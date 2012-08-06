@@ -1,0 +1,10 @@
+#!/bin/bash
+
+bplgen $1 $2
+#runboogie $1 /bv:i /timeLimit:5 /vcsMaxKeepGoingSplits:3
+#runboogie $1 /bv:i /timeLimit:30 /z3mam:4
+runboogie $1 /timeLimit:1200
+#runboogie $1 /bv:z /timeLimit:60
+#runboogie $1 /bv:z /timeLimit:60 /z3opt:REFLECT_BV_OPS=true
+exit
+
