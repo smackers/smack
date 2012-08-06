@@ -5,23 +5,30 @@
 
 using namespace smack;
 
-BPLProcedure::BPLProcedure(Function* funcP) : func(funcP) {
-  if (func->getReturnType()->getTypeID() == Type::VoidTyID) {
-    voidFlag = true;
-    returnVar = NULL;
-  } else {
-    voidFlag = false;
-    std::string returnVarName = "__SMACK_";
-    returnVarName.append(func->getName().str());
-    returnVarName.append("_return");
-    returnVar = new BPLVarExpr(translateName(returnVarName));
-  }
-}
-
 BPLProcedure::~BPLProcedure() {}
 
-Function* BPLProcedure::getFunction() const {
-  return func;
+std::string BPLProcedure::getName() const {
+  return name;
+}
+
+void BPLProcedure::setNotVoid() {
+  voidFlag = false;
+}
+
+bool BPLProcedure::isVoid() const {
+  return voidFlag;
+}
+
+void BPLProcedure::addArgument(std::string argument) {
+  arguments.push_back(argument);
+}
+
+void BPLProcedure::setReturnVar(BPLVarExpr* var) {
+  returnVar = var;
+}
+
+BPLVarExpr* BPLProcedure::getReturnVar() const {
+  return returnVar;
 }
 
 void BPLProcedure::setEntryBlock(BPLBlock* block) {
@@ -57,30 +64,21 @@ void BPLProcedure::addBoolVariable(Value* var) {
   boolVars.push_back(var);
 }
 
-bool BPLProcedure::isVoid() const {
-  return voidFlag;
-}
-
-BPLVarExpr* BPLProcedure::getReturnVar() const {
-  return returnVar;
-}
-
 void BPLProcedure::print(std::ostream &os) const {
   if (this == 0) {
     os << "<null BPLProcedure>";
   } else {
     os << "procedure ";
-    if (func->getName().str() != Common::MAIN_PROCEDURE) {
+    if (name != Common::MAIN_PROCEDURE) {
       os << "{:inline 1} ";
     }
-    os << func->getName().str() << "(";
-    for (Function::const_arg_iterator
-        i = func->arg_begin(), b = func->arg_begin(), e = func->arg_end(); i != e; ++i) {
+    os << name << "(";
+    for(std::vector<std::string>::const_iterator
+        i = arguments.begin(), b = arguments.begin(), e = arguments.end(); i != e; ++i) {
       if (i != b) {
         os << ", ";
       }
-      assert(i->getName().str() != "");
-      os << translateName(i->getName().str()) << ":ptr";
+      os << *i << ":ptr";
     }
     os << ")";
     

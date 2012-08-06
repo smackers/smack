@@ -23,7 +23,7 @@ public:
   BPLModule();
   virtual ~BPLModule();
   void addGlobalVariable(std::string name);
-	void addProcedure(BPLProcedure* procedure, std::string name);
+	void addProcedure(BPLProcedure* procedure);
 	BPLProcedure* getProcedure(std::string name);
 	std::map<std::string, BPLProcedure*>& getProcedures();
   void print(std::ostream &os) const;

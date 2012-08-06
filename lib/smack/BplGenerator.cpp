@@ -28,8 +28,24 @@ bool BplGenerator::runOnModule(Module &m) {
     if (func->isDeclaration()) {
       continue;
     }
-    BPLProcedure* bplProc = new BPLProcedure(func);
-    bplModule->addProcedure(bplProc, func->getName().str());
+
+    BPLProcedure* bplProc = new BPLProcedure(func->getName().str());
+
+    // set return variable name
+    if (func->getReturnType()->getTypeID() != Type::VoidTyID) {
+      bplProc->setNotVoid();
+      std::string returnVarName = "__SMACK_";
+      returnVarName.append(func->getName().str());
+      returnVarName.append("_return");
+      bplProc->setReturnVar(new BPLVarExpr(translateName(returnVarName)));
+    }
+
+    // add arguments
+    for (Function::const_arg_iterator i = func->arg_begin(), e = func->arg_end(); i != e; ++i) {
+      bplProc->addArgument(translateName(i));
+    }
+
+    bplModule->addProcedure(bplProc);
 
     std::map<const BasicBlock*, BPLBlock*> processedBlocks;
     std::vector<BasicBlock*> workStack;
