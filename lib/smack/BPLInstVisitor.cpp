@@ -125,6 +125,17 @@ void BPLInstVisitor::processInstruction(Instruction& inst) {
   }
 }
 
+void BPLInstVisitor::visitAllocaInst(AllocaInst& ai) {
+  processInstruction(ai);
+
+  Type* allocType = ai.getAllocatedType();
+  unsigned typeSize = targetData->getTypeStoreSize(allocType);
+  BPLConstantExpr* typeSizeExpr = new BPLConstantExpr(typeSize);
+  BPLExpr* arraySizeExpr = visitValue(ai.getArraySize());
+  BPLAllocaInst* bplInst = new BPLAllocaInst(&ai, typeSizeExpr, arraySizeExpr);
+  block->addInstruction(bplInst);
+}
+
 void BPLInstVisitor::visitBranchInst(BranchInst& bi) {
   processInstruction(bi);
 }
@@ -299,6 +310,18 @@ void BPLInstVisitor::visitICmpInst(ICmpInst& ci) {
 }
 
 void BPLInstVisitor::visitZExtInst(ZExtInst& ci) {
+  processInstruction(ci);
+
+  BPLInstruction* bplInst;
+  if (ci.getSrcTy()->isIntegerTy() && ci.getSrcTy()->getPrimitiveSizeInBits() == 1) {
+    bplInst = new BPLBoolToIntInst(&ci, visitValue(ci.getOperand(0)));
+  } else {
+    bplInst = new BPLAssignInst(&ci, new BPLVarExpr(&ci), visitValue(ci.getOperand(0)));
+  }
+  block->addInstruction(bplInst);
+}
+
+void BPLInstVisitor::visitSExtInst(SExtInst& ci) {
   processInstruction(ci);
 
   BPLInstruction* bplInst;

@@ -4,7 +4,7 @@ BOOGIE="mono /home/zvonimir/projects/boogie/Binaries/Boogie.exe"
 
 bplgen $1 $2
 
-$BOOGIE $1.bpl /timeLimit:1200
+$BOOGIE $1.bpl /timeLimit:1200 /loopUnroll:15
 #$BOOGIE $1.bpl /bv:i /timeLimit:30 /z3mam:4
 #$BOOGIE $1.bpl /bv:i /timeLimit:5 /vcsMaxKeepGoingSplits:3
 #$BOOGIE $1.bpl /bv:z /timeLimit:60

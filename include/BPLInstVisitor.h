@@ -30,6 +30,7 @@ public:
   void addSuccBlock(BPLBlock* succBlock);
   void visitInstruction(Instruction& i);
   void processInstruction(Instruction& i);
+  void visitAllocaInst(AllocaInst& i);
   void visitBranchInst(BranchInst& i);
   void visitPHINode(PHINode& i);
   void visitCallInst(CallInst& i);
@@ -39,6 +40,7 @@ public:
   void visitGetElementPtrInst(GetElementPtrInst& i);
   void visitICmpInst(ICmpInst& i);
   void visitZExtInst(ZExtInst& i);
+  void visitSExtInst(SExtInst& i);
   void visitBitCastInst(BitCastInst& i);
   void visitBinaryOperator(BinaryOperator& i);
 };

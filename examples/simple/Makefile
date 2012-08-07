@@ -38,7 +38,13 @@ inline: LDFLAGS =
 SOURCES = simple.c simple_fail.c \
           pointers.c pointers1.c pointers2.c pointers3.c \
           array.c \
-          array1.c array1_fail.c
+          array1.c array1_fail.c \
+          array2.c array2_fail.c \
+          array3.c array3_fail.c \
+          array4.c array4_fail.c \
+          array_free.c array_free_fail.c \
+          array_free1.c array_free1_fail.c \
+          array_free2.c array_free2_fail.c
 
 OBJECTS = $(SOURCES:.c=.o)
 FILES = $(basename $(SOURCES))
@@ -60,7 +66,7 @@ clean:
 run:
 	@for file in $(FILES); do   \
 		(echo Running SMACK on $$file ...; \
-		 smack $$file -use_dsa; \
+		 smack $$file; \
 		 echo; echo) \
 	done
 

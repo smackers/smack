@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-#define MAXSIZE 50
+#define MAXSIZE 10
 #define RESET 0
 
 int main() {
