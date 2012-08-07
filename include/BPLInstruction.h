@@ -43,7 +43,6 @@ protected:
 public:
   BPLInstruction(BPLInstructionIDs idP, Instruction* instP) : id(idP), inst(instP) {}
 	virtual ~BPLInstruction() {}
-  Instruction* getInstruction() const;
   void setParentBlock(BPLBlock* parentBlockP);
   BPLBlock* getParentBlock() const;
   virtual void print(std::ostream &os) const;

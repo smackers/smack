@@ -27,10 +27,6 @@ void BPLBlock::addInstruction(BPLInstruction* inst) {
   inst->setParentBlock(this);
 }
 
-std::vector<BPLInstruction*>& BPLBlock::getInstructions() {
-  return instructions;
-}
-
 void BPLBlock::setParentProcedure(BPLProcedure* parentProc) {
   parentProcedure = parentProc;
 }

@@ -30,7 +30,6 @@ public:
   BasicBlock* getBasicBlock() const;
   std::string getName() const;
   void addInstruction(BPLInstruction* inst);
-  std::vector<BPLInstruction*>& getInstructions();
   void setParentProcedure(BPLProcedure* parentProc);
   BPLProcedure* getParentProcedure() const;
   void print(std::ostream &os) const;

@@ -23,10 +23,6 @@ std::ostream &operator<<(std::ostream &os, const BPLInstruction& inst) {
 
 }
 
-Instruction* BPLInstruction::getInstruction() const {
-  return inst;
-}
-
 void BPLInstruction::setParentBlock(BPLBlock* parentBlockP) {
   parentBlock = parentBlockP;
 }
