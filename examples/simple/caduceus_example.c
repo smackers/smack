@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "smack.h"
 
 typedef struct {
   int a;
@@ -15,7 +18,7 @@ int main(void) {
   s1.a = 3;
   p2->x = 4;
 
-  assert(s1.a == 3);
+  __SMACK_assert(s1.a == 3);
   return 0;
 }
 
