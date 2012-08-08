@@ -15,7 +15,7 @@ int main(void) {
   s1.a = 3;
   p2->x = 4;
 
-//  assert(s1.a == 3);
+  assert(s1.a == 3);
   return 0;
 }
 

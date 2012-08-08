@@ -2,16 +2,10 @@
 #include <stdlib.h>
 #include "smack.h"
 
-void __SMACK_anno_incr(int *x) {
-  INLINE(__SMACK_inline());
-}
 void incr(int *x) {
   (*x)++;
 }
 
-void __SMACK_anno_decr(int *x) {
-  INLINE(__SMACK_inline());
-}
 void decr(int *x) {
   (*x)--;
 }
@@ -32,3 +26,4 @@ int main() {
 
   return 0;
 }
+

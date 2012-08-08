@@ -14,16 +14,10 @@ struct ops {
   struct int_ops *iops;
 };
 
-void __SMACK_anno_incr(int x) {
-  INLINE(__SMACK_inline());
-}
 int incr(int x) {
   return ++x;
 }
 
-void __SMACK_anno_decr(int x) {
-  INLINE(__SMACK_inline());
-}
 int decr(int x) {
   return --x;
 }
@@ -52,3 +46,4 @@ int main() {
 
   return 0;
 }
+

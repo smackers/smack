@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include "smack.h"
 
-void __SMACK_anno_returnOne() {
-  __SMACK_ensures(__SMACK_return == 1);
-  INLINE(__SMACK_inline());
-}
 int returnOne() {
   return 1;
 }
