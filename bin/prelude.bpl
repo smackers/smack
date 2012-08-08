@@ -2,7 +2,6 @@
 type ref;
 type name;
 type ptr;
-type stype;
 const unique null:ref;
 function Ptr(ref, int) returns (ptr);
 function Obj(ptr) returns (ref);
@@ -19,7 +18,6 @@ var Alloc:[ref]name;
 
 // Immutable
 function Size(ref) returns (int);
-function Type(ptr) returns (stype);
 
 // Undefined ptr value
 var undef:ptr;
@@ -35,7 +33,6 @@ ensures old(Alloc)[Obj(new)] == UNALLOCATED && Alloc[Obj(new)] == ALLOCATED;
 ensures Off(new) == 0;
 ensures Obj(new) != null;
 ensures Size(Obj(new)) == obj_size;
-//ensures (forall t:stype, i:int :: Obj(Mem[t][Ptr(Obj(new), i)]) == null); // possible matching loop!
 ensures (forall x_obj:ref :: {Alloc[x_obj]} x_obj == Obj(new) || old(Alloc)[x_obj] == Alloc[x_obj]);
 
 procedure __SMACK_malloc(obj_size:int) returns (new:ptr);
@@ -44,7 +41,6 @@ ensures old(Alloc)[Obj(new)] == UNALLOCATED && Alloc[Obj(new)] == ALLOCATED;
 ensures Off(new) == 0;
 ensures Obj(new) != null;
 ensures Size(Obj(new)) == obj_size;
-//ensures (forall t:stype, i:int :: Obj(Mem[t][Ptr(Obj(new), i)]) == null); // possible matching loop!
 ensures (forall x_obj:ref :: {Alloc[x_obj]} x_obj == Obj(new) || old(Alloc)[x_obj] == Alloc[x_obj]);
 
 procedure __SMACK_free(pointer:ptr);

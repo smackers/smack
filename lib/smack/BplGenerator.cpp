@@ -24,10 +24,10 @@ bool BplGenerator::runOnModule(Module &m) {
   BPLInstVisitor bplVisitor(&targetData);
 
   for (Module::iterator func = m.begin(), e = m.end(); func != e; ++func) {
-    DEBUG(errs() << "Analyzing function: " << func->getName().str() << "\n");
-    if (func->isDeclaration()) {
+    if (func->isDeclaration() || func->getName().str().find("__SMACK") != std::string::npos ) {
       continue;
     }
+    DEBUG(errs() << "Analyzing function: " << func->getName().str() << "\n");
 
     BPLProcedure* bplProc = new BPLProcedure(func->getName().str());
 
