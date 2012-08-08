@@ -51,48 +51,6 @@ ensures Alloc[Obj(pointer)] != UNALLOCATED;
 ensures (forall x:ref :: {Alloc[x]} Obj(pointer) == x || old(Alloc)[x] == Alloc[x]);
 
 
-// comparison operators functions
-function __SMACK_ICMP_EQ(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_EQ(a, b)}
-  __SMACK_ICMP_EQ(a, b) == (a == b));
-
-function __SMACK_ICMP_NE(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_NE(a, b)}
-  __SMACK_ICMP_NE(a, b) == (a != b));
-
-function __SMACK_ICMP_SGE(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_SGE(a, b)}
-  __SMACK_ICMP_SGE(a, b) == (Obj(a) == Obj(b) && Off(a) >= Off(b)));
-
-function __SMACK_ICMP_UGE(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_UGE(a, b)}
-  __SMACK_ICMP_UGE(a, b) == (Obj(a) == Obj(b) && Off(a) >= Off(b)));
-
-function __SMACK_ICMP_SLE(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_SLE(a, b)}
-  __SMACK_ICMP_SLE(a, b) == (Obj(a) == Obj(b) && Off(a) <= Off(b)));
-
-function __SMACK_ICMP_ULE(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_ULE(a, b)}
-  __SMACK_ICMP_ULE(a, b) == (Obj(a) == Obj(b) && Off(a) <= Off(b)));
-
-function __SMACK_ICMP_SLT(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_SLT(a, b)}
-  __SMACK_ICMP_SLT(a, b) == (Obj(a) == Obj(b) && Off(a) < Off(b)));
-
-function __SMACK_ICMP_ULT(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_ULT(a, b)}
-  __SMACK_ICMP_ULT(a, b) == (Obj(a) == Obj(b) && Off(a) < Off(b)));
-
-function __SMACK_ICMP_SGT(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_SGT(a, b)}
-  __SMACK_ICMP_SGT(a, b) == (Obj(a) == Obj(b) && Off(a) > Off(b)));
-
-function __SMACK_ICMP_UGT(a:ptr, b:ptr) returns (result:bool);
-axiom {:expand true} (forall a:ptr, b:ptr :: {__SMACK_ICMP_UGT(a, b)}
-  __SMACK_ICMP_UGT(a, b) == (Obj(a) == Obj(b) && Off(a) > Off(b)));
-
-
 // comparison operators procedures
 procedure __SMACK_Proc_ICMP_EQ(a:ptr, b:ptr) returns (result:bool);
 ensures result == (a == b);
