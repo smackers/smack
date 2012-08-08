@@ -223,7 +223,7 @@ void BPLAllocaInst::print(std::ostream &os) const {
   std::string varName = translateName(inst->getName().str());
   
   os << "call " << varName << " := ";
-  os << "__SMACK_alloca(" << typeSize->getOffComponent() << " * " << arraySize->getOffComponent() << ");\n";
+  os << "__SMACK_alloca(mul(" << typeSize->getOffComponent() << ", " << arraySize->getOffComponent() << "));\n";
 }
 
 void BPLMallocInst::print(std::ostream &os) const {
@@ -242,12 +242,12 @@ void BPLFreeInst::print(std::ostream &os) const {
 
 void BPLAssertInst::print(std::ostream &os) const {
   BPLInstruction::print(os);
-  os << "assert(" << *assertion << " != Ptr(null, 0));\n";
+  os << "assert(" << *assertion << " != Ptr(null, 0bv32));\n";
 }
 
 void BPLAssumeInst::print(std::ostream &os) const {
   BPLInstruction::print(os);
-  os << "assume(" << *assumption << " != Ptr(null, 0));\n";
+  os << "assume(" << *assumption << " != Ptr(null, 0bv32));\n";
 }
 
 void BPLReturnInst::print(std::ostream &os) const {

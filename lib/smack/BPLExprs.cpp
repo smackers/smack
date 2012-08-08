@@ -45,18 +45,18 @@ void BPLConstantExpr::print(std::ostream &os) const {
         const APInt& intValue = ci->getValue();
         std::string stringValue = intValue.toString(10, true);
         if (intValue.isNegative()) {
-          os << "Ptr(null, 0-" << stringValue.substr(1) << ")";
+          os << "Ptr(null, sub(0bv32, " << stringValue.substr(1) << "bv32))";
         } else {
-          os << "Ptr(null, " << stringValue << ")";
+          os << "Ptr(null, " << stringValue << "bv32)";
         }
       }
     } else if (isa<ConstantPointerNull>(constant)) {
-      os << "Ptr(null, 0)";
+      os << "Ptr(null, 0bv32)";
     } else {
       assert(false && "Value type not supported");
     }
   } else {
-    os << "Ptr(null, " << intConstant << ")";
+    os << "Ptr(null, " << intConstant << "bv32)";
   }
 }
 
@@ -73,17 +73,17 @@ std::string BPLConstantExpr::getOffComponent() const {
       const APInt& intValue = ci->getValue();
       std::string stringValue = intValue.toString(10, true);
       if (intValue.isNegative()) {
-        off << "0-" << stringValue.substr(1);
+        off << "sub(0bv32, " << stringValue.substr(1) << "bv32)";
       } else {
-        off << stringValue;
+        off << stringValue << "bv32";
       }
     } else if (isa<ConstantPointerNull>(constant)) {
-      off << "0";
+      off << "0bv32";
     } else {
       assert(false && "Value type not supported");
     }
   } else {
-    off << intConstant;
+    off << intConstant << "bv32";
   }
   return off.str();
 }
