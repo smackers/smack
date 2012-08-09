@@ -1,0 +1,52 @@
+
+********************** SMACK INSTALLATION AND USER GUIDE **********************
+
+
+*** SMACK dependencies ***
+
+LLVM (www.llvm.org)
+clang (http://clang.llvm.org/)
+Boogie (http://boogie.codeplex.com)
+
+
+*** Installing SMACK ***
+
+1. Unpack SMACK into LLVM's project directory, i.e. into
+   LLVM_SRC/projects/smack.
+
+2. Add SMACK's directory to LLVM's configure script (look for "sample" project
+   to see where smack has to be added).
+
+3. Configure and build LLVM. If everything goes well, you should now have
+   libsmack.so and libsmack.a in the directory LLVM_OBJ/projects/smack/Debug/lib
+   (or something like that depending on which build options you used).
+
+
+*** Running SMACK ***
+
+Try SMACK on a simple example in the smack/examples/simple directory.
+NOTE: Both clang and llvm binaries (e.g. llvm-link, opt, etc.) should be in
+      your path, as well as LLVM_SRC/projects/smack/bin directory!
+
+First, go to the smack/examples/headers directory and compile smack.c (used for
+defining SMACK-specific functions) using the provided Makefile by running "make
+llvm".
+
+Then, go to smack/examples/simple directory and compile the examples by running
+"make llvm". You should get a number of LLVM's bc files, one per example.
+
+Execute SMACK's LLVM pass on an example to generate its translation into the
+Boogie file tmp.bpl using the following command (replace LLVM_OBJ with the
+appropriate directory):
+opt -load LLVM_OBJ/projects/smack/Debug/lib/libsmack.so -internalize -mem2reg \
+  -die -lowerswitch -bpl_print -debug-only=bpl < simple.bc > /dev/null 2> tmp.bpl
+
+Before Boogie can be run on the example, SMACK's prelude (smack/bin/prelude.bpl)
+with necessary declarations and axioms has to be added to the generated bpl
+file. You can take a look at how this is done in the smack/bin/bplgen script, or
+just execute the script (bin directory has to be in your path): bplgen simple
+
+The bplgen script is going to generate a Boogie file called simple.bpl for the
+example. You should be able to run Boogie on simple.bpl without getting any
+errors.
+
