@@ -2,25 +2,25 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BPLModule.h"
+#include "SmackModule.h"
 
 using namespace smack;
 
-BPLModule::BPLModule() {}
+SmackModule::SmackModule() {}
 
-BPLModule::~BPLModule() {}
+SmackModule::~SmackModule() {}
 
-void BPLModule::addGlobalVariable(std::string name) {
+void SmackModule::addGlobalVariable(std::string name) {
   assert(globalVariables.count(name) == 0);
   globalVariables.insert(name);
 }
 
-void BPLModule::addProcedure(Procedure* procedure) {
+void SmackModule::addProcedure(Procedure* procedure) {
   assert(procedures.count(procedure->getName()) == 0);
   procedures[procedure->getName()] = procedure;
 }
 
-Procedure* BPLModule::getProcedure(std::string name) {
+Procedure* SmackModule::getProcedure(std::string name) {
   if (procedures.count(name) == 0) {
     return NULL;
   } else {
@@ -28,11 +28,11 @@ Procedure* BPLModule::getProcedure(std::string name) {
   }
 }
 
-std::map<std::string, Procedure*>& BPLModule::getProcedures() {
+std::map<std::string, Procedure*>& SmackModule::getProcedures() {
   return procedures;
 }
 
-void BPLModule::print(std::ostream &os) const {
+void SmackModule::print(std::ostream &os) const {
   if (this == 0) {
     os << "<null BPLModule>";
   } else {
@@ -57,7 +57,7 @@ void BPLModule::print(std::ostream &os) const {
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const BPLModule* module) {
+std::ostream &operator<<(std::ostream &os, const SmackModule* module) {
   if (module == 0) {
     os << "<null> BPLModule!\n";
   } else {
@@ -66,12 +66,12 @@ std::ostream &operator<<(std::ostream &os, const BPLModule* module) {
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const BPLModule& module) {
+std::ostream &operator<<(std::ostream &os, const SmackModule& module) {
   module.print(os);
   return os;
 }
 
-raw_ostream &operator<<(raw_ostream &os, const BPLModule* module) {
+raw_ostream &operator<<(raw_ostream &os, const SmackModule* module) {
   if (module == 0) {
     os << "<null> BPLModule!\n";
   } else {
@@ -82,7 +82,7 @@ raw_ostream &operator<<(raw_ostream &os, const BPLModule* module) {
   return os;
 }
  
-raw_ostream &operator<<(raw_ostream &os, const BPLModule& module) {
+raw_ostream &operator<<(raw_ostream &os, const SmackModule& module) {
   std::ostringstream stream;
   module.print(stream);
   os << stream.str();

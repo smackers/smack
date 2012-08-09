@@ -5,7 +5,7 @@
 #ifndef BPLPRINTER_H
 #define BPLPRINTER_H
 
-#include "BplGenerator.h"
+#include "SmackGenerator.h"
 #include "llvm/Function.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Pass.h"
@@ -28,7 +28,7 @@ public:
   virtual bool runOnModule(Module &m);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
-    AU.addRequired<BplGenerator>();
+    AU.addRequired<SmackGenerator>();
   }
 };
 }

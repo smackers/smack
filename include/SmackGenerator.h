@@ -2,12 +2,12 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef BPLGENERATOR_H
-#define BPLGENERATOR_H
+#ifndef SMACKGENERATOR_H
+#define SMACKGENERATOR_H
 
 #include "BPLBlock.h"
-#include "BPLInstVisitor.h"
-#include "BPLModule.h"
+#include "SmackInstVisitor.h"
+#include "SmackModule.h"
 #include "BplPrintUtils.h"
 #include "llvm/Function.h"
 #include "llvm/InstrTypes.h"
@@ -23,14 +23,14 @@ using namespace llvm;
 
 namespace smack {
 
-class BplGenerator : public ModulePass {
+class SmackGenerator : public ModulePass {
 private:
-  BPLModule* bplModule;
+  SmackModule* module;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  BplGenerator() : ModulePass(ID) {}
+  SmackGenerator() : ModulePass(ID) {}
   virtual bool runOnModule(Module &m);
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
@@ -38,10 +38,10 @@ public:
     AU.addRequired<TargetData>();
   }
 
-  BPLModule* getBPLModule() const {
-    return bplModule;
+  SmackModule* getModule() const {
+    return module;
   }
 };
 }
 
-#endif  /*BPLGENERATOR_H*/
+#endif  /*SMACKGENERATOR_H*/

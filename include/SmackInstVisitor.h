@@ -2,11 +2,11 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef BPLINSTVISITOR_H
-#define BPLINSTVISITOR_H
+#ifndef SMACKINSTVISITOR_H
+#define SMACKINSTVISITOR_H
 
 #include "Procedure.h"
-#include "BPLModule.h"
+#include "SmackModule.h"
 #include "Common.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IntrinsicInst.h"
@@ -19,14 +19,14 @@ using namespace llvm;
 
 namespace smack {
 
-class BPLInstVisitor : public InstVisitor<BPLInstVisitor> {
+class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
 private:
   TargetData* targetData;
   BPLBlock* block;
   Expr* visitValue(Value* value);
  
 public:
-  BPLInstVisitor(TargetData* td) : targetData(td) {}
+  SmackInstVisitor(TargetData* td) : targetData(td) {}
   void setBPLBlock(BPLBlock* blockP);
   void addSuccBlock(BPLBlock* succBlock);
   void visitInstruction(Instruction& i);
@@ -47,4 +47,4 @@ public:
 };
 }
 
-#endif  /*BPLINSTVISITOR_H*/
+#endif  /*SMACKINSTVISITOR_H*/

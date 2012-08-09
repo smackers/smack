@@ -2,11 +2,11 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BPLInstVisitor.h"
+#include "SmackInstVisitor.h"
       
 using namespace smack;
 
-Expr* BPLInstVisitor::visitValue(Value* value) {
+Expr* SmackInstVisitor::visitValue(Value* value) {
   Expr* valExpr = NULL;
 
   if (value->hasName()) {
@@ -87,11 +87,11 @@ Expr* BPLInstVisitor::visitValue(Value* value) {
   return valExpr;
 }
 
-void BPLInstVisitor::setBPLBlock(BPLBlock* blockP) {
+void SmackInstVisitor::setBPLBlock(BPLBlock* blockP) {
   block = blockP;
 }
 
-void BPLInstVisitor::addSuccBlock(BPLBlock* succBlock) {
+void SmackInstVisitor::addSuccBlock(BPLBlock* succBlock) {
   block->addSuccBlock(succBlock);
   
   BasicBlock* succBasicBlock = succBlock->getBasicBlock();
@@ -107,12 +107,12 @@ void BPLInstVisitor::addSuccBlock(BPLBlock* succBlock) {
   }
 }
 
-void BPLInstVisitor::visitInstruction(Instruction& inst) {
+void SmackInstVisitor::visitInstruction(Instruction& inst) {
   DEBUG(errs() << "Instruction not handled: " << inst << "\n");
   assert(false && "Instruction not handled");
 }
 
-void BPLInstVisitor::processInstruction(Instruction& inst) {
+void SmackInstVisitor::processInstruction(Instruction& inst) {
   DEBUG(errs() << "Inst: " << inst << "\n");
   DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
   if (inst.getType()->getTypeID() != Type::VoidTyID) {
@@ -126,7 +126,7 @@ void BPLInstVisitor::processInstruction(Instruction& inst) {
   }
 }
 
-void BPLInstVisitor::visitAllocaInst(AllocaInst& ai) {
+void SmackInstVisitor::visitAllocaInst(AllocaInst& ai) {
   processInstruction(ai);
 
   Type* allocType = ai.getAllocatedType();
@@ -137,15 +137,15 @@ void BPLInstVisitor::visitAllocaInst(AllocaInst& ai) {
   block->addInstruction(bplInst);
 }
 
-void BPLInstVisitor::visitBranchInst(BranchInst& bi) {
+void SmackInstVisitor::visitBranchInst(BranchInst& bi) {
   processInstruction(bi);
 }
 
-void BPLInstVisitor::visitPHINode(PHINode& phi) {
+void SmackInstVisitor::visitPHINode(PHINode& phi) {
   processInstruction(phi);
 }
 
-void BPLInstVisitor::visitCallInst(CallInst& ci) {
+void SmackInstVisitor::visitCallInst(CallInst& ci) {
   processInstruction(ci);
 
   if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == Common::ASSERT) {
@@ -228,7 +228,7 @@ void BPLInstVisitor::visitCallInst(CallInst& ci) {
   }
 }
 
-void BPLInstVisitor::visitReturnInst(ReturnInst& ri) {
+void SmackInstVisitor::visitReturnInst(ReturnInst& ri) {
   processInstruction(ri);
 
   BPLReturnInst* bplInst;
@@ -243,7 +243,7 @@ void BPLInstVisitor::visitReturnInst(ReturnInst& ri) {
   block->addInstruction(bplInst);
 }
 
-void BPLInstVisitor::visitLoadInst(LoadInst& li) {
+void SmackInstVisitor::visitLoadInst(LoadInst& li) {
   processInstruction(li);
 
   Value* ptr = li.getPointerOperand();
@@ -253,7 +253,7 @@ void BPLInstVisitor::visitLoadInst(LoadInst& li) {
   block->addInstruction(assignInst);
 }
 
-void BPLInstVisitor::visitStoreInst(StoreInst& si) {
+void SmackInstVisitor::visitStoreInst(StoreInst& si) {
   processInstruction(si);
 
   Value* ptr = si.getPointerOperand();
@@ -263,7 +263,7 @@ void BPLInstVisitor::visitStoreInst(StoreInst& si) {
   block->addInstruction(assignInst);
 }
 
-void BPLInstVisitor::visitGetElementPtrInst(GetElementPtrInst& gepi) {
+void SmackInstVisitor::visitGetElementPtrInst(GetElementPtrInst& gepi) {
   processInstruction(gepi);
 
   Value* ptrVal = gepi.getPointerOperand();
@@ -301,7 +301,7 @@ void BPLInstVisitor::visitGetElementPtrInst(GetElementPtrInst& gepi) {
   block->addInstruction(bplInst);
 }
 
-void BPLInstVisitor::visitICmpInst(ICmpInst& ci) {
+void SmackInstVisitor::visitICmpInst(ICmpInst& ci) {
   processInstruction(ci);
 
   Expr* left = visitValue(ci.getOperand(0));
@@ -310,7 +310,7 @@ void BPLInstVisitor::visitICmpInst(ICmpInst& ci) {
   block->addInstruction(cmpInst);
 }
 
-void BPLInstVisitor::visitZExtInst(ZExtInst& ci) {
+void SmackInstVisitor::visitZExtInst(ZExtInst& ci) {
   processInstruction(ci);
 
   BPLInstruction* bplInst;
@@ -322,7 +322,7 @@ void BPLInstVisitor::visitZExtInst(ZExtInst& ci) {
   block->addInstruction(bplInst);
 }
 
-void BPLInstVisitor::visitSExtInst(SExtInst& ci) {
+void SmackInstVisitor::visitSExtInst(SExtInst& ci) {
   processInstruction(ci);
 
   BPLInstruction* bplInst;
@@ -334,7 +334,7 @@ void BPLInstVisitor::visitSExtInst(SExtInst& ci) {
   block->addInstruction(bplInst);
 }
 
-void BPLInstVisitor::visitBitCastInst(BitCastInst& ci) {
+void SmackInstVisitor::visitBitCastInst(BitCastInst& ci) {
 
   // TODO: currently this is a noop instruction
   processInstruction(ci);
@@ -343,7 +343,7 @@ void BPLInstVisitor::visitBitCastInst(BitCastInst& ci) {
   block->addInstruction(assignInst);
 }
 
-void BPLInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
+void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
   processInstruction(bo);
 
   Expr* left = visitValue(bo.getOperand(0));
