@@ -5,7 +5,7 @@
 #ifndef BPLBLOCK_H_
 #define BPLBLOCK_H_
 
-#include "BPLInstructions.h"
+#include "Statements.h"
 #include "Utils.h"
 #include "llvm/BasicBlock.h"
 #include <set>
@@ -21,7 +21,7 @@ class BPLBlock {
 private:
   std::vector<BPLBlock*> succBlocks;
   BasicBlock* basicBlock;
-  std::vector<BPLInstruction*> instructions;
+  std::vector<Statement*> instructions;
   Procedure* parentProcedure;
   
 public:
@@ -30,7 +30,7 @@ public:
 	void addSuccBlock(BPLBlock* succBlock);
   BasicBlock* getBasicBlock() const;
   std::string getName() const;
-  void addInstruction(BPLInstruction* inst);
+  void addInstruction(Statement* inst);
   void setParentProcedure(Procedure* parentProc);
   Procedure* getParentProcedure() const;
   void print(std::ostream &os) const;

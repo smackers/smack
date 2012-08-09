@@ -3,7 +3,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackInstVisitor.h"
-      
+
 using namespace smack;
 
 Expr* SmackInstVisitor::visitValue(Value* value) {
@@ -101,8 +101,8 @@ void SmackInstVisitor::addSuccBlock(BPLBlock* succBlock) {
     if (Value* incomingValue = phiNode->getIncomingValueForBlock(block->getBasicBlock())) {
       Expr* incomingExpr = visitValue(incomingValue);
       VarExpr* incomingVar = new VarExpr(phiNode);
-      BPLAssignInst* assignInst = new BPLAssignInst(phiNode, incomingVar, incomingExpr);
-      block->addInstruction(assignInst);
+      AssignStmt* assignStmt = new AssignStmt(phiNode, incomingVar, incomingExpr);
+      block->addInstruction(assignStmt);
     }
   }
 }
@@ -133,8 +133,8 @@ void SmackInstVisitor::visitAllocaInst(AllocaInst& ai) {
   unsigned typeSize = targetData->getTypeStoreSize(allocType);
   ConstExpr* typeSizeExpr = new ConstExpr(typeSize);
   Expr* arraySizeExpr = visitValue(ai.getArraySize());
-  BPLAllocaInst* bplInst = new BPLAllocaInst(&ai, typeSizeExpr, arraySizeExpr);
-  block->addInstruction(bplInst);
+  AllocaStmt* stmt = new AllocaStmt(&ai, typeSizeExpr, arraySizeExpr);
+  block->addInstruction(stmt);
 }
 
 void SmackInstVisitor::visitBranchInst(BranchInst& bi) {
@@ -151,13 +151,13 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
   if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == Common::ASSERT) {
     assert(ci.getNumOperands() == 2 && "Assertions should have only one parameter");
     Expr* expr = visitValue(ci.getOperand(0));
-    BPLAssertInst* bplInst = new BPLAssertInst(&ci, expr);
-    block->addInstruction(bplInst);
+    AssertStmt* stmt = new AssertStmt(&ci, expr);
+    block->addInstruction(stmt);
   } else if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == Common::ASSUME) {
     assert(ci.getNumOperands() == 2 && "Assumes should have only one parameter");
     Expr* expr = visitValue(ci.getOperand(0));
-    BPLAssumeInst* bplInst = new BPLAssumeInst(&ci, expr);
-    block->addInstruction(bplInst);
+    AssumeStmt* stmt = new AssumeStmt(&ci, expr);
+    block->addInstruction(stmt);
   } else if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == "malloc") {
     assert(ci.getNumOperands() == 2 && "Call to malloc should have only one parameter");
 
@@ -172,22 +172,22 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
 
     Expr* arraySizeExpr = visitValue(ci.getOperand(0));
 
-    BPLMallocInst* bplInst = new BPLMallocInst(&ci, arraySizeExpr);
-    block->addInstruction(bplInst);
+    MallocStmt* stmt = new MallocStmt(&ci, arraySizeExpr);
+    block->addInstruction(stmt);
   } else if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == "free") {
     assert(ci.getNumOperands() == 2 && "Call to free should have only one parameter");
     Expr* freedPtrExpr = visitValue(ci.getOperand(0));
-    BPLFreeInst* bplInst = new BPLFreeInst(&ci, freedPtrExpr);
-    block->addInstruction(bplInst);
+    FreeStmt* stmt = new FreeStmt(&ci, freedPtrExpr);
+    block->addInstruction(stmt);
   } else {
-    BPLCallInst* bplCallInst = new BPLCallInst(&ci);
+    CallStmt* stmt = new CallStmt(&ci);
 
 #ifdef USE_DSA
     CallSite callSite = CallSite::get(&ci);
     if (ci.getCalledFunction() != NULL) {
       Function* calledFunction = ci.getCalledFunction();
-      bplModule->addCalledProcedure(calledFunction->getNameStr());
-      CalledFunction* calledFunc = bplCallInst->addCalledFunction(calledFunction);
+      module->addCalledProcedure(calledFunction->getNameStr());
+      CalledFunction* calledFunc = stmt->addCalledFunction(calledFunction);
 
       if ((Common::memoryType == DSA_INDEXED || Common::memoryType == DSA_SPLIT) &&
           tdDataStructures->hasDSGraph(*calledFunction)) {
@@ -197,9 +197,9 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
       for (std::vector<const Function*>::iterator i = callTargetFinder->begin(callSite),
           ei = callTargetFinder->end(callSite); i != ei; ++i) {
         const Function* calledFunction = *i;
-        bplModule->addCalledProcedure(calledFunction->getNameStr());
+        module->addCalledProcedure(calledFunction->getNameStr());
         if (ci.getCalledValue()->getType() == calledFunction->getType()) {
-          CalledFunction* calledFunc = bplCallInst->addCalledFunction(calledFunction);
+          CalledFunction* calledFunc = stmt->addCalledFunction(calledFunction);
 
           if ((Common::memoryType == DSA_INDEXED || Common::memoryType == DSA_SPLIT) &&
               tdDataStructures->hasDSGraph(*calledFunction)) {
@@ -211,36 +211,36 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
 #else
     Function* calledFunction = ci.getCalledFunction();
     assert(calledFunction != NULL && "Indirect function calls currently not supported");
-    bplCallInst->addCalledFunction(calledFunction);
+    stmt->addCalledFunction(calledFunction);
 #endif
 
     if (ci.getType()->getTypeID() != Type::VoidTyID) {
       VarExpr* returnVar = new VarExpr(&ci);
-      bplCallInst->setReturnVar(returnVar);
+      stmt->setReturnVar(returnVar);
     }
 
     for (unsigned i = 0, e = ci.getNumOperands() - 1; i < e; ++i) {
       Expr* param = visitValue(ci.getOperand(i));
-      bplCallInst->addParam(param);
+      stmt->addParam(param);
     }
 
-    block->addInstruction(bplCallInst);
+    block->addInstruction(stmt);
   }
 }
 
 void SmackInstVisitor::visitReturnInst(ReturnInst& ri) {
   processInstruction(ri);
 
-  BPLReturnInst* bplInst;
+  ReturnStmt* stmt;
   Value* retVal = ri.getReturnValue();
   if (retVal == NULL) {
     // void return value
-    bplInst = new BPLReturnInst(&ri);
+    stmt = new ReturnStmt(&ri);
   } else {
     Expr* retExpr = visitValue(retVal);
-    bplInst = new BPLReturnInst(&ri, block->getParentProcedure()->getReturnVar(), retExpr);
+    stmt = new ReturnStmt(&ri, block->getParentProcedure()->getReturnVar(), retExpr);
   }
-  block->addInstruction(bplInst);
+  block->addInstruction(stmt);
 }
 
 void SmackInstVisitor::visitLoadInst(LoadInst& li) {
@@ -249,8 +249,8 @@ void SmackInstVisitor::visitLoadInst(LoadInst& li) {
   Value* ptr = li.getPointerOperand();
   MemExpr* memExpr = new MemExpr(visitValue(ptr), Memory::create());
   Expr* expr = new VarExpr(&li);
-  BPLAssignInst* assignInst = new BPLAssignInst(&li, expr, memExpr);
-  block->addInstruction(assignInst);
+  AssignStmt* assignStmt = new AssignStmt(&li, expr, memExpr);
+  block->addInstruction(assignStmt);
 }
 
 void SmackInstVisitor::visitStoreInst(StoreInst& si) {
@@ -259,8 +259,8 @@ void SmackInstVisitor::visitStoreInst(StoreInst& si) {
   Value* ptr = si.getPointerOperand();
   MemExpr* memExpr = new MemExpr(visitValue(ptr), Memory::create());
   Expr* expr = visitValue(si.getOperand(0));
-  BPLAssignInst* assignInst = new BPLAssignInst(&si, memExpr, expr);
-  block->addInstruction(assignInst);
+  AssignStmt* assignStmt = new AssignStmt(&si, memExpr, expr);
+  block->addInstruction(assignStmt);
 }
 
 void SmackInstVisitor::visitGetElementPtrInst(GetElementPtrInst& gepi) {
@@ -297,8 +297,8 @@ void SmackInstVisitor::visitGetElementPtrInst(GetElementPtrInst& gepi) {
   }
 
   VarExpr* varExpr = new VarExpr(&gepi);
-  BPLAssignInst* bplInst = new BPLAssignInst(&gepi, varExpr, ptr);
-  block->addInstruction(bplInst);
+  AssignStmt* stmt = new AssignStmt(&gepi, varExpr, ptr);
+  block->addInstruction(stmt);
 }
 
 void SmackInstVisitor::visitICmpInst(ICmpInst& ci) {
@@ -306,32 +306,32 @@ void SmackInstVisitor::visitICmpInst(ICmpInst& ci) {
 
   Expr* left = visitValue(ci.getOperand(0));
   Expr* right = visitValue(ci.getOperand(1));
-  BPLCmpInst* cmpInst = new BPLCmpInst(&ci, left, right);
-  block->addInstruction(cmpInst);
+  CmpStmt* cmpStmt = new CmpStmt(&ci, left, right);
+  block->addInstruction(cmpStmt);
 }
 
 void SmackInstVisitor::visitZExtInst(ZExtInst& ci) {
   processInstruction(ci);
 
-  BPLInstruction* bplInst;
+  Statement* stmt;
   if (ci.getSrcTy()->isIntegerTy() && ci.getSrcTy()->getPrimitiveSizeInBits() == 1) {
-    bplInst = new BPLBoolToIntInst(&ci, visitValue(ci.getOperand(0)));
+    stmt = new BoolToIntStmt(&ci, visitValue(ci.getOperand(0)));
   } else {
-    bplInst = new BPLAssignInst(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
+    stmt = new AssignStmt(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
   }
-  block->addInstruction(bplInst);
+  block->addInstruction(stmt);
 }
 
 void SmackInstVisitor::visitSExtInst(SExtInst& ci) {
   processInstruction(ci);
 
-  BPLInstruction* bplInst;
+  Statement* stmt;
   if (ci.getSrcTy()->isIntegerTy() && ci.getSrcTy()->getPrimitiveSizeInBits() == 1) {
-    bplInst = new BPLBoolToIntInst(&ci, visitValue(ci.getOperand(0)));
+    stmt = new BoolToIntStmt(&ci, visitValue(ci.getOperand(0)));
   } else {
-    bplInst = new BPLAssignInst(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
+    stmt = new AssignStmt(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
   }
-  block->addInstruction(bplInst);
+  block->addInstruction(stmt);
 }
 
 void SmackInstVisitor::visitBitCastInst(BitCastInst& ci) {
@@ -339,8 +339,8 @@ void SmackInstVisitor::visitBitCastInst(BitCastInst& ci) {
   // TODO: currently this is a noop instruction
   processInstruction(ci);
 
-  BPLAssignInst* assignInst = new BPLAssignInst(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
-  block->addInstruction(assignInst);
+  AssignStmt* assignStmt = new AssignStmt(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
+  block->addInstruction(assignStmt);
 }
 
 void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
@@ -348,6 +348,6 @@ void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
 
   Expr* left = visitValue(bo.getOperand(0));
   Expr* right = visitValue(bo.getOperand(1));
-  BPLBinaryOperatorInst* binaryOperatorInst = new BPLBinaryOperatorInst(&bo, left, right);
-  block->addInstruction(binaryOperatorInst);
+  BinaryOperatorStmt* binaryOperatorStmt = new BinaryOperatorStmt(&bo, left, right);
+  block->addInstruction(binaryOperatorStmt);
 }

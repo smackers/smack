@@ -2,20 +2,20 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BPLInstructions.h"
+#include "Statements.h"
 
 using namespace smack;
 
-Expr* BPLAssignInst::getLeft() const {
+Expr* AssignStmt::getLeft() const {
   return left;
 }
 
-Expr* BPLAssignInst::getRight() const {
+Expr* AssignStmt::getRight() const {
   return right;
 }
 
-void BPLAssignInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void AssignStmt::print(std::ostream &os) const {
+  Statement::print(os);
   os << *left << " := " << *right << ";\n";
 }
 
@@ -23,27 +23,27 @@ const Function* CalledFunction::getCalledFunction() {
   return calledFunction;
 }
 
-BPLCallInst::~BPLCallInst() {
+CallStmt::~CallStmt() {
   std::for_each(calledFunctions.begin(), calledFunctions.end(), &CalledFunction::destroy);
   calledFunctions.clear();
 }
 
-CalledFunction* BPLCallInst::addCalledFunction(const Function* func) {
+CalledFunction* CallStmt::addCalledFunction(const Function* func) {
   CalledFunction* calledFunction = new CalledFunction(func);
   calledFunctions.push_back(calledFunction);
   return calledFunction;
 }
 
-void BPLCallInst::setReturnVar(VarExpr* returnVarP) {
+void CallStmt::setReturnVar(VarExpr* returnVarP) {
   returnVar = returnVarP;
 }
 
-void BPLCallInst::addParam(Expr* param) {
+void CallStmt::addParam(Expr* param) {
   params.push_back(param);
 }
 
-void BPLCallInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void CallStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(isa<CallInst>(inst) && "Call instruction has to be CallInst");
   
   if (calledFunctions.empty()) {
@@ -108,8 +108,8 @@ void BPLCallInst::print(std::ostream &os) const {
   }
 }
 
-void BPLCmpInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void CmpStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "Cmp instruction has to have a name");
   assert(isa<ICmpInst>(inst) && "Compare instruction has to be integer compare");
   const ICmpInst* icmp = cast<ICmpInst>(inst);
@@ -151,24 +151,24 @@ void BPLCmpInst::print(std::ostream &os) const {
   os << "(" << *left << ", " << *right << ");\n";
 }
 
-void BPLBoolToIntInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void BoolToIntStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "BoolToInt instruction has to have a name");
   os << "call " << translateName(inst->getName().str()) << " := ";
   os << "__SMACK_BoolToInt";
   os << "(" << *boolExpr << ");\n";
 }
 
-void BPLTruncInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void TruncStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "Trunc instruction has to have a name");
   os << "call " << translateName(inst->getName().str()) << " := ";
   os << "__SMACK_Trunc";
   os << "(" << *operand << ");\n";
 }
 
-void BPLBinaryOperatorInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void BinaryOperatorStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "BinaryOperator instruction has to have a name");
   assert(isa<BinaryOperator>(inst) && "Binary operator instruction has to be BinaryOperator");
   os << "call " << translateName(inst->getName().str()) << " := ";
@@ -218,8 +218,8 @@ void BPLBinaryOperatorInst::print(std::ostream &os) const {
   os << "(" << *left << ", " << *right << ");\n";
 }
 
-void BPLAllocaInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void AllocaStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "Alloca instruction has to have a name");
   std::string varName = translateName(inst->getName().str());
   
@@ -227,8 +227,8 @@ void BPLAllocaInst::print(std::ostream &os) const {
   os << "__SMACK_alloca(mul(" << typeSize->getOffComponent() << ", " << arraySize->getOffComponent() << "));\n";
 }
 
-void BPLMallocInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void MallocStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "Malloc instruction has to have a name");
   std::string varName = translateName(inst->getName().str());
   
@@ -236,23 +236,23 @@ void BPLMallocInst::print(std::ostream &os) const {
   os << "__SMACK_malloc(" << arraySize->getOffComponent() << ");\n";
 }
 
-void BPLFreeInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void FreeStmt::print(std::ostream &os) const {
+  Statement::print(os);
   os << "call __SMACK_free(" << *freedPtr << ");\n";
 }
 
-void BPLAssertInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void AssertStmt::print(std::ostream &os) const {
+  Statement::print(os);
   os << "assert(" << *assertion << " != Ptr(null, 0bv32));\n";
 }
 
-void BPLAssumeInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void AssumeStmt::print(std::ostream &os) const {
+  Statement::print(os);
   os << "assume(" << *assumption << " != Ptr(null, 0bv32));\n";
 }
 
-void BPLReturnInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void ReturnStmt::print(std::ostream &os) const {
+  Statement::print(os);
   if (returnValue != NULL) {
     assert(returnVar != NULL && "Return variable shoudn't be NULL");
     os << *returnVar << " := " << *returnValue << ";\n  ";
@@ -260,8 +260,8 @@ void BPLReturnInst::print(std::ostream &os) const {
   os << "return;\n";
 }
 
-void BPLSelectInst::print(std::ostream &os) const {
-  BPLInstruction::print(os);
+void SelectStmt::print(std::ostream &os) const {
+  Statement::print(os);
   assert(inst->hasName() && "Select instruction has to have a name");
   os << "if (" << *condition << ") {\n";
   os << "    " << translateName(inst->getName().str()) << " := " << *trueExpr << ";\n";

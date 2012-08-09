@@ -23,7 +23,7 @@ std::string BPLBlock::getName() const {
   return basicBlock->getName();
 }
 
-void BPLBlock::addInstruction(BPLInstruction* inst) {
+void BPLBlock::addInstruction(Statement* inst) {
   instructions.push_back(inst);
   inst->setParentBlock(this);
 }
