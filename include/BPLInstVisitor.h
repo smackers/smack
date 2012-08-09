@@ -5,7 +5,7 @@
 #ifndef BPLINSTVISITOR_H
 #define BPLINSTVISITOR_H
 
-#include "BPLProcedure.h"
+#include "Procedure.h"
 #include "BPLModule.h"
 #include "Common.h"
 #include "llvm/ADT/SmallVector.h"

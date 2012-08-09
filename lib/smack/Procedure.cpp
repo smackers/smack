@@ -2,54 +2,54 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BPLProcedure.h"
+#include "Procedure.h"
 
 using namespace smack;
 
-BPLProcedure::~BPLProcedure() {}
+Procedure::~Procedure() {}
 
-std::string BPLProcedure::getName() const {
+std::string Procedure::getName() const {
   return name;
 }
 
-void BPLProcedure::setNotVoid() {
+void Procedure::setNotVoid() {
   voidFlag = false;
 }
 
-bool BPLProcedure::isVoid() const {
+bool Procedure::isVoid() const {
   return voidFlag;
 }
 
-void BPLProcedure::addArgument(std::string argument) {
+void Procedure::addArgument(std::string argument) {
   arguments.push_back(argument);
 }
 
-void BPLProcedure::setReturnVar(BPLVarExpr* var) {
+void Procedure::setReturnVar(BPLVarExpr* var) {
   returnVar = var;
 }
 
-BPLVarExpr* BPLProcedure::getReturnVar() const {
+BPLVarExpr* Procedure::getReturnVar() const {
   return returnVar;
 }
 
-void BPLProcedure::setEntryBlock(BPLBlock* block) {
+void Procedure::setEntryBlock(BPLBlock* block) {
   entryBlock = block;
 }
 
-BPLBlock* BPLProcedure::getEntryBlock() const {
+BPLBlock* Procedure::getEntryBlock() const {
   return entryBlock;
 }
 
-void BPLProcedure::addBlock(BPLBlock* block) {
+void Procedure::addBlock(BPLBlock* block) {
   blocks.push_back(block);
   block->setParentProcedure(this);
 }
 
-std::vector<BPLBlock*>& BPLProcedure::getBlocks() {
+std::vector<BPLBlock*>& Procedure::getBlocks() {
   return blocks;
 }
 
-void BPLProcedure::addVariable(Value* var) {
+void Procedure::addVariable(Value* var) {
   assert(var->getType()->getTypeID() != Type::VoidTyID && "Variable type shoudln't be void");
   if (!var->hasName()) {
     var->setName("smackVar");
@@ -57,7 +57,7 @@ void BPLProcedure::addVariable(Value* var) {
   vars.push_back(var);
 }
 
-void BPLProcedure::addBoolVariable(Value* var) {
+void Procedure::addBoolVariable(Value* var) {
   assert(var->getType()->getTypeID() != Type::VoidTyID && "Variable type shoudln't be void");
   if (!var->hasName()) {
     var->setName("smackVar");
@@ -65,7 +65,7 @@ void BPLProcedure::addBoolVariable(Value* var) {
   boolVars.push_back(var);
 }
 
-void BPLProcedure::print(std::ostream &os) const {
+void Procedure::print(std::ostream &os) const {
   if (this == 0) {
     os << "<null BPLProcedure>";
   } else {
@@ -113,7 +113,7 @@ void BPLProcedure::print(std::ostream &os) const {
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const BPLProcedure* proc) {
+std::ostream &operator<<(std::ostream &os, const Procedure* proc) {
   if (proc == 0) {
     os << "<null> BPLProcedure!\n";
   } else {
@@ -122,7 +122,7 @@ std::ostream &operator<<(std::ostream &os, const BPLProcedure* proc) {
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const BPLProcedure& proc) {
+std::ostream &operator<<(std::ostream &os, const Procedure& proc) {
   proc.print(os);
   return os;
 }

@@ -30,7 +30,7 @@ bool BplGenerator::runOnModule(Module &m) {
     }
     DEBUG(errs() << "Analyzing function: " << func->getName().str() << "\n");
 
-    BPLProcedure* bplProc = new BPLProcedure(func->getName().str());
+    Procedure* bplProc = new Procedure(func->getName().str());
 
     // set return variable name
     if (func->getReturnType()->getTypeID() != Type::VoidTyID) {

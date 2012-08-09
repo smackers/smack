@@ -2,8 +2,8 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef BPLPROCEDURE_H_
-#define BPLPROCEDURE_H_
+#ifndef PROCEDURE_H_
+#define PROCEDURE_H_
 
 #include "BPLBlock.h"
 #include "BPLPrintUtils.h"
@@ -17,7 +17,7 @@ namespace smack {
 
 class AnnoExpr;
 
-class BPLProcedure {
+class Procedure {
 private:
   std::string name;
   bool voidFlag;
@@ -29,8 +29,8 @@ private:
   std::vector<Value*> boolVars;
 
 public:
-	BPLProcedure(std::string name) : name(name), voidFlag(true), returnVar(NULL), entryBlock(NULL) {}
-	virtual ~BPLProcedure();
+	Procedure(std::string name) : name(name), voidFlag(true), returnVar(NULL), entryBlock(NULL) {}
+	virtual ~Procedure();
 	std::string getName() const;
   void setNotVoid();
   bool isVoid() const;
@@ -45,9 +45,9 @@ public:
   void addBoolVariable(Value* var);
   void print(std::ostream &os) const;
 };
-std::ostream &operator<<(std::ostream &os, const BPLProcedure* proc);
-std::ostream &operator<<(std::ostream &os, const BPLProcedure& proc);
+std::ostream &operator<<(std::ostream &os, const Procedure* proc);
+std::ostream &operator<<(std::ostream &os, const Procedure& proc);
 
 }
 
-#endif /*BPLPROCEDURE_H_*/
+#endif /*PROCEDURE_H_*/

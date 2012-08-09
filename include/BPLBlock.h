@@ -15,14 +15,14 @@ using namespace llvm;
 
 namespace smack {
 
-class BPLProcedure;
+class Procedure;
 
 class BPLBlock {
 private:
   std::vector<BPLBlock*> succBlocks;
   BasicBlock* basicBlock;
   std::vector<BPLInstruction*> instructions;
-  BPLProcedure* parentProcedure;
+  Procedure* parentProcedure;
   
 public:
 	BPLBlock(BasicBlock* block);
@@ -31,8 +31,8 @@ public:
   BasicBlock* getBasicBlock() const;
   std::string getName() const;
   void addInstruction(BPLInstruction* inst);
-  void setParentProcedure(BPLProcedure* parentProc);
-  BPLProcedure* getParentProcedure() const;
+  void setParentProcedure(Procedure* parentProc);
+  Procedure* getParentProcedure() const;
   void print(std::ostream &os) const;
 };
 std::ostream &operator<<(std::ostream &os, const BPLBlock* block);

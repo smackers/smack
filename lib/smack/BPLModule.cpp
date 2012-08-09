@@ -15,12 +15,12 @@ void BPLModule::addGlobalVariable(std::string name) {
   globalVariables.insert(name);
 }
 
-void BPLModule::addProcedure(BPLProcedure* procedure) {
+void BPLModule::addProcedure(Procedure* procedure) {
   assert(procedures.count(procedure->getName()) == 0);
   procedures[procedure->getName()] = procedure;
 }
 
-BPLProcedure* BPLModule::getProcedure(std::string name) {
+Procedure* BPLModule::getProcedure(std::string name) {
   if (procedures.count(name) == 0) {
     return NULL;
   } else {
@@ -28,7 +28,7 @@ BPLProcedure* BPLModule::getProcedure(std::string name) {
   }
 }
 
-std::map<std::string, BPLProcedure*>& BPLModule::getProcedures() {
+std::map<std::string, Procedure*>& BPLModule::getProcedures() {
   return procedures;
 }
 
@@ -47,7 +47,7 @@ void BPLModule::print(std::ostream &os) const {
 
     os << "\n";
 
-    for(std::map<std::string, BPLProcedure*>::const_iterator
+    for(std::map<std::string, Procedure*>::const_iterator
         i = procedures.begin(), e = procedures.end(); i != e; ++i) {
       os << i->second << "\n";
     }

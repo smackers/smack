@@ -5,7 +5,7 @@
 #ifndef BPLMODULE_H_
 #define BPLMODULE_H_
 
-#include "BPLProcedure.h"
+#include "Procedure.h"
 #include "Common.h"
 #include <map>
 #include <set>
@@ -18,15 +18,15 @@ namespace smack {
 class BPLModule {
 private:
   std::set<std::string> globalVariables;
-  std::map<std::string, BPLProcedure*> procedures;
+  std::map<std::string, Procedure*> procedures;
 
 public:
   BPLModule();
   virtual ~BPLModule();
   void addGlobalVariable(std::string name);
-	void addProcedure(BPLProcedure* procedure);
-	BPLProcedure* getProcedure(std::string name);
-	std::map<std::string, BPLProcedure*>& getProcedures();
+	void addProcedure(Procedure* procedure);
+	Procedure* getProcedure(std::string name);
+	std::map<std::string, Procedure*>& getProcedures();
   void print(std::ostream &os) const;
 };
 std::ostream &operator<<(std::ostream &os, const BPLModule* module);

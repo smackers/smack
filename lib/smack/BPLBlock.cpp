@@ -28,11 +28,11 @@ void BPLBlock::addInstruction(BPLInstruction* inst) {
   inst->setParentBlock(this);
 }
 
-void BPLBlock::setParentProcedure(BPLProcedure* parentProc) {
+void BPLBlock::setParentProcedure(Procedure* parentProc) {
   parentProcedure = parentProc;
 }
 
-BPLProcedure* BPLBlock::getParentProcedure() const {
+Procedure* BPLBlock::getParentProcedure() const {
   return parentProcedure;
 }
 
