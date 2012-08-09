@@ -6,7 +6,7 @@
 #define PROCEDURE_H_
 
 #include "BPLBlock.h"
-#include "BPLPrintUtils.h"
+#include "BplPrintUtils.h"
 #include "Utils.h"
 #include <map>
 #include <sstream>

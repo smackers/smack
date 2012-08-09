@@ -8,7 +8,7 @@
 #include "BPLBlock.h"
 #include "BPLInstVisitor.h"
 #include "BPLModule.h"
-#include "BPLPrintUtils.h"
+#include "BplPrintUtils.h"
 #include "llvm/Function.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Pass.h"

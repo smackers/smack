@@ -5,7 +5,7 @@
 #ifndef BPLEXPR_H_
 #define BPLEXPR_H_
 
-#include "BPLPrintUtils.h"
+#include "BplPrintUtils.h"
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
 #include "llvm/Support/Debug.h"
