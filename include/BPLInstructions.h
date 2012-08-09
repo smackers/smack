@@ -16,7 +16,7 @@ private:
 
 public:
   BPLAssignInst(Instruction* instP, Expr* leftP, Expr* rightP) :
-    BPLInstruction(BPLAssignInstID, instP), left(leftP), right(rightP) {}
+    BPLInstruction(AssignInstID, instP), left(leftP), right(rightP) {}
   virtual ~BPLAssignInst() {}
   Expr* getLeft() const;
   Expr* getRight() const;
@@ -27,7 +27,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLAssignInstID;
+    return inst->getInstructionID() == AssignInstID;
   }  
 };
 
@@ -51,7 +51,7 @@ private:
   std::vector<Expr*> params;
 
 public:
-  BPLCallInst(Instruction* instP) : BPLInstruction(BPLCallInstID, instP), returnVar(NULL) {}
+  BPLCallInst(Instruction* instP) : BPLInstruction(CallInstID, instP), returnVar(NULL) {}
   virtual ~BPLCallInst();
   CalledFunction* addCalledFunction(const Function* func);
   void setReturnVar(VarExpr* returnVarP);
@@ -63,7 +63,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLCallInstID;
+    return inst->getInstructionID() == CallInstID;
   }  
 };
 
@@ -74,7 +74,7 @@ private:
 
 public:
   BPLCmpInst(Instruction* instP, Expr* leftP, Expr* rightP) :
-    BPLInstruction(BPLCmpInstID, instP), left(leftP), right(rightP) {}
+    BPLInstruction(CmpInstID, instP), left(leftP), right(rightP) {}
   virtual ~BPLCmpInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -83,7 +83,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLCmpInstID;
+    return inst->getInstructionID() == CmpInstID;
   }  
 };
 
@@ -93,7 +93,7 @@ private:
 
 public:
   BPLBoolToIntInst(Instruction* instP, Expr* boolExprP) :
-    BPLInstruction(BPLBoolToIntInstID, instP), boolExpr(boolExprP) {}
+    BPLInstruction(BoolToIntInstID, instP), boolExpr(boolExprP) {}
   virtual ~BPLBoolToIntInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -102,7 +102,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLBoolToIntInstID;
+    return inst->getInstructionID() == BoolToIntInstID;
   }  
 };
 
@@ -112,7 +112,7 @@ private:
 
 public:
   BPLTruncInst(Instruction* instP, Expr* operandP) :
-    BPLInstruction(BPLTruncInstID, instP), operand(operandP) {}
+    BPLInstruction(TruncInstID, instP), operand(operandP) {}
   virtual ~BPLTruncInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -121,7 +121,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLTruncInstID;
+    return inst->getInstructionID() == TruncInstID;
   }  
 };
 
@@ -132,7 +132,7 @@ private:
 
 public:
   BPLBinaryOperatorInst(Instruction* instP, Expr* leftP, Expr* rightP) :
-    BPLInstruction(BPLBinaryOperatorInstID, instP), left(leftP), right(rightP) {}
+    BPLInstruction(BinaryOperatorInstID, instP), left(leftP), right(rightP) {}
   virtual ~BPLBinaryOperatorInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -141,7 +141,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLBinaryOperatorInstID;
+    return inst->getInstructionID() == BinaryOperatorInstID;
   }  
 };
 
@@ -152,7 +152,7 @@ private:
 
 public:
   BPLAllocaInst(Instruction* instP, ConstExpr* typeSizeP, Expr* arraySizeP) :
-    BPLInstruction(BPLAllocaInstID, instP), typeSize(typeSizeP), arraySize(arraySizeP) {}
+    BPLInstruction(AllocaInstID, instP), typeSize(typeSizeP), arraySize(arraySizeP) {}
   virtual ~BPLAllocaInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -161,7 +161,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLAllocaInstID;
+    return inst->getInstructionID() == AllocaInstID;
   }  
 };
 
@@ -171,7 +171,7 @@ private:
   
 public:
   BPLMallocInst(Instruction* instP, Expr* arraySizeP) :
-    BPLInstruction(BPLMallocInstID, instP), arraySize(arraySizeP) {}
+    BPLInstruction(MallocInstID, instP), arraySize(arraySizeP) {}
   virtual ~BPLMallocInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -180,7 +180,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLMallocInstID;
+    return inst->getInstructionID() == MallocInstID;
   }  
 };
 
@@ -190,7 +190,7 @@ private:
   
 public:
   BPLFreeInst(Instruction* instP, Expr* freedPtrP) :
-    BPLInstruction(BPLFreeInstID, instP), freedPtr(freedPtrP) {}
+    BPLInstruction(FreeInstID, instP), freedPtr(freedPtrP) {}
   virtual ~BPLFreeInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -199,7 +199,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLFreeInstID;
+    return inst->getInstructionID() == FreeInstID;
   }  
 };
 
@@ -209,7 +209,7 @@ private:
   
 public:
   BPLAssertInst(Instruction* instP, Expr* assertionP) :
-    BPLInstruction(BPLAssertInstID, instP), assertion(assertionP) {}
+    BPLInstruction(AssertInstID, instP), assertion(assertionP) {}
   virtual ~BPLAssertInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -218,7 +218,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLAssertInstID;
+    return inst->getInstructionID() == AssertInstID;
   }  
 };
 
@@ -228,7 +228,7 @@ private:
   
 public:
   BPLAssumeInst(Instruction* instP, Expr* assumptionP) :
-    BPLInstruction(BPLAssumeInstID, instP), assumption(assumptionP) {}
+    BPLInstruction(AssumeInstID, instP), assumption(assumptionP) {}
   virtual ~BPLAssumeInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -237,7 +237,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLAssumeInstID;
+    return inst->getInstructionID() == AssumeInstID;
   }  
 };
 
@@ -248,9 +248,9 @@ private:
   
 public:
   BPLReturnInst(Instruction* instP) :
-    BPLInstruction(BPLReturnInstID, instP), returnVar(0), returnValue(0) {}
+    BPLInstruction(ReturnInstID, instP), returnVar(0), returnValue(0) {}
   BPLReturnInst(Instruction* instP, VarExpr* returnVarP, Expr* returnValueP) :
-    BPLInstruction(BPLReturnInstID, instP), returnVar(returnVarP), returnValue(returnValueP) {}
+    BPLInstruction(ReturnInstID, instP), returnVar(returnVarP), returnValue(returnValueP) {}
   virtual ~BPLReturnInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -259,7 +259,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLReturnInstID;
+    return inst->getInstructionID() == ReturnInstID;
   }  
 };
 
@@ -271,7 +271,7 @@ private:
 
 public:
   BPLSelectInst(Instruction* instP, Expr* conditionP, Expr* trueP, Expr* falseP) :
-    BPLInstruction(BPLSelectInstID, instP), condition(conditionP), trueExpr(trueP), falseExpr(falseP) {}
+    BPLInstruction(SelectInstID, instP), condition(conditionP), trueExpr(trueP), falseExpr(falseP) {}
   virtual ~BPLSelectInst() {}
   virtual void print(std::ostream &os) const;
 
@@ -280,7 +280,7 @@ public:
   }
 
   static inline bool classof(const BPLInstruction* inst) {
-    return inst->getBPLInstructionID() == BPLSelectInstID;
+    return inst->getInstructionID() == SelectInstID;
   }  
 };
 

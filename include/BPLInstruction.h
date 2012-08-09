@@ -18,37 +18,37 @@ class BPLBlock;
 
 class BPLInstruction {
 public:
-  enum BPLInstructionIDs {
-    BPLAssignInstID,
-    BPLCallInstID,
-    BPLCmpInstID,
-    BPLBoolToIntInstID,
-    BPLTruncInstID,
-    BPLBinaryOperatorInstID,
-    BPLAllocaInstID,
-    BPLMallocInstID,
-    BPLFreeInstID,
-    BPLAssertInstID,
-    BPLAssumeInstID,
-    BPLReturnInstID,
-    BPLSelectInstID
+  enum InstructionIDs {
+    AssignInstID,
+    CallInstID,
+    CmpInstID,
+    BoolToIntInstID,
+    TruncInstID,
+    BinaryOperatorInstID,
+    AllocaInstID,
+    MallocInstID,
+    FreeInstID,
+    AssertInstID,
+    AssumeInstID,
+    ReturnInstID,
+    SelectInstID
   };
 
 private:
-  BPLInstructionIDs id;
+  InstructionIDs id;
   
 protected:
   Instruction* inst;
   BPLBlock* parentBlock;
   
 public:
-  BPLInstruction(BPLInstructionIDs idP, Instruction* instP) : id(idP), inst(instP) {}
+  BPLInstruction(InstructionIDs idP, Instruction* instP) : id(idP), inst(instP) {}
 	virtual ~BPLInstruction() {}
   void setParentBlock(BPLBlock* parentBlockP);
   BPLBlock* getParentBlock() const;
   virtual void print(std::ostream &os) const;
   
-  inline BPLInstructionIDs getBPLInstructionID() const {
+  inline InstructionIDs getInstructionID() const {
     return id;
   }
   
