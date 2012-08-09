@@ -28,7 +28,7 @@ private:
   std::vector<Value*> boolVars;
 
 public:
-	BPLProcedure(std::string name) : name(name), voidFlag(true), returnVar(NULL) {}
+	BPLProcedure(std::string name) : name(name), voidFlag(true), returnVar(NULL), entryBlock(NULL) {}
 	virtual ~BPLProcedure();
 	std::string getName() const;
   void setNotVoid();
