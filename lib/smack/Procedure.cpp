@@ -24,11 +24,11 @@ void Procedure::addArgument(std::string argument) {
   arguments.push_back(argument);
 }
 
-void Procedure::setReturnVar(BPLVarExpr* var) {
+void Procedure::setReturnVar(VarExpr* var) {
   returnVar = var;
 }
 
-BPLVarExpr* Procedure::getReturnVar() const {
+VarExpr* Procedure::getReturnVar() const {
   return returnVar;
 }
 

@@ -11,15 +11,15 @@ namespace smack {
 
 class BPLAssignInst : public BPLInstruction {
 private:
-  BPLExpr* left;
-  BPLExpr* right;
+  Expr* left;
+  Expr* right;
 
 public:
-  BPLAssignInst(Instruction* instP, BPLExpr* leftP, BPLExpr* rightP) :
+  BPLAssignInst(Instruction* instP, Expr* leftP, Expr* rightP) :
     BPLInstruction(BPLAssignInstID, instP), left(leftP), right(rightP) {}
   virtual ~BPLAssignInst() {}
-  BPLExpr* getLeft() const;
-  BPLExpr* getRight() const;
+  Expr* getLeft() const;
+  Expr* getRight() const;
   virtual void print(std::ostream &os) const;
 
   static inline bool classof(const BPLAssignInst* inst) {
@@ -47,15 +47,15 @@ public:
 class BPLCallInst : public BPLInstruction {
 private:
   std::vector<CalledFunction*> calledFunctions;
-  BPLVarExpr* returnVar;
-  std::vector<BPLExpr*> params;
+  VarExpr* returnVar;
+  std::vector<Expr*> params;
 
 public:
   BPLCallInst(Instruction* instP) : BPLInstruction(BPLCallInstID, instP), returnVar(NULL) {}
   virtual ~BPLCallInst();
   CalledFunction* addCalledFunction(const Function* func);
-  void setReturnVar(BPLVarExpr* returnVarP);
-  void addParam(BPLExpr* param);
+  void setReturnVar(VarExpr* returnVarP);
+  void addParam(Expr* param);
   virtual void print(std::ostream &os) const;
 
   static inline bool classof(const BPLCallInst* inst) {
@@ -69,11 +69,11 @@ public:
 
 class BPLCmpInst : public BPLInstruction {
 private:
-  BPLExpr* left;
-  BPLExpr* right;
+  Expr* left;
+  Expr* right;
 
 public:
-  BPLCmpInst(Instruction* instP, BPLExpr* leftP, BPLExpr* rightP) :
+  BPLCmpInst(Instruction* instP, Expr* leftP, Expr* rightP) :
     BPLInstruction(BPLCmpInstID, instP), left(leftP), right(rightP) {}
   virtual ~BPLCmpInst() {}
   virtual void print(std::ostream &os) const;
@@ -89,10 +89,10 @@ public:
 
 class BPLBoolToIntInst : public BPLInstruction {
 private:
-  BPLExpr* boolExpr;
+  Expr* boolExpr;
 
 public:
-  BPLBoolToIntInst(Instruction* instP, BPLExpr* boolExprP) :
+  BPLBoolToIntInst(Instruction* instP, Expr* boolExprP) :
     BPLInstruction(BPLBoolToIntInstID, instP), boolExpr(boolExprP) {}
   virtual ~BPLBoolToIntInst() {}
   virtual void print(std::ostream &os) const;
@@ -108,10 +108,10 @@ public:
 
 class BPLTruncInst : public BPLInstruction {
 private:
-  BPLExpr* operand;
+  Expr* operand;
 
 public:
-  BPLTruncInst(Instruction* instP, BPLExpr* operandP) :
+  BPLTruncInst(Instruction* instP, Expr* operandP) :
     BPLInstruction(BPLTruncInstID, instP), operand(operandP) {}
   virtual ~BPLTruncInst() {}
   virtual void print(std::ostream &os) const;
@@ -127,11 +127,11 @@ public:
 
 class BPLBinaryOperatorInst : public BPLInstruction {
 private:
-  BPLExpr* left;
-  BPLExpr* right;
+  Expr* left;
+  Expr* right;
 
 public:
-  BPLBinaryOperatorInst(Instruction* instP, BPLExpr* leftP, BPLExpr* rightP) :
+  BPLBinaryOperatorInst(Instruction* instP, Expr* leftP, Expr* rightP) :
     BPLInstruction(BPLBinaryOperatorInstID, instP), left(leftP), right(rightP) {}
   virtual ~BPLBinaryOperatorInst() {}
   virtual void print(std::ostream &os) const;
@@ -147,11 +147,11 @@ public:
 
 class BPLAllocaInst : public BPLInstruction {
 private:
-  BPLConstantExpr* typeSize;
-  BPLExpr* arraySize;
+  ConstExpr* typeSize;
+  Expr* arraySize;
 
 public:
-  BPLAllocaInst(Instruction* instP, BPLConstantExpr* typeSizeP, BPLExpr* arraySizeP) :
+  BPLAllocaInst(Instruction* instP, ConstExpr* typeSizeP, Expr* arraySizeP) :
     BPLInstruction(BPLAllocaInstID, instP), typeSize(typeSizeP), arraySize(arraySizeP) {}
   virtual ~BPLAllocaInst() {}
   virtual void print(std::ostream &os) const;
@@ -167,10 +167,10 @@ public:
 
 class BPLMallocInst : public BPLInstruction {
 private:
-  BPLExpr* arraySize;
+  Expr* arraySize;
   
 public:
-  BPLMallocInst(Instruction* instP, BPLExpr* arraySizeP) :
+  BPLMallocInst(Instruction* instP, Expr* arraySizeP) :
     BPLInstruction(BPLMallocInstID, instP), arraySize(arraySizeP) {}
   virtual ~BPLMallocInst() {}
   virtual void print(std::ostream &os) const;
@@ -186,10 +186,10 @@ public:
 
 class BPLFreeInst : public BPLInstruction {
 private:
-  BPLExpr* freedPtr;
+  Expr* freedPtr;
   
 public:
-  BPLFreeInst(Instruction* instP, BPLExpr* freedPtrP) :
+  BPLFreeInst(Instruction* instP, Expr* freedPtrP) :
     BPLInstruction(BPLFreeInstID, instP), freedPtr(freedPtrP) {}
   virtual ~BPLFreeInst() {}
   virtual void print(std::ostream &os) const;
@@ -205,10 +205,10 @@ public:
 
 class BPLAssertInst : public BPLInstruction {
 private:
-  BPLExpr* assertion;
+  Expr* assertion;
   
 public:
-  BPLAssertInst(Instruction* instP, BPLExpr* assertionP) :
+  BPLAssertInst(Instruction* instP, Expr* assertionP) :
     BPLInstruction(BPLAssertInstID, instP), assertion(assertionP) {}
   virtual ~BPLAssertInst() {}
   virtual void print(std::ostream &os) const;
@@ -224,10 +224,10 @@ public:
 
 class BPLAssumeInst : public BPLInstruction {
 private:
-  BPLExpr* assumption;
+  Expr* assumption;
   
 public:
-  BPLAssumeInst(Instruction* instP, BPLExpr* assumptionP) :
+  BPLAssumeInst(Instruction* instP, Expr* assumptionP) :
     BPLInstruction(BPLAssumeInstID, instP), assumption(assumptionP) {}
   virtual ~BPLAssumeInst() {}
   virtual void print(std::ostream &os) const;
@@ -243,13 +243,13 @@ public:
 
 class BPLReturnInst : public BPLInstruction {
 private:
-  BPLVarExpr* returnVar;
-  BPLExpr* returnValue;
+  VarExpr* returnVar;
+  Expr* returnValue;
   
 public:
   BPLReturnInst(Instruction* instP) :
     BPLInstruction(BPLReturnInstID, instP), returnVar(0), returnValue(0) {}
-  BPLReturnInst(Instruction* instP, BPLVarExpr* returnVarP, BPLExpr* returnValueP) :
+  BPLReturnInst(Instruction* instP, VarExpr* returnVarP, Expr* returnValueP) :
     BPLInstruction(BPLReturnInstID, instP), returnVar(returnVarP), returnValue(returnValueP) {}
   virtual ~BPLReturnInst() {}
   virtual void print(std::ostream &os) const;
@@ -265,12 +265,12 @@ public:
 
 class BPLSelectInst : public BPLInstruction {
 private:
-  BPLExpr* condition;
-  BPLExpr* trueExpr;
-  BPLExpr* falseExpr;
+  Expr* condition;
+  Expr* trueExpr;
+  Expr* falseExpr;
 
 public:
-  BPLSelectInst(Instruction* instP, BPLExpr* conditionP, BPLExpr* trueP, BPLExpr* falseP) :
+  BPLSelectInst(Instruction* instP, Expr* conditionP, Expr* trueP, Expr* falseP) :
     BPLInstruction(BPLSelectInstID, instP), condition(conditionP), trueExpr(trueP), falseExpr(falseP) {}
   virtual ~BPLSelectInst() {}
   virtual void print(std::ostream &os) const;

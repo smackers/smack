@@ -2,8 +2,8 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef BPLEXPR_H_
-#define BPLEXPR_H_
+#ifndef EXPR_H_
+#define EXPR_H_
 
 #include "BplPrintUtils.h"
 #include "llvm/Constants.h"
@@ -18,25 +18,25 @@ using namespace llvm;
 
 namespace smack {
 
-class BPLExpr {
+class Expr {
 public:
-  enum BPLExprIDs {
-    BPLMemExprID,
-    BPLVarExprID,
-    BPLConstantExprID,
-    BPLPtrArithExprID,
-    BPLNotExprID,
-    BPLTrueExprID,
-    BPLFalseExprID,
-    BPLUndefExprID
+  enum ExprIDs {
+    MemExprID,
+    VarExprID,
+    ConstantExprID,
+    PtrArithExprID,
+    NotExprID,
+    TrueExprID,
+    FalseExprID,
+    UndefExprID
   };
 
 private:
-  BPLExprIDs id;
+  ExprIDs id;
   
 public:
-  BPLExpr(BPLExprIDs idP) : id(idP) {}
-  virtual ~BPLExpr() {}
+  Expr(ExprIDs idP) : id(idP) {}
+  virtual ~Expr() {}
   virtual void print(std::ostream &os) const = 0;
   
   virtual std::string getObjComponent() const {
@@ -55,17 +55,17 @@ public:
     return off.str();
   }
   
-  inline BPLExprIDs getBPLExprID() const {
+  inline ExprIDs getExprID() const {
     return id;
   }
   
-  static inline bool classof(const BPLExpr* expr) {
+  static inline bool classof(const Expr* expr) {
     return true;
   }
 };
-std::ostream &operator<<(std::ostream &os, const BPLExpr* expr);
-std::ostream &operator<<(std::ostream &os, const BPLExpr& expr);
+std::ostream &operator<<(std::ostream &os, const Expr* expr);
+std::ostream &operator<<(std::ostream &os, const Expr& expr);
 
 }
 
-#endif /*BPLEXPR_H_*/
+#endif /*EXPR_H_*/

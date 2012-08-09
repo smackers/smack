@@ -6,11 +6,11 @@
 
 using namespace smack;
 
-BPLExpr* BPLAssignInst::getLeft() const {
+Expr* BPLAssignInst::getLeft() const {
   return left;
 }
 
-BPLExpr* BPLAssignInst::getRight() const {
+Expr* BPLAssignInst::getRight() const {
   return right;
 }
 
@@ -34,11 +34,11 @@ CalledFunction* BPLCallInst::addCalledFunction(const Function* func) {
   return calledFunction;
 }
 
-void BPLCallInst::setReturnVar(BPLVarExpr* returnVarP) {
+void BPLCallInst::setReturnVar(VarExpr* returnVarP) {
   returnVar = returnVarP;
 }
 
-void BPLCallInst::addParam(BPLExpr* param) {
+void BPLCallInst::addParam(Expr* param) {
   params.push_back(param);
 }
 
@@ -59,7 +59,7 @@ void BPLCallInst::print(std::ostream &os) const {
     }
     os << func->getName().str();
     os << "(";
-    for(std::vector<BPLExpr*>::const_iterator
+    for(std::vector<Expr*>::const_iterator
         j = params.begin(), bj = params.begin(), ej = params.end(); j != ej; ++j) {
       if (j != bj) {
         os << ", ";
@@ -93,7 +93,7 @@ void BPLCallInst::print(std::ostream &os) const {
       const Function* func = (*i)->getCalledFunction();
       os << func->getName().str();
       os << "(";
-      for(std::vector<BPLExpr*>::const_iterator
+      for(std::vector<Expr*>::const_iterator
           j = params.begin(), bj = params.begin(), ej = params.end(); j != ej; ++j) {
         if (j != bj) {
           os << ", ";

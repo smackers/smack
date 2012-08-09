@@ -2,27 +2,27 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BPLExprs.h"
+#include "Exprs.h"
 
 using namespace smack;
 
-BPLExpr* BPLMemExpr::getPointer() const {
+Expr* MemExpr::getPointer() const {
   return ptr;
 }
 
-Memory* BPLMemExpr::getMemory() const {
+Memory* MemExpr::getMemory() const {
   return mem;
 }
 
-void BPLMemExpr::print(std::ostream &os) const {
+void MemExpr::print(std::ostream &os) const {
   os << *mem << "[" << *ptr << "]";
 }
 
-std::string BPLVarExpr::getName() const {
+std::string VarExpr::getName() const {
   return varName;
 }
 
-void BPLVarExpr::print(std::ostream &os) const {
+void VarExpr::print(std::ostream &os) const {
   if (var == 0) {
     assert(!varName.empty() && "If var is NULL, varName shouldn't be empty");
     os << varName;
@@ -33,7 +33,7 @@ void BPLVarExpr::print(std::ostream &os) const {
   }
 }
 
-void BPLConstantExpr::print(std::ostream &os) const {
+void ConstExpr::print(std::ostream &os) const {
   if (constant != NULL) {
     if (const ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
       if (ci->getBitWidth() == 1) {
@@ -61,13 +61,13 @@ void BPLConstantExpr::print(std::ostream &os) const {
   }
 }
 
-std::string BPLConstantExpr::getObjComponent() const {
+std::string ConstExpr::getObjComponent() const {
   std::stringstream obj;
   obj << "null";
   return obj.str();
 }
 
-std::string BPLConstantExpr::getOffComponent() const {
+std::string ConstExpr::getOffComponent() const {
   std::stringstream off;
   if (constant != NULL) {
     if (const ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
@@ -89,22 +89,22 @@ std::string BPLConstantExpr::getOffComponent() const {
   return off.str();
 }
 
-void BPLPtrArithExpr::print(std::ostream &os) const {
+void PtrArithExpr::print(std::ostream &os) const {
   os << "__SMACK_PtrArith(" << *ptr << ", " << offset->getOffComponent() << ", " << size->getOffComponent() << ")";
 }
 
-void BPLNotExpr::print(std::ostream &os) const {
+void NotExpr::print(std::ostream &os) const {
   os << "!(" << *expr << ")";
 }
 
-void BPLTrueExpr::print(std::ostream &os) const {
+void TrueExpr::print(std::ostream &os) const {
   os << "true";
 }
 
-void BPLFalseExpr::print(std::ostream &os) const {
+void FalseExpr::print(std::ostream &os) const {
   os << "false";
 }
 
-void BPLUndefExpr::print(std::ostream &os) const {
+void UndefExpr::print(std::ostream &os) const {
   os << "undef";
 }

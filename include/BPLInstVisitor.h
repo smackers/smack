@@ -23,7 +23,7 @@ class BPLInstVisitor : public InstVisitor<BPLInstVisitor> {
 private:
   TargetData* targetData;
   BPLBlock* block;
-  BPLExpr* visitValue(Value* value);
+  Expr* visitValue(Value* value);
  
 public:
   BPLInstVisitor(TargetData* td) : targetData(td) {}

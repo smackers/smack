@@ -38,7 +38,7 @@ bool BplGenerator::runOnModule(Module &m) {
       std::string returnVarName = "__SMACK_";
       returnVarName.append(func->getName().str());
       returnVarName.append("_return");
-      bplProc->setReturnVar(new BPLVarExpr(translateName(returnVarName)));
+      bplProc->setReturnVar(new VarExpr(translateName(returnVarName)));
     }
 
     // add arguments

@@ -60,12 +60,12 @@ void BPLBlock::print(std::ostream &os) const {
           os << ";\n";
 
           os << "$label_" << getName() << "_" << trueBlock->getName().str() << ":\n";
-          BPLExpr* trueCondition = new BPLVarExpr(conditionValue);
+          Expr* trueCondition = new VarExpr(conditionValue);
           os << "  assume " << trueCondition << ";\n";
           os << "  goto label_" << trueBlock->getName().str() << ";\n";
 
           os << "$label_" << getName() << "_" << falseBlock->getName().str() << ":\n";
-          BPLExpr* falseCondition = new BPLNotExpr(new BPLVarExpr(conditionValue));
+          Expr* falseCondition = new NotExpr(new VarExpr(conditionValue));
           os << "  assume " << falseCondition << ";\n";
           os << "  goto label_" << falseBlock->getName().str() << ";\n";
         } else {

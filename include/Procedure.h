@@ -22,7 +22,7 @@ private:
   std::string name;
   bool voidFlag;
   std::vector<std::string> arguments;
-  BPLVarExpr* returnVar;
+  VarExpr* returnVar;
   std::vector<BPLBlock*> blocks;
   BPLBlock* entryBlock;
   std::vector<Value*> vars;
@@ -35,8 +35,8 @@ public:
   void setNotVoid();
   bool isVoid() const;
   void addArgument(std::string argument);
-  void setReturnVar(BPLVarExpr* var);
-  BPLVarExpr* getReturnVar() const;
+  void setReturnVar(VarExpr* var);
+  VarExpr* getReturnVar() const;
 	void setEntryBlock(BPLBlock* block);
   BPLBlock* getEntryBlock() const;
   void addBlock(BPLBlock* block);
