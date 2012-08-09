@@ -5,7 +5,7 @@
 #ifndef PROCEDURE_H_
 #define PROCEDURE_H_
 
-#include "BPLBlock.h"
+#include "Block.h"
 #include "BplPrintUtils.h"
 #include "Utils.h"
 #include <map>
@@ -23,8 +23,8 @@ private:
   bool voidFlag;
   std::vector<std::string> arguments;
   VarExpr* returnVar;
-  std::vector<BPLBlock*> blocks;
-  BPLBlock* entryBlock;
+  std::vector<Block*> blocks;
+  Block* entryBlock;
   std::vector<Value*> vars;
   std::vector<Value*> boolVars;
 
@@ -37,10 +37,10 @@ public:
   void addArgument(std::string argument);
   void setReturnVar(VarExpr* var);
   VarExpr* getReturnVar() const;
-	void setEntryBlock(BPLBlock* block);
-  BPLBlock* getEntryBlock() const;
-  void addBlock(BPLBlock* block);
-  std::vector<BPLBlock*>& getBlocks();
+	void setEntryBlock(Block* block);
+  Block* getEntryBlock() const;
+  void addBlock(Block* block);
+  std::vector<Block*>& getBlocks();
   void addVariable(Value* var);
   void addBoolVariable(Value* var);
   void print(std::ostream &os) const;

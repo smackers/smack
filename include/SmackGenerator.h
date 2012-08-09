@@ -5,7 +5,7 @@
 #ifndef SMACKGENERATOR_H
 #define SMACKGENERATOR_H
 
-#include "BPLBlock.h"
+#include "Block.h"
 #include "SmackInstVisitor.h"
 #include "SmackModule.h"
 #include "BplPrintUtils.h"

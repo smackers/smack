@@ -14,7 +14,7 @@ using namespace llvm;
 
 namespace smack {
 
-class BPLBlock;
+class Block;
 
 class Statement {
 public:
@@ -39,13 +39,13 @@ private:
   
 protected:
   Instruction* inst;
-  BPLBlock* parentBlock;
+  Block* parentBlock;
   
 public:
   Statement(StatementIDs idP, Instruction* instP) : id(idP), inst(instP) {}
 	virtual ~Statement() {}
-  void setParentBlock(BPLBlock* parentBlockP);
-  BPLBlock* getParentBlock() const;
+  void setParentBlock(Block* parentBlockP);
+  Block* getParentBlock() const;
   virtual void print(std::ostream &os) const;
   
  StatementIDs getStatementID() const {

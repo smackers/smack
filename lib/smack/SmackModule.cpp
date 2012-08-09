@@ -34,7 +34,7 @@ std::map<std::string, Procedure*>& SmackModule::getProcedures() {
 
 void SmackModule::print(std::ostream &os) const {
   if (this == 0) {
-    os << "<null BPLModule>";
+    os << "<null SmackModule>";
   } else {
     os << "//**** MODULE ****\n";
 
@@ -59,7 +59,7 @@ namespace smack {
 
 std::ostream &operator<<(std::ostream &os, const SmackModule* module) {
   if (module == 0) {
-    os << "<null> BPLModule!\n";
+    os << "<null> SmackModule!\n";
   } else {
     module->print(os);
   }
@@ -73,7 +73,7 @@ std::ostream &operator<<(std::ostream &os, const SmackModule& module) {
 
 raw_ostream &operator<<(raw_ostream &os, const SmackModule* module) {
   if (module == 0) {
-    os << "<null> BPLModule!\n";
+    os << "<null> SmackModule!\n";
   } else {
     std::ostringstream stream;
     module->print(stream);

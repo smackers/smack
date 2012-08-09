@@ -2,43 +2,43 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BPLBlock.h"
+#include "Block.h"
 
 using namespace smack;
 
-BPLBlock::BPLBlock(BasicBlock* block) : basicBlock(block), parentProcedure(NULL) {}
+Block::Block(BasicBlock* block) : basicBlock(block), parentProcedure(NULL) {}
 
-BPLBlock::~BPLBlock() {}
+Block::~Block() {}
 
-void BPLBlock::addSuccBlock(BPLBlock* succBlock) {
+void Block::addSuccBlock(Block* succBlock) {
   succBlocks.push_back(succBlock);
 }
 
-BasicBlock* BPLBlock::getBasicBlock() const {
+BasicBlock* Block::getBasicBlock() const {
   return basicBlock;
 }
 
-std::string BPLBlock::getName() const {
+std::string Block::getName() const {
   assert(basicBlock->hasName() && "Basic block always has a name");
   return basicBlock->getName();
 }
 
-void BPLBlock::addInstruction(Statement* inst) {
+void Block::addInstruction(Statement* inst) {
   instructions.push_back(inst);
   inst->setParentBlock(this);
 }
 
-void BPLBlock::setParentProcedure(Procedure* parentProc) {
+void Block::setParentProcedure(Procedure* parentProc) {
   parentProcedure = parentProc;
 }
 
-Procedure* BPLBlock::getParentProcedure() const {
+Procedure* Block::getParentProcedure() const {
   return parentProcedure;
 }
 
-void BPLBlock::print(std::ostream &os) const {
+void Block::print(std::ostream &os) const {
   if (this == 0) {
-    os << "<null BPLBlock>";
+    os << "<null Block>";
   } else {
     os << "label_" << getName() << ":\n";
 
@@ -72,7 +72,7 @@ void BPLBlock::print(std::ostream &os) const {
           assert(branchInst->getNumSuccessors() == 1 && "Unconditional branch has one successor");
           
           os << "  goto ";
-          for(std::vector<BPLBlock*>::const_iterator i = succBlocks.begin(), b = succBlocks.begin(),
+          for(std::vector<Block*>::const_iterator i = succBlocks.begin(), b = succBlocks.begin(),
               e = succBlocks.end(); i != e; ++i) {
             if (i != b) {
               os << ", ";
@@ -91,16 +91,16 @@ void BPLBlock::print(std::ostream &os) const {
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const BPLBlock* block) {
+std::ostream &operator<<(std::ostream &os, const Block* block) {
   if (block == 0) {
-    os << "<null> BPLBlock!\n";
+    os << "<null> Block!\n";
   } else {
     block->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const BPLBlock& block) {
+std::ostream &operator<<(std::ostream &os, const Block& block) {
   block.print(os);
   return os;
 }

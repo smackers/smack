@@ -22,13 +22,13 @@ namespace smack {
 class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
 private:
   TargetData* targetData;
-  BPLBlock* block;
+  Block* block;
   Expr* visitValue(Value* value);
  
 public:
   SmackInstVisitor(TargetData* td) : targetData(td) {}
-  void setBPLBlock(BPLBlock* blockP);
-  void addSuccBlock(BPLBlock* succBlock);
+  void setBlock(Block* blockP);
+  void addSuccBlock(Block* succBlock);
   void visitInstruction(Instruction& i);
   void processInstruction(Instruction& i);
   void visitAllocaInst(AllocaInst& i);

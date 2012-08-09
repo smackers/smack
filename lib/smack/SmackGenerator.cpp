@@ -6,7 +6,7 @@
 
 using namespace smack;
 
-RegisterPass<SmackGenerator> X("bpl", "SMACK generator pass");
+RegisterPass<SmackGenerator> X("smack", "SMACK generator pass");
 char SmackGenerator::ID = 0;
 
 bool SmackGenerator::runOnModule(Module &m) {
@@ -22,7 +22,7 @@ bool SmackGenerator::runOnModule(Module &m) {
   }
 
   DEBUG(errs() << "Analyzing functions...\n");
-  SmackInstVisitor bplVisitor(&targetData);
+  SmackInstVisitor smackVisitor(&targetData);
 
   for (Module::iterator func = m.begin(), e = m.end(); func != e; ++func) {
     if (func->isDeclaration() || func->getName().str().find("__SMACK") != std::string::npos ) {
@@ -30,62 +30,62 @@ bool SmackGenerator::runOnModule(Module &m) {
     }
     DEBUG(errs() << "Analyzing function: " << func->getName().str() << "\n");
 
-    Procedure* bplProc = new Procedure(func->getName().str());
+    Procedure* procedure = new Procedure(func->getName().str());
 
     // set return variable name
     if (func->getReturnType()->getTypeID() != Type::VoidTyID) {
-      bplProc->setNotVoid();
+      procedure->setNotVoid();
       std::string returnVarName = "__SMACK_";
       returnVarName.append(func->getName().str());
       returnVarName.append("_return");
-      bplProc->setReturnVar(new VarExpr(translateName(returnVarName)));
+      procedure->setReturnVar(new VarExpr(translateName(returnVarName)));
     }
 
     // add arguments
     for (Function::const_arg_iterator i = func->arg_begin(), e = func->arg_end(); i != e; ++i) {
-      bplProc->addArgument(translateName(i));
+      procedure->addArgument(translateName(i));
     }
 
-    module->addProcedure(bplProc);
+    module->addProcedure(procedure);
 
-    std::map<const BasicBlock*, BPLBlock*> processedBlocks;
+    std::map<const BasicBlock*, Block*> processedBlocks;
     std::vector<BasicBlock*> workStack;
-    std::vector<BPLBlock*> bplWorkStack;
+    std::vector<Block*> smackWorkStack;
 
     BasicBlock& entryBlock = func->getEntryBlock();
-    BPLBlock* bplEntryBlock = new BPLBlock(&entryBlock);
-    bplProc->setEntryBlock(bplEntryBlock);
+    Block* smackEntryBlock = new Block(&entryBlock);
+    procedure->setEntryBlock(smackEntryBlock);
 
     workStack.push_back(&entryBlock);
-    bplWorkStack.push_back(bplEntryBlock);
+    smackWorkStack.push_back(smackEntryBlock);
 
     while (!workStack.empty()) {
-      BasicBlock* block = workStack.back();
+      BasicBlock* basicBlock = workStack.back();
       workStack.pop_back();
-      BPLBlock* bplBlock = bplWorkStack.back();
-      bplWorkStack.pop_back();
+      Block* smackBlock = smackWorkStack.back();
+      smackWorkStack.pop_back();
       
-      if (processedBlocks.count(block) == 0) {
-        processedBlocks[block] = bplBlock;
-        bplProc->addBlock(bplBlock);
-        bplVisitor.setBPLBlock(bplBlock);
-        bplVisitor.visit(block);
+      if (processedBlocks.count(basicBlock) == 0) {
+        processedBlocks[basicBlock] = smackBlock;
+        procedure->addBlock(smackBlock);
+        smackVisitor.setBlock(smackBlock);
+        smackVisitor.visit(basicBlock);
         
-        for (succ_iterator i = succ_begin(block), e = succ_end(block); i != e; ++i) {
+        for (succ_iterator i = succ_begin(basicBlock), e = succ_end(basicBlock); i != e; ++i) {
           BasicBlock* succ = *i;
-          BPLBlock* bplSucc;
+          Block* smackSucc;
           if (processedBlocks.count(succ) == 0) {
-            bplSucc = new BPLBlock(succ);
+            smackSucc = new Block(succ);
             workStack.push_back(succ);
-            bplWorkStack.push_back(bplSucc);
+            smackWorkStack.push_back(smackSucc);
           } else {
             assert(processedBlocks.count(succ) == 1);
-            bplSucc = processedBlocks[succ];
+            smackSucc = processedBlocks[succ];
           }
-          bplVisitor.addSuccBlock(bplSucc);
+          smackVisitor.addSuccBlock(smackSucc);
         }
       } else {
-        assert(processedBlocks.count(block) == 1);
+        assert(processedBlocks.count(basicBlock) == 1);
       }
     }
 

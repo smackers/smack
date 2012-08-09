@@ -10,7 +10,7 @@ namespace smack {
 
 std::ostream &operator<<(std::ostream &os, const Statement* inst) {
   if (inst == 0) {
-    os << "<null> BPLInst!\n";
+    os << "<null> Stmt!\n";
   } else {
     inst->print(os);
   }
@@ -24,11 +24,11 @@ std::ostream &operator<<(std::ostream &os, const Statement& inst) {
 
 }
 
-void Statement::setParentBlock(BPLBlock* parentBlockP) {
+void Statement::setParentBlock(Block* parentBlockP) {
   parentBlock = parentBlockP;
 }
 
-BPLBlock* Statement::getParentBlock() const {
+Block* Statement::getParentBlock() const {
   return parentBlock;
 }
 

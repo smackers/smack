@@ -32,20 +32,20 @@ VarExpr* Procedure::getReturnVar() const {
   return returnVar;
 }
 
-void Procedure::setEntryBlock(BPLBlock* block) {
+void Procedure::setEntryBlock(Block* block) {
   entryBlock = block;
 }
 
-BPLBlock* Procedure::getEntryBlock() const {
+Block* Procedure::getEntryBlock() const {
   return entryBlock;
 }
 
-void Procedure::addBlock(BPLBlock* block) {
+void Procedure::addBlock(Block* block) {
   blocks.push_back(block);
   block->setParentProcedure(this);
 }
 
-std::vector<BPLBlock*>& Procedure::getBlocks() {
+std::vector<Block*>& Procedure::getBlocks() {
   return blocks;
 }
 
@@ -67,7 +67,7 @@ void Procedure::addBoolVariable(Value* var) {
 
 void Procedure::print(std::ostream &os) const {
   if (this == 0) {
-    os << "<null BPLProcedure>";
+    os << "<null Procedure>";
   } else {
     os << "procedure ";
     if (name != Common::MAIN_PROCEDURE) {
@@ -115,7 +115,7 @@ namespace smack {
 
 std::ostream &operator<<(std::ostream &os, const Procedure* proc) {
   if (proc == 0) {
-    os << "<null> BPLProcedure!\n";
+    os << "<null> Procedure!\n";
   } else {
     proc->print(os);
   }

@@ -2,8 +2,8 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef BPLBLOCK_H_
-#define BPLBLOCK_H_
+#ifndef BLOCK_H_
+#define BLOCK_H_
 
 #include "Statements.h"
 #include "Utils.h"
@@ -17,17 +17,17 @@ namespace smack {
 
 class Procedure;
 
-class BPLBlock {
+class Block {
 private:
-  std::vector<BPLBlock*> succBlocks;
+  std::vector<Block*> succBlocks;
   BasicBlock* basicBlock;
   std::vector<Statement*> instructions;
   Procedure* parentProcedure;
   
 public:
-	BPLBlock(BasicBlock* block);
-	virtual ~BPLBlock();
-	void addSuccBlock(BPLBlock* succBlock);
+	Block(BasicBlock* block);
+	virtual ~Block();
+	void addSuccBlock(Block* succBlock);
   BasicBlock* getBasicBlock() const;
   std::string getName() const;
   void addInstruction(Statement* inst);
@@ -35,9 +35,9 @@ public:
   Procedure* getParentProcedure() const;
   void print(std::ostream &os) const;
 };
-std::ostream &operator<<(std::ostream &os, const BPLBlock* block);
-std::ostream &operator<<(std::ostream &os, const BPLBlock& block);
+std::ostream &operator<<(std::ostream &os, const Block* block);
+std::ostream &operator<<(std::ostream &os, const Block& block);
 
 }
 
-#endif /*BPLBLOCK_H_*/
+#endif /*BLOCK_H_*/

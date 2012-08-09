@@ -10,7 +10,7 @@ namespace smack {
 
 std::ostream &operator<<(std::ostream &os, const Expr* expr) {
   if (expr == 0) {
-    os << "<null> BPLExpr!\n";
+    os << "<null> Expr!\n";
   } else {
     expr->print(os);
   }

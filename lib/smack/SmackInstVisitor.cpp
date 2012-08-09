@@ -87,11 +87,11 @@ Expr* SmackInstVisitor::visitValue(Value* value) {
   return valExpr;
 }
 
-void SmackInstVisitor::setBPLBlock(BPLBlock* blockP) {
+void SmackInstVisitor::setBlock(Block* blockP) {
   block = blockP;
 }
 
-void SmackInstVisitor::addSuccBlock(BPLBlock* succBlock) {
+void SmackInstVisitor::addSuccBlock(Block* succBlock) {
   block->addSuccBlock(succBlock);
   
   BasicBlock* succBasicBlock = succBlock->getBasicBlock();
