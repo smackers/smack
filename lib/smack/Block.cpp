@@ -3,10 +3,12 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "Block.h"
+#include <string>
 
 using namespace smack;
 
-Block::Block(BasicBlock* block) : basicBlock(block), parentProcedure(NULL) {}
+Block::Block(BasicBlock* block, int blockNum) : 
+  basicBlock(block), parentProcedure(NULL), blockNum(blockNum) {}
 
 Block::~Block() {}
 
@@ -19,8 +21,13 @@ BasicBlock* Block::getBasicBlock() const {
 }
 
 std::string Block::getName() const {
-  assert(basicBlock->hasName() && "Basic block always has a name");
-  return basicBlock->getName();
+  std::stringstream s;
+  if (basicBlock->hasName())
+    return basicBlock->getName();
+  else {
+    s << "bb" << blockNum;
+    return s.str();
+  }
 }
 
 void Block::addInstruction(Statement* inst) {
@@ -40,46 +47,42 @@ void Block::print(std::ostream &os) const {
   if (this == 0) {
     os << "<null Block>";
   } else {
-    os << "label_" << getName() << ":\n";
+    os << getName() << ":\n";
 
     printElements(instructions, os);
 
     if (!succBlocks.empty()) {
       if (const BranchInst* branchInst = dyn_cast<BranchInst>(basicBlock->getTerminator())) {
         if (branchInst->isConditional()) {
-          assert(branchInst->getNumSuccessors() == 2 && "Conditional branch has two successors");
-          
-          Value* conditionValue = branchInst->getCondition();
-          assert(conditionValue->hasName() && "Condition has to have a name");
-          BasicBlock* trueBlock = branchInst->getSuccessor(0);
-          BasicBlock* falseBlock = branchInst->getSuccessor(1);
-          
-          os << "  goto ";
-          os << "$label_" << getName() << "_" << trueBlock->getName().str() << ", ";
-          os << "$label_" << getName() << "_" << falseBlock->getName().str();
-          os << ";\n";
+          assert(branchInst->getNumSuccessors() == 2 
+            && "Conditional branch has two successors");
 
-          os << "$label_" << getName() << "_" << trueBlock->getName().str() << ":\n";
-          Expr* trueCondition = new VarExpr(conditionValue);
-          os << "  assume " << trueCondition << ";\n";
-          os << "  goto label_" << trueBlock->getName().str() << ";\n";
-
-          os << "$label_" << getName() << "_" << falseBlock->getName().str() << ":\n";
-          Expr* falseCondition = new NotExpr(new VarExpr(conditionValue));
-          os << "  assume " << falseCondition << ";\n";
-          os << "  goto label_" << falseBlock->getName().str() << ";\n";
-        } else {
-          assert(branchInst->getNumSuccessors() == 1 && "Unconditional branch has one successor");
-          
-          os << "  goto ";
-          for(std::vector<Block*>::const_iterator i = succBlocks.begin(), b = succBlocks.begin(),
-              e = succBlocks.end(); i != e; ++i) {
-            if (i != b) {
-              os << ", ";
-            }
-            os << "label_" << (*i)->getName();
+          Expr
+            *te = new VarExpr(branchInst->getCondition()),
+            *fe = new NotExpr(te);      
+                  
+          BasicBlock 
+            *tb = branchInst->getSuccessor(0);
+                  
+          os << "  goto " << getName() << "$T, " << getName() << "$F;\n";          
+            
+          for ( std::vector<Block*>::const_iterator 
+                  head = succBlocks.begin(), 
+                  curr = head, tail = succBlocks.end();
+                curr != tail;
+                curr++ ) {
+                                    
+            BasicBlock *bb = (*curr)->basicBlock;                  
+            os << getName() << "$" << (bb == tb ? "T" : "F") << ":\n";
+            os << "  assume " << (bb == tb ? te : fe) << ";\n";
+            os << "  goto " << (*curr)->getName() << ";\n";            
           }
-          os << ";\n";
+          
+        } else {
+          assert(branchInst->getNumSuccessors() == 1 
+            && "Unconditional branch has one successor");
+          
+          os << "  goto " << succBlocks[0]->getName() << ";\n";
         }
       } else {
         assert(false && "Terminator instruction not currently supported");

@@ -51,9 +51,11 @@ bool SmackGenerator::runOnModule(Module &m) {
     std::map<const BasicBlock*, Block*> processedBlocks;
     std::vector<BasicBlock*> workStack;
     std::vector<Block*> smackWorkStack;
+    
+    int bn = 0;
 
     BasicBlock& entryBlock = func->getEntryBlock();
-    Block* smackEntryBlock = new Block(&entryBlock);
+    Block* smackEntryBlock = new Block(&entryBlock,bn++);
     procedure->setEntryBlock(smackEntryBlock);
 
     workStack.push_back(&entryBlock);
@@ -75,7 +77,7 @@ bool SmackGenerator::runOnModule(Module &m) {
           BasicBlock* succ = *i;
           Block* smackSucc;
           if (processedBlocks.count(succ) == 0) {
-            smackSucc = new Block(succ);
+            smackSucc = new Block(succ, bn++);
             workStack.push_back(succ);
             smackWorkStack.push_back(smackSucc);
           } else {

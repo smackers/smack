@@ -23,9 +23,10 @@ private:
   BasicBlock* basicBlock;
   std::vector<Statement*> instructions;
   Procedure* parentProcedure;
+  int blockNum;
   
 public:
-	Block(BasicBlock* block);
+	Block(BasicBlock* block, int blockNum);
 	virtual ~Block();
 	void addSuccBlock(Block* succBlock);
   BasicBlock* getBasicBlock() const;
