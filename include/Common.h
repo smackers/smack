@@ -9,11 +9,15 @@
 
 namespace smack {
 
+
 struct Common {
   const static std::string MAIN_PROCEDURE;
   
   const static std::string ASSERT;
   const static std::string ASSUME;
+
+  static unsigned INT_WIDTH;
+  static std::string int_const(uint64_t i);
 };
 
 }

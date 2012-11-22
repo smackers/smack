@@ -243,12 +243,12 @@ void FreeStmt::print(std::ostream &os) const {
 
 void AssertStmt::print(std::ostream &os) const {
   Statement::print(os);
-  os << "assert(" << *assertion << " != Ptr(null, 0bv32));\n";
+  os << "assert(" << *assertion << " != Ptr(null, " << Common::int_const(0) << "));\n";
 }
 
 void AssumeStmt::print(std::ostream &os) const {
   Statement::print(os);
-  os << "assume(" << *assumption << " != Ptr(null, 0bv32));\n";
+  os << "assume(" << *assumption << " != Ptr(null, " << Common::int_const(0) << "));\n";
 }
 
 void ReturnStmt::print(std::ostream &os) const {

@@ -1,4 +1,4 @@
-//******** AXIOMS *********
+// SMACK-PRELUDE-BEGIN
 type ref;
 type name;
 type ptr;
@@ -151,6 +151,4 @@ procedure __SMACK_nondet() returns (x:ptr);
 procedure __SMACK_nondetInt() returns (x:ptr);
 ensures Obj(x) == null;
 
-//**** HEADER END ****
-
-
+// SMACK-PRELUDE-END

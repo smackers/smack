@@ -3,6 +3,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "Exprs.h"
+#include "Common.h"
 
 using namespace smack;
 
@@ -43,21 +44,20 @@ void ConstExpr::print(std::ostream &os) const {
           os << "true";
         }
       } else {
-        const APInt& intValue = ci->getValue();
-        std::string stringValue = intValue.toString(10, true);
-        if (intValue.isNegative()) {
-          os << "Ptr(null, sub(0bv32, " << stringValue.substr(1) << "bv32))";
-        } else {
-          os << "Ptr(null, " << stringValue << "bv32)";
-        }
+        
+        std::string sval = Common::int_const( ci->getLimitedValue() );
+        if ( ci->isNegative() )
+          os << "Ptr(null,sub(" << Common::int_const(0) << "," << sval.substr(1) << "))";
+        else
+          os << "Ptr(null," << sval << ")";
       }
     } else if (isa<ConstantPointerNull>(constant)) {
-      os << "Ptr(null, 0bv32)";
+      os << "Ptr(null," << Common::int_const(0) << ")";
     } else {
       assert(false && "Value type not supported");
     }
   } else {
-    os << "Ptr(null, " << intConstant << "bv32)";
+    os << "Ptr(null," << Common::int_const(intConstant) << ")";
   }
 }
 
@@ -71,20 +71,19 @@ std::string ConstExpr::getOffComponent() const {
   std::stringstream off;
   if (constant != NULL) {
     if (const ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
-      const APInt& intValue = ci->getValue();
-      std::string stringValue = intValue.toString(10, true);
-      if (intValue.isNegative()) {
-        off << "sub(0bv32, " << stringValue.substr(1) << "bv32)";
+      std::string sval = Common::int_const( ci->getLimitedValue() );
+      if ( ci->isNegative() ) {
+        off << "sub(" << Common::int_const(0) << ", " << sval.substr(1) << ")";
       } else {
-        off << stringValue << "bv32";
+        off << sval;
       }
     } else if (isa<ConstantPointerNull>(constant)) {
-      off << "0bv32";
+      off << Common::int_const(0);
     } else {
       assert(false && "Value type not supported");
     }
   } else {
-    off << intConstant << "bv32";
+    off << Common::int_const(intConstant);
   }
   return off.str();
 }
