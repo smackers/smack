@@ -17,6 +17,7 @@
 #include "llvm/Support/CFG.h"
 #include "llvm/Target/TargetData.h"
 #include <map>
+#include <stack>
 #include <vector>
 
 using namespace llvm;

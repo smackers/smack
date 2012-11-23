@@ -70,7 +70,7 @@ void Block::print(std::ostream &os) const {
                   head = succBlocks.begin(), 
                   curr = head, tail = succBlocks.end();
                 curr != tail;
-                curr++ ) {
+                ++curr ) {
                                     
             BasicBlock *bb = (*curr)->basicBlock;                  
             os << getName() << "$" << (bb == tb ? "T" : "F") << ":\n";

@@ -48,46 +48,38 @@ bool SmackGenerator::runOnModule(Module &m) {
 
     module->addProcedure(procedure);
 
-    std::map<const BasicBlock*, Block*> processedBlocks;
-    std::vector<BasicBlock*> workStack;
-    std::vector<Block*> smackWorkStack;
-    
+    std::map<const BasicBlock*, Block*> knownBlocks;
+    std::stack<BasicBlock*> workStack;    
     int bn = 0;
 
     BasicBlock& entryBlock = func->getEntryBlock();
     Block* smackEntryBlock = new Block(&entryBlock,bn++);
     procedure->setEntryBlock(smackEntryBlock);
+    knownBlocks[&entryBlock] = smackEntryBlock;
+    workStack.push(&entryBlock);
 
-    workStack.push_back(&entryBlock);
-    smackWorkStack.push_back(smackEntryBlock);
+    // invariant: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b) or  
+    // workStack.CONTAINED(b) at some point in time.
+    while (!workStack.empty()) {      
+      BasicBlock *basicBlock = workStack.top(); workStack.pop();
+      Block *smackBlock = knownBlocks[basicBlock];
 
-    while (!workStack.empty()) {
-      BasicBlock* basicBlock = workStack.back();
-      workStack.pop_back();
-      Block* smackBlock = smackWorkStack.back();
-      smackWorkStack.pop_back();
-      
-      if (processedBlocks.count(basicBlock) == 0) {
-        processedBlocks[basicBlock] = smackBlock;
-        procedure->addBlock(smackBlock);
-        smackVisitor.setBlock(smackBlock);
-        smackVisitor.visit(basicBlock);
+      procedure->addBlock(smackBlock);
+      smackVisitor.setBlock(smackBlock);
+      smackVisitor.visit(basicBlock);
         
-        for (succ_iterator i = succ_begin(basicBlock), e = succ_end(basicBlock); i != e; ++i) {
-          BasicBlock* succ = *i;
-          Block* smackSucc;
-          if (processedBlocks.count(succ) == 0) {
-            smackSucc = new Block(succ, bn++);
-            workStack.push_back(succ);
-            smackWorkStack.push_back(smackSucc);
-          } else {
-            assert(processedBlocks.count(succ) == 1);
-            smackSucc = processedBlocks[succ];
-          }
-          smackVisitor.addSuccBlock(smackSucc);
+      for (succ_iterator i = succ_begin(basicBlock), e = succ_end(basicBlock); i != e; ++i) {
+        BasicBlock* succ = *i;
+        Block* smackSucc;
+          
+        if (knownBlocks.count(succ) == 0) {
+          smackSucc = new Block(succ, bn++);
+          knownBlocks[succ] = smackSucc;
+          workStack.push(succ);
+        } else {
+            smackSucc = knownBlocks[succ];
         }
-      } else {
-        assert(processedBlocks.count(basicBlock) == 1);
+        smackVisitor.addSuccBlock(smackSucc);
       }
     }
 
