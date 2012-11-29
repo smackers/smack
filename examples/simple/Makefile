@@ -1,37 +1,37 @@
 CC = gcc
 CCLD = $(CC)
-INC = /home/zvonimir/projects/llvm-/src/projects/smack/examples/headers
+INC = ../headers
 CFLAGS = -c -Wall -I$(INC)
 LDFLAGS =
-LIBS = /home/zvonimir/projects/llvm/src/projects/smack/examples/headers/smack.o
+LIBS = ../headers/smack.o
 
 llvm: CC = clang
 llvm: CCLD = llvm-link
-llvm: INC = /home/zvonimir/projects/llvm/src/projects/smack/examples/headers
+llvm: INC = ../headers
 llvm: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC)
 llvm: LDFLAGS =
 
 llvm_debug: CC = clang
 llvm_debug: CCLD = llvm-link
-llvm_debug: INC = /home/zvonimir/projects/llvm/src/projects/smack/examples/headers
+llvm_debug: INC = ../headers
 llvm_debug: CFLAGS = -g -c -Wall -emit-llvm -O0 -I$(INC)
 llvm_debug: LDFLAGS = -disable-inlining -disable-opt
 
 infer: CC = clang
 infer: CCLD = llvm-link
-infer: INC = /home/zvonimir/projects/llvm/src/projects/smack/examples/headers
+infer: INC = ../headers
 infer: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC) -DINFERENCE
 infer: LDFLAGS = -disable-inlining -disable-opt
 
 types: CC = clang
 types: CCLD = llvm-link
-types: INC = /home/zvonimir/projects/llvm/src/projects/smack/examples/headers
+types: INC = ../headers
 types: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC) -DCHECK_TYPES
 types: LDFLAGS = -disable-inlining -disable-opt
 
 inline: CC = clang
 inline: CCLD = llvm-link
-inline: INC = /home/zvonimir/projects/llvm/src/projects/smack/examples/headers
+inline: INC = ../headers
 inline: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC) -DENABLE_INLINE
 inline: LDFLAGS =
 
