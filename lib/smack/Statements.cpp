@@ -61,7 +61,7 @@ void CallStmt::print(std::ostream &os) const {
     std::stringstream ps;
     for(std::vector<Expr*>::const_iterator
         bp = params.begin(), ep = params.end(), p = bp; p != ep; ++p)          
-      ps << *p << (p != bp ? "," : "");
+      ps << (p != bp ? "," : "") << *p;
     
     if (name == "__SMACK_record_int")
       os << name << "(Off(" << ps.str() << "));" << std::endl;
