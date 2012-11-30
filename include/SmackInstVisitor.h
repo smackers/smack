@@ -13,7 +13,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/InstVisitor.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/DataLayout.h"
 
 using namespace llvm;
 
@@ -21,12 +21,12 @@ namespace smack {
 
 class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
 private:
-  TargetData* targetData;
+  DataLayout* targetData;
   Block* block;
   Expr* visitValue(Value* value);
  
 public:
-  SmackInstVisitor(TargetData* td) : targetData(td) {}
+  SmackInstVisitor(DataLayout* td) : targetData(td) {}
   void setBlock(Block* blockP);
   void addSuccBlock(Block* succBlock);
   void visitInstruction(Instruction& i);

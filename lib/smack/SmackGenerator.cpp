@@ -10,7 +10,7 @@ RegisterPass<SmackGenerator> X("smack", "SMACK generator pass");
 char SmackGenerator::ID = 0;
 
 bool SmackGenerator::runOnModule(Module &m) {
-  TargetData& targetData = getAnalysis<TargetData>();
+  DataLayout& targetData = getAnalysis<DataLayout>();
   module = new SmackModule();
 
   DEBUG(errs() << "Analyzing globals...\n");

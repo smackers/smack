@@ -15,7 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CFG.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/DataLayout.h"
 #include <map>
 #include <stack>
 #include <vector>
@@ -36,7 +36,7 @@ public:
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
-    AU.addRequired<TargetData>();
+    AU.addRequired<DataLayout>();
   }
 
   SmackModule* getModule() const {
