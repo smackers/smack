@@ -4,7 +4,7 @@
 
 *** SMACK dependencies ***
 
-LLVM (www.llvm.org)
+LLVM 3.2 (www.llvm.org)
 clang (http://clang.llvm.org/)
 Boogie (http://boogie.codeplex.com)
 
