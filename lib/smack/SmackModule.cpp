@@ -36,21 +36,24 @@ void SmackModule::print(std::ostream &os) const {
   if (this == 0) {
     os << "<null SmackModule>";
   } else {
-    os << "//**** MODULE ****\n";
-
-    os << "\n";
+    os << "// SMACK-MODULE-BEGIN" << std::endl;
 
     for(std::set<std::string>::const_iterator
         i = globalVariables.begin(), e = globalVariables.end(); i != e; ++i) {
-      os << "var " << *i << ":ptr;\n";
+      os << "const " << *i << ":ptr;" << std::endl;
+      
+      for(std::set<std::string>::const_iterator
+        j = i, f = globalVariables.end(); j != f && ++j != f; ) {
+          os << "axiom(Obj(" << *i << ") != Obj(" << *j << "));" << std::endl;
+      }
     }
-
-    os << "\n";
 
     for(std::map<std::string, Procedure*>::const_iterator
         i = procedures.begin(), e = procedures.end(); i != e; ++i) {
-      os << i->second << "\n";
+      os << std::endl << i->second;
     }
+
+    os << "// SMACK-MODULE-END" << std::endl;
   }
 }
 

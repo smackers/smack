@@ -38,19 +38,13 @@ void ConstExpr::print(std::ostream &os) const {
   if (constant != NULL) {
     if (const ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
       if (ci->getBitWidth() == 1) {
-        if (ci->isZero()) {
+        if (ci->isZero())
           os << "false";
-        } else {
-          os << "true";
-        }
-      } else {
-        
-        std::string sval = Common::int_const( ci->getLimitedValue() );
-        if ( ci->isNegative() )
-          os << "Ptr(null,sub(" << Common::int_const(0) << "," << sval.substr(1) << "))";
         else
-          os << "Ptr(null," << sval << ")";
-      }
+          os << "true";
+      } else        
+        os << "Ptr(null," << Common::int_const( ci->getValue() ) <<  ")";
+
     } else if (isa<ConstantPointerNull>(constant)) {
       os << "Ptr(null," << Common::int_const(0) << ")";
     } else {

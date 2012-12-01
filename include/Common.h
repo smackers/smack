@@ -6,6 +6,9 @@
 #define COMMON_H_
 
 #include <string>
+#include "llvm/Constants.h"
+#include "llvm/Instructions.h"
+#include "llvm/Support/Debug.h"
 
 namespace smack {
 
@@ -17,7 +20,8 @@ struct Common {
   const static std::string ASSUME;
 
   static unsigned INT_WIDTH;
-  static std::string int_const(uint64_t i);
+  static std::string int_const(int64_t i);
+  static std::string int_const(const llvm::APInt &ap);
 };
 
 }

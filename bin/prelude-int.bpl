@@ -20,7 +20,7 @@ var Alloc:[ref]name;
 function Size(ref) returns (int);
 
 // Undefined ptr value
-var undef:ptr;
+const undef:ptr;
 
 // Constants
 const unique UNALLOCATED:name;
@@ -57,16 +57,16 @@ ensures result == (a == b);
 procedure __SMACK_Proc_ICMP_NE(a:ptr, b:ptr) returns (result:bool);
 ensures result == (a != b);
 
-procedure __SMACK_Proc_ICMP_GE(a:ptr, b:ptr) returns (result:bool);
+procedure __SMACK_Proc_ICMP_SGE(a:ptr, b:ptr) returns (result:bool);
 ensures result == (Off(a) >= Off(b));
 
-procedure __SMACK_Proc_ICMP_LE(a:ptr, b:ptr) returns (result:bool);
+procedure __SMACK_Proc_ICMP_SLE(a:ptr, b:ptr) returns (result:bool);
 ensures result == (Off(a) <= Off(b));
 
-procedure __SMACK_Proc_ICMP_LT(a:ptr, b:ptr) returns (result:bool);
+procedure __SMACK_Proc_ICMP_SLT(a:ptr, b:ptr) returns (result:bool);
 ensures result == (Off(a) < Off(b));
 
-procedure __SMACK_Proc_ICMP_GT(a:ptr, b:ptr) returns (result:bool);
+procedure __SMACK_Proc_ICMP_SGT(a:ptr, b:ptr) returns (result:bool);
 ensures result == (Off(a) > Off(b));
 
 

@@ -56,17 +56,21 @@ void CallStmt::print(std::ostream &os) const {
     os << "call ";
     if (returnVar != NULL) {
       os << *returnVar << " := ";
-    }
-    os << func->getName().str();
-    os << "(";
+    }    
+    std::string name = func->getName().str();
+    std::stringstream ps;
     for(std::vector<Expr*>::const_iterator
-        j = params.begin(), bj = params.begin(), ej = params.end(); j != ej; ++j) {
-      if (j != bj) {
-        os << ", ";
-      }
-      os << *j;
-    }
-    os << ");\n";
+        bp = params.begin(), ep = params.end(), p = bp; p != ep; ++p)          
+      ps << *p << (p != bp ? "," : "");
+    
+    if (name == "__SMACK_record_int")
+      os << name << "(Off(" << ps.str() << "));" << std::endl;
+    else if (name == "__SMACK_record_obj")
+      os << name << "(Obj(" << ps.str() << "));" << std::endl;
+    else if (name == "__SMACK_record_ptr")
+      os << name << "(" << ps.str() << ");" << std::endl;
+    else
+      os << name << "(" << ps.str() << ");" << std::endl;
 
   } else {
     unsigned long uniqueLabelSufix = (unsigned long)this;
