@@ -1,4 +1,4 @@
-//******** AXIOMS *********
+// SMACK-PRELUDE-BEGIN
 type ref;
 type name;
 type ptr;
@@ -11,6 +11,19 @@ function Off(ptr) returns (int);
 axiom(forall x:ptr :: {Obj(x)}{Off(x)} x == Ptr(Obj(x), Off(x)));
 axiom(forall x_obj:ref, x_off:int :: {Ptr(x_obj, x_off)} x_obj == Obj(Ptr(x_obj, x_off)));
 axiom(forall x_obj:ref, x_off:int :: {Ptr(x_obj, x_off)} x_off == Off(Ptr(x_obj, x_off)));
+
+function add(p1:int, p2:int) returns (int) {p1 + p2}
+function sub(p1:int, p2:int) returns (int) {p1 - p2}
+function mul(p1:int, p2:int) returns (int) {p1 * p2}
+function ult(p1:int, p2:int) returns (bool) {p1 < p2}
+function ugt(p1:int, p2:int) returns (bool) {p1 > p2}
+function ule(p1:int, p2:int) returns (bool) {p1 <= p2}
+function uge(p1:int, p2:int) returns (bool) {p1 >= p2}
+function slt(p1:int, p2:int) returns (bool) {p1 < p2}
+function sgt(p1:int, p2:int) returns (bool) {p1 > p2}
+function sle(p1:int, p2:int) returns (bool) {p1 <= p2}
+function sge(p1:int, p2:int) returns (bool) {p1 >= p2}
+
 
 // Mutable
 var Mem:[ptr]ptr;
@@ -25,6 +38,7 @@ const undef:ptr;
 // Constants
 const unique UNALLOCATED:name;
 const unique ALLOCATED:name;
+
 
 procedure __SMACK_alloca(obj_size:int) returns (new:ptr);
 modifies Alloc;
@@ -58,26 +72,34 @@ procedure __SMACK_Proc_ICMP_NE(a:ptr, b:ptr) returns (result:bool);
 ensures result == (a != b);
 
 procedure __SMACK_Proc_ICMP_SGE(a:ptr, b:ptr) returns (result:bool);
-ensures result == (Off(a) >= Off(b));
+ensures result == sge(Off(a), Off(b));
+procedure __SMACK_Proc_ICMP_UGE(a:ptr, b:ptr) returns (result:bool);
+ensures result == uge(Off(a), Off(b));
 
 procedure __SMACK_Proc_ICMP_SLE(a:ptr, b:ptr) returns (result:bool);
-ensures result == (Off(a) <= Off(b));
+ensures result == sle(Off(a), Off(b));
+procedure __SMACK_Proc_ICMP_ULE(a:ptr, b:ptr) returns (result:bool);
+ensures result == ule(Off(a), Off(b));
 
 procedure __SMACK_Proc_ICMP_SLT(a:ptr, b:ptr) returns (result:bool);
-ensures result == (Off(a) < Off(b));
+ensures result == slt(Off(a), Off(b));
+procedure __SMACK_Proc_ICMP_ULT(a:ptr, b:ptr) returns (result:bool);
+ensures result == ult(Off(a), Off(b));
 
 procedure __SMACK_Proc_ICMP_SGT(a:ptr, b:ptr) returns (result:bool);
-ensures result == (Off(a) > Off(b));
+ensures result == sgt(Off(a), Off(b));
+procedure __SMACK_Proc_ICMP_UGT(a:ptr, b:ptr) returns (result:bool);
+ensures result == ugt(Off(a), Off(b));
 
 
 procedure __SMACK_Add(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null && Off(result) == Off(a) + Off(b);
+ensures Obj(result) == null && Off(result) == add(Off(a), Off(b));
 
 procedure __SMACK_Sub(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null && Off(result) == Off(a) - Off(b);
+ensures Obj(result) == null && Off(result) == sub(Off(a), Off(b));
 
 procedure __SMACK_Mul(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null && Off(result) == Off(a) * Off(b);
+ensures Obj(result) == null && Off(result) == mul(Off(a), Off(b));
 
 procedure __SMACK_SDiv(a:ptr, b:ptr) returns (result:ptr);
 ensures Obj(result) == null;
@@ -112,9 +134,9 @@ ensures Obj(result) == null;
 procedure __SMACK_Trunc(a:ptr) returns (result:ptr);
 ensures result == a;
 
-function __SMACK_PtrArith(pointer:ptr, offset:int, size:int) returns (result:ptr);
-axiom(forall p:ptr, off:int, size:int :: {__SMACK_PtrArith(p, off, size)}
-  __SMACK_PtrArith(p, off, size) == Ptr(Obj(p), Off(p) + off * size));
+
+function __SMACK_PtrArith(p:ptr, off:int, size:int) returns (result:ptr)
+  { Ptr(Obj(p), add(Off(p), mul(off, size))) }
 
 procedure __SMACK_BoolToInt(a:bool) returns (result:ptr);
 ensures Obj(result) == null;
@@ -128,6 +150,6 @@ procedure __SMACK_nondet() returns (x:ptr);
 procedure __SMACK_nondetInt() returns (x:ptr);
 ensures Obj(x) == null;
 
-//**** HEADER END ****
+// SMACK-PRELUDE-END
 
 

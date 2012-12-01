@@ -12,7 +12,7 @@ const std::string Common::MAIN_PROCEDURE = "main";
 const std::string Common::ASSERT = "__SMACK_assert";
 const std::string Common::ASSUME = "__SMACK_assume";
 
-unsigned Common::INT_WIDTH = 32;
+unsigned Common::INT_WIDTH = 0;
 
 std::string Common::int_const(int64_t i) {
   std::stringstream s;

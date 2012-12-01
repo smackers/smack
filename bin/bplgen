@@ -27,7 +27,7 @@ OPTS="-internalize -mem2reg -die -lowerswitch"
 #SMACK_OPTS="-generate_lines"
 
 
-PRELUDE=$HOME/bin/prelude-bv.bpl
+PRELUDE=$HOME/bin/prelude-int.bpl
 
 # Test if command line argument present (non-empty).
 if [ -n "$2" ]

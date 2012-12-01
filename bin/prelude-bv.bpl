@@ -33,7 +33,7 @@ var Alloc:[ref]name;
 function Size(ref) returns (bv32);
 
 // Undefined ptr value
-var undef:ptr;
+const undef:ptr;
 
 // Constants
 const unique UNALLOCATED:name;
@@ -135,9 +135,8 @@ procedure __SMACK_Trunc(a:ptr) returns (result:ptr);
 ensures result == a;
 
 
-function __SMACK_PtrArith(pointer:ptr, offset:bv32, size:bv32) returns (result:ptr);
-axiom(forall p:ptr, off:bv32, size:bv32 :: {__SMACK_PtrArith(p, off, size)}
-  __SMACK_PtrArith(p, off, size) == Ptr(Obj(p), add(Off(p), mul(off, size))));
+function __SMACK_PtrArith(p:ptr, off:bv32, size:bv32) returns (result:ptr)
+  { Ptr(Obj(p), add(Off(p), mul(off, size))) }
 
 procedure __SMACK_BoolToInt(a:bool) returns (result:ptr);
 ensures Obj(result) == null;
@@ -152,3 +151,5 @@ procedure __SMACK_nondetInt() returns (x:ptr);
 ensures Obj(x) == null;
 
 // SMACK-PRELUDE-END
+
+
