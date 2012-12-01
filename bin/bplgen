@@ -1,7 +1,7 @@
 #!/bin/bash
 
 HOME=/home/zvonimir/projects/llvm/src/projects/smack
-SMACK_LIB=/home/zvonimir/projects/llvm/build/projects/smack/Debug+Asserts/lib/libsmack.so
+SMACK_LIB=/home/zvonimir/projects/llvm/build/projects/smack/Debug+Asserts/lib/smack.so
 
 #OPTS="-internalize -mem2reg -dce -lowerswitch"
 OPTS="-internalize -mem2reg -die -lowerswitch"
