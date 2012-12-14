@@ -40,7 +40,7 @@ metadata = {
   "PrivacyUrl": "http://bitbucket.org/lissa/smack",
   "Institution": "University of Utah",
   "InstitutionUrl": "http://www.cs.utah.edu",
-  "InstitutionImageUrl": "http://bytebucket.org/lissa/smack/wiki/SoClogo_red_small.png",
+  "InstitutionImageUrl": "http://github.com/lissa-group/smack/wiki/SoClogo_red_small.png",
   "MimeType": "text/c",
   "SupportsLanguageSyntax": False,
   "Title": "Static Checker for C/C++ Programs",
