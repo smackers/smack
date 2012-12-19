@@ -1,7 +1,18 @@
 #!/bin/bash
 
-HOME=/home/zvonimir/projects/llvm/src/projects/smack
-SMACK_LIB=/home/zvonimir/projects/llvm/build/projects/smack/Debug+Asserts/lib/smack.so
+# find out where the script is stored
+SOURCE="${BASH_SOURCE[0]}"
+DIR="$( dirname "$SOURCE" )"
+while [ -h "$SOURCE" ]
+do 
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+SMACK_LIB=$DIR/../lib/smack.so
+PRELUDE=$DIR/prelude-int.bpl
 
 #OPTS="-internalize -mem2reg -dce -lowerswitch"
 OPTS="-internalize -mem2reg -die -lowerswitch"
@@ -27,19 +38,12 @@ OPTS="-internalize -mem2reg -die -lowerswitch"
 #SMACK_OPTS="-generate_lines"
 
 
-PRELUDE=$HOME/bin/prelude-int.bpl
-
 # Test if command line argument present (non-empty).
 if [ -n "$2" ]
 then
   if [ "$2" = "-inference" ]
   then
     SMACK_OPTS="-inference $SMACK_OPTS"
-  fi
-  if [ "$2" = "-monolithic" ]
-  then
-    SMACK_OPTS="-monolithic $SMACK_OPTS"
-    PRELUDE=$HOME/headers/prelude_bits_monolitic.bpl
   fi
   if [ "$2" = "-use_dsa" ]
   then

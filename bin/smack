@@ -2,7 +2,18 @@
 
 BOOGIE="mono /home/zvonimir/projects/boogie/Binaries/Boogie.exe"
 
-bplgen $1 $2
+# find out where the script is stored
+SOURCE="${BASH_SOURCE[0]}"
+DIR="$( dirname "$SOURCE" )"
+while [ -h "$SOURCE" ]
+do 
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+$DIR/bplgen $1 $2
 
 $BOOGIE $1.bpl /timeLimit:1200 /loopUnroll:15
 #$BOOGIE $1.bpl /bv:i /timeLimit:30 /z3mam:4
