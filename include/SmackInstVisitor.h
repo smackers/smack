@@ -12,7 +12,7 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/Support/InstVisitor.h"
 #include "llvm/DataLayout.h"
 
 using namespace llvm;
