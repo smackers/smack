@@ -1,7 +1,7 @@
 dnl **************************************************************************
 dnl * Initialize
 dnl **************************************************************************
-AC_INIT([[[SAMPLE]]],[[[x.xx]]],[bugs@yourdomain])
+AC_INIT([SMACK],[1.0],[zvonimir@cs.utah.edu])
 
 dnl Identify where LLVM source tree is
 LLVM_SRC_ROOT="../.."
@@ -1464,9 +1464,7 @@ dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree
 AC_CONFIG_MAKEFILE(Makefile)
 AC_CONFIG_MAKEFILE(lib/Makefile)
-AC_CONFIG_MAKEFILE(lib/sample/Makefile)
-AC_CONFIG_MAKEFILE(tools/Makefile)
-AC_CONFIG_MAKEFILE(tools/sample/Makefile)
+AC_CONFIG_MAKEFILE(lib/smack/Makefile)
 
 dnl This must be last
 AC_OUTPUT
