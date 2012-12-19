@@ -11,42 +11,52 @@ Boogie (http://boogie.codeplex.com)
 
 *** Installing SMACK ***
 
-1. Unpack SMACK into LLVM's project directory, i.e. into
-   LLVM_SRC/projects/smack.
+1. Checkout SMACK:
+cd where-you-want-smack-source-to-live
+git clone git@github.com:smackers/smack.git
 
-2. Add SMACK's directory to LLVM's configure script (look for "sample" project
-   to see where smack has to be added).
+2. Configure SMACK:
 
-3. Configure and build LLVM. If everything goes well, you should now have
-   libsmack.so and libsmack.a in the directory LLVM_OBJ/projects/smack/Debug/lib
-   (or something like that depending on which build options you used).
+cd where-you-want-to-build-smack
+mkdir build (for building without polluting the source dir)
+cd build
+../smack/configure --with-llvmsrc=<directory> --with-llvmobj=<directory> --prefix=<directory>
+
+Options for configure are:
+--with-llvmsrc=<directory>  : Tell SMACK where the LLVM source tree is located [required].
+--with-llvmobj=<directory>  : Tell SMACK where the LLVM object tree is located [required].
+--prefix=<directory>        : Specify full pathname of where you want SMACK installed [required].
+--enable-optimized          : Compile with optimizations enabled [default is NO].
+--enable-assertions         : Compile with assertion checks enabled [default is YES].
+
+
+3. Build SMACK:
+make
+
+If everything goes well, you should now have lib/libsmack.a and lib/smack.so in
+the SMACK installation directory.
+
+4. Copy SMACK's bin scripts to the installation directory:
+cp -r smack-source-dir/bin smack-install-dir
+
+You should probably add smack-install-dir/bin to your path.
 
 
 *** Running SMACK ***
 
 Try SMACK on a simple example in the smack/examples/simple directory.
-NOTE: Both clang and llvm binaries (e.g. llvm-link, opt, etc.) should be in
-      your path, as well as LLVM_SRC/projects/smack/bin directory!
+NOTE: Boogie, clang, and llvm binaries (e.g. llvm-link, opt, etc.) should be in
+      your path, as well as smack-install-dir/bin directory!
 
 First, go to the smack/examples/headers directory and compile smack.c (used for
-defining SMACK-specific functions) using the provided Makefile by running "make
-llvm".
+defining SMACK-specific functions) using the provided Makefile by running
+"make llvm".
 
 Then, go to smack/examples/simple directory and compile the examples by running
 "make llvm". You should get a number of LLVM's bc files, one per example.
 
-Execute SMACK's LLVM pass on an example to generate its translation into the
-Boogie file tmp.bpl using the following command (replace LLVM_OBJ with the
-appropriate directory):
-opt -load LLVM_OBJ/projects/smack/Debug/lib/libsmack.so -internalize -mem2reg \
-  -die -lowerswitch -bpl_print -debug-only=bpl < simple.bc > /dev/null 2> tmp.bpl
+Run SMACK on examples, for instance:
+smack simple
+smack simple_fail
 
-Before Boogie can be run on the example, SMACK's prelude (smack/bin/prelude.bpl)
-with necessary declarations and axioms has to be added to the generated bpl
-file. You can take a look at how this is done in the smack/bin/bplgen script, or
-just execute the script (bin directory has to be in your path): bplgen simple
-
-The bplgen script is going to generate a Boogie file called simple.bpl for the
-example. You should be able to run Boogie on simple.bpl without getting any
-errors.
 
