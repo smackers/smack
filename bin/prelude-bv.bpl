@@ -118,9 +118,9 @@ ensures $obj(p) == $NULL;
 procedure __SMACK_assert(p: $ptr);
 procedure __SMACK_assume(p: $ptr);
 
-procedure __SMACK_record_int(i: bv32);
-procedure __SMACK_record_obj(o: $ref);
-procedure __SMACK_record_ptr(p: $ptr);
+procedure boogie_si_record_int(i: bv32);
+procedure boogie_si_record_obj(o: $ref);
+procedure boogie_si_record_ptr(p: $ptr);
 
 // SMACK-PRELUDE-END
 
