@@ -6,6 +6,7 @@
 #include <string>
 
 using namespace smack;
+using namespace std;
 
 Block::Block(BasicBlock* block, int blockNum) : 
   basicBlock(block), parentProcedure(NULL), blockNum(blockNum) {}
@@ -20,12 +21,12 @@ BasicBlock* Block::getBasicBlock() const {
   return basicBlock;
 }
 
-std::string Block::getName() const {
-  std::stringstream s;
+string Block::getName() const {
+  stringstream s;
   if (basicBlock->hasName())
     return basicBlock->getName();
   else {
-    s << "bb" << blockNum;
+    s << "$bb" << blockNum;
     return s.str();
   }
 }
@@ -43,11 +44,11 @@ Procedure* Block::getParentProcedure() const {
   return parentProcedure;
 }
 
-void Block::print(std::ostream &os) const {
+void Block::print(ostream &os) const {
   if (this == 0) {
     os << "<null Block>";
   } else {
-    os << getName() << ":\n";
+    os << getName() << ":" << endl;
 
     printElements(instructions, os);
 
@@ -64,25 +65,25 @@ void Block::print(std::ostream &os) const {
           BasicBlock 
             *tb = branchInst->getSuccessor(0);
                   
-          os << "  goto " << getName() << "$T, " << getName() << "$F;\n";          
+          os << "  goto " << getName() << "$T, " << getName() << "$F;" << endl;          
             
-          for ( std::vector<Block*>::const_iterator 
+          for ( vector<Block*>::const_iterator 
                   head = succBlocks.begin(), 
                   curr = head, tail = succBlocks.end();
                 curr != tail;
                 ++curr ) {
                                     
             BasicBlock *bb = (*curr)->basicBlock;                  
-            os << getName() << "$" << (bb == tb ? "T" : "F") << ":\n";
-            os << "  assume " << (bb == tb ? te : fe) << ";\n";
-            os << "  goto " << (*curr)->getName() << ";\n";            
+            os << getName() << "$" << (bb == tb ? "T" : "F") << ":" << endl;
+            os << "  assume " << (bb == tb ? te : fe) << ";" << endl;
+            os << "  goto " << (*curr)->getName() << ";" << endl;            
           }
           
         } else {
           assert(branchInst->getNumSuccessors() == 1 
             && "Unconditional branch has one successor");
           
-          os << "  goto " << succBlocks[0]->getName() << ";\n";
+          os << "  goto " << succBlocks[0]->getName() << ";" << endl;
         }
       } else {
         assert(false && "Terminator instruction not currently supported");
@@ -94,16 +95,16 @@ void Block::print(std::ostream &os) const {
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const Block* block) {
+ostream &operator<<(ostream &os, const Block* block) {
   if (block == 0) {
-    os << "<null> Block!\n";
+    os << "<null> Block!" << endl;
   } else {
     block->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const Block& block) {
+ostream &operator<<(ostream &os, const Block& block) {
   block.print(os);
   return os;
 }

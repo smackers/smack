@@ -6,16 +6,17 @@
 #include <sstream>
 
 using namespace smack;
+using namespace std;
 
-const std::string Common::MAIN_PROCEDURE = "main";
+const string Common::MAIN_PROCEDURE = "main";
 
-const std::string Common::ASSERT = "__SMACK_assert";
-const std::string Common::ASSUME = "__SMACK_assume";
+const string Common::ASSERT = "__SMACK_assert";
+const string Common::ASSUME = "__SMACK_assume";
 
 unsigned Common::INT_WIDTH = 0;
 
-std::string Common::int_const(int64_t i) {
-  std::stringstream s;
+string Common::int_const(int64_t i) {
+  stringstream s;
   if (INT_WIDTH == 0)
     s << i;
   else
@@ -23,14 +24,14 @@ std::string Common::int_const(int64_t i) {
   return s.str();
 }
 
-std::string Common::int_const(const llvm::APInt &ap) {
-  std::stringstream s;
+string Common::int_const(const llvm::APInt &ap) {
+  stringstream s;
   
   if (INT_WIDTH == 0)
     s << ap.toString(10,true);
   
   else if (ap.isNegative())
-    s << "sub(0bv" << INT_WIDTH << "," 
+    s << "$sub(0bv" << INT_WIDTH << "," 
       << ap.toString(10,true).substr(1) << "bv" << INT_WIDTH << ")";
     
   else

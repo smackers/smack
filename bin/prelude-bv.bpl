@@ -1,155 +1,126 @@
 // SMACK-PRELUDE-BEGIN
-type ref;
-type name;
-type ptr;
-const unique null:ref;
-function Ptr(ref, bv32) returns (ptr);
-function Obj(ptr) returns (ref);
-function Off(ptr) returns (bv32);
 
-// Ptr, Obj, Off axioms
-axiom(forall x:ptr :: {Obj(x)}{Off(x)} x == Ptr(Obj(x), Off(x)));
-axiom(forall x_obj:ref, x_off:bv32 :: {Ptr(x_obj, x_off)} x_obj == Obj(Ptr(x_obj, x_off)));
-axiom(forall x_obj:ref, x_off:bv32 :: {Ptr(x_obj, x_off)} x_off == Off(Ptr(x_obj, x_off)));
+// SMACK Memory Model
 
-function {:bvbuiltin "bvadd"} add(p1:bv32, p2:bv32) returns (bv32);
-function {:bvbuiltin "bvsub"} sub(p1:bv32, p2:bv32) returns (bv32);
-function {:bvbuiltin "bvmul"} mul(p1:bv32, p2:bv32) returns (bv32);
-function {:bvbuiltin "bvult"} ult(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvugt"} ugt(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvule"} ule(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvuge"} uge(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvslt"} slt(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvsgt"} sgt(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvsle"} sle(p1:bv32, p2:bv32) returns (bool);
-function {:bvbuiltin "bvsge"} sge(p1:bv32, p2:bv32) returns (bool);
+type $ref;
+type $ptr;
 
+const unique $NULL: $ref;
+const $UNDEF: $ptr;
 
-// Mutable
-var Mem:[ptr]ptr;
-var Alloc:[ref]name;
+function $ptr($ref, int) returns ($ptr);
+function $size($ref) returns (bv32);
+function $obj($ptr) returns ($ref);
+function $off($ptr) returns (bv32);
 
-// Immutable
-function Size(ref) returns (bv32);
+axiom(forall x:$ptr :: {$obj(x)}{$off(x)} x == $ptr($obj(x), $off(x)));
+axiom(forall x_obj:$ref, x_off:bv32 :: {$ptr(x_obj, x_off)} x_obj == $obj($ptr(x_obj, x_off)));
+axiom(forall x_obj:$ref, x_off:bv32 :: {$ptr(x_obj, x_off)} x_off == $off($ptr(x_obj, x_off)));
 
-// Undefined ptr value
-const undef:ptr;
+type $name;
+const unique $UNALLOCATED: $name;
+const unique $ALLOCATED: $name;
+var Mem: [$ptr] $ptr;
+var $Alloc: [$ref] $name;
 
-// Constants
-const unique UNALLOCATED:name;
-const unique ALLOCATED:name;
+procedure $alloca(obj_size: bv32) returns (new:$ptr);
+modifies $Alloc;
+ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
+ensures $off(new) == 0bv32;
+ensures $obj(new) != $NULL;
+ensures $size($obj(new)) == obj_size;
+ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
 
+procedure $malloc(obj_size: bv32) returns (new:$ptr);
+modifies $Alloc;
+ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
+ensures $off(new) == 0bv32;
+ensures $obj(new) != $NULL;
+ensures $size($obj(new)) == obj_size;
+ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
 
-procedure __SMACK_alloca(obj_size:bv32) returns (new:ptr);
-modifies Alloc;
-ensures old(Alloc)[Obj(new)] == UNALLOCATED && Alloc[Obj(new)] == ALLOCATED;
-ensures Off(new) == 0bv32;
-ensures Obj(new) != null;
-ensures Size(Obj(new)) == obj_size;
-ensures (forall x_obj:ref :: {Alloc[x_obj]} x_obj == Obj(new) || old(Alloc)[x_obj] == Alloc[x_obj]);
+procedure $free(pointer: $ptr);
+modifies $Alloc;
+requires $Alloc[$obj(pointer)] == $ALLOCATED;
+requires $off(pointer) == 0bv32;
+ensures $Alloc[$obj(pointer)] != $UNALLOCATED;
+ensures (forall x:$ref :: {$Alloc[x]} $obj(pointer) == x || old($Alloc)[x] == $Alloc[x]);
 
-procedure __SMACK_malloc(obj_size:bv32) returns (new:ptr);
-modifies Alloc;
-ensures old(Alloc)[Obj(new)] == UNALLOCATED && Alloc[Obj(new)] == ALLOCATED;
-ensures Off(new) == 0bv32;
-ensures Obj(new) != null;
-ensures Size(Obj(new)) == obj_size;
-ensures (forall x_obj:ref :: {Alloc[x_obj]} x_obj == Obj(new) || old(Alloc)[x_obj] == Alloc[x_obj]);
+// SMACK Arithmetic Predicates
 
-procedure __SMACK_free(pointer:ptr);
-modifies Alloc;
-requires Alloc[Obj(pointer)] == ALLOCATED;
-requires Off(pointer) == 0bv32;
-ensures Alloc[Obj(pointer)] != UNALLOCATED;
-ensures (forall x:ref :: {Alloc[x]} Obj(pointer) == x || old(Alloc)[x] == Alloc[x]);
+function {:bvbuiltin "bvadd"} $add(p1:bv32, p2:bv32) returns (bv32);
+function {:bvbuiltin "bvsub"} $sub(p1:bv32, p2:bv32) returns (bv32);
+function {:bvbuiltin "bvmul"} $mul(p1:bv32, p2:bv32) returns (bv32);
+function $sdiv(p1:bv32, p2:bv32) returns (bv32);
+function $udiv(p1:bv32, p2:bv32) returns (bv32);
+function $srem(p1:bv32, p2:bv32) returns (bv32);
+function $and(p1:bv32, p2:bv32) returns (bv32);
+function $or(p1:bv32, p2:bv32) returns (bv32);
+function $xor(p1:bv32, p2:bv32) returns (bv32);
+function $lshr(p1:bv32, p2:bv32) returns (bv32);
+function $ashr(p1:bv32, p2:bv32) returns (bv32);
+function $shl(p1:bv32, p2:bv32) returns (bv32);
+function {:bvbuiltin "bvult"} $ult(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvugt"} $ugt(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvule"} $ule(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvuge"} $uge(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvslt"} $slt(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvsgt"} $sgt(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvsle"} $sle(p1:bv32, p2:bv32) returns (bool);
+function {:bvbuiltin "bvsge"} $sge(p1:bv32, p2:bv32) returns (bool);
 
+function $pa(pointer: $ptr, offset: bv32, size: bv32) returns ($ptr);
+function $trunc(p:$ptr) returns ($ptr);
+function $p2i(p: $ptr) returns ($ptr);
+function $p2b(p: $ptr) returns (bool);
+function $b2p(b: bool) returns ($ptr);
+function $i2b(i: bv32) returns (bool);
+function $b2i(b: bool) returns (bv32);
 
-// comparison operators procedures
-procedure __SMACK_Proc_ICMP_EQ(a:ptr, b:ptr) returns (result:bool);
-ensures result == (a == b);
+// SMACK Arithmetic Axioms
 
-procedure __SMACK_Proc_ICMP_NE(a:ptr, b:ptr) returns (result:bool);
-ensures result == (a != b);
+axiom $and(0bv32,0bv32) == 0bv32;
+axiom $and(0bv32,1bv32) == 0bv32;
+axiom $and(1bv32,0bv32) == 0bv32;
+axiom $and(1bv32,1bv32) == 1bv32;
 
-procedure __SMACK_Proc_ICMP_SGE(a:ptr, b:ptr) returns (result:bool);
-ensures result == sge(Off(a), Off(b));
-procedure __SMACK_Proc_ICMP_UGE(a:ptr, b:ptr) returns (result:bool);
-ensures result == uge(Off(a), Off(b));
+axiom $or(0bv32,0bv32) == 0bv32;
+axiom $or(0bv32,1bv32) == 1bv32;
+axiom $or(1bv32,0bv32) == 1bv32;
+axiom $or(1bv32,1bv32) == 1bv32;
 
-procedure __SMACK_Proc_ICMP_SLE(a:ptr, b:ptr) returns (result:bool);
-ensures result == sle(Off(a), Off(b));
-procedure __SMACK_Proc_ICMP_ULE(a:ptr, b:ptr) returns (result:bool);
-ensures result == ule(Off(a), Off(b));
+axiom $xor(0bv32,0bv32) == 0bv32;
+axiom $xor(0bv32,1bv32) == 1bv32;
+axiom $xor(1bv32,0bv32) == 1bv32;
+axiom $xor(1bv32,1bv32) == 0bv32;
 
-procedure __SMACK_Proc_ICMP_SLT(a:ptr, b:ptr) returns (result:bool);
-ensures result == slt(Off(a), Off(b));
-procedure __SMACK_Proc_ICMP_ULT(a:ptr, b:ptr) returns (result:bool);
-ensures result == ult(Off(a), Off(b));
+axiom (forall p:$ptr, o:bv32, s:bv32 :: {$pa(p,o,s)} $pa(p,o,s) == $ptr($obj(p), $off(p) + o * s));
+axiom (forall p:$ptr, o:bv32, s:bv32 :: {$pa(p,o,s)} $obj($pa(p,o,s)) == $obj(p));
+axiom (forall p:$ptr :: $trunc(p) == p);
 
-procedure __SMACK_Proc_ICMP_SGT(a:ptr, b:ptr) returns (result:bool);
-ensures result == sgt(Off(a), Off(b));
-procedure __SMACK_Proc_ICMP_UGT(a:ptr, b:ptr) returns (result:bool);
-ensures result == ugt(Off(a), Off(b));
+axiom $b2i(true) == 1bv32;
+axiom $b2i(false) == 0bv32;
+axiom $b2p(true) == $ptr($NULL,1bv32);
+axiom $b2p(false) == $ptr($NULL,0bv32);
 
+axiom (forall i:bv32 :: $i2b(i) <==> i != 0bv32);
+axiom $i2b(0bv32) == false;
+axiom (forall r:$ref, i:bv32 :: $p2b($ptr(r,i)) <==> i != 0bv32);
+axiom $p2b($ptr($NULL,0bv32)) == false;
+axiom (forall r:$ref, i:bv32 :: $p2i($ptr(r,i)) == $ptr($NULL,i));
 
-procedure __SMACK_Add(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null && Off(result) == add(Off(a), Off(b));
+// SMACK Library Procedures
 
-procedure __SMACK_Sub(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null && Off(result) == sub(Off(a), Off(b));
+procedure __SMACK_nondet() returns (p: $ptr);
+procedure __SMACK_nondetInt() returns (p: $ptr);
+ensures $obj(p) == $NULL;
 
-procedure __SMACK_Mul(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null && Off(result) == mul(Off(a), Off(b));
+procedure __SMACK_assert(p: $ptr);
+procedure __SMACK_assume(p: $ptr);
 
-procedure __SMACK_SDiv(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_UDiv(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_SRem(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_URem(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_And(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_Or(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_Xor(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_LShr(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_AShr(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_Shl(a:ptr, b:ptr) returns (result:ptr);
-ensures Obj(result) == null;
-
-procedure __SMACK_Trunc(a:ptr) returns (result:ptr);
-ensures result == a;
-
-
-function __SMACK_PtrArith(p:ptr, off:bv32, size:bv32) returns (result:ptr)
-  { Ptr(Obj(p), add(Off(p), mul(off, size))) }
-
-procedure __SMACK_BoolToInt(a:bool) returns (result:ptr);
-ensures Obj(result) == null;
-ensures (a && Off(result) != 0bv32) || (!a && Off(result) == 0bv32);
-
-procedure __SMACK_isInt(x:ptr) returns (result:ptr);
-ensures (Obj(x) == null && result != Ptr(null, 0bv32)) || (Obj(x) != null && result == Ptr(null, 0bv32));
-
-procedure __SMACK_nondet() returns (x:ptr);
-
-procedure __SMACK_nondetInt() returns (x:ptr);
-ensures Obj(x) == null;
+procedure __SMACK_record_int(i: bv32);
+procedure __SMACK_record_obj(o: $ref);
+procedure __SMACK_record_ptr(p: $ptr);
 
 // SMACK-PRELUDE-END
-
 

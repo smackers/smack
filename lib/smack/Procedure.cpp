@@ -5,10 +5,11 @@
 #include "Procedure.h"
 
 using namespace smack;
+using namespace std;
 
 Procedure::~Procedure() {}
 
-std::string Procedure::getName() const {
+string Procedure::getName() const {
   return name;
 }
 
@@ -20,7 +21,7 @@ bool Procedure::isVoid() const {
   return voidFlag;
 }
 
-void Procedure::addArgument(std::string argument) {
+void Procedure::addArgument(string argument) {
   arguments.push_back(argument);
 }
 
@@ -45,27 +46,27 @@ void Procedure::addBlock(Block* block) {
   block->setParentProcedure(this);
 }
 
-std::vector<Block*>& Procedure::getBlocks() {
+vector<Block*>& Procedure::getBlocks() {
   return blocks;
 }
 
 void Procedure::addVariable(Value* var) {
-  assert(var->getType()->getTypeID() != Type::VoidTyID && "Variable type shoudln't be void");
+  assert(var->getType()->getTypeID() != Type::VoidTyID && "Variable type shouldn't be void");
   if (!var->hasName()) {
-    var->setName("smackVar");
+    var->setName("$p");
   }
   vars.push_back(var);
 }
 
 void Procedure::addBoolVariable(Value* var) {
-  assert(var->getType()->getTypeID() != Type::VoidTyID && "Variable type shoudln't be void");
+  assert(var->getType()->getTypeID() != Type::VoidTyID && "Variable type shouldn't be void");
   if (!var->hasName()) {
-    var->setName("smackVar");
+    var->setName("$b");
   }
   boolVars.push_back(var);
 }
 
-void Procedure::print(std::ostream &os) const {
+void Procedure::print(ostream &os) const {
   if (this == 0) {
     os << "<null Procedure>";
   } else {
@@ -74,55 +75,55 @@ void Procedure::print(std::ostream &os) const {
       os << "{:inline 1} ";
     }
     os << name << "(";
-    for(std::vector<std::string>::const_iterator
+    for(vector<string>::const_iterator
         i = arguments.begin(), b = arguments.begin(), e = arguments.end(); i != e; ++i) {
       if (i != b) {
         os << ", ";
       }
-      os << *i << ":ptr";
+      os << *i << ": $ptr";
     }
     os << ")";
     
     if (voidFlag) {
-      os << "\n";
+      os << endl;
     } else {
       assert(returnVar != 0 && "Function is not void and return var has to be set");
-      os << " returns (" << *returnVar << ":ptr)\n";
+      os << " returns (" << *returnVar << ": $ptr)" << endl;
     }
     
-    os << "modifies Mem;\n";
-    os << "modifies Alloc;\n";
+    os << "modifies $Mem;" << endl;
+    os << "modifies $Alloc;" << endl;
     
-    os << "{\n";
-    std::vector<std::string> varNames;
+    os << "{" << endl;
+    vector<string> varNames;
     varNames.resize(vars.size());
-    std::transform(vars.begin(), vars.end(), varNames.begin(), getValueName());
-    printVarDecls(varNames, os, "ptr");
+    transform(vars.begin(), vars.end(), varNames.begin(), getValueName());
+    printVarDecls(varNames, os, "$ptr");
     varNames.clear();
     varNames.resize(boolVars.size());
-    std::transform(boolVars.begin(), boolVars.end(), varNames.begin(), getValueName());
+    transform(boolVars.begin(), boolVars.end(), varNames.begin(), getValueName());
     printVarDecls(varNames, os, "bool");
 
-    os << "\n";
+    os << endl;
     
     printElements(blocks, os);
-    os << "}\n";
+    os << "}" << endl;
   }
 }
 
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const Procedure* proc) {
+ostream &operator<<(ostream &os, const Procedure* proc) {
   if (proc == 0) {
-    os << "<null> Procedure!\n";
+    os << "<null> Procedure!" << endl;
   } else {
     proc->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const Procedure& proc) {
+ostream &operator<<(ostream &os, const Procedure& proc) {
   proc.print(os);
   return os;
 }

@@ -5,12 +5,13 @@
 #include "SmackModule.h"
 
 using namespace smack;
+using namespace std;
 
 SmackModule::SmackModule() {}
 
 SmackModule::~SmackModule() {}
 
-void SmackModule::addGlobalVariable(std::string name) {
+void SmackModule::addGlobalVariable(string name) {
   assert(globalVariables.count(name) == 0);
   globalVariables.insert(name);
 }
@@ -20,7 +21,7 @@ void SmackModule::addProcedure(Procedure* procedure) {
   procedures[procedure->getName()] = procedure;
 }
 
-Procedure* SmackModule::getProcedure(std::string name) {
+Procedure* SmackModule::getProcedure(string name) {
   if (procedures.count(name) == 0) {
     return NULL;
   } else {
@@ -28,48 +29,48 @@ Procedure* SmackModule::getProcedure(std::string name) {
   }
 }
 
-std::map<std::string, Procedure*>& SmackModule::getProcedures() {
+map<string, Procedure*>& SmackModule::getProcedures() {
   return procedures;
 }
 
-void SmackModule::print(std::ostream &os) const {
+void SmackModule::print(ostream &os) const {
   if (this == 0) {
     os << "<null SmackModule>";
   } else {
-    os << "// SMACK-MODULE-BEGIN" << std::endl;
+    os << "// SMACK-MODULE-BEGIN" << endl;
 
-    for(std::set<std::string>::const_iterator
+    for(set<string>::const_iterator
         i = globalVariables.begin(), e = globalVariables.end(); i != e; ++i) {
-      os << "const " << *i << ":ptr;" << std::endl;
+      os << "const " << *i << ": $ptr;" << endl;
       
-      for(std::set<std::string>::const_iterator
+      for(set<string>::const_iterator
         j = i, f = globalVariables.end(); j != f && ++j != f; ) {
-          os << "axiom(Obj(" << *i << ") != Obj(" << *j << "));" << std::endl;
+          os << "axiom($obj(" << *i << ") != $obj(" << *j << "));" << endl;
       }
     }
 
-    for(std::map<std::string, Procedure*>::const_iterator
+    for(map<string, Procedure*>::const_iterator
         i = procedures.begin(), e = procedures.end(); i != e; ++i) {
-      os << std::endl << i->second;
+      os << endl << i->second;
     }
 
-    os << "// SMACK-MODULE-END" << std::endl;
+    os << "// SMACK-MODULE-END" << endl;
   }
 }
 
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const SmackModule* module) {
+ostream &operator<<(ostream &os, const SmackModule* module) {
   if (module == 0) {
-    os << "<null> SmackModule!\n";
+    os << "<null> SmackModule!" << endl;
   } else {
     module->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const SmackModule& module) {
+ostream &operator<<(ostream &os, const SmackModule& module) {
   module.print(os);
   return os;
 }
@@ -78,7 +79,7 @@ raw_ostream &operator<<(raw_ostream &os, const SmackModule* module) {
   if (module == 0) {
     os << "<null> SmackModule!\n";
   } else {
-    std::ostringstream stream;
+    ostringstream stream;
     module->print(stream);
     os << stream.str();
   }
@@ -86,7 +87,7 @@ raw_ostream &operator<<(raw_ostream &os, const SmackModule* module) {
 }
  
 raw_ostream &operator<<(raw_ostream &os, const SmackModule& module) {
-  std::ostringstream stream;
+  ostringstream stream;
   module.print(stream);
   os << stream.str();
   return os;

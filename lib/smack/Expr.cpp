@@ -5,19 +5,20 @@
 #include "Expr.h"
 
 using namespace smack;
+using namespace std;
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const Expr* expr) {
+ostream &operator<<(ostream &os, const Expr* expr) {
   if (expr == 0) {
-    os << "<null> Expr!\n";
+    os << "<null> Expr!" << endl;
   } else {
     expr->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const Expr& expr) {
+ostream &operator<<(ostream &os, const Expr& expr) {
   expr.print(os);
   return os;
 }

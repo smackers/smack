@@ -194,7 +194,7 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
         generateMemoryPairings(callSite, calledFunction, calledFunc);
       }
     } else {
-      for (std::vector<const Function*>::iterator i = callTargetFinder->begin(callSite),
+      for (vector<const Function*>::iterator i = callTargetFinder->begin(callSite),
           ei = callTargetFinder->end(callSite); i != ei; ++i) {
         const Function* calledFunction = *i;
         module->addCalledProcedure(calledFunction->getNameStr());

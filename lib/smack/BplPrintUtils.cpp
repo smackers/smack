@@ -4,16 +4,18 @@
 //
 #include "BplPrintUtils.h"
 
-std::string smack::translateName(const std::string name) {
-  return "$" + name;
+using namespace std;
+
+string smack::translateName(const string name) {
+  return "" + name;
 }
 
-std::string smack::translateName(const Value* val) {
+string smack::translateName(const Value* val) {
   assert(val->hasName() && "Value has to have a name");
-  const std::string name = EscapeString(val->getName().str());
+  const string name = EscapeString(val->getName().str());
   if (isa<GlobalVariable>(val)) {
-    return "$$" + name;
+    return "" + name;
   } else {
-    return "$" + name;
+    return "" + name;
   }
 }

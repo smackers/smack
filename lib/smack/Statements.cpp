@@ -5,6 +5,7 @@
 #include "Statements.h"
 
 using namespace smack;
+using namespace std;
 
 Expr* AssignStmt::getLeft() const {
   return left;
@@ -14,9 +15,9 @@ Expr* AssignStmt::getRight() const {
   return right;
 }
 
-void AssignStmt::print(std::ostream &os) const {
+void AssignStmt::print(ostream &os) const {
   Statement::print(os);
-  os << *left << " := " << *right << ";\n";
+  os << *left << " := " << *right << ";" << endl;
 }
 
 const Function* CalledFunction::getCalledFunction() {
@@ -24,7 +25,7 @@ const Function* CalledFunction::getCalledFunction() {
 }
 
 CallStmt::~CallStmt() {
-  std::for_each(calledFunctions.begin(), calledFunctions.end(), &CalledFunction::destroy);
+  for_each(calledFunctions.begin(), calledFunctions.end(), &CalledFunction::destroy);
   calledFunctions.clear();
 }
 
@@ -42,13 +43,13 @@ void CallStmt::addParam(Expr* param) {
   params.push_back(param);
 }
 
-void CallStmt::print(std::ostream &os) const {
+void CallStmt::print(ostream &os) const {
   Statement::print(os);
   assert(isa<CallInst>(inst) && "Call instruction has to be CallInst");
   
   if (calledFunctions.empty()) {
     // TODO: this is unsound!
-    os << "// Empty call\n";
+    os << "// Empty call" << endl;
   } else if (calledFunctions.size() == 1) {
     CalledFunction* calledFunc = calledFunctions[0];
 
@@ -57,39 +58,39 @@ void CallStmt::print(std::ostream &os) const {
     if (returnVar != NULL) {
       os << *returnVar << " := ";
     }    
-    std::string name = func->getName().str();
-    std::stringstream ps;
-    for(std::vector<Expr*>::const_iterator
+    string name = func->getName().str();
+    stringstream ps;
+    for(vector<Expr*>::const_iterator
         bp = params.begin(), ep = params.end(), p = bp; p != ep; ++p)          
       ps << (p != bp ? "," : "") << *p;
     
     if (name == "__SMACK_record_int")
-      os << name << "(Off(" << ps.str() << "));" << std::endl;
+      os << name << "($off(" << ps.str() << "));" << endl;
     else if (name == "__SMACK_record_obj")
-      os << name << "(Obj(" << ps.str() << "));" << std::endl;
+      os << name << "($obj(" << ps.str() << "));" << endl;
     else if (name == "__SMACK_record_ptr")
-      os << name << "(" << ps.str() << ");" << std::endl;
+      os << name << "(" << ps.str() << ");" << endl;
     else
-      os << name << "(" << ps.str() << ");" << std::endl;
+      os << name << "(" << ps.str() << ");" << endl;
 
   } else {
     unsigned long uniqueLabelSufix = (unsigned long)this;
 
     os << "goto ";
     int labelCounter = 0;
-    for (std::vector<CalledFunction*>::const_iterator i = calledFunctions.begin(),
+    for (vector<CalledFunction*>::const_iterator i = calledFunctions.begin(),
         b = calledFunctions.begin(), e = calledFunctions.end(); i != e; ++i, ++labelCounter) {
       if (i != b) {
         os << ", ";
       }
       os << "label_call_" << uniqueLabelSufix << "_" << labelCounter;
     }
-    os << ";\n";
+    os << ";" << endl;
 
     labelCounter = 0;
-    for (std::vector<CalledFunction*>::const_iterator i = calledFunctions.begin(),
+    for (vector<CalledFunction*>::const_iterator i = calledFunctions.begin(),
         e = calledFunctions.end(); i != e; ++i, ++labelCounter) {
-      os << "label_call_" << uniqueLabelSufix << "_" << labelCounter << ":\n";
+      os << "label_call_" << uniqueLabelSufix << "_" << labelCounter << ":" << endl;
       os << "  call ";
       if (returnVar != NULL) {
         os << *returnVar << " := ";
@@ -97,179 +98,200 @@ void CallStmt::print(std::ostream &os) const {
       const Function* func = (*i)->getCalledFunction();
       os << func->getName().str();
       os << "(";
-      for(std::vector<Expr*>::const_iterator
+      for(vector<Expr*>::const_iterator
           j = params.begin(), bj = params.begin(), ej = params.end(); j != ej; ++j) {
         if (j != bj) {
           os << ", ";
         }
         os << *j;
       }
-      os << ");\n";
+      os << ");" << endl;
 
-      os << "  goto label_call_" << uniqueLabelSufix << "_end;\n";
+      os << "  goto label_call_" << uniqueLabelSufix << "_end;" << endl;
     }
-    os << "label_call_" << uniqueLabelSufix << "_end:\n";
+    os << "label_call_" << uniqueLabelSufix << "_end:" << endl;
   }
 }
 
-void CmpStmt::print(std::ostream &os) const {
+void CmpStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "Cmp instruction has to have a name");
   assert(isa<ICmpInst>(inst) && "Compare instruction has to be integer compare");
   const ICmpInst* icmp = cast<ICmpInst>(inst);
-  os << "call " << translateName(icmp->getName().str()) << " := ";
+  os << translateName(icmp->getName().str()) << " := ";
   switch (icmp->getPredicate()) {
   case ICmpInst::ICMP_EQ:
-    os << "__SMACK_Proc_ICMP_EQ";
+    os << *left << " == " << *right;
     break;
   case ICmpInst::ICMP_NE:
-    os << "__SMACK_Proc_ICMP_NE";
+    os << *left << " != " << *right;
     break;
   case ICmpInst::ICMP_SGE:
-    os << "__SMACK_Proc_ICMP_SGE";
+    os << "$sge($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_UGE:
-    os << "__SMACK_Proc_ICMP_UGE";
+    os << "$uge($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_SLE:
-    os << "__SMACK_Proc_ICMP_SLE";
+    os << "$sle($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_ULE:
-    os << "__SMACK_Proc_ICMP_ULE";
+    os << "$ule($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_SLT:
-    os << "__SMACK_Proc_ICMP_SLT";
+    os << "$slt($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_ULT:
-    os << "__SMACK_Proc_ICMP_ULT";
+    os << "$ult($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_SGT:
-    os << "__SMACK_Proc_ICMP_SGT";
+    os << "$sgt($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_UGT:
-    os << "__SMACK_Proc_ICMP_UGT";
+    os << os << "$ugt($off(" << *left << "), $off(" << *right << "))";
     break;
   default:
     assert(false && "Predicate not supported");
   }
-  os << "(" << *left << ", " << *right << ");\n";
+  os << ";" << endl;
 }
 
-void BoolToIntStmt::print(std::ostream &os) const {
+void BoolToIntStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "BoolToInt instruction has to have a name");
-  os << "call " << translateName(inst->getName().str()) << " := ";
-  os << "__SMACK_BoolToInt";
-  os << "(" << *boolExpr << ");\n";
+  os << translateName(inst->getName().str()) 
+     << " := $b2p(" << *boolExpr << ");" << endl;
 }
 
-void TruncStmt::print(std::ostream &os) const {
+void TruncStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "Trunc instruction has to have a name");
-  os << "call " << translateName(inst->getName().str()) << " := ";
-  os << "__SMACK_Trunc";
-  os << "(" << *operand << ");\n";
+  os << translateName(inst->getName().str())  << " := ";
+  if (((TruncInst *) inst)->getDestTy()->isIntegerTy(1))
+    os << "$p2b";
+  else
+    os << "$trunc";
+  os << "(" << *operand << ");" << endl;
 }
 
-void BinaryOperatorStmt::print(std::ostream &os) const {
+void BinaryOperatorStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "BinaryOperator instruction has to have a name");
   assert(isa<BinaryOperator>(inst) && "Binary operator instruction has to be BinaryOperator");
-  os << "call " << translateName(inst->getName().str()) << " := ";
+  os << translateName(inst->getName().str()) << " := ";
+
+  if (inst->getType()->isIntegerTy(1))
+    os << "$i2b(";
+  else
+    os << "$ptr($NULL, ";
+  
   switch (inst->getOpcode()) {
   case Instruction::Add:
-    os << "__SMACK_Add";
+    os << "$add";
     break;
   case Instruction::Sub:
-    os << "__SMACK_Sub";
+    os << "$sub";
     break;
   case Instruction::Mul:
-    os << "__SMACK_Mul";
+    os << "$mul";
     break;
   case Instruction::SDiv:
-    os << "__SMACK_SDiv";
+    os << "$sdiv";
     break;
   case Instruction::UDiv:
-    os << "__SMACK_UDiv";
+    os << "$udiv";
     break;
   case Instruction::SRem:
-    os << "__SMACK_SRem";
+    os << "$srem";
     break;
   case Instruction::URem:
-    os << "__SMACK_URem";
+    os << "$urem";
     break;
   case Instruction::And:
-    os << "__SMACK_And";
+    os << "$and";
     break;
   case Instruction::Or:
-    os << "__SMACK_Or";
+    os << "$or";
     break;
   case Instruction::Xor:
-    os << "__SMACK_Xor";
+    os << "$xor";
     break;
   case Instruction::LShr:
-    os << "__SMACK_LShr";
+    os << "$lshr";
     break;
   case Instruction::AShr:
-    os << "__SMACK_AShr";
+    os << "$ashr";
     break;
   case Instruction::Shl:
-    os << "__SMACK_Shl";
+    os << "$shl";
     break;
   default:
     assert(false && "Predicate not supported");
   }
-  os << "(" << *left << ", " << *right << ");\n";
+  os << "( ";
+  if (inst->getOperand(0)->getType()->isIntegerTy(1))
+    os << "$b2i(";
+  else 
+    os << "$off(";
+  os << *left << "), ";
+
+  if (inst->getOperand(1)->getType()->isIntegerTy(1))
+    os << "$b2i(";
+  else 
+    os << "$off(";
+  os << *right << ")";
+  
+  os << " ));" << endl;
 }
 
-void AllocaStmt::print(std::ostream &os) const {
+void AllocaStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "Alloca instruction has to have a name");
-  std::string varName = translateName(inst->getName().str());
+  string varName = translateName(inst->getName().str());
   
   os << "call " << varName << " := ";
-  os << "__SMACK_alloca(mul(" << typeSize->getOffComponent() << ", " << arraySize->getOffComponent() << "));\n";
+  os << "$alloca($mul(" << typeSize->getOffComponent() << ", " << arraySize->getOffComponent() << "));" << endl;
 }
 
-void MallocStmt::print(std::ostream &os) const {
+void MallocStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "Malloc instruction has to have a name");
-  std::string varName = translateName(inst->getName().str());
+  string varName = translateName(inst->getName().str());
   
   os << "call " << varName << " := ";
-  os << "__SMACK_malloc(" << arraySize->getOffComponent() << ");\n";
+  os << "$malloc(" << arraySize->getOffComponent() << ");" << endl;
 }
 
-void FreeStmt::print(std::ostream &os) const {
+void FreeStmt::print(ostream &os) const {
   Statement::print(os);
-  os << "call __SMACK_free(" << *freedPtr << ");\n";
+  os << "call $free(" << *freedPtr << ");" << endl;
 }
 
-void AssertStmt::print(std::ostream &os) const {
+void AssertStmt::print(ostream &os) const {
   Statement::print(os);
-  os << "assert(" << *assertion << " != Ptr(null, " << Common::int_const(0) << "));\n";
+  os << "assert(" << *assertion << " != $ptr($NULL, " << Common::int_const(0) << "));" << endl;
 }
 
-void AssumeStmt::print(std::ostream &os) const {
+void AssumeStmt::print(ostream &os) const {
   Statement::print(os);
-  os << "assume(" << *assumption << " != Ptr(null, " << Common::int_const(0) << "));\n";
+  os << "assume(" << *assumption << " != $ptr($NULL, " << Common::int_const(0) << "));" << endl;
 }
 
-void ReturnStmt::print(std::ostream &os) const {
+void ReturnStmt::print(ostream &os) const {
   Statement::print(os);
   if (returnValue != NULL) {
-    assert(returnVar != NULL && "Return variable shoudn't be NULL");
-    os << *returnVar << " := " << *returnValue << ";\n  ";
+    assert(returnVar != NULL && "Return variable shouldn't be NULL");
+    os << *returnVar << " := " << *returnValue << ";" << endl << "  ";
   }
-  os << "return;\n";
+  os << "return;" << endl;
 }
 
-void SelectStmt::print(std::ostream &os) const {
+void SelectStmt::print(ostream &os) const {
   Statement::print(os);
   assert(inst->hasName() && "Select instruction has to have a name");
-  os << "if (" << *condition << ") {\n";
-  os << "    " << translateName(inst->getName().str()) << " := " << *trueExpr << ";\n";
-  os << "  } else {\n";
-  os << "    " << translateName(inst->getName().str()) << " := " << *falseExpr << ";\n";
-  os << "  }\n";
+  os << "if (" << *condition << ") {" << endl;
+  os << "    " << translateName(inst->getName().str()) << " := " << *trueExpr << ";" << endl;
+  os << "  } else {" << endl;
+  os << "    " << translateName(inst->getName().str()) << " := " << *falseExpr << ";" << endl;
+  os << "  }" << endl;
 }

@@ -6,6 +6,7 @@
 #include "Common.h"
 
 using namespace smack;
+using namespace std;
 
 Expr* MemExpr::getPointer() const {
   return ptr;
@@ -15,15 +16,15 @@ Memory* MemExpr::getMemory() const {
   return mem;
 }
 
-void MemExpr::print(std::ostream &os) const {
+void MemExpr::print(ostream &os) const {
   os << *mem << "[" << *ptr << "]";
 }
 
-std::string VarExpr::getName() const {
+string VarExpr::getName() const {
   return varName;
 }
 
-void VarExpr::print(std::ostream &os) const {
+void VarExpr::print(ostream &os) const {
   if (var == 0) {
     assert(!varName.empty() && "If var is NULL, varName shouldn't be empty");
     os << varName;
@@ -34,7 +35,7 @@ void VarExpr::print(std::ostream &os) const {
   }
 }
 
-void ConstExpr::print(std::ostream &os) const {
+void ConstExpr::print(ostream &os) const {
   if (constant != NULL) {
     if (const ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
       if (ci->getBitWidth() == 1) {
@@ -43,31 +44,31 @@ void ConstExpr::print(std::ostream &os) const {
         else
           os << "true";
       } else        
-        os << "Ptr(null," << Common::int_const( ci->getValue() ) <<  ")";
+        os << "$ptr($NULL," << Common::int_const( ci->getValue() ) <<  ")";
 
     } else if (isa<ConstantPointerNull>(constant)) {
-      os << "Ptr(null," << Common::int_const(0) << ")";
+      os << "$ptr($NULL," << Common::int_const(0) << ")";
     } else {
       assert(false && "Value type not supported");
     }
   } else {
-    os << "Ptr(null," << Common::int_const(intConstant) << ")";
+    os << "$ptr($NULL," << Common::int_const(intConstant) << ")";
   }
 }
 
-std::string ConstExpr::getObjComponent() const {
-  std::stringstream obj;
-  obj << "null";
+string ConstExpr::getObjComponent() const {
+  stringstream obj;
+  obj << "$NULL";
   return obj.str();
 }
 
-std::string ConstExpr::getOffComponent() const {
-  std::stringstream off;
+string ConstExpr::getOffComponent() const {
+  stringstream off;
   if (constant != NULL) {
     if (const ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
-      std::string sval = Common::int_const( ci->getLimitedValue() );
+      string sval = Common::int_const( ci->getLimitedValue() );
       if ( ci->isNegative() ) {
-        off << "sub(" << Common::int_const(0) << ", " << sval.substr(1) << ")";
+        off << "$sub(" << Common::int_const(0) << ", " << sval.substr(1) << ")";
       } else {
         off << sval;
       }
@@ -82,22 +83,24 @@ std::string ConstExpr::getOffComponent() const {
   return off.str();
 }
 
-void PtrArithExpr::print(std::ostream &os) const {
-  os << "__SMACK_PtrArith(" << *ptr << ", " << offset->getOffComponent() << ", " << size->getOffComponent() << ")";
+void PtrArithExpr::print(ostream &os) const {
+  os << "$pa(" << *ptr << ", " 
+     << offset->getOffComponent() << ", " 
+     << size->getOffComponent() << ")";
 }
 
-void NotExpr::print(std::ostream &os) const {
+void NotExpr::print(ostream &os) const {
   os << "!(" << *expr << ")";
 }
 
-void TrueExpr::print(std::ostream &os) const {
+void TrueExpr::print(ostream &os) const {
   os << "true";
 }
 
-void FalseExpr::print(std::ostream &os) const {
+void FalseExpr::print(ostream &os) const {
   os << "false";
 }
 
-void UndefExpr::print(std::ostream &os) const {
-  os << "undef";
+void UndefExpr::print(ostream &os) const {
+  os << "$UNDEF";
 }

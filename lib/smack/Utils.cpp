@@ -5,10 +5,11 @@
 #include "Utils.h"
 
 using namespace smack;
+using namespace std;
 
 namespace smack {
 
-std::string EscapeString(std::string str) {
+string EscapeString(string str) {
   str = llvm::DOT::EscapeString(str);
   return str;
 }

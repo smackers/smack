@@ -46,7 +46,7 @@ public:
   printSecondItem(std::ostream &stream) : os(stream) {}
   template <typename T1, typename T2>
   void operator()(const std::pair<T1, T2>& pair) {
-    os << pair.second << "\n";
+    os << pair.second << std::endl;
   }
 };
 

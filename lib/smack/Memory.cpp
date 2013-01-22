@@ -5,19 +5,20 @@
 #include "Memory.h"
 
 using namespace smack;
+using namespace std;
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const Memory* mem) {
+ostream &operator<<(ostream &os, const Memory* mem) {
   if (mem == 0) {
-    os << "<null> Memory!\n";
+    os << "<null> Memory!" << endl;
   } else {
     mem->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const Memory& mem) {
+ostream &operator<<(ostream &os, const Memory& mem) {
   mem.print(os);
   return os;
 }
@@ -28,6 +29,6 @@ Memory* Memory::create() {
   return mem;
 }
 
-void Memory::print(std::ostream &os) const {
-  os << "Mem";
+void Memory::print(ostream &os) const {
+  os << "$Mem";
 }

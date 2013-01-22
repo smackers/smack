@@ -24,7 +24,7 @@ private:
 public:
   printVarDecl(std::ostream &stream, std::string varTypeP) : os(stream), varType(varTypeP) {}
   void operator()(std::string var) {
-    os << "var " << var << " : " << varType << ";\n";
+    os << "var " << var << " : " << varType << ";" << std::endl;
   }
 };
 

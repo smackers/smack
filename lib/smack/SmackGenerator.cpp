@@ -5,6 +5,7 @@
 #include "SmackGenerator.h"
 
 using namespace smack;
+using namespace std;
 
 RegisterPass<SmackGenerator> X("smack", "SMACK generator pass");
 char SmackGenerator::ID = 0;
@@ -16,7 +17,7 @@ bool SmackGenerator::runOnModule(Module &m) {
   DEBUG(errs() << "Analyzing globals...\n");
   for (Module::const_global_iterator g = m.global_begin(), e = m.global_end(); g != e; ++g) {
     if (isa<GlobalVariable>(g)) {
-      std::string globalName = translateName(g);
+      string globalName = translateName(g);
       module->addGlobalVariable(globalName);
     }
   }
@@ -25,7 +26,7 @@ bool SmackGenerator::runOnModule(Module &m) {
   SmackInstVisitor smackVisitor(&targetData);
 
   for (Module::iterator func = m.begin(), e = m.end(); func != e; ++func) {
-    if (func->isDeclaration() || func->getName().str().find("__SMACK") != std::string::npos ) {
+    if (func->isDeclaration() || func->getName().str().find("__SMACK") != string::npos ) {
       continue;
     }
     DEBUG(errs() << "Analyzing function: " << func->getName().str() << "\n");
@@ -35,10 +36,7 @@ bool SmackGenerator::runOnModule(Module &m) {
     // set return variable name
     if (func->getReturnType()->getTypeID() != Type::VoidTyID) {
       procedure->setNotVoid();
-      std::string returnVarName = "__SMACK_";
-      returnVarName.append(func->getName().str());
-      returnVarName.append("_return");
-      procedure->setReturnVar(new VarExpr(translateName(returnVarName)));
+      procedure->setReturnVar(new VarExpr("$r"));
     }
 
     // add arguments
@@ -48,8 +46,8 @@ bool SmackGenerator::runOnModule(Module &m) {
 
     module->addProcedure(procedure);
 
-    std::map<const BasicBlock*, Block*> knownBlocks;
-    std::stack<BasicBlock*> workStack;    
+    map<const BasicBlock*, Block*> knownBlocks;
+    stack<BasicBlock*> workStack;    
     int bn = 0;
 
     BasicBlock& entryBlock = func->getEntryBlock();

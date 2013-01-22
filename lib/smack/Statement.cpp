@@ -5,19 +5,20 @@
 #include "Statement.h"
 
 using namespace smack;
+using namespace std;
 
 namespace smack {
 
-std::ostream &operator<<(std::ostream &os, const Statement* inst) {
+ostream &operator<<(ostream &os, const Statement* inst) {
   if (inst == 0) {
-    os << "<null> Stmt!\n";
+    os << "<null> Stmt!" << endl;
   } else {
     inst->print(os);
   }
   return os;
 }
  
-std::ostream &operator<<(std::ostream &os, const Statement& inst) {
+ostream &operator<<(ostream &os, const Statement& inst) {
   inst.print(os);
   return os;
 }
@@ -32,6 +33,6 @@ Block* Statement::getParentBlock() const {
   return parentBlock;
 }
 
-void Statement::print(std::ostream &os) const {
+void Statement::print(ostream &os) const {
   os << "  ";
 }

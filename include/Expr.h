@@ -41,7 +41,7 @@ public:
   
   virtual std::string getObjComponent() const {
     std::stringstream obj;
-    obj << "Obj(";
+    obj << "$obj(";
     print(obj);
     obj << ")";
     return obj.str();
@@ -49,7 +49,7 @@ public:
   
   virtual std::string getOffComponent() const {
     std::stringstream off;
-    off << "Off(";
+    off << "$off(";
     print(off);
     off << ")";
     return off.str();
