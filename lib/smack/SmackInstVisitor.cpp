@@ -145,6 +145,14 @@ void SmackInstVisitor::visitPHINode(PHINode& phi) {
   processInstruction(phi);
 }
 
+void SmackInstVisitor::visitTruncInst(TruncInst& ti) {
+  processInstruction(ti);
+}  
+
+void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
+  processInstruction(ii);
+}  
+
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
   processInstruction(ci);
 
@@ -351,3 +359,38 @@ void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
   BinaryOperatorStmt* binaryOperatorStmt = new BinaryOperatorStmt(&bo, left, right);
   block->addInstruction(binaryOperatorStmt);
 }
+
+// void SmackInstVisitor::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+//   processInstruction(I);
+//   Expr 
+//     *res = new VarExpr(&I),
+//     *ndvar = new VarExpr("$ndvar"),
+//     *b2p = new VarExpr("$b2p"),
+//     *fst = new MemExpr(visitValue(I.getOperand(0)), Memory::create()),
+//     *snd = visitValue(I.getOperand(1)),
+//     *thd = visitValue(I.getOperand(2)),
+//     *same = new BinExpr(res,Expr::EqOp,snd),
+//     *diff = new BinExpr(res,Expr::NeqOp,snd),
+//     *pos = new BinExpr(ndvar,Expr::EqOp,thd),
+//     *neg = new BinExpr(ndvar,Expr::EqOp,res);
+//   FunExpr
+//     *po1 = new FunExpr(b2p),
+//     *po2 = new FunExpr(b2p);
+//   
+//   po1->addArgument(new BinExpr(diff,Expr::OrOp,pos));
+//   po2->addArgument(new BinExpr(same,Expr::OrOp,neg));
+//   
+//   block->addInstruction( new AssignStmt(&I, res, fst) );
+//   block->addInstruction( new HavocStmt(&I, ndvar) );
+//   block->addInstruction( new AssumeStmt(&I, po1) );
+//   block->addInstruction( new AssumeStmt(&I, po2) );
+//   block->addInstruction( new AssignStmt(&I, fst, ndvar) );
+// }
+
+// void SmackInstVisitor::visitPtrToIntInst(PtrToIntInst &I) {
+//   processInstruction(I);
+//   Expr *dest = new VarExpr(&I);
+//   FunExpr *src = new FunExpr(new VarExpr("$p2i"));
+//   src->addArgument( visitValue(I.getOperand(0)) );
+//   block->addInstruction( new AssignStmt(&I, dest, src) );
+// }

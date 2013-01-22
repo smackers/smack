@@ -34,6 +34,8 @@ public:
   void visitAllocaInst(AllocaInst& i);
   void visitBranchInst(BranchInst& i);
   void visitPHINode(PHINode& i);
+  void visitTruncInst(TruncInst& i);
+  void visitUnreachableInst(UnreachableInst& i);
   void visitCallInst(CallInst& i);
   void visitReturnInst(ReturnInst& i);
   void visitLoadInst(LoadInst& i);
@@ -44,6 +46,8 @@ public:
   void visitSExtInst(SExtInst& i);
   void visitBitCastInst(BitCastInst& i);
   void visitBinaryOperator(BinaryOperator& i);
+  // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  // void visitPtrToIntInst(PtrToIntInst &I);
 };
 }
 

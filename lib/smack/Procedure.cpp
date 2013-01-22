@@ -13,16 +13,20 @@ string Procedure::getName() const {
   return name;
 }
 
-void Procedure::setNotVoid() {
-  voidFlag = false;
-}
-
 bool Procedure::isVoid() const {
-  return voidFlag;
+  return returnType->isVoidTy();
 }
 
-void Procedure::addArgument(string argument) {
-  arguments.push_back(argument);
+bool Procedure::isBoolean() const {
+  return returnType->isIntegerTy(1);
+}
+
+void Procedure::addArgument(const llvm::Argument *arg) {
+  arguments.push_back(arg);
+}
+
+vector<const llvm::Argument*>& Procedure::getArguments() {
+  return arguments;
 }
 
 void Procedure::setReturnVar(VarExpr* var) {
@@ -31,6 +35,10 @@ void Procedure::setReturnVar(VarExpr* var) {
 
 VarExpr* Procedure::getReturnVar() const {
   return returnVar;
+}
+
+bool Procedure::isDefined() const {
+  return !blocks.empty();
 }
 
 void Procedure::setEntryBlock(Block* block) {
@@ -71,43 +79,41 @@ void Procedure::print(ostream &os) const {
     os << "<null Procedure>";
   } else {
     os << "procedure ";
-    if (name != Common::MAIN_PROCEDURE) {
-      os << "{:inline 1} ";
-    }
-    os << name << "(";
-    for(vector<string>::const_iterator
-        i = arguments.begin(), b = arguments.begin(), e = arguments.end(); i != e; ++i) {
-      if (i != b) {
-        os << ", ";
-      }
-      os << *i << ": $ptr";
-    }
+    os << name << "(";    
+    for (int i=0, n=arguments.size(); i<n; i++)
+      os << translateName(arguments[i])
+         << ": " << (arguments[i]->getType()->isIntegerTy(1) ? "bool" : "$ptr")
+         << (i<n-1 ? ", " : "");    
     os << ")";
     
-    if (voidFlag) {
-      os << endl;
-    } else {
-      assert(returnVar != 0 && "Function is not void and return var has to be set");
-      os << " returns (" << *returnVar << ": $ptr)" << endl;
-    }
-    
-    os << "modifies $Mem;" << endl;
-    os << "modifies $Alloc;" << endl;
-    
-    os << "{" << endl;
-    vector<string> varNames;
-    varNames.resize(vars.size());
-    transform(vars.begin(), vars.end(), varNames.begin(), getValueName());
-    printVarDecls(varNames, os, "$ptr");
-    varNames.clear();
-    varNames.resize(boolVars.size());
-    transform(boolVars.begin(), boolVars.end(), varNames.begin(), getValueName());
-    printVarDecls(varNames, os, "bool");
+    assert ((isVoid() || returnVar != NULL) 
+      && "Function is not void and return var has to be set");
 
-    os << endl;
-    
-    printElements(blocks, os);
-    os << "}" << endl;
+    if (isDefined()) {
+      if (!isVoid())
+        os << " returns (" << *returnVar << ": " << (isBoolean() ? "bool" : "$ptr") << ")";
+      os << endl;    
+      os << "modifies $Mem;" << endl;
+      os << "modifies $Alloc;" << endl;
+      os << "{" << endl;
+      
+      vector<string> varNames;
+      varNames.resize(vars.size());
+      transform(vars.begin(), vars.end(), varNames.begin(), getValueName());
+      printVarDecls(varNames, os, "$ptr");
+      varNames.clear();
+      varNames.resize(boolVars.size());
+      transform(boolVars.begin(), boolVars.end(), varNames.begin(), getValueName());
+      printVarDecls(varNames, os, "bool");
+      os << endl;
+      
+      printElements(blocks, os);
+      os << "}" << endl;
+    } else {
+      if (!isVoid())
+        os << " returns ($r: " << (isBoolean() ? "bool" : "$ptr") << ")";
+      os << ";" << endl;      
+    }
   }
 }
 

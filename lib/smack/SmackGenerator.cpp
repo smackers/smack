@@ -31,55 +31,56 @@ bool SmackGenerator::runOnModule(Module &m) {
     }
     DEBUG(errs() << "Analyzing function: " << func->getName().str() << "\n");
 
-    Procedure* procedure = new Procedure(func->getName().str());
+    Procedure* procedure = new Procedure(func->getName().str(), func->getReturnType());
 
     // set return variable name
-    if (func->getReturnType()->getTypeID() != Type::VoidTyID) {
-      procedure->setNotVoid();
+    if ( !procedure->isVoid() )
       procedure->setReturnVar(new VarExpr("$r"));
-    }
 
     // add arguments
     for (Function::const_arg_iterator i = func->arg_begin(), e = func->arg_end(); i != e; ++i) {
-      procedure->addArgument(translateName(i));
+      procedure->addArgument(i);
     }
 
     module->addProcedure(procedure);
 
-    map<const BasicBlock*, Block*> knownBlocks;
-    stack<BasicBlock*> workStack;    
-    int bn = 0;
+    if ( !func->isDeclaration() && !func->empty() && !func->getEntryBlock().empty() ) {    
+      map<const BasicBlock*, Block*> knownBlocks;
+      stack<BasicBlock*> workStack;    
+      int bn = 0;
 
-    BasicBlock& entryBlock = func->getEntryBlock();
-    Block* smackEntryBlock = new Block(&entryBlock,bn++);
-    procedure->setEntryBlock(smackEntryBlock);
-    knownBlocks[&entryBlock] = smackEntryBlock;
-    workStack.push(&entryBlock);
+      BasicBlock& entryBlock = func->getEntryBlock();
+      Block* smackEntryBlock = new Block(&entryBlock,bn++);
+      procedure->setEntryBlock(smackEntryBlock);
+      knownBlocks[&entryBlock] = smackEntryBlock;
+      workStack.push(&entryBlock);
 
-    // invariant: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b) or  
-    // workStack.CONTAINED(b) at some point in time.
-    while (!workStack.empty()) {      
-      BasicBlock *basicBlock = workStack.top(); workStack.pop();
-      Block *smackBlock = knownBlocks[basicBlock];
+      // invariant: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b) or  
+      // workStack.CONTAINED(b) at some point in time.
+      while (!workStack.empty()) {      
+        BasicBlock *basicBlock = workStack.top(); workStack.pop();
+        Block *smackBlock = knownBlocks[basicBlock];
 
-      procedure->addBlock(smackBlock);
-      smackVisitor.setBlock(smackBlock);
-      smackVisitor.visit(basicBlock);
+        procedure->addBlock(smackBlock);
+        smackVisitor.setBlock(smackBlock);
+        smackVisitor.visit(basicBlock);
         
-      for (succ_iterator i = succ_begin(basicBlock), e = succ_end(basicBlock); i != e; ++i) {
-        BasicBlock* succ = *i;
-        Block* smackSucc;
+        for (succ_iterator i = succ_begin(basicBlock), e = succ_end(basicBlock); i != e; ++i) {
+          BasicBlock* succ = *i;
+          Block* smackSucc;
           
-        if (knownBlocks.count(succ) == 0) {
-          smackSucc = new Block(succ, bn++);
-          knownBlocks[succ] = smackSucc;
-          workStack.push(succ);
-        } else {
-            smackSucc = knownBlocks[succ];
+          if (knownBlocks.count(succ) == 0) {
+            smackSucc = new Block(succ, bn++);
+            knownBlocks[succ] = smackSucc;
+            workStack.push(succ);
+          } else {
+              smackSucc = knownBlocks[succ];
+          }
+          smackVisitor.addSuccBlock(smackSucc);
         }
-        smackVisitor.addSuccBlock(smackSucc);
       }
     }
+
 
     DEBUG(errs() << "Finished analyzing function: " << func->getName().str() << "\n\n");
   }

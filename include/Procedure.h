@@ -20,8 +20,8 @@ class AnnoExpr;
 class Procedure {
 private:
   std::string name;
-  bool voidFlag;
-  std::vector<std::string> arguments;
+  llvm::Type *returnType;
+  std::vector<const llvm::Argument*> arguments;
   VarExpr* returnVar;
   std::vector<Block*> blocks;
   Block* entryBlock;
@@ -29,14 +29,17 @@ private:
   std::vector<Value*> boolVars;
 
 public:
-	Procedure(std::string name) : name(name), voidFlag(true), returnVar(NULL), entryBlock(NULL) {}
+	Procedure(std::string name, llvm::Type *returnTypeP)
+    : name(name), returnType(returnTypeP), returnVar(NULL), entryBlock(NULL) {}
 	virtual ~Procedure();
 	std::string getName() const;
-  void setNotVoid();
   bool isVoid() const;
-  void addArgument(std::string argument);
+  bool isBoolean() const;
+  void addArgument(const llvm::Argument *arg);
+  std::vector<const llvm::Argument*>& getArguments();
   void setReturnVar(VarExpr* var);
   VarExpr* getReturnVar() const;
+  bool isDefined() const;
 	void setEntryBlock(Block* block);
   Block* getEntryBlock() const;
   void addBlock(Block* block);
