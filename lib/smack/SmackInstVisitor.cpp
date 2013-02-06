@@ -156,17 +156,25 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
   processInstruction(ci);
 
-  if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == Common::ASSERT) {
+  if (ci.getCalledFunction() != NULL 
+      && strip(ci.getCalledFunction()->getName()) == Common::ASSERT) {
+        
     assert(ci.getNumOperands() == 2 && "Assertions should have only one parameter");
     Expr* expr = visitValue(ci.getOperand(0));
     AssertStmt* stmt = new AssertStmt(&ci, expr);
     block->addInstruction(stmt);
-  } else if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == Common::ASSUME) {
+    
+  } else if (ci.getCalledFunction() != NULL 
+      && strip(ci.getCalledFunction()->getName()) == Common::ASSUME) {
+        
     assert(ci.getNumOperands() == 2 && "Assumes should have only one parameter");
     Expr* expr = visitValue(ci.getOperand(0));
     AssumeStmt* stmt = new AssumeStmt(&ci, expr);
     block->addInstruction(stmt);
-  } else if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == "malloc") {
+    
+  } else if (ci.getCalledFunction() != NULL 
+      && strip(ci.getCalledFunction()->getName()) == "malloc") {
+        
     assert(ci.getNumOperands() == 2 && "Call to malloc should have only one parameter");
 
     assert(ci.hasOneUse());
@@ -182,11 +190,15 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
 
     MallocStmt* stmt = new MallocStmt(&ci, arraySizeExpr);
     block->addInstruction(stmt);
-  } else if (ci.getCalledFunction() != NULL && ci.getCalledFunction()->getName() == "free") {
+    
+  } else if (ci.getCalledFunction() != NULL 
+      && strip(ci.getCalledFunction()->getName()) == "free") {
+        
     assert(ci.getNumOperands() == 2 && "Call to free should have only one parameter");
     Expr* freedPtrExpr = visitValue(ci.getOperand(0));
     FreeStmt* stmt = new FreeStmt(&ci, freedPtrExpr);
     block->addInstruction(stmt);
+    
   } else {
     CallStmt* stmt = new CallStmt(&ci);
 

@@ -79,7 +79,9 @@ void Procedure::print(ostream &os) const {
     os << "<null Procedure>";
   } else {
     os << "procedure ";
-    os << name << "(";    
+
+    // Print the arguments
+    os << translateName(name) << "(";
     for (int i=0, n=arguments.size(); i<n; i++)
       os << translateName(arguments[i])
          << ": " << (arguments[i]->getType()->isIntegerTy(1) ? "bool" : "$ptr")

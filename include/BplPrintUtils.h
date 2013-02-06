@@ -16,6 +16,9 @@ using namespace llvm;
 
 namespace smack {
 
+  std::string translateName(const std::string name);
+  std::string translateName(const Value* val);
+
 class printVarDecl {
 private:
   std::ostream &os;
@@ -24,16 +27,13 @@ private:
 public:
   printVarDecl(std::ostream &stream, std::string varTypeP) : os(stream), varType(varTypeP) {}
   void operator()(std::string var) {
-    os << "var " << var << " : " << varType << ";" << std::endl;
+    os << "  var " << translateName(var) << " : " << varType << ";" << std::endl;
   }
 };
 
 template <class CT> void printVarDecls(const CT& collection, std::ostream& os, std::string varType) {
   std::for_each(collection.begin(), collection.end(), printVarDecl(os, varType));
 }
-
-std::string translateName(const std::string name);
-std::string translateName(const Value* val);
 
 struct getValueName {
   std::string operator()(Value* val) {

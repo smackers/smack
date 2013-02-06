@@ -60,7 +60,10 @@ void printSecondElements(const CT& collection, std::ostream& os) {
   std::for_each(collection.begin(), collection.end(), printSecondItem(os));
 }
 
-std::string EscapeString(std::string str);
+  std::string EscapeString(std::string s);
+  std::string strip(std::string s);
+  bool isBplKeyword(std::string s);
+  bool isSmackProc(std::string s);
 
 }
 

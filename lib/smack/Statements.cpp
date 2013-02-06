@@ -58,7 +58,7 @@ void CallStmt::print(ostream &os) const {
     if (returnVar != NULL) {
       os << *returnVar << " := ";
     }    
-    string name = func->getName().str();
+    string name = translateName(func->getName().str());
     stringstream ps;
     for(vector<Expr*>::const_iterator
         bp = params.begin(), ep = params.end(), p = bp; p != ep; ++p)          

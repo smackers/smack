@@ -41,7 +41,7 @@ void SmackModule::print(ostream &os) const {
 
     for(set<string>::const_iterator
         i = globalVariables.begin(), e = globalVariables.end(); i != e; ++i) {
-      os << "const " << *i << ": $ptr;" << endl;
+      os << "const unique " << translateName(*i) << ": $ptr;" << endl;
       
       for(set<string>::const_iterator
         j = i, f = globalVariables.end(); j != f && ++j != f; ) {
