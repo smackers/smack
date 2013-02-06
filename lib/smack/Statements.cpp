@@ -148,7 +148,7 @@ void CmpStmt::print(ostream &os) const {
     os << "$sgt($off(" << *left << "), $off(" << *right << "))";
     break;
   case ICmpInst::ICMP_UGT:
-    os << "$ugt($off(" << *left << "), $off(" << *right << "))";
+    os << os << "$ugt($off(" << *left << "), $off(" << *right << "))";
     break;
   default:
     assert(false && "Predicate not supported");
