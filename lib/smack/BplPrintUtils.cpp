@@ -11,9 +11,9 @@ string smack::translateName(const string name) {
   string s = name;
   
   // replace exotic character(s)
-  for (unsigned i=0; i<s.length(); i++)
-    if (s[i] == '\01')
-      s[i] = '_';
+  // for (unsigned i=0; i<s.length(); i++)
+  //   if (s[i] == '\01')
+  //     s[i] = '_';
     
   // avoid using Boogie keywords
   if (isBplKeyword(s))

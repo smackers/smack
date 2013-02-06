@@ -17,10 +17,10 @@ namespace smack {
   }
   
   Regex BPL_KW(
-    "bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant"
+    "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant"
     "|free|unique|finite|complete|type|const|function|axiom|var|procedure"
     "|implementation|where|returns|assume|assert|havoc|call|return|while"
-    "|break|goto|if|else" );
+    "|break|goto|if|else)$" );
   Regex SMACK_NAME(".*__SMACK_.*");
   Regex CPP_NAMETX("(_ZN?[0-9]*)([A-Za-z0-9_$#@!?]+)(i|pv)");
   
