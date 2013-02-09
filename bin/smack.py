@@ -2,11 +2,22 @@
 
 from os import path
 import sys
+import re
 import subprocess
 import argparse
 from llvm2bpl import *
 
 boogie = ['mono', '/home/zvonimir/projects/boogie/Binaries/Boogie.exe']
+
+
+def addInline(match):
+  procName = match.group(1)
+  procDef = ''
+  if procName == 'main' or procName.startswith('__SMACK'):
+    procDef += 'procedure ' + procName + '('
+  else:
+    procDef += 'procedure {:inline 1} ' + procName + '('
+  return procDef
 
 
 if __name__ == '__main__':
@@ -29,6 +40,12 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   bplOutput = llvm2bpl(preludePath, libraryPath, args.infile)
+
+
+  # put inline on procedures
+  p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
+  bplOutput = p.sub(lambda match: addInline(match), bplOutput)
+
 
   # write final output
   args.outfile.write(bplOutput)
