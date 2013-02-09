@@ -56,7 +56,7 @@ Then, go to smack/examples/simple directory and compile the examples by running
 "make llvm". You should get a number of LLVM's bc files, one per example.
 
 Run SMACK on examples, for instance:
-smack simple
-smack simple_fail
+smack.py simple
+smack.py simple_fail
 
 
