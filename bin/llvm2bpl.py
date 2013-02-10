@@ -5,6 +5,7 @@ import sys
 import subprocess
 import argparse
 import io
+import platform
 
 
 def is_valid_file(parser, arg):
@@ -37,8 +38,10 @@ if __name__ == '__main__':
   scriptPathName = path.dirname(sys.argv[0])        
   scriptFullPath = path.abspath(scriptPathName)
   preludePath = path.join(scriptFullPath, 'prelude-int.bpl')
-  libraryPath = path.join(path.dirname(scriptFullPath), 'lib', 'smack.so')
-
+  if platform.system() == 'Darwin':
+    libraryPath = path.join(path.dirname(scriptFullPath), 'Debug+Asserts/lib', 'smack.dylib')
+  else: 
+    libraryPath = path.join(path.dirname(scriptFullPath), 'lib', 'smack.so')
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
