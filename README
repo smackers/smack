@@ -47,6 +47,13 @@ You should probably add smack-install-dir/bin to your path.
 Try SMACK on a simple example in the smack/examples/simple directory.
 NOTE: Boogie, clang, and llvm binaries (e.g. llvm-link, opt, etc.) should be in
       your path, as well as smack-install-dir/bin directory!
+      In particular, for smack.py to work correctly, one should be able to
+      invoke Boogie on your system just by typing 'boogie' in the command line.
+      Creating an alias as suggested in the Boogie installation manual will not
+      work with smack.py. Instead, a simple solution on a Unix-like system is
+      putting the following script in your path and naming it 'boogie':
+      #!/bin/bash
+      mono <path_to_Boogie.exe> $1 $2 $3 $4 $5 $6 $7 $8 $9
 
 First, go to the smack/examples/headers directory and compile smack.c (used for
 defining SMACK-specific functions) using the provided Makefile by running
