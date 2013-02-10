@@ -35,8 +35,7 @@ inline: INC = ../headers
 inline: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC) -DENABLE_INLINE
 inline: LDFLAGS =
 
-SOURCES = simple.c simple_fail.c \
-          simple_double_free.c \
+SOURCES = simple_double_free.c \
           simple_pre.c simple_pre_fail.c \
           simple_pre1.c simple_pre1_fail.c \
           simple_pre2.c simple_pre2_fail.c \
