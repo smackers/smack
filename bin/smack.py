@@ -7,13 +7,11 @@ import subprocess
 import argparse
 from llvm2bpl import *
 
-boogie = ['mono', '/home/zvonimir/projects/boogie/Binaries/Boogie.exe']
-
 
 def addInline(match):
   procName = match.group(1)
   procDef = ''
-  if procName == 'main' or procName.startswith('__SMACK'):
+  if procName == 'main':
     procDef += 'procedure ' + procName + '('
   else:
     procDef += 'procedure {:inline 1} ' + procName + '('
@@ -52,7 +50,7 @@ if __name__ == '__main__':
   args.outfile.close()
 
   # invoke Boogie
-  p = subprocess.Popen(boogie + [args.outfile.name, '/timeLimit:1200', '/loopUnroll:15'], stdout=subprocess.PIPE)
+  p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:1200', '/loopUnroll:15'], stdout=subprocess.PIPE)
   boogieOutput = p.communicate()[0]
   print boogieOutput
 
