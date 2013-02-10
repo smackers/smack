@@ -52,13 +52,6 @@ SOURCES = simple_double_free.c \
           array_free.c array_free_fail.c \
           array_free1.c array_free1_fail.c \
           array_free2.c array_free2_fail.c \
-          two_arrays.c \
-          two_arrays1.c \
-          two_arrays2.c \
-          two_arrays3.c \
-          two_arrays4.c \
-          two_arrays5.c \
-          two_arrays6.c two_arrays6_fail.c \
           func_ptr.c \
           func_ptr1.c func_ptr1_fail.c \
           func_ptr2.c \
