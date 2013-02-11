@@ -39,14 +39,6 @@ SOURCES = pointers.c pointers1.c pointers2.c pointers3.c \
           nested_struct.c nested_struct_fail.c \
           nested_struct1.c nested_struct1_fail.c \
           nested_struct2.c nested_struct2_fail.c \
-          array.c \
-          array1.c array1_fail.c \
-          array2.c array2_fail.c \
-          array3.c array3_fail.c \
-          array4.c array4_fail.c \
-          array_free.c array_free_fail.c \
-          array_free1.c array_free1_fail.c \
-          array_free2.c array_free2_fail.c \
           func_ptr.c \
           func_ptr1.c func_ptr1_fail.c \
           func_ptr2.c \
