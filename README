@@ -5,8 +5,9 @@
 *** SMACK dependencies ***
 
 LLVM 3.2 (www.llvm.org)
-clang (http://clang.llvm.org/)
+clang (http://clang.llvm.org)
 Boogie (http://boogie.codeplex.com)
+Python (http://www.python.org)
 
 
 *** Installing SMACK ***
@@ -41,10 +42,6 @@ cp -r smack-source-dir/bin smack-install-dir
 
 You should probably add smack-install-dir/bin to your path.
 
-
-*** Running SMACK ***
-
-Try SMACK on a simple example in the smack/examples/simple directory.
 NOTE: Boogie, clang, and llvm binaries (e.g. llvm-link, opt, etc.) should be in
       your path, as well as smack-install-dir/bin directory!
       In particular, for smack.py to work correctly, one should be able to
@@ -55,7 +52,26 @@ NOTE: Boogie, clang, and llvm binaries (e.g. llvm-link, opt, etc.) should be in
       #!/bin/bash
       mono <path_to_Boogie.exe> $1 $2 $3 $4 $5 $6 $7 $8 $9
 
-First, go to the smack/examples/headers directory and compile smack.c (used for
+
+*** Running Regression Tests ***
+
+To make sure SMACK has been installed properly, run its regression tests.
+
+First, go to the smack/headers directory and compile smack.c (used for
+defining SMACK-specific functions) using the provided Makefile by running
+"make llvm".
+
+Then, go to smack/test directory and compile the regression tests by running
+"make". You should get a number of LLVM bitcode files, one per test.
+
+Execute the regression test script with "./regtest.py". All tests should pass.
+
+
+*** Running SMACK ***
+
+Try SMACK on a simple example in the smack/examples/simple directory.
+
+First, go to the smack/headers directory and compile smack.c (used for
 defining SMACK-specific functions) using the provided Makefile by running
 "make llvm".
 
@@ -65,5 +81,4 @@ Then, go to smack/examples/simple directory and compile the examples by running
 Run SMACK on examples, for instance:
 smack.py simple
 smack.py simple_fail
-
 
