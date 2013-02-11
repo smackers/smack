@@ -1,17 +1,15 @@
-CC = gcc
-CCLD = $(CC)
+CC = clang
+CCLD = llvm-link
 INC = ../headers
-CFLAGS = -c -Wall -I$(INC)
+CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC)
 LDFLAGS =
-LIBS = ../headers/smack.o
-
-llvm: CC = clang
-llvm: CCLD = llvm-link
-llvm: INC = ../headers
-llvm: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC)
-llvm: LDFLAGS =
 
 SOURCES = simple.c simple_fail.c \
+          simple_pre.c simple_pre_fail.c \
+          simple_pre1.c simple_pre1_fail.c \
+          simple_pre2.c simple_pre2_fail.c \
+          simple_pre3.c simple_pre3_fail.c \
+          simple_double_free.c \
           two_arrays.c \
           two_arrays1.c \
           two_arrays2.c \
@@ -23,7 +21,7 @@ SOURCES = simple.c simple_fail.c \
 OBJECTS = $(SOURCES:.c=.o)
 FILES = $(basename $(SOURCES))
 
-all llvm: $(SOURCES) $(FILES)
+all: $(SOURCES) $(FILES)
 
 $(FILES): $(OBJECTS) $(LIBS)
 	$(CCLD) $(LDFLAGS) $@.o $(LIBS) -o $@

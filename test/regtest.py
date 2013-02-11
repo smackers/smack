@@ -5,16 +5,25 @@ import re
 
 # list of regression tests with the expected outputs
 tests = [
-  ('simple', r'1 verified, 0 errors'),
-  ('simple_fail', r'0 verified, 1 error'),
-  ('two_arrays', r'1 verified, 0 errors'),
-  ('two_arrays1', r'1 verified, 0 errors'),
-  ('two_arrays2', r'1 verified, 0 errors'),
-  ('two_arrays3', r'1 verified, 0 errors'),
-  ('two_arrays4', r'1 verified, 0 errors'),
-  ('two_arrays5', r'1 verified, 0 errors'),
-  ('two_arrays6', r'1 verified, 0 errors'),
-  ('two_arrays_fail', r'0 verified, 1 error')
+  ('simple',             r'1 verified, 0 errors'),
+  ('simple_fail',        r'0 verified, 1 error' ),
+  ('simple_pre',         r'1 verified, 0 errors'),
+  ('simple_pre_fail',    r'0 verified, 1 error' ),
+  ('simple_pre1',        r'1 verified, 0 errors'),
+  ('simple_pre1_fail',   r'0 verified, 1 error' ),
+  ('simple_pre2',        r'1 verified, 0 errors'),
+  ('simple_pre2_fail',   r'0 verified, 1 error' ),
+  ('simple_pre3',        r'1 verified, 0 errors'),
+  ('simple_pre3_fail',   r'0 verified, 1 error' ),
+  ('simple_double_free', r'0 verified, 1 error' ),
+  ('two_arrays',         r'1 verified, 0 errors'),
+  ('two_arrays1',        r'1 verified, 0 errors'),
+  ('two_arrays2',        r'1 verified, 0 errors'),
+  ('two_arrays3',        r'1 verified, 0 errors'),
+  ('two_arrays4',        r'1 verified, 0 errors'),
+  ('two_arrays5',        r'1 verified, 0 errors'),
+  ('two_arrays6',        r'1 verified, 0 errors'),
+  ('two_arrays6_fail',   r'0 verified, 1 error' )
 ]
 
 
