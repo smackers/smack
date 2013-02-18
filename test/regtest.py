@@ -45,7 +45,7 @@ tests = [
 for test in tests:
 
   # invoke SMACK
-  p = subprocess.Popen(['smack.py', test[0], '-o', test[0] + '.bpl'], stdout=subprocess.PIPE)
+  p = subprocess.Popen(['smack-check.py', test[0], '-o', test[0] + '.bpl'], stdout=subprocess.PIPE)
   smackOutput = p.communicate()[0]
 
   # check SMACK output

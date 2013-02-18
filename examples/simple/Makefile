@@ -72,7 +72,7 @@ clean:
 run:
 	@for file in $(FILES); do   \
 		(echo Running SMACK on $$file ...; \
-		 smack.py $$file -o $$file.bpl; \
+		 smack-check.py $$file -o $$file.bpl; \
 		 echo; echo) \
 	done
 
