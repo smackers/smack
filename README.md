@@ -1,17 +1,27 @@
-SMACK is a tool for statically checking properties of programs written in
-C/C++. For a given input program, SMACK checks for violations of user-provided
-assertions. The tool is open-source and integrates into the well-known LLVM
-compiler infrastructure. Therefore, SMACK can (at least in theory) check any
-program that can be compiled with LLVM. It should also be relatively easy to
-implement and try out different extensions on top of SMACK.
+[SMACK](http://smackers.github.com/smack/) is a modular software verification
+infrastructure. The main purpose of SMACK is to lower the bar for implementing
+and prototyping custom software verifiers. To achieve that, SMACK relies on the
+well-known [LLVM](http://www.llvm.org) compiler infrastructure for its
+front-end, and [Boogie](http://boogie.codeplex.com) intermediate verification
+language for its back-end. Such separation of concerns and modularity make
+implementing various additions and extensions to SMACK relatively easy.
+Furthermore, the open architecture of SMACK encourages prototyping custom
+software verifiers on top of SMACK.
 
 
 ## SMACK Dependencies
 
-* [LLVM 3.2](www.llvm.org)
-* [clang](http://clang.llvm.org)
+SMACK depends on the following projects:
+* [LLVM](http://www.llvm.org) (release [3.2](http://llvm.org/releases/download.html#3.2))
+* [clang](http://clang.llvm.org) (release [3.2](http://llvm.org/releases/download.html#3.2))
 * [Boogie](http://boogie.codeplex.com)
 * [Python](http://www.python.org)
+
+To configure, build, and install LLVM and clang, follow their [Getting Started
+Quickly](http://llvm.org/docs/GettingStarted.html#getting-started-quickly-a-summary)
+summary. Note that SMACK supports only major LLVM releases and not the latest
+version found on its Subversion repository. Therefore, instead of checking out
+LLVM from SVN, download its sources for the required release noted above.
 
 
 ## Installing SMACK
@@ -45,8 +55,8 @@ implement and try out different extensions on top of SMACK.
    make
    ```
 
-   If everything goes well, you should now have lib/libsmack.a and lib/smack.so in
-   the SMACK installation directory.
+   If everything goes well, you should now have lib/libsmack.a and lib/smack.so
+   (or smack.dylib on MacOS) in the SMACK installation directory.
 
 4. Copy SMACK's bin scripts to the installation directory:
 
@@ -56,12 +66,12 @@ implement and try out different extensions on top of SMACK.
    Then add smack-install-dir/bin to your path.
 
 **NOTE:**
-Boogie, clang, and llvm binaries (e.g. llvm-link, opt, etc.) should be in
+Boogie, clang, and LLVM binaries (e.g. llvm-link, opt, etc.) should be in
 your path, as well as smack-install-dir/bin directory!  
-In particular, for smack.py to work correctly, one should be able to
+In particular, for smack-check.py to work correctly, one should be able to
 invoke Boogie on your system just by typing 'boogie' in the command line.
-Creating an alias as suggested in the Boogie installation manual will not
-work with smack.py. Instead, a simple solution on a Unix-like system is
+Creating an alias as suggested in the Boogie installation manual will not work
+with smack-check.py. Instead, a simple solution on a Unix-like system is
 putting the following script in your path and naming it 'boogie':
 ```
 #!/bin/bash
@@ -83,19 +93,30 @@ Then, go to smack/test directory and compile the regression tests by running
 Execute the regression test script with `./regtest.py`. All tests should pass.
 
 
-## Running SMACK
+## SMACK Tools
 
-Try SMACK on a simple example in the smack/examples/simple directory.
+Currently, SMACK comes with the following tools:
+* llvm2bpl is a bare-bone translator from LLVM bitcode into Boogie.
+* smack-check is tool for statically checking properties of programs written in
+  C/C++. For a given input program, the tool checks for violations of
+  user-provided assertions.
+
+
+## Running the SMACK Checker
+
+Try the SMACK Checker on a simple example in the smack/examples/simple
+directory.
 
 First, go to the smack/headers directory and compile smack.c (used for
 defining SMACK-specific functions) using the provided Makefile by running
 `make llvm`.
 
 Then, go to smack/examples/simple directory and compile the examples by running
-`make llvm`. You should get a number of LLVM's bc files, one per example.
+`make llvm`. You should get a number of LLVM's bitcode files, one per example.
 
-Run SMACK on examples, for instance:
+Run the SMACK Checker on examples, for instance:
 ```
-smack.py simple
-smack.py simple_fail
+smack-check.py simple
+smack-check.py simple_fail
 ```
+
