@@ -10,6 +10,10 @@ SOURCES = simple.c simple_fail.c \
           simple_pre2.c simple_pre2_fail.c \
           simple_pre3.c simple_pre3_fail.c \
           simple_double_free.c \
+          pointers.c pointers_fail.c \
+          pointers1.c pointers1_fail.c \
+          pointers2.c pointers2_fail.c \
+          pointers3.c pointers3_fail.c \
           array.c \
           array1.c array1_fail.c \
           array2.c array2_fail.c \

@@ -35,8 +35,7 @@ inline: INC = ../../headers
 inline: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC) -DENABLE_INLINE
 inline: LDFLAGS =
 
-SOURCES = pointers.c pointers1.c pointers2.c pointers3.c \
-          nested_struct.c nested_struct_fail.c \
+SOURCES = nested_struct.c nested_struct_fail.c \
           nested_struct1.c nested_struct1_fail.c \
           nested_struct2.c nested_struct2_fail.c \
           func_ptr.c \
