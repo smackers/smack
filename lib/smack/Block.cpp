@@ -22,13 +22,16 @@ BasicBlock* Block::getBasicBlock() const {
 }
 
 string Block::getName() const {
+  string name;
   stringstream s;
+
   if (basicBlock->hasName())
-    return basicBlock->getName();
+    name = basicBlock->getName();
   else {
     s << "$bb" << blockNum;
-    return s.str();
+    name = s.str();
   }
+  return translateName(name);
 }
 
 void Block::addInstruction(Statement* inst) {
