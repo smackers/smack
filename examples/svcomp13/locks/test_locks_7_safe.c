@@ -1,3 +1,4 @@
+#include "smack.h"
 extern int __VERIFIER_nondet_int();
 int main()
 {
@@ -114,7 +115,7 @@ int main()
     }
   out:
     return 0;
-  ERROR:
+  ERROR: __SMACK_assert(0);
     return 0;  
 }
 
