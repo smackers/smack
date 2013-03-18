@@ -50,10 +50,11 @@ LLVM from SVN, download its sources for the required release noted above.
    * --enable-optimized          : Compile with optimizations enabled [default is NO].
    * --enable-assertions         : Compile with assertion checks enabled [default is YES].
 
-3. Build SMACK:
+3. Build and install SMACK:
 
    ```
    make
+   make install
    ```
 
    If everything goes well, you should now have lib/libsmack.a and lib/smack.so
