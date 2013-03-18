@@ -16,7 +16,7 @@ SMACK depends on the following projects:
 * [LLVM](http://www.llvm.org) (release [3.2](http://llvm.org/releases/download.html#3.2))
 * [clang](http://clang.llvm.org) (release [3.2](http://llvm.org/releases/download.html#3.2))
 * [Boogie](http://boogie.codeplex.com)
-* [Python](http://www.python.org)
+* [Python](http://www.python.org) (version 2.7)
 
 To configure, build, and install LLVM and clang, follow their [Getting Started
 Quickly](http://llvm.org/docs/GettingStarted.html#getting-started-quickly-a-summary)
