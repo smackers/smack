@@ -53,7 +53,7 @@ if __name__ == '__main__':
   args.outfile.close()
 
   # invoke Boogie
-  p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:1200', '/loopUnroll:15'], stdout=subprocess.PIPE)
+  p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:1200', '/loopUnroll:20'], stdout=subprocess.PIPE)
   boogieOutput = p.communicate()[0]
   print boogieOutput
 
