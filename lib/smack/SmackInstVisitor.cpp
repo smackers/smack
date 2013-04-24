@@ -155,29 +155,29 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
 
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
   processInstruction(ci);
+  Function* calledFunction = ci.getCalledFunction();
+  assert(calledFunction != NULL && "Indirect function calls currently not supported");
+  std::string funcName = strip(calledFunction->getName().str());
 
-  if (ci.getCalledFunction() != NULL 
-      && strip(ci.getCalledFunction()->getName()) == Common::ASSERT) {
-        
+  if (funcName.find("llvm.dbg.") == 0) {
+    // skipping over debug info function calls
+    return;
+  }
+
+  if (funcName == Common::ASSERT) {
     assert(ci.getNumOperands() == 2 && "Assertions should have only one parameter");
     Expr* expr = visitValue(ci.getOperand(0));
     AssertStmt* stmt = new AssertStmt(&ci, expr);
     block->addInstruction(stmt);
-    
-  } else if (ci.getCalledFunction() != NULL 
-      && strip(ci.getCalledFunction()->getName()) == Common::ASSUME) {
-        
+  } else if (funcName == Common::ASSUME) {
     assert(ci.getNumOperands() == 2 && "Assumes should have only one parameter");
     Expr* expr = visitValue(ci.getOperand(0));
     AssumeStmt* stmt = new AssumeStmt(&ci, expr);
     block->addInstruction(stmt);
-    
-  } else if (ci.getCalledFunction() != NULL 
-      && strip(ci.getCalledFunction()->getName()) == "malloc") {
-        
+  } else if (funcName == "malloc") {
     assert(ci.getNumOperands() == 2 && "Call to malloc should have only one parameter");
-
     assert(ci.hasOneUse());
+
     Type* allocType = ci.getType();
     for (Value::use_iterator i = ci.use_begin(), e = ci.use_end(); i != e; ++i) {
       Instruction* inst = cast<Instruction>(*i);
@@ -190,15 +190,11 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
 
     MallocStmt* stmt = new MallocStmt(&ci, arraySizeExpr);
     block->addInstruction(stmt);
-    
-  } else if (ci.getCalledFunction() != NULL 
-      && strip(ci.getCalledFunction()->getName()) == "free") {
-        
+  } else if (funcName == "free") {
     assert(ci.getNumOperands() == 2 && "Call to free should have only one parameter");
     Expr* freedPtrExpr = visitValue(ci.getOperand(0));
     FreeStmt* stmt = new FreeStmt(&ci, freedPtrExpr);
     block->addInstruction(stmt);
-    
   } else {
     CallStmt* stmt = new CallStmt(&ci);
 
@@ -229,8 +225,6 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
       }
     }
 #else
-    Function* calledFunction = ci.getCalledFunction();
-    assert(calledFunction != NULL && "Indirect function calls currently not supported");
     stmt->addCalledFunction(calledFunction);
 #endif
 
