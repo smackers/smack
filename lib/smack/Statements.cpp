@@ -60,7 +60,7 @@ void CallStmt::print(ostream &os) const {
     }    
     string name = translateName(func->getName().str());
 
-    if (func->isVarArg()) {
+    if (func->isVarArg() && params.size() > 0) {
       assert(params.size() <= 5 && "Currently only up to 5 var arg parameters are supported");
       stringstream ss;
       ss << name << "#" << params.size();

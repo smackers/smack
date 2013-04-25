@@ -51,7 +51,8 @@ tests = [
   ('two_arrays5',        r'1 verified, 0 errors'),
   ('two_arrays6',        r'1 verified, 0 errors'),
   ('two_arrays6_fail',   r'0 verified, 1 error' ),
-  ('printfs',            r'1 verified, 0 errors')
+  ('printfs',            r'1 verified, 0 errors'),
+  ('return_label',       r'1 verified, 0 errors')
 ]
 
 
