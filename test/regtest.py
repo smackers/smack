@@ -50,7 +50,8 @@ tests = [
   ('two_arrays4',        r'1 verified, 0 errors'),
   ('two_arrays5',        r'1 verified, 0 errors'),
   ('two_arrays6',        r'1 verified, 0 errors'),
-  ('two_arrays6_fail',   r'0 verified, 1 error' )
+  ('two_arrays6_fail',   r'0 verified, 1 error' ),
+  ('printfs',            r'1 verified, 0 errors')
 ]
 
 

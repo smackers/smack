@@ -125,5 +125,13 @@ procedure boogie_si_record_int(i: int);
 procedure boogie_si_record_obj(o: $ref);
 procedure boogie_si_record_ptr(p: $ptr);
 
+// C/C++ Library Procedures
+
+procedure printf#1(p1:$ptr) returns (ret:$ptr);
+procedure printf#2(p1:$ptr, p2:$ptr) returns (ret:$ptr);
+procedure printf#3(p1:$ptr, p2:$ptr, p3:$ptr) returns (ret:$ptr);
+procedure printf#4(p1:$ptr, p2:$ptr, p3:$ptr, p4:$ptr) returns (ret:$ptr);
+procedure printf#5(p1:$ptr, p2:$ptr, p3:$ptr, p4:$ptr, p5:$ptr) returns (ret:$ptr);
+
 // SMACK-PRELUDE-END
 

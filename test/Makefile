@@ -30,7 +30,8 @@ SOURCES = simple.c simple_fail.c \
           two_arrays3.c \
           two_arrays4.c \
           two_arrays5.c \
-          two_arrays6.c two_arrays6_fail.c
+          two_arrays6.c two_arrays6_fail.c \
+          printfs.c
  
 OBJECTS = $(SOURCES:.c=.o)
 FILES = $(basename $(SOURCES))
