@@ -28,6 +28,7 @@ tests = [
   ('loop_fail',          r'0 verified, 1 error' ),
   ('loop1',              r'1 verified, 0 errors'),
   ('loop1_fail',         r'0 verified, 1 error' ),
+  ('nondet',             r'1 verified, 0 errors'),
   ('array',              r'1 verified, 0 errors'),
   ('array1',             r'1 verified, 0 errors'),
   ('array1_fail',        r'0 verified, 1 error' ),
