@@ -13,8 +13,9 @@ Expr* SmackInstVisitor::visitValue(Value* value) {
     if (isa<Function>(value)) {
       // function pointer
       DEBUG(errs() << "Value not handled: " << *value << "\n");
-      assert(false && "Constant expression of this type not supported");
-      valExpr = new UndefExpr();
+//      assert(false && "Constant expression of this type not supported");
+//      valExpr = new UndefExpr();
+      valExpr = new ConstExpr(value);
     } else {
       valExpr = new VarExpr(value);
     }
@@ -153,10 +154,8 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
   processInstruction(ii);
 }  
 
-void SmackInstVisitor::visitCallInst(CallInst& ci) {
-  processInstruction(ci);
+void SmackInstVisitor::processDirectCall(CallInst& ci) {
   Function* calledFunction = ci.getCalledFunction();
-  assert(calledFunction != NULL && "Indirect function calls currently not supported");
   std::string funcName = strip(calledFunction->getName().str());
 
   if (funcName.find("llvm.dbg.") == 0) {
@@ -197,6 +196,56 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
     block->addInstruction(stmt);
   } else {
     CallStmt* stmt = new CallStmt(&ci);
+    stmt->addCalledFunction(calledFunction);
+
+    if (ci.getType()->getTypeID() != Type::VoidTyID) {
+      VarExpr* returnVar = new VarExpr(&ci);
+      stmt->setReturnVar(returnVar);
+    }
+
+    for (unsigned i = 0, e = ci.getNumOperands() - 1; i < e; ++i) {
+      Expr* param = visitValue(ci.getOperand(i));
+      stmt->addParam(param);
+    }
+
+    block->addInstruction(stmt);
+  }
+}
+
+void SmackInstVisitor::processIndirectCall(CallInst& ci) {
+  const Value* calledValue = ci.getCalledValue();
+  DEBUG(errs() << "Called value: " << *calledValue << "\n");
+  Type* calledValueType = calledValue->getType();
+  DEBUG(errs() << "Called value type: " << *calledValueType << "\n");
+  assert(calledValueType->isPointerTy() && "Indirect call value type has to be a pointer");
+  Type* calledFuncType = calledValueType->getPointerElementType();
+  DEBUG(errs() << "Called function type: " << *calledFuncType << "\n");
+
+  CallStmt* stmt = new CallStmt(&ci);
+  VarExpr* functionPointer = new VarExpr(calledValue);
+  stmt->setFunctionPointer(functionPointer);
+
+  Module* module = ci.getParent()->getParent()->getParent();
+  for (Module::iterator func = module->begin(), e = module->end(); func != e; ++func) {
+    DEBUG(errs() << "Function type: " << *func->getFunctionType() << "\n");
+    if (func->getFunctionType() == calledFuncType) {
+      DEBUG(errs() << "Matching called function type: " << *func << "\n");
+      stmt->addCalledFunction(func);
+    }
+  }
+//  assert(false && "Indirect function calls currently not supported");
+
+  if (ci.getType()->getTypeID() != Type::VoidTyID) {
+    VarExpr* returnVar = new VarExpr(&ci);
+    stmt->setReturnVar(returnVar);
+  }
+
+  for (unsigned i = 0, e = ci.getNumOperands() - 1; i < e; ++i) {
+    Expr* param = visitValue(ci.getOperand(i));
+    stmt->addParam(param);
+  }
+
+  block->addInstruction(stmt);
 
 #ifdef USE_DSA
     CallSite callSite = CallSite::get(&ci);
@@ -224,21 +273,15 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
         }
       }
     }
-#else
-    stmt->addCalledFunction(calledFunction);
 #endif
+}
 
-    if (ci.getType()->getTypeID() != Type::VoidTyID) {
-      VarExpr* returnVar = new VarExpr(&ci);
-      stmt->setReturnVar(returnVar);
-    }
-
-    for (unsigned i = 0, e = ci.getNumOperands() - 1; i < e; ++i) {
-      Expr* param = visitValue(ci.getOperand(i));
-      stmt->addParam(param);
-    }
-
-    block->addInstruction(stmt);
+void SmackInstVisitor::visitCallInst(CallInst& ci) {
+  processInstruction(ci);
+  if (ci.getCalledFunction()) {
+    processDirectCall(ci);
+  } else {
+    processIndirectCall(ci);
   }
 }
 

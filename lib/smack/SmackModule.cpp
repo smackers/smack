@@ -51,6 +51,11 @@ void SmackModule::print(ostream &os) const {
 
     for(map<string, Procedure*>::const_iterator
         i = procedures.begin(), e = procedures.end(); i != e; ++i) {
+      os << "const unique " << i->first << "#ptr: $ptr;" << endl;
+    }
+
+    for(map<string, Procedure*>::const_iterator
+        i = procedures.begin(), e = procedures.end(); i != e; ++i) {
       os << endl << i->second;
     }
 

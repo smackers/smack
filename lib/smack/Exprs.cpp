@@ -48,6 +48,9 @@ void ConstExpr::print(ostream &os) const {
 
     } else if (isa<ConstantPointerNull>(constant)) {
       os << "$ptr($NULL," << Common::int_const(0) << ")";
+    } else if (isa<Function>(constant)) {
+      std::string funcName = strip(constant->getName().str());
+      os << funcName << "#ptr";
     } else {
       assert(false && "Value type not supported");
     }

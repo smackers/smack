@@ -39,6 +39,10 @@ void CallStmt::setReturnVar(VarExpr* returnVarP) {
   returnVar = returnVarP;
 }
 
+void CallStmt::setFunctionPointer(VarExpr* functionPointerP) {
+  functionPointer = functionPointerP;
+}
+
 void CallStmt::addParam(Expr* param) {
   params.push_back(param);
 }
@@ -82,28 +86,20 @@ void CallStmt::print(ostream &os) const {
       os << name << "(" << ps.str() << ");" << endl;
 
   } else {
-    unsigned long uniqueLabelSufix = (unsigned long)this;
 
-    os << "goto ";
-    int labelCounter = 0;
     for (vector<CalledFunction*>::const_iterator i = calledFunctions.begin(),
-        b = calledFunctions.begin(), e = calledFunctions.end(); i != e; ++i, ++labelCounter) {
-      if (i != b) {
-        os << ", ";
+        bi = calledFunctions.begin(), e = calledFunctions.end(); i != e; ++i) {
+      if (i == bi) {
+        os << "if ";
+      } else {
+        os << "  } else if ";
       }
-      os << "label_call_" << uniqueLabelSufix << "_" << labelCounter;
-    }
-    os << ";" << endl;
-
-    labelCounter = 0;
-    for (vector<CalledFunction*>::const_iterator i = calledFunctions.begin(),
-        e = calledFunctions.end(); i != e; ++i, ++labelCounter) {
-      os << "label_call_" << uniqueLabelSufix << "_" << labelCounter << ":" << endl;
-      os << "  call ";
+      const Function* func = (*i)->getCalledFunction();
+      os << "(" << *functionPointer << " == " << func->getName().str() << "#ptr) {" << endl;
+      os << "    call ";
       if (returnVar != NULL) {
         os << *returnVar << " := ";
       }
-      const Function* func = (*i)->getCalledFunction();
       os << func->getName().str();
       os << "(";
       for(vector<Expr*>::const_iterator
@@ -114,10 +110,10 @@ void CallStmt::print(ostream &os) const {
         os << *j;
       }
       os << ");" << endl;
-
-      os << "  goto label_call_" << uniqueLabelSufix << "_end;" << endl;
     }
-    os << "label_call_" << uniqueLabelSufix << "_end:" << endl;
+    os << "  } else {"<< endl;
+    os << "    assert false;"<< endl;
+    os << "  }"<< endl;
   }
 }
 

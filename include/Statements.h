@@ -48,13 +48,15 @@ class CallStmt : public Statement {
 private:
   std::vector<CalledFunction*> calledFunctions;
   VarExpr* returnVar;
+  VarExpr* functionPointer;
   std::vector<Expr*> params;
 
 public:
-  CallStmt(Instruction* instP) : Statement(CallStmtID, instP), returnVar(NULL) {}
+  CallStmt(Instruction* instP) : Statement(CallStmtID, instP), returnVar(NULL), functionPointer(NULL) {}
   virtual ~CallStmt();
   CalledFunction* addCalledFunction(const Function* func);
   void setReturnVar(VarExpr* returnVarP);
+  void setFunctionPointer(VarExpr* functionPointerP);
   void addParam(Expr* param);
   virtual void print(std::ostream &os) const;
 

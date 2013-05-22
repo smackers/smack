@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "smack.h"
 
 int incr(int x) {
@@ -10,16 +8,18 @@ int decr(int x) {
   return --x;
 }
 
-int main() {
+int main(void) {
   int (*fp)(int);
-  int x;
+  int x = 1, y = 1;
 
-  x = 0;
-  fp = incr;
+  if (y > 0) {
+    fp = incr;
+  } else {
+    fp = decr;
+  }
   x = fp(x);
 
-  __SMACK_assert(x == 1);
-
+  __SMACK_assert(x == 2);
   return 0;
 }
 

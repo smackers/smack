@@ -17,6 +17,10 @@ SOURCES = simple.c simple_fail.c \
           loop.c loop_fail.c \
           loop1.c loop1_fail.c \
           nondet.c \
+          printfs.c \
+          return_label.c \
+          func_ptr.c func_ptr_fail.c \
+          func_ptr1.c func_ptr1_fail.c \
           array.c \
           array1.c array1_fail.c \
           array2.c array2_fail.c \
@@ -31,10 +35,8 @@ SOURCES = simple.c simple_fail.c \
           two_arrays3.c \
           two_arrays4.c \
           two_arrays5.c \
-          two_arrays6.c two_arrays6_fail.c \
-          printfs.c \
-          return_label.c
- 
+          two_arrays6.c two_arrays6_fail.c
+
 OBJECTS = $(SOURCES:.c=.o)
 FILES = $(basename $(SOURCES))
 

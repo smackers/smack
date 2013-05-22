@@ -24,7 +24,9 @@ private:
   DataLayout* targetData;
   Block* block;
   Expr* visitValue(Value* value);
- 
+  void processDirectCall(CallInst& ci);
+  void processIndirectCall(CallInst& ci);
+
 public:
   SmackInstVisitor(DataLayout* td) : targetData(td) {}
   void setBlock(Block* blockP);

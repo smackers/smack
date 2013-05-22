@@ -38,10 +38,7 @@ inline: LDFLAGS =
 SOURCES = nested_struct.c nested_struct_fail.c \
           nested_struct1.c nested_struct1_fail.c \
           nested_struct2.c nested_struct2_fail.c \
-          func_ptr.c \
-          func_ptr1.c func_ptr1_fail.c \
           func_ptr2.c \
-          func_ptr3.c \
           lock.c lock_fail.c \
           ase_example.c ase_example_fail.c \
           caduceus_example.c \

@@ -29,6 +29,12 @@ tests = [
   ('loop1',              r'1 verified, 0 errors'),
   ('loop1_fail',         r'0 verified, 1 error' ),
   ('nondet',             r'1 verified, 0 errors'),
+  ('printfs',            r'1 verified, 0 errors'),
+  ('return_label',       r'1 verified, 0 errors'),
+  ('func_ptr',           r'1 verified, 0 errors'),
+  ('func_ptr_fail',      r'0 verified, 1 error' ),
+  ('func_ptr1',          r'1 verified, 0 errors'),
+  ('func_ptr1_fail',     r'0 verified, 1 error' ),
   ('array',              r'1 verified, 0 errors'),
   ('array1',             r'1 verified, 0 errors'),
   ('array1_fail',        r'0 verified, 1 error' ),
@@ -51,9 +57,7 @@ tests = [
   ('two_arrays4',        r'1 verified, 0 errors'),
   ('two_arrays5',        r'1 verified, 0 errors'),
   ('two_arrays6',        r'1 verified, 0 errors'),
-  ('two_arrays6_fail',   r'0 verified, 1 error' ),
-  ('printfs',            r'1 verified, 0 errors'),
-  ('return_label',       r'1 verified, 0 errors')
+  ('two_arrays6_fail',   r'0 verified, 1 error' )
 ]
 
 
