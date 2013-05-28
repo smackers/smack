@@ -954,7 +954,7 @@ LLVMLibsOptions += -Wl,--enable-auto-import,--enable-runtime-pseudo-reloc \
                    -L $(SharedLibDir)
 endif
 LLVMLibsOptions += -lLLVM-$(LLVMVersion)
-LLVMLibsPaths += $(SharedLibDir)/$(SharedPrefix)LLVM-$(LLVMVersion)$(SHLIBEXT)
+LLVMLibsPaths += $(LLVMSharedLibDir)/$(SharedPrefix)LLVM-$(LLVMVersion)$(SHLIBEXT)
 else
 
 ifndef NO_LLVM_CONFIG
@@ -1145,7 +1145,7 @@ $(LibName.SO): $(ObjectsO) $(ProjLibsPaths) $(LLVMLibsPaths) $(SharedLibDir)/.di
 	$(Echo) Linking $(BuildMode) $(SharedLibKindMessage) \
 	  $(notdir $@)
 	$(Verb) $(Link) $(SharedLinkOptions) -o $@ $(ObjectsO) \
-	  $(ProjLibsOptions) $(LLVMLibsOptions) $(LIBS)
+	  $(ProjLibsOptions) -L$(LLVMSharedLibDir) $(LLVMLibsOptions) $(LIBS)
 else
 $(LibName.SO): $(ObjectsO) $(SharedLibDir)/.dir
 	$(Echo) Linking $(BuildMode) Shared Library $(notdir $@)
