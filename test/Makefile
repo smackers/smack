@@ -37,19 +37,15 @@ SOURCES = simple.c simple_fail.c \
           two_arrays5.c \
           two_arrays6.c two_arrays6_fail.c
 
-OBJECTS = $(SOURCES:.c=.o)
-FILES = $(basename $(SOURCES))
+BYTECODES = $(SOURCES:.c=.ll)
 
-all: $(SOURCES) $(FILES)
+all: $(BYTECODES)
 
-$(FILES): $(OBJECTS) $(LIBS)
-	$(CCLD) $(LDFLAGS) $@.o $(LIBS) -o $@
-
-.c.o:
+%.ll: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.o *.bc *.bpl
+	rm -f *.ll *.bc *.bpl
 	@for file in $(FILES); do \
 		(rm -f $$file;) \
 	done
