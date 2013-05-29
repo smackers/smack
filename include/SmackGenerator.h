@@ -5,9 +5,9 @@
 #ifndef SMACKGENERATOR_H
 #define SMACKGENERATOR_H
 
-#include "Block.h"
+#include "BoogieAst.h"
+
 #include "SmackInstVisitor.h"
-#include "SmackModule.h"
 #include "BplPrintUtils.h"
 #include "llvm/Function.h"
 #include "llvm/InstrTypes.h"
@@ -20,28 +20,24 @@
 #include <stack>
 #include <vector>
 
-using namespace llvm;
-
 namespace smack {
 
-class SmackGenerator : public ModulePass {
+class SmackGenerator : public llvm::ModulePass {
 private:
-  SmackModule* module;
+  Program *program;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
   SmackGenerator() : ModulePass(ID) {}
-  virtual bool runOnModule(Module &m);
+  virtual bool runOnModule(llvm::Module &m);
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     AU.setPreservesAll();
-    AU.addRequired<DataLayout>();
+    AU.addRequired<llvm::DataLayout>();
   }
-
-  SmackModule* getModule() const {
-    return module;
-  }
+  
+  Program * getProgram() const { return program; }
 };
 }
 

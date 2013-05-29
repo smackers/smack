@@ -12,8 +12,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CFG.h"
-#include <map>
-#include <vector>
 
 using namespace llvm;
 

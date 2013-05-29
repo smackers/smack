@@ -5,9 +5,8 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
-#include "Procedure.h"
-#include "SmackModule.h"
-#include "Common.h"
+#include "BoogieAst.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
@@ -21,16 +20,19 @@ namespace smack {
 
 class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
 private:
-  DataLayout* targetData;
-  Block* block;
-  Expr* visitValue(Value* value);
-  void processDirectCall(CallInst& ci);
-  void processIndirectCall(CallInst& ci);
+  DataLayout *targetData;
+  Procedure *currProc;
+  Block *currBlock;
+  
+  void generateCall(string p, vector<Expr*> ps, vector<string> rs);
 
 public:
-  SmackInstVisitor(DataLayout* td) : targetData(td) {}
-  void setBlock(Block* blockP);
-  void addSuccBlock(Block* succBlock);
+  SmackInstVisitor(DataLayout *td, Procedure *p, Block *b) 
+      : targetData(td), currProc(p), currBlock(b) {}  
+  void setCurrBlock(Block *b) { currBlock = b; }
+  Expr * expr(Value *v);
+  Expr * operand(Value *v);
+      
   void visitInstruction(Instruction& i);
   void processInstruction(Instruction& i);
   void visitAllocaInst(AllocaInst& i);
@@ -48,6 +50,8 @@ public:
   void visitSExtInst(SExtInst& i);
   void visitBitCastInst(BitCastInst& i);
   void visitBinaryOperator(BinaryOperator& i);
+  
+  
   // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   // void visitPtrToIntInst(PtrToIntInst &I);
 };
