@@ -16,18 +16,17 @@ def is_valid_file(parser, arg):
 
 
 def find_library_path(smackRoot):
-  buildDir = path.join(smackRoot, 'Debug+Asserts', 'lib')
-  if not path.exists(buildDir):
-    buildDir = path.join(smackRoot, 'Release+Asserts', 'lib')
-  if not path.exists(buildDir):
-    buildDir = path.join(smackRoot, 'lib')
-  assert path.exists(buildDir)
+  installPrefix = path.join(smackRoot, 'Debug+Asserts')
+  if not path.exists(installPrefix):
+    installPrefix = path.join(smackRoot, 'Release+Asserts')
+  if not path.exists(installPrefix):
+    installPrefix = smackRoot
 
-  libraryPath = path.join(buildDir, 'smack.so')
+  libraryPath = path.join(installPrefix, 'lib', 'smack.so')
   if not path.exists(libraryPath):
-    libraryPath = path.join(buildDir, 'smack.dylib')
+    libraryPath = path.join(installPrefix, 'lib', 'smack.dylib')
   if not path.exists(libraryPath):
-    libraryPath = path.join(buildDir, 'smack.dll')
+    libraryPath = path.join(installPrefix, 'bin', 'smack.dll')
   assert path.exists(libraryPath)
   return libraryPath
 
