@@ -5,15 +5,9 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
-#include "Procedure.h"
-#include "SmackModule.h"
-#include "Common.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "BoogieAst.h"
+#include "Values.h"
 #include "llvm/Support/InstVisitor.h"
-#include "llvm/DataLayout.h"
 
 using namespace llvm;
 
@@ -21,18 +15,20 @@ namespace smack {
 
 class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
 private:
-  DataLayout* targetData;
-  Block* block;
-  Expr* visitValue(Value* value);
-  void processDirectCall(CallInst& ci);
-  void processIndirectCall(CallInst& ci);
+  Values& values;
+  Procedure *currProc;
+  Block *currBlock;
+  
+  Stmt * generateCall(Function *f, vector<Expr*> ps, vector<string> rs);
 
 public:
-  SmackInstVisitor(DataLayout* td) : targetData(td) {}
-  void setBlock(Block* blockP);
-  void addSuccBlock(Block* succBlock);
-  void visitInstruction(Instruction& i);
+  SmackInstVisitor(Values& v, Procedure *p, Block *b) 
+      : values(v), currProc(p), currBlock(b) {}  
+  void setCurrBlock(Block *b) { currBlock = b; }
+  Block * getCurrBlock() { return currBlock; }
+
   void processInstruction(Instruction& i);
+  void visitInstruction(Instruction& i);
   void visitAllocaInst(AllocaInst& i);
   void visitBranchInst(BranchInst& i);
   void visitPHINode(PHINode& i);
@@ -48,6 +44,8 @@ public:
   void visitSExtInst(SExtInst& i);
   void visitBitCastInst(BitCastInst& i);
   void visitBinaryOperator(BinaryOperator& i);
+  
+  
   // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   // void visitPtrToIntInst(PtrToIntInst &I);
 };

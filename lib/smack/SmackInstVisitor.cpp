@@ -3,108 +3,24 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackInstVisitor.h"
+#include "llvm/Support/InstVisitor.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include <sstream>
 
 using namespace smack;
 
-Expr* SmackInstVisitor::visitValue(Value* value) {
-  Expr* valExpr = NULL;
-
-  if (value->hasName()) {
-    if (isa<Function>(value)) {
-      // function pointer
-      DEBUG(errs() << "Value not handled: " << *value << "\n");
-//      assert(false && "Constant expression of this type not supported");
-//      valExpr = new UndefExpr();
-      valExpr = new ConstExpr(value);
-    } else {
-      valExpr = new VarExpr(value);
-    }
-  } else if (Constant* constant = dyn_cast<Constant>(value)) {
-    if (ConstantExpr* constantExpr = dyn_cast<ConstantExpr>(constant)) {
-      if (constantExpr->getOpcode() == Instruction::GetElementPtr) {
-        Value* ptrVal = constantExpr->getOperand(0);
-        Expr* ptr = visitValue(ptrVal);
-
-        Type* type = ptrVal->getType();
-        gep_type_iterator typeI = gep_type_begin(constantExpr);
-        for (unsigned i = 1, e = constantExpr->getNumOperands(); i != e; ++i, ++typeI) {
-          Constant* idx = constantExpr->getOperand(i);
-          if (StructType* structType = dyn_cast<StructType>(*typeI)) {
-            assert(idx->getType()->isIntegerTy() && idx->getType()->getPrimitiveSizeInBits() == 32 && "Illegal struct idx");
-            unsigned fieldNo = cast<ConstantInt>(idx)->getZExtValue();
-
-            // Get structure layout information...
-            const StructLayout* layout = targetData->getStructLayout(structType);
-
-            // Add in the offset, as calculated by the structure layout info...
-            ConstExpr* offset = new ConstExpr(layout->getElementOffset(fieldNo));
-            ConstExpr* size = new ConstExpr(1);
-            PtrArithExpr* ptrArith = new PtrArithExpr(ptr, offset, size);
-            ptr = ptrArith;
-
-            // Update type to refer to current element
-            type = structType->getElementType(fieldNo);
-          } else {
-            // Update type to refer to current element
-            type = cast<SequentialType>(type)->getElementType();
-
-            // Get the array index and the size of each array element
-            Expr* offset;
-            if (idx->hasName()) {
-              offset = new VarExpr(idx);
-            } else {
-              offset = new ConstExpr(idx);
-            }
-            ConstExpr* size = new ConstExpr(targetData->getTypeStoreSize(type));
-            PtrArithExpr* ptrArith = new PtrArithExpr(ptr, offset, size);
-            ptr = ptrArith;
-          }
-        }
-        valExpr = ptr;
-      } else if (constantExpr->getOpcode() == Instruction::BitCast) {
-
-        // TODO: currently this is a noop instruction
-        Value* ptrVal = constantExpr->getOperand(0);
-        valExpr = visitValue(ptrVal);
-      } else if (constantExpr->getOpcode() == Instruction::IntToPtr) {
-        valExpr = new UndefExpr();
-      } else {
-        assert(false && "Constant expression of this type not supported");
-      }
-    } else if (ConstantInt* constantInt = dyn_cast<ConstantInt>(constant)) {
-      valExpr = new ConstExpr(constantInt);
-    } else if (constant->isNullValue()) {
-      valExpr = new ConstExpr((int64_t)0);
-    } else if (isa<UndefValue>(constant)) {
-      valExpr = new UndefExpr();
-    } else {
-      assert(false && "This type of constant not supported");
-    }
-  } else {
-    assert(false && "Value of this type not supported");
-  }
-
-  assert(valExpr != NULL);
-  return valExpr;
-}
-
-void SmackInstVisitor::setBlock(Block* blockP) {
-  block = blockP;
-}
-
-void SmackInstVisitor::addSuccBlock(Block* succBlock) {
-  block->addSuccBlock(succBlock);
-  
-  BasicBlock* succBasicBlock = succBlock->getBasicBlock();
-  for (BasicBlock::iterator
-      i = succBasicBlock->begin(), e = succBasicBlock->end(); i != e && isa<PHINode>(i); ++i) {
-    PHINode* phiNode = cast<PHINode>(i);
-    if (Value* incomingValue = phiNode->getIncomingValueForBlock(block->getBasicBlock())) {
-      Expr* incomingExpr = visitValue(incomingValue);
-      VarExpr* incomingVar = new VarExpr(phiNode);
-      AssignStmt* assignStmt = new AssignStmt(phiNode, incomingVar, incomingExpr);
-      block->addInstruction(assignStmt);
-    }
+void SmackInstVisitor::processInstruction(Instruction& inst) {
+    DEBUG(errs() << "Inst: " << inst << "\n");
+    DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
+    if (inst.getType()->getTypeID() != Type::VoidTyID) {
+        bool isBool = inst.getType()->isIntegerTy(1);
+        if (!inst.hasName())
+            inst.setName(isBool ? "$b" : "$p");
+        VarDecl *d = new VarDecl(values.id(&inst), isBool ? "bool" : "$ptr");        
+        if (!currProc->hasDecl(d))
+            currProc->addDecl(d);
   }
 }
 
@@ -113,29 +29,13 @@ void SmackInstVisitor::visitInstruction(Instruction& inst) {
   assert(false && "Instruction not handled");
 }
 
-void SmackInstVisitor::processInstruction(Instruction& inst) {
-  DEBUG(errs() << "Inst: " << inst << "\n");
-  DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
-  if (inst.getType()->getTypeID() != Type::VoidTyID) {
-    if (inst.getType()->isIntegerTy(1)) {
-      DEBUG(errs() << "Adding bool var\n");
-      block->getParentProcedure()->addBoolVariable(&inst);
-    } else {
-      DEBUG(errs() << "Adding var\n");
-      block->getParentProcedure()->addVariable(&inst);
-    }
-  }
-}
-
 void SmackInstVisitor::visitAllocaInst(AllocaInst& ai) {
-  processInstruction(ai);
-
-  Type* allocType = ai.getAllocatedType();
-  unsigned typeSize = targetData->getTypeStoreSize(allocType);
-  ConstExpr* typeSizeExpr = new ConstExpr(typeSize);
-  Expr* arraySizeExpr = visitValue(ai.getArraySize());
-  AllocaStmt* stmt = new AllocaStmt(&ai, typeSizeExpr, arraySizeExpr);
-  block->addInstruction(stmt);
+    processInstruction(ai);
+    unsigned typeSize = values.storageSize(ai.getAllocatedType());
+    Value *arraySize = ai.getArraySize();
+    currBlock->addStmt( Stmt::call("$alloca", 
+        Expr::fn("$mul", values.lit(typeSize), values.lit(arraySize)),
+        values.id(&ai)) );
 }
 
 void SmackInstVisitor::visitBranchInst(BranchInst& bi) {
@@ -143,7 +43,7 @@ void SmackInstVisitor::visitBranchInst(BranchInst& bi) {
 }
 
 void SmackInstVisitor::visitPHINode(PHINode& phi) {
-  processInstruction(phi);
+  processInstruction(phi);  
 }
 
 void SmackInstVisitor::visitTruncInst(TruncInst& ti) {
@@ -154,260 +54,313 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
   processInstruction(ii);
 }  
 
-void SmackInstVisitor::processDirectCall(CallInst& ci) {
-  Function* calledFunction = ci.getCalledFunction();
-  std::string funcName = strip(calledFunction->getName().str());
+// TODO Should we put this DEBUG info back in ?
+// void SmackInstVisitor::processIndirectCall(CallInst& ci) {
+    // DEBUG(errs() << "Called value: " << *calledValue << "\n");
+    // DEBUG(errs() << "Called value type: " << *calledValueType << "\n");
+    // DEBUG(errs() << "Called function type: " << *calledFuncType << "\n");
 
-  if (funcName.find("llvm.dbg.") == 0) {
-    // skipping over debug info function calls
-    return;
-  }
 
-  if (funcName == Common::ASSERT) {
-    assert(ci.getNumOperands() == 2 && "Assertions should have only one parameter");
-    Expr* expr = visitValue(ci.getOperand(0));
-    AssertStmt* stmt = new AssertStmt(&ci, expr);
-    block->addInstruction(stmt);
-  } else if (funcName == Common::ASSUME) {
-    assert(ci.getNumOperands() == 2 && "Assumes should have only one parameter");
-    Expr* expr = visitValue(ci.getOperand(0));
-    AssumeStmt* stmt = new AssumeStmt(&ci, expr);
-    block->addInstruction(stmt);
-  } else if (funcName == "malloc") {
-    assert(ci.getNumOperands() == 2 && "Call to malloc should have only one parameter");
-    assert(ci.hasOneUse());
+// TODO When will we revive the DSA code ?
+// #ifdef USE_DSA
+//     CallSite callSite = CallSite::get(&ci);
+//     if (ci.getCalledFunction() != NULL) {
+//       Function* calledFunction = ci.getCalledFunction();
+//       module->addCalledProcedure(calledFunction->getNameStr());
+//       CalledFunction* calledFunc = stmt->addCalledFunction(calledFunction);
+// 
+//       if ((Common::memoryType == DSA_INDEXED || Common::memoryType == DSA_SPLIT) &&
+//           tdDataStructures->hasDSGraph(*calledFunction)) {
+//         generateMemoryPairings(callSite, calledFunction, calledFunc);
+//       }
+//     } else {
+//       for (vector<const Function*>::iterator i = callTargetFinder->begin(callSite),
+//           ei = callTargetFinder->end(callSite); i != ei; ++i) {
+//         const Function* calledFunction = *i;
+//         module->addCalledProcedure(calledFunction->getNameStr());
+//         if (ci.getCalledValue()->getType() == calledFunction->getType()) {
+//           CalledFunction* calledFunc = stmt->addCalledFunction(calledFunction);
+// 
+//           if ((Common::memoryType == DSA_INDEXED || Common::memoryType == DSA_SPLIT) &&
+//               tdDataStructures->hasDSGraph(*calledFunction)) {
+//             generateMemoryPairings(callSite, calledFunction, calledFunc);
+//           }
+//         }
+//       }
+//     }
+// #endif
+// }
 
-    Type* allocType = ci.getType();
-    for (Value::use_iterator i = ci.use_begin(), e = ci.use_end(); i != e; ++i) {
-      Instruction* inst = cast<Instruction>(*i);
-      if (BitCastInst* bitCastInst = dyn_cast<BitCastInst>(inst)) {
-        allocType = cast<PointerType>(bitCastInst->getDestTy())->getElementType();
-      }
-    }
+// TODO Does this function belong here, or in "Values" ?
+Stmt * SmackInstVisitor::generateCall(
+    Function *f, vector<Expr*> args, vector<string> rets ) {
+        
+    string name = values.fun(f);
 
-    Expr* arraySizeExpr = visitValue(ci.getOperand(0));
+    if (name.find("llvm.dbg.") == 0) 
+        // a "skip" statement..
+        return Stmt::assume(Expr::lit(true));
 
-    MallocStmt* stmt = new MallocStmt(&ci, arraySizeExpr);
-    block->addInstruction(stmt);
-  } else if (funcName == "free") {
-    assert(ci.getNumOperands() == 2 && "Call to free should have only one parameter");
-    Expr* freedPtrExpr = visitValue(ci.getOperand(0));
-    FreeStmt* stmt = new FreeStmt(&ci, freedPtrExpr);
-    block->addInstruction(stmt);
-  } else {
-    CallStmt* stmt = new CallStmt(&ci);
-    stmt->addCalledFunction(calledFunction);
+    else if (name == "__SMACK_assert") {
+        assert (args.size() == 1 && rets.size() == 0);
+        return Stmt::assert_(Expr::neq(
+            args[0], Expr::fn("$ptr",Expr::id("$NULL"),values.lit((unsigned)0))));
 
-    if (ci.getType()->getTypeID() != Type::VoidTyID) {
-      VarExpr* returnVar = new VarExpr(&ci);
-      stmt->setReturnVar(returnVar);
-    }
+    } else if (name == "__SMACK_assume") {
+        assert (args.size() == 1 && rets.size() == 0);
+        return Stmt::assume(Expr::neq(
+            args[0], Expr::fn("$ptr",Expr::id("$NULL"),values.lit((unsigned)0))));
+        
+    } else if (name == "__SMACK_record_int") {
+        assert (args.size() == 1 && rets.size() == 0);
+        return Stmt::call(name,Expr::fn("$off",args[0]));
+        
+    } else if (name == "__SMACK_record_obj") {
+        assert (args.size() == 1 && rets.size() == 0);
+        return Stmt::call(name,Expr::fn("$obj",args[0]));
+        
+    } else if (name == "__SMACK_record_ptr") {
+        assert (args.size() == 1 && rets.size() == 0);
+        return Stmt::call(name,args[0]);
 
-    for (unsigned i = 0, e = ci.getNumOperands() - 1; i < e; ++i) {
-      Expr* param = visitValue(ci.getOperand(i));
-      stmt->addParam(param);
-    }
+    } else if (name == "malloc") {
+        assert (args.size() == 1);
+        return Stmt::call("$malloc", Expr::fn("$off",args[0]), rets[0]);
 
-    block->addInstruction(stmt);
-  }
-}
+    } else if (name == "free") {
+        assert(args.size() == 1);
+        return Stmt::call("$free",args[0]);
+        
+    } else if (f->isVarArg() && args.size() > 0) {
+        // Handle variable argument functions
+        assert( args.size() <= 5 
+            && "Currently only up to 5 var arg parameters are supported" );
+        stringstream ss;
+        ss << name << "#" << args.size();
+        name = ss.str();
+        return Stmt::call(name, args, rets);
 
-void SmackInstVisitor::processIndirectCall(CallInst& ci) {
-  const Value* calledValue = ci.getCalledValue();
-  DEBUG(errs() << "Called value: " << *calledValue << "\n");
-  Type* calledValueType = calledValue->getType();
-  DEBUG(errs() << "Called value type: " << *calledValueType << "\n");
-  assert(calledValueType->isPointerTy() && "Indirect call value type has to be a pointer");
-  Type* calledFuncType = calledValueType->getPointerElementType();
-  DEBUG(errs() << "Called function type: " << *calledFuncType << "\n");
-
-  CallStmt* stmt = new CallStmt(&ci);
-  VarExpr* functionPointer = new VarExpr(calledValue);
-  stmt->setFunctionPointer(functionPointer);
-
-  Module* module = ci.getParent()->getParent()->getParent();
-  for (Module::iterator func = module->begin(), e = module->end(); func != e; ++func) {
-    DEBUG(errs() << "Function type: " << *func->getFunctionType() << "\n");
-    if (func->getFunctionType() == calledFuncType) {
-      DEBUG(errs() << "Matching called function type: " << *func << "\n");
-      stmt->addCalledFunction(func);
-    }
-  }
-//  assert(false && "Indirect function calls currently not supported");
-
-  if (ci.getType()->getTypeID() != Type::VoidTyID) {
-    VarExpr* returnVar = new VarExpr(&ci);
-    stmt->setReturnVar(returnVar);
-  }
-
-  for (unsigned i = 0, e = ci.getNumOperands() - 1; i < e; ++i) {
-    Expr* param = visitValue(ci.getOperand(i));
-    stmt->addParam(param);
-  }
-
-  block->addInstruction(stmt);
-
-#ifdef USE_DSA
-    CallSite callSite = CallSite::get(&ci);
-    if (ci.getCalledFunction() != NULL) {
-      Function* calledFunction = ci.getCalledFunction();
-      module->addCalledProcedure(calledFunction->getNameStr());
-      CalledFunction* calledFunc = stmt->addCalledFunction(calledFunction);
-
-      if ((Common::memoryType == DSA_INDEXED || Common::memoryType == DSA_SPLIT) &&
-          tdDataStructures->hasDSGraph(*calledFunction)) {
-        generateMemoryPairings(callSite, calledFunction, calledFunc);
-      }
     } else {
-      for (vector<const Function*>::iterator i = callTargetFinder->begin(callSite),
-          ei = callTargetFinder->end(callSite); i != ei; ++i) {
-        const Function* calledFunction = *i;
-        module->addCalledProcedure(calledFunction->getNameStr());
-        if (ci.getCalledValue()->getType() == calledFunction->getType()) {
-          CalledFunction* calledFunc = stmt->addCalledFunction(calledFunction);
-
-          if ((Common::memoryType == DSA_INDEXED || Common::memoryType == DSA_SPLIT) &&
-              tdDataStructures->hasDSGraph(*calledFunction)) {
-            generateMemoryPairings(callSite, calledFunction, calledFunc);
-          }
-        }
-      }
+        return Stmt::call(name, args, rets);
     }
-#endif
 }
+
+// Counter for unique block names used for function pointer call dispatch.
+int fpcNum = 0;
 
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
-  processInstruction(ci);
-  if (ci.getCalledFunction()) {
-    processDirectCall(ci);
-  } else {
-    processIndirectCall(ci);
-  }
+    processInstruction(ci);
+
+    vector<Expr*> args;
+    for (unsigned i=0; i<ci.getNumOperands()-1; i++)
+        args.push_back(values.expr(ci.getOperand(i)));
+
+    vector<string> rets;
+    if (!ci.getType()->isVoidTy())
+        rets.push_back(values.id(&ci));
+    
+    if (Function* f = ci.getCalledFunction())
+        currBlock->addStmt( generateCall(f,args,rets) );
+
+    else {
+        // function pointer call...
+        vector<llvm::Function*> fs;
+    
+        // Collect the list of possible function calls
+        llvm::Value *c = ci.getCalledValue();
+        llvm::Type *t = c->getType();
+        assert( t->isPointerTy() && "Indirect call value type must be pointer");
+        t = t->getPointerElementType();
+        llvm::Module *m = ci.getParent()->getParent()->getParent();
+        for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
+            if (f->getFunctionType() == t)
+                fs.push_back(f);
+        
+        if (fs.size() == 1)
+            // Q: is this case really possible?
+            currBlock->addStmt(generateCall(fs[0],args,rets));
+    
+        else if (fs.size() > 1) {
+            string tgt;
+            stringstream ss(tgt);
+            ss << "$fpd#" << fpcNum++;
+            tgt = ss.str();
+            Block *tail = new Block(tgt);
+            vector<string> targets;            
+            
+            // Create a sequence of dispatch blocks, one for each call.
+            for (unsigned i=0; i<fs.size(); i++) {                
+                stringstream ss;
+                ss << tgt << "#" << i;
+                string name = ss.str();
+                    
+                Block *disp = new Block(name);
+                targets.push_back(name);
+
+                disp->addStmt(Stmt::assume(
+                    Expr::eq(values.expr(c),Expr::id(values.id(fs[i])))));
+                disp->addStmt(generateCall(fs[i],args,rets));
+                disp->addStmt(Stmt::goto_(tgt));
+                currProc->addBlock(disp);
+            }
+
+            // Jump to the dispatch blocks.
+            currBlock->addStmt(Stmt::goto_(targets));
+
+            // Update the current block for subsequent visits.
+            currBlock = tail;
+            currProc->addBlock(tail);
+        
+        } else
+            assert (false && "unable to resolve function call...");
+    }
 }
 
 void SmackInstVisitor::visitReturnInst(ReturnInst& ri) {
   processInstruction(ri);
-
-  ReturnStmt* stmt;
-  Value* retVal = ri.getReturnValue();
-  if (retVal == NULL) {
-    // void return value
-    stmt = new ReturnStmt(&ri);
-  } else {
-    Expr* retExpr = visitValue(retVal);
-    stmt = new ReturnStmt(&ri, block->getParentProcedure()->getReturnVar(), retExpr);
-  }
-  block->addInstruction(stmt);
+  
+  if (Value *v = ri.getReturnValue())
+    currBlock->addStmt( Stmt::assign(Expr::id("$r"), values.expr(v)) );
+  
+  currBlock->addStmt( Stmt::return_() );
 }
 
 void SmackInstVisitor::visitLoadInst(LoadInst& li) {
-  processInstruction(li);
-
-  Value* ptr = li.getPointerOperand();
-  MemExpr* memExpr = new MemExpr(visitValue(ptr), Memory::create());
-  Expr* expr = new VarExpr(&li);
-  AssignStmt* assignStmt = new AssignStmt(&li, expr, memExpr);
-  block->addInstruction(assignStmt);
+  processInstruction(li);  
+  assert(li.hasName() && "Variable has to have a name");
+  currBlock->addStmt(Stmt::assign(values.expr(&li),
+      Expr::sel(Expr::id("$Mem"), values.expr(li.getPointerOperand()))));
 }
 
 void SmackInstVisitor::visitStoreInst(StoreInst& si) {
-  processInstruction(si);
-
-  Value* ptr = si.getPointerOperand();
-  MemExpr* memExpr = new MemExpr(visitValue(ptr), Memory::create());
-  Expr* expr = visitValue(si.getOperand(0));
-  AssignStmt* assignStmt = new AssignStmt(&si, memExpr, expr);
-  block->addInstruction(assignStmt);
+    processInstruction(si);
+    currBlock->addStmt(Stmt::assign(
+        Expr::sel(Expr::id("$Mem"), values.expr(si.getPointerOperand())), 
+        values.expr(si.getOperand(0))));
 }
 
 void SmackInstVisitor::visitGetElementPtrInst(GetElementPtrInst& gepi) {
-  processInstruction(gepi);
+    processInstruction(gepi);
 
-  Value* ptrVal = gepi.getPointerOperand();
-  Expr* ptr = visitValue(ptrVal);
+    // TODO Lots of duplication with the values.expr() procedure here..
 
-  gep_type_iterator typeI = gep_type_begin(gepi);
-  for (GetElementPtrInst::op_iterator
-      idxI = gepi.idx_begin(), e = gepi.idx_end(); idxI != e; ++idxI, ++typeI) {
-    if (StructType* structType = dyn_cast<StructType>(*typeI)) {
-      assert((*idxI)->getType()->isIntegerTy() && (*idxI)->getType()->getPrimitiveSizeInBits() == 32 && "Illegal struct idx");
-      unsigned fieldNo = cast<ConstantInt>(*idxI)->getZExtValue();
+    Expr *p = values.expr(gepi.getPointerOperand());
+    unsigned n = gepi.getNumOperands();
 
-      // Get structure layout information...
-      const StructLayout* layout = targetData->getStructLayout(structType);
+    gep_type_iterator typeI = gep_type_begin(gepi);
+    
+    for (unsigned i=1; i<n; i++, ++typeI) {        
+        Value* idx = gepi.getOperand(i);        
+        if (StructType* structType = dyn_cast<StructType>(*typeI)) {
+            
+            assert( idx->getType()->isIntegerTy() 
+                && idx->getType()->getPrimitiveSizeInBits() == 32 
+                && "Illegal struct idx" );
 
-      // Add in the offset, as calculated by the structure layout info...
-      ConstExpr* offset = new ConstExpr(layout->getElementOffset(fieldNo));
-      ConstExpr* size = new ConstExpr(1);
-      PtrArithExpr* ptrArith = new PtrArithExpr(ptr, offset, size);
-      ptr = ptrArith;
-    } else {
-      // Type refers to sequence element type
-      Type* type = cast<SequentialType>(*typeI)->getElementType();
+            // Get structure layout information...
+            unsigned fieldNo = cast<ConstantInt>(idx)->getZExtValue();
 
-      // Get the array index and the size of each array element
-      Expr* offset = visitValue(*idxI);
-      ConstExpr* size = new ConstExpr(targetData->getTypeStoreSize(type));
-      PtrArithExpr* ptrArith = new PtrArithExpr(ptr, offset, size);
-      ptr = ptrArith;
+            // Add in the offset, as calculated by the      
+            // structure layout info...
+            p = Expr::fn("$pa", p, 
+                Expr::lit((int) values.fieldOffset(structType,fieldNo)),
+                Expr::lit(1));
+
+        } else {
+            // Update type to refer to current element
+            Type *type = cast<SequentialType>(*typeI)->getElementType();
+            p = Expr::fn("$pa", p, values.lit(idx),
+                Expr::lit((int) values.storageSize(type)));
+        }
     }
-  }
-
-  VarExpr* varExpr = new VarExpr(&gepi);
-  AssignStmt* stmt = new AssignStmt(&gepi, varExpr, ptr);
-  block->addInstruction(stmt);
+    
+    currBlock->addStmt(Stmt::assign(values.expr(&gepi), p));
 }
 
 void SmackInstVisitor::visitICmpInst(ICmpInst& ci) {
-  processInstruction(ci);
-
-  Expr* left = visitValue(ci.getOperand(0));
-  Expr* right = visitValue(ci.getOperand(1));
-  CmpStmt* cmpStmt = new CmpStmt(&ci, left, right);
-  block->addInstruction(cmpStmt);
+    processInstruction(ci);
+    Expr *l = values.expr(ci.getOperand(0)),
+        *r = values.expr(ci.getOperand(1));
+        
+    Expr *e = NULL;
+    string o;
+    
+    switch (ci.getPredicate()) {
+        case ICmpInst::ICMP_EQ: e = Expr::eq(l,r); break;
+        case ICmpInst::ICMP_NE: e = Expr::neq(l,r); break;
+        case ICmpInst::ICMP_SGE: o = "$sge"; break;
+        case ICmpInst::ICMP_UGE: o = "$uge"; break;
+        case ICmpInst::ICMP_SLE: o = "$sle"; break;
+        case ICmpInst::ICMP_ULE: o = "$ule"; break;
+        case ICmpInst::ICMP_SLT: o = "$slt"; break;
+        case ICmpInst::ICMP_ULT: o = "$ult"; break;
+        case ICmpInst::ICMP_SGT: o = "$sgt"; break;
+        case ICmpInst::ICMP_UGT: o = "$ugt"; break;
+        default:
+        assert( false && "unexpected predicate." );
+    }
+    if (e == NULL) e = Expr::fn(o, Expr::fn("$off",l), Expr::fn("$off",r));        
+    currBlock->addStmt(Stmt::assign(values.expr(&ci),e));
 }
 
 void SmackInstVisitor::visitZExtInst(ZExtInst& ci) {
-  processInstruction(ci);
-
-  Statement* stmt;
-  if (ci.getSrcTy()->isIntegerTy() && ci.getSrcTy()->getPrimitiveSizeInBits() == 1) {
-    stmt = new BoolToIntStmt(&ci, visitValue(ci.getOperand(0)));
-  } else {
-    stmt = new AssignStmt(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
-  }
-  block->addInstruction(stmt);
+    processInstruction(ci);
+        
+    Expr *e = values.expr(ci.getOperand(0));
+    if (ci.getSrcTy()->isIntegerTy() 
+        && ci.getSrcTy()->getPrimitiveSizeInBits() == 1)
+        e = Expr::fn("$b2p",e);
+    currBlock->addStmt(Stmt::assign(values.expr(&ci),e));
 }
 
 void SmackInstVisitor::visitSExtInst(SExtInst& ci) {
-  processInstruction(ci);
-
-  Statement* stmt;
-  if (ci.getSrcTy()->isIntegerTy() && ci.getSrcTy()->getPrimitiveSizeInBits() == 1) {
-    stmt = new BoolToIntStmt(&ci, visitValue(ci.getOperand(0)));
-  } else {
-    stmt = new AssignStmt(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
-  }
-  block->addInstruction(stmt);
+    processInstruction(ci);
+        
+    Expr *e = values.expr(ci.getOperand(0));
+    if (ci.getSrcTy()->isIntegerTy() 
+        && ci.getSrcTy()->getPrimitiveSizeInBits() == 1)
+        e = Expr::fn("$b2p",e);
+    currBlock->addStmt(Stmt::assign(values.expr(&ci), e));
 }
 
 void SmackInstVisitor::visitBitCastInst(BitCastInst& ci) {
 
-  // TODO: currently this is a noop instruction
-  processInstruction(ci);
-
-  AssignStmt* assignStmt = new AssignStmt(&ci, new VarExpr(&ci), visitValue(ci.getOperand(0)));
-  block->addInstruction(assignStmt);
+    // TODO: currently this is a noop instruction
+    processInstruction(ci);
+    currBlock->addStmt(Stmt::assign(values.expr(&ci), values.expr(ci.getOperand(0))));
 }
 
 void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
-  processInstruction(bo);
-
-  Expr* left = visitValue(bo.getOperand(0));
-  Expr* right = visitValue(bo.getOperand(1));
-  BinaryOperatorStmt* binaryOperatorStmt = new BinaryOperatorStmt(&bo, left, right);
-  block->addInstruction(binaryOperatorStmt);
+    processInstruction(bo);
+      
+    string op;
+    switch (bo.getOpcode()) {
+        case Instruction::Add: op = "$add"; break;
+        case Instruction::Sub: op = "$sub"; break;
+        case Instruction::Mul: op = "$mul"; break;
+        case Instruction::SDiv: op = "$sdiv"; break;
+        case Instruction::UDiv: op = "$udiv"; break;
+        case Instruction::SRem: op = "$srem"; break;
+        case Instruction::URem: op = "$urem"; break;
+        case Instruction::And: op = "$and"; break;
+        case Instruction::Or: op = "$or"; break;
+        case Instruction::Xor: op = "$xor"; break;
+        case Instruction::LShr: op = "$LShr"; break;
+        case Instruction::AShr: op = "$AShr"; break;
+        case Instruction::Shl: op = "$Shl"; break;
+        default: assert( false && "predicate not supported" );
+    }
+    Expr 
+        *left = values.integer(bo.getOperand(0)),
+        *right = values.integer(bo.getOperand(1));
+    Expr *e = Expr::fn(op, left, right);
+    Expr *f = bo.getType()->isIntegerTy(1)
+        ? Expr::fn("$i2b", e)
+        : Expr::fn("$ptr", Expr::id("$NULL"), e);
+    currBlock->addStmt(Stmt::assign(values.expr(&bo), f));
 }
+
+// TODO Maybe we should reinstate this legacy code..
 
 // void SmackInstVisitor::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 //   processInstruction(I);
