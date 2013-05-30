@@ -37,21 +37,22 @@ if __name__ == '__main__':
   # find prelude and library paths
   scriptPathName = path.dirname(sys.argv[0])        
   scriptFullPath = path.abspath(scriptPathName)
-  smackRoot = path.dirname(scriptFullPath);
+  smackRoot = path.dirname(scriptFullPath)
   preludePath = path.join(scriptFullPath, 'prelude-int.bpl')
 
-  buildDir = path.join(smackRoot, 'Debug+Asserts');
-  if not path.exists( buildDir ):
-    buildDir = path.join(smackRoot, 'Release+Asserts');
-  if not path.exists( buildDir ):
-    print 'Could not find smack dynamic library.'
+  buildDir = path.join(smackRoot, 'lib')
+  if not path.exists(buildDir):
+    buildDir = path.join(smackRoot, 'Debug+Asserts')
+  if not path.exists(buildDir):
+    buildDir = path.join(smackRoot, 'Release+Asserts')
+  assert path.exists(buildDir)
 
-  if 'darwin' in platform.system().lower():
+  libraryPath = path.join(buildDir, 'smack.so')
+  if not path.exists(libraryPath):
     libraryPath = path.join(buildDir, 'lib', 'smack.dylib')
-  elif 'cygwin' in platform.system().lower():
+  if not path.exists(libraryPath):
     libraryPath = path.join(buildDir, 'bin', 'smack.dll')
-  else: 
-    libraryPath = path.join(buildDir, 'lib', 'smack.so')
+  assert path.exists(libraryPath)
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
