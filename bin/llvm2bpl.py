@@ -15,13 +15,35 @@ def is_valid_file(parser, arg):
     return open(arg, 'r')
 
 
-def llvm2bpl(preludePath, libraryPath, infile):
+def find_library_path(smackRoot):
+  buildDir = path.join(smackRoot, 'Debug+Asserts', 'lib')
+  if not path.exists(buildDir):
+    buildDir = path.join(smackRoot, 'Release+Asserts', 'lib')
+  if not path.exists(buildDir):
+    buildDir = path.join(smackRoot, 'lib')
+  assert path.exists(buildDir)
+
+  libraryPath = path.join(buildDir, 'smack.so')
+  if not path.exists(libraryPath):
+    libraryPath = path.join(buildDir, 'smack.dylib')
+  if not path.exists(libraryPath):
+    libraryPath = path.join(buildDir, 'smack.dll')
+  assert path.exists(libraryPath)
+  return libraryPath
+
+
+def llvm2bpl(scriptPathName, infile):
+
+  # find prelude and library paths
+  scriptFullPath = path.abspath(scriptPathName)
+  smackRoot = path.dirname(scriptFullPath)
+  preludePath = path.join(scriptFullPath, 'prelude-int.bpl')
+  libraryPath = find_library_path(smackRoot)
 
   # load prelude
   preludeFile = open(preludePath)
   prelude = preludeFile.read()
   preludeFile.close()
-
 
   # invoke SMACK LLVM module
   p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
@@ -34,26 +56,6 @@ def llvm2bpl(preludePath, libraryPath, infile):
 
 if __name__ == '__main__':
 
-  # find prelude and library paths
-  scriptPathName = path.dirname(sys.argv[0])        
-  scriptFullPath = path.abspath(scriptPathName)
-  smackRoot = path.dirname(scriptFullPath)
-  preludePath = path.join(scriptFullPath, 'prelude-int.bpl')
-
-  buildDir = path.join(smackRoot, 'lib')
-  if not path.exists(buildDir):
-    buildDir = path.join(smackRoot, 'Debug+Asserts')
-  if not path.exists(buildDir):
-    buildDir = path.join(smackRoot, 'Release+Asserts')
-  assert path.exists(buildDir)
-
-  libraryPath = path.join(buildDir, 'smack.so')
-  if not path.exists(libraryPath):
-    libraryPath = path.join(buildDir, 'lib', 'smack.dylib')
-  if not path.exists(libraryPath):
-    libraryPath = path.join(buildDir, 'bin', 'smack.dll')
-  assert path.exists(libraryPath)
-
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
   parser.add_argument('infile', metavar='<file>',
@@ -64,7 +66,7 @@ if __name__ == '__main__':
                       help='output Boogie file (default: %(default)s)')
   args = parser.parse_args()
 
-  bplOutput = llvm2bpl(preludePath, libraryPath, args.infile)
+  bplOutput = llvm2bpl(path.dirname(sys.argv[0]), args.infile)
 
   # write final output
   args.outfile.write(bplOutput)
