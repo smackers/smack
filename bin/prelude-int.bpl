@@ -72,6 +72,7 @@ function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}
 function $pa(pointer: $ptr, offset: int, size: int) returns ($ptr);
 function $trunc(p: $ptr) returns ($ptr);
 function $p2i(p: $ptr) returns ($ptr);
+function $i2p(p: $ptr) returns ($ptr);
 function $p2b(p: $ptr) returns (bool);
 function $b2p(b: bool) returns ($ptr);
 function $i2b(i: int) returns (bool);
@@ -108,6 +109,7 @@ axiom $i2b(0) == false;
 axiom (forall r:$ref, i:int :: $p2b($ptr(r,i)) <==> i != 0);
 axiom $p2b($ptr($NULL,0)) == false;
 axiom (forall r:$ref, i:int :: $p2i($ptr(r,i)) == $ptr($NULL,i));
+axiom (forall i:int :: (exists r:$ref :: $i2p($ptr($NULL,i)) == $ptr(r,i)));
 
 // SMACK Library Procedures
 

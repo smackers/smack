@@ -72,6 +72,7 @@ function {:bvbuiltin "bvsge"} $sge(p1:bv32, p2:bv32) returns (bool);
 function $pa(pointer: $ptr, offset: bv32, size: bv32) returns ($ptr);
 function $trunc(p:$ptr) returns ($ptr);
 function $p2i(p: $ptr) returns ($ptr);
+function $i2p(p: $ptr) returns ($ptr);
 function $p2b(p: $ptr) returns (bool);
 function $b2p(b: bool) returns ($ptr);
 function $i2b(i: bv32) returns (bool);
@@ -108,6 +109,7 @@ axiom $i2b(0bv32) == false;
 axiom (forall r:$ref, i:bv32 :: $p2b($ptr(r,i)) <==> i != 0bv32);
 axiom $p2b($ptr($NULL,0bv32)) == false;
 axiom (forall r:$ref, i:bv32 :: $p2i($ptr(r,i)) == $ptr($NULL,i));
+axiom (forall i:bv32 :: (exists r:$ref :: $i2p($ptr($NULL,i)) == $ptr(r,i)));
 
 // SMACK Library Procedures
 

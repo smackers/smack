@@ -44,10 +44,10 @@ public:
   void visitSExtInst(SExtInst& i);
   void visitBitCastInst(BitCastInst& i);
   void visitBinaryOperator(BinaryOperator& i);
-  
+  void visitPtrToIntInst(PtrToIntInst& i);
+  void visitIntToPtrInst(IntToPtrInst& i);
   
   // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
-  // void visitPtrToIntInst(PtrToIntInst &I);
 };
 }
 

@@ -389,10 +389,14 @@ void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
 //   block->addInstruction( new AssignStmt(&I, fst, ndvar) );
 // }
 
-// void SmackInstVisitor::visitPtrToIntInst(PtrToIntInst &I) {
-//   processInstruction(I);
-//   Expr *dest = new VarExpr(&I);
-//   FunExpr *src = new FunExpr(new VarExpr("$p2i"));
-//   src->addArgument( visitValue(I.getOperand(0)) );
-//   block->addInstruction( new AssignStmt(&I, dest, src) );
-// }
+void SmackInstVisitor::visitPtrToIntInst(PtrToIntInst& i) {
+    processInstruction(i);
+    currBlock->addStmt(Stmt::assign(values.expr(&i),
+        Expr::fn("$p2i",values.expr(i.getOperand(0)))));
+}
+
+void SmackInstVisitor::visitIntToPtrInst(IntToPtrInst& i) {
+  processInstruction(i);
+    currBlock->addStmt(Stmt::assign(values.expr(&i),
+        Expr::fn("$i2p",values.expr(i.getOperand(0)))));
+}
