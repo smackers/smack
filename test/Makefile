@@ -37,11 +37,11 @@ SOURCES = simple.c simple_fail.c \
           two_arrays5.c \
           two_arrays6.c two_arrays6_fail.c
 
-BYTECODES = $(SOURCES:.c=.ll)
+BYTECODES = $(SOURCES:.c=.bc)
 
 all: $(BYTECODES)
 
-%.ll: %.c
+%.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:

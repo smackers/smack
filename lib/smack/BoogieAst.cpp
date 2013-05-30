@@ -1,7 +1,8 @@
 #include "BoogieAst.h"
+#include "llvm/Constants.h"
+#include <sstream>
 
 using namespace std;
-#include <sstream>
 
 namespace smack {
 
@@ -46,6 +47,10 @@ namespace smack {
         return new BinExpr(BinExpr::Neq, l, r);
     }
     
+    Expr * Expr::not_(Expr *e) {
+        return new NotExpr(e);
+    }
+    
     Expr * Expr::sel(Expr *b, Expr *i) {
         return new SelExpr(b,i);
     }
@@ -85,11 +90,26 @@ namespace smack {
         return new CallStmt(p, ps, rs);
     }
     
+    Stmt * Stmt::goto_(string t) {
+        return new GotoStmt(vector<string>(1,t));
+    }
+    
+    Stmt * Stmt::goto_(string t, string u) {
+        vector<string> ts(2,"");
+        ts[0] = t;
+        ts[1] = u;
+        return new GotoStmt(ts);
+    }
+    
     Stmt * Stmt::return_() {
         return new ReturnStmt();
     }
     
-    ostream &operator<<(ostream &os, const Expr* e) {
+    ostream &operator<<(ostream &os, const Expr& e) {
+        e.print(os);
+        return os;
+    }
+    ostream &operator<<(ostream &os, const Expr *e) {
         e->print(os);
         return os;
     }
@@ -123,11 +143,12 @@ namespace smack {
     }
     
     template<class T> void print_seq(ostream &os, vector<T> ts,
-        string init, string sep, string term) {
-    
+        string init, string sep, string term) {          
+
         os << init;
-        for (unsigned i=0; i<ts.size(); i++)
-            os << ts[i] << (i < ts.size()-1 ? sep : term);
+        for (typename vector<T>::iterator i = ts.begin(); i != ts.end(); ++i)
+            os << (i == ts.begin() ? "" : sep) << *i;
+        os << term;
     }    
     template<class T> void print_seq(ostream &os, vector<T> ts, string sep) {
         print_seq<T>(os,ts,"",sep,"");
@@ -137,7 +158,7 @@ namespace smack {
     }
     
     void BinExpr::print(ostream &os) const { 
-        os << "(" << lhs;
+        os << "(" << lhs << " ";
         switch (op) {
             case Iff: os << "<==>"; break;
             case Imp: os << "==>"; break;
@@ -157,7 +178,7 @@ namespace smack {
             case Div: os << "/"; break;
             case Mod: os << "%"; break;
         }
-        os << rhs << ")";
+        os << " " << rhs << ")";
     }
     
     void FunExpr::print(ostream &os) const {
@@ -223,12 +244,17 @@ namespace smack {
         os << "assume " << expr;
     }
 
-    void CallStmt::print(ostream &os) const {         
+    void CallStmt::print(ostream &os) const {
         os << "call ";
         if (returns.size() > 0)
             print_seq<string>(os,returns,"",", "," := ");
         os << proc;
         print_seq<Expr*>(os,params,"(",", ",")");
+    }
+    
+    void GotoStmt::print(ostream &os) const {
+        os << "goto ";
+        print_seq<string>(os,targets,", ");
     }
     
     void HavocStmt::print(ostream &os) const {
@@ -264,9 +290,7 @@ namespace smack {
     void Block::print(ostream &os) const {
         if (name != "")
             os << name << ":" << endl;
-        print_seq<Stmt*>(os,stmts,"  ",";\n  ",";\n");
-
-        // TODO add gotos & jump conditions
+        print_seq<Stmt*>(os,stmts,"  ",";\n  ",";");
     }
 
     void Procedure::print(ostream &os) const {
@@ -291,7 +315,7 @@ namespace smack {
         os << "{" << endl;
         print_seq<Decl*>(os,decls,"  ","\n  ","\n");
         print_seq<Block*>(os,blocks,"\n");
-        os << "}" << endl;
+        os << endl << "}" << endl;
     }
 
     void Program::print(ostream &os) const {

@@ -6,13 +6,8 @@
 #define SMACKINSTVISITOR_H
 
 #include "BoogieAst.h"
-
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "Values.h"
 #include "llvm/Support/InstVisitor.h"
-#include "llvm/DataLayout.h"
 
 using namespace llvm;
 
@@ -20,21 +15,20 @@ namespace smack {
 
 class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
 private:
-  DataLayout *targetData;
+  Values& values;
   Procedure *currProc;
   Block *currBlock;
   
-  void generateCall(string p, vector<Expr*> ps, vector<string> rs);
+  Stmt * generateCall(string p, vector<Expr*> ps, vector<string> rs);
+  void processIndirectCall(CallInst& ci);
 
 public:
-  SmackInstVisitor(DataLayout *td, Procedure *p, Block *b) 
-      : targetData(td), currProc(p), currBlock(b) {}  
+  SmackInstVisitor(Values& v, Procedure *p, Block *b) 
+      : values(v), currProc(p), currBlock(b) {}  
   void setCurrBlock(Block *b) { currBlock = b; }
-  Expr * expr(Value *v);
-  Expr * operand(Value *v);
-      
-  void visitInstruction(Instruction& i);
+
   void processInstruction(Instruction& i);
+  void visitInstruction(Instruction& i);
   void visitAllocaInst(AllocaInst& i);
   void visitBranchInst(BranchInst& i);
   void visitPHINode(PHINode& i);

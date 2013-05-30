@@ -3,7 +3,13 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackGenerator.h"
+#include "SmackInstVisitor.h"
+#include "Values.h"
+#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/CFG.h"
 #include <sstream>
+#include <stack>
 
 using namespace smack;
 using namespace std;
@@ -20,6 +26,7 @@ string blockName(int n) {
 bool SmackGenerator::runOnModule(llvm::Module &m) {
 
     program = new Program();
+    Values values(&getAnalysis<DataLayout>());
 
     DEBUG(errs() << "Analyzing globals...\n");
 
@@ -29,7 +36,7 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
         x = m.global_begin(), e = m.global_end(); x != e; ++x) {
             
         if (isa<GlobalVariable>(x)) {
-            string name = translateName(x); // TODO clean
+            string name = values.id(x);
             globals.push_back(name);
             program->addDecl(new ConstDecl(name, "$ptr", true));  
         }
@@ -66,7 +73,7 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
         for (llvm::Function::const_arg_iterator
                 arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg) {
             proc->addParam(
-                translateName(arg),  // TODO clean
+                values.id(arg),
                 arg->getType()->isIntegerTy(1) ? "bool" : "$ptr" );
         }
         
@@ -93,7 +100,7 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
             Block *entry = new Block(blockName(bn++));
             proc->addBlock(entry);
             known[&entryBlock] = entry;
-            SmackInstVisitor visitor(&getAnalysis<DataLayout>(), proc, entry);
+            SmackInstVisitor visitor(values, proc, entry);
 
             // INVARIANT: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b) or  
             // workStack.CONTAINED(b) at some point in time.
@@ -103,33 +110,66 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
 
                 visitor.setCurrBlock(block);
                 visitor.visit(llvmBlock);
-
+                
                 for (succ_iterator i = succ_begin(llvmBlock),
                         e = succ_end(llvmBlock); i != e; ++i) {
 
                     llvm::BasicBlock* llvmSucc = *i;
-                    Block *succ;
           
+                    // uncovered basic block
                     if (known.count(llvmSucc) == 0) {
-                        succ = new Block(blockName(bn++));
+                        Block *succ = new Block(blockName(bn++));
                         proc->addBlock(succ);
                         known[llvmSucc] = succ;
                         workStack.push(llvmSucc);
-                    } else {
-                        succ = known[llvmSucc];
                     }
-                    
-                    // create a successor link
-                    block->addSucc(succ);
+                            
+                    // write to the phi-node variable of the successor
                     for (llvm::BasicBlock::iterator
                         s = llvmSucc->begin(), e = llvmSucc->end(); s != e && isa<PHINode>(s); ++s) {
                             
-                        // write to the phi-node variable of the successor
                         PHINode* phi = cast<PHINode>(s);
-                        if (Value* v = phi->getIncomingValueForBlock(llvmBlock)) 
-                            block->addStmt(Stmt::assign(visitor.expr(phi),visitor.expr(v)));
+                        if (Value* v = phi->getIncomingValueForBlock(llvmBlock)) {
+                            visitor.processInstruction(*phi);
+                            block->addStmt(Stmt::assign(Expr::id(values.id(phi)), values.expr(v)));
+                        }
                     }
                 }
+                
+                // Add the corresponding GOTO statements
+                if (llvm::BranchInst *bi = 
+                    dyn_cast<llvm::BranchInst>(llvmBlock->getTerminator())) {
+                    
+                    if (bi->isConditional()) {
+                        assert( bi->getNumSuccessors() == 2 );                       
+                        Expr *e = values.expr(bi->getCondition());
+                        
+                        // Intermediate block for positive condition test
+                        Block *pos = new Block( block->getName() + "#T" );
+                        pos->addStmt(Stmt::assume(e));
+                        pos->addStmt(
+                            Stmt::goto_(known[bi->getSuccessor(0)]->getName()));
+                        proc->addBlock(pos);
+
+                        // Intermediate block for negative condition test
+                        Block *neg = new Block( block->getName() + "#F" );
+                        neg->addStmt(Stmt::assume(Expr::not_(e)));
+                        neg->addStmt(
+                            Stmt::goto_(known[bi->getSuccessor(1)]->getName()));
+                        proc->addBlock(neg);
+
+                        // Branch to intermediate blocks
+                        block->addStmt(
+                            Stmt::goto_(pos->getName(), neg->getName()));
+
+                    } else {
+                        assert( bi->getNumSuccessors() == 1 );
+                        block->addStmt( 
+                            Stmt::goto_(known[bi->getSuccessor(0)]->getName()));
+                    }
+                } else
+                    // Otherwise there should have been no successors
+                    assert( succ_begin(llvmBlock) == succ_end(llvmBlock) );                
             }
         }
 

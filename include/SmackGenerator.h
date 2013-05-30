@@ -6,19 +6,7 @@
 #define SMACKGENERATOR_H
 
 #include "BoogieAst.h"
-
-#include "SmackInstVisitor.h"
-#include "BplPrintUtils.h"
-#include "llvm/Function.h"
-#include "llvm/InstrTypes.h"
-#include "llvm/Pass.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CFG.h"
 #include "llvm/DataLayout.h"
-#include <map>
-#include <stack>
-#include <vector>
 
 namespace smack {
 

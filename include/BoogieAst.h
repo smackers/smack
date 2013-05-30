@@ -1,11 +1,6 @@
 #ifndef BOOGIE_AST_H_
 #define BOOGIE_AST_H_
 
-#include "llvm/Constants.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/BasicBlock.h"
-
 #include <string>
 #include <vector>
 
@@ -25,6 +20,7 @@ namespace smack {
         static Expr * lit(int i, unsigned w);
         static Expr * lit(bool b);
         static Expr * neq(Expr *l, Expr *r);
+        static Expr * not_(Expr *e);
         static Expr * sel(Expr *b, Expr *i);
         static Expr * sel(string b, string i);
     };
@@ -124,6 +120,8 @@ namespace smack {
         static Stmt * call(string p, Expr *x, string r);
         static Stmt * call(string p, Expr *x, Expr *y, string r);
         static Stmt * call(string p, vector<Expr*> ps, vector<string> rs);
+        static Stmt * goto_(string t);
+        static Stmt * goto_(string t, string u);
         static Stmt * return_();
         virtual void print(ostream &os) const = 0;
     };
@@ -159,6 +157,13 @@ namespace smack {
             : proc(p), params(ps), returns(rs) {}
         void print(ostream &os) const;
     };
+    
+    class GotoStmt : public Stmt {
+        vector<string> targets;
+    public:
+        GotoStmt(vector<string> ts) : targets(ts) {}
+        void print(ostream &os) const;
+    };
 
     class HavocStmt : public Stmt {
         vector<string> vars;
@@ -176,56 +181,55 @@ namespace smack {
     };    
     
     class Decl {
+    protected:
+        string name;
+        string type;
+        Decl(string n, string t) : name(n), type(t) {}
     public:
         virtual void print(ostream &os) const = 0;
+        string getName() const { return name; }
+        string getType() const { return type; }
     };
 
     class AxiomDecl : public Decl {
         Expr *expr;
     public:
-        AxiomDecl(Expr *e) : expr(e) {}
+        AxiomDecl(Expr *e) : Decl("",""), expr(e) {}
         void print(ostream &os) const;
     };
     
     class ConstDecl : public Decl {
-        string name;
-        string type;
         bool unique;
     public:
-        ConstDecl(string n, string t, bool u) : name(n), type(t), unique(u) {}
-        ConstDecl(string n, string t) : name(n), type(t), unique(false) {}
+        ConstDecl(string n, string t, bool u) : Decl(n,t), unique(u) {}
+        ConstDecl(string n, string t) : Decl(n,t), unique(false) {}
         void print(ostream &os) const;
     };    
     
     class FuncDecl : public Decl {
-        string name;
         vector< pair<string,string> > params;
-        string type;
         Expr *body;
     public:
         FuncDecl(string n, vector< pair<string,string> > ps, string t, Expr *b) 
-            : name(n), params(ps), type(t), body(b) {}
+            : Decl(n,""), params(ps), body(b) {}
         void print(ostream &os) const;
     };
     
     class VarDecl : public Decl {
-        string name;
-        string type;
     public:
-        VarDecl(string n, string t) : name(n), type(t) {}
+        VarDecl(string n, string t) : Decl(n,t) {}
         void print(ostream &os) const;
     };
     
     class Block {
         string name;
-        vector<Block*> succ;
         vector<Stmt*> stmts;
     public:
         Block() : name("") {}
         Block(string n) : name(n) {}
         void print(ostream &os) const;
         void addStmt(Stmt *s) { stmts.push_back(s); }
-        void addSucc(Block *b) { succ.push_back(b); }
+        string getName() { return name; }
     };
         
     class Procedure {
@@ -242,6 +246,13 @@ namespace smack {
         void addRet(string x, string t) { rets.push_back(make_pair(x,t)); }
         void addMod(string m) { mods.push_back(m); }
         void addDecl(Decl *d) { decls.push_back(d); }
+        bool hasDecl(Decl *d) {
+            for (unsigned i=0; i<decls.size(); i++)
+                if (d->getName() == decls[i]->getName() 
+                    && d->getType() == decls[i]->getType())
+                    return true;
+            return false;
+        }
         void addBlock(Block *b) { blocks.push_back(b); }
     };
         
