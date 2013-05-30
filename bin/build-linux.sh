@@ -145,7 +145,7 @@ fi
 if [ ${INSTALL_SMACK} -eq 1 ]; then
 
 # Get SMACK
-git clone -b ext git://github.com/smackers/smack.git ${SMACK_DIR}/src/
+git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
 # Configure SMACK and build
 cd ${SMACK_DIR}/build/
