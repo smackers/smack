@@ -88,7 +88,9 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
 
         // BODY
         if ( !func->isDeclaration() && !func->empty() 
-            && !func->getEntryBlock().empty() ) {    
+            && !func->getEntryBlock().empty() ) {
+                
+            // TODO Probably should break this code up for readability.
 
             map<const llvm::BasicBlock*, Block*> known;
             stack<llvm::BasicBlock*> workStack;    
@@ -132,7 +134,10 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
                     // write to the phi-node variable of the successor
                     for (llvm::BasicBlock::iterator
                         s = llvmSucc->begin(), e = llvmSucc->end(); s != e && isa<PHINode>(s); ++s) {
-                            
+                        
+                        // TODO This is a bit messy, and would be better 
+                        // handled (somehow) in SmackInstVisitor
+                        
                         PHINode* phi = cast<PHINode>(s);
                         if (Value* v = phi->getIncomingValueForBlock(llvmBlock)) {
                             visitor.processInstruction(*phi);

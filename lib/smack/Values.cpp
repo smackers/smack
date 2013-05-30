@@ -8,6 +8,8 @@
 using namespace llvm;
 
 namespace smack {
+    
+    // TODO Do the following functions belong here ?
 
     string EscapeString(string str) {
       str = llvm::DOT::EscapeString(str);
@@ -38,7 +40,12 @@ namespace smack {
       return SMACK_NAME.match(s);
     }
 
+    // TODO Make this width a parameter to generate bitvector-based code.
     const int width = 0;
+    
+    // TODO The rest of these functions are kind of a mess, without a clear
+    // and understandable interface; they are also fully of messy code, and
+    // probably redundancy.
 
     Expr * Values::lit(Value *v) {
         if (const ConstantInt* ci = dyn_cast<ConstantInt>(v)) {

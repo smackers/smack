@@ -5,6 +5,10 @@
 #include "llvm/DataLayout.h"
 
 namespace smack {
+    
+    // TODO What is the right name for this class ?
+    // TODO What is it's fundamental purpose / abstraction ?
+    
     class Values {
     private:
         llvm::DataLayout *targetData;

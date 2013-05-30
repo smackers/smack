@@ -54,12 +54,14 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
   processInstruction(ii);
 }  
 
+// TODO Should we put this DEBUG info back in ?
 // void SmackInstVisitor::processIndirectCall(CallInst& ci) {
     // DEBUG(errs() << "Called value: " << *calledValue << "\n");
     // DEBUG(errs() << "Called value type: " << *calledValueType << "\n");
     // DEBUG(errs() << "Called function type: " << *calledFuncType << "\n");
 
 
+// TODO When will we revive the DSA code ?
 // #ifdef USE_DSA
 //     CallSite callSite = CallSite::get(&ci);
 //     if (ci.getCalledFunction() != NULL) {
@@ -89,6 +91,7 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
 // #endif
 // }
 
+// TODO Does this function belong here, or in "Values" ?
 Stmt * SmackInstVisitor::generateCall(
     Function *f, vector<Expr*> args, vector<string> rets ) {
         
@@ -142,6 +145,7 @@ Stmt * SmackInstVisitor::generateCall(
     }
 }
 
+// Counter for unique block names used for function pointer call dispatch.
 int fpcNum = 0;
 
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
@@ -355,6 +359,8 @@ void SmackInstVisitor::visitBinaryOperator(BinaryOperator& bo) {
         : Expr::fn("$ptr", Expr::id("$NULL"), e);
     currBlock->addStmt(Stmt::assign(values.expr(&bo), f));
 }
+
+// TODO Maybe we should reinstate this legacy code..
 
 // void SmackInstVisitor::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 //   processInstruction(I);
