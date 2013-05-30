@@ -111,6 +111,11 @@ bool SmackGenerator::runOnModule(llvm::Module &m) {
                 visitor.setCurrBlock(block);
                 visitor.visit(llvmBlock);
                 
+                // NOTE: the visitor could have broken up the block we gave him
+                // into several pieces (e.g. for procedure dispatch), so we must
+                // take whatever his current "tail" block is.
+                block = visitor.getCurrBlock();
+                
                 for (succ_iterator i = succ_begin(llvmBlock),
                         e = succ_end(llvmBlock); i != e; ++i) {
 

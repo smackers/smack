@@ -91,13 +91,17 @@ namespace smack {
     }
     
     Stmt * Stmt::goto_(string t) {
-        return new GotoStmt(vector<string>(1,t));
+        return goto_(vector<string>(1,t));
     }
     
     Stmt * Stmt::goto_(string t, string u) {
         vector<string> ts(2,"");
         ts[0] = t;
         ts[1] = u;
+        return goto_(ts);
+    }
+    
+    Stmt * Stmt::goto_(vector<string> ts) {
         return new GotoStmt(ts);
     }
     

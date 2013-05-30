@@ -25,6 +25,7 @@ public:
   SmackInstVisitor(Values& v, Procedure *p, Block *b) 
       : values(v), currProc(p), currBlock(b) {}  
   void setCurrBlock(Block *b) { currBlock = b; }
+  Block * getCurrBlock() { return currBlock; }
 
   void processInstruction(Instruction& i);
   void visitInstruction(Instruction& i);

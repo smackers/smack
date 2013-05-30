@@ -122,6 +122,7 @@ namespace smack {
         static Stmt * call(string p, vector<Expr*> ps, vector<string> rs);
         static Stmt * goto_(string t);
         static Stmt * goto_(string t, string u);
+        static Stmt * goto_(vector<string> ts);
         static Stmt * return_();
         virtual void print(ostream &os) const = 0;
     };

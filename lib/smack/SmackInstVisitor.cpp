@@ -142,6 +142,8 @@ Stmt * SmackInstVisitor::generateCall(
     }
 }
 
+int fpcNum = 0;
+
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
     processInstruction(ci);
 
@@ -161,7 +163,8 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
         vector<llvm::Function*> fs;
     
         // Collect the list of possible function calls
-        llvm::Type *t = ci.getCalledValue()->getType();
+        llvm::Value *c = ci.getCalledValue();
+        llvm::Type *t = c->getType();
         assert( t->isPointerTy() && "Indirect call value type must be pointer");
         t = t->getPointerElementType();
         llvm::Module *m = ci.getParent()->getParent()->getParent();
@@ -174,10 +177,35 @@ void SmackInstVisitor::visitCallInst(CallInst& ci) {
             currBlock->addStmt(generateCall(fs[0],args,rets));
     
         else if (fs.size() > 1) {
-            assert (false && "TODO : implement function pointer dispatch.");
-            for (unsigned i=0; i<fs.size(); i++) {
-                // ...
+            string tgt;
+            stringstream ss(tgt);
+            ss << "$fpd#" << fpcNum++;
+            tgt = ss.str();
+            Block *tail = new Block(tgt);
+            vector<string> targets;            
+            
+            // Create a sequence of dispatch blocks, one for each call.
+            for (unsigned i=0; i<fs.size(); i++) {                
+                stringstream ss;
+                ss << tgt << "#" << i;
+                string name = ss.str();
+                    
+                Block *disp = new Block(name);
+                targets.push_back(name);
+
+                disp->addStmt(Stmt::assume(
+                    Expr::eq(values.expr(c),Expr::id(values.id(fs[i])))));
+                disp->addStmt(generateCall(fs[i],args,rets));
+                disp->addStmt(Stmt::goto_(tgt));
+                currProc->addBlock(disp);
             }
+
+            // Jump to the dispatch blocks.
+            currBlock->addStmt(Stmt::goto_(targets));
+
+            // Update the current block for subsequent visits.
+            currBlock = tail;
+            currProc->addBlock(tail);
         
         } else
             assert (false && "unable to resolve function call...");
