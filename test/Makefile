@@ -38,14 +38,18 @@ SOURCES = simple.c simple_fail.c \
           two_arrays6.c two_arrays6_fail.c
 
 BYTECODES = $(SOURCES:.c=.bc)
+OBJECTS = $(SOURCES:.c=.o)
 
-all: $(BYTECODES)
+all: $(OBJECTS)
+	
+%.o: %.bc
+	$(CCLD) $(LDFLAGS) $< -o $@
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.ll *.bc *.bpl
+	rm -f *.ll *.bc *.o *.bpl
 	@for file in $(FILES); do \
 		(rm -f $$file;) \
 	done

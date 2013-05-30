@@ -54,53 +54,11 @@ void SmackInstVisitor::visitUnreachableInst(UnreachableInst& ii) {
   processInstruction(ii);
 }  
 
-void SmackInstVisitor::processIndirectCall(CallInst& ci) {
+// void SmackInstVisitor::processIndirectCall(CallInst& ci) {
     // DEBUG(errs() << "Called value: " << *calledValue << "\n");
     // DEBUG(errs() << "Called value type: " << *calledValueType << "\n");
     // DEBUG(errs() << "Called function type: " << *calledFuncType << "\n");
 
-    vector<llvm::Function*> fs;
-    
-    // Collect the list of possible function calls
-    llvm::Type *t = ci.getCalledValue()->getType();
-    assert( t->isPointerTy() && "Indirect call value type must be pointer");
-    t = t->getPointerElementType();
-    llvm::Module *m = ci.getParent()->getParent()->getParent();
-    for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
-        if (f->getFunctionType() == t)
-            fs.push_back(f);
-
-    vector<Expr*> args;
-    vector<string> rets;
-
-    // Build the argument and returns sequences
-    for (unsigned i=0; i<ci.getNumOperands()-1; i++)
-        args.push_back(values.expr(ci.getOperand(i)));
-    
-    if (!ci.getType()->isVoidTy())
-        rets.push_back(values.id(&ci));
-    
-    if (fs.size() == 1) {
-        string name = values.fun(fs[0]);
-        
-        // Handle variable argument functions
-        if (fs[0]->isVarArg() && args.size() > 0) {
-            assert( args.size() <= 5 
-                && "Currently only up to 5 var arg parameters are supported" );
-            stringstream ss;
-            ss << name << "#" << args.size();
-            name = ss.str();
-        }
-        currBlock->addStmt(generateCall(name,args,rets));
-    
-    } else if (fs.size() > 1) {
-        assert (false && "TODO : implement function pointer dispatch.");
-        for (unsigned i=0; i<fs.size(); i++) {
-            // ...
-        }
-        
-    } else
-        assert (false && "unable to resolve function call...");
 
 // #ifdef USE_DSA
 //     CallSite callSite = CallSite::get(&ci);
@@ -129,10 +87,12 @@ void SmackInstVisitor::processIndirectCall(CallInst& ci) {
 //       }
 //     }
 // #endif
-}
+// }
 
 Stmt * SmackInstVisitor::generateCall(
-    string name, vector<Expr*> args, vector<string> rets ) {
+    Function *f, vector<Expr*> args, vector<string> rets ) {
+        
+    string name = values.fun(f);
 
     if (name.find("llvm.dbg.") == 0) 
         // a "skip" statement..
@@ -167,6 +127,15 @@ Stmt * SmackInstVisitor::generateCall(
     } else if (name == "free") {
         assert(args.size() == 1);
         return Stmt::call("$free",args[0]);
+        
+    } else if (f->isVarArg() && args.size() > 0) {
+        // Handle variable argument functions
+        assert( args.size() <= 5 
+            && "Currently only up to 5 var arg parameters are supported" );
+        stringstream ss;
+        ss << name << "#" << args.size();
+        name = ss.str();
+        return Stmt::call(name, args, rets);
 
     } else {
         return Stmt::call(name, args, rets);
@@ -176,22 +145,42 @@ Stmt * SmackInstVisitor::generateCall(
 void SmackInstVisitor::visitCallInst(CallInst& ci) {
     processInstruction(ci);
 
-    if (Function* f = ci.getCalledFunction()) {
-        string name = values.fun(f);
-        vector<Expr*> args;
-        vector<string> rets;
+    vector<Expr*> args;
+    for (unsigned i=0; i<ci.getNumOperands()-1; i++)
+        args.push_back(values.expr(ci.getOperand(i)));
+
+    vector<string> rets;
+    if (!ci.getType()->isVoidTy())
+        rets.push_back(values.id(&ci));
     
-        for (unsigned i=0; i<ci.getNumOperands()-1; i++)
-            args.push_back(values.expr(ci.getOperand(i)));
+    if (Function* f = ci.getCalledFunction())
+        currBlock->addStmt( generateCall(f,args,rets) );
 
-        if (!ci.getType()->isVoidTy())
-            rets.push_back(values.id(&ci));
-
-        currBlock->addStmt( generateCall(name,args,rets) );
-
-    } else {
-        // function pointer call
-        assert( false && "function pointer call" );
+    else {
+        // function pointer call...
+        vector<llvm::Function*> fs;
+    
+        // Collect the list of possible function calls
+        llvm::Type *t = ci.getCalledValue()->getType();
+        assert( t->isPointerTy() && "Indirect call value type must be pointer");
+        t = t->getPointerElementType();
+        llvm::Module *m = ci.getParent()->getParent()->getParent();
+        for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
+            if (f->getFunctionType() == t)
+                fs.push_back(f);
+        
+        if (fs.size() == 1)
+            // Q: is this case really possible?
+            currBlock->addStmt(generateCall(fs[0],args,rets));
+    
+        else if (fs.size() > 1) {
+            assert (false && "TODO : implement function pointer dispatch.");
+            for (unsigned i=0; i<fs.size(); i++) {
+                // ...
+            }
+        
+        } else
+            assert (false && "unable to resolve function call...");
     }
 }
 

@@ -19,8 +19,7 @@ private:
   Procedure *currProc;
   Block *currBlock;
   
-  Stmt * generateCall(string p, vector<Expr*> ps, vector<string> rs);
-  void processIndirectCall(CallInst& ci);
+  Stmt * generateCall(Function *f, vector<Expr*> ps, vector<string> rs);
 
 public:
   SmackInstVisitor(Values& v, Procedure *p, Block *b) 
