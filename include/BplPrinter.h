@@ -7,22 +7,20 @@
 
 #include "SmackGenerator.h"
 
-using namespace llvm;
-
 namespace smack {
 
-class BplPrinter : public ModulePass {
+    class BplPrinter : public llvm::ModulePass {
 
-public:
-  static char ID; // Pass identification, replacement for typeid
+    public:
+      static char ID; // Pass identification, replacement for typeid
 
-  BplPrinter() : ModulePass(ID) {}
-  virtual bool runOnModule(Module &m);
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<SmackGenerator>();
-  }
-};
+      BplPrinter() : llvm::ModulePass(ID) {}
+      virtual bool runOnModule(llvm::Module &m);
+      virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+        AU.setPreservesAll();
+        AU.addRequired<SmackGenerator>();
+      }
+    };
 }
 
 #endif  /*BPLPRINTER_H*/

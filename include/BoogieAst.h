@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 namespace smack {
+
+    using namespace std;
    
     class Expr {
     public:

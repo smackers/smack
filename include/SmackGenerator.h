@@ -10,23 +10,23 @@
 
 namespace smack {
 
-class SmackGenerator : public llvm::ModulePass {
-private:
-  Program *program;
+    class SmackGenerator : public llvm::ModulePass {
+    private:
+      Program *program;
 
-public:
-  static char ID; // Pass identification, replacement for typeid
+    public:
+      static char ID; // Pass identification, replacement for typeid
 
-  SmackGenerator() : ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module &m);
+      SmackGenerator() : ModulePass(ID) {}
+      virtual bool runOnModule(llvm::Module &m);
 
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<llvm::DataLayout>();
-  }
+      virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+        AU.setPreservesAll();
+        AU.addRequired<llvm::DataLayout>();
+      }
   
-  Program * getProgram() const { return program; }
-};
+      Program * getProgram() const { return program; }
+    };
 }
 
 #endif  /*SMACKGENERATOR_H*/

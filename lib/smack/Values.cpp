@@ -5,9 +5,12 @@
 #include "llvm/Support/InstVisitor.h"
 #include <sstream>
 
-using namespace llvm;
-
 namespace smack {
+    
+    using llvm::Regex;
+    using llvm::SmallVector;
+    using llvm::StringRef;
+    using namespace std;
     
     // TODO Do the following functions belong here ?
 
@@ -47,8 +50,8 @@ namespace smack {
     // and understandable interface; they are also fully of messy code, and
     // probably redundancy.
 
-    Expr * Values::lit(Value *v) {
-        if (const ConstantInt* ci = dyn_cast<ConstantInt>(v)) {
+    Expr * Values::lit(llvm::Value *v) {
+        if (const llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v)) {
             if (ci->getBitWidth() == 1)
                 return Expr::lit(!ci->isZero());
         
@@ -58,7 +61,7 @@ namespace smack {
             else
                 return Expr::lit(val,width);
         
-        } else if (isa<ConstantPointerNull>(v))
+        } else if (llvm::isa<llvm::ConstantPointerNull>(v))
             return Expr::lit(0,width);
         
          else
@@ -71,20 +74,20 @@ namespace smack {
         return Expr::lit(v,width);
     }
     
-    string Values::id(const Value *v) {
+    string Values::id(const llvm::Value *v) {
         string name;
     
         if (v->hasName()) {
             name = strip( v->getName().str() );
 
-            if (isa<Function>(v)) {
+            if (llvm::isa<llvm::Function>(v)) {
                 stringstream ss;
                 ss << name << "#ptr";
                 name = ss.str();
             }        
         } else {
             // DEBUG(errs() << "Value : " << *val << "\n");
-            raw_string_ostream ss(name);
+            llvm::raw_string_ostream ss(name);
             ss << *v;
             // name = name.substr(1);
             // name = "$" + EscapeString(name.substr(name.find("%")+1));
@@ -97,16 +100,18 @@ namespace smack {
         return name;
     }
 
-    string Values::fun(Value *v) {
+    string Values::fun(llvm::Value *v) {
         if (v->hasName())
             return strip(v->getName().str());
         else
             assert( false && "expected named value." );
     }
 
-    Expr * Values::expr(Value *v) {
+    Expr * Values::expr(llvm::Value *v) {
+        using namespace llvm;
+        
         if (v->hasName())
-            return Expr::id(id(v));        
+            return Expr::id(id(v));
 
         else if (Constant* constant = dyn_cast<Constant>(v)) {
 
@@ -132,13 +137,13 @@ namespace smack {
                                 && "Illegal struct idx" );
 
                             // Get structure layout information...
-                            const StructLayout* layout = targetData->getStructLayout(structType);
-                            unsigned fieldNo = cast<ConstantInt>(idx)->getZExtValue();
+                            unsigned fieldNo = 
+                                cast<ConstantInt>(idx)->getZExtValue();
 
                             // Add in the offset, as calculated by the      
                             // structure layout info...
                             p = Expr::fn("$pa", p, 
-                                Expr::lit((int) layout->getElementOffset(fieldNo)),
+                                Expr::lit((int) fieldOffset(structType,fieldNo)),
                                 Expr::lit(1));
 
                             // Update type to refer to current element
@@ -148,7 +153,7 @@ namespace smack {
                             // Update type to refer to current element
                             type = cast<SequentialType>(type)->getElementType();
                             p = Expr::fn("$pa", p, lit(idx), 
-                                Expr::lit((int) targetData->getTypeStoreSize(type)));
+                                Expr::lit((int) storageSize(type)));
                         }
                     }
                     return p;
@@ -184,18 +189,19 @@ namespace smack {
         }    
     }
 
-    Expr * Values::integer(Value *o) {
+    Expr * Values::integer(llvm::Value *o) {
         if (o->getType()->isIntegerTy(1))
             return Expr::fn("$b2i", expr(o));
         else
             return Expr::fn("$off", expr(o));
     }
     
-    unsigned Values::storageSize(Type *t) {
+    unsigned Values::storageSize(llvm::Type *t) {
         return targetData->getTypeStoreSize(t);
     }
     
-    unsigned Values::fieldOffset(StructType *t, unsigned fieldNo) {
+    unsigned Values::fieldOffset(llvm::StructType *t, unsigned fieldNo) {
         return targetData->getStructLayout(t)->getElementOffset(fieldNo);
     }
-}
+
+} // namespace smack

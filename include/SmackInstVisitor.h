@@ -9,46 +9,45 @@
 #include "Values.h"
 #include "llvm/Support/InstVisitor.h"
 
-using namespace llvm;
-
 namespace smack {
 
-class SmackInstVisitor : public InstVisitor<SmackInstVisitor> {
-private:
-  Values& values;
-  Procedure *currProc;
-  Block *currBlock;
+    class SmackInstVisitor : public llvm::InstVisitor<SmackInstVisitor> {
+    
+    private:
+      Values& values;
+      Procedure *currProc;
+      Block *currBlock;
   
-  Stmt * generateCall(Function *f, vector<Expr*> ps, vector<string> rs);
+      Stmt * generateCall(llvm::Function *f, vector<Expr*> ps, vector<string> rs);
 
-public:
-  SmackInstVisitor(Values& v, Procedure *p, Block *b) 
-      : values(v), currProc(p), currBlock(b) {}  
-  void setCurrBlock(Block *b) { currBlock = b; }
-  Block * getCurrBlock() { return currBlock; }
+    public:
+      SmackInstVisitor(Values& v, Procedure *p, Block *b) 
+          : values(v), currProc(p), currBlock(b) {}  
+      void setCurrBlock(Block *b) { currBlock = b; }
+      Block * getCurrBlock() { return currBlock; }
 
-  void processInstruction(Instruction& i);
-  void visitInstruction(Instruction& i);
-  void visitAllocaInst(AllocaInst& i);
-  void visitBranchInst(BranchInst& i);
-  void visitPHINode(PHINode& i);
-  void visitTruncInst(TruncInst& i);
-  void visitUnreachableInst(UnreachableInst& i);
-  void visitCallInst(CallInst& i);
-  void visitReturnInst(ReturnInst& i);
-  void visitLoadInst(LoadInst& i);
-  void visitStoreInst(StoreInst& i);
-  void visitGetElementPtrInst(GetElementPtrInst& i);
-  void visitICmpInst(ICmpInst& i);
-  void visitZExtInst(ZExtInst& i);
-  void visitSExtInst(SExtInst& i);
-  void visitBitCastInst(BitCastInst& i);
-  void visitBinaryOperator(BinaryOperator& i);
-  void visitPtrToIntInst(PtrToIntInst& i);
-  void visitIntToPtrInst(IntToPtrInst& i);
+      void processInstruction(llvm::Instruction& i);
+      void visitInstruction(llvm::Instruction& i);
+      void visitAllocaInst(llvm::AllocaInst& i);
+      void visitBranchInst(llvm::BranchInst& i);
+      void visitPHINode(llvm::PHINode& i);
+      void visitTruncInst(llvm::TruncInst& i);
+      void visitUnreachableInst(llvm::UnreachableInst& i);
+      void visitCallInst(llvm::CallInst& i);
+      void visitReturnInst(llvm::ReturnInst& i);
+      void visitLoadInst(llvm::LoadInst& i);
+      void visitStoreInst(llvm::StoreInst& i);
+      void visitGetElementPtrInst(llvm::GetElementPtrInst& i);
+      void visitICmpInst(llvm::ICmpInst& i);
+      void visitZExtInst(llvm::ZExtInst& i);
+      void visitSExtInst(llvm::SExtInst& i);
+      void visitBitCastInst(llvm::BitCastInst& i);
+      void visitBinaryOperator(llvm::BinaryOperator& i);
+      void visitPtrToIntInst(llvm::PtrToIntInst& i);
+      void visitIntToPtrInst(llvm::IntToPtrInst& i);
   
-  // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
-};
+      // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+    };
 }
 
 #endif  /*SMACKINSTVISITOR_H*/

@@ -2,9 +2,9 @@
 #include "llvm/Constants.h"
 #include <sstream>
 
-using namespace std;
-
 namespace smack {
+
+    using namespace std;
 
     Expr * Expr::eq(Expr *l, Expr *r) {
         return new BinExpr(BinExpr::Eq, l, r);

@@ -8,16 +8,20 @@
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 
-using namespace smack;
+namespace smack {
+    
+    using llvm::errs;
+    using namespace std;
 
-RegisterPass<BplPrinter> Y("bpl_print", "BoogiePL printer pass");
-char BplPrinter::ID = 0;
+    llvm::RegisterPass<BplPrinter> Y("bpl_print", "BoogiePL printer pass");
+    char BplPrinter::ID = 0;
 
-bool BplPrinter::runOnModule(Module &m) {
-  SmackGenerator& smackGenerator = getAnalysis<SmackGenerator>();
-  Program *program = smackGenerator.getProgram();
-  ostringstream s;
-  program->print(s);  
-  DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
-  return false;
+    bool BplPrinter::runOnModule(llvm::Module &m) {
+      SmackGenerator& smackGenerator = getAnalysis<SmackGenerator>();
+      Program *program = smackGenerator.getProgram();
+      ostringstream s;
+      program->print(s);  
+      DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
+      return false;
+    }
 }
