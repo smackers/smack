@@ -15,17 +15,17 @@ namespace smack {
     }    
     
     Expr * Expr::fn(string f, Expr *x, Expr *y) {
-        vector<Expr*> ps(2,NULL);
-        ps[0] = x;
-        ps[1] = y;
+        vector<Expr*> ps;
+        ps.push_back(x);
+        ps.push_back(y);
         return new FunExpr(f,ps);
     }    
 
     Expr * Expr::fn(string f, Expr *x, Expr *y, Expr *z) {
-        vector<Expr*> ps(3,NULL);
-        ps[0] = x;
-        ps[1] = y;
-        ps[2] = z;
+        vector<Expr*> ps;
+        ps.push_back(x);
+        ps.push_back(y);
+        ps.push_back(z);
         return new FunExpr(f,ps);
     }
     
@@ -80,9 +80,9 @@ namespace smack {
     }
     
     Stmt * Stmt::call(string p, Expr *x, Expr *y, string r) {
-        vector<Expr*> ps(2,NULL);
-        ps[0] = x;
-        ps[1] = y;
+        vector<Expr*> ps;
+        ps.push_back(x);
+        ps.push_back(y);
         return call(p, ps, vector<string>(1,r));
     }
     
