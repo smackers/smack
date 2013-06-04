@@ -12,16 +12,18 @@ namespace smack {
     class Values {
     private:
         llvm::DataLayout *targetData;
+
     public:
         Values(llvm::DataLayout *td) : targetData(td) {}
         
-        Expr * lit(llvm::Value *v);
-        Expr * lit(unsigned v);
-        string id(const llvm::Value *v);
-        string fun(llvm::Value *v);
-        Expr * expr(llvm::Value *v);
-        
-        Expr * integer(llvm::Value *v);
+        Expr * asLit(llvm::Value *v);
+        Expr * asLit(unsigned v);
+        string asId(const llvm::Value *v);
+        string asFnId(llvm::Value *v);
+        Expr * asExpr(llvm::Value *v);
+        Expr * gepAsExpr(llvm::Value *p, vector<llvm::Value*> ps,
+            vector<llvm::Type*> ts);        
+        Expr * asIntExpr(llvm::Value *v);
     
         unsigned storageSize(llvm::Type *t);    
         unsigned fieldOffset(llvm::StructType *t, unsigned fieldNo);

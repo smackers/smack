@@ -25,15 +25,6 @@ namespace smack {
       "|implementation|where|returns|assume|assert|havoc|call|return|while"
       "|break|goto|if|else)$" );
     Regex SMACK_NAME(".*__SMACK_.*");
-    Regex CPP_NAMETX("(_ZN?[0-9]*)([A-Za-z0-9_$#@!?]+)(i|pv)");
-
-    string strip(string s) {
-      SmallVector<StringRef,4> matches;
-      if (CPP_NAMETX.match(s,&matches))
-        return matches[2];
-      else
-        return s;
-    }
 
     bool isBplKeyword(string s) {
       return BPL_KW.match(s);
@@ -50,7 +41,7 @@ namespace smack {
     // and understandable interface; they are also fully of messy code, and
     // probably redundancy.
 
-    Expr * Values::lit(llvm::Value *v) {
+    Expr * Values::asLit(llvm::Value *v) {
         if (const llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v)) {
             if (ci->getBitWidth() == 1)
                 return Expr::lit(!ci->isZero());
@@ -65,20 +56,20 @@ namespace smack {
             return Expr::lit(0,width);
         
          else
-             return Expr::fn("$off",expr(v));
+             return Expr::fn("$off", asExpr(v));
             // assert( false && "value type not supported" );
     }
      
-    Expr * Values::lit(unsigned v) {
+    Expr * Values::asLit(unsigned v) {
         // TODO why doesn't this one do the thing with negative as well?
         return Expr::lit(v,width);
     }
     
-    string Values::id(const llvm::Value *v) {
+    string Values::asId(const llvm::Value *v) {
         string name;
     
         if (v->hasName()) {
-            name = strip( v->getName().str() );
+            name = v->getName().str();
 
             if (llvm::isa<llvm::Function>(v)) {
                 stringstream ss;
@@ -100,18 +91,51 @@ namespace smack {
         return name;
     }
 
-    string Values::fun(llvm::Value *v) {
+    string Values::asFnId(llvm::Value *v) {
         if (v->hasName())
-            return strip(v->getName().str());
+            return v->getName().str();
         else
             assert( false && "expected named value." );
     }
+    
+    Expr * Values::gepAsExpr(llvm::Value *p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
+        assert ( ps.size() > 0 && ps.size() == ts.size() );
 
-    Expr * Values::expr(llvm::Value *v) {
+        Expr *e = asExpr(p);
+        
+        for (unsigned i=0; i<ps.size(); i++) {            
+            if (llvm::StructType *st = llvm::dyn_cast<llvm::StructType>(ts[i])) {
+            
+                assert( ps[i]->getType()->isIntegerTy() 
+                    && ps[i]->getType()->getPrimitiveSizeInBits() == 32 
+                    && "Illegal struct idx" );
+
+                // Get structure layout information...
+                unsigned fieldNo =
+                    llvm::cast<llvm::ConstantInt>(ps[i])->getZExtValue();
+
+                // Add in the offset, as calculated by the      
+                // structure layout info...
+                e = Expr::fn("$pa", e, 
+                    Expr::lit((int) fieldOffset(st,fieldNo)),
+                    Expr::lit(1));
+                    
+            } else {
+                llvm::Type *et = 
+                    llvm::cast<llvm::SequentialType>(ts[i])->getElementType();
+                e = Expr::fn("$pa", e, asLit(ps[i]), 
+                    Expr::lit((int) storageSize(et)));
+            }
+        }
+
+        return e;
+    }
+
+    Expr * Values::asExpr(llvm::Value *v) {
         using namespace llvm;
         
         if (v->hasName())
-            return Expr::id(id(v));
+            return Expr::id(asId(v));
 
         else if (Constant* constant = dyn_cast<Constant>(v)) {
 
@@ -119,52 +143,22 @@ namespace smack {
             
                 if (constantExpr->getOpcode() == Instruction::GetElementPtr) {
 
-                    unsigned n = constantExpr->getNumOperands();
-                    Value* pv = constantExpr->getOperand(0);
-                    Expr *p = expr(pv);
-
-                    Type* type = pv->getType();
-                    gep_type_iterator typeI = gep_type_begin(constantExpr);
-                
-                    for (unsigned i = 1; i < n; i++, ++typeI) {
-                    
-                        Constant* idx = constantExpr->getOperand(i);
-                    
-                        if (StructType* structType = dyn_cast<StructType>(*typeI)) {
-                        
-                            assert( idx->getType()->isIntegerTy() 
-                                && idx->getType()->getPrimitiveSizeInBits() == 32 
-                                && "Illegal struct idx" );
-
-                            // Get structure layout information...
-                            unsigned fieldNo = 
-                                cast<ConstantInt>(idx)->getZExtValue();
-
-                            // Add in the offset, as calculated by the      
-                            // structure layout info...
-                            p = Expr::fn("$pa", p, 
-                                Expr::lit((int) fieldOffset(structType,fieldNo)),
-                                Expr::lit(1));
-
-                            // Update type to refer to current element
-                            type = structType->getElementType(fieldNo);
-                        
-                        } else {
-                            // Update type to refer to current element
-                            type = cast<SequentialType>(type)->getElementType();
-                            p = Expr::fn("$pa", p, lit(idx), 
-                                Expr::lit((int) storageSize(type)));
-                        }
+                    vector<llvm::Value*> ps;
+                    vector<llvm::Type*> ts;
+                    llvm::gep_type_iterator typeI = gep_type_begin(constantExpr);
+                    for (unsigned i=1; i<constantExpr->getNumOperands(); i++, ++typeI) {
+                        ps.push_back(constantExpr->getOperand(i));
+                        ts.push_back(*typeI);
                     }
-                    return p;
+                    return gepAsExpr(constantExpr->getOperand(0),ps,ts);
                 
                 } else if (constantExpr->getOpcode() == Instruction::BitCast)
-
-                      // TODO: currently this is a noop instruction
-                      return expr( constantExpr->getOperand(0) );
+                    // TODO: currently this is a noop instruction
+                    return asExpr( constantExpr->getOperand(0) );
                   
                 else if (constantExpr->getOpcode() == Instruction::IntToPtr)
-                    return Expr::id("$UNDEF");
+                    // TODO test this out, formerly Expr::id("$UNDEF");
+                    return Expr::fn("$i2p", asExpr(constantExpr->getOperand(0)));
 
                 else
                     assert( false && "constant expression of this type not supported" );
@@ -173,10 +167,10 @@ namespace smack {
                 if (ci->getBitWidth() == 1)
                     return Expr::lit(!ci->isZero());
 
-                else return Expr::fn("$ptr", Expr::id("$NULL"), lit(ci));
+                else return Expr::fn("$ptr", Expr::id("$NULL"), asLit(ci));
 
             } else if (constant->isNullValue())
-                return Expr::fn("$ptr", Expr::id("$NULL"), lit((unsigned)0));
+                return Expr::fn("$ptr", Expr::id("$NULL"), asLit((unsigned)0));
             
             else if (isa<UndefValue>(constant))
                 return Expr::id("$UNDEF");
@@ -189,11 +183,11 @@ namespace smack {
         }    
     }
 
-    Expr * Values::integer(llvm::Value *o) {
+    Expr * Values::asIntExpr(llvm::Value *o) {
         if (o->getType()->isIntegerTy(1))
-            return Expr::fn("$b2i", expr(o));
+            return Expr::fn("$b2i", asExpr(o));
         else
-            return Expr::fn("$off", expr(o));
+            return Expr::fn("$off", asExpr(o));
     }
     
     unsigned Values::storageSize(llvm::Type *t) {

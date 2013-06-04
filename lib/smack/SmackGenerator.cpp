@@ -38,7 +38,7 @@ namespace smack {
             x = m.global_begin(), e = m.global_end(); x != e; ++x) {
             
             if (llvm::isa<llvm::GlobalVariable>(x)) {
-                string name = values.id(x);
+                string name = values.asId(x);
                 globals.push_back(name);
                 program->addDecl(new ConstDecl(name, "$ptr", true));  
             }
@@ -76,7 +76,7 @@ namespace smack {
             for (llvm::Function::const_arg_iterator
                     arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg) {
                 proc->addParam(
-                    values.id(arg),
+                    values.asId(arg),
                     arg->getType()->isIntegerTy(1) ? "bool" : "$ptr" );
             }
         
@@ -150,7 +150,7 @@ namespace smack {
                                     phi->getIncomingValueForBlock(llvmBlock)) {
                                 visitor.processInstruction(*phi);
                                 block->addStmt(Stmt::assign(
-                                    Expr::id(values.id(phi)), values.expr(v)));
+                                    Expr::id(values.asId(phi)), values.asExpr(v)));
                             }
                         }
                     }
@@ -161,7 +161,7 @@ namespace smack {
                     
                         if (bi->isConditional()) {
                             assert( bi->getNumSuccessors() == 2 );                       
-                            Expr *e = values.expr(bi->getCondition());
+                            Expr *e = values.asExpr(bi->getCondition());
                         
                             // Intermediate block for positive condition test
                             Block *pos = new Block( block->getName() + "#T" );
