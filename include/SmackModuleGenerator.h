@@ -10,14 +10,14 @@
 
 namespace smack {
 
-    class SmackGenerator : public llvm::ModulePass {
+    class SmackModuleGenerator : public llvm::ModulePass {
     private:
       Program *program;
 
     public:
       static char ID; // Pass identification, replacement for typeid
 
-      SmackGenerator() : ModulePass(ID) {}
+      SmackModuleGenerator() : ModulePass(ID) {}
       virtual bool runOnModule(llvm::Module &m);
 
       virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {

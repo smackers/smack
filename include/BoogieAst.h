@@ -11,11 +11,13 @@ namespace smack {
     class Expr {
     public:
         virtual void print(ostream &os) const = 0;
+        static Expr * and_(Expr *l, Expr *r);
         static Expr * eq(Expr *l, Expr *r);
         static Expr * fn(string f, Expr *x);
         static Expr * fn(string f, Expr *x, Expr *y);
         static Expr * fn(string f, Expr *x, Expr *y, Expr *z);
         static Expr * id(string x);
+        static Expr * impl(Expr *l, Expr *r);
         static Expr * lit(int i);
         static Expr * lit(int i, unsigned w);
         static Expr * lit(bool b);
@@ -123,6 +125,7 @@ namespace smack {
         static Stmt * goto_(string t);
         static Stmt * goto_(string t, string u);
         static Stmt * goto_(vector<string> ts);
+        static Stmt * havoc(string x);
         static Stmt * return_();
         virtual void print(ostream &os) const = 0;
     };
@@ -170,8 +173,6 @@ namespace smack {
         vector<string> vars;
     public:
         HavocStmt(vector<string> vs) : vars(vs) {}
-        HavocStmt(string v) 
-            : vars(vector<string>(1,v)) {}
         void print(ostream &os) const;
     };
     

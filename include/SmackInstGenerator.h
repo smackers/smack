@@ -11,18 +11,24 @@
 
 namespace smack {
 
-    class SmackInstVisitor : public llvm::InstVisitor<SmackInstVisitor> {
+    class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
     
     private:
-      Values& values;
-      Procedure *currProc;
-      Block *currBlock;
+        Values& values;
+        Procedure *currProc;
+        Block *currBlock;
+        map<const llvm::BasicBlock*, Block*> &blockMap;
   
-      Stmt * generateCall(llvm::Function *f, vector<Expr*> ps, vector<string> rs);
+        Stmt * generateCall(llvm::Function *f, vector<Expr*> ps, vector<string> rs);
+
+        void generatePhiAssigns(llvm::TerminatorInst& i);
+        void generateGotoStmts(vector<pair<Expr*,string> > target);
 
     public:
-      SmackInstVisitor(Values& v, Procedure *p, Block *b) 
-          : values(v), currProc(p), currBlock(b) {}  
+      SmackInstGenerator(Values& v, Procedure *p, Block *b, 
+          map<const llvm::BasicBlock*, Block*>& bm) 
+          : values(v), currProc(p), currBlock(b), blockMap(bm) {}
+
       void setCurrBlock(Block *b) { currBlock = b; }
       Block * getCurrBlock() { return currBlock; }
 
@@ -30,6 +36,7 @@ namespace smack {
       void visitInstruction(llvm::Instruction& i);
       void visitAllocaInst(llvm::AllocaInst& i);
       void visitBranchInst(llvm::BranchInst& i);
+      void visitSwitchInst(llvm::SwitchInst& i);
       void visitPHINode(llvm::PHINode& i);
       void visitTruncInst(llvm::TruncInst& i);
       void visitUnreachableInst(llvm::UnreachableInst& i);
@@ -45,6 +52,7 @@ namespace smack {
       void visitBinaryOperator(llvm::BinaryOperator& i);
       void visitPtrToIntInst(llvm::PtrToIntInst& i);
       void visitIntToPtrInst(llvm::IntToPtrInst& i);
+      void visitSelectInst(llvm::SelectInst& i);
   
       // void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
     };

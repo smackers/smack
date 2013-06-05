@@ -17,7 +17,7 @@ namespace smack {
     char BplPrinter::ID = 0;
 
     bool BplPrinter::runOnModule(llvm::Module &m) {
-      SmackGenerator& smackGenerator = getAnalysis<SmackGenerator>();
+      SmackModuleGenerator& smackGenerator = getAnalysis<SmackModuleGenerator>();
       Program *program = smackGenerator.getProgram();
       ostringstream s;
       program->print(s);  

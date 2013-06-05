@@ -5,6 +5,10 @@
 namespace smack {
 
     using namespace std;
+    
+    Expr * Expr::and_(Expr *l, Expr *r) {
+        return new BinExpr(BinExpr::And, l, r);
+    }
 
     Expr * Expr::eq(Expr *l, Expr *r) {
         return new BinExpr(BinExpr::Eq, l, r);
@@ -30,6 +34,11 @@ namespace smack {
     }
     
     Expr * Expr::id(string s) { return new VarExpr(s); }
+    
+    Expr * Expr::impl(Expr *l, Expr *r) {
+        return new BinExpr(BinExpr::Imp, l, r);
+    }
+
     Expr * Expr::lit(int i) { return new LitExpr(i); }
     Expr * Expr::lit(int i, unsigned w) {
         switch (w) {
@@ -103,6 +112,10 @@ namespace smack {
     
     Stmt * Stmt::goto_(vector<string> ts) {
         return new GotoStmt(ts);
+    }
+    
+    Stmt * Stmt::havoc(string x) {
+        return new HavocStmt(vector<string>(1,x));
     }
     
     Stmt * Stmt::return_() {

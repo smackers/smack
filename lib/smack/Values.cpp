@@ -1,4 +1,5 @@
 #include "Values.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
@@ -159,9 +160,15 @@ namespace smack {
                 else if (constantExpr->getOpcode() == Instruction::IntToPtr)
                     // TODO test this out, formerly Expr::id("$UNDEF");
                     return Expr::fn("$i2p", asExpr(constantExpr->getOperand(0)));
+                
+                else if (constantExpr->getOpcode() == Instruction::PtrToInt)
+                    // TODO test this out, formerly Expr::id("$UNDEF");
+                    return Expr::fn("$p2i", asExpr(constantExpr->getOperand(0)));
 
-                else
+                else {
+                    DEBUG(errs() << "VALUE : " << *v << "\n");
                     assert( false && "constant expression of this type not supported" );
+                }
 
             } else if (ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
                 if (ci->getBitWidth() == 1)
@@ -175,10 +182,13 @@ namespace smack {
             else if (isa<UndefValue>(constant))
                 return Expr::id("$UNDEF");
 
-            else
+            else {
+                DEBUG(errs() << "VALUE : " << *v << "\n");
                 assert( false && "this type of constant not supported" );
+            }
             
         } else {
+            DEBUG(errs() << "VALUE : " << *v << "\n");
             assert( false && "value of this type not supported" );
         }    
     }
