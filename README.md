@@ -55,7 +55,7 @@ combinations. You can still give it a try and modify it based on your specific
 needs.
 
 **Known problems:**
-Z3 source code can sometimes not be cloned from codeplex using git. This is a
+Z3 source code cannot be cloned from codeplex using git sometimes. This is a
 known
 [problem](http://z3.codeplex.com/wikipage?title=Git%20HTTPS%20cloning%20errors).
 In that case you can manually download Z3's sources from its codeplex site.
@@ -96,7 +96,8 @@ In that case you can manually download Z3's sources from its codeplex site.
    ```
 
    If everything goes well, you should now have lib/libsmack.a and lib/smack.so
-   (or smack.dylib on MacOS) in the SMACK installation directory.
+   (or smack.dylib on MacOS, or smack.dll on Cygwin) in the SMACK installation
+   directory.
 
 4. Copy SMACK's bin scripts to the installation directory:
 
@@ -112,9 +113,9 @@ In that case you can manually download Z3's sources from its codeplex site.
    export BOOGIE="mono /home/john/Boogie/Binaries/Boogie.exe"
    ```
 
-**Note:**
-Boogie, clang, and LLVM binaries (e.g., llvm-link, opt) should be in your path,
-as well as smack-install-dir/bin directory!
+**Important note:**
+LLVM/clang binaries (e.g., clang, llvm-link, opt) should all be in your path,
+as well as your smack-install-dir/bin directory!
 
 
 ### Running Regression Tests
