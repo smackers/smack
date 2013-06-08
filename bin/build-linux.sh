@@ -152,7 +152,6 @@ cd ${SMACK_DIR}/build/
 ${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_DIR}/build --prefix=${SMACK_DIR}/install
 make
 make install
-cp -r ${SMACK_DIR}/src/bin ${SMACK_DIR}/install/bin
 
 cd ${BASE_DIR}
 
