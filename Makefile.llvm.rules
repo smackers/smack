@@ -2119,6 +2119,7 @@ install-local::
 	      '(' -name LICENSE.TXT \
 	       -o -name '*.def' \
 	       -o -name '*.h' \
+         -o -name '*.bpl' \
 	       -o -name '*.inc' \
 	       -o -name '*.td' \
 	      ')' -print | grep -v CVS | \
@@ -2138,6 +2139,7 @@ ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
 	      '(' -name LICENSE.TXT \
 	       -o -name '*.def' \
 	       -o -name '*.h' \
+         -o -name '*.bpl' \
 	       -o -name '*.inc' \
 	       -o -name '*.td' \
 	      ')' -print | grep -v CVS | \
@@ -2165,6 +2167,50 @@ uninstall-local::
       -print ')' | sed 's#\.in$$##;s#^#$(DESTDIR)$(PROJ_includedir)/#'` ; \
 	fi
 endif
+
+#------------------------------------------------------------------------
+# SMACK HACKS : install our scripts
+#------------------------------------------------------------------------
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+install-local::
+	$(Echo) Installing scripts
+	$(Verb) $(MKDIR) $(DESTDIR)$(PROJ_bindir)
+	$(Verb) if test -d "$(PROJ_SRC_ROOT)/bin" ; then \
+	  cd $(PROJ_SRC_ROOT)/bin && \
+	  for scr in `find . -type f \
+	      '(' -name '*.py' \
+	       -o -name '*.rb' \
+         -o -name 'boogie' \
+	      ')' -print | grep -v CVS | \
+	      grep -v .svn` ; do \
+	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$scr"` ; \
+	    if test \! -d "$$instdir" ; then \
+	      $(EchoCmd) Making install directory $$instdir ; \
+	      $(MKDIR) $$instdir ;\
+	    fi ; \
+	    $(ScriptInstall) $$scr $(DESTDIR)$(PROJ_bindir)/$$scr ; \
+	  done ; \
+	fi
+
+uninstall-local::
+	$(Echo) Uninstalling scripts
+	$(Verb) if [ -d "$(PROJ_SRC_ROOT)/bin" ] ; then \
+	  cd $(PROJ_SRC_ROOT)/bin && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f \
+	      '!' '(' -name '*~' -o -name '.#*' \
+        -o -name '*.in' ')' -print ')' | \
+        grep -v CVS | sed 's#^#$(DESTDIR)$(PROJ_bindir)/#'` ; \
+	  cd $(PROJ_SRC_ROOT)/bin && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f -name '*.in' \
+      -print ')' | sed 's#\.in$$##;s#^#$(DESTDIR)$(PROJ_bindir)/#'` ; \
+	fi
+endif
+
 endif
 
 check-line-length:

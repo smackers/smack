@@ -37,6 +37,12 @@ namespace smack {
                 program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
             }
         }
+        
+        // AXIOMS about variables being static
+        for (unsigned i=0; i<globals.size(); i++)
+            program->addDecl(new AxiomDecl(
+                Expr::fn(SmackRep::STATIC,
+                    Expr::fn(SmackRep::OBJ, Expr::id(globals[i])) )));
     
         // AXIOMS about variable uniqueness
         for (unsigned i=0; i<globals.size(); i++)

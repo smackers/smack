@@ -24,6 +24,7 @@ namespace smack {
         static const string FREE;
 
         static const string PTR;
+        static const string STATIC;
         static const string OBJ;
         static const string OFF;
         static const string PA;

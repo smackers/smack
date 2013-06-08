@@ -14,14 +14,16 @@ def is_valid_file(parser, arg):
   else:
     return open(arg, 'r')
 
-
-def find_library_path(smackRoot):
+def find_install_prefix(smackRoot):
   installPrefix = path.join(smackRoot, 'Debug+Asserts')
   if not path.exists(installPrefix):
     installPrefix = path.join(smackRoot, 'Release+Asserts')
   if not path.exists(installPrefix):
     installPrefix = smackRoot
+  assert path.exists(installPrefix)
+  return installPrefix
 
+def find_library_path(installPrefix):
   libraryPath = path.join(installPrefix, 'lib', 'smack.so')
   if not path.exists(libraryPath):
     libraryPath = path.join(installPrefix, 'lib', 'smack.dylib')
@@ -30,14 +32,14 @@ def find_library_path(smackRoot):
   assert path.exists(libraryPath)
   return libraryPath
 
-
 def llvm2bpl(scriptPathName, infile):
 
   # find prelude and library paths
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
-  preludePath = path.join(scriptFullPath, 'prelude-int.bpl')
-  libraryPath = find_library_path(smackRoot)
+  installPrefix = find_install_prefix(smackRoot)
+  libraryPath = find_library_path(installPrefix)
+  preludePath = path.join(installPrefix, 'include', 'prelude-int.bpl')
 
   # load prelude
   preludeFile = open(preludePath)

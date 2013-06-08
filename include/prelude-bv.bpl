@@ -9,6 +9,7 @@ const unique $NULL: $ref;
 const $UNDEF: $ptr;
 
 function $ptr($ref, int) returns ($ptr);
+function $static($ref) returns (bool);
 function $size($ref) returns (bv32);
 function $obj($ptr) returns ($ref);
 function $off($ptr) returns (bv32);
@@ -26,6 +27,7 @@ var $Alloc: [$ref] $name;
 procedure $alloca(obj_size: bv32) returns (new:$ptr);
 modifies $Alloc;
 ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
+ensures !$static($obj(new));
 ensures $off(new) == 0bv32;
 ensures $obj(new) != $NULL;
 ensures $size($obj(new)) == obj_size;
@@ -34,6 +36,7 @@ ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[
 procedure $malloc(obj_size: bv32) returns (new:$ptr);
 modifies $Alloc;
 ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
+ensures !$static($obj(new));
 ensures $off(new) == 0bv32;
 ensures $obj(new) != $NULL;
 ensures $size($obj(new)) == obj_size;
@@ -42,6 +45,7 @@ ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[
 procedure $free(pointer: $ptr);
 modifies $Alloc;
 requires $Alloc[$obj(pointer)] == $ALLOCATED;
+// requires !$static($obj(pointer));
 requires $off(pointer) == 0bv32;
 ensures $Alloc[$obj(pointer)] != $UNALLOCATED;
 ensures (forall x:$ref :: {$Alloc[x]} $obj(pointer) == x || old($Alloc)[x] == $Alloc[x]);
