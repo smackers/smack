@@ -26,24 +26,14 @@ namespace smack {
 
         DEBUG(errs() << "Analyzing globals...\n");
 
-        vector<string> globals;
-    
         for (llvm::Module::const_global_iterator 
             x = m.global_begin(), e = m.global_end(); x != e; ++x) {
                 
-            if (llvm::isa<llvm::GlobalVariable>(x) 
-                || llvm::isa<llvm::Function>(x)) {
-                string name = rep.id(x);
-                globals.push_back(name);
-                program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
-            }         
-        }
-        
-        // AXIOMS about variables being static
-        for (unsigned i=0; i<globals.size(); i++)
+            string name = rep.id(x);
+            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
             program->addDecl(new AxiomDecl(
-                Expr::fn(SmackRep::STATIC,
-                    Expr::fn(SmackRep::OBJ, Expr::id(globals[i])) )));
+                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
+        }        
     
         // AXIOMS about variable uniqueness
         // NOTE: This should be covered by the "unique" annotation on the
@@ -59,10 +49,14 @@ namespace smack {
         for (llvm::Module::iterator func = m.begin(), e = m.end(); 
                 func != e; ++func) {
 
-            string name = func->getName().str();
-        
+            string name = rep.id(func);
+            
             if (func->isDeclaration() || rep.isSmackName(name))
                 continue;
+            
+            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
+            program->addDecl(new AxiomDecl(
+                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
         
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
