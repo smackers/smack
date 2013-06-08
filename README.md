@@ -99,14 +99,7 @@ In that case you can manually download Z3's sources from its codeplex site.
    (or smack.dylib on MacOS, or smack.dll on Cygwin) in the SMACK installation
    directory.
 
-4. Copy SMACK's bin scripts to the installation directory:
-
-   ```
-   cp -r smack-source-dir/bin smack-install-dir
-   ```
-   Then add smack-install-dir/bin to your path.
-
-5. Create an environment variable called BOOGIE containing a Boogie invocation
+4. Create an environment variable called BOOGIE containing a Boogie invocation
    command for your platform. For example:
 
    ```
