@@ -30,12 +30,13 @@ namespace smack {
     
         for (llvm::Module::const_global_iterator 
             x = m.global_begin(), e = m.global_end(); x != e; ++x) {
-            
-            if (llvm::isa<llvm::GlobalVariable>(x)) {
+                
+            if (llvm::isa<llvm::GlobalVariable>(x) 
+                || llvm::isa<llvm::Function>(x)) {
                 string name = rep.id(x);
                 globals.push_back(name);
                 program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
-            }
+            }         
         }
         
         // AXIOMS about variables being static
@@ -45,10 +46,13 @@ namespace smack {
                     Expr::fn(SmackRep::OBJ, Expr::id(globals[i])) )));
     
         // AXIOMS about variable uniqueness
-        for (unsigned i=0; i<globals.size(); i++)
-            for (unsigned j=i+1; j<globals.size(); j++)
-                program->addDecl(new AxiomDecl(
-                    Expr::neq(Expr::id(globals[i]), Expr::id(globals[j])) ));
+        // NOTE: This should be covered by the "unique" annotation on the
+        // declarations.  What is not covered is that their REFERENCES should
+        // be unique...        
+        // for (unsigned i=0; i<globals.size(); i++)
+        //     for (unsigned j=i+1; j<globals.size(); j++)
+        //         program->addDecl(new AxiomDecl(
+        //             Expr::neq(Expr::id(globals[i]), Expr::id(globals[j])) ));
 
         DEBUG(errs() << "Analyzing functions...\n");
 
@@ -63,9 +67,6 @@ namespace smack {
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
             Procedure *proc = new Procedure(name);
-
-            // POINTER TO THIS FUNCTION
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
             program->addProc(proc);
             
             // PARAMETERS
