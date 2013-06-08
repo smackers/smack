@@ -24,6 +24,8 @@ tests = [
   ('pointers2_fail',     r'0 verified, 1 error' ),
   ('pointers3',          r'1 verified, 0 errors'),
   ('pointers3_fail',     r'0 verified, 1 error' ),
+  ('globals',            r'1 verified, 0 errors'),
+  ('globals_fail',       r'0 verified, 1 error' ),
   ('loop',               r'1 verified, 0 errors'),
   ('loop_fail',          r'0 verified, 1 error' ),
   ('loop1',              r'1 verified, 0 errors'),
