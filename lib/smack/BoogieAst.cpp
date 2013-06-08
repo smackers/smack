@@ -6,41 +6,41 @@ namespace smack {
 
     using namespace std;
     
-    Expr * Expr::and_(Expr *l, Expr *r) {
+    const Expr * Expr::and_(const Expr *l, const Expr *r) {
         return new BinExpr(BinExpr::And, l, r);
     }
 
-    Expr * Expr::eq(Expr *l, Expr *r) {
+    const Expr * Expr::eq(const Expr *l, const Expr *r) {
         return new BinExpr(BinExpr::Eq, l, r);
     }
 
-    Expr * Expr::fn(string f, Expr *x) {
-        return new FunExpr(f,vector<Expr*>(1,x));
+    const Expr * Expr::fn(string f, const Expr *x) {
+        return new FunExpr(f,vector<const Expr*>(1,x));
     }    
     
-    Expr * Expr::fn(string f, Expr *x, Expr *y) {
-        vector<Expr*> ps;
+    const Expr * Expr::fn(string f, const Expr *x, const Expr *y) {
+        vector<const Expr*> ps;
         ps.push_back(x);
         ps.push_back(y);
         return new FunExpr(f,ps);
     }    
 
-    Expr * Expr::fn(string f, Expr *x, Expr *y, Expr *z) {
-        vector<Expr*> ps;
+    const Expr * Expr::fn(string f, const Expr *x, const Expr *y, const Expr *z) {
+        vector<const Expr*> ps;
         ps.push_back(x);
         ps.push_back(y);
         ps.push_back(z);
         return new FunExpr(f,ps);
     }
     
-    Expr * Expr::id(string s) { return new VarExpr(s); }
+    const Expr * Expr::id(string s) { return new VarExpr(s); }
     
-    Expr * Expr::impl(Expr *l, Expr *r) {
+    const Expr * Expr::impl(const Expr *l, const Expr *r) {
         return new BinExpr(BinExpr::Imp, l, r);
     }
 
-    Expr * Expr::lit(int i) { return new LitExpr(i); }
-    Expr * Expr::lit(int i, unsigned w) {
+    const Expr * Expr::lit(int i) { return new LitExpr(i); }
+    const Expr * Expr::lit(int i, unsigned w) {
         switch (w) {
             case 0: return new LitExpr(i);
             case 8: return new LitExpr(LitExpr::Bv8, i);
@@ -50,75 +50,79 @@ namespace smack {
         }
     }
     
-    Expr * Expr::lit(bool b) { return new LitExpr(b); }
+    const Expr * Expr::lit(bool b) { return new LitExpr(b); }
     
-    Expr * Expr::neq(Expr *l, Expr *r) {
+    const Expr * Expr::neq(const Expr *l, const Expr *r) {
         return new BinExpr(BinExpr::Neq, l, r);
     }
     
-    Expr * Expr::not_(Expr *e) {
+    const Expr * Expr::not_(const Expr *e) {
         return new NotExpr(e);
     }
     
-    Expr * Expr::sel(Expr *b, Expr *i) {
+    const Expr * Expr::sel(const Expr *b, const Expr *i) {
         return new SelExpr(b,i);
     }
     
-    Expr * Expr::sel(string b, string i) {
+    const Expr * Expr::sel(string b, string i) {
         return new SelExpr(id(b), id(i));
     }
     
-    Stmt * Stmt::assert_(Expr *e) {
+    const Stmt * Stmt::assert_(const Expr *e) {
         return new AssertStmt(e);
     }
     
-    Stmt * Stmt::assign(Expr *e, Expr *f) {
-        return new AssignStmt(vector<Expr*>(1,e), vector<Expr*>(1,f));
+    const Stmt * Stmt::assign(const Expr *e, const Expr *f) {
+        return new AssignStmt(vector<const Expr*>(1,e), vector<const Expr*>(1,f));
     }
     
-    Stmt * Stmt::assume(Expr *e) {
+    const Stmt * Stmt::assume(const Expr *e) {
         return new AssumeStmt(e);
     }
     
-    Stmt * Stmt::call(string p, Expr *x) {
-        return call(p, vector<Expr*>(1,x), vector<string>());
+    const Stmt * Stmt::call(string p, const Expr *x) {
+        return call(p, vector<const Expr*>(1,x), vector<string>());
     }
     
-    Stmt * Stmt::call(string p, Expr *x, string r) {
-        return call(p, vector<Expr*>(1,x), vector<string>(1,r));
+    const Stmt * Stmt::call(string p, const Expr *x, string r) {
+        return call(p, vector<const Expr*>(1,x), vector<string>(1,r));
     }
     
-    Stmt * Stmt::call(string p, Expr *x, Expr *y, string r) {
-        vector<Expr*> ps;
+    const Stmt * Stmt::call(string p, const Expr *x, const Expr *y, string r) {
+        vector<const Expr*> ps;
         ps.push_back(x);
         ps.push_back(y);
         return call(p, ps, vector<string>(1,r));
     }
     
-    Stmt * Stmt::call(string p, vector<Expr*> ps, vector<string> rs) {
+    const Stmt * Stmt::call(string p, vector<const Expr*> ps, vector<string> rs) {
         return new CallStmt(p, ps, rs);
     }
     
-    Stmt * Stmt::goto_(string t) {
+    const Stmt * Stmt::comment(string s) {
+        return new Comment(s);
+    }
+    
+    const Stmt * Stmt::goto_(string t) {
         return goto_(vector<string>(1,t));
     }
     
-    Stmt * Stmt::goto_(string t, string u) {
+    const Stmt * Stmt::goto_(string t, string u) {
         vector<string> ts(2,"");
         ts[0] = t;
         ts[1] = u;
         return goto_(ts);
     }
     
-    Stmt * Stmt::goto_(vector<string> ts) {
+    const Stmt * Stmt::goto_(vector<string> ts) {
         return new GotoStmt(ts);
     }
     
-    Stmt * Stmt::havoc(string x) {
+    const Stmt * Stmt::havoc(string x) {
         return new HavocStmt(vector<string>(1,x));
     }
     
-    Stmt * Stmt::return_() {
+    const Stmt * Stmt::return_() {
         return new ReturnStmt();
     }
     
@@ -200,7 +204,7 @@ namespace smack {
     
     void FunExpr::print(ostream &os) const {
         os << fun;
-        print_seq<Expr*>(os,args,"(",", ",")");
+        print_seq<const Expr*>(os,args,"(",", ",")");
     }
 
     void LitExpr::print(ostream &os) const {
@@ -234,31 +238,32 @@ namespace smack {
 
     void SelExpr::print(ostream &os) const { 
         os << base;
-        print_seq<Expr*>(os,idxs,"[",", ","]");
+        print_seq<const Expr*>(os,idxs,"[",", ","]");
     }
 
     void UpdExpr::print(ostream &os) const { 
         os << base << "[";
-        print_seq<Expr*>(os,idxs,", ");
+        print_seq<const Expr*>(os,idxs,", ");
         os << " := " << val << "]";
     }
 
     void VarExpr::print(ostream &os) const { 
         os << var;
     }
-    
+        
     void AssertStmt::print(ostream &os) const {
-        os << "assert " << expr;
+        os << "assert " << expr << ";";
     }
 
-    void AssignStmt::print(ostream &os) const {            
-        print_seq<Expr*>(os,lhs,", ");
+    void AssignStmt::print(ostream &os) const {
+        print_seq<const Expr*>(os,lhs,", ");
         os << " := ";            
-        print_seq<Expr*>(os,rhs,", ");
+        print_seq<const Expr*>(os,rhs,", ");
+        os << ";";
     }
 
     void AssumeStmt::print(ostream &os) const {
-        os << "assume " << expr;
+        os << "assume " << expr << ";";
     }
 
     void CallStmt::print(ostream &os) const {
@@ -266,21 +271,28 @@ namespace smack {
         if (returns.size() > 0)
             print_seq<string>(os,returns,"",", "," := ");
         os << proc;
-        print_seq<Expr*>(os,params,"(",", ",")");
+        print_seq<const Expr*>(os,params,"(",", ",")");
+        os << ";";
+    }
+    
+    void Comment::print(ostream &os) const {
+        os << "// " << str;
     }
     
     void GotoStmt::print(ostream &os) const {
         os << "goto ";
         print_seq<string>(os,targets,", ");
+        os << ";";
     }
     
     void HavocStmt::print(ostream &os) const {
         os << "havoc ";
         print_seq<string>(os,vars,", ");
+        os << ";";
     }
 
     void ReturnStmt::print(ostream &os) const {
-        os << "return";
+        os << "return;";
     }
     
     void AxiomDecl::print(ostream &os) const {
@@ -307,7 +319,7 @@ namespace smack {
     void Block::print(ostream &os) const {
         if (name != "")
             os << name << ":" << endl;
-        print_seq<Stmt*>(os,stmts,"  ",";\n  ",";");
+        print_seq<const Stmt*>(os,stmts,"  ","\n  ","");
     }
 
     void Procedure::print(ostream &os) const {

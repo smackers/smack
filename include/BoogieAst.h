@@ -11,20 +11,20 @@ namespace smack {
     class Expr {
     public:
         virtual void print(ostream &os) const = 0;
-        static Expr * and_(Expr *l, Expr *r);
-        static Expr * eq(Expr *l, Expr *r);
-        static Expr * fn(string f, Expr *x);
-        static Expr * fn(string f, Expr *x, Expr *y);
-        static Expr * fn(string f, Expr *x, Expr *y, Expr *z);
-        static Expr * id(string x);
-        static Expr * impl(Expr *l, Expr *r);
-        static Expr * lit(int i);
-        static Expr * lit(int i, unsigned w);
-        static Expr * lit(bool b);
-        static Expr * neq(Expr *l, Expr *r);
-        static Expr * not_(Expr *e);
-        static Expr * sel(Expr *b, Expr *i);
-        static Expr * sel(string b, string i);
+        static const Expr * and_(const Expr *l, const Expr *r);
+        static const Expr * eq(const Expr *l, const Expr *r);
+        static const Expr * fn(string f, const Expr *x);
+        static const Expr * fn(string f, const Expr *x, const Expr *y);
+        static const Expr * fn(string f, const Expr *x, const Expr *y, const Expr *z);
+        static const Expr * id(string x);
+        static const Expr * impl(const Expr *l, const Expr *r);
+        static const Expr * lit(int i);
+        static const Expr * lit(int i, unsigned w);
+        static const Expr * lit(bool b);
+        static const Expr * neq(const Expr *l, const Expr *r);
+        static const Expr * not_(const Expr *e);
+        static const Expr * sel(const Expr *b, const Expr *i);
+        static const Expr * sel(string b, string i);
     };
         
     class BinExpr : public Expr {
@@ -32,19 +32,19 @@ namespace smack {
         enum Binary { Iff, Imp, Or, And, Eq, Neq, Lt, Gt, Lte, Gte, Sub, Conc,
                       Plus, Minus, Times, Div, Mod };
     private:
-        Binary op;
-        Expr *lhs;
-        Expr *rhs;
+        const Binary op;
+        const Expr *lhs;
+        const Expr *rhs;
     public:
-        BinExpr(Binary b, Expr *l, Expr *r) : op(b), lhs(l), rhs(r) {}
+        BinExpr(const Binary b, const Expr *l, const Expr *r) : op(b), lhs(l), rhs(r) {}
         void print(ostream &os) const;
     };
     
     class FunExpr : public Expr {
         string fun;
-        vector<Expr*> args;
+        vector<const Expr*> args;
     public:
-        FunExpr(string f, vector<Expr*> xs) : fun(f), args(xs) {}
+        FunExpr(string f, vector<const Expr*> xs) : fun(f), args(xs) {}
         void print(ostream &os) const;
     };
     
@@ -52,27 +52,27 @@ namespace smack {
     public:
         enum Literal { True, False, Num, Bv8, Bv32, Bv64 };
     private:
-        Literal lit;
+        const Literal lit;
         int val;
         int width;
     public:
         LitExpr(bool b) : lit(b ? True : False) {}
         LitExpr(int i) : lit(Num), val(i) {}
-        LitExpr(Literal l, int i) : lit(l), val(i) {}
+        LitExpr(const Literal l, int i) : lit(l), val(i) {}
         void print(ostream &os) const;
     };
     
     class NegExpr : public Expr {
-        Expr *expr;
+        const Expr *expr;
     public:
-        NegExpr(Expr *e) : expr(e) {}
+        NegExpr(const Expr *e) : expr(e) {}
         void print(ostream &os) const;
     };
     
     class NotExpr : public Expr {
-        Expr *expr;
+        const Expr *expr;
     public:
-        NotExpr(Expr *e) : expr(e) {}
+        NotExpr(const Expr *e) : expr(e) {}
         void print(ostream &os) const;
     };
     
@@ -86,79 +86,87 @@ namespace smack {
     };
     
     class SelExpr : public Expr {
-        Expr *base;
-        vector<Expr*> idxs;
+        const Expr *base;
+        vector<const Expr*> idxs;
     public:
-        SelExpr(Expr *a, vector<Expr*> i) : base(a), idxs(i) {}
-        SelExpr(Expr *a, Expr* i) : base(a), idxs(vector<Expr*>(1,i)) {}
+        SelExpr(const Expr *a, vector<const Expr*> i) : base(a), idxs(i) {}
+        SelExpr(const Expr *a, const Expr* i) : base(a), idxs(vector<const Expr*>(1,i)) {}
         void print(ostream &os) const;
     };    
     
     class UpdExpr : public Expr {
-        Expr *base;
-        vector<Expr*> idxs;
-        Expr *val;
+        const Expr *base;
+        vector<const Expr*> idxs;
+        const Expr *val;
     public:
-        UpdExpr(Expr *a, vector<Expr*> i, Expr *v) 
+        UpdExpr(const Expr *a, vector<const Expr*> i, const Expr *v) 
             : base(a), idxs(i), val(v) {}
-        UpdExpr(Expr *a, Expr* i, Expr *v) 
-            : base(a), idxs(vector<Expr*>(1,i)), val(v) {}
+        UpdExpr(const Expr *a, const Expr* i, const Expr *v) 
+            : base(a), idxs(vector<const Expr*>(1,i)), val(v) {}
         void print(ostream &os) const;
     };
     
     class VarExpr : public Expr {
-        const string var;
+        string var;
     public:
-        VarExpr(const string v) : var(v) {}
+        VarExpr(string v) : var(v) {}
         void print(ostream &os) const;
     };
     
     class Stmt {
     public:
-        static Stmt * assert_(Expr *e);
-        static Stmt * assign(Expr *e, Expr *f);
-        static Stmt * assume(Expr *e);
-        static Stmt * call(string p, Expr *x);
-        static Stmt * call(string p, Expr *x, string r);
-        static Stmt * call(string p, Expr *x, Expr *y, string r);
-        static Stmt * call(string p, vector<Expr*> ps, vector<string> rs);
-        static Stmt * goto_(string t);
-        static Stmt * goto_(string t, string u);
-        static Stmt * goto_(vector<string> ts);
-        static Stmt * havoc(string x);
-        static Stmt * return_();
+        static const Stmt * assert_(const Expr *e);
+        static const Stmt * assign(const Expr *e, const Expr *f);
+        static const Stmt * assume(const Expr *e);
+        static const Stmt * call(string p, const Expr *x);
+        static const Stmt * call(string p, const Expr *x, string r);
+        static const Stmt * call(string p, const Expr *x, const Expr *y, string r);
+        static const Stmt * call(string p, vector<const Expr*> ps, vector<string> rs);
+        static const Stmt * comment(string c);
+        static const Stmt * goto_(string t);
+        static const Stmt * goto_(string t, string u);
+        static const Stmt * goto_(vector<string> ts);
+        static const Stmt * havoc(string x);
+        static const Stmt * return_();
         virtual void print(ostream &os) const = 0;
     };
     
     class AssertStmt : public Stmt {
-        Expr *expr;
+        const Expr *expr;
     public:
-        AssertStmt(Expr *e) : expr(e) {}
+        AssertStmt(const Expr *e) : expr(e) {}
         void print(ostream &os) const;
     };
     
     class AssignStmt : public Stmt {
-        vector<Expr*> lhs;
-        vector<Expr*> rhs;
+        vector<const Expr*> lhs;
+        vector<const Expr*> rhs;
     public:
-        AssignStmt(vector<Expr*> lhs, vector<Expr*> rhs) : lhs(lhs), rhs(rhs) {}
+        AssignStmt(vector<const Expr*> lhs, vector<const Expr*> rhs) : lhs(lhs), rhs(rhs) {}
         void print(ostream &os) const;
     };
     
     class AssumeStmt : public Stmt {
-        Expr *expr;
+        const Expr *expr;
     public:
-        AssumeStmt(Expr *e) : expr(e) {}
+        AssumeStmt(const Expr *e) : expr(e) {}
         void print(ostream &os) const;
     };   
     
     class CallStmt : public Stmt {
         string proc;
-        vector<Expr*> params;
+        vector<const Expr*> params;
         vector<string> returns;
     public:
-        CallStmt(string p, vector<Expr*> ps, vector<string> rs)
+        CallStmt(string p, vector<const Expr*> ps, vector<string> rs)
             : proc(p), params(ps), returns(rs) {}
+        void print(ostream &os) const;
+    };
+    
+    class Comment : public Stmt {
+        string str;
+    public:
+        Comment(string s) : str(s) {}
         void print(ostream &os) const;
     };
     
@@ -194,9 +202,9 @@ namespace smack {
     };
 
     class AxiomDecl : public Decl {
-        Expr *expr;
+        const Expr *expr;
     public:
-        AxiomDecl(Expr *e) : Decl("",""), expr(e) {}
+        AxiomDecl(const Expr *e) : Decl("",""), expr(e) {}
         void print(ostream &os) const;
     };
     
@@ -210,7 +218,7 @@ namespace smack {
     
     class FuncDecl : public Decl {
         vector< pair<string,string> > params;
-        Expr *body;
+        const Expr *body;
     public:
         FuncDecl(string n, vector< pair<string,string> > ps, string t, Expr *b) 
             : Decl(n,""), params(ps), body(b) {}
@@ -225,12 +233,12 @@ namespace smack {
     
     class Block {
         string name;
-        vector<Stmt*> stmts;
+        vector<const Stmt*> stmts;
     public:
         Block() : name("") {}
         Block(string n) : name(n) {}
         void print(ostream &os) const;
-        void addStmt(Stmt *s) { stmts.push_back(s); }
+        void addStmt(const Stmt *s) { stmts.push_back(s); }
         string getName() { return name; }
     };
         
