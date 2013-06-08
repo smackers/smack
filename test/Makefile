@@ -14,6 +14,7 @@ SOURCES = simple.c simple_fail.c \
           pointers1.c pointers1_fail.c \
           pointers2.c pointers2_fail.c \
           pointers3.c pointers3_fail.c \
+          globals.c globals_fail.c \
           loop.c loop_fail.c \
           loop1.c loop1_fail.c \
           nondet.c \
