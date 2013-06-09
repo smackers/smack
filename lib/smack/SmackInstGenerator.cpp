@@ -34,7 +34,7 @@ namespace smack {
         stringstream s;
         s << SmackRep::BLOCK_LBL << blockNum++;
         Block *b = new Block(s.str());
-        currProc->addBlock(b);
+        currProc.addBlock(b);
         return b;
     }
     
@@ -42,7 +42,7 @@ namespace smack {
         stringstream s;
         s << "$x" << varNum++;
         string name = s.str();
-        currProc->addDecl(new VarDecl(name, SmackRep::PTR_TYPE));
+        currProc.addDecl(new VarDecl(name, SmackRep::PTR_TYPE));
         return name;
     }
     
@@ -51,8 +51,8 @@ namespace smack {
             if (!inst.hasName())
                 inst.setName(rep.isBool(&inst) ? SmackRep::BOOL_VAR : SmackRep::PTR_VAR);
             VarDecl *d = new VarDecl(rep.id(&inst), rep.type(&inst));
-            if (!currProc->hasDecl(d))
-                currProc->addDecl(d);
+            if (!currProc.hasDecl(d))
+                currProc.addDecl(d);
         }
     }
 
@@ -274,15 +274,12 @@ namespace smack {
             return Stmt::call(SmackRep::FREE, args[0]);
         
         } else if (f->isVarArg() && args.size() > 0) {
-            // Handle variable argument functions
-            
-            if (args.size() <= 5)
-                WARN("may not have generated declaration for this call.");
 
+            // Handle variable argument functions
+            missingDecls.insert(make_pair(name,args.size()));
             stringstream ss;
             ss << name << "#" << args.size();
-            name = ss.str();
-            return Stmt::call(name, args, rets);
+            return Stmt::call(ss.str(), args, rets);
 
         } else {
             return Stmt::call(name, args, rets);

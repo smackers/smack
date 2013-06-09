@@ -8,6 +8,7 @@
 #include "BoogieAst.h"
 #include "SmackRep.h"
 #include "llvm/Support/InstVisitor.h"
+#include <set>
 
 namespace smack {
 
@@ -15,9 +16,10 @@ namespace smack {
         
     private:
         SmackRep& rep;
-        Procedure *currProc;
+        Procedure& currProc;
         Block *currBlock;
-        map<const llvm::BasicBlock*, Block*> &blockMap;
+        map<const llvm::BasicBlock*, Block*>& blockMap;
+        set<pair<string,int> >& missingDecls;
         int blockNum;
         int varNum;
   
@@ -29,9 +31,10 @@ namespace smack {
         void nameInstruction(llvm::Instruction& i);
         
     public:
-        SmackInstGenerator(SmackRep& r, Procedure *p,
-            map<const llvm::BasicBlock*, Block*>& bm) 
-            : rep(r), currProc(p), blockMap(bm), blockNum(0), varNum(0) {}
+        SmackInstGenerator(SmackRep& r, Procedure& p,
+            map<const llvm::BasicBlock*, Block*>& bm, set<pair<string,int> >& md) 
+            : rep(r), currProc(p), blockMap(bm), missingDecls(md),
+            blockNum(0), varNum(0) {}
 
         Block * createBlock();
         void setCurrBlock(Block *b) { currBlock = b; }

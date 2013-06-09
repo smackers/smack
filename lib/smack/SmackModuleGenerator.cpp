@@ -45,6 +45,8 @@ namespace smack {
         //             Expr::neq(Expr::id(globals[i]), Expr::id(globals[j])) ));
 
         DEBUG(errs() << "Analyzing functions...\n");
+        
+        set<pair<string,int> > missingDecls;
 
         for (llvm::Module::iterator func = m.begin(), e = m.end(); 
                 func != e; ++func) {
@@ -83,7 +85,7 @@ namespace smack {
 
                 map<const llvm::BasicBlock*, Block*> known;
                 stack<llvm::BasicBlock*> workStack;
-                SmackInstGenerator igen(rep, proc, known);
+                SmackInstGenerator igen(rep, *proc, known, missingDecls);
 
                 llvm::BasicBlock& entry = func->getEntryBlock();
                 workStack.push(&entry);
@@ -115,6 +117,24 @@ namespace smack {
 
             DEBUG(errs() << "Finished analyzing function: " << name << "\n\n");
         }
+
+        // Add any missing procedure declarations 
+        // NOTE: for the moment, these correspond to VARARG procedures.
+        for (set<pair<string,int> >::iterator d = missingDecls.begin();
+            d != missingDecls.end(); ++d) {
+                
+            stringstream name;
+            name << d->first << "#" << d->second;            
+            Procedure *p = new Procedure(name.str());
+            for (int i=0; i<d->second; i++) {
+                stringstream param;
+                param << "p" << i;
+                p->addParam(param.str(), SmackRep::PTR_TYPE);
+            }
+            p->addRet(SmackRep::RET_VAR, SmackRep::PTR_TYPE);
+            program->addProc(p);
+        }
+        
         return false;
     }
 

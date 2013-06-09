@@ -5,6 +5,7 @@ int main(void) {
   printf("Hello World %d\n", 10);
   printf("Hello World %d %d\n", 10, 20);
   printf("Hello World %d %d %d\n", 10, 20, 30);
+  printf("Hello World %d %d %d\n", 10, 20, 30);
   printf("Hello World %d %d %d %d\n", 10, 20, 30, 40);
 }
 

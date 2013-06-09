@@ -336,15 +336,20 @@ namespace smack {
                     << (i < rets.size()-1 ? ", " : "");
             os << ") ";
         }
+        if (blocks.size() == 0)
+            os << ";";
+
         if (mods.size() > 0) {
             os << endl;
             print_seq<string>(os,mods, "  modifies ", ", ", ";");
-            os << endl;
         }
-        os << "{" << endl;
-        print_seq<Decl*>(os,decls,"  ","\n  ","\n");
-        print_seq<Block*>(os,blocks,"\n");
-        os << endl << "}" << endl;
+        if (blocks.size() > 0) {
+            os << "{" << endl;
+            print_seq<Decl*>(os,decls,"  ","\n  ","\n");
+            print_seq<Block*>(os,blocks,"\n");
+            os << endl << "}";
+        }
+        os << endl;
     }
 
     void Program::print(ostream &os) const {
