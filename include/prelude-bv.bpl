@@ -58,6 +58,7 @@ function {:bvbuiltin "bvmul"} $mul(p1:bv32, p2:bv32) returns (bv32);
 function $sdiv(p1:bv32, p2:bv32) returns (bv32);
 function $udiv(p1:bv32, p2:bv32) returns (bv32);
 function $srem(p1:bv32, p2:bv32) returns (bv32);
+function $urem(p1:bv32, p2:bv32) returns (bv32);
 function $and(p1:bv32, p2:bv32) returns (bv32);
 function $or(p1:bv32, p2:bv32) returns (bv32);
 function $xor(p1:bv32, p2:bv32) returns (bv32);

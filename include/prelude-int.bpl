@@ -58,6 +58,7 @@ function $mul(p1:int, p2:int) returns (int) {p1 * p2}
 function $sdiv(p1:int, p2:int) returns (int);
 function $udiv(p1:int, p2:int) returns (int);
 function $srem(p1:int, p2:int) returns (int);
+function $urem(p1:int, p2:int) returns (int);
 function $and(p1:int, p2:int) returns (int);
 function $or(p1:int, p2:int) returns (int);
 function $xor(p1:int, p2:int) returns (int);
