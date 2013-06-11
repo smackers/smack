@@ -124,7 +124,10 @@ namespace smack {
             d != missingDecls.end(); ++d) {
  
             stringstream name;
-            name << rep.id(d->first) << "#" << d->second;            
+            name << rep.id(d->first);
+            if (d->first->isVarArg() && d->second > 0) {
+                name << "#" << d->second;
+            }
             Procedure *p = new Procedure(name.str());
             for (int i=0; i<d->second; i++) {
                 stringstream param;

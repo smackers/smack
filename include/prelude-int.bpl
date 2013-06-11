@@ -122,9 +122,6 @@ procedure __SMACK_nondet() returns (p: $ptr);
 procedure __SMACK_nondetInt() returns (p: $ptr);
 ensures $obj(p) == $NULL;
 
-procedure __VERIFIER_nondet_int() returns (p: $ptr);
-ensures $obj(p) == $NULL;
-
 procedure __SMACK_assert(p: $ptr);
 procedure __SMACK_assume(p: $ptr);
 

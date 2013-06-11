@@ -281,13 +281,11 @@ namespace smack {
             ss << name << "#" << args.size();
             return Stmt::call(ss.str(), args, rets);
 
-        } else if (f->isDeclaration()) {
+        } else if (f->isDeclaration() && !rep.isSmackName(name)) {
 
             // Handle functions without bodies (just declarations)
             missingDecls.insert(make_pair(f,args.size()));
-            stringstream ss;
-            ss << name << "#" << args.size();
-            return Stmt::call(ss.str(), args, rets);
+            return Stmt::call(name, args, rets);
  
         } else {
             return Stmt::call(name, args, rets);
