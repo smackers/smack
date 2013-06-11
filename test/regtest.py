@@ -32,6 +32,7 @@ tests = [
   ('loop1_fail',         r'0 verified, 1 error' ),
   ('nondet',             r'1 verified, 0 errors'),
   ('printfs',            r'1 verified, 0 errors'),
+  ('extern_func',        r'1 verified, 0 errors'),
   ('return_label',       r'1 verified, 0 errors'),
   ('func_ptr',           r'1 verified, 0 errors'),
   ('func_ptr_fail',      r'0 verified, 1 error' ),

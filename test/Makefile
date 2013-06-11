@@ -19,6 +19,7 @@ SOURCES = simple.c simple_fail.c \
           loop1.c loop1_fail.c \
           nondet.c \
           printfs.c \
+          extern_func.c \
           return_label.c \
           func_ptr.c func_ptr_fail.c \
           func_ptr1.c func_ptr1_fail.c \
