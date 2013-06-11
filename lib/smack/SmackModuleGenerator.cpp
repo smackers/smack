@@ -122,19 +122,34 @@ namespace smack {
         // NOTE: for the moment, these correspond to VARARG procedures.
         for (set<pair<llvm::Function*,int> >::iterator d = missingDecls.begin();
             d != missingDecls.end(); ++d) {
- 
+            llvm::Function* func = d->first;
+            int numArgs = d->second;
+
             stringstream name;
-            name << rep.id(d->first);
-            if (d->first->isVarArg() && d->second > 0) {
-                name << "#" << d->second;
+            name << rep.id(func);
+            if (func->isVarArg() && numArgs > 0) {
+                name << "#" << numArgs;
             }
+
             Procedure *p = new Procedure(name.str());
-            for (int i=0; i<d->second; i++) {
-                stringstream param;
-                param << "p" << i;
-                p->addParam(param.str(), SmackRep::PTR_TYPE);
+
+            if (func->isVarArg()) {
+                for (int i=0; i<numArgs; i++) {
+                    stringstream param;
+                    param << "p" << i;
+                    p->addParam(param.str(), SmackRep::PTR_TYPE);
+                }
+            } else {
+                int i = 0;
+                for (llvm::Function::const_arg_iterator
+                        arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg, ++i) {
+                    stringstream param;
+                    param << "p" << i;
+                    p->addParam(param.str(), rep.type(arg->getType()));
+                }
             }
-            if (! d->first->getReturnType()->isVoidTy() )
+ 
+            if (! func->getReturnType()->isVoidTy() )
                 p->addRet(SmackRep::RET_VAR, SmackRep::PTR_TYPE);
             program->addProc(p);
         }
