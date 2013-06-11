@@ -46,7 +46,7 @@ namespace smack {
 
         DEBUG(errs() << "Analyzing functions...\n");
         
-        set<pair<string,int> > missingDecls;
+        set<pair<llvm::Function*,int> > missingDecls;
 
         for (llvm::Module::iterator func = m.begin(), e = m.end(); 
                 func != e; ++func) {
@@ -120,18 +120,19 @@ namespace smack {
 
         // Add any missing procedure declarations 
         // NOTE: for the moment, these correspond to VARARG procedures.
-        for (set<pair<string,int> >::iterator d = missingDecls.begin();
+        for (set<pair<llvm::Function*,int> >::iterator d = missingDecls.begin();
             d != missingDecls.end(); ++d) {
-                
+ 
             stringstream name;
-            name << d->first << "#" << d->second;            
+            name << rep.id(d->first) << "#" << d->second;            
             Procedure *p = new Procedure(name.str());
             for (int i=0; i<d->second; i++) {
                 stringstream param;
                 param << "p" << i;
                 p->addParam(param.str(), SmackRep::PTR_TYPE);
             }
-            p->addRet(SmackRep::RET_VAR, SmackRep::PTR_TYPE);
+            if (! d->first->getReturnType()->isVoidTy() )
+                p->addRet(SmackRep::RET_VAR, SmackRep::PTR_TYPE);
             program->addProc(p);
         }
         

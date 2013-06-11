@@ -276,7 +276,7 @@ namespace smack {
         } else if (f->isVarArg() && args.size() > 0) {
 
             // Handle variable argument functions
-            missingDecls.insert(make_pair(name,args.size()));
+            missingDecls.insert(make_pair(f,args.size()));
             stringstream ss;
             ss << name << "#" << args.size();
             return Stmt::call(ss.str(), args, rets);
@@ -284,7 +284,7 @@ namespace smack {
         } else if (f->isDeclaration()) {
 
             // Handle functions without bodies (just declarations)
-            missingDecls.insert(make_pair(name,args.size()));
+            missingDecls.insert(make_pair(f,args.size()));
             stringstream ss;
             ss << name << "#" << args.size();
             return Stmt::call(ss.str(), args, rets);

@@ -19,7 +19,7 @@ namespace smack {
         Procedure& currProc;
         Block *currBlock;
         map<const llvm::BasicBlock*, Block*>& blockMap;
-        set<pair<string,int> >& missingDecls;
+        set<pair<llvm::Function*,int> >& missingDecls;
         int blockNum;
         int varNum;
   
@@ -32,7 +32,7 @@ namespace smack {
         
     public:
         SmackInstGenerator(SmackRep& r, Procedure& p,
-            map<const llvm::BasicBlock*, Block*>& bm, set<pair<string,int> >& md) 
+            map<const llvm::BasicBlock*, Block*>& bm, set<pair<llvm::Function*,int> >& md) 
             : rep(r), currProc(p), blockMap(bm), missingDecls(md),
             blockNum(0), varNum(0) {}
 
