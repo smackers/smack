@@ -78,7 +78,7 @@ namespace smack {
       "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant"
       "|unique|finite|complete|type|const|function|axiom|var|procedure"
       "|implementation|where|returns|assume|assert|havoc|call|return|while"
-      "|break|goto|if|else)$" );
+      "|break|goto|if|else|div)$" );
     Regex SMACK_NAME(".*__SMACK_.*");
 
     bool isBplKeyword(string s) {
