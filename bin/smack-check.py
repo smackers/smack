@@ -29,18 +29,21 @@ if __name__ == '__main__':
   parser.add_argument('-o', '--output', dest='outfile', metavar='<file>', default='a.bpl',
                       type=argparse.FileType('w'),
                       help='output Boogie file (default: %(default)s)')
+  parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
+                      help='turn on debug info')
   args = parser.parse_args()
+  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug)
 
-  bplOutput = llvm2bpl(path.dirname(sys.argv[0]), args.infile)
-
+  # print debug info
+  if args.debug:
+    print debug
 
   # put inline on procedures
   p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
-  bplOutput = p.sub(lambda match: addInline(match), bplOutput)
-
+  bpl = p.sub(lambda match: addInline(match), bpl)
 
   # write final output
-  args.outfile.write(bplOutput)
+  args.outfile.write(bpl)
   args.outfile.close()
 
   # invoke Boogie

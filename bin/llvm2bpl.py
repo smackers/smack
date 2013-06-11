@@ -32,7 +32,7 @@ def find_library_path(installPrefix):
   assert path.exists(libraryPath)
   return libraryPath
 
-def llvm2bpl(scriptPathName, infile):
+def llvm2bpl(scriptPathName, infile, debug):
 
   # find prelude and library paths
   scriptFullPath = path.abspath(scriptPathName)
@@ -47,12 +47,19 @@ def llvm2bpl(scriptPathName, infile):
   preludeFile.close()
 
   # invoke SMACK LLVM module
-  p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-    '-die', '-lowerswitch', '-bpl_print', '-debug-only=bpl', '-o=tmp.bc'],
-    stdin=infile, stderr=subprocess.PIPE)
-  bplOutput = p.communicate()[1]
-  bplOutput = prelude + bplOutput
-  return bplOutput
+  if debug:
+    p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
+      '-die', '-lowerswitch', '-bpl_print', '-debug', '-o=tmp.bc'],
+      stdin=infile, stderr=subprocess.PIPE)
+  else:
+    p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
+      '-die', '-lowerswitch', '-bpl_print', '-debug-only=bpl', '-o=tmp.bc'],
+      stdin=infile, stderr=subprocess.PIPE)
+  output = p.communicate()[1]
+  bplStartIndex = output.find('// BEGIN SMACK-GENERATED CODE')
+  debug = output[0:bplStartIndex]
+  bpl = prelude + output[bplStartIndex:]
+  return debug, bpl
  
 
 if __name__ == '__main__':
@@ -65,11 +72,17 @@ if __name__ == '__main__':
   parser.add_argument('-o', '--output', dest='outfile', metavar='<file>', default='a.bpl',
                       type=argparse.FileType('w'),
                       help='output Boogie file (default: %(default)s)')
+  parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
+                      help='turn on debug info')
   args = parser.parse_args()
 
-  bplOutput = llvm2bpl(path.dirname(sys.argv[0]), args.infile)
+  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug)
+
+  # print debug info
+  if args.debug:
+    print debug
 
   # write final output
-  args.outfile.write(bplOutput)
+  args.outfile.write(bpl)
   args.outfile.close()
 
