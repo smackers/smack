@@ -272,7 +272,7 @@ namespace smack {
         } else if (name == "free") {
             assert(args.size() == 1);
             return Stmt::call(SmackRep::FREE, args[0]);
-        
+
         } else if (f->isVarArg() && args.size() > 0) {
 
             // Handle variable argument functions
@@ -281,6 +281,14 @@ namespace smack {
             ss << name << "#" << args.size();
             return Stmt::call(ss.str(), args, rets);
 
+        } else if (f->isDeclaration()) {
+
+            // Handle functions without bodies (just declarations)
+            missingDecls.insert(make_pair(name,args.size()));
+            stringstream ss;
+            ss << name << "#" << args.size();
+            return Stmt::call(ss.str(), args, rets);
+ 
         } else {
             return Stmt::call(name, args, rets);
         }
