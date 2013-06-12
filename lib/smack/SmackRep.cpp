@@ -69,6 +69,10 @@ namespace smack {
     
     const Expr *SmackRep::ZERO = Expr::fn(PTR, NUL, Expr::lit(0));
     
+    const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
+    const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
+    const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
+    
     // TODO Do the following functions belong here ?
 
     string EscapeString(string str) {
@@ -82,6 +86,11 @@ namespace smack {
       "|implementation|where|returns|assume|assert|havoc|call|return|while"
       "|break|goto|if|else|div)$" );
     Regex SMACK_NAME(".*__SMACK_.*");
+    Regex SMACK_ASSERT(".*__SMACK_assert.*");
+    Regex SMACK_ASSUME(".*__SMACK_assume.*");
+    Regex SMACK_REC_OBJ(".*__SMACK_record_obj.*");
+    Regex SMACK_REC_INT(".*__SMACK_record_int.*");
+    Regex SMACK_REC_PTR(".*__SMACK_record_ptr.*");
 
     bool isBplKeyword(string s) {
       return BPL_KW.match(s);
@@ -89,7 +98,27 @@ namespace smack {
         
     bool SmackRep::isSmackName(string n) {
         return SMACK_NAME.match(n);
-    }    
+    }
+    
+    bool SmackRep::isSmackAssert(llvm::Function *f) {
+        return SMACK_ASSERT.match(id(f));
+    }
+    
+    bool SmackRep::isSmackAssume(llvm::Function *f) {
+        return SMACK_ASSUME.match(id(f));
+    }
+    
+    bool SmackRep::isSmackRecObj(llvm::Function *f) {
+        return SMACK_REC_OBJ.match(id(f));
+    }
+    
+    bool SmackRep::isSmackRecInt(llvm::Function *f) {
+        return SMACK_REC_INT.match(id(f));
+    }
+    
+    bool SmackRep::isSmackRecPtr(llvm::Function *f) {
+        return SMACK_REC_PTR.match(id(f));
+    }
     
     bool SmackRep::isBool(llvm::Type *t) {
         return t->isIntegerTy(1);

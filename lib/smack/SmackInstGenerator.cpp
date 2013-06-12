@@ -243,27 +243,27 @@ namespace smack {
             // a "skip" statement..
             return Stmt::assume(Expr::lit(true));
 
-        else if (name == "__SMACK_assert") {
+        else if (rep.isSmackAssert(f)) {
             assert (args.size() == 1 && rets.size() == 0);
             return Stmt::assert_(
                 Expr::neq(args[0], SmackRep::ZERO) );
 
-        } else if (name == "__SMACK_assume") {
+        } else if (rep.isSmackAssume(f)) {
             assert (args.size() == 1 && rets.size() == 0);
             return Stmt::assume(
                 Expr::neq(args[0], SmackRep::ZERO) );
         
-        } else if (name == "__SMACK_record_int") {
+        } else if (rep.isSmackRecInt(f)) {
             assert (args.size() == 1 && rets.size() == 0);
-            return Stmt::call(name, rep.off(args[0]));
+            return Stmt::call(SmackRep::BOOGIE_REC_INT, rep.off(args[0]));
         
-        } else if (name == "__SMACK_record_obj") {
+        } else if (rep.isSmackRecObj(f)) {
             assert (args.size() == 1 && rets.size() == 0);
-            return Stmt::call(name, rep.obj(args[0]));
+            return Stmt::call(SmackRep::BOOGIE_REC_OBJ, rep.obj(args[0]));
         
-        } else if (name == "__SMACK_record_ptr") {
+        } else if (rep.isSmackRecPtr(f)) {
             assert (args.size() == 1 && rets.size() == 0);
-            return Stmt::call(name, args[0]);
+            return Stmt::call(SmackRep::BOOGIE_REC_PTR, args[0]);
 
         } else if (name == "malloc") {
             assert (args.size() == 1);

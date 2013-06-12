@@ -122,9 +122,6 @@ procedure __SMACK_nondet() returns (p: $ptr);
 procedure __SMACK_nondetInt() returns (p: $ptr);
 ensures $obj(p) == $NULL;
 
-procedure __SMACK_assert(p: $ptr);
-procedure __SMACK_assume(p: $ptr);
-
 procedure boogie_si_record_int(i: int);
 procedure boogie_si_record_obj(o: $ref);
 procedure boogie_si_record_ptr(p: $ptr);

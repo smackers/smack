@@ -64,6 +64,10 @@ namespace smack {
         static const Expr *UNDEF;
         static const Expr *ZERO;
         
+        static const string BOOGIE_REC_PTR;
+        static const string BOOGIE_REC_OBJ;
+        static const string BOOGIE_REC_INT;
+        
     private:
         llvm::DataLayout *targetData;
 
@@ -71,6 +75,11 @@ namespace smack {
         SmackRep(llvm::DataLayout *td) : targetData(td) {}
 
         bool isSmackName(string n);
+        bool isSmackAssert(llvm::Function *f);
+        bool isSmackAssume(llvm::Function *f);
+        bool isSmackRecObj(llvm::Function *f);
+        bool isSmackRecInt(llvm::Function *f);
+        bool isSmackRecPtr(llvm::Function *f);
         bool isBool(llvm::Type *t);
         bool isBool(llvm::Value *v);
         string type(llvm::Type *t);
