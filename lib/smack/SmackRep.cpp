@@ -23,6 +23,7 @@ namespace smack {
     const string SmackRep::PTR_TYPE = "$ptr";
     const string SmackRep::REF_TYPE = "$ref";
     const string SmackRep::NULL_VAL = "$NULL";
+    const string SmackRep::UNDEF_VAL = "$UNDEF";
 
     const string SmackRep::ALLOCA = "$alloca";
     const string SmackRep::MALLOC = "$malloc";
@@ -63,10 +64,10 @@ namespace smack {
     const string SmackRep::SGT = "$sgt";
     const string SmackRep::UGT = "$ugt";
     
-    const Expr *SmackRep::NUL = Expr::id("$NULL");
-    const Expr *SmackRep::UNDEF = Expr::id("$UNDEF");
+    const Expr *SmackRep::NUL = Expr::id(NULL_VAL);
+    const Expr *SmackRep::UNDEF = Expr::id(UNDEF_VAL);
     
-    const Expr *SmackRep::ZERO = Expr::fn("$ptr", NUL, Expr::lit(0));
+    const Expr *SmackRep::ZERO = Expr::fn(PTR, NUL, Expr::lit(0));
     
     // TODO Do the following functions belong here ?
 
@@ -196,7 +197,7 @@ namespace smack {
         
             uint64_t val = ci->getLimitedValue();
             if (width > 0 && ci->isNegative())
-                return Expr::fn("$sub", Expr::lit(0,width), Expr::lit(-val,width));
+                return Expr::fn(SUB, Expr::lit(0,width), Expr::lit(-val,width));
             else
                 return Expr::lit(val,width);
         
@@ -355,14 +356,14 @@ namespace smack {
             using llvm::ICmpInst;
             case ICmpInst::ICMP_EQ: e = Expr::eq(l,r); break;
             case ICmpInst::ICMP_NE: e = Expr::neq(l,r); break;
-            case ICmpInst::ICMP_SGE: o = "$sge"; break;
-            case ICmpInst::ICMP_UGE: o = "$uge"; break;
-            case ICmpInst::ICMP_SLE: o = "$sle"; break;
-            case ICmpInst::ICMP_ULE: o = "$ule"; break;
-            case ICmpInst::ICMP_SLT: o = "$slt"; break;
-            case ICmpInst::ICMP_ULT: o = "$ult"; break;
-            case ICmpInst::ICMP_SGT: o = "$sgt"; break;
-            case ICmpInst::ICMP_UGT: o = "$ugt"; break;
+            case ICmpInst::ICMP_SGE: o = SGE; break;
+            case ICmpInst::ICMP_UGE: o = UGE; break;
+            case ICmpInst::ICMP_SLE: o = SLE; break;
+            case ICmpInst::ICMP_ULE: o = ULE; break;
+            case ICmpInst::ICMP_SLT: o = SLT; break;
+            case ICmpInst::ICMP_ULT: o = ULT; break;
+            case ICmpInst::ICMP_SGT: o = SGT; break;
+            case ICmpInst::ICMP_UGT: o = UGT; break;
             default:
             assert( false && "unexpected predicate." );
         }
