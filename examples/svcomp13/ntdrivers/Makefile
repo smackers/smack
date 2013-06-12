@@ -11,7 +11,6 @@ SOURCES = cdaudio_safe.i.cil.c \
           floppy2_safe.i.cil.c \
           floppy_safe.i.cil.c \
           floppy_unsafe.i.cil.c \
-          kbfiltr_safe.i.cil.c.trace \
           kbfiltr_unsafe.i.cil.c \
           parport_safe.i.cil.c \
           parport_unsafe.i.cil.c

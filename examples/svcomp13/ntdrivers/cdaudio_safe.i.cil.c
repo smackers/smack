@@ -1,3 +1,4 @@
+#include "smack.h"
 extern char __VERIFIER_nondet_char(void);
 extern int __VERIFIER_nondet_int(void);
 extern long __VERIFIER_nondet_long(void);
@@ -2835,7 +2836,7 @@ void errorFn(void)
 { 
 
   {
-  ERROR: 
+  ERROR: __SMACK_assert(0);
   goto ERROR;
 }
 }
@@ -7707,7 +7708,7 @@ int main(void)
 }
 }
 char _SLAM_alloc_dummy  ;
-extern int ( /* missing proto */  malloc)() ;
+// extern int ( /* missing proto */  malloc)() ;
 char *nondet_malloc(int i ) 
 { int __BLAST_NONDET___0 = __VERIFIER_nondet_int() ;
   int tmp ;
