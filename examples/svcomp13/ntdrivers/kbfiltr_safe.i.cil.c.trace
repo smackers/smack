@@ -1,0 +1,62 @@
+error trace call graph:
+=======================
+
+main
+    _BLAST_init
+    DriverEntry
+    KbFilter_AddDevice
+        IoCreateDevice
+        IoAttachDeviceToDeviceStack
+    stub_driver_init
+    KbFilter_PnP
+        errorFn
+        
+detailed trace:
+===============
+
+main()
+{
+    ...
+    DEVICE_OBJECT devobj;               // uninitialized stack object, thus devobj.DeviceExtension may contain any data;
+    ...                                 // LLBMC chooses 0x1fffffbc5 for devobj.DeviceExtension
+    _BLAST_init();                      // sets NP=1; NP is stored at address 0x1ffffbf8 (this will become important later)
+    status = DriverEntry(& d, & u);     // status = 0
+    if (status >= 0L) {                 // yes
+        ...
+        if (irp_choice == 0) {          // yes
+            ...
+        }
+        status = KbFilter_AddDevice(& d, & devobj); // status = 0, doesn't init. devobj
+        stub_driver_init();             // sets s = 1 (= NP), doesn't init. devobj
+        if (! (status >= 0L)) { ... }   // no
+        ...
+        if (__BLAST_NONDET == 3) {      // yes
+            goto switch_4_3;
+            ...
+            switch_4_3:
+            status = KbFilter_PnP(& devobj, pirp)   // *** 1 ***
+        }
+        ...
+    }
+}
+
+*** 1 ***
+---------
+
+status = KbFilter_PnP(PDEVICE_OBJECT DeviceObject , PIRP Irp )
+{                                       // DeviceObject->DeviceExtension has not been
+    ...                                 // initialited, LLBMC has set it to 0x1ffffbc5 (see above)
+    devExt = (struct _DEVICE_EXTENSION *)DeviceObject->DeviceExtension;
+    ...
+    if (irpStack->MinorFunction == 23) {
+        goto switch_2_23;
+        ...
+        switch_2_23:
+        devExt->SurpriseRemoved = 1;    // devExt->SurpriseRemoved is stored at 0x1ffffbfa;
+                                        // setting it to 1 overwrites a byte in NP and
+                                        // thus changes NP from 1 to 65537
+        if (s == NP) { ... } else {     // no; s = 1, NP = 65537 (@0x1ffffbf8)
+            errorFn();                  // ------> error state reached!
+        }
+    }
+}
