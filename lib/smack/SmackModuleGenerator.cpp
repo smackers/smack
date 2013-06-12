@@ -26,14 +26,14 @@ namespace smack {
 
         DEBUG(errs() << "Analyzing globals...\n");
 
-        for (llvm::Module::const_global_iterator 
+        for (llvm::Module::const_global_iterator
             x = m.global_begin(), e = m.global_end(); x != e; ++x) {
-                
+
             string name = rep.id(x);
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
-            program->addDecl(new AxiomDecl(
-                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
-        }        
+            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
+//            program->addDecl(new AxiomDecl(
+//                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
+        }
     
         // AXIOMS about variable uniqueness
         // NOTE: This should be covered by the "unique" annotation on the
@@ -56,9 +56,9 @@ namespace smack {
             if (func->isDeclaration() || rep.isSmackName(name))
                 continue;
             
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
-            program->addDecl(new AxiomDecl(
-                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
+            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
+//            program->addDecl(new AxiomDecl(
+//                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
         
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
@@ -77,7 +77,8 @@ namespace smack {
         
             // MODIFIES
             proc->addMod(SmackRep::MEMORY);
-            proc->addMod(SmackRep::ALLOC);
+//            proc->addMod(SmackRep::ALLOC);
+            proc->addMod(SmackRep::CURRADDR);
 
             // BODY
             if ( !func->isDeclaration() && !func->empty() 

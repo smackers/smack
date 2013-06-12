@@ -2,53 +2,25 @@
 
 // SMACK Memory Model
 
-type $ref;
-type $ptr;
+// function $size(int) returns (int);
+// type $name;
+// const unique $UNALLOCATED: $name;
+// const unique $ALLOCATED: $name;
+var $Mem: [int] int;
+var $CurrAddr:int;
+// var $Alloc: [int] $name;
 
-const unique $NULL: $ref;
-const $UNDEF: $ptr;
+procedure $malloc(obj_size: int) returns (new: int);
+modifies $CurrAddr;
+ensures new == old($CurrAddr);
+ensures $CurrAddr > old($CurrAddr) + obj_size;
 
-function $ptr($ref, int) returns ($ptr);
-function $static($ref) returns (bool);
-function $size($ref) returns (int);
-function $obj($ptr) returns ($ref);
-function $off($ptr) returns (int);
+procedure $alloca(obj_size: int) returns (new: int);
+modifies $CurrAddr;
+ensures new == old($CurrAddr);
+ensures $CurrAddr > old($CurrAddr) + obj_size;
 
-axiom(forall x:$ptr :: {$obj(x)}{$off(x)} x == $ptr($obj(x), $off(x)));
-axiom(forall x_obj:$ref, x_off:int :: {$ptr(x_obj, x_off)} x_obj == $obj($ptr(x_obj, x_off)));
-axiom(forall x_obj:$ref, x_off:int :: {$ptr(x_obj, x_off)} x_off == $off($ptr(x_obj, x_off)));
-
-type $name;
-const unique $UNALLOCATED: $name;
-const unique $ALLOCATED: $name;
-var $Mem: [$ptr] $ptr;
-var $Alloc: [$ref] $name;
-
-procedure $alloca(obj_size: int) returns (new: $ptr);
-modifies $Alloc;
-ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
-ensures !$static($obj(new));
-ensures $off(new) == 0;
-ensures $obj(new) != $NULL;
-ensures $size($obj(new)) == obj_size;
-ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
-
-procedure $malloc(obj_size: int) returns (new: $ptr);
-modifies $Alloc;
-ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
-ensures !$static($obj(new));
-ensures $off(new) == 0;
-ensures $obj(new) != $NULL;
-ensures $size($obj(new)) == obj_size;
-ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
-
-procedure $free(pointer: $ptr);
-modifies $Alloc;
-requires $Alloc[$obj(pointer)] == $ALLOCATED;
-// requires !$static($obj(pointer));
-requires $off(pointer) == 0;
-ensures $Alloc[$obj(pointer)] != $UNALLOCATED;
-ensures (forall x:$ref :: {$Alloc[x]} $obj(pointer) == x || old($Alloc)[x] == $Alloc[x]);
+procedure $free(pointer: int);
 
 // SMACK Arithmetic Predicates
 
@@ -74,12 +46,12 @@ function $sgt(p1:int, p2:int) returns (bool) {p1 > p2}
 function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}
 function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}
 
-function $pa(pointer: $ptr, offset: int, size: int) returns ($ptr);
-function $trunc(p: $ptr) returns ($ptr);
-function $p2i(p: $ptr) returns ($ptr);
-function $i2p(p: $ptr) returns ($ptr);
-function $p2b(p: $ptr) returns (bool);
-function $b2p(b: bool) returns ($ptr);
+function $pa(pointer: int, offset: int, size: int) returns (int);
+function $trunc(p: int) returns (int);
+function $p2i(p: int) returns (int);
+function $i2p(p: int) returns (int);
+function $p2b(p: int) returns (bool);
+function $b2p(b: bool) returns (int);
 function $i2b(i: int) returns (bool);
 function $b2i(b: bool) returns (int);
 
@@ -100,34 +72,32 @@ axiom $xor(0,1) == 1;
 axiom $xor(1,0) == 1;
 axiom $xor(1,1) == 0;
 
-axiom (forall p:$ptr, o:int, s:int :: {$pa(p,o,s)} $pa(p,o,s) == $ptr($obj(p), $off(p) + o * s));
-axiom (forall p:$ptr, o:int, s:int :: {$pa(p,o,s)} $obj($pa(p,o,s)) == $obj(p));
-axiom (forall p:$ptr :: $trunc(p) == p);
+axiom (forall p:int, o:int, s:int :: {$pa(p,o,s)} $pa(p,o,s) == p + o * s);
+axiom (forall p:int :: $trunc(p) == p);
 
 axiom $b2i(true) == 1;
 axiom $b2i(false) == 0;
-axiom $b2p(true) == $ptr($NULL,1);
-axiom $b2p(false) == $ptr($NULL,0);
+axiom $b2p(true) == 1;
+axiom $b2p(false) == 0;
 
 axiom (forall i:int :: $i2b(i) <==> i != 0);
 axiom $i2b(0) == false;
-axiom (forall r:$ref, i:int :: $p2b($ptr(r,i)) <==> i != 0);
-axiom $p2b($ptr($NULL,0)) == false;
-axiom (forall r:$ref, i:int :: $p2i($ptr(r,i)) == $ptr($NULL,i));
-axiom (forall i:int :: (exists r:$ref :: $i2p($ptr($NULL,i)) == $ptr(r,i)));
+axiom (forall i:int :: $p2b(i) <==> i != 0);
+axiom $p2b(0) == false;
+axiom (forall i:int :: $p2i(i) == i);
+axiom (forall i:int :: $i2p(i) == i);
 
 // SMACK Library Procedures
 
-procedure __SMACK_nondet() returns (p: $ptr);
-procedure __SMACK_nondetInt() returns (p: $ptr);
-ensures $obj(p) == $NULL;
+procedure __SMACK_nondet() returns (p: int);
+procedure __SMACK_nondetInt() returns (p: int);
 
-procedure __SMACK_assert(p: $ptr);
-procedure __SMACK_assume(p: $ptr);
+procedure __SMACK_assert(p: int);
+procedure __SMACK_assume(p: int);
 
-procedure boogie_si_record_int(i: int);
-procedure boogie_si_record_obj(o: $ref);
-procedure boogie_si_record_ptr(p: $ptr);
+// procedure boogie_si_record_int(i: bv32);
+// procedure boogie_si_record_obj(o: $ref);
+// procedure boogie_si_record_ptr(p: $ptr);
 
 // SMACK-PRELUDE-END
 

@@ -15,12 +15,13 @@ namespace smack {
     
     const string SmackRep::MEMORY = "$Mem";
     const string SmackRep::ALLOC = "$Alloc";
+    const string SmackRep::CURRADDR = "$CurrAddr";
     const string SmackRep::BLOCK_LBL = "$bb";
     const string SmackRep::RET_VAR = "$r";
     const string SmackRep::BOOL_VAR = "$b";
     const string SmackRep::PTR_VAR = "$p";
     const string SmackRep::BOOL_TYPE = "bool";
-    const string SmackRep::PTR_TYPE = "$ptr";
+    const string SmackRep::PTR_TYPE = "int";
     const string SmackRep::NULL_VAL = "$NULL";
 
     const string SmackRep::ALLOCA = "$alloca";
@@ -65,7 +66,7 @@ namespace smack {
     const Expr *SmackRep::NUL = Expr::id("$NULL");
     const Expr *SmackRep::UNDEF = Expr::id("$UNDEF");
     
-    const Expr *SmackRep::ZERO = Expr::fn("$ptr", NUL, Expr::lit(0));
+    const Expr *SmackRep::ZERO = Expr::lit(0);
     
     // TODO Do the following functions belong here ?
 
@@ -116,18 +117,6 @@ namespace smack {
     // NOTE: flexibility for future alternative memory models
     const Expr * SmackRep::mem(const Expr *e) {
         return Expr::sel(Expr::id(SmackRep::MEMORY), e);
-    }
-    
-    const Expr * SmackRep::ptr(const Expr *obj, const Expr *off) {
-        return Expr::fn(PTR, obj, off);
-    }
-    
-    const Expr * SmackRep::obj(const Expr *e) {
-        return Expr::fn(OBJ,e);
-    }
-    
-    const Expr * SmackRep::off(const Expr *e) {
-        return Expr::fn(OFF,e);
     }
     
     const Expr * SmackRep::i2p(const Expr *e) {
@@ -203,7 +192,7 @@ namespace smack {
             return Expr::lit(0,width);
         
          else
-             return off(expr(v));
+             return expr(v);
             // assert( false && "value type not supported" );
     }
      
@@ -289,7 +278,7 @@ namespace smack {
                 if (ci->getBitWidth() == 1)
                     return Expr::lit(!ci->isZero());
 
-                else return ptr(NUL, lit(ci));
+                else return lit(ci);
 
             } else if (constant->isNullValue())
                 return ZERO;
@@ -333,10 +322,10 @@ namespace smack {
             *r = o.getOperand(1);
 
         const Expr *e = Expr::fn(op, 
-            (isBool(l) ? b2i(expr(l)) : off(expr(l))),
-            (isBool(r) ? b2i(expr(r)) : off(expr(r))) );
+            (isBool(l) ? b2i(expr(l)) : expr(l)),
+            (isBool(r) ? b2i(expr(r)) : expr(r)) );
 
-        return isBool(&o) ? i2b(e) : ptr(NUL, e);
+        return isBool(&o) ? i2b(e) : e;
     }
     
     const Expr * SmackRep::pred(llvm::CmpInst& ci) {
@@ -362,7 +351,7 @@ namespace smack {
             assert( false && "unexpected predicate." );
         }
         
-        return e == NULL ? Expr::fn(o, off(l), off(r)) : e;
+        return e == NULL ? Expr::fn(o, l, r) : e;
     }
 
 } // namespace smack

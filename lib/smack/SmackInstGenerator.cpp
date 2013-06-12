@@ -253,21 +253,21 @@ namespace smack {
             return Stmt::assume(
                 Expr::neq(args[0], SmackRep::ZERO) );
         
-        } else if (name == "__SMACK_record_int") {
-            assert (args.size() == 1 && rets.size() == 0);
-            return Stmt::call(name, rep.off(args[0]));
-        
-        } else if (name == "__SMACK_record_obj") {
-            assert (args.size() == 1 && rets.size() == 0);
-            return Stmt::call(name, rep.obj(args[0]));
-        
-        } else if (name == "__SMACK_record_ptr") {
-            assert (args.size() == 1 && rets.size() == 0);
-            return Stmt::call(name, args[0]);
+//        } else if (name == "__SMACK_record_int") {
+//            assert (args.size() == 1 && rets.size() == 0);
+//            return Stmt::call(name, rep.off(args[0]));
+//
+//        } else if (name == "__SMACK_record_obj") {
+//            assert (args.size() == 1 && rets.size() == 0);
+//            return Stmt::call(name, rep.obj(args[0]));
+//
+//        } else if (name == "__SMACK_record_ptr") {
+//            assert (args.size() == 1 && rets.size() == 0);
+//            return Stmt::call(name, args[0]);
 
         } else if (name == "malloc") {
             assert (args.size() == 1);
-            return Stmt::call(SmackRep::MALLOC, rep.off(args[0]), rets[0]);
+            return Stmt::call(SmackRep::MALLOC, args[0], rets[0]);
 
         } else if (name == "free") {
             assert(args.size() == 1);

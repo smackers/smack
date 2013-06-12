@@ -11,6 +11,7 @@ namespace smack {
     public:
         static const string MEMORY;
         static const string ALLOC;
+        static const string CURRADDR;
         static const string BLOCK_LBL;
         static const string RET_VAR;
         static const string BOOL_VAR;
@@ -78,9 +79,6 @@ namespace smack {
         unsigned fieldOffset(llvm::StructType *t, unsigned fieldNo);
         
         const Expr * mem(const Expr *e);
-        const Expr * ptr(const Expr *obj, const Expr *off);
-        const Expr * obj(const Expr *e);
-        const Expr * off(const Expr *e);
         const Expr * i2p(const Expr *e);
         const Expr * p2i(const Expr *e);
         const Expr * b2p(const Expr *e);
