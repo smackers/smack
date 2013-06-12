@@ -5,9 +5,6 @@
 type $ref;
 type $ptr;
 
-const unique $NULL: $ref;
-const $UNDEF: $ptr;
-
 function $ptr($ref, int) returns ($ptr);
 function $static($ref) returns (bool);
 function $size($ref) returns (int);
@@ -23,13 +20,15 @@ const unique $UNALLOCATED: $name;
 const unique $ALLOCATED: $name;
 var $Mem: [$ptr] $ptr;
 var $Alloc: [$ref] $name;
+const unique $NULL: $ref;
+axiom $static($NULL);
+const $UNDEF: $ptr;
 
 procedure $alloca(obj_size: int) returns (new: $ptr);
 modifies $Alloc;
 ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
 ensures !$static($obj(new));
 ensures $off(new) == 0;
-ensures $obj(new) != $NULL;
 ensures $size($obj(new)) == obj_size;
 ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
 
@@ -38,7 +37,6 @@ modifies $Alloc;
 ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
 ensures !$static($obj(new));
 ensures $off(new) == 0;
-ensures $obj(new) != $NULL;
 ensures $size($obj(new)) == obj_size;
 ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
 
