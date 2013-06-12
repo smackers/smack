@@ -17,6 +17,7 @@ namespace smack {
         static const string PTR_VAR;
         static const string BOOL_TYPE;
         static const string PTR_TYPE;
+        static const string REF_TYPE;
         static const string NULL_VAL;
 
         static const string ALLOCA;

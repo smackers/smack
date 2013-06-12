@@ -21,6 +21,7 @@ namespace smack {
     const string SmackRep::PTR_VAR = "$p";
     const string SmackRep::BOOL_TYPE = "bool";
     const string SmackRep::PTR_TYPE = "$ptr";
+    const string SmackRep::REF_TYPE = "$ref";
     const string SmackRep::NULL_VAL = "$NULL";
 
     const string SmackRep::ALLOCA = "$alloca";
@@ -247,7 +248,11 @@ namespace smack {
     const Expr * SmackRep::expr(llvm::Value *v) {
         using namespace llvm;
         
-        if (v->hasName())
+        if (GlobalValue *g = dyn_cast<GlobalValue>(v)) {
+            assert(g->hasName());
+            return ptr(Expr::id(id(v)),lit((unsigned)0));
+        
+        } else if (v->hasName())
             return Expr::id(id(v));
         
         else if (Constant* constant = dyn_cast<Constant>(v)) {

@@ -30,9 +30,9 @@ namespace smack {
             x = m.global_begin(), e = m.global_end(); x != e; ++x) {
                 
             string name = rep.id(x);
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
+            program->addDecl(new ConstDecl(name, SmackRep::REF_TYPE, true));  
             program->addDecl(new AxiomDecl(
-                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
+                Expr::fn(SmackRep::STATIC, Expr::id(name)) ));
         }        
     
         // AXIOMS about variable uniqueness
@@ -56,9 +56,9 @@ namespace smack {
             if (func->isDeclaration() || rep.isSmackName(name))
                 continue;
             
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));  
+            program->addDecl(new ConstDecl(name, SmackRep::REF_TYPE, true));  
             program->addDecl(new AxiomDecl(
-                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
+                Expr::fn(SmackRep::STATIC, Expr::id(name)) ));
         
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
