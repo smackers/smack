@@ -14,11 +14,13 @@ var $CurrAddr:int;
 
 procedure $malloc(obj_size: int) returns (new: int);
 modifies $CurrAddr;
+ensures 0 < old($CurrAddr);
 ensures new == old($CurrAddr);
 ensures $CurrAddr > old($CurrAddr) + obj_size;
 
 procedure $alloca(obj_size: int) returns (new: int);
 modifies $CurrAddr;
+ensures 0 < old($CurrAddr);
 ensures new == old($CurrAddr);
 ensures $CurrAddr > old($CurrAddr) + obj_size;
 
