@@ -42,6 +42,7 @@ int main() {
   elem *arrayOne;
   elem *arrayTwo;
 
+  arraySize = __SMACK_nondet();
   __SMACK_assume(arraySize > 0);
 
   arrayOne = (elem*)malloc(arraySize * sizeof(elem));

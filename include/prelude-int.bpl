@@ -10,21 +10,31 @@ const $UNDEF: int;
 // const unique $ALLOCATED: $name;
 var $Mem: [int] int;
 var $CurrAddr:int;
-// var $Alloc: [int] $name;
+var $Alloc: [int] bool;
 
 procedure $malloc(obj_size: int) returns (new: int);
-modifies $CurrAddr;
+modifies $CurrAddr, $Alloc;
+requires obj_size > 0;
 ensures 0 < old($CurrAddr);
 ensures new == old($CurrAddr);
 ensures $CurrAddr > old($CurrAddr) + obj_size;
+ensures $Alloc[new];
+ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);
 
 procedure $alloca(obj_size: int) returns (new: int);
-modifies $CurrAddr;
+modifies $CurrAddr, $Alloc;
+requires obj_size > 0;
 ensures 0 < old($CurrAddr);
 ensures new == old($CurrAddr);
 ensures $CurrAddr > old($CurrAddr) + obj_size;
+ensures $Alloc[new];
+ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);
 
 procedure $free(pointer: int);
+modifies $Alloc;
+requires $Alloc[pointer];
+ensures !$Alloc[pointer];
+ensures (forall x:int :: {$Alloc[x]} x == pointer || old($Alloc)[x] == $Alloc[x]);
 
 // SMACK Arithmetic Predicates
 

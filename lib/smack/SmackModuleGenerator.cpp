@@ -90,7 +90,7 @@ namespace smack {
         
             // MODIFIES
             proc->addMod(SmackRep::MEMORY);
-//            proc->addMod(SmackRep::ALLOC);
+            proc->addMod(SmackRep::ALLOC);
             proc->addMod(SmackRep::CURRADDR);
 
             // BODY
