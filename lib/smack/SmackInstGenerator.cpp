@@ -315,12 +315,29 @@ namespace smack {
         } else {
             // function pointer call...
             vector<llvm::Function*> fs;
-    
-            // Collect the list of possible function calls
+
             llvm::Value *c = ci.getCalledValue();
+            DEBUG(errs() << "Called value: " << *c << "\n");
+
+            // special case that happens when some clang warnings are reported
+            // we can find out the called function exactly
+            if (llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(c)) {
+                if (ce->isCast()) {
+                    llvm::Value *castValue = ce->getOperand(0);
+                    if (llvm::Function *castFunc = llvm::dyn_cast<llvm::Function>(castValue)) {
+                        currBlock->addStmt(generateCall(castFunc,args,rets));
+                        return;
+                    }
+                }
+            }
+
+            // Collect the list of possible function calls
             llvm::Type *t = c->getType();
+            DEBUG(errs() << "Called value type: " << *t << "\n");
             assert( t->isPointerTy() && "Indirect call value type must be pointer");
             t = t->getPointerElementType();
+            DEBUG(errs() << "Called function type: " << *t << "\n");
+
             llvm::Module *m = ci.getParent()->getParent()->getParent();
             for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
                 if (f->getFunctionType() == t)
