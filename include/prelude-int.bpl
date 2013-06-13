@@ -2,6 +2,8 @@
 
 // SMACK Memory Model
 
+const $UNDEF: int;
+
 // function $size(int) returns (int);
 // type $name;
 // const unique $UNALLOCATED: $name;
