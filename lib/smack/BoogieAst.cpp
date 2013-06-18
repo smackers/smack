@@ -342,6 +342,7 @@ namespace smack {
         if (mods.size() > 0) {
             os << endl;
             print_seq<string>(os,mods, "  modifies ", ", ", ";");
+            os << endl;
         }
         if (blocks.size() > 0) {
             os << "{" << endl;

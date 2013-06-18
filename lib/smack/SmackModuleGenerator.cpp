@@ -47,7 +47,7 @@ namespace smack {
                 Expr::fn("$slt", Expr::fn(SmackRep::ADD, Expr::id(globals[globals.size()-1]), Expr::lit(1024)),
                 Expr::lit(0))));
         }
-   
+
         // AXIOMS about variable uniqueness
         // NOTE: This should be covered by the "unique" annotation on the
         // declarations.  What is not covered is that their REFERENCES should

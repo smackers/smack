@@ -22,7 +22,9 @@ namespace smack {
     const string SmackRep::PTR_VAR = "$p";
     const string SmackRep::BOOL_TYPE = "bool";
     const string SmackRep::PTR_TYPE = "int";
+    const string SmackRep::REF_TYPE = "$ref";
     const string SmackRep::NULL_VAL = "$NULL";
+    const string SmackRep::UNDEF_VAL = "$UNDEF";
 
     const string SmackRep::ALLOCA = "$alloca";
     const string SmackRep::MALLOC = "$malloc";
@@ -63,10 +65,14 @@ namespace smack {
     const string SmackRep::SGT = "$sgt";
     const string SmackRep::UGT = "$ugt";
     
-    const Expr *SmackRep::NUL = Expr::id("$NULL");
-    const Expr *SmackRep::UNDEF = Expr::id("$UNDEF");
+    const Expr *SmackRep::NUL = Expr::id(NULL_VAL);
+    const Expr *SmackRep::UNDEF = Expr::id(UNDEF_VAL);
     
     const Expr *SmackRep::ZERO = Expr::lit(0);
+    
+    const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
+    const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
+    const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
     
     // TODO Do the following functions belong here ?
 
@@ -81,6 +87,11 @@ namespace smack {
       "|implementation|where|returns|assume|assert|havoc|call|return|while"
       "|break|goto|if|else|div)$" );
     Regex SMACK_NAME(".*__SMACK_.*");
+    Regex SMACK_ASSERT(".*__SMACK_assert.*");
+    Regex SMACK_ASSUME(".*__SMACK_assume.*");
+    Regex SMACK_REC_OBJ(".*__SMACK_record_obj.*");
+    Regex SMACK_REC_INT(".*__SMACK_record_int.*");
+    Regex SMACK_REC_PTR(".*__SMACK_record_ptr.*");
 
     bool isBplKeyword(string s) {
       return BPL_KW.match(s);
@@ -88,7 +99,27 @@ namespace smack {
         
     bool SmackRep::isSmackName(string n) {
         return SMACK_NAME.match(n);
-    }    
+    }
+    
+    bool SmackRep::isSmackAssert(llvm::Function *f) {
+        return SMACK_ASSERT.match(id(f));
+    }
+    
+    bool SmackRep::isSmackAssume(llvm::Function *f) {
+        return SMACK_ASSUME.match(id(f));
+    }
+    
+    bool SmackRep::isSmackRecObj(llvm::Function *f) {
+        return SMACK_REC_OBJ.match(id(f));
+    }
+    
+    bool SmackRep::isSmackRecInt(llvm::Function *f) {
+        return SMACK_REC_INT.match(id(f));
+    }
+    
+    bool SmackRep::isSmackRecPtr(llvm::Function *f) {
+        return SMACK_REC_PTR.match(id(f));
+    }
     
     bool SmackRep::isBool(llvm::Type *t) {
         return t->isIntegerTy(1);
@@ -184,7 +215,7 @@ namespace smack {
         
             uint64_t val = ci->getLimitedValue();
             if (width > 0 && ci->isNegative())
-                return Expr::fn("$sub", Expr::lit(0,width), Expr::lit(-val,width));
+                return Expr::fn(SUB, Expr::lit(0,width), Expr::lit(-val,width));
             else
                 return Expr::lit(val,width);
         
@@ -236,7 +267,11 @@ namespace smack {
     const Expr * SmackRep::expr(llvm::Value *v) {
         using namespace llvm;
         
-        if (v->hasName())
+        if (GlobalValue *g = dyn_cast<GlobalValue>(v)) {
+            assert(g->hasName());
+            return Expr::id(id(v));
+        
+        } else if (v->hasName())
             return Expr::id(id(v));
         
         else if (Constant* constant = dyn_cast<Constant>(v)) {
@@ -339,14 +374,14 @@ namespace smack {
             using llvm::ICmpInst;
             case ICmpInst::ICMP_EQ: e = Expr::eq(l,r); break;
             case ICmpInst::ICMP_NE: e = Expr::neq(l,r); break;
-            case ICmpInst::ICMP_SGE: o = "$sge"; break;
-            case ICmpInst::ICMP_UGE: o = "$uge"; break;
-            case ICmpInst::ICMP_SLE: o = "$sle"; break;
-            case ICmpInst::ICMP_ULE: o = "$ule"; break;
-            case ICmpInst::ICMP_SLT: o = "$slt"; break;
-            case ICmpInst::ICMP_ULT: o = "$ult"; break;
-            case ICmpInst::ICMP_SGT: o = "$sgt"; break;
-            case ICmpInst::ICMP_UGT: o = "$ugt"; break;
+            case ICmpInst::ICMP_SGE: o = SGE; break;
+            case ICmpInst::ICMP_UGE: o = UGE; break;
+            case ICmpInst::ICMP_SLE: o = SLE; break;
+            case ICmpInst::ICMP_ULE: o = ULE; break;
+            case ICmpInst::ICMP_SLT: o = SLT; break;
+            case ICmpInst::ICMP_ULT: o = ULT; break;
+            case ICmpInst::ICMP_SGT: o = SGT; break;
+            case ICmpInst::ICMP_UGT: o = UGT; break;
             default:
             assert( false && "unexpected predicate." );
         }

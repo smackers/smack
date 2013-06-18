@@ -106,10 +106,7 @@ axiom (forall i:int :: $i2p(i) == i);
 procedure __SMACK_nondet() returns (p: int);
 procedure __SMACK_nondetInt() returns (p: int);
 
-procedure __SMACK_assert(p: int);
-procedure __SMACK_assume(p: int);
-
-// procedure boogie_si_record_int(i: bv32);
+// procedure boogie_si_record_int(i: int);
 // procedure boogie_si_record_obj(o: $ref);
 // procedure boogie_si_record_ptr(p: $ptr);
 

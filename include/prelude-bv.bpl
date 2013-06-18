@@ -5,9 +5,6 @@
 type $ref;
 type $ptr;
 
-const unique $NULL: $ref;
-const $UNDEF: $ptr;
-
 function $ptr($ref, int) returns ($ptr);
 function $static($ref) returns (bool);
 function $size($ref) returns (bv32);
@@ -21,15 +18,17 @@ axiom(forall x_obj:$ref, x_off:bv32 :: {$ptr(x_obj, x_off)} x_off == $off($ptr(x
 type $name;
 const unique $UNALLOCATED: $name;
 const unique $ALLOCATED: $name;
-var Mem: [$ptr] $ptr;
+var $Mem: [$ptr] $ptr;
 var $Alloc: [$ref] $name;
+const unique $NULL: $ref;
+axiom $static($NULL);
+const $UNDEF: $ptr;
 
 procedure $alloca(obj_size: bv32) returns (new:$ptr);
 modifies $Alloc;
 ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
 ensures !$static($obj(new));
 ensures $off(new) == 0bv32;
-ensures $obj(new) != $NULL;
 ensures $size($obj(new)) == obj_size;
 ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
 
@@ -38,7 +37,6 @@ modifies $Alloc;
 ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;
 ensures !$static($obj(new));
 ensures $off(new) == 0bv32;
-ensures $obj(new) != $NULL;
 ensures $size($obj(new)) == obj_size;
 ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);
 
@@ -121,9 +119,6 @@ axiom (forall i:bv32 :: (exists r:$ref :: $i2p($ptr($NULL,i)) == $ptr(r,i)));
 procedure __SMACK_nondet() returns (p: $ptr);
 procedure __SMACK_nondetInt() returns (p: $ptr);
 ensures $obj(p) == $NULL;
-
-procedure __SMACK_assert(p: $ptr);
-procedure __SMACK_assume(p: $ptr);
 
 procedure boogie_si_record_int(i: bv32);
 procedure boogie_si_record_obj(o: $ref);
