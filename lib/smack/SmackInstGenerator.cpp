@@ -253,9 +253,9 @@ namespace smack {
             return Stmt::assume(
                 Expr::neq(args[0], SmackRep::ZERO) );
 
-//        } else if (rep.isSmackRecInt(f)) {
-//            assert (args.size() == 1 && rets.size() == 0);
-//            return Stmt::call(SmackRep::BOOGIE_REC_INT, rep.off(args[0]));
+       } else if (rep.isSmackRecInt(f)) {
+           assert (args.size() == 1 && rets.size() == 0);
+           return Stmt::call(SmackRep::BOOGIE_REC_INT, args[0]);
 //
 //        } else if (rep.isSmackRecObj(f)) {
 //            assert (args.size() == 1 && rets.size() == 0);
