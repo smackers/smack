@@ -113,38 +113,44 @@ namespace smack {
         void print(ostream &os) const;
     };
     
+    class AttrVal {
+    public:
+        virtual void print(ostream &os) const = 0;
+    };
+    
+    class StrVal : public AttrVal {
+        string val;
+    public:
+        StrVal(string s) : val(s) {}
+        void print(ostream &os) const;
+    };
+    
+    class ExprVal : public AttrVal {
+        const Expr *val;
+    public:
+        ExprVal(const Expr *e) : val(e) {}
+        void print(ostream &os) const;
+    };
+    
     class Attr {
     protected:
         string name;
+        vector<const AttrVal*> vals;
     public:
-        Attr(string n) : name(n) {}
-        virtual void print(ostream &os) const;
+        Attr(string n, vector<const AttrVal*> vs) : name(n), vals(vs) {}
+        void print(ostream &os) const;
         
         static const Attr * attr(string s);
         static const Attr * attr(string s, string v);
         static const Attr * attr(string s, int v);
-    };
-    
-    class StrAttr : public Attr {
-        string val;
-    public:
-        StrAttr(string n, string v) : Attr(n), val(v) {}
-        void print(ostream &os) const;
-    };
-    
-    class IntAttr : public Attr {
-        int val;
-    public:
-        IntAttr(string n, int v) : Attr(n), val(v) {}
-        void print(ostream &os) const;
+        static const Attr * attr(string s, string v, int i);
+        static const Attr * attr(string s, string v, int i, int j);
     };
     
     class Stmt {
     public:
-        static const Stmt * annot(vector<const Attr *> attrs);
-        static const Stmt * annot(string s);
-        static const Stmt * annot(string s, string v);
-        static const Stmt * annot(string s, int v);
+        static const Stmt * annot(vector<const Attr*> attrs);
+        static const Stmt * annot(const Attr *a);
         static const Stmt * assert_(const Expr *e);
         static const Stmt * assign(const Expr *e, const Expr *f);
         static const Stmt * assume(const Expr *e);
@@ -158,6 +164,7 @@ namespace smack {
         static const Stmt * goto_(vector<string> ts);
         static const Stmt * havoc(string x);
         static const Stmt * return_();
+        static const Stmt * skip();
         virtual void print(ostream &os) const = 0;
     };
     

@@ -60,10 +60,11 @@ namespace smack {
     void SmackInstGenerator::annotate(llvm::Instruction& i) {
         if (llvm::MDNode *n = i.getMetadata("dbg")) {
             llvm::DILocation l(n);
-            vector<const Attr*> attrs;
-            attrs.push_back(Attr::attr("sourcefile",l.getFilename().str()));
-            attrs.push_back(Attr::attr("sourceline",l.getLineNumber()));
-            currBlock->addStmt(Stmt::annot(attrs));
+            currBlock->addStmt(Stmt::annot(
+                Attr::attr("sourceloc", 
+                    l.getFilename().str(), 
+                    l.getLineNumber(),
+                    l.getColumnNumber() )));
         }
     }
 
@@ -303,14 +304,14 @@ namespace smack {
         
         if (ci.isInlineAsm()) {
             WARN("unsoundly ignoring inline asm call.");
-            currBlock->addStmt(Stmt::assume(Expr::lit(true)));
+            currBlock->addStmt(Stmt::skip());
             return;
 
         } else if (llvm::Function* f = ci.getCalledFunction()) {
             if (rep.id(f).find("llvm.dbg.") != string::npos) {
                 // a "skip" statement..
                 WARN("ignoring llvm.debug call.");
-                currBlock->addStmt(Stmt::assume(Expr::lit(true)));
+                currBlock->addStmt(Stmt::skip());
                 return;
             }
         }
@@ -369,7 +370,7 @@ namespace smack {
                 // In the worst case, we have no idea what function may have
                 // been called...
                 WARN("unsoundly ignoring indeterminate call.");
-                currBlock->addStmt(Stmt::assume(Expr::lit(true)));
+                currBlock->addStmt(Stmt::skip());
             }
         }
     }
