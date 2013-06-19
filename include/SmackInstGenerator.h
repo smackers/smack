@@ -26,10 +26,11 @@ namespace smack {
         const Stmt * generateCall(llvm::Function *f, vector<const Expr*> ps, vector<string> rs);
 
         void generatePhiAssigns(llvm::TerminatorInst& i);
-        void generateGotoStmts(vector<pair<const Expr*,string> > target);
+        void generateGotoStmts(llvm::Instruction& i, 
+            vector<pair<const Expr*,string> > target);
         void processInstruction(llvm::Instruction& i);
         void nameInstruction(llvm::Instruction& i);
-        void annotate(llvm::Instruction& i);
+        void annotate(llvm::Instruction& i, Block *b);
         
     public:
         SmackInstGenerator(SmackRep& r, Procedure& p,

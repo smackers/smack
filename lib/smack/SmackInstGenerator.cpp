@@ -57,10 +57,10 @@ namespace smack {
         }
     }
     
-    void SmackInstGenerator::annotate(llvm::Instruction& i) {
+    void SmackInstGenerator::annotate(llvm::Instruction& i, Block *b) {
         if (llvm::MDNode *n = i.getMetadata("dbg")) {
             llvm::DILocation l(n);
-            currBlock->addStmt(Stmt::annot(
+            b->addStmt(Stmt::annot(
                 Attr::attr("sourceloc", 
                     l.getFilename().str(), 
                     l.getLineNumber(),
@@ -71,7 +71,7 @@ namespace smack {
     void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
         DEBUG(errs() << "Inst: " << inst << "\n");
         DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
-        annotate(inst);
+        annotate(inst,currBlock);
         ORIG(inst);
         nameInstruction(inst);
     }
@@ -113,6 +113,7 @@ namespace smack {
     }
     
     void SmackInstGenerator::generateGotoStmts(
+        llvm::Instruction& inst,
         vector<pair<const Expr*,string> > targets) {
 
         assert (targets.size() > 0);
@@ -122,6 +123,7 @@ namespace smack {
         
             for (unsigned i=0; i<targets.size(); i++) {            
                 Block *b = createBlock();
+                annotate(inst,b);
                 b->addStmt(Stmt::assume(targets[i].first));
                 b->addStmt(Stmt::goto_(targets[i].second));
                 dispatch.push_back(b->getName());
@@ -160,7 +162,7 @@ namespace smack {
                 blockMap[bi.getSuccessor(1)]->getName() ));
         }        
         generatePhiAssigns(bi);
-        generateGotoStmts(targets);
+        generateGotoStmts(bi,targets);
     }
     
     void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
@@ -190,7 +192,7 @@ namespace smack {
             blockMap[si.getDefaultDest()]->getName() ));
 
         generatePhiAssigns(si);
-        generateGotoStmts(targets);
+        generateGotoStmts(si,targets);
     }
 
     void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {
