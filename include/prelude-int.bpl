@@ -2,6 +2,11 @@
 
 // SMACK Memory Model
 
+function $ptr(obj:int, off:int) returns (int) {obj + off}
+function $off(ptr:int) returns (int) {ptr}
+
+const unique $NULL: int;
+axiom $NULL == 0;
 const $UNDEF: int;
 
 // function $size(int) returns (int);

@@ -2,11 +2,21 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef SMACKGENERATOR_H
-#define SMACKGENERATOR_H
+#ifndef SMACKMODULEGENERATOR_H
+#define SMACKMODULEGENERATOR_H
 
 #include "BoogieAst.h"
+#include "SmackInstGenerator.h"
+#include "SmackRepFlatMem.h"
 #include "llvm/DataLayout.h"
+#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/CFG.h"
+#include <sstream>
+#include <stack>
+
+using namespace std;
+using llvm::errs;
 
 namespace smack {
 
@@ -29,4 +39,5 @@ namespace smack {
     };
 }
 
-#endif  /*SMACKGENERATOR_H*/
+#endif  /*SMACKMODULEGENERATOR_H*/
+

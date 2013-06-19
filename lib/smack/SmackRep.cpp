@@ -1,28 +1,15 @@
 #include "SmackRep.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/Regex.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
-#include "llvm/Support/InstVisitor.h"
-#include <sstream>
 
 namespace smack {
-    
-    using llvm::Regex;
-    using llvm::SmallVector;
-    using llvm::StringRef;
-    using namespace std;
-    
+   
     const string SmackRep::MEMORY = "$Mem";
     const string SmackRep::ALLOC = "$Alloc";
-    const string SmackRep::CURRADDR = "$CurrAddr";
     const string SmackRep::BLOCK_LBL = "$bb";
     const string SmackRep::RET_VAR = "$r";
     const string SmackRep::BOOL_VAR = "$b";
     const string SmackRep::PTR_VAR = "$p";
     const string SmackRep::BOOL_TYPE = "bool";
     const string SmackRep::PTR_TYPE = "int";
-    const string SmackRep::REF_TYPE = "$ref";
     const string SmackRep::NULL_VAL = "$NULL";
     const string SmackRep::UNDEF_VAL = "$UNDEF";
 
@@ -70,10 +57,8 @@ namespace smack {
     
     const Expr *SmackRep::ZERO = Expr::lit(0);
     
-    const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
-    const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
-    const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
-    
+    const int SmackRep::width = 0;
+
     // TODO Do the following functions belong here ?
 
     string EscapeString(string str) {
@@ -150,6 +135,18 @@ namespace smack {
         return Expr::sel(Expr::id(SmackRep::MEMORY), e);
     }
     
+    const Expr * SmackRep::ptr(const Expr *obj, const Expr *off) {
+        return Expr::fn(PTR, obj, off);
+    }
+    
+    const Expr * SmackRep::obj(const Expr *e) {
+        return Expr::fn(OBJ,e);
+    }
+    
+    const Expr * SmackRep::off(const Expr *e) {
+        return Expr::fn(OFF,e);
+    }
+    
     const Expr * SmackRep::i2p(const Expr *e) {
         return Expr::fn(I2P, e);
     }
@@ -205,9 +202,6 @@ namespace smack {
         return name;
     }
     
-    // TODO Make this width a parameter to generate bitvector-based code.
-    const int width = 0;  
-
     const Expr * SmackRep::lit(llvm::Value *v) {
         if (const llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v)) {
             if (ci->getBitWidth() == 1)
@@ -223,7 +217,7 @@ namespace smack {
             return Expr::lit(0,width);
         
          else
-             return expr(v);
+             return off(expr(v));
             // assert( false && "value type not supported" );
     }
      
@@ -269,7 +263,7 @@ namespace smack {
         
         if (GlobalValue *g = dyn_cast<GlobalValue>(v)) {
             assert(g->hasName());
-            return Expr::id(id(v));
+            return ptr(Expr::id(id(v)),lit((unsigned)0));
         
         } else if (v->hasName())
             return Expr::id(id(v));
@@ -313,7 +307,7 @@ namespace smack {
                 if (ci->getBitWidth() == 1)
                     return Expr::lit(!ci->isZero());
 
-                else return lit(ci);
+                else return ptr(NUL, lit(ci));
 
             } else if (constant->isNullValue())
                 return ZERO;
@@ -357,10 +351,10 @@ namespace smack {
             *r = o.getOperand(1);
 
         const Expr *e = Expr::fn(op, 
-            (isBool(l) ? b2i(expr(l)) : expr(l)),
-            (isBool(r) ? b2i(expr(r)) : expr(r)) );
+            (isBool(l) ? b2i(expr(l)) : off(expr(l))),
+            (isBool(r) ? b2i(expr(r)) : off(expr(r))) );
 
-        return isBool(&o) ? i2b(e) : e;
+        return isBool(&o) ? i2b(e) : ptr(NUL, e);
     }
     
     const Expr * SmackRep::pred(llvm::CmpInst& ci) {
@@ -386,7 +380,7 @@ namespace smack {
             assert( false && "unexpected predicate." );
         }
         
-        return e == NULL ? Expr::fn(o, l, r) : e;
+        return e == NULL ? Expr::fn(o, off(l), off(r)) : e;
     }
 
 } // namespace smack

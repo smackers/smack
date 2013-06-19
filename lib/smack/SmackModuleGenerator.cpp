@@ -3,18 +3,8 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackModuleGenerator.h"
-#include "SmackInstGenerator.h"
-#include "SmackRep.h"
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/CFG.h"
-#include <sstream>
-#include <stack>
 
 namespace smack {
-
-    using namespace std;
-    using llvm::errs;
 
     llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
     char SmackModuleGenerator::ID = 0;
@@ -22,7 +12,7 @@ namespace smack {
     bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
 
         program = new Program();
-        SmackRep rep(&getAnalysis<llvm::DataLayout>());
+        SmackRepFlatMem rep(&getAnalysis<llvm::DataLayout>());
 
         DEBUG(errs() << "Analyzing globals...\n");
 
@@ -91,7 +81,7 @@ namespace smack {
             // MODIFIES
             proc->addMod(SmackRep::MEMORY);
             proc->addMod(SmackRep::ALLOC);
-            proc->addMod(SmackRep::CURRADDR);
+            proc->addMod(SmackRepFlatMem::CURRADDR);
 
             // BODY
             if ( !func->isDeclaration() && !func->empty() 
