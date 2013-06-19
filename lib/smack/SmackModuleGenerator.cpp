@@ -12,7 +12,7 @@ namespace smack {
     bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
 
         program = new Program();
-        SmackRepFlatMem rep(&getAnalysis<llvm::DataLayout>());
+        SmackRep rep = SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>());
 
         DEBUG(errs() << "Analyzing globals...\n");
 

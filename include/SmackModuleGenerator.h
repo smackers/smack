@@ -7,7 +7,7 @@
 
 #include "BoogieAst.h"
 #include "SmackInstGenerator.h"
-#include "SmackRepFlatMem.h"
+#include "SmackRepFactory.h"
 #include "llvm/DataLayout.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Debug.h"
