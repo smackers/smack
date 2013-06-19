@@ -5,6 +5,7 @@
 #include "SmackInstGenerator.h"
 #include "llvm/Support/InstVisitor.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/DebugInfo.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include <sstream>
@@ -55,10 +56,21 @@ namespace smack {
                 currProc.addDecl(d);
         }
     }
+    
+    void SmackInstGenerator::annotate(llvm::Instruction& i) {
+        if (llvm::MDNode *n = i.getMetadata("dbg")) {
+            llvm::DILocation l(n);
+            vector<const Attr*> attrs;
+            attrs.push_back(Attr::attr("sourcefile",l.getFilename().str()));
+            attrs.push_back(Attr::attr("sourceline",l.getLineNumber()));
+            currBlock->addStmt(Stmt::annot(attrs));
+        }
+    }
 
     void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
         DEBUG(errs() << "Inst: " << inst << "\n");
         DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
+        annotate(inst);
         ORIG(inst);
         nameInstruction(inst);
     }
@@ -237,13 +249,7 @@ namespace smack {
         
         string name = rep.id(f);
 
-        // TODO we might instead assume that there are no llvm.dbg symbols
-        // having run the -strip-debug-declare before.
-        if (name.find("llvm.dbg.") == 0) 
-            // a "skip" statement..
-            return Stmt::assume(Expr::lit(true));
-
-        else if (rep.isSmackAssert(f)) {
+        if (rep.isSmackAssert(f)) {
             assert (args.size() == 1 && rets.size() == 0);
             return Stmt::assert_(
                 Expr::neq(args[0], SmackRep::ZERO) );
@@ -299,6 +305,14 @@ namespace smack {
             WARN("unsoundly ignoring inline asm call.");
             currBlock->addStmt(Stmt::assume(Expr::lit(true)));
             return;
+
+        } else if (llvm::Function* f = ci.getCalledFunction()) {
+            if (rep.id(f).find("llvm.dbg.") != string::npos) {
+                // a "skip" statement..
+                WARN("ignoring llvm.debug call.");
+                currBlock->addStmt(Stmt::assume(Expr::lit(true)));
+                return;
+            }
         }
 
         vector<const Expr*> args;

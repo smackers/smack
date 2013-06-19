@@ -29,6 +29,7 @@ namespace smack {
         void generateGotoStmts(vector<pair<const Expr*,string> > target);
         void processInstruction(llvm::Instruction& i);
         void nameInstruction(llvm::Instruction& i);
+        void annotate(llvm::Instruction& i);
         
     public:
         SmackInstGenerator(SmackRep& r, Procedure& p,

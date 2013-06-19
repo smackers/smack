@@ -67,7 +67,38 @@ namespace smack {
     const Expr * Expr::sel(string b, string i) {
         return new SelExpr(id(b), id(i));
     }
+
+    const Attr * Attr::attr(string s) {
+        return new Attr(s);
+    }
+
+    const Attr * Attr::attr(string s, string v) {
+        return new StrAttr(s,v);
+    }
+
+    const Attr * Attr::attr(string s, int v) {
+        return new IntAttr(s,v);
+    }
+
+    const Stmt * Stmt::annot(vector<const Attr*> attrs) {
+        AssumeStmt *s = new AssumeStmt(Expr::lit(true));
+        for (unsigned i=0; i<attrs.size(); i++)
+            s->add(attrs[i]);
+        return s;
+    }
     
+    const Stmt * Stmt::annot(string s) {
+        return Stmt::annot(vector<const Attr*>(1,Attr::attr(s)));
+    }
+    
+    const Stmt * Stmt::annot(string s, string v) {
+        return Stmt::annot(vector<const Attr*>(1,Attr::attr(s,v)));
+    }    
+    
+    const Stmt * Stmt::annot(string s, int v) {
+        return Stmt::annot(vector<const Attr*>(1,Attr::attr(s,v)));
+    }    
+
     const Stmt * Stmt::assert_(const Expr *e) {
         return new AssertStmt(e);
     }
@@ -132,6 +163,10 @@ namespace smack {
     }
     ostream &operator<<(ostream &os, const Expr *e) {
         e->print(os);
+        return os;
+    }
+    ostream &operator<<(ostream &os, const Attr *a) {
+        a->print(os);
         return os;
     }
     ostream &operator<<(ostream &os, const Stmt *s) {
@@ -250,6 +285,18 @@ namespace smack {
     void VarExpr::print(ostream &os) const { 
         os << var;
     }
+    
+    void Attr::print(ostream &os) const {
+        os << "{:" << name << "}";
+    }
+    
+    void StrAttr::print(ostream &os) const {
+        os << "{:" << name << " \"" << val << "\"}";
+    }
+    
+    void IntAttr::print(ostream &os) const {
+        os << "{:" << name << " " << val << "}";
+    }
         
     void AssertStmt::print(ostream &os) const {
         os << "assert " << expr << ";";
@@ -263,7 +310,10 @@ namespace smack {
     }
 
     void AssumeStmt::print(ostream &os) const {
-        os << "assume " << expr << ";";
+        os << "assume ";
+        if (attrs.size() > 0)
+            print_seq<const Attr*>(os,attrs,""," "," ");
+        os << expr << ";";
     }
 
     void CallStmt::print(ostream &os) const {
