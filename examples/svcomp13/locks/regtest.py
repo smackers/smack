@@ -21,6 +21,7 @@ tests = [
 ]
 
 
+passed = failed = 0
 for test in tests:
 
   # invoke SMACK
@@ -30,6 +31,11 @@ for test in tests:
   # check SMACK output
   if re.search(test[1], smackOutput):
     print 'PASSED: ', test[0]
+    passed += 1
   else:
     print 'FAILED: ', test[0]
+    failed += 1
+
+print '\nPASSED count: ', passed
+print 'FAILED count: ', failed
 
