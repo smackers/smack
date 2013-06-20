@@ -32,7 +32,7 @@ def find_library_path(installPrefix):
   assert path.exists(libraryPath)
   return libraryPath
 
-def llvm2bpl(scriptPathName, infile, debug):
+def llvm2bpl(scriptPathName, infile, debug, memmod):
 
   # find library paths
   scriptFullPath = path.abspath(scriptPathName)
@@ -43,11 +43,11 @@ def llvm2bpl(scriptPathName, infile, debug):
   # invoke SMACK LLVM module
   if debug:
     p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-      '-die', '-lowerswitch', '-bpl_print', '-debug', '-o=tmp.bc'],
+      '-die', '-lowerswitch', '-bpl_print', '-mem-mod='+memmod, '-debug', '-o=tmp.bc'],
       stdin=infile, stderr=subprocess.PIPE)
   else:
     p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-      '-die', '-lowerswitch', '-bpl_print', '-debug-only=bpl', '-o=tmp.bc'],
+      '-die', '-lowerswitch', '-bpl_print', '-mem-mod='+memmod, '-debug-only=bpl', '-o=tmp.bc'],
       stdin=infile, stderr=subprocess.PIPE)
   output = p.communicate()[1]
   bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
@@ -68,9 +68,11 @@ if __name__ == '__main__':
                       help='output Boogie file (default: %(default)s)')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
+  parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
+                      help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
   args = parser.parse_args()
 
-  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug)
+  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod)
 
   # print debug info
   if args.debug:

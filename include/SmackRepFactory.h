@@ -7,9 +7,13 @@
 
 namespace smack {
  
+    enum MemMod {
+        flat, twodim
+    };
+
     class SmackRepFactory {
     public:
-        static SmackRep* createSmackRep(llvm::DataLayout *td);
+        static SmackRep* createSmackRep(llvm::DataLayout *td, MemMod memoryModel);
     };
 }
 

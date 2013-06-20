@@ -12,6 +12,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CFG.h"
+#include "llvm/Support/CommandLine.h"
 #include <sstream>
 #include <stack>
 
@@ -19,6 +20,13 @@ using namespace std;
 using llvm::errs;
 
 namespace smack {
+
+    // Enable memory model to be specified on the command line
+    static llvm::cl::opt<MemMod> MemoryModel("mem-mod", llvm::cl::desc("Set the memory model:"),
+        llvm::cl::values(
+            clEnumVal(flat, "flat memory model"),
+            clEnumVal(twodim, "two dimensional memory model"),
+            clEnumValEnd));
 
     class SmackModuleGenerator : public llvm::ModulePass {
     private:

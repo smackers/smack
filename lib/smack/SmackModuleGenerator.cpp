@@ -11,7 +11,7 @@ namespace smack {
 
     bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
 
-        SmackRep* rep = SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>());
+        SmackRep* rep = SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>(), MemoryModel);
         program = new Program(rep->getPrelude());
 
         DEBUG(errs() << "Analyzing globals...\n");

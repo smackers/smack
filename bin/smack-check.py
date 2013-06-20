@@ -31,8 +31,11 @@ if __name__ == '__main__':
                       help='output Boogie file (default: %(default)s)')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
+  parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
+                      help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
   args = parser.parse_args()
-  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug)
+
+  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod)
 
   # print debug info
   if args.debug:
