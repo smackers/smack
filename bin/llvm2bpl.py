@@ -34,17 +34,11 @@ def find_library_path(installPrefix):
 
 def llvm2bpl(scriptPathName, infile, debug):
 
-  # find prelude and library paths
+  # find library paths
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
   installPrefix = find_install_prefix(smackRoot)
   libraryPath = find_library_path(installPrefix)
-  preludePath = path.join(installPrefix, 'include', 'prelude-int.bpl')
-
-  # load prelude
-  preludeFile = open(preludePath)
-  prelude = preludeFile.read()
-  preludeFile.close()
 
   # invoke SMACK LLVM module
   if debug:
@@ -56,9 +50,9 @@ def llvm2bpl(scriptPathName, infile, debug):
       '-die', '-lowerswitch', '-bpl_print', '-debug-only=bpl', '-o=tmp.bc'],
       stdin=infile, stderr=subprocess.PIPE)
   output = p.communicate()[1]
-  bplStartIndex = output.find('// BEGIN SMACK-GENERATED CODE')
+  bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
   debug = output[0:bplStartIndex]
-  bpl = prelude + output[bplStartIndex:]
+  bpl = output[bplStartIndex:]
   return debug, bpl
  
 

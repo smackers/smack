@@ -267,10 +267,11 @@ namespace smack {
     };
         
     class Program {
+        string prelude;
         vector<Decl*> decls;
         vector<Procedure*> procs;
     public:
-        Program() { }
+        Program(string p) : prelude(p) { }
         void print(ostream &os) const;
         void addDecl(Decl *d) { decls.push_back(d); }
         void addProc(Procedure *p) { procs.push_back(p); }

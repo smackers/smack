@@ -14,12 +14,14 @@ namespace smack {
     public:
         static const string CURRADDR;
         static const string PTR_TYPE;
+        static const string PRELUDE;
 
     public:
         SmackRepFlatMem(llvm::DataLayout *td) : SmackRep(td) {}
         void declareGlobals(llvm::Module &m, Program* program);
         void addModifies(Procedure *proc);
         string getPtrType();
+        string getPrelude();
     };
 }
 

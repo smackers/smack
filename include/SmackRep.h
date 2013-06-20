@@ -125,6 +125,7 @@ namespace smack {
         virtual void declareGlobals(llvm::Module &m, Program* program) = 0;
         virtual void addModifies(Procedure *proc) = 0;
         virtual string getPtrType() = 0;
+        virtual string getPrelude() = 0;
     };
 }
 

@@ -354,6 +354,9 @@ namespace smack {
     }
 
     void Program::print(ostream &os) const {
+        os << "// SMACK-PRELUDE-BEGIN" << endl;
+        os << prelude;
+        os << "// SMACK-PRELUDE-END" << endl;
         os << "// BEGIN SMACK-GENERATED CODE" << endl;
         print_seq<Decl*>(os,decls,"\n");
         os << endl;
