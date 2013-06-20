@@ -26,6 +26,10 @@ namespace smack {
               Expr::lit(0))));
       }
     }
+
+    void SmackRepFlatMem::declareFunctionPointer(string name, Program* program) {
+      program->addDecl(new ConstDecl(name, getPtrType(), true));
+    }
     
     void SmackRepFlatMem::addModifies(Procedure *proc) {
       proc->addMod(MEMORY);

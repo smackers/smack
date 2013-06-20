@@ -29,11 +29,9 @@ namespace smack {
             
             if (func->isDeclaration() || rep->isSmackName(name))
                 continue;
-            
-            program->addDecl(new ConstDecl(name, rep->getPtrType(), true));
-//            program->addDecl(new AxiomDecl(
-//                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
-        
+
+            rep->declareFunctionPointer(name, program);
+
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
             Procedure *proc = new Procedure(name);

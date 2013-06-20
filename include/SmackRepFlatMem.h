@@ -19,6 +19,7 @@ namespace smack {
     public:
         SmackRepFlatMem(llvm::DataLayout *td) : SmackRep(td) {}
         void declareGlobals(llvm::Module &m, Program* program);
+        void declareFunctionPointer(string name, Program* program);
         void addModifies(Procedure *proc);
         string getPtrType();
         string getPrelude();

@@ -26,6 +26,11 @@ namespace smack {
       //             Expr::neq(Expr::id(globals[i]), Expr::id(globals[j])) ));
 
     }
+
+    void SmackRep2dMem::declareFunctionPointer(string name, Program* program) {
+      program->addDecl(new ConstDecl(name, REF_TYPE, true));
+      program->addDecl(new AxiomDecl(Expr::fn(SmackRep::STATIC, Expr::id(name)) ));
+    }
     
     void SmackRep2dMem::addModifies(Procedure *proc) {
       proc->addMod(MEMORY);
