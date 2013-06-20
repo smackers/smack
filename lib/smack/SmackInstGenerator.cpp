@@ -253,7 +253,7 @@ namespace smack {
             return Stmt::assume(
                 Expr::neq(args[0], SmackRep::ZERO) );
 
-       } else if (rep.isSmackRecInt(f)) {
+       } else if (rep->isSmackRecInt(f)) {
            assert (args.size() == 1 && rets.size() == 0);
            return Stmt::call(SmackRep::BOOGIE_REC_INT, rep->off(args[0]));
 //
@@ -267,7 +267,7 @@ namespace smack {
 
         } else if (name == "malloc") {
             assert (args.size() == 1);
-            return Stmt::call(SmackRep::MALLOC, args[0], rets[0]);
+            return Stmt::call(SmackRep::MALLOC, rep->off(args[0]), rets[0]);
 
         } else if (name == "free") {
             assert(args.size() == 1);

@@ -76,6 +76,10 @@ namespace smack {
         static const Expr *UNDEF;
         static const Expr *ZERO;
 
+        static const string BOOGIE_REC_PTR;
+        static const string BOOGIE_REC_OBJ;
+        static const string BOOGIE_REC_INT;
+
         // TODO Make this width a parameter to generate bitvector-based code.
         static const int width;
 

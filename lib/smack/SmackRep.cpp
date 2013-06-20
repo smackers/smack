@@ -55,7 +55,11 @@ namespace smack {
     const Expr *SmackRep::UNDEF = Expr::id(UNDEF_VAL);
     
     const Expr *SmackRep::ZERO = Expr::fn(PTR, NUL, Expr::lit(0));
-    
+
+    const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
+    const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
+    const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
+
     const int SmackRep::width = 0;
 
     // TODO Do the following functions belong here ?
