@@ -122,6 +122,7 @@ namespace smack {
         const Expr * pred(llvm::CmpInst& ci);
 
         virtual void declareGlobals(llvm::Module &m, Program* program) = 0;
+        virtual void addModifies(Procedure *proc) = 0;
     };
 }
 

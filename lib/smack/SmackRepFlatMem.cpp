@@ -31,4 +31,9 @@ namespace smack {
       }
     }
     
+    void SmackRepFlatMem::addModifies(Procedure *proc) {
+      proc->addMod(MEMORY);
+      proc->addMod(ALLOC);
+      proc->addMod(CURRADDR);
+    }
 } // namespace smack

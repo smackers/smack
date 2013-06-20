@@ -58,9 +58,7 @@ namespace smack {
                 proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
         
             // MODIFIES
-            proc->addMod(SmackRep::MEMORY);
-            proc->addMod(SmackRep::ALLOC);
-            proc->addMod(SmackRepFlatMem::CURRADDR);
+            rep->addModifies(proc);
 
             // BODY
             if ( !func->isDeclaration() && !func->empty() 
