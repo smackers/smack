@@ -54,7 +54,7 @@ namespace smack {
     const Expr *SmackRep::NUL = Expr::id(NULL_VAL);
     const Expr *SmackRep::UNDEF = Expr::id(UNDEF_VAL);
     
-    const Expr *SmackRep::ZERO = Expr::lit(0);
+    const Expr *SmackRep::ZERO = Expr::fn(PTR, NUL, Expr::lit(0));
     
     const int SmackRep::width = 0;
 
