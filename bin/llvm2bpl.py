@@ -43,11 +43,11 @@ def llvm2bpl(scriptPathName, infile, debug, memmod):
   # invoke SMACK LLVM module
   if debug:
     p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-      '-die', '-lowerswitch', '-bpl_print', '-mem-mod='+memmod, '-debug', '-o=tmp.bc'],
+      '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug', '-o=tmp.bc'],
       stdin=infile, stderr=subprocess.PIPE)
   else:
     p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-      '-die', '-lowerswitch', '-bpl_print', '-mem-mod='+memmod, '-debug-only=bpl', '-o=tmp.bc'],
+      '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug-only=bpl', '-o=tmp.bc'],
       stdin=infile, stderr=subprocess.PIPE)
   output = p.communicate()[1]
   bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')

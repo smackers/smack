@@ -33,6 +33,8 @@ if __name__ == '__main__':
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
                       help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
+  parser.add_argument('--loop-unroll', metavar='N', dest='loopUnroll', default='20', type=int,
+                      help='unroll loops in Boogie N number of times')
   args = parser.parse_args()
 
   debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod)
@@ -50,7 +52,7 @@ if __name__ == '__main__':
   args.outfile.close()
 
   # invoke Boogie
-  p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:1200', '/loopUnroll:20'], stdout=subprocess.PIPE)
+  p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:1200', '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
   boogieOutput = p.communicate()[0]
   print boogieOutput
 
