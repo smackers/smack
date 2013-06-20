@@ -12,31 +12,10 @@ namespace smack {
     bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
 
         program = new Program();
-        SmackRep rep = SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>());
+        SmackRep* rep = SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>());
 
         DEBUG(errs() << "Analyzing globals...\n");
-
-        vector<string> globals;
-        for (llvm::Module::const_global_iterator
-            x = m.global_begin(), e = m.global_end(); x != e; ++x) {
-
-            string name = rep.id(x);
-            globals.push_back(name);
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
-//            program->addDecl(new AxiomDecl(
-//                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
-        }
-
-        // TODO: size of globals is currently hard-coded to 1024
-        if (!globals.empty()) {
-            for (unsigned i=0; i<globals.size()-1; i++)
-                program->addDecl(new AxiomDecl(
-                    Expr::fn("$slt", Expr::fn(SmackRep::ADD, Expr::id(globals[i]), Expr::lit(1024)),
-                    Expr::id(globals[i+1]))));
-            program->addDecl(new AxiomDecl(
-                Expr::fn("$slt", Expr::fn(SmackRep::ADD, Expr::id(globals[globals.size()-1]), Expr::lit(1024)),
-                Expr::lit(0))));
-        }
+        rep->declareGlobals(m, program);
 
         // AXIOMS about variable uniqueness
         // NOTE: This should be covered by the "unique" annotation on the
@@ -54,9 +33,9 @@ namespace smack {
         for (llvm::Module::iterator func = m.begin(), e = m.end(); 
                 func != e; ++func) {
 
-            string name = rep.id(func);
+            string name = rep->id(func);
             
-            if (func->isDeclaration() || rep.isSmackName(name))
+            if (func->isDeclaration() || rep->isSmackName(name))
                 continue;
             
             program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
@@ -71,12 +50,12 @@ namespace smack {
             // PARAMETERS
             for (llvm::Function::const_arg_iterator
                     arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg) {
-                proc->addParam(rep.id(arg), rep.type(arg->getType()));
+                proc->addParam(rep->id(arg), rep->type(arg->getType()));
             }
         
             // RETURNS
             if (! func->getReturnType()->isVoidTy() )
-                proc->addRet(SmackRep::RET_VAR, rep.type(func->getReturnType()));
+                proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
         
             // MODIFIES
             proc->addMod(SmackRep::MEMORY);
@@ -130,7 +109,7 @@ namespace smack {
             int numArgs = d->second;
 
             stringstream name;
-            name << rep.id(func);
+            name << rep->id(func);
             if (func->isVarArg() && numArgs > 0) {
                 name << "#" << numArgs;
             }
@@ -149,7 +128,7 @@ namespace smack {
                         arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg, ++i) {
                     stringstream param;
                     param << "p" << i;
-                    p->addParam(param.str(), rep.type(arg->getType()));
+                    p->addParam(param.str(), rep->type(arg->getType()));
                 }
             }
  

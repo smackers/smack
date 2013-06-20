@@ -8,7 +8,7 @@ namespace smack {
  
     class SmackRepFactory {
     public:
-        static SmackRep createSmackRep(llvm::DataLayout *td);
+        static SmackRep* createSmackRep(llvm::DataLayout *td);
     };
 }
 

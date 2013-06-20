@@ -16,8 +16,8 @@ namespace smack {
 
     public:
         SmackRepFlatMem(llvm::DataLayout *td) : SmackRep(td) {}
+        void declareGlobals(llvm::Module &m, Program* program);
     };
 }
 
 #endif // SMACKREPFLATMEM_H
-

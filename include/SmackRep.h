@@ -120,8 +120,9 @@ namespace smack {
         const Expr * expr(llvm::Value *v);
         const Expr * op(llvm::BinaryOperator& o);
         const Expr * pred(llvm::CmpInst& ci);
+
+        virtual void declareGlobals(llvm::Module &m, Program* program) = 0;
     };
 }
 
 #endif // SMACKREP_H
-

@@ -15,7 +15,7 @@ namespace smack {
     class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
         
     private:
-        SmackRep& rep;
+        SmackRep* rep;
         Procedure& currProc;
         Block *currBlock;
         map<const llvm::BasicBlock*, Block*>& blockMap;
@@ -31,7 +31,7 @@ namespace smack {
         void nameInstruction(llvm::Instruction& i);
         
     public:
-        SmackInstGenerator(SmackRep& r, Procedure& p,
+        SmackInstGenerator(SmackRep* r, Procedure& p,
             map<const llvm::BasicBlock*, Block*>& bm, set<pair<llvm::Function*,int> >& md) 
             : rep(r), currProc(p), blockMap(bm), missingDecls(md),
             blockNum(0), varNum(0) {}

@@ -2,8 +2,8 @@
 
 namespace smack {
    
-    SmackRep SmackRepFactory::createSmackRep(llvm::DataLayout *td) {
-        return SmackRepFlatMem(td);
+    SmackRep* SmackRepFactory::createSmackRep(llvm::DataLayout *td) {
+        return new SmackRepFlatMem(td);
     }
 
 } // namespace smack
