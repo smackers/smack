@@ -113,8 +113,44 @@ namespace smack {
         void print(ostream &os) const;
     };
     
+    class AttrVal {
+    public:
+        virtual void print(ostream &os) const = 0;
+    };
+    
+    class StrVal : public AttrVal {
+        string val;
+    public:
+        StrVal(string s) : val(s) {}
+        void print(ostream &os) const;
+    };
+    
+    class ExprVal : public AttrVal {
+        const Expr *val;
+    public:
+        ExprVal(const Expr *e) : val(e) {}
+        void print(ostream &os) const;
+    };
+    
+    class Attr {
+    protected:
+        string name;
+        vector<const AttrVal*> vals;
+    public:
+        Attr(string n, vector<const AttrVal*> vs) : name(n), vals(vs) {}
+        void print(ostream &os) const;
+        
+        static const Attr * attr(string s);
+        static const Attr * attr(string s, string v);
+        static const Attr * attr(string s, int v);
+        static const Attr * attr(string s, string v, int i);
+        static const Attr * attr(string s, string v, int i, int j);
+    };
+    
     class Stmt {
     public:
+        static const Stmt * annot(vector<const Attr*> attrs);
+        static const Stmt * annot(const Attr *a);
         static const Stmt * assert_(const Expr *e);
         static const Stmt * assign(const Expr *e, const Expr *f);
         static const Stmt * assume(const Expr *e);
@@ -128,6 +164,7 @@ namespace smack {
         static const Stmt * goto_(vector<string> ts);
         static const Stmt * havoc(string x);
         static const Stmt * return_();
+        static const Stmt * skip();
         virtual void print(ostream &os) const = 0;
     };
     
@@ -148,8 +185,10 @@ namespace smack {
     
     class AssumeStmt : public Stmt {
         const Expr *expr;
+        vector<const Attr*> attrs;
     public:
         AssumeStmt(const Expr *e) : expr(e) {}
+        void add(const Attr *a) { attrs.push_back(a); }
         void print(ostream &os) const;
     };   
     

@@ -1,7 +1,7 @@
 CC = clang
 CCLD = llvm-link
 INC = ../headers
-CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC)
+CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 LDFLAGS =
 
 SOURCES = simple.c simple_fail.c \

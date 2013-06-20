@@ -5,6 +5,7 @@
 #include "SmackInstGenerator.h"
 #include "llvm/Support/InstVisitor.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/DebugInfo.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include <sstream>
@@ -55,10 +56,22 @@ namespace smack {
                 currProc.addDecl(d);
         }
     }
+    
+    void SmackInstGenerator::annotate(llvm::Instruction& i, Block *b) {
+        if (llvm::MDNode *n = i.getMetadata("dbg")) {
+            llvm::DILocation l(n);
+            b->addStmt(Stmt::annot(
+                Attr::attr("sourceloc", 
+                    l.getFilename().str(), 
+                    l.getLineNumber(),
+                    l.getColumnNumber() )));
+        }
+    }
 
     void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
         DEBUG(errs() << "Inst: " << inst << "\n");
         DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
+        annotate(inst,currBlock);
         ORIG(inst);
         nameInstruction(inst);
     }
@@ -100,6 +113,7 @@ namespace smack {
     }
     
     void SmackInstGenerator::generateGotoStmts(
+        llvm::Instruction& inst,
         vector<pair<const Expr*,string> > targets) {
 
         assert (targets.size() > 0);
@@ -109,6 +123,7 @@ namespace smack {
         
             for (unsigned i=0; i<targets.size(); i++) {            
                 Block *b = createBlock();
+                annotate(inst,b);
                 b->addStmt(Stmt::assume(targets[i].first));
                 b->addStmt(Stmt::goto_(targets[i].second));
                 dispatch.push_back(b->getName());
@@ -147,7 +162,7 @@ namespace smack {
                 blockMap[bi.getSuccessor(1)]->getName() ));
         }        
         generatePhiAssigns(bi);
-        generateGotoStmts(targets);
+        generateGotoStmts(bi,targets);
     }
     
     void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
@@ -177,7 +192,7 @@ namespace smack {
             blockMap[si.getDefaultDest()]->getName() ));
 
         generatePhiAssigns(si);
-        generateGotoStmts(targets);
+        generateGotoStmts(si,targets);
     }
 
     void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {
@@ -237,13 +252,7 @@ namespace smack {
         
         string name = rep->id(f);
 
-        // TODO we might instead assume that there are no llvm.dbg symbols
-        // having run the -strip-debug-declare before.
-        if (name.find("llvm.dbg.") == 0) 
-            // a "skip" statement..
-            return Stmt::assume(Expr::lit(true));
-
-        else if (rep->isSmackAssert(f)) {
+        if (rep->isSmackAssert(f)) {
             assert (args.size() == 1 && rets.size() == 0);
             return Stmt::assert_(
                 Expr::neq(args[0], SmackRep::ZERO) );
@@ -297,8 +306,16 @@ namespace smack {
         
         if (ci.isInlineAsm()) {
             WARN("unsoundly ignoring inline asm call.");
-            currBlock->addStmt(Stmt::assume(Expr::lit(true)));
+            currBlock->addStmt(Stmt::skip());
             return;
+
+        } else if (llvm::Function* f = ci.getCalledFunction()) {
+            if (rep->id(f).find("llvm.dbg.") != string::npos) {
+                // a "skip" statement..
+                WARN("ignoring llvm.debug call.");
+                currBlock->addStmt(Stmt::skip());
+                return;
+            }
         }
 
         vector<const Expr*> args;
@@ -372,7 +389,7 @@ namespace smack {
                 // In the worst case, we have no idea what function may have
                 // been called...
                 WARN("unsoundly ignoring indeterminate call.");
-                currBlock->addStmt(Stmt::assume(Expr::lit(true)));
+                currBlock->addStmt(Stmt::skip());
             }
         }
     }
