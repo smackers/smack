@@ -203,7 +203,10 @@ namespace smack {
 
     void SmackInstGenerator::visitTruncInst(llvm::TruncInst& ti) {
         processInstruction(ti);
-    }  
+        WARN("ignoring trunc instruction : " + i2s(ti));
+        currBlock->addStmt(Stmt::assign(
+            rep->expr(&ti), rep->expr(ti.getOperand(0))));
+    }
 
     void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
         processInstruction(ii);
