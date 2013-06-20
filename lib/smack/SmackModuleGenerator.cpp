@@ -28,12 +28,15 @@ namespace smack {
                 func != e; ++func) {
 
             string name = rep->id(func);
-            
-            if (func->isDeclaration() || rep->isSmackName(name))
+
+            if (rep->isSmackName(name) || name == "malloc" || name == "free")
                 continue;
 
             program->addDecls(rep->globalDecl(func));
-            
+
+            if (func->isDeclaration())
+                continue;
+
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
             Procedure *proc = new Procedure(name);
