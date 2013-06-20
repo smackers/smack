@@ -59,6 +59,57 @@ namespace smack {
     const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
     const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
     const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
+    
+    const string SmackRep::PRELUDE =
+        "// SMACK Arithmetic Predicates\n"
+        "\n"
+        "function $add(p1:int, p2:int) returns (int) {p1 + p2}\n"
+        "function $sub(p1:int, p2:int) returns (int) {p1 - p2}\n"
+        "function $mul(p1:int, p2:int) returns (int) {p1 * p2}\n"
+        "function $sdiv(p1:int, p2:int) returns (int);\n"
+        "function $udiv(p1:int, p2:int) returns (int);\n"
+        "function $srem(p1:int, p2:int) returns (int);\n"
+        "function $urem(p1:int, p2:int) returns (int);\n"
+        "function $and(p1:int, p2:int) returns (int);\n"
+        "function $or(p1:int, p2:int) returns (int);\n"
+        "function $xor(p1:int, p2:int) returns (int);\n"
+        "function $lshr(p1:int, p2:int) returns (int);\n"
+        "function $ashr(p1:int, p2:int) returns (int);\n"
+        "function $shl(p1:int, p2:int) returns (int);\n"
+        "function $ult(p1:int, p2:int) returns (bool) {p1 < p2}\n"
+        "function $ugt(p1:int, p2:int) returns (bool) {p1 > p2}\n"
+        "function $ule(p1:int, p2:int) returns (bool) {p1 <= p2}\n"
+        "function $uge(p1:int, p2:int) returns (bool) {p1 >= p2}\n"
+        "function $slt(p1:int, p2:int) returns (bool) {p1 < p2}\n"
+        "function $sgt(p1:int, p2:int) returns (bool) {p1 > p2}\n"
+        "function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}\n"
+        "function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}\n"
+        "function $i2b(i: int) returns (bool);\n"
+        "function $b2i(b: bool) returns (int);\n"
+        "\n"
+        "// SMACK Arithmetic Axioms\n"
+        "\n"
+        "axiom $and(0,0) == 0;\n"
+        "axiom $and(0,1) == 0;\n"
+        "axiom $and(1,0) == 0;\n"
+        "axiom $and(1,1) == 1;\n"
+        "\n"
+        "axiom $or(0,0) == 0;\n"
+        "axiom $or(0,1) == 1;\n"
+        "axiom $or(1,0) == 1;\n"
+        "axiom $or(1,1) == 1;\n"
+        "\n"
+        "axiom $xor(0,0) == 0;\n"
+        "axiom $xor(0,1) == 1;\n"
+        "axiom $xor(1,0) == 1;\n"
+        "axiom $xor(1,1) == 0;\n"
+        "\n"
+        "axiom $b2i(true) == 1;\n"
+        "axiom $b2i(false) == 0;\n"
+        "axiom (forall i:int :: $i2b(i) <==> i != 0);\n"
+        "axiom $i2b(0) == false;\n"
+        "\n"
+        "procedure boogie_si_record_int(i: int);\n";
 
     const int SmackRep::width = 0;
 
@@ -384,6 +435,10 @@ namespace smack {
         }
         
         return e == NULL ? Expr::fn(o, off(l), off(r)) : e;
+    }
+    
+    string SmackRep::getPrelude() {
+        return PRELUDE;
     }
 
 } // namespace smack

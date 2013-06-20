@@ -70,8 +70,6 @@ namespace smack {
         static const string SGT;
         static const string UGT;
 
-        static const string PRELUDE;
-
         static const Expr *NUL;
         static const Expr *UNDEF;
         static const Expr *ZERO;
@@ -84,6 +82,7 @@ namespace smack {
         static const int width;
 
     private:
+        static const string PRELUDE;
         llvm::DataLayout *targetData;
 
     public:
@@ -126,11 +125,10 @@ namespace smack {
         const Expr * op(llvm::BinaryOperator& o);
         const Expr * pred(llvm::CmpInst& ci);
 
-        virtual void declareGlobals(llvm::Module &m, Program* program) = 0;
-        virtual void declareFunctionPointer(string name, Program* program) = 0;
-        virtual void addModifies(Procedure *proc) = 0;
+        virtual vector<const Decl*> globalDecl(const llvm::Value *g) = 0;
+        virtual vector<string> getModifies() { return vector<string>(); }
         virtual string getPtrType() = 0;
-        virtual string getPrelude() = 0;
+        virtual string getPrelude();
     };
 }
 

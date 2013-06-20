@@ -168,6 +168,19 @@ namespace smack {
         return new AssumeStmt(Expr::lit(true));
     }
     
+    const Decl * Decl::axiom(const Expr* e) {
+        return new AxiomDecl(e);
+    }
+    const Decl * Decl::constant(string name, string type) {
+        return Decl::constant(name,type,false);
+    }
+    const Decl * Decl::constant(string name, string type, bool unique) {
+        return new ConstDecl(name,type,unique);
+    }
+    const Decl * Decl::variable(string name, string type) {
+        return new VarDecl(name,type);
+    }
+    
     ostream &operator<<(ostream &os, const Expr& e) {
         e.print(os);
         return os;
@@ -413,7 +426,7 @@ namespace smack {
         }
         if (blocks.size() > 0) {
             os << "{" << endl;
-            print_seq<Decl*>(os,decls,"  ","\n  ","\n");
+            print_seq<const Decl*>(os,decls,"  ","\n  ","\n");
             print_seq<Block*>(os,blocks,"\n");
             os << endl << "}";
         }
@@ -425,7 +438,7 @@ namespace smack {
         os << prelude;
         os << "// SMACK-PRELUDE-END" << endl;
         os << "// BEGIN SMACK-GENERATED CODE" << endl;
-        print_seq<Decl*>(os,decls,"\n");
+        print_seq<const Decl*>(os,decls,"\n");
         os << endl;
         print_seq<Procedure*>(os,procs,"\n");
         os << "// END SMACK-GENERATED CODE" << endl;

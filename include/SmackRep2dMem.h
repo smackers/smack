@@ -18,11 +18,10 @@ namespace smack {
 
     public:
         SmackRep2dMem(llvm::DataLayout *td) : SmackRep(td) {}
-        void declareGlobals(llvm::Module &m, Program* program);
-        void declareFunctionPointer(string name, Program* program);
-        void addModifies(Procedure *proc);
-        string getPtrType();
-        string getPrelude();
+        virtual vector<const Decl*> globalDecl(const llvm::Value *g);
+        virtual vector<string> getModifies();
+        virtual string getPtrType();
+        virtual string getPrelude();
     };
 }
 

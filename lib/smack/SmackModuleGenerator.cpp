@@ -15,8 +15,10 @@ namespace smack {
         program = new Program(rep->getPrelude());
 
         DEBUG(errs() << "Analyzing globals...\n");
-        rep->declareGlobals(m, program);
-
+        
+        for (llvm::Module::const_global_iterator
+            x = m.global_begin(), e = m.global_end(); x != e; ++x)
+            program->addDecls(rep->globalDecl(x));
 
         DEBUG(errs() << "Analyzing functions...\n");
         
@@ -30,8 +32,8 @@ namespace smack {
             if (func->isDeclaration() || rep->isSmackName(name))
                 continue;
 
-            rep->declareFunctionPointer(name, program);
-
+            program->addDecls(rep->globalDecl(func));
+            
             DEBUG(errs() << "Analyzing function: " << name << "\n");
 
             Procedure *proc = new Procedure(name);
@@ -48,7 +50,7 @@ namespace smack {
                 proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
         
             // MODIFIES
-            rep->addModifies(proc);
+            proc->addMods(rep->getModifies());
 
             // BODY
             if ( !func->isDeclaration() && !func->empty() 

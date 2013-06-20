@@ -238,6 +238,10 @@ namespace smack {
         virtual void print(ostream &os) const = 0;
         string getName() const { return name; }
         string getType() const { return type; }
+        static const Decl * axiom(const Expr* e);
+        static const Decl * constant(string name, string type);
+        static const Decl * constant(string name, string type, bool unique);
+        static const Decl * variable(string name, string type);
     };
 
     class AxiomDecl : public Decl {
@@ -286,7 +290,7 @@ namespace smack {
         vector< pair<string,string> > params;
         vector< pair<string,string> > rets;
         vector<string> mods;
-        vector<Decl*> decls;
+        vector<const Decl*> decls;
         vector<Block*> blocks;
     public:
         Procedure(string n) : name(n) {}
@@ -294,8 +298,16 @@ namespace smack {
         void addParam(string x, string t) { params.push_back(make_pair(x,t)); }
         void addRet(string x, string t) { rets.push_back(make_pair(x,t)); }
         void addMod(string m) { mods.push_back(m); }
-        void addDecl(Decl *d) { decls.push_back(d); }
-        bool hasDecl(Decl *d) {
+        void addMods(vector<string> ms) { 
+            for (unsigned i=0; i<ms.size(); i++) 
+                addMod(ms[i]);
+        }
+        void addDecl(const Decl *d) { decls.push_back(d); }
+        void addDecls(vector<const Decl*> ds) { 
+            for (unsigned i=0; i<ds.size(); i++) 
+                addDecl(ds[i]);
+        }
+        bool hasDecl(const Decl *d) {
             for (unsigned i=0; i<decls.size(); i++)
                 if (d->getName() == decls[i]->getName() 
                     && d->getType() == decls[i]->getType())
@@ -307,12 +319,16 @@ namespace smack {
         
     class Program {
         string prelude;
-        vector<Decl*> decls;
+        vector<const Decl*> decls;
         vector<Procedure*> procs;
     public:
         Program(string p) : prelude(p) { }
         void print(ostream &os) const;
-        void addDecl(Decl *d) { decls.push_back(d); }
+        void addDecl(const Decl *d) { decls.push_back(d); }
+        void addDecls(vector<const Decl*> ds) { 
+            for (unsigned i=0; i<ds.size(); i++) 
+                addDecl(ds[i]);
+        }
         void addProc(Procedure *p) { procs.push_back(p); }
     };    
 }
