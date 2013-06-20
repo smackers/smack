@@ -38,7 +38,7 @@ namespace smack {
             if (func->isDeclaration() || rep->isSmackName(name))
                 continue;
             
-            program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
+            program->addDecl(new ConstDecl(name, rep->getPtrType(), true));
 //            program->addDecl(new AxiomDecl(
 //                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
         
@@ -118,7 +118,7 @@ namespace smack {
                 for (int i=0; i<numArgs; i++) {
                     stringstream param;
                     param << "p" << i;
-                    p->addParam(param.str(), SmackRep::PTR_TYPE);
+                    p->addParam(param.str(), rep->getPtrType());
                 }
             } else {
                 int i = 0;
@@ -131,7 +131,7 @@ namespace smack {
             }
  
             if (! func->getReturnType()->isVoidTy() )
-                p->addRet(SmackRep::RET_VAR, SmackRep::PTR_TYPE);
+                p->addRet(SmackRep::RET_VAR, rep->getPtrType());
             program->addProc(p);
         }
         

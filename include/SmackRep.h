@@ -28,7 +28,6 @@ namespace smack {
         static const string BOOL_VAR;
         static const string PTR_VAR;
         static const string BOOL_TYPE;
-        static const string PTR_TYPE;
         static const string NULL_VAL;
         static const string UNDEF_VAL;
 
@@ -70,6 +69,8 @@ namespace smack {
         static const string ULT;
         static const string SGT;
         static const string UGT;
+
+        static const string PRELUDE;
 
         static const Expr *NUL;
         static const Expr *UNDEF;
@@ -123,6 +124,7 @@ namespace smack {
 
         virtual void declareGlobals(llvm::Module &m, Program* program) = 0;
         virtual void addModifies(Procedure *proc) = 0;
+        virtual string getPtrType() = 0;
     };
 }
 

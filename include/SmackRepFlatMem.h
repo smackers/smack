@@ -13,11 +13,13 @@ namespace smack {
     class SmackRepFlatMem : public SmackRep {
     public:
         static const string CURRADDR;
+        static const string PTR_TYPE;
 
     public:
         SmackRepFlatMem(llvm::DataLayout *td) : SmackRep(td) {}
         void declareGlobals(llvm::Module &m, Program* program);
         void addModifies(Procedure *proc);
+        string getPtrType();
     };
 }
 

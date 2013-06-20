@@ -9,7 +9,6 @@ namespace smack {
     const string SmackRep::BOOL_VAR = "$b";
     const string SmackRep::PTR_VAR = "$p";
     const string SmackRep::BOOL_TYPE = "bool";
-    const string SmackRep::PTR_TYPE = "int";
     const string SmackRep::NULL_VAL = "$NULL";
     const string SmackRep::UNDEF_VAL = "$UNDEF";
 
@@ -115,7 +114,7 @@ namespace smack {
     }    
     
     string SmackRep::type(llvm::Type *t) {
-        return isBool(t) ? BOOL_TYPE : PTR_TYPE;
+        return isBool(t) ? BOOL_TYPE : getPtrType();
     }
     
     string SmackRep::type(llvm::Value *v) {

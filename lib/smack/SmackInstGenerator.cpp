@@ -42,7 +42,7 @@ namespace smack {
         stringstream s;
         s << "$x" << varNum++;
         string name = s.str();
-        currProc.addDecl(new VarDecl(name, SmackRep::PTR_TYPE));
+        currProc.addDecl(new VarDecl(name, rep->getPtrType()));
         return name;
     }
     

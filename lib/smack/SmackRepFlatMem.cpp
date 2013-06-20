@@ -3,7 +3,7 @@
 namespace smack {
 
     const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
-//    const string SmackRepFlatMem::PTR_TYPE = "int";
+    const string SmackRepFlatMem::PTR_TYPE = "int";
 
 //    const Expr *SmackRepFlatMem::ZERO = Expr::lit(0);
     
@@ -14,7 +14,7 @@ namespace smack {
 
           string name = id(x);
           globals.push_back(name);
-          program->addDecl(new ConstDecl(name, SmackRep::PTR_TYPE, true));
+          program->addDecl(new ConstDecl(name, getPtrType(), true));
 //            program->addDecl(new AxiomDecl(
 //                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
       }
@@ -36,4 +36,9 @@ namespace smack {
       proc->addMod(ALLOC);
       proc->addMod(CURRADDR);
     }
+
+    string SmackRepFlatMem::getPtrType() {
+      return PTR_TYPE;
+    }
+
 } // namespace smack
