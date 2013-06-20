@@ -5,8 +5,6 @@ namespace smack {
     const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
     const string SmackRepFlatMem::PTR_TYPE = "int";
 
-//    const Expr *SmackRepFlatMem::ZERO = Expr::lit(0);
-    
     void SmackRepFlatMem::declareGlobals(llvm::Module &m, Program* program) {
       vector<string> globals;
       for (llvm::Module::const_global_iterator
@@ -15,8 +13,6 @@ namespace smack {
           string name = id(x);
           globals.push_back(name);
           program->addDecl(new ConstDecl(name, getPtrType(), true));
-//            program->addDecl(new AxiomDecl(
-//                Expr::fn(SmackRep::STATIC, rep.obj(Expr::id(name))) ));
       }
 
       // TODO: size of globals is currently hard-coded to 1024

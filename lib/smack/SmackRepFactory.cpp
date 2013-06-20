@@ -3,7 +3,7 @@
 namespace smack {
    
     SmackRep* SmackRepFactory::createSmackRep(llvm::DataLayout *td) {
-        return new SmackRepFlatMem(td);
+        return new SmackRep2dMem(td);
     }
 
 } // namespace smack

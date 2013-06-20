@@ -17,14 +17,6 @@ namespace smack {
         DEBUG(errs() << "Analyzing globals...\n");
         rep->declareGlobals(m, program);
 
-        // AXIOMS about variable uniqueness
-        // NOTE: This should be covered by the "unique" annotation on the
-        // declarations.  What is not covered is that their REFERENCES should
-        // be unique...        
-        // for (unsigned i=0; i<globals.size(); i++)
-        //     for (unsigned j=i+1; j<globals.size(); j++)
-        //         program->addDecl(new AxiomDecl(
-        //             Expr::neq(Expr::id(globals[i]), Expr::id(globals[j])) ));
 
         DEBUG(errs() << "Analyzing functions...\n");
         
