@@ -21,13 +21,6 @@ using llvm::errs;
 
 namespace smack {
 
-    // Enable memory model to be specified on the command line
-    static llvm::cl::opt<MemMod> MemoryModel("mem-mod", llvm::cl::desc("Set the memory model:"),
-        llvm::cl::values(
-            clEnumVal(flat, "flat memory model"),
-            clEnumVal(twodim, "two dimensional memory model"),
-            clEnumValEnd));
-
     class SmackModuleGenerator : public llvm::ModulePass {
     private:
       Program *program;
