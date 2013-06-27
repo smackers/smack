@@ -28,7 +28,7 @@ for test in tests:
     
   for mem in ['flat', 'twodim']:
     
-    print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
+    print "{0:>25} {1:>8}:".format(test[0], "(" + mem + ")"),
 
     # invoke SMACK
     p = subprocess.Popen(['smack-check.py', test[0] + '.o', '--mem-mod=' + mem, '-o', test[0] +'.bpl'], stdout=subprocess.PIPE)
