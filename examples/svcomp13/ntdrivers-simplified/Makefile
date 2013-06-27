@@ -1,7 +1,7 @@
 CC = clang
 CCLD = llvm-link
 INC = ../../../headers
-CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC)
+CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 LDFLAGS =
 
 SOURCES = cdaudio_simpl1_safe.cil.c \

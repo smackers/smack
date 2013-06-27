@@ -23,6 +23,10 @@ def generateSourceErrorTrace(boogieOutput, bpl):
   FILENAME = '[\w#$~%.\/-]+'
   LABEL = '[\w$]+'
 
+  if not re.search('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bpl):
+#    print 'No debug info in bpl file.'
+    return None
+
   sourceTrace = ''
   for traceLine in boogieOutput.splitlines(True):
     traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
@@ -101,5 +105,9 @@ if __name__ == '__main__':
   # invoke Boogie
   p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
   boogieOutput = p.communicate()[0]
-  print generateSourceErrorTrace(boogieOutput, bpl)
+  sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
+  if sourceTrace:
+    print sourceTrace
+  else:
+    print boogieOutput
 
