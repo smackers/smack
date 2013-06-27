@@ -19,6 +19,51 @@ def addInline(match):
   return procDef
 
 
+def generateSourceErrorTrace(boogieOutput, bpl):
+  FILENAME = '[\w#$~%.\/-]+'
+  LABEL = '[\w$]+'
+
+  sourceTrace = ''
+  for traceLine in boogieOutput.splitlines(True):
+    traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
+    errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (.*)', traceLine)
+    if traceMatch:
+      spaces = str(traceMatch.group(1))
+      filename = str(traceMatch.group(2))
+      lineno = int(traceMatch.group(3))
+      colno = int(traceMatch.group(4))
+      label = str(traceMatch.group(5))
+
+      for bplLine in bpl.splitlines(True)[lineno:lineno+10]:
+        m = re.match('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bplLine)
+        if m:
+          filename = str(m.group(1))
+          lineno = int(m.group(2))
+          colno = int(m.group(3))
+ 
+          sourceTrace += spaces + filename + '(' + str(lineno) + ',' + str(colno) + ')\n'
+          break
+    elif errorMatch:
+      filename = str(errorMatch.group(1))
+      lineno = int(errorMatch.group(2))
+      colno = int(errorMatch.group(3))
+      message = str(errorMatch.group(4))
+ 
+      for bplLine in bpl.splitlines(True)[lineno-2:lineno+8]:
+        m = re.match('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bplLine)
+        if m:
+          filename = str(m.group(1))
+          lineno = int(m.group(2))
+          colno = int(m.group(3))
+ 
+          sourceTrace += filename + '(' + str(lineno) + ',' + str(colno) + '): ' + message + '\n'
+          break
+
+    else:
+      sourceTrace += traceLine
+  return sourceTrace
+ 
+
 if __name__ == '__main__':
 
   # parse command line arguments
@@ -56,5 +101,5 @@ if __name__ == '__main__':
   # invoke Boogie
   p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
   boogieOutput = p.communicate()[0]
-  print boogieOutput
+  print generateSourceErrorTrace(boogieOutput, bpl)
 
