@@ -9,6 +9,7 @@ llvm: CC = clang
 llvm: CCLD = llvm-link
 llvm: INC = ../../headers
 llvm: CFLAGS = -c -Wall -emit-llvm -O0 -I$(INC)
+llvm: CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 llvm: LDFLAGS =
 
 llvm_debug: CC = clang
