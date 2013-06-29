@@ -22,6 +22,7 @@ SOURCES = simple.c simple_fail.c \
           extern_func.c \
           return_label.c \
           struct_cast.c struct_cast_fail.c \
+          struct_cast1.c struct_cast1_fail.c \
           nested_struct.c nested_struct_fail.c \
           func_ptr.c func_ptr_fail.c \
           func_ptr1.c func_ptr1_fail.c \

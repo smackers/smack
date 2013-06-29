@@ -36,6 +36,8 @@ tests = [
   ('return_label',       r'1 verified, 0 errors'),
   ('struct_cast',        r'1 verified, 0 errors'),
   ('struct_cast_fail',   r'0 verified, 1 error' ),
+  ('struct_cast1',       r'1 verified, 0 errors'),
+  ('struct_cast1_fail',  r'0 verified, 1 error' ),
   ('nested_struct',      r'1 verified, 0 errors'),
   ('nested_struct_fail', r'0 verified, 1 error' ),
   ('func_ptr',           r'1 verified, 0 errors'),
