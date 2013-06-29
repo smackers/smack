@@ -31,6 +31,7 @@ SOURCES = simple.c simple_fail.c \
           array_free.c array_free_fail.c \
           array_free1.c array_free1_fail.c \
           array_free2.c array_free2_fail.c \
+          ase_example.c ase_example_fail.c \
           two_arrays.c \
           two_arrays1.c \
           two_arrays2.c \

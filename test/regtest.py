@@ -53,6 +53,8 @@ tests = [
   ('array_free1_fail',   r'0 verified, 4 errors'),
   ('array_free2',        r'1 verified, 0 errors'),
   ('array_free2_fail',   r'0 verified, 5 errors'),
+  ('ase_example',        r'1 verified, 0 errors'),
+  ('ase_example_fail',   r'0 verified, 1 error' ),
   ('two_arrays',         r'1 verified, 0 errors'),
   ('two_arrays1',        r'1 verified, 0 errors'),
   ('two_arrays2',        r'1 verified, 0 errors'),

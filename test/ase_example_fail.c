@@ -30,7 +30,7 @@ void init(int size) {
   }
 }
 
-int main() {
+int main(void) {
   init(10);
 }
 
