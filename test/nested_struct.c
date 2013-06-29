@@ -16,7 +16,7 @@ typedef struct {
   char status;
 } element;
 
-int main() {
+int main(void) {
   element elem;
 
   elem.count = 1;
