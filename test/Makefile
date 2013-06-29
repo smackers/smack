@@ -21,6 +21,7 @@ SOURCES = simple.c simple_fail.c \
           printfs.c \
           extern_func.c \
           return_label.c \
+          struct_cast.c struct_cast_fail.c \
           func_ptr.c func_ptr_fail.c \
           func_ptr1.c func_ptr1_fail.c \
           array.c \

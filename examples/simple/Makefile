@@ -40,7 +40,6 @@ SOURCES = nested_struct.c nested_struct_fail.c \
           nested_struct1.c nested_struct1_fail.c \
           nested_struct2.c nested_struct2_fail.c \
           func_ptr2.c \
-          caduceus_example.c \
           vmcai_struct.c \
           vmcai_bytes.c
 
