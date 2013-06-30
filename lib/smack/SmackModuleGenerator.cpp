@@ -36,7 +36,7 @@ namespace smack {
 
             string name = rep->id(func);
 
-            if (rep->isSmackName(name) || name == "malloc" || name == "free")
+            if (rep->isSmackName(name) || rep->isProcIgnore(name))
                 continue;
 
             program->addDecls(rep->globalDecl(func));

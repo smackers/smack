@@ -522,4 +522,14 @@ namespace smack {
         )));
     }
 
+    void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst &mci) {
+        processInstruction(mci);
+
+        vector<const Expr*> args;
+        for (unsigned i=0; i<mci.getNumOperands()-1; i++)
+            args.push_back(rep->expr(mci.getOperand(i)));
+        assert(args.size() == 5);
+        currBlock->addStmt(Stmt::call(SmackRep::MEMCPY, args));
+    }
 } // namespace smack
+

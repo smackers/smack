@@ -133,6 +133,10 @@ namespace smack {
         return call(p, ps, vector<string>(1,r));
     }
     
+    const Stmt * Stmt::call(string p, vector<const Expr*> ps) {
+        return call(p, ps, vector<string>());
+    }
+
     const Stmt * Stmt::call(string p, vector<const Expr*> ps, vector<string> rs) {
         return new CallStmt(p, ps, rs);
     }

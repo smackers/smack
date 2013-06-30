@@ -15,6 +15,7 @@ namespace smack {
     const string SmackRep::ALLOCA = "$alloca";
     const string SmackRep::MALLOC = "$malloc";
     const string SmackRep::FREE = "$free";
+    const string SmackRep::MEMCPY = "$memcpy";
 
     const string SmackRep::PTR = "$ptr";
     const string SmackRep::STATIC = "$static";
@@ -126,6 +127,7 @@ namespace smack {
       "|implementation|where|returns|assume|assert|havoc|call|return|while"
       "|break|goto|if|else|div)$" );
     Regex SMACK_NAME(".*__SMACK_.*");
+    Regex PROC_IGNORE("malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*");
     Regex SMACK_ASSERT(".*__SMACK_assert.*");
     Regex SMACK_ASSUME(".*__SMACK_assume.*");
     Regex SMACK_REC_OBJ(".*__SMACK_record_obj.*");
@@ -139,7 +141,11 @@ namespace smack {
     bool SmackRep::isSmackName(string n) {
         return SMACK_NAME.match(n);
     }
-    
+
+    bool SmackRep::isProcIgnore(string n) {
+        return PROC_IGNORE.match(n);
+    }
+
     bool SmackRep::isSmackAssert(llvm::Function *f) {
         return SMACK_ASSERT.match(id(f));
     }

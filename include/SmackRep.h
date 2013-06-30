@@ -34,6 +34,7 @@ namespace smack {
         static const string ALLOCA;
         static const string MALLOC;
         static const string FREE;
+        static const string MEMCPY;
 
         static const string PTR;
         static const string STATIC;
@@ -89,6 +90,7 @@ namespace smack {
         SmackRep(llvm::DataLayout *td) : targetData(td) {}
 
         bool isSmackName(string n);
+        bool isProcIgnore(string n);
         bool isSmackAssert(llvm::Function *f);
         bool isSmackAssume(llvm::Function *f);
         bool isSmackRecObj(llvm::Function *f);

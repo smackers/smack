@@ -157,6 +157,7 @@ namespace smack {
         static const Stmt * call(string p, const Expr *x);
         static const Stmt * call(string p, const Expr *x, string r);
         static const Stmt * call(string p, const Expr *x, const Expr *y, string r);
+        static const Stmt * call(string p, vector<const Expr*> ps);
         static const Stmt * call(string p, vector<const Expr*> ps, vector<string> rs);
         static const Stmt * comment(string c);
         static const Stmt * goto_(string t);

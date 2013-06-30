@@ -65,6 +65,7 @@ namespace smack {
         void visitIntToPtrInst(llvm::IntToPtrInst& i);
         void visitSelectInst(llvm::SelectInst& i);
         void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i);
+        void visitMemCpyInst(llvm::MemCpyInst &i);
     };
 }
 
