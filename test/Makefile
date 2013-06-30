@@ -24,6 +24,8 @@ SOURCES = simple.c simple_fail.c \
           struct_cast.c struct_cast_fail.c \
           struct_cast1.c struct_cast1_fail.c \
           nested_struct.c nested_struct_fail.c \
+          nested_struct1.c nested_struct1_fail.c \
+          nested_struct2.c nested_struct2_fail.c \
           func_ptr.c func_ptr_fail.c \
           func_ptr1.c func_ptr1_fail.c \
           array.c \
