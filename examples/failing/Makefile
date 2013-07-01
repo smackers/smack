@@ -4,7 +4,7 @@ INC = ../../headers
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 LDFLAGS =
 
-SOURCES = simple.c
+SOURCES = globals_func_ptr.c
 
 OBJECTS = $(SOURCES:.c=.o)
 FILES = $(basename $(SOURCES))
