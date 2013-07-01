@@ -60,6 +60,7 @@ if __name__ == '__main__':
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
+  parser.add_argument('-v', '--version', action='version', version="SMACK version 1.3")
   parser.add_argument('infile', metavar='<file>',
                       type=lambda x: is_valid_file(parser,x),
                       help='input LLVM file')
