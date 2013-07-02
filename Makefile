@@ -16,3 +16,10 @@ EXTRA_DIST = include
 #
 include $(LEVEL)/Makefile.common
 
+#
+# Standardized source code formatting.
+# -- probably should be run systematically with build.
+#
+format:
+	astyle --options=astyle.conf $$(find lib -name "*.cpp")
+	astyle --options=astyle.conf $$(find include -name "*.h")
