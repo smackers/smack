@@ -1,3 +1,4 @@
+// simple.c
 #include "smack.h"
 
 int incr(int x) {
