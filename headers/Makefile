@@ -1,13 +1,10 @@
-CC = gcc
-CFLAGS = -c -Wall
-
-llvm: CC = clang
-llvm: CFLAGS = -c -Wall -emit-llvm -O0
+CC = clang
+CFLAGS = -c -Wall -emit-llvm -O0 -g
 
 SOURCES = smack.c
 OBJECTS = $(SOURCES:.c=.o)
 
-all llvm: $(SOURCES) $(OBJECTS)
+all: $(SOURCES) $(OBJECTS)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
