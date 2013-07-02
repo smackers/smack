@@ -1,8 +1,6 @@
 CC = clang
-CCLD = llvm-link
 INC = ../../../headers
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
-LDFLAGS =
 
 SOURCES = cdaudio_safe.i.cil.c \
           cdaudio_unsafe.i.cil.c \
@@ -15,20 +13,13 @@ SOURCES = cdaudio_safe.i.cil.c \
           parport_safe.i.cil.c \
           parport_unsafe.i.cil.c
 
-OBJECTS = $(SOURCES:.c=.o)
-FILES = $(basename $(SOURCES))
+BITCODE = $(SOURCES:.c=.bc)
 
-all: $(SOURCES) $(FILES)
+all: $(BITCODE)
 
-$(FILES): $(OBJECTS) $(LIBS)
-	$(CCLD) $(LDFLAGS) $@.o $(LIBS) -o $@
-
-.c.o:
+%.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.o *.bc *.bpl
-	@for file in $(FILES); do \
-		(rm -f $$file;) \
-	done
+	rm -f *.bc *.bpl
 

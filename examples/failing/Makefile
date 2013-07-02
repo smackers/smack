@@ -1,25 +1,16 @@
 CC = clang
-CCLD = llvm-link
 INC = ../../headers
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
-LDFLAGS =
 
 SOURCES = globals_func_ptr.c
 
-OBJECTS = $(SOURCES:.c=.o)
-FILES = $(basename $(SOURCES))
+BITCODE = $(SOURCES:.c=.bc)
 
-all: $(SOURCES) $(FILES)
+all: $(BITCODE)
 
-$(FILES): $(OBJECTS) $(LIBS)
-	$(CCLD) $(LDFLAGS) $@.o $(LIBS) -o $@
-
-.c.o:
+%.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.o *.bc *.bpl
-	@for file in $(FILES); do \
-		(rm -f $$file;) \
-	done
+	rm -f *.bc *.bpl
 

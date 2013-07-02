@@ -34,7 +34,7 @@ for test in tests:
     print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
 
     # invoke SMACK
-    p = subprocess.Popen(['smack-check.py', test[0] + '.o', '--mem-mod=' + mem, '-o', test[0] +'.bpl'], stdout=subprocess.PIPE)
+    p = subprocess.Popen(['smack-check.py', test[0] + '.bc', '--mem-mod=' + mem, '-o', test[0] +'.bpl'], stdout=subprocess.PIPE)
     smackOutput = p.communicate()[0]
 
     # check SMACK output
