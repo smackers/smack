@@ -126,6 +126,7 @@ Currently, SMACK comes with the following tools in the bin directory:
 * smack-check is tool for statically checking properties of programs written in
   C/C++. For a given input program, the tool checks for violations of
   user-provided assertions.
+
 Type `llvm2bpl.py -h` or `smack-check.py -h` for a full list of supported
 command line options.
 
@@ -159,7 +160,7 @@ First, compile the example into an LLVM bitcode file using clang:
 clang -c -Wall -emit-llvm -O0 -g -I../../headers simple.c -o simple.bc
 ```
 We use the -g flag to compile with debug information enabled, which the SMACK
-checker leverages to generate a nicer output.
+checker leverages to generate more informative error traces.
 Then, run the SMACK checker on the generated bitcode file:
 ```
 smack-check.py simple -o simple.bpl
