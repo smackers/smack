@@ -117,7 +117,7 @@ To make sure SMACK has been installed properly, run its regression tests.
 
 First, go to the smack/headers directory and compile smack.c (used for
 defining SMACK-specific functions) using the provided Makefile by running
-`make llvm`.
+`make`.
 
 Then, go to smack/test directory and compile the regression tests by running
 `make`. You should get a number of LLVM bitcode files, one per test.
@@ -141,10 +141,10 @@ directory.
 
 First, go to the smack/headers directory and compile smack.c (used for
 defining SMACK-specific functions) using the provided Makefile by running
-`make llvm`.
+`make`.
 
 Then, go to smack/examples/simple directory and compile the examples by running
-`make llvm`. You should get a number of LLVM's bitcode files, one per example.
+`make`. You should get a number of LLVM's bitcode files, one per example.
 
 Run the SMACK Checker on examples, for instance:
 ```
