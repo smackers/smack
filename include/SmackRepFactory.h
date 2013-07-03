@@ -6,15 +6,15 @@
 #include "llvm/DataLayout.h"
 
 namespace smack {
- 
-    enum MemMod {
-        flat, twodim
-    };
 
-    class SmackRepFactory {
-    public:
-        static SmackRep* createSmackRep(llvm::DataLayout *td, MemMod memoryModel);
-    };
+enum MemMod {
+  flat, twodim
+};
+
+class SmackRepFactory {
+public:
+  static SmackRep* createSmackRep(llvm::DataLayout* td, MemMod memoryModel);
+};
 }
 
 #endif // SMACKREPFACTORY_H

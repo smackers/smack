@@ -9,18 +9,18 @@
 
 namespace smack {
 
-    class BplPrinter : public llvm::ModulePass {
+class BplPrinter : public llvm::ModulePass {
 
-    public:
-      static char ID; // Pass identification, replacement for typeid
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-      BplPrinter() : llvm::ModulePass(ID) {}
-      virtual bool runOnModule(llvm::Module &m);
-      virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-        AU.setPreservesAll();
-        AU.addRequired<SmackModuleGenerator>();
-      }
-    };
+  BplPrinter() : llvm::ModulePass(ID) {}
+  virtual bool runOnModule(llvm::Module& m);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
+    AU.setPreservesAll();
+    AU.addRequired<SmackModuleGenerator>();
+  }
+};
 }
 
 #endif  /*BPLPRINTER_H*/

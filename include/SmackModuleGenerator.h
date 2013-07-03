@@ -21,23 +21,25 @@ using llvm::errs;
 
 namespace smack {
 
-    class SmackModuleGenerator : public llvm::ModulePass {
-    private:
-      Program *program;
+class SmackModuleGenerator : public llvm::ModulePass {
+private:
+  Program* program;
 
-    public:
-      static char ID; // Pass identification, replacement for typeid
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-      SmackModuleGenerator() : ModulePass(ID) {}
-      virtual bool runOnModule(llvm::Module &m);
+  SmackModuleGenerator() : ModulePass(ID) {}
+  virtual bool runOnModule(llvm::Module& m);
 
-      virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-        AU.setPreservesAll();
-        AU.addRequired<llvm::DataLayout>();
-      }
-  
-      Program * getProgram() const { return program; }
-    };
+  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
+    AU.setPreservesAll();
+    AU.addRequired<llvm::DataLayout>();
+  }
+
+  Program* getProgram() const {
+    return program;
+  }
+};
 }
 
 #endif  /*SMACKMODULEGENERATOR_H*/
