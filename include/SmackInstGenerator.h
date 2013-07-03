@@ -73,4 +73,5 @@ public:
 };
 }
 
-#endif  /*SMACKINSTVISITOR_H*/
+#endif // SMACKINSTVISITOR_H
+

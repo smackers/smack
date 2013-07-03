@@ -1,5 +1,10 @@
-#ifndef BOOGIE_AST_H_
-#define BOOGIE_AST_H_
+//
+// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+//                    Michael Emmi (michael.emmi@gmail.com)
+// This file is distributed under the MIT License. See LICENSE for details.
+//
+#ifndef BOOGIEAST_H
+#define BOOGIEAST_H
 
 #include <string>
 #include <vector>
@@ -359,4 +364,5 @@ public:
 };
 }
 
-#endif // BOOGIE_AST_H_
+#endif // BOOGIEAST_H
+

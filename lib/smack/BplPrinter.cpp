@@ -3,7 +3,6 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "BplPrinter.h"
-
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
@@ -25,3 +24,4 @@ bool BplPrinter::runOnModule(llvm::Module& m) {
   return false;
 }
 }
+

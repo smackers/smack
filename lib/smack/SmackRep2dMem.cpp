@@ -1,3 +1,8 @@
+//
+// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+//                    Michael Emmi (michael.emmi@gmail.com)
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #include "SmackRep2dMem.h"
 
 namespace smack {
@@ -107,3 +112,4 @@ const string SmackRep2dMem::PRELUDE =
   "ensures $obj(p) == $NULL;\n";
 
 } // namespace smack
+

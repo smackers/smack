@@ -141,3 +141,4 @@ bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
 }
 
 } // namespace smack
+

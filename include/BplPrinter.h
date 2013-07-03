@@ -23,4 +23,5 @@ public:
 };
 }
 
-#endif  /*BPLPRINTER_H*/
+#endif // BPLPRINTER_H
+

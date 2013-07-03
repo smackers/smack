@@ -3,11 +3,11 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackInstGenerator.h"
-#include "llvm/Support/InstVisitor.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/DebugInfo.h"
-#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InstVisitor.h"
 #include <sstream>
 
 namespace smack {

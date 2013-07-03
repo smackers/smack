@@ -9,10 +9,10 @@
 #include "SmackInstGenerator.h"
 #include "SmackRepFactory.h"
 #include "llvm/DataLayout.h"
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/GraphWriter.h"
 #include <sstream>
 #include <stack>
 
@@ -42,5 +42,5 @@ public:
 };
 }
 
-#endif  /*SMACKMODULEGENERATOR_H*/
+#endif // SMACKMODULEGENERATOR_H
 

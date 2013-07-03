@@ -1,3 +1,8 @@
+//
+// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+//                    Michael Emmi (michael.emmi@gmail.com)
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
@@ -5,10 +10,10 @@
 #include "llvm/DataLayout.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InstVisitor.h"
+#include "llvm/Support/Regex.h"
 #include <sstream>
 
 namespace smack {
@@ -137,3 +142,4 @@ public:
 }
 
 #endif // SMACKREP_H
+

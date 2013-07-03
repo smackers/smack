@@ -1,3 +1,8 @@
+//
+// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+//                    Michael Emmi (michael.emmi@gmail.com)
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #include "BoogieAst.h"
 #include "llvm/Constants.h"
 #include <sstream>
@@ -509,3 +514,4 @@ void Program::print(ostream& os) const {
   os << "// END SMACK-GENERATED CODE" << endl;
 }
 }
+
