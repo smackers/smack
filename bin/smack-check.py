@@ -8,6 +8,8 @@ import argparse
 import platform
 from llvm2bpl import *
 
+VERSION = '1.2'
+
 
 def addInline(match):
   procName = match.group(1)
@@ -27,11 +29,16 @@ def generateSourceErrorTrace(boogieOutput, bpl):
 #    print 'No debug info in bpl file.'
     return None
 
-  sourceTrace = ''
+  sourceTrace = '\nSMACK checker version ' + VERSION + '\n\n'
   for traceLine in boogieOutput.splitlines(True):
+    resultMatch = re.match('Boogie .* (\d+) verified, (\d+) error.*', traceLine)
     traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
     errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (.*)', traceLine)
-    if traceMatch:
+    if resultMatch:
+      verified = int(resultMatch.group(1))
+      errors = int(resultMatch.group(2))
+      sourceTrace += '\nFinished with ' + str(verified) + ' checked, ' + str(errors) + ' errors\n'
+    elif traceMatch:
       spaces = str(traceMatch.group(1))
       filename = str(traceMatch.group(2))
       lineno = int(traceMatch.group(3))
@@ -62,9 +69,6 @@ def generateSourceErrorTrace(boogieOutput, bpl):
  
           sourceTrace += filename + '(' + str(lineno) + ',' + str(colno) + '): ' + message + '\n'
           break
-
-    else:
-      sourceTrace += traceLine
   return sourceTrace
  
 
@@ -72,7 +76,7 @@ if __name__ == '__main__':
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
-  parser.add_argument('-v', '--version', action='version', version="SMACK version 1.2")
+  parser.add_argument('-v', '--version', action='version', version='SMACK version ' + VERSION)
   parser.add_argument('infile', metavar='<file>',
                       type=lambda x: is_valid_file(parser,x),
                       help='input LLVM file')
@@ -104,7 +108,7 @@ if __name__ == '__main__':
   args.outfile.close()
 
   # invoke Boogie
-  p = subprocess.Popen(['boogie', args.outfile.name, '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
+  p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
   boogieOutput = p.communicate()[0]
   sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
   if sourceTrace:
