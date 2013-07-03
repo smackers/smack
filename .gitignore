@@ -26,3 +26,6 @@ bin/*.pyc
 
 # Generally annoying files
 .DS_Store
+
+# Backup files
+*.orig

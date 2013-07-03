@@ -114,14 +114,8 @@ as well as your smack-install-dir/bin directory!
 ### Running Regression Tests
 
 To make sure SMACK has been installed properly, run its regression tests.
-
-First, go to the smack/headers directory and compile smack.c (used for
-defining SMACK-specific functions) using the provided Makefile by running
-`make llvm`.
-
-Then, go to smack/test directory and compile the regression tests by running
+Go to smack/test directory and compile the regression tests by running
 `make`. You should get a number of LLVM bitcode files, one per test.
-
 Execute the regression test script with `./regtest.py`. All tests should pass.
 
 
@@ -133,22 +127,43 @@ Currently, SMACK comes with the following tools in the bin directory:
   C/C++. For a given input program, the tool checks for violations of
   user-provided assertions.
 
+Type `llvm2bpl.py -h` or `smack-check.py -h` for a full list of supported
+command line options.
 
-## Running the SMACK Checker
 
-Try the SMACK Checker on a simple example in the smack/examples/simple
+## The SMACK Checker User Guide
+
+Next, we illustrate how to check the following simple C program using the SMACK
+checker:
+```
+// simple.c
+#include "smack.h"
+
+int incr(int x) {
+  return x + 1;
+}
+
+int main(void) {
+  int a;
+
+  a = 1;
+  a = incr(a);
+  __SMACK_assert(a == 2);
+  return 0;
+}
+```
+Note that this example can also be found in the smack/examples/simple
 directory.
 
-First, go to the smack/headers directory and compile smack.c (used for
-defining SMACK-specific functions) using the provided Makefile by running
-`make llvm`.
-
-Then, go to smack/examples/simple directory and compile the examples by running
-`make llvm`. You should get a number of LLVM's bitcode files, one per example.
-
-Run the SMACK Checker on examples, for instance:
+First, compile the example into an LLVM bitcode file using clang:
 ```
-smack-check.py simple
-smack-check.py simple_fail
+clang -c -Wall -emit-llvm -O0 -g -I../../headers simple.c -o simple.bc
 ```
+We use the -g flag to compile with debug information enabled, which the SMACK
+checker leverages to generate more informative error traces.
+Then, run the SMACK checker on the generated bitcode file:
+```
+smack-check.py simple -o simple.bpl
+```
+SMACK should report no errors for this example.
 

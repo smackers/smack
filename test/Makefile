@@ -1,8 +1,6 @@
 CC = clang
-CCLD = llvm-link
 INC = ../headers
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
-LDFLAGS =
 
 SOURCES = simple.c simple_fail.c \
           simple_pre.c simple_pre_fail.c \
@@ -46,20 +44,13 @@ SOURCES = simple.c simple_fail.c \
           two_arrays5.c \
           two_arrays6.c two_arrays6_fail.c
 
-BYTECODES = $(SOURCES:.c=.bc)
-OBJECTS = $(SOURCES:.c=.o)
+BITCODE = $(SOURCES:.c=.bc)
 
-all: $(OBJECTS)
-	
-%.o: %.bc
-	$(CCLD) $(LDFLAGS) $< -o $@
+all: $(BITCODE)
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.ll *.bc *.o *.bpl
-	@for file in $(FILES); do \
-		(rm -f $$file;) \
-	done
+	rm -f *.bc *.bpl
 

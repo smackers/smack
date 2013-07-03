@@ -1,8 +1,6 @@
 CC = clang
-CCLD = llvm-link
 INC = ../../../headers
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
-LDFLAGS =
 
 SOURCES = test_locks_5_safe.c \
           test_locks_6_safe.c \
@@ -16,20 +14,13 @@ SOURCES = test_locks_5_safe.c \
           test_locks_14_safe.c test_locks_14_unsafe.c \
           test_locks_15_safe.c test_locks_15_unsafe.c
 
-OBJECTS = $(SOURCES:.c=.o)
-FILES = $(basename $(SOURCES))
+BITCODE = $(SOURCES:.c=.bc)
 
-all: $(SOURCES) $(FILES)
+all: $(BITCODE)
 
-$(FILES): $(OBJECTS) $(LIBS)
-	$(CCLD) $(LDFLAGS) $@.o $(LIBS) -o $@
-
-.c.o:
+%.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.o *.bc *.bpl
-	@for file in $(FILES); do \
-		(rm -f $$file;) \
-	done
+	rm -f *.bc *.bpl
 

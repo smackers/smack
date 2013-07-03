@@ -2,7 +2,7 @@ CC = clang
 INC = ../../headers
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
-SOURCES = simple.c
+SOURCES = globals_func_ptr.c
 
 BITCODE = $(SOURCES:.c=.bc)
 

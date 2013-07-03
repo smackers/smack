@@ -1,3 +1,8 @@
+//
+// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+//                    Michael Emmi (michael.emmi@gmail.com)
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #ifndef SMACKREPFACTORY_H
 #define SMACKREPFACTORY_H
 
@@ -6,15 +11,16 @@
 #include "llvm/DataLayout.h"
 
 namespace smack {
- 
-    enum MemMod {
-        flat, twodim
-    };
 
-    class SmackRepFactory {
-    public:
-        static SmackRep* createSmackRep(llvm::DataLayout *td, MemMod memoryModel);
-    };
+enum MemMod {
+  flat, twodim
+};
+
+class SmackRepFactory {
+public:
+  static SmackRep* createSmackRep(llvm::DataLayout* td, MemMod memoryModel);
+};
 }
 
 #endif // SMACKREPFACTORY_H
+

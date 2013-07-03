@@ -7,6 +7,8 @@ import argparse
 import io
 import platform
 
+VERSION = '1.2'
+
 
 def is_valid_file(parser, arg):
   if not path.isfile(arg):
@@ -60,6 +62,7 @@ if __name__ == '__main__':
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
+  parser.add_argument('-v', '--version', action='version', version='SMACK version ' + VERSION)
   parser.add_argument('infile', metavar='<file>',
                       type=lambda x: is_valid_file(parser,x),
                       help='input LLVM file')
