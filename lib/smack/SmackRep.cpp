@@ -57,6 +57,12 @@ const string SmackRep::ULT = "$ult";
 const string SmackRep::SGT = "$sgt";
 const string SmackRep::UGT = "$ugt";
 
+// used for memory model debugging
+const string SmackRep::MEM_OP = "$mop";
+const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
+const string SmackRep::MEM_READ = "$R";
+const string SmackRep::MEM_WRITE = "$W";
+
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 const Expr* SmackRep::UNDEF = Expr::id(UNDEF_VAL);
 

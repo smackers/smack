@@ -22,7 +22,7 @@ using llvm::Regex;
 using llvm::SmallVector;
 using llvm::StringRef;
 using namespace std;
-
+  
 class SmackRep {
 public:
   static const string CURRADDR; // TODO: push this into SmackRepFlatMem
@@ -75,6 +75,11 @@ public:
   static const string ULT;
   static const string SGT;
   static const string UGT;
+  
+  static const string MEM_OP;
+  static const string REC_MEM_OP;
+  static const string MEM_READ;
+  static const string MEM_WRITE;
 
   static const Expr* NUL;
   static const Expr* UNDEF;

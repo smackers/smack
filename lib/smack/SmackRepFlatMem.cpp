@@ -40,26 +40,13 @@ string SmackRepFlatMem::getPtrType() {
   return PTR_TYPE;
 }
 
-string SmackRepFlatMem::getPrelude() {
-  return PRELUDE + SmackRep::getPrelude();
-}
+const string MEMORY_DEBUG_SYMBOLS = 
+  "type $mop;\n"
+  "procedure boogie_si_record_mop(m: $mop);\n"
+  "const $R: $mop;\n"
+  "const $W: $mop;\n";    
 
-const string SmackRepFlatMem::PRELUDE =
-  "// SMACK Flat Memory Model\n"
-  "\n"
-  "function $ptr(obj:int, off:int) returns (int) {obj + off}\n"
-  "function $size(int) returns (int);\n"
-  "function $obj(int) returns (int);\n"
-  "function $off(ptr:int) returns (int) {ptr}\n"
-  "\n"
-  "var $Mem: [int] int;\n"
-  "var $Alloc: [int] bool;\n"
-  "var $CurrAddr:int;\n"
-  "\n"
-  "const unique $NULL: int;\n"
-  "axiom $NULL == 0;\n"
-  "const $UNDEF: int;\n"
-  "\n"
+const string MEM_MODEL_PROCS =
   "procedure $malloc(obj_size: int) returns (new: int);\n"
   "modifies $CurrAddr, $Alloc;\n"
   "requires obj_size > 0;\n"
@@ -92,7 +79,54 @@ const string SmackRepFlatMem::PRELUDE =
   "procedure $memcpy(dest:int, src:int, len:int, align:int, isvolatile:bool);\n"
   "modifies $Mem;\n"
   "ensures (forall x:int :: dest <= x && x < dest + len ==> $Mem[x] == old($Mem)[src - dest + x]);\n"
-  "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> $Mem[x] == old($Mem)[x]);\n"
+  "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> $Mem[x] == old($Mem)[x]);\n";
+
+const string MEM_MODEL_IMPLS =
+  "procedure $malloc(obj_size: int) returns (new: int)\n"
+  "  modifies $CurrAddr, $Alloc;\n"
+  "  requires obj_size > 0;\n"
+  "{\n"
+  "  assume $CurrAddr > 0;\n"
+  "  new := $CurrAddr;\n"
+  "  $CurrAddr := $CurrAddr + obj_size;\n"
+  "  $Alloc[new] := true;\n"
+  "}\n"
+  "procedure $alloca(obj_size: int) returns (new: int)\n"
+  "  modifies $CurrAddr, $Alloc;\n"
+  "  requires obj_size > 0;\n"
+  "{\n"
+  "  assume $CurrAddr > 0;\n"
+  "  new := $CurrAddr;\n"
+  "  $CurrAddr := $CurrAddr + obj_size;\n"
+  "  $Alloc[new] := true;\n"
+  "}\n"
+  "procedure $free(pointer: int)\n"
+  "  modifies $Alloc;\n"
+  "  // requires $Alloc[pointer];\n"
+  "  // requires $obj(pointer) == pointer;\n"
+  "{\n"
+  "  $Alloc[pointer] := false;\n"
+  "}\n"
+  "procedure $memcpy(dest:int, src:int, len:int, align:int, isvolatile:bool);\n"
+  "modifies $Mem;\n"
+  "ensures (forall x:int :: dest <= x && x < dest + len ==> $Mem[x] == old($Mem)[src - dest + x]);\n"
+  "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> $Mem[x] == old($Mem)[x]);\n";
+
+const string SmackRepFlatMem::PRELUDE =
+  "// SMACK Flat Memory Model\n"
+  "\n"
+  "function $ptr(obj:int, off:int) returns (int) {obj + off}\n"
+  "function $size(int) returns (int);\n"
+  "function $obj(int) returns (int);\n"
+  "function $off(ptr:int) returns (int) {ptr}\n"
+  "\n"
+  "var $Mem: [int] int;\n"
+  "var $Alloc: [int] bool;\n"
+  "var $CurrAddr:int;\n"
+  "\n"
+  "const unique $NULL: int;\n"
+  "axiom $NULL == 0;\n"
+  "const $UNDEF: int;\n"
   "\n"
   "function $pa(pointer: int, offset: int, size: int) returns (int);\n"
   "function $trunc(p: int) returns (int);\n"
@@ -113,6 +147,14 @@ const string SmackRepFlatMem::PRELUDE =
   "\n"
   "procedure __SMACK_nondet() returns (p: int);\n"
   "procedure __SMACK_nondetInt() returns (p: int);\n";
+
+string SmackRepFlatMem::getPrelude() {
+  return PRELUDE 
+    + SmackRep::getPrelude() + "\n"
+    + (SmackOptions::MemoryModelDebug ? MEMORY_DEBUG_SYMBOLS + "\n": "")
+    + (SmackOptions::MemoryModelImpls ? MEM_MODEL_IMPLS : MEM_MODEL_PROCS)
+    + "\n" ;
+}
 
 } // namespace smack
 

@@ -11,7 +11,7 @@
 #include <set>
 
 namespace smack {
-
+  
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:

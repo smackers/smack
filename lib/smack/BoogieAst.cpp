@@ -188,6 +188,9 @@ const Stmt* Stmt::skip() {
   return new AssumeStmt(Expr::lit(true));
 }
 
+const Decl* Decl::typee(string name, string type) {
+  return new TypeDecl(name,type);
+}
 const Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
@@ -199,6 +202,9 @@ const Decl* Decl::constant(string name, string type, bool unique) {
 }
 const Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
+}
+const Decl* Decl::procedure(string name, string arg, string type) {
+  return new ProcDecl(name,vector< pair<string,string> >(1,make_pair(arg,type)),"");
 }
 
 ostream& operator<<(ostream& os, const Expr& e) {
@@ -445,6 +451,13 @@ void ReturnStmt::print(ostream& os) const {
   os << "return;";
 }
 
+void TypeDecl::print(ostream& os) const {
+  if (type != "")
+    os << "type " << name << " = " << type << ";";
+  else
+    os << "type " << name << ";";
+}
+
 void AxiomDecl::print(ostream& os) const {
   os << "axiom " << expr << ";";
 }
@@ -464,6 +477,17 @@ void FuncDecl::print(ostream& os) const {
 
 void VarDecl::print(ostream& os) const {
   os << "var " << name << ": " << type << ";";
+}
+
+void ProcDecl::print(ostream& os) const {
+  os << "procedure " << name << "(";
+  for (unsigned i = 0; i < params.size(); i++)
+    os << params[i].first << ": " << params[i].second
+       << (i < params.size() - 1 ? ", " : "");
+  os << ")";
+  if (type != "") 
+    os << " returns (" << type << ")";
+  os << ";";
 }
 
 void Block::print(ostream& os) const {

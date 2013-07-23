@@ -251,10 +251,18 @@ public:
   string getType() const {
     return type;
   }
+  static const Decl* typee(string name, string type);
   static const Decl* axiom(const Expr* e);
   static const Decl* constant(string name, string type);
   static const Decl* constant(string name, string type, bool unique);
   static const Decl* variable(string name, string type);
+  static const Decl* procedure(string name, string arg, string type);
+};
+
+class TypeDecl : public Decl {
+public:
+  TypeDecl(string n, string t) : Decl(n,t) {}
+  void print(ostream& os) const;
 };
 
 class AxiomDecl : public Decl {
@@ -284,6 +292,14 @@ public:
 class VarDecl : public Decl {
 public:
   VarDecl(string n, string t) : Decl(n, t) {}
+  void print(ostream& os) const;
+};
+
+class ProcDecl : public Decl {
+  vector< pair<string,string> > params;
+public:
+  ProcDecl(string n, vector< pair<string,string> > ps, string r) 
+    : Decl(n,r), params(ps) {}
   void print(ostream& os) const;
 };
 

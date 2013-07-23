@@ -3,22 +3,18 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackModuleGenerator.h"
+#include "SmackOptions.h"
 
 namespace smack {
 
 llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
 char SmackModuleGenerator::ID = 0;
 
-// Enable memory model to be specified on the command line
-static llvm::cl::opt<MemMod> MemoryModel("mem-mod", llvm::cl::desc("Set the memory model:"),
-    llvm::cl::values(
-      clEnumVal(flat, "flat memory model"),
-      clEnumVal(twodim, "two dimensional memory model"),
-      clEnumValEnd));
-
 bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
 
-  SmackRep* rep = SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>(), MemoryModel);
+  SmackRep* rep = 
+    SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>());
+  
   program = new Program(rep->getPrelude());
 
   DEBUG(errs() << "Analyzing globals...\n");

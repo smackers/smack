@@ -7,6 +7,7 @@
 #define SMACKREPFLATMEM_H
 
 #include "SmackRep.h"
+#include "SmackOptions.h"
 
 namespace smack {
 
@@ -23,6 +24,14 @@ public:
   static const string CURRADDR;
   static const string PTR_TYPE;
   static const string PRELUDE;
+  
+  static const string MALLOC_PROC;
+  static const string ALLOCA_PROC;
+  static const string FREE_PROC;
+  
+  static const string MALLOC_IMPL;
+  static const string ALLOCA_IMPL;
+  static const string FREE_IMPL;
 
 public:
   SmackRepFlatMem(llvm::DataLayout* td) : SmackRep(td), globalsTop(0) {}

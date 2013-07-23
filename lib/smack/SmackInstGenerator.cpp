@@ -3,6 +3,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackInstGenerator.h"
+#include "SmackOptions.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
@@ -14,7 +15,7 @@ namespace smack {
 
 using llvm::errs;
 using namespace std;
-
+  
 const bool CODE_WARN = true;
 const bool SHOW_ORIG = false;
 
@@ -412,6 +413,12 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   currBlock->addStmt(Stmt::assign(
                        rep->expr(&li),
                        rep->mem(rep->expr(li.getPointerOperand()))));
+
+  if (SmackOptions::MemoryModelDebug) {
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(li.getPointerOperand())));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(&li)));
+  }
 }
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
@@ -419,6 +426,12 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   currBlock->addStmt(Stmt::assign(
                        rep->mem(rep->expr(si.getPointerOperand())),
                        rep->expr(si.getOperand(0))));
+                       
+  if (SmackOptions::MemoryModelDebug) {
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getPointerOperand())));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getOperand(0))));
+  }
 }
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
