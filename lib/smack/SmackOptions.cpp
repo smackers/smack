@@ -20,15 +20,19 @@ const llvm::cl::opt<MemMod> SmackOptions::MemoryModel(
     clEnumValEnd));
 
 const llvm::cl::opt<bool> SmackOptions::MemoryModelDebug(
-  "mem-mod-dbg", llvm::cl::desc("Enable memory model debugging:")
+  "mem-mod-dbg", llvm::cl::desc("Enable memory model debugging.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::IgnoreMemoryModelAsserts(
-  "no-mem-mod-asserts", llvm::cl::desc("Ignore memory model assertions:")
+  "no-mem-mod-asserts", llvm::cl::desc("Ignore memory model assertions.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::MemoryModelImpls(
-  "mem-mod-impls", llvm::cl::desc("Provide implementations for memory model procedures:")
+  "mem-mod-impls", llvm::cl::desc("Provide implementations for memory model procedures.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
+  "source-loc-syms", llvm::cl::desc("Include source locations in generated code.")
 );
 
 }

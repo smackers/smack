@@ -59,9 +59,12 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
 }
 
 void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
-  if (llvm::MDNode* n = i.getMetadata("dbg")) {
+
+  if (llvm::MDNode* n = i.getMetadata("dbg")) {      
     llvm::DILocation l(n);
-    b->addStmt(Stmt::annot(
+    
+    if (SmackOptions::SourceLocSymbols)
+      b->addStmt(Stmt::annot(
                  Attr::attr("sourceloc",
                             l.getFilename().str(),
                             l.getLineNumber(),

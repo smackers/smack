@@ -21,6 +21,8 @@ public:
   static const llvm::cl::opt<bool> MemoryModelDebug;
   static const llvm::cl::opt<bool> IgnoreMemoryModelAsserts;
   static const llvm::cl::opt<bool> MemoryModelImpls;
+  
+  static const llvm::cl::opt<bool> SourceLocSymbols;
 };
 }
 
