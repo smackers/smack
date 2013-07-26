@@ -11,13 +11,23 @@ from llvm2bpl import *
 VERSION = '1.2'
 
 
-def addInline(match):
+def addInline(match, entryPoints):
   procName = match.group(1)
   procDef = ''
-  if procName == 'main':
+  if procName in entryPoints:
     procDef += 'procedure ' + procName + '('
   else:
     procDef += 'procedure {:inline 1} ' + procName + '('
+  return procDef
+
+
+def addEntryPoint(match, entryPoints):
+  procName = match.group(1)
+  procDef = ''
+  if procName in entryPoints:
+    procDef += 'procedure {:entrypoint} ' + procName + '('
+  else:
+    procDef += 'procedure ' + procName + '('
   return procDef
 
 
@@ -75,18 +85,11 @@ def generateSourceErrorTrace(boogieOutput, bpl):
 if __name__ == '__main__':
 
   # parse command line arguments
-  parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.')
-  parser.add_argument('-v', '--version', action='version', version='SMACK version ' + VERSION)
-  parser.add_argument('infile', metavar='<file>',
-                      type=lambda x: is_valid_file(parser,x),
-                      help='input LLVM file')
-  parser.add_argument('-o', '--output', dest='outfile', metavar='<file>', default='a.bpl',
-                      type=argparse.FileType('w'),
-                      help='output Boogie file (default: %(default)s)')
-  parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
-                      help='turn on debug info')
-  parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
-                      help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
+  parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[llvm2bplParser()])
+  parser.add_argument('--checker', dest='checker', choices=['boogie', 'corral'], default='boogie',
+                      help='set the underlying checker')
+  parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
+                      help='specify entry procedures')
   parser.add_argument('--loop-unroll', metavar='N', dest='loopUnroll', default='20', type=int,
                       help='unroll loops in Boogie N number of times')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
@@ -101,18 +104,27 @@ if __name__ == '__main__':
 
   # put inline on procedures
   p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
-  bpl = p.sub(lambda match: addInline(match), bpl)
+  if args.checker == 'boogie':
+    bpl = p.sub(lambda match: addInline(match, args.entryPoints), bpl)
+  else:
+    bpl = p.sub(lambda match: addEntryPoint(match.entryPoints), bpl)
 
   # write final output
   args.outfile.write(bpl)
   args.outfile.close()
 
-  # invoke Boogie
-  p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
-  boogieOutput = p.communicate()[0]
-  sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
-  if sourceTrace:
-    print sourceTrace
+  if args.checker == 'boogie':
+    # invoke Boogie
+    p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
+    boogieOutput = p.communicate()[0]
+    sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
+    if sourceTrace:
+      print sourceTrace
+    else:
+      print boogieOutput
   else:
-    print boogieOutput
+    # invoke Corral
+    p = subprocess.Popen(['corral', args.outfile.name], stdout=subprocess.PIPE)
+    corralOutput = p.communicate()[0]
+    print corralOutput
 
