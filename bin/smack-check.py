@@ -21,6 +21,16 @@ def addInline(match):
   return procDef
 
 
+def addEntryPoint(match):
+  procName = match.group(1)
+  procDef = ''
+  if procName == 'main':
+    procDef += 'procedure {:entrypoint} ' + procName + '('
+  else:
+    procDef += 'procedure ' + procName + '('
+  return procDef
+
+
 def generateSourceErrorTrace(boogieOutput, bpl):
   FILENAME = '[\w#$~%.\/-]+'
   LABEL = '[\w$]+'
@@ -87,6 +97,8 @@ if __name__ == '__main__':
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
                       help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
+  parser.add_argument('--checker', dest='checker', choices=['boogie', 'corral'], default='boogie',
+                      help='set the underlying checker')
   parser.add_argument('--loop-unroll', metavar='N', dest='loopUnroll', default='20', type=int,
                       help='unroll loops in Boogie N number of times')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
@@ -101,18 +113,27 @@ if __name__ == '__main__':
 
   # put inline on procedures
   p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
-  bpl = p.sub(lambda match: addInline(match), bpl)
+  if args.checker == 'boogie':
+    bpl = p.sub(lambda match: addInline(match), bpl)
+  else:
+    bpl = p.sub(lambda match: addEntryPoint(match), bpl)
 
   # write final output
   args.outfile.write(bpl)
   args.outfile.close()
 
-  # invoke Boogie
-  p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
-  boogieOutput = p.communicate()[0]
-  sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
-  if sourceTrace:
-    print sourceTrace
+  if args.checker == 'boogie':
+    # invoke Boogie
+    p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
+    boogieOutput = p.communicate()[0]
+    sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
+    if sourceTrace:
+      print sourceTrace
+    else:
+      print boogieOutput
   else:
-    print boogieOutput
+    # invoke Corral
+    p = subprocess.Popen(['corral', args.outfile.name], stdout=subprocess.PIPE)
+    corralOutput = p.communicate()[0]
+    print corralOutput
 
