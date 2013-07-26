@@ -102,12 +102,13 @@ if __name__ == '__main__':
   if args.debug:
     print debug
 
-  # put inline on procedures
   p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
   if args.checker == 'boogie':
+    # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints), bpl)
   else:
-    bpl = p.sub(lambda match: addEntryPoint(match.entryPoints), bpl)
+    # annotate entry points
+    bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
 
   # write final output
   args.outfile.write(bpl)

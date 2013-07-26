@@ -82,7 +82,7 @@ def llvm2bpl(scriptPathName, infile, debug, memmod):
 if __name__ == '__main__':
 
   # parse command line arguments
-  parser = argparse.ArgumentParser(description='Outputs a Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
+  parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
   debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod)
