@@ -40,7 +40,24 @@ if __name__ == '__main__':
                       help='specify entry procedures')
   args = parser.parse_args()
 
-  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod)
+  scriptPathName = path.dirname(sys.argv[0])
+  scriptFullPath = path.abspath(scriptPathName)
+  smackRoot = path.dirname(scriptFullPath)
+  smackHeaders = path.join(smackRoot, 'include')
+
+  inputFile = args.infile
+  fileName, fileExtension = path.splitext(inputFile.name)
+
+  if fileExtension == '.c':
+    # if input file is .c, then compile it first with clang
+    p = subprocess.Popen(['clang', '-c', '-Wall', '-emit-llvm', '-O0', '-g',
+      '-I' + smackHeaders, inputFile.name, '-o', fileName + '.bc'])
+    p.wait()
+    inputFileName = path.join(path.curdir, fileName + '.bc')
+    inputFile = open(inputFileName, 'r')
+
+  debug, bpl = llvm2bpl(scriptPathName, inputFile, args.debug, args.memmod)
+  inputFile.close()
 
   # print debug info
   if args.debug:

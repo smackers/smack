@@ -1,5 +1,5 @@
 CC = clang
-INC = ../../../headers
+INC = ../../../include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = cdaudio_safe.i.cil.c \
