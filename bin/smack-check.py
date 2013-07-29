@@ -142,7 +142,7 @@ if __name__ == '__main__':
       print boogieOutput
   else:
     # invoke Corral
-    p = subprocess.Popen(['corral', args.outfile.name], stdout=subprocess.PIPE)
+    p = subprocess.Popen(['corral', args.outfile.name, '/recursionBound:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
     corralOutput = p.communicate()[0]
     print corralOutput
 
