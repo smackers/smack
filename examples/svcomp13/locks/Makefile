@@ -1,5 +1,5 @@
 CC = clang
-INC = ../../../headers
+INC = ../../../include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = test_locks_5_safe.c \

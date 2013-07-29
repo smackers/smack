@@ -157,7 +157,7 @@ directory.
 
 First, compile the example into an LLVM bitcode file using clang:
 ```
-clang -c -Wall -emit-llvm -O0 -g -I../../headers simple.c -o simple.bc
+clang -c -Wall -emit-llvm -O0 -g -I../../include simple.c -o simple.bc
 ```
 We use the -g flag to compile with debug information enabled, which the SMACK
 checker leverages to generate more informative error traces.
