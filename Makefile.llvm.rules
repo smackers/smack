@@ -2186,6 +2186,7 @@ install-local::
 	      '(' -name '*.py' \
 	       -o -name '*.rb' \
          -o -name 'boogie' \
+         -o -name 'corral' \
 	      ')' -print | grep -v CVS | \
 	      grep -v .svn` ; do \
 	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$scr"` ; \
