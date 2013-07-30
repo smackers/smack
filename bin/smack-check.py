@@ -92,13 +92,13 @@ if __name__ == '__main__':
                       help='Boogie time limit in seconds')
   args = parser.parse_args()
 
-  bpl = smack(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.checker, args.entryPoints)
+  bpl = smack(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)
   args.outfile.close()
 
-  if args.checker == 'boogie-plain' or args.checker == 'boogie-inline':
+  if args.verifier == 'boogie-plain' or args.verifier == 'boogie-inline':
     # invoke Boogie
     p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.unroll)], stdout=subprocess.PIPE)
     boogieOutput = p.communicate()[0]

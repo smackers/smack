@@ -12,8 +12,8 @@ VERSION = '1.2'
 
 def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
-  parser.add_argument('--checker', dest='checker', choices=['boogie-plain', 'boogie-inline', 'corral'], default='boogie-inline',
-                      help='set the underlying checker format')
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie-plain', 'boogie-inline', 'corral'], default='boogie-inline',
+                      help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
   return parser
@@ -54,7 +54,7 @@ def clang(scriptPathName, inputFile):
   return inputFile
 
 
-def smack(scriptPathName, inputFile, debugFlag, memmod, checker, entryPoints):
+def smack(scriptPathName, inputFile, debugFlag, memmod, verifier, entryPoints):
   fileExtension = path.splitext(inputFile.name)[1]
   if fileExtension == '.c':
     # if input file is .c, then compile it first with clang
@@ -68,10 +68,10 @@ def smack(scriptPathName, inputFile, debugFlag, memmod, checker, entryPoints):
     print debug
 
   p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
-  if checker == 'boogie-inline':
+  if verifier == 'boogie-inline':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, entryPoints), bpl)
-  elif checker == 'corral':
+  elif verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, entryPoints), bpl)
   return bpl
@@ -83,7 +83,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
   args = parser.parse_args()
 
-  bpl = smack(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.checker, args.entryPoints)
+  bpl = smack(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)

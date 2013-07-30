@@ -17,8 +17,11 @@ of SMACK.
 SMACK depends on the following projects:
 * [LLVM](http://www.llvm.org) (release [3.2](http://llvm.org/releases/download.html#3.2)),
   [clang](http://clang.llvm.org) (release [3.2](http://llvm.org/releases/download.html#3.2))
-* [Boogie](http://boogie.codeplex.com), [Z3](http://z3.codeplex.com/)
 * [Python](http://www.python.org) (version 2.7)
+
+Currently, SMACK supports the following back-end verifiers:
+* [Boogie](http://boogie.codeplex.com), default theorem prover is [Z3](http://z3.codeplex.com/)
+* [Corral](http://research.microsoft.com/en-us/projects/verifierq/), default theorem prover is [Z3](http://z3.codeplex.com/)
 
 To configure, build, and install LLVM and clang, follow their [Getting Started
 Quickly](http://llvm.org/docs/GettingStarted.html#getting-started-quickly-a-summary)
@@ -106,6 +109,8 @@ In that case you can manually download Z3's sources from its codeplex site.
    export BOOGIE="mono /home/john/Boogie/Binaries/Boogie.exe"
    ```
 
+   Similarly, if using Corral create an environment variable called CORRAL.
+
 **Important note:**
 LLVM/clang binaries (e.g., clang, llvm-link, opt) should all be in your path,
 as well as your smack-install-dir/bin directory!
@@ -122,12 +127,14 @@ Execute the regression test script with `./regtest.py`. All tests should pass.
 ## SMACK Tools
 
 Currently, SMACK comes with the following tools in the bin directory:
-* llvm2bpl is a bare-bone translator from LLVM bitcode into Boogie.
-* smack-check is tool for statically checking properties of programs written in
+* llvm2bpl is a bare-bone translator from LLVM bitcode into plain Boogie.
+* smack generates output Boogie files specifically formatted for a chosen
+  back-end verifier.
+* smack-check is a tool for statically checking properties of programs written in
   C/C++. For a given input program, the tool checks for violations of
   user-provided assertions.
 
-Type `llvm2bpl.py -h` or `smack-check.py -h` for a full list of supported
+Type `llvm2bpl.py -h`, `smack.py -h`, or `smack-check.py -h` for a full list of supported
 command line options.
 
 
@@ -155,15 +162,17 @@ int main(void) {
 Note that this example can also be found in the smack/examples/simple
 directory.
 
-First, compile the example into an LLVM bitcode file using clang:
+Simply run the SMACK checker on your input C file:
+```
+smack-check.py simple.c -o simple.bpl
+```
+SMACK should report no errors for this example.
+
+Under the hood, SMACK first compiles the example into an LLVM bitcode file using clang:
 ```
 clang -c -Wall -emit-llvm -O0 -g -I../../include simple.c -o simple.bc
 ```
 We use the -g flag to compile with debug information enabled, which the SMACK
-checker leverages to generate more informative error traces.
-Then, run the SMACK checker on the generated bitcode file:
-```
-smack-check.py simple -o simple.bpl
-```
-SMACK should report no errors for this example.
-
+checker leverages to generate more informative error traces. Then, the generated bitcode
+file is translated into Boogie code, which is in turn passed to the chosen back-end
+verifier.
