@@ -6,7 +6,7 @@ import re
 import subprocess
 import argparse
 import platform
-from llvm2bpl import *
+from smack import *
 
 VERSION = '1.2'
 
@@ -85,55 +85,22 @@ def generateSourceErrorTrace(boogieOutput, bpl):
 if __name__ == '__main__':
 
   # parse command line arguments
-  parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[llvm2bplParser()])
-  parser.add_argument('--checker', dest='checker', choices=['boogie', 'corral'], default='boogie',
-                      help='set the underlying checker')
-  parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
-                      help='specify entry procedures')
-  parser.add_argument('--loop-unroll', metavar='N', dest='loopUnroll', default='20', type=int,
-                      help='unroll loops in Boogie N number of times')
+  parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[smackParser()])
+  parser.add_argument('--unroll', metavar='N', dest='unroll', default='20', type=int,
+                      help='unroll loops/recursion in Boogie/Corral N number of times')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
                       help='Boogie time limit in seconds')
   args = parser.parse_args()
 
-  scriptPathName = path.dirname(sys.argv[0])
-  scriptFullPath = path.abspath(scriptPathName)
-  smackRoot = path.dirname(scriptFullPath)
-  smackHeaders = path.join(smackRoot, 'include')
-
-  inputFile = args.infile
-  fileName, fileExtension = path.splitext(inputFile.name)
-
-  if fileExtension == '.c':
-    # if input file is .c, then compile it first with clang
-    p = subprocess.Popen(['clang', '-c', '-Wall', '-emit-llvm', '-O0', '-g',
-      '-I' + smackHeaders, inputFile.name, '-o', fileName + '.bc'])
-    p.wait()
-    inputFileName = path.join(path.curdir, fileName + '.bc')
-    inputFile = open(inputFileName, 'r')
-
-  debug, bpl = llvm2bpl(scriptPathName, inputFile, args.debug, args.memmod)
-  inputFile.close()
-
-  # print debug info
-  if args.debug:
-    print debug
-
-  p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
-  if args.checker == 'boogie':
-    # put inline on procedures
-    bpl = p.sub(lambda match: addInline(match, args.entryPoints), bpl)
-  else:
-    # annotate entry points
-    bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
+  bpl = smack(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.checker, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)
   args.outfile.close()
 
-  if args.checker == 'boogie':
+  if args.checker == 'boogie-plain' or args.checker == 'boogie-inline':
     # invoke Boogie
-    p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
+    p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.unroll)], stdout=subprocess.PIPE)
     boogieOutput = p.communicate()[0]
     sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
     if sourceTrace:
@@ -142,7 +109,7 @@ if __name__ == '__main__':
       print boogieOutput
   else:
     # invoke Corral
-    p = subprocess.Popen(['corral', args.outfile.name, '/recursionBound:' + str(args.loopUnroll)], stdout=subprocess.PIPE)
+    p = subprocess.Popen(['corral', args.outfile.name, '/recursionBound:' + str(args.unroll)], stdout=subprocess.PIPE)
     corralOutput = p.communicate()[0]
     print corralOutput
 

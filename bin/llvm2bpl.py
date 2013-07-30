@@ -53,7 +53,7 @@ def find_library_path(installPrefix):
   return libraryPath
 
 
-def llvm2bpl(scriptPathName, infile, debug, memmod):
+def llvm2bpl(scriptPathName, infile, debugFlag, memmod):
 
   # find library paths
   scriptFullPath = path.abspath(scriptPathName)
@@ -62,7 +62,7 @@ def llvm2bpl(scriptPathName, infile, debug, memmod):
   libraryPath = find_library_path(installPrefix)
 
   # invoke SMACK LLVM module
-  if debug:
+  if debugFlag:
     p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
       '-source-loc-syms',
       '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug', '-o=tmp.bc'],
