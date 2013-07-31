@@ -377,6 +377,9 @@ public:
   void addProc(Procedure* p) {
     procs.push_back(p);
   }
+  void appendPrelude(string s) {
+    prelude += s;
+  }
 };
 }
 

@@ -20,6 +20,7 @@ private:
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*>& blockMap;
   set<pair<llvm::Function*, int> >& missingDecls;
+  set<string>& moreDecls;
   int blockNum;
   int varNum;
 
@@ -34,8 +35,10 @@ private:
 
 public:
   SmackInstGenerator(SmackRep* r, Procedure& p,
-                     map<const llvm::BasicBlock*, Block*>& bm, set<pair<llvm::Function*, int> >& md)
-    : rep(r), currProc(p), blockMap(bm), missingDecls(md),
+                     map<const llvm::BasicBlock*, Block*>& bm, 
+                     set<pair<llvm::Function*, int> >& md,
+                     set<string>& mmdd)
+    : rep(r), currProc(p), blockMap(bm), missingDecls(md), moreDecls(mmdd),
       blockNum(0), varNum(0) {}
 
   Block* createBlock();

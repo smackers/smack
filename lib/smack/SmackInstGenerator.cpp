@@ -415,7 +415,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
   currBlock->addStmt(Stmt::assign(
                        rep->expr(&li),
-                       rep->mem(rep->expr(li.getPointerOperand()))));
+                       rep->mem(li.getPointerOperand())));
 
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
@@ -427,7 +427,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   currBlock->addStmt(Stmt::assign(
-                       rep->mem(rep->expr(si.getPointerOperand())),
+                       rep->mem(si.getPointerOperand()),
                        rep->expr(si.getOperand(0))));
                        
   if (SmackOptions::MemoryModelDebug) {
@@ -491,7 +491,7 @@ void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {
 
   const Expr
   *res = rep->expr(&i),
-   *piv = rep->mem(rep->expr(i.getOperand(0))),
+   *piv = rep->mem(i.getOperand(0)),
     *cmp = rep->expr(i.getOperand(1)),
      *swp = rep->expr(i.getOperand(2));
 
@@ -540,12 +540,15 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
 void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst& mci) {
   processInstruction(mci);
+  unsigned dstReg = rep->getRegion(mci.getOperand(0));
+  unsigned srcReg = rep->getRegion(mci.getOperand(1));
 
   vector<const Expr*> args;
   for (unsigned i = 0; i < mci.getNumOperands() - 1; i++)
     args.push_back(rep->expr(mci.getOperand(i)));
   assert(args.size() == 5);
-  currBlock->addStmt(Stmt::call(SmackRep::MEMCPY, args));
+  currBlock->addStmt(Stmt::call(rep->memcpyCall(dstReg,srcReg), args));
+  moreDecls.insert(rep->memcpyProc(dstReg,srcReg));
 }
 } // namespace smack
 

@@ -8,12 +8,12 @@
 
 namespace smack {
 
-SmackRep* SmackRepFactory::createSmackRep(llvm::DataLayout* td) {
+SmackRep* SmackRepFactory::createSmackRep(llvm::AliasAnalysis* aa, llvm::DataLayout* td) {
   
   if ( SmackOptions::MemoryModel == twodim )
-    return new SmackRep2dMem(td);
+    return new SmackRep2dMem(aa,td);
   else
-    return new SmackRepFlatMem(td);
+    return new SmackRepFlatMem(aa,td);
 }
 
 } // namespace smack

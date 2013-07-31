@@ -19,14 +19,20 @@ class SmackRep2dMem : public SmackRep {
 public:
   static const string PTR_TYPE;
   static const string REF_TYPE;
-  static const string PRELUDE;
+  static const string POINTERS;
 
 public:
-  SmackRep2dMem(llvm::DataLayout* td) : SmackRep(td) {}
+  SmackRep2dMem(llvm::AliasAnalysis* aa, llvm::DataLayout* td) 
+    : SmackRep(aa,td) {}
   virtual vector<const Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();
-  virtual string getPrelude();
+  
+  virtual string memoryModel();
+  virtual string mallocProc();
+  virtual string freeProc();
+  virtual string allocaProc();
+  virtual string memcpyProc(int dstReg, int srcReg);
 };
 }
 

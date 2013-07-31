@@ -4,6 +4,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackRepFlatMem.h"
+#include "SmackOptions.h"
 
 namespace smack {
 
@@ -16,7 +17,7 @@ vector<const Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
   decls.push_back(Decl::constant(name, getPtrType(), true));
 
   // TODO fix this
-  int size = 1024;
+  int size = targetData->getTypeStoreSize(g->getType());
 
   globalsTop -= size;
 
@@ -30,7 +31,6 @@ vector<const Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
 
 vector<string> SmackRepFlatMem::getModifies() {
   vector<string> mods = SmackRep::getModifies();
-  mods.push_back(MEMORY);
   mods.push_back(ALLOC);
   mods.push_back(CURRADDR);
   return mods;
@@ -39,80 +39,8 @@ vector<string> SmackRepFlatMem::getModifies() {
 string SmackRepFlatMem::getPtrType() {
   return PTR_TYPE;
 }
-
-const string MEMORY_DEBUG_SYMBOLS = 
-  "type $mop;\n"
-  "procedure boogie_si_record_mop(m: $mop);\n"
-  "const $R: $mop;\n"
-  "const $W: $mop;\n";    
-
-const string MEM_MODEL_PROCS =
-  "procedure $malloc(obj_size: int) returns (new: int);\n"
-  "modifies $CurrAddr, $Alloc;\n"
-  "requires obj_size > 0;\n"
-  "ensures 0 < old($CurrAddr);\n"
-  "ensures new == old($CurrAddr);\n"
-  "ensures $CurrAddr > old($CurrAddr) + obj_size;\n"
-  "ensures $size(new) == obj_size;\n"
-  "ensures (forall x:int :: new <= x && x < new + obj_size ==> $obj(x) == new);\n"
-  "ensures $Alloc[new];\n"
-  "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);\n"
-  "\n"
-  "procedure $alloca(obj_size: int) returns (new: int);\n"
-  "modifies $CurrAddr, $Alloc;\n"
-  "requires obj_size > 0;\n"
-  "ensures 0 < old($CurrAddr);\n"
-  "ensures new == old($CurrAddr);\n"
-  "ensures $CurrAddr > old($CurrAddr) + obj_size;\n"
-  "ensures $size(new) == obj_size;\n"
-  "ensures (forall x:int :: new <= x && x < new + obj_size ==> $obj(x) == new);\n"
-  "ensures $Alloc[new];\n"
-  "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);\n"
-  "\n"
-  "procedure $free(pointer: int);\n"
-  "modifies $Alloc;\n"
-  "requires $Alloc[pointer];\n"
-  "requires $obj(pointer) == pointer;\n"
-  "ensures !$Alloc[pointer];\n"
-  "ensures (forall x:int :: {$Alloc[x]} x == pointer || old($Alloc)[x] == $Alloc[x]);\n"
-  "\n"
-  "procedure $memcpy(dest:int, src:int, len:int, align:int, isvolatile:bool);\n"
-  "modifies $Mem;\n"
-  "ensures (forall x:int :: dest <= x && x < dest + len ==> $Mem[x] == old($Mem)[src - dest + x]);\n"
-  "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> $Mem[x] == old($Mem)[x]);\n";
-
-const string MEM_MODEL_IMPLS =
-  "procedure $malloc(obj_size: int) returns (new: int)\n"
-  "  modifies $CurrAddr, $Alloc;\n"
-  "  requires obj_size > 0;\n"
-  "{\n"
-  "  assume $CurrAddr > 0;\n"
-  "  new := $CurrAddr;\n"
-  "  $CurrAddr := $CurrAddr + obj_size;\n"
-  "  $Alloc[new] := true;\n"
-  "}\n"
-  "procedure $alloca(obj_size: int) returns (new: int)\n"
-  "  modifies $CurrAddr, $Alloc;\n"
-  "  requires obj_size > 0;\n"
-  "{\n"
-  "  assume $CurrAddr > 0;\n"
-  "  new := $CurrAddr;\n"
-  "  $CurrAddr := $CurrAddr + obj_size;\n"
-  "  $Alloc[new] := true;\n"
-  "}\n"
-  "procedure $free(pointer: int)\n"
-  "  modifies $Alloc;\n"
-  "  // requires $Alloc[pointer];\n"
-  "  // requires $obj(pointer) == pointer;\n"
-  "{\n"
-  "  $Alloc[pointer] := false;\n"
-  "}\n"
-  "procedure $memcpy(dest:int, src:int, len:int, align:int, isvolatile:bool);\n"
-  "modifies $Mem;\n"
-  "ensures (forall x:int :: dest <= x && x < dest + len ==> $Mem[x] == old($Mem)[src - dest + x]);\n"
-  "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> $Mem[x] == old($Mem)[x]);\n";
-
-const string SmackRepFlatMem::PRELUDE =
+  
+const string SmackRepFlatMem::POINTERS =
   "// SMACK Flat Memory Model\n"
   "\n"
   "function $ptr(obj:int, off:int) returns (int) {obj + off}\n"
@@ -120,7 +48,6 @@ const string SmackRepFlatMem::PRELUDE =
   "function $obj(int) returns (int);\n"
   "function $off(ptr:int) returns (int) {ptr}\n"
   "\n"
-  "var $Mem: [int] int;\n"
   "var $Alloc: [int] bool;\n"
   "var $CurrAddr:int;\n"
   "\n"
@@ -144,16 +71,100 @@ const string SmackRepFlatMem::PRELUDE =
   "axiom $p2b(0) == false;\n"
   "axiom (forall i:int :: $p2i(i) == i);\n"
   "axiom (forall i:int :: $i2p(i) == i);\n"
-  "\n"
   "procedure __SMACK_nondet() returns (p: int);\n"
   "procedure __SMACK_nondetInt() returns (p: int);\n";
 
-string SmackRepFlatMem::getPrelude() {
-  return PRELUDE 
-    + SmackRep::getPrelude() + "\n"
-    + (SmackOptions::MemoryModelDebug ? MEMORY_DEBUG_SYMBOLS + "\n": "")
-    + (SmackOptions::MemoryModelImpls ? MEM_MODEL_IMPLS : MEM_MODEL_PROCS)
-    + "\n" ;
+string SmackRepFlatMem::memoryModel() {
+  return POINTERS;
+}
+
+string SmackRepFlatMem::mallocProc() {
+  stringstream s;
+  
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $malloc(obj_size: int) returns (new: int)" << endl;
+    s << "  modifies $CurrAddr, $Alloc;" << endl;
+    s << "  requires obj_size > 0;" << endl;
+    s << "{" << endl;
+    s << "  assume $CurrAddr > 0;" << endl;
+    s << "  new := $CurrAddr;" << endl;
+    s << "  $CurrAddr := $CurrAddr + obj_size;" << endl;
+    s << "  $Alloc[new] := true;" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $malloc(obj_size: int) returns (new: int);" << endl;
+    s << "modifies $CurrAddr, $Alloc;" << endl;
+    s << "requires obj_size > 0;" << endl;
+    s << "ensures 0 < old($CurrAddr);" << endl;
+    s << "ensures new == old($CurrAddr);" << endl;
+    s << "ensures $CurrAddr > old($CurrAddr) + obj_size;" << endl;
+    s << "ensures $size(new) == obj_size;" << endl;
+    s << "ensures (forall x:int :: new <= x && x < new + obj_size ==> $obj(x) == new);" << endl;
+    s << "ensures $Alloc[new];" << endl;
+    s << "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);" << endl;;
+  }  
+  return s.str();
+}
+
+string SmackRepFlatMem::freeProc() {
+  stringstream s;
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $free(pointer: int)" << endl;
+    s << "  modifies $Alloc;" << endl;
+    s << "  // requires $Alloc[pointer];" << endl;
+    s << "  // requires $obj(pointer) == pointer;" << endl;
+    s << "{" << endl;
+    s << "  $Alloc[pointer] := false;" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $free(pointer: int);" << endl;
+    s << "modifies $Alloc;" << endl;
+    s << "requires $Alloc[pointer];" << endl;
+    s << "requires $obj(pointer) == pointer;" << endl;
+    s << "ensures !$Alloc[pointer];" << endl;
+    s << "ensures (forall x:int :: {$Alloc[x]} x == pointer || old($Alloc)[x] == $Alloc[x]);" << endl;
+  }
+  return s.str();
+}
+
+string SmackRepFlatMem::allocaProc() {
+  stringstream s;
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $alloca(obj_size: int) returns (new: int)" << endl;
+    s << "  modifies $CurrAddr, $Alloc;" << endl;
+    s << "  requires obj_size > 0;" << endl;
+    s << "{" << endl;
+    s << "  assume $CurrAddr > 0;" << endl;
+    s << "  new := $CurrAddr;" << endl;
+    s << "  $CurrAddr := $CurrAddr + obj_size;" << endl;
+    s << "  $Alloc[new] := true;" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $alloca(obj_size: int) returns (new: int);" << endl;
+    s << "modifies $CurrAddr, $Alloc;" << endl;
+    s << "requires obj_size > 0;" << endl;
+    s << "ensures 0 < old($CurrAddr);" << endl;
+    s << "ensures new == old($CurrAddr);" << endl;
+    s << "ensures $CurrAddr > old($CurrAddr) + obj_size;" << endl;
+    s << "ensures $size(new) == obj_size;" << endl;
+    s << "ensures (forall x:int :: new <= x && x < new + obj_size ==> $obj(x) == new);" << endl;
+    s << "ensures $Alloc[new];" << endl;
+    s << "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);" << endl;
+  }
+  return s.str();
+}
+
+string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {
+  stringstream s;
+  s << "procedure $memcpy." << dstReg << "." << srcReg;
+  s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
+  s << "modifies " << memReg(dstReg) << ";" << endl;
+  s << "ensures (forall x:int :: dest <= x && x < dest + len ==> " 
+    << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
+    << endl;
+  s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+    << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  return s.str();
 }
 
 } // namespace smack

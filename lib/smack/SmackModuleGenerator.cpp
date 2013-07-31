@@ -13,9 +13,11 @@ char SmackModuleGenerator::ID = 0;
 bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
 
   SmackRep* rep = 
-    SmackRepFactory::createSmackRep(&getAnalysis<llvm::DataLayout>());
-  
-  program = new Program(rep->getPrelude());
+    SmackRepFactory::createSmackRep(
+      &getAnalysis<llvm::AliasAnalysis>(),
+      &getAnalysis<llvm::DataLayout>());
+
+  program = new Program("");
 
   DEBUG(errs() << "Analyzing globals...\n");
 
@@ -26,6 +28,7 @@ bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
   DEBUG(errs() << "Analyzing functions...\n");
 
   set<pair<llvm::Function*, int> > missingDecls;
+  set<string> moreDecls;
 
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
@@ -45,26 +48,13 @@ bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
     Procedure* proc = new Procedure(name);
     program->addProc(proc);
 
-    // PARAMETERS
-    for (llvm::Function::const_arg_iterator
-         arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg) {
-      proc->addParam(rep->id(arg), rep->type(arg->getType()));
-    }
-
-    // RETURNS
-    if (! func->getReturnType()->isVoidTy())
-      proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
-
-    // MODIFIES
-    proc->addMods(rep->getModifies());
-
     // BODY
     if (!func->isDeclaration() && !func->empty()
         && !func->getEntryBlock().empty()) {
 
       map<const llvm::BasicBlock*, Block*> known;
       stack<llvm::BasicBlock*> workStack;
-      SmackInstGenerator igen(rep, *proc, known, missingDecls);
+      SmackInstGenerator igen(rep, *proc, known, missingDecls, moreDecls);
 
       llvm::BasicBlock& entry = func->getEntryBlock();
       workStack.push(&entry);
@@ -93,6 +83,21 @@ bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
         igen.visit(b);
       }
     }
+
+    // PARAMETERS
+    for (llvm::Function::const_arg_iterator
+         arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg) {
+      proc->addParam(rep->id(arg), rep->type(arg->getType()));
+    }
+
+    // RETURNS
+    if (! func->getReturnType()->isVoidTy())
+      proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
+
+    // MODIFIES
+    // NOTE we must do this after instruction generation, since we would not
+    // otherwise know how many / which regions are modified.
+    proc->addMods(rep->getModifies());
 
     DEBUG(errs() << "Finished analyzing function: " << name << "\n\n");
   }
@@ -132,6 +137,15 @@ bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
       p->addRet(SmackRep::RET_VAR, rep->getPtrType());
     program->addProc(p);
   }
+
+  for (set<string>::iterator d = moreDecls.begin();
+       d != moreDecls.end(); ++d) {
+     program->appendPrelude(*d);
+   }
+  
+  // NOTE we must do this after instruction generation, since we would not 
+  // otherwise know how many regions to declare.
+  program->appendPrelude(rep->getPrelude());
 
   return false;
 }

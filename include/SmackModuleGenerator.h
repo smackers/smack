@@ -9,6 +9,7 @@
 #include "SmackInstGenerator.h"
 #include "SmackRepFactory.h"
 #include "llvm/DataLayout.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -34,6 +35,7 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayout>();
+    AU.addRequired<llvm::AliasAnalysis>();
   }
 
   Program* getProgram() const {

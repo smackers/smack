@@ -7,7 +7,6 @@
 #define SMACKREPFLATMEM_H
 
 #include "SmackRep.h"
-#include "SmackOptions.h"
 
 namespace smack {
 
@@ -23,22 +22,20 @@ class SmackRepFlatMem : public SmackRep {
 public:
   static const string CURRADDR;
   static const string PTR_TYPE;
-  static const string PRELUDE;
-  
-  static const string MALLOC_PROC;
-  static const string ALLOCA_PROC;
-  static const string FREE_PROC;
-  
-  static const string MALLOC_IMPL;
-  static const string ALLOCA_IMPL;
-  static const string FREE_IMPL;
+  static const string POINTERS;  
 
 public:
-  SmackRepFlatMem(llvm::DataLayout* td) : SmackRep(td), globalsTop(0) {}
+  SmackRepFlatMem(llvm::AliasAnalysis* aa, llvm::DataLayout* td) 
+    : SmackRep(aa,td), globalsTop(0) {}
   virtual vector<const Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();
-  virtual string getPrelude();
+  
+  virtual string memoryModel();
+  virtual string mallocProc();
+  virtual string freeProc();
+  virtual string allocaProc();
+  virtual string memcpyProc(int dstReg, int srcReg);
 };
 }
 

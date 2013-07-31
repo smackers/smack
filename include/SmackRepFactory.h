@@ -13,7 +13,7 @@
 namespace smack {
 class SmackRepFactory {
 public:
-  static SmackRep* createSmackRep(llvm::DataLayout* td);
+  static SmackRep* createSmackRep(llvm::AliasAnalysis* aa, llvm::DataLayout* td);
 };
 }
 

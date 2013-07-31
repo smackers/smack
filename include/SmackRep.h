@@ -9,6 +9,7 @@
 #include "BoogieAst.h"
 #include "llvm/DataLayout.h"
 #include "llvm/InstrTypes.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
@@ -26,7 +27,6 @@ using namespace std;
 class SmackRep {
 public:
   static const string CURRADDR; // TODO: push this into SmackRepFlatMem
-  static const string MEMORY;
   static const string ALLOC;
   static const string BLOCK_LBL;
   static const string RET_VAR;
@@ -92,12 +92,17 @@ public:
   // TODO Make this width a parameter to generate bitvector-based code.
   static const int width;
 
-private:
-  static const string PRELUDE;
+protected:
+  static const string ARITHMETIC;
+  static const string AUX_PROCS;
+  static const string MEMORY_DEBUG_SYMBOLS;
+  llvm::AliasAnalysis* aliasAnalysis;
   llvm::DataLayout* targetData;
+  vector<const llvm::Value*> memoryRegions;
 
 public:
-  SmackRep(llvm::DataLayout* td) : targetData(td) {}
+  SmackRep(llvm::AliasAnalysis* aa, llvm::DataLayout* td) 
+    : aliasAnalysis(aa), targetData(td) {}
 
   bool isSmackName(string n);
   bool isProcIgnore(string n);
@@ -113,8 +118,11 @@ public:
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
+  
+  unsigned getRegion(const llvm::Value* v);
+  string memReg(unsigned i);
 
-  const Expr* mem(const Expr* e);
+  const Expr* mem(const llvm::Value* v);
   const Expr* ptr(const Expr* obj, const Expr* off);
   const Expr* obj(const Expr* e);
   const Expr* off(const Expr* e);
@@ -129,20 +137,25 @@ public:
   const Expr* pa(const Expr* e, const Expr* x, const Expr* y);
 
   string id(const llvm::Value* v);
-  const Expr* lit(llvm::Value* v);
+  const Expr* lit(const llvm::Value* v);
   const Expr* lit(unsigned v);
   const Expr* ptrArith(llvm::Value* p, vector<llvm::Value*> ps,
                        vector<llvm::Type*> ts);
-  const Expr* expr(llvm::Value* v);
+  const Expr* expr(const llvm::Value* v);
   const Expr* op(llvm::BinaryOperator& o);
   const Expr* pred(llvm::CmpInst& ci);
-
+  
   virtual vector<const Decl*> globalDecl(const llvm::Value* g) = 0;
-  virtual vector<string> getModifies() {
-    return vector<string>();
-  }
+  virtual vector<string> getModifies();
   virtual string getPtrType() = 0;
   virtual string getPrelude();
+  
+  virtual string memoryModel() = 0;
+  virtual string mallocProc() = 0;
+  virtual string freeProc() = 0;
+  virtual string allocaProc() = 0;
+  virtual string memcpyCall(int dstReg, int srcReg);
+  virtual string memcpyProc(int dstReg, int srcReg) = 0;
 };
 }
 

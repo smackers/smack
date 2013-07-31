@@ -4,10 +4,10 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "SmackRep.h"
+#include "SmackOptions.h"
 
 namespace smack {
 
-const string SmackRep::MEMORY = "$Mem";
 const string SmackRep::ALLOC = "$Alloc";
 const string SmackRep::BLOCK_LBL = "$bb";
 const string SmackRep::RET_VAR = "$r";
@@ -72,7 +72,7 @@ const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
 const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
 const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
 
-const string SmackRep::PRELUDE =
+const string SmackRep::ARITHMETIC =
   "// SMACK Arithmetic Predicates\n"
   "\n"
   "function $add(p1:int, p2:int) returns (int) {p1 + p2}\n"
@@ -119,9 +119,16 @@ const string SmackRep::PRELUDE =
   "axiom $b2i(true) == 1;\n"
   "axiom $b2i(false) == 0;\n"
   "axiom (forall i:int :: $i2b(i) <==> i != 0);\n"
-  "axiom $i2b(0) == false;\n"
-  "\n"
+  "axiom $i2b(0) == false;\n";
+
+const string SmackRep::AUX_PROCS =
   "procedure boogie_si_record_int(i: int);\n";
+
+const string SmackRep::MEMORY_DEBUG_SYMBOLS = 
+  "type $mop;\n"
+  "procedure boogie_si_record_mop(m: $mop);\n"
+  "const $R: $mop;\n"
+  "const $W: $mop;\n";    
 
 const int SmackRep::width = 0;
 
@@ -201,9 +208,29 @@ unsigned SmackRep::fieldOffset(llvm::StructType* t, unsigned fieldNo) {
   return targetData->getStructLayout(t)->getElementOffset(fieldNo);
 }
 
-// NOTE: flexibility for future alternative memory models
-const Expr* SmackRep::mem(const Expr* e) {
-  return Expr::sel(Expr::id(SmackRep::MEMORY), e);
+string SmackRep::memReg(unsigned i) {
+  stringstream s;
+  s << "$M." << i;
+  return s.str();
+}
+
+const Expr* SmackRep::mem(const llvm::Value* v) {
+  return Expr::sel(Expr::id(memReg(getRegion(v))), expr(v));
+}
+
+unsigned SmackRep::getRegion(const llvm::Value* v) {
+  for (unsigned i=0; i<memoryRegions.size(); ++i)
+    if (!aliasAnalysis->isNoAlias(v,memoryRegions[i]))
+      return i;
+
+  memoryRegions.push_back(v);
+  return memoryRegions.size()-1;
+}
+
+string SmackRep::memcpyCall(int dstReg, int srcReg) {
+  stringstream s;
+  s << "$memcpy." << dstReg << "." << srcReg;
+  return s.str();
 }
 
 const Expr* SmackRep::ptr(const Expr* obj, const Expr* off) {
@@ -273,8 +300,8 @@ string SmackRep::id(const llvm::Value* v) {
   return name;
 }
 
-const Expr* SmackRep::lit(llvm::Value* v) {
-  if (const llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v)) {
+const Expr* SmackRep::lit(const llvm::Value* v) {
+  if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
     if (ci->getBitWidth() == 1)
       return Expr::lit(!ci->isZero());
 
@@ -329,19 +356,19 @@ const Expr* SmackRep::ptrArith(
   return e;
 }
 
-const Expr* SmackRep::expr(llvm::Value* v) {
+const Expr* SmackRep::expr(const llvm::Value* v) {
   using namespace llvm;
 
-  if (GlobalValue* g = dyn_cast<GlobalValue>(v)) {
+  if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
     assert(g->hasName());
     return ptr(Expr::id(id(v)), lit((unsigned)0));
 
   } else if (v->hasName())
     return Expr::id(id(v));
 
-  else if (Constant* constant = dyn_cast<Constant>(v)) {
+  else if (const Constant* constant = dyn_cast<const Constant>(v)) {
 
-    if (ConstantExpr* constantExpr = dyn_cast<ConstantExpr>(constant)) {
+    if (const ConstantExpr* constantExpr = dyn_cast<const ConstantExpr>(constant)) {
 
       if (constantExpr->getOpcode() == Instruction::GetElementPtr) {
 
@@ -374,7 +401,7 @@ const Expr* SmackRep::expr(llvm::Value* v) {
         assert(false && "constant expression of this type not supported");
       }
 
-    } else if (ConstantInt* ci = dyn_cast<ConstantInt>(constant)) {
+    } else if (const ConstantInt* ci = dyn_cast<const ConstantInt>(constant)) {
       if (ci->getBitWidth() == 1)
         return Expr::lit(!ci->isZero());
 
@@ -501,8 +528,34 @@ const Expr* SmackRep::pred(llvm::CmpInst& ci) {
 }
 
 string SmackRep::getPrelude() {
-  return PRELUDE;
+  stringstream s;
+  s << AUX_PROCS << endl;
+  s << ARITHMETIC << endl;
+
+  if (SmackOptions::MemoryModelDebug)
+    s << MEMORY_DEBUG_SYMBOLS << endl;
+  
+  s << "// Memory region declarations: " << memoryRegions.size() << endl;
+  for (unsigned i=0; i<memoryRegions.size(); ++i)
+    s << "var " << memReg(i) 
+      << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+  
+  s << endl;
+
+  s << memoryModel() << endl;
+  s << mallocProc() << endl;
+  s << freeProc() << endl;
+  s << allocaProc() << endl;
+  return s.str();
 }
+
+vector<string> SmackRep::getModifies() {
+  vector<string> mods;
+  for (unsigned i=0; i<memoryRegions.size(); ++i)
+    mods.push_back(memReg(i));
+  return mods;
+}
+
 
 } // namespace smack
 
