@@ -25,8 +25,10 @@ public:
   static const string POINTERS;  
 
 public:
-  SmackRepFlatMem(llvm::AliasAnalysis* aa, llvm::DataLayout* td) 
-    : SmackRep(aa,td), globalsTop(0) {}
+  SmackRepFlatMem(llvm::AliasAnalysis* aa) : SmackRep(aa), globalsTop(0) {}
+#ifdef ENABLE_DSA
+  SmackRepFlatMem(llvm::DataStructures* ds) : SmackRep(ds), globalsTop(0) {}
+#endif
   virtual vector<const Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();

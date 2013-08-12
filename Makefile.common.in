@@ -18,6 +18,21 @@ PROJ_OBJ_ROOT := $(subst //,/,@abs_top_builddir@)
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT := @prefix@
 
+# When ENABLE_DSA is enabled, we compile with the data structure analysis from
+# the poolalloc module, which is separate from LLVM.  In that case we need the
+# location of the poolalloc source and objects.
+#ENABLE_DSA = 1
+@ENABLE_DSA@
+POOLALLOC_SRC_ROOT = @poolallocsrc@
+POOLALLOC_OBJ_ROOT = @poolallocobj@
+
+ifdef ENABLE_DSA
+  MORE_FLAGS = -DENABLE_DSA -I$(POOLALLOC_SRC_ROOT)/include -I$(POOLALLOC_OBJ_ROOT)/include
+  CFLAGS += $(MORE_FLAGS)
+  CPPFLAGS += $(MORE_FLAGS)
+  CXXFLAGS += $(MORE_FLAGS)
+endif
+
 # Configuration file to set paths specific to local installation of LLVM
 include $(PROJ_OBJ_ROOT)/Makefile.llvm.config
 

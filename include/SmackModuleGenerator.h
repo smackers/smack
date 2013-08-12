@@ -7,7 +7,6 @@
 
 #include "BoogieAst.h"
 #include "SmackInstGenerator.h"
-#include "SmackRepFactory.h"
 #include "llvm/DataLayout.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/CFG.h"
@@ -16,6 +15,10 @@
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 #include <stack>
+
+#ifdef ENABLE_DSA
+#include "dsa/DataStructure.h"
+#endif
 
 using namespace std;
 using llvm::errs;
@@ -35,7 +38,13 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayout>();
+#ifdef ENABLE_DSA
+    SmackOptions::UseDSA
+      ? AU.addRequired<llvm::EQTDDataStructures>()
+      : AU.addRequired<llvm::AliasAnalysis>();
+#else
     AU.addRequired<llvm::AliasAnalysis>();
+#endif
   }
 
   Program* getProgram() const {

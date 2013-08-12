@@ -5,7 +5,6 @@
 //
 
 #include "SmackOptions.h"
-#include "SmackRepFactory.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace smack {
@@ -33,6 +32,10 @@ const llvm::cl::opt<bool> SmackOptions::MemoryModelImpls(
 
 const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
   "source-loc-syms", llvm::cl::desc("Include source locations in generated code.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::UseDSA(
+  "use-dsa", llvm::cl::desc("Leverage data-structure analysis from poolalloc.")
 );
 
 }

@@ -13,9 +13,13 @@ char SmackModuleGenerator::ID = 0;
 bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
 
   SmackRep* rep = 
-    SmackRepFactory::createSmackRep(
-      &getAnalysis<llvm::AliasAnalysis>(),
-      &getAnalysis<llvm::DataLayout>());
+#ifdef ENABLE_DSA
+      SmackOptions::UseDSA
+        ? SmackRep::createRep(&getAnalysis<llvm::EQTDDataStructures>())
+        : SmackRep::createRep(&getAnalysis<llvm::AliasAnalysis>());
+#else
+      SmackRep::createRep(&getAnalysis<llvm::AliasAnalysis>());
+#endif
 
   program = new Program("");
 

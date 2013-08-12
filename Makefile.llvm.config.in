@@ -55,6 +55,14 @@ endif
 ifndef LLVM_OBJ_ROOT
 $(error Projects must define LLVM_OBJ_ROOT)
 endif
+ifdef ENABLE_DSA
+  ifndef POOLALLOC_SRC_ROOT
+      $(error Must define POOLALLOC_SRC_ROOT)
+  endif
+  ifndef POOLALLOC_OBJ_ROOT
+      $(error Must define POOLALLOC_OBJ_ROOT)
+  endif
+endif
 PROJ_SRC_DIR := $(call realpath, $(PROJ_SRC_ROOT)/$(patsubst $(PROJ_OBJ_ROOT)%,%,$(PROJ_OBJ_DIR)))
 prefix          := $(PROJ_INSTALL_ROOT)
 PROJ_prefix     := $(prefix)

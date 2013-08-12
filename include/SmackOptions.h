@@ -7,7 +7,6 @@
 #ifndef SMACKOPTIONS_H
 #define SMACKOPTIONS_H
 
-#include "SmackRepFactory.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace smack {
@@ -23,6 +22,8 @@ public:
   static const llvm::cl::opt<bool> MemoryModelImpls;
   
   static const llvm::cl::opt<bool> SourceLocSymbols;
+
+  static const llvm::cl::opt<bool> UseDSA;
 };
 }
 

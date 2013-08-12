@@ -462,6 +462,15 @@ else
   esac
 fi
 
+dnl --enable-dsa : check whether they want to leverage data structure analysis:
+AC_ARG_ENABLE(dsa, AS_HELP_STRING(
+ --enable-dsa,[Compile with data-structure analysis enabled (default is NO)]),,enableval="no")
+if test ${enableval} = "no" ; then
+  AC_SUBST(ENABLE_DSA,[[]])
+else
+  AC_SUBST(ENABLE_DSA,[[ENABLE_DSA=1]])
+fi
+
 dnl Allow enablement of building and installing docs
 AC_ARG_ENABLE(docs,
               AS_HELP_STRING([--enable-docs],
@@ -801,6 +810,29 @@ AC_ARG_ENABLE(libffi,AS_HELP_STRING(
     *) AC_MSG_ERROR([Invalid setting for --enable-libffi. Use "yes" or "no"]) ;;
   esac],
   llvm_cv_enable_libffi=no)
+  
+dnl **************************************************************************
+dnl * Set the location of various third-party software packages
+dnl **************************************************************************
+
+dnl Specify the location of the poolalloc project
+AC_ARG_WITH(poolallocsrc,
+  AS_HELP_STRING([--with-poolallocsrc],
+    [Specify location of Pool Allocation source code]),
+    AC_SUBST(poolallocsrc,"$withval"),
+    AC_SUBST(poolallocsrc,"$LLVM_SRC_ROOT/projects/poolalloc"
+    ))
+
+AC_ARG_WITH(poolallocobj,
+  AS_HELP_STRING([--with-poolallocobj],
+    [Specify location of Pool Allocation object code]),
+    AC_SUBST(poolallocobj,"$withval"),
+    AC_SUBST(poolallocobj,"$LLVM_OBJ_ROOT/projects/poolalloc"
+    ))
+
+dnl Ensure that all pathnames are absolute pathnames
+poolallocsrc=`cd $poolallocsrc; pwd`
+poolallocobj=`cd $poolallocobj; pwd`
 
 dnl===-----------------------------------------------------------------------===
 dnl===

@@ -7,6 +7,7 @@
 #define SMACKREP_H
 
 #include "BoogieAst.h"
+#include "SmackOptions.h"
 #include "llvm/DataLayout.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -16,6 +17,11 @@
 #include "llvm/Support/InstVisitor.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>
+
+#ifdef ENABLE_DSA
+#include "dsa/DSGraph.h"
+#include "dsa/DataStructure.h"
+#endif
 
 namespace smack {
 
@@ -97,12 +103,25 @@ protected:
   static const string AUX_PROCS;
   static const string MEMORY_DEBUG_SYMBOLS;
   llvm::AliasAnalysis* aliasAnalysis;
-  llvm::DataLayout* targetData;
-  vector<const llvm::Value*> memoryRegions;
+  vector<const void*> memoryRegions;
+#ifdef ENABLE_DSA
+  llvm::DataStructures* dsa;
+#endif
+  const llvm::DataLayout* targetData;
 
+protected:
+  SmackRep(llvm::AliasAnalysis* aa)
+    : aliasAnalysis(aa), targetData(aa->getDataLayout()) {}  
 public:
-  SmackRep(llvm::AliasAnalysis* aa, llvm::DataLayout* td) 
-    : aliasAnalysis(aa), targetData(td) {}
+  static SmackRep* createRep(llvm::AliasAnalysis* aa);
+  
+#ifdef ENABLE_DSA
+protected:
+  SmackRep(llvm::DataStructures* ds) 
+    : dsa(ds), targetData(&ds->getDataLayout()) {}
+public:
+  static SmackRep* createRep(llvm::DataStructures* ds);
+#endif
 
   bool isSmackName(string n);
   bool isProcIgnore(string n);
