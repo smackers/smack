@@ -16,8 +16,22 @@ vector<const Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
   string name = id(g);
   decls.push_back(Decl::constant(name, getPtrType(), true));
 
-  // TODO fix this
-  int size = targetData->getTypeStoreSize(g->getType());
+  unsigned size;
+  
+  // NOTE: all global variables have pointer type in LLVM
+  if (g->getType()->isPointerTy()) {
+    llvm::PointerType *t = (llvm::PointerType*) g->getType();
+    
+    // in case we can determine the size of the element type ...
+    if (t->getElementType()->isSized())
+      size = storageSize(t->getElementType());
+    
+    // otherwise (e.g. for function declarations), use a default size
+    else
+      size = 1024;
+    
+  } else
+    size = storageSize(g->getType());
 
   globalsTop -= size;
 
