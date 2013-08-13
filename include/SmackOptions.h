@@ -23,7 +23,9 @@ public:
   
   static const llvm::cl::opt<bool> SourceLocSymbols;
 
+#ifdef ENABLE_DSA
   static const llvm::cl::opt<bool> UseDSA;
+#endif
 };
 }
 

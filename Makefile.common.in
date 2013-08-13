@@ -27,10 +27,12 @@ POOLALLOC_SRC_ROOT = @poolallocsrc@
 POOLALLOC_OBJ_ROOT = @poolallocobj@
 
 ifdef ENABLE_DSA
-  MORE_FLAGS = -DENABLE_DSA -I$(POOLALLOC_SRC_ROOT)/include -I$(POOLALLOC_OBJ_ROOT)/include
+  MORE_FLAGS = -DENABLE_DSA -I$(POOLALLOC_SRC_ROOT)/include
   CFLAGS += $(MORE_FLAGS)
   CPPFLAGS += $(MORE_FLAGS)
   CXXFLAGS += $(MORE_FLAGS)
+  LDFLAGS += $(POOLALLOC_OBJ_ROOT)/$(BuildMode)/lib/LLVMDataStructure.a
+  LDFLAGS += $(POOLALLOC_OBJ_ROOT)/$(BuildMode)/lib/poolalloc.a
 endif
 
 # Configuration file to set paths specific to local installation of LLVM

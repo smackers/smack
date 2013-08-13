@@ -56,10 +56,10 @@ ifndef LLVM_OBJ_ROOT
 $(error Projects must define LLVM_OBJ_ROOT)
 endif
 ifdef ENABLE_DSA
-  ifndef POOLALLOC_SRC_ROOT
+  ifeq (,$(wildcard $(POOLALLOC_SRC_ROOT)))
       $(error Must define POOLALLOC_SRC_ROOT)
   endif
-  ifndef POOLALLOC_OBJ_ROOT
+  ifeq (,$(wildcard $(POOLALLOC_OBJ_ROOT)))
       $(error Must define POOLALLOC_OBJ_ROOT)
   endif
 endif

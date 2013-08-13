@@ -5456,8 +5456,8 @@ else
 fi
 
 
-poolallocsrc=`cd $poolallocsrc; pwd`
-poolallocobj=`cd $poolallocobj; pwd`
+poolallocsrc=`cd $poolallocsrc && pwd`
+poolallocobj=`cd $poolallocobj && pwd`
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BSD-compatible nm" >&5

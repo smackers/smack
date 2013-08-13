@@ -831,8 +831,8 @@ AC_ARG_WITH(poolallocobj,
     ))
 
 dnl Ensure that all pathnames are absolute pathnames
-poolallocsrc=`cd $poolallocsrc; pwd`
-poolallocobj=`cd $poolallocobj; pwd`
+poolallocsrc=`cd $poolallocsrc && pwd`
+poolallocobj=`cd $poolallocobj && pwd`
 
 dnl===-----------------------------------------------------------------------===
 dnl===
