@@ -18,11 +18,6 @@
 #include "llvm/Support/Regex.h"
 #include <sstream>
 
-#ifdef ENABLE_DSA
-#include "dsa/DSGraph.h"
-#include "dsa/DataStructure.h"
-#endif
-
 namespace smack {
 
 using llvm::Regex;
@@ -104,9 +99,6 @@ protected:
   static const string MEMORY_DEBUG_SYMBOLS;
   llvm::AliasAnalysis* aliasAnalysis;
   vector<const void*> memoryRegions;
-#ifdef ENABLE_DSA
-  llvm::DataStructures* dsa;
-#endif
   const llvm::DataLayout* targetData;
 
 protected:
@@ -115,14 +107,6 @@ protected:
 public:
   static SmackRep* createRep(llvm::AliasAnalysis* aa);
   
-#ifdef ENABLE_DSA
-protected:
-  SmackRep(llvm::DataStructures* ds) 
-    : dsa(ds), targetData(&ds->getDataLayout()) {}
-public:
-  static SmackRep* createRep(llvm::DataStructures* ds);
-#endif
-
   bool isSmackName(string n);
   bool isProcIgnore(string n);
   bool isSmackAssert(llvm::Function* f);

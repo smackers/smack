@@ -32,7 +32,7 @@ ifdef ENABLE_DSA
   CPPFLAGS += $(MORE_FLAGS)
   CXXFLAGS += $(MORE_FLAGS)
   LDFLAGS += $(POOLALLOC_OBJ_ROOT)/$(BuildMode)/lib/LLVMDataStructure.a
-  LDFLAGS += $(POOLALLOC_OBJ_ROOT)/$(BuildMode)/lib/poolalloc.a
+  LDFLAGS += $(POOLALLOC_OBJ_ROOT)/$(BuildMode)/lib/AssistDS.a
 endif
 
 # Configuration file to set paths specific to local installation of LLVM

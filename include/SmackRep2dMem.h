@@ -23,9 +23,6 @@ public:
 
 public:
   SmackRep2dMem(llvm::AliasAnalysis* aa) : SmackRep(aa) {}
-#ifdef ENABLE_DSA
-  SmackRep2dMem(llvm::DataStructures* ds) : SmackRep(ds) {}
-#endif
   virtual vector<const Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();

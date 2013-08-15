@@ -17,7 +17,7 @@
 #include <stack>
 
 #ifdef ENABLE_DSA
-#include "dsa/DataStructure.h"
+#include "DSAAliasAnalysis.h"
 #endif
 
 using namespace std;
@@ -33,19 +33,31 @@ public:
   static char ID; // Pass identification, replacement for typeid
 
   SmackModuleGenerator() : ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& m);
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayout>();
 #ifdef ENABLE_DSA
-    SmackOptions::UseDSA
-      ? AU.addRequired<llvm::EQTDDataStructures>()
-      : AU.addRequired<llvm::AliasAnalysis>();
+    AU.addRequired<DSAAliasAnalysis>();
 #else
     AU.addRequired<llvm::AliasAnalysis>();
 #endif
   }
+
+  virtual bool runOnModule(llvm::Module& m) {  
+    SmackRep* rep = 
+      SmackRep::createRep(
+#ifdef ENABLE_DSA
+        &getAnalysis<DSAAliasAnalysis>()
+#else
+        &getAnalysis<llvm::AliasAnalysis>()
+#endif
+      );
+    generateProgram(m,rep);
+    return false;
+  }
+  
+  void generateProgram(llvm::Module& m, SmackRep* rep);
 
   Program* getProgram() const {
     return program;

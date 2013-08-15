@@ -10,16 +10,7 @@ namespace smack {
 llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
 char SmackModuleGenerator::ID = 0;
 
-bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
-
-  SmackRep* rep = 
-#ifdef ENABLE_DSA
-      SmackOptions::UseDSA
-        ? SmackRep::createRep(&getAnalysis<llvm::EQTDDataStructures>())
-        : SmackRep::createRep(&getAnalysis<llvm::AliasAnalysis>());
-#else
-      SmackRep::createRep(&getAnalysis<llvm::AliasAnalysis>());
-#endif
+void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
   program = new Program("");
 
@@ -150,8 +141,6 @@ bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.
   program->appendPrelude(rep->getPrelude());
-
-  return false;
 }
 
 } // namespace smack

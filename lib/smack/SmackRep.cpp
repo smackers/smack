@@ -141,15 +141,6 @@ SmackRep* SmackRep::createRep(llvm::AliasAnalysis* aa) {
     return new SmackRepFlatMem(aa);
 }
 
-#ifdef ENABLE_DSA
-SmackRep* SmackRep::createRep(llvm::DataStructures* ds) {
-  if ( SmackOptions::MemoryModel == twodim )
-    return new SmackRep2dMem(ds);
-  else
-    return new SmackRepFlatMem(ds);
-}
-#endif
-
 // TODO Do the following functions belong here ?
 
 string EscapeString(string str) {
@@ -236,20 +227,7 @@ const Expr* SmackRep::mem(const llvm::Value* v) {
   return Expr::sel(Expr::id(memReg(getRegion(v))), expr(v));
 }
 
-unsigned SmackRep::getRegion(const llvm::Value* v) {
-#ifdef ENABLE_DSA
-  if ( SmackOptions::UseDSA ) {
-    const llvm::DSNodeHandle& n = dsa->getGlobalsGraph()->getNodeForValue(v);
-
-    for (unsigned i=0; i<memoryRegions.size(); ++i)
-      if (n.getNode() == ((const llvm::DSNodeHandle*) memoryRegions[i])->getNode())
-        return i;
-
-    memoryRegions.push_back(&n);
-    return memoryRegions.size()-1;
-  } 
-#endif
-
+unsigned SmackRep::getRegion(const llvm::Value* v) {  
   for (unsigned i=0; i<memoryRegions.size(); ++i)
     if (!aliasAnalysis->isNoAlias(v, (const llvm::Value*) memoryRegions[i]))
       return i;
@@ -567,10 +545,6 @@ string SmackRep::getPrelude() {
     s << MEMORY_DEBUG_SYMBOLS << endl;
     
   s << "// Memory region declarations";
-#ifdef ENABLE_DSA
-  if (SmackOptions::UseDSA)
-    s << " (DSA-induced)";
-#endif
   s << ": " << memoryRegions.size() << endl;
   for (unsigned i=0; i<memoryRegions.size(); ++i)
     s << "var " << memReg(i) 
