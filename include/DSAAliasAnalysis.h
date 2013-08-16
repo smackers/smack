@@ -58,8 +58,6 @@ public:
 private:
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);
   bool equivNodes(const llvm::DSNode* n1, const llvm::DSNode* n2);
-  bool equivNodes(const Location* l1, const Location* l2);
-  bool isComplete(const Location* l);
   unsigned getOffset(const Location* l);
   bool disjoint(const Location* l1, const Location* l2);
 };

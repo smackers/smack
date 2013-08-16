@@ -90,9 +90,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
       proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
 
     // MODIFIES
-    // NOTE we must do this after instruction generation, since we would not
-    // otherwise know how many / which regions are modified.
-    proc->addMods(rep->getModifies());
+    // ... to do below, after memory splitting is determined.
 
     DEBUG(errs() << "Finished analyzing function: " << name << "\n\n");
   }
@@ -131,6 +129,12 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
     if (! func->getReturnType()->isVoidTy())
       p->addRet(SmackRep::RET_VAR, rep->getPtrType());
     program->addProc(p);
+  }
+
+  // MODIFIES
+  for ( vector<Procedure*>::const_iterator p = program->pbegin();
+        p != program->pend(); ++p ) {
+    (*p)->addMods(rep->getModifies());
   }
 
   for (set<string>::iterator d = moreDecls.begin();

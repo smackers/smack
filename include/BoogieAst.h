@@ -377,6 +377,12 @@ public:
   void addProc(Procedure* p) {
     procs.push_back(p);
   }
+  vector<Procedure*>::const_iterator pbegin() {
+    return procs.begin();
+  }
+  vector<Procedure*>::const_iterator pend() {
+    return procs.end();
+  }
   void appendPrelude(string s) {
     prelude += s;
   }

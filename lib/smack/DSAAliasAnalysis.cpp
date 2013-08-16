@@ -48,16 +48,6 @@ bool DSAAliasAnalysis::equivNodes(const DSNode* n1, const DSNode* n2) {
   return eqs.getLeaderValue(n1) == eqs.getLeaderValue(n2);
 }
 
-bool DSAAliasAnalysis::equivNodes(const Location* l1, const Location* l2) {
-  return equivNodes(
-    nodeEqs->getMemberForValue(l1->Ptr), 
-    nodeEqs->getMemberForValue(l2->Ptr) );
-}
-
-bool DSAAliasAnalysis::isComplete(const Location* l) {
-  return nodeEqs->getMemberForValue(l->Ptr)->isCompleteNode();
-}
-
 unsigned DSAAliasAnalysis::getOffset(const Location* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
   DSGraph::ScalarMapTy::const_iterator I = S.find((Value*)l->Ptr);
@@ -87,51 +77,6 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
     if (disjoint(&LocA,&LocB))
       return NoAlias;
   }
-  
-  // if (isComplete(&LocA) || isComplete(&LocB)) {
-  // 
-  //   if (!equivNodes(&LocA,&LocB))
-  //     return NoAlias;
-  // 
-  //   if (!overlappingNodes(&LocA,&LocB))
-  //     return NoAlias;
-  // }
-
-  //   DSGraph *G1 = getGraphForValue(LocA.Ptr);
-  // DSGraph *G2 = getGraphForValue(LocB.Ptr);
-  // 
-  // const DSGraph::ScalarMapTy &GSM1 = G1->getScalarMap();
-  // DSGraph::ScalarMapTy::const_iterator I = GSM1.find((Value*)LocA.Ptr);
-  // if (I == GSM1.end()) return NoAlias;
-  // 
-  // const DSGraph::ScalarMapTy &GSM2 = G2->getScalarMap();
-  // DSGraph::ScalarMapTy::const_iterator J = GSM2.find((Value*)LocB.Ptr);
-  // if (J == GSM2.end()) return NoAlias;
-  // 
-  // // DSNode  *N1 = I->second.getNode(),  *N2 = J->second.getNode();
-  // 
-  // const DSNode *N1 = nodeEqs->getMemberForValue(LocA.Ptr);
-  // const DSNode *N2 = nodeEqs->getMemberForValue(LocB.Ptr);
-  // 
-  // unsigned O1 = I->second.getOffset(), O2 = J->second.getOffset();
-  // if (N1 == 0 || N2 == 0)
-  //   // Can't tell whether anything aliases null.
-  //   return AliasAnalysis::alias(LocA, LocB);
-  // 
-  // // We can only make a judgment if one of the nodes is complete.
-  // if (N1->isCompleteNode() || N2->isCompleteNode()) {
-  //   
-  //   if (!equivNodes(N1,N2))
-  //     return NoAlias;   // Completely different nodes.
-  // 
-  //   // See if they point to different offsets...  if so, we may be able to
-  //   // determine that they do not alias...
-  //   if (O1 < O2 && O1+LocA.Size <= O2)
-  //     return NoAlias;
-  // 
-  //   if (O2 < O1 && O2+LocB.Size <= O1)
-  //     return NoAlias;
-  // }
   
   // FIXME: we could improve on this by checking the globals graph for aliased
   // global queries...
