@@ -31,6 +31,18 @@ RegisterPass<DSAAliasAnalysis> A("ds-aa", "Data Structure Graph Based Alias Anal
 RegisterAnalysisGroup<AliasAnalysis> B(A);
 char DSAAliasAnalysis::ID = 0;
 
+void DSAAliasAnalysis::collectMemcpys(llvm::Module &M) {
+  for (llvm::Module::iterator func = M.begin(), e = M.end();
+       func != e; ++func) {
+         
+    for (llvm::Function::iterator block = func->begin(); 
+        block != func->end(); ++block) {
+        
+      memcpys->visit(*block);
+    }
+  }
+}
+
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return TD->getDSGraph(*I->getParent()->getParent());
@@ -74,7 +86,7 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
     if (!equivNodes(N1,N2))
       return NoAlias;
     
-    if (disjoint(&LocA,&LocB))
+    if (!memcpys->has(N1) && !memcpys->has(N2) && disjoint(&LocA,&LocB))
       return NoAlias;
   }
   
