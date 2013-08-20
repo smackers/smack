@@ -180,8 +180,8 @@ const string SmackRep::ARITHMETIC =
   "function $funo(f1:float, f2:float) returns (bool);\n"
   "function $fp2si(f:float) returns (int);\n"
   "function $fp2ui(f:float) returns (int);\n"
-  "function $si2pf(i:int) returns (float);\n"
-  "function $ui2pf(i:int) returns (float);\n" ;
+  "function $si2fp(i:int) returns (float);\n"
+  "function $ui2fp(i:int) returns (float);\n" ;
 
 const string SmackRep::AUX_PROCS =
   "procedure boogie_si_record_int(i: int);\n";
