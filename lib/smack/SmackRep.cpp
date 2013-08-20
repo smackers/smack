@@ -55,6 +55,12 @@ const string SmackRep::LSHR = "$lshr";
 const string SmackRep::ASHR = "$ashr";
 const string SmackRep::SHL = "$shl";
 
+const string SmackRep::NAND = "$nand";
+const string SmackRep::MAX = "$max";
+const string SmackRep::MIN = "$min";
+const string SmackRep::UMAX = "$umax";
+const string SmackRep::UMIN = "$umin";
+
 const string SmackRep::FADD = "$fadd";
 const string SmackRep::FSUB = "$fsub";
 const string SmackRep::FMUL = "$fmul";
@@ -137,6 +143,11 @@ const string SmackRep::ARITHMETIC =
   "function $sgt(p1:int, p2:int) returns (bool) {p1 > p2}\n"
   "function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}\n"
   "function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}\n"
+  "function $nand(p1:int, p2:int) returns (int);\n"
+  "function $max(p1:int, p2:int) returns (int);\n"
+  "function $min(p1:int, p2:int) returns (int);\n"
+  "function $umax(p1:int, p2:int) returns (int);\n"
+  "function $umin(p1:int, p2:int) returns (int);\n"
   "function $i2b(i: int) returns (bool);\n"
   "axiom (forall i:int :: $i2b(i) <==> i != 0);\n"
   "axiom $i2b(0) == false;\n"

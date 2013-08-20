@@ -88,6 +88,12 @@ public:
   static const string SGT;
   static const string UGT;
   
+  static const string NAND;
+  static const string MAX;
+  static const string MIN;
+  static const string UMAX;
+  static const string UMIN;
+  
   static const string FFALSE;
   static const string FOEQ;
   static const string FOGE;

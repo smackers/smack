@@ -71,7 +71,6 @@ public:
   void visitPtrToIntInst(llvm::PtrToIntInst& i);
   void visitIntToPtrInst(llvm::IntToPtrInst& i);
   void visitSelectInst(llvm::SelectInst& i);
-  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i);
   void visitMemCpyInst(llvm::MemCpyInst& i);
   
   void visitFCmpInst(llvm::FCmpInst& i);
@@ -81,6 +80,9 @@ public:
   void visitFPToUIInst(llvm::FPToUIInst& i);
   void visitSIToFPInst(llvm::SIToFPInst& i);
   void visitUIToFPInst(llvm::UIToFPInst& i);
+
+  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i);
+  void visitAtomicRMWInst(llvm::AtomicRMWInst& i);
 };
 }
 

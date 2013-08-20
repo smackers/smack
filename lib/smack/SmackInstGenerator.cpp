@@ -512,6 +512,57 @@ void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {
   currBlock->addStmt(Stmt::assign(piv, Expr::id(x)));
 }
 
+void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
+  processInstruction(i);
+  
+  const Expr* res = rep->expr(&i);
+  const Expr* mem = rep->mem(i.getPointerOperand());
+  const Expr* val = rep->expr(i.getValOperand());  
+  const Expr* op;  
+  
+  switch (i.getOperation()) {
+    using llvm::AtomicRMWInst;
+  case AtomicRMWInst::Xchg:
+    op = val;
+    break;
+  case AtomicRMWInst::Add:
+    op = Expr::fn(SmackRep::ADD,mem,val);
+    break;
+  case AtomicRMWInst::Sub:
+    op = Expr::fn(SmackRep::SUB,mem,val);
+    break;
+  case AtomicRMWInst::And:
+    op = Expr::fn(SmackRep::AND,mem,val);
+    break;
+  case AtomicRMWInst::Nand:
+    op = Expr::fn(SmackRep::NAND,mem,val);
+    break;
+  case AtomicRMWInst::Or:
+    op = Expr::fn(SmackRep::OR,mem,val);
+    break;
+  case AtomicRMWInst::Xor:
+    op = Expr::fn(SmackRep::XOR,mem,val);
+    break;
+  case AtomicRMWInst::Max:
+    op = Expr::fn(SmackRep::MAX,mem,val);
+    break;
+  case AtomicRMWInst::Min:
+    op = Expr::fn(SmackRep::MIN,mem,val);
+    break;
+  case AtomicRMWInst::UMax:
+    op = Expr::fn(SmackRep::UMAX,mem,val);
+    break;
+  case AtomicRMWInst::UMin:
+    op = Expr::fn(SmackRep::UMIN,mem,val);
+    break;
+  default:
+    assert(false && "unexpected atomic operation.");
+  }  
+  
+  currBlock->addStmt(Stmt::assign(res,mem));
+  currBlock->addStmt(Stmt::assign(mem,op));
+}
+
 void SmackInstGenerator::visitPtrToIntInst(llvm::PtrToIntInst& i) {
   processInstruction(i);
 
