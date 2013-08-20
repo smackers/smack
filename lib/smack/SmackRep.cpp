@@ -36,6 +36,11 @@ const string SmackRep::P2I = "$p2i";
 const string SmackRep::I2B = "$i2b";
 const string SmackRep::B2I = "$b2i";
 
+const string SmackRep::FP2SI = "$fp2si";
+const string SmackRep::FP2UI = "$fp2ui";
+const string SmackRep::SI2FP = "$si2fp";
+const string SmackRep::UI2FP = "$ui2fp";
+
 const string SmackRep::ADD = "$add";
 const string SmackRep::SUB = "$sub";
 const string SmackRep::MUL = "$mul";
@@ -50,6 +55,12 @@ const string SmackRep::LSHR = "$lshr";
 const string SmackRep::ASHR = "$ashr";
 const string SmackRep::SHL = "$shl";
 
+const string SmackRep::FADD = "$fadd";
+const string SmackRep::FSUB = "$fsub";
+const string SmackRep::FMUL = "$fmul";
+const string SmackRep::FDIV = "$fdiv";
+const string SmackRep::FREM = "$frem";
+
 const string SmackRep::SGE = "$sge";
 const string SmackRep::UGE = "$uge";
 const string SmackRep::SLE = "$sle";
@@ -58,6 +69,23 @@ const string SmackRep::SLT = "$slt";
 const string SmackRep::ULT = "$ult";
 const string SmackRep::SGT = "$sgt";
 const string SmackRep::UGT = "$ugt";
+
+const string SmackRep::FFALSE = "$ffalse";
+const string SmackRep::FOEQ = "$foeq";
+const string SmackRep::FOGE = "$foge";
+const string SmackRep::FOGT = "$fogt";
+const string SmackRep::FOLE = "$fole";
+const string SmackRep::FOLT = "$folt";
+const string SmackRep::FONE = "$fone";
+const string SmackRep::FORD = "$ford";
+const string SmackRep::FTRUE = "$ftrue";
+const string SmackRep::FUEQ = "$fueq";
+const string SmackRep::FUGE = "$fuge";
+const string SmackRep::FUGT = "$fugt";
+const string SmackRep::FULE = "$fule";
+const string SmackRep::FULT = "$fult";
+const string SmackRep::FUNE = "$fune";
+const string SmackRep::FUNO = "$funo";
 
 // used for memory model debugging
 const string SmackRep::MEM_OP = "$mop";
@@ -75,8 +103,7 @@ const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
 const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
 
 const string SmackRep::ARITHMETIC =
-  "// SMACK Arithmetic Predicates\n"
-  "\n"
+  "// Integer arithmetic\n"
   "function $add(p1:int, p2:int) returns (int) {p1 + p2}\n"
   "function $sub(p1:int, p2:int) returns (int) {p1 - p2}\n"
   "function $mul(p1:int, p2:int) returns (int) {p1 * p2}\n"
@@ -85,8 +112,20 @@ const string SmackRep::ARITHMETIC =
   "function $srem(p1:int, p2:int) returns (int);\n"
   "function $urem(p1:int, p2:int) returns (int);\n"
   "function $and(p1:int, p2:int) returns (int);\n"
+  "axiom $and(0,0) == 0;\n"
+  "axiom $and(0,1) == 0;\n"
+  "axiom $and(1,0) == 0;\n"
+  "axiom $and(1,1) == 1;\n"
   "function $or(p1:int, p2:int) returns (int);\n"
+  "axiom $or(0,0) == 0;\n"
+  "axiom $or(0,1) == 1;\n"
+  "axiom $or(1,0) == 1;\n"
+  "axiom $or(1,1) == 1;\n"
   "function $xor(p1:int, p2:int) returns (int);\n"
+  "axiom $xor(0,0) == 0;\n"
+  "axiom $xor(0,1) == 1;\n"
+  "axiom $xor(1,0) == 1;\n"
+  "axiom $xor(1,1) == 0;\n"
   "function $lshr(p1:int, p2:int) returns (int);\n"
   "function $ashr(p1:int, p2:int) returns (int);\n"
   "function $shl(p1:int, p2:int) returns (int);\n"
@@ -99,29 +138,39 @@ const string SmackRep::ARITHMETIC =
   "function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}\n"
   "function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}\n"
   "function $i2b(i: int) returns (bool);\n"
+  "axiom (forall i:int :: $i2b(i) <==> i != 0);\n"
+  "axiom $i2b(0) == false;\n"
   "function $b2i(b: bool) returns (int);\n"
-  "\n"
-  "// SMACK Arithmetic Axioms\n"
-  "\n"
-  "axiom $and(0,0) == 0;\n"
-  "axiom $and(0,1) == 0;\n"
-  "axiom $and(1,0) == 0;\n"
-  "axiom $and(1,1) == 1;\n"
-  "\n"
-  "axiom $or(0,0) == 0;\n"
-  "axiom $or(0,1) == 1;\n"
-  "axiom $or(1,0) == 1;\n"
-  "axiom $or(1,1) == 1;\n"
-  "\n"
-  "axiom $xor(0,0) == 0;\n"
-  "axiom $xor(0,1) == 1;\n"
-  "axiom $xor(1,0) == 1;\n"
-  "axiom $xor(1,1) == 0;\n"
-  "\n"
   "axiom $b2i(true) == 1;\n"
   "axiom $b2i(false) == 0;\n"
-  "axiom (forall i:int :: $i2b(i) <==> i != 0);\n"
-  "axiom $i2b(0) == false;\n";
+  "\n"
+  "// Floating point\n"
+  "type float;\n"
+  "const $ffalse: float;\n"
+  "const $ftrue: float;\n"
+  "function $fadd(f1:float, f2:float) returns (float);\n"
+  "function $fsub(f1:float, f2:float) returns (float);\n"
+  "function $fmul(f1:float, f2:float) returns (float);\n"
+  "function $fdiv(f1:float, f2:float) returns (float);\n"
+  "function $frem(f1:float, f2:float) returns (float);\n"
+  "function $foeq(f1:float, f2:float) returns (bool);\n"
+  "function $foge(f1:float, f2:float) returns (bool);\n"
+  "function $fogt(f1:float, f2:float) returns (bool);\n"
+  "function $fole(f1:float, f2:float) returns (bool);\n"
+  "function $folt(f1:float, f2:float) returns (bool);\n"
+  "function $fone(f1:float, f2:float) returns (bool);\n"
+  "function $ford(f1:float, f2:float) returns (bool);\n"
+  "function $fueq(f1:float, f2:float) returns (bool);\n"
+  "function $fuge(f1:float, f2:float) returns (bool);\n"
+  "function $fugt(f1:float, f2:float) returns (bool);\n"
+  "function $fule(f1:float, f2:float) returns (bool);\n"
+  "function $fult(f1:float, f2:float) returns (bool);\n"
+  "function $fune(f1:float, f2:float) returns (bool);\n"
+  "function $funo(f1:float, f2:float) returns (bool);\n"
+  "function $fp2si(f:float) returns (int);\n"
+  "function $fp2ui(f:float) returns (int);\n"
+  "function $si2pf(i:int) returns (float);\n"
+  "function $ui2pf(i:int) returns (float);\n" ;
 
 const string SmackRep::AUX_PROCS =
   "procedure boogie_si_record_int(i: int);\n";
@@ -274,6 +323,22 @@ const Expr* SmackRep::b2i(const Expr* e) {
   return Expr::fn(B2I, e);
 }
 
+const Expr* SmackRep::fp2si(const Expr* e) {
+  return Expr::fn(FP2SI, e);
+}
+
+const Expr* SmackRep::fp2ui(const Expr* e) {
+  return Expr::fn(FP2UI, e);
+}
+
+const Expr* SmackRep::si2fp(const Expr* e) {
+  return Expr::fn(SI2FP, e);
+}
+
+const Expr* SmackRep::ui2fp(const Expr* e) {
+  return Expr::fn(UI2FP, e);
+}
+
 const Expr* SmackRep::pa(const Expr* e, int x, int y) {
   return pa(e, Expr::lit(x), Expr::lit(y));
 }
@@ -319,6 +384,12 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       return Expr::fn(SUB, Expr::lit(0, width), Expr::lit(-val, width));
     else
       return Expr::lit(val, width);
+
+  } else if (const llvm::ConstantFP* cf = llvm::dyn_cast<const llvm::ConstantFP>(v)) {
+
+    // TODO encode floating point...
+
+    return Expr::lit(0, width);
 
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
     return Expr::lit(0, width);
@@ -415,6 +486,9 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return Expr::lit(!ci->isZero());
 
       else return ptr(NUL, lit(ci));
+      
+    } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
+      return ptr(NUL, lit(cf));
 
     } else if (constant->isNullValue())
       return ZERO;
@@ -437,6 +511,8 @@ const Expr* SmackRep::op(llvm::BinaryOperator& o) {
   string op;
   switch (o.getOpcode()) {
     using llvm::Instruction;
+
+  // Integer operations
   case Instruction::Add:
     op = ADD;
     break;
@@ -476,6 +552,24 @@ const Expr* SmackRep::op(llvm::BinaryOperator& o) {
   case Instruction::Shl:
     op = SHL;
     break;
+
+  // Floating point operations
+  case Instruction::FAdd:
+    op = FADD;
+    break;
+  case Instruction::FSub:
+    op = FSUB;
+    break;
+  case Instruction::FMul:
+    op = FMUL;
+    break;
+  case Instruction::FDiv:
+    op = FDIV;
+    break;
+  case Instruction::FRem:
+    op = FREM;
+    break;
+      
   default:
     assert(false && "unexpected predicate.");
   }
@@ -498,36 +592,88 @@ const Expr* SmackRep::pred(llvm::CmpInst& ci) {
    *r = expr(ci.getOperand(1));
 
   switch (ci.getPredicate()) {
-    using llvm::ICmpInst;
-  case ICmpInst::ICMP_EQ:
+    using llvm::CmpInst;
+
+  // integer comparison
+  case CmpInst::ICMP_EQ:
     e = Expr::eq(l, r);
     break;
-  case ICmpInst::ICMP_NE:
+  case CmpInst::ICMP_NE:
     e = Expr::neq(l, r);
     break;
-  case ICmpInst::ICMP_SGE:
+  case CmpInst::ICMP_SGE:
     o = SGE;
     break;
-  case ICmpInst::ICMP_UGE:
+  case CmpInst::ICMP_UGE:
     o = UGE;
     break;
-  case ICmpInst::ICMP_SLE:
+  case CmpInst::ICMP_SLE:
     o = SLE;
     break;
-  case ICmpInst::ICMP_ULE:
+  case CmpInst::ICMP_ULE:
     o = ULE;
     break;
-  case ICmpInst::ICMP_SLT:
+  case CmpInst::ICMP_SLT:
     o = SLT;
     break;
-  case ICmpInst::ICMP_ULT:
+  case CmpInst::ICMP_ULT:
     o = ULT;
     break;
-  case ICmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SGT:
     o = SGT;
     break;
-  case ICmpInst::ICMP_UGT:
+  case CmpInst::ICMP_UGT:
     o = UGT;
+    break;
+
+  // floating point comparison 
+  case CmpInst::FCMP_FALSE:
+    o = FFALSE;
+    break;
+  case CmpInst::FCMP_OEQ:
+    o = FOEQ;
+    break;
+  case CmpInst::FCMP_OGE:
+    o = FOGE;
+    break;
+  case CmpInst::FCMP_OGT:
+    o = FOGT;
+    break;
+  case CmpInst::FCMP_OLE:
+    o = FOLE;
+    break;
+  case CmpInst::FCMP_OLT:
+    o = FOLT;
+    break;
+  case CmpInst::FCMP_ONE:
+    o = FONE;
+    break;
+  case CmpInst::FCMP_ORD:
+    o = FORD;
+    break;
+  case CmpInst::FCMP_TRUE:
+    o = FTRUE;
+    break;
+  case CmpInst::FCMP_UEQ:
+    o = FUEQ;
+    break;
+  case CmpInst::FCMP_UGE:
+    o = FUGE;
+    break;
+  case CmpInst::FCMP_UGT:
+    o = FUGT;
+    break;
+  case CmpInst::FCMP_ULE:
+    o = FULE;
+    break;
+  case CmpInst::FCMP_ULT:
+    o = FULT;
+    break;
+  case CmpInst::FCMP_UNE:
+    o = FUNE;
+    break;
+  case CmpInst::FCMP_UNO:
+    o = FUNO;
     break;
   default:
     assert(false && "unexpected predicate.");

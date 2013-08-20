@@ -73,6 +73,14 @@ public:
   void visitSelectInst(llvm::SelectInst& i);
   void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i);
   void visitMemCpyInst(llvm::MemCpyInst& i);
+  
+  void visitFCmpInst(llvm::FCmpInst& i);
+  void visitFPTruncInst(llvm::FPTruncInst& i);
+  void visitFPExtInst(llvm::FPExtInst& i);
+  void visitFPToSIInst(llvm::FPToSIInst& i);
+  void visitFPToUIInst(llvm::FPToUIInst& i);
+  void visitSIToFPInst(llvm::SIToFPInst& i);
+  void visitUIToFPInst(llvm::UIToFPInst& i);
 };
 }
 

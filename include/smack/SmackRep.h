@@ -54,6 +54,11 @@ public:
   static const string I2B;
   static const string B2I;
 
+  static const string FP2SI;
+  static const string FP2UI;
+  static const string SI2FP;
+  static const string UI2FP;
+
   static const string ADD;
   static const string SUB;
   static const string MUL;
@@ -68,6 +73,12 @@ public:
   static const string ASHR;
   static const string SHL;
 
+  static const string FADD;
+  static const string FSUB;
+  static const string FMUL;
+  static const string FDIV;
+  static const string FREM;
+
   static const string SGE;
   static const string UGE;
   static const string SLE;
@@ -76,6 +87,23 @@ public:
   static const string ULT;
   static const string SGT;
   static const string UGT;
+  
+  static const string FFALSE;
+  static const string FOEQ;
+  static const string FOGE;
+  static const string FOGT;
+  static const string FOLE;
+  static const string FOLT;
+  static const string FONE;
+  static const string FORD;
+  static const string FTRUE;
+  static const string FUEQ;
+  static const string FUGE;
+  static const string FUGT;
+  static const string FULE;
+  static const string FULT;
+  static const string FUNE;
+  static const string FUNO;
   
   static const string MEM_OP;
   static const string REC_MEM_OP;
@@ -134,6 +162,11 @@ public:
   const Expr* b2p(const Expr* e);
   const Expr* i2b(const Expr* e);
   const Expr* b2i(const Expr* e);
+
+  const Expr* fp2si(const Expr* e);
+  const Expr* fp2ui(const Expr* e);
+  const Expr* si2fp(const Expr* e);
+  const Expr* ui2fp(const Expr* e);
 
   const Expr* pa(const Expr* e, int x, int y);
   const Expr* pa(const Expr* e, const Expr* x, int y);

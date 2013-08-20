@@ -456,6 +456,12 @@ void SmackInstGenerator::visitICmpInst(llvm::ICmpInst& ci) {
   currBlock->addStmt(Stmt::assign(rep->expr(&ci), rep->pred(ci)));
 }
 
+void SmackInstGenerator::visitFCmpInst(llvm::FCmpInst& ci) {
+  processInstruction(ci);
+  WARN("floating point?!?!");
+  currBlock->addStmt(Stmt::assign(rep->expr(&ci), rep->pred(ci)));
+}
+
 void SmackInstGenerator::visitZExtInst(llvm::ZExtInst& ci) {
   processInstruction(ci);
 
@@ -521,6 +527,45 @@ void SmackInstGenerator::visitIntToPtrInst(llvm::IntToPtrInst& i) {
   // TODO review this use of i2p
   currBlock->addStmt(Stmt::assign(rep->expr(&i),
                                   rep->i2p(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitFPTruncInst(llvm::FPTruncInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), rep->expr(i.getOperand(0))));  
+}
+void SmackInstGenerator::visitFPExtInst(llvm::FPExtInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), rep->expr(i.getOperand(0))));
+}
+
+void SmackInstGenerator::visitFPToSIInst(llvm::FPToSIInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->fp2si(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitFPToUIInst(llvm::FPToUIInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->fp2ui(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitSIToFPInst(llvm::SIToFPInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->si2fp(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitUIToFPInst(llvm::UIToFPInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->ui2fp(rep->expr(i.getOperand(0)))));
 }
 
 void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
