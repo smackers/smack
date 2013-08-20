@@ -208,8 +208,10 @@ void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {
 void SmackInstGenerator::visitTruncInst(llvm::TruncInst& ti) {
   processInstruction(ti);
   WARN("ignoring trunc instruction : " + i2s(ti));
-  currBlock->addStmt(Stmt::assign(
-                       rep->expr(&ti), rep->expr(ti.getOperand(0))));
+  const Expr* res = rep->expr(ti.getOperand(0));
+  if (rep->isBool(&ti))
+    res = rep->i2b(res);
+  currBlock->addStmt(Stmt::assign(rep->expr(&ti), res));
 }
 
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
