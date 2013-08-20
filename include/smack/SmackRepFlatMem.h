@@ -6,7 +6,7 @@
 #ifndef SMACKREPFLATMEM_H
 #define SMACKREPFLATMEM_H
 
-#include "SmackRep.h"
+#include "smack/SmackRep.h"
 
 namespace smack {
 

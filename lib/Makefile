@@ -8,6 +8,6 @@ LEVEL=..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS=smack
+DIRS=DSA AssistDS smack
 
 include $(LEVEL)/Makefile.common

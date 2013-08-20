@@ -2,8 +2,8 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "SmackInstGenerator.h"
-#include "SmackOptions.h"
+#include "smack/SmackInstGenerator.h"
+#include "smack/SmackOptions.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"

@@ -5,8 +5,9 @@
 #ifndef SMACKMODULEGENERATOR_H
 #define SMACKMODULEGENERATOR_H
 
-#include "BoogieAst.h"
-#include "SmackInstGenerator.h"
+#include "smack/BoogieAst.h"
+#include "smack/SmackInstGenerator.h"
+#include "smack/DSAAliasAnalysis.h"
 #include "llvm/DataLayout.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/CFG.h"
@@ -15,10 +16,6 @@
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 #include <stack>
-
-#ifdef ENABLE_DSA
-#include "DSAAliasAnalysis.h"
-#endif
 
 using namespace std;
 using llvm::errs;
@@ -37,22 +34,11 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayout>();
-#ifdef ENABLE_DSA
     AU.addRequired<DSAAliasAnalysis>();
-#else
-    AU.addRequired<llvm::AliasAnalysis>();
-#endif
   }
 
   virtual bool runOnModule(llvm::Module& m) {  
-    SmackRep* rep = 
-      SmackRep::createRep(
-#ifdef ENABLE_DSA
-        &getAnalysis<DSAAliasAnalysis>()
-#else
-        &getAnalysis<llvm::AliasAnalysis>()
-#endif
-      );
+    SmackRep* rep = SmackRep::createRep(&getAnalysis<DSAAliasAnalysis>());
     generateProgram(m,rep);
     return false;
   }

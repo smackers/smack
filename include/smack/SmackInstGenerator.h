@@ -5,8 +5,8 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
-#include "BoogieAst.h"
-#include "SmackRep.h"
+#include "smack/BoogieAst.h"
+#include "smack/SmackRep.h"
 #include "llvm/Support/InstVisitor.h"
 #include <set>
 

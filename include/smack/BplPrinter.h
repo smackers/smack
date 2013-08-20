@@ -5,7 +5,7 @@
 #ifndef BPLPRINTER_H
 #define BPLPRINTER_H
 
-#include "SmackModuleGenerator.h"
+#include "smack/SmackModuleGenerator.h"
 
 namespace smack {
 

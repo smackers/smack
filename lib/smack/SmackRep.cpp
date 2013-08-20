@@ -3,10 +3,10 @@
 //                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "SmackRep.h"
-#include "SmackRep2dMem.h"
-#include "SmackRepFlatMem.h"
-#include "SmackOptions.h"
+#include "smack/SmackRep.h"
+#include "smack/SmackRep2dMem.h"
+#include "smack/SmackRepFlatMem.h"
+#include "smack/SmackOptions.h"
 
 namespace smack {
 

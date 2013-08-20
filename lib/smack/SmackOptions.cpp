@@ -4,7 +4,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
-#include "SmackOptions.h"
+#include "smack/SmackOptions.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace smack {

@@ -6,8 +6,8 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
-#include "BoogieAst.h"
-#include "SmackOptions.h"
+#include "smack/BoogieAst.h"
+#include "smack/SmackOptions.h"
 #include "llvm/DataLayout.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Analysis/AliasAnalysis.h"

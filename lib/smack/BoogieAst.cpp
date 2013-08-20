@@ -3,7 +3,7 @@
 //                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BoogieAst.h"
+#include "smack/BoogieAst.h"
 #include "llvm/Constants.h"
 #include <sstream>
 

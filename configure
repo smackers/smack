@@ -720,7 +720,6 @@ ENABLE_PTHREADS
 ENABLE_THREADS
 ENABLE_DOXYGEN
 ENABLE_DOCS
-ENABLE_DSA
 TARGET_HAS_JIT
 JIT
 DEBUG_SYMBOLS
@@ -828,7 +827,6 @@ enable_expensive_checks
 enable_debug_runtime
 enable_debug_symbols
 enable_jit
-enable_dsa
 enable_docs
 enable_doxygen
 enable_threads
@@ -1496,8 +1494,6 @@ Optional Features:
   --enable-debug-symbols  Build compiler with debug symbols (default is NO if
                           optimization is on and YES if it's off)
   --enable-jit            Enable Just In Time Compiling (default is YES)
-  --enable-dsa            Compile with data-structure analysis enabled
-                          (default is NO)
   --enable-docs           Build documents (default is YES)
   --enable-doxygen        Build doxygen documentation (default is NO)
   --enable-threads        Use threads if available (default is YES)
@@ -4951,21 +4947,6 @@ else
     *)           TARGET_HAS_JIT=0
  ;;
   esac
-fi
-
-# Check whether --enable-dsa was given.
-if test "${enable_dsa+set}" = set; then :
-  enableval=$enable_dsa;
-else
-  enableval="no"
-fi
-
-if test ${enableval} = "no" ; then
-  ENABLE_DSA=
-
-else
-  ENABLE_DSA=ENABLE_DSA=1
-
 fi
 
 # Check whether --enable-docs was given.
@@ -9209,7 +9190,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 9212 "configure"
+#line 9193 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H

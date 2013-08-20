@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef ENABLE_DSA
-
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Module.h"
@@ -21,7 +19,7 @@
 #include "llvm/Analysis/Passes.h"
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
-#include "DSAAliasAnalysis.h"
+#include "smack/DSAAliasAnalysis.h"
 
 namespace smack {
 
@@ -96,4 +94,3 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
 }
 
 }
-#endif

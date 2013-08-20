@@ -23,3 +23,6 @@ include $(LEVEL)/Makefile.common
 format:
 	astyle --options=astyle.conf $$(find lib -name "*.cpp")
 	astyle --options=astyle.conf $$(find include -name "*.h")
+	
+distclean:: clean
+	${RM} -f Makefile.common Makefile.config

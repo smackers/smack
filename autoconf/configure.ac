@@ -462,15 +462,6 @@ else
   esac
 fi
 
-dnl --enable-dsa : check whether they want to leverage data structure analysis:
-AC_ARG_ENABLE(dsa, AS_HELP_STRING(
- --enable-dsa,[Compile with data-structure analysis enabled (default is NO)]),,enableval="no")
-if test ${enableval} = "no" ; then
-  AC_SUBST(ENABLE_DSA,[[]])
-else
-  AC_SUBST(ENABLE_DSA,[[ENABLE_DSA=1]])
-fi
-
 dnl Allow enablement of building and installing docs
 AC_ARG_ENABLE(docs,
               AS_HELP_STRING([--enable-docs],
