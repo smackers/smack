@@ -334,8 +334,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   }
 
   vector<const Expr*> args;
-  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++)
-    args.push_back(rep->expr(ci.getOperand(i)));
+  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++) {
+    const Expr* arg = rep->expr(ci.getOperand(i));
+    if (llvm::Function* f = ci.getCalledFunction())
+      if (f->isVarArg() && rep->isFloat(ci.getOperand(i)))
+        arg = rep->fp2si(arg);
+    args.push_back(arg);
+  }
 
   vector<string> rets;
   if (!ci.getType()->isVoidTy())

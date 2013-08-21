@@ -206,9 +206,15 @@ SmackRep* SmackRep::createRep(llvm::AliasAnalysis* aa) {
 
 // TODO Do the following functions belong here ?
 
-string EscapeString(string str) {
-  str = llvm::DOT::EscapeString(str);
-  return str;
+string EscapeString(string s) {
+  string Str(llvm::DOT::EscapeString(s));
+  for (unsigned i = 0; i != Str.length(); ++i)
+    switch (Str[i]) {
+    case '\01':
+      Str[i] = '_';
+      break;
+    }
+  return Str;
 }
 
 Regex BPL_KW(
