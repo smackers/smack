@@ -222,6 +222,8 @@ void SmackInstGenerator::visitTruncInst(llvm::TruncInst& ti) {
 
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
   processInstruction(ii);
+  
+  currBlock->addStmt(Stmt::assume(Expr::lit(false)));
 }
 
 // TODO Should we put this DEBUG info back in ?
