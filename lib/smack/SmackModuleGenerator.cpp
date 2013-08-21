@@ -125,9 +125,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
         p->addParam(param.str(), rep->type(arg->getType()));
       }
     }
-
+    
     if (! func->getReturnType()->isVoidTy())
-      p->addRet(SmackRep::RET_VAR, rep->getPtrType());
+      p->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
     program->addProc(p);
   }
 

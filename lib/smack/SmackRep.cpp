@@ -14,8 +14,10 @@ const string SmackRep::ALLOC = "$Alloc";
 const string SmackRep::BLOCK_LBL = "$bb";
 const string SmackRep::RET_VAR = "$r";
 const string SmackRep::BOOL_VAR = "$b";
+const string SmackRep::FLOAT_VAR = "$f";
 const string SmackRep::PTR_VAR = "$p";
 const string SmackRep::BOOL_TYPE = "bool";
+const string SmackRep::FLOAT_TYPE = "float";
 const string SmackRep::NULL_VAL = "$NULL";
 const string SmackRep::UNDEF_VAL = "$UNDEF";
 
@@ -29,6 +31,8 @@ const string SmackRep::STATIC = "$static";
 const string SmackRep::OBJ = "$obj";
 const string SmackRep::OFF = "$off";
 const string SmackRep::PA = "$pa";
+
+const string SmackRep::FP = "$fp";
 
 const string SmackRep::B2P = "$b2p";
 const string SmackRep::I2P = "$i2p";
@@ -102,8 +106,6 @@ const string SmackRep::MEM_WRITE = "$W";
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 const Expr* SmackRep::UNDEF = Expr::id(UNDEF_VAL);
 
-const Expr* SmackRep::ZERO = Expr::fn(PTR, NUL, Expr::lit(0));
-
 const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
 const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
 const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
@@ -157,6 +159,7 @@ const string SmackRep::ARITHMETIC =
   "\n"
   "// Floating point\n"
   "type float;\n"
+  "function $fp(a:int) returns (float);\n"
   "const $ffalse: float;\n"
   "const $ftrue: float;\n"
   "function $fadd(f1:float, f2:float) returns (float);\n"
@@ -261,8 +264,21 @@ bool SmackRep::isBool(llvm::Value* v) {
   return isBool(v->getType());
 }
 
+bool SmackRep::isFloat(llvm::Type* t) {
+  return t->isFloatingPointTy();
+}
+
+bool SmackRep::isFloat(llvm::Value* v) {
+  return isFloat(v->getType());
+}
+
 string SmackRep::type(llvm::Type* t) {
-  return isBool(t) ? BOOL_TYPE : getPtrType();
+  if (isBool(t))
+    return BOOL_TYPE;
+  else if (isFloat(t))
+    return FLOAT_TYPE;
+  else
+    return getPtrType();
 }
 
 string SmackRep::type(llvm::Value* v) {
@@ -302,17 +318,17 @@ string SmackRep::memcpyCall(int dstReg, int srcReg) {
   return s.str();
 }
 
-const Expr* SmackRep::ptr(const Expr* obj, const Expr* off) {
-  return Expr::fn(PTR, obj, off);
-}
-
-const Expr* SmackRep::obj(const Expr* e) {
-  return Expr::fn(OBJ, e);
-}
-
-const Expr* SmackRep::off(const Expr* e) {
-  return Expr::fn(OFF, e);
-}
+// const Expr* SmackRep::ptr(const Expr* obj, const Expr* off) {
+//   return Expr::fn(PTR, obj, off);
+// }
+// 
+// const Expr* SmackRep::obj(const Expr* e) {
+//   return Expr::fn(OBJ, e);
+// }
+// 
+// const Expr* SmackRep::off(const Expr* e) {
+//   return Expr::fn(OFF, e);
+// }
 
 const Expr* SmackRep::i2p(const Expr* e) {
   return Expr::fn(I2P, e);
@@ -398,15 +414,14 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
 
   } else if (const llvm::ConstantFP* cf = llvm::dyn_cast<const llvm::ConstantFP>(v)) {
 
-    // TODO encode floating point...
-
-    return Expr::lit(0, width);
+    // TODO encode floating point
+    return Expr::fn(FP,Expr::lit(uniqueFpNum++));
 
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
     return Expr::lit(0, width);
 
   else
-    return off(expr(v));
+    return ptr2val(expr(v));
   // assert( false && "value type not supported" );
 }
 
@@ -452,7 +467,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
   if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
     assert(g->hasName());
-    return ptr(Expr::id(id(v)), lit((unsigned)0));
+    return ref2ptr(Expr::id(id(v)));
 
   } else if (v->hasName())
     return Expr::id(id(v));
@@ -496,13 +511,13 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       if (ci->getBitWidth() == 1)
         return Expr::lit(!ci->isZero());
 
-      else return ptr(NUL, lit(ci));
+      else return val2ptr(lit(ci));
       
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
-      return ptr(NUL, lit(cf));
+      return val2ptr(lit(cf));
 
     } else if (constant->isNullValue())
-      return ZERO;
+      return val2ptr(lit((unsigned)0));
 
     else if (isa<UndefValue>(constant))
       return UNDEF;
@@ -589,10 +604,10 @@ const Expr* SmackRep::op(llvm::BinaryOperator& o) {
    *r = o.getOperand(1);
 
   const Expr* e = Expr::fn(op,
-                           (isBool(l) ? b2i(expr(l)) : off(expr(l))),
-                           (isBool(r) ? b2i(expr(r)) : off(expr(r))));
+                           (isBool(l) ? b2i(expr(l)) : ptr2val(expr(l))),
+                           (isBool(r) ? b2i(expr(r)) : ptr2val(expr(r))));
 
-  return isBool(&o) ? i2b(e) : ptr(NUL, e);
+  return isBool(&o) ? i2b(e) : val2ptr(e);
 }
 
 const Expr* SmackRep::pred(llvm::CmpInst& ci) {
@@ -690,7 +705,7 @@ const Expr* SmackRep::pred(llvm::CmpInst& ci) {
     assert(false && "unexpected predicate.");
   }
 
-  return e == NULL ? Expr::fn(o, off(l), off(r)) : e;
+  return e == NULL ? Expr::fn(o, ptr2val(l), ptr2val(r)) : e;
 }
 
 string SmackRep::getPrelude() {

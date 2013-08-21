@@ -32,8 +32,10 @@ public:
   static const string BLOCK_LBL;
   static const string RET_VAR;
   static const string BOOL_VAR;
+  static const string FLOAT_VAR;
   static const string PTR_VAR;
   static const string BOOL_TYPE;
+  static const string FLOAT_TYPE;
   static const string NULL_VAL;
   static const string UNDEF_VAL;
 
@@ -47,6 +49,8 @@ public:
   static const string OBJ;
   static const string OFF;
   static const string PA;
+  
+  static const string FP;
 
   static const string B2P;
   static const string I2P;
@@ -118,7 +122,6 @@ public:
 
   static const Expr* NUL;
   static const Expr* UNDEF;
-  static const Expr* ZERO;
 
   static const string BOOGIE_REC_PTR;
   static const string BOOGIE_REC_OBJ;
@@ -134,10 +137,14 @@ protected:
   llvm::AliasAnalysis* aliasAnalysis;
   vector<const void*> memoryRegions;
   const llvm::DataLayout* targetData;
+  
+  int uniqueFpNum;
 
 protected:
   SmackRep(llvm::AliasAnalysis* aa)
-    : aliasAnalysis(aa), targetData(aa->getDataLayout()) {}  
+    : aliasAnalysis(aa), targetData(aa->getDataLayout()) {
+    uniqueFpNum = 0;
+  }  
 public:
   static SmackRep* createRep(llvm::AliasAnalysis* aa);
   
@@ -150,6 +157,8 @@ public:
   bool isSmackRecPtr(llvm::Function* f);
   bool isBool(llvm::Type* t);
   bool isBool(llvm::Value* v);
+  bool isFloat(llvm::Type* t);
+  bool isFloat(llvm::Value* v);
   string type(llvm::Type* t);
   string type(llvm::Value* v);
 
@@ -160,9 +169,9 @@ public:
   string memReg(unsigned i);
 
   const Expr* mem(const llvm::Value* v);
-  const Expr* ptr(const Expr* obj, const Expr* off);
-  const Expr* obj(const Expr* e);
-  const Expr* off(const Expr* e);
+  // const Expr* ptr(const Expr* obj, const Expr* off);
+  // const Expr* obj(const Expr* e);
+  // const Expr* off(const Expr* e);
   const Expr* i2p(const Expr* e);
   const Expr* p2i(const Expr* e);
   const Expr* b2p(const Expr* e);
@@ -187,6 +196,10 @@ public:
   const Expr* op(llvm::BinaryOperator& o);
   const Expr* pred(llvm::CmpInst& ci);
   
+  virtual const Expr* ptr2val(const Expr* e) = 0;
+  virtual const Expr* val2ptr(const Expr* e) = 0;
+  virtual const Expr* ref2ptr(const Expr* e) = 0;
+  
   virtual vector<const Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
   virtual string getPtrType() = 0;
@@ -198,6 +211,7 @@ public:
   virtual string allocaProc() = 0;
   virtual string memcpyCall(int dstReg, int srcReg);
   virtual string memcpyProc(int dstReg, int srcReg) = 0;
+  
 };
 }
 

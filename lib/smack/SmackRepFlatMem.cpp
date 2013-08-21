@@ -53,6 +53,18 @@ vector<string> SmackRepFlatMem::getModifies() {
 string SmackRepFlatMem::getPtrType() {
   return PTR_TYPE;
 }
+
+const Expr* SmackRepFlatMem::ptr2val(const Expr* e) {
+  return e;
+}
+
+const Expr* SmackRepFlatMem::val2ptr(const Expr* e) {
+  return e;
+}
+
+const Expr* SmackRepFlatMem::ref2ptr(const Expr* e) {
+  return e;
+}
   
 const string SmackRepFlatMem::POINTERS =
   "// SMACK Flat Memory Model\n"

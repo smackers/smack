@@ -50,8 +50,14 @@ string SmackInstGenerator::createVar() {
 
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
-    if (!inst.hasName())
-      inst.setName(rep->isBool(&inst) ? SmackRep::BOOL_VAR : SmackRep::PTR_VAR);
+    if (!inst.hasName()) {
+      if (rep->isBool(&inst))
+        inst.setName(SmackRep::BOOL_VAR);
+      else if (rep->isFloat(&inst))
+        inst.setName(SmackRep::FLOAT_VAR);
+      else
+        inst.setName(SmackRep::PTR_VAR);
+    }
     VarDecl* d = new VarDecl(rep->id(&inst), rep->type(&inst));
     if (!currProc.hasDecl(d))
       currProc.addDecl(d);
@@ -264,16 +270,16 @@ const Stmt* SmackInstGenerator::generateCall(
   if (rep->isSmackAssert(f)) {
     assert(args.size() == 1 && rets.size() == 0);
     return Stmt::assert_(
-             Expr::neq(args[0], SmackRep::ZERO));
+             Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
 
   } else if (rep->isSmackAssume(f)) {
     assert(args.size() == 1 && rets.size() == 0);
     return Stmt::assume(
-             Expr::neq(args[0], SmackRep::ZERO));
+             Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
 
   } else if (rep->isSmackRecInt(f)) {
     assert(args.size() == 1 && rets.size() == 0);
-    return Stmt::call(SmackRep::BOOGIE_REC_INT, rep->off(args[0]));
+    return Stmt::call(SmackRep::BOOGIE_REC_INT, rep->ptr2val(args[0]));
 //
 //        } else if (rep->isSmackRecObj(f)) {
 //            assert (args.size() == 1 && rets.size() == 0);
@@ -285,7 +291,7 @@ const Stmt* SmackInstGenerator::generateCall(
 
   } else if (name == "malloc") {
     assert(args.size() == 1);
-    return Stmt::call(SmackRep::MALLOC, rep->off(args[0]), rets[0]);
+    return Stmt::call(SmackRep::MALLOC, rep->ptr2val(args[0]), rets[0]);
 
   } else if (name == "free") {
     assert(args.size() == 1);
@@ -415,9 +421,10 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  currBlock->addStmt(Stmt::assign(
-                       rep->expr(&li),
-                       rep->mem(li.getPointerOperand())));
+  const Expr* src = rep->mem(li.getPointerOperand());
+  if (rep->isFloat(&li))
+    src = rep->si2fp(src);
+  currBlock->addStmt(Stmt::assign(rep->expr(&li),src));
 
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
@@ -428,9 +435,10 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
-  currBlock->addStmt(Stmt::assign(
-                       rep->mem(si.getPointerOperand()),
-                       rep->expr(si.getOperand(0))));
+  const Expr* src = rep->expr(si.getOperand(0));
+  if (rep->isFloat(si.getOperand(0)))
+    src = rep->fp2si(src);
+  currBlock->addStmt(Stmt::assign(rep->mem(si.getPointerOperand()),src));
                        
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));

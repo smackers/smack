@@ -29,6 +29,18 @@ string SmackRep2dMem::getPtrType() {
   return PTR_TYPE;
 }
 
+const Expr* SmackRep2dMem::ptr2val(const Expr* e) {
+  return Expr::fn(OFF, e);
+}
+
+const Expr* SmackRep2dMem::val2ptr(const Expr* e) {
+  return Expr::fn(PTR, NUL, e);
+}
+
+const Expr* SmackRep2dMem::ref2ptr(const Expr* e) {
+  return Expr::fn(PTR, e, Expr::lit(0));
+}
+
 const string SmackRep2dMem::POINTERS =
   "// SMACK 2D Memory Model\n"
   "\n"
