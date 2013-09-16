@@ -19,7 +19,6 @@ const string SmackRep::PTR_VAR = "$p";
 const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 const string SmackRep::NULL_VAL = "$NULL";
-const string SmackRep::UNDEF_VAL = "$UNDEF";
 
 const string SmackRep::ALLOCA = "$alloca";
 const string SmackRep::MALLOC = "$malloc";
@@ -104,7 +103,6 @@ const string SmackRep::MEM_READ = "$R";
 const string SmackRep::MEM_WRITE = "$W";
 
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
-const Expr* SmackRep::UNDEF = Expr::id(UNDEF_VAL);
 
 const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
 const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
@@ -384,6 +382,12 @@ const Expr* SmackRep::pa(const Expr* e, const Expr* x, const Expr* y) {
   return Expr::fn(PA, e, x, y);
 }
 
+const Expr* SmackRep::undef() {
+  stringstream s;
+  s << "$u." << uniqueUndefNum++;
+  return Expr::id(s.str());
+}
+
 string SmackRep::id(const llvm::Value* v) {
   string name;
 
@@ -421,7 +425,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
   } else if (const llvm::ConstantFP* cf = llvm::dyn_cast<const llvm::ConstantFP>(v)) {
 
     // TODO encode floating point
-    return Expr::fn(FP,Expr::lit(uniqueFpNum++));
+    return Expr::fn(FP,Expr::lit((int) uniqueFpNum++));
 
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
     return Expr::lit(0, width);
@@ -526,7 +530,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return val2ptr(lit((unsigned)0));
 
     else if (isa<UndefValue>(constant))
-      return UNDEF;
+      return undef();
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -729,6 +733,15 @@ string SmackRep::getPrelude() {
       << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
   
   s << endl;
+
+  if (uniqueUndefNum > 0) {
+    s << "// Undefined values" << endl;
+    s << "const ";
+    for (unsigned i=0; i<uniqueUndefNum; i++)
+      s << (i > 0 ? ", " : "") << "$u." << i;
+    s << ": " << getPtrType() << ";" << endl;  
+    s << endl;
+  }
 
   s << memoryModel() << endl;
   s << mallocProc() << endl;

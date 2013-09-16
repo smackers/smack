@@ -37,7 +37,6 @@ public:
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
   static const string NULL_VAL;
-  static const string UNDEF_VAL;
 
   static const string ALLOCA;
   static const string MALLOC;
@@ -121,7 +120,6 @@ public:
   static const string MEM_WRITE;
 
   static const Expr* NUL;
-  static const Expr* UNDEF;
 
   static const string BOOGIE_REC_PTR;
   static const string BOOGIE_REC_OBJ;
@@ -138,12 +136,14 @@ protected:
   vector<const void*> memoryRegions;
   const llvm::DataLayout* targetData;
   
-  int uniqueFpNum;
+  unsigned uniqueFpNum;
+  unsigned uniqueUndefNum;
 
 protected:
   SmackRep(llvm::AliasAnalysis* aa)
     : aliasAnalysis(aa), targetData(aa->getDataLayout()) {
     uniqueFpNum = 0;
+    uniqueUndefNum = 0;
   }  
 public:
   static SmackRep* createRep(llvm::AliasAnalysis* aa);
@@ -188,6 +188,7 @@ public:
   const Expr* pa(const Expr* e, const Expr* x, const Expr* y);
 
   string id(const llvm::Value* v);
+  const Expr* undef();
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(unsigned v);
   const Expr* ptrArith(llvm::Value* p, vector<llvm::Value*> ps,
