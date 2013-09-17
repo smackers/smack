@@ -160,6 +160,7 @@ public:
   static const Stmt* assert_(const Expr* e);
   static const Stmt* assign(const Expr* e, const Expr* f);
   static const Stmt* assume(const Expr* e);
+  static const Stmt* call(string p);
   static const Stmt* call(string p, const Expr* x);
   static const Stmt* call(string p, const Expr* x, string r);
   static const Stmt* call(string p, const Expr* x, const Expr* y, string r);

@@ -108,6 +108,8 @@ const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
 const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
 const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
 
+const string SmackRep::STATIC_INIT = "$static_init";
+
 const string SmackRep::ARITHMETIC =
   "// Integer arithmetic\n"
   "function $add(p1:int, p2:int) returns (int) {p1 + p2}\n"
@@ -258,6 +260,14 @@ bool SmackRep::isSmackRecInt(llvm::Function* f) {
 
 bool SmackRep::isSmackRecPtr(llvm::Function* f) {
   return SMACK_REC_PTR.match(id(f));
+}
+
+bool SmackRep::isInt(const llvm::Type* t) {
+  return t->isIntegerTy();
+}
+
+bool SmackRep::isInt(const llvm::Value* v) {
+  return isInt(v->getType());
 }
 
 bool SmackRep::isBool(llvm::Type* t) {
@@ -757,6 +767,42 @@ vector<string> SmackRep::getModifies() {
   return mods;
 }
 
+void SmackRep::addStaticInit(const llvm::Value* v) {
+  using namespace llvm;
+  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
+    
+    if (g->hasInitializer()) {
+      const Value* i = g->getInitializer();
+
+      if (isInt(i))
+        staticInits.push_back(Stmt::assign(mem(g),expr(i)));
+
+      else if (i->getType()->isArrayTy()) {
+        ArrayType* t = (ArrayType*) i->getType();
+        extraDecls.push_back(Decl::axiom(Expr::eq(
+          Expr::fn("$size",Expr::id(id(g))),lit(t->getNumElements()))));
+      }
+    }
+  }
+}
+
+bool SmackRep::hasStaticInits() {
+  return staticInits.size() > 0;
+}
+
+Procedure* SmackRep::getStaticInit() {
+  Procedure* proc = new Procedure(STATIC_INIT);
+  Block* b = new Block();
+  for (unsigned i=0; i<staticInits.size(); i++)
+    b->addStmt(staticInits[i]);
+  b->addStmt(Stmt::return_());
+  proc->addBlock(b);
+  return proc;
+}
+
+vector<const Decl*> SmackRep::getExtraDecls() {
+  return extraDecls;
+}
 
 } // namespace smack
 

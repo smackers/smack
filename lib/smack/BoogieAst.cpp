@@ -134,6 +134,10 @@ const Stmt* Stmt::assume(const Expr* e) {
   return new AssumeStmt(e);
 }
 
+const Stmt* Stmt::call(string p) {
+  return call(p, vector<const Expr*>(), vector<string>());
+}
+
 const Stmt* Stmt::call(string p, const Expr* x) {
   return call(p, vector<const Expr*>(1, x), vector<string>());
 }
@@ -520,7 +524,8 @@ void Procedure::print(ostream& os) const {
   }
   if (blocks.size() > 0) {
     os << "{" << endl;
-    print_seq<const Decl*>(os, decls, "  ", "\n  ", "\n");
+    if (decls.size() > 0)
+      print_seq<const Decl*>(os, decls, "  ", "\n  ", "\n");
     print_seq<Block*>(os, blocks, "\n");
     os << endl << "}";
   }
@@ -533,7 +538,7 @@ void Program::print(ostream& os) const {
   os << "// SMACK-PRELUDE-END" << endl;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
   print_seq<const Decl*>(os, decls, "\n");
-  os << endl;
+  os << endl << endl;
   print_seq<Procedure*>(os, procs, "\n");
   os << "// END SMACK-GENERATED CODE" << endl;
 }

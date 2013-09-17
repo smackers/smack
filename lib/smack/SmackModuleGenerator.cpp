@@ -19,6 +19,10 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
   for (llvm::Module::const_global_iterator
        x = m.global_begin(), e = m.global_end(); x != e; ++x)
     program->addDecls(rep->globalDecl(x));
+  
+  if (rep->hasStaticInits())
+    program->addProc(rep->getStaticInit());
+  program->addDecls(rep->getExtraDecls());
 
   DEBUG(errs() << "Analyzing functions...\n");
 
@@ -42,7 +46,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
     Procedure* proc = new Procedure(name);
     program->addProc(proc);
-
+    
     // BODY
     if (!func->isDeclaration() && !func->empty()
         && !func->getEntryBlock().empty()) {
@@ -54,6 +58,10 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
       llvm::BasicBlock& entry = func->getEntryBlock();
       workStack.push(&entry);
       known[&entry] = igen.createBlock();
+      
+      // First execute static initializers, in the main procedure.
+      if (name == "main" && rep->hasStaticInits())
+        known[&entry]->addStmt(Stmt::call(SmackRep::STATIC_INIT));
 
       // INVARIANT: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b)
       // or workStack.CONTAINED(b) at some point in time.

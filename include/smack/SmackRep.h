@@ -124,6 +124,8 @@ public:
   static const string BOOGIE_REC_PTR;
   static const string BOOGIE_REC_OBJ;
   static const string BOOGIE_REC_INT;
+  
+  static const string STATIC_INIT;
 
   // TODO Make this width a parameter to generate bitvector-based code.
   static const int width;
@@ -135,6 +137,9 @@ protected:
   llvm::AliasAnalysis* aliasAnalysis;
   vector<const void*> memoryRegions;
   const llvm::DataLayout* targetData;
+  
+  vector<const Stmt*> staticInits;
+  vector<const Decl*> extraDecls;
   
   unsigned uniqueFpNum;
   unsigned uniqueUndefNum;
@@ -155,6 +160,8 @@ public:
   bool isSmackRecObj(llvm::Function* f);
   bool isSmackRecInt(llvm::Function* f);
   bool isSmackRecPtr(llvm::Function* f);
+  bool isInt(const llvm::Type* t);
+  bool isInt(const llvm::Value* v);
   bool isBool(llvm::Type* t);
   bool isBool(llvm::Value* v);
   bool isFloat(llvm::Type* t);
@@ -203,6 +210,10 @@ public:
   
   virtual vector<const Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
+  void addStaticInit(const llvm::Value* g);
+  bool hasStaticInits();
+  Procedure* getStaticInit();
+  vector<const Decl*> getExtraDecls();
   virtual string getPtrType() = 0;
   virtual string getPrelude();
   

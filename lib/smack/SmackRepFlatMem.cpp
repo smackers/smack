@@ -10,8 +10,10 @@ namespace smack {
 
 const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
 const string SmackRepFlatMem::PTR_TYPE = "int";
-
+  
 vector<const Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
+  addStaticInit(g);
+
   vector<const Decl*> decls;
   string name = id(g);
   decls.push_back(Decl::constant(name, getPtrType(), true));

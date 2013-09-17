@@ -67,7 +67,7 @@ def smack(scriptPathName, inputFile, debugFlag, memmod, verifier, entryPoints):
   if debugFlag:
     print debug
 
-  p = re.compile('procedure[ ]*([a-zA-Z0-9_]*)[ ]*\(')
+  p = re.compile('procedure[ ]*([a-zA-Z0-9_$]*)[ ]*\(')
   if verifier == 'boogie-inline':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, entryPoints), bpl)

@@ -12,6 +12,8 @@ const string SmackRep2dMem::PTR_TYPE = "$ptr";
 const string SmackRep2dMem::REF_TYPE = "$ref";
 
 vector<const Decl*> SmackRep2dMem::globalDecl(const llvm::Value* g) {
+  addStaticInit(g);
+
   vector<const Decl*> decls;
   string name = id(g);
   decls.push_back(Decl::constant(name, REF_TYPE, true));
