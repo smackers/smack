@@ -11,26 +11,6 @@ from smack import *
 VERSION = '1.2'
 
 
-def addInline(match, entryPoints):
-  procName = match.group(1)
-  procDef = ''
-  if procName in entryPoints:
-    procDef += 'procedure ' + procName + '('
-  else:
-    procDef += 'procedure {:inline 1} ' + procName + '('
-  return procDef
-
-
-def addEntryPoint(match, entryPoints):
-  procName = match.group(1)
-  procDef = ''
-  if procName in entryPoints:
-    procDef += 'procedure {:entrypoint} ' + procName + '('
-  else:
-    procDef += 'procedure ' + procName + '('
-  return procDef
-
-
 def generateSourceErrorTrace(boogieOutput, bpl):
   FILENAME = '[\w#$~%.\/-]+'
   LABEL = '[\w$]+'
@@ -39,7 +19,7 @@ def generateSourceErrorTrace(boogieOutput, bpl):
 #    print 'No debug info in bpl file.'
     return None
 
-  sourceTrace = '\nSMACK checker version ' + VERSION + '\n\n'
+  sourceTrace = '\nSMACK verifier version ' + VERSION + '\n\n'
   for traceLine in boogieOutput.splitlines(True):
     resultMatch = re.match('Boogie .* (\d+) verified, (\d+) error.*', traceLine)
     traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
@@ -47,7 +27,7 @@ def generateSourceErrorTrace(boogieOutput, bpl):
     if resultMatch:
       verified = int(resultMatch.group(1))
       errors = int(resultMatch.group(2))
-      sourceTrace += '\nFinished with ' + str(verified) + ' checked, ' + str(errors) + ' errors\n'
+      sourceTrace += '\nFinished with ' + str(verified) + ' verified, ' + str(errors) + ' errors\n'
     elif traceMatch:
       spaces = str(traceMatch.group(1))
       filename = str(traceMatch.group(2))
