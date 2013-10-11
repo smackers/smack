@@ -15,10 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "dsa-bu"
-#include "llvm/Constants.h"
+#include "llvm/IR/Constants.h"
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Module.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"

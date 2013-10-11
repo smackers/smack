@@ -14,7 +14,7 @@
 
 #include <string>
 #include "llvm/Pass.h"
-#include "llvm/Value.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
   class Function;

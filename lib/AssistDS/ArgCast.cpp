@@ -15,7 +15,7 @@
 #define DEBUG_TYPE "argcast"
 
 #include "assistDS/ArgCast.h"
-#include "llvm/Attributes.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
@@ -132,11 +132,11 @@ bool ArgCast::runOnModule(Module& M) {
                                                         FormalType, true, "", CI);
           Args.push_back(CastI);
         } else {
-          if(F->getParamAttributes(i+1).SExt) {
+          if (F->getAttributes().hasAttribute(i+1, Attribute::SExt)) {
             CastInst *CastI = CastInst::CreateIntegerCast(CI->getOperand(i+1), 
                                                           FormalType, true, "", CI);
             Args.push_back(CastI);
-          } else if(F->getParamAttributes(i+1).ZExt) {
+          } else if (F->getAttributes().hasAttribute(i+1, Attribute::ZExt)) {
             CastInst *CastI = CastInst::CreateIntegerCast(CI->getOperand(i+1), 
                                                           FormalType, false, "", CI);
             Args.push_back(CastI);

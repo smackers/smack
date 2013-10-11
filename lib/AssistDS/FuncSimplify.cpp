@@ -10,7 +10,7 @@
 #define DEBUG_TYPE "func-simplify"
 
 #include "assistDS/FuncSimplify.h"
-#include "llvm/Attributes.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"

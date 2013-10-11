@@ -40,11 +40,11 @@
 #include "dsa/DSGraph.h"
 #include "dsa/DSNode.h"
 #include "dsa/DSCallGraph.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Module.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/ValueSymbolTable.h"
+#include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Assembly/Writer.h"
 using namespace llvm;
 

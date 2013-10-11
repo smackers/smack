@@ -4,11 +4,11 @@
 //
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
+#include "llvm/InstVisitor.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/InstVisitor.h"
 #include <sstream>
 
 namespace smack {

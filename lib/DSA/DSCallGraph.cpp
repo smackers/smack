@@ -15,8 +15,8 @@
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
 
-#include "llvm/Function.h"
-#include "llvm/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/CommandLine.h"
 

@@ -13,9 +13,9 @@
 // call F (..., T1 val1, ...)
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Instructions.h"
-#include "llvm/Constants.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
