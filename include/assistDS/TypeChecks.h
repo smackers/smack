@@ -16,10 +16,10 @@
 
 #include "dsa/AddressTakenAnalysis.h"
 
-#include "llvm/Instructions.h"
-#include "llvm/Function.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
-#include "llvm/DataLayout.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"

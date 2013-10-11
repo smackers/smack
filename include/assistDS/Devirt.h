@@ -14,15 +14,15 @@
 
 #include "dsa/CallTargets.h"
 
-#include "llvm/Constants.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Pass.h"
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Support/InstVisitor.h"
-#include "llvm/DataLayout.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/InstVisitor.h"
+#include "llvm/IR/DataLayout.h"
 
 using namespace llvm;
 

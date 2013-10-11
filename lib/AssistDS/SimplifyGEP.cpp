@@ -15,12 +15,12 @@
 #define DEBUG_TYPE "simplify-gep"
 
 #include "assistDS/SimplifyGEP.h"
-#include "llvm/Constants.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Operator.h"
-#include "llvm/DataLayout.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Operator.h"
 
 #include <vector>
 

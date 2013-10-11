@@ -17,8 +17,8 @@
 #include "dsa/DSNode.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/InstIterator.h"
 

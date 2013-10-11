@@ -16,8 +16,8 @@
 #define DEBUG_TYPE "td_dsa"
 
 #include "dsa/DataStructure.h"
-#include "llvm/Module.h"
-#include "llvm/DerivedTypes.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "dsa/DSGraph.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"

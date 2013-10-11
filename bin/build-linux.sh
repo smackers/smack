@@ -44,6 +44,7 @@ SMACK_DIR="${BASE_DIR}/smack"
 
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
+sudo apt-get install g++ --assume-yes
 sudo apt-get install git --assume-yes
 sudo apt-get install mercurial --assume-yes
 sudo apt-get install autoconf --assume-yes
@@ -87,7 +88,7 @@ autoconf
 python scripts/mk_make.py
 cd build
 make
-sudo make install
+make install
 
 cd ${BASE_DIR}
 
@@ -118,15 +119,15 @@ fi
 if [ ${INSTALL_LLVM} -eq 1 ]; then
 
 # Get llvm and extract
-wget http://llvm.org/releases/3.2/llvm-3.2.src.tar.gz
-wget http://llvm.org/releases/3.2/clang-3.2.src.tar.gz
-wget http://llvm.org/releases/3.2/compiler-rt-3.2.src.tar.gz
+wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz
+wget http://llvm.org/releases/3.3/cfe-3.3.src.tar.gz
+wget http://llvm.org/releases/3.3/compiler-rt-3.3.src.tar.gz
 
-tar -C ${LLVM_DIR}/src -xzvf llvm-3.2.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src -xzvf llvm-3.3.src.tar.gz --strip 1
 mkdir -p ${LLVM_DIR}/src/tools/clang
-tar -C ${LLVM_DIR}/src/tools/clang -xzvf clang-3.2.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/tools/clang -xzvf cfe-3.3.src.tar.gz --strip 1
 mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
-tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.2.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.3.src.tar.gz --strip 1
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/

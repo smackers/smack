@@ -14,8 +14,8 @@
 
 #include "assistDS/DSNodeEquivs.h"
 
-#include "llvm/Constants.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/ADT/SmallSet.h"
 

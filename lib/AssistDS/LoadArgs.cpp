@@ -15,14 +15,14 @@
 #define DEBUG_TYPE "ld-args"
 
 #include "assistDS/LoadArgs.h"
-#include "llvm/Constants.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Use.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Use.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -80,8 +80,8 @@ bool LoadArgs::runOnModule(Module& M) {
             // do not care about dead arguments
             if(ai->use_empty())
               continue;
-            if(F->getParamAttributes(argNum).SExt ||
-               F->getParamAttributes(argNum).ZExt)
+            if(F->getAttributes().getParamAttributes(argNum).hasAttrSomewhere(Attribute::SExt) ||
+               F->getAttributes().getParamAttributes(argNum).hasAttrSomewhere(Attribute::ZExt))
               continue;
             if (isa<LoadInst>(CI->getArgOperand(argNum)))
               break;
@@ -168,9 +168,9 @@ bool LoadArgs::runOnModule(Module& M) {
               fargs.push_back(ai);
             }
 
-            NewF->setAttributes(NewF->getAttributes().addAttr(
+            NewF->setAttributes(NewF->getAttributes().addAttributes(
                 F->getContext(), 0, F->getAttributes().getRetAttributes()));
-            NewF->setAttributes(NewF->getAttributes().addAttr(
+            NewF->setAttributes(NewF->getAttributes().addAttributes(
                 F->getContext(), ~0, F->getAttributes().getFnAttributes()));
             //Get the point to insert the GEP instr.
             Instruction *InsertPoint;
@@ -178,13 +178,16 @@ bool LoadArgs::runOnModule(Module& M) {
             LoadInst *LI_new = new LoadInst(fargs.at(argNum), "", InsertPoint);
             fargs.at(argNum+1)->replaceAllUsesWith(LI_new);
           }
-          SmallVector<AttributeWithIndex, 8> AttributesVec;
+          
+          //this does not seem to be a good idea
+          AttributeSet NewCallPAL=AttributeSet();
+	  
           // Get the initial attributes of the call
-          AttrListPtr CallPAL = CI->getAttributes();
-          Attributes RAttrs = CallPAL.getRetAttributes();
-          Attributes FnAttrs = CallPAL.getFnAttributes();
-          if (RAttrs.hasAttributes())
-            AttributesVec.push_back(AttributeWithIndex::get(0, RAttrs));
+          AttributeSet CallPAL = CI->getAttributes();
+          AttributeSet RAttrs = CallPAL.getRetAttributes();
+          AttributeSet FnAttrs = CallPAL.getFnAttributes();
+          if (!RAttrs.isEmpty())
+            NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
 
           SmallVector<Value*, 8> Args;
           for(unsigned j =0;j<CI->getNumArgOperands();j++) {
@@ -192,17 +195,14 @@ bool LoadArgs::runOnModule(Module& M) {
               Args.push_back(NewVal);
             }
             Args.push_back(CI->getArgOperand(j));
-            // position in the AttributesVec
-            Attributes Attrs = CallPAL.getParamAttributes(j+1);
-            if (Attrs.hasAttributes())
-              AttributesVec.push_back(AttributeWithIndex::get(Args.size(), Attrs));
+            // position in the NewCallPAL
+            AttributeSet Attrs = CallPAL.getParamAttributes(j+1);
+            if (!Attrs.isEmpty())
+              NewCallPAL=NewCallPAL.addAttributes(F->getContext(),Args.size(), Attrs);
           }
           // Create the new attributes vec.
-          if (FnAttrs.hasAttributes())
-            AttributesVec.push_back(AttributeWithIndex::get(~0, FnAttrs));
-
-          AttrListPtr NewCallPAL = AttrListPtr::get(F->getContext(),
-                                                    AttributesVec);
+          if (!FnAttrs.isEmpty())
+            NewCallPAL=NewCallPAL.addAttributes(F->getContext(),~0, FnAttrs);
 
           CallInst *CallI = CallInst::Create(NewF,Args,"", CI);
           CallI->setCallingConv(CI->getCallingConv());
