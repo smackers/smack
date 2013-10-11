@@ -9,6 +9,7 @@
 # - mercurial
 # - python
 # - gcc
+# - g++
 # - make
 # - autoconf
 # - mono
@@ -29,12 +30,14 @@ BASE_DIR=`pwd`/smack-project
 INSTALL_PACKAGES=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
+INSTALL_CORRAL=1
 INSTALL_LLVM=1
 INSTALL_SMACK=1
 
 # Other dirs
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
+CORRAL_DIR="${BASE_DIR}/corral"
 LLVM_DIR="${BASE_DIR}/llvm"
 SMACK_DIR="${BASE_DIR}/smack"
 
@@ -63,6 +66,7 @@ mkdir -p ${BASE_DIR}
 mkdir -p ${Z3_DIR}/src
 mkdir -p ${Z3_DIR}/install
 mkdir -p ${BOOGIE_DIR}
+mkdir -p ${CORRAL_DIR}
 mkdir -p ${LLVM_DIR}/src
 mkdir -p ${LLVM_DIR}/build
 mkdir -p ${LLVM_DIR}/install
@@ -88,7 +92,7 @@ autoconf
 python scripts/mk_make.py
 cd build
 make
-make install
+sudo make install
 
 cd ${BASE_DIR}
 
@@ -107,6 +111,44 @@ hg clone https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 cd ${BOOGIE_DIR}/Source
 xbuild Boogie.sln
 ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+
+cd ${BASE_DIR}
+
+fi
+
+################################################################################
+
+# Corral
+
+if [ ${INSTALL_CORRAL} -eq 1 ]; then
+
+# Get Corral
+git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+
+# Build Corral
+cd ${CORRAL_DIR}/references
+
+cp ${BOOGIE_DIR}/Binaries/AbsInt.dll .
+cp ${BOOGIE_DIR}/Binaries/Basetypes.dll .
+cp ${BOOGIE_DIR}/Binaries/CodeContractsExtender.dll .
+cp ${BOOGIE_DIR}/Binaries/Core.dll .
+cp ${BOOGIE_DIR}/Binaries/ExecutionEngine.dll .
+cp ${BOOGIE_DIR}/Binaries/Graph.dll .
+cp ${BOOGIE_DIR}/Binaries/Houdini.dll .
+cp ${BOOGIE_DIR}/Binaries/Model.dll .
+cp ${BOOGIE_DIR}/Binaries/ParserHelper.dll .
+cp ${BOOGIE_DIR}/Binaries/Provers.SMTLib.dll .
+cp ${BOOGIE_DIR}/Binaries/VCExpr.dll .
+cp ${BOOGIE_DIR}/Binaries/VCGeneration.dll .
+cp ${BOOGIE_DIR}/Binaries/Boogie.exe .
+cp ${BOOGIE_DIR}/Binaries/BVD.exe .
+cp ${BOOGIE_DIR}/Binaries/Doomed.dll .
+cp ${BOOGIE_DIR}/Binaries/Predication.dll .
+
+cd ${CORRAL_DIR}
+xbuild cba.sln
+cp ${CORRAL_DIR}/references/UnivBackPred2.smt2 ${CORRAL_DIR}/bin/Debug
+ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Debug/z3.exe
 
 cd ${BASE_DIR}
 
@@ -158,6 +200,7 @@ cd ${BASE_DIR}
 
 # Set required paths and environment variables
 export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
+export CORRAL="mono ${CORRAL_DIR}/bin/Debug/corral.exe"
 export PATH=$PATH:${LLVM_DIR}/install/bin
 export PATH=$PATH:${SMACK_DIR}/install/bin
 
@@ -165,6 +208,7 @@ export PATH=$PATH:${SMACK_DIR}/install/bin
 cd ${SMACK_DIR}/src/test
 make
 ./regtest.py
+./regtest-corral.py
 
 cd ${BASE_DIR}
 
