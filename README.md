@@ -129,14 +129,14 @@ Corral). All tests should pass.
 
 Currently, SMACK comes with the following tools in the bin directory:
 * llvm2bpl is a bare-bone translator from LLVM bitcode into plain Boogie.
-* smack generates output Boogie files specifically formatted for a chosen
+* smackgen generates output Boogie files specifically formatted for a chosen
   back-end verifier.
 * smack-verify is a tool for statically verifying properties of programs written in
   C/C++. For a given input program, the tool checks for violations of
   user-provided assertions.
 
-Type `llvm2bpl.py -h`, `smack.py -h`, or `smack-verify.py -h` for a full list of supported
-command line options.
+Type `llvm2bpl.py -h`, `smackgen.py -h`, or `smack-verify.py -h` for a full
+list of supported command line options.
 
 
 ## The SMACK Verifier User Guide
