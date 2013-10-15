@@ -6,7 +6,7 @@ import re
 import subprocess
 import argparse
 import platform
-from smack import *
+from smackgen import *
 
 VERSION = '1.2'
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                       help='Boogie time limit in seconds')
   args = parser.parse_args()
 
-  bpl = smack(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
+  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)
