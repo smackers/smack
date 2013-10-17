@@ -44,11 +44,13 @@ require the --enable-optimized option).  Then when configuring SMACK you should
 use these options as well.
 
 
-## Getting Started Quickly (on Linux)
+## Getting Started Quickly
 
-To get you started with SMACK quickly, we provide a reference installation
-script that downloads and installs Z3, Boogie, LLVM/clang, and SMACK. Simply
-download
+### Linux
+
+To get you started with SMACK quickly on Linux, we provide a reference
+installation script that downloads and installs Z3, Boogie, Corral, LLVM/clang,
+and SMACK. Simply download
 [build-linux.sh](http://github.com/smackers/smack/blob/master/bin/build-linux.sh)
 and execute it.
 
@@ -62,6 +64,21 @@ Z3 source code cannot be cloned from codeplex using git sometimes. This is a
 known
 [problem](http://z3.codeplex.com/wikipage?title=Git%20HTTPS%20cloning%20errors).
 In that case you can manually download Z3's sources from its codeplex site.
+
+### Cygwin
+
+Similarly to Linux, we provide a reference installation script that downloads
+and installs LLVM/clang and SMACK on Cygwin. Simply download
+[build-cygwin.sh](http://github.com/smackers/smack/blob/master/bin/build-cygwin.sh)
+and execute it.
+
+Note that you will have to install Z3 and Boogie/Corral on your own, which
+should be straightforward since these projects provide Windows installers.
+
+**Known problems:**
+We had problems building LLVM on some versions of Cygwin, although it works
+perfectly fine on others. We still haven't figured out the exact combination on
+which it always works.
 
 
 ## Getting Started with SMACK
@@ -177,3 +194,12 @@ We use the -g flag to compile with debug information enabled, which the SMACK
 verifier leverages to generate more informative error traces. Then, the generated bitcode
 file is translated into Boogie code, which is in turn passed to the chosen back-end
 verifier.
+
+
+## Support
+
+For general discussion about SMACK, posting questions, reporting problems, bug
+reports, announcements, etc. please visit and join our [Google
+Group](http://groups.google.com/group/smack-dev) or simply email
+[smack-dev@googlegroups.com](mailto:smack-dev@googlegroups.com).
+
