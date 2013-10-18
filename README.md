@@ -199,7 +199,8 @@ verifier.
 ## Support
 
 For general discussion about SMACK, posting questions, reporting problems, bug
-reports, announcements, etc. please visit and join our [Google
-Group](http://groups.google.com/group/smack-dev) or simply email
-[smack-dev@googlegroups.com](mailto:smack-dev@googlegroups.com).
+reports, announcements, etc. please join our [Google
+Group](http://groups.google.com/group/smack-dev) mailing list.  If you do not
+have a Google account, you can still join by simply sending an email to
+[smack-dev+subscribe@googlegroups.com](mailto:smack-dev+subscribe@googlegroups.com).
 
