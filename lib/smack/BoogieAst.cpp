@@ -84,8 +84,15 @@ const Expr* Expr::sel(string b, string i) {
   return new SelExpr(id(b), id(i));
 }
 
+const Attr* Attr::attr(string s, vector<const Expr*> vs) {
+  vector<const AttrVal*> vals;
+  for (unsigned i=0; i<vs.size(); i++)
+    vals.push_back(new ExprVal(vs[i]));
+  return new Attr(s,vals);
+}
+
 const Attr* Attr::attr(string s) {
-  return new Attr(s, vector<const AttrVal*>());
+  return attr(s, vector<const Expr*>());
 }
 
 const Attr* Attr::attr(string s, string v) {
@@ -93,7 +100,7 @@ const Attr* Attr::attr(string s, string v) {
 }
 
 const Attr* Attr::attr(string s, int v) {
-  return new Attr(s, vector<const AttrVal*>(1, new ExprVal(Expr::lit(v))));
+  return attr(s, vector<const Expr*>(1, Expr::lit(v)));
 }
 
 const Attr* Attr::attr(string s, string v, int i) {
@@ -132,6 +139,12 @@ const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
 
 const Stmt* Stmt::assume(const Expr* e) {
   return new AssumeStmt(e);
+}
+
+const Stmt* Stmt::assume(const Expr* e, const Attr* a) {
+  AssumeStmt* s = new AssumeStmt(e);
+  s->add(a);
+  return (const AssumeStmt*) s;
 }
 
 const Stmt* Stmt::call(string p) {
@@ -404,7 +417,8 @@ void ExprVal::print(ostream& os) const {
 
 void Attr::print(ostream& os) const {
   os << "{:" << name;
-  print_seq<const AttrVal*>(os, vals, " ", ", ", "");
+  if (vals.size() > 0)
+    print_seq<const AttrVal*>(os, vals, " ", ", ", "");
   os << "}";
 }
 

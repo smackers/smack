@@ -151,6 +151,7 @@ public:
   static const Attr* attr(string s, int v);
   static const Attr* attr(string s, string v, int i);
   static const Attr* attr(string s, string v, int i, int j);
+  static const Attr* attr(string s, vector<const Expr*> vs);
 };
 
 class Stmt {
@@ -160,6 +161,7 @@ public:
   static const Stmt* assert_(const Expr* e);
   static const Stmt* assign(const Expr* e, const Expr* f);
   static const Stmt* assume(const Expr* e);
+  static const Stmt* assume(const Expr* e, const Attr* attrs);
   static const Stmt* call(string p);
   static const Stmt* call(string p, const Expr* x);
   static const Stmt* call(string p, const Expr* x, string r);

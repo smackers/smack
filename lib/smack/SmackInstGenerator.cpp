@@ -278,6 +278,10 @@ const Stmt* SmackInstGenerator::generateCall(
     assert(args.size() == 1 && rets.size() == 0);
     return Stmt::assume(
              Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
+    
+  } else if (rep->isSmackYield(f)) {
+    assert(rets.size() == 0);
+    return Stmt::assume(Expr::lit(true), Attr::attr("yield",args));
 
   } else if (rep->isSmackRecInt(f)) {
     assert(args.size() == 1 && rets.size() == 0);
