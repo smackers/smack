@@ -7,7 +7,7 @@ import argparse
 import io
 import platform
 
-VERSION = '1.2'
+VERSION = '1.3.0'
 
 
 def is_valid_file(parser, arg):
