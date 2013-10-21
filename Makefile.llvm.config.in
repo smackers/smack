@@ -59,7 +59,7 @@ PROJ_SRC_DIR := $(call realpath, $(PROJ_SRC_ROOT)/$(patsubst $(PROJ_OBJ_ROOT)%,%
 prefix          := $(PROJ_INSTALL_ROOT)
 PROJ_prefix     := $(prefix)
 ifndef PROJ_VERSION
-PROJ_VERSION := 1.0
+PROJ_VERSION := 1.3.0
 endif
 
 PROJ_bindir     := $(PROJ_prefix)/bin
