@@ -3,8 +3,8 @@
 //                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "BoogieAst.h"
-#include "llvm/Constants.h"
+#include "smack/BoogieAst.h"
+#include "llvm/IR/Constants.h"
 #include <sstream>
 
 namespace smack {
@@ -84,8 +84,15 @@ const Expr* Expr::sel(string b, string i) {
   return new SelExpr(id(b), id(i));
 }
 
+const Attr* Attr::attr(string s, vector<const Expr*> vs) {
+  vector<const AttrVal*> vals;
+  for (unsigned i=0; i<vs.size(); i++)
+    vals.push_back(new ExprVal(vs[i]));
+  return new Attr(s,vals);
+}
+
 const Attr* Attr::attr(string s) {
-  return new Attr(s, vector<const AttrVal*>());
+  return attr(s, vector<const Expr*>());
 }
 
 const Attr* Attr::attr(string s, string v) {
@@ -93,7 +100,7 @@ const Attr* Attr::attr(string s, string v) {
 }
 
 const Attr* Attr::attr(string s, int v) {
-  return new Attr(s, vector<const AttrVal*>(1, new ExprVal(Expr::lit(v))));
+  return attr(s, vector<const Expr*>(1, Expr::lit(v)));
 }
 
 const Attr* Attr::attr(string s, string v, int i) {
@@ -134,6 +141,16 @@ const Stmt* Stmt::assume(const Expr* e) {
   return new AssumeStmt(e);
 }
 
+const Stmt* Stmt::assume(const Expr* e, const Attr* a) {
+  AssumeStmt* s = new AssumeStmt(e);
+  s->add(a);
+  return (const AssumeStmt*) s;
+}
+
+const Stmt* Stmt::call(string p) {
+  return call(p, vector<const Expr*>(), vector<string>());
+}
+
 const Stmt* Stmt::call(string p, const Expr* x) {
   return call(p, vector<const Expr*>(1, x), vector<string>());
 }
@@ -154,7 +171,19 @@ const Stmt* Stmt::call(string p, vector<const Expr*> ps) {
 }
 
 const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs) {
-  return new CallStmt(p, ps, rs);
+  return call(p, ps, rs, vector<const Attr*>());
+}
+
+const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs,
+  const Attr* attr) {
+
+  return call(p, ps, rs, vector<const Attr*>(1, attr));
+}
+
+const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs, 
+  vector<const Attr*> ax) {
+
+  return new CallStmt(p, ps, rs, ax);
 }
 
 const Stmt* Stmt::comment(string s) {
@@ -188,6 +217,9 @@ const Stmt* Stmt::skip() {
   return new AssumeStmt(Expr::lit(true));
 }
 
+const Decl* Decl::typee(string name, string type) {
+  return new TypeDecl(name,type);
+}
 const Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
@@ -199,6 +231,9 @@ const Decl* Decl::constant(string name, string type, bool unique) {
 }
 const Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
+}
+const Decl* Decl::procedure(string name, string arg, string type) {
+  return new ProcDecl(name,vector< pair<string,string> >(1,make_pair(arg,type)),"");
 }
 
 ostream& operator<<(ostream& os, const Expr& e) {
@@ -394,7 +429,8 @@ void ExprVal::print(ostream& os) const {
 
 void Attr::print(ostream& os) const {
   os << "{:" << name;
-  print_seq<const AttrVal*>(os, vals, " ", ", ", "");
+  if (vals.size() > 0)
+    print_seq<const AttrVal*>(os, vals, " ", ", ", "");
   os << "}";
 }
 
@@ -418,6 +454,8 @@ void AssumeStmt::print(ostream& os) const {
 
 void CallStmt::print(ostream& os) const {
   os << "call ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   if (returns.size() > 0)
     print_seq<string>(os, returns, "", ", ", " := ");
   os << proc;
@@ -445,6 +483,13 @@ void ReturnStmt::print(ostream& os) const {
   os << "return;";
 }
 
+void TypeDecl::print(ostream& os) const {
+  if (type != "")
+    os << "type " << name << " = " << type << ";";
+  else
+    os << "type " << name << ";";
+}
+
 void AxiomDecl::print(ostream& os) const {
   os << "axiom " << expr << ";";
 }
@@ -464,6 +509,17 @@ void FuncDecl::print(ostream& os) const {
 
 void VarDecl::print(ostream& os) const {
   os << "var " << name << ": " << type << ";";
+}
+
+void ProcDecl::print(ostream& os) const {
+  os << "procedure " << name << "(";
+  for (unsigned i = 0; i < params.size(); i++)
+    os << params[i].first << ": " << params[i].second
+       << (i < params.size() - 1 ? ", " : "");
+  os << ")";
+  if (type != "") 
+    os << " returns (" << type << ")";
+  os << ";";
 }
 
 void Block::print(ostream& os) const {
@@ -496,7 +552,8 @@ void Procedure::print(ostream& os) const {
   }
   if (blocks.size() > 0) {
     os << "{" << endl;
-    print_seq<const Decl*>(os, decls, "  ", "\n  ", "\n");
+    if (decls.size() > 0)
+      print_seq<const Decl*>(os, decls, "  ", "\n  ", "\n");
     print_seq<Block*>(os, blocks, "\n");
     os << endl << "}";
   }
@@ -509,7 +566,7 @@ void Program::print(ostream& os) const {
   os << "// SMACK-PRELUDE-END" << endl;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
   print_seq<const Decl*>(os, decls, "\n");
-  os << endl;
+  os << endl << endl;
   print_seq<Procedure*>(os, procs, "\n");
   os << "// END SMACK-GENERATED CODE" << endl;
 }

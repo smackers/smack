@@ -2,19 +2,20 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "SmackInstGenerator.h"
+#include "smack/SmackInstGenerator.h"
+#include "smack/SmackOptions.h"
+#include "llvm/InstVisitor.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/InstVisitor.h"
 #include <sstream>
 
 namespace smack {
 
 using llvm::errs;
 using namespace std;
-
+  
 const bool CODE_WARN = true;
 const bool SHOW_ORIG = false;
 
@@ -49,8 +50,14 @@ string SmackInstGenerator::createVar() {
 
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
-    if (!inst.hasName())
-      inst.setName(rep->isBool(&inst) ? SmackRep::BOOL_VAR : SmackRep::PTR_VAR);
+    if (!inst.hasName()) {
+      if (rep->isBool(&inst))
+        inst.setName(SmackRep::BOOL_VAR);
+      else if (rep->isFloat(&inst))
+        inst.setName(SmackRep::FLOAT_VAR);
+      else
+        inst.setName(SmackRep::PTR_VAR);
+    }
     VarDecl* d = new VarDecl(rep->id(&inst), rep->type(&inst));
     if (!currProc.hasDecl(d))
       currProc.addDecl(d);
@@ -58,9 +65,12 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
 }
 
 void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
-  if (llvm::MDNode* n = i.getMetadata("dbg")) {
+
+  if (llvm::MDNode* n = i.getMetadata("dbg")) {      
     llvm::DILocation l(n);
-    b->addStmt(Stmt::annot(
+    
+    if (SmackOptions::SourceLocSymbols)
+      b->addStmt(Stmt::annot(
                  Attr::attr("sourceloc",
                             l.getFilename().str(),
                             l.getLineNumber(),
@@ -204,12 +214,16 @@ void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {
 void SmackInstGenerator::visitTruncInst(llvm::TruncInst& ti) {
   processInstruction(ti);
   WARN("ignoring trunc instruction : " + i2s(ti));
-  currBlock->addStmt(Stmt::assign(
-                       rep->expr(&ti), rep->expr(ti.getOperand(0))));
+  const Expr* res = rep->expr(ti.getOperand(0));
+  if (rep->isBool(&ti))
+    res = rep->i2b(res);
+  currBlock->addStmt(Stmt::assign(rep->expr(&ti), res));
 }
 
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
   processInstruction(ii);
+  
+  currBlock->addStmt(Stmt::assume(Expr::lit(false)));
 }
 
 // TODO Should we put this DEBUG info back in ?
@@ -258,16 +272,26 @@ const Stmt* SmackInstGenerator::generateCall(
   if (rep->isSmackAssert(f)) {
     assert(args.size() == 1 && rets.size() == 0);
     return Stmt::assert_(
-             Expr::neq(args[0], SmackRep::ZERO));
+             Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
 
   } else if (rep->isSmackAssume(f)) {
     assert(args.size() == 1 && rets.size() == 0);
     return Stmt::assume(
-             Expr::neq(args[0], SmackRep::ZERO));
+             Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
+    
+  } else if (rep->isSmackYield(f)) {
+    assert(rets.size() == 0);
+    return Stmt::assume(Expr::lit(true), Attr::attr("yield",args));
+    
+  } else if (rep->isSmackAsyncCall(f)) {
+    assert(args.size() > 0);
+    string name = ((const VarExpr*) args[0])->name();
+    args.erase(args.begin());
+    return Stmt::call(name, args, rets, Attr::attr("async"));
 
   } else if (rep->isSmackRecInt(f)) {
     assert(args.size() == 1 && rets.size() == 0);
-    return Stmt::call(SmackRep::BOOGIE_REC_INT, rep->off(args[0]));
+    return Stmt::call(SmackRep::BOOGIE_REC_INT, rep->ptr2val(args[0]));
 //
 //        } else if (rep->isSmackRecObj(f)) {
 //            assert (args.size() == 1 && rets.size() == 0);
@@ -279,7 +303,7 @@ const Stmt* SmackInstGenerator::generateCall(
 
   } else if (name == "malloc") {
     assert(args.size() == 1);
-    return Stmt::call(SmackRep::MALLOC, rep->off(args[0]), rets[0]);
+    return Stmt::call(SmackRep::MALLOC, rep->ptr2val(args[0]), rets[0]);
 
   } else if (name == "free") {
     assert(args.size() == 1);
@@ -322,8 +346,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   }
 
   vector<const Expr*> args;
-  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++)
-    args.push_back(rep->expr(ci.getOperand(i)));
+  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++) {
+    const Expr* arg = rep->expr(ci.getOperand(i));
+    if (llvm::Function* f = ci.getCalledFunction())
+      if (f->isVarArg() && rep->isFloat(ci.getOperand(i)))
+        arg = rep->fp2si(arg);
+    args.push_back(arg);
+  }
 
   vector<string> rets;
   if (!ci.getType()->isVoidTy())
@@ -409,16 +438,30 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  currBlock->addStmt(Stmt::assign(
-                       rep->expr(&li),
-                       rep->mem(rep->expr(li.getPointerOperand()))));
+  const Expr* src = rep->mem(li.getPointerOperand());
+  if (rep->isFloat(&li))
+    src = rep->si2fp(src);
+  currBlock->addStmt(Stmt::assign(rep->expr(&li),src));
+
+  if (SmackOptions::MemoryModelDebug) {
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(li.getPointerOperand())));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(&li)));
+  }
 }
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
-  currBlock->addStmt(Stmt::assign(
-                       rep->mem(rep->expr(si.getPointerOperand())),
-                       rep->expr(si.getOperand(0))));
+  const Expr* src = rep->expr(si.getOperand(0));
+  if (rep->isFloat(si.getOperand(0)))
+    src = rep->fp2si(src);
+  currBlock->addStmt(Stmt::assign(rep->mem(si.getPointerOperand()),src));
+                       
+  if (SmackOptions::MemoryModelDebug) {
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getPointerOperand())));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getOperand(0))));
+  }
 }
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
@@ -437,6 +480,12 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
 
 void SmackInstGenerator::visitICmpInst(llvm::ICmpInst& ci) {
   processInstruction(ci);
+  currBlock->addStmt(Stmt::assign(rep->expr(&ci), rep->pred(ci)));
+}
+
+void SmackInstGenerator::visitFCmpInst(llvm::FCmpInst& ci) {
+  processInstruction(ci);
+  WARN("floating point?!?!");
   currBlock->addStmt(Stmt::assign(rep->expr(&ci), rep->pred(ci)));
 }
 
@@ -475,7 +524,7 @@ void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {
 
   const Expr
   *res = rep->expr(&i),
-   *piv = rep->mem(rep->expr(i.getOperand(0))),
+   *piv = rep->mem(i.getOperand(0)),
     *cmp = rep->expr(i.getOperand(1)),
      *swp = rep->expr(i.getOperand(2));
 
@@ -488,6 +537,57 @@ void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {
   currBlock->addStmt(Stmt::assume(
                        Expr::impl(Expr::neq(piv, cmp), Expr::eq(Expr::id(x), res))));
   currBlock->addStmt(Stmt::assign(piv, Expr::id(x)));
+}
+
+void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
+  processInstruction(i);
+  
+  const Expr* res = rep->expr(&i);
+  const Expr* mem = rep->mem(i.getPointerOperand());
+  const Expr* val = rep->expr(i.getValOperand());  
+  const Expr* op;  
+  
+  switch (i.getOperation()) {
+    using llvm::AtomicRMWInst;
+  case AtomicRMWInst::Xchg:
+    op = val;
+    break;
+  case AtomicRMWInst::Add:
+    op = Expr::fn(SmackRep::ADD,mem,val);
+    break;
+  case AtomicRMWInst::Sub:
+    op = Expr::fn(SmackRep::SUB,mem,val);
+    break;
+  case AtomicRMWInst::And:
+    op = Expr::fn(SmackRep::AND,mem,val);
+    break;
+  case AtomicRMWInst::Nand:
+    op = Expr::fn(SmackRep::NAND,mem,val);
+    break;
+  case AtomicRMWInst::Or:
+    op = Expr::fn(SmackRep::OR,mem,val);
+    break;
+  case AtomicRMWInst::Xor:
+    op = Expr::fn(SmackRep::XOR,mem,val);
+    break;
+  case AtomicRMWInst::Max:
+    op = Expr::fn(SmackRep::MAX,mem,val);
+    break;
+  case AtomicRMWInst::Min:
+    op = Expr::fn(SmackRep::MIN,mem,val);
+    break;
+  case AtomicRMWInst::UMax:
+    op = Expr::fn(SmackRep::UMAX,mem,val);
+    break;
+  case AtomicRMWInst::UMin:
+    op = Expr::fn(SmackRep::UMIN,mem,val);
+    break;
+  default:
+    assert(false && "unexpected atomic operation.");
+  }  
+  
+  currBlock->addStmt(Stmt::assign(res,mem));
+  currBlock->addStmt(Stmt::assign(mem,op));
 }
 
 void SmackInstGenerator::visitPtrToIntInst(llvm::PtrToIntInst& i) {
@@ -507,6 +607,45 @@ void SmackInstGenerator::visitIntToPtrInst(llvm::IntToPtrInst& i) {
                                   rep->i2p(rep->expr(i.getOperand(0)))));
 }
 
+void SmackInstGenerator::visitFPTruncInst(llvm::FPTruncInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), rep->expr(i.getOperand(0))));  
+}
+void SmackInstGenerator::visitFPExtInst(llvm::FPExtInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), rep->expr(i.getOperand(0))));
+}
+
+void SmackInstGenerator::visitFPToSIInst(llvm::FPToSIInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->fp2si(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitFPToUIInst(llvm::FPToUIInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->fp2ui(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitSIToFPInst(llvm::SIToFPInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->si2fp(rep->expr(i.getOperand(0)))));
+}
+
+void SmackInstGenerator::visitUIToFPInst(llvm::UIToFPInst& i) {
+  processInstruction(i);
+  WARN("not really handling floating point : " + i2s(i));
+  currBlock->addStmt(Stmt::assign(rep->expr(&i), 
+    rep->ui2fp(rep->expr(i.getOperand(0)))));
+}
+
 void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
   processInstruction(i);
   string x = rep->id(&i);
@@ -524,12 +663,15 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
 void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst& mci) {
   processInstruction(mci);
+  unsigned dstReg = rep->getRegion(mci.getOperand(0));
+  unsigned srcReg = rep->getRegion(mci.getOperand(1));
 
   vector<const Expr*> args;
   for (unsigned i = 0; i < mci.getNumOperands() - 1; i++)
     args.push_back(rep->expr(mci.getOperand(i)));
   assert(args.size() == 5);
-  currBlock->addStmt(Stmt::call(SmackRep::MEMCPY, args));
+  currBlock->addStmt(Stmt::call(rep->memcpyCall(dstReg,srcReg), args));
+  moreDecls.insert(rep->memcpyProc(dstReg,srcReg));
 }
 } // namespace smack
 

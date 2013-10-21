@@ -1,5 +1,5 @@
 CC = clang
-INC = ../../../headers
+INC = ../../../include/smack
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = cdaudio_simpl1_safe.cil.c \

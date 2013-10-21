@@ -1,6 +1,6 @@
 # Set the name of the project here
 PROJECT_NAME := smack
-PROJ_VERSION := 1.0
+PROJ_VERSION := 1.3.0
 
 # Set this variable to the top of the LLVM source tree.
 LLVM_SRC_ROOT = @LLVM_SRC@
@@ -17,6 +17,9 @@ PROJ_OBJ_ROOT := $(subst //,/,@abs_top_builddir@)
 
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT := @prefix@
+
+# Do not install the archive files
+NO_INSTALL_ARCHIVES=1
 
 # Configuration file to set paths specific to local installation of LLVM
 include $(PROJ_OBJ_ROOT)/Makefile.llvm.config

@@ -20,3 +20,21 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+==============================================================================
+Copyrights and Licenses for Third Party Software Distributed with SMACK:
+==============================================================================
+SMACK contains code written by third parties.  Such software will have its own
+individual LICENSE.TXT file in the directory in which it appears.  This file
+will describe the copyrights, license, and restrictions which apply to that
+code.
+
+The following pieces of software have additional or alternate copyrights,
+licenses, and/or restrictions:
+
+Program             Directories
+-------             -----------
+poolalloc           include/assistDS
+                    include/dsa
+                    lib/AssistDS
+                    lib/DSA

@@ -1,0 +1,15 @@
+DSA is changed since PLDI07 in (at least) the following ways:
+
+1) DSA tracks types per offset.
+2) DSA does not assume that all clients will want to collapse a node if types 
+   conflict.  Many clients don't care that an offset is used as an int or a 
+   double, they just care about the points-to result.
+
+In Progress:
+
+1) DSA handles multiple entry points in a module.
+2) Optional assumption that only legal targets are called at indirect call sites
+3) Positional arguments, rather than pointer relative arguments.  This handles
+   the case where pointer and ints are assumed compatible and function pointers
+   containing them are cast freely.
+
