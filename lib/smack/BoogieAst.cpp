@@ -171,7 +171,19 @@ const Stmt* Stmt::call(string p, vector<const Expr*> ps) {
 }
 
 const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs) {
-  return new CallStmt(p, ps, rs);
+  return call(p, ps, rs, vector<const Attr*>());
+}
+
+const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs,
+  const Attr* attr) {
+
+  return call(p, ps, rs, vector<const Attr*>(1, attr));
+}
+
+const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs, 
+  vector<const Attr*> ax) {
+
+  return new CallStmt(p, ps, rs, ax);
 }
 
 const Stmt* Stmt::comment(string s) {
@@ -442,6 +454,8 @@ void AssumeStmt::print(ostream& os) const {
 
 void CallStmt::print(ostream& os) const {
   os << "call ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   if (returns.size() > 0)
     print_seq<string>(os, returns, "", ", ", " := ");
   os << proc;

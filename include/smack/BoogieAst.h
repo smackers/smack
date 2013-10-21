@@ -116,6 +116,7 @@ class VarExpr : public Expr {
   string var;
 public:
   VarExpr(string v) : var(v) {}
+  string name() const { return var; }
   void print(ostream& os) const;
 };
 
@@ -161,13 +162,15 @@ public:
   static const Stmt* assert_(const Expr* e);
   static const Stmt* assign(const Expr* e, const Expr* f);
   static const Stmt* assume(const Expr* e);
-  static const Stmt* assume(const Expr* e, const Attr* attrs);
+  static const Stmt* assume(const Expr* e, const Attr* attr);
   static const Stmt* call(string p);
   static const Stmt* call(string p, const Expr* x);
   static const Stmt* call(string p, const Expr* x, string r);
   static const Stmt* call(string p, const Expr* x, const Expr* y, string r);
   static const Stmt* call(string p, vector<const Expr*> ps);
   static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs);
+  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs, const Attr* attr);
+  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs, vector<const Attr*> ax);
   static const Stmt* comment(string c);
   static const Stmt* goto_(string t);
   static const Stmt* goto_(string t, string u);
@@ -208,9 +211,11 @@ class CallStmt : public Stmt {
   string proc;
   vector<const Expr*> params;
   vector<string> returns;
+  vector<const Attr*> attrs;
 public:
-  CallStmt(string p, vector<const Expr*> ps, vector<string> rs)
-    : proc(p), params(ps), returns(rs) {}
+  CallStmt(string p, vector<const Expr*> ps, vector<string> rs, 
+    vector<const Attr*> ax)
+    : proc(p), params(ps), returns(rs), attrs(ax) {}
   void print(ostream& os) const;
 };
 

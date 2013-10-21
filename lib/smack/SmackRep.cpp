@@ -227,6 +227,7 @@ Regex PROC_IGNORE("^(malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*)$");
 Regex SMACK_ASSERT(".*__SMACK_assert.*");
 Regex SMACK_ASSUME(".*__SMACK_assume.*");
 Regex SMACK_YIELD(".*__SMACK_yield.*");
+Regex SMACK_ASYNC_CALL(".*__SMACK_async_call.*");
 Regex SMACK_REC_OBJ(".*__SMACK_record_obj.*");
 Regex SMACK_REC_INT(".*__SMACK_record_int.*");
 Regex SMACK_REC_PTR(".*__SMACK_record_ptr.*");
@@ -253,6 +254,10 @@ bool SmackRep::isSmackAssume(llvm::Function* f) {
 
 bool SmackRep::isSmackYield(llvm::Function* f) {
   return SMACK_YIELD.match(id(f));
+}
+
+bool SmackRep::isSmackAsyncCall(llvm::Function* f) {
+  return SMACK_ASYNC_CALL.match(id(f));
 }
 
 bool SmackRep::isSmackRecObj(llvm::Function* f) {

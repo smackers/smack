@@ -158,6 +158,7 @@ public:
   bool isSmackAssert(llvm::Function* f);
   bool isSmackAssume(llvm::Function* f);
   bool isSmackYield(llvm::Function* f);
+  bool isSmackAsyncCall(llvm::Function* f);
   bool isSmackRecObj(llvm::Function* f);
   bool isSmackRecInt(llvm::Function* f);
   bool isSmackRecPtr(llvm::Function* f);

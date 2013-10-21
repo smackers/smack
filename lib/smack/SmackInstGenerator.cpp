@@ -282,6 +282,12 @@ const Stmt* SmackInstGenerator::generateCall(
   } else if (rep->isSmackYield(f)) {
     assert(rets.size() == 0);
     return Stmt::assume(Expr::lit(true), Attr::attr("yield",args));
+    
+  } else if (rep->isSmackAsyncCall(f)) {
+    assert(args.size() > 0);
+    string name = ((const VarExpr*) args[0])->name();
+    args.erase(args.begin());
+    return Stmt::call(name, args, rets, Attr::attr("async"));
 
   } else if (rep->isSmackRecInt(f)) {
     assert(args.size() == 1 && rets.size() == 0);
