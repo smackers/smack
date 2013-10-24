@@ -118,6 +118,54 @@ int main() {
   return 0;
 }"""
 
+pointers = """#include <stdio.h>
+#include <stdlib.h>
+#include "smack.h"
+
+void incr(int *x) {
+  (*x)++;
+}
+
+int main() {
+  int *a = (int*)malloc(sizeof(int));
+  int *b = (int*)malloc(sizeof(int));
+
+  *a = *b = 0;
+
+  incr(a);
+  incr(b);
+
+  __SMACK_assert(*a == 1);
+  __SMACK_assert(*b == 1);
+
+  return 0;
+}"""
+
+structcast = """#include <stdio.h>
+#include <stdlib.h>
+#include "smack.h"
+
+typedef struct {
+  int a;
+  int b;
+} S1;
+
+typedef struct {
+  int x;
+} S2;
+
+int main(void) {
+  S1 s1;
+  S2* p2 = (S2*)(&s1);
+
+  s1.a = 3;
+  p2->x = 4;
+
+  __SMACK_assert(s1.a == 4);
+  return 0;
+}"""
+
+
 tutorialsource = """SMACK is a SMACK is a tool for statically checking properties of programs written in C/C++. 
 		For a given input program, SMACK checks for violations of user-provided assertions. 
 		The tool is open-source and integrates into the well-known LLVM compiler infrastructure.\r\n 
@@ -134,58 +182,50 @@ metadata = {
 	"Version": "1.0",
 	"Email": "zvonimir@cs.utah.edu",
 	"SupportEmail": "zvonimir@cs.utah.edu",
-	"TermsOfUseUrl": "https://github.com/smackers/smack",
-	"PrivacyUrl": "https://github.com/smackers/smack",
-	"Institution": "University of Utah",
-	"InstitutionUrl": "http://www.cs.utah.edu",
-	"InstitutionImageUrl": "https://dl.dropboxusercontent.com/u/93242277/logos.jpg",
+	"TermsOfUseUrl": "https://github.com/smackers/smack/wiki",
+	"PrivacyUrl": "https://github.com/smackers/smack/wiki",
+	"Institution": "SOAR Lab, IMDEA",
+	"InstitutionUrl": "http://soarlab.org/",
+	"InstitutionImageUrl": "https://dl.dropboxusercontent.com/u/93242277/smack-logo.png",
 	"MimeType": "text/c",
 	"SupportsLanguageSyntax": False,
 	"Title": "Static Checker for C/C++ Programs",
-	"Description": "SMACK is a tool for statically checking properties of programs written in C/C++. For a given input program, SMACK checks for violations of user-provided  			assertions. The tool is open-source and integrates into the well-known LLVM compiler infrastructure.",
+	"Description": "SMACK is a modular software verification infrastructure. The main purpose of SMACK is to lower the bar for experimenting with software verification and quickly prototyping custom software verifiers. To achieve that, SMACK relies on the well-known LLVM compiler infrastructure for its front-end, and Boogie intermediate verification language for its back-end. Such separation of concerns and modularity make implementing various additions and extensions to SMACK relatively easy. Furthermore, the open architecture of SMACK encourages prototyping custom software verifiers on top of SMACK.",
 	"Question": "Are there any assertion violations in this program?",
-	"Url": "https://github.com/smackers/smack",
+	"Url": "https://github.com/smackers/smack/wiki",
 	"Samples": [
 	{
-		"Name": "Simple",
+		"Name": "simple",
 		"Source": rise_simple
 	},
 	{
-		"Name": "Simple_buggy",
+		"Name": "simple_buggy",
 		"Source": rise_simple_buggy
 	},
 	{
-		"Name": "Func. Ptr_buggy",
+		"Name": "pointers",
+		"Source": pointers
+	},
+	{
+		"Name": "func ptr_buggy",
 		"Source": func_ptr_fail
 	},
 	{
-		"Name": "Loop assert",
+		"Name": "loop assert",
 		"Source": loop
 	},
 	{
-		"Name": "Simple Theorem",
+		"Name": "simple theorem",
 		"Source": assume_example
-	}
-	],
-	"Tutorials": [
+	},
 	{
-		"Name": "guide",
-		"Source": tutorialsource,
-		"Samples": [
-		{
-			"Name": "Sample Assert",
-			"Source": rise_simple
-		},
-		{
-                        "Name": "Sample nondet",
-                        "Source": nondet2
-                },
-		{
-			"Name": "Sample Assume",
-			"Source": assume_example
-		}
-		]
-	} 
+		"Name": "nondeterministic",
+		"Source": nondet
+	},
+	{
+		"Name": "struct cast",
+		"Source": structcast
+	}
 	]
 }
 
@@ -219,46 +259,22 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		length = int(self.headers.getheader('content-length'))      
 		data_string = self.rfile.read(length)
 		data = json.loads(data_string)
-		#x = time.localtime()
-		random.seed()
-		x = str(random.random()).split('.')[1]
-		#filename = 'pero'+str(x.tm_hour)+str(x.tm_min)+str(x.tm_sec)
-		filename = 'pero'+x
+
+		f = open("rollingcount",'r')
+		x = int(f.read())+1
+		filename = 'pero'+str(x)
+		f.close()
+		f = open("rollingcount",'w')
+		f.write(str(x))
+		f.close()
+
 		f = open(filename+'.c', 'w')
 		f.write(data["Source"])
 		f.close()
+
 		f = open('logs','a')
-		q = subprocess.call(["clang", "-c", "-Wall", "-emit-llvm", "-O0", "-I../include/smack", filename+".c", "-o", filename+".bc"])
-		if not q == 0:
-			smack_response = {
-				"Version": "1.0",
-				"Outputs": [
-				{
-					"MimeType": "text/plain",
-					"Value": "Compile error"
-				}
-				]
-			}
-			body = json.dumps(smack_response)
-			self.send_response(200)
-			self.send_header('Content-Type', 'text/javascript')
-			self.send_header('Content-Length', len(body))
-			self.send_header('Expires', '-1')
-			self.send_header('Cache-Control', 'no-cache')
-			self.send_header('Cache-Control', 'no-store')
-			self.send_header('Cache-Control', 'must-revalidate')
-			self.send_header('Cache-Control', 'max-age=0')
-			self.send_header('Pragma', 'no-cache')
-			self.end_headers()
-			self.wfile.write(body)
-			self.wfile.flush()
-			f.write(self.client_address[0]+"--"+filename+".c--"+"Compiler Error\n")
-			f.close()
-			os.system("rm "+filename+".b*")
-			self.connection.shutdown(1)
-			return
-		#p = subprocess.Popen(["timeout","60","smack-verif.py", filename+".bc", "-o", filename+".bpl"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		p = subprocess.Popen(['smack-verify.py', filename + '.bc', '-o', filename +'.bpl'], stdout=subprocess.PIPE)
+
+		p = subprocess.Popen(["timeout","60",'smack-verify.py', filename + '.c', '-o', filename +'.bpl'], stdout=subprocess.PIPE)
 		smack_string = p.communicate()[0]
 		return_code = p.returncode
 		if not return_code == 0:
@@ -287,6 +303,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				f.write(self.client_address[0]+"--"+filename+".c--"+"SMACK Error\n")
 				f.close()
 		else:  
+			print(smack_string)
 			output = smack_string.split(' ')
                         output = [i for i in output if '$' not in i]
 			for i in range(len(output)):
@@ -299,8 +316,8 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                         g.close()
 			f.write(self.client_address[0]+"--"+filename+".c--"+"Output\n")
 			f.close()
-			smack_string = smack_string+ "\nRefer execution trace line numbers in this Boogie File:\n"
-			smack_string = smack_string+subprocess.check_output(["cat", "-n", filename+".bpl"])
+			smack_string = smack_string+ "\nSource file for reference:\n"
+			smack_string = smack_string+subprocess.check_output(["cat", "-n", filename+".c"])
 			smack_response = {
 				"Version": "1.0",
 				"Outputs": [
@@ -334,5 +351,6 @@ def start_server():
 	server.serve_forever()
 
 if __name__ == "__main__":
+	os.system("export BOOGIE='/home/smack/boogie/Binaries/Boogie.exe'")
 	start_server()
 
