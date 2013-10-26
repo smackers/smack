@@ -75,6 +75,12 @@ def llvm2bpl(scriptPathName, infile, debugFlag, memmod):
   output = p.communicate()[1]
   bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
   debug = output[0:bplStartIndex]
+  if p.returncode != 0:
+    if debugFlag:
+      print debug
+    print >> sys.stderr, "LLVM/SMACK encountered an error:"
+    print >> sys.stderr, output[0:1000], "... (output truncated)"
+    sys.exit("LLVM/SMACK returned exit status %s" % p.returncode)
   bpl = output[bplStartIndex:]
   return debug, bpl
  
