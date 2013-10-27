@@ -1,0 +1,74 @@
+// 
+// Copyright (c) 2013 Pantazis Deligiannis (p.deligiannis@imperial.ac.uk)
+// This file is distributed under the MIT License. See LICENSE for details.
+// 
+
+#include "llvm/PassManager.h"
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/ToolOutputFile.h"
+
+#include "smack/SmackModuleGenerator.h"
+
+bool VerboseFlag;
+bool DebugFlag;
+
+static llvm::cl::opt<std::string>
+InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
+	llvm::cl::Required, llvm::cl::value_desc("filename"));
+
+static llvm::cl::opt<std::string>
+OutputFilename("o", llvm::cl::desc("Override output filename"),
+	llvm::cl::init(""), llvm::cl::value_desc("filename"));
+
+static llvm::cl::opt<bool, true>
+Verbose("verbose", llvm::cl::desc("Enable verbose output"),
+	llvm::cl::ValueDisallowed, llvm::cl::location(VerboseFlag));
+	
+static llvm::cl::opt<bool, true>
+Debug("debug", llvm::cl::desc("Enable debug output"),
+	llvm::cl::ValueDisallowed, llvm::cl::Hidden, llvm::cl::location(DebugFlag));
+
+int main(int argc, char **argv) {
+	llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
+	llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
+	
+	if (DebugFlag) {
+		llvm::sys::PrintStackTraceOnErrorSignal();
+		llvm::PrettyStackTraceProgram PSTP(argc, argv);
+		llvm::EnableDebugBuffering = true;
+	}
+	
+  if (OutputFilename.empty()) {
+    OutputFilename = InputFilename;
+  }
+	
+	llvm::SMDiagnostic err;
+	std::string error_msg;
+	llvm::LLVMContext &context = llvm::getGlobalContext();	
+	llvm::OwningPtr<llvm::Module> module;
+	llvm::OwningPtr<llvm::tool_output_file> output;
+	
+	module.reset(llvm::ParseIRFile(InputFilename, err, context));
+  
+  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
+	
+  llvm::PassManager pass_manager;
+	pass_manager.add(new smack::SmackModuleGenerator());
+	pass_manager.add(llvm::createVerifierPass());
+	pass_manager.add(llvm::createBitcodeWriterPass(output->os()));
+  pass_manager.run(*module.get());
+	
+	output->keep();
+	
+  return 0;
+}
