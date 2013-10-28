@@ -7,7 +7,7 @@ import argparse
 import platform
 from llvm2bpl import *
 
-VERSION = '1.2'
+VERSION = '1.3.0'
 
 
 def smackParser():
