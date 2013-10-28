@@ -2,7 +2,7 @@ import BaseHTTPServer
 import SimpleHTTPServer
 import json
 import subprocess
-import os, time
+import os, time, re
 import random
 
 PORT = 8080
@@ -179,27 +179,27 @@ tutorialsource = """SMACK is a SMACK is a tool for statically checking propertie
 metadata = {
 	"Name": "smack",
 	"DisplayName": "SMACK",
-	"Version": "1.0",
-	"Email": "zvonimir@cs.utah.edu",
-	"SupportEmail": "zvonimir@cs.utah.edu",
-	"TermsOfUseUrl": "https://github.com/smackers/smack/wiki",
-	"PrivacyUrl": "https://github.com/smackers/smack/wiki",
-	"Institution": "SOAR Lab, IMDEA",
-	"InstitutionUrl": "http://soarlab.org/",
+	"Version": "1.3.0",
+	"Email": "smack-dev@googlegroups.com",
+	"SupportEmail": "smack-dev@googlegroups.com",
+	"TermsOfUseUrl": "https://github.com/smackers/smack/",
+	"PrivacyUrl": "https://github.com/smackers/smack/",
+	"Institution": "University of Utah and IMDEA Software",
+	"InstitutionUrl": "https://github.com/smackers/smack/",
 	"InstitutionImageUrl": "https://dl.dropboxusercontent.com/u/93242277/smack-logo.png",
 	"MimeType": "text/c",
 	"SupportsLanguageSyntax": False,
-	"Title": "Static Checker for C/C++ Programs",
+	"Title": "Verifier for C/C++ Programs",
 	"Description": "SMACK is a modular software verification infrastructure. The main purpose of SMACK is to lower the bar for experimenting with software verification and quickly prototyping custom software verifiers. To achieve that, SMACK relies on the well-known LLVM compiler infrastructure for its front-end, and Boogie intermediate verification language for its back-end. Such separation of concerns and modularity make implementing various additions and extensions to SMACK relatively easy. Furthermore, the open architecture of SMACK encourages prototyping custom software verifiers on top of SMACK.",
 	"Question": "Are there any assertion violations in this program?",
-	"Url": "https://github.com/smackers/smack/wiki",
+	"Url": "https://github.com/smackers/smack/",
 	"Samples": [
 	{
 		"Name": "simple",
 		"Source": rise_simple
 	},
 	{
-		"Name": "simple_buggy",
+		"Name": "simple buggy",
 		"Source": rise_simple_buggy
 	},
 	{
@@ -207,7 +207,7 @@ metadata = {
 		"Source": pointers
 	},
 	{
-		"Name": "func ptr_buggy",
+		"Name": "func ptr buggy",
 		"Source": func_ptr_fail
 	},
 	{
@@ -262,7 +262,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
 		f = open("rollingcount",'r')
 		x = int(f.read())+1
-		filename = 'pero'+str(x)
+		filename = 'input_'+str(x)
 		f.close()
 		f = open("rollingcount",'w')
 		f.write(str(x))
@@ -280,7 +280,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		if not return_code == 0:
 			if return_code == 31744:
                         	smack_response = {
-                                	"Version": "1.0",
+                                	"Version": "1.3.0",
 	                                "Outputs": [
         	                        {
                 	                        "MimeType": "text/plain",
@@ -292,7 +292,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				f.close()
 			else:
 				smack_response = {
-					"Version": "1.0",
+					"Version": "1.3.0",
 					"Outputs": [
 					{
 						"MimeType": "text/plain",
@@ -303,12 +303,13 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				f.write(self.client_address[0]+"--"+filename+".c--"+"SMACK Error\n")
 				f.close()
 		else:  
-			print(smack_string)
+			#print(smack_string)
+			smack_string = smack_string.replace(filename+'.c', 'input.c')
 			output = smack_string.split(' ')
                         output = [i for i in output if '$' not in i]
 			for i in range(len(output)):
 				if '):' in output[i]:
-					output[i]=output[i][0:len(output[i])-1]+"\n"
+					output[i]=output[i][0:len(output[i])-1]+"\n"                
                         t=" "
                         smack_string = t.join(output) 
 			g = open(filename+".output",'w')
@@ -316,10 +317,10 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                         g.close()
 			f.write(self.client_address[0]+"--"+filename+".c--"+"Output\n")
 			f.close()
-			smack_string = smack_string+ "\nSource file for reference:\n"
-			smack_string = smack_string+subprocess.check_output(["cat", "-n", filename+".c"])
+			#smack_string = smack_string+ "\nSource file for reference:\n"
+			#smack_string = smack_string+subprocess.check_output(["cat", "-n", filename+".c"])
 			smack_response = {
-				"Version": "1.0",
+				"Version": "1.3.0",
 				"Outputs": [
 				{
 					"MimeType": "text/plain",
@@ -351,6 +352,5 @@ def start_server():
 	server.serve_forever()
 
 if __name__ == "__main__":
-	os.system("export BOOGIE='/home/smack/boogie/Binaries/Boogie.exe'")
 	start_server()
 
