@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
 	
   llvm::PassManager pass_manager;
 	pass_manager.add(new smack::SmackModuleGenerator());
-	pass_manager.add(llvm::createVerifierPass());
-	pass_manager.add(llvm::createBitcodeWriterPass(output->os()));
+	// pass_manager.add(llvm::createVerifierPass());
+	// pass_manager.add(llvm::createBitcodeWriterPass(output->os()));
   pass_manager.run(*module.get());
 	
 	output->keep();

@@ -45,6 +45,86 @@ endif()
 
 include_directories(include)
 
+add_library(assistDS STATIC
+	include/assistDS/ArgCast.h
+	include/assistDS/FuncSimplify.h
+	include/assistDS/Int2PtrCmp.h
+	include/assistDS/SimplifyExtractValue.h
+	include/assistDS/StructReturnToPointer.h
+	include/assistDS/DSNodeEquivs.h
+	include/assistDS/FuncSpec.h
+	include/assistDS/SimplifyGEP.h
+	include/assistDS/TypeChecks.h
+	include/assistDS/DataStructureCallGraph.h
+	include/assistDS/GEPExprArgs.h
+	include/assistDS/LoadArgs.h
+	include/assistDS/SimplifyInsertValue.h
+	include/assistDS/TypeChecksOpt.h
+	include/assistDS/Devirt.h
+	include/assistDS/IndCloner.h
+	include/assistDS/MergeGEP.h
+	include/assistDS/SimplifyLoad.h
+	lib/AssistDS/ArgCast.cpp
+	lib/AssistDS/Devirt.cpp
+	lib/AssistDS/GEPExprArgs.cpp
+	lib/AssistDS/LoadArgs.cpp
+	lib/AssistDS/SimplifyExtractValue.cpp
+	lib/AssistDS/StructReturnToPointer.cpp
+	lib/AssistDS/ArgSimplify.cpp
+	lib/AssistDS/DynCount.cpp
+	lib/AssistDS/IndCloner.cpp
+	lib/AssistDS/SimplifyGEP.cpp
+	lib/AssistDS/TypeChecks.cpp
+	lib/AssistDS/DSNodeEquivs.cpp
+	lib/AssistDS/FuncSimplify.cpp
+	lib/AssistDS/Int2PtrCmp.cpp
+	lib/AssistDS/MergeGEP.cpp
+	lib/AssistDS/SimplifyInsertValue.cpp
+	lib/AssistDS/TypeChecksOpt.cpp
+	lib/AssistDS/DataStructureCallGraph.cpp
+	lib/AssistDS/FuncSpec.cpp
+	lib/AssistDS/SVADevirt.cpp
+	lib/AssistDS/SimplifyLoad.cpp
+)
+
+add_library(dsa STATIC
+	include/dsa/AddressTakenAnalysis.h
+	include/dsa/DSCallGraph.h
+	include/dsa/DSNode.h
+	include/dsa/EntryPointAnalysis.h
+	include/dsa/keyiterator.h
+	include/dsa/svset.h
+	include/dsa/AllocatorIdentification.h
+	include/dsa/DSGraph.h
+	include/dsa/DSSupport.h
+	include/dsa/stl_util.h
+	include/dsa/CallTargets.h
+	include/dsa/DSGraphTraits.h
+	include/dsa/DataStructure.h
+	include/dsa/TypeSafety.h
+	include/dsa/super_set.h
+	lib/dsa/AddressTakenAnalysis.cpp
+	lib/dsa/CallTargets.cpp
+	lib/dsa/DSTest.cpp
+	lib/dsa/EquivClassGraphs.cpp
+	lib/dsa/StdLibPass.cpp
+	lib/dsa/AllocatorIdentification.cpp
+	lib/dsa/CompleteBottomUp.cpp
+	lib/dsa/DataStructure.cpp
+	lib/dsa/GraphChecker.cpp
+	lib/dsa/Printer.cpp
+	lib/dsa/TopDownClosure.cpp
+	lib/dsa/Basic.cpp
+	lib/dsa/DSCallGraph.cpp
+	lib/dsa/DataStructureStats.cpp
+	lib/dsa/TypeSafety.cpp
+	lib/dsa/BottomUpClosure.cpp
+	lib/dsa/DSGraph.cpp
+	lib/dsa/EntryPointAnalysis.cpp
+	lib/dsa/Local.cpp
+	lib/dsa/SanityCheck.cpp
+)
+
 add_library(smackTranslator STATIC
 	include/smack/smack.h
 	include/smack/BoogieAst.h
@@ -71,8 +151,8 @@ add_executable(smack
   tools/smack/smack.cpp
 )
 
-set_target_properties(smack smackTranslator
+set_target_properties(smack smackTranslator assistDS dsa
     PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(smack smackTranslator)
+target_link_libraries(smack smackTranslator assistDS dsa)
