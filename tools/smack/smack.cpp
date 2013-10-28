@@ -3,9 +3,8 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 // 
 
+#include "llvm/LinkAllPasses.h"
 #include "llvm/PassManager.h"
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
@@ -16,10 +15,12 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 
+#include "smack/BplPrinter.h"
+#include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 
-bool VerboseFlag;
 bool DebugFlag;
 
 static llvm::cl::opt<std::string>
@@ -30,10 +31,10 @@ static llvm::cl::opt<std::string>
 OutputFilename("o", llvm::cl::desc("Override output filename"),
 	llvm::cl::init(""), llvm::cl::value_desc("filename"));
 
-static llvm::cl::opt<bool, true>
-Verbose("verbose", llvm::cl::desc("Enable verbose output"),
-	llvm::cl::ValueDisallowed, llvm::cl::location(VerboseFlag));
-	
+static llvm::cl::opt<std::string>
+DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
+	llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
+
 static llvm::cl::opt<bool, true>
 Debug("debug", llvm::cl::desc("Enable debug output"),
 	llvm::cl::ValueDisallowed, llvm::cl::Hidden, llvm::cl::location(DebugFlag));
@@ -49,26 +50,60 @@ int main(int argc, char **argv) {
 	}
 	
   if (OutputFilename.empty()) {
-    OutputFilename = InputFilename;
+    OutputFilename = InputFilename + ".bpl";
   }
 	
-	llvm::SMDiagnostic err;
 	std::string error_msg;
+	llvm::SMDiagnostic err;
 	llvm::LLVMContext &context = llvm::getGlobalContext();	
 	llvm::OwningPtr<llvm::Module> module;
-	llvm::OwningPtr<llvm::tool_output_file> output;
+	// llvm::OwningPtr<llvm::tool_output_file> output;
 	
 	module.reset(llvm::ParseIRFile(InputFilename, err, context));
+  if (module.get() == 0) {
+	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::Colors::RED);
+	  llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
+	  if (llvm::errs().has_colors()) llvm::errs().resetColor();
+  }
   
-  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
+  // output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
 	
-  llvm::PassManager pass_manager;
+	///////////////////////////////
+	// initialise and run passes //
+	///////////////////////////////
+	
+	llvm::PassManager pass_manager;
+	llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+  llvm::initializeCore(Registry);
+  llvm::initializeScalarOpts(Registry);
+  llvm::initializeObjCARCOpts(Registry);
+  llvm::initializeVectorization(Registry);
+  llvm::initializeIPO(Registry);
+  llvm::initializeAnalysis(Registry);
+  llvm::initializeIPA(Registry);
+  llvm::initializeTransformUtils(Registry);
+  llvm::initializeInstCombine(Registry);
+  llvm::initializeInstrumentation(Registry);
+  llvm::initializeTarget(Registry);
+	
+  // add an appropriate DataLayout instance for the module
+  llvm::DataLayout *dl = 0;
+  const std::string &moduleDataLayout = module.get()->getDataLayout();
+  if (!moduleDataLayout.empty())
+    dl = new llvm::DataLayout(moduleDataLayout);
+  else if (!DefaultDataLayout.empty())
+    dl = new llvm::DataLayout(moduleDataLayout);
+  if (dl) pass_manager.add(dl);
+	
+	pass_manager.add(llvm::createInternalizePass());
+	pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
+	pass_manager.add(llvm::createDeadInstEliminationPass());
+	pass_manager.add(llvm::createLowerSwitchPass());
 	pass_manager.add(new smack::SmackModuleGenerator());
-	// pass_manager.add(llvm::createVerifierPass());
-	// pass_manager.add(llvm::createBitcodeWriterPass(output->os()));
+	pass_manager.add(new smack::BplPrinter());
   pass_manager.run(*module.get());
 	
-	output->keep();
+	// output->keep();
 	
   return 0;
 }

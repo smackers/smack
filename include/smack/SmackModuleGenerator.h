@@ -37,7 +37,7 @@ public:
     AU.addRequired<DSAAliasAnalysis>();
   }
 
-  virtual bool runOnModule(llvm::Module& m) {  
+  virtual bool runOnModule(llvm::Module& m) {
     SmackRep* rep = SmackRep::createRep(&getAnalysis<DSAAliasAnalysis>());
     generateProgram(m,rep);
     return false;
