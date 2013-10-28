@@ -44,6 +44,8 @@ tests = [
   ('nested_struct1_fail',r'0 verified, 1 errors?'),
   ('nested_struct2',     r'1 verified, 0 errors?'),
   ('nested_struct2_fail',r'0 verified, 1 errors?'),
+  ('struct_assign',      r'1 verified, 0 errors?'),
+  ('struct_assign_fail', r'0 verified, 1 errors?'),
   ('func_ptr',           r'1 verified, 0 errors?'),
   ('func_ptr_fail',      r'0 verified, 1 errors?'),
   ('func_ptr1',          r'1 verified, 0 errors?'),
