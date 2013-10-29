@@ -245,7 +245,12 @@ const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
     std::deque<const User *> WL;
     SmallSet<const User *, 8> Visited;
 
-    WL.insert(WL.end(), V->use_begin(), V->use_end());
+    // BEGIN BANDAGE: caught a bug here after upgrade to OSX Mavericks
+    // ORIGINAL: WL.insert(WL.end(), V->use_begin(), V->use_end());
+    for ( llvm::Value::const_use_iterator i = V->use_begin(); i != V->use_end(); ++i )
+      WL.push_back(*i);
+    // END BANDAGE
+
     do {
       const User *TheUser = WL.front();
       WL.pop_front();
