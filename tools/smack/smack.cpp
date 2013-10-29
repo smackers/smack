@@ -17,7 +17,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "smack/BplPrinter.h"
+#include "smack/BplFilePrinter.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 	llvm::SMDiagnostic err;
 	llvm::LLVMContext &context = llvm::getGlobalContext();	
 	llvm::OwningPtr<llvm::Module> module;
-	// llvm::OwningPtr<llvm::tool_output_file> output;
+	llvm::OwningPtr<llvm::tool_output_file> output;
 	
 	module.reset(llvm::ParseIRFile(InputFilename, err, context));
   if (module.get() == 0) {
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 	  if (llvm::errs().has_colors()) llvm::errs().resetColor();
   }
   
-  // output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
+  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
 	
 	///////////////////////////////
 	// initialise and run passes //
@@ -95,15 +95,17 @@ int main(int argc, char **argv) {
     dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(dl);
 	
+	if (&output->os()) llvm::errs() << "TEST\n";
+	
 	pass_manager.add(llvm::createInternalizePass());
 	pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 	pass_manager.add(llvm::createDeadInstEliminationPass());
 	pass_manager.add(llvm::createLowerSwitchPass());
 	pass_manager.add(new smack::SmackModuleGenerator());
-	pass_manager.add(new smack::BplPrinter());
+	pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());
 	
-	// output->keep();
+	output->keep();
 	
   return 0;
 }

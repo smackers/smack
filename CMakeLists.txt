@@ -128,6 +128,7 @@ add_library(dsa STATIC
 add_library(smackTranslator STATIC
 	include/smack/smack.h
 	include/smack/BoogieAst.h
+	include/smack/BplFilePrinter.h
 	include/smack/BplPrinter.h
 	include/smack/DSAAliasAnalysis.h
 	include/smack/SmackInstGenerator.h
@@ -137,6 +138,7 @@ add_library(smackTranslator STATIC
 	include/smack/SmackRep2dMem.h
 	include/smack/SmackRepFlatMem.h
   lib/smack/BoogieAst.cpp
+	lib/smack/BplFilePrinter.cpp
 	lib/smack/BplPrinter.cpp
 	lib/smack/DSAAliasAnalysis.cpp
 	lib/smack/SmackInstGenerator.cpp
