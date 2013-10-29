@@ -461,7 +461,7 @@ const Expr* SmackRep::lit(unsigned v) {
 }
 
 const Expr* SmackRep::ptrArith(
-  llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
+  const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
 
   assert(ps.size() > 0 && ps.size() == ts.size());
 
@@ -782,15 +782,25 @@ void SmackRep::addStaticInit(const llvm::Value* v) {
   if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
     
     if (g->hasInitializer()) {
-      const Value* i = g->getInitializer();
+      const Constant* init = g->getInitializer();
 
-      if (isInt(i))
-        staticInits.push_back(Stmt::assign(mem(g),expr(i)));
+      if (isInt(init))
+        staticInits.push_back(Stmt::assign(mem(g),expr(init)));
 
-      else if (i->getType()->isArrayTy()) {
-        ArrayType* t = (ArrayType*) i->getType();
+      else if (init->getType()->isArrayTy()) {
+        ArrayType* t = (ArrayType*) init->getType();
         extraDecls.push_back(Decl::axiom(Expr::eq(
           Expr::fn("$size",Expr::id(id(g))),lit(t->getNumElements()))));
+      }
+
+      else if (init->getType()->isStructTy()) {
+        StructType* t = (StructType*) init->getType();
+        for (unsigned i = 0, e = t->getNumElements(); i != e; ++i) {
+          Constant* c = init->getAggregateElement(i);
+          assert(isInt(c));
+          staticInits.push_back(Stmt::assign(Expr::sel(
+              Expr::id(memReg(getRegion(g))), pa(expr(g), 1, fieldOffset(t, i))),expr(c)));
+        }
       }
     }
   }

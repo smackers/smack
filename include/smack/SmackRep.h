@@ -200,7 +200,7 @@ public:
   const Expr* undef();
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(unsigned v);
-  const Expr* ptrArith(llvm::Value* p, vector<llvm::Value*> ps,
+  const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
   const Expr* op(llvm::BinaryOperator& o);
