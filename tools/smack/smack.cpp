@@ -74,17 +74,7 @@ int main(int argc, char **argv) {
 	
 	llvm::PassManager pass_manager;
 	llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
-  llvm::initializeCore(Registry);
-  llvm::initializeScalarOpts(Registry);
-  llvm::initializeObjCARCOpts(Registry);
-  llvm::initializeVectorization(Registry);
-  llvm::initializeIPO(Registry);
   llvm::initializeAnalysis(Registry);
-  llvm::initializeIPA(Registry);
-  llvm::initializeTransformUtils(Registry);
-  llvm::initializeInstCombine(Registry);
-  llvm::initializeInstrumentation(Registry);
-  llvm::initializeTarget(Registry);
 	
   // add an appropriate DataLayout instance for the module
   llvm::DataLayout *dl = 0;
@@ -94,9 +84,7 @@ int main(int argc, char **argv) {
   else if (!DefaultDataLayout.empty())
     dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(dl);
-	
-	if (&output->os()) llvm::errs() << "TEST\n";
-	
+		
 	pass_manager.add(llvm::createInternalizePass());
 	pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 	pass_manager.add(llvm::createDeadInstEliminationPass());
