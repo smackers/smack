@@ -21,8 +21,6 @@
 #include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 
-bool DebugFlag;
-
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
 	llvm::cl::Required, llvm::cl::value_desc("filename"));
@@ -35,19 +33,13 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
 	llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
-static llvm::cl::opt<bool, true>
-Debug("debug", llvm::cl::desc("Enable debug output"),
-	llvm::cl::ValueDisallowed, llvm::cl::Hidden, llvm::cl::location(DebugFlag));
-
 int main(int argc, char **argv) {
 	llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
 	llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
 	
-	if (DebugFlag) {
-		llvm::sys::PrintStackTraceOnErrorSignal();
-		llvm::PrettyStackTraceProgram PSTP(argc, argv);
-		llvm::EnableDebugBuffering = true;
-	}
+	llvm::sys::PrintStackTraceOnErrorSignal();
+	llvm::PrettyStackTraceProgram PSTP(argc, argv);
+	llvm::EnableDebugBuffering = true;
 	
   if (OutputFilename.empty()) {
     OutputFilename = InputFilename + ".bpl";
