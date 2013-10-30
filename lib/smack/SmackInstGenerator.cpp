@@ -332,7 +332,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   if (ci.isInlineAsm()) {
-    WARN("unsoundly ignoring inline asm call.");
+    WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     currBlock->addStmt(Stmt::skip());
     return;
 
@@ -420,7 +420,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     } else {
       // In the worst case, we have no idea what function may have
       // been called...
-      WARN("unsoundly ignoring indeterminate call.");
+      WARN("unsoundly ignoring indeterminate call: " + i2s(ci));
       currBlock->addStmt(Stmt::skip());
     }
   }
