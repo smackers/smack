@@ -33,6 +33,15 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
 	llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
+// removes extension from filename if there is one
+std::string getFileName(const std::string &str) {
+	std::string filename = str;
+	size_t lastdot = str.find_last_of(".");
+  if (lastdot != std::string::npos)
+		filename = str.substr(0, lastdot);	
+	return filename; 
+}
+
 int main(int argc, char **argv) {
 	llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
 	llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
@@ -40,9 +49,9 @@ int main(int argc, char **argv) {
 	llvm::sys::PrintStackTraceOnErrorSignal();
 	llvm::PrettyStackTraceProgram PSTP(argc, argv);
 	llvm::EnableDebugBuffering = true;
-	
+		
   if (OutputFilename.empty()) {
-    OutputFilename = InputFilename + ".bpl";
+    OutputFilename = getFileName(InputFilename) + ".bpl";
   }
 	
 	std::string error_msg;
