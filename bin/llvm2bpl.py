@@ -30,6 +30,8 @@ def llvm2bplParser():
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
                       help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
+  parser.add_argument('--tool', dest='usetool', action="store_true", default=False,
+                      help='use the executable tool instead of loading the dynamic library to LLVM opt')
   return parser
 
 
@@ -53,25 +55,37 @@ def find_library_path(installPrefix):
   return libraryPath
 
 
-def llvm2bpl(scriptPathName, infile, debugFlag, memmod):
+def llvm2bpl(scriptPathName, infile, debugFlag, memmod, usetool):
 
   # find library paths
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
-  installPrefix = find_install_prefix(smackRoot)
-  libraryPath = find_library_path(installPrefix)
-
+  installPrefix = find_install_prefix(smackRoot)    
+    
+  # use the executable smack tool
+  if usetool:
+    if debugFlag:
+      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, '-debug', infile.name],
+        stderr=subprocess.PIPE)
+    else:
+      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name],
+        stderr=subprocess.PIPE)
+  
   # invoke SMACK LLVM module
-  if debugFlag:
-    p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-      '-source-loc-syms',
-      '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug', '-o=tmp.bc'],
-      stdin=infile, stderr=subprocess.PIPE)
   else:
-    p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-      '-source-loc-syms',
-      '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug-only=bpl', '-o=tmp.bc'],
-      stdin=infile, stderr=subprocess.PIPE)
+    libraryPath = find_library_path(installPrefix)
+    
+    if debugFlag:
+      p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
+        '-source-loc-syms',
+        '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug', '-o=tmp.bc'],
+        stdin=infile, stderr=subprocess.PIPE)
+    else:
+      p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
+        '-source-loc-syms',
+        '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug-only=bpl', '-o=tmp.bc'],
+        stdin=infile, stderr=subprocess.PIPE)
+  
   output = p.communicate()[1]
   bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
   debug = output[0:bplStartIndex]
@@ -91,7 +105,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod)
+  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.usetool)
 
   # print debug info
   if args.debug:
