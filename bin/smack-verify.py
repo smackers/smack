@@ -8,7 +8,7 @@ import argparse
 import platform
 from smackgen import *
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 
 def generateSourceErrorTrace(boogieOutput, bpl):
