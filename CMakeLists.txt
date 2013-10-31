@@ -41,6 +41,24 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     set(LLVM_CXXFLAGS "${LLVM_CXXFLAGS} -std=c++11 -stdlib=libc++")
   endif()
 	
+else()
+  set(LLVM_SRC "" CACHE PATH "LLVM source directory")
+  set(LLVM_BUILD "" CACHE PATH "LLVM build directory")
+  set(LLVM_BUILD_TYPE "" CACHE STRING "LLVM build type")
+
+  if (NOT EXISTS "${LLVM_SRC}/include/llvm")
+    message(FATAL_ERROR "Invalid LLVM source directory: ${LLVM_SRC}")
+  endif()
+
+  set(LLVM_LIBDIR "${LLVM_BUILD}/lib/${LLVM_BUILD_TYPE}")
+  if (NOT EXISTS "${LLVM_LIBDIR}")
+    message(FATAL_ERROR "Invalid LLVM build directory: ${LLVM_BUILD}")
+  endif()
+
+  set(LLVM_CXXFLAGS "\"/I${LLVM_SRC}/include\" \"/I${LLVM_BUILD}/include\" -D_SCL_SECURE_NO_WARNINGS -wd4146 -wd4244 -wd4355 -wd4482 -wd4800")
+  set(LLVM_LDFLAGS "")
+  set(LLVM_LIBS "${LLVM_LIBDIR}/LLVMTransformUtils.lib" "${LLVM_LIBDIR}/LLVMipa.lib" "${LLVM_LIBDIR}/LLVMAnalysis.lib" "${LLVM_LIBDIR}/LLVMTarget.lib" "${LLVM_LIBDIR}/LLVMMC.lib" "${LLVM_LIBDIR}/LLVMObject.lib" "${LLVM_LIBDIR}/LLVMBitReader.lib" "${LLVM_LIBDIR}/LLVMCore.lib" "${LLVM_LIBDIR}/LLVMSupport.lib")
+	
 endif()
 
 include_directories(include)
