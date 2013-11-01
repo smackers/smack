@@ -104,10 +104,6 @@ const string SmackRep::MEM_WRITE = "$W";
 
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 
-const string SmackRep::BOOGIE_REC_PTR = "boogie_si_record_ptr";
-const string SmackRep::BOOGIE_REC_OBJ = "boogie_si_record_obj";
-const string SmackRep::BOOGIE_REC_INT = "boogie_si_record_int";
-
 const string SmackRep::STATIC_INIT = "$static_init";
 
 const string SmackRep::ARITHMETIC =
@@ -186,9 +182,6 @@ const string SmackRep::ARITHMETIC =
   "function $si2fp(i:int) returns (float);\n"
   "function $ui2fp(i:int) returns (float);\n" ;
 
-const string SmackRep::AUX_PROCS =
-  "procedure boogie_si_record_int(i: int);\n";
-
 const string SmackRep::MEMORY_DEBUG_SYMBOLS = 
   "type $mop;\n"
   "procedure boogie_si_record_mop(m: $mop);\n"
@@ -224,13 +217,6 @@ Regex BPL_KW(
   "|break|goto|if|else|div)$");
 Regex SMACK_NAME(".*__SMACK_.*");
 Regex PROC_IGNORE("^(malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*)$");
-Regex SMACK_ASSERT(".*__SMACK_assert.*");
-Regex SMACK_ASSUME(".*__SMACK_assume.*");
-Regex SMACK_YIELD(".*__SMACK_yield.*");
-Regex SMACK_ASYNC_CALL(".*__SMACK_async_call.*");
-Regex SMACK_REC_OBJ(".*__SMACK_record_obj.*");
-Regex SMACK_REC_INT(".*__SMACK_record_int.*");
-Regex SMACK_REC_PTR(".*__SMACK_record_ptr.*");
 
 bool isBplKeyword(string s) {
   return BPL_KW.match(s);
@@ -242,34 +228,6 @@ bool SmackRep::isSmackName(string n) {
 
 bool SmackRep::isProcIgnore(string n) {
   return PROC_IGNORE.match(n);
-}
-
-bool SmackRep::isSmackAssert(llvm::Function* f) {
-  return SMACK_ASSERT.match(id(f));
-}
-
-bool SmackRep::isSmackAssume(llvm::Function* f) {
-  return SMACK_ASSUME.match(id(f));
-}
-
-bool SmackRep::isSmackYield(llvm::Function* f) {
-  return SMACK_YIELD.match(id(f));
-}
-
-bool SmackRep::isSmackAsyncCall(llvm::Function* f) {
-  return SMACK_ASYNC_CALL.match(id(f));
-}
-
-bool SmackRep::isSmackRecObj(llvm::Function* f) {
-  return SMACK_REC_OBJ.match(id(f));
-}
-
-bool SmackRep::isSmackRecInt(llvm::Function* f) {
-  return SMACK_REC_INT.match(id(f));
-}
-
-bool SmackRep::isSmackRecPtr(llvm::Function* f) {
-  return SMACK_REC_PTR.match(id(f));
 }
 
 bool SmackRep::isInt(const llvm::Type* t) {
@@ -339,6 +297,8 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
 string SmackRep::memcpyCall(int dstReg, int srcReg) {
   stringstream s;
   s << "$memcpy." << dstReg << "." << srcReg;
+
+  program->addDecl(memcpyProc(dstReg,srcReg));
   return s.str();
 }
 
@@ -563,6 +523,15 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
   }
 }
 
+string SmackRep::getString(const llvm::Value* v) {
+  if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
+    if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
+      if (const llvm::GlobalValue* cc = llvm::dyn_cast<const llvm::GlobalValue>(constantExpr->getOperand(0)))
+        if (const llvm::ConstantDataSequential* cds = llvm::dyn_cast<const llvm::ConstantDataSequential>(cc->getOperand(0)))
+            return cds ->getAsCString();
+  return "";
+}
+
 const Expr* SmackRep::op(llvm::BinaryOperator& o) {
   string op;
   switch (o.getOpcode()) {
@@ -738,9 +707,63 @@ const Expr* SmackRep::pred(llvm::CmpInst& ci) {
   return e == NULL ? Expr::fn(o, ptr2val(l), ptr2val(r)) : e;
 }
 
+string indexedName(string name, int idx) {
+  stringstream idxd;
+  idxd << name << "#" << idx;
+  return idxd.str();
+}
+
+const Decl * SmackRep::procOnTheFly(llvm::Function* f, int n) {
+  vector< pair<string,string> > args;
+  if (f->isVarArg()) {
+    for (int i = 0; i < n; i++) {
+      args.push_back( make_pair(indexedName("p",i), getPtrType()) );
+    }
+  } else {
+    int i = 0;
+    for (llvm::Function::const_arg_iterator
+         arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
+      args.push_back( make_pair(indexedName("p",i), type(arg->getType())) );
+    }
+  } 
+  llvm::Type* t = f->getReturnType();
+  return Decl::procedure(
+    f->isVarArg() ? indexedName(id(f),n) : id(f), 
+    args, 
+    make_pair(RET_VAR, t->isVoidTy() ? "" : type(t))
+  );
+}
+
+const Stmt* SmackRep::call(llvm::Function* f, vector<const Expr*> args, vector<string> rets) {
+  string name = id(f);
+
+  if (name == "malloc") {
+    assert(args.size() == 1);
+    return Stmt::call(MALLOC, ptr2val(args[0]), rets[0]);
+
+  } else if (name == "free") {
+    assert(args.size() == 1);
+    return Stmt::call(FREE, args[0]);
+
+  } else if (f->isVarArg() && args.size() > 0) {
+    
+    // Handle variable argument functions
+    program->addDecl(procOnTheFly(f,args.size()));
+    return Stmt::call(indexedName(name,args.size()), args, rets);
+
+  } else if (f->isDeclaration() && !isSmackName(name)) {
+
+    // Handle functions without bodies (just declarations)
+    program->addDecl(procOnTheFly(f,args.size()));
+    return Stmt::call(name, args, rets);
+
+  } else {
+    return Stmt::call(name, args, rets);
+  }
+}
+
 string SmackRep::getPrelude() {
   stringstream s;
-  s << AUX_PROCS << endl;
   s << ARITHMETIC << endl;
 
   if (SmackOptions::MemoryModelDebug)
@@ -789,7 +812,7 @@ void SmackRep::addStaticInit(const llvm::Value* v) {
 
       else if (init->getType()->isArrayTy()) {
         ArrayType* t = (ArrayType*) init->getType();
-        extraDecls.push_back(Decl::axiom(Expr::eq(
+        program->addDecl(Decl::axiom(Expr::eq(
           Expr::fn("$size",Expr::id(id(g))),lit(t->getNumElements()))));
       }
 
@@ -818,10 +841,6 @@ Procedure* SmackRep::getStaticInit() {
   b->addStmt(Stmt::return_());
   proc->addBlock(b);
   return proc;
-}
-
-vector<const Decl*> SmackRep::getExtraDecls() {
-  return extraDecls;
 }
 
 } // namespace smack

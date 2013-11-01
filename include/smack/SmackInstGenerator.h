@@ -19,12 +19,8 @@ private:
   Procedure& currProc;
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*>& blockMap;
-  set<pair<llvm::Function*, int> >& missingDecls;
-  set<string>& moreDecls;
   int blockNum;
   int varNum;
-
-  const Stmt* generateCall(llvm::Function* f, vector<const Expr*> ps, vector<string> rs);
 
   void generatePhiAssigns(llvm::TerminatorInst& i);
   void generateGotoStmts(llvm::Instruction& i,
@@ -35,10 +31,8 @@ private:
 
 public:
   SmackInstGenerator(SmackRep* r, Procedure& p,
-                     map<const llvm::BasicBlock*, Block*>& bm, 
-                     set<pair<llvm::Function*, int> >& md,
-                     set<string>& mmdd)
-    : rep(r), currProc(p), blockMap(bm), missingDecls(md), moreDecls(mmdd),
+                     map<const llvm::BasicBlock*, Block*>& bm)
+    : rep(r), currProc(p), blockMap(bm),
       blockNum(0), varNum(0) {}
 
   Block* createBlock();

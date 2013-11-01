@@ -11,6 +11,8 @@
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 
+#include <iostream>
+
 namespace smack {
 
 using llvm::errs;
@@ -216,7 +218,7 @@ void SmackInstGenerator::visitTruncInst(llvm::TruncInst& ti) {
   WARN("ignoring trunc instruction : " + i2s(ti));
   const Expr* res = rep->expr(ti.getOperand(0));
   if (rep->isBool(&ti))
-    res = rep->i2b(res);
+    res = rep->i2b( rep->isInt(ti.getOperand(0)) ? rep->ptr2val(res) : res );
   currBlock->addStmt(Stmt::assign(rep->expr(&ti), res));
 }
 
@@ -263,94 +265,28 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 // #endif
 // }
 
-// TODO Does this function belong here, or in "SmackRep" ?
-const Stmt* SmackInstGenerator::generateCall(
-  llvm::Function* f, vector<const Expr*> args, vector<string> rets) {
-
-  string name = rep->id(f);
-
-  if (rep->isSmackAssert(f)) {
-    assert(args.size() == 1 && rets.size() == 0);
-    return Stmt::assert_(
-             Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
-
-  } else if (rep->isSmackAssume(f)) {
-    assert(args.size() == 1 && rets.size() == 0);
-    return Stmt::assume(
-             Expr::neq(args[0], rep->val2ptr(rep->lit((unsigned) 0))));
-    
-  } else if (rep->isSmackYield(f)) {
-    assert(rets.size() == 0);
-    return Stmt::assume(Expr::lit(true), Attr::attr("yield",args));
-    
-  } else if (rep->isSmackAsyncCall(f)) {
-    assert(args.size() > 0);
-    string name = ((const VarExpr*) args[0])->name();
-    args.erase(args.begin());
-    return Stmt::call(name, args, rets, Attr::attr("async"));
-
-  } else if (rep->isSmackRecInt(f)) {
-    assert(args.size() == 1 && rets.size() == 0);
-    return Stmt::call(SmackRep::BOOGIE_REC_INT, rep->ptr2val(args[0]));
-//
-//        } else if (rep->isSmackRecObj(f)) {
-//            assert (args.size() == 1 && rets.size() == 0);
-//            return Stmt::call(SmackRep::BOOGIE_REC_OBJ, rep->obj(args[0]));
-//
-//        } else if (rep->isSmackRecPtr(f)) {
-//            assert (args.size() == 1 && rets.size() == 0);
-//            return Stmt::call(SmackRep::BOOGIE_REC_PTR, args[0]);
-
-  } else if (name == "malloc") {
-    assert(args.size() == 1);
-    return Stmt::call(SmackRep::MALLOC, rep->ptr2val(args[0]), rets[0]);
-
-  } else if (name == "free") {
-    assert(args.size() == 1);
-    return Stmt::call(SmackRep::FREE, args[0]);
-
-  } else if (f->isVarArg() && args.size() > 0) {
-
-    // Handle variable argument functions
-    missingDecls.insert(make_pair(f, args.size()));
-    stringstream ss;
-    ss << name << "#" << args.size();
-    return Stmt::call(ss.str(), args, rets);
-
-  } else if (f->isDeclaration() && !rep->isSmackName(name)) {
-
-    // Handle functions without bodies (just declarations)
-    missingDecls.insert(make_pair(f, args.size()));
-    return Stmt::call(name, args, rets);
-
-  } else {
-    return Stmt::call(name, args, rets);
-  }
-}
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
+  
+  llvm::Function* f = ci.getCalledFunction();
 
   if (ci.isInlineAsm()) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     currBlock->addStmt(Stmt::skip());
     return;
-
-  } else if (llvm::Function* f = ci.getCalledFunction()) {
-    if (rep->id(f).find("llvm.dbg.") != string::npos) {
-      // a "skip" statement..
-      WARN("ignoring llvm.debug call.");
-      currBlock->addStmt(Stmt::skip());
-      return;
-    }
+    
+  } else if (f && rep->id(f).find("llvm.dbg.") != string::npos) {
+    WARN("ignoring llvm.debug call.");
+    currBlock->addStmt(Stmt::skip());
+    return;
   }
-
+  
   vector<const Expr*> args;
   for (unsigned i = 0; i < ci.getNumOperands() - 1; i++) {
     const Expr* arg = rep->expr(ci.getOperand(i));
-    if (llvm::Function* f = ci.getCalledFunction())
-      if (f->isVarArg() && rep->isFloat(ci.getOperand(i)))
-        arg = rep->fp2si(arg);
+    if (f && f->isVarArg() && rep->isFloat(ci.getOperand(i)))
+      arg = rep->fp2si(arg);
     args.push_back(arg);
   }
 
@@ -358,8 +294,33 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   if (!ci.getType()->isVoidTy())
     rets.push_back(rep->id(&ci));
 
-  if (llvm::Function* f = ci.getCalledFunction()) {
-    currBlock->addStmt(generateCall(f, args, rets));
+  if (f && rep->id(f) == "__SMACK_code") {
+    
+    string s = rep->getString(ci.getOperand(0));
+    assert(!s.empty() && "__SMACK_code: missing format string.");
+    
+    for (unsigned i=1; i<args.size(); i++) {
+      string::size_type idx = s.find('@');
+      assert(idx != string::npos && "__SMACK_code: too many arguments.");
+      
+      ostringstream ss;
+
+      if (s.find("{@}") == idx-1) {      
+        if (rep->isInt(ci.getOperand(i)))
+          args[i] = rep->ptr2val(args[i]);
+        args[i]->print(ss);
+        s = s.replace(idx-1,3,ss.str());
+        
+      } else {
+        args[i]->print(ss);
+        s = s.replace(idx,1,ss.str());
+      }      
+    }
+    currBlock->addStmt(Stmt::code(s));
+    return;    
+
+  } else if (f) {
+    currBlock->addStmt(rep->call(f, args, rets));
 
   } else {
     // function pointer call...
@@ -374,7 +335,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       if (ce->isCast()) {
         llvm::Value* castValue = ce->getOperand(0);
         if (llvm::Function* castFunc = llvm::dyn_cast<llvm::Function>(castValue)) {
-          currBlock->addStmt(generateCall(castFunc, args, rets));
+          currBlock->addStmt(rep->call(castFunc, args, rets));
           return;
         }
       }
@@ -394,7 +355,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
     if (fs.size() == 1) {
       // Q: is this case really possible?
-      currBlock->addStmt(generateCall(fs[0], args, rets));
+      currBlock->addStmt(rep->call(fs[0], args, rets));
 
     } else if (fs.size() > 1) {
       Block* tail = createBlock();
@@ -407,7 +368,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
         disp->addStmt(Stmt::assume(
                         Expr::eq(rep->expr(c), rep->expr(fs[i]))));
-        disp->addStmt(generateCall(fs[i], args, rets));
+        disp->addStmt(rep->call(fs[i], args, rets));
         disp->addStmt(Stmt::goto_(tail->getName()));
       }
 
@@ -445,8 +406,8 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
-    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(li.getPointerOperand())));
-    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(&li)));
+    currBlock->addStmt(Stmt::call("boogie_si_record_int", rep->expr(li.getPointerOperand())));
+    currBlock->addStmt(Stmt::call("boogie_si_record_int", rep->expr(&li)));
   }
 }
 
@@ -459,8 +420,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
                        
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));
-    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getPointerOperand())));
-    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getOperand(0))));
+    currBlock->addStmt(Stmt::call("boogie_si_record_int", rep->expr(si.getPointerOperand())));
+    currBlock->addStmt(Stmt::call("boogie_si_record_int", rep->expr(si.getOperand(0))));
   }
 }
 
@@ -671,7 +632,6 @@ void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst& mci) {
     args.push_back(rep->expr(mci.getOperand(i)));
   assert(args.size() == 5);
   currBlock->addStmt(Stmt::call(rep->memcpyCall(dstReg,srcReg), args));
-  moreDecls.insert(rep->memcpyProc(dstReg,srcReg));
 }
 } // namespace smack
 

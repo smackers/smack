@@ -12,7 +12,7 @@ char SmackModuleGenerator::ID = 0;
 
 void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
-  program = new Program("");
+  rep->setProgram( program = new Program("") );
 
   DEBUG(errs() << "Analyzing globals...\n");
 
@@ -22,19 +22,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
   
   if (rep->hasStaticInits())
     program->addProc(rep->getStaticInit());
-  program->addDecls(rep->getExtraDecls());
 
   DEBUG(errs() << "Analyzing functions...\n");
-
-  set<pair<llvm::Function*, int> > missingDecls;
-  set<string> moreDecls;
 
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
 
     string name = rep->id(func);
 
-    if (rep->isSmackName(name) || rep->isProcIgnore(name))
+    if (rep->isProcIgnore(name))
       continue;
 
     program->addDecls(rep->globalDecl(func));
@@ -53,7 +49,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
       map<const llvm::BasicBlock*, Block*> known;
       stack<llvm::BasicBlock*> workStack;
-      SmackInstGenerator igen(rep, *proc, known, missingDecls, moreDecls);
+      SmackInstGenerator igen(rep, *proc, known);
 
       llvm::BasicBlock& entry = func->getEntryBlock();
       workStack.push(&entry);
@@ -103,52 +99,11 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
     DEBUG(errs() << "Finished analyzing function: " << name << "\n\n");
   }
 
-  // Add any missing procedure declarations
-  // NOTE: for the moment, these correspond to VARARG procedures.
-  for (set<pair<llvm::Function*, int> >::iterator d = missingDecls.begin();
-       d != missingDecls.end(); ++d) {
-    llvm::Function* func = d->first;
-    int numArgs = d->second;
-
-    stringstream name;
-    name << rep->id(func);
-    if (func->isVarArg() && numArgs > 0) {
-      name << "#" << numArgs;
-    }
-
-    Procedure* p = new Procedure(name.str());
-
-    if (func->isVarArg()) {
-      for (int i = 0; i < numArgs; i++) {
-        stringstream param;
-        param << "p" << i;
-        p->addParam(param.str(), rep->getPtrType());
-      }
-    } else {
-      int i = 0;
-      for (llvm::Function::const_arg_iterator
-           arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg, ++i) {
-        stringstream param;
-        param << "p" << i;
-        p->addParam(param.str(), rep->type(arg->getType()));
-      }
-    }
-    
-    if (! func->getReturnType()->isVoidTy())
-      p->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
-    program->addProc(p);
-  }
-
   // MODIFIES
   for ( vector<Procedure*>::const_iterator p = program->pbegin();
         p != program->pend(); ++p ) {
     (*p)->addMods(rep->getModifies());
   }
-
-  for (set<string>::iterator d = moreDecls.begin();
-       d != moreDecls.end(); ++d) {
-     program->appendPrelude(*d);
-   }
   
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.

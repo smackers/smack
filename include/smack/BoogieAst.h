@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 namespace smack {
 
@@ -178,6 +179,7 @@ public:
   static const Stmt* havoc(string x);
   static const Stmt* return_();
   static const Stmt* skip();
+  static const Stmt* code(string s);
   virtual void print(ostream& os) const = 0;
 };
 
@@ -246,6 +248,13 @@ public:
   void print(ostream& os) const;
 };
 
+class CodeStmt : public Stmt {
+  string code;
+public:
+  CodeStmt(string s) : code(s) {}
+  void print(ostream& os) const;
+};
+
 class Decl {
 protected:
   string name;
@@ -265,6 +274,15 @@ public:
   static const Decl* constant(string name, string type, bool unique);
   static const Decl* variable(string name, string type);
   static const Decl* procedure(string name, string arg, string type);
+  static const Decl* procedure(string name, vector< pair<string,string> > args, pair<string,string> ret);
+
+};
+
+struct DeclCompare {
+  bool operator()(const Decl* a, const Decl* b) const {
+    assert(a && b);
+    return a->getName() < b->getName();
+  }
 };
 
 class TypeDecl : public Decl {
@@ -305,9 +323,10 @@ public:
 
 class ProcDecl : public Decl {
   vector< pair<string,string> > params;
+  string retvar;
 public:
-  ProcDecl(string n, vector< pair<string,string> > ps, string r) 
-    : Decl(n,r), params(ps) {}
+  ProcDecl(string n, vector< pair<string,string> > ps, string r, string t) 
+    : Decl(n,t), params(ps), retvar(r) {}
   void print(ostream& os) const;
 };
 
@@ -370,17 +389,21 @@ public:
 
 class Program {
   string prelude;
-  vector<const Decl*> decls;
+  set<const Decl*,DeclCompare> decls;
+  set<string> blindDecls;
   vector<Procedure*> procs;
 public:
   Program(string p) : prelude(p) { }
   void print(ostream& os) const;
   void addDecl(const Decl* d) {
-    decls.push_back(d);
+    decls.insert(d);
   }
   void addDecls(vector<const Decl*> ds) {
     for (unsigned i = 0; i < ds.size(); i++)
       addDecl(ds[i]);
+  }
+  void addDecl(string s) {
+    blindDecls.insert(s);
   }
   void addProc(Procedure* p) {
     procs.push_back(p);
