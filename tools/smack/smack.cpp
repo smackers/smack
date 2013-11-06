@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 	
 	module.reset(llvm::ParseIRFile(InputFilename, err, context));
   if (module.get() == 0) {
-	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::Colors::RED);
+	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
 	  llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
 	  if (llvm::errs().has_colors()) llvm::errs().resetColor();
 		return 1;
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   
   output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
 	if (!error_msg.empty()) {
-	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::Colors::RED);
+	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
 	  llvm::errs() << "error: " << error_msg << "\n";
 	  if (llvm::errs().has_colors()) llvm::errs().resetColor();
 		return 1;
