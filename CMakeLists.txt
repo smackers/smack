@@ -106,21 +106,21 @@ add_library(assistDS STATIC
 )
 
 add_library(dsa STATIC
-	include/DSA/AddressTakenAnalysis.h
-	include/DSA/DSCallGraph.h
-	include/DSA/DSNode.h
-	include/DSA/EntryPointAnalysis.h
-	include/DSA/keyiterator.h
-	include/DSA/svset.h
-	include/DSA/AllocatorIdentification.h
-	include/DSA/DSGraph.h
-	include/DSA/DSSupport.h
-	include/DSA/stl_util.h
-	include/DSA/CallTargets.h
-	include/DSA/DSGraphTraits.h
-	include/DSA/DataStructure.h
-	include/DSA/TypeSafety.h
-	include/DSA/super_set.h
+	include/dsa/AddressTakenAnalysis.h
+	include/dsa/DSCallGraph.h
+	include/dsa/DSNode.h
+	include/dsa/EntryPointAnalysis.h
+	include/dsa/keyiterator.h
+	include/dsa/svset.h
+	include/dsa/AllocatorIdentification.h
+	include/dsa/DSGraph.h
+	include/dsa/DSSupport.h
+	include/dsa/stl_util.h
+	include/dsa/CallTargets.h
+	include/dsa/DSGraphTraits.h
+	include/dsa/DataStructure.h
+	include/dsa/TypeSafety.h
+	include/dsa/super_set.h
 	lib/DSA/AddressTakenAnalysis.cpp
 	lib/DSA/CallTargets.cpp
 	lib/DSA/DSTest.cpp
