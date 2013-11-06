@@ -444,7 +444,8 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   currBlock->addStmt(Stmt::assign(rep->expr(&li),src));
 
   if (SmackOptions::MemoryModelDebug) {
-    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, Expr::lit(0)));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(li.getPointerOperand())));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(&li)));
   }
@@ -458,7 +459,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   currBlock->addStmt(Stmt::assign(rep->mem(si.getPointerOperand()),src));
                        
   if (SmackOptions::MemoryModelDebug) {
-    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, Expr::lit(1)));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getPointerOperand())));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getOperand(0))));
   }

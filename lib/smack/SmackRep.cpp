@@ -99,8 +99,7 @@ const string SmackRep::FUNO = "$funo";
 // used for memory model debugging
 const string SmackRep::MEM_OP = "$mop";
 const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
-const string SmackRep::MEM_READ = "$R";
-const string SmackRep::MEM_WRITE = "$W";
+const string SmackRep::MEM_OP_VAL = "$MOP";
 
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 
@@ -192,8 +191,7 @@ const string SmackRep::AUX_PROCS =
 const string SmackRep::MEMORY_DEBUG_SYMBOLS = 
   "type $mop;\n"
   "procedure boogie_si_record_mop(m: $mop);\n"
-  "const $R: $mop;\n"
-  "const $W: $mop;\n";    
+  "const $MOP: $mop;\n";
 
 const int SmackRep::width = 0;
 

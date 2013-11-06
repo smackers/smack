@@ -116,8 +116,7 @@ public:
   
   static const string MEM_OP;
   static const string REC_MEM_OP;
-  static const string MEM_READ;
-  static const string MEM_WRITE;
+  static const string MEM_OP_VAL;
 
   static const Expr* NUL;
 
