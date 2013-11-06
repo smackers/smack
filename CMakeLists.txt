@@ -32,14 +32,6 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_VARIABLE LLVM_LDFLAGS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-				
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    set(LLVM_CXXFLAGS "${LLVM_CXXFLAGS} -std=c++0x -stdlib=libc++")
-  endif()
-  
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(LLVM_CXXFLAGS "${LLVM_CXXFLAGS} -std=c++11 -stdlib=libc++")
-  endif()
 	
 else()
   set(LLVM_SRC "" CACHE PATH "LLVM source directory")
