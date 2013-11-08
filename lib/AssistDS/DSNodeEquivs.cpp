@@ -226,8 +226,6 @@ DSNodeEquivs::getEquivalenceClasses() {
 // Returns a DSNode for the specified value.
 // Returns null for a node that was not found.
 const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
-  assert (!V->use_empty() && "Value has no uses.");
-
   TDDataStructures &TDDS = getAnalysis<TDDataStructures>();
   DSNodeHandle *NHForV = 0;
 
