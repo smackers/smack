@@ -31,6 +31,10 @@ string SmackRep2dMem::getPtrType() {
   return PTR_TYPE;
 }
 
+const Expr* SmackRep2dMem::ptr2ref(const Expr* e) {
+  return Expr::fn(OBJ, e);
+}
+
 const Expr* SmackRep2dMem::ptr2val(const Expr* e) {
   return Expr::fn(OFF, e);
 }
@@ -68,15 +72,15 @@ const string SmackRep2dMem::POINTERS =
   "axiom $static($NULL);\n"
   "const $UNDEF: $ptr;\n"
   "\n"
-  "function $pa(pointer: $ptr, offset: int, size: int) returns ($ptr);\n"
+  "function $pa(pointer: $ptr, index: int, size: int) returns ($ptr);\n"
   "function $trunc(p: $ptr) returns ($ptr);\n"
   "function $p2i(p: $ptr) returns ($ptr);\n"
   "function $i2p(p: $ptr) returns ($ptr);\n"
   "function $p2b(p: $ptr) returns (bool);\n"
   "function $b2p(b: bool) returns ($ptr);\n"
   "\n"
-  "axiom (forall p:$ptr, o:int, s:int :: {$pa(p,o,s)} $pa(p,o,s) == $ptr($obj(p), $off(p) + o * s));\n"
-  "axiom (forall p:$ptr, o:int, s:int :: {$pa(p,o,s)} $obj($pa(p,o,s)) == $obj(p));\n"
+  "axiom (forall p:$ptr, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == $ptr($obj(p), $off(p) + i * s));\n"
+  "axiom (forall p:$ptr, i:int, s:int :: {$pa(p,i,s)} $obj($pa(p,i,s)) == $obj(p));\n"
   "axiom (forall p:$ptr :: $trunc(p) == p);\n"
   "\n"
   "axiom $b2p(true) == $ptr($NULL,1);\n"

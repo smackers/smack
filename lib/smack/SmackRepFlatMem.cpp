@@ -56,6 +56,10 @@ string SmackRepFlatMem::getPtrType() {
   return PTR_TYPE;
 }
 
+const Expr* SmackRepFlatMem::ptr2ref(const Expr* e) {
+  return e;
+}
+
 const Expr* SmackRepFlatMem::ptr2val(const Expr* e) {
   return e;
 }
@@ -83,14 +87,14 @@ const string SmackRepFlatMem::POINTERS =
   "axiom $NULL == 0;\n"
   "const $UNDEF: int;\n"
   "\n"
-  "function $pa(pointer: int, offset: int, size: int) returns (int);\n"
+  "function $pa(pointer: int, index: int, size: int) returns (int);\n"
   "function $trunc(p: int) returns (int);\n"
   "function $p2i(p: int) returns (int);\n"
   "function $i2p(p: int) returns (int);\n"
   "function $p2b(p: int) returns (bool);\n"
   "function $b2p(b: bool) returns (int);\n"
   "\n"
-  "axiom (forall p:int, o:int, s:int :: {$pa(p,o,s)} $pa(p,o,s) == p + o * s);\n"
+  "axiom (forall p:int, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == p + i * s);\n"
   "axiom (forall p:int :: $trunc(p) == p);\n"
   "\n"
   "axiom $b2p(true) == 1;\n"

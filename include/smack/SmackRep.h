@@ -177,6 +177,7 @@ public:
   string memReg(unsigned i);
 
   const Expr* mem(const llvm::Value* v);
+  const Expr* mem(unsigned region, const Expr* addr);
   // const Expr* ptr(const Expr* obj, const Expr* off);
   // const Expr* obj(const Expr* e);
   // const Expr* off(const Expr* e);
@@ -191,9 +192,9 @@ public:
   const Expr* si2fp(const Expr* e);
   const Expr* ui2fp(const Expr* e);
 
-  const Expr* pa(const Expr* e, int x, int y);
-  const Expr* pa(const Expr* e, const Expr* x, int y);
-  const Expr* pa(const Expr* e, const Expr* x, const Expr* y);
+  const Expr* pa(const Expr* base, int index, int size);
+  const Expr* pa(const Expr* base, const Expr* index, int size);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
 
   string id(const llvm::Value* v);
   const Expr* undef();
@@ -205,6 +206,7 @@ public:
   const Expr* op(llvm::BinaryOperator& o);
   const Expr* pred(llvm::CmpInst& ci);
   
+  virtual const Expr* ptr2ref(const Expr* e) = 0;
   virtual const Expr* ptr2val(const Expr* e) = 0;
   virtual const Expr* val2ptr(const Expr* e) = 0;
   virtual const Expr* ref2ptr(const Expr* e) = 0;
@@ -212,6 +214,7 @@ public:
   virtual vector<const Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
   void addStaticInit(const llvm::Value* g);
+  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
   bool hasStaticInits();
   Procedure* getStaticInit();
   vector<const Decl*> getExtraDecls();

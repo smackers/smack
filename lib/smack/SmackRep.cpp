@@ -315,14 +315,18 @@ unsigned SmackRep::fieldOffset(llvm::StructType* t, unsigned fieldNo) {
   return targetData->getStructLayout(t)->getElementOffset(fieldNo);
 }
 
-string SmackRep::memReg(unsigned i) {
+string SmackRep::memReg(unsigned idx) {
   stringstream s;
-  s << "$M." << i;
+  s << "$M." << idx;
   return s.str();
 }
 
 const Expr* SmackRep::mem(const llvm::Value* v) {
-  return Expr::sel(Expr::id(memReg(getRegion(v))), expr(v));
+  return mem( getRegion(v), expr(v) );
+}
+
+const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
+  return Expr::sel( Expr::id(memReg(region)), addr );
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {  
@@ -388,16 +392,16 @@ const Expr* SmackRep::ui2fp(const Expr* e) {
   return Expr::fn(UI2FP, e);
 }
 
-const Expr* SmackRep::pa(const Expr* e, int x, int y) {
-  return pa(e, Expr::lit(x), Expr::lit(y));
+const Expr* SmackRep::pa(const Expr* base, int index, int size) {
+  return pa(base, Expr::lit(index), Expr::lit(size));
 }
 
-const Expr* SmackRep::pa(const Expr* e, const Expr* x, int y) {
-  return pa(e, x, Expr::lit(y));
+const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size) {
+  return pa(base, index, Expr::lit(size));
 }
 
-const Expr* SmackRep::pa(const Expr* e, const Expr* x, const Expr* y) {
-  return Expr::fn(PA, e, x, y);
+const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size) {
+  return Expr::fn(PA, base, index, size);
 }
 
 const Expr* SmackRep::undef() {
@@ -775,31 +779,43 @@ vector<string> SmackRep::getModifies() {
   return mods;
 }
 
+void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val) {
+  using namespace llvm;
+
+  if (isInt(val)) {
+    staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
+    
+  } else if (PointerType* pt = dyn_cast<PointerType>(val->getType())) {
+    staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
+
+  } else if (const ArrayType* at = dyn_cast<const ArrayType>(val->getType())) {
+    extraDecls.push_back(
+      Decl::axiom(
+        Expr::eq(
+          Expr::fn("$size", ptr2ref(addr)),
+          lit(at->getNumElements()) )));
+    
+  } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
+    for (unsigned i = 0; i < st->getNumElements(); i++) {
+      const Constant* elem = val->getAggregateElement(i);
+      addInit( region, pa(addr,fieldOffset(st,i),1), elem );
+    }
+    
+  } else {
+    assert (false && "Unexpected static initializer.");
+  }
+}
+
 void SmackRep::addStaticInit(const llvm::Value* v) {
   using namespace llvm;
   if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
     
     if (g->hasInitializer()) {
       const Constant* init = g->getInitializer();
-
-      if (isInt(init))
-        staticInits.push_back(Stmt::assign(mem(g),expr(init)));
-
-      else if (init->getType()->isArrayTy()) {
-        ArrayType* t = (ArrayType*) init->getType();
-        extraDecls.push_back(Decl::axiom(Expr::eq(
-          Expr::fn("$size",Expr::id(id(g))),lit(t->getNumElements()))));
-      }
-
-      else if (init->getType()->isStructTy()) {
-        StructType* t = (StructType*) init->getType();
-        for (unsigned i = 0, e = t->getNumElements(); i != e; ++i) {
-          Constant* c = init->getAggregateElement(i);
-          assert(isInt(c));
-          staticInits.push_back(Stmt::assign(Expr::sel(
-              Expr::id(memReg(getRegion(g))), pa(expr(g), 1, fieldOffset(t, i))),expr(c)));
-        }
-      }
+      
+      // NOTE: here we are assuming all (nested) fields of a struct with a
+      // static initializer belong to the same region
+      addInit(getRegion(g), expr(g), init);
     }
   }
 }
