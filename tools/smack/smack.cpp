@@ -23,67 +23,67 @@
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
-	llvm::cl::Required, llvm::cl::value_desc("filename"));
+  llvm::cl::Required, llvm::cl::value_desc("filename"));
 
 static llvm::cl::opt<std::string>
 OutputFilename("o", llvm::cl::desc("Override output filename"),
-	llvm::cl::init(""), llvm::cl::value_desc("filename"));
+  llvm::cl::init(""), llvm::cl::value_desc("filename"));
 
 static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
-	llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
+  llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
 // removes extension from filename if there is one
 std::string getFileName(const std::string &str) {
-	std::string filename = str;
-	size_t lastdot = str.find_last_of(".");
+  std::string filename = str;
+  size_t lastdot = str.find_last_of(".");
   if (lastdot != std::string::npos)
-		filename = str.substr(0, lastdot);	
-	return filename; 
+    filename = str.substr(0, lastdot);  
+  return filename; 
 }
 
 int main(int argc, char **argv) {
-	llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
-	llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
-	
-	llvm::sys::PrintStackTraceOnErrorSignal();
-	llvm::PrettyStackTraceProgram PSTP(argc, argv);
-	llvm::EnableDebugBuffering = true;
-		
+  llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
+  llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
+  
+  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::PrettyStackTraceProgram PSTP(argc, argv);
+  llvm::EnableDebugBuffering = true;
+    
   if (OutputFilename.empty()) {
     OutputFilename = getFileName(InputFilename) + ".bpl";
   }
-	
-	std::string error_msg;
-	llvm::SMDiagnostic err;
-	llvm::LLVMContext &context = llvm::getGlobalContext();	
-	llvm::OwningPtr<llvm::Module> module;
-	llvm::OwningPtr<llvm::tool_output_file> output;
-	
-	module.reset(llvm::ParseIRFile(InputFilename, err, context));
+  
+  std::string error_msg;
+  llvm::SMDiagnostic err;
+  llvm::LLVMContext &context = llvm::getGlobalContext();  
+  llvm::OwningPtr<llvm::Module> module;
+  llvm::OwningPtr<llvm::tool_output_file> output;
+  
+  module.reset(llvm::ParseIRFile(InputFilename, err, context));
   if (module.get() == 0) {
-	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
-	  llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
-	  if (llvm::errs().has_colors()) llvm::errs().resetColor();
-		return 1;
+    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
+    llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
+    if (llvm::errs().has_colors()) llvm::errs().resetColor();
+    return 1;
   }
   
   output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
-	if (!error_msg.empty()) {
-	  if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
-	  llvm::errs() << "error: " << error_msg << "\n";
-	  if (llvm::errs().has_colors()) llvm::errs().resetColor();
-		return 1;
+  if (!error_msg.empty()) {
+    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
+    llvm::errs() << "error: " << error_msg << "\n";
+    if (llvm::errs().has_colors()) llvm::errs().resetColor();
+    return 1;
   }
-	
-	///////////////////////////////
-	// initialise and run passes //
-	///////////////////////////////
-	
-	llvm::PassManager pass_manager;
-	llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+  
+  ///////////////////////////////
+  // initialise and run passes //
+  ///////////////////////////////
+  
+  llvm::PassManager pass_manager;
+  llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
-	
+  
   // add an appropriate DataLayout instance for the module
   llvm::DataLayout *dl = 0;
   const std::string &moduleDataLayout = module.get()->getDataLayout();
@@ -92,16 +92,16 @@ int main(int argc, char **argv) {
   else if (!DefaultDataLayout.empty())
     dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(dl);
-		
-	pass_manager.add(llvm::createInternalizePass());
-	pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
-	pass_manager.add(llvm::createDeadInstEliminationPass());
-	pass_manager.add(llvm::createLowerSwitchPass());
-	pass_manager.add(new smack::SmackModuleGenerator());
-	pass_manager.add(new smack::BplFilePrinter(output->os()));
+    
+  pass_manager.add(llvm::createInternalizePass());
+  pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
+  pass_manager.add(llvm::createDeadInstEliminationPass());
+  pass_manager.add(llvm::createLowerSwitchPass());
+  pass_manager.add(new smack::SmackModuleGenerator());
+  pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());
-	
-	output->keep();
-	
+  
+  output->keep();
+  
   return 0;
 }

@@ -20,7 +20,7 @@ bool BplFilePrinter::runOnModule(llvm::Module& m) {
   Program* program = smackGenerator.getProgram();
   ostringstream s;
   program->print(s);
-	out << s.str();
+  out << s.str();
   DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
   return false;
 }
