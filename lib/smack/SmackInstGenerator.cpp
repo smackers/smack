@@ -389,7 +389,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
     llvm::Module* m = ci.getParent()->getParent()->getParent();
     for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
-      if (f->getFunctionType() == t)
+      if (f->getFunctionType() == t && f->hasAddressTaken())
         fs.push_back(f);
 
     if (fs.size() == 1) {
