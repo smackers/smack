@@ -96,8 +96,8 @@ cd ${BASE_DIR}
 # Set required paths and environment variables
 export BOOGIE=boogie
 export CORRAL=corral
-export PATH=$PATH:${LLVM_DIR}/install/bin
-export PATH=$PATH:${SMACK_DIR}/install/bin
+export PATH=${LLVM_DIR}/install/bin:$PATH
+export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
 cd ${SMACK_DIR}/src/test

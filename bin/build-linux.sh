@@ -201,8 +201,8 @@ cd ${BASE_DIR}
 # Set required paths and environment variables
 export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
 export CORRAL="mono ${CORRAL_DIR}/bin/Debug/corral.exe"
-export PATH=$PATH:${LLVM_DIR}/install/bin
-export PATH=$PATH:${SMACK_DIR}/install/bin
+export PATH=${LLVM_DIR}/install/bin:$PATH
+export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
 cd ${SMACK_DIR}/src/test
