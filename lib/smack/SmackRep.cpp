@@ -444,7 +444,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     else
       return Expr::lit(val, width);
 
-  } else if (const llvm::ConstantFP* cf = llvm::dyn_cast<const llvm::ConstantFP>(v)) {
+  } else if (llvm::isa<const llvm::ConstantFP>(v)) {
 
     // TODO encode floating point
     return Expr::fn(FP,Expr::lit((int) uniqueFpNum++));
@@ -785,7 +785,7 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   if (isInt(val)) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
     
-  } else if (PointerType* pt = dyn_cast<PointerType>(val->getType())) {
+  } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (const ArrayType* at = dyn_cast<const ArrayType>(val->getType())) {

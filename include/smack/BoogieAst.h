@@ -60,7 +60,6 @@ public:
 private:
   const Literal lit;
   int val;
-  int width;
 public:
   LitExpr(bool b) : lit(b ? True : False) {}
   LitExpr(int i) : lit(Num), val(i) {}
