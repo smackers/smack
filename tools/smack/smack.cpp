@@ -51,7 +51,8 @@ int main(int argc, char **argv) {
   llvm::EnableDebugBuffering = true;
     
   if (OutputFilename.empty()) {
-    OutputFilename = getFileName(InputFilename) + ".bpl";
+//    OutputFilename = getFileName(InputFilename) + ".bpl";
+    OutputFilename = "a.bpl";
   }
   
   std::string error_msg;

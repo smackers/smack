@@ -65,12 +65,14 @@ def llvm2bpl(scriptPathName, infile, debugFlag, memmod, usetool):
   # use the executable smack tool
   if usetool:
     if debugFlag:
-      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, '-debug', infile.name],
-        stderr=subprocess.PIPE)
+      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, '-debug', infile.name])
     else:
-      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name],
-        stderr=subprocess.PIPE)
-  
+      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name])
+
+    p.wait()
+    with open('a.bpl', 'r') as outputFile:
+      output = outputFile.read()
+
   # invoke SMACK LLVM module
   else:
     libraryPath = find_library_path(installPrefix)
@@ -85,8 +87,8 @@ def llvm2bpl(scriptPathName, infile, debugFlag, memmod, usetool):
         '-source-loc-syms',
         '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug-only=bpl', '-o=tmp.bc'],
         stdin=infile, stderr=subprocess.PIPE)
-  
-  output = p.communicate()[1]
+    output = p.communicate()[1]
+
   bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
   debug = output[0:bplStartIndex]
   if p.returncode != 0:
