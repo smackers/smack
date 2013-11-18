@@ -332,7 +332,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   if (ci.isInlineAsm()) {
-    WARN("unsoundly ignoring inline asm call.");
+    WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     currBlock->addStmt(Stmt::skip());
     return;
 
@@ -389,7 +389,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
     llvm::Module* m = ci.getParent()->getParent()->getParent();
     for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
-      if (f->getFunctionType() == t)
+      if (f->getFunctionType() == t && f->hasAddressTaken())
         fs.push_back(f);
 
     if (fs.size() == 1) {
@@ -420,7 +420,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     } else {
       // In the worst case, we have no idea what function may have
       // been called...
-      WARN("unsoundly ignoring indeterminate call.");
+      WARN("unsoundly ignoring indeterminate call: " + i2s(ci));
       currBlock->addStmt(Stmt::skip());
     }
   }
@@ -444,7 +444,8 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   currBlock->addStmt(Stmt::assign(rep->expr(&li),src));
 
   if (SmackOptions::MemoryModelDebug) {
-    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, Expr::lit(0)));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(li.getPointerOperand())));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(&li)));
   }
@@ -458,7 +459,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   currBlock->addStmt(Stmt::assign(rep->mem(si.getPointerOperand()),src));
                        
   if (SmackOptions::MemoryModelDebug) {
-    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+    currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, Expr::lit(1)));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getPointerOperand())));
     currBlock->addStmt(Stmt::call(SmackRep::BOOGIE_REC_INT, rep->expr(si.getOperand(0))));
   }

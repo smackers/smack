@@ -44,6 +44,8 @@ tests = [
   ('nested_struct1_fail',r'This assertion can fail'),
   ('nested_struct2',     r'Program has no bugs'),
   ('nested_struct2_fail',r'This assertion can fail'),
+  ('struct_assign',      r'Program has no bugs'),
+  ('struct_assign_fail', r'This assertion can fail'),
   ('func_ptr',           r'Program has no bugs'),
   ('func_ptr_fail',      r'This assertion can fail'),
   ('func_ptr1',          r'Program has no bugs'),

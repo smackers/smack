@@ -29,16 +29,54 @@ RegisterPass<DSAAliasAnalysis> A("ds-aa", "Data Structure Graph Based Alias Anal
 RegisterAnalysisGroup<AliasAnalysis> B(A);
 char DSAAliasAnalysis::ID = 0;
 
-void DSAAliasAnalysis::collectMemcpys(llvm::Module &M) {
+vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
+    llvm::Module &M, MemcpyCollector *mcc) {
+
   for (llvm::Module::iterator func = M.begin(), e = M.end();
        func != e; ++func) {
          
     for (llvm::Function::iterator block = func->begin(); 
         block != func->end(); ++block) {
         
-      memcpys->visit(*block);
+      mcc->visit(*block);
     }
   }
+  return mcc->getMemcpys();
+}
+
+
+vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M) {
+  vector<const llvm::DSNode*> sis;
+
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+    = nodeEqs->getEquivalenceClasses();
+  for (llvm::Module::const_global_iterator
+       g = M.global_begin(), e = M.global_end(); g != e; ++g) {
+    if (g->hasInitializer()) {
+      sis.push_back(eqs.getLeaderValue(nodeEqs->getMemberForValue(g)));
+    }
+  }
+  return sis;
+}
+
+bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+    = nodeEqs->getEquivalenceClasses();
+  const llvm::DSNode* nn = eqs.getLeaderValue(n);
+  for (unsigned i=0; i<memcpys.size(); i++)
+    if (memcpys[i] == nn)
+      return true;
+  return false;
+}
+
+bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+    = nodeEqs->getEquivalenceClasses();
+  const llvm::DSNode* nn = eqs.getLeaderValue(n);
+  for (unsigned i=0; i<staticInits.size(); i++)
+    if (staticInits[i] == nn)
+      return true;
+  return false;
 }
 
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
@@ -84,7 +122,9 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
     if (!equivNodes(N1,N2))
       return NoAlias;
     
-    if (!memcpys->has(N1) && !memcpys->has(N2) && disjoint(&LocA,&LocB))
+    if (!isMemcpyd(N1) && !isMemcpyd(N2) 
+      && !isStaticInitd(N1) && !isStaticInitd(N2) 
+      && disjoint(&LocA,&LocB))
       return NoAlias;
   }
   

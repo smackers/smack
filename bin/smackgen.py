@@ -7,7 +7,7 @@ import argparse
 import platform
 from llvm2bpl import *
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 
 def smackParser():
@@ -56,6 +56,10 @@ def clang(scriptPathName, inputFile):
   p = subprocess.Popen(['clang', '-c', '-Wall', '-emit-llvm', '-O0', '-g',
     '-I' + smackHeaders, inputFile.name, '-o', fileName + '.bc'])
   p.wait()
+
+  if p.returncode != 0:
+    sys.exit("SMACK encountered a clang error. Exiting...")
+
   inputFileName = path.join(path.curdir, fileName + '.bc')
   inputFile = open(inputFileName, 'r')
   return inputFile
