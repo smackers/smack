@@ -5,7 +5,7 @@ import subprocess
 import os, time, re
 import random
 
-PORT = 8080
+PORT = 8000
 
 rise_simple = """#include \"smack.h\"
 
@@ -274,8 +274,8 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
 		f = open('logs','a')
 
-		p = subprocess.Popen(["timeout","60",'smack-verify.py', filename + '.c', '-o', filename +'.bpl'], stdout=subprocess.PIPE)
-		smack_string = p.communicate()[0]
+		p = subprocess.Popen(["timeout","60",'smack-verify.py', filename + '.c', '-o', filename +'.bpl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		smack_string = p.communicate()
 		return_code = p.returncode
 		if not return_code == 0:
 			if return_code == 31744:
@@ -296,7 +296,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 					"Outputs": [
 					{
 						"MimeType": "text/plain",
-						"Value": "SMACK Error"
+						"Value": "SMACK Error"+smack_string[1]
 					}
 					]
 				}
@@ -304,16 +304,16 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				f.close()
 		else:  
 			#print(smack_string)
-			smack_string = smack_string.replace(filename+'.c', 'input.c')
-			output = smack_string.split(' ')
+			#smack_string = smack_string.replace(filename+'.c', 'input.c')
+			output = smack_string[0].split(' ')
                         output = [i for i in output if '$' not in i]
 			for i in range(len(output)):
 				if '):' in output[i]:
 					output[i]=output[i][0:len(output[i])-1]+"\n"                
                         t=" "
-                        smack_string = t.join(output) 
+                        smack = t.join(output) 
 			g = open(filename+".output",'w')
-                        g.write(smack_string)
+                        g.write(smack)
                         g.close()
 			f.write(self.client_address[0]+"--"+filename+".c--"+"Output\n")
 			f.close()
@@ -324,7 +324,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				"Outputs": [
 				{
 					"MimeType": "text/plain",
-					"Value": smack_string
+					"Value": smack
 				}
 				]
 			}
