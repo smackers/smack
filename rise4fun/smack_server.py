@@ -187,8 +187,8 @@ metadata = {
 	"Institution": "University of Utah and IMDEA Software",
 	"InstitutionUrl": "https://github.com/smackers/smack/",
 	"InstitutionImageUrl": "https://dl.dropboxusercontent.com/u/93242277/smack-logo.png",
-	"MimeType": "text/c",
-	"SupportsLanguageSyntax": False,
+	"MimeType": "text/x-c",
+	"SupportsLanguageSyntax": True,
 	"Title": "Verifier for C/C++ Programs",
 	"Description": "SMACK is a modular software verification infrastructure. The main purpose of SMACK is to lower the bar for experimenting with software verification and quickly prototyping custom software verifiers. To achieve that, SMACK relies on the well-known LLVM compiler infrastructure for its front-end, and Boogie intermediate verification language for its back-end. Such separation of concerns and modularity make implementing various additions and extensions to SMACK relatively easy. Furthermore, the open architecture of SMACK encourages prototyping custom software verifiers on top of SMACK.",
 	"Question": "Are there any assertion violations in this program?",
@@ -296,7 +296,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 					"Outputs": [
 					{
 						"MimeType": "text/plain",
-						"Value": "SMACK error"
+						"Value": "SMACK Error"
 					}
 					]
 				}
