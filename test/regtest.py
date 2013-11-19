@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 import subprocess
-import argparse
 import re
 
 # list of regression tests with the expected outputs
@@ -80,35 +79,24 @@ tests = [
   ('two_arrays6_fail',   r'0 verified, 1 errors?')
 ]
 
-def regtestParser():
-  parser = argparse.ArgumentParser(add_help=False)
-  parser.add_argument('--tool', dest='usetool', action="store_true", default=False,
-                      help='use the executable tool instead of loading the dynamic library to LLVM opt')
-  return parser
-
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
   
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests(usetool):
+def runtests():
   passed = failed = 0
   for test in tests:
     
     for mem in ['flat', 'twodim']:
     
       print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
-      
+
       # invoke SMACK
-      if usetool:
-        p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline', '--tool',
-                              '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
-                              stdout=subprocess.PIPE)
-      else:
-        p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline',
-                              '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
-                              stdout=subprocess.PIPE)
+      p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline',
+                            '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
+                            stdout=subprocess.PIPE)
       
       smackOutput = p.communicate()[0]
 
@@ -124,11 +112,8 @@ def runtests(usetool):
 
 if __name__ == '__main__':
 
-  # parse command line arguments
-  parser = argparse.ArgumentParser(description='Runs SMACK regression tests (using corral).', parents=[regtestParser()])
-  args = parser.parse_args()
-
-  passed, failed = runtests(args.usetool)
+  passed, failed = runtests()
   
   print '\nPASSED count: ', passed
   print 'FAILED count: ', failed
+
