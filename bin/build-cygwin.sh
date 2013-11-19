@@ -68,7 +68,7 @@ tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.3.src.tar.gz --s
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/
-${LLVM_DIR}/src/configure --prefix=${LLVM_DIR}/install --enable-shared --enable-optimized
+${LLVM_DIR}/src/configure --prefix=${LLVM_DIR}/install --enable-optimized
 make
 make install
 
@@ -87,7 +87,7 @@ git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
 # Configure SMACK and build
 cd ${SMACK_DIR}/build/
-${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_DIR}/build --prefix=${SMACK_DIR}/install --enable-shared --enable-optimized
+${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_DIR}/build --prefix=${SMACK_DIR}/install --enable-optimized
 make
 make install
 

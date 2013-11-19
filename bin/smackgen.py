@@ -71,12 +71,8 @@ def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryP
     # if input file is .c, then compile it first with clang
     inputFile = clang(scriptPathName, inputFile)
 
-  debug, bpl = llvm2bpl(scriptPathName, inputFile, debugFlag, memmod)
+  bpl = llvm2bpl(inputFile, debugFlag, memmod)
   inputFile.close()
-
-  # print debug info
-  if debugFlag:
-    print debug
 
   p = re.compile('procedure[ ]*([a-zA-Z0-9_$]*)[ ]*\(')
   if verifier == 'boogie-inline':
