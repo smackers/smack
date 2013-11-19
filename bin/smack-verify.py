@@ -72,7 +72,7 @@ if __name__ == '__main__':
                       help='Boogie time limit in seconds')
   args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints, args.usetool)
+  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)

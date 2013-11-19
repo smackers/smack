@@ -61,18 +61,14 @@ def clang(scriptPathName, inputFile):
   return inputFile
 
 
-def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryPoints, usetool):
+def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryPoints):
   fileExtension = path.splitext(inputFile.name)[1]
   if fileExtension == '.c':
     # if input file is .c, then compile it first with clang
     inputFile = clang(scriptPathName, inputFile)
 
-  debug, bpl = llvm2bpl(scriptPathName, inputFile, debugFlag, memmod, usetool)
+  bpl = llvm2bpl(inputFile, debugFlag, memmod)
   inputFile.close()
-
-  # print debug info
-  if debugFlag:
-    print debug
 
   p = re.compile('procedure[ ]*([a-zA-Z0-9_$]*)[ ]*\(')
   if verifier == 'boogie-inline':
@@ -92,7 +88,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
   args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints, args.usetool)
+  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)

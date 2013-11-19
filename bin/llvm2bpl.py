@@ -30,75 +30,28 @@ def llvm2bplParser():
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
                       help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
-  parser.add_argument('--tool', dest='usetool', action="store_true", default=False,
-                      help='use the executable tool instead of loading the dynamic library to LLVM opt')
   return parser
 
 
-def find_install_prefix(smackRoot):
-  installPrefix = path.join(smackRoot, 'Debug+Asserts')
-  if not path.exists(installPrefix):
-    installPrefix = path.join(smackRoot, 'Release+Asserts')
-  if not path.exists(installPrefix):
-    installPrefix = smackRoot
-  assert path.exists(installPrefix)
-  return installPrefix
+def llvm2bpl(infile, debugFlag, memmod):
 
-
-def find_library_path(installPrefix):
-  libraryPath = path.join(installPrefix, 'lib', 'smack.so')
-  if not path.exists(libraryPath):
-    libraryPath = path.join(installPrefix, 'lib', 'smack.dylib')
-  if not path.exists(libraryPath):
-    libraryPath = path.join(installPrefix, 'bin', 'smack.dll')
-  assert path.exists(libraryPath)
-  return libraryPath
-
-
-def llvm2bpl(scriptPathName, infile, debugFlag, memmod, usetool):
-
-  # find library paths
-  scriptFullPath = path.abspath(scriptPathName)
-  smackRoot = path.dirname(scriptFullPath)
-  installPrefix = find_install_prefix(smackRoot)    
-    
-  # use the executable smack tool
-  if usetool:
-    if debugFlag:
-      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, '-debug', infile.name])
-    else:
-      p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name])
-
-    p.wait()
-    with open('a.bpl', 'r') as outputFile:
-      output = outputFile.read()
-
-  # invoke SMACK LLVM module
+  if debugFlag:
+    p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, '-debug', infile.name])
   else:
-    libraryPath = find_library_path(installPrefix)
-    
-    if debugFlag:
-      p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-        '-source-loc-syms',
-        '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug', '-o=tmp.bc'],
-        stdin=infile, stderr=subprocess.PIPE)
-    else:
-      p = subprocess.Popen(['opt', '-load=' + libraryPath, '-internalize', '-mem2reg',
-        '-source-loc-syms',
-        '-die', '-lowerswitch', '-bpl_print', '-mem-mod=' + memmod, '-debug-only=bpl', '-o=tmp.bc'],
-        stdin=infile, stderr=subprocess.PIPE)
-    output = p.communicate()[1]
+    p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name])
+
+  p.wait()
+  if p.returncode != 0:
+    print >> sys.stderr, "SMACK encountered an error:"
+    print >> sys.stderr, output[0:1000], "... (output truncated)"
+    sys.exit("SMACK returned exit status %s" % p.returncode)
+
+  with open('a.bpl', 'r') as outputFile:
+    output = outputFile.read()
 
   bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
-  debug = output[0:bplStartIndex]
-  if p.returncode != 0:
-    if debugFlag:
-      print debug
-    print >> sys.stderr, "LLVM/SMACK encountered an error:"
-    print >> sys.stderr, output[0:1000], "... (output truncated)"
-    sys.exit("LLVM/SMACK returned exit status %s" % p.returncode)
   bpl = output[bplStartIndex:]
-  return debug, bpl
+  return bpl
  
 
 if __name__ == '__main__':
@@ -107,11 +60,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  debug, bpl = llvm2bpl(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.usetool)
-
-  # print debug info
-  if args.debug:
-    print debug
+  bpl = llvm2bpl(args.infile, args.debug, args.memmod)
 
   # write final output
   args.outfile.write(bpl)
