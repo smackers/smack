@@ -39,13 +39,6 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def replaceDebugInfo(match):
-  fileName = match.group(1)
-  line = match.group(2)
-  col = match.group(3)
-  return 'assert {:sourcefile "' + fileName + '"} {:sourceline ' + line + '} true;'
-
-
 def clang(scriptPathName, inputFile):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
@@ -81,8 +74,6 @@ def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryP
   elif verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, entryPoints), bpl)
-    p = re.compile('assume {:sourceloc "(.*)", ([0-9]*), ([0-9]*)} true;')
-    bpl = p.sub(lambda match: replaceDebugInfo(match), bpl)
   return bpl
 
 

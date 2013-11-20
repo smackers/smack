@@ -50,7 +50,7 @@ string SmackInstGenerator::createVar() {
 
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
-    if (!inst.hasName()) {
+    if (!inst.hasName() || !rep->isSmackGeneratedName(inst.getName())) {
       if (rep->isBool(&inst))
         inst.setName(SmackRep::BOOL_VAR);
       else if (rep->isFloat(&inst))

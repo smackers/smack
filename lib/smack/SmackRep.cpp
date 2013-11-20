@@ -238,6 +238,10 @@ bool SmackRep::isSmackName(string n) {
   return SMACK_NAME.match(n);
 }
 
+bool SmackRep::isSmackGeneratedName(string n) {
+  return n.size() > 0 && n[0] == '$';
+}
+
 bool SmackRep::isProcIgnore(string n) {
   return PROC_IGNORE.match(n);
 }

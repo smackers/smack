@@ -153,6 +153,7 @@ public:
   static SmackRep* createRep(llvm::AliasAnalysis* aa);
   
   bool isSmackName(string n);
+  bool isSmackGeneratedName(string n);
   bool isProcIgnore(string n);
   bool isSmackAssert(llvm::Function* f);
   bool isSmackAssume(llvm::Function* f);
