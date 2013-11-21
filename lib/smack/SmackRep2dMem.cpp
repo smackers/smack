@@ -155,7 +155,7 @@ string SmackRep2dMem::allocaProc() {
     s << "  modifies $Alloc;" << endl;
     s << "  requires obj_size > 0;" << endl;
     s << "{" << endl;
-    s << "  assume $Alloc[$obj(new)] = $UNALLOCATED;" << endl;
+    s << "  assume $Alloc[$obj(new)] == $UNALLOCATED;" << endl;
     s << "  assume !$static($obj(new));" << endl;
     s << "  assume $off(new) == 0;" << endl;
     s << "  assume $size($obj(new)) == obj_size;" << endl;
