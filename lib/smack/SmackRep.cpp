@@ -834,8 +834,8 @@ bool SmackRep::hasStaticInits() {
 }
 
 Procedure* SmackRep::getStaticInit() {
-  Procedure* proc = new Procedure(STATIC_INIT);
-  Block* b = new Block();
+  Procedure* proc = new Procedure(*program, STATIC_INIT);
+  Block* b = new Block(*proc);
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);
   b->addStmt(Stmt::return_());

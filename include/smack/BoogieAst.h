@@ -14,6 +14,9 @@ namespace smack {
 
 using namespace std;
 
+class Program;
+class Procedure;
+
 class Expr {
 public:
   virtual void print(ostream& os) const = 0;
@@ -275,6 +278,7 @@ public:
   static const Decl* variable(string name, string type);
   static const Decl* procedure(string name, string arg, string type);
   static const Decl* procedure(string name, vector< pair<string,string> > args, pair<string,string> ret);
+  static const Decl* code(string s);
 
 };
 
@@ -330,13 +334,22 @@ public:
   void print(ostream& os) const;
 };
 
+class CodeDecl : public Decl {
+  string code;
+public:
+  CodeDecl(string s) : Decl(s,s), code(s) {}
+  void print(ostream& os) const;
+};
+
 class Block {
+  Procedure& proc;
   string name;
   vector<const Stmt*> stmts;
 public:
-  Block() : name("") {}
-  Block(string n) : name(n) {}
+  Block(Procedure& p) : proc(p), name("") {}
+  Block(Procedure& p, string n) : proc(p), name(n) {}
   void print(ostream& os) const;
+  Procedure& getProc() const { return proc; }
   void addStmt(const Stmt* s) {
     stmts.push_back(s);
   }
@@ -346,6 +359,7 @@ public:
 };
 
 class Procedure {
+  Program& prog;
   string name;
   vector< pair<string, string> > params;
   vector< pair<string, string> > rets;
@@ -353,8 +367,9 @@ class Procedure {
   vector<const Decl*> decls;
   vector<Block*> blocks;
 public:
-  Procedure(string n) : name(n) {}
+  Procedure(Program& p, string n) : prog(p), name(n) {}
   void print(ostream& os) const;
+  Program& getProg() const { return prog; }
   void addParam(string x, string t) {
     params.push_back(make_pair(x, t));
   }

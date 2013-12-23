@@ -12,16 +12,16 @@ char SmackModuleGenerator::ID = 0;
 
 void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
-  rep->setProgram( program = new Program("") );
-
+  rep->setProgram( &program );
+  
   DEBUG(errs() << "Analyzing globals...\n");
 
   for (llvm::Module::const_global_iterator
        x = m.global_begin(), e = m.global_end(); x != e; ++x)
-    program->addDecls(rep->globalDecl(x));
+    program.addDecls(rep->globalDecl(x));
   
   if (rep->hasStaticInits())
-    program->addProc(rep->getStaticInit());
+    program.addProc(rep->getStaticInit());
 
   DEBUG(errs() << "Analyzing functions...\n");
 
@@ -33,15 +33,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
     if (rep->isProcIgnore(name))
       continue;
 
-    program->addDecls(rep->globalDecl(func));
+    program.addDecls(rep->globalDecl(func));
 
     if (func->isDeclaration())
       continue;
 
     DEBUG(errs() << "Analyzing function: " << name << "\n");
 
-    Procedure* proc = new Procedure(name);
-    program->addProc(proc);
+    Procedure* proc = new Procedure(program, name);
+    program.addProc(proc);
     
     // BODY
     if (!func->isDeclaration() && !func->empty()
@@ -49,7 +49,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
       map<const llvm::BasicBlock*, Block*> known;
       stack<llvm::BasicBlock*> workStack;
-      SmackInstGenerator igen(rep, *proc, known);
+      SmackInstGenerator igen(*rep, *proc, known);
 
       llvm::BasicBlock& entry = func->getEntryBlock();
       workStack.push(&entry);
@@ -100,14 +100,14 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
   }
 
   // MODIFIES
-  for ( vector<Procedure*>::const_iterator p = program->pbegin();
-        p != program->pend(); ++p ) {
+  for ( vector<Procedure*>::const_iterator p = program.pbegin();
+        p != program.pend(); ++p ) {
     (*p)->addMods(rep->getModifies());
   }
   
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.
-  program->appendPrelude(rep->getPrelude());
+  program.appendPrelude(rep->getPrelude());
 }
 
 } // namespace smack

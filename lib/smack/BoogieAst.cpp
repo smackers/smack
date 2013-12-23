@@ -242,6 +242,9 @@ const Decl* Decl::procedure(string name, string arg, string type) {
 const Decl* Decl::procedure(string name, vector< pair<string,string> > args, pair<string,string> ret) {
   return new ProcDecl(name,args,ret.first,ret.second);
 }
+const Decl* Decl::code(string s) {
+  return new CodeDecl(s);
+}
 
 ostream& operator<<(ostream& os, const Expr& e) {
   e.print(os);
@@ -545,6 +548,9 @@ void ProcDecl::print(ostream& os) const {
   if (type != "") 
     os << " returns (" << retvar << ": " << type << ")";
   os << ";";
+}
+void CodeDecl::print(ostream& os) const {
+  os << code;
 }
 
 void Block::print(ostream& os) const {
