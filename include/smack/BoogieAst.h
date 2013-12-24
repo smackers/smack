@@ -6,6 +6,7 @@
 #ifndef BOOGIEAST_H
 #define BOOGIEAST_H
 
+#include <cassert>
 #include <string>
 #include <vector>
 #include <set>
