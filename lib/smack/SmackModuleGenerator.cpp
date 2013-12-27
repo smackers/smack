@@ -33,7 +33,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
     if (rep->isProcIgnore(name))
       continue;
 
-    program.addDecls(rep->globalDecl(func));
+    if (!func->isVarArg())
+      program.addDecls(rep->globalDecl(func));
 
     if (func->isDeclaration())
       continue;

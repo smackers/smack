@@ -11,6 +11,8 @@ namespace smack {
 
 using namespace std;
 
+unsigned Decl::uniqueId = 0;
+
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
@@ -597,8 +599,6 @@ void Program::print(ostream& os) const {
   os << "// SMACK-PRELUDE-END" << endl;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
   print_set<const Decl*,DeclCompare>(os, decls, "\n");
-  os << endl << endl;
-  print_set<string>(os, blindDecls, "\n");
   os << endl << endl;
   print_seq<Procedure*>(os, procs, "\n");
   os << "// END SMACK-GENERATED CODE" << endl;

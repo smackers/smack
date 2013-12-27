@@ -713,10 +713,10 @@ string indexedName(string name, int idx) {
   return idxd.str();
 }
 
-const Decl * SmackRep::procOnTheFly(llvm::Function* f, int n) {
+const Decl* SmackRep::proc(llvm::Function* f, int nargs) {
   vector< pair<string,string> > args;
   if (f->isVarArg()) {
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < nargs; i++) {
       args.push_back( make_pair(indexedName("p",i), getPtrType()) );
     }
   } else {
@@ -728,14 +728,32 @@ const Decl * SmackRep::procOnTheFly(llvm::Function* f, int n) {
   } 
   llvm::Type* t = f->getReturnType();
   return Decl::procedure(
-    f->isVarArg() ? indexedName(id(f),n) : id(f), 
+    f->isVarArg() ? indexedName(id(f),nargs) : id(f), 
     args, 
     make_pair(RET_VAR, t->isVoidTy() ? "" : type(t))
   );
 }
 
-const Stmt* SmackRep::call(llvm::Function* f, vector<const Expr*> args, vector<string> rets) {
+const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
+  const Expr* arg = expr(v);
+  if (f && f->isVarArg() && isFloat(v))
+    arg = fp2si(arg);
+  return arg;
+}
+
+const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
+
+  assert(f && "Call encountered unresolved function.");
+  
   string name = id(f);
+  vector<const Expr*> args;
+  vector<string> rets;
+  
+  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++)
+    args.push_back(arg(f, i, ci.getOperand(i)));
+  
+  if (!ci.getType()->isVoidTy())
+    rets.push_back(id(&ci));
 
   if (name == "malloc") {
     assert(args.size() == 1);
@@ -745,21 +763,45 @@ const Stmt* SmackRep::call(llvm::Function* f, vector<const Expr*> args, vector<s
     assert(args.size() == 1);
     return Stmt::call(FREE, args[0]);
 
-  } else if (f->isVarArg() && args.size() > 0) {
+  } else if (f->isVarArg() || (f->isDeclaration() && !isSmackName(name))) {
     
-    // Handle variable argument functions
-    program->addDecl(procOnTheFly(f,args.size()));
-    return Stmt::call(indexedName(name,args.size()), args, rets);
-
-  } else if (f->isDeclaration() && !isSmackName(name)) {
-
-    // Handle functions without bodies (just declarations)
-    program->addDecl(procOnTheFly(f,args.size()));
-    return Stmt::call(name, args, rets);
-
+    const Decl* p = proc(f,args.size());
+    program->addDecl(p);
+    return Stmt::call(p->getName(), args, rets);
+    
   } else {
     return Stmt::call(name, args, rets);
   }
+}
+
+const string SmackRep::code(llvm::CallInst& ci) {
+  
+  llvm::Function* f = ci.getCalledFunction();
+  assert(f && "Inline code embedded in unresolved function.");
+  
+  string fmt = getString(ci.getOperand(0));
+  assert(!fmt.empty() && "__SMACK_code: missing format string.");
+  
+  string s = fmt;
+  for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
+    const Expr* a = arg(f, i, ci.getOperand(i));
+    string::size_type idx = s.find('@');
+    assert(idx != string::npos && "__SMACK_code: too many arguments.");
+    
+    ostringstream ss;
+
+    if (s.find("{@}") == idx-1) {
+      if (isInt(ci.getOperand(i)))
+        a = ptr2val(a);
+      a->print(ss);
+      s = s.replace(idx-1,3,ss.str());
+      
+    } else {
+      a->print(ss);
+      s = s.replace(idx,1,ss.str());
+    }      
+  }
+  return s;
 }
 
 string SmackRep::getPrelude() {

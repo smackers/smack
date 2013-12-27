@@ -197,8 +197,10 @@ public:
   const Expr* op(llvm::BinaryOperator& o);
   const Expr* pred(llvm::CmpInst& ci);
   
-  const Stmt* call(llvm::Function* f, vector<const Expr*> args, vector<string> rets);
-  const Decl * procOnTheFly(llvm::Function* f, int n);
+  const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
+  const Stmt* call(llvm::Function* f, llvm::CallInst& ci);
+  const string code(llvm::CallInst& ci);
+  const Decl* proc(llvm::Function* f, int n);
   
   virtual const Expr* ptr2val(const Expr* e) = 0;
   virtual const Expr* val2ptr(const Expr* e) = 0;

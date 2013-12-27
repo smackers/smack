@@ -259,18 +259,20 @@ public:
 };
 
 class Decl {
+  static unsigned uniqueId;
+public:
+  enum kind { STOR, PROC, FUNC, TYPE, UNNAMED };
 protected:
+  unsigned id;
   string name;
   string type;
-  Decl(string n, string t) : name(n), type(t) {}
+  Decl(string n, string t) : id(uniqueId++), name(n), type(t) { }
 public:
   virtual void print(ostream& os) const = 0;
-  string getName() const {
-    return name;
-  }
-  string getType() const {
-    return type;
-  }
+  unsigned getId() const { return id; }
+  string getName() const { return name; }
+  string getType() const { return type; }
+  virtual kind getKind() const = 0;
   static const Decl* typee(string name, string type);
   static const Decl* axiom(const Expr* e);
   static const Decl* constant(string name, string type);
@@ -279,26 +281,31 @@ public:
   static const Decl* procedure(string name, string arg, string type);
   static const Decl* procedure(string name, vector< pair<string,string> > args, pair<string,string> ret);
   static const Decl* code(string s);
-
 };
 
 struct DeclCompare {
   bool operator()(const Decl* a, const Decl* b) const {
-    assert(a && b);
-    return a->getName() < b->getName();
+    assert(a && b);    
+    if (a->getKind() == b->getKind() && a->getKind() != Decl::UNNAMED)
+      return a->getName() < b->getName();
+    else
+      return a->getId() < b->getId();
   }
 };
 
 class TypeDecl : public Decl {
 public:
   TypeDecl(string n, string t) : Decl(n,t) {}
+  kind getKind() const { return TYPE; }
   void print(ostream& os) const;
 };
 
 class AxiomDecl : public Decl {
   const Expr* expr;
+  static int uniqueId;
 public:
   AxiomDecl(const Expr* e) : Decl("", ""), expr(e) {}
+  kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
 };
 
@@ -307,6 +314,7 @@ class ConstDecl : public Decl {
 public:
   ConstDecl(string n, string t, bool u) : Decl(n, t), unique(u) {}
   ConstDecl(string n, string t) : Decl(n, t), unique(false) {}
+  kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
 
@@ -316,12 +324,14 @@ class FuncDecl : public Decl {
 public:
   FuncDecl(string n, vector< pair<string, string> > ps, string t, Expr* b)
     : Decl(n, ""), params(ps), body(b) {}
+  kind getKind() const { return FUNC; }
   void print(ostream& os) const;
 };
 
 class VarDecl : public Decl {
 public:
   VarDecl(string n, string t) : Decl(n, t) {}
+  kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
 
@@ -331,13 +341,15 @@ class ProcDecl : public Decl {
 public:
   ProcDecl(string n, vector< pair<string,string> > ps, string r, string t) 
     : Decl(n,t), params(ps), retvar(r) {}
+  kind getKind() const { return PROC; }
   void print(ostream& os) const;
 };
 
 class CodeDecl : public Decl {
   string code;
 public:
-  CodeDecl(string s) : Decl(s,s), code(s) {}
+  CodeDecl(string s) : Decl("",""), code(s) {}
+  kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
 };
 
@@ -405,7 +417,6 @@ public:
 class Program {
   string prelude;
   set<const Decl*,DeclCompare> decls;
-  set<string> blindDecls;
   vector<Procedure*> procs;
 public:
   Program(string p) : prelude(p) { }
@@ -413,12 +424,12 @@ public:
   void addDecl(const Decl* d) {
     decls.insert(d);
   }
+  void addDecl(string s) {
+    decls.insert( Decl::code(s) );
+  }
   void addDecls(vector<const Decl*> ds) {
     for (unsigned i = 0; i < ds.size(); i++)
       addDecl(ds[i]);
-  }
-  void addDecl(string s) {
-    blindDecls.insert(s);
   }
   void addProc(Procedure* p) {
     procs.push_back(p);

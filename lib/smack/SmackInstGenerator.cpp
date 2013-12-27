@@ -265,7 +265,6 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 // #endif
 // }
 
-
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
   
@@ -274,61 +273,22 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   if (ci.isInlineAsm()) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     currBlock->addStmt(Stmt::skip());
-    return;
     
   } else if (f && rep.id(f).find("llvm.dbg.") != string::npos) {
     WARN("ignoring llvm.debug call.");
     currBlock->addStmt(Stmt::skip());
-    return;
-  }
-  
-  vector<const Expr*> args;
-  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++) {
-    const Expr* arg = rep.expr(ci.getOperand(i));
-    if (f && f->isVarArg() && rep.isFloat(ci.getOperand(i)))
-      arg = rep.fp2si(arg);
-    args.push_back(arg);
-  }
 
-  vector<string> rets;
-  if (!ci.getType()->isVoidTy())
-    rets.push_back(rep.id(&ci));
+  } else if (f && rep.id(f) == "__SMACK_code") {
+    currBlock->addStmt(Stmt::code(rep.code(ci)));
 
-  if (f && ( rep.id(f) == "__SMACK_code" 
-          || rep.id(f) == "__SMACK_decl" 
-          || rep.id(f) == "__SMACK_top_decl" )) {
-    
-    string s = rep.getString(ci.getOperand(0));
-    assert(!s.empty() && "__SMACK_code: missing format string.");
-    
-    for (unsigned i=1; i<args.size(); i++) {
-      string::size_type idx = s.find('@');
-      assert(idx != string::npos && "__SMACK_code: too many arguments.");
-      
-      ostringstream ss;
+  } else if (f && rep.id(f) == "__SMACK_decl") {
+    proc.addDecl(Decl::code(rep.code(ci)));
 
-      if (s.find("{@}") == idx-1) {      
-        if (rep.isInt(ci.getOperand(i)))
-          args[i] = rep.ptr2val(args[i]);
-        args[i]->print(ss);
-        s = s.replace(idx-1,3,ss.str());
-        
-      } else {
-        args[i]->print(ss);
-        s = s.replace(idx,1,ss.str());
-      }      
-    }
-    if (rep.id(f) == "__SMACK_code")
-      currBlock->addStmt(Stmt::code(s));
-    else if (rep.id(f) == "__SMACK_decl")
-      proc.addDecl(Decl::code(s));
-    else
-      proc.getProg().addDecl(Decl::code(s));
-    
-    return;    
+  } else if (f && rep.id(f) == "__SMACK_top_decl") {
+    proc.getProg().addDecl(Decl::code(rep.code(ci)));
 
   } else if (f) {
-    currBlock->addStmt(rep.call(f, args, rets));
+    currBlock->addStmt(rep.call(f, ci));
 
   } else {
     // function pointer call...
@@ -343,7 +303,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       if (ce->isCast()) {
         llvm::Value* castValue = ce->getOperand(0);
         if (llvm::Function* castFunc = llvm::dyn_cast<llvm::Function>(castValue)) {
-          currBlock->addStmt(rep.call(castFunc, args, rets));
+          currBlock->addStmt(rep.call(castFunc, ci));
           return;
         }
       }
@@ -363,7 +323,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
     if (fs.size() == 1) {
       // Q: is this case really possible?
-      currBlock->addStmt(rep.call(fs[0], args, rets));
+      currBlock->addStmt(rep.call(fs[0], ci));
 
     } else if (fs.size() > 1) {
       Block* tail = createBlock();
@@ -376,7 +336,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
         disp->addStmt(Stmt::assume(
                         Expr::eq(rep.expr(c), rep.expr(fs[i]))));
-        disp->addStmt(rep.call(fs[i], args, rets));
+        disp->addStmt(rep.call(fs[i], ci));
         disp->addStmt(Stmt::goto_(tail->getName()));
       }
 
