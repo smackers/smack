@@ -52,7 +52,7 @@ string SmackInstGenerator::createVar() {
 
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
-    if (!inst.hasName()) {
+    if (!inst.hasName() || !rep.isSmackGeneratedName(inst.getName())) {
       if (rep.isBool(&inst))
         inst.setName(SmackRep::BOOL_VAR);
       else if (rep.isFloat(&inst))
@@ -318,7 +318,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
     llvm::Module* m = ci.getParent()->getParent()->getParent();
     for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
-      if (f->getFunctionType() == t)
+      if (f->getFunctionType() == t && f->hasAddressTaken())
         fs.push_back(f);
 
     if (fs.size() == 1) {
@@ -373,7 +373,8 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   currBlock->addStmt(Stmt::assign(rep.expr(&li),src));
 
   if (SmackOptions::MemoryModelDebug) {
-    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_READ)));
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+    currBlock->addStmt(Stmt::call("boogie_si_record_int", Expr::lit(0)));
     currBlock->addStmt(Stmt::call("boogie_si_record_int", rep.expr(li.getPointerOperand())));
     currBlock->addStmt(Stmt::call("boogie_si_record_int", rep.expr(&li)));
   }
@@ -387,7 +388,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   currBlock->addStmt(Stmt::assign(rep.mem(si.getPointerOperand()),src));
                        
   if (SmackOptions::MemoryModelDebug) {
-    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_WRITE)));
+    currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+    currBlock->addStmt(Stmt::call("boogie_si_record_int", Expr::lit(1)));
     currBlock->addStmt(Stmt::call("boogie_si_record_int", rep.expr(si.getPointerOperand())));
     currBlock->addStmt(Stmt::call("boogie_si_record_int", rep.expr(si.getOperand(0))));
   }

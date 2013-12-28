@@ -39,13 +39,6 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def replaceDebugInfo(match):
-  fileName = match.group(1)
-  line = match.group(2)
-  col = match.group(3)
-  return 'assert {:sourcefile "' + fileName + '"} {:sourceline ' + line + '} true;'
-
-
 def clang(scriptPathName, inputFile):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
@@ -56,6 +49,10 @@ def clang(scriptPathName, inputFile):
   p = subprocess.Popen(['clang', '-c', '-Wall', '-emit-llvm', '-O0', '-g',
     '-I' + smackHeaders, inputFile.name, '-o', fileName + '.bc'])
   p.wait()
+
+  if p.returncode != 0:
+    sys.exit("SMACK encountered a clang error. Exiting...")
+
   inputFileName = path.join(path.curdir, fileName + '.bc')
   inputFile = open(inputFileName, 'r')
   return inputFile
@@ -67,12 +64,8 @@ def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryP
     # if input file is .c, then compile it first with clang
     inputFile = clang(scriptPathName, inputFile)
 
-  debug, bpl = llvm2bpl(scriptPathName, inputFile, debugFlag, memmod)
+  bpl = llvm2bpl(inputFile, debugFlag, memmod)
   inputFile.close()
-
-  # print debug info
-  if debugFlag:
-    print debug
 
   p = re.compile('procedure[ ]*([a-zA-Z0-9_$]*)[ ]*\(')
   if verifier == 'boogie-inline':
@@ -81,8 +74,6 @@ def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryP
   elif verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, entryPoints), bpl)
-    p = re.compile('assume {:sourceloc "(.*)", ([0-9]*), ([0-9]*)} true;')
-    bpl = p.sub(lambda match: replaceDebugInfo(match), bpl)
   return bpl
 
 
