@@ -17,6 +17,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>
+#include <set>
 
 namespace smack {
 
@@ -119,10 +120,6 @@ public:
   static const string MEM_OP_VAL;
 
   static const Expr* NUL;
-
-  static const string BOOGIE_REC_PTR;
-  static const string BOOGIE_REC_OBJ;
-  static const string BOOGIE_REC_INT;
   
   static const string STATIC_INIT;
 
@@ -131,14 +128,13 @@ public:
 
 protected:
   static const string ARITHMETIC;
-  static const string AUX_PROCS;
   static const string MEMORY_DEBUG_SYMBOLS;
   llvm::AliasAnalysis* aliasAnalysis;
   vector<const void*> memoryRegions;
   const llvm::DataLayout* targetData;
+  Program* program;
   
   vector<const Stmt*> staticInits;
-  vector<const Decl*> extraDecls;
   
   unsigned uniqueFpNum;
   unsigned uniqueUndefNum;
@@ -151,17 +147,11 @@ protected:
   }  
 public:
   static SmackRep* createRep(llvm::AliasAnalysis* aa);
+  void setProgram(Program* p) { program = p; }
   
   bool isSmackName(string n);
   bool isSmackGeneratedName(string n);
   bool isProcIgnore(string n);
-  bool isSmackAssert(llvm::Function* f);
-  bool isSmackAssume(llvm::Function* f);
-  bool isSmackYield(llvm::Function* f);
-  bool isSmackAsyncCall(llvm::Function* f);
-  bool isSmackRecObj(llvm::Function* f);
-  bool isSmackRecInt(llvm::Function* f);
-  bool isSmackRecPtr(llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
   bool isBool(llvm::Type* t);
@@ -204,21 +194,26 @@ public:
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
+  string getString(const llvm::Value* v);
   const Expr* op(llvm::BinaryOperator& o);
   const Expr* pred(llvm::CmpInst& ci);
+  
+  const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
+  const Stmt* call(llvm::Function* f, llvm::CallInst& ci);
+  const string code(llvm::CallInst& ci);
+  const Decl* proc(llvm::Function* f, int n);
   
   virtual const Expr* ptr2ref(const Expr* e) = 0;
   virtual const Expr* ptr2val(const Expr* e) = 0;
   virtual const Expr* val2ptr(const Expr* e) = 0;
   virtual const Expr* ref2ptr(const Expr* e) = 0;
-  
+
   virtual vector<const Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
   void addStaticInit(const llvm::Value* g);
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
   bool hasStaticInits();
   Procedure* getStaticInit();
-  vector<const Decl*> getExtraDecls();
   virtual string getPtrType() = 0;
   virtual string getPrelude();
   

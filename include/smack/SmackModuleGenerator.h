@@ -24,12 +24,12 @@ namespace smack {
 
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
-  Program* program;
+  Program program;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  SmackModuleGenerator() : ModulePass(ID) {}
+  SmackModuleGenerator() : ModulePass(ID), program("") {}
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
@@ -45,7 +45,7 @@ public:
   
   void generateProgram(llvm::Module& m, SmackRep* rep);
 
-  Program* getProgram() const {
+  Program& getProgram() {
     return program;
   }
 };

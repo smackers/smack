@@ -89,11 +89,7 @@ const string SmackRep2dMem::POINTERS =
   "axiom (forall r:$ref, i:int :: $p2b($ptr(r,i)) <==> i != 0);\n"
   "axiom $p2b($ptr($NULL,0)) == false;\n"
   "axiom (forall r:$ref, i:int :: $p2i($ptr(r,i)) == $ptr($NULL,i));\n"
-  "axiom (forall i:int :: (exists r:$ref :: $i2p($ptr($NULL,i)) == $ptr(r,i)));\n"
-  "\n"
-  "procedure __SMACK_nondet() returns (p: $ptr);\n"
-  "procedure __SMACK_nondetInt() returns (p: $ptr);\n"
-  "ensures $obj(p) == $NULL;\n";
+  "axiom (forall i:int :: (exists r:$ref :: $i2p($ptr($NULL,i)) == $ptr(r,i)));\n";
 
 string SmackRep2dMem::memoryModel() {
   return POINTERS;

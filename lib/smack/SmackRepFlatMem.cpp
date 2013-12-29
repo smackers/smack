@@ -102,9 +102,7 @@ const string SmackRepFlatMem::POINTERS =
   "axiom (forall i:int :: $p2b(i) <==> i != 0);\n"
   "axiom $p2b(0) == false;\n"
   "axiom (forall i:int :: $p2i(i) == i);\n"
-  "axiom (forall i:int :: $i2p(i) == i);\n"
-  "procedure __SMACK_nondet() returns (p: int);\n"
-  "procedure __SMACK_nondetInt() returns (p: int);\n";
+  "axiom (forall i:int :: $i2p(i) == i);\n";
 
 string SmackRepFlatMem::memoryModel() {
   return POINTERS;

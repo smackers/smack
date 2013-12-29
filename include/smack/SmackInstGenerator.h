@@ -15,16 +15,12 @@ namespace smack {
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
-  SmackRep* rep;
-  Procedure& currProc;
+  SmackRep& rep;
+  Procedure& proc;
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*>& blockMap;
-  set<pair<llvm::Function*, int> >& missingDecls;
-  set<string>& moreDecls;
   int blockNum;
   int varNum;
-
-  const Stmt* generateCall(llvm::Function* f, vector<const Expr*> ps, vector<string> rs);
 
   void generatePhiAssigns(llvm::TerminatorInst& i);
   void generateGotoStmts(llvm::Instruction& i,
@@ -34,12 +30,10 @@ private:
   void annotate(llvm::Instruction& i, Block* b);
 
 public:
-  SmackInstGenerator(SmackRep* r, Procedure& p,
-                     map<const llvm::BasicBlock*, Block*>& bm, 
-                     set<pair<llvm::Function*, int> >& md,
-                     set<string>& mmdd)
-    : rep(r), currProc(p), blockMap(bm), missingDecls(md), moreDecls(mmdd),
-      blockNum(0), varNum(0) {}
+  SmackInstGenerator(SmackRep& r, Procedure& p,
+                     map<const llvm::BasicBlock*, Block*>& bm)
+    : rep(r), proc(p),
+      blockMap(bm), blockNum(0), varNum(0) {}
 
   Block* createBlock();
   void setCurrBlock(Block* b) {

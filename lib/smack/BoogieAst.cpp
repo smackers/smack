@@ -11,6 +11,8 @@ namespace smack {
 
 using namespace std;
 
+unsigned Decl::uniqueId = 0;
+
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
@@ -217,6 +219,10 @@ const Stmt* Stmt::skip() {
   return new AssumeStmt(Expr::lit(true));
 }
 
+const Stmt* Stmt::code(string s) {
+  return new CodeStmt(s);
+}
+
 const Decl* Decl::typee(string name, string type) {
   return new TypeDecl(name,type);
 }
@@ -233,7 +239,13 @@ const Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
 }
 const Decl* Decl::procedure(string name, string arg, string type) {
-  return new ProcDecl(name,vector< pair<string,string> >(1,make_pair(arg,type)),"");
+  return procedure(name,vector< pair<string,string> >(1,make_pair(arg,type)),make_pair("",""));
+}
+const Decl* Decl::procedure(string name, vector< pair<string,string> > args, pair<string,string> ret) {
+  return new ProcDecl(name,args,ret.first,ret.second);
+}
+const Decl* Decl::code(string s) {
+  return new CodeDecl(s);
 }
 
 ostream& operator<<(ostream& os, const Expr& e) {
@@ -294,6 +306,20 @@ template<class T> void print_seq(ostream& os, vector<T> ts, string sep) {
 }
 template<class T> void print_seq(ostream& os, vector<T> ts) {
   print_seq<T>(os, ts, "", "", "");
+}
+template<class T, class C> void print_set(ostream& os, set<T,C> ts,
+                                 string init, string sep, string term) {
+
+  os << init;
+  for (typename set<T,C>::iterator i = ts.begin(); i != ts.end(); ++i)
+    os << (i == ts.begin() ? "" : sep) << *i;
+  os << term;
+}
+template<class T, class C> void print_set(ostream& os, set<T,C> ts, string sep) {
+  print_set<T,C>(os, ts, "", sep, "");
+}
+template<class T, class C> void print_set(ostream& os, set<T,C> ts) {
+  print_set<T,C>(os, ts, "", "", "");
 }
 
 void BinExpr::print(ostream& os) const {
@@ -483,6 +509,10 @@ void ReturnStmt::print(ostream& os) const {
   os << "return;";
 }
 
+void CodeStmt::print(ostream& os) const {
+  os << code;
+}
+
 void TypeDecl::print(ostream& os) const {
   if (type != "")
     os << "type " << name << " = " << type << ";";
@@ -518,8 +548,11 @@ void ProcDecl::print(ostream& os) const {
        << (i < params.size() - 1 ? ", " : "");
   os << ")";
   if (type != "") 
-    os << " returns (" << type << ")";
+    os << " returns (" << retvar << ": " << type << ")";
   os << ";";
+}
+void CodeDecl::print(ostream& os) const {
+  os << code;
 }
 
 void Block::print(ostream& os) const {
@@ -565,7 +598,7 @@ void Program::print(ostream& os) const {
   os << prelude;
   os << "// SMACK-PRELUDE-END" << endl;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
-  print_seq<const Decl*>(os, decls, "\n");
+  print_set<const Decl*,DeclCompare>(os, decls, "\n");
   os << endl << endl;
   print_seq<Procedure*>(os, procs, "\n");
   os << "// END SMACK-GENERATED CODE" << endl;
