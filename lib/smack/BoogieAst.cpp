@@ -223,28 +223,29 @@ const Stmt* Stmt::code(string s) {
   return new CodeStmt(s);
 }
 
-const Decl* Decl::typee(string name, string type) {
+Decl* Decl::typee(string name, string type) {
   return new TypeDecl(name,type);
 }
-const Decl* Decl::axiom(const Expr* e) {
+Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
-const Decl* Decl::constant(string name, string type) {
+Decl* Decl::constant(string name, string type) {
   return Decl::constant(name, type, false);
 }
-const Decl* Decl::constant(string name, string type, bool unique) {
+Decl* Decl::constant(string name, string type, bool unique) {
   return new ConstDecl(name, type, unique);
 }
-const Decl* Decl::variable(string name, string type) {
+Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
 }
-const Decl* Decl::procedure(string name, string arg, string type) {
-  return procedure(name,vector< pair<string,string> >(1,make_pair(arg,type)),make_pair("",""));
+Decl* Decl::procedure(Program& p, string name) {
+  return procedure(p,name,vector< pair<string,string> >(),vector< pair<string,string> >());
 }
-const Decl* Decl::procedure(string name, vector< pair<string,string> > args, pair<string,string> ret) {
-  return new ProcDecl(name,args,ret.first,ret.second);
+Decl* Decl::procedure(Program& p, string name, 
+    vector< pair<string,string> > args, vector< pair<string,string> > rets) {
+  return new ProcDecl(p,name,args,rets);
 }
-const Decl* Decl::code(string s) {
+Decl* Decl::code(string s) {
   return new CodeDecl(s);
 }
 
@@ -272,15 +273,11 @@ ostream& operator<<(ostream& os, const Block* b) {
   b->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Decl* d) {
+ostream& operator<<(ostream& os, Decl* d) {
   d->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Procedure* p) {
-  p->print(os);
-  return os;
-}
-ostream& operator<<(ostream& os, const Program* p) {
+ostream& operator<<(ostream& os, Program* p) {
   if (p == 0) {
     os << "<null> Program!\n";
   } else {
@@ -288,7 +285,7 @@ ostream& operator<<(ostream& os, const Program* p) {
   }
   return os;
 }
-ostream& operator<<(ostream& os, const Program& p) {
+ostream& operator<<(ostream& os, Program& p) {
   p.print(os);
   return os;
 }
@@ -514,10 +511,10 @@ void CodeStmt::print(ostream& os) const {
 }
 
 void TypeDecl::print(ostream& os) const {
-  if (type != "")
-    os << "type " << name << " = " << type << ";";
-  else
-    os << "type " << name << ";";
+  os << "type " << name;
+  if (alias != "")
+    os << " = " << alias << ";";
+  os << ";";
 }
 
 void AxiomDecl::print(ostream& os) const {
@@ -546,26 +543,6 @@ void ProcDecl::print(ostream& os) const {
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
-  os << ")";
-  if (type != "") 
-    os << " returns (" << retvar << ": " << type << ")";
-  os << ";";
-}
-void CodeDecl::print(ostream& os) const {
-  os << code;
-}
-
-void Block::print(ostream& os) const {
-  if (name != "")
-    os << name << ":" << endl;
-  print_seq<const Stmt*>(os, stmts, "  ", "\n  ", "");
-}
-
-void Procedure::print(ostream& os) const {
-  os << "procedure " << name << "(";
-  for (unsigned i = 0; i < params.size(); i++)
-    os << params[i].first << ": " << params[i].second
-       << (i < params.size() - 1 ? ", " : "");
   os << ") ";
   if (rets.size() > 0) {
     os << endl;
@@ -586,21 +563,27 @@ void Procedure::print(ostream& os) const {
   if (blocks.size() > 0) {
     os << "{" << endl;
     if (decls.size() > 0)
-      print_seq<const Decl*>(os, decls, "  ", "\n  ", "\n");
+      print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");
     print_seq<Block*>(os, blocks, "\n");
     os << endl << "}";
   }
-  os << endl;
+}
+
+void CodeDecl::print(ostream& os) const {
+  os << code;
+}
+
+void Block::print(ostream& os) const {
+  if (name != "")
+    os << name << ":" << endl;
+  print_seq<const Stmt*>(os, stmts, "  ", "\n  ", "");
 }
 
 void Program::print(ostream& os) const {
-  os << "// SMACK-PRELUDE-BEGIN" << endl;
   os << prelude;
-  os << "// SMACK-PRELUDE-END" << endl;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
-  print_set<const Decl*,DeclCompare>(os, decls, "\n");
-  os << endl << endl;
-  print_seq<Procedure*>(os, procs, "\n");
+  print_set<Decl*,DeclCompare>(os, decls, "\n");
+  os << endl;
   os << "// END SMACK-GENERATED CODE" << endl;
 }
 }

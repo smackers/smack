@@ -29,7 +29,7 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  SmackModuleGenerator() : ModulePass(ID), program("") {}
+  SmackModuleGenerator() : ModulePass(ID) {}
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();

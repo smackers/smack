@@ -228,8 +228,8 @@ bool SmackRep::isSmackGeneratedName(string n) {
   return n.size() > 0 && n[0] == '$';
 }
 
-bool SmackRep::isProcIgnore(string n) {
-  return PROC_IGNORE.match(n);
+bool SmackRep::isIgnore(llvm::Function* f) {  
+  return PROC_IGNORE.match(id(f));
 }
 
 bool SmackRep::isInt(const llvm::Type* t) {
@@ -719,8 +719,9 @@ string indexedName(string name, int idx) {
   return idxd.str();
 }
 
-const Decl* SmackRep::proc(llvm::Function* f, int nargs) {
-  vector< pair<string,string> > args;
+ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
+  vector< pair<string,string> > args, rets;
+
   if (f->isVarArg()) {
     for (int i = 0; i < nargs; i++) {
       args.push_back( make_pair(indexedName("p",i), getPtrType()) );
@@ -729,14 +730,20 @@ const Decl* SmackRep::proc(llvm::Function* f, int nargs) {
     int i = 0;
     for (llvm::Function::const_arg_iterator
          arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
-      args.push_back( make_pair(indexedName("p",i), type(arg->getType())) );
+      
+      args.push_back(make_pair(
+        arg->hasName() ? id(arg) : indexedName("p",i), 
+        type(arg->getType()) ));
     }
-  } 
-  llvm::Type* t = f->getReturnType();
-  return Decl::procedure(
+  }  
+  if (!f->getReturnType()->isVoidTy())
+    rets.push_back(make_pair(RET_VAR,type(f->getReturnType())));
+
+  return (ProcDecl*) Decl::procedure(
+    *program,
     f->isVarArg() ? indexedName(id(f),nargs) : id(f), 
     args, 
-    make_pair(RET_VAR, t->isVoidTy() ? "" : type(t))
+    rets
   );
 }
 
@@ -771,7 +778,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
 
   } else if (f->isVarArg() || (f->isDeclaration() && !isSmackName(name))) {
     
-    const Decl* p = proc(f,args.size());
+    Decl* p = proc(f,args.size());
     program->addDecl(p);
     return Stmt::call(p->getName(), args, rets);
     
@@ -780,7 +787,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
   }
 }
 
-const string SmackRep::code(llvm::CallInst& ci) {
+string SmackRep::code(llvm::CallInst& ci) {
   
   llvm::Function* f = ci.getCalledFunction();
   assert(f && "Inline code embedded in unresolved function.");
@@ -812,6 +819,7 @@ const string SmackRep::code(llvm::CallInst& ci) {
 
 string SmackRep::getPrelude() {
   stringstream s;
+  s << "// SMACK-PRELUDE-BEGIN" << endl;
   s << ARITHMETIC << endl;
 
   if (SmackOptions::MemoryModelDebug)
@@ -838,6 +846,7 @@ string SmackRep::getPrelude() {
   s << mallocProc() << endl;
   s << freeProc() << endl;
   s << allocaProc() << endl;
+  s << "// SMACK-PRELUDE-END" << endl;
   return s.str();
 }
 
@@ -893,8 +902,8 @@ bool SmackRep::hasStaticInits() {
   return staticInits.size() > 0;
 }
 
-Procedure* SmackRep::getStaticInit() {
-  Procedure* proc = new Procedure(*program, STATIC_INIT);
+Decl* SmackRep::getStaticInit() {
+  ProcDecl* proc = (ProcDecl*) Decl::procedure(*program, STATIC_INIT);
   Block* b = new Block(*proc);
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);

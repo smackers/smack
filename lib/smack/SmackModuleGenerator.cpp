@@ -21,43 +21,37 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
     program.addDecls(rep->globalDecl(x));
   
   if (rep->hasStaticInits())
-    program.addProc(rep->getStaticInit());
+    program.addDecl(rep->getStaticInit());
 
   DEBUG(errs() << "Analyzing functions...\n");
 
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
 
-    string name = rep->id(func);
-
-    if (rep->isProcIgnore(name))
+    if (rep->isIgnore(func))
       continue;
-
+    
     if (!func->isVarArg())
       program.addDecls(rep->globalDecl(func));
 
-    if (func->isDeclaration())
-      continue;
+    ProcDecl* proc = rep->proc(func,0);
+    program.addDecl(proc);
 
-    DEBUG(errs() << "Analyzing function: " << name << "\n");
-
-    Procedure* proc = new Procedure(program, name);
-    program.addProc(proc);
-    
-    // BODY
     if (!func->isDeclaration() && !func->empty()
         && !func->getEntryBlock().empty()) {
 
+      DEBUG(errs() << "Analyzing function: " << rep->id(func) << "\n");
+
       map<const llvm::BasicBlock*, Block*> known;
       stack<llvm::BasicBlock*> workStack;
-      SmackInstGenerator igen(*rep, *proc, known);
+      SmackInstGenerator igen(*rep, (ProcDecl&) *proc, known);
 
       llvm::BasicBlock& entry = func->getEntryBlock();
       workStack.push(&entry);
       known[&entry] = igen.createBlock();
       
       // First execute static initializers, in the main procedure.
-      if (name == "main" && rep->hasStaticInits())
+      if (rep->id(func) == "main" && rep->hasStaticInits())
         known[&entry]->addStmt(Stmt::call(SmackRep::STATIC_INIT));
 
       // INVARIANT: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b)
@@ -82,29 +76,18 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
         igen.setCurrBlock(known[b]);
         igen.visit(b);
       }
-    }
 
-    // PARAMETERS
-    for (llvm::Function::const_arg_iterator
-         arg = func->arg_begin(), e = func->arg_end(); arg != e; ++arg) {
-      proc->addParam(rep->id(arg), rep->type(arg->getType()));
+      DEBUG(errs() << "Finished analyzing function: " << rep->id(func) << "\n\n");
     }
-
-    // RETURNS
-    if (! func->getReturnType()->isVoidTy())
-      proc->addRet(SmackRep::RET_VAR, rep->type(func->getReturnType()));
 
     // MODIFIES
     // ... to do below, after memory splitting is determined.
-
-    DEBUG(errs() << "Finished analyzing function: " << name << "\n\n");
   }
 
   // MODIFIES
-  for ( vector<Procedure*>::const_iterator p = program.pbegin();
-        p != program.pend(); ++p ) {
-    (*p)->addMods(rep->getModifies());
-  }
+  vector<ProcDecl*> procs = program.getProcs();
+  for (unsigned i=0; i<procs.size(); i++)
+    procs[i]->addMods(rep->getModifies());
   
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.

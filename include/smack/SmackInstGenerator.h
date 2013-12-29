@@ -16,7 +16,7 @@ class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
   SmackRep& rep;
-  Procedure& proc;
+  ProcDecl& proc;
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*>& blockMap;
   int blockNum;
@@ -30,7 +30,7 @@ private:
   void annotate(llvm::Instruction& i, Block* b);
 
 public:
-  SmackInstGenerator(SmackRep& r, Procedure& p,
+  SmackInstGenerator(SmackRep& r, ProcDecl& p,
                      map<const llvm::BasicBlock*, Block*>& bm)
     : rep(r), proc(p),
       blockMap(bm), blockNum(0), varNum(0) {}

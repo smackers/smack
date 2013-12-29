@@ -23,7 +23,7 @@ public:
 
 public:
   SmackRep2dMem(llvm::AliasAnalysis* aa) : SmackRep(aa) {}
-  virtual vector<const Decl*> globalDecl(const llvm::Value* g);
+  virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();
   

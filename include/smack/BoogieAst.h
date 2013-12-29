@@ -15,8 +15,8 @@ namespace smack {
 
 using namespace std;
 
+class Block;
 class Program;
-class Procedure;
 
 class Expr {
 public:
@@ -265,26 +265,26 @@ public:
 protected:
   unsigned id;
   string name;
-  string type;
-  Decl(string n, string t) : id(uniqueId++), name(n), type(t) { }
+  Decl(string n) : id(uniqueId++), name(n) { }
 public:
   virtual void print(ostream& os) const = 0;
   unsigned getId() const { return id; }
   string getName() const { return name; }
-  string getType() const { return type; }
   virtual kind getKind() const = 0;
-  static const Decl* typee(string name, string type);
-  static const Decl* axiom(const Expr* e);
-  static const Decl* constant(string name, string type);
-  static const Decl* constant(string name, string type, bool unique);
-  static const Decl* variable(string name, string type);
-  static const Decl* procedure(string name, string arg, string type);
-  static const Decl* procedure(string name, vector< pair<string,string> > args, pair<string,string> ret);
-  static const Decl* code(string s);
+  
+  static Decl* typee(string name, string type);
+  static Decl* axiom(const Expr* e);
+  static Decl* constant(string name, string type);
+  static Decl* constant(string name, string type, bool unique);
+  static Decl* variable(string name, string type);
+  static Decl* procedure(Program& p, string name);
+  static Decl* procedure(Program& p, string name,
+    vector< pair<string,string> > args, vector< pair<string,string> > rets);
+  static Decl* code(string s);
 };
 
 struct DeclCompare {
-  bool operator()(const Decl* a, const Decl* b) const {
+  bool operator()(Decl* a, Decl* b) const {
     assert(a && b);    
     if (a->getKind() == b->getKind() && a->getKind() != Decl::UNNAMED)
       return a->getName() < b->getName();
@@ -294,8 +294,9 @@ struct DeclCompare {
 };
 
 class TypeDecl : public Decl {
+  string alias;
 public:
-  TypeDecl(string n, string t) : Decl(n,t) {}
+  TypeDecl(string n, string t) : Decl(n), alias(t) {}
   kind getKind() const { return TYPE; }
   void print(ostream& os) const;
 };
@@ -304,83 +305,51 @@ class AxiomDecl : public Decl {
   const Expr* expr;
   static int uniqueId;
 public:
-  AxiomDecl(const Expr* e) : Decl("", ""), expr(e) {}
+  AxiomDecl(const Expr* e) : Decl(""), expr(e) {}
   kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
 };
 
 class ConstDecl : public Decl {
+  string type;
   bool unique;
 public:
-  ConstDecl(string n, string t, bool u) : Decl(n, t), unique(u) {}
-  ConstDecl(string n, string t) : Decl(n, t), unique(false) {}
+  ConstDecl(string n, string t, bool u) : Decl(n), type(t), unique(u) {}
+  ConstDecl(string n, string t) : Decl(n), type(t), unique(false) {}
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
 
 class FuncDecl : public Decl {
   vector< pair<string, string> > params;
+  string type;
   const Expr* body;
 public:
   FuncDecl(string n, vector< pair<string, string> > ps, string t, Expr* b)
-    : Decl(n, ""), params(ps), body(b) {}
+    : Decl(n), params(ps), type(t), body(b) {}
   kind getKind() const { return FUNC; }
   void print(ostream& os) const;
 };
 
 class VarDecl : public Decl {
+  string type;
 public:
-  VarDecl(string n, string t) : Decl(n, t) {}
+  VarDecl(string n, string t) : Decl(n), type(t) {}
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
 
 class ProcDecl : public Decl {
-  vector< pair<string,string> > params;
-  string retvar;
-public:
-  ProcDecl(string n, vector< pair<string,string> > ps, string r, string t) 
-    : Decl(n,t), params(ps), retvar(r) {}
-  kind getKind() const { return PROC; }
-  void print(ostream& os) const;
-};
-
-class CodeDecl : public Decl {
-  string code;
-public:
-  CodeDecl(string s) : Decl("",""), code(s) {}
-  kind getKind() const { return UNNAMED; }
-  void print(ostream& os) const;
-};
-
-class Block {
-  Procedure& proc;
-  string name;
-  vector<const Stmt*> stmts;
-public:
-  Block(Procedure& p) : proc(p), name("") {}
-  Block(Procedure& p, string n) : proc(p), name(n) {}
-  void print(ostream& os) const;
-  Procedure& getProc() const { return proc; }
-  void addStmt(const Stmt* s) {
-    stmts.push_back(s);
-  }
-  string getName() {
-    return name;
-  }
-};
-
-class Procedure {
   Program& prog;
-  string name;
-  vector< pair<string, string> > params;
-  vector< pair<string, string> > rets;
+  vector< pair<string,string> > params;
+  vector< pair<string,string> > rets;
   vector<string> mods;
-  vector<const Decl*> decls;
+  vector<Decl*> decls;
   vector<Block*> blocks;
 public:
-  Procedure(Program& p, string n) : prog(p), name(n) {}
-  void print(ostream& os) const;
+  ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
+    : Decl(n), prog(p), params(ps), rets(rs) {}
+  kind getKind() const { return PROC; }
   Program& getProg() const { return prog; }
   void addParam(string x, string t) {
     params.push_back(make_pair(x, t));
@@ -395,53 +364,80 @@ public:
     for (unsigned i = 0; i < ms.size(); i++)
       addMod(ms[i]);
   }
-  void addDecl(const Decl* d) {
+  void addDecl(Decl* d) {
     decls.push_back(d);
   }
-  void addDecls(vector<const Decl*> ds) {
+  void addDecls(vector<Decl*> ds) {
     for (unsigned i = 0; i < ds.size(); i++)
       addDecl(ds[i]);
   }
-  bool hasDecl(const Decl* d) {
+  bool hasDecl(Decl* d) {
     for (unsigned i = 0; i < decls.size(); i++)
       if (d->getName() == decls[i]->getName()
-          && d->getType() == decls[i]->getType())
+          && d->getKind() == decls[i]->getKind())
         return true;
     return false;
   }
   void addBlock(Block* b) {
     blocks.push_back(b);
   }
+  void print(ostream& os) const;
+};
+
+class CodeDecl : public Decl {
+  string code;
+public:
+  CodeDecl(string s) : Decl(""), code(s) {}
+  kind getKind() const { return UNNAMED; }
+  void print(ostream& os) const;
+};
+
+class Block {
+  ProcDecl& proc;
+  string name;
+  vector<const Stmt*> stmts;
+public:
+  Block(ProcDecl& p) : proc(p), name("") {}
+  Block(ProcDecl& p, string n) : proc(p), name(n) {}
+  void print(ostream& os) const;
+  ProcDecl& getProc() const { return proc; }
+  void addStmt(const Stmt* s) {
+    stmts.push_back(s);
+  }
+  string getName() {
+    return name;
+  }
 };
 
 class Program {
+  // TODO While I would prefer that a program is just a set or sequence of
+  // declarations, putting the Prelude in a CodeDeclaration does not work,
+  // and I do not yet understand why; see below. --mje
   string prelude;
-  set<const Decl*,DeclCompare> decls;
-  vector<Procedure*> procs;
+  set<Decl*,DeclCompare> decls;
 public:
-  Program(string p) : prelude(p) { }
+  Program() {}
   void print(ostream& os) const;
-  void addDecl(const Decl* d) {
+  void addDecl(Decl* d) {
     decls.insert(d);
   }
   void addDecl(string s) {
+    // TODO Why does this break to put the prelude string inside of a CodeDecl?
     decls.insert( Decl::code(s) );
-  }
-  void addDecls(vector<const Decl*> ds) {
-    for (unsigned i = 0; i < ds.size(); i++)
-      addDecl(ds[i]);
-  }
-  void addProc(Procedure* p) {
-    procs.push_back(p);
-  }
-  vector<Procedure*>::const_iterator pbegin() {
-    return procs.begin();
-  }
-  vector<Procedure*>::const_iterator pend() {
-    return procs.end();
   }
   void appendPrelude(string s) {
     prelude += s;
+  }
+  void addDecls(vector<Decl*> ds) {
+    for (unsigned i = 0; i < ds.size(); i++)
+      addDecl(ds[i]);
+  }
+  vector<ProcDecl*> getProcs() {
+    vector<ProcDecl*> procs;
+    for (set<Decl*,DeclCompare>::iterator i = decls.begin(); i != decls.end(); ++i)
+      if ((*i)->getKind() == Decl::PROC)
+        procs.push_back((ProcDecl*) (*i));
+    return procs;
   }
 };
 }

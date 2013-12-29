@@ -151,7 +151,7 @@ public:
   
   bool isSmackName(string n);
   bool isSmackGeneratedName(string n);
-  bool isProcIgnore(string n);
+  bool isIgnore(llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
   bool isBool(llvm::Type* t);
@@ -200,20 +200,20 @@ public:
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, llvm::CallInst& ci);
-  const string code(llvm::CallInst& ci);
-  const Decl* proc(llvm::Function* f, int n);
+  string code(llvm::CallInst& ci);
+  ProcDecl* proc(llvm::Function* f, int n);
   
   virtual const Expr* ptr2ref(const Expr* e) = 0;
   virtual const Expr* ptr2val(const Expr* e) = 0;
   virtual const Expr* val2ptr(const Expr* e) = 0;
   virtual const Expr* ref2ptr(const Expr* e) = 0;
 
-  virtual vector<const Decl*> globalDecl(const llvm::Value* g) = 0;
+  virtual vector<Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
   void addStaticInit(const llvm::Value* g);
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
   bool hasStaticInits();
-  Procedure* getStaticInit();
+  Decl* getStaticInit();
   virtual string getPtrType() = 0;
   virtual string getPrelude();
   
