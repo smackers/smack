@@ -575,7 +575,7 @@ void ProcDecl::print(ostream& os) const {
     os << endl;
     os << "{" << endl;
     if (decls.size() > 0)
-      print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");
+      print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
     print_seq<Block*>(os, blocks, "\n");
     os << endl << "}";
   }

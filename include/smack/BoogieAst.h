@@ -349,7 +349,7 @@ class ProcDecl : public Decl {
   vector<string> mods;
   vector<const Expr*> requires;
   vector<const Expr*> ensures;
-  vector<Decl*> decls;
+  set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
 public:
   ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
@@ -379,18 +379,7 @@ public:
     ensures.push_back(e);
   }
   void addDecl(Decl* d) {
-    decls.push_back(d);
-  }
-  void addDecls(vector<Decl*> ds) {
-    for (unsigned i = 0; i < ds.size(); i++)
-      addDecl(ds[i]);
-  }
-  bool hasDecl(Decl* d) {
-    for (unsigned i = 0; i < decls.size(); i++)
-      if (d->getName() == decls[i]->getName()
-          && d->getKind() == decls[i]->getKind())
-        return true;
-    return false;
+    decls.insert(d);
   }
   void addBlock(Block* b) {
     blocks.push_back(b);

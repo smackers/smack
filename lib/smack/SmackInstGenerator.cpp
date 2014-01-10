@@ -46,7 +46,7 @@ string SmackInstGenerator::createVar() {
   stringstream s;
   s << "$x" << varNum++;
   string name = s.str();
-  proc.addDecl(new VarDecl(name, rep.getPtrType()));
+  proc.addDecl(Decl::variable(name, rep.getPtrType()));
   return name;
 }
 
@@ -60,9 +60,7 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
       else
         inst.setName(SmackRep::PTR_VAR);
     }
-    VarDecl* d = new VarDecl(rep.id(&inst), rep.type(&inst));
-    if (!proc.hasDecl(d))
-      proc.addDecl(d);
+    proc.addDecl(Decl::variable(rep.id(&inst), rep.type(&inst)));
   }
 }
 
