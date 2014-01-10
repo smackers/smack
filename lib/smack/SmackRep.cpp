@@ -722,20 +722,18 @@ string indexedName(string name, int idx) {
 ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
   vector< pair<string,string> > args, rets;
 
-  if (f->isVarArg()) {
-    for (int i = 0; i < nargs; i++) {
-      args.push_back( make_pair(indexedName("p",i), getPtrType()) );
-    }
-  } else {
-    int i = 0;
-    for (llvm::Function::const_arg_iterator
-         arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
-      
-      args.push_back(make_pair(
-        arg->hasName() ? id(arg) : indexedName("p",i), 
-        type(arg->getType()) ));
-    }
-  }  
+  int i = 0;
+  for (llvm::Function::const_arg_iterator
+       arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
+    
+    args.push_back(make_pair(
+      arg->hasName() ? id(arg) : indexedName("p",i), 
+      type(arg->getType()) ));
+  }
+  
+  for (; i < nargs; i++)
+    args.push_back(make_pair(indexedName("p",i), getPtrType()));
+
   if (!f->getReturnType()->isVoidTy())
     rets.push_back(make_pair(RET_VAR,type(f->getReturnType())));
 
