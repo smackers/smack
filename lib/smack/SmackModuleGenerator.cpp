@@ -95,7 +95,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
       vector< pair<string,string> > rets = procs[i]->getRets();
       for (vector< pair<string,string> >::iterator r = rets.begin();
           r != rets.end(); ++r) {
-        procs[i]->addEnsures(rep->declareIsExternal(Expr::id(r->first)));
+        
+        // TODO should only do this for returned POINTERS.
+        // procs[i]->addEnsures(rep->declareIsExternal(Expr::id(r->first)));
       }
     }
   }
