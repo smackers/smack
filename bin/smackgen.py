@@ -67,7 +67,7 @@ def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryP
   bpl = llvm2bpl(inputFile, debugFlag, memmod)
   inputFile.close()
 
-  p = re.compile('procedure[ ]*([a-zA-Z0-9_$]*)[ ]*\(')
+  p = re.compile('procedure\s+([^\s(]*)\s*\(')
   if verifier == 'boogie-inline':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, entryPoints), bpl)
