@@ -21,6 +21,10 @@ const Expr* Expr::eq(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Eq, l, r);
 }
 
+const Expr* Expr::lt(const Expr* l, const Expr* r) {
+  return new BinExpr(BinExpr::Lt, l, r);
+}
+
 const Expr* Expr::fn(string f, const Expr* x) {
   return new FunExpr(f, vector<const Expr*>(1, x));
 }
@@ -543,14 +547,14 @@ void ProcDecl::print(ostream& os) const {
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
-  os << ") ";
+  os << ")";
   if (rets.size() > 0) {
     os << endl;
     os << "  returns (";
     for (unsigned i = 0; i < rets.size(); i++)
       os << rets[i].first << ": " << rets[i].second
          << (i < rets.size() - 1 ? ", " : "");
-    os << ") ";
+    os << ")";
   }
   if (blocks.size() == 0)
     os << ";";
@@ -558,9 +562,17 @@ void ProcDecl::print(ostream& os) const {
   if (mods.size() > 0) {
     os << endl;
     print_seq<string>(os, mods, "  modifies ", ", ", ";");
+  }
+  if (requires.size() > 0) {
     os << endl;
+    print_seq<const Expr*>(os, requires, "  requires ", ";\n  requires ", ";");
+  }
+  if (ensures.size() > 0) {
+    os << endl;
+    print_seq<const Expr*>(os, ensures, "  ensures ", ";\n  ensures ", ";");
   }
   if (blocks.size() > 0) {
+    os << endl;
     os << "{" << endl;
     if (decls.size() > 0)
       print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");

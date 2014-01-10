@@ -23,6 +23,7 @@ public:
   virtual void print(ostream& os) const = 0;
   static const Expr* and_(const Expr* l, const Expr* r);
   static const Expr* eq(const Expr* l, const Expr* r);
+  static const Expr* lt(const Expr* l, const Expr* r);
   static const Expr* fn(string f, const Expr* x);
   static const Expr* fn(string f, const Expr* x, const Expr* y);
   static const Expr* fn(string f, const Expr* x, const Expr* y, const Expr* z);
@@ -346,6 +347,8 @@ class ProcDecl : public Decl {
   vector< pair<string,string> > params;
   vector< pair<string,string> > rets;
   vector<string> mods;
+  vector<const Expr*> requires;
+  vector<const Expr*> ensures;
   vector<Decl*> decls;
   vector<Block*> blocks;
 public:
@@ -359,12 +362,21 @@ public:
   void addRet(string x, string t) {
     rets.push_back(make_pair(x, t));
   }
+  vector< pair<string,string> > getRets() {
+    return rets;
+  }
   void addMod(string m) {
     mods.push_back(m);
   }
   void addMods(vector<string> ms) {
     for (unsigned i = 0; i < ms.size(); i++)
       addMod(ms[i]);
+  }
+  void addRequires(const Expr* e) {
+    requires.push_back(e);
+  }
+  void addEnsures(const Expr* e) {
+    ensures.push_back(e);
   }
   void addDecl(Decl* d) {
     decls.push_back(d);
@@ -382,6 +394,9 @@ public:
   }
   void addBlock(Block* b) {
     blocks.push_back(b);
+  }
+  bool hasBody() {
+    return decls.size() > 0 || blocks.size() > 0;
   }
   void print(ostream& os) const;
 };

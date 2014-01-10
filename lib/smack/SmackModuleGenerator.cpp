@@ -86,8 +86,19 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
   // MODIFIES
   vector<ProcDecl*> procs = program.getProcs();
-  for (unsigned i=0; i<procs.size(); i++)
-    procs[i]->addMods(rep->getModifies());
+  for (unsigned i=0; i<procs.size(); i++) {
+    
+    if (procs[i]->hasBody()) {
+      procs[i]->addMods(rep->getModifies());
+    
+    } else {
+      vector< pair<string,string> > rets = procs[i]->getRets();
+      for (vector< pair<string,string> >::iterator r = rets.begin();
+          r != rets.end(); ++r) {
+        procs[i]->addEnsures(rep->declareIsExternal(Expr::id(r->first)));
+      }
+    }
+  }
   
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.

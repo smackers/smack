@@ -34,7 +34,9 @@ public:
   const Expr* ptr2val(const Expr* e);
   const Expr* val2ptr(const Expr* e);
   const Expr* ref2ptr(const Expr* e);
-    
+
+  const Expr* declareIsExternal(const Expr* e);
+
   virtual string memoryModel();
   virtual string mallocProc();
   virtual string freeProc();

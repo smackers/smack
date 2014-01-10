@@ -45,7 +45,6 @@ public:
   static const string MEMCPY;
 
   static const string PTR;
-  static const string STATIC;
   static const string OBJ;
   static const string OFF;
   static const string PA;
@@ -216,7 +215,9 @@ public:
   Decl* getStaticInit();
   virtual string getPtrType() = 0;
   virtual string getPrelude();
-  
+
+  virtual const Expr* declareIsExternal(const Expr* e) = 0;
+
   virtual string memoryModel() = 0;
   virtual string mallocProc() = 0;
   virtual string freeProc() = 0;

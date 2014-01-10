@@ -10,6 +10,8 @@ namespace smack {
 
 const string SmackRep2dMem::PTR_TYPE = "$ptr";
 const string SmackRep2dMem::REF_TYPE = "$ref";
+const string SmackRep2dMem::STATIC = "$static";
+const string SmackRep2dMem::EXTERN = "$extern";
 
 vector<Decl*> SmackRep2dMem::globalDecl(const llvm::Value* g) {
   addStaticInit(g);
@@ -17,8 +19,12 @@ vector<Decl*> SmackRep2dMem::globalDecl(const llvm::Value* g) {
   vector<Decl*> decls;
   string name = id(g);
   decls.push_back(Decl::constant(name, REF_TYPE, true));
-  decls.push_back(Decl::axiom(Expr::fn(SmackRep::STATIC, Expr::id(name))));
+  decls.push_back(Decl::axiom(Expr::fn(SmackRep2dMem::STATIC, Expr::id(name))));
   return decls;
+}
+
+const Expr* SmackRep2dMem::declareIsExternal(const Expr* e) {
+  return Expr::fn(SmackRep2dMem::EXTERN, ptr2ref(e));
 }
 
 vector<string> SmackRep2dMem::getModifies() {
@@ -55,6 +61,7 @@ const string SmackRep2dMem::POINTERS =
   "\n"
   "function $ptr($ref, int) returns ($ptr);\n"
   "function $static($ref) returns (bool);\n"
+  "function $extern($ref) returns (bool);\n"
   "function $size($ref) returns (int);\n"
   "function $obj($ptr) returns ($ref);\n"
   "function $off($ptr) returns (int);\n"
@@ -70,6 +77,7 @@ const string SmackRep2dMem::POINTERS =
   "\n"
   "const unique $NULL: $ref;\n"
   "axiom $static($NULL);\n"
+  "axiom(forall r:$ref :: $static(r) ==> !$extern(r));\n"
   "const $UNDEF: $ptr;\n"
   "\n"
   "function $pa(pointer: $ptr, index: int, size: int) returns ($ptr);\n"

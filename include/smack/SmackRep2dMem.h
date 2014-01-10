@@ -20,6 +20,8 @@ public:
   static const string PTR_TYPE;
   static const string REF_TYPE;
   static const string POINTERS;
+  static const string STATIC;
+  static const string EXTERN;
 
 public:
   SmackRep2dMem(llvm::AliasAnalysis* aa) : SmackRep(aa) {}
@@ -31,7 +33,9 @@ public:
   const Expr* ptr2val(const Expr* e);
   const Expr* val2ptr(const Expr* e);
   const Expr* ref2ptr(const Expr* e);
-  
+
+  const Expr* declareIsExternal(const Expr* e);
+
   virtual string memoryModel();
   virtual string mallocProc();
   virtual string freeProc();

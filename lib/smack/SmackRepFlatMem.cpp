@@ -45,6 +45,10 @@ vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
   return decls;
 }
 
+const Expr* SmackRepFlatMem::declareIsExternal(const Expr* e) {
+  return Expr::lt(e,Expr::lit(globalsTop));
+}
+
 vector<string> SmackRepFlatMem::getModifies() {
   vector<string> mods = SmackRep::getModifies();
   mods.push_back(ALLOC);
