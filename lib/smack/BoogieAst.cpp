@@ -570,7 +570,7 @@ void ProcDecl::print(ostream& os) const {
 }
 
 void CodeDecl::print(ostream& os) const {
-  os << code;
+  os << name;
 }
 
 void Block::print(ostream& os) const {
@@ -582,7 +582,7 @@ void Block::print(ostream& os) const {
 void Program::print(ostream& os) const {
   os << prelude;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
-  print_set<Decl*,DeclCompare>(os, decls, "\n");
+  print_set<Decl*>(os, decls, "\n");
   os << endl;
   os << "// END SMACK-GENERATED CODE" << endl;
 }

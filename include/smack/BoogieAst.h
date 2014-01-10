@@ -261,7 +261,7 @@ public:
 class Decl {
   static unsigned uniqueId;
 public:
-  enum kind { STOR, PROC, FUNC, TYPE, UNNAMED };
+  enum kind { STOR, PROC, FUNC, TYPE, UNNAMED, CODE };
 protected:
   unsigned id;
   string name;
@@ -284,12 +284,14 @@ public:
 };
 
 struct DeclCompare {
-  bool operator()(Decl* a, Decl* b) const {
+  bool operator()(Decl* a, Decl* b) {
     assert(a && b);    
     if (a->getKind() == b->getKind() && a->getKind() != Decl::UNNAMED)
       return a->getName() < b->getName();
-    else
+    else if (a->getKind() == b->getKind())
       return a->getId() < b->getId();
+    else
+      return a->getKind() < b->getKind();
   }
 };
 
@@ -385,10 +387,9 @@ public:
 };
 
 class CodeDecl : public Decl {
-  string code;
 public:
-  CodeDecl(string s) : Decl(""), code(s) {}
-  kind getKind() const { return UNNAMED; }
+  CodeDecl(string s) : Decl(s) {}
+  kind getKind() const { return CODE; }
   void print(ostream& os) const;
 };
 
@@ -434,7 +435,7 @@ public:
   }
   vector<ProcDecl*> getProcs() {
     vector<ProcDecl*> procs;
-    for (set<Decl*,DeclCompare>::iterator i = decls.begin(); i != decls.end(); ++i)
+    for (set<Decl*>::iterator i = decls.begin(); i != decls.end(); ++i)
       if ((*i)->getKind() == Decl::PROC)
         procs.push_back((ProcDecl*) (*i));
     return procs;
