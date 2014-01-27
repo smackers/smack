@@ -52,6 +52,7 @@ sudo apt-get install git --assume-yes
 sudo apt-get install mercurial --assume-yes
 sudo apt-get install autoconf --assume-yes
 sudo apt-get install mono-devel --assume-yes
+sudo apt-get install wget --assume-yes
 
 fi
 
@@ -83,7 +84,10 @@ cd ${BASE_DIR}
 if [ ${INSTALL_Z3} -eq 1 ]; then
 
 # Get Z3
-git clone https://git01.codeplex.com/z3 ${Z3_DIR}/src/
+cd ${Z3_DIR}/src/
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=89c1785b73225a1b363c0e485f854613121b70a7"
+unzip -o SourceControlFileDownload*
+rm -f SourceControlFileDownload*
 
 # Configure Z3 and build
 cd ${Z3_DIR}/src/
@@ -105,7 +109,7 @@ fi
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 
 # Get Boogie
-hg clone https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r f59ad49fc3a4 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -124,6 +128,8 @@ if [ ${INSTALL_CORRAL} -eq 1 ]; then
 
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+cd ${CORRAL_DIR}
+git checkout 9311d7273384
 
 # Build Corral
 cd ${CORRAL_DIR}/references
@@ -131,6 +137,7 @@ cd ${CORRAL_DIR}/references
 cp ${BOOGIE_DIR}/Binaries/AbsInt.dll .
 cp ${BOOGIE_DIR}/Binaries/Basetypes.dll .
 cp ${BOOGIE_DIR}/Binaries/CodeContractsExtender.dll .
+cp ${BOOGIE_DIR}/Binaries/Concurrency.dll .
 cp ${BOOGIE_DIR}/Binaries/Core.dll .
 cp ${BOOGIE_DIR}/Binaries/ExecutionEngine.dll .
 cp ${BOOGIE_DIR}/Binaries/Graph.dll .
@@ -147,7 +154,6 @@ cp ${BOOGIE_DIR}/Binaries/Predication.dll .
 
 cd ${CORRAL_DIR}
 xbuild cba.sln
-cp ${CORRAL_DIR}/references/UnivBackPred2.smt2 ${CORRAL_DIR}/bin/Debug
 ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Debug/z3.exe
 
 cd ${BASE_DIR}
