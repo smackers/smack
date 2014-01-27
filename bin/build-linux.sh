@@ -52,6 +52,7 @@ sudo apt-get install git --assume-yes
 sudo apt-get install mercurial --assume-yes
 sudo apt-get install autoconf --assume-yes
 sudo apt-get install mono-devel --assume-yes
+sudo apt-get install wget --assume-yes
 
 fi
 
@@ -83,7 +84,10 @@ cd ${BASE_DIR}
 if [ ${INSTALL_Z3} -eq 1 ]; then
 
 # Get Z3
-git clone https://git01.codeplex.com/z3 ${Z3_DIR}/src/
+cd ${Z3_DIR}/src/
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=89c1785b73225a1b363c0e485f854613121b70a7"
+unzip -o SourceControlFileDownload*
+rm -f SourceControlFileDownload*
 
 # Configure Z3 and build
 cd ${Z3_DIR}/src/
