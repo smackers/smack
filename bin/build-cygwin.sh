@@ -34,19 +34,8 @@ SMACK_DIR="${BASE_DIR}/smack"
 
 ################################################################################
 
-# Set up directories
-
-# Base directory for everything
+# Set up base directory for everything
 mkdir -p ${BASE_DIR}
-
-# Other dirs
-mkdir -p ${LLVM_DIR}/src
-mkdir -p ${LLVM_DIR}/build
-mkdir -p ${LLVM_DIR}/install
-mkdir -p ${SMACK_DIR}/src
-mkdir -p ${SMACK_DIR}/build
-mkdir -p ${SMACK_DIR}/install
-
 cd ${BASE_DIR}
 
 ################################################################################
@@ -54,6 +43,10 @@ cd ${BASE_DIR}
 # LLVM
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
+
+mkdir -p ${LLVM_DIR}/src
+mkdir -p ${LLVM_DIR}/build
+mkdir -p ${LLVM_DIR}/install
 
 # Get llvm and extract
 wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz
@@ -81,6 +74,10 @@ fi
 # SMACK
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
+
+mkdir -p ${SMACK_DIR}/src
+mkdir -p ${SMACK_DIR}/build
+mkdir -p ${SMACK_DIR}/install
 
 # Get SMACK
 git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/

@@ -28,6 +28,7 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
+INSTALL_MONO=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
@@ -35,6 +36,7 @@ INSTALL_LLVM=1
 INSTALL_SMACK=1
 
 # Other dirs
+MONO_DIR="${BASE_DIR}/mono-3"
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
 CORRAL_DIR="${BASE_DIR}/corral"
@@ -47,41 +49,60 @@ SMACK_DIR="${BASE_DIR}/smack"
 
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
-sudo apt-get install g++ --assume-yes
-sudo apt-get install git --assume-yes
-sudo apt-get install mercurial --assume-yes
-sudo apt-get install autoconf --assume-yes
-sudo apt-get install mono-devel --assume-yes
-sudo apt-get install wget --assume-yes
+sudo apt-get install -y g++
+sudo apt-get install -y git
+sudo apt-get install -y mercurial
+sudo apt-get install -y autoconf
+sudo apt-get install -y wget
 
 fi
 
 ################################################################################
 
-# Set up directories
-
-# Base directory for everything
+# Set up base directory for everything
 mkdir -p ${BASE_DIR}
+cd ${BASE_DIR}
 
-# Other dirs
-mkdir -p ${Z3_DIR}/src
-mkdir -p ${Z3_DIR}/install
-mkdir -p ${BOOGIE_DIR}
-mkdir -p ${CORRAL_DIR}
-mkdir -p ${LLVM_DIR}/src
-mkdir -p ${LLVM_DIR}/build
-mkdir -p ${LLVM_DIR}/install
-mkdir -p ${SMACK_DIR}/src
-mkdir -p ${SMACK_DIR}/build
-mkdir -p ${SMACK_DIR}/install
+################################################################################
+
+# mono
+
+if [ ${INSTALL_MONO} -eq 1 ]; then
+
+mkdir -p ${MONO_DIR}
+
+# Install mono
+sudo apt-get install -y git build-essential autoconf automake bison flex libtool gettext gdb mono-gmcs
+cd ${MONO_DIR}
+git clone git://github.com/mono/mono.git
+cd mono
+git checkout mono-3.2.6
+./autogen.sh --prefix=/usr/local
+make
+sudo make install
+
+# Install libgdiplus
+sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev 
+sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev
+cd ${MONO_DIR}
+git clone git://github.com/mono/libgdiplus.git
+cd libgdiplus
+./autogen.sh --prefix=/usr/local
+make
+sudo make install
 
 cd ${BASE_DIR}
+
+fi
 
 ################################################################################
 
 # Z3
 
 if [ ${INSTALL_Z3} -eq 1 ]; then
+
+mkdir -p ${Z3_DIR}/src
+mkdir -p ${Z3_DIR}/install
 
 # Get Z3
 cd ${Z3_DIR}/src/
@@ -108,6 +129,8 @@ fi
 
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 
+mkdir -p ${BOOGIE_DIR}
+
 # Get Boogie
 hg clone -r f59ad49fc3a4 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
@@ -125,6 +148,8 @@ fi
 # Corral
 
 if [ ${INSTALL_CORRAL} -eq 1 ]; then
+
+mkdir -p ${CORRAL_DIR}
 
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
@@ -166,6 +191,10 @@ fi
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
 
+mkdir -p ${LLVM_DIR}/src
+mkdir -p ${LLVM_DIR}/build
+mkdir -p ${LLVM_DIR}/install
+
 # Get llvm and extract
 wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz
 wget http://llvm.org/releases/3.3/cfe-3.3.src.tar.gz
@@ -192,6 +221,10 @@ fi
 # SMACK
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
+
+mkdir -p ${SMACK_DIR}/src
+mkdir -p ${SMACK_DIR}/build
+mkdir -p ${SMACK_DIR}/install
 
 # Get SMACK
 git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
