@@ -2,6 +2,7 @@
 
 import subprocess
 import re
+import time
 
 # list of regression tests with the expected outputs
 tests = [
@@ -32,15 +33,17 @@ def runtests():
       print "{0:>25} {1:>8}:".format(test[0], "(" + mem + ")"),
 
       # invoke SMACK
+      t0 = time.time()
       p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline',
                             '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
                             stdout=subprocess.PIPE)
       
       smackOutput = p.communicate()[0]
+      elapsed = time.time() - t0
 
       # check SMACK output
       if re.search(test[1], smackOutput):
-        print green('PASSED')
+        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
         passed += 1
       else:
         print red('FAILED')
