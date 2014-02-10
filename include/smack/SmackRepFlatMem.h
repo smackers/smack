@@ -17,15 +17,17 @@ using namespace std;
 
 class SmackRepFlatMem : public SmackRep {
 
-  int globalsTop;
+  int bottom;
 
 public:
   static const string CURRADDR;
+  static const string BOTTOM;
+  static const string IS_EXT;
   static const string PTR_TYPE;
   static const string POINTERS;  
 
 public:
-  SmackRepFlatMem(llvm::AliasAnalysis* aa) : SmackRep(aa), globalsTop(0) {}
+  SmackRepFlatMem(llvm::AliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();

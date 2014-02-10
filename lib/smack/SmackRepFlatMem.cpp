@@ -9,6 +9,8 @@
 namespace smack {
 
 const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
+const string SmackRepFlatMem::BOTTOM = "$GLOBALS_BOTTOM";
+const string SmackRepFlatMem::IS_EXT = "$isExternal";
 const string SmackRepFlatMem::PTR_TYPE = "int";
   
 vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
@@ -17,36 +19,42 @@ vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
   vector<Decl*> decls;
   string name = id(g);
   decls.push_back(Decl::constant(name, getPtrType(), true));
-
-  unsigned size;
   
-  // NOTE: all global variables have pointer type in LLVM
-  if (g->getType()->isPointerTy()) {
-    llvm::PointerType *t = (llvm::PointerType*) g->getType();
+  if (((llvm::GlobalVariable*)g)->hasInitializer()) {
+    unsigned size;
+  
+    // NOTE: all global variables have pointer type in LLVM
+    if (g->getType()->isPointerTy()) {
+      llvm::PointerType *t = (llvm::PointerType*) g->getType();
     
-    // in case we can determine the size of the element type ...
-    if (t->getElementType()->isSized())
-      size = storageSize(t->getElementType());
+      // in case we can determine the size of the element type ...
+      if (t->getElementType()->isSized())
+        size = storageSize(t->getElementType());
     
-    // otherwise (e.g. for function declarations), use a default size
-    else
-      size = 1024;
+      // otherwise (e.g. for function declarations), use a default size
+      else
+        size = 1024;
     
-  } else
-    size = storageSize(g->getType());
+    } else
+      size = storageSize(g->getType());
 
-  globalsTop -= size;
+    bottom -= size;
 
-  decls.push_back(Decl::axiom(
-                    Expr::eq(Expr::id(name), Expr::lit(globalsTop))));
-  // Expr::fn("$slt",
-  //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-  //     Expr::lit(globalsTop)) ));
+    decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
+    // Expr::fn("$slt",
+    //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+    //     Expr::lit(bottom)) ));
+    
+  } else {
+    // A global variable is external iff it has no initializer
+    decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+  }
+
   return decls;
 }
 
 const Expr* SmackRepFlatMem::declareIsExternal(const Expr* e) {
-  return Expr::lt(e,Expr::lit(globalsTop));
+  return Expr::fn(IS_EXT,e);
 }
 
 vector<string> SmackRepFlatMem::getModifies() {
@@ -109,7 +117,12 @@ const string SmackRepFlatMem::POINTERS =
   "axiom (forall i:int :: $i2p(i) == i);\n";
 
 string SmackRepFlatMem::memoryModel() {
-  return POINTERS;
+  stringstream s;
+  s << POINTERS;
+  s << "function " << IS_EXT << "(p: int) returns (bool) { p < " << bottom - 32768 << " }" << endl;
+  s << "const " << BOTTOM << ": int;" << endl;
+  s << "axiom " << BOTTOM << " == " << bottom << ";" << endl;
+  return s.str();
 }
 
 string SmackRepFlatMem::mallocProc() {
