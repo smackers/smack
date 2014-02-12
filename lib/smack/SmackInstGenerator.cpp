@@ -443,7 +443,7 @@ void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& ci) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& bo) {
   processInstruction(bo);
-  currBlock->addStmt(Stmt::assign(rep.expr(&bo), rep.op(bo)));
+  currBlock->addStmt(Stmt::assign(rep.expr(&bo), rep.op(bo.getOpcode(), &bo)));
 }
 
 void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {

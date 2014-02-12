@@ -154,7 +154,7 @@ public:
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
   bool isBool(llvm::Type* t);
-  bool isBool(llvm::Value* v);
+  bool isBool(const llvm::Value* v);
   bool isFloat(llvm::Type* t);
   bool isFloat(llvm::Value* v);
   string type(llvm::Type* t);
@@ -194,7 +194,7 @@ public:
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
   string getString(const llvm::Value* v);
-  const Expr* op(llvm::BinaryOperator& o);
+  const Expr* op(unsigned opcode, const llvm::User* o);
   const Expr* pred(llvm::CmpInst& ci);
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);

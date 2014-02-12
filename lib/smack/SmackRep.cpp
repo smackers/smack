@@ -243,7 +243,7 @@ bool SmackRep::isBool(llvm::Type* t) {
   return t->isIntegerTy(1);
 }
 
-bool SmackRep::isBool(llvm::Value* v) {
+bool SmackRep::isBool(const llvm::Value* v) {
   return isBool(v->getType());
 }
 
@@ -497,6 +497,9 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         // TODO test this out, formerly Expr::id("$UNDEF");
         return p2i(expr(constantExpr->getOperand(0)));
 
+      else if (Instruction::isBinaryOp(constantExpr->getOpcode()))
+        return op(constantExpr->getOpcode(), constantExpr);
+
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
         assert(false && "constant expression of this type not supported");
@@ -537,9 +540,9 @@ string SmackRep::getString(const llvm::Value* v) {
   return "";
 }
 
-const Expr* SmackRep::op(llvm::BinaryOperator& o) {
+const Expr* SmackRep::op(unsigned opcode, const llvm::User* o) {
   string op;
-  switch (o.getOpcode()) {
+  switch (opcode) {
     using llvm::Instruction;
 
   // Integer operations
@@ -604,14 +607,14 @@ const Expr* SmackRep::op(llvm::BinaryOperator& o) {
     assert(false && "unexpected predicate.");
   }
   llvm::Value
-  *l = o.getOperand(0),
-   *r = o.getOperand(1);
+  *l = o->getOperand(0),
+  *r = o->getOperand(1);
 
   const Expr* e = Expr::fn(op,
                            (isBool(l) ? b2i(expr(l)) : ptr2val(expr(l))),
                            (isBool(r) ? b2i(expr(r)) : ptr2val(expr(r))));
 
-  return isBool(&o) ? i2b(e) : val2ptr(e);
+  return isBool(o) ? i2b(e) : val2ptr(e);
 }
 
 const Expr* SmackRep::pred(llvm::CmpInst& ci) {
