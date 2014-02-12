@@ -109,7 +109,7 @@ string SmackRep2dMem::mallocProc() {
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $malloc(obj_size: int) returns (new: int)" << endl;
     s << "  modifies $Alloc;" << endl;
-    s << "  requires obj_size > 0;" << endl;
+    s << "  free requires obj_size >= 0;" << endl;
     s << "{" << endl;
     s << "  assume $Alloc[$obj(new)] = $UNALLOCATED;" << endl;
     s << "  assume !$static($obj(new));" << endl;
@@ -120,6 +120,7 @@ string SmackRep2dMem::mallocProc() {
   } else {
     s << "procedure $malloc(obj_size: int) returns (new: $ptr);" << endl;
     s << "modifies $Alloc;" << endl;
+    s << "free requires obj_size >= 0;" << endl;
     s << "ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;" << endl;
     s << "ensures !$static($obj(new));" << endl;
     s << "ensures $off(new) == 0;" << endl;
@@ -134,18 +135,18 @@ string SmackRep2dMem::freeProc() {
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $free(pointer: $ptr)" << endl;
     s << "  modifies $Alloc;" << endl;
-    s << "  requires $ALLOC[$obj(pointer)] == $ALLOCATED;" << endl;
+    s << "  // requires $ALLOC[$obj(pointer)] == $ALLOCATED;" << endl;
     s << "  // requires !$static($obj(pointer);" << endl;
-    s << "  requires $off(pointer) == 0;" << endl;
+    s << "  // requires $off(pointer) == 0;" << endl;
     s << "{" << endl;
     s << "  $Alloc[$obj(new)] := $UNALLOCATED;" << endl;
     s << "}" << endl;
   } else {   
     s << "procedure $free(pointer: $ptr);" << endl;
     s << "modifies $Alloc;" << endl;
-    s << "requires $Alloc[$obj(pointer)] == $ALLOCATED;" << endl;
+    s << "// requires $Alloc[$obj(pointer)] == $ALLOCATED;" << endl;
     s << "// requires !$static($obj(pointer));" << endl;
-    s << "requires $off(pointer) == 0;" << endl;
+    s << "// requires $off(pointer) == 0;" << endl;
     s << "ensures $Alloc[$obj(pointer)] != $UNALLOCATED;" << endl;
     s << "ensures (forall x:$ref :: {$Alloc[x]} $obj(pointer) == x || old($Alloc)[x] == $Alloc[x]);" << endl;
   }
@@ -157,7 +158,7 @@ string SmackRep2dMem::allocaProc() {
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $alloca(obj_size: int) returns (new: $ptr)" << endl;
     s << "  modifies $Alloc;" << endl;
-    s << "  requires obj_size > 0;" << endl;
+    s << "  free requires obj_size >= 0;" << endl;
     s << "{" << endl;
     s << "  assume $Alloc[$obj(new)] == $UNALLOCATED;" << endl;
     s << "  assume !$static($obj(new));" << endl;
@@ -168,6 +169,7 @@ string SmackRep2dMem::allocaProc() {
   } else {   
     s << "procedure $alloca(obj_size: int) returns (new: $ptr);" << endl;
     s << "modifies $Alloc;" << endl;
+    s << "free requires obj_size >= 0;" << endl;
     s << "ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;" << endl;
     s << "ensures !$static($obj(new));" << endl;
     s << "ensures $off(new) == 0;" << endl;
