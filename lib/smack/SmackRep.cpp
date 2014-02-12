@@ -213,7 +213,10 @@ Regex BPL_KW(
   "|implementation|where|returns|assume|assert|havoc|call|return|while"
   "|break|goto|if|else|div)$");
 Regex SMACK_NAME(".*__SMACK_.*");
-Regex PROC_IGNORE("^(malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*)$");
+Regex PROC_IGNORE("^("
+  "malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*|"
+  "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
+")$");
 
 bool isBplKeyword(string s) {
   return BPL_KW.match(s);
