@@ -498,7 +498,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return p2i(expr(constantExpr->getOperand(0)));
 
       else if (Instruction::isBinaryOp(constantExpr->getOpcode()))
-        return op(constantExpr->getOpcode(), constantExpr);
+        return op(constantExpr);
 
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -540,8 +540,19 @@ string SmackRep::getString(const llvm::Value* v) {
   return "";
 }
 
-const Expr* SmackRep::op(unsigned opcode, const llvm::User* o) {
+const Expr* SmackRep::op(const llvm::User* v) {
+  using namespace llvm;
+  unsigned opcode;
   string op;
+
+  if (const BinaryOperator* bo = dyn_cast<const BinaryOperator>(v))
+    opcode = bo->getOpcode();
+
+  else if (const ConstantExpr* ce = dyn_cast<const ConstantExpr>(v))
+    opcode = ce->getOpcode();
+
+  else assert(false && "unexpected operator value.");
+
   switch (opcode) {
     using llvm::Instruction;
 
@@ -607,14 +618,14 @@ const Expr* SmackRep::op(unsigned opcode, const llvm::User* o) {
     assert(false && "unexpected predicate.");
   }
   llvm::Value
-  *l = o->getOperand(0),
-  *r = o->getOperand(1);
+  *l = v->getOperand(0),
+   *r = v->getOperand(1);
 
   const Expr* e = Expr::fn(op,
                            (isBool(l) ? b2i(expr(l)) : ptr2val(expr(l))),
                            (isBool(r) ? b2i(expr(r)) : ptr2val(expr(r))));
 
-  return isBool(o) ? i2b(e) : val2ptr(e);
+  return isBool(v) ? i2b(e) : val2ptr(e);
 }
 
 const Expr* SmackRep::pred(llvm::CmpInst& ci) {

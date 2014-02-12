@@ -194,7 +194,7 @@ public:
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
   string getString(const llvm::Value* v);
-  const Expr* op(unsigned opcode, const llvm::User* o);
+  const Expr* op(const llvm::User* v);
   const Expr* pred(llvm::CmpInst& ci);
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
