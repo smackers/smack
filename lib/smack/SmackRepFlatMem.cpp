@@ -142,6 +142,7 @@ string SmackRepFlatMem::mallocProc() {
     return
       "procedure $malloc(n: int) returns (p: int);\n"
       "modifies $CurrAddr, $Alloc;\n"
+      "ensures p > 0;\n"
       "ensures n > 0 ==> $size(p) == n;\n"
       "ensures n <= 0 ==> $size(p) == 0;\n"
       "ensures p == old($CurrAddr);\n"
@@ -185,6 +186,7 @@ string SmackRepFlatMem::allocaProc() {
     return
       "procedure $alloca(n: int) returns (p: int);\n"
       "modifies $CurrAddr, $Alloc;\n"
+      "ensures p > 0;\n"
       "ensures n > 0 ==> $size(p) == n;\n"
       "ensures n <= 0 ==> $size(p) == 0;\n"
       "ensures p == old($CurrAddr);\n"
