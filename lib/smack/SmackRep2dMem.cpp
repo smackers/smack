@@ -104,79 +104,72 @@ string SmackRep2dMem::memoryModel() {
 }
 
 string SmackRep2dMem::mallocProc() {
-  stringstream s;
   
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $malloc(obj_size: int) returns (new: int)" << endl;
-    s << "  modifies $Alloc;" << endl;
-    s << "  free requires obj_size >= 0;" << endl;
-    s << "{" << endl;
-    s << "  assume $Alloc[$obj(new)] = $UNALLOCATED;" << endl;
-    s << "  assume !$static($obj(new));" << endl;
-    s << "  assume $off(new) == 0;" << endl;
-    s << "  assume $size($obj(new)) == obj_size;" << endl;
-    s << "  $Alloc[$obj(new)] := $ALLOCATED;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $malloc(obj_size: int) returns (new: $ptr);" << endl;
-    s << "modifies $Alloc;" << endl;
-    s << "free requires obj_size >= 0;" << endl;
-    s << "ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;" << endl;
-    s << "ensures !$static($obj(new));" << endl;
-    s << "ensures $off(new) == 0;" << endl;
-    s << "ensures $size($obj(new)) == obj_size;" << endl;
-    s << "ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);" << endl;
-  }  
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return
+      "procedure $malloc(n: int) returns (p: $ptr)\n"
+      "modifies $Alloc;\n"
+      "{\n"
+      "  assume n > 0 ==> $size($obj(p)) == n;\n"
+      "  assume n <= 0 ==> $size($obj(p)) == 0;\n"
+      "  assume !$static($obj(p));\n"
+      "  assume $Alloc[$obj(p)] == $UNALLOCATED;\n"
+      "  assume $off(p) == 0;\n"
+      "  $Alloc[$obj(p)] := $ALLOCATED;\n"
+      "}\n";
+  else
+    return
+      "procedure $malloc(n: int) returns (p: $ptr);\n"
+      "modifies $Alloc;\n"
+      "ensures $size($obj(p)) >= 0;\n"
+      "ensures n >= 0 ==> $size($obj(p)) == n;\n"
+      "ensures old($Alloc)[$obj(p)] == $UNALLOCATED;\n"
+      "ensures $Alloc[$obj(p)] == $ALLOCATED;\n"
+      "ensures !$static($obj(p));\n"
+      "ensures $off(p) == 0;\n"
+      "ensures (forall r: $ref :: {$Alloc[r]} r != $obj(p) ==> $Alloc[r] == old($Alloc)[r]);\n";
 }
 
 string SmackRep2dMem::freeProc() {
-  stringstream s;
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $free(pointer: $ptr)" << endl;
-    s << "  modifies $Alloc;" << endl;
-    s << "  // requires $ALLOC[$obj(pointer)] == $ALLOCATED;" << endl;
-    s << "  // requires !$static($obj(pointer);" << endl;
-    s << "  // requires $off(pointer) == 0;" << endl;
-    s << "{" << endl;
-    s << "  $Alloc[$obj(new)] := $UNALLOCATED;" << endl;
-    s << "}" << endl;
-  } else {   
-    s << "procedure $free(pointer: $ptr);" << endl;
-    s << "modifies $Alloc;" << endl;
-    s << "// requires $Alloc[$obj(pointer)] == $ALLOCATED;" << endl;
-    s << "// requires !$static($obj(pointer));" << endl;
-    s << "// requires $off(pointer) == 0;" << endl;
-    s << "ensures $Alloc[$obj(pointer)] != $UNALLOCATED;" << endl;
-    s << "ensures (forall x:$ref :: {$Alloc[x]} $obj(pointer) == x || old($Alloc)[x] == $Alloc[x]);" << endl;
-  }
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return
+      "procedure $free(p: $ptr)\n"
+      "modifies $Alloc;\n"
+      "{\n"
+      "  $Alloc[$obj(p)] := $UNALLOCATED;\n"
+      "}\n";
+  else
+    return
+      "procedure $free(p: $ptr);\n"
+      "modifies $Alloc;\n"
+      "ensures $Alloc[$obj(p)] == $UNALLOCATED;\n"
+      "ensures (forall r: $ref :: {$Alloc[r]} r != $obj(p) ==> $Alloc[r] == old($Alloc)[r]);\n";
 }
 
 string SmackRep2dMem::allocaProc() {
-  stringstream s;
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $alloca(obj_size: int) returns (new: $ptr)" << endl;
-    s << "  modifies $Alloc;" << endl;
-    s << "  free requires obj_size >= 0;" << endl;
-    s << "{" << endl;
-    s << "  assume $Alloc[$obj(new)] == $UNALLOCATED;" << endl;
-    s << "  assume !$static($obj(new));" << endl;
-    s << "  assume $off(new) == 0;" << endl;
-    s << "  assume $size($obj(new)) == obj_size;" << endl;
-    s << "  $Alloc[$obj(new)] := $ALLOCATED;" << endl;
-    s << "}" << endl;
-  } else {   
-    s << "procedure $alloca(obj_size: int) returns (new: $ptr);" << endl;
-    s << "modifies $Alloc;" << endl;
-    s << "free requires obj_size >= 0;" << endl;
-    s << "ensures old($Alloc)[$obj(new)] == $UNALLOCATED && $Alloc[$obj(new)] == $ALLOCATED;" << endl;
-    s << "ensures !$static($obj(new));" << endl;
-    s << "ensures $off(new) == 0;" << endl;
-    s << "ensures $size($obj(new)) == obj_size;" << endl;
-    s << "ensures (forall x_obj:$ref :: {$Alloc[x_obj]} x_obj == $obj(new) || old($Alloc)[x_obj] == $Alloc[x_obj]);" << endl;
-  }
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return
+      "procedure $alloca(n: int) returns (p: $ptr)\n"
+      "modifies $Alloc;\n"
+      "{\n"
+      "  assume n > 0 ==> $size($obj(p)) == n;\n"
+      "  assume n <= 0 ==> $size($obj(p)) == 0;\n"
+      "  assume !$static($obj(p));\n"
+      "  assume $Alloc[$obj(p)] == $UNALLOCATED;\n"
+      "  assume $off(p) == 0;\n"
+      "  $Alloc[$obj(p)] := $ALLOCATED;\n"
+      "}\n";
+  else
+    return
+      "procedure $alloca(n: int) returns (p: $ptr);\n"
+      "modifies $Alloc;\n"
+      "ensures $size($obj(p)) >= 0;\n"
+      "ensures n >= 0 ==> $size($obj(p)) == n;\n"
+      "ensures old($Alloc)[$obj(p)] == $UNALLOCATED;\n"
+      "ensures $Alloc[$obj(p)] == $ALLOCATED;\n"
+      "ensures !$static($obj(p));\n"
+      "ensures $off(p) == 0;\n"
+      "ensures (forall r: $ref :: {$Alloc[r]} r != $obj(p) ==> $Alloc[r] == old($Alloc)[r]);\n";
 }
 
 string SmackRep2dMem::memcpyProc(int dstReg, int srcReg) {

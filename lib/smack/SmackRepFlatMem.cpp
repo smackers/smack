@@ -126,79 +126,73 @@ string SmackRepFlatMem::memoryModel() {
 }
 
 string SmackRepFlatMem::mallocProc() {
-  stringstream s;
-  
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $malloc(obj_size: int) returns (new: int)" << endl;
-    s << "  modifies $CurrAddr, $Alloc;" << endl;
-    s << "  free requires obj_size >= 0;" << endl;
-    s << "{" << endl;
-    s << "  assume $CurrAddr > 0;" << endl;
-    s << "  new := $CurrAddr;" << endl;
-    s << "  $CurrAddr := $CurrAddr + obj_size + 1;" << endl;
-    s << "  $Alloc[new] := true;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $malloc(obj_size: int) returns (new: int);" << endl;
-    s << "modifies $CurrAddr, $Alloc;" << endl;
-    s << "free requires obj_size >= 0;" << endl;
-    s << "ensures 0 < old($CurrAddr);" << endl;
-    s << "ensures new == old($CurrAddr);" << endl;
-    s << "ensures $CurrAddr > old($CurrAddr) + obj_size + 1;" << endl;
-    s << "ensures $size(new) == obj_size;" << endl;
-    s << "ensures (forall x:int :: new <= x && x < new + obj_size + 1 ==> $obj(x) == new);" << endl;
-    s << "ensures $Alloc[new];" << endl;
-    s << "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);" << endl;;
-  }  
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return 
+      "procedure $malloc(n: int) returns (p: int)\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "{\n"
+      "  assume $CurrAddr > 0;\n"
+      "  p := $CurrAddr;\n"
+      "  assume n > 0 ==> $size(p) == n;\n"
+      "  assume n <= 0 ==> $size(p) == 0;\n"
+      "  $CurrAddr := $CurrAddr + $size(p) + 1;\n"
+      "  $Alloc[p] := true;\n"
+      "}\n";
+  else    
+    return
+      "procedure $malloc(n: int) returns (p: int);\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "ensures n <= 0 ==> $size(p) == 0;\n"
+      "ensures n > 0 ==> $size(p) == n;\n"
+      "ensures p == old($CurrAddr);\n"
+      "ensures $CurrAddr > old($CurrAddr);\n"
+      "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
+      "ensures $Alloc[p];\n"
+      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::freeProc() {
-  stringstream s;
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $free(pointer: int)" << endl;
-    s << "  modifies $Alloc;" << endl;
-    s << "  // requires $Alloc[pointer];" << endl;
-    s << "  // requires $obj(pointer) == pointer;" << endl;
-    s << "{" << endl;
-    s << "  $Alloc[pointer] := false;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $free(pointer: int);" << endl;
-    s << "modifies $Alloc;" << endl;
-    s << "// requires $Alloc[pointer];" << endl;
-    s << "// requires $obj(pointer) == pointer;" << endl;
-    s << "ensures !$Alloc[pointer];" << endl;
-    s << "ensures (forall x:int :: {$Alloc[x]} x == pointer || old($Alloc)[x] == $Alloc[x]);" << endl;
-  }
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return
+      "procedure $free(p: int)\n"
+      "modifies $Alloc;\n"
+      "{\n"
+      "  $Alloc[p] := false;\n"
+      "}\n";  
+  else
+    return
+      "procedure $free(p: int);\n"
+      "modifies $Alloc;\n"
+      "ensures !$Alloc[p];\n"
+      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n";
 }
 
 string SmackRepFlatMem::allocaProc() {
-  stringstream s;
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $alloca(obj_size: int) returns (new: int)" << endl;
-    s << "  modifies $CurrAddr, $Alloc;" << endl;
-    s << "  free requires obj_size >= 0;" << endl;
-    s << "{" << endl;
-    s << "  assume $CurrAddr > 0;" << endl;
-    s << "  new := $CurrAddr;" << endl;
-    s << "  $CurrAddr := $CurrAddr + obj_size + 1;" << endl;
-    s << "  $Alloc[new] := true;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $alloca(obj_size: int) returns (new: int);" << endl;
-    s << "modifies $CurrAddr, $Alloc;" << endl;
-    s << "free requires obj_size >= 0;" << endl;
-    s << "ensures 0 < old($CurrAddr);" << endl;
-    s << "ensures new == old($CurrAddr);" << endl;
-    s << "ensures $CurrAddr > old($CurrAddr) + obj_size + 1;" << endl;
-    s << "ensures $size(new) == obj_size;" << endl;
-    s << "ensures (forall x:int :: new <= x && x < new + obj_size + 1 ==> $obj(x) == new);" << endl;
-    s << "ensures $Alloc[new];" << endl;
-    s << "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);" << endl;
-  }
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return 
+      "procedure $alloca(n: int) returns (p: int)\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "{\n"
+      "  assume $CurrAddr > 0;\n"
+      "  p := $CurrAddr;\n"
+      "  assume n > 0 ==> $size(p) == n;\n"
+      "  assume n <= 0 ==> $size(p) == 0;\n"
+      "  $CurrAddr := $CurrAddr + $size(p) + 1;\n"
+      "  $Alloc[p] := true;\n"
+      "}\n";
+  else    
+    return
+      "procedure $alloca(n: int) returns (p: int);\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "ensures n <= 0 ==> $size(p) == 0;\n"
+      "ensures n > 0 ==> $size(p) == n;\n"
+      "ensures p == old($CurrAddr);\n"
+      "ensures $CurrAddr > old($CurrAddr);\n"
+      "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
+      "ensures $Alloc[p];\n"
+      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {

@@ -30,15 +30,17 @@ def llvm2bplParser():
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
                       help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
+  parser.add_argument('--mem-impls', dest='memimpls', action="store_true", default=False,
+                      help='use procedure implementations for memory allocation')
   return parser
 
 
-def llvm2bpl(infile, debugFlag, memmod):
-
-  if debugFlag:
-    p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, '-debug', infile.name])
-  else:
-    p = subprocess.Popen(['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name])
+def llvm2bpl(infile, debugFlag, memmod, memImpls):
+    
+  cmd = ['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name]
+  if debugFlag: cmd.append('-debug')
+  if memImpls: cmd.append('-mem-mod-impls')
+  p = subprocess.Popen(cmd)
 
   p.wait()
   if p.returncode != 0:
@@ -60,7 +62,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  bpl = llvm2bpl(args.infile, args.debug, args.memmod)
+  bpl = llvm2bpl(args.infile, args.debug, args.memmod, args.memimpls)
 
   # write final output
   args.outfile.write(bpl)
