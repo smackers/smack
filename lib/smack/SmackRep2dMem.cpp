@@ -121,8 +121,8 @@ string SmackRep2dMem::mallocProc() {
     return
       "procedure $malloc(n: int) returns (p: $ptr);\n"
       "modifies $Alloc;\n"
-      "ensures $size($obj(p)) >= 0;\n"
-      "ensures n >= 0 ==> $size($obj(p)) == n;\n"
+      "ensures n > 0 ==> $size($obj(p)) == n;\n"
+      "ensures n <= 0 ==> $size($obj(p)) == 0;\n"
       "ensures old($Alloc)[$obj(p)] == $UNALLOCATED;\n"
       "ensures $Alloc[$obj(p)] == $ALLOCATED;\n"
       "ensures !$static($obj(p));\n"
@@ -163,8 +163,8 @@ string SmackRep2dMem::allocaProc() {
     return
       "procedure $alloca(n: int) returns (p: $ptr);\n"
       "modifies $Alloc;\n"
-      "ensures $size($obj(p)) >= 0;\n"
-      "ensures n >= 0 ==> $size($obj(p)) == n;\n"
+      "ensures n > 0 ==> $size($obj(p)) == n;\n"
+      "ensures n <= 0 ==> $size($obj(p)) == 0;\n"
       "ensures old($Alloc)[$obj(p)] == $UNALLOCATED;\n"
       "ensures $Alloc[$obj(p)] == $ALLOCATED;\n"
       "ensures !$static($obj(p));\n"
@@ -193,4 +193,3 @@ string SmackRep2dMem::memcpyProc(int dstReg, int srcReg) {
 
 
 } // namespace smack
-
