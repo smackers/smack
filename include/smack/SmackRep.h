@@ -209,7 +209,7 @@ public:
 
   virtual vector<Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
-  void addStaticInit(const llvm::Value* g);
+  unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
   bool hasStaticInits();
   Decl* getStaticInit();

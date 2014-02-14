@@ -13,12 +13,24 @@ const string SmackRep2dMem::REF_TYPE = "$ref";
 const string SmackRep2dMem::STATIC = "$static";
 const string SmackRep2dMem::EXTERN = "$extern";
 
-vector<Decl*> SmackRep2dMem::globalDecl(const llvm::Value* g) {
-  addStaticInit(g);
-
+vector<Decl*> SmackRep2dMem::globalDecl(const llvm::Value* v) {
+  using namespace llvm;
   vector<Decl*> decls;
-  string name = id(g);
-  decls.push_back(Decl::constant(name, REF_TYPE, true));
+  vector<const Attr*> ax;
+  string name = id(v);
+  
+  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {  
+    if (g->hasInitializer()) {
+      const llvm::Constant* init = g->getInitializer();
+      unsigned numElems = numElements(init);
+      if (numElems > 1)
+        ax.push_back(Attr::attr("count",numElems));  
+      addInit(getRegion(g), expr(g), init);
+    } else {
+      decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+    }
+  }
+  decls.push_back(Decl::constant(name, REF_TYPE, ax, true));
   decls.push_back(Decl::axiom(Expr::fn(SmackRep2dMem::STATIC, Expr::id(name))));
   return decls;
 }
@@ -62,7 +74,6 @@ const string SmackRep2dMem::POINTERS =
   "function $ptr($ref, int) returns ($ptr);\n"
   "function $static($ref) returns (bool);\n"
   "function $extern($ref) returns (bool);\n"
-  "function $size($ref) returns (int);\n"
   "function $obj($ptr) returns ($ref);\n"
   "function $off($ptr) returns (int);\n"
   "\n"
@@ -110,8 +121,6 @@ string SmackRep2dMem::mallocProc() {
       "procedure $malloc(n: int) returns (p: $ptr)\n"
       "modifies $Alloc;\n"
       "{\n"
-      "  assume n > 0 ==> $size($obj(p)) == n;\n"
-      "  assume n <= 0 ==> $size($obj(p)) == 0;\n"
       "  assume !$static($obj(p));\n"
       "  assume $Alloc[$obj(p)] == $UNALLOCATED;\n"
       "  assume $off(p) == 0;\n"
@@ -121,8 +130,6 @@ string SmackRep2dMem::mallocProc() {
     return
       "procedure $malloc(n: int) returns (p: $ptr);\n"
       "modifies $Alloc;\n"
-      "ensures n > 0 ==> $size($obj(p)) == n;\n"
-      "ensures n <= 0 ==> $size($obj(p)) == 0;\n"
       "ensures old($Alloc)[$obj(p)] == $UNALLOCATED;\n"
       "ensures $Alloc[$obj(p)] == $ALLOCATED;\n"
       "ensures !$static($obj(p));\n"
@@ -152,8 +159,6 @@ string SmackRep2dMem::allocaProc() {
       "procedure $alloca(n: int) returns (p: $ptr)\n"
       "modifies $Alloc;\n"
       "{\n"
-      "  assume n > 0 ==> $size($obj(p)) == n;\n"
-      "  assume n <= 0 ==> $size($obj(p)) == 0;\n"
       "  assume !$static($obj(p));\n"
       "  assume $Alloc[$obj(p)] == $UNALLOCATED;\n"
       "  assume $off(p) == 0;\n"
@@ -163,8 +168,6 @@ string SmackRep2dMem::allocaProc() {
     return
       "procedure $alloca(n: int) returns (p: $ptr);\n"
       "modifies $Alloc;\n"
-      "ensures n > 0 ==> $size($obj(p)) == n;\n"
-      "ensures n <= 0 ==> $size($obj(p)) == 0;\n"
       "ensures old($Alloc)[$obj(p)] == $UNALLOCATED;\n"
       "ensures $Alloc[$obj(p)] == $ALLOCATED;\n"
       "ensures !$static($obj(p));\n"

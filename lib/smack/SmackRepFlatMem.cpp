@@ -13,43 +13,49 @@ const string SmackRepFlatMem::BOTTOM = "$GLOBALS_BOTTOM";
 const string SmackRepFlatMem::IS_EXT = "$isExternal";
 const string SmackRepFlatMem::PTR_TYPE = "int";
   
-vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
-  addStaticInit(g);
-
+vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
+  using namespace llvm;
   vector<Decl*> decls;
-  string name = id(g);
-  decls.push_back(Decl::constant(name, getPtrType(), true));
+  vector<const Attr*> ax;
+  string name = id(v);
   
-  if (((llvm::GlobalVariable*)g)->hasInitializer()) {
-    unsigned size;
+  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
+    if (g->hasInitializer()) {
+      const Constant* init = g->getInitializer();
+      unsigned numElems = numElements(init);
+      unsigned size;
   
-    // NOTE: all global variables have pointer type in LLVM
-    if (g->getType()->isPointerTy()) {
-      llvm::PointerType *t = (llvm::PointerType*) g->getType();
+      // NOTE: all global variables have pointer type in LLVM
+      if (g->getType()->isPointerTy()) {
+        PointerType *t = (PointerType*) g->getType();
     
-      // in case we can determine the size of the element type ...
-      if (t->getElementType()->isSized())
-        size = storageSize(t->getElementType());
+        // in case we can determine the size of the element type ...
+        if (t->getElementType()->isSized())
+          size = storageSize(t->getElementType());
     
-      // otherwise (e.g. for function declarations), use a default size
-      else
-        size = 1024;
+        // otherwise (e.g. for function declarations), use a default size
+        else
+          size = 1024;
     
-    } else
-      size = storageSize(g->getType());
+      } else
+        size = storageSize(g->getType());
 
-    bottom -= size;
+      bottom -= size;
 
-    decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
-    // Expr::fn("$slt",
-    //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-    //     Expr::lit(bottom)) ));
+      if (numElems > 1)
+        ax.push_back(Attr::attr("count",numElems));
     
-  } else {
-    // A global variable is external iff it has no initializer
-    decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+      decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
+      addInit(getRegion(g), expr(g), init);
+      // Expr::fn("$slt",
+      //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+      //     Expr::lit(bottom)) ));
+    
+    } else {
+      decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+    }
   }
-
+  decls.push_back(Decl::constant(name, getPtrType(), ax, true));
   return decls;
 }
 
@@ -88,7 +94,6 @@ const string SmackRepFlatMem::POINTERS =
   "// SMACK Flat Memory Model\n"
   "\n"
   "function $ptr(obj:int, off:int) returns (int) {obj + off}\n"
-  "function $size(int) returns (int);\n"
   "function $obj(int) returns (int);\n"
   "function $off(ptr:int) returns (int) {ptr}\n"
   "\n"
@@ -133,9 +138,11 @@ string SmackRepFlatMem::mallocProc() {
       "{\n"
       "  assume $CurrAddr > 0;\n"
       "  p := $CurrAddr;\n"
-      "  assume n > 0 ==> $size(p) == n;\n"
-      "  assume n <= 0 ==> $size(p) == 0;\n"
-      "  $CurrAddr := $CurrAddr + $size(p) + 1;\n"
+      "  if (n > 0) {\n"
+      "    $CurrAddr := $CurrAddr + n;\n"
+      "  } else {\n"
+      "    $CurrAddr := $CurrAddr + 1;\n"
+      "  }\n"
       "  $Alloc[p] := true;\n"
       "}\n";
   else    
@@ -143,8 +150,6 @@ string SmackRepFlatMem::mallocProc() {
       "procedure $malloc(n: int) returns (p: int);\n"
       "modifies $CurrAddr, $Alloc;\n"
       "ensures p > 0;\n"
-      "ensures n > 0 ==> $size(p) == n;\n"
-      "ensures n <= 0 ==> $size(p) == 0;\n"
       "ensures p == old($CurrAddr);\n"
       "ensures $CurrAddr > old($CurrAddr);\n"
       "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
@@ -177,9 +182,11 @@ string SmackRepFlatMem::allocaProc() {
       "{\n"
       "  assume $CurrAddr > 0;\n"
       "  p := $CurrAddr;\n"
-      "  assume n > 0 ==> $size(p) == n;\n"
-      "  assume n <= 0 ==> $size(p) == 0;\n"
-      "  $CurrAddr := $CurrAddr + $size(p) + 1;\n"
+      "  if (n > 0) {\n"
+      "    $CurrAddr := $CurrAddr + n;\n"
+      "  } else {\n"
+      "    $CurrAddr := $CurrAddr + 1;\n"
+      "  }\n"
       "  $Alloc[p] := true;\n"
       "}\n";
   else    
@@ -187,8 +194,6 @@ string SmackRepFlatMem::allocaProc() {
       "procedure $alloca(n: int) returns (p: int);\n"
       "modifies $CurrAddr, $Alloc;\n"
       "ensures p > 0;\n"
-      "ensures n > 0 ==> $size(p) == n;\n"
-      "ensures n <= 0 ==> $size(p) == 0;\n"
       "ensures p == old($CurrAddr);\n"
       "ensures $CurrAddr > old($CurrAddr);\n"
       "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"

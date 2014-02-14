@@ -266,7 +266,9 @@ public:
 protected:
   unsigned id;
   string name;
-  Decl(string n) : id(uniqueId++), name(n) { }
+  vector<const Attr*> attrs;
+  Decl(string n, vector<const Attr*> ax) : id(uniqueId++), name(n), attrs(ax) { }
+  Decl(string n) : id(uniqueId++), name(n), attrs(vector<const Attr*>()) { }
 public:
   virtual void print(ostream& os) const = 0;
   unsigned getId() const { return id; }
@@ -277,6 +279,7 @@ public:
   static Decl* axiom(const Expr* e);
   static Decl* constant(string name, string type);
   static Decl* constant(string name, string type, bool unique);
+  static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
   static Decl* variable(string name, string type);
   static Decl* procedure(Program& p, string name);
   static Decl* procedure(Program& p, string name,
@@ -317,8 +320,7 @@ class ConstDecl : public Decl {
   string type;
   bool unique;
 public:
-  ConstDecl(string n, string t, bool u) : Decl(n), type(t), unique(u) {}
-  ConstDecl(string n, string t) : Decl(n), type(t), unique(false) {}
+  ConstDecl(string n, string t, vector<const Attr*> ax, bool u) : Decl(n,ax), type(t), unique(u) {}
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
