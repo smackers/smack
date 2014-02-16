@@ -32,6 +32,8 @@ const string SmackRep::PA = "$pa";
 
 const string SmackRep::FP = "$fp";
 
+const string SmackRep::TRUNC = "$trunc";
+
 const string SmackRep::B2P = "$b2p";
 const string SmackRep::I2P = "$i2p";
 const string SmackRep::P2I = "$p2i";

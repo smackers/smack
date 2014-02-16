@@ -89,6 +89,15 @@ const Expr* SmackRepFlatMem::val2ptr(const Expr* e) {
 const Expr* SmackRepFlatMem::ref2ptr(const Expr* e) {
   return e;
 }
+
+const Expr* SmackRepFlatMem::trunc(const Expr* e, llvm::Type* t) {
+  assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
+
+  if (isBool(t))
+    return Expr::fn(I2B,e);
+  else
+    return Expr::fn(TRUNC,e,lit(t->getPrimitiveSizeInBits()));
+}
   
 const string SmackRepFlatMem::POINTERS =
   "// SMACK Flat Memory Model\n"
@@ -105,14 +114,14 @@ const string SmackRepFlatMem::POINTERS =
   "const $UNDEF: int;\n"
   "\n"
   "function $pa(pointer: int, index: int, size: int) returns (int);\n"
-  "function $trunc(p: int) returns (int);\n"
+  "function $trunc(p: int, size: int) returns (int);\n"
   "function $p2i(p: int) returns (int);\n"
   "function $i2p(p: int) returns (int);\n"
   "function $p2b(p: int) returns (bool);\n"
   "function $b2p(b: bool) returns (int);\n"
   "\n"
   "axiom (forall p:int, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == p + i * s);\n"
-  "axiom (forall p:int :: $trunc(p) == p);\n"
+  "axiom (forall p,s:int :: $trunc(p,s) == p);\n"
   "\n"
   "axiom $b2p(true) == 1;\n"
   "axiom $b2p(false) == 0;\n"

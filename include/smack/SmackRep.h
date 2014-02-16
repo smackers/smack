@@ -50,6 +50,8 @@ public:
   static const string PA;
   
   static const string FP;
+  
+  static const string TRUNC;
 
   static const string B2P;
   static const string I2P;
@@ -206,6 +208,8 @@ public:
   virtual const Expr* ptr2val(const Expr* e) = 0;
   virtual const Expr* val2ptr(const Expr* e) = 0;
   virtual const Expr* ref2ptr(const Expr* e) = 0;
+  
+  virtual const Expr* trunc(const Expr* e, llvm::Type* t) = 0;
 
   virtual vector<Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
