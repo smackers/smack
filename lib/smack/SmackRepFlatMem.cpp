@@ -46,7 +46,7 @@ vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
         ax.push_back(Attr::attr("count",numElems));
     
       decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
-      addInit(getRegion(g), expr(g), init);
+      addInit(getRegion(g), g, init);
       // Expr::fn("$slt",
       //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
       //     Expr::lit(bottom)) ));
@@ -72,31 +72,6 @@ vector<string> SmackRepFlatMem::getModifies() {
 
 string SmackRepFlatMem::getPtrType() {
   return PTR_TYPE;
-}
-
-const Expr* SmackRepFlatMem::ptr2ref(const Expr* e) {
-  return e;
-}
-
-const Expr* SmackRepFlatMem::ptr2val(const Expr* e) {
-  return e;
-}
-
-const Expr* SmackRepFlatMem::val2ptr(const Expr* e) {
-  return e;
-}
-
-const Expr* SmackRepFlatMem::ref2ptr(const Expr* e) {
-  return e;
-}
-
-const Expr* SmackRepFlatMem::trunc(const Expr* e, llvm::Type* t) {
-  assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
-
-  if (isBool(t))
-    return Expr::fn(I2B,e);
-  else
-    return Expr::fn(TRUNC,e,lit(t->getPrimitiveSizeInBits()));
 }
   
 const string SmackRepFlatMem::POINTERS =

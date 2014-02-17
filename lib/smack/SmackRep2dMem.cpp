@@ -25,7 +25,7 @@ vector<Decl*> SmackRep2dMem::globalDecl(const llvm::Value* v) {
       unsigned numElems = numElements(init);
       if (numElems > 1)
         ax.push_back(Attr::attr("count",numElems));  
-      addInit(getRegion(g), expr(g), init);
+      addInit(getRegion(g), g, init);
     } else {
       decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
     }
@@ -65,12 +65,12 @@ const Expr* SmackRep2dMem::ref2ptr(const Expr* e) {
   return Expr::fn(PTR, e, Expr::lit(0));
 }
 
-const Expr* SmackRep2dMem::trunc(const Expr* e, llvm::Type* t) {
+const Expr* SmackRep2dMem::trunc(const llvm::Value* v, llvm::Type* t) {
   assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
   if (isBool(t))
-    return Expr::fn("$p2b",e);
+    return Expr::fn("$p2b",expr(v));
   else
-    return Expr::fn(TRUNC,e,lit(t->getPrimitiveSizeInBits()));
+    return Expr::fn(TRUNC,expr(v),lit(t->getPrimitiveSizeInBits()));
 }
 
 const string SmackRep2dMem::POINTERS =

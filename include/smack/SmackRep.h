@@ -146,6 +146,18 @@ protected:
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
   }  
+
+private:
+  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
+
+  const Expr* pa(const Expr* base, int index, int size);
+  const Expr* pa(const Expr* base, const Expr* index, int size);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
+  
+  const Expr* b2p(const llvm::Value* v);
+  const Expr* i2b(const llvm::Value* v);
+  const Expr* b2i(const llvm::Value* v);
+
 public:
   static SmackRep* createRep(llvm::AliasAnalysis* aa);
   void setProgram(Program* p) { program = p; }
@@ -159,8 +171,6 @@ public:
   bool isBool(const llvm::Value* v);
   bool isFloat(llvm::Type* t);
   bool isFloat(llvm::Value* v);
-  string type(llvm::Type* t);
-  string type(llvm::Value* v);
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
@@ -168,25 +178,11 @@ public:
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
 
+  virtual string type(llvm::Type* t);
+  virtual string type(llvm::Value* v);
+  
   const Expr* mem(const llvm::Value* v);
-  const Expr* mem(unsigned region, const Expr* addr);
-  // const Expr* ptr(const Expr* obj, const Expr* off);
-  // const Expr* obj(const Expr* e);
-  // const Expr* off(const Expr* e);
-  const Expr* i2p(const Expr* e);
-  const Expr* p2i(const Expr* e);
-  const Expr* b2p(const Expr* e);
-  const Expr* i2b(const Expr* e);
-  const Expr* b2i(const Expr* e);
-
-  const Expr* fp2si(const Expr* e);
-  const Expr* fp2ui(const Expr* e);
-  const Expr* si2fp(const Expr* e);
-  const Expr* ui2fp(const Expr* e);
-
-  const Expr* pa(const Expr* base, int index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
+  const Expr* mem(unsigned region, const Expr* addr);  
 
   string id(const llvm::Value* v);
   const Expr* undef();
@@ -204,17 +200,28 @@ public:
   string code(llvm::CallInst& ci);
   ProcDecl* proc(llvm::Function* f, int n);
   
-  virtual const Expr* ptr2ref(const Expr* e) = 0;
-  virtual const Expr* ptr2val(const Expr* e) = 0;
-  virtual const Expr* val2ptr(const Expr* e) = 0;
-  virtual const Expr* ref2ptr(const Expr* e) = 0;
-  
-  virtual const Expr* trunc(const Expr* e, llvm::Type* t) = 0;
+  virtual const Expr* trunc(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* zext(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* sext(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* fptrunc(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* fpext(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* fp2ui(const llvm::Value* v);
+  virtual const Expr* fp2si(const llvm::Value* v);
+  virtual const Expr* ui2fp(const llvm::Value* v);
+  virtual const Expr* si2fp(const llvm::Value* v);
+  virtual const Expr* p2i(const llvm::Value* v);
+  virtual const Expr* i2p(const llvm::Value* v);
+  virtual const Expr* bitcast(const llvm::Value* v, llvm::Type* t);
 
+  virtual const Stmt* alloca(llvm::AllocaInst& i);
+  virtual const Stmt* memcpy(const llvm::Value* dst, const llvm::Value* src,
+    const llvm::Value* len, const llvm::Value* align,
+    const llvm::Value* isVolatile);
+  
   virtual vector<Decl*> globalDecl(const llvm::Value* g) = 0;
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
-  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
+  void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
   bool hasStaticInits();
   Decl* getStaticInit();
   virtual string getPtrType() = 0;
@@ -226,7 +233,6 @@ public:
   virtual string mallocProc() = 0;
   virtual string freeProc() = 0;
   virtual string allocaProc() = 0;
-  virtual string memcpyCall(int dstReg, int srcReg);
   virtual string memcpyProc(int dstReg, int srcReg) = 0;
   
 };
