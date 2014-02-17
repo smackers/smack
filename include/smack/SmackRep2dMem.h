@@ -15,6 +15,8 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using namespace std;
 
+// NOTE: TwoDim memory model has no good (sound or precise) support for
+// ptr2int and int2ptr operations.
 class SmackRep2dMem : public SmackRep {
 public:
   static const string PTR_TYPE;
@@ -33,6 +35,8 @@ public:
   const Expr* ptr2val(const Expr* e);
   const Expr* val2ptr(const Expr* e);
   const Expr* ref2ptr(const Expr* e);
+  
+  const Expr* trunc(const Expr* e, llvm::Type* t);
 
   const Expr* declareIsExternal(const Expr* e);
 

@@ -32,6 +32,8 @@ const string SmackRep::PA = "$pa";
 
 const string SmackRep::FP = "$fp";
 
+const string SmackRep::TRUNC = "$trunc";
+
 const string SmackRep::B2P = "$b2p";
 const string SmackRep::I2P = "$i2p";
 const string SmackRep::P2I = "$p2i";
@@ -871,6 +873,14 @@ vector<string> SmackRep::getModifies() {
   return mods;
 }
 
+unsigned SmackRep::numElements(const llvm::Constant* v) {
+  using namespace llvm;
+  if (const ArrayType* at = dyn_cast<const ArrayType>(v->getType()))
+    return at->getNumElements();
+  else
+    return 1;
+}
+
 void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val) {
   using namespace llvm;
 
@@ -880,12 +890,7 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
-  } else if (const ArrayType* at = dyn_cast<const ArrayType>(val->getType())) {
-    program->addDecl(
-      Decl::axiom(
-        Expr::eq(
-          Expr::fn("$size", ptr2ref(addr)),
-          lit(at->getNumElements()) )));
+  } else if (dyn_cast<const ArrayType>(val->getType())) {
     
   } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
@@ -895,20 +900,6 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
     
   } else {
     assert (false && "Unexpected static initializer.");
-  }
-}
-
-void SmackRep::addStaticInit(const llvm::Value* v) {
-  using namespace llvm;
-  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
-    
-    if (g->hasInitializer()) {
-      const Constant* init = g->getInitializer();
-      
-      // NOTE: here we are assuming all (nested) fields of a struct with a
-      // static initializer belong to the same region
-      addInit(getRegion(g), expr(g), init);
-    }
   }
 }
 

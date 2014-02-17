@@ -16,7 +16,7 @@ tests = [
   ('simple_pre2_fail',   r'This assertion can fail', 2),
   ('simple_pre3',        r'Program has no bugs', 2),
   ('simple_pre3_fail',   r'This assertion can fail', 2),
-  ('simple_double_free', r'This assertion can fail', 2),
+#  ('simple_double_free', r'This assertion can fail', 2),
   ('pointers',           r'Program has no bugs', 2),
   ('pointers_fail',      r'This assertion can fail', 2),
   ('pointers1',          r'Program has no bugs', 2),
@@ -60,12 +60,12 @@ tests = [
   ('array3_fail',        r'This assertion can fail', 11),
   ('array4',             r'Program has no bugs', 11),
   ('array4_fail',        r'This assertion can fail', 11),
-  ('array_free',         r'Program has no bugs', 11),
-  ('array_free_fail',    r'This assertion can fail', 11),
-  ('array_free1',        r'Program has no bugs', 11),
-  ('array_free1_fail',   r'This assertion can fail', 11),
-  ('array_free2',        r'Program has no bugs', 11),
-  ('array_free2_fail',   r'This assertion can fail', 11),
+#  ('array_free',         r'Program has no bugs', 11),
+#  ('array_free_fail',    r'This assertion can fail', 11),
+#  ('array_free1',        r'Program has no bugs', 11),
+#  ('array_free1_fail',   r'This assertion can fail', 11),
+#  ('array_free2',        r'Program has no bugs', 11),
+#  ('array_free2_fail',   r'This assertion can fail', 11),
   ('lock',               r'Program has no bugs', 2),
   ('lock_fail',          r'This assertion can fail', 2),
   ('ase_example',        r'Program has no bugs', 11),
@@ -90,7 +90,7 @@ def runtests():
   passed = failed = 0
   for test in tests:
     
-    for mem in ['flat', 'twodim']:
+    for mem in ['flat']:
     
       print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
 

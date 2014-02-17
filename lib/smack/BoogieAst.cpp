@@ -234,10 +234,13 @@ Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
 Decl* Decl::constant(string name, string type) {
-  return Decl::constant(name, type, false);
+  return Decl::constant(name, type, vector<const Attr*>(), false);
 }
 Decl* Decl::constant(string name, string type, bool unique) {
-  return new ConstDecl(name, type, unique);
+  return Decl::constant(name, type, vector<const Attr*>(), unique);
+}
+Decl* Decl::constant(string name, string type, vector<const Attr*> ax, bool unique) {
+  return new ConstDecl(name, type, ax, unique);
 }
 Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
@@ -515,23 +518,33 @@ void CodeStmt::print(ostream& os) const {
 }
 
 void TypeDecl::print(ostream& os) const {
-  os << "type " << name;
+  os << "type ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name;
   if (alias != "")
     os << " = " << alias << ";";
   os << ";";
 }
 
 void AxiomDecl::print(ostream& os) const {
-  os << "axiom " << expr << ";";
+  os << "axiom ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << expr << ";";
 }
 
 void ConstDecl::print(ostream& os) const {
-  os << "const " << (unique ? "unique " : "")
-     << name << ": " << type << ";";
+  os << "const ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << (unique ? "unique " : "") << name << ": " << type << ";";
 }
 
 void FuncDecl::print(ostream& os) const {
   os << "function " << name;
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
@@ -539,11 +552,16 @@ void FuncDecl::print(ostream& os) const {
 }
 
 void VarDecl::print(ostream& os) const {
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << "var " << name << ": " << type << ";";
 }
 
 void ProcDecl::print(ostream& os) const {
-  os << "procedure " << name << "(";
+  os << "procedure ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name << "(";
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
