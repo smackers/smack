@@ -28,7 +28,7 @@ def runtests():
   passed = failed = 0
   for test in tests:
     
-    for mem in ['flat', 'twodim']:
+    for mem in ['flat']:
     
       print "{0:>25} {1:>8}:".format(test[0], "(" + mem + ")"),
 

@@ -15,6 +15,8 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using namespace std;
 
+// NOTE: TwoDim memory model has no good (sound or precise) support for
+// ptr2int and int2ptr operations.
 class SmackRep2dMem : public SmackRep {
 public:
   static const string PTR_TYPE;
