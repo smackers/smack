@@ -36,8 +36,6 @@ RegisterAnalysisGroup<CallGraph> Y(X);
 }
 
 bool DataStructureCallGraph::runOnModule(Module &M) {
-  CallGraph::initialize(M);
-
   ExternalCallingNode = getOrInsertFunction(0);
   CallsExternalNode = new CallGraphNode(0);
   Root = 0;
