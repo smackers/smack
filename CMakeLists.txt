@@ -174,3 +174,12 @@ INSTALL(TARGETS smack smackTranslator assistDS dsa
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
+
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
+	${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
+	${CMAKE_CURRENT_SOURCE_DIR}/bin/llvm2bpl.py
+	${CMAKE_CURRENT_SOURCE_DIR}/bin/smackgen.py
+	${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-verify.py
+  DESTINATION bin
+)
+	
