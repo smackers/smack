@@ -28,6 +28,7 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
+INSTALL_CMAKE=1
 INSTALL_MONO=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
@@ -62,6 +63,18 @@ fi
 # Set up base directory for everything
 mkdir -p ${BASE_DIR}
 cd ${BASE_DIR}
+
+################################################################################
+
+# cmake
+
+if [ ${INSTALL_CMAKE} -eq 1 ]; then
+
+cd ${BASE_DIR}
+wget http://www.cmake.org/files/v2.8/cmake-2.8.12.2-Linux-i386.sh
+sudo sh cmake-2.8.12.2-Linux-i386.sh --prefix=/usr/local --exclude-subdir
+
+fi
 
 ################################################################################
 
@@ -208,7 +221,7 @@ tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.4.src.tar.gz --s
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/
-${LLVM_DIR}/src/configure --prefix=${LLVM_DIR}/install --enable-optimized
+cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
 make
 make install
 
@@ -231,7 +244,7 @@ git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
 # Configure SMACK and build
 cd ${SMACK_DIR}/build/
-${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_DIR}/build --prefix=${SMACK_DIR}/install --enable-optimized
+cmake -DLLVM_CONFIG=${LLVM_DIR}/install/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
 make
 make install
 
