@@ -161,7 +161,7 @@ ZIP        := @ZIP@
 
 HAVE_PTHREAD := @HAVE_PTHREAD@
 
-LIBS       := @LIBS@
+LIBS       := @LIBS@ -lcurses
 
 # Targets that we should build
 TARGETS_TO_BUILD=@TARGETS_TO_BUILD@
