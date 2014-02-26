@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   
-  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::raw_fd_ostream::F_Binary));
+  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg));
   if (!error_msg.empty()) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
     llvm::errs() << "error: " << error_msg << "\n";
