@@ -11,12 +11,18 @@ namespace smack {
 
 using namespace std;
 
+unsigned Decl::uniqueId = 0;
+
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
 
 const Expr* Expr::eq(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Eq, l, r);
+}
+
+const Expr* Expr::lt(const Expr* l, const Expr* r) {
+  return new BinExpr(BinExpr::Lt, l, r);
 }
 
 const Expr* Expr::fn(string f, const Expr* x) {
@@ -217,23 +223,37 @@ const Stmt* Stmt::skip() {
   return new AssumeStmt(Expr::lit(true));
 }
 
-const Decl* Decl::typee(string name, string type) {
+const Stmt* Stmt::code(string s) {
+  return new CodeStmt(s);
+}
+
+Decl* Decl::typee(string name, string type) {
   return new TypeDecl(name,type);
 }
-const Decl* Decl::axiom(const Expr* e) {
+Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
-const Decl* Decl::constant(string name, string type) {
-  return Decl::constant(name, type, false);
+Decl* Decl::constant(string name, string type) {
+  return Decl::constant(name, type, vector<const Attr*>(), false);
 }
-const Decl* Decl::constant(string name, string type, bool unique) {
-  return new ConstDecl(name, type, unique);
+Decl* Decl::constant(string name, string type, bool unique) {
+  return Decl::constant(name, type, vector<const Attr*>(), unique);
 }
-const Decl* Decl::variable(string name, string type) {
+Decl* Decl::constant(string name, string type, vector<const Attr*> ax, bool unique) {
+  return new ConstDecl(name, type, ax, unique);
+}
+Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
 }
-const Decl* Decl::procedure(string name, string arg, string type) {
-  return new ProcDecl(name,vector< pair<string,string> >(1,make_pair(arg,type)),"");
+Decl* Decl::procedure(Program& p, string name) {
+  return procedure(p,name,vector< pair<string,string> >(),vector< pair<string,string> >());
+}
+Decl* Decl::procedure(Program& p, string name, 
+    vector< pair<string,string> > args, vector< pair<string,string> > rets) {
+  return new ProcDecl(p,name,args,rets);
+}
+Decl* Decl::code(string s) {
+  return new CodeDecl(s);
 }
 
 ostream& operator<<(ostream& os, const Expr& e) {
@@ -260,15 +280,11 @@ ostream& operator<<(ostream& os, const Block* b) {
   b->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Decl* d) {
+ostream& operator<<(ostream& os, Decl* d) {
   d->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Procedure* p) {
-  p->print(os);
-  return os;
-}
-ostream& operator<<(ostream& os, const Program* p) {
+ostream& operator<<(ostream& os, Program* p) {
   if (p == 0) {
     os << "<null> Program!\n";
   } else {
@@ -276,7 +292,7 @@ ostream& operator<<(ostream& os, const Program* p) {
   }
   return os;
 }
-ostream& operator<<(ostream& os, const Program& p) {
+ostream& operator<<(ostream& os, Program& p) {
   p.print(os);
   return os;
 }
@@ -294,6 +310,20 @@ template<class T> void print_seq(ostream& os, vector<T> ts, string sep) {
 }
 template<class T> void print_seq(ostream& os, vector<T> ts) {
   print_seq<T>(os, ts, "", "", "");
+}
+template<class T, class C> void print_set(ostream& os, set<T,C> ts,
+                                 string init, string sep, string term) {
+
+  os << init;
+  for (typename set<T,C>::iterator i = ts.begin(); i != ts.end(); ++i)
+    os << (i == ts.begin() ? "" : sep) << *i;
+  os << term;
+}
+template<class T, class C> void print_set(ostream& os, set<T,C> ts, string sep) {
+  print_set<T,C>(os, ts, "", sep, "");
+}
+template<class T, class C> void print_set(ostream& os, set<T,C> ts) {
+  print_set<T,C>(os, ts, "", "", "");
 }
 
 void BinExpr::print(ostream& os) const {
@@ -483,24 +513,38 @@ void ReturnStmt::print(ostream& os) const {
   os << "return;";
 }
 
+void CodeStmt::print(ostream& os) const {
+  os << code;
+}
+
 void TypeDecl::print(ostream& os) const {
-  if (type != "")
-    os << "type " << name << " = " << type << ";";
-  else
-    os << "type " << name << ";";
+  os << "type ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name;
+  if (alias != "")
+    os << " = " << alias << ";";
+  os << ";";
 }
 
 void AxiomDecl::print(ostream& os) const {
-  os << "axiom " << expr << ";";
+  os << "axiom ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << expr << ";";
 }
 
 void ConstDecl::print(ostream& os) const {
-  os << "const " << (unique ? "unique " : "")
-     << name << ": " << type << ";";
+  os << "const ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << (unique ? "unique " : "") << name << ": " << type << ";";
 }
 
 void FuncDecl::print(ostream& os) const {
   os << "function " << name;
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
@@ -508,18 +552,55 @@ void FuncDecl::print(ostream& os) const {
 }
 
 void VarDecl::print(ostream& os) const {
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << "var " << name << ": " << type << ";";
 }
 
 void ProcDecl::print(ostream& os) const {
-  os << "procedure " << name << "(";
+  os << "procedure ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name << "(";
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
   os << ")";
-  if (type != "") 
-    os << " returns (" << type << ")";
-  os << ";";
+  if (rets.size() > 0) {
+    os << endl;
+    os << "  returns (";
+    for (unsigned i = 0; i < rets.size(); i++)
+      os << rets[i].first << ": " << rets[i].second
+         << (i < rets.size() - 1 ? ", " : "");
+    os << ")";
+  }
+  if (blocks.size() == 0)
+    os << ";";
+
+  if (mods.size() > 0) {
+    os << endl;
+    print_seq<string>(os, mods, "  modifies ", ", ", ";");
+  }
+  if (requires.size() > 0) {
+    os << endl;
+    print_seq<const Expr*>(os, requires, "  requires ", ";\n  requires ", ";");
+  }
+  if (ensures.size() > 0) {
+    os << endl;
+    print_seq<const Expr*>(os, ensures, "  ensures ", ";\n  ensures ", ";");
+  }
+  if (blocks.size() > 0) {
+    os << endl;
+    os << "{" << endl;
+    if (decls.size() > 0)
+      print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
+    print_seq<Block*>(os, blocks, "\n");
+    os << endl << "}";
+  }
+}
+
+void CodeDecl::print(ostream& os) const {
+  os << name;
 }
 
 void Block::print(ostream& os) const {
@@ -528,46 +609,11 @@ void Block::print(ostream& os) const {
   print_seq<const Stmt*>(os, stmts, "  ", "\n  ", "");
 }
 
-void Procedure::print(ostream& os) const {
-  os << "procedure " << name << "(";
-  for (unsigned i = 0; i < params.size(); i++)
-    os << params[i].first << ": " << params[i].second
-       << (i < params.size() - 1 ? ", " : "");
-  os << ") ";
-  if (rets.size() > 0) {
-    os << endl;
-    os << "  returns (";
-    for (unsigned i = 0; i < rets.size(); i++)
-      os << rets[i].first << ": " << rets[i].second
-         << (i < rets.size() - 1 ? ", " : "");
-    os << ") ";
-  }
-  if (blocks.size() == 0)
-    os << ";";
-
-  if (mods.size() > 0) {
-    os << endl;
-    print_seq<string>(os, mods, "  modifies ", ", ", ";");
-    os << endl;
-  }
-  if (blocks.size() > 0) {
-    os << "{" << endl;
-    if (decls.size() > 0)
-      print_seq<const Decl*>(os, decls, "  ", "\n  ", "\n");
-    print_seq<Block*>(os, blocks, "\n");
-    os << endl << "}";
-  }
-  os << endl;
-}
-
 void Program::print(ostream& os) const {
-  os << "// SMACK-PRELUDE-BEGIN" << endl;
   os << prelude;
-  os << "// SMACK-PRELUDE-END" << endl;
   os << "// BEGIN SMACK-GENERATED CODE" << endl;
-  print_seq<const Decl*>(os, decls, "\n");
-  os << endl << endl;
-  print_seq<Procedure*>(os, procs, "\n");
+  print_set<Decl*>(os, decls, "\n");
+  os << endl;
   os << "// END SMACK-GENERATED CODE" << endl;
 }
 }

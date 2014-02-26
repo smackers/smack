@@ -6,18 +6,24 @@
 #ifndef BOOGIEAST_H
 #define BOOGIEAST_H
 
+#include <cassert>
 #include <string>
 #include <vector>
+#include <set>
 
 namespace smack {
 
 using namespace std;
+
+class Block;
+class Program;
 
 class Expr {
 public:
   virtual void print(ostream& os) const = 0;
   static const Expr* and_(const Expr* l, const Expr* r);
   static const Expr* eq(const Expr* l, const Expr* r);
+  static const Expr* lt(const Expr* l, const Expr* r);
   static const Expr* fn(string f, const Expr* x);
   static const Expr* fn(string f, const Expr* x, const Expr* y);
   static const Expr* fn(string f, const Expr* x, const Expr* y, const Expr* z);
@@ -60,7 +66,6 @@ public:
 private:
   const Literal lit;
   int val;
-  int width;
 public:
   LitExpr(bool b) : lit(b ? True : False) {}
   LitExpr(int i) : lit(Num), val(i) {}
@@ -178,6 +183,7 @@ public:
   static const Stmt* havoc(string x);
   static const Stmt* return_();
   static const Stmt* skip();
+  static const Stmt* code(string s);
   virtual void print(ostream& os) const = 0;
 };
 
@@ -246,101 +252,120 @@ public:
   void print(ostream& os) const;
 };
 
+class CodeStmt : public Stmt {
+  string code;
+public:
+  CodeStmt(string s) : code(s) {}
+  void print(ostream& os) const;
+};
+
 class Decl {
+  static unsigned uniqueId;
+public:
+  enum kind { STOR, PROC, FUNC, TYPE, UNNAMED, CODE };
 protected:
+  unsigned id;
   string name;
-  string type;
-  Decl(string n, string t) : name(n), type(t) {}
+  vector<const Attr*> attrs;
+  Decl(string n, vector<const Attr*> ax) : id(uniqueId++), name(n), attrs(ax) { }
+  Decl(string n) : id(uniqueId++), name(n), attrs(vector<const Attr*>()) { }
 public:
   virtual void print(ostream& os) const = 0;
-  string getName() const {
-    return name;
+  unsigned getId() const { return id; }
+  string getName() const { return name; }
+  virtual kind getKind() const = 0;
+  
+  static Decl* typee(string name, string type);
+  static Decl* axiom(const Expr* e);
+  static Decl* constant(string name, string type);
+  static Decl* constant(string name, string type, bool unique);
+  static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
+  static Decl* variable(string name, string type);
+  static Decl* procedure(Program& p, string name);
+  static Decl* procedure(Program& p, string name,
+    vector< pair<string,string> > args, vector< pair<string,string> > rets);
+  static Decl* code(string s);
+};
+
+struct DeclCompare {
+  bool operator()(Decl* a, Decl* b) {
+    assert(a && b);    
+    if (a->getKind() == b->getKind() && a->getKind() != Decl::UNNAMED)
+      return a->getName() < b->getName();
+    else if (a->getKind() == b->getKind())
+      return a->getId() < b->getId();
+    else
+      return a->getKind() < b->getKind();
   }
-  string getType() const {
-    return type;
-  }
-  static const Decl* typee(string name, string type);
-  static const Decl* axiom(const Expr* e);
-  static const Decl* constant(string name, string type);
-  static const Decl* constant(string name, string type, bool unique);
-  static const Decl* variable(string name, string type);
-  static const Decl* procedure(string name, string arg, string type);
 };
 
 class TypeDecl : public Decl {
+  string alias;
 public:
-  TypeDecl(string n, string t) : Decl(n,t) {}
+  TypeDecl(string n, string t) : Decl(n), alias(t) {}
+  kind getKind() const { return TYPE; }
   void print(ostream& os) const;
 };
 
 class AxiomDecl : public Decl {
   const Expr* expr;
+  static int uniqueId;
 public:
-  AxiomDecl(const Expr* e) : Decl("", ""), expr(e) {}
+  AxiomDecl(const Expr* e) : Decl(""), expr(e) {}
+  kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
 };
 
 class ConstDecl : public Decl {
+  string type;
   bool unique;
 public:
-  ConstDecl(string n, string t, bool u) : Decl(n, t), unique(u) {}
-  ConstDecl(string n, string t) : Decl(n, t), unique(false) {}
+  ConstDecl(string n, string t, vector<const Attr*> ax, bool u) : Decl(n,ax), type(t), unique(u) {}
+  kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
 
 class FuncDecl : public Decl {
   vector< pair<string, string> > params;
+  string type;
   const Expr* body;
 public:
   FuncDecl(string n, vector< pair<string, string> > ps, string t, Expr* b)
-    : Decl(n, ""), params(ps), body(b) {}
+    : Decl(n), params(ps), type(t), body(b) {}
+  kind getKind() const { return FUNC; }
   void print(ostream& os) const;
 };
 
 class VarDecl : public Decl {
+  string type;
 public:
-  VarDecl(string n, string t) : Decl(n, t) {}
+  VarDecl(string n, string t) : Decl(n), type(t) {}
+  kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
 
 class ProcDecl : public Decl {
+  Program& prog;
   vector< pair<string,string> > params;
-public:
-  ProcDecl(string n, vector< pair<string,string> > ps, string r) 
-    : Decl(n,r), params(ps) {}
-  void print(ostream& os) const;
-};
-
-class Block {
-  string name;
-  vector<const Stmt*> stmts;
-public:
-  Block() : name("") {}
-  Block(string n) : name(n) {}
-  void print(ostream& os) const;
-  void addStmt(const Stmt* s) {
-    stmts.push_back(s);
-  }
-  string getName() {
-    return name;
-  }
-};
-
-class Procedure {
-  string name;
-  vector< pair<string, string> > params;
-  vector< pair<string, string> > rets;
+  vector< pair<string,string> > rets;
   vector<string> mods;
-  vector<const Decl*> decls;
+  vector<const Expr*> requires;
+  vector<const Expr*> ensures;
+  set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
 public:
-  Procedure(string n) : name(n) {}
-  void print(ostream& os) const;
+  ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
+    : Decl(n), prog(p), params(ps), rets(rs) {}
+  kind getKind() const { return PROC; }
+  Program& getProg() const { return prog; }
   void addParam(string x, string t) {
     params.push_back(make_pair(x, t));
   }
   void addRet(string x, string t) {
     rets.push_back(make_pair(x, t));
+  }
+  vector< pair<string,string> > getRets() {
+    return rets;
   }
   void addMod(string m) {
     mods.push_back(m);
@@ -349,50 +374,77 @@ public:
     for (unsigned i = 0; i < ms.size(); i++)
       addMod(ms[i]);
   }
-  void addDecl(const Decl* d) {
-    decls.push_back(d);
+  void addRequires(const Expr* e) {
+    requires.push_back(e);
   }
-  void addDecls(vector<const Decl*> ds) {
-    for (unsigned i = 0; i < ds.size(); i++)
-      addDecl(ds[i]);
+  void addEnsures(const Expr* e) {
+    ensures.push_back(e);
   }
-  bool hasDecl(const Decl* d) {
-    for (unsigned i = 0; i < decls.size(); i++)
-      if (d->getName() == decls[i]->getName()
-          && d->getType() == decls[i]->getType())
-        return true;
-    return false;
+  void addDecl(Decl* d) {
+    decls.insert(d);
   }
   void addBlock(Block* b) {
     blocks.push_back(b);
   }
+  bool hasBody() {
+    return decls.size() > 0 || blocks.size() > 0;
+  }
+  void print(ostream& os) const;
+};
+
+class CodeDecl : public Decl {
+public:
+  CodeDecl(string s) : Decl(s) {}
+  kind getKind() const { return CODE; }
+  void print(ostream& os) const;
+};
+
+class Block {
+  ProcDecl& proc;
+  string name;
+  vector<const Stmt*> stmts;
+public:
+  Block(ProcDecl& p) : proc(p), name("") {}
+  Block(ProcDecl& p, string n) : proc(p), name(n) {}
+  void print(ostream& os) const;
+  ProcDecl& getProc() const { return proc; }
+  void addStmt(const Stmt* s) {
+    stmts.push_back(s);
+  }
+  string getName() {
+    return name;
+  }
 };
 
 class Program {
+  // TODO While I would prefer that a program is just a set or sequence of
+  // declarations, putting the Prelude in a CodeDeclaration does not work,
+  // and I do not yet understand why; see below. --mje
   string prelude;
-  vector<const Decl*> decls;
-  vector<Procedure*> procs;
+  set<Decl*,DeclCompare> decls;
 public:
-  Program(string p) : prelude(p) { }
+  Program() {}
   void print(ostream& os) const;
-  void addDecl(const Decl* d) {
-    decls.push_back(d);
+  void addDecl(Decl* d) {
+    decls.insert(d);
   }
-  void addDecls(vector<const Decl*> ds) {
-    for (unsigned i = 0; i < ds.size(); i++)
-      addDecl(ds[i]);
-  }
-  void addProc(Procedure* p) {
-    procs.push_back(p);
-  }
-  vector<Procedure*>::const_iterator pbegin() {
-    return procs.begin();
-  }
-  vector<Procedure*>::const_iterator pend() {
-    return procs.end();
+  void addDecl(string s) {
+    // TODO Why does this break to put the prelude string inside of a CodeDecl?
+    decls.insert( Decl::code(s) );
   }
   void appendPrelude(string s) {
     prelude += s;
+  }
+  void addDecls(vector<Decl*> ds) {
+    for (unsigned i = 0; i < ds.size(); i++)
+      addDecl(ds[i]);
+  }
+  vector<ProcDecl*> getProcs() {
+    vector<ProcDecl*> procs;
+    for (set<Decl*>::iterator i = decls.begin(); i != decls.end(); ++i)
+      if ((*i)->getKind() == Decl::PROC)
+        procs.push_back((ProcDecl*) (*i));
+    return procs;
   }
 };
 }

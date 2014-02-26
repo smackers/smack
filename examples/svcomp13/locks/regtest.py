@@ -2,6 +2,7 @@
 
 import subprocess
 import re
+import time
 
 # list of regression tests with the expected outputs
 tests = [
@@ -26,25 +27,37 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-passed = failed = 0
-for test in tests:
+def runtests():
+  passed = failed = 0
+  for test in tests:
     
-  for mem in ['flat', 'twodim']:
+    for mem in ['flat']:
     
-    print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
+      print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
 
-    # invoke SMACK
-    p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline', '--mem-mod=' + mem, '-o', test[0] +'.bpl'], stdout=subprocess.PIPE)
-    smackOutput = p.communicate()[0]
+      # invoke SMACK
+      t0 = time.time()
+      p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline',
+                            '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
+                            stdout=subprocess.PIPE)
+      
+      smackOutput = p.communicate()[0]
+      elapsed = time.time() - t0
 
-    # check SMACK output
-    if re.search(test[1], smackOutput):
-      print green('PASSED')
-      passed += 1
-    else:
-      print red('FAILED')
-      failed += 1
+      # check SMACK output
+      if re.search(test[1], smackOutput):
+        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
+        passed += 1
+      else:
+        print red('FAILED')
+        failed += 1
+  
+  return passed, failed
 
-print '\nPASSED count: ', passed
-print 'FAILED count: ', failed
+if __name__ == '__main__':
+
+  passed, failed = runtests()
+  
+  print '\nPASSED count: ', passed
+  print 'FAILED count: ', failed
 
