@@ -1,13 +1,15 @@
-[SMACK](http://smackers.github.com/smack/) is a modular software verification
-infrastructure. The main purpose of SMACK is to lower the bar for experimenting
-with software verification and quickly prototyping custom software verifiers.
-To achieve that, SMACK relies on the well-known [LLVM](http://www.llvm.org)
-compiler infrastructure for its front-end, and
-[Boogie](http://boogie.codeplex.com) intermediate verification language for its
-back-end. Such separation of concerns and modularity make implementing various
-additions and extensions to SMACK relatively easy.  Furthermore, the open
-architecture of SMACK encourages prototyping custom software verifiers on top
-of SMACK.
+At its core, SMACK is a translator from the [LLVM](http://www.llvm.org)
+compiler's popular intermediate representation (IR) into the
+[Boogie](http://boogie.codeplex.com) intermediate verification language (IVL).
+Sourcing LLVM IR exploits an increasing number of compiler frontends,
+optimizations, and analyses. Targeting Boogie exploits a canonical platform
+which simplifies the implementation of algorithms for verification, model
+checking, and abstract interpretation. The main purpose of SMACK is to decouple
+the implementations of verification algorithms from the details of source
+languages, and enable rapid prototyping on production code.  Our initial
+experience verifying C language programs is encouraging: SMACK is competitive
+in SV-COMP benchmarks, is able to translate large programs (100 KLOC), and is
+used in several verification research prototypes.
 
 ## A Quick Demo
 
