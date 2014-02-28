@@ -33,6 +33,7 @@ tests = [
   ('loop1_fail',         r'0 verified, 1 errors?', 11),
   ('nondet',             r'1 verified, 0 errors?', 2),
   ('printfs',            r'1 verified, 0 errors?', 2),
+  ('extern_struct',      r'0 verified, 1 errors?', 2),
   ('extern_func',        r'1 verified, 0 errors?', 2),
   ('return_label',       r'1 verified, 0 errors?', 2),
   ('struct_cast',        r'1 verified, 0 errors?', 2),

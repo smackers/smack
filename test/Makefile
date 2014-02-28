@@ -17,6 +17,7 @@ SOURCES = simple.c simple_fail.c \
           loop1.c loop1_fail.c \
           nondet.c \
           printfs.c \
+          extern_struct.c \
           extern_func.c \
           return_label.c \
           struct_cast.c struct_cast_fail.c \

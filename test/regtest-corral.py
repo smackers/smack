@@ -33,6 +33,7 @@ tests = [
   ('loop1_fail',         r'This assertion can fail', 11),
   ('nondet',             r'Program has no bugs', 2),
   ('printfs',            r'Program has no bugs', 2),
+  ('extern_struct',      r'This assertion can fail', 2),
   ('extern_func',        r'Program has no bugs', 2),
   ('return_label',       r'Program has no bugs', 2),
   ('struct_cast',        r'Program has no bugs', 2),
