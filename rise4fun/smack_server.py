@@ -5,8 +5,8 @@ import subprocess
 import os, time, re
 import random
 
-PORT = 8000
-
+PORT = 8080
+version = "1.3.10"
 rise_simple = """#include \"smack.h\"
 
 int main(void) {
@@ -112,7 +112,7 @@ assume_example = """#include "smack.h"
 
 int main() {
   int x = __SMACK_nondet();
-  int n;
+  int n = __SMACK_nondet();
   __SMACK_assume(n>0);
   __SMACK_assert(x+n > x);
   return 0;
@@ -179,12 +179,12 @@ tutorialsource = """SMACK is a SMACK is a tool for statically checking propertie
 metadata = {
 	"Name": "smack",
 	"DisplayName": "SMACK",
-	"Version": "1.3.0",
+	"Version": version,
 	"Email": "smack-dev@googlegroups.com",
 	"SupportEmail": "smack-dev@googlegroups.com",
 	"TermsOfUseUrl": "https://github.com/smackers/smack/",
 	"PrivacyUrl": "https://github.com/smackers/smack/",
-	"Institution": "University of Utah and IMDEA Software",
+	"Institution": "University of Utah and IMDEA Software Institute",
 	"InstitutionUrl": "https://github.com/smackers/smack/",
 	"InstitutionImageUrl": "https://dl.dropboxusercontent.com/u/93242277/smack-logo.png",
 	"MimeType": "text/x-c",
@@ -215,7 +215,7 @@ metadata = {
 		"Source": loop
 	},
 	{
-		"Name": "simple theorem",
+		"Name": "simple assume",
 		"Source": assume_example
 	},
 	{
@@ -274,38 +274,84 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
 		f = open('logs','a')
 
-		p = subprocess.Popen(["timeout","60",'smack-verify.py', filename + '.c', '-o', filename +'.bpl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		p = subprocess.Popen(["timeout","10s",'smack-verify.py', filename + '.c', '-o', filename +'.bpl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		smack_string = p.communicate()
 		return_code = p.returncode
 		if not return_code == 0:
-			if return_code == 31744:
+			if return_code == 124:
+				resp = "Program is taking unusually long to verify. Request timed out."
                         	smack_response = {
-                                	"Version": "1.3.0",
+                                	"Version": version,
 	                                "Outputs": [
         	                        {
                 	                        "MimeType": "text/plain",
-                        	                "Value": "Program is taking unusually long to verify. Request timed out."
+                        	                "Value": resp
                                 	}
                                 	]
                         	}
 				f.write(self.client_address[0]+"--"+filename+".c--"+"Timed Out\n")
 				f.close()
 			else:
+				output = smack_string[1].replace(filename+'.c', 'input.c')
+				output = output.split(' ')
+				error = []
+				smack = ''
+				for i in range(len(output)):
+					if(output[i] == "error:" or output[i] == "warning:"):
+						error.append(i)
+				for i in range(len(error)):
+					t = output[error[i]-1].split(':')
+					flag =1
+					if(output[error[i]-1] == 'fatal'):
+						flag = 0
+					if(i < len(error)-1 and flag):
+						m = output[error[i]].split(':')
+						j = error[i]+1
+						while 1:
+							if('\n' in output[j]):
+								break
+							j = j+1
+						haha = output[j].find('\n')
+						output[j] = output[j][0:haha]
+						p = output[error[i]+1:j+1]
+						we = " "
+						p = we.join(p)
+						if(len(t) < 3 or len(m) < 1):
+							smack = smack+" SMACK Error\r\n"
+						else:
+							smack = smack+"input.c("+t[1]+","+t[2]+") : "+m[0]+" "+str(i)+": "+p+"\r\n"
+					elif(i == len(error)-1 and flag):
+						m = output[error[i]].split(':')
+                       	                        j = error[i]+1
+                               	                while 1:
+                                       	                if('\n' in output[j]):
+                                               	                break
+							j = j+ 1
+						haha = output[j].find('\n')
+                                                output[j] = output[j][0:haha]
+                                                p = output[error[i]+1:j+1]
+       	                                        we = " "
+               	                                p = we.join(p)
+						if(len(t) >= 3 or len(m) >= 1):
+	                       	                        smack = smack+"input.c("+t[1]+","+t[2]+") : "+m[0]+" "+str(i)+": "+p+"\r\n"
+						else:
+							smack = smack+" SMACK Error\r\n"
+				if(smack == ''):
+					smack = "SMACK Error"
 				smack_response = {
-					"Version": "1.3.0",
+					"Version": version,
 					"Outputs": [
 					{
 						"MimeType": "text/plain",
-						"Value": "SMACK Error"+smack_string[1]
+						"Value": smack
 					}
 					]
 				}
 				f.write(self.client_address[0]+"--"+filename+".c--"+"SMACK Error\n")
 				f.close()
 		else:  
-			#print(smack_string)
-			#smack_string = smack_string.replace(filename+'.c', 'input.c')
-			output = smack_string[0].split(' ')
+			outp = smack_string[0].replace(filename+'.c', 'input.c')
+			output = outp.split(' ')
                         output = [i for i in output if '$' not in i]
 			for i in range(len(output)):
 				if '):' in output[i]:
@@ -317,17 +363,41 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                         g.close()
 			f.write(self.client_address[0]+"--"+filename+".c--"+"Output\n")
 			f.close()
-			#smack_string = smack_string+ "\nSource file for reference:\n"
-			#smack_string = smack_string+subprocess.check_output(["cat", "-n", filename+".c"])
-			smack_response = {
-				"Version": "1.3.0",
-				"Outputs": [
-				{
-					"MimeType": "text/plain",
-					"Value": smack
+			if('not hold' in outp):
+				temp = smack.split('\n')
+				temp = [w for w in temp if w != '']
+				response = temp[0]+"\r\n"
+				flag = 1
+				cnt = 0
+				for i in range(len(temp)):
+					if('input' in temp[i] and flag):
+						response = response+temp[i]+" : error main: This assertion might not hold\r\n"
+						flag = 0
+					elif('input' in temp[i] and flag == 0): 
+						response = response+temp[i]+" : Trace Element: Error trace["+str(cnt)+"]\r\n"
+						cnt = cnt +1
+				response = response + temp[len(temp)-1]
+					
+				smack_response = {
+					"Version": version,
+					"Outputs": [
+					{
+						"MimeType": "text/plain",
+						"Value": response
+					}
+					]
 				}
-				]
-			}
+			else:
+				 smack_response = {
+                                        "Version": version,
+                                        "Outputs": [
+                                        {
+                                                "MimeType": "text/plain",
+                                                "Value": smack
+                                        }
+                                        ]
+                                }
+
 			f.close()
 		body = json.dumps(smack_response)
 		self.send_response(200)
