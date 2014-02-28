@@ -24,7 +24,7 @@ namespace smack {
 
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
-  Program* program;
+  Program program;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -37,7 +37,7 @@ public:
     AU.addRequired<DSAAliasAnalysis>();
   }
 
-  virtual bool runOnModule(llvm::Module& m) {  
+  virtual bool runOnModule(llvm::Module& m) {
     SmackRep* rep = SmackRep::createRep(&getAnalysis<DSAAliasAnalysis>());
     generateProgram(m,rep);
     return false;
@@ -45,7 +45,7 @@ public:
   
   void generateProgram(llvm::Module& m, SmackRep* rep);
 
-  Program* getProgram() const {
+  Program& getProgram() {
     return program;
   }
 };

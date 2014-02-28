@@ -9,40 +9,58 @@
 namespace smack {
 
 const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
+const string SmackRepFlatMem::BOTTOM = "$GLOBALS_BOTTOM";
+const string SmackRepFlatMem::IS_EXT = "$isExternal";
 const string SmackRepFlatMem::PTR_TYPE = "int";
   
-vector<const Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* g) {
-  addStaticInit(g);
-
-  vector<const Decl*> decls;
-  string name = id(g);
-  decls.push_back(Decl::constant(name, getPtrType(), true));
-
-  unsigned size;
+vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
+  using namespace llvm;
+  vector<Decl*> decls;
+  vector<const Attr*> ax;
+  string name = id(v);
   
-  // NOTE: all global variables have pointer type in LLVM
-  if (g->getType()->isPointerTy()) {
-    llvm::PointerType *t = (llvm::PointerType*) g->getType();
+  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
+    if (g->hasInitializer()) {
+      const Constant* init = g->getInitializer();
+      unsigned numElems = numElements(init);
+      unsigned size;
+  
+      // NOTE: all global variables have pointer type in LLVM
+      if (g->getType()->isPointerTy()) {
+        PointerType *t = (PointerType*) g->getType();
     
-    // in case we can determine the size of the element type ...
-    if (t->getElementType()->isSized())
-      size = storageSize(t->getElementType());
+        // in case we can determine the size of the element type ...
+        if (t->getElementType()->isSized())
+          size = storageSize(t->getElementType());
     
-    // otherwise (e.g. for function declarations), use a default size
-    else
-      size = 1024;
+        // otherwise (e.g. for function declarations), use a default size
+        else
+          size = 1024;
     
-  } else
-    size = storageSize(g->getType());
+      } else
+        size = storageSize(g->getType());
 
-  globalsTop -= size;
+      bottom -= size;
 
-  decls.push_back(Decl::axiom(
-                    Expr::eq(Expr::id(name), Expr::lit(globalsTop))));
-  // Expr::fn("$slt",
-  //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-  //     Expr::lit(globalsTop)) ));
+      if (numElems > 1)
+        ax.push_back(Attr::attr("count",numElems));
+    
+      decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
+      addInit(getRegion(g), expr(g), init);
+      // Expr::fn("$slt",
+      //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+      //     Expr::lit(bottom)) ));
+    
+    } else {
+      decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+    }
+  }
+  decls.push_back(Decl::constant(name, getPtrType(), ax, true));
   return decls;
+}
+
+const Expr* SmackRepFlatMem::declareIsExternal(const Expr* e) {
+  return Expr::fn(IS_EXT,e);
 }
 
 vector<string> SmackRepFlatMem::getModifies() {
@@ -71,12 +89,20 @@ const Expr* SmackRepFlatMem::val2ptr(const Expr* e) {
 const Expr* SmackRepFlatMem::ref2ptr(const Expr* e) {
   return e;
 }
+
+const Expr* SmackRepFlatMem::trunc(const Expr* e, llvm::Type* t) {
+  assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
+
+  if (isBool(t))
+    return Expr::fn(I2B,e);
+  else
+    return Expr::fn(TRUNC,e,lit(t->getPrimitiveSizeInBits()));
+}
   
 const string SmackRepFlatMem::POINTERS =
   "// SMACK Flat Memory Model\n"
   "\n"
   "function $ptr(obj:int, off:int) returns (int) {obj + off}\n"
-  "function $size(int) returns (int);\n"
   "function $obj(int) returns (int);\n"
   "function $off(ptr:int) returns (int) {ptr}\n"
   "\n"
@@ -88,102 +114,101 @@ const string SmackRepFlatMem::POINTERS =
   "const $UNDEF: int;\n"
   "\n"
   "function $pa(pointer: int, index: int, size: int) returns (int);\n"
-  "function $trunc(p: int) returns (int);\n"
+  "function $trunc(p: int, size: int) returns (int);\n"
   "function $p2i(p: int) returns (int);\n"
   "function $i2p(p: int) returns (int);\n"
   "function $p2b(p: int) returns (bool);\n"
   "function $b2p(b: bool) returns (int);\n"
   "\n"
   "axiom (forall p:int, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == p + i * s);\n"
-  "axiom (forall p:int :: $trunc(p) == p);\n"
+  "axiom (forall p,s:int :: $trunc(p,s) == p);\n"
   "\n"
   "axiom $b2p(true) == 1;\n"
   "axiom $b2p(false) == 0;\n"
   "axiom (forall i:int :: $p2b(i) <==> i != 0);\n"
   "axiom $p2b(0) == false;\n"
   "axiom (forall i:int :: $p2i(i) == i);\n"
-  "axiom (forall i:int :: $i2p(i) == i);\n"
-  "procedure __SMACK_nondet() returns (p: int);\n"
-  "procedure __SMACK_nondetInt() returns (p: int);\n";
+  "axiom (forall i:int :: $i2p(i) == i);\n";
 
 string SmackRepFlatMem::memoryModel() {
-  return POINTERS;
+  stringstream s;
+  s << POINTERS;
+  s << "function " << IS_EXT << "(p: int) returns (bool) { p < " << bottom - 32768 << " }" << endl;
+  s << "const " << BOTTOM << ": int;" << endl;
+  s << "axiom " << BOTTOM << " == " << bottom << ";" << endl;
+  return s.str();
 }
 
 string SmackRepFlatMem::mallocProc() {
-  stringstream s;
-  
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $malloc(obj_size: int) returns (new: int)" << endl;
-    s << "  modifies $CurrAddr, $Alloc;" << endl;
-    s << "  requires obj_size > 0;" << endl;
-    s << "{" << endl;
-    s << "  assume $CurrAddr > 0;" << endl;
-    s << "  new := $CurrAddr;" << endl;
-    s << "  $CurrAddr := $CurrAddr + obj_size;" << endl;
-    s << "  $Alloc[new] := true;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $malloc(obj_size: int) returns (new: int);" << endl;
-    s << "modifies $CurrAddr, $Alloc;" << endl;
-    s << "requires obj_size > 0;" << endl;
-    s << "ensures 0 < old($CurrAddr);" << endl;
-    s << "ensures new == old($CurrAddr);" << endl;
-    s << "ensures $CurrAddr > old($CurrAddr) + obj_size;" << endl;
-    s << "ensures $size(new) == obj_size;" << endl;
-    s << "ensures (forall x:int :: new <= x && x < new + obj_size ==> $obj(x) == new);" << endl;
-    s << "ensures $Alloc[new];" << endl;
-    s << "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);" << endl;;
-  }  
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return 
+      "procedure $malloc(n: int) returns (p: int)\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "{\n"
+      "  assume $CurrAddr > 0;\n"
+      "  p := $CurrAddr;\n"
+      "  if (n > 0) {\n"
+      "    $CurrAddr := $CurrAddr + n;\n"
+      "  } else {\n"
+      "    $CurrAddr := $CurrAddr + 1;\n"
+      "  }\n"
+      "  $Alloc[p] := true;\n"
+      "}\n";
+  else    
+    return
+      "procedure $malloc(n: int) returns (p: int);\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "ensures p > 0;\n"
+      "ensures p == old($CurrAddr);\n"
+      "ensures $CurrAddr > old($CurrAddr);\n"
+      "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
+      "ensures $Alloc[p];\n"
+      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::freeProc() {
-  stringstream s;
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $free(pointer: int)" << endl;
-    s << "  modifies $Alloc;" << endl;
-    s << "  // requires $Alloc[pointer];" << endl;
-    s << "  // requires $obj(pointer) == pointer;" << endl;
-    s << "{" << endl;
-    s << "  $Alloc[pointer] := false;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $free(pointer: int);" << endl;
-    s << "modifies $Alloc;" << endl;
-    s << "requires $Alloc[pointer];" << endl;
-    s << "requires $obj(pointer) == pointer;" << endl;
-    s << "ensures !$Alloc[pointer];" << endl;
-    s << "ensures (forall x:int :: {$Alloc[x]} x == pointer || old($Alloc)[x] == $Alloc[x]);" << endl;
-  }
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return
+      "procedure $free(p: int)\n"
+      "modifies $Alloc;\n"
+      "{\n"
+      "  $Alloc[p] := false;\n"
+      "}\n";  
+  else
+    return
+      "procedure $free(p: int);\n"
+      "modifies $Alloc;\n"
+      "ensures !$Alloc[p];\n"
+      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n";
 }
 
 string SmackRepFlatMem::allocaProc() {
-  stringstream s;
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $alloca(obj_size: int) returns (new: int)" << endl;
-    s << "  modifies $CurrAddr, $Alloc;" << endl;
-    s << "  requires obj_size > 0;" << endl;
-    s << "{" << endl;
-    s << "  assume $CurrAddr > 0;" << endl;
-    s << "  new := $CurrAddr;" << endl;
-    s << "  $CurrAddr := $CurrAddr + obj_size;" << endl;
-    s << "  $Alloc[new] := true;" << endl;
-    s << "}" << endl;
-  } else {
-    s << "procedure $alloca(obj_size: int) returns (new: int);" << endl;
-    s << "modifies $CurrAddr, $Alloc;" << endl;
-    s << "requires obj_size > 0;" << endl;
-    s << "ensures 0 < old($CurrAddr);" << endl;
-    s << "ensures new == old($CurrAddr);" << endl;
-    s << "ensures $CurrAddr > old($CurrAddr) + obj_size;" << endl;
-    s << "ensures $size(new) == obj_size;" << endl;
-    s << "ensures (forall x:int :: new <= x && x < new + obj_size ==> $obj(x) == new);" << endl;
-    s << "ensures $Alloc[new];" << endl;
-    s << "ensures (forall x:int :: {$Alloc[x]} x == new || old($Alloc)[x] == $Alloc[x]);" << endl;
-  }
-  return s.str();
+  if (SmackOptions::MemoryModelImpls)
+    return 
+      "procedure $alloca(n: int) returns (p: int)\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "{\n"
+      "  assume $CurrAddr > 0;\n"
+      "  p := $CurrAddr;\n"
+      "  if (n > 0) {\n"
+      "    $CurrAddr := $CurrAddr + n;\n"
+      "  } else {\n"
+      "    $CurrAddr := $CurrAddr + 1;\n"
+      "  }\n"
+      "  $Alloc[p] := true;\n"
+      "}\n";
+  else    
+    return
+      "procedure $alloca(n: int) returns (p: int);\n"
+      "modifies $CurrAddr, $Alloc;\n"
+      "ensures p > 0;\n"
+      "ensures p == old($CurrAddr);\n"
+      "ensures $CurrAddr > old($CurrAddr);\n"
+      "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
+      "ensures $Alloc[p];\n"
+      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {
@@ -200,4 +225,3 @@ string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {
 }
 
 } // namespace smack
-

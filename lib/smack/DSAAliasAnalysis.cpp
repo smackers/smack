@@ -118,7 +118,8 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
   const DSNode *N1 = nodeEqs->getMemberForValue(LocA.Ptr);
   const DSNode *N2 = nodeEqs->getMemberForValue(LocB.Ptr);
   
-  if (N1->isCompleteNode() || N2->isCompleteNode()) {
+  if ((N1->isCompleteNode() || N2->isCompleteNode()) &&
+      !(N1->isExternalNode() && N2->isExternalNode())) {
     if (!equivNodes(N1,N2))
       return NoAlias;
     

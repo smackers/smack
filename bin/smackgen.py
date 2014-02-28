@@ -7,7 +7,7 @@ import argparse
 import platform
 from llvm2bpl import *
 
-VERSION = '1.3.1'
+VERSION = '1.4.0'
 
 
 def smackParser():
@@ -39,13 +39,6 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def replaceDebugInfo(match):
-  fileName = match.group(1)
-  line = match.group(2)
-  col = match.group(3)
-  return 'assert {:sourcefile "' + fileName + '"} {:sourceline ' + line + '} true;'
-
-
 def clang(scriptPathName, inputFile):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
@@ -65,28 +58,22 @@ def clang(scriptPathName, inputFile):
   return inputFile
 
 
-def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, verifier, entryPoints):
+def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, memimpls, verifier, entryPoints):
   fileExtension = path.splitext(inputFile.name)[1]
   if fileExtension == '.c':
     # if input file is .c, then compile it first with clang
     inputFile = clang(scriptPathName, inputFile)
 
-  debug, bpl = llvm2bpl(scriptPathName, inputFile, debugFlag, memmod)
+  bpl = llvm2bpl(inputFile, debugFlag, memmod, memimpls)
   inputFile.close()
 
-  # print debug info
-  if debugFlag:
-    print debug
-
-  p = re.compile('procedure[ ]*([a-zA-Z0-9_$]*)[ ]*\(')
+  p = re.compile('procedure\s+([^\s(]*)\s*\(')
   if verifier == 'boogie-inline':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, entryPoints), bpl)
   elif verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, entryPoints), bpl)
-    p = re.compile('assume {:sourceloc "(.*)", ([0-9]*), ([0-9]*)} true;')
-    bpl = p.sub(lambda match: replaceDebugInfo(match), bpl)
   return bpl
 
 
@@ -96,7 +83,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
   args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.verifier, args.entryPoints)
+  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints)
 
   # write final output
   args.outfile.write(bpl)
