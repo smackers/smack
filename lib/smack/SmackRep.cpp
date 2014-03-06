@@ -741,12 +741,17 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
   vector< pair<string,string> > args, rets;
 
   int i = 0;
-  for (llvm::Function::const_arg_iterator
+  for (llvm::Function::arg_iterator
        arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
+    string name;
+    if (arg->hasName()) {
+      name = id(arg);
+    } else {
+      name = indexedName("p",i);
+      arg->setName(name);
+    }
     
-    args.push_back(make_pair(
-      arg->hasName() ? id(arg) : indexedName("p",i), 
-      type(arg->getType()) ));
+    args.push_back(make_pair(name, type(arg->getType()) ));
   }
   
   for (; i < nargs; i++)
