@@ -8,8 +8,8 @@
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
+#include "smack/DSAAliasAnalysis.h"
 #include "llvm/InstVisitor.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Debug.h"
@@ -130,7 +130,7 @@ public:
 protected:
   static const string ARITHMETIC;
   static const string MEMORY_DEBUG_SYMBOLS;
-  llvm::AliasAnalysis* aliasAnalysis;
+  DSAAliasAnalysis* aliasAnalysis;
   vector<const void*> memoryRegions;
   const llvm::DataLayout* targetData;
   Program* program;
@@ -141,13 +141,13 @@ protected:
   unsigned uniqueUndefNum;
 
 protected:
-  SmackRep(llvm::AliasAnalysis* aa)
+  SmackRep(DSAAliasAnalysis* aa)
     : aliasAnalysis(aa), targetData(aa->getDataLayout()) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
   }  
 public:
-  static SmackRep* createRep(llvm::AliasAnalysis* aa);
+  static SmackRep* createRep(DSAAliasAnalysis* aa);
   void setProgram(Program* p) { program = p; }
   
   bool isSmackName(string n);
@@ -167,6 +167,7 @@ public:
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
+  bool isExternal(const llvm::Value* v);
 
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);

@@ -189,7 +189,7 @@ const string SmackRep::MEMORY_DEBUG_SYMBOLS =
 
 const int SmackRep::width = 0;
 
-SmackRep* SmackRep::createRep(llvm::AliasAnalysis* aa) {
+SmackRep* SmackRep::createRep(DSAAliasAnalysis* aa) {
   if ( SmackOptions::MemoryModel == twodim )
     return new SmackRep2dMem(aa);
   else
@@ -305,6 +305,10 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
 
   memoryRegions.push_back(v);
   return memoryRegions.size()-1;
+}
+
+bool SmackRep::isExternal(const llvm::Value* v) {
+  return aliasAnalysis->isExternal(v);
 }
 
 string SmackRep::memcpyCall(int dstReg, int srcReg) {

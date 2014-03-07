@@ -110,6 +110,12 @@ bool DSAAliasAnalysis::disjoint(const Location* l1, const Location* l2) {
     || (o2 < o1 && o2 + l2->Size <= o1);
 }
 
+bool DSAAliasAnalysis::isExternal(const Value* v) {
+  const DSNode *N = getGraphForValue(v)->getNodeForValue(v).getNode();
+  return N && N->isExternalNode() && !N->isHeapNode() && !N->isAllocaNode();
+
+}
+
 AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {
 
   if (LocA.Ptr == LocB.Ptr) 

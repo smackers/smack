@@ -27,7 +27,7 @@ public:
   static const string POINTERS;  
 
 public:
-  SmackRepFlatMem(llvm::AliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
+  SmackRepFlatMem(DSAAliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();

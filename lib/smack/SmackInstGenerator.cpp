@@ -574,6 +574,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       currBlock->addStmt(Stmt::skip());
     }
   }
+
+  if (!ci.getType()->isVoidTy() && rep.isExternal(&ci))
+    currBlock->addStmt(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
 }
 
 /******************************************************************************/

@@ -26,7 +26,7 @@ public:
   static const string EXTERN;
 
 public:
-  SmackRep2dMem(llvm::AliasAnalysis* aa) : SmackRep(aa) {}
+  SmackRep2dMem(DSAAliasAnalysis* aa) : SmackRep(aa) {}
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
   virtual string getPtrType();

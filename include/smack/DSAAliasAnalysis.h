@@ -92,6 +92,8 @@ public:
     return false;
   }
   
+  bool isExternal(const llvm::Value* v);
+  
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
   
 private:
