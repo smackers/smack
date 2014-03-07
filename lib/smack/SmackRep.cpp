@@ -205,6 +205,9 @@ string EscapeString(string s) {
     case '\01':
       Str[i] = '_';
       break;
+    case '@':
+      Str[i] = '.';
+      break;
     }
   return Str;
 }
