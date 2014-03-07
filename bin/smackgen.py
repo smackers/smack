@@ -42,7 +42,7 @@ def addEntryPoint(match, entryPoints):
 def clang(scriptPathName, inputFile):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
-  smackHeaders = path.join(smackRoot, 'include')
+  smackHeaders = path.join(smackRoot, 'include', 'smack')
 
   fileName = path.splitext(inputFile.name)[0]
 
