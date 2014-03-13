@@ -499,6 +499,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     currBlock->addStmt(Stmt::skip());
 
+  } else if (f && rep.id(f) == "__SMACK_mod") {
+    proc.addMod(rep.code(ci));
+
   } else if (f && rep.id(f) == "__SMACK_code") {
     currBlock->addStmt(Stmt::code(rep.code(ci)));
 

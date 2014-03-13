@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 void __SMACK_code(const char *fmt, ...);
+void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
