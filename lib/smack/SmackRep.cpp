@@ -7,7 +7,6 @@
 #include "smack/SmackRep2dMem.h"
 #include "smack/SmackRepFlatMem.h"
 #include "smack/SmackOptions.h"
-#include <iostream>
 
 namespace smack {
 
@@ -300,7 +299,7 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
 }
 
 bool SmackRep::safeToCallGetRegion(const llvm::Value* v) {
-  return aliasAnalysis->getNode(v);
+  return aliasAnalysis->getNode(v) != NULL;
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
