@@ -1,8 +1,9 @@
 #include "smack.h"
+#include <inttypes.h>
 
 struct a {
-  long i;
-  long j;
+  int64_t i;
+  int64_t j;
 };
 
 struct a foo(struct a bar) {

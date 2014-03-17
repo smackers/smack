@@ -8,8 +8,8 @@ import time
 tests = [
   ('cdaudio_safe.i.cil',    r'Program has no bugs'),
   ('cdaudio_unsafe.i.cil',  r'This assertion can fail'),
-#  ('diskperf_safe.i.cil',   r'Program has no bugs'), # fails due to returning structs
-#  ('diskperf_unsafe.i.cil', r'This assertion can fail'),
+  ('diskperf_safe.i.cil',   r'Program has no bugs'),
+  ('diskperf_unsafe.i.cil', r'This assertion can fail'),
   ('floppy2_safe.i.cil',    r'Program has no bugs'),
   ('floppy_safe.i.cil',     r'Program has no bugs'),
   ('floppy_unsafe.i.cil',   r'This assertion can fail'),

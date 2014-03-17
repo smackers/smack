@@ -20,6 +20,9 @@
 #include "smack/BplFilePrinter.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
+#include "assistDS/StructReturnToPointer.h"
+#include "assistDS/SimplifyExtractValue.h"
+#include "assistDS/SimplifyInsertValue.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -98,6 +101,9 @@ int main(int argc, char **argv) {
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
   pass_manager.add(llvm::createDeadInstEliminationPass());
   pass_manager.add(llvm::createLowerSwitchPass());
+  pass_manager.add(new llvm::StructRet());
+  pass_manager.add(new llvm::SimplifyEV());
+  pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());
