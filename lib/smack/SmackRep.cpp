@@ -298,17 +298,41 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
   return Expr::sel( Expr::id(memReg(region)), addr );
 }
 
-unsigned SmackRep::getRegion(const llvm::Value* v) {  
-  for (unsigned i=0; i<memoryRegions.size(); ++i)
-    if (!aliasAnalysis->isNoAlias(v, (const llvm::Value*) memoryRegions[i]))
-      return i;
+bool SmackRep::safeToCallGetRegion(const llvm::Value* v) {
+  return aliasAnalysis->getNode(v) != NULL;
+}
 
-  memoryRegions.push_back(v);
-  return memoryRegions.size()-1;
+unsigned SmackRep::getRegion(const llvm::Value* v) {
+  unsigned r;
+
+  for (r=0; r<memoryRegions.size(); ++r)
+    if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].first))
+      break;
+
+  if (r == memoryRegions.size())
+    memoryRegions.push_back(make_pair(v,false));
+
+  memoryRegions[r].second = memoryRegions[r].second || aliasAnalysis->isAlloced(v);
+
+  return r;
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
-  return aliasAnalysis->isExternal(v);
+  return safeToCallGetRegion(v) ? !memoryRegions[getRegion(v)].second : false;
+}
+
+void SmackRep::collectRegions(llvm::Module &M) {
+  RegionCollector rc(*this);
+
+  for (llvm::Module::iterator func = M.begin(), e = M.end();
+       func != e; ++func) {
+
+    for (llvm::Function::iterator block = func->begin();
+        block != func->end(); ++block) {
+
+      rc.visit(*block);
+    }
+  }
 }
 
 string SmackRep::memcpyCall(int dstReg, int srcReg) {

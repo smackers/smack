@@ -13,6 +13,7 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
   rep->setProgram( &program );
+  rep->collectRegions(m);
   
   DEBUG(errs() << "Analyzing globals...\n");
 

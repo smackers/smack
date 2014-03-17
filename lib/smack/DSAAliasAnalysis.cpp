@@ -110,10 +110,18 @@ bool DSAAliasAnalysis::disjoint(const Location* l1, const Location* l2) {
     || (o2 < o1 && o2 + l2->Size <= o1);
 }
 
-bool DSAAliasAnalysis::isExternal(const Value* v) {
-  const DSNode *N = getGraphForValue(v)->getNodeForValue(v).getNode();
-  return N && N->isExternalNode() && !N->isHeapNode() && !N->isAllocaNode();
+DSNode *DSAAliasAnalysis::getNode(const Value* v) {
+  return getGraphForValue(v)->getNodeForValue(v).getNode();
+}
 
+bool DSAAliasAnalysis::isAlloced(const Value* v) {
+  const DSNode *N = getNode(v);
+  return N && (N->isHeapNode() || N->isAllocaNode());
+}
+
+bool DSAAliasAnalysis::isExternal(const Value* v) {
+  const DSNode *N = getNode(v);
+  return N && N->isExternalNode();
 }
 
 AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {

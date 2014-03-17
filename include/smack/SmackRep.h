@@ -131,7 +131,7 @@ protected:
   static const string ARITHMETIC;
   static const string MEMORY_DEBUG_SYMBOLS;
   DSAAliasAnalysis* aliasAnalysis;
-  vector<const void*> memoryRegions;
+  vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
   Program* program;
   
@@ -168,6 +168,7 @@ public:
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
   bool isExternal(const llvm::Value* v);
+  void collectRegions(llvm::Module &M);
 
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);
@@ -221,6 +222,7 @@ public:
   virtual string getPtrType() = 0;
   virtual string getPrelude();
 
+  bool safeToCallGetRegion(const llvm::Value* v);
   virtual const Expr* declareIsExternal(const Expr* e) = 0;
 
   virtual string memoryModel() = 0;
@@ -231,6 +233,20 @@ public:
   virtual string memcpyProc(int dstReg, int srcReg) = 0;
   
 };
+
+class RegionCollector : public llvm::InstVisitor<RegionCollector> {
+private:
+  SmackRep& rep;
+
+public:
+  RegionCollector(SmackRep& r) : rep(r) {}
+  void visitAllocaInst(llvm::AllocaInst& i) { rep.getRegion(&i); }
+  void visitCallInst(llvm::CallInst& i) {
+    if (!i.getType()->isVoidTy() && rep.safeToCallGetRegion(&i))
+      rep.getRegion(&i);
+  }
+};
+
 }
 
 #endif // SMACKREP_H
