@@ -36,6 +36,8 @@ tests = [
   ('struct_return',      r'Program has no bugs', 2),
   ('extern_struct',      r'This assertion can fail', 2),
   ('extern_func',        r'Program has no bugs', 2),
+  ('extern_mem',         r'Program has no bugs', 2),
+  ('extern_mem_fail',    r'This assertion can fail', 2),
   ('return_label',       r'Program has no bugs', 2),
   ('struct_cast',        r'Program has no bugs', 2),
   ('struct_cast_fail',   r'This assertion can fail', 2),
