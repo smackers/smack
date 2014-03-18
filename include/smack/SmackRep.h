@@ -222,7 +222,6 @@ public:
   virtual string getPtrType() = 0;
   virtual string getPrelude();
 
-  bool safeToCallGetRegion(const llvm::Value* v);
   virtual const Expr* declareIsExternal(const Expr* e) = 0;
 
   virtual string memoryModel() = 0;
@@ -242,7 +241,7 @@ public:
   RegionCollector(SmackRep& r) : rep(r) {}
   void visitAllocaInst(llvm::AllocaInst& i) { rep.getRegion(&i); }
   void visitCallInst(llvm::CallInst& i) {
-    if (!i.getType()->isVoidTy() && rep.safeToCallGetRegion(&i))
+    if (i.getType()->isPointerTy())
       rep.getRegion(&i);
   }
 };

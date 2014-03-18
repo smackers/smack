@@ -578,7 +578,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     }
   }
 
-  if (!ci.getType()->isVoidTy() && rep.isExternal(&ci))
+  if (f && f->isDeclaration() && rep.isExternal(&ci))
     currBlock->addStmt(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
 }
 

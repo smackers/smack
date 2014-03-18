@@ -298,10 +298,6 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
   return Expr::sel( Expr::id(memReg(region)), addr );
 }
 
-bool SmackRep::safeToCallGetRegion(const llvm::Value* v) {
-  return aliasAnalysis->getNode(v) != NULL;
-}
-
 unsigned SmackRep::getRegion(const llvm::Value* v) {
   unsigned r;
 
@@ -318,7 +314,7 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
-  return safeToCallGetRegion(v) ? !memoryRegions[getRegion(v)].second : false;
+  return v->getType()->isPointerTy() && !memoryRegions[getRegion(v)].second;
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {
