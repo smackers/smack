@@ -20,7 +20,7 @@ SOURCES = simple.c simple_fail.c \
           struct_return.c \
           extern_struct.c \
           extern_func.c \
-					extern_mem.c extern_mem_fail.c \
+          extern_mem.c extern_mem_fail.c \
           return_label.c \
           struct_cast.c struct_cast_fail.c \
           struct_cast1.c struct_cast1_fail.c \
