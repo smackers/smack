@@ -185,6 +185,7 @@ const string SmackRep::ARITHMETIC =
 const string SmackRep::MEMORY_DEBUG_SYMBOLS = 
   "type $mop;\n"
   "procedure boogie_si_record_mop(m: $mop);\n"
+  "procedure boogie_si_record_int(i: int);\n"
   "const $MOP: $mop;\n";
 
 const int SmackRep::width = 0;
