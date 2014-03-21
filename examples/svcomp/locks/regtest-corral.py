@@ -6,19 +6,19 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('test_locks_5_safe',     r'Program has no bugs'),
-  ('test_locks_6_safe',     r'Program has no bugs'),
-  ('test_locks_7_safe',     r'Program has no bugs'),
-  ('test_locks_8_safe',     r'Program has no bugs'),
-  ('test_locks_9_safe',     r'Program has no bugs'),
-  ('test_locks_10_safe',    r'Program has no bugs'),
-  ('test_locks_11_safe',    r'Program has no bugs'),
-  ('test_locks_12_safe',    r'Program has no bugs'),
-  ('test_locks_13_safe',    r'Program has no bugs'),
-  ('test_locks_14_safe',    r'Program has no bugs'),
-  ('test_locks_14_unsafe',  r'This assertion can fail'),
-  ('test_locks_15_safe',    r'Program has no bugs'),
-  ('test_locks_15_unsafe',  r'This assertion can fail')
+  ('test_locks_5_true',     r'Program has no bugs'),
+  ('test_locks_6_true',     r'Program has no bugs'),
+  ('test_locks_7_true',     r'Program has no bugs'),
+  ('test_locks_8_true',     r'Program has no bugs'),
+  ('test_locks_9_true',     r'Program has no bugs'),
+  ('test_locks_10_true',    r'Program has no bugs'),
+  ('test_locks_11_true',    r'Program has no bugs'),
+  ('test_locks_12_true',    r'Program has no bugs'),
+  ('test_locks_13_true',    r'Program has no bugs'),
+  ('test_locks_14_true',    r'Program has no bugs'),
+  ('test_locks_14_false',   r'This assertion can fail'),
+  ('test_locks_15_true',    r'Program has no bugs'),
+  ('test_locks_15_false',   r'This assertion can fail')
 ]
 
 def red(text):

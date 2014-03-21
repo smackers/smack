@@ -6,19 +6,19 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('test_locks_5_safe',     r'1 verified, 0 errors?'),
-  ('test_locks_6_safe',     r'1 verified, 0 errors?'),
-  ('test_locks_7_safe',     r'1 verified, 0 errors?'),
-  ('test_locks_8_safe',     r'1 verified, 0 errors?'),
-  ('test_locks_9_safe',     r'1 verified, 0 errors?'),
-  ('test_locks_10_safe',    r'1 verified, 0 errors?'),
-  ('test_locks_11_safe',    r'1 verified, 0 errors?'),
-  ('test_locks_12_safe',    r'1 verified, 0 errors?'),
-  ('test_locks_13_safe',    r'1 verified, 0 errors?'),
-  ('test_locks_14_safe',    r'1 verified, 0 errors?'),
-  ('test_locks_14_unsafe',  r'0 verified, 1 errors?'),
-  ('test_locks_15_safe',    r'1 verified, 0 errors?'),
-  ('test_locks_15_unsafe',  r'0 verified, 1 errors?')
+  ('test_locks_5_true',     r'1 verified, 0 errors?'),
+  ('test_locks_6_true',     r'1 verified, 0 errors?'),
+  ('test_locks_7_true',     r'1 verified, 0 errors?'),
+  ('test_locks_8_true',     r'1 verified, 0 errors?'),
+  ('test_locks_9_true',     r'1 verified, 0 errors?'),
+  ('test_locks_10_true',    r'1 verified, 0 errors?'),
+  ('test_locks_11_true',    r'1 verified, 0 errors?'),
+  ('test_locks_12_true',    r'1 verified, 0 errors?'),
+  ('test_locks_13_true',    r'1 verified, 0 errors?'),
+  ('test_locks_14_true',    r'1 verified, 0 errors?'),
+  ('test_locks_14_false',   r'0 verified, 1 errors?'),
+  ('test_locks_15_true',    r'1 verified, 0 errors?'),
+  ('test_locks_15_false',   r'0 verified, 1 errors?')
 ]
 
 def red(text):
