@@ -6,16 +6,15 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('cdaudio_safe.i.cil',    r'Program has no bugs'),
-  ('cdaudio_unsafe.i.cil',  r'This assertion can fail'),
-  ('diskperf_safe.i.cil',   r'Program has no bugs'),
-  ('diskperf_unsafe.i.cil', r'This assertion can fail'),
-  ('floppy2_safe.i.cil',    r'Program has no bugs'),
-  ('floppy_safe.i.cil',     r'Program has no bugs'),
-  ('floppy_unsafe.i.cil',   r'This assertion can fail'),
-  ('kbfiltr_unsafe.i.cil',  r'This assertion can fail'),
-  ('parport_safe.i.cil',    r'Program has no bugs'),
-  ('parport_unsafe.i.cil',  r'This assertion can fail')
+  ('cdaudio_true.i.cil',    r'Program has no bugs'),
+  ('diskperf_true.i.cil',   r'Program has no bugs'),
+  ('diskperf_false.i.cil',  r'This assertion can fail'),
+  ('floppy2_true.i.cil',    r'Program has no bugs'),
+  ('floppy_true.i.cil',     r'Program has no bugs'),
+  ('floppy_false.i.cil',    r'This assertion can fail'),
+  ('kbfiltr_false.i.cil',   r'This assertion can fail'),
+  ('parport_true.i.cil',    r'Program has no bugs'),
+  ('parport_false.i.cil',   r'This assertion can fail')
 ]
 
 def red(text):

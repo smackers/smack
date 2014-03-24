@@ -6,16 +6,15 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('cdaudio_safe.i.cil',    r'1 verified, 0 errors?'),
-  ('cdaudio_unsafe.i.cil',  r'0 verified, 1 errors?'),
-#  ('diskperf_safe.i.cil',   r'1 verified, 0 errors?'),
-#  ('diskperf_unsafe.i.cil', r'0 verified, 1 errors?'),
-  ('floppy2_safe.i.cil',    r'1 verified, 0 errors?'),
-  ('floppy_safe.i.cil',     r'1 verified, 0 errors?'),
-  ('floppy_unsafe.i.cil',   r'0 verified, 1 errors?'),
-  ('kbfiltr_unsafe.i.cil',  r'0 verified, 1 errors?'),
-  ('parport_safe.i.cil',    r'1 verified, 0 errors?'),
-  ('parport_unsafe.i.cil',  r'0 verified, 1 errors?')
+  ('cdaudio_true.i.cil',    r'1 verified, 0 errors?'),
+#  ('diskperf_true.i.cil',   r'1 verified, 0 errors?'),
+#  ('diskperf_false.i.cil',  r'0 verified, 1 errors?'),
+  ('floppy2_true.i.cil',    r'1 verified, 0 errors?'),
+  ('floppy_true.i.cil',     r'1 verified, 0 errors?'),
+  ('floppy_false.i.cil',    r'0 verified, 1 errors?'),
+  ('kbfiltr_false.i.cil',   r'0 verified, 1 errors?'),
+  ('parport_true.i.cil',    r'1 verified, 0 errors?'),
+  ('parport_false.i.cil',   r'0 verified, 1 errors?')
 ]
 
 def red(text):

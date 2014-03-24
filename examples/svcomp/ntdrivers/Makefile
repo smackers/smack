@@ -2,16 +2,15 @@ CC = clang
 INC = ../../../include/smack
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
-SOURCES = cdaudio_safe.i.cil.c \
-          cdaudio_unsafe.i.cil.c \
-          diskperf_safe.i.cil.c \
-          diskperf_unsafe.i.cil.c \
-          floppy2_safe.i.cil.c \
-          floppy_safe.i.cil.c \
-          floppy_unsafe.i.cil.c \
-          kbfiltr_unsafe.i.cil.c \
-          parport_safe.i.cil.c \
-          parport_unsafe.i.cil.c
+SOURCES = cdaudio_true.i.cil.c \
+          diskperf_true.i.cil.c \
+          diskperf_false.i.cil.c \
+          floppy2_true.i.cil.c \
+          floppy_true.i.cil.c \
+          floppy_false.i.cil.c \
+          kbfiltr_false.i.cil.c \
+          parport_true.i.cil.c \
+          parport_false.i.cil.c
 
 BITCODE = $(SOURCES:.c=.bc)
 
