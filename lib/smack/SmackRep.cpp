@@ -923,14 +923,18 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
-  } else if (dyn_cast<const ArrayType>(val->getType())) {
-    
+  } else if (ArrayType* at = dyn_cast<ArrayType>(val->getType())) {
+    for (unsigned i = 0; i < at->getNumElements(); i++) {
+      const Constant* elem = val->getAggregateElement(i);
+      addInit( region, pa(addr,i,storageSize(at->getElementType())), elem );
+    }
+
   } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
       addInit( region, pa(addr,fieldOffset(st,i),1), elem );
     }
-    
+
   } else {
     assert (false && "Unexpected static initializer.");
   }
