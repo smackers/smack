@@ -12,6 +12,8 @@ const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
 const string SmackRepFlatMem::BOTTOM = "$GLOBALS_BOTTOM";
 const string SmackRepFlatMem::IS_EXT = "$isExternal";
 const string SmackRepFlatMem::PTR_TYPE = "int";
+
+Regex STRING_CONSTANT("^\\.str[0-9]*$");
   
 vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
   using namespace llvm;
@@ -42,14 +44,17 @@ vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
 
       bottom -= size;
 
-      if (numElems > 1)
-        ax.push_back(Attr::attr("count",numElems));
-    
-      decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
-      addInit(getRegion(g), expr(g), init);
-      // Expr::fn("$slt",
-      //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-      //     Expr::lit(bottom)) ));
+      if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
+        if (numElems > 1)
+          ax.push_back(Attr::attr("count",numElems));
+
+        decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
+        addInit(getRegion(g), expr(g), init);
+
+        // Expr::fn("$slt",
+        //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+        //     Expr::lit(bottom)) ));
+      }
     
     } else {
       decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));

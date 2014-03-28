@@ -8,6 +8,8 @@
 #include "smack/SmackRepFlatMem.h"
 #include "smack/SmackOptions.h"
 
+#include <iostream>
+
 namespace smack {
 
 const string SmackRep::ALLOC = "$Alloc";
@@ -914,6 +916,7 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
     return 1;
 }
 
+
 void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val) {
   using namespace llvm;
 
@@ -924,6 +927,7 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (ArrayType* at = dyn_cast<ArrayType>(val->getType())) {
+
     for (unsigned i = 0; i < at->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
       addInit( region, pa(addr,i,storageSize(at->getElementType())), elem );
