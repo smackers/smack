@@ -169,7 +169,7 @@ string SmackRepFlatMem::mallocProc() {
       "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
       "ensures $Alloc[p];\n"
       "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
+      "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::freeProc() {
