@@ -516,6 +516,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
         llvm::Value* castValue = ce->getOperand(0);
         if (llvm::Function* castFunc = llvm::dyn_cast<llvm::Function>(castValue)) {
           currBlock->addStmt(rep.call(castFunc, ci));
+          if (castFunc->isDeclaration() && rep.isExternal(&ci))
+            currBlock->addStmt(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
           return;
         }
       }
