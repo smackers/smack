@@ -218,14 +218,33 @@ string SmackRepFlatMem::allocaProc() {
 
 string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {
   stringstream s;
-  s << "procedure $memcpy." << dstReg << "." << srcReg;
-  s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
-  s << "modifies " << memReg(dstReg) << ";" << endl;
-  s << "ensures (forall x:int :: dest <= x && x < dest + len ==> " 
-    << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
-    << endl;
-  s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-    << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool)" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "{" << endl;
+    s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
+    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+    s << "  havoc " << memReg(dstReg) << ";" << endl;
+    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> " 
+      << memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
+    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> " 
+      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
+      << endl;
+    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  }
+
   return s.str();
 }
 
