@@ -83,6 +83,8 @@ if __name__ == '__main__':
     if p.returncode:
       print boogieOutput
       sys.exit("SMACK encountered an error invoking Boogie. Exiting...")
+    if args.debug:
+      print boogieOutput
     sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
     if sourceTrace:
       print sourceTrace
