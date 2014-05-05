@@ -66,13 +66,11 @@ if __name__ == '__main__':
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[smackParser()])
-  parser.add_argument('--unroll', metavar='N', dest='unroll', default='2', type=int,
-                      help='unroll loops/recursion in Boogie/Corral N number of times')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
                       help='Boogie time limit in seconds')
   args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints)
+  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints, args.unroll)
 
   # write final output
   args.outfile.write(bpl)
