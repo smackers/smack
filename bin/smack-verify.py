@@ -82,6 +82,9 @@ if __name__ == '__main__':
     # invoke Boogie
     p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.unroll)], stdout=subprocess.PIPE)
     boogieOutput = p.communicate()[0]
+    if p.returncode:
+      print boogieOutput
+      sys.exit("SMACK encountered an error invoking Boogie. Exiting...")
     sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
     if sourceTrace:
       print sourceTrace
@@ -91,5 +94,8 @@ if __name__ == '__main__':
     # invoke Corral
     p = subprocess.Popen(['corral', args.outfile.name, '/recursionBound:' + str(args.unroll), '/tryCTrace'], stdout=subprocess.PIPE)
     corralOutput = p.communicate()[0]
+    if p.returncode:
+      print corralOutput
+      sys.exit("SMACK encountered an error invoking Corral. Exiting...")
     print corralOutput
 
