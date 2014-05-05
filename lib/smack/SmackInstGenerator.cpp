@@ -588,4 +588,15 @@ void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst& mci) {
   currBlock->addStmt(Stmt::call(rep.memcpyCall(dstReg,srcReg), args));
 }
 
+void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst& msi) {
+  processInstruction(msi);
+  unsigned dstReg = rep.getRegion(msi.getOperand(0));
+
+  vector<const Expr*> args;
+  for (unsigned i = 0; i < msi.getNumOperands() - 1; i++)
+    args.push_back(rep.expr(msi.getOperand(i)));
+  assert(args.size() == 5);
+  currBlock->addStmt(Stmt::call(rep.memsetCall(dstReg), args));
+}
+
 } // namespace smack

@@ -34,6 +34,8 @@ tests = [
   ('nondet',                r'Program has no bugs', 2),
   ('printfs',               r'Program has no bugs', 2),
   ('struct_return',         r'Program has no bugs', 2),
+  ('struct_init',           r'Program has no bugs', 2),
+  ('struct_init_fail',      r'This assertion can fail', 2),
   ('extern_struct',         r'This assertion can fail', 2),
   ('extern_func',           r'Program has no bugs', 2),
   ('extern_mem',            r'Program has no bugs', 2),

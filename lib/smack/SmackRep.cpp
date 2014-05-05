@@ -222,7 +222,7 @@ Regex BPL_KW(
   "|break|goto|if|else|div)$");
 Regex SMACK_NAME(".*__SMACK_.*");
 Regex PROC_IGNORE("^("
-  "malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*|"
+  "malloc|free|llvm\\.memcpy\\..*|llvm\\.memset\\..*|llvm\\.dbg\\..*|"
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
@@ -339,6 +339,14 @@ string SmackRep::memcpyCall(int dstReg, int srcReg) {
   s << "$memcpy." << dstReg << "." << srcReg;
 
   program->addDecl(memcpyProc(dstReg,srcReg));
+  return s.str();
+}
+
+string SmackRep::memsetCall(int dstReg) {
+  stringstream s;
+  s << "$memset." << dstReg;
+
+  program->addDecl(memsetProc(dstReg));
   return s.str();
 }
 

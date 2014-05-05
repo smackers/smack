@@ -46,6 +46,7 @@ public:
   virtual string freeProc();
   virtual string allocaProc();
   virtual string memcpyProc(int dstReg, int srcReg);
+  virtual string memsetProc(int dstReg);
 };
 }
 

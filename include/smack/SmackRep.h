@@ -230,6 +230,8 @@ public:
   virtual string allocaProc() = 0;
   virtual string memcpyCall(int dstReg, int srcReg);
   virtual string memcpyProc(int dstReg, int srcReg) = 0;
+  virtual string memsetCall(int dstReg);
+  virtual string memsetProc(int dstReg) = 0;
   
 };
 

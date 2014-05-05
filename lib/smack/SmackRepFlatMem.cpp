@@ -248,4 +248,34 @@ string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {
   return s.str();
 }
 
+string SmackRepFlatMem::memsetProc(int dstReg) {
+  stringstream s;
+
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $memset." << dstReg;
+    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool)" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "{" << endl;
+    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+    s << "  havoc " << memReg(dstReg) << ";" << endl;
+    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == val);" << endl;
+    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $memset." << dstReg;
+    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == val);"
+      << endl;
+    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  }
+
+  return s.str();
+}
+
 } // namespace smack

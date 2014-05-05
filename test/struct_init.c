@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <smack.h>
 
 struct a {
@@ -6,7 +5,9 @@ struct a {
   int j;
 };
 
-int main() {
+int main(void) {
   struct a x = {0,0};
-  __SMACK_assert(x.i == 0);
+  __SMACK_assert(x.i == 0 && x.j == 0);
+  return 0;
 }
+

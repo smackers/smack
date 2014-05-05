@@ -95,8 +95,8 @@ public:
   // TODO landingpad
   
   void visitMemCpyInst(llvm::MemCpyInst& i);
+  void visitMemSetInst(llvm::MemSetInst& i);
 };
 }
 
 #endif // SMACKINSTVISITOR_H
-

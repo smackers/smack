@@ -202,5 +202,23 @@ string SmackRep2dMem::memcpyProc(int dstReg, int srcReg) {
   return s.str();
 }
 
+string SmackRep2dMem::memsetProc(int dstReg) {
+  stringstream s;
+  s << "procedure $memset." << dstReg;
+  s << "(dest: $ptr, val: $ptr, len: $ptr, align: $ptr, isvolatile: bool);" << endl;
+  s << "modifies " << memReg(dstReg) << ";" << endl;
+  s << "ensures (forall x:$ptr :: $obj(x) == $obj(dest)" << endl
+    << "  && $off(dest) <= $off(x) && $off(x) < $off(dest) + $off(len)" << endl
+    << "  ==> "
+    << memReg(dstReg) << "[x] == $off(val));"
+    << endl;
+  s << "ensures (forall x:$ptr :: !($obj(x) == $obj(dest)" << endl
+    << "  && $off(dest) <= $off(x) && $off(x) < $off(dest) + $off(len))" << endl
+    << "  ==> "
+    << memReg(dstReg) << "[x] == old("
+    << memReg(dstReg) << ")[x]);" << endl;
+  return s.str();
+}
+
 
 } // namespace smack
