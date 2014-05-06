@@ -65,34 +65,41 @@ def generateSourceErrorTrace(boogieOutput, bpl):
  
 def smackdOutput(corralOutput):
   FILENAME = '[\w#$~%.\/-]+'
-  LABEL = '[\w$]+'
 
-  traces = []
-  for traceLine in corralOutput.splitlines(True):
-    traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
-    errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
-    if traceMatch:
-      filename = str(traceMatch.group(1))
-      lineno = int(traceMatch.group(2))
-      colno = int(traceMatch.group(3))
-      threadid = int(traceMatch.group(4))
-      desc = str(traceMatch.group(6))
-      trace = { 'threadid': threadid, 'file': filename, 'line': lineno, 'column': colno, 'description': '' if desc == 'None' else desc }
-      traces.append(trace)
-    elif errorMatch:
-      filename = str(errorMatch.group(1))
-      lineno = int(errorMatch.group(2))
-      colno = int(errorMatch.group(3))
-      desc = str(errorMatch.group(4))
-      failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
- 
-  json_data = {
-    'verifier': 'corral',
-    'passed?': False,
-    'failsAt': failsAt,
-    'threadCount': 1,
-    'traces': traces
-  }
+  passedMatch = re.search('Program has no bugs', corralOutput)
+  if passedMatch:
+    json_data = {
+      'verifier': 'corral',
+      'passed?': True
+    }
+
+  else:
+    traces = []
+    for traceLine in corralOutput.splitlines(True):
+      traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
+      errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
+      if traceMatch:
+        filename = str(traceMatch.group(1))
+        lineno = int(traceMatch.group(2))
+        colno = int(traceMatch.group(3))
+        threadid = int(traceMatch.group(4))
+        desc = str(traceMatch.group(6))
+        trace = { 'threadid': threadid, 'file': filename, 'line': lineno, 'column': colno, 'description': '' if desc == 'None' else desc }
+        traces.append(trace)
+      elif errorMatch:
+        filename = str(errorMatch.group(1))
+        lineno = int(errorMatch.group(2))
+        colno = int(errorMatch.group(3))
+        desc = str(errorMatch.group(4))
+        failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
+
+    json_data = {
+      'verifier': 'corral',
+      'passed?': False,
+      'failsAt': failsAt,
+      'threadCount': 1,
+      'traces': traces
+    }
   json_string = json.dumps(json_data)
   print json_string
 
