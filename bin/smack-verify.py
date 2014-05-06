@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 from os import path
+import json
 import sys
 import re
 import subprocess
@@ -60,14 +61,50 @@ def generateSourceErrorTrace(boogieOutput, bpl):
           sourceTrace += filename + '(' + str(lineno) + ',' + str(colno) + '): ' + message + '\n'
           break
   return sourceTrace
- 
 
+ 
+def smackdOutput(corralOutput):
+  FILENAME = '[\w#$~%.\/-]+'
+  LABEL = '[\w$]+'
+
+  traces = []
+  for traceLine in corralOutput.splitlines(True):
+    traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
+    errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
+    if traceMatch:
+      filename = str(traceMatch.group(1))
+      lineno = int(traceMatch.group(2))
+      colno = int(traceMatch.group(3))
+      threadid = int(traceMatch.group(4))
+      desc = str(traceMatch.group(6))
+      trace = { 'threadid': threadid, 'file': filename, 'line': lineno, 'column': colno, 'description': '' if desc == 'None' else desc }
+      traces.append(trace)
+    elif errorMatch:
+      filename = str(errorMatch.group(1))
+      lineno = int(errorMatch.group(2))
+      colno = int(errorMatch.group(3))
+      desc = str(errorMatch.group(4))
+      failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
+ 
+  json_data = {
+    'verifier': 'corral',
+    'passed?': False,
+    'failsAt': failsAt,
+    'threadCount': 1,
+    'traces': traces
+  }
+  json_string = json.dumps(json_data)
+  print json_string
+
+ 
 if __name__ == '__main__':
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[smackParser()])
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
                       help='Boogie time limit in seconds')
+  parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
+                      help='output JSON format for SMACKd')
   args = parser.parse_args()
 
   bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints, args.unroll)
@@ -97,5 +134,8 @@ if __name__ == '__main__':
     if p.returncode:
       print corralOutput
       sys.exit("SMACK encountered an error invoking Corral. Exiting...")
-    print corralOutput
+    if args.smackd:
+      smackdOutput(corralOutput)
+    else:
+      print corralOutput
 
