@@ -31,7 +31,12 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
     if (rep->isIgnore(func))
       continue;
-    
+
+    if (rep->isMallocOrFree(func)) {
+      program.addDecls(rep->globalDecl(func));
+      continue;
+    }
+
     if (!func->isVarArg())
       program.addDecls(rep->globalDecl(func));
 

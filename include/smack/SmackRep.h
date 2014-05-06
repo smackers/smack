@@ -152,6 +152,7 @@ public:
   
   bool isSmackName(string n);
   bool isSmackGeneratedName(string n);
+  bool isMallocOrFree(llvm::Function* f);
   bool isIgnore(llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);

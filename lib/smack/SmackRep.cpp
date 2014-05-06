@@ -216,13 +216,14 @@ string EscapeString(string s) {
 }
 
 Regex BPL_KW(
-  "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant"
+  "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
   "|unique|finite|complete|type|const|function|axiom|var|procedure"
   "|implementation|where|returns|assume|assert|havoc|call|return|while"
   "|break|goto|if|else|div)$");
 Regex SMACK_NAME(".*__SMACK_.*");
+Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
-  "malloc|free|llvm\\.memcpy\\..*|llvm\\.memset\\..*|llvm\\.dbg\\..*|"
+  "llvm\\.memcpy\\..*|llvm\\.memset\\..*|llvm\\.dbg\\..*|"
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
@@ -236,6 +237,10 @@ bool SmackRep::isSmackName(string n) {
 
 bool SmackRep::isSmackGeneratedName(string n) {
   return n.size() > 0 && n[0] == '$';
+}
+
+bool SmackRep::isMallocOrFree(llvm::Function* f) {
+  return PROC_MALLOC_FREE.match(id(f));
 }
 
 bool SmackRep::isIgnore(llvm::Function* f) {  
@@ -831,7 +836,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
     assert(args.size() == 1);
     return Stmt::call(MALLOC, ptr2val(args[0]), rets[0]);
 
-  } else if (name == "free") {
+  } else if (name == "free_") {
     assert(args.size() == 1);
     return Stmt::call(FREE, args[0]);
 
