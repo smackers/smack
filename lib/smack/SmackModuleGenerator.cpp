@@ -13,6 +13,7 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
   rep->setProgram( &program );
+  rep->collectRegions(m);
   
   DEBUG(errs() << "Analyzing globals...\n");
 
@@ -30,7 +31,12 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
     if (rep->isIgnore(func))
       continue;
-    
+
+    if (rep->isMallocOrFree(func)) {
+      program.addDecls(rep->globalDecl(func));
+      continue;
+    }
+
     if (!func->isVarArg())
       program.addDecls(rep->globalDecl(func));
 

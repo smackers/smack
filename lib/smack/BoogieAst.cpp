@@ -17,6 +17,10 @@ const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
 
+const Expr* Expr::cond(const Expr* c, const Expr* t, const Expr* e) {
+  return new CondExpr(c,t,e);
+}
+
 const Expr* Expr::eq(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Eq, l, r);
 }
@@ -382,6 +386,10 @@ void BinExpr::print(ostream& os) const {
     break;
   }
   os << " " << rhs << ")";
+}
+
+void CondExpr::print(ostream& os) const {
+  os << "if " << cond << " then " << then << " else " << else_;
 }
 
 void FunExpr::print(ostream& os) const {

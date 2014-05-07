@@ -91,9 +91,13 @@ public:
 
     return false;
   }
-  
+
+  llvm::DSNode *getNode(const llvm::Value* v);
+  bool isAlloced(const llvm::Value* v);
+  bool isExternal(const llvm::Value* v);
+
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
-  
+
 private:
   bool isMemcpyd(const llvm::DSNode* n);
   bool isStaticInitd(const llvm::DSNode* n);

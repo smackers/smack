@@ -7708,7 +7708,7 @@ int main(void)
 }
 }
 char _SLAM_alloc_dummy  ;
-// extern int ( /* missing proto */  malloc)() ;
+extern int ( /* missing proto */  malloc)() ;
 char *nondet_malloc(int i ) 
 { int __BLAST_NONDET___0 = __VERIFIER_nondet_int() ;
   int tmp ;

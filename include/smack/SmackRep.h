@@ -8,8 +8,8 @@
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
+#include "smack/DSAAliasAnalysis.h"
 #include "llvm/InstVisitor.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Debug.h"
@@ -130,8 +130,8 @@ public:
 protected:
   static const string ARITHMETIC;
   static const string MEMORY_DEBUG_SYMBOLS;
-  llvm::AliasAnalysis* aliasAnalysis;
-  vector<const void*> memoryRegions;
+  DSAAliasAnalysis* aliasAnalysis;
+  vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
   Program* program;
   
@@ -141,7 +141,7 @@ protected:
   unsigned uniqueUndefNum;
 
 protected:
-  SmackRep(llvm::AliasAnalysis* aa)
+  SmackRep(DSAAliasAnalysis* aa)
     : aliasAnalysis(aa), targetData(aa->getDataLayout()) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
@@ -159,11 +159,12 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  static SmackRep* createRep(llvm::AliasAnalysis* aa);
+  static SmackRep* createRep(DSAAliasAnalysis* aa);
   void setProgram(Program* p) { program = p; }
   
   bool isSmackName(string n);
   bool isSmackGeneratedName(string n);
+  bool isMallocOrFree(llvm::Function* f);
   bool isIgnore(llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
@@ -177,6 +178,8 @@ public:
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
+  bool isExternal(const llvm::Value* v);
+  void collectRegions(llvm::Module &M);
 
   virtual string type(llvm::Type* t);
   virtual string type(llvm::Value* v);
@@ -234,8 +237,24 @@ public:
   virtual string freeProc() = 0;
   virtual string allocaProc() = 0;
   virtual string memcpyProc(int dstReg, int srcReg) = 0;
+  virtual string memsetCall(int dstReg);
+  virtual string memsetProc(int dstReg) = 0;
   
 };
+
+class RegionCollector : public llvm::InstVisitor<RegionCollector> {
+private:
+  SmackRep& rep;
+
+public:
+  RegionCollector(SmackRep& r) : rep(r) {}
+  void visitAllocaInst(llvm::AllocaInst& i) { rep.getRegion(&i); }
+  void visitCallInst(llvm::CallInst& i) {
+    if (i.getType()->isPointerTy())
+      rep.getRegion(&i);
+  }
+};
+
 }
 
 #endif // SMACKREP_H

@@ -6,16 +6,16 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('cdaudio_safe.i.cil',    r'Program has no bugs'),
-  ('cdaudio_unsafe.i.cil',  r'This assertion can fail'),
-#  ('diskperf_safe.i.cil',   r'Program has no bugs'), # fails due to returning structs
-#  ('diskperf_unsafe.i.cil', r'This assertion can fail'),
-  ('floppy2_safe.i.cil',    r'Program has no bugs'),
-  ('floppy_safe.i.cil',     r'Program has no bugs'),
-  ('floppy_unsafe.i.cil',   r'This assertion can fail'),
-  ('kbfiltr_unsafe.i.cil',  r'This assertion can fail'),
-  ('parport_safe.i.cil',    r'Program has no bugs'),
-  ('parport_unsafe.i.cil',  r'This assertion can fail')
+  ('cdaudio_simpl1_true.cil',    r'Program has no bugs'),
+  ('cdaudio_simpl1_false.cil',   r'This assertion can fail'),
+  ('diskperf_simpl1_true.cil',   r'Program has no bugs'),
+  ('floppy_simpl3_true.cil',     r'Program has no bugs'),
+  ('floppy_simpl3_false.cil',    r'This assertion can fail'),
+  ('floppy_simpl4_true.cil',     r'Program has no bugs'),
+  ('floppy_simpl4_false.cil',    r'This assertion can fail'),
+  ('kbfiltr_simpl1_true.cil',    r'Program has no bugs'),
+  ('kbfiltr_simpl2_true.cil',    r'Program has no bugs'),
+  ('kbfiltr_simpl2_false.cil',   r'This assertion can fail')
 ]
 
 def red(text):

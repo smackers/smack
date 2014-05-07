@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class DataStructureCallGraph : public ModulePass, public CallGraph {
+class DataStructureCallGraph : public CallGraph {
   // Root is root of the call graph, or the external node if a 'main' function
   // couldn't be found.
   CallGraphNode *Root;
@@ -43,7 +43,7 @@ class DataStructureCallGraph : public ModulePass, public CallGraph {
 public:
   static char ID;
   DataStructureCallGraph() :
-    ModulePass(ID), Root(0), ExternalCallingNode(0), CallsExternalNode(0) { }
+    Root(0), ExternalCallingNode(0), CallsExternalNode(0) { }
 
   virtual bool runOnModule(Module &M);
 
@@ -99,7 +99,7 @@ private:
       delete CallsExternalNode;
       CallsExternalNode = 0;
     }
-    CallGraph::destroy();
+    CallGraph::releaseMemory();
   }
 };
 

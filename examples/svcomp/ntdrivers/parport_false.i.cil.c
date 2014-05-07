@@ -8999,7 +8999,7 @@ PVOID PptSetCancelRoutine(PIRP Irp , void (*CancelRoutine)(struct _DEVICE_OBJECT
   return ((void (*)(struct _DEVICE_OBJECT *DeviceObject , struct _IRP *Irp ))((void *)tmp));
 }
 }
-extern int ( /* missing proto */  KeQueryTickCount)() ;
+extern void KeQueryTickCount(LARGE_INTEGER *i) ;
 BOOLEAN CheckPort(PUCHAR wPortAddr , UCHAR bMask , UCHAR bValue , USHORT usTimeDelay ) 
 { UCHAR dsr ;
   LARGE_INTEGER Wait ;

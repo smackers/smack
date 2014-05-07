@@ -22,6 +22,7 @@ class Expr {
 public:
   virtual void print(ostream& os) const = 0;
   static const Expr* and_(const Expr* l, const Expr* r);
+  static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
   static const Expr* lt(const Expr* l, const Expr* r);
   static const Expr* fn(string f, const Expr* x);
@@ -49,6 +50,16 @@ private:
   const Expr* rhs;
 public:
   BinExpr(const Binary b, const Expr* l, const Expr* r) : op(b), lhs(l), rhs(r) {}
+  void print(ostream& os) const;
+};
+
+class CondExpr : public Expr {
+  const Expr* cond;
+  const Expr* then;
+  const Expr* else_;
+public:
+  CondExpr(const Expr* c, const Expr* t, const Expr* e)
+    : cond(c), then(t), else_(e) {}
   void print(ostream& os) const;
 };
 

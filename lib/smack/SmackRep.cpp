@@ -8,6 +8,8 @@
 #include "smack/SmackRepFlatMem.h"
 #include "smack/SmackOptions.h"
 
+#include <iostream>
+
 namespace smack {
 
 const string SmackRep::ALLOC = "$Alloc";
@@ -185,11 +187,12 @@ const string SmackRep::ARITHMETIC =
 const string SmackRep::MEMORY_DEBUG_SYMBOLS = 
   "type $mop;\n"
   "procedure boogie_si_record_mop(m: $mop);\n"
+  "procedure boogie_si_record_int(i: int);\n"
   "const $MOP: $mop;\n";
 
 const int SmackRep::width = 0;
 
-SmackRep* SmackRep::createRep(llvm::AliasAnalysis* aa) {
+SmackRep* SmackRep::createRep(DSAAliasAnalysis* aa) {
   if ( SmackOptions::MemoryModel == twodim )
     return new SmackRep2dMem(aa);
   else
@@ -205,18 +208,22 @@ string EscapeString(string s) {
     case '\01':
       Str[i] = '_';
       break;
+    case '@':
+      Str[i] = '.';
+      break;
     }
   return Str;
 }
 
 Regex BPL_KW(
-  "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant"
+  "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
   "|unique|finite|complete|type|const|function|axiom|var|procedure"
   "|implementation|where|returns|assume|assert|havoc|call|return|while"
   "|break|goto|if|else|div)$");
 Regex SMACK_NAME(".*__SMACK_.*");
+Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
-  "malloc|free|llvm\\.memcpy\\..*|llvm\\.dbg\\..*|"
+  "llvm\\.memcpy\\..*|llvm\\.memset\\..*|llvm\\.dbg\\..*|"
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
@@ -230,6 +237,10 @@ bool SmackRep::isSmackName(string n) {
 
 bool SmackRep::isSmackGeneratedName(string n) {
   return n.size() > 0 && n[0] == '$';
+}
+
+bool SmackRep::isMallocOrFree(llvm::Function* f) {
+  return PROC_MALLOC_FREE.match(id(f));
 }
 
 bool SmackRep::isIgnore(llvm::Function* f) {  
@@ -295,13 +306,37 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
   return Expr::sel( Expr::id(memReg(region)), addr );
 }
 
-unsigned SmackRep::getRegion(const llvm::Value* v) {  
-  for (unsigned i=0; i<memoryRegions.size(); ++i)
-    if (!aliasAnalysis->isNoAlias(v, (const llvm::Value*) memoryRegions[i]))
-      return i;
+unsigned SmackRep::getRegion(const llvm::Value* v) {
+  unsigned r;
 
-  memoryRegions.push_back(v);
-  return memoryRegions.size()-1;
+  for (r=0; r<memoryRegions.size(); ++r)
+    if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].first))
+      break;
+
+  if (r == memoryRegions.size())
+    memoryRegions.push_back(make_pair(v,false));
+
+  memoryRegions[r].second = memoryRegions[r].second || aliasAnalysis->isAlloced(v);
+
+  return r;
+}
+
+bool SmackRep::isExternal(const llvm::Value* v) {
+  return v->getType()->isPointerTy() && !memoryRegions[getRegion(v)].second;
+}
+
+void SmackRep::collectRegions(llvm::Module &M) {
+  RegionCollector rc(*this);
+
+  for (llvm::Module::iterator func = M.begin(), e = M.end();
+       func != e; ++func) {
+
+    for (llvm::Function::iterator block = func->begin();
+        block != func->end(); ++block) {
+
+      rc.visit(*block);
+    }
+  }
 }
 
 const Expr* SmackRep::trunc(const llvm::Value* v, llvm::Type* t) {
@@ -369,6 +404,14 @@ const Stmt* SmackRep::memcpy(
   args.push_back(expr(align));
   args.push_back(expr(isVolatile));
   return Stmt::call(name.str(),args);
+}
+
+string SmackRep::memsetCall(int dstReg) {
+  stringstream s;
+  s << "$memset." << dstReg;
+
+  program->addDecl(memsetProc(dstReg));
+  return s.str();
 }
 
 const Expr* SmackRep::pa(const Expr* base, int index, int size) {
@@ -759,12 +802,17 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
   vector< pair<string,string> > args, rets;
 
   int i = 0;
-  for (llvm::Function::const_arg_iterator
+  for (llvm::Function::arg_iterator
        arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
+    string name;
+    if (arg->hasName()) {
+      name = id(arg);
+    } else {
+      name = indexedName("p",i);
+      arg->setName(name);
+    }
     
-    args.push_back(make_pair(
-      arg->hasName() ? id(arg) : indexedName("p",i), 
-      type(arg->getType()) ));
+    args.push_back(make_pair(name, type(arg->getType()) ));
   }
   
   for (; i < nargs; i++)
@@ -803,7 +851,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
     assert(args.size() == 1);
     return Stmt::call(MALLOC, args[0], rets[0]);
 
-  } else if (name == "free") {
+  } else if (name == "free_") {
     assert(args.size() == 1);
     return Stmt::call(FREE, args[0]);
 
@@ -907,14 +955,19 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
-  } else if (dyn_cast<const ArrayType>(val->getType())) {
-    
+  } else if (ArrayType* at = dyn_cast<ArrayType>(val->getType())) {
+
+    for (unsigned i = 0; i < at->getNumElements(); i++) {
+      const Constant* elem = val->getAggregateElement(i);
+      addInit( region, pa(addr,i,storageSize(at->getElementType())), elem );
+    }
+
   } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
       addInit( region, pa(addr,fieldOffset(st,i),1), elem );
     }
-    
+
   } else {
     assert (false && "Unexpected static initializer.");
   }

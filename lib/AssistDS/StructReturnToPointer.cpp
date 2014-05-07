@@ -15,6 +15,7 @@
 
 #include "assistDS/StructReturnToPointer.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/ValueMap.h"
@@ -47,10 +48,11 @@ using namespace llvm;
 //  false - The module was not modified.
 //
 bool StructRet::runOnModule(Module& M) {
+  const llvm::DataLayout targetData(&M);
 
   std::vector<Function*> worklist;
   for (Module::iterator I = M.begin(); I != M.end(); ++I)
-    if (!I->isDeclaration() && !I->mayBeOverridden()) {
+    if (!I->mayBeOverridden()) {
       if(I->hasAddressTaken())
         continue;
       if(I->getReturnType()->isStructTy()) {
@@ -75,7 +77,7 @@ bool StructRet::runOnModule(Module& M) {
 
     // Create the new function body and insert it into the module.
     Function *NF = Function::Create(NFTy, 
-                                    GlobalValue::InternalLinkage, 
+                                    F->getLinkage(),
                                     F->getName(), &M);
     ValueToValueMapTy ValueMap;
     Function::arg_iterator NI = NF->arg_begin();
@@ -84,11 +86,14 @@ bool StructRet::runOnModule(Module& M) {
     for (Function::arg_iterator II = F->arg_begin(); II != F->arg_end(); ++II, ++NI) {
       ValueMap[II] = NI;
       NI->setName(II->getName());
-      NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+      AttributeSet attrs = F->getAttributes().getParamAttributes(II->getArgNo() + 1);
+      if (!attrs.isEmpty())
+        NI->addAttr(attrs);
     }
     // Perform the cloning.
     SmallVector<ReturnInst*,100> Returns;
-    CloneFunctionInto(NF, F, ValueMap, false, Returns);
+    if (!F->isDeclaration())
+      CloneFunctionInto(NF, F, ValueMap, false, Returns);
     std::vector<Value*> fargs;
     for(Function::arg_iterator ai = NF->arg_begin(), 
         ae= NF->arg_end(); ai != ae; ++ai) {
@@ -104,7 +109,13 @@ bool StructRet::runOnModule(Module& M) {
         ReturnInst * RI = dyn_cast<ReturnInst>(I++);
         if(!RI)
           continue;
-        new StoreInst(RI->getOperand(0), fargs.at(0), RI);
+        LoadInst *LI = dyn_cast<LoadInst>(RI->getOperand(0));
+        assert(LI && "Return should be preceded by a load instruction");
+        IRBuilder<> Builder(RI);
+        Builder.CreateMemCpy(fargs.at(0),
+            LI->getPointerOperand(),
+            targetData.getTypeStoreSize(LI->getType()),
+            targetData.getPrefTypeAlignment(LI->getType()));
       }
     }
 
@@ -132,7 +143,7 @@ bool StructRet::runOnModule(Module& M) {
         NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
 
       Args.push_back(AllocaNew);
-      for(unsigned j =1;j<CI->getNumOperands();j++) {
+      for(unsigned j = 0; j < CI->getNumOperands()-1; j++) {
         Args.push_back(CI->getOperand(j));
         // position in the NewCallPAL
         AttributeSet Attrs = CallPAL.getParamAttributes(j);
@@ -142,7 +153,6 @@ bool StructRet::runOnModule(Module& M) {
       // Create the new attributes vec.
       if (!FnAttrs.isEmpty())
         NewCallPAL=NewCallPAL.addAttributes(F->getContext(),~0, FnAttrs);
-
 
       CallInst *CallI = CallInst::Create(NF, Args, "", CI);
       CallI->setCallingConv(CI->getCallingConv());

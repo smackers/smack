@@ -7,7 +7,7 @@ import argparse
 import platform
 from llvm2bpl import *
 
-VERSION = '1.3.1'
+VERSION = '1.4.0'
 
 
 def smackParser():
@@ -16,16 +16,18 @@ def smackParser():
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
+  parser.add_argument('--unroll', metavar='N', dest='unroll', default='2', type=int,
+                      help='unroll loops/recursion in Boogie/Corral N number of times')
   return parser
 
 
-def addInline(match, entryPoints):
+def addInline(match, entryPoints, unroll):
   procName = match.group(1)
   procDef = ''
   if procName in entryPoints:
     procDef += 'procedure ' + procName + '('
   else:
-    procDef += 'procedure {:inline 1} ' + procName + '('
+    procDef += 'procedure {:inline ' + str(unroll) + '} ' + procName + '('
   return procDef
 
 
@@ -42,7 +44,7 @@ def addEntryPoint(match, entryPoints):
 def clang(scriptPathName, inputFile):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
-  smackHeaders = path.join(smackRoot, 'include')
+  smackHeaders = path.join(smackRoot, 'include', 'smack')
 
   fileName = path.splitext(inputFile.name)[0]
 
@@ -58,7 +60,7 @@ def clang(scriptPathName, inputFile):
   return inputFile
 
 
-def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, memimpls, verifier, entryPoints):
+def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, memimpls, verifier, entryPoints, unroll):
   fileExtension = path.splitext(inputFile.name)[1]
   if fileExtension == '.c':
     # if input file is .c, then compile it first with clang
@@ -70,7 +72,7 @@ def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, memimpls, verifi
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
   if verifier == 'boogie-inline':
     # put inline on procedures
-    bpl = p.sub(lambda match: addInline(match, entryPoints), bpl)
+    bpl = p.sub(lambda match: addInline(match, entryPoints, unroll), bpl)
   elif verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, entryPoints), bpl)
@@ -83,7 +85,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
   args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints)
+  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints, args.unroll)
 
   # write final output
   args.outfile.write(bpl)

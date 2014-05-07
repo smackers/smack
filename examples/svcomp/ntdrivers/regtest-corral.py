@@ -6,16 +6,15 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('cdaudio_simpl1_safe.cil',    r'1 verified, 0 errors?'),
-  ('cdaudio_simpl1_unsafe.cil',  r'0 verified, 1 errors?'),
-  ('diskperf_simpl1_safe.cil',   r'1 verified, 0 errors?'),
-  ('floppy_simpl3_safe.cil',     r'1 verified, 0 errors?'),
-  ('floppy_simpl3_unsafe.cil',   r'0 verified, 1 errors?'),
-  ('floppy_simpl4_safe.cil',     r'1 verified, 0 errors?'),
-  ('floppy_simpl4_unsafe.cil',   r'0 verified, 1 errors?'),
-  ('kbfiltr_simpl1_safe.cil',    r'1 verified, 0 errors?'),
-  ('kbfiltr_simpl2_safe.cil',    r'1 verified, 0 errors?'),
-  ('kbfiltr_simpl2_unsafe.cil',  r'0 verified, 1 errors?')
+  ('cdaudio_true.i.cil',    r'Program has no bugs'),
+  ('diskperf_true.i.cil',   r'Program has no bugs'),
+  ('diskperf_false.i.cil',  r'This assertion can fail'),
+  ('floppy2_true.i.cil',    r'Program has no bugs'),
+  ('floppy_true.i.cil',     r'Program has no bugs'),
+  ('floppy_false.i.cil',    r'This assertion can fail'),
+  ('kbfiltr_false.i.cil',   r'This assertion can fail'),
+  ('parport_true.i.cil',    r'Program has no bugs'),
+  ('parport_false.i.cil',   r'This assertion can fail')
 ]
 
 def red(text):
@@ -34,7 +33,7 @@ def runtests():
 
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=boogie-inline',
+      p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=corral',
                             '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
                             stdout=subprocess.PIPE)
       

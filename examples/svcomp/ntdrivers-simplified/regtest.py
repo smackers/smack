@@ -6,16 +6,16 @@ import time
 
 # list of regression tests with the expected outputs
 tests = [
-  ('cdaudio_safe.i.cil',    r'1 verified, 0 errors?'),
-  ('cdaudio_unsafe.i.cil',  r'0 verified, 1 errors?'),
-#  ('diskperf_safe.i.cil',   r'1 verified, 0 errors?'),
-#  ('diskperf_unsafe.i.cil', r'0 verified, 1 errors?'),
-  ('floppy2_safe.i.cil',    r'1 verified, 0 errors?'),
-  ('floppy_safe.i.cil',     r'1 verified, 0 errors?'),
-  ('floppy_unsafe.i.cil',   r'0 verified, 1 errors?'),
-  ('kbfiltr_unsafe.i.cil',  r'0 verified, 1 errors?'),
-  ('parport_safe.i.cil',    r'1 verified, 0 errors?'),
-  ('parport_unsafe.i.cil',  r'0 verified, 1 errors?')
+  ('cdaudio_simpl1_true.cil',    r'1 verified, 0 errors?'),
+  ('cdaudio_simpl1_false.cil',   r'0 verified, 1 errors?'),
+  ('diskperf_simpl1_true.cil',   r'1 verified, 0 errors?'),
+  ('floppy_simpl3_true.cil',     r'1 verified, 0 errors?'),
+  ('floppy_simpl3_false.cil',    r'0 verified, 1 errors?'),
+  ('floppy_simpl4_true.cil',     r'1 verified, 0 errors?'),
+  ('floppy_simpl4_false.cil',    r'0 verified, 1 errors?'),
+  ('kbfiltr_simpl1_true.cil',    r'1 verified, 0 errors?'),
+  ('kbfiltr_simpl2_true.cil',    r'1 verified, 0 errors?'),
+  ('kbfiltr_simpl2_false.cil',   r'0 verified, 1 errors?')
 ]
 
 def red(text):

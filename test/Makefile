@@ -17,7 +17,12 @@ SOURCES = simple.c simple_fail.c \
           loop1.c loop1_fail.c \
           nondet.c \
           printfs.c \
+          struct_return.c \
+          struct_init.c struct_init_fail.c \
+          extern_struct.c \
           extern_func.c \
+          extern_mem.c extern_mem_fail.c \
+          smack_code_call.c smack_code_call_fail.c \
           return_label.c \
           struct_cast.c struct_cast_fail.c \
           struct_cast1.c struct_cast1_fail.c \

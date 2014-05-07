@@ -12,6 +12,8 @@ const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
 const string SmackRepFlatMem::BOTTOM = "$GLOBALS_BOTTOM";
 const string SmackRepFlatMem::IS_EXT = "$isExternal";
 const string SmackRepFlatMem::PTR_TYPE = "int";
+
+Regex STRING_CONSTANT("^\\.str[0-9]*$");
   
 vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
   using namespace llvm;
@@ -42,14 +44,17 @@ vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
 
       bottom -= size;
 
-      if (numElems > 1)
-        ax.push_back(Attr::attr("count",numElems));
-    
-      decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
-      addInit(getRegion(g), g, init);
-      // Expr::fn("$slt",
-      //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-      //     Expr::lit(bottom)) ));
+      if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
+        if (numElems > 1)
+          ax.push_back(Attr::attr("count",numElems));
+
+        decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(bottom))));
+        addInit(getRegion(g), g, init);
+
+        // Expr::fn("$slt",
+        //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+        //     Expr::lit(bottom)) ));
+      }
     
     } else {
       decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
@@ -139,7 +144,7 @@ string SmackRepFlatMem::mallocProc() {
       "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
       "ensures $Alloc[p];\n"
       "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
+      "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::freeProc() {
@@ -183,19 +188,68 @@ string SmackRepFlatMem::allocaProc() {
       "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
       "ensures $Alloc[p];\n"
       "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-      "ensures n >= 0 ==> (forall q: int :: p <= q && q < p+n ==> $obj(q) == p);\n";
+      "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {
   stringstream s;
-  s << "procedure $memcpy." << dstReg << "." << srcReg;
-  s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
-  s << "modifies " << memReg(dstReg) << ";" << endl;
-  s << "ensures (forall x:int :: dest <= x && x < dest + len ==> " 
-    << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
-    << endl;
-  s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-    << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool)" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "{" << endl;
+    s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
+    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+    s << "  havoc " << memReg(dstReg) << ";" << endl;
+    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> " 
+      << memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
+    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> " 
+      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
+      << endl;
+    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  }
+
+  return s.str();
+}
+
+string SmackRepFlatMem::memsetProc(int dstReg) {
+  stringstream s;
+
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $memset." << dstReg;
+    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool)" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "{" << endl;
+    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+    s << "  havoc " << memReg(dstReg) << ";" << endl;
+    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == val);" << endl;
+    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $memset." << dstReg;
+    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == val);"
+      << endl;
+    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  }
+
   return s.str();
 }
 
