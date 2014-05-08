@@ -81,8 +81,6 @@ string SmackRepFlatMem::getPtrType() {
 
 string SmackRepFlatMem::memoryModel() {
   stringstream s;
-  s << "function " << IS_EXT << "(p: int) returns (bool) { p < " << bottom - 32768 << " }" << endl;
-  s << "const " << BOTTOM << ": int;" << endl;
   s << "axiom " << BOTTOM << " == " << bottom << ";" << endl;
   return s.str();
 }

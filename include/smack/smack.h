@@ -30,11 +30,10 @@ int __SMACK_nondet() {
   return x;
 }
 
-void SMACK_DECLS() {
+void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
-  D("// SMACK-PRELUDE-BEGIN");
 
-  D("// Integer arithmetic");
+  // Integer arithmetic
   D("function $add(p1:int, p2:int) returns (int) {p1 + p2}");
   D("function $sub(p1:int, p2:int) returns (int) {p1 - p2}");
   D("function $mul(p1:int, p2:int) returns (int) {p1 * p2}");
@@ -80,7 +79,7 @@ void SMACK_DECLS() {
   D("axiom $b2i(true) == 1;");
   D("axiom $b2i(false) == 0;");
 
-  D("// Floating point");
+  // Floating point
   D("type float;");
   D("function $fp(a:int) returns (float);");
   D("const $ffalse: float;");
@@ -109,7 +108,7 @@ void SMACK_DECLS() {
   D("function $si2fp(i:int) returns (float);");
   D("function $ui2fp(i:int) returns (float);");
 
-  D("// Memory Model");
+  // Memory Model
   D("function $ptr(obj:int, off:int) returns (int) {obj + off}");
   D("function $obj(int) returns (int);");
   D("function $off(ptr:int) returns (int) {ptr}");
@@ -138,11 +137,14 @@ void SMACK_DECLS() {
   D("axiom (forall i:int :: $p2i(i) == i);");
   D("axiom (forall i:int :: $i2p(i) == i);");
 
-  D("// Memory debugging symbols");
+  // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
   D("procedure boogie_si_record_int(i: int);");
   D("const $MOP: $mop;");
+  
+  D("const $GLOBALS_BOTTOM: int;");
+  D("function $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
   
 #if MEMORY_PROCEDURE_IMPLS
   D("procedure $malloc(n: int) returns (p: int)"

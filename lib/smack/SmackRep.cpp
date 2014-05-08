@@ -833,7 +833,6 @@ string SmackRep::getPrelude() {
   }
 
   s << memoryModel() << endl;
-  s << "// SMACK-PRELUDE-END" << endl;
   return s.str();
 }
 
