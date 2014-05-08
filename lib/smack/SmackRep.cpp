@@ -108,88 +108,6 @@ const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 
 const string SmackRep::STATIC_INIT = "$static_init";
 
-const string SmackRep::ARITHMETIC =
-  "// Integer arithmetic\n"
-  "function $add(p1:int, p2:int) returns (int) {p1 + p2}\n"
-  "function $sub(p1:int, p2:int) returns (int) {p1 - p2}\n"
-  "function $mul(p1:int, p2:int) returns (int) {p1 * p2}\n"
-  "function $sdiv(p1:int, p2:int) returns (int);\n"
-  "function $udiv(p1:int, p2:int) returns (int);\n"
-  "function $srem(p1:int, p2:int) returns (int);\n"
-  "function $urem(p1:int, p2:int) returns (int);\n"
-  "function $and(p1:int, p2:int) returns (int);\n"
-  "axiom $and(0,0) == 0;\n"
-  "axiom $and(0,1) == 0;\n"
-  "axiom $and(1,0) == 0;\n"
-  "axiom $and(1,1) == 1;\n"
-  "function $or(p1:int, p2:int) returns (int);\n"
-  "axiom $or(0,0) == 0;\n"
-  "axiom $or(0,1) == 1;\n"
-  "axiom $or(1,0) == 1;\n"
-  "axiom $or(1,1) == 1;\n"
-  "function $xor(p1:int, p2:int) returns (int);\n"
-  "axiom $xor(0,0) == 0;\n"
-  "axiom $xor(0,1) == 1;\n"
-  "axiom $xor(1,0) == 1;\n"
-  "axiom $xor(1,1) == 0;\n"
-  "function $lshr(p1:int, p2:int) returns (int);\n"
-  "function $ashr(p1:int, p2:int) returns (int);\n"
-  "function $shl(p1:int, p2:int) returns (int);\n"
-  "function $ult(p1:int, p2:int) returns (bool) {p1 < p2}\n"
-  "function $ugt(p1:int, p2:int) returns (bool) {p1 > p2}\n"
-  "function $ule(p1:int, p2:int) returns (bool) {p1 <= p2}\n"
-  "function $uge(p1:int, p2:int) returns (bool) {p1 >= p2}\n"
-  "function $slt(p1:int, p2:int) returns (bool) {p1 < p2}\n"
-  "function $sgt(p1:int, p2:int) returns (bool) {p1 > p2}\n"
-  "function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}\n"
-  "function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}\n"
-  "function $nand(p1:int, p2:int) returns (int);\n"
-  "function $max(p1:int, p2:int) returns (int);\n"
-  "function $min(p1:int, p2:int) returns (int);\n"
-  "function $umax(p1:int, p2:int) returns (int);\n"
-  "function $umin(p1:int, p2:int) returns (int);\n"
-  "function $i2b(i: int) returns (bool);\n"
-  "axiom (forall i:int :: $i2b(i) <==> i != 0);\n"
-  "axiom $i2b(0) == false;\n"
-  "function $b2i(b: bool) returns (int);\n"
-  "axiom $b2i(true) == 1;\n"
-  "axiom $b2i(false) == 0;\n"
-  "\n"
-  "// Floating point\n"
-  "type float;\n"
-  "function $fp(a:int) returns (float);\n"
-  "const $ffalse: float;\n"
-  "const $ftrue: float;\n"
-  "function $fadd(f1:float, f2:float) returns (float);\n"
-  "function $fsub(f1:float, f2:float) returns (float);\n"
-  "function $fmul(f1:float, f2:float) returns (float);\n"
-  "function $fdiv(f1:float, f2:float) returns (float);\n"
-  "function $frem(f1:float, f2:float) returns (float);\n"
-  "function $foeq(f1:float, f2:float) returns (bool);\n"
-  "function $foge(f1:float, f2:float) returns (bool);\n"
-  "function $fogt(f1:float, f2:float) returns (bool);\n"
-  "function $fole(f1:float, f2:float) returns (bool);\n"
-  "function $folt(f1:float, f2:float) returns (bool);\n"
-  "function $fone(f1:float, f2:float) returns (bool);\n"
-  "function $ford(f1:float, f2:float) returns (bool);\n"
-  "function $fueq(f1:float, f2:float) returns (bool);\n"
-  "function $fuge(f1:float, f2:float) returns (bool);\n"
-  "function $fugt(f1:float, f2:float) returns (bool);\n"
-  "function $fule(f1:float, f2:float) returns (bool);\n"
-  "function $fult(f1:float, f2:float) returns (bool);\n"
-  "function $fune(f1:float, f2:float) returns (bool);\n"
-  "function $funo(f1:float, f2:float) returns (bool);\n"
-  "function $fp2si(f:float) returns (int);\n"
-  "function $fp2ui(f:float) returns (int);\n"
-  "function $si2fp(i:int) returns (float);\n"
-  "function $ui2fp(i:int) returns (float);\n" ;
-
-const string SmackRep::MEMORY_DEBUG_SYMBOLS = 
-  "type $mop;\n"
-  "procedure boogie_si_record_mop(m: $mop);\n"
-  "procedure boogie_si_record_int(i: int);\n"
-  "const $MOP: $mop;\n";
-
 const int SmackRep::width = 0;
 
 SmackRep* SmackRep::createRep(DSAAliasAnalysis* aa) {
@@ -896,12 +814,7 @@ string SmackRep::code(llvm::CallInst& ci) {
 
 string SmackRep::getPrelude() {
   stringstream s;
-  s << "// SMACK-PRELUDE-BEGIN" << endl;
-  s << ARITHMETIC << endl;
-
-  if (SmackOptions::MemoryModelDebug)
-    s << MEMORY_DEBUG_SYMBOLS << endl;
-    
+  s << endl;
   s << "// Memory region declarations";
   s << ": " << memoryRegions.size() << endl;
   for (unsigned i=0; i<memoryRegions.size(); ++i)
@@ -920,9 +833,6 @@ string SmackRep::getPrelude() {
   }
 
   s << memoryModel() << endl;
-  s << mallocProc() << endl;
-  s << freeProc() << endl;
-  s << allocaProc() << endl;
   s << "// SMACK-PRELUDE-END" << endl;
   return s.str();
 }

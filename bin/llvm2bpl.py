@@ -51,9 +51,10 @@ def llvm2bpl(infile, debugFlag, memmod, memImpls):
   with open('a.bpl', 'r') as outputFile:
     output = outputFile.read()
 
-  bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
-  bpl = output[bplStartIndex:]
-  return bpl
+  # bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
+  # bpl = output[bplStartIndex:]
+  # return bpl
+  return output
  
 
 if __name__ == '__main__':

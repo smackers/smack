@@ -78,117 +78,13 @@ vector<string> SmackRepFlatMem::getModifies() {
 string SmackRepFlatMem::getPtrType() {
   return PTR_TYPE;
 }
-  
-const string SmackRepFlatMem::POINTERS =
-  "// SMACK Flat Memory Model\n"
-  "\n"
-  "function $ptr(obj:int, off:int) returns (int) {obj + off}\n"
-  "function $obj(int) returns (int);\n"
-  "function $off(ptr:int) returns (int) {ptr}\n"
-  "\n"
-  "var $Alloc: [int] bool;\n"
-  "var $CurrAddr:int;\n"
-  "\n"
-  "const unique $NULL: int;\n"
-  "axiom $NULL == 0;\n"
-  "const $UNDEF: int;\n"
-  "\n"
-  "function $pa(pointer: int, index: int, size: int) returns (int);\n"
-  "function $trunc(p: int, size: int) returns (int);\n"
-  "function $p2i(p: int) returns (int);\n"
-  "function $i2p(p: int) returns (int);\n"
-  "function $p2b(p: int) returns (bool);\n"
-  "function $b2p(b: bool) returns (int);\n"
-  "\n"
-  "axiom (forall p:int, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == p + i * s);\n"
-  "axiom (forall p,s:int :: $trunc(p,s) == p);\n"
-  "\n"
-  "axiom $b2p(true) == 1;\n"
-  "axiom $b2p(false) == 0;\n"
-  "axiom (forall i:int :: $p2b(i) <==> i != 0);\n"
-  "axiom $p2b(0) == false;\n"
-  "axiom (forall i:int :: $p2i(i) == i);\n"
-  "axiom (forall i:int :: $i2p(i) == i);\n";
 
 string SmackRepFlatMem::memoryModel() {
   stringstream s;
-  s << POINTERS;
   s << "function " << IS_EXT << "(p: int) returns (bool) { p < " << bottom - 32768 << " }" << endl;
   s << "const " << BOTTOM << ": int;" << endl;
   s << "axiom " << BOTTOM << " == " << bottom << ";" << endl;
   return s.str();
-}
-
-string SmackRepFlatMem::mallocProc() {
-  if (SmackOptions::MemoryModelImpls)
-    return 
-      "procedure $malloc(n: int) returns (p: int)\n"
-      "modifies $CurrAddr, $Alloc;\n"
-      "{\n"
-      "  assume $CurrAddr > 0;\n"
-      "  p := $CurrAddr;\n"
-      "  if (n > 0) {\n"
-      "    $CurrAddr := $CurrAddr + n;\n"
-      "  } else {\n"
-      "    $CurrAddr := $CurrAddr + 1;\n"
-      "  }\n"
-      "  $Alloc[p] := true;\n"
-      "}\n";
-  else    
-    return
-      "procedure $malloc(n: int) returns (p: int);\n"
-      "modifies $CurrAddr, $Alloc;\n"
-      "ensures p > 0;\n"
-      "ensures p == old($CurrAddr);\n"
-      "ensures $CurrAddr > old($CurrAddr);\n"
-      "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
-      "ensures $Alloc[p];\n"
-      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-      "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);\n";
-}
-
-string SmackRepFlatMem::freeProc() {
-  if (SmackOptions::MemoryModelImpls)
-    return
-      "procedure $free(p: int)\n"
-      "modifies $Alloc;\n"
-      "{\n"
-      "  $Alloc[p] := false;\n"
-      "}\n";  
-  else
-    return
-      "procedure $free(p: int);\n"
-      "modifies $Alloc;\n"
-      "ensures !$Alloc[p];\n"
-      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n";
-}
-
-string SmackRepFlatMem::allocaProc() {
-  if (SmackOptions::MemoryModelImpls)
-    return 
-      "procedure $alloca(n: int) returns (p: int)\n"
-      "modifies $CurrAddr, $Alloc;\n"
-      "{\n"
-      "  assume $CurrAddr > 0;\n"
-      "  p := $CurrAddr;\n"
-      "  if (n > 0) {\n"
-      "    $CurrAddr := $CurrAddr + n;\n"
-      "  } else {\n"
-      "    $CurrAddr := $CurrAddr + 1;\n"
-      "  }\n"
-      "  $Alloc[p] := true;\n"
-      "}\n";
-  else    
-    return
-      "procedure $alloca(n: int) returns (p: int);\n"
-      "modifies $CurrAddr, $Alloc;\n"
-      "ensures p > 0;\n"
-      "ensures p == old($CurrAddr);\n"
-      "ensures $CurrAddr > old($CurrAddr);\n"
-      "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
-      "ensures $Alloc[p];\n"
-      "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-      "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);\n";
 }
 
 string SmackRepFlatMem::memcpyProc(int dstReg, int srcReg) {

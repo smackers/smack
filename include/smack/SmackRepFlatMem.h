@@ -24,7 +24,6 @@ public:
   static const string BOTTOM;
   static const string IS_EXT;
   static const string PTR_TYPE;
-  static const string POINTERS;  
 
 public:
   SmackRepFlatMem(DSAAliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
@@ -35,9 +34,6 @@ public:
   const Expr* declareIsExternal(const Expr* e);
 
   virtual string memoryModel();
-  virtual string mallocProc();
-  virtual string freeProc();
-  virtual string allocaProc();
   virtual string memcpyProc(int dstReg, int srcReg);
   virtual string memsetProc(int dstReg);
 };

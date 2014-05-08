@@ -128,8 +128,6 @@ public:
   static const int width;
 
 protected:
-  static const string ARITHMETIC;
-  static const string MEMORY_DEBUG_SYMBOLS;
   DSAAliasAnalysis* aliasAnalysis;
   vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
@@ -233,9 +231,6 @@ public:
   virtual const Expr* declareIsExternal(const Expr* e) = 0;
 
   virtual string memoryModel() = 0;
-  virtual string mallocProc() = 0;
-  virtual string freeProc() = 0;
-  virtual string allocaProc() = 0;
   virtual string memcpyProc(int dstReg, int srcReg) = 0;
   virtual string memsetCall(int dstReg);
   virtual string memsetProc(int dstReg) = 0;
