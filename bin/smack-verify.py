@@ -113,7 +113,19 @@ if __name__ == '__main__':
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
                       help='output JSON format for SMACKd')
 
-  bpl, options = smackGenerate(sys.argv)
+  parser.parse_args() # just check if arguments are looking good
+
+  # remove arguments not recognized by lower scripts
+  # not sure of a better way to do this
+  sysArgv = sys.argv[:]
+  for i in reversed(range(len(sysArgv))):
+    if sysArgv[i] == '--smackd':
+      del sysArgv[i]
+    elif sys.argv[i] == '--time-limit':
+      del sysArgv[i]
+      del sysArgv[i]
+
+  bpl, options = smackGenerate(sysArgv)
   args = parser.parse_args(options + sys.argv[1:])
 
   # write final output
