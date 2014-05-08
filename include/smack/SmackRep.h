@@ -28,8 +28,6 @@ using namespace std;
   
 class SmackRep {
 public:
-  static const string CURRADDR; // TODO: push this into SmackRepFlatMem
-  static const string ALLOC;
   static const string BLOCK_LBL;
   static const string RET_VAR;
   static const string BOOL_VAR;

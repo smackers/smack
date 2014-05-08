@@ -41,7 +41,7 @@ const Expr* SmackRep2dMem::declareIsExternal(const Expr* e) {
 
 vector<string> SmackRep2dMem::getModifies() {
   vector<string> mods = SmackRep::getModifies();
-  mods.push_back(ALLOC);
+  mods.push_back("$Alloc");
   return mods;
 }
 

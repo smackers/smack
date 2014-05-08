@@ -12,7 +12,6 @@
 
 namespace smack {
 
-const string SmackRep::ALLOC = "$Alloc";
 const string SmackRep::BLOCK_LBL = "$bb";
 const string SmackRep::RET_VAR = "$r";
 const string SmackRep::BOOL_VAR = "$b";

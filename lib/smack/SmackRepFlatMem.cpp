@@ -8,11 +8,6 @@
 
 namespace smack {
 
-const string SmackRepFlatMem::CURRADDR = "$CurrAddr";
-const string SmackRepFlatMem::BOTTOM = "$GLOBALS_BOTTOM";
-const string SmackRepFlatMem::IS_EXT = "$isExternal";
-const string SmackRepFlatMem::PTR_TYPE = "int";
-
 Regex STRING_CONSTANT("^\\.str[0-9]*$");
   
 vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
@@ -65,23 +60,23 @@ vector<Decl*> SmackRepFlatMem::globalDecl(const llvm::Value* v) {
 }
 
 const Expr* SmackRepFlatMem::declareIsExternal(const Expr* e) {
-  return Expr::fn(IS_EXT,e);
+  return Expr::fn("$isExternal",e);
 }
 
 vector<string> SmackRepFlatMem::getModifies() {
   vector<string> mods = SmackRep::getModifies();
-  mods.push_back(ALLOC);
-  mods.push_back(CURRADDR);
+  mods.push_back("$Alloc");
+  mods.push_back("$CurrAddr");
   return mods;
 }
 
 string SmackRepFlatMem::getPtrType() {
-  return PTR_TYPE;
+  return "int";
 }
 
 string SmackRepFlatMem::memoryModel() {
   stringstream s;
-  s << "axiom " << BOTTOM << " == " << bottom << ";" << endl;
+  s << "axiom $GLOBALS_BOTTOM == " << bottom << ";" << endl;
   return s.str();
 }
 

@@ -20,12 +20,6 @@ class SmackRepFlatMem : public SmackRep {
   int bottom;
 
 public:
-  static const string CURRADDR;
-  static const string BOTTOM;
-  static const string IS_EXT;
-  static const string PTR_TYPE;
-
-public:
   SmackRepFlatMem(DSAAliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual vector<string> getModifies();
