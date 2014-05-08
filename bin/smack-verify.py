@@ -17,7 +17,7 @@ def generateSourceErrorTrace(boogieOutput, bpl):
   LABEL = '[\w$]+'
 
   if not re.search('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bpl):
-#    print 'No debug info in bpl file.'
+    # no debug info in bpl file
     return None
 
   sourceTrace = '\nSMACK verifier version ' + VERSION + '\n\n'
@@ -112,9 +112,9 @@ if __name__ == '__main__':
                       help='Boogie time limit in seconds')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
                       help='output JSON format for SMACKd')
-  args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints, args.unroll)
+  bpl, options = smackGenerate(sys.argv)
+  args = parser.parse_args(options + sys.argv[1:])
 
   # write final output
   args.outfile.write(bpl)

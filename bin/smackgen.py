@@ -60,23 +60,37 @@ def clang(scriptPathName, inputFile):
   return inputFile
 
 
-def smackGenerate(scriptPathName, inputFile, debugFlag, memmod, memimpls, verifier, entryPoints, unroll):
+def smackGenerate(sysArgv):
+
+  # parse command line arguments
+  parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
+  args = parser.parse_args(sysArgv[1:])
+  inputFile = args.infile
+  scriptPathName = path.dirname(sysArgv[0])
+
   fileExtension = path.splitext(inputFile.name)[1]
+  options = []
   if fileExtension == '.c':
-    # if input file is .c, then compile it first with clang
+    # if input file is .c, then search for options in comments and compile it with clang
+    lines = inputFile.readlines()
+    for line in lines:
+      optionsMatch = re.match('.*SMACK-OPTIONS:[ ]+(.*)$', line)
+      if optionsMatch:
+        options = optionsMatch.group(1).split()
+        args = parser.parse_args(options + sysArgv[1:])
     inputFile = clang(scriptPathName, inputFile)
 
-  bpl = llvm2bpl(inputFile, debugFlag, memmod, memimpls)
+  bpl = llvm2bpl(inputFile, args.debug, args.memmod, args.memimpls)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  if verifier == 'boogie-inline':
+  if args.verifier == 'boogie-inline':
     # put inline on procedures
-    bpl = p.sub(lambda match: addInline(match, entryPoints, unroll), bpl)
-  elif verifier == 'corral':
+    bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
+  elif args.verifier == 'corral':
     # annotate entry points
-    bpl = p.sub(lambda match: addEntryPoint(match, entryPoints), bpl)
-  return bpl
+    bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
+  return bpl, options
 
 
 if __name__ == '__main__':
@@ -85,7 +99,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
   args = parser.parse_args()
 
-  bpl = smackGenerate(path.dirname(sys.argv[0]), args.infile, args.debug, args.memmod, args.memimpls, args.verifier, args.entryPoints, args.unroll)
+  bpl, options = smackGenerate(sys.argv)
 
   # write final output
   args.outfile.write(bpl)
