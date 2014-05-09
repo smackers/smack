@@ -35,6 +35,7 @@ tests = [
   ('printfs',               r'1 verified, 0 errors?', 2),
   ('struct_return',         r'1 verified, 0 errors?', 2),
   ('struct_init',           r'1 verified, 0 errors?', 2),
+  ('struct_init_fail',      r'0 verified, 1 errors?', 2),
   ('extern_struct',         r'0 verified, 1 errors?', 2),
   ('extern_func',           r'1 verified, 0 errors?', 2),
   ('extern_mem',            r'1 verified, 0 errors?', 2),
