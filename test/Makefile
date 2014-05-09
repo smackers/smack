@@ -18,7 +18,7 @@ SOURCES = simple.c simple_fail.c \
           nondet.c \
           printfs.c \
           struct_return.c \
-          struct_init.c struct_init_fail.c \
+          struct_init.c \
           extern_struct.c \
           extern_func.c \
           extern_mem.c extern_mem_fail.c \

@@ -41,7 +41,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
       program.addDecls(rep->globalDecl(func));
 
     ProcDecl* proc = rep->proc(func,0);
-    program.addDecl(proc);
+    if (proc->getName() != "__SMACK_decls")
+      program.addDecl(proc);
 
     if (!func->isDeclaration() && !func->empty()
         && !func->getEntryBlock().empty()) {
