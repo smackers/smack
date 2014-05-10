@@ -38,7 +38,7 @@ public:
   }
 
   virtual bool runOnModule(llvm::Module& m) {
-    SmackRep* rep = SmackRep::createRep(&getAnalysis<DSAAliasAnalysis>());
+    SmackRep* rep = new SmackRep(&getAnalysis<DSAAliasAnalysis>());
     generateProgram(m,rep);
     return false;
   }

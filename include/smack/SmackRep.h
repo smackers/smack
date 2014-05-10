@@ -131,15 +131,16 @@ protected:
   vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
   Program* program;
+  int globalsBottom;
   
   vector<const Stmt*> staticInits;
   
   unsigned uniqueFpNum;
   unsigned uniqueUndefNum;
 
-protected:
+public:
   SmackRep(DSAAliasAnalysis* aa)
-    : aliasAnalysis(aa), targetData(aa->getDataLayout()) {
+    : aliasAnalysis(aa), targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
   }  
@@ -156,7 +157,6 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  static SmackRep* createRep(DSAAliasAnalysis* aa);
   void setProgram(Program* p) { program = p; }
   
   bool isSmackName(string n);
@@ -214,27 +214,23 @@ public:
   virtual const Expr* bitcast(const llvm::Value* v, llvm::Type* t);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);
-  virtual const Stmt* memcpy(const llvm::Value* dst, const llvm::Value* src,
-    const llvm::Value* len, const llvm::Value* align,
-    const llvm::Value* isVolatile);
+  virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
+  virtual const Stmt* memset(const llvm::MemSetInst& msi);
   
-  virtual vector<Decl*> globalDecl(const llvm::Value* g) = 0;
+  virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual void addBplGlobal(string name);
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
   bool hasStaticInits();
   Decl* getStaticInit();
-  virtual string getPtrType() = 0;
+  virtual string getPtrType();
   virtual string getPrelude();
 
-  virtual const Expr* declareIsExternal(const Expr* e) = 0;
+  virtual const Expr* declareIsExternal(const Expr* e);
 
-  virtual string memoryModel() = 0;
-  virtual string memcpyProc(int dstReg, int srcReg) = 0;
-  virtual string memsetCall(int dstReg);
-  virtual string memsetProc(int dstReg) = 0;
-  
+  virtual string memcpyProc(int dstReg, int srcReg);
+  virtual string memsetProc(int dstReg);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {

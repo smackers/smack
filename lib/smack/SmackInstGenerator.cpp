@@ -561,19 +561,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst& mci) {
   processInstruction(mci);
   assert (mci.getNumOperands() == 6);
-  currBlock->addStmt(rep.memcpy(mci.getOperand(0),mci.getOperand(1),
-    mci.getOperand(2),mci.getOperand(3),mci.getOperand(4)));
+  currBlock->addStmt(rep.memcpy(mci));
 }
 
 void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst& msi) {
   processInstruction(msi);
-  unsigned dstReg = rep.getRegion(msi.getOperand(0));
-
-  vector<const Expr*> args;
-  for (unsigned i = 0; i < msi.getNumOperands() - 1; i++)
-    args.push_back(rep.expr(msi.getOperand(i)));
-  assert(args.size() == 5);
-  currBlock->addStmt(Stmt::call(rep.memsetCall(dstReg), args));
+  assert (msi.getNumOperands() == 6);
+  currBlock->addStmt(rep.memset(msi));
 }
 
 } // namespace smack

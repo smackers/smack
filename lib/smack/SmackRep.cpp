@@ -4,8 +4,6 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/SmackRep.h"
-#include "smack/SmackRep2dMem.h"
-#include "smack/SmackRepFlatMem.h"
 #include "smack/SmackOptions.h"
 
 #include <iostream>
@@ -108,13 +106,6 @@ const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 const string SmackRep::STATIC_INIT = "$static_init";
 
 const int SmackRep::width = 0;
-
-SmackRep* SmackRep::createRep(DSAAliasAnalysis* aa) {
-  if ( false )
-    return new SmackRep2dMem(aa);
-  else
-    return new SmackRepFlatMem(aa);
-}
 
 // TODO Do the following functions belong here ?
 
@@ -305,30 +296,31 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
   return Stmt::call(ALLOCA,size,id(&i));
 }
 
-const Stmt* SmackRep::memcpy(
-  const llvm::Value* dst, const llvm::Value* src,
-  const llvm::Value* len, const llvm::Value* align,
-  const llvm::Value* isVolatile) {
+const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
+  int dstRegion = getRegion(mci.getOperand(0));
+  int srcRegion = getRegion(mci.getOperand(1));
 
-  program->addDecl(memcpyProc(getRegion(dst),getRegion(src)));
-    
+  program->addDecl(memcpyProc(dstRegion,srcRegion));
+
   stringstream name;
-  name << "$memcpy." << getRegion(dst) << "." << getRegion(src);
+  name << "$memcpy." << dstRegion << "." << srcRegion;
   vector<const Expr*> args;
-  args.push_back(expr(dst));
-  args.push_back(expr(src));
-  args.push_back(expr(len));
-  args.push_back(expr(align));
-  args.push_back(expr(isVolatile));
+  for (unsigned i = 0; i < mci.getNumOperands() - 1; i++)
+    args.push_back(expr(mci.getOperand(i)));
   return Stmt::call(name.str(),args);
 }
 
-string SmackRep::memsetCall(int dstReg) {
-  stringstream s;
-  s << "$memset." << dstReg;
+const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
+  int region = getRegion(msi.getOperand(0));
 
-  program->addDecl(memsetProc(dstReg));
-  return s.str();
+  program->addDecl(memsetProc(region));
+
+  stringstream name;
+  vector<const Expr*> args;
+  name << "$memset." << region;
+  for (unsigned i = 0; i < msi.getNumOperands() - 1; i++)
+    args.push_back(expr(msi.getOperand(i)));
+  return Stmt::call(name.str(),args);
 }
 
 const Expr* SmackRep::pa(const Expr* base, int index, int size) {
@@ -831,7 +823,8 @@ string SmackRep::getPrelude() {
     s << endl;
   }
 
-  s << memoryModel() << endl;
+  s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
+
   return s.str();
 }
 
@@ -899,6 +892,126 @@ Decl* SmackRep::getStaticInit() {
   b->addStmt(Stmt::return_());
   proc->addBlock(b);
   return proc;
+}
+Regex STRING_CONSTANT("^\\.str[0-9]*$");
+
+vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
+  using namespace llvm;
+  vector<Decl*> decls;
+  vector<const Attr*> ax;
+  string name = id(v);
+
+  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
+    if (g->hasInitializer()) {
+      const Constant* init = g->getInitializer();
+      unsigned numElems = numElements(init);
+      unsigned size;
+
+      // NOTE: all global variables have pointer type in LLVM
+      if (g->getType()->isPointerTy()) {
+        PointerType *t = (PointerType*) g->getType();
+
+        // in case we can determine the size of the element type ...
+        if (t->getElementType()->isSized())
+          size = storageSize(t->getElementType());
+
+        // otherwise (e.g. for function declarations), use a default size
+        else
+          size = 1024;
+
+      } else
+        size = storageSize(g->getType());
+
+      globalsBottom -= size;
+
+      if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
+        if (numElems > 1)
+          ax.push_back(Attr::attr("count",numElems));
+
+        decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))));
+        addInit(getRegion(g), g, init);
+
+        // Expr::fn("$slt",
+        //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+        //     Expr::lit(globalsBottom)) ));
+      }
+
+    } else {
+      decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+    }
+  }
+  decls.push_back(Decl::constant(name, getPtrType(), ax, true));
+  return decls;
+}
+
+const Expr* SmackRep::declareIsExternal(const Expr* e) {
+  return Expr::fn("$isExternal",e);
+}
+
+string SmackRep::getPtrType() {
+  return "int";
+}
+
+string SmackRep::memcpyProc(int dstReg, int srcReg) {
+  stringstream s;
+
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool)" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "{" << endl;
+    s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
+    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+    s << "  havoc " << memReg(dstReg) << ";" << endl;
+    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
+    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
+      << endl;
+    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  }
+
+  return s.str();
+}
+
+string SmackRep::memsetProc(int dstReg) {
+  stringstream s;
+
+  if (SmackOptions::MemoryModelImpls) {
+    s << "procedure $memset." << dstReg;
+    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool)" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "{" << endl;
+    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+    s << "  havoc " << memReg(dstReg) << ";" << endl;
+    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == val);" << endl;
+    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    s << "}" << endl;
+  } else {
+    s << "procedure $memset." << dstReg;
+    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+      << memReg(dstReg) << "[x] == val);"
+      << endl;
+    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+  }
+
+  return s.str();
 }
 
 } // namespace smack
