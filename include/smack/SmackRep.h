@@ -127,6 +127,7 @@ public:
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
+  vector<string> bplGlobals;
   vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
   Program* program;
@@ -218,6 +219,7 @@ public:
     const llvm::Value* isVolatile);
   
   virtual vector<Decl*> globalDecl(const llvm::Value* g) = 0;
+  virtual void addBplGlobal(string name);
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);

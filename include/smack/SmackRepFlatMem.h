@@ -22,7 +22,6 @@ class SmackRepFlatMem : public SmackRep {
 public:
   SmackRepFlatMem(DSAAliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
-  virtual vector<string> getModifies();
   virtual string getPtrType();
   
   const Expr* declareIsExternal(const Expr* e);

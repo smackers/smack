@@ -63,13 +63,6 @@ const Expr* SmackRepFlatMem::declareIsExternal(const Expr* e) {
   return Expr::fn("$isExternal",e);
 }
 
-vector<string> SmackRepFlatMem::getModifies() {
-  vector<string> mods = SmackRep::getModifies();
-  mods.push_back("$Alloc");
-  mods.push_back("$CurrAddr");
-  return mods;
-}
-
 string SmackRepFlatMem::getPtrType() {
   return "int";
 }

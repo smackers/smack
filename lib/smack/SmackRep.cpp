@@ -835,8 +835,14 @@ string SmackRep::getPrelude() {
   return s.str();
 }
 
+void SmackRep::addBplGlobal(string name) {
+  bplGlobals.push_back(name);
+}
+
 vector<string> SmackRep::getModifies() {
   vector<string> mods;
+  for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
+    mods.push_back(*i);
   for (unsigned i=0; i<memoryRegions.size(); ++i)
     mods.push_back(memReg(i));
   return mods;

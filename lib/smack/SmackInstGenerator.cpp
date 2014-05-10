@@ -26,6 +26,8 @@ const bool SHOW_ORIG = false;
 #define ORIG(ins) \
     if (SHOW_ORIG) currBlock->addStmt(Stmt::comment(i2s(ins)))
 
+Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$#'`~^\\?]*):.*;");
+
 string i2s(llvm::Instruction& i) {
   string s;
   llvm::raw_string_ostream ss(s);
@@ -472,7 +474,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     proc.addDecl(Decl::code(rep.code(ci)));
 
   } else if (f && rep.id(f) == "__SMACK_top_decl") {
-    proc.getProg().addDecl(Decl::code(rep.code(ci)));
+    string decl = rep.code(ci);
+    proc.getProg().addDecl(Decl::code(decl));
+    if (VAR_DECL.match(decl)) {
+      string var = VAR_DECL.sub("\\1",decl);
+      rep.addBplGlobal(var);
+    }
 
   } else if (f) {
     currBlock->addStmt(rep.call(f, ci));
