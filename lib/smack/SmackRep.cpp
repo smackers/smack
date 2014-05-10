@@ -110,7 +110,7 @@ const string SmackRep::STATIC_INIT = "$static_init";
 const int SmackRep::width = 0;
 
 SmackRep* SmackRep::createRep(DSAAliasAnalysis* aa) {
-  if ( SmackOptions::MemoryModel == twodim )
+  if ( false )
     return new SmackRep2dMem(aa);
   else
     return new SmackRepFlatMem(aa);

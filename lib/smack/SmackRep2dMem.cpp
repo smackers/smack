@@ -124,7 +124,7 @@ string SmackRep2dMem::memoryModel() {
 
 string SmackRep2dMem::mallocProc() {
   
-  if (SmackOptions::MemoryModelImpls)
+  if (false)
     return
       "procedure $malloc(n: int) returns (p: $ptr)\n"
       "modifies $Alloc;\n"
@@ -146,7 +146,7 @@ string SmackRep2dMem::mallocProc() {
 }
 
 string SmackRep2dMem::freeProc() {
-  if (SmackOptions::MemoryModelImpls)
+  if (false)
     return
       "procedure $free(p: $ptr)\n"
       "modifies $Alloc;\n"
@@ -162,7 +162,7 @@ string SmackRep2dMem::freeProc() {
 }
 
 string SmackRep2dMem::allocaProc() {
-  if (SmackOptions::MemoryModelImpls)
+  if (false)
     return
       "procedure $alloca(n: int) returns (p: $ptr)\n"
       "modifies $Alloc;\n"

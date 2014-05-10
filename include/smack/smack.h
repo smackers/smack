@@ -180,64 +180,88 @@ void __SMACK_decls() {
   D("const $GLOBALS_BOTTOM: int;");
   D("function $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
   
-#if MEMORY_PROCEDURE_IMPLS
-  D("procedure $malloc(n: int) returns (p: int)"
-    "modifies $CurrAddr, $Alloc;"
-    "{"
-    "  assume $CurrAddr > 0;"
-    "  p := $CurrAddr;"
-    "  if (n > 0) {"
-    "    $CurrAddr := $CurrAddr + n;"
-    "  } else {"
-    "    $CurrAddr := $CurrAddr + 1;"
-    "  }"
-    "  $Alloc[p] := true;"
+#if MEMORY_MODEL_NO_REUSE_IMPLS
+  D("procedure $malloc(n: int) returns (p: int)\n"
+    "modifies $CurrAddr, $Alloc;\n"
+    "{\n"
+    "  assume $CurrAddr > 0;\n"
+    "  p := $CurrAddr;\n"
+    "  if (n > 0) {\n"
+    "    $CurrAddr := $CurrAddr + n;\n"
+    "  } else {\n"
+    "    $CurrAddr := $CurrAddr + 1;\n"
+    "  }\n"
+    "  $Alloc[p] := true;\n"
     "}");
 
-  D("procedure $free(p: int)"
-    "modifies $Alloc;"
-    "{"
-    "  $Alloc[p] := false;"
+  D("procedure $free(p: int)\n"
+    "modifies $Alloc;\n"
+    "{\n"
+    "  $Alloc[p] := false;\n"
     "}");
   
-  D("procedure $alloca(n: int) returns (p: int)"
-    "modifies $CurrAddr, $Alloc;"
-    "{"
-    "  assume $CurrAddr > 0;"
-    "  p := $CurrAddr;"
-    "  if (n > 0) {"
-    "    $CurrAddr := $CurrAddr + n;"
-    "  } else {"
-    "    $CurrAddr := $CurrAddr + 1;"
-    "  }"
-    "  $Alloc[p] := true;"
+  D("procedure $alloca(n: int) returns (p: int)\n"
+    "modifies $CurrAddr, $Alloc;\n"
+    "{\n"
+    "  assume $CurrAddr > 0;\n"
+    "  p := $CurrAddr;\n"
+    "  if (n > 0) {\n"
+    "    $CurrAddr := $CurrAddr + n;\n"
+    "  } else {\n"
+    "    $CurrAddr := $CurrAddr + 1;\n"
+    "  }\n"
+    "  $Alloc[p] := true;\n"
     "}");
-#else
-  D("procedure $malloc(n: int) returns (p: int);"
-    "modifies $CurrAddr, $Alloc;"
-    "ensures p > 0;"
-    "ensures p == old($CurrAddr);"
-    "ensures $CurrAddr > old($CurrAddr);"
-    "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;"
-    "ensures $Alloc[p];"
-    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));"
+
+#elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+  D("procedure $malloc(n: int) returns (p: int);\n"
+    "modifies $Alloc;\n"
+    "ensures p > 0;\n"
+    "ensures !old($Alloc[p]);\n"
+    "ensures $Alloc[p];\n"
+    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
 
-  D("procedure $free(p: int);"
-    "modifies $Alloc;"
-    "ensures !$Alloc[p];"
+  D("procedure $free(p: int);\n"
+    "modifies $Alloc;\n"
+    "ensures !$Alloc[p];\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
 
-  D("procedure $alloca(n: int) returns (p: int);"
-    "modifies $CurrAddr, $Alloc;"
-    "ensures p > 0;"
-    "ensures p == old($CurrAddr);"
-    "ensures $CurrAddr > old($CurrAddr);"
-    "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;"
-    "ensures $Alloc[p];"
-    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));"
+  D("procedure $alloca(n: int) returns (p: int);\n"
+    "modifies $Alloc;\n"
+    "ensures p > 0;\n"
+    "ensures !old($Alloc[p]);\n"
+    "ensures $Alloc[p];\n"
+    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+
+#else // DEFAULT/FRESH does not reuse previously-allocated addresses
+  D("procedure $malloc(n: int) returns (p: int);\n"
+    "modifies $CurrAddr, $Alloc;\n"
+    "ensures p > 0;\n"
+    "ensures p == old($CurrAddr);\n"
+    "ensures $CurrAddr > old($CurrAddr);\n"
+    "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
+    "ensures $Alloc[p];\n"
+    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+
+  D("procedure $free(p: int);\n"
+    "modifies $Alloc;\n"
+    "ensures !$Alloc[p];\n"
+    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
+
+  D("procedure $alloca(n: int) returns (p: int);\n"
+    "modifies $CurrAddr, $Alloc;\n"
+    "ensures p > 0;\n"
+    "ensures p == old($CurrAddr);\n"
+    "ensures $CurrAddr > old($CurrAddr);\n"
+    "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
+    "ensures $Alloc[p];\n"
+    "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
 #endif
+
 #undef D
 }
 

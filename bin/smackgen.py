@@ -18,6 +18,8 @@ def smackParser():
                       help='specify entry procedures')
   parser.add_argument('--unroll', metavar='N', dest='unroll', default='2', type=int,
                       help='unroll loops/recursion in Boogie/Corral N number of times')
+  parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse',
+                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
   return parser
 
 
@@ -41,7 +43,7 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def clang(scriptPathName, inputFile):
+def clang(scriptPathName, inputFile, memoryModel):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
   smackHeaders = path.join(smackRoot, 'include', 'smack')
@@ -49,6 +51,7 @@ def clang(scriptPathName, inputFile):
   fileName = path.splitext(inputFile.name)[0]
 
   p = subprocess.Popen(['clang', '-c', '-Wall', '-emit-llvm', '-O0', '-g',
+    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
     '-I' + smackHeaders, inputFile.name, '-o', fileName + '.bc'])
   p.wait()
 
@@ -78,9 +81,9 @@ def smackGenerate(sysArgv):
       if optionsMatch:
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
-    inputFile = clang(scriptPathName, inputFile)
+    inputFile = clang(scriptPathName, inputFile, args.memmod)
 
-  bpl = llvm2bpl(inputFile, args.debug, args.memmod, args.memimpls)
+  bpl = llvm2bpl(inputFile, args.debug, "impls" in args.memmod)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
