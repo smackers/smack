@@ -225,7 +225,7 @@ void __SMACK_decls() {
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
 
-#else // DEFAULT/FRESH does not reuse previously-allocated addresses
+#else // NO_REUSE does not reuse previously-allocated addresses
   D("procedure $malloc(n: int) returns (p: int);\n"
     "modifies $CurrAddr, $Alloc;\n"
     "ensures p > 0;\n"
