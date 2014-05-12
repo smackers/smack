@@ -137,9 +137,6 @@ void __SMACK_decls() {
   D("function $obj(int) returns (int);");
   D("function $off(ptr:int) returns (int) {ptr}");
 
-  D("var $Alloc: [int] bool;");
-  D("var $CurrAddr:int;");
-
   D("const unique $NULL: int;");
   D("axiom $NULL == 0;");
   D("const $UNDEF: int;");
@@ -171,6 +168,9 @@ void __SMACK_decls() {
   D("function $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
   
 #if MEMORY_MODEL_NO_REUSE_IMPLS
+  D("var $Alloc: [int] bool;");
+  D("var $CurrAddr:int;");
+
   D("procedure $malloc(n: int) returns (p: int)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
@@ -204,11 +204,17 @@ void __SMACK_decls() {
     "}");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+  D("var $Alloc: [int] bool;");
+  D("var $Size: [int] int;");
+
   D("procedure $malloc(n: int) returns (p: int);\n"
-    "modifies $Alloc;\n"
+    "modifies $Alloc, $Size;\n"
     "ensures p > 0;\n"
     "ensures !old($Alloc[p]);\n"
+    "ensures (forall q: int :: {$Alloc[q]} $Alloc[q] ==> p + n < q || p > q + $Size[q]);\n"
     "ensures $Alloc[p];\n"
+    "ensures $Size[p] == n;\n"
+    "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
 
@@ -218,14 +224,20 @@ void __SMACK_decls() {
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
 
   D("procedure $alloca(n: int) returns (p: int);\n"
-    "modifies $Alloc;\n"
+    "modifies $Alloc, $Size;\n"
     "ensures p > 0;\n"
     "ensures !old($Alloc[p]);\n"
+    "ensures (forall q: int :: {$Alloc[q]} $Alloc[q] ==> p + n < q || p > q + $Size[q]);\n"
     "ensures $Alloc[p];\n"
+    "ensures $Size[p] == n;\n"
+    "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
+  D("var $Alloc: [int] bool;");
+  D("var $CurrAddr:int;");
+
   D("procedure $malloc(n: int) returns (p: int);\n"
     "modifies $CurrAddr, $Alloc;\n"
     "ensures p > 0;\n"
