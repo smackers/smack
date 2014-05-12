@@ -98,13 +98,13 @@ def runtests():
   passed = failed = 0
   for test in tests:
     
-    for mem in ['no-reuse']:
+    for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
     
-      print "{0:>20} {1:>8}:".format(test[0], "(" + mem + ")"),
+      print "{0:>20} {1:>16}:".format(test[0], "(" + mem + ")"),
 
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=corral',
+      p = subprocess.Popen(['smack-verify.py', test[0] + '.c', '--verifier=corral',
                             '--unroll=' + str(test[2]), '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
                             stdout=subprocess.PIPE)
       

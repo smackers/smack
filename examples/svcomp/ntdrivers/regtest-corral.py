@@ -19,24 +19,24 @@ tests = [
 
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
-  
+ 
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
 def runtests():
   passed = failed = 0
   for test in tests:
-    
-    for mem in ['no-reuse']:
-    
-      print "{0:>25} {1:>8}:".format(test[0], "(" + mem + ")"),
+
+    for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
+
+      print "{0:>25} {1:>16}:".format(test[0], "(" + mem + ")"),
 
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smack-verify.py', test[0] + '.bc', '--verifier=corral',
-                            '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
+      p = subprocess.Popen(['smack-verify.py', test[0] + '.c', '--verifier=corral',
+                            '--mem-mod=' + mem, '--clang=-w', '-o', test[0] +'.bpl'],
                             stdout=subprocess.PIPE)
-      
+
       smackOutput = p.communicate()[0]
       elapsed = time.time() - t0
 
@@ -47,13 +47,13 @@ def runtests():
       else:
         print red('FAILED')
         failed += 1
-  
+
   return passed, failed
 
 if __name__ == '__main__':
 
   passed, failed = runtests()
-  
+ 
   print '\nPASSED count: ', passed
   print 'FAILED count: ', failed
 
