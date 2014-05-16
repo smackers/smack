@@ -54,6 +54,7 @@ sudo apt-get install -y git
 sudo apt-get install -y mercurial
 sudo apt-get install -y autoconf
 sudo apt-get install -y wget
+sudo apt-get install -y unzip
 
 fi
 
