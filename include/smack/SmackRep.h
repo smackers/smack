@@ -30,6 +30,7 @@ class SmackRep {
 public:
   static const string BLOCK_LBL;
   static const string RET_VAR;
+  static const string EXN_VAR;
   static const string BOOL_VAR;
   static const string FLOAT_VAR;
   static const string PTR_VAR;
@@ -196,7 +197,7 @@ public:
   const Expr* pred(llvm::CmpInst& ci);
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
-  const Stmt* call(llvm::Function* f, llvm::CallInst& ci);
+  const Stmt* call(llvm::Function* f, llvm::User& u);
   string code(llvm::CallInst& ci);
   ProcDecl* proc(llvm::Function* f, int n);
   

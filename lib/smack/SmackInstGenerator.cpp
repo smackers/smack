@@ -148,6 +148,7 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
     currBlock->addStmt(Stmt::assign(
                          Expr::id(SmackRep::RET_VAR), rep.expr(v)));
 
+  currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::EXN_VAR), Expr::lit(false)));
   currBlock->addStmt(Stmt::return_());
 }
 
@@ -209,6 +210,32 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
 
   generatePhiAssigns(si);
   generateGotoStmts(si, targets);
+}
+
+void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
+  processInstruction(ii);
+  llvm::Function* f = ii.getCalledFunction();
+  if (f) {
+    currBlock->addStmt(rep.call(f, ii));
+  } else {
+    assert(false && "unexpected invoke instruction.");
+  }
+  vector<pair<const Expr*, string> > targets;
+  targets.push_back(make_pair(
+    Expr::not_(Expr::id(SmackRep::EXN_VAR)),
+    blockMap[ii.getUnwindDest()]->getName()));
+  targets.push_back(make_pair(
+    Expr::id(SmackRep::EXN_VAR),
+    blockMap[ii.getUnwindDest()]->getName()));
+  generateGotoStmts(ii, targets);
+}
+
+void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
+  processInstruction(ri);
+  // TODO set a return variable indication exceptional flow
+  WARN("unsoundly ignoring value of resume instruction: " + i2s(ri));
+  currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::EXN_VAR), Expr::lit(true)));
+  currBlock->addStmt(Stmt::return_());
 }
 
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
@@ -552,6 +579,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   if (f && f->isDeclaration() && rep.isExternal(&ci))
     currBlock->addStmt(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
+}
+
+void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
+  processInstruction(lpi);
+  // TODO what exactly!?
+  WARN("unsoundly ignoring landingpad instruction: " + i2s(lpi));
 }
 
 /******************************************************************************/

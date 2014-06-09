@@ -12,6 +12,7 @@ namespace smack {
 
 const string SmackRep::BLOCK_LBL = "$bb";
 const string SmackRep::RET_VAR = "$r";
+const string SmackRep::EXN_VAR = "$ex";
 const string SmackRep::BOOL_VAR = "$b";
 const string SmackRep::FLOAT_VAR = "$f";
 const string SmackRep::PTR_VAR = "$p";
@@ -729,6 +730,7 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
 
   if (!f->getReturnType()->isVoidTy())
     rets.push_back(make_pair(RET_VAR,type(f->getReturnType())));
+  rets.push_back(make_pair(EXN_VAR,BOOL_TYPE));
 
   return (ProcDecl*) Decl::procedure(
     *program,
@@ -742,19 +744,27 @@ const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
   return (f && f->isVarArg() && isFloat(v)) ? fp2si(v) : expr(v);
 }
 
-const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
+const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
+  using namespace llvm;
 
   assert(f && "Call encountered unresolved function.");
   
   string name = id(f);
   vector<const Expr*> args;
   vector<string> rets;
+
+  unsigned num_arg_operands = ci.getNumOperands();
+  if (isa<CallInst>(ci))
+    num_arg_operands -= 1;
+  else if (isa<InvokeInst>(ci))
+    num_arg_operands -= 3;
   
-  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++)
+  for (unsigned i = 0; i < num_arg_operands; i++)
     args.push_back(arg(f, i, ci.getOperand(i)));
   
   if (!ci.getType()->isVoidTy())
     rets.push_back(id(&ci));
+  rets.push_back(EXN_VAR);
 
   if (name == "malloc") {
     assert(args.size() == 1);

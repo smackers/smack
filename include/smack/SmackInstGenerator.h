@@ -51,8 +51,8 @@ public:
   void visitBranchInst(llvm::BranchInst& i);
   void visitSwitchInst(llvm::SwitchInst& i);
   // TODO implement indirectbr
-  // TODO implement invoke
-  // TODO implement resume
+  void visitInvokeInst(llvm::InvokeInst& i);
+  void visitResumeInst(llvm::ResumeInst& i);
   void visitUnreachableInst(llvm::UnreachableInst& i);
   
   void visitBinaryOperator(llvm::BinaryOperator& i);
@@ -92,7 +92,7 @@ public:
   void visitSelectInst(llvm::SelectInst& i);
   void visitCallInst(llvm::CallInst& i);
   // TODO implement va_arg
-  // TODO landingpad
+  void visitLandingPadInst(llvm::LandingPadInst& i);
   
   void visitMemCpyInst(llvm::MemCpyInst& i);
   void visitMemSetInst(llvm::MemSetInst& i);
