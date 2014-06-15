@@ -491,16 +491,16 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     currBlock->addStmt(Stmt::skip());
 
-  } else if (f && rep.id(f) == "__SMACK_mod") {
+  } else if (f && rep.id(f).find("__SMACK_mod") != string::npos) {
     proc.addMod(rep.code(ci));
 
-  } else if (f && rep.id(f) == "__SMACK_code") {
+  } else if (f && rep.id(f).find("__SMACK_code") != string::npos) {
     currBlock->addStmt(Stmt::code(rep.code(ci)));
 
-  } else if (f && rep.id(f) == "__SMACK_decl") {
+  } else if (f && rep.id(f).find("__SMACK_decl") != string::npos) {
     proc.addDecl(Decl::code(rep.code(ci)));
 
-  } else if (f && rep.id(f) == "__SMACK_top_decl") {
+  } else if (f && rep.id(f).find("__SMACK_top_decl") != string::npos) {
     string decl = rep.code(ci);
     proc.getProg().addDecl(Decl::code(decl));
     if (VAR_DECL.match(decl)) {
