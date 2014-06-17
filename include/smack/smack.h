@@ -269,6 +269,8 @@ void __SMACK_decls() {
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
 #endif
 
+  D("function $ev(p: int, i: int) returns (int);");
+
 #undef D
 }
 

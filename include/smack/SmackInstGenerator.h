@@ -61,8 +61,8 @@ public:
   // TODO implement insertelement
   // TODO implement shufflevector
 
-  // TODO implement extractvalue
-  // TODO implement insertvalue
+  void visitExtractValueInst(llvm::ExtractValueInst& i);
+  void visitInsertValueInst(llvm::InsertValueInst& i);
   
   void visitAllocaInst(llvm::AllocaInst& i);
   void visitLoadInst(llvm::LoadInst& i);

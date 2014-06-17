@@ -1024,5 +1024,9 @@ string SmackRep::memsetProc(int dstReg) {
   return s.str();
 }
 
+const Expr* SmackRep::extractValue(const llvm::Value* v, unsigned idx) {
+  return Expr::fn("$ev",expr(v),Expr::lit((int)idx));
+}
+
 } // namespace smack
 

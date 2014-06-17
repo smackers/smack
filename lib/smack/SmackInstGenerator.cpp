@@ -218,7 +218,8 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
   if (f) {
     currBlock->addStmt(rep.call(f, ii));
   } else {
-    assert(false && "unexpected invoke instruction.");
+    // assert(false && "unexpected invoke instruction.");
+    WARN("unsoundly ignoring invoke instruction... ");
   }
   vector<pair<const Expr*, string> > targets;
   targets.push_back(make_pair(
@@ -233,7 +234,7 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
 void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
   processInstruction(ri);
   // TODO set a return variable indication exceptional flow
-  WARN("unsoundly ignoring value of resume instruction: " + i2s(ri));
+  WARN("unsoundly ignoring value of resume instruction... ");
   currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::EXN_VAR), Expr::lit(true)));
   currBlock->addStmt(Stmt::return_());
 }
@@ -263,7 +264,29 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& bo) {
 /*                  AGGREGATE                   OPERATIONS                    */
 /******************************************************************************/
 
-// TODO implement aggregate operations
+void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& i) {
+  processInstruction(i);
+  assert (i.getNumIndices() == 1);
+  unsigned idx = i.getIndices()[0];
+  currBlock->addStmt(Stmt::assign(rep.expr(&i),
+    rep.extractValue(i.getAggregateOperand(),idx)));
+}
+
+void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& i) {
+  processInstruction(i);
+  llvm::StructType* t = llvm::dyn_cast<llvm::StructType>(i.getType());
+  assert (t != NULL);
+  assert (i.getNumIndices() == 1);
+  unsigned idx = i.getIndices()[0];
+
+  for (unsigned j = 0; j < t->getNumElements(); j++)
+    currBlock->addStmt(Stmt::assume(Expr::eq(
+      rep.extractValue(&i,j),
+      j == idx
+        ? rep.expr(i.getInsertedValueOperand())
+        : rep.extractValue(i.getAggregateOperand(),j)
+    )));
+}
 
 /******************************************************************************/
 /*     MEMORY       ACCESS        AND       ADDRESSING       OPERATIONS       */
@@ -584,7 +607,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
   processInstruction(lpi);
   // TODO what exactly!?
-  WARN("unsoundly ignoring landingpad instruction: " + i2s(lpi));
+  WARN("unsoundly ignoring landingpad instruction...");
 }
 
 /******************************************************************************/

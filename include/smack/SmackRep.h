@@ -232,6 +232,8 @@ public:
 
   virtual string memcpyProc(int dstReg, int srcReg);
   virtual string memsetProc(int dstReg);
+
+  const Expr* extractValue(const llvm::Value* v, unsigned idx);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {
