@@ -12,7 +12,8 @@ namespace smack {
 
 const string SmackRep::BLOCK_LBL = "$bb";
 const string SmackRep::RET_VAR = "$r";
-const string SmackRep::EXN_VAR = "$ex";
+const string SmackRep::EXN_VAR = "$exn";
+const string SmackRep::EXN_VAL_VAR = "$exnv";
 const string SmackRep::BOOL_VAR = "$b";
 const string SmackRep::FLOAT_VAR = "$f";
 const string SmackRep::PTR_VAR = "$p";
@@ -730,7 +731,6 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
 
   if (!f->getReturnType()->isVoidTy())
     rets.push_back(make_pair(RET_VAR,type(f->getReturnType())));
-  rets.push_back(make_pair(EXN_VAR,BOOL_TYPE));
 
   return (ProcDecl*) Decl::procedure(
     *program,
@@ -764,7 +764,6 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
   
   if (!ci.getType()->isVoidTy())
     rets.push_back(id(&ci));
-  rets.push_back(EXN_VAR);
 
   if (name == "malloc") {
     assert(args.size() == 1);
@@ -1022,10 +1021,6 @@ string SmackRep::memsetProc(int dstReg) {
   }
 
   return s.str();
-}
-
-const Expr* SmackRep::extractValue(const llvm::Value* v, unsigned idx) {
-  return Expr::fn("$ev",expr(v),Expr::lit((int)idx));
 }
 
 } // namespace smack

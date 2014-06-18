@@ -233,9 +233,8 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
 
 void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
   processInstruction(ri);
-  // TODO set a return variable indication exceptional flow
-  WARN("unsoundly ignoring value of resume instruction... ");
   currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::EXN_VAR), Expr::lit(true)));
+  currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::EXN_VAL_VAR), rep.expr(ri.getValue())));
   currBlock->addStmt(Stmt::return_());
 }
 
@@ -264,28 +263,46 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& bo) {
 /*                  AGGREGATE                   OPERATIONS                    */
 /******************************************************************************/
 
-void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& i) {
-  processInstruction(i);
-  assert (i.getNumIndices() == 1);
-  unsigned idx = i.getIndices()[0];
-  currBlock->addStmt(Stmt::assign(rep.expr(&i),
-    rep.extractValue(i.getAggregateOperand(),idx)));
+void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
+  processInstruction(evi);
+  const Expr* e = rep.expr(evi.getAggregateOperand());
+  for (unsigned i = 0; i < evi.getNumIndices(); i++)
+    e = Expr::fn("$extractvalue", e, Expr::lit((int)evi.getIndices()[i]));
+  currBlock->addStmt(Stmt::assign(rep.expr(&evi),e));
 }
 
-void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& i) {
-  processInstruction(i);
-  llvm::StructType* t = llvm::dyn_cast<llvm::StructType>(i.getType());
-  assert (t != NULL);
-  assert (i.getNumIndices() == 1);
-  unsigned idx = i.getIndices()[0];
+void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
+  processInstruction(ivi);
+  const Expr* old = rep.expr(ivi.getAggregateOperand());
+  const Expr* res = rep.expr(&ivi);
+  const llvm::Type* t = ivi.getType();
 
-  for (unsigned j = 0; j < t->getNumElements(); j++)
-    currBlock->addStmt(Stmt::assume(Expr::eq(
-      rep.extractValue(&i,j),
-      j == idx
-        ? rep.expr(i.getInsertedValueOperand())
-        : rep.extractValue(i.getAggregateOperand(),j)
-    )));
+  for (unsigned i = 0; i < ivi.getNumIndices(); i++) {
+    unsigned idx = ivi.getIndices()[i];
+
+    unsigned num_elements;
+    if (const llvm::StructType* st = llvm::dyn_cast<const llvm::StructType>(t)) {
+      num_elements = st->getNumElements();
+      t = st->getElementType(idx);
+    } else if (const llvm::ArrayType* at = llvm::dyn_cast<const llvm::ArrayType>(t)) {
+      num_elements = at->getNumElements();
+      t = at->getElementType();
+    } else {
+      assert (false && "Unexpected aggregate type");
+    }
+
+    for (unsigned j = 0; j < num_elements; j++) {
+      if (j != idx) {
+        currBlock->addStmt(Stmt::assume(Expr::eq(
+          Expr::fn("$extractvalue", res, Expr::lit((int)j)),
+          Expr::fn("$extractvalue", old, Expr::lit((int)j))
+        )));
+      }
+    }
+    res = Expr::fn("$extractvalue", res, Expr::lit((int)idx));
+    old = Expr::fn("$extractvalue", old, Expr::lit((int)idx));
+  }
+  currBlock->addStmt(Stmt::assume(Expr::eq(res,rep.expr(ivi.getInsertedValueOperand()))));
 }
 
 /******************************************************************************/
@@ -607,7 +624,10 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
   processInstruction(lpi);
   // TODO what exactly!?
-  WARN("unsoundly ignoring landingpad instruction...");
+  currBlock->addStmt(Stmt::assign(rep.expr(&lpi),Expr::id(SmackRep::EXN_VAL_VAR)));
+  if (lpi.isCleanup())
+    currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::EXN_VAR),Expr::lit(false)));
+  WARN("unsoundly ignoring landingpad clauses...");
 }
 
 /******************************************************************************/

@@ -31,6 +31,7 @@ public:
   static const string BLOCK_LBL;
   static const string RET_VAR;
   static const string EXN_VAR;
+  static const string EXN_VAL_VAR;
   static const string BOOL_VAR;
   static const string FLOAT_VAR;
   static const string PTR_VAR;
@@ -232,8 +233,6 @@ public:
 
   virtual string memcpyProc(int dstReg, int srcReg);
   virtual string memsetProc(int dstReg);
-
-  const Expr* extractValue(const llvm::Value* v, unsigned idx);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {
