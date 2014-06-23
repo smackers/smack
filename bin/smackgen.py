@@ -51,8 +51,15 @@ def clang(scriptPathName, inputFile, memoryModel, clangArgs):
   smackHeaders = path.join(smackRoot, 'include', 'smack')
 
   fileName = path.splitext(inputFile.name)[0]
+  fileExtension = path.splitext(inputFile.name)[1]
 
-  clangCommand = ['clang']
+  if fileExtension in ['.c']:
+    clangCommand = ['clang']
+  elif fileExtension in ['.cc', '.cpp']:
+    clangCommand = ['clang++']
+  else:
+    sys.exit('Unexpected source file extension `' + fileExtension + '\'')
+
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders]
@@ -79,7 +86,7 @@ def smackGenerate(sysArgv):
 
   fileExtension = path.splitext(inputFile.name)[1]
   options = []
-  if fileExtension == '.c':
+  if fileExtension in ['.c','.cc','.cpp']:
     # if input file is .c, then search for options in comments and compile it with clang
     lines = inputFile.readlines()
     for line in lines:
@@ -88,6 +95,10 @@ def smackGenerate(sysArgv):
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
     inputFile = clang(scriptPathName, inputFile, args.memmod, args.clang)
+  elif fileExtension in ['.bc', '.ll']:
+    pass # do nothing
+  else:
+    sys.exit('Unexpected source file extension `' + fileExtension + '\'')
 
   bpl = llvm2bpl(inputFile, args.debug, "impls" in args.memmod)
   inputFile.close()

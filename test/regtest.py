@@ -3,9 +3,12 @@
 import subprocess
 import re
 import time
+import os.path
 
 # list of regression tests with the expected outputs
 tests = [
+  ('hello',                 r'1 verified, 0 errors?', 2),
+  ('hello_fail',            r'0 verified, 1 errors?', 2),
   ('simple',                r'1 verified, 0 errors?', 2),
   ('simple_fail',           r'0 verified, 1 errors?', 2),
   ('simple_pre',            r'1 verified, 0 errors?', 2),
@@ -102,9 +105,16 @@ def runtests():
     
       print "{0:>20} {1:>16}:".format(test[0], "(" + mem + ")"),
 
+      if os.path.isfile(test[0] + '.c'):
+        sourceFile = test[0] + '.c'
+      elif os.path.isfile(test[0] + '.cc'):
+        sourceFile = test[0] + '.cc'
+      elif os.path.isfile(test[0] + '.cpp'):
+        sourceFile = test[0] + '.cpp'
+
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smack-verify.py', test[0] + '.c', '--verifier=boogie-inline',
+      p = subprocess.Popen(['smack-verify.py', sourceFile, '--verifier=boogie-inline',
                             '--unroll=' + str(test[2]), '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
                             stdout=subprocess.PIPE)
       
