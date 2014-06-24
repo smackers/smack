@@ -224,7 +224,7 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
   vector<pair<const Expr*, string> > targets;
   targets.push_back(make_pair(
     Expr::not_(Expr::id(SmackRep::EXN_VAR)),
-    blockMap[ii.getUnwindDest()]->getName()));
+    blockMap[ii.getNormalDest()]->getName()));
   targets.push_back(make_pair(
     Expr::id(SmackRep::EXN_VAR),
     blockMap[ii.getUnwindDest()]->getName()));
