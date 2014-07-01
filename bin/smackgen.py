@@ -53,7 +53,7 @@ def clang(scriptPathName, inputFile, memoryModel, clangArgs):
   fileName = path.splitext(inputFile.name)[0]
 
   clangCommand = ['clang']
-  clangCommand += ['-c', '-emit-llvm', '-O0', '-g',
+  clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders]
   clangCommand += clangArgs.split()
