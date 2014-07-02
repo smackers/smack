@@ -80,6 +80,9 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd):
             result[sourceLine["filename"]].add(resItem)
     
     for curfile in result:
+        #secondary sort by column
+        result[curfile] = sorted(result[curfile], key=lambda e:e[1], reverse=False)
+        #primary sort by line
         result[curfile] = sorted(result[curfile], key=lambda e:e[0], reverse=False)
 
     if(smackd):
@@ -92,10 +95,8 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd):
 def TestReachability(verifier, bplFileName, timeLimit, unroll, debug, lineInfo):
     boogieText = "assert false;"
 
-    #TODO FIX THIS CODE
-    bplNew = bplFileName.split(".")
-    bplNew[0] = bplNew[0] + "_coverage"
-    bplNew = ".".join(bplNew)
+    bplfileBase = path.splitext(bplFileName)[0]
+    bplNew = bplfileBase + "_coverage.bpl"
 
     CopyFileWhileInserting(bplFileName, bplNew, lineInfo['bplLineNo'] + 1, boogieText)
 

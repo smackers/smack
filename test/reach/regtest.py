@@ -10,7 +10,20 @@ tests = [
   ('if',                1),
   ('if2',               1),
   ('if3',               1),
+  ('if4',               1),
   ('func',              1),
+  ('func2',             1),
+  ('func3',             1),
+  ('libs',              1),
+  ('while',             1),
+  ('while2',            3),
+  ('while3',            3),
+  ('do',                3),
+  ('for',               5),
+  ('for2',              5),
+  ('break',            10),
+  ('continue',         10),
+  ('return',            1),
 ]
 
 def red(text):
