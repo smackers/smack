@@ -884,6 +884,9 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
       addInit( region, pa(addr,fieldOffset(st,i),1), elem );
     }
 
+  } else if (val->getType()->isX86_FP80Ty()) {
+    staticInits.push_back(Stmt::code("// ignored X86 FP80 initializer"));
+
   } else {
     assert (false && "Unexpected static initializer.");
   }
