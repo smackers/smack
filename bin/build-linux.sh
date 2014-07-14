@@ -84,7 +84,7 @@ sudo make install
 
 # Install libgdiplus
 sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev 
-sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev
+sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
 cd ${MONO_DIR}
 git clone git://github.com/mono/libgdiplus.git
 cd libgdiplus
@@ -133,7 +133,7 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r f59ad49fc3a4 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r 661c32e8d5ca https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -155,7 +155,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 9311d7273384
+git checkout df4d2e2ace82
 
 # Build Corral
 cd ${CORRAL_DIR}/references

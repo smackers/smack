@@ -28,8 +28,6 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
-INSTALL_CMAKE=1
-INSTALL_MONO=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
@@ -37,7 +35,6 @@ INSTALL_LLVM=1
 INSTALL_SMACK=1
 
 # Other dirs
-MONO_DIR="${BASE_DIR}/mono-3"
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
 CORRAL_DIR="${BASE_DIR}/corral"
@@ -56,6 +53,7 @@ sudo apt-get install -y mercurial
 sudo apt-get install -y autoconf
 sudo apt-get install -y wget
 sudo apt-get install -y unzip
+sudo apt-get install -y monodevelop
 
 fi
 
@@ -64,50 +62,6 @@ fi
 # Set up base directory for everything
 mkdir -p ${BASE_DIR}
 cd ${BASE_DIR}
-
-################################################################################
-
-# cmake
-
-if [ ${INSTALL_CMAKE} -eq 1 ]; then
-
-cd ${BASE_DIR}
-wget http://www.cmake.org/files/v2.8/cmake-2.8.12.2-Linux-i386.sh
-sudo sh cmake-2.8.12.2-Linux-i386.sh --prefix=/usr/local --exclude-subdir
-
-fi
-
-################################################################################
-
-# mono
-
-if [ ${INSTALL_MONO} -eq 1 ]; then
-
-mkdir -p ${MONO_DIR}
-
-# Install mono
-sudo apt-get install -y git build-essential autoconf automake bison flex libtool gettext gdb mono-gmcs
-cd ${MONO_DIR}
-git clone git://github.com/mono/mono.git
-cd mono
-git checkout mono-3.2.6
-./autogen.sh --prefix=/usr/local
-make
-sudo make install
-
-# Install libgdiplus
-sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev 
-sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
-cd ${MONO_DIR}
-git clone git://github.com/mono/libgdiplus.git
-cd libgdiplus
-./autogen.sh --prefix=/usr/local
-make
-sudo make install
-
-cd ${BASE_DIR}
-
-fi
 
 ################################################################################
 
@@ -222,7 +176,7 @@ tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.4.src.tar.gz --s
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/
-cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+${LLVM_DIR}/src/configure --prefix=${LLVM_DIR}/install --enable-optimized
 make
 make install
 
@@ -245,7 +199,7 @@ git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
 # Configure SMACK and build
 cd ${SMACK_DIR}/build/
-cmake -DLLVM_CONFIG=${LLVM_DIR}/install/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_DIR}/build --prefix=${SMACK_DIR}/install --enable-optimized
 make
 make install
 
