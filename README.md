@@ -49,7 +49,7 @@ concluding that the original program `simple.c` is verified to be correct.
 While SMACK is designed to be a *modular* verifier, for our convenience, this
 whole process has also been wrapped into a single command in SMACK:
 
-    smack-verify.py simple.c -o simple.bpl
+    smackverify.py simple.c -o simple.bpl
     
 which equally reports that the program `simple.c` is verified.
 

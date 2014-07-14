@@ -258,7 +258,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 			self.connection.shutdown(1)
 			return
 		#p = subprocess.Popen(["timeout","60","smack-verif.py", filename+".bc", "-o", filename+".bpl"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		p = subprocess.Popen(['smack-verify.py', filename + '.bc', '-o', filename +'.bpl'], stdout=subprocess.PIPE)
+		p = subprocess.Popen(['smackverify.py', filename + '.bc', '-o', filename +'.bpl'], stdout=subprocess.PIPE)
 		smack_string = p.communicate()[0]
 		return_code = p.returncode
 		if not return_code == 0:
