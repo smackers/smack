@@ -158,7 +158,7 @@ if __name__ == '__main__':
       del sysArgv[i]
       del sysArgv[i]
 
-  bpl, options = smackGenerate(sysArgv)
+  bpl, options, clangOutput = smackGenerate(sysArgv)
   args = parser.parse_args(options + sys.argv[1:])
 
   # write final output

@@ -6,10 +6,7 @@ import pprint
 import subprocess
 import json
 from smackgen import *
-#Import from module with hyphen in name
-smackverify = __import__("smack-verify")
-verifyParser = smackverify.verifyParser
-verify = smackverify.verify
+from smackverify import *
 
 VERSION = '1.4.0'
 
@@ -60,7 +57,24 @@ def GetSourceLineInfo(bplFile):
     
     return sorted(sourceInfo, key=lambda e:e['sourceLineNo'], reverse=True)
 
-def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd):
+def UpdateWithClangInfo(clangOuptut, sourceInfo):
+    FILENAME = '[\w#$~%.\/-]+'
+    regex = '(' + FILENAME + '):(\d+):(\d+): warning: will never be executed \[-Wunreachable-code\]'
+    clangFilter = re.compile(regex)
+
+    for line in clangOutput.splitlines(True):
+        match = clangFilter.match(line)
+        if(match):
+            newSource = {
+                'filename' : match.group(1),
+                'sourceLineNo' : int(match.group(2)),
+                'sourceColNo' : int(match.group(3)),
+                'bplLineNo' : -1,
+                'isReachable' : False
+                }
+            sourceInfo.append(newSource)
+
+def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd, clangOutput):
     sourceInfo = GetSourceLineInfo(bplFileName)
 
     for sourceLine in sourceInfo:
@@ -69,6 +83,9 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd):
 
             #TODO - how does python handle changing lists in for loop?
             UpdateSourceInfo(reachRes, sourceInfo, verifier)
+
+    #Add lines caught by clang's -Wunreachable-code
+    UpdateWithClangInfo(clangOutput, sourceInfo)
             
     # Extract info
     result = {}
@@ -112,7 +129,14 @@ def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
         regex = '(' + FILENAME + ')\((\d+),(\d+)\): Trace:.*'
     else:
         #boogie...
-        regex = '\s*(' + FILENAME + ')\((\d+),(\d+)\)'
+        #TODO Once line numbers are fixed for boogie-inline,
+        #     we can save time here by using all traces,
+        #     not just the instruction causing the failure
+        #     (use trace that led to failing instruction, also)
+        #  As is, current smackverify output using boogie-inline
+        #     is including unvisited lines in traces. (See
+        #     src/test/reach/switch.c)
+        regex = '\s*(' + FILENAME + ')\((\d+),(\d+)\): Error.*'
     traceFilter = re.compile(regex)
 
     for line in corralOutput.splitlines(True):
@@ -148,8 +172,11 @@ if __name__ == '__main__':
         elif sys.argv[i] == '--time-limit':
             del sysArgv[i]
             del sysArgv[i]
-            
-    bpl, options = smackGenerate(sysArgv)
+
+
+    #Add clang's -Wunreachable-code flag
+    sysArgv.append('--clang=-Wunreachable-code')
+    bpl, options, clangOutput = smackGenerate(sysArgv)
     args = parser.parse_args(options + sys.argv[1:])
 
     # write final output
@@ -157,4 +184,4 @@ if __name__ == '__main__':
     args.outfile.close()
     #!!!!!!END COPY OF SECTION FROM smack-verify.py!!!!!!!!!!!
 
-    GetCodeCoverage(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd)
+    GetCodeCoverage(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd, clangOutput)
