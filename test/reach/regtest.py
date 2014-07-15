@@ -6,11 +6,16 @@ import time
 import json
 
 # list of regression tests with the expected outputs
+#   (filename, loop unroll)
 tests = [
   ('if',                1),
   ('if2',               1),
   ('if3',               1),
   ('if4',               1),
+  ('switch',            1),
+  ('switch2',           1),
+  ('switch3',           1),
+  ('switch4',           1),
   ('func',              1),
   ('func2',             1),
   ('func3',             1),
@@ -41,27 +46,26 @@ def runtests():
       expected = ansFile.read()
       ansFile.close()
 
-      for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
-    
-        print "{0:>20} {1:>16} {2:>16}:".format(test[0], "(" + verifier + ")", "(" + mem + ")"),
+      print "{0:>20} {1:>16}:".format(test[0], "(" + verifier + ")"),
 
-        # invoke smack-reach
-        t0 = time.time()
-        p = subprocess.Popen(['smackreach.py', test[0] + '.c', '--verifier=' + verifier,
-                              '--unroll=' + str(test[1]), '--mem-mod=' + mem,
-                              '-o', test[0] +'.bpl', '--smackd'],
-                             stdout=subprocess.PIPE)
+      # invoke smack-reach
+      t0 = time.time()
+      p = subprocess.Popen(['smackreach.py', test[0] + '.c',
+                            '--verifier=' + verifier,
+                            '--unroll=' + str(test[1]), 
+                            '-o', test[0] +'.bpl', '--smackd'],
+                           stdout=subprocess.PIPE)
       
-        smackOutput = p.communicate()[0]
-        elapsed = time.time() - t0
+      smackOutput = p.communicate()[0]
+      elapsed = time.time() - t0
 
-        # check SMACK output
-        if(json.loads(expected) == json.loads(smackOutput)):
-          print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
-          passed += 1
-        else:
-          print red('FAILED')
-          failed += 1
+      # check SMACK output
+      if(json.loads(expected) == json.loads(smackOutput)):
+        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
+        passed += 1
+      else:
+        print red('FAILED')
+        failed += 1
   
   return passed, failed
 
