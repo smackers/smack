@@ -7,7 +7,7 @@ import argparse
 import io
 import platform
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 
 def is_valid_file(parser, arg):
@@ -28,16 +28,12 @@ def llvm2bplParser():
                       help='output Boogie file (default: %(default)s)')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
-  parser.add_argument('--mem-mod', dest='memmod', choices=['flat', 'twodim'], default='flat',
-                      help='set the memory model (flat=flat memory model, twodim=two dimensional memory model)')
-  parser.add_argument('--mem-impls', dest='memimpls', action="store_true", default=False,
-                      help='use procedure implementations for memory allocation')
   return parser
 
 
-def llvm2bpl(infile, debugFlag, memmod, memImpls):
+def llvm2bpl(infile, debugFlag, memImpls):
     
-  cmd = ['smack', '-source-loc-syms', '-mem-mod=' + memmod, infile.name]
+  cmd = ['smack', '-source-loc-syms', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   p = subprocess.Popen(cmd)
@@ -51,9 +47,10 @@ def llvm2bpl(infile, debugFlag, memmod, memImpls):
   with open('a.bpl', 'r') as outputFile:
     output = outputFile.read()
 
-  bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
-  bpl = output[bplStartIndex:]
-  return bpl
+  # bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
+  # bpl = output[bplStartIndex:]
+  # return bpl
+  return output
  
 
 if __name__ == '__main__':

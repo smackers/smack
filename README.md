@@ -11,6 +11,9 @@ experience verifying C language programs is encouraging: SMACK is competitive
 in SV-COMP benchmarks, is able to translate large programs (100 KLOC), and is
 used in several verification research prototypes.
 
+*Please drop us a note if using SMACK in your research or teaching. We would
+love to learn more about your experience.*
+
 ## A Quick Demo
 
 SMACK can verify C programs, such as the following:
@@ -49,7 +52,7 @@ concluding that the original program `simple.c` is verified to be correct.
 While SMACK is designed to be a *modular* verifier, for our convenience, this
 whole process has also been wrapped into a single command in SMACK:
 
-    smack-verify.py simple.c -o simple.bpl
+    smackverify.py simple.c -o simple.bpl
     
 which equally reports that the program `simple.c` is verified.
 

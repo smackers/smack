@@ -1,3 +1,4 @@
+#include "smack.h"
 
 extern int foo(int x);
 
