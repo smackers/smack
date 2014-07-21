@@ -12,7 +12,7 @@ in SV-COMP benchmarks, is able to translate large programs (100 KLOC), and is
 used in several verification research prototypes.
 
 *Please drop us a note if using SMACK in your research or teaching. We would
-love to learn about your experince.*
+love to learn more about your experience.*
 
 ## A Quick Demo
 
