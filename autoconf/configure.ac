@@ -1,7 +1,7 @@
 dnl **************************************************************************
 dnl * Initialize
 dnl **************************************************************************
-AC_INIT([[SMACK]],[[1.4.0]],[smack-dev@googlegroups.com],[smack],[http://github.com/smackers/smack])
+AC_INIT([[SMACK]],[[1.4.1]],[smack-dev@googlegroups.com],[smack],[http://github.com/smackers/smack])
 
 dnl Identify where LLVM source tree is
 LLVM_SRC_ROOT="../.."
