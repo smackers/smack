@@ -9,7 +9,7 @@ import argparse
 import platform
 from smackgen import *
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 def verifyParser():
   # parse command line arguments
