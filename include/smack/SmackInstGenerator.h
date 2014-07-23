@@ -16,11 +16,15 @@ class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
   SmackRep& rep;
-  ProcDecl& proc;
+  CodeContainer& proc;
   Block* currBlock;
-  map<const llvm::BasicBlock*, Block*>& blockMap;
+  map<const llvm::BasicBlock*, Block*> blockMap;
   int blockNum;
   int varNum;
+
+  string createVar();
+  Block* createBlock();
+  Block* getBlock(llvm::BasicBlock* bb);
 
   void generatePhiAssigns(llvm::TerminatorInst& i);
   void generateGotoStmts(llvm::Instruction& i,
@@ -29,22 +33,16 @@ private:
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
+  void addDecl(Decl* d) { proc.addDecl(d); }
+  void addMod(string x) { proc.addMod(x); }
+  void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
+  void addBlock(Block* b) { proc.addBlock(b); }
+
 public:
-  SmackInstGenerator(SmackRep& r, ProcDecl& p,
-                     map<const llvm::BasicBlock*, Block*>& bm)
-    : rep(r), proc(p),
-      blockMap(bm), blockNum(0), varNum(0) {}
-
-  Block* createBlock();
-  void setCurrBlock(Block* b) {
-    currBlock = b;
-  }
-  Block* getCurrBlock() {
-    return currBlock;
-  }
-
-  string createVar();
-
+  SmackInstGenerator(SmackRep& r, CodeContainer& p)
+    : rep(r), proc(p), blockNum(0), varNum(0) {}
+  
+  void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);
 
   void visitReturnInst(llvm::ReturnInst& i);

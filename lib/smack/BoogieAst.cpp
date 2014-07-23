@@ -457,6 +457,14 @@ void VarExpr::print(ostream& os) const {
   os << var;
 }
 
+void CodeExpr::print(ostream& os) const {
+  os << "|{" << endl;
+  if (decls.size() > 0)
+    print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
+  print_seq<Block*>(os, blocks, "\n");
+  os << endl << "}|";
+}
+
 void StrVal::print(ostream& os) const {
   os << "\"" << val << "\"";
 }

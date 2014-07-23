@@ -10,6 +10,64 @@ namespace smack {
 llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
 char SmackModuleGenerator::ID = 0;
 
+class SpecCollector : public llvm::InstVisitor<SpecCollector> {
+private:
+  SmackRep& rep;
+  ProcDecl& proc;
+  Program& program;
+  set<llvm::Instruction*> specs;
+  set<llvm::BasicBlock*> blocks;
+
+public:
+  SpecCollector(SmackRep& r, ProcDecl& d, Program& p)
+    : rep(r), proc(d), program(p) {}
+  
+  // void slicing???(llvm::CallInst& ci) {
+  //   stack<llvm::Instruction*> worklist;
+  //   worklist.push(&ci);
+  //   while (!worklist.empty()) {
+  //     llvm::Instruction* i = worklist.top();
+  //     worklist.pop();
+  //     specs.insert(i);
+  //     // i->removeFromParent();
+  //     // blocks.insert(i->getParent());
+  //     // i->getParent()->removeFromParent();
+  //
+  //     if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(i)) {
+  //       for (llvm::PHINode::block_iterator bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
+  //         worklist.push( (*bb)->getTerminator() );
+  //       }
+  //
+  //     } else if (llvm::BranchInst* br = llvm::dyn_cast<llvm::BranchInst>(i)) {
+  //       if (br->isConditional()) {
+  //         DEBUG(errs() << "GOT COND BR.\n");
+  //         // worklist.push( br->getCondition() );
+  //       }
+  //
+  //     } else {
+  //       i->removeFromParent();
+  //       for (llvm::User::op_iterator ops = i->op_begin(); ops != i->op_end(); ++ops) {
+  //         if (llvm::Instruction* ii = llvm::dyn_cast<llvm::Instruction>(ops)) {
+  //           worklist.push(ii);
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+  void visitCallInst(llvm::CallInst& ci) {
+    llvm::Function* f = ci.getCalledFunction();
+    if (f && rep.id(f).find("requires") != string::npos) {
+      CodeExpr* code = new CodeExpr(program);
+      SmackInstGenerator igen(rep, *code);
+      // TODO visit the slice, not the whole proc!
+      igen.visit(ci.getParent()->getParent());
+      proc.addRequires(code);
+    }
+  }
+
+};
+
 void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
   rep->setProgram( &program );
@@ -49,40 +107,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
       DEBUG(errs() << "Analyzing function: " << rep->id(func) << "\n");
 
-      map<const llvm::BasicBlock*, Block*> known;
-      stack<llvm::BasicBlock*> workStack;
-      SmackInstGenerator igen(*rep, (ProcDecl&) *proc, known);
+      SpecCollector sc(*rep, *proc, program);
+      sc.visit(func);
 
-      llvm::BasicBlock& entry = func->getEntryBlock();
-      workStack.push(&entry);
-      known[&entry] = igen.createBlock();
-      
+      SmackInstGenerator igen(*rep, *proc);
+      igen.visit(func);
+
       // First execute static initializers, in the main procedure.
       if (rep->id(func) == "main" && rep->hasStaticInits())
-        known[&entry]->addStmt(Stmt::call(SmackRep::STATIC_INIT));
-
-      // INVARIANT: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b)
-      // or workStack.CONTAINED(b) at some point in time.
-      while (!workStack.empty()) {
-        llvm::BasicBlock* b = workStack.top();
-        workStack.pop();
-
-        for (llvm::succ_iterator s = succ_begin(b),
-             e = succ_end(b); s != e; ++s) {
-
-          // uncovered basic block
-          if (known.count(*s) == 0) {
-            known[*s] = igen.createBlock();
-            workStack.push(*s);
-          }
-        }
-
-        // NOTE: here we are sure that all successor blocks have
-        // already been created, and are mapped for the visitor.
-
-        igen.setCurrBlock(known[b]);
-        igen.visit(b);
-      }
+        proc->insert(Stmt::call(SmackRep::STATIC_INIT));
 
       DEBUG(errs() << "Finished analyzing function: " << rep->id(func) << "\n\n");
     }

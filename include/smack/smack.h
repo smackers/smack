@@ -45,6 +45,13 @@ void __SMACK_assume(bool v) {
   __SMACK_code("assume {@} != 0;", v);
 }
 
+void requires(bool expr);
+void ensures(bool expr);
+
+int forall(const char *var, bool expr);
+int exists(const char *var, bool expr);
+int var(const char *var);
+
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
 //// should have a type $ptr parameter, not an int.  How should we do this?
 // void __SMACK_record_int(int i) {

@@ -39,8 +39,8 @@ string i2s(llvm::Instruction& i) {
 Block* SmackInstGenerator::createBlock() {
   stringstream s;
   s << SmackRep::BLOCK_LBL << blockNum++;
-  Block* b = new Block(proc, s.str());
-  proc.addBlock(b);
+  Block* b = new Block(s.str());
+  addBlock(b);
   return b;
 }
 
@@ -48,8 +48,14 @@ string SmackInstGenerator::createVar() {
   stringstream s;
   s << "$x" << varNum++;
   string name = s.str();
-  proc.addDecl(Decl::variable(name, rep.getPtrType()));
+  addDecl(Decl::variable(name, rep.getPtrType()));
   return name;
+}
+
+Block* SmackInstGenerator::getBlock(llvm::BasicBlock* bb) {
+  if (blockMap.count(bb) == 0)
+    blockMap[bb] = createBlock();
+  return blockMap[bb];
 }
 
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
@@ -62,7 +68,7 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
       else
         inst.setName(SmackRep::PTR_VAR);
     }
-    proc.addDecl(Decl::variable(rep.id(&inst), rep.type(&inst)));
+    addDecl(Decl::variable(rep.id(&inst), rep.type(&inst)));
   }
 }
 
@@ -86,6 +92,10 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
   annotate(inst, currBlock);
   ORIG(inst);
   nameInstruction(inst);
+}
+
+void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
+  currBlock = getBlock(&bb);
 }
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
@@ -160,22 +170,18 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
   if (bi.getNumSuccessors() == 1) {
 
     // Unconditional branch
-    assert(blockMap.count(bi.getSuccessor(0)) != 0);
     targets.push_back(make_pair(Expr::lit(true),
-                                blockMap[bi.getSuccessor(0)]->getName()));
+                                getBlock(bi.getSuccessor(0))->getName()));
 
   } else {
 
     // Conditional branch
     assert(bi.getNumSuccessors() == 2);
-    assert(blockMap.count(bi.getSuccessor(0)) != 0);
-    assert(blockMap.count(bi.getSuccessor(1)) != 0);
-
     const Expr* e = rep.expr(bi.getCondition());
     targets.push_back(make_pair(e,
-                                blockMap[bi.getSuccessor(0)]->getName()));
+                                getBlock(bi.getSuccessor(0))->getName()));
     targets.push_back(make_pair(Expr::not_(e),
-                                blockMap[bi.getSuccessor(1)]->getName()));
+                                getBlock(bi.getSuccessor(1))->getName()));
   }
   generatePhiAssigns(bi);
   generateGotoStmts(bi, targets);
@@ -193,19 +199,16 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
   for (llvm::SwitchInst::CaseIt
        i = si.case_begin(); i != si.case_begin(); ++i) {
 
-    assert(blockMap.count(i.getCaseSuccessor()) != 0);
     const Expr* v = rep.expr(i.getCaseValue());
     targets.push_back(make_pair(Expr::eq(e, v),
-                                blockMap[i.getCaseSuccessor()]->getName()));
+                                getBlock(i.getCaseSuccessor())->getName()));
 
     // Add the negation of this case to the default case
     n = Expr::and_(n, Expr::neq(e, v));
   }
 
   // The default case
-  assert(blockMap.count(si.getDefaultDest()) != 0);
-  targets.push_back(make_pair(n,
-                              blockMap[si.getDefaultDest()]->getName()));
+  targets.push_back(make_pair(n,getBlock(si.getDefaultDest())->getName()));
 
   generatePhiAssigns(si);
   generateGotoStmts(si, targets);
@@ -465,17 +468,17 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     currBlock->addStmt(Stmt::skip());
 
   } else if (f && rep.id(f) == "__SMACK_mod") {
-    proc.addMod(rep.code(ci));
+    addMod(rep.code(ci));
 
   } else if (f && rep.id(f) == "__SMACK_code") {
     currBlock->addStmt(Stmt::code(rep.code(ci)));
 
   } else if (f && rep.id(f) == "__SMACK_decl") {
-    proc.addDecl(Decl::code(rep.code(ci)));
+    addDecl(Decl::code(rep.code(ci)));
 
   } else if (f && rep.id(f) == "__SMACK_top_decl") {
     string decl = rep.code(ci);
-    proc.getProg().addDecl(Decl::code(decl));
+    addTopDecl(Decl::code(decl));
     if (VAR_DECL.match(decl)) {
       string var = VAR_DECL.sub("\\1",decl);
       rep.addBplGlobal(var);

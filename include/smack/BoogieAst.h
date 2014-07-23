@@ -15,7 +15,6 @@ namespace smack {
 
 using namespace std;
 
-class Block;
 class Program;
 
 class Expr {
@@ -355,20 +354,71 @@ public:
   void print(ostream& os) const;
 };
 
-class ProcDecl : public Decl {
+class Block {
+  string name;
+  vector<const Stmt*> stmts;
+public:
+  Block() : name("") {}
+  Block(string n) : name(n) {}
+  void print(ostream& os) const;
+  void insert(const Stmt* s) {
+    stmts.insert(stmts.begin(), s);
+  }
+  void addStmt(const Stmt* s) {
+    stmts.push_back(s);
+  }
+  string getName() {
+    return name;
+  }
+};
+
+class CodeContainer {
+protected:
   Program& prog;
-  vector< pair<string,string> > params;
-  vector< pair<string,string> > rets;
-  vector<string> mods;
-  vector<const Expr*> requires;
-  vector<const Expr*> ensures;
   set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
+  vector<string> mods;
+  CodeContainer(Program& p) : prog(p) {}
+public:
+  Program& getProg() const {
+    return prog;
+  }
+  void addDecl(Decl* d) {
+    decls.insert(d);
+  }
+  void insert(const Stmt* s) {
+    blocks.front()->insert(s);
+  }
+  void addBlock(Block* b) {
+    blocks.push_back(b);
+  }
+  bool hasBody() {
+    return decls.size() > 0 || blocks.size() > 0;
+  }
+  void addMod(string m) {
+    mods.push_back(m);
+  }
+  void addMods(vector<string> ms) {
+    for (unsigned i = 0; i < ms.size(); i++)
+      addMod(ms[i]);
+  }
+};
+
+class CodeExpr : public Expr, public CodeContainer {
+public:
+  CodeExpr(Program& p) : CodeContainer(p) {}
+  void print(ostream& os) const;
+};
+
+class ProcDecl : public Decl, public CodeContainer {
+  vector< pair<string,string> > params;
+  vector< pair<string,string> > rets;
+  vector<const Expr*> requires;
+  vector<const Expr*> ensures;
 public:
   ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
-    : Decl(n), prog(p), params(ps), rets(rs) {}
+    : Decl(n), CodeContainer(p), params(ps), rets(rs) {}
   kind getKind() const { return PROC; }
-  Program& getProg() const { return prog; }
   void addParam(string x, string t) {
     params.push_back(make_pair(x, t));
   }
@@ -378,27 +428,11 @@ public:
   vector< pair<string,string> > getRets() {
     return rets;
   }
-  void addMod(string m) {
-    mods.push_back(m);
-  }
-  void addMods(vector<string> ms) {
-    for (unsigned i = 0; i < ms.size(); i++)
-      addMod(ms[i]);
-  }
   void addRequires(const Expr* e) {
     requires.push_back(e);
   }
   void addEnsures(const Expr* e) {
     ensures.push_back(e);
-  }
-  void addDecl(Decl* d) {
-    decls.insert(d);
-  }
-  void addBlock(Block* b) {
-    blocks.push_back(b);
-  }
-  bool hasBody() {
-    return decls.size() > 0 || blocks.size() > 0;
   }
   void print(ostream& os) const;
 };
@@ -408,23 +442,6 @@ public:
   CodeDecl(string s) : Decl(s) {}
   kind getKind() const { return CODE; }
   void print(ostream& os) const;
-};
-
-class Block {
-  ProcDecl& proc;
-  string name;
-  vector<const Stmt*> stmts;
-public:
-  Block(ProcDecl& p) : proc(p), name("") {}
-  Block(ProcDecl& p, string n) : proc(p), name(n) {}
-  void print(ostream& os) const;
-  ProcDecl& getProc() const { return proc; }
-  void addStmt(const Stmt* s) {
-    stmts.push_back(s);
-  }
-  string getName() {
-    return name;
-  }
 };
 
 class Program {
