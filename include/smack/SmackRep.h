@@ -157,6 +157,7 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
+  Program* getProgram() { return program; }
   void setProgram(Program* p) { program = p; }
   
   bool isSmackName(string n);

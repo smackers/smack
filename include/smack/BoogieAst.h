@@ -20,6 +20,8 @@ class Program;
 class Expr {
 public:
   virtual void print(ostream& os) const = 0;
+  static const Expr* exists(string v, string t, const Expr* e);
+  static const Expr* forall(string v, string t, const Expr* e);
   static const Expr* and_(const Expr* l, const Expr* r);
   static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
@@ -99,10 +101,13 @@ public:
 
 class QuantExpr : public Expr {
 public:
-  enum Quantifier { Forall, Exists };
+  enum Quantifier { Exists, Forall };
 private:
-  Quantifier q;
+  Quantifier quant;
+  vector< pair<string,string> > vars;
+  const Expr* expr;
 public:
+  QuantExpr(Quantifier q, vector< pair<string,string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
   void print(ostream& os) const;
 };
 
@@ -192,6 +197,7 @@ public:
   static const Stmt* goto_(vector<string> ts);
   static const Stmt* havoc(string x);
   static const Stmt* return_();
+  static const Stmt* return_(const Expr* e);
   static const Stmt* skip();
   static const Stmt* code(string s);
   virtual void print(ostream& os) const = 0;
@@ -257,8 +263,9 @@ public:
 };
 
 class ReturnStmt : public Stmt {
+  const Expr* expr;
 public:
-  ReturnStmt() {}
+  ReturnStmt(const Expr* e = nullptr) : expr(e) {}
   void print(ostream& os) const;
 };
 
@@ -402,6 +409,7 @@ public:
     for (unsigned i = 0; i < ms.size(); i++)
       addMod(ms[i]);
   }
+  virtual bool isProc() { return false; }
 };
 
 class CodeExpr : public Expr, public CodeContainer {
@@ -434,6 +442,7 @@ public:
   void addEnsures(const Expr* e) {
     ensures.push_back(e);
   }
+  bool isProc() { return true; }
   void print(ostream& os) const;
 };
 

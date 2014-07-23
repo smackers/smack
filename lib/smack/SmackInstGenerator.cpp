@@ -4,6 +4,7 @@
 //
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
+#include "smack/Slicing.h"
 #include "llvm/InstVisitor.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/Support/Debug.h"
@@ -483,6 +484,27 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       string var = VAR_DECL.sub("\\1",decl);
       rep.addBplGlobal(var);
     }
+
+  } else if (f && rep.id(f).find("requires") != string::npos) {
+    if (!proc.isProc()) {
+      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
+      currBlock->addStmt(Stmt::return_(rep.expr(ci.getArgOperand(0))));
+    }
+
+  // } else if (f && rep.id(f).find("var") != string::npos) {
+  //   if (!proc.isProc()) {
+  //     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
+  //     currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
+  //   }
+
+  // } else if (f && rep.id(f).find("forall") != string::npos) {
+  //   assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
+  //   currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::forall(
+  //     rep.getString(ci.getArgOperand(0)),
+  //     "int",
+  //     slice(rep ,ci.getArgOperand(1))
+  //   )));
+    // currBlock->addStmt(Stmt::return_(rep.expr(ci.getArgOperand(0))));
 
   } else if (f) {
     currBlock->addStmt(rep.call(f, ci));

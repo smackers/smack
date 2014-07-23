@@ -4,6 +4,7 @@
 //
 #include "smack/SmackModuleGenerator.h"
 #include "smack/SmackOptions.h"
+#include "smack/Slicing.h"
 
 namespace smack {
 
@@ -15,54 +16,15 @@ private:
   SmackRep& rep;
   ProcDecl& proc;
   Program& program;
-  set<llvm::Instruction*> specs;
-  set<llvm::BasicBlock*> blocks;
 
 public:
   SpecCollector(SmackRep& r, ProcDecl& d, Program& p)
     : rep(r), proc(d), program(p) {}
-  
-  // void slicing???(llvm::CallInst& ci) {
-  //   stack<llvm::Instruction*> worklist;
-  //   worklist.push(&ci);
-  //   while (!worklist.empty()) {
-  //     llvm::Instruction* i = worklist.top();
-  //     worklist.pop();
-  //     specs.insert(i);
-  //     // i->removeFromParent();
-  //     // blocks.insert(i->getParent());
-  //     // i->getParent()->removeFromParent();
-  //
-  //     if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(i)) {
-  //       for (llvm::PHINode::block_iterator bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
-  //         worklist.push( (*bb)->getTerminator() );
-  //       }
-  //
-  //     } else if (llvm::BranchInst* br = llvm::dyn_cast<llvm::BranchInst>(i)) {
-  //       if (br->isConditional()) {
-  //         DEBUG(errs() << "GOT COND BR.\n");
-  //         // worklist.push( br->getCondition() );
-  //       }
-  //
-  //     } else {
-  //       i->removeFromParent();
-  //       for (llvm::User::op_iterator ops = i->op_begin(); ops != i->op_end(); ++ops) {
-  //         if (llvm::Instruction* ii = llvm::dyn_cast<llvm::Instruction>(ops)) {
-  //           worklist.push(ii);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
 
   void visitCallInst(llvm::CallInst& ci) {
     llvm::Function* f = ci.getCalledFunction();
     if (f && rep.id(f).find("requires") != string::npos) {
-      CodeExpr* code = new CodeExpr(program);
-      SmackInstGenerator igen(rep, *code);
-      // TODO visit the slice, not the whole proc!
-      igen.visit(ci.getParent()->getParent());
-      proc.addRequires(code);
+      proc.addRequires(slice(rep,&ci));
     }
   }
 
