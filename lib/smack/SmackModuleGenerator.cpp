@@ -16,15 +16,45 @@ private:
   SmackRep& rep;
   ProcDecl& proc;
   Program& program;
+  
+  vector<const Expr*> slices;
 
 public:
   SpecCollector(SmackRep& r, ProcDecl& d, Program& p)
     : rep(r), proc(d), program(p) {}
 
+  Expr* slice(SmackRep& rep, llvm::Value* v) {
+    CodeExpr* code = new CodeExpr(*rep.getProgram());
+    SmackInstGenerator igen(rep, *code, slices.size());
+    llvm::Function* sliced = llvm::slice(v);
+    igen.setQuantifierMap(&slices);
+    igen.visit(sliced);
+    delete sliced;
+    return code;
+  }
+
   void visitCallInst(llvm::CallInst& ci) {
-    llvm::Function* f = ci.getCalledFunction();
-    if (f && rep.id(f).find("requires") != string::npos) {
-      proc.addRequires(slice(rep,&ci));
+    using namespace llvm;
+    Function* f = ci.getCalledFunction();
+
+    if (f && rep.id(f).find("forall") != string::npos) {
+      assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
+      Value* var = ci.getArgOperand(0);
+      Value* arg = ci.getArgOperand(1);
+      const Expr* e = Expr::forall(rep.getString(var), "int", slice(rep,arg));
+      ci.setArgOperand(1,ConstantInt::get(IntegerType::get(ci.getContext(),32),slices.size()));
+      slices.push_back(e);
+      llvm::slice(arg,true,true);
+
+    } else if (f && rep.id(f).find("requires") != string::npos) {
+      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
+      proc.addRequires(slice(rep,ci.getArgOperand(0)));
+      llvm::slice(&ci,true,true);
+
+    } else if (f && rep.id(f).find("ensures") != string::npos) {
+      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
+      proc.addEnsures(slice(rep,ci.getArgOperand(0)));
+      llvm::slice(&ci,true,true);
     }
   }
 

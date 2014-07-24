@@ -47,7 +47,10 @@ Block* SmackInstGenerator::createBlock() {
 
 string SmackInstGenerator::createVar() {
   stringstream s;
-  s << "$x" << varNum++;
+  s << "$x";
+  if (varNs >= 0)
+    s << "." << varNs << ".";
+  s << varNum++;
   string name = s.str();
   addDecl(Decl::variable(name, rep.getPtrType()));
   return name;
@@ -62,12 +65,16 @@ Block* SmackInstGenerator::getBlock(llvm::BasicBlock* bb) {
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
     if (!inst.hasName() || !rep.isSmackGeneratedName(inst.getName())) {
+      stringstream s;
       if (rep.isBool(&inst))
-        inst.setName(SmackRep::BOOL_VAR);
+        s << SmackRep::BOOL_VAR;
       else if (rep.isFloat(&inst))
-        inst.setName(SmackRep::FLOAT_VAR);
+        s << SmackRep::FLOAT_VAR;
       else
-        inst.setName(SmackRep::PTR_VAR);
+        s << SmackRep::PTR_VAR;
+      if (varNs >= 0)
+        s << "." << varNs << ".";
+      inst.setName(s.str());
     }
     addDecl(Decl::variable(rep.id(&inst), rep.type(&inst)));
   }
@@ -155,11 +162,17 @@ void SmackInstGenerator::generateGotoStmts(
 void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
   processInstruction(ri);
 
-  if (llvm::Value* v = ri.getReturnValue())
-    currBlock->addStmt(Stmt::assign(
-                         Expr::id(SmackRep::RET_VAR), rep.expr(v)));
+  llvm::Value* v = ri.getReturnValue();
 
-  currBlock->addStmt(Stmt::return_());
+  if (proc.isProc()) {
+    if (v)
+      currBlock->addStmt(Stmt::assign(Expr::id(SmackRep::RET_VAR), rep.expr(v)));
+    currBlock->addStmt(Stmt::return_());
+
+  } else {
+    assert (v && "Expected return value.");
+    currBlock->addStmt(Stmt::return_(rep.expr(v)));
+  }
 }
 
 void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
@@ -485,26 +498,19 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       rep.addBplGlobal(var);
     }
 
-  } else if (f && rep.id(f).find("requires") != string::npos) {
+  } else if (f && rep.id(f).find("var") != string::npos) {
     if (!proc.isProc()) {
-      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
-      currBlock->addStmt(Stmt::return_(rep.expr(ci.getArgOperand(0))));
+      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
+      currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
     }
 
-  // } else if (f && rep.id(f).find("var") != string::npos) {
-  //   if (!proc.isProc()) {
-  //     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
-  //     currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
-  //   }
-
-  // } else if (f && rep.id(f).find("forall") != string::npos) {
-  //   assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
-  //   currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::forall(
-  //     rep.getString(ci.getArgOperand(0)),
-  //     "int",
-  //     slice(rep ,ci.getArgOperand(1))
-  //   )));
-    // currBlock->addStmt(Stmt::return_(rep.expr(ci.getArgOperand(0))));
+  } else if (f && rep.id(f).find("forall") != string::npos) {
+    assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
+    llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(1));
+    if (cidx && qMap) {
+      uint64_t idx = cidx->getLimitedValue();
+      currBlock->addStmt(Stmt::assign(rep.expr(&ci),(*qMap)[idx]));
+    }
 
   } else if (f) {
     currBlock->addStmt(rep.call(f, ci));

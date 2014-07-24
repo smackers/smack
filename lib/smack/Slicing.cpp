@@ -17,17 +17,39 @@ using namespace std;
 
 namespace llvm {
 
-  Function* slice(Function* f, Value* v, bool keep=false) {
-    ValueToValueMapTy VMap;
-    Function* slice = CloneFunction(f,VMap,true);
-    v = VMap[v];
+  Function* slice(Value* v, bool exclude=false, bool inPlace=false) {
+    Function* slice;
 
+    queue<Instruction*> workList;
     set<Instruction*> markedI;
     set<BasicBlock*> markedB;
-    queue<Instruction*> workList;
 
-    if (Instruction* I = dyn_cast<Instruction>(v)) {
+    Instruction* I = dyn_cast<Instruction>(v);
+    assert(I && "Expected instruction value.");
+
+    Function* f = I->getParent()->getParent();
+
+    // DEBUG(llvm::errs() << "COMPUTING SLICE " << *v << "\n");
+    // DEBUG(llvm::errs() << "IN " << *f << "\n");
+    // DEBUG(llvm::errs() << "exclude? " << exclude << "\n");
+    // DEBUG(llvm::errs() << "inPlace? " << inPlace << "\n");
+
+    if (inPlace) {
+      slice = f;
+    } else {
+      ValueToValueMapTy VMap;
+      slice = CloneFunction(f,VMap,true);
+      v = VMap[v];
+    }
+
+    I = dyn_cast<Instruction>(v);
+    assert(I && "Expected instruction value.");
+
+    if (exclude) {
       workList.push(I);
+    } else {
+      I->getParent()->getTerminator()->eraseFromParent();
+      workList.push( ReturnInst::Create(I->getContext(),I,I->getParent()) );
     }
     
     while (!workList.empty()) {
@@ -63,45 +85,32 @@ namespace llvm {
     
     for (Function::iterator B = slice->begin(); B != slice->end(); ++B) {
       for (BasicBlock::iterator I = B->begin(); I != B->end(); ++I)
-        if (markedI.count(I) == 0)
+        if (!markedI.count(I) == !exclude)
           goneI.push_back(I);
-      if (markedB.count(B) == 0)
+
+      if (!exclude && markedB.count(B) == 0)
         goneB.push_back(B);
     }
-    
-    // TODO ERASE FROM THE ORIGINAL COPY
-    // for (Function::iterator B = f->begin(); B != f->end(); ++B) {
-    //   for (BasicBlock::iterator I = B->begin(); I != B->end(); ++I) {
-    //     Value* V = VMap[I];
-    //     if (Instruction* J = dyn_cast<Instruction>(V)) {
-    //       if (markedI.count(J) > 0) {
-    //         goneI.push_back(I);
-    //       }
-    //     }
-    //   }
-    // }
-    
-    for (vector<Instruction*>::iterator I = goneI.begin(); I != goneI.end(); ++I)
-      (*I)->eraseFromParent();
 
-    for (vector<BasicBlock*>::iterator B = goneB.begin(); B != goneB.end(); ++B)
-      (*B)->eraseFromParent();    
+    for (vector<Instruction*>::reverse_iterator I = goneI.rbegin(); I != goneI.rend(); ++I) {
+      BasicBlock* B = (*I)->getParent();
+      // DEBUG(errs() << "ERASING " << **I << "\n");
+      // DEBUG(errs() << "FROM " << *(*I)->getParent() << "\n");
+      // DEBUG(errs() << "IN " << *(*I)->getParent()->getParent() << "\n");
+      (*I)->eraseFromParent();
+      if (exclude && B->empty())
+        goneB.push_back(B);
+    }
+
+    for (vector<BasicBlock*>::iterator B = goneB.begin(); B != goneB.end(); ++B) {
+      // DEBUG(errs() << "ERASING " << **B << "\n");
+      // DEBUG(errs() << "FROM " << *(*B)->getParent() << "\n");
+      (*B)->eraseFromParent();
+    }
+
+    // DEBUG(llvm::errs() << "COMPUTED SLICE " << *slice << "\n");
 
     return slice;
   }
 
-}
-
-namespace smack {
-  
-  Expr* slice(SmackRep& rep, llvm::Value* v, bool keep=false) {
-    CodeExpr* code = new CodeExpr(*rep.getProgram());
-    SmackInstGenerator igen(rep, *code);
-    if (llvm::Instruction* I = llvm::dyn_cast<llvm::Instruction>(v)) {
-      llvm::Function* sliced = llvm::slice(I->getParent()->getParent(),v,keep);
-      igen.visit(sliced);
-      delete sliced;
-    }
-    return code;
-  }
 }

@@ -21,6 +21,8 @@ private:
   map<const llvm::BasicBlock*, Block*> blockMap;
   int blockNum;
   int varNum;
+  int varNs;
+  vector<const Expr*>* qMap;
 
   string createVar();
   Block* createBlock();
@@ -39,8 +41,10 @@ private:
   void addBlock(Block* b) { proc.addBlock(b); }
 
 public:
-  SmackInstGenerator(SmackRep& r, CodeContainer& p)
-    : rep(r), proc(p), blockNum(0), varNum(0) {}
+  SmackInstGenerator(SmackRep& r, CodeContainer& p, int varNamespace = -1)
+    : rep(r), proc(p), blockNum(0), varNum(0), varNs(varNamespace) {}
+  
+  void setQuantifierMap(vector<const Expr*>* qm) { qMap = qm; }
   
   void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);

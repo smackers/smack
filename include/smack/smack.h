@@ -48,8 +48,8 @@ void __SMACK_assume(bool v) {
 void requires(bool expr);
 void ensures(bool expr);
 
-int forall(const char *var, bool expr);
-int exists(const char *var, bool expr);
+bool forall(const char *var, bool expr);
+bool exists(const char *var, bool expr);
 int var(const char *var);
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int

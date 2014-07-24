@@ -317,6 +317,11 @@ ostream& operator<<(ostream& os, Program& p) {
   return os;
 }
 
+template<class T,class U> ostream& operator<<(ostream& os, pair<T,U> p) {
+  os << p.first << ": " << p.second;
+  return os;
+}
+
 template<class T> void print_seq(ostream& os, vector<T> ts,
                                  string init, string sep, string term) {
 
@@ -448,14 +453,14 @@ void QuantExpr::print(ostream& os) const {
   os << "(";
   switch (quant) {
   case Forall:
-    os << "forall";
+    os << "forall ";
     break;
   case Exists:
-    os << "exists";
+    os << "exists ";
     break;
   }
-  os << " -- ToDo: Implement quantified expressions. ";
-  os << ")";
+  print_seq< pair<string,string> >(os, vars, ",");
+  os << " :: " << expr << ")";
 }
 
 void SelExpr::print(ostream& os) const {
