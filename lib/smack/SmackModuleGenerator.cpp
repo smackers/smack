@@ -22,6 +22,10 @@ private:
 public:
   SpecCollector(SmackRep& r, ProcDecl& d, Program& p)
     : rep(r), proc(d), program(p) {}
+  
+  vector<const Expr*>& getSlices() {
+    return slices;
+  }
 
   Expr* slice_expr(SmackRep& rep, llvm::Value* v) {
     CodeExpr* code = new CodeExpr(*rep.getProgram());
@@ -57,10 +61,12 @@ public:
       llvm::remove_slice(&ci);
 
     } else if (f && rep.id(f).find("invariant") != string::npos) {
-      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
-      // TODO WHERE CAN WE STICK THIS INVARIANT?
-      // ???_ADD_INVARIANT_???(slice_expr(rep,ci.getArgOperand(0)));
-      llvm::remove_slice(&ci);
+      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
+      Value* arg = ci.getArgOperand(0);
+      const Expr* e = slice_expr(rep,arg);
+      ci.setArgOperand(0,ConstantInt::get(IntegerType::get(ci.getContext(),32),slices.size()));
+      slices.push_back(e);
+      llvm::remove_slice(arg);
     }
   }
 
@@ -109,6 +115,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
       sc.visit(func);
 
       SmackInstGenerator igen(*rep, *proc);
+      igen.setQuantifierMap(&sc.getSlices());
       igen.visit(func);
 
       // First execute static initializers, in the main procedure.

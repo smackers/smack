@@ -498,7 +498,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       rep.addBplGlobal(var);
     }
 
-  } else if (f && rep.id(f).find("var") != string::npos) {
+  } else if (f && rep.id(f).find("qvar") != string::npos) {
     if (!proc.isProc()) {
       assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
       currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
@@ -516,7 +516,17 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(1));
     if (cidx && qMap) {
       uint64_t idx = cidx->getLimitedValue();
+      assert(qMap->size() > idx && "Did not find slice expression.");
       currBlock->addStmt(Stmt::assign(rep.expr(&ci),(*qMap)[idx]));
+    }
+
+  } else if (f && rep.id(f).find("invariant") != string::npos) {
+    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
+    llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(0));
+    if (cidx && qMap) {
+      uint64_t idx = cidx->getLimitedValue();
+      assert(qMap->size() > idx && "Did not find slice expression.");
+      currBlock->addStmt(Stmt::assert_((*qMap)[idx]));
     }
 
   } else if (f) {

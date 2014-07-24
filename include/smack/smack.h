@@ -51,7 +51,7 @@ void invariant(bool expr);
 
 bool forall(const char *var, bool expr);
 bool exists(const char *var, bool expr);
-int var(const char *var);
+int qvar(const char *var);
 int old(int term);
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
