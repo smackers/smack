@@ -23,10 +23,10 @@ public:
   SpecCollector(SmackRep& r, ProcDecl& d, Program& p)
     : rep(r), proc(d), program(p) {}
 
-  Expr* slice(SmackRep& rep, llvm::Value* v) {
+  Expr* slice_expr(SmackRep& rep, llvm::Value* v) {
     CodeExpr* code = new CodeExpr(*rep.getProgram());
     SmackInstGenerator igen(rep, *code, slices.size());
-    llvm::Function* sliced = llvm::slice(v);
+    llvm::Function* sliced = llvm::get_slice(v);
     igen.setQuantifierMap(&slices);
     igen.visit(sliced);
     delete sliced;
@@ -41,20 +41,26 @@ public:
       assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
       Value* var = ci.getArgOperand(0);
       Value* arg = ci.getArgOperand(1);
-      const Expr* e = Expr::forall(rep.getString(var), "int", slice(rep,arg));
+      const Expr* e = Expr::forall(rep.getString(var), "int", slice_expr(rep,arg));
       ci.setArgOperand(1,ConstantInt::get(IntegerType::get(ci.getContext(),32),slices.size()));
       slices.push_back(e);
-      llvm::slice(arg,true,true);
+      llvm::remove_slice(arg);
 
     } else if (f && rep.id(f).find("requires") != string::npos) {
       assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
-      proc.addRequires(slice(rep,ci.getArgOperand(0)));
-      llvm::slice(&ci,true,true);
+      proc.addRequires(slice_expr(rep,ci.getArgOperand(0)));
+      llvm::remove_slice(&ci);
 
     } else if (f && rep.id(f).find("ensures") != string::npos) {
       assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
-      proc.addEnsures(slice(rep,ci.getArgOperand(0)));
-      llvm::slice(&ci,true,true);
+      proc.addEnsures(slice_expr(rep,ci.getArgOperand(0)));
+      llvm::remove_slice(&ci);
+
+    } else if (f && rep.id(f).find("invariant") != string::npos) {
+      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
+      // TODO WHERE CAN WE STICK THIS INVARIANT?
+      // ???_ADD_INVARIANT_???(slice_expr(rep,ci.getArgOperand(0)));
+      llvm::remove_slice(&ci);
     }
   }
 

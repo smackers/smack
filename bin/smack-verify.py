@@ -134,7 +134,11 @@ if __name__ == '__main__':
 
   if args.verifier == 'boogie-plain' or args.verifier == 'boogie-inline':
     # invoke Boogie
-    p = subprocess.Popen(['boogie', args.outfile.name, '/nologo', '/timeLimit:' + str(args.timeLimit), '/loopUnroll:' + str(args.unroll)], stdout=subprocess.PIPE)
+    cmd = ['boogie', args.outfile.name, '/nologo']
+    cmd += ['/timeLimit:' + str(args.timeLimit)]
+    if args.verifier == 'boogie-inline':
+      cmd += ['/loopUnroll:' + str(args.unroll)]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     boogieOutput = p.communicate()[0]
     if p.returncode:
       print boogieOutput

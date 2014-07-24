@@ -51,7 +51,7 @@ namespace llvm {
       I->getParent()->getTerminator()->eraseFromParent();
       workList.push( ReturnInst::Create(I->getContext(),I,I->getParent()) );
     }
-    
+
     while (!workList.empty()) {
       Instruction* I = workList.front();
       workList.pop();
@@ -79,14 +79,16 @@ namespace llvm {
         }
       }
     }
-    
+
     vector<Instruction*> goneI;
     vector<BasicBlock*> goneB;
-    
+
     for (Function::iterator B = slice->begin(); B != slice->end(); ++B) {
       for (BasicBlock::iterator I = B->begin(); I != B->end(); ++I)
-        if (!markedI.count(I) == !exclude)
+        if (!markedI.count(I) == !exclude) {
           goneI.push_back(I);
+          I->dropAllReferences();
+        }
 
       if (!exclude && markedB.count(B) == 0)
         goneB.push_back(B);
@@ -94,6 +96,7 @@ namespace llvm {
 
     for (vector<Instruction*>::reverse_iterator I = goneI.rbegin(); I != goneI.rend(); ++I) {
       BasicBlock* B = (*I)->getParent();
+      // NOTE THIS WILL BREAK SINCE I'S REFERENCES HAVE BEEN DROPPED
       // DEBUG(errs() << "ERASING " << **I << "\n");
       // DEBUG(errs() << "FROM " << *(*I)->getParent() << "\n");
       // DEBUG(errs() << "IN " << *(*I)->getParent()->getParent() << "\n");
@@ -111,6 +114,14 @@ namespace llvm {
     // DEBUG(llvm::errs() << "COMPUTED SLICE " << *slice << "\n");
 
     return slice;
+  }
+
+  Function* get_slice(Value* v) {
+    return slice(v);
+  }
+
+  void remove_slice(Value* v) {
+    slice(v,true,true);
   }
 
 }
