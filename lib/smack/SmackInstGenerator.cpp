@@ -504,6 +504,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       currBlock->addStmt(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
     }
 
+  } else if (f && rep.id(f).find("old") != string::npos) {
+    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
+    // TODO NEED TO ELIMiNATE TEMPORARY SSA VARIABLES HERE
+    // .... IT'S NO USE TO USE OLD ON A PROCEDURE-LOCAL SSA VARIABLE.
+    currBlock->addStmt(Stmt::assign(rep.expr(&ci),
+      Expr::fn("old",rep.expr(ci.getArgOperand(0))) ));
+
   } else if (f && rep.id(f).find("forall") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
     llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(1));
