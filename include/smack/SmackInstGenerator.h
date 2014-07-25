@@ -22,7 +22,7 @@ private:
   int blockNum;
   int varNum;
   int varNs;
-  vector<const Expr*>* qMap;
+  vector<const Expr*>* slices;
 
   string createVar();
   Block* createBlock();
@@ -44,7 +44,7 @@ public:
   SmackInstGenerator(SmackRep& r, CodeContainer& p, int varNamespace = -1)
     : rep(r), proc(p), blockNum(0), varNum(0), varNs(varNamespace) {}
   
-  void setQuantifierMap(vector<const Expr*>* qm) { qMap = qm; }
+  void setSliceMap(vector<const Expr*>* sm) { slices = sm; }
   
   void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);
