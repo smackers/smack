@@ -46,7 +46,16 @@ public:
       Value* var = ci.getArgOperand(0);
       Value* arg = ci.getArgOperand(1);
       const Expr* e = Expr::forall(rep.getString(var), "int", slice_expr(rep,arg));
-      ci.setArgOperand(1,ConstantInt::get(IntegerType::get(ci.getContext(),32),slices.size()));
+      ci.setArgOperand(1,ConstantInt::get(Type::getInt32Ty(ci.getContext()),slices.size()));
+      slices.push_back(e);
+      llvm::remove_slice(arg);
+
+    } else if (f && rep.id(f).find("exists") != string::npos) {
+      assert(ci.getNumArgOperands() == 2 && "Unexpected operands to exists.");
+      Value* var = ci.getArgOperand(0);
+      Value* arg = ci.getArgOperand(1);
+      const Expr* e = Expr::exists(rep.getString(var), "int", slice_expr(rep,arg));
+      ci.setArgOperand(1,ConstantInt::get(Type::getInt32Ty(ci.getContext()),slices.size()));
       slices.push_back(e);
       llvm::remove_slice(arg);
 
@@ -64,9 +73,37 @@ public:
       assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
       Value* arg = ci.getArgOperand(0);
       const Expr* e = slice_expr(rep,arg);
-      ci.setArgOperand(0,ConstantInt::get(IntegerType::get(ci.getContext(),32),slices.size()));
+      Value* sliceIdx = ConstantInt::get(Type::getInt32Ty(ci.getContext()),slices.size());
+      ci.setArgOperand(0,sliceIdx);
       slices.push_back(e);
-      llvm::remove_slice(arg);
+
+      BasicBlock* body = ci.getParent();
+      BasicBlock* head = body->getSinglePredecessor();
+      assert(head && "Expected single predecessor block.");
+      ArrayRef<Value*> args(sliceIdx);
+      ArrayRef<Type*> params(Type::getInt32Ty(ci.getContext()));
+      CallInst::Create(
+        Function::Create(
+          FunctionType::get(Type::getVoidTy(ci.getContext()),params,false),
+          GlobalValue::ExternalLinkage, "iassume"),
+        args,"",head->getTerminator());
+      unsigned count = 0;
+      for (pred_iterator B = pred_begin(head), E = pred_end(head); B != E; ++B) {
+        CallInst::Create(
+          Function::Create(
+            FunctionType::get(Type::getVoidTy(ci.getContext()),params,false),
+            GlobalValue::ExternalLinkage, "iassert"),
+          args,"",(*B)->getTerminator());
+        count++;
+      }
+      assert(count == 2 && "Expected head with two predecessors.");
+      count = 0;
+      for (succ_iterator B = succ_begin(head), E = succ_end(head); B != E; ++B) {
+        count++;
+      }
+      assert(count == 2 && "Expected head with two successors.");
+
+      llvm::remove_slice(&ci);
     }
   }
 
