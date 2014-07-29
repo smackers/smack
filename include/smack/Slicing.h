@@ -1,8 +1,19 @@
+//
+// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+//                    Michael Emmi (michael.emmi@gmail.com)
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 
 #include "llvm/InstVisitor.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include <unordered_set>
+
+using namespace std;
 
 namespace llvm {
-  Function* slice(Value* v, bool exclude=false, bool inPlace=false);
-  Function* get_slice(Value* v);
-  void remove_slice(Value* v);
+
+  unordered_set<Instruction*> getSlice(Value* V);
+
+  Function* slice(Value* V);
+
 }

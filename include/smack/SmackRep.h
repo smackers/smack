@@ -143,7 +143,8 @@ public:
     : aliasAnalysis(aa), targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
-  }  
+  }
+  DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
 
 private:
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);

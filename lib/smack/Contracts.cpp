@@ -1,15 +1,29 @@
 #include "smack/Contracts.h"
+#include "llvm/Support/InstIterator.h"
 
 namespace smack {
 
-Expr* ContractsExtractor::sliceExpr(llvm::Value* v) {
+Expr* ContractsExtractor::sliceExpr(llvm::Value* V) {
+  using namespace llvm;
+
   CodeExpr* code = new CodeExpr(*rep.getProgram());
   SmackInstGenerator igen(rep, *code, slices.size());
-  llvm::Function* sliced = llvm::get_slice(v);
+
+  Instruction* I = dyn_cast<Instruction>(V);
+  assert(I && "Expected instruction.");
+  llvm::Function* F = I->getParent()->getParent();
+  Instruction* J = ReturnInst::Create(I->getContext(), I, I->getParent());
+  unordered_set<Instruction*> slice = llvm::getSlice(J);
   igen.setSliceMap(&slices);
-  igen.visit(sliced);
+  igen.visitSlice(F,slice);
+  llvm::Function* sliced = llvm::slice(J);
   delete sliced;
   return code;
+}
+
+llvm::Value* ContractsExtractor::sliceIdx(llvm::Value& ctx) {
+  using namespace llvm;
+  return ConstantInt::get(Type::getInt32Ty(ctx.getContext()),slices.size());
 }
 
 void ContractsExtractor::visitCallInst(llvm::CallInst& ci) {
@@ -21,41 +35,43 @@ void ContractsExtractor::visitCallInst(llvm::CallInst& ci) {
     Value* var = ci.getArgOperand(0);
     Value* arg = ci.getArgOperand(1);
     const Expr* e = Expr::forall(rep.getString(var), "int", sliceExpr(arg));
-    ci.setArgOperand(1,ConstantInt::get(Type::getInt32Ty(ci.getContext()),slices.size()));
+    ci.setArgOperand(1,sliceIdx(ci));
     slices.push_back(e);
-    llvm::remove_slice(arg);
 
   } else if (f && rep.id(f).find("exists") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to exists.");
     Value* var = ci.getArgOperand(0);
     Value* arg = ci.getArgOperand(1);
     const Expr* e = Expr::exists(rep.getString(var), "int", sliceExpr(arg));
-    ci.setArgOperand(1,ConstantInt::get(Type::getInt32Ty(ci.getContext()),slices.size()));
+    ci.setArgOperand(1,sliceIdx(ci));
     slices.push_back(e);
-    llvm::remove_slice(arg);
 
   } else if (f && rep.id(f).find("requires") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
-    proc.addRequires(sliceExpr(ci.getArgOperand(0)));
-    llvm::remove_slice(&ci);
+    Value* V = ci.getArgOperand(0);
+    ci.setArgOperand(0,sliceIdx(ci));
+    proc.addRequires(sliceExpr(V));
+    ci.eraseFromParent();
 
   } else if (f && rep.id(f).find("ensures") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
-    proc.addEnsures(sliceExpr(ci.getArgOperand(0)));
-    llvm::remove_slice(&ci);
+    Value* V = ci.getArgOperand(0);
+    ci.setArgOperand(0,sliceIdx(ci));
+    proc.addEnsures(sliceExpr(V));
+    ci.eraseFromParent();
 
   } else if (f && rep.id(f).find("invariant") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
     Value* arg = ci.getArgOperand(0);
+    Value* idx = sliceIdx(ci);
+    ci.setArgOperand(0,idx);
     const Expr* e = sliceExpr(arg);
-    Value* sliceIdx = ConstantInt::get(Type::getInt32Ty(ci.getContext()),slices.size());
-    ci.setArgOperand(0,sliceIdx);
     slices.push_back(e);
 
     BasicBlock* body = ci.getParent();
     BasicBlock* head = body->getSinglePredecessor();
     assert(head && "Expected single predecessor block.");
-    ArrayRef<Value*> args(sliceIdx);
+    ArrayRef<Value*> args(idx);
     ArrayRef<Type*> params(Type::getInt32Ty(ci.getContext()));
     CallInst::Create(
       Function::Create(
@@ -77,8 +93,7 @@ void ContractsExtractor::visitCallInst(llvm::CallInst& ci) {
       count++;
     }
     assert(count == 2 && "Expected head with two successors.");
-
-    llvm::remove_slice(&ci);
+    ci.eraseFromParent();
   }
 }
 

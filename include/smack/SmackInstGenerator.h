@@ -8,7 +8,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
 #include "llvm/InstVisitor.h"
-#include <set>
+#include <unordered_set>
 
 namespace smack {
   
@@ -40,12 +40,30 @@ private:
   void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
   void addBlock(Block* b) { proc.addBlock(b); }
 
+  void emit(const Stmt* s) { currBlock->addStmt(s); }
+
 public:
   SmackInstGenerator(SmackRep& r, CodeContainer& p, int varNamespace = -1)
     : rep(r), proc(p), blockNum(0), varNum(0), varNs(varNamespace) {}
   
   void setSliceMap(vector<const Expr*>* sm) { slices = sm; }
   
+  void visitSlice(llvm::Function* F, unordered_set<llvm::Instruction*> slice) {
+    using namespace llvm;
+    for (Function::iterator B = F->begin(), E = F->end(); B != E; ++B) {
+      bool blockVisited = false;
+      for (BasicBlock::iterator I = B->begin(), G = B->end(); I != G; ++I) {
+        if (slice.count(&*I)) {
+          if (!blockVisited) {
+            visitBasicBlock(*B);
+            blockVisited = true;
+          }
+          visit(*I);
+        }
+      }
+    }
+  }
+
   void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);
 

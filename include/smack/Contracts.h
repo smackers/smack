@@ -19,6 +19,7 @@ public:
   void visitCallInst(llvm::CallInst& ci);
 
   Expr* sliceExpr(llvm::Value* v);
+  llvm::Value* sliceIdx(llvm::Value& ctx);
   vector<const Expr*>& getSlices() { return slices; }
 };
 
