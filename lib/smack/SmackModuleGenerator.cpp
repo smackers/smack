@@ -54,7 +54,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
       ce.visit(func);
 
       SmackInstGenerator igen(*rep, *proc);
-      igen.setSliceMap(&ce.getSlices());
+      igen.setExtracted(ce.getExtracted());
       igen.visit(func);
 
       // First execute static initializers, in the main procedure.

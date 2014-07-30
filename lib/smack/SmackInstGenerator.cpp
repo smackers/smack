@@ -512,30 +512,15 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   } else if (f && rep.id(f).find("forall") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
-    llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(1));
-    if (cidx && slices) {
-      uint64_t idx = cidx->getLimitedValue();
-      assert(slices->size() > idx && "Did not find slice expression.");
-      emit(Stmt::assign(rep.expr(&ci),(*slices)[idx]));
-    }
+    emit(Stmt::assign(rep.expr(&ci),getExtracted(ci.getArgOperand(1))));
 
   } else if (f && rep.id(f).find("iassert") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(0));
-    if (cidx && slices) {
-      uint64_t idx = cidx->getLimitedValue();
-      assert(slices->size() > idx && "Did not find slice expression.");
-      emit(Stmt::assert_((*slices)[idx]));
-    }
+    emit(Stmt::assert_(getExtracted(ci.getArgOperand(0))));
 
   } else if (f && rep.id(f).find("iassume") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    llvm::ConstantInt* cidx = llvm::dyn_cast<llvm::ConstantInt>(ci.getArgOperand(0));
-    if (cidx && slices) {
-      uint64_t idx = cidx->getLimitedValue();
-      assert(slices->size() > idx && "Did not find slice expression.");
-      emit(Stmt::assume((*slices)[idx]));
-    }
+    emit(Stmt::assume(getExtracted(ci.getArgOperand(0))));
 
   } else if (f) {
     emit(rep.call(f, ci));

@@ -22,7 +22,7 @@ private:
   int blockNum;
   int varNum;
   int varNs;
-  vector<const Expr*>* slices;
+  vector<const Expr*>* extracted;
 
   string createVar();
   Block* createBlock();
@@ -46,7 +46,16 @@ public:
   SmackInstGenerator(SmackRep& r, CodeContainer& p, int varNamespace = -1)
     : rep(r), proc(p), blockNum(0), varNum(0), varNs(varNamespace) {}
   
-  void setSliceMap(vector<const Expr*>* sm) { slices = sm; }
+  void setExtracted(vector<const Expr*>& e) { extracted = &e; }
+  const Expr* getExtracted(llvm::Value* V) {
+    using namespace llvm;
+    if (ConstantInt* CI = dyn_cast<ConstantInt>(V)) {
+      uint64_t i = CI->getLimitedValue();
+      assert(extracted && extracted->size() > i && "Did not find extracted expression.");
+      return (*extracted)[i];
+    }
+    assert(false && "Unexpected value.");
+  }
   
   void visitSlice(llvm::Function* F, unordered_set<llvm::Instruction*> slice) {
     using namespace llvm;

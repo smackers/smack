@@ -6,21 +6,28 @@
 #include "smack/BoogieAst.h"
 
 namespace smack {
+using namespace llvm;
 
-class ContractsExtractor : public llvm::InstVisitor<ContractsExtractor> {
+class ContractsExtractor : public InstVisitor<ContractsExtractor> {
 private:
   SmackRep& rep;
   ProcDecl& proc;
   
-  vector<const Expr*> slices;
+  vector<const Expr*> extracted;
 
 public:
   ContractsExtractor(SmackRep& r, ProcDecl& d) : rep(r), proc(d) {}
-  void visitCallInst(llvm::CallInst& ci);
 
-  Expr* sliceExpr(llvm::Value* v);
-  llvm::Value* sliceIdx(llvm::Value& ctx);
-  vector<const Expr*>& getSlices() { return slices; }
+  vector<const Expr*>& getExtracted() { return extracted; }
+
+  void visitCallInst(CallInst& ci);
+
+private:
+  Expr* sliceExpr(Value* v);
+
+  Value* extractionIdx(LLVMContext& ctx) {
+    return ConstantInt::get(Type::getInt32Ty(ctx),extracted.size());
+  }
 };
 
 }

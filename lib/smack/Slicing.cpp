@@ -27,7 +27,7 @@ namespace llvm {
     while (!workList.empty()) {
       Instruction* I = workList.front();
       workList.pop();
-      if (slice.find(I) != slice.end())
+      if (slice.count(I))
         continue;
       slice.insert(I);
 
