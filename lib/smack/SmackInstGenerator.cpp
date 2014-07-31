@@ -498,10 +498,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     }
 
   } else if (f && rep.id(f).find("qvar") != string::npos) {
-    if (!proc.isProc()) {
-      assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
-      emit(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
-    }
+    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
+    emit(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
 
   } else if (f && rep.id(f).find("old") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
