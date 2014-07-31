@@ -151,6 +151,7 @@ add_library(smackTranslator STATIC
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
   lib/smack/DSAAliasAnalysis.cpp
+  lib/smack/Slicing.cpp
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
