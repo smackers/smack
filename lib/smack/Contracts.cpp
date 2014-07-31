@@ -25,16 +25,16 @@ void ContractsExtractor::visitCallInst(CallInst& ci) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
     Value* var = ci.getArgOperand(0);
     Value* arg = ci.getArgOperand(1);
-    const Expr* e = Expr::forall(rep.getString(var), "int", sliceExpr(arg));
     ci.setArgOperand(1,extractionIdx(ci.getContext()));
+    const Expr* e = Expr::forall(rep.getString(var), "int", sliceExpr(arg));
     extracted.push_back(e);
 
   } else if (f && rep.id(f).find("exists") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to exists.");
     Value* var = ci.getArgOperand(0);
     Value* arg = ci.getArgOperand(1);
-    const Expr* e = Expr::exists(rep.getString(var), "int", sliceExpr(arg));
     ci.setArgOperand(1,extractionIdx(ci.getContext()));
+    const Expr* e = Expr::exists(rep.getString(var), "int", sliceExpr(arg));
     extracted.push_back(e);
 
   } else if (f && rep.id(f).find("requires") != string::npos) {
