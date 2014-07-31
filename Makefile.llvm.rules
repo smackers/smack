@@ -2189,7 +2189,7 @@ install-local::
          -o -name 'corral' \
 	      ')' -print | grep -v CVS | \
 	      grep -v .svn` ; do \
-	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$scr"` ; \
+	    instdir=`dirname "$(DESTDIR)$(PROJ_bindir)/$$scr"` ; \
 	    if test \! -d "$$instdir" ; then \
 	      $(EchoCmd) Making install directory $$instdir ; \
 	      $(MKDIR) $$instdir ;\

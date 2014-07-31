@@ -102,7 +102,7 @@ def smackGenerate(sysArgv):
   si = re.compile('procedure\s+(\$static_init)\s*\(')
   if args.verifier == 'boogie-plain':
     bpl = si.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
-  if args.verifier == 'boogie-inline':
+  elif args.verifier == 'boogie-inline':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
   elif args.verifier == 'corral':

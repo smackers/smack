@@ -497,12 +497,16 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       rep.addBplGlobal(var);
     }
 
+  } else if (f && rep.id(f).find("result") != string::npos) {
+    assert(ci.getNumArgOperands() == 0 && "Unexpected operands to result.");
+    emit(Stmt::assign(rep.expr(&ci),Expr::id(SmackRep::RET_VAR)));
+
   } else if (f && rep.id(f).find("qvar") != string::npos) {
-    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
+    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to qvar.");
     emit(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
 
   } else if (f && rep.id(f).find("old") != string::npos) {
-    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to var.");
+    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to old.");
     // TODO NEED TO ELIMiNATE TEMPORARY SSA VARIABLES HERE
     // .... IT'S NO USE TO USE OLD ON A PROCEDURE-LOCAL SSA VARIABLE.
     emit(Stmt::assign(rep.expr(&ci),

@@ -53,6 +53,7 @@ bool forall(const char *var, bool expr);
 bool exists(const char *var, bool expr);
 int qvar(const char *var);
 int old(int term);
+int result();
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
 //// should have a type $ptr parameter, not an int.  How should we do this?
