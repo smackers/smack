@@ -7,13 +7,13 @@ import argparse
 import platform
 from llvm2bpl import *
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 
 def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
   parser.add_argument('--clang', dest='clang', default='',
-                      help='pass arguments to clang')
+                      help='pass arguments to clang (e.g., --clang="-w -g")')
   parser.add_argument('--verifier', dest='verifier', choices=['boogie-plain', 'boogie-inline', 'corral'], default='boogie-inline',
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
@@ -53,20 +53,26 @@ def clang(scriptPathName, inputFile, memoryModel, clangArgs):
   fileName = path.splitext(inputFile.name)[0]
 
   clangCommand = ['clang']
-  clangCommand += ['-c', '-emit-llvm', '-O0', '-g',
+  clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders]
   clangCommand += clangArgs.split()
   clangCommand += [inputFile.name, '-o', fileName + '.bc']
-  p = subprocess.Popen(clangCommand)
-  p.wait()
+  #Redirect stderr to stdout, then grab stdout (communicate() calls wait())
+  #This should more or less maintain stdout/stderr interleaving order
+  #However, this will be problematic if any callers want to differentiate
+  #    between clangs stdout and stderr.
+  p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  clangStdout, clangStderr = p.communicate()
+  clangOutput = clangStdout
 
   if p.returncode != 0:
+    print clangOutput
     sys.exit("SMACK encountered a clang error. Exiting...")
 
   inputFileName = path.join(path.curdir, fileName + '.bc')
   inputFile = open(inputFileName, 'r')
-  return inputFile
+  return inputFile, clangOutput
 
 
 def smackGenerate(sysArgv):
@@ -87,7 +93,7 @@ def smackGenerate(sysArgv):
       if optionsMatch:
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
-    inputFile = clang(scriptPathName, inputFile, args.memmod, args.clang)
+    inputFile, clangOutput = clang(scriptPathName, inputFile, args.memmod, args.clang)
 
   bpl = llvm2bpl(inputFile, args.debug, "impls" in args.memmod)
   inputFile.close()
@@ -102,7 +108,7 @@ def smackGenerate(sysArgv):
   elif args.verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
-  return bpl, options
+  return bpl, options, clangOutput
 
 
 if __name__ == '__main__':
@@ -111,7 +117,8 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs the appropriately annotated Boogie file generated from the input LLVM file.', parents=[smackParser()])
   args = parser.parse_args()
 
-  bpl, options = smackGenerate(sys.argv)
+  bpl, options, clangOutput = smackGenerate(sys.argv)
+  print clangOutput
 
   # write final output
   args.outfile.write(bpl)

@@ -34,7 +34,7 @@ def runtests():
 
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smack-verify.py', test[0] + '.c', '--verifier=boogie-inline',
+      p = subprocess.Popen(['smackverify.py', test[0] + '.c', '--verifier=boogie-inline',
                             '--mem-mod=' + mem, '--clang=-w', '-o', test[0] +'.bpl'],
                             stdout=subprocess.PIPE)
 

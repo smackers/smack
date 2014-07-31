@@ -9,12 +9,26 @@ import argparse
 import platform
 from smackgen import *
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
+
+def verifyParser():
+  # parse command line arguments
+  parser = argparse.ArgumentParser(add_help=False, parents=[smackParser()])
+
+  parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
+                      help='Boogie time limit in seconds')
+  parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
+                      help='output JSON format for SMACKd')
+  return parser
 
 
-def generateSourceErrorTrace(boogieOutput, bpl):
+def generateSourceErrorTrace(boogieOutput, bplFileName):
   FILENAME = '[\w#$~%.\/-]+'
   LABEL = '[\w$]+'
+
+  bplFile = open(bplFileName)
+  bpl = bplFile.read()
+  bplFile.close()
 
   if not re.search('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bpl):
     # no debug info in bpl file
@@ -103,16 +117,39 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
+def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
+  if verifier == 'boogie-plain' or verifier == 'boogie-inline':
+    # invoke Boogie
+    cmd = ['boogie', args.outfile.name, '/nologo']
+    cmd += ['/timeLimit:' + str(args.timeLimit)]
+    if args.verifier == 'boogie-inline':
+      cmd += ['/loopUnroll:' + str(args.unroll)]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    boogieOutput = p.communicate()[0]
+    if p.returncode:
+      return boogieOutput
+      sys.exit("SMACK encountered an error invoking Boogie. Exiting...")
+    if debug:
+      return boogieOutput
+    sourceTrace = generateSourceErrorTrace(boogieOutput, bplFileName)
+    if sourceTrace:
+      return sourceTrace
+    else:
+      return boogieOutput
+  else:
+    # invoke Corral
+    p = subprocess.Popen(['corral', bplFileName, '/recursionBound:' + str(unroll), '/tryCTrace'], stdout=subprocess.PIPE)
+    corralOutput = p.communicate()[0]
+    if p.returncode:
+      return corralOutput
+      sys.exit("SMACK encountered an error invoking Corral. Exiting...")
+    if smackd:
+      smackdOutput(corralOutput)
+    else:
+      return corralOutput
  
 if __name__ == '__main__':
-
-  # parse command line arguments
-  parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[smackParser()])
-  parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
-                      help='Boogie time limit in seconds')
-  parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
-                      help='output JSON format for SMACKd')
-
+  parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])
   parser.parse_args() # just check if arguments are looking good
 
   # remove arguments not recognized by lower scripts
@@ -125,40 +162,12 @@ if __name__ == '__main__':
       del sysArgv[i]
       del sysArgv[i]
 
-  bpl, options = smackGenerate(sysArgv)
+  bpl, options, clangOutput = smackGenerate(sysArgv)
   args = parser.parse_args(options + sys.argv[1:])
 
   # write final output
   args.outfile.write(bpl)
   args.outfile.close()
 
-  if args.verifier == 'boogie-plain' or args.verifier == 'boogie-inline':
-    # invoke Boogie
-    cmd = ['boogie', args.outfile.name, '/nologo']
-    cmd += ['/timeLimit:' + str(args.timeLimit)]
-    if args.verifier == 'boogie-inline':
-      cmd += ['/loopUnroll:' + str(args.unroll)]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    boogieOutput = p.communicate()[0]
-    if p.returncode:
-      print boogieOutput
-      sys.exit("SMACK encountered an error invoking Boogie. Exiting...")
-    if args.debug:
-      print boogieOutput
-    sourceTrace = generateSourceErrorTrace(boogieOutput, bpl)
-    if sourceTrace:
-      print sourceTrace
-    else:
-      print boogieOutput
-  else:
-    # invoke Corral
-    p = subprocess.Popen(['corral', args.outfile.name, '/recursionBound:' + str(args.unroll), '/tryCTrace'], stdout=subprocess.PIPE)
-    corralOutput = p.communicate()[0]
-    if p.returncode:
-      print corralOutput
-      sys.exit("SMACK encountered an error invoking Corral. Exiting...")
-    if args.smackd:
-      smackdOutput(corralOutput)
-    else:
-      print corralOutput
+  print(verify(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd))
 
