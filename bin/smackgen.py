@@ -99,7 +99,7 @@ def smackGenerate(sysArgv):
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  si = re.compile('procedure\s+(\$static_init)\s*\(')
+  si = re.compile('procedure\s+(\$static_init|__SMACK_.*|)\s*\(')
   if args.verifier == 'boogie-plain':
     bpl = si.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
   elif args.verifier == 'boogie-inline':
