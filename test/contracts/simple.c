@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @expect 4 verified, 1 errors?
+// @expect 2 verified, 0 errors?
 
 int g;
 
