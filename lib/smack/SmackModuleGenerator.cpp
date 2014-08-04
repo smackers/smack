@@ -4,7 +4,6 @@
 //
 #include "smack/SmackModuleGenerator.h"
 #include "smack/SmackOptions.h"
-#include "smack/Contracts.h"
 
 namespace smack {
 
@@ -50,16 +49,40 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
 
       DEBUG(errs() << "Analyzing function: " << rep->id(func) << "\n");
 
-      ContractsExtractor ce(*rep, *proc);
-      ce.visit(func);
+      map<const llvm::BasicBlock*, Block*> known;
+      stack<llvm::BasicBlock*> workStack;
+      SmackInstGenerator igen(*rep, (ProcDecl&) *proc, known);
 
-      SmackInstGenerator igen(*rep, *proc);
-      igen.setExtracted(ce.getExtracted());
-      igen.visit(func);
-
+      llvm::BasicBlock& entry = func->getEntryBlock();
+      workStack.push(&entry);
+      known[&entry] = igen.createBlock();
+      
       // First execute static initializers, in the main procedure.
       if (rep->id(func) == "main" && rep->hasStaticInits())
-        proc->insert(Stmt::call(SmackRep::STATIC_INIT));
+        known[&entry]->addStmt(Stmt::call(SmackRep::STATIC_INIT));
+
+      // INVARIANT: knownBlocks.CONTAINS(b) iff workStack.CONTAINS(b)
+      // or workStack.CONTAINED(b) at some point in time.
+      while (!workStack.empty()) {
+        llvm::BasicBlock* b = workStack.top();
+        workStack.pop();
+
+        for (llvm::succ_iterator s = succ_begin(b),
+             e = succ_end(b); s != e; ++s) {
+
+          // uncovered basic block
+          if (known.count(*s) == 0) {
+            known[*s] = igen.createBlock();
+            workStack.push(*s);
+          }
+        }
+
+        // NOTE: here we are sure that all successor blocks have
+        // already been created, and are mapped for the visitor.
+
+        igen.setCurrBlock(known[b]);
+        igen.visit(b);
+      }
 
       DEBUG(errs() << "Finished analyzing function: " << rep->id(func) << "\n\n");
     }

@@ -143,8 +143,7 @@ public:
     : aliasAnalysis(aa), targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
-  }
-  DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
+  }  
 
 private:
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
@@ -158,7 +157,6 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  Program* getProgram() { return program; }
   void setProgram(Program* p) { program = p; }
   
   bool isSmackName(string n);

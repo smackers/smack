@@ -13,18 +13,6 @@ using namespace std;
 
 unsigned Decl::uniqueId = 0;
 
-const Expr* Expr::exists(string v, string t, const Expr* e) {
-  vector< pair<string,string> > vars;
-  vars.push_back(make_pair(v,t));
-  return new QuantExpr(QuantExpr::Exists, vars, e);
-}
-
-const Expr* Expr::forall(string v, string t, const Expr* e) {
-  vector< pair<string,string> > vars;
-  vars.push_back(make_pair(v,t));
-  return new QuantExpr(QuantExpr::Forall, vars, e);
-}
-
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
@@ -231,10 +219,6 @@ const Stmt* Stmt::havoc(string x) {
   return new HavocStmt(vector<string>(1, x));
 }
 
-const Stmt* Stmt::return_(const Expr* e) {
-  return new ReturnStmt(e);
-}
-
 const Stmt* Stmt::return_() {
   return new ReturnStmt();
 }
@@ -314,11 +298,6 @@ ostream& operator<<(ostream& os, Program* p) {
 }
 ostream& operator<<(ostream& os, Program& p) {
   p.print(os);
-  return os;
-}
-
-template<class T,class U> ostream& operator<<(ostream& os, pair<T,U> p) {
-  os << p.first << ": " << p.second;
   return os;
 }
 
@@ -451,16 +430,16 @@ void NotExpr::print(ostream& os) const {
 
 void QuantExpr::print(ostream& os) const {
   os << "(";
-  switch (quant) {
+  switch (q) {
   case Forall:
-    os << "forall ";
+    os << "forall";
     break;
   case Exists:
-    os << "exists ";
+    os << "exists";
     break;
   }
-  print_seq< pair<string,string> >(os, vars, ",");
-  os << " :: " << expr << ")";
+  os << " -- ToDo: Implement quantified expressions. ";
+  os << ")";
 }
 
 void SelExpr::print(ostream& os) const {
@@ -476,14 +455,6 @@ void UpdExpr::print(ostream& os) const {
 
 void VarExpr::print(ostream& os) const {
   os << var;
-}
-
-void CodeExpr::print(ostream& os) const {
-  os << "|{" << endl;
-  if (decls.size() > 0)
-    print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
-  print_seq<Block*>(os, blocks, "\n");
-  os << endl << "}|";
 }
 
 void StrVal::print(ostream& os) const {
@@ -547,10 +518,7 @@ void HavocStmt::print(ostream& os) const {
 }
 
 void ReturnStmt::print(ostream& os) const {
-  os << "return";
-  if (expr)
-    os << " " << expr;  
-  os << ";";
+  os << "return;";
 }
 
 void CodeStmt::print(ostream& os) const {
