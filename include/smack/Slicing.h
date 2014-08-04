@@ -14,6 +14,6 @@ namespace llvm {
 
   unordered_set<Instruction*> getSlice(Value* V);
 
-  Function* slice(Value* V);
+  void removeSlice(Value* V);
 
 }

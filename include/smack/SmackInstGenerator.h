@@ -30,7 +30,7 @@ private:
 
   void generatePhiAssigns(llvm::TerminatorInst& i);
   void generateGotoStmts(llvm::Instruction& i,
-                         vector<pair<const Expr*, string> > target);
+                         vector<pair<const Expr*, llvm::BasicBlock*> > target);
   void processInstruction(llvm::Instruction& i);
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
@@ -70,6 +70,7 @@ public:
           visit(*I);
         }
       }
+      // TODO WHAT TO DO WITH TERMINATORLESS BLOCKS?
     }
   }
 

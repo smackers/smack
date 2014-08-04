@@ -133,7 +133,7 @@ void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst& ti) {
 
 void SmackInstGenerator::generateGotoStmts(
   llvm::Instruction& inst,
-  vector<pair<const Expr*, string> > targets) {
+  vector<pair<const Expr*, llvm::BasicBlock*> > targets) {
 
   assert(targets.size() > 0);
 
@@ -141,17 +141,27 @@ void SmackInstGenerator::generateGotoStmts(
     vector<string> dispatch;
 
     for (unsigned i = 0; i < targets.size(); i++) {
-      Block* b = createBlock();
-      annotate(inst, b);
-      b->addStmt(Stmt::assume(targets[i].first));
-      b->addStmt(Stmt::goto_(targets[i].second));
-      dispatch.push_back(b->getName());
+      const Expr* condition = targets[i].first;
+      llvm::BasicBlock* target = targets[i].second;
+
+      if (target->getUniquePredecessor() == inst.getParent()) {
+        Block* b = getBlock(target);
+        b->insert(Stmt::assume(condition));
+        dispatch.push_back(b->getName());
+
+      } else {
+        Block* b = createBlock();
+        annotate(inst, b);
+        b->addStmt(Stmt::assume(condition));
+        b->addStmt(Stmt::goto_(getBlock(target)->getName()));
+        dispatch.push_back(b->getName());
+      }
     }
 
     emit(Stmt::goto_(dispatch));
 
   } else
-    emit(Stmt::goto_(targets[0].second));
+    emit(Stmt::goto_(getBlock(targets[0].second)->getName()));
 }
 
 /******************************************************************************/
@@ -178,23 +188,20 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
   processInstruction(bi);
 
   // Collect the list of tarets
-  vector<pair<const Expr*, string> > targets;
+  vector<pair<const Expr*, llvm::BasicBlock*> > targets;
 
   if (bi.getNumSuccessors() == 1) {
 
     // Unconditional branch
-    targets.push_back(make_pair(Expr::lit(true),
-                                getBlock(bi.getSuccessor(0))->getName()));
+    targets.push_back(make_pair(Expr::lit(true),bi.getSuccessor(0)));
 
   } else {
 
     // Conditional branch
     assert(bi.getNumSuccessors() == 2);
     const Expr* e = rep.expr(bi.getCondition());
-    targets.push_back(make_pair(e,
-                                getBlock(bi.getSuccessor(0))->getName()));
-    targets.push_back(make_pair(Expr::not_(e),
-                                getBlock(bi.getSuccessor(1))->getName()));
+    targets.push_back(make_pair(e,bi.getSuccessor(0)));
+    targets.push_back(make_pair(Expr::not_(e),bi.getSuccessor(1)));
   }
   generatePhiAssigns(bi);
   generateGotoStmts(bi, targets);
@@ -204,7 +211,7 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
   processInstruction(si);
 
   // Collect the list of tarets
-  vector<pair<const Expr*, string> > targets;
+  vector<pair<const Expr*, llvm::BasicBlock*> > targets;
 
   const Expr* e = rep.expr(si.getCondition());
   const Expr* n = Expr::lit(true);
@@ -213,15 +220,14 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
        i = si.case_begin(); i != si.case_begin(); ++i) {
 
     const Expr* v = rep.expr(i.getCaseValue());
-    targets.push_back(make_pair(Expr::eq(e, v),
-                                getBlock(i.getCaseSuccessor())->getName()));
+    targets.push_back(make_pair(Expr::eq(e,v),i.getCaseSuccessor()));
 
     // Add the negation of this case to the default case
     n = Expr::and_(n, Expr::neq(e, v));
   }
 
   // The default case
-  targets.push_back(make_pair(n,getBlock(si.getDefaultDest())->getName()));
+  targets.push_back(make_pair(n,si.getDefaultDest()));
 
   generatePhiAssigns(si);
   generateGotoStmts(si, targets);

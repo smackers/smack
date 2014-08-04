@@ -14,7 +14,8 @@ Expr* ContractsExtractor::sliceExpr(Value* V) {
   SmackInstGenerator igen(rep, *code, extracted.size());
   igen.setExtracted(extracted);
   igen.visitSlice(F,getSlice(J));
-  delete llvm::slice(J);
+  J->eraseFromParent();
+  removeSlice(I);
   return code;
 }
 

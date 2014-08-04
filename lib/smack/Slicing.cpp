@@ -19,7 +19,7 @@ namespace llvm {
   unordered_set<Instruction*> getSlice(Value* V) {
     unordered_set<Instruction*> slice;
     Instruction* I = dyn_cast<Instruction>(V);
-    assert( I && "Expected instruction value.");
+    assert(I && "Expected instruction value.");
 
     queue<Instruction*> workList;
     workList.push(I);
@@ -50,28 +50,24 @@ namespace llvm {
           workList.push( (*B)->getTerminator() );
         }
       }
+
+      // ENSURE EACH BLOCK HAS A TERMINATOR
+      if (BranchInst* Br = dyn_cast<BranchInst>(I->getParent()->getTerminator()))
+        workList.push(Br);
     }
 
     return slice;
   }
 
-  Function* slice(Value* V) {
-    map<BasicBlock*, BasicBlock*> blockMap;
+  void removeSlice(Value* V) {
 
     Instruction* I = dyn_cast<Instruction>(V);
     assert(I && "Expected instruction value.");
-    Function* F = I->getParent()->getParent();
-    Function* slice = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage);
 
     queue<Instruction*> workList;
     set<Instruction*> covered;
+    map<BasicBlock*,BasicBlock*> succ;
 
-    DEBUG(errs() << "COMPUTING SLICE " << *V << "\n");
-    DEBUG(errs() << "FROM " << *F << "\n");
-
-    BasicBlock* B = BasicBlock::Create(slice->getContext(), "", slice, 0);
-    blockMap.insert(make_pair(I->getParent(),B));
-    ReturnInst::Create(slice->getContext(),I,B);
     workList.push(I);
 
     while (!workList.empty()) {
@@ -79,47 +75,39 @@ namespace llvm {
       workList.pop();
       if (covered.count(I))
         continue;
+
       covered.insert(I);
 
-      BasicBlock* B = I->getParent();
-      I->removeFromParent();
-
-      // TODO REMOVE THE BLOCK?
-      // TODO REMOVE TERMINATORS?
-
-      BasicBlock* C;
-      if (blockMap.count(B))
-        C = blockMap.find(B)->second;
-      else
-        blockMap.insert(make_pair(B,
-          C = BasicBlock::Create(slice->getContext(), "", slice, 0)));
-      C->getInstList().push_front(I);
+      if (I->getNumUses() > 1)
+        continue;
 
       if (BranchInst* Br = dyn_cast<BranchInst>(I)) {
-        if (Br->isConditional()) {
-          if (Instruction* J = dyn_cast<Instruction>(Br->getCondition())) {
+        succ.insert(make_pair(Br->getParent(),Br->getSuccessor(0)));
+        if (Br->isConditional())
+          if (Instruction* J = dyn_cast<Instruction>(Br->getCondition()))
             workList.push(J);
-          }
-        }
       } else {
-        for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U) {
-          if (Instruction* J = dyn_cast<Instruction>(U)) {
+        for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U)
+          if (Instruction* J = dyn_cast<Instruction>(U))
             workList.push(J);
-          }
-        }
       }
 
       if (PHINode* Phi = dyn_cast<PHINode>(I)) {
-        for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
-          workList.push( (*B)->getTerminator() );
+        for (PHINode::block_iterator A = Phi->block_begin(); A != Phi->block_end(); ++A) {
+          workList.push( (*A)->getTerminator() );
         }
       }
+
+      BasicBlock* B = I->getParent();
+      I->eraseFromParent();
+
+      if (B->getInstList().size() == 0) {
+        BasicBlock* C = succ[B];
+        assert(C && "Successor not found!");
+        B->replaceAllUsesWith(C);
+        B->eraseFromParent();
+      }
     }
-
-    DEBUG(errs() << "COMPUTED SLICE " << *slice << "\n");
-    DEBUG(errs() << "WITH LEFTOVER " << *F << "\n");
-
-    return slice;
   }
 
 }
