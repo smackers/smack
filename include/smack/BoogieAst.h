@@ -265,7 +265,7 @@ public:
 class ReturnStmt : public Stmt {
   const Expr* expr;
 public:
-  ReturnStmt(const Expr* e = nullptr) : expr(e) {}
+  ReturnStmt(const Expr* e = 0) : expr(e) {}
   void print(ostream& os) const;
 };
 
