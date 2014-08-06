@@ -48,6 +48,11 @@ namespace llvm {
       slice.insert(I);
       slice.insert(I->getParent());
 
+      // ENSURE EACH BLOCK HAS A TERMINATOR
+      if (BranchInst* Br = dyn_cast<BranchInst>(I->getParent()->getTerminator()))
+        if (I->getParent() != B)
+          workList.push(Br);
+
       if (BranchInst* Br = dyn_cast<BranchInst>(I)) {
         if (Br->isConditional()) {
           if (Instruction* J = dyn_cast<Instruction>(Br->getCondition())) {
@@ -56,26 +61,31 @@ namespace llvm {
           slice.insert(Br->getSuccessor(1));
         }
         slice.insert(Br->getSuccessor(0));
-
-      } else {
-        for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U) {
-          if (Instruction* J = dyn_cast<Instruction>(U))
-            if (!contains(backedges,J->getParent(),I->getParent()))
-              workList.push(J);
-        }
+        continue;
       }
 
       if (PHINode* Phi = dyn_cast<PHINode>(I)) {
         for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
-          if (!contains(backedges,*B,I->getParent()))
-            workList.push( (*B)->getTerminator() );
+          if (contains(backedges,*B,I->getParent())) {
+            goto NEXT;
+          }
+        }
+
+        for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
+          workList.push( (*B)->getTerminator() );
         }
       }
 
-      // ENSURE EACH BLOCK HAS A TERMINATOR
-      if (BranchInst* Br = dyn_cast<BranchInst>(I->getParent()->getTerminator()))
-        if (I->getParent() != B)
-          workList.push(Br);
+      for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U) {
+        if (Instruction* J = dyn_cast<Instruction>(U)) {
+          if (!contains(backedges,J->getParent(),I->getParent())) {
+            workList.push(J);
+          }
+        }
+      }
+
+NEXT:
+      (void)0; // no-op
     }
 
     return slice;
