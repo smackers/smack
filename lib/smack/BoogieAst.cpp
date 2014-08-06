@@ -253,6 +253,9 @@ Decl* Decl::typee(string name, string type) {
 Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
+Decl* Decl::function(string name, vector< pair<string,string> > args, string type, const Expr* e) {
+  return new FuncDecl(name,vector<const Attr*>(),args,type,e);
+}
 Decl* Decl::constant(string name, string type) {
   return Decl::constant(name, type, vector<const Attr*>(), false);
 }

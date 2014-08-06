@@ -261,7 +261,7 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   int dstRegion = getRegion(mci.getOperand(0));
   int srcRegion = getRegion(mci.getOperand(1));
 
-  program->addDecl(memcpyProc(dstRegion,srcRegion));
+  program.addDecl(memcpyProc(dstRegion,srcRegion));
 
   stringstream name;
   name << "$memcpy." << dstRegion << "." << srcRegion;
@@ -274,7 +274,7 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   int region = getRegion(msi.getOperand(0));
 
-  program->addDecl(memsetProc(region));
+  program.addDecl(memsetProc(region));
 
   stringstream name;
   vector<const Expr*> args;
@@ -669,7 +669,7 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
     rets.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
 
   return (ProcDecl*) Decl::procedure(
-    *program,
+    program,
     f->isVarArg() ? indexedName(naming.get(*f),nargs) : naming.get(*f), 
     args, 
     rets
@@ -705,7 +705,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
   } else if (f->isVarArg() || (f->isDeclaration() && !Naming::isSmackName(name))) {
     
     Decl* p = proc(f,args.size());
-    program->addDecl(p);
+    program.addDecl(p);
     return Stmt::call(p->getName(), args, rets);
     
   } else {
@@ -823,7 +823,7 @@ bool SmackRep::hasStaticInits() {
 }
 
 Decl* SmackRep::getStaticInit() {
-  ProcDecl* proc = (ProcDecl*) Decl::procedure(*program, STATIC_INIT);
+  ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
   Block* b = new Block();
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);

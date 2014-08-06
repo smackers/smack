@@ -124,10 +124,10 @@ public:
 protected:
   DSAAliasAnalysis* aliasAnalysis;
   Naming& naming;
+  Program& program;
   vector<string> bplGlobals;
   vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
-  Program* program;
   int globalsBottom;
   
   vector<const Stmt*> staticInits;
@@ -136,12 +136,14 @@ protected:
   unsigned uniqueUndefNum;
 
 public:
-  SmackRep(DSAAliasAnalysis* aa, Naming& N)
-    : aliasAnalysis(aa), naming(N), targetData(aa->getDataLayout()), globalsBottom(0) {
+  SmackRep(DSAAliasAnalysis* aa, Naming& N, Program& P)
+    : aliasAnalysis(aa), naming(N), program(P),
+      targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
   }
   DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
+  Program& getProgram() { return program; }
 
 private:
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
@@ -155,9 +157,6 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  Program* getProgram() { return program; }
-  void setProgram(Program* p) { program = p; }
-  
   bool isMallocOrFree(llvm::Function* f);
   bool isIgnore(llvm::Function* f);
   bool isInt(const llvm::Type* t);

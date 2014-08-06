@@ -8,7 +8,7 @@ Expr* ContractsExtractor::sliceExpr(Value* V) {
   Instruction* I = dyn_cast<Instruction>(V);
   assert(I && "Expected instruction.");
   Function* F = I->getParent()->getParent();
-  CodeExpr* code = new CodeExpr(*rep.getProgram());
+  CodeExpr* code = new CodeExpr(rep.getProgram());
   SmackInstGenerator igen(rep, *code, naming, exprs);
   naming.enter();
   igen.visitSlice(F,I);

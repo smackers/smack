@@ -291,9 +291,11 @@ public:
   unsigned getId() const { return id; }
   string getName() const { return name; }
   virtual kind getKind() const = 0;
+  void addAttr(const Attr* a) { attrs.push_back(a); }
   
   static Decl* typee(string name, string type);
   static Decl* axiom(const Expr* e);
+  static Decl* function(string name, vector< pair<string,string> > args, string type, const Expr* e);
   static Decl* constant(string name, string type);
   static Decl* constant(string name, string type, bool unique);
   static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
@@ -347,8 +349,9 @@ class FuncDecl : public Decl {
   string type;
   const Expr* body;
 public:
-  FuncDecl(string n, vector< pair<string, string> > ps, string t, Expr* b)
-    : Decl(n), params(ps), type(t), body(b) {}
+  FuncDecl(string n, vector<const Attr*> ax, vector< pair<string, string> > ps,
+    string t, const Expr* b)
+    : Decl(n,ax), params(ps), type(t), body(b) {}
   kind getKind() const { return FUNC; }
   void print(ostream& os) const;
 };
