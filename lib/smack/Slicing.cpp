@@ -5,7 +5,8 @@
 //
 
 #include "smack/Slicing.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include <vector>
@@ -16,10 +17,25 @@ using namespace std;
 
 namespace llvm {
 
-  unordered_set<Instruction*> getSlice(Value* V) {
-    unordered_set<Instruction*> slice;
+  typedef SmallVector< pair<const BasicBlock*, const BasicBlock*>, 10 > EdgeList;
+
+  bool contains(EdgeList& backedges, const BasicBlock* src, const BasicBlock* tgt) {
+    for (EdgeList::iterator E = backedges.begin(), End = backedges.end(); E != End; ++E) {
+      if (E->first == src && E->second == tgt)
+        return true;
+    }
+    return false;
+  }
+
+  unordered_set<Value*> getSlice(Value* V) {
+    unordered_set<Value*> slice;
     Instruction* I = dyn_cast<Instruction>(V);
     assert(I && "Expected instruction value.");
+
+    const BasicBlock* B = I->getParent();
+    const Function* F = B->getParent();
+    EdgeList backedges;
+    FindFunctionBackedges(*F,backedges);
 
     queue<Instruction*> workList;
     workList.push(I);
@@ -30,30 +46,36 @@ namespace llvm {
       if (slice.count(I))
         continue;
       slice.insert(I);
+      slice.insert(I->getParent());
 
       if (BranchInst* Br = dyn_cast<BranchInst>(I)) {
         if (Br->isConditional()) {
           if (Instruction* J = dyn_cast<Instruction>(Br->getCondition())) {
             workList.push(J);
           }
+          slice.insert(Br->getSuccessor(1));
         }
+        slice.insert(Br->getSuccessor(0));
+
       } else {
         for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U) {
-          if (Instruction* J = dyn_cast<Instruction>(U)) {
-            workList.push(J);
-          }
+          if (Instruction* J = dyn_cast<Instruction>(U))
+            if (!contains(backedges,J->getParent(),I->getParent()))
+              workList.push(J);
         }
       }
 
       if (PHINode* Phi = dyn_cast<PHINode>(I)) {
         for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
-          workList.push( (*B)->getTerminator() );
+          if (!contains(backedges,*B,I->getParent()))
+            workList.push( (*B)->getTerminator() );
         }
       }
 
       // ENSURE EACH BLOCK HAS A TERMINATOR
       if (BranchInst* Br = dyn_cast<BranchInst>(I->getParent()->getTerminator()))
-        workList.push(Br);
+        if (I->getParent() != B)
+          workList.push(Br);
     }
 
     return slice;

@@ -12,7 +12,7 @@ using namespace std;
 
 namespace llvm {
 
-  unordered_set<Instruction*> getSlice(Value* V);
+  unordered_set<Value*> getSlice(Value* V);
 
   void removeSlice(Value* V);
 

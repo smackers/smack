@@ -38,12 +38,11 @@ public:
   }
 
   virtual bool runOnModule(llvm::Module& m) {
-    SmackRep* rep = new SmackRep(&getAnalysis<DSAAliasAnalysis>());
-    generateProgram(m,rep);
+    generateProgram(m);
     return false;
   }
   
-  void generateProgram(llvm::Module& m, SmackRep* rep);
+  void generateProgram(llvm::Module& m);
 
   Program& getProgram() {
     return program;

@@ -12,21 +12,20 @@ class ContractsExtractor : public InstVisitor<ContractsExtractor> {
 private:
   SmackRep& rep;
   ProcDecl& proc;
-  
-  vector<const Expr*> extracted;
+  Naming& naming;
+  ExpressionList& exprs;
 
 public:
-  ContractsExtractor(SmackRep& r, ProcDecl& d) : rep(r), proc(d) {}
-
-  vector<const Expr*>& getExtracted() { return extracted; }
+  ContractsExtractor(SmackRep& R, ProcDecl& P, Naming& N, ExpressionList& E)
+    : rep(R), proc(P), naming(N), exprs(E) {}
 
   void visitCallInst(CallInst& ci);
 
 private:
   Expr* sliceExpr(Value* v);
 
-  Value* extractionIdx(LLVMContext& ctx) {
-    return ConstantInt::get(Type::getInt32Ty(ctx),extracted.size());
+  Value* expressionIdx(LLVMContext& ctx) {
+    return ConstantInt::get(Type::getInt32Ty(ctx),exprs.size());
   }
 };
 

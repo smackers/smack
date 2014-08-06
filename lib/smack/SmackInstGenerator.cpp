@@ -38,22 +38,9 @@ string i2s(llvm::Instruction& i) {
 }
 
 Block* SmackInstGenerator::createBlock() {
-  stringstream s;
-  s << SmackRep::BLOCK_LBL << blockNum++;
-  Block* b = new Block(s.str());
+  Block* b = new Block(naming.freshBlockName());
   addBlock(b);
   return b;
-}
-
-string SmackInstGenerator::createVar() {
-  stringstream s;
-  s << "$x";
-  if (varNs >= 0)
-    s << "." << varNs << ".";
-  s << varNum++;
-  string name = s.str();
-  addDecl(Decl::variable(name, rep.getPtrType()));
-  return name;
 }
 
 Block* SmackInstGenerator::getBlock(llvm::BasicBlock* bb) {
@@ -63,21 +50,10 @@ Block* SmackInstGenerator::getBlock(llvm::BasicBlock* bb) {
 }
 
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
-  if (!inst.getType()->isVoidTy()) {
-    if (!inst.hasName() || !rep.isSmackGeneratedName(inst.getName())) {
-      stringstream s;
-      if (rep.isBool(&inst))
-        s << SmackRep::BOOL_VAR;
-      else if (rep.isFloat(&inst))
-        s << SmackRep::FLOAT_VAR;
-      else
-        s << SmackRep::PTR_VAR;
-      if (varNs >= 0)
-        s << "." << varNs << ".";
-      inst.setName(s.str());
-    }
-    addDecl(Decl::variable(rep.id(&inst), rep.type(&inst)));
-  }
+  if (inst.getType()->isVoidTy())
+    return;
+
+  addDecl(Decl::variable(naming.get(inst), rep.type(&inst)));
 }
 
 void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
@@ -175,9 +151,8 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
 
   if (proc.isProc()) {
     if (v)
-      emit(Stmt::assign(Expr::id(SmackRep::RET_VAR), rep.expr(v)));
+      emit(Stmt::assign(Expr::id(Naming::RET_VAR), rep.expr(v)));
     emit(Stmt::return_());
-
   } else {
     assert (v && "Expected return value.");
     emit(Stmt::return_(rep.expr(v)));
@@ -460,7 +435,7 @@ void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {
 
 void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
   processInstruction(i);
-  string x = rep.id(&i);
+  string x = naming.get(i);
   const Expr
   *c = rep.expr(i.getOperand(0)),
    *v1 = rep.expr(i.getOperand(1)),
@@ -482,20 +457,20 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     emit(Stmt::skip());
     
-  } else if (f && rep.id(f).find("llvm.dbg.") != string::npos) {
+  } else if (f && naming.get(*f).find("llvm.dbg.") != string::npos) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
-  } else if (f && rep.id(f) == "__SMACK_mod") {
+  } else if (f && naming.get(*f) == "__SMACK_mod") {
     addMod(rep.code(ci));
 
-  } else if (f && rep.id(f) == "__SMACK_code") {
+  } else if (f && naming.get(*f) == "__SMACK_code") {
     emit(Stmt::code(rep.code(ci)));
 
-  } else if (f && rep.id(f) == "__SMACK_decl") {
+  } else if (f && naming.get(*f) == "__SMACK_decl") {
     addDecl(Decl::code(rep.code(ci)));
 
-  } else if (f && rep.id(f) == "__SMACK_top_decl") {
+  } else if (f && naming.get(*f) == "__SMACK_top_decl") {
     string decl = rep.code(ci);
     addTopDecl(Decl::code(decl));
     if (VAR_DECL.match(decl)) {
@@ -503,32 +478,32 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       rep.addBplGlobal(var);
     }
 
-  } else if (f && rep.id(f).find("result") != string::npos) {
+  } else if (f && naming.get(*f).find("result") != string::npos) {
     assert(ci.getNumArgOperands() == 0 && "Unexpected operands to result.");
-    emit(Stmt::assign(rep.expr(&ci),Expr::id(SmackRep::RET_VAR)));
+    emit(Stmt::assign(rep.expr(&ci),Expr::id(Naming::RET_VAR)));
 
-  } else if (f && rep.id(f).find("qvar") != string::npos) {
+  } else if (f && naming.get(*f).find("qvar") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to qvar.");
     emit(Stmt::assign(rep.expr(&ci),Expr::id(rep.getString(ci.getArgOperand(0)))));
 
-  } else if (f && rep.id(f).find("old") != string::npos) {
+  } else if (f && naming.get(*f).find("old") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to old.");
     llvm::LoadInst* LI = llvm::dyn_cast<llvm::LoadInst>(ci.getArgOperand(0));
     assert(LI && "Expected value from Load.");
     emit(Stmt::assign(rep.expr(&ci),
       Expr::fn("old",rep.mem(LI->getPointerOperand())) ));
 
-  } else if (f && rep.id(f).find("forall") != string::npos) {
+  } else if (f && naming.get(*f).find("forall") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
-    emit(Stmt::assign(rep.expr(&ci),getExtracted(ci.getArgOperand(1))));
+    emit(Stmt::assign(rep.expr(&ci),getExpression(ci.getArgOperand(1))));
 
-  } else if (f && rep.id(f).find("iassert") != string::npos) {
+  } else if (f && naming.get(*f).find("iassert") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    emit(Stmt::assert_(getExtracted(ci.getArgOperand(0))));
+    emit(Stmt::assert_(getExpression(ci.getArgOperand(0))));
 
-  } else if (f && rep.id(f).find("iassume") != string::npos) {
+  } else if (f && naming.get(*f).find("iassume") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    emit(Stmt::assume(getExtracted(ci.getArgOperand(0))));
+    emit(Stmt::assume(getExpression(ci.getArgOperand(0))));
 
   } else if (f) {
     emit(rep.call(f, ci));

@@ -7,24 +7,26 @@
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
+#include "smack/Naming.h"
+#include "smack/Slicing.h"
 #include "llvm/InstVisitor.h"
 #include <unordered_set>
 
 namespace smack {
-  
+
+typedef vector<const Expr*> ExpressionList;
+
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
   SmackRep& rep;
   CodeContainer& proc;
+  Naming& naming;
+  ExpressionList& exprs;
+
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*> blockMap;
-  int blockNum;
-  int varNum;
-  int varNs;
-  vector<const Expr*>* extracted;
 
-  string createVar();
   Block* createBlock();
   Block* getBlock(llvm::BasicBlock* bb);
 
@@ -39,38 +41,47 @@ private:
   void addMod(string x) { proc.addMod(x); }
   void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
   void addBlock(Block* b) { proc.addBlock(b); }
-
   void emit(const Stmt* s) { currBlock->addStmt(s); }
 
 public:
-  SmackInstGenerator(SmackRep& r, CodeContainer& p, int varNamespace = -1)
-    : rep(r), proc(p), blockNum(0), varNum(0), varNs(varNamespace) {}
-  
-  void setExtracted(vector<const Expr*>& e) { extracted = &e; }
-  const Expr* getExtracted(llvm::Value* V) {
+  SmackInstGenerator(SmackRep& R, CodeContainer& P, Naming& N, ExpressionList& E)
+    : rep(R), proc(P), naming(N), exprs(E) {}
+
+  const Expr* getExpression(llvm::Value* V) {
     using namespace llvm;
     if (ConstantInt* CI = dyn_cast<ConstantInt>(V)) {
       uint64_t i = CI->getLimitedValue();
-      assert(extracted && extracted->size() > i && "Did not find extracted expression.");
-      return (*extracted)[i];
+      assert(exprs.size() > i && "Did not find expression.");
+      return exprs[i];
     }
     assert(false && "Unexpected value.");
   }
   
-  void visitSlice(llvm::Function* F, unordered_set<llvm::Instruction*> slice) {
+  void visitSlice(llvm::Function* F, llvm::Instruction* I) {
     using namespace llvm;
+
+    unordered_set<Value*> slice = getSlice(I);
+
+    DEBUG(errs() << "SLICE OF SIZE " << slice.size() << "\n");
+
     for (Function::iterator B = F->begin(), E = F->end(); B != E; ++B) {
-      bool blockVisited = false;
+      if (!slice.count(B))
+        continue;
+      visitBasicBlock(*B);
+
       for (BasicBlock::iterator I = B->begin(), G = B->end(); I != G; ++I) {
-        if (slice.count(&*I)) {
-          if (!blockVisited) {
-            visitBasicBlock(*B);
-            blockVisited = true;
-          }
-          visit(*I);
-        }
+        if (!slice.count(&*I))
+          continue;
+        visit(*I);
       }
-      // TODO WHAT TO DO WITH TERMINATORLESS BLOCKS?
+
+      if (I->getParent() == B) {
+        emit(Stmt::return_(rep.expr(I)));
+
+      } else if (!slice.count(B->getTerminator())) {
+        emit(Stmt::assume(Expr::lit(false)));
+        emit(Stmt::goto_(getBlock(I->getParent())->getName()));
+      }
     }
   }
 

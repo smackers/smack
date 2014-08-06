@@ -10,11 +10,6 @@
 
 namespace smack {
 
-const string SmackRep::BLOCK_LBL = "$bb";
-const string SmackRep::RET_VAR = "$r";
-const string SmackRep::BOOL_VAR = "$b";
-const string SmackRep::FLOAT_VAR = "$f";
-const string SmackRep::PTR_VAR = "$p";
 const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 const string SmackRep::NULL_VAL = "$NULL";
@@ -107,52 +102,18 @@ const string SmackRep::STATIC_INIT = "$static_init";
 
 const int SmackRep::width = 0;
 
-// TODO Do the following functions belong here ?
-
-string EscapeString(string s) {
-  string Str(llvm::DOT::EscapeString(s));
-  for (unsigned i = 0; i != Str.length(); ++i)
-    switch (Str[i]) {
-    case '\01':
-      Str[i] = '_';
-      break;
-    case '@':
-      Str[i] = '.';
-      break;
-    }
-  return Str;
-}
-
-Regex BPL_KW(
-  "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
-  "|unique|finite|complete|type|const|function|axiom|var|procedure"
-  "|implementation|where|returns|assume|assert|havoc|call|return|while"
-  "|break|goto|if|else|div)$");
-Regex SMACK_NAME(".*__SMACK_.*");
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
   "llvm\\.memcpy\\..*|llvm\\.memset\\..*|llvm\\.dbg\\..*|"
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-bool isBplKeyword(string s) {
-  return BPL_KW.match(s);
-}
-
-bool SmackRep::isSmackName(string n) {
-  return SMACK_NAME.match(n);
-}
-
-bool SmackRep::isSmackGeneratedName(string n) {
-  return n.size() > 0 && n[0] == '$';
-}
-
 bool SmackRep::isMallocOrFree(llvm::Function* f) {
-  return PROC_MALLOC_FREE.match(id(f));
+  return PROC_MALLOC_FREE.match(naming.get(*f));
 }
 
 bool SmackRep::isIgnore(llvm::Function* f) {  
-  return PROC_IGNORE.match(id(f));
+  return PROC_IGNORE.match(naming.get(*f));
 }
 
 bool SmackRep::isInt(const llvm::Type* t) {
@@ -293,7 +254,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
   const Expr* size = 
     Expr::fn(MUL,lit(storageSize(i.getAllocatedType())),lit(i.getArraySize()));
                        
-  return Stmt::call(ALLOCA,size,id(&i));
+  return Stmt::call(ALLOCA,size,naming.get(i));
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
@@ -346,29 +307,6 @@ const Expr* SmackRep::undef() {
   stringstream s;
   s << "$u." << uniqueUndefNum++;
   return Expr::id(s.str());
-}
-
-string SmackRep::id(const llvm::Value* v) {
-  string name;
-
-  if (v->hasName()) {
-    name = v->getName().str();
-
-  } else {
-    assert(false && "expected named value.");
-
-    // OLD NAME-HANDLING CODE
-    // llvm::raw_string_ostream ss(name);
-    // ss << *v;
-    // name = name.substr(name.find("%"));
-    // name = name.substr(0, name.find(" "));
-  }
-  name = EscapeString(name);
-
-  if (isBplKeyword(name))
-    name = name + "_";
-
-  return name;
 }
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
@@ -437,10 +375,10 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
   if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
     assert(g->hasName());
-    return Expr::id(id(v));
+    return Expr::id(naming.get(*v));
 
-  } else if (v->hasName())
-    return Expr::id(id(v));
+  } else if (naming.get(*v) != "")
+    return Expr::id(naming.get(*v));
 
   else if (const Constant* constant = dyn_cast<const Constant>(v)) {
 
@@ -715,7 +653,7 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
        arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
     string name;
     if (arg->hasName()) {
-      name = id(arg);
+      name = naming.get(*arg);
     } else {
       name = indexedName("p",i);
       arg->setName(name);
@@ -728,11 +666,11 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
     args.push_back(make_pair(indexedName("p",i), getPtrType()));
 
   if (!f->getReturnType()->isVoidTy())
-    rets.push_back(make_pair(RET_VAR,type(f->getReturnType())));
+    rets.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
 
   return (ProcDecl*) Decl::procedure(
     *program,
-    f->isVarArg() ? indexedName(id(f),nargs) : id(f), 
+    f->isVarArg() ? indexedName(naming.get(*f),nargs) : naming.get(*f), 
     args, 
     rets
   );
@@ -746,7 +684,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
 
   assert(f && "Call encountered unresolved function.");
   
-  string name = id(f);
+  string name = naming.get(*f);
   vector<const Expr*> args;
   vector<string> rets;
   
@@ -754,7 +692,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
     args.push_back(arg(f, i, ci.getOperand(i)));
   
   if (!ci.getType()->isVoidTy())
-    rets.push_back(id(&ci));
+    rets.push_back(naming.get(ci));
 
   if (name == "malloc") {
     assert(args.size() == 1);
@@ -764,7 +702,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
     assert(args.size() == 1);
     return Stmt::call(FREE, args[0]);
 
-  } else if (f->isVarArg() || (f->isDeclaration() && !isSmackName(name))) {
+  } else if (f->isVarArg() || (f->isDeclaration() && !Naming::isSmackName(name))) {
     
     Decl* p = proc(f,args.size());
     program->addDecl(p);
@@ -899,7 +837,7 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
   using namespace llvm;
   vector<Decl*> decls;
   vector<const Attr*> ax;
-  string name = id(v);
+  string name = naming.get(*v);
 
   if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
     if (g->hasInitializer()) {

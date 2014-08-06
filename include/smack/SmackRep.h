@@ -6,6 +6,7 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
+#include "smack/Naming.h"
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
 #include "smack/DSAAliasAnalysis.h"
@@ -28,11 +29,6 @@ using namespace std;
   
 class SmackRep {
 public:
-  static const string BLOCK_LBL;
-  static const string RET_VAR;
-  static const string BOOL_VAR;
-  static const string FLOAT_VAR;
-  static const string PTR_VAR;
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
   static const string NULL_VAL;
@@ -127,6 +123,7 @@ public:
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
+  Naming& naming;
   vector<string> bplGlobals;
   vector< pair<const llvm::Value*, bool> > memoryRegions;
   const llvm::DataLayout* targetData;
@@ -139,8 +136,8 @@ protected:
   unsigned uniqueUndefNum;
 
 public:
-  SmackRep(DSAAliasAnalysis* aa)
-    : aliasAnalysis(aa), targetData(aa->getDataLayout()), globalsBottom(0) {
+  SmackRep(DSAAliasAnalysis* aa, Naming& N)
+    : aliasAnalysis(aa), naming(N), targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
     uniqueUndefNum = 0;
   }
@@ -161,8 +158,6 @@ public:
   Program* getProgram() { return program; }
   void setProgram(Program* p) { program = p; }
   
-  bool isSmackName(string n);
-  bool isSmackGeneratedName(string n);
   bool isMallocOrFree(llvm::Function* f);
   bool isIgnore(llvm::Function* f);
   bool isInt(const llvm::Type* t);
@@ -186,7 +181,6 @@ public:
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);  
 
-  string id(const llvm::Value* v);
   const Expr* undef();
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(unsigned v);

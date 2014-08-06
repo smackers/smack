@@ -11,57 +11,62 @@ namespace smack {
 llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
 char SmackModuleGenerator::ID = 0;
 
-void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
+void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
-  rep->setProgram( &program );
-  rep->collectRegions(m);
+  Naming naming;
+  SmackRep rep(&getAnalysis<DSAAliasAnalysis>(), naming);
+
+  rep.setProgram( &program );
+  rep.collectRegions(m);
   
   DEBUG(errs() << "Analyzing globals...\n");
 
   for (llvm::Module::const_global_iterator
        x = m.global_begin(), e = m.global_end(); x != e; ++x)
-    program.addDecls(rep->globalDecl(x));
+    program.addDecls(rep.globalDecl(x));
   
-  if (rep->hasStaticInits())
-    program.addDecl(rep->getStaticInit());
+  if (rep.hasStaticInits())
+    program.addDecl(rep.getStaticInit());
 
   DEBUG(errs() << "Analyzing functions...\n");
 
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
 
-    if (rep->isIgnore(func))
+    if (rep.isIgnore(func))
       continue;
 
-    if (rep->isMallocOrFree(func)) {
-      program.addDecls(rep->globalDecl(func));
+    if (rep.isMallocOrFree(func)) {
+      program.addDecls(rep.globalDecl(func));
       continue;
     }
 
     if (!func->isVarArg())
-      program.addDecls(rep->globalDecl(func));
+      program.addDecls(rep.globalDecl(func));
 
-    ProcDecl* proc = rep->proc(func,0);
+    ProcDecl* proc = rep.proc(func,0);
     if (proc->getName() != "__SMACK_decls")
       program.addDecl(proc);
 
     if (!func->isDeclaration() && !func->empty()
         && !func->getEntryBlock().empty()) {
 
-      DEBUG(errs() << "Analyzing function: " << rep->id(func) << "\n");
+      DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
 
-      ContractsExtractor ce(*rep, *proc);
+      ExpressionList E;
+      ContractsExtractor ce(rep, *proc, naming, E);
+      SmackInstGenerator igen(rep, *proc, naming, E);
+
+      naming.enter();
       ce.visit(func);
-
-      SmackInstGenerator igen(*rep, *proc);
-      igen.setExtracted(ce.getExtracted());
       igen.visit(func);
+      naming.leave();
 
       // First execute static initializers, in the main procedure.
-      if (rep->id(func) == "main" && rep->hasStaticInits())
+      if (naming.get(*func) == "main" && rep.hasStaticInits())
         proc->insert(Stmt::call(SmackRep::STATIC_INIT));
 
-      DEBUG(errs() << "Finished analyzing function: " << rep->id(func) << "\n\n");
+      DEBUG(errs() << "Finished analyzing function: " << naming.get(*func) << "\n\n");
     }
 
     // MODIFIES
@@ -73,7 +78,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
   for (unsigned i=0; i<procs.size(); i++) {
     
     if (procs[i]->hasBody()) {
-      procs[i]->addMods(rep->getModifies());
+      procs[i]->addMods(rep.getModifies());
     
     } else {
       vector< pair<string,string> > rets = procs[i]->getRets();
@@ -81,14 +86,14 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
           r != rets.end(); ++r) {
         
         // TODO should only do this for returned POINTERS.
-        // procs[i]->addEnsures(rep->declareIsExternal(Expr::id(r->first)));
+        // procs[i]->addEnsures(rep.declareIsExternal(Expr::id(r->first)));
       }
     }
   }
   
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.
-  program.appendPrelude(rep->getPrelude());
+  program.appendPrelude(rep.getPrelude());
 }
 
 } // namespace smack
