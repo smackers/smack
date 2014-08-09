@@ -161,7 +161,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Checks the input LLVM file for code reachability.', parents=[reachParser()])
     parser.parse_args() # just check if arguments are looking good
 
-    #!!!!!!START COPY OF SECTION FROM smack-verify.py!!!!!!!!!!!
+    #!!!!!!START COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
     #  Probably should pull into subroutine or something
     # remove arguments not recognized by lower scripts
     # not sure of a better way to do this
@@ -182,6 +182,6 @@ if __name__ == '__main__':
     # write final output
     args.outfile.write(bpl)
     args.outfile.close()
-    #!!!!!!END COPY OF SECTION FROM smack-verify.py!!!!!!!!!!!
+    #!!!!!!END COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
 
     GetCodeCoverage(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd, clangOutput)
