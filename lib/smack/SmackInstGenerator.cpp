@@ -72,7 +72,6 @@ void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
 
 void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
   DEBUG(errs() << "Inst: " << inst << "\n");
-  DEBUG(errs() << "Inst name: " << inst.getName().str() << "\n");
   annotate(inst, currBlock);
   ORIG(inst);
   nameInstruction(inst);
@@ -497,13 +496,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
     emit(Stmt::assign(rep.expr(&ci),getExpression(ci.getArgOperand(1))));
 
-  } else if (f && naming.get(*f).find("iassert") != string::npos) {
+  } else if (f && naming.get(*f).find("invariant") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
     emit(Stmt::assert_(getExpression(ci.getArgOperand(0))));
-
-  } else if (f && naming.get(*f).find("iassume") != string::npos) {
-    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    emit(Stmt::assume(getExpression(ci.getArgOperand(0))));
 
   } else if (f) {
     emit(rep.call(f, ci));

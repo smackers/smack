@@ -52,38 +52,23 @@ void ContractsExtractor::visitCallInst(CallInst& ci) {
 
   } else if (f && naming.get(*f).find("invariant") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    Value* arg = ci.getArgOperand(0);
+    Value* V = ci.getArgOperand(0);
     Value* idx = expressionIdx(ci.getContext());
     ci.setArgOperand(0,idx);
-    const Expr* e = sliceExpr(arg);
-    exprs.push_back(e);
+    exprs.push_back(sliceExpr(V));
 
     BasicBlock* body = ci.getParent();
     BasicBlock* head = body->getSinglePredecessor();
     assert(head && "Expected single predecessor block.");
-    ArrayRef<Value*> args(idx);
-    ArrayRef<Type*> params(Type::getInt32Ty(ci.getContext()));
-    CallInst::Create(
-      Function::Create(
-        FunctionType::get(Type::getVoidTy(ci.getContext()),params,false),
-        GlobalValue::ExternalLinkage, "iassume"),
-      args,"",head->getTerminator());
-    unsigned count = 0;
-    for (pred_iterator B = pred_begin(head), E = pred_end(head); B != E; ++B) {
-      CallInst::Create(
-        Function::Create(
-          FunctionType::get(Type::getVoidTy(ci.getContext()),params,false),
-          GlobalValue::ExternalLinkage, "iassert"),
-        args,"",(*B)->getTerminator());
-      count++;
-    }
-    assert(count == 2 && "Expected head with two predecessors.");
-    count = 0;
-    for (succ_iterator B = succ_begin(head), E = succ_end(head); B != E; ++B) {
-      count++;
-    }
-    assert(count == 2 && "Expected head with two successors.");
-    ci.eraseFromParent();
+
+    ci.removeFromParent();
+
+    // NOTE Boogie only considers only assertions at the beginning of the loop
+    // head block to be loop invariants. Therefore we push this instruction to
+    // the front -- just after any Phi nodes.
+    BasicBlock::iterator I = head->begin();
+    while (isa<PHINode>(I)) ++I;
+    head->getInstList().insert(I,&ci);
   }
 }
 

@@ -56,8 +56,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
       SmackInstGenerator igen(rep, *proc, naming, E);
 
       naming.enter();
+      DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << " from ");
+      DEBUG(errs() << *func << "\n");
       ce.visit(func);
+      DEBUG(errs() << "\n");
+
+      DEBUG(errs() << "Generating body for " << naming.get(*func) << " from ");
+      DEBUG(errs() << *func << "\n");
       igen.visit(func);
+      DEBUG(errs() << "\n");
       naming.leave();
 
       // First execute static initializers, in the main procedure.

@@ -41,7 +41,12 @@ private:
   void addMod(string x) { proc.addMod(x); }
   void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
   void addBlock(Block* b) { proc.addBlock(b); }
-  void emit(const Stmt* s) { currBlock->addStmt(s); }
+  void emit(const Stmt* s) {
+    // stringstream str;
+    // s->print(str);
+    // DEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
+    currBlock->addStmt(s);
+  }
 
 public:
   SmackInstGenerator(SmackRep& R, CodeContainer& P, Naming& N, ExpressionList& E)
@@ -61,8 +66,6 @@ public:
     using namespace llvm;
 
     unordered_set<Value*> slice = getSlice(I);
-
-    DEBUG(errs() << "SLICE OF SIZE " << slice.size() << "\n");
 
     for (Function::iterator B = F->begin(), E = F->end(); B != E; ++B) {
       if (!slice.count(B))
