@@ -41,6 +41,10 @@ const Expr* Expr::lt(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Lt, l, r);
 }
 
+const Expr* Expr::fn(string f, vector<const Expr*> args) {
+  return new FunExpr(f, args);
+}
+
 const Expr* Expr::fn(string f, const Expr* x) {
   return new FunExpr(f, vector<const Expr*>(1, x));
 }
@@ -585,13 +589,18 @@ void ConstDecl::print(ostream& os) const {
 }
 
 void FuncDecl::print(ostream& os) const {
-  os << "function " << name;
+  os << "function ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name << "(";
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
-  os << ": " << type << " { " << body << " };";
+  os << ") returns (" << type << ")";
+  if (body)
+    os << " { " << body << " }";
+  else
+    os << ";";
 }
 
 void VarDecl::print(ostream& os) const {

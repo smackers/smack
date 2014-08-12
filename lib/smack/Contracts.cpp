@@ -1,20 +1,22 @@
 #include "smack/Contracts.h"
 #include "llvm/Support/InstIterator.h"
 
-namespace smack {
-  using namespace llvm;
+using namespace llvm;
 
-Expr* ContractsExtractor::sliceExpr(Value* V) {
+namespace smack {
+
+unsigned ContractsExtractor::uniqueSliceId = 0;
+
+const Expr* ContractsExtractor::sliceExpr(Value* V) {
   Instruction* I = dyn_cast<Instruction>(V);
   assert(I && "Expected instruction.");
-  Function* F = I->getParent()->getParent();
-  CodeExpr* code = new CodeExpr(rep.getProgram());
-  SmackInstGenerator igen(rep, *code, naming, exprs);
-  naming.enter();
-  igen.visitSlice(F,I);
-  naming.leave();
-  removeSlice(I);
-  return code;
+
+  stringstream name;
+  name << "$expr" << uniqueSliceId++;
+  Slice S(name.str(),*I);
+  rep.getProgram().addDecl((Decl*) S.getBoogieDecl(naming,rep,exprs));
+  S.remove();
+  return S.getBoogieExpression(naming);
 }
 
 void ContractsExtractor::visitCallInst(CallInst& ci) {

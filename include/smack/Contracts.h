@@ -14,6 +14,7 @@ private:
   ProcDecl& proc;
   Naming& naming;
   ExpressionList& exprs;
+  static unsigned uniqueSliceId;
 
 public:
   ContractsExtractor(SmackRep& R, ProcDecl& P, Naming& N, ExpressionList& E)
@@ -22,7 +23,7 @@ public:
   void visitCallInst(CallInst& ci);
 
 private:
-  Expr* sliceExpr(Value* v);
+  const Expr* sliceExpr(Value* v);
 
   Value* expressionIdx(LLVMContext& ctx) {
     return ConstantInt::get(Type::getInt32Ty(ctx),exprs.size());

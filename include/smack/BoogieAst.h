@@ -29,6 +29,7 @@ public:
   static const Expr* fn(string f, const Expr* x);
   static const Expr* fn(string f, const Expr* x, const Expr* y);
   static const Expr* fn(string f, const Expr* x, const Expr* y, const Expr* z);
+  static const Expr* fn(string f, vector<const Expr*> args);
   static const Expr* id(string x);
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(int i);
