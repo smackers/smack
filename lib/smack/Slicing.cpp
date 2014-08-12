@@ -84,8 +84,7 @@ namespace llvm {
         }
       }
 
-NEXT:
-      (void)0; // no-op
+NEXT: ; // no-op
     }
 
     return slice;
@@ -114,10 +113,13 @@ NEXT:
         continue;
 
       if (BranchInst* Br = dyn_cast<BranchInst>(I)) {
-        succ.insert(make_pair(Br->getParent(),Br->getSuccessor(0)));
-        if (Br->isConditional())
+        if (Br->isConditional()) {
           if (Instruction* J = dyn_cast<Instruction>(Br->getCondition()))
             workList.push(J);
+        } else {
+          // TODO FIGURE THIS OUT & CLEAN IT UP
+          succ.insert(make_pair(Br->getParent(),Br->getSuccessor(0)));
+        }
       } else {
         for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U)
           if (Instruction* J = dyn_cast<Instruction>(U))
@@ -134,10 +136,12 @@ NEXT:
       I->eraseFromParent();
 
       if (B->getInstList().size() == 0) {
-        BasicBlock* C = succ[B];
-        assert(C && "Successor not found!");
-        B->replaceAllUsesWith(C);
-        B->eraseFromParent();
+        // TODO FIGURE THIS OUT & CLEAN IT UP
+        if (BasicBlock* C = succ[B]) {
+          // assert(C && "Successor not found!");
+          B->replaceAllUsesWith(C);
+          B->eraseFromParent();
+        }
       }
     }
   }
