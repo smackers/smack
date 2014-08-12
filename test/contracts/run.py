@@ -29,7 +29,7 @@ for test in glob.glob("*.c"):
 
   # invoke SMACK
   t0 = time.time()
-  cmd = ['smackverify.py', test, '--verifier=boogie-plain']
+  cmd = ['smackverify.py', test, '--verifier=boogie']
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
   # check SMACK output

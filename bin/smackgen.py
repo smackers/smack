@@ -14,11 +14,11 @@ def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
   parser.add_argument('--clang', dest='clang', default='',
                       help='pass arguments to clang (e.g., --clang="-w -g")')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie-plain', 'boogie-inline', 'corral'], default='boogie-inline',
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral'], default='corral',
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
-  parser.add_argument('--unroll', metavar='N', dest='unroll', default='2', type=int,
+  parser.add_argument('--unroll', metavar='N', dest='unroll', type=int,
                       help='unroll loops/recursion in Boogie/Corral N number of times')
   parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse',
                       help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
@@ -100,14 +100,18 @@ def smackGenerate(sysArgv):
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
   si = re.compile('procedure\s+(\$static_init|__SMACK_.*|)\s*\(')
-  if args.verifier == 'boogie-plain':
-    bpl = si.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
-  elif args.verifier == 'boogie-inline':
+
+  if args.verifier == 'boogie' and args.unroll is None:
+    bpl = si.sub(lambda match: addInline(match, args.entryPoints, 1), bpl)
+
+  elif args.verifier == 'boogie':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
+
   elif args.verifier == 'corral':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
+
   return bpl, options, clangOutput
 
 
