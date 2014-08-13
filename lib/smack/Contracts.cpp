@@ -16,7 +16,7 @@ const Expr* ContractsExtractor::sliceExpr(Value* V) {
   Slice S(name.str(),*I);
   rep.getProgram().addDecl((Decl*) S.getBoogieDecl(naming,rep,exprs));
   S.remove();
-  return S.getBoogieExpression(naming);
+  return S.getBoogieExpression(naming,rep);
 }
 
 void ContractsExtractor::visitCallInst(CallInst& ci) {

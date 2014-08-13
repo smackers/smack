@@ -38,7 +38,7 @@ public:
 
   string getName();
   const Decl* getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& exprs);
-  const Expr* getBoogieExpression(Naming& naming);
+  const Expr* getBoogieExpression(Naming& naming, SmackRep& rep);
 };
 
 }

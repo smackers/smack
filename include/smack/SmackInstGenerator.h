@@ -41,6 +41,8 @@ private:
   void addMod(string x) { proc.addMod(x); }
   void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
   void addBlock(Block* b) { proc.addBlock(b); }
+
+public:
   void emit(const Stmt* s) {
     // stringstream str;
     // s->print(str);
@@ -61,32 +63,6 @@ public:
     }
     assert(false && "Unexpected value.");
   }
-
-  // void visitSlice(llvm::Function* F, llvm::Instruction* I) {
-  //   using namespace llvm;
-  //
-  //   unordered_set<Value*> slice = getSlice(I);
-  //
-  //   for (Function::iterator B = F->begin(), E = F->end(); B != E; ++B) {
-  //     if (!slice.count(B))
-  //       continue;
-  //     visitBasicBlock(*B);
-  //
-  //     for (BasicBlock::iterator I = B->begin(), G = B->end(); I != G; ++I) {
-  //       if (!slice.count(&*I))
-  //         continue;
-  //       visit(*I);
-  //     }
-  //
-  //     if (I->getParent() == B) {
-  //       emit(Stmt::return_(rep.expr(I)));
-  //
-  //     } else if (!slice.count(B->getTerminator())) {
-  //       emit(Stmt::assume(Expr::lit(false)));
-  //       emit(Stmt::goto_(getBlock(I->getParent())->getName()));
-  //     }
-  //   }
-  // }
 
   void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);

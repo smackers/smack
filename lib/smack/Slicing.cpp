@@ -29,12 +29,33 @@ bool contains(EdgeList& backedges, const BasicBlock* src, const BasicBlock* tgt)
   return false;
 }
 
+bool hasIncomingBackEdge(PHINode* Phi, EdgeList& backedges) {
+  for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
+    if (contains(backedges,*B,Phi->getParent()))
+      return true;
+  }
+  return false;
+}
+
+GlobalValue* usedGlobal(User* U) {
+  GlobalValue* G = 0;
+  for (User::op_iterator V = U->op_begin(), E = U->op_end(); V != E; ++V) {
+    if (dyn_cast<Instruction>(V))
+      continue;
+    if ((G = dyn_cast<GlobalValue>(V)))
+      break;
+    if ((U = dyn_cast<User>(V)) && (G = usedGlobal(U)))
+      break;
+  }
+  return G;
+}
+
 Slice::Slice(string name, Instruction& I)
   : name(name), value(I), block(*I.getParent()),
     function(*block.getParent()), context(function.getContext()) {
 
   EdgeList backedges;
-  FindFunctionBackedges(function,backedges);
+  FindFunctionBackedges(function, backedges);
 
   queue<Instruction*> workList;
   workList.push(&I);
@@ -42,8 +63,16 @@ Slice::Slice(string name, Instruction& I)
   while (!workList.empty()) {
     Instruction* I = workList.front();
     workList.pop();
-    if (values.count(I))
+    if (values.count(I) || inputs.count(I))
       continue;
+
+    if (PHINode* Phi = dyn_cast<PHINode>(I)) {
+      if (hasIncomingBackEdge(Phi, backedges)) {
+        inputs.insert(I);
+        continue;
+      }
+    }
+
     values.insert(I);
     values.insert(I->getParent());
 
@@ -65,12 +94,6 @@ Slice::Slice(string name, Instruction& I)
 
     if (PHINode* Phi = dyn_cast<PHINode>(I)) {
       for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
-        if (contains(backedges,*B,I->getParent())) {
-          goto NEXT;
-        }
-      }
-
-      for (PHINode::block_iterator B = Phi->block_begin(); B != Phi->block_end(); ++B) {
         workList.push( (*B)->getTerminator() );
       }
     }
@@ -83,7 +106,8 @@ Slice::Slice(string name, Instruction& I)
       }
     }
 
-NEXT: ; // no-op
+    if (GlobalValue* G = usedGlobal(I))
+      inputs.insert(G);
   }
 
 }
@@ -149,14 +173,27 @@ string Slice::getName() {
 
 const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& exprs) {
   vector< pair<string,string> > params;
-  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V)
-    params.push_back(make_pair(naming.get(**V), rep.type(*V)));
+
+  naming.enter();
+
+  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V) {
+    string param, type;
+
+    if (GlobalVariable* G = dyn_cast<GlobalVariable>(*V)) {
+      param = rep.memReg(rep.getRegion(G));
+      type = "[int] int";
+    } else if ((*V)->hasName() && (*V)->getName().find("result") != string::npos) {
+      param = Naming::RET_VAR;
+      type = rep.type(*V);
+    } else {
+      param = naming.get(**V);
+      type = rep.type(*V);
+    }
+    params.push_back(make_pair(param, type));
+  }
 
   CodeExpr* code = new CodeExpr(rep.getProgram());
   SmackInstGenerator igen(rep, *code, naming, exprs);
-  naming.enter();
-
-  // igen.visitSlice(function,value);
 
   for (Function::iterator B = function.begin(), E = function.end(); B != E; ++B) {
     if (!values.count(B))
@@ -170,18 +207,11 @@ const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& 
     }
 
     if (B == block) {
-      // emit(Stmt::return_(rep.expr(I)));
-      Instruction* I = ReturnInst::Create(context,&value);
-      igen.visit(I);
-      delete I;
+      igen.emit(Stmt::return_(rep.expr(&value)));
 
     } else if (!values.count(B->getTerminator())) {
-      // emit(Stmt::assume(Expr::lit(false)));
-      // emit(Stmt::goto_(getBlock(I->getParent())->getName()));
-      igen.visit(new UnreachableInst(context));
-      Instruction* I = ReturnInst::Create(context,ConstantInt::getTrue(context));
-      igen.visit(I);
-      delete I;
+      igen.emit(Stmt::assume(Expr::lit(false)));
+      igen.emit(Stmt::return_(Expr::lit(true)));
     }
   }
 
@@ -192,10 +222,18 @@ const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& 
   return D;
 }
 
-const Expr* Slice::getBoogieExpression(Naming& naming) {
+const Expr* Slice::getBoogieExpression(Naming& naming, SmackRep& rep) {
   vector<const Expr*> args;
-  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V)
-    args.push_back(Expr::id(naming.get(**V)));
+  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V) {
+    string arg;
+    if (GlobalVariable* G = dyn_cast<GlobalVariable>(*V))
+      arg = rep.memReg(rep.getRegion(G));
+    else if ((*V)->hasName() && (*V)->getName().find("result") != string::npos)
+      arg = Naming::RET_VAR;
+    else
+      arg = naming.get(**V);
+    args.push_back(Expr::id(arg));
+  }
   return Expr::fn(getName(),args);
 }
 
