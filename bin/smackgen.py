@@ -94,7 +94,7 @@ def smackGenerate(sysArgv):
         args = parser.parse_args(options + sysArgv[1:])
     inputFile, clangOutput = clang(scriptPathName, inputFile, args.memmod, args.clang)
 
-  bpl = llvm2bpl(inputFile, args.debug, "impls" in args.memmod)
+  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
@@ -118,6 +118,7 @@ if __name__ == '__main__':
     print clangOutput
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 
