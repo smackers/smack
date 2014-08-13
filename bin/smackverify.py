@@ -160,7 +160,7 @@ if __name__ == '__main__':
   for i in reversed(range(len(sysArgv))):
     if sysArgv[i] == '--smackd':
       del sysArgv[i]
-    elif sys.argv[i] == '--time-limit':
+    elif sysArgv[i] == '--time-limit':
       del sysArgv[i]
       del sysArgv[i]
 
