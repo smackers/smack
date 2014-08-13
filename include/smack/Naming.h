@@ -27,6 +27,7 @@ public:
   static const string BOOL_VAR;
   static const string FLOAT_VAR;
   static const string PTR_VAR;
+  static const string UNDEF_SYM;
 
   Naming() : blockNum(0), varNum(0) { }
   void enter();

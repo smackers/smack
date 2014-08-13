@@ -1,6 +1,7 @@
 #include "smack/Naming.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Constants.h"
 #include <sstream>
 
 namespace smack {
@@ -10,6 +11,7 @@ const string Naming::RET_VAR = "$r";
 const string Naming::BOOL_VAR = "$b";
 const string Naming::FLOAT_VAR = "$f";
 const string Naming::PTR_VAR = "$p";
+const string Naming::UNDEF_SYM = "$u";
 
 Regex Naming::BPL_KW(
   "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
@@ -75,6 +77,9 @@ string Naming::get(const llvm::Value& V) {
     assert(nameStack.size() > 0 && "Name stack should not be empty.");
     name = freshBlockName();
 
+  } else if (llvm::isa<llvm::UndefValue>(&V)) {
+    return freshVarName(V);
+
   } else if (llvm::isa<llvm::Instruction>(&V)) {
     assert(nameStack.size() > 0 && "Name stack should not be empty.");
     name = freshVarName(V);
@@ -97,7 +102,10 @@ string Naming::freshBlockName() {
 string Naming::freshVarName(const llvm::Value& V) {
   stringstream s;
 
-  if (V.getType()->isIntegerTy(1))
+  if (llvm::isa<llvm::UndefValue>(&V))
+    s << UNDEF_SYM;
+
+  else if (V.getType()->isIntegerTy(1))
     s << BOOL_VAR;
 
   else if (V.getType()->isFloatingPointTy())

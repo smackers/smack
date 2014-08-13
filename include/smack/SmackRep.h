@@ -133,14 +133,12 @@ protected:
   vector<const Stmt*> staticInits;
   
   unsigned uniqueFpNum;
-  unsigned uniqueUndefNum;
 
 public:
   SmackRep(DSAAliasAnalysis* aa, Naming& N, Program& P)
     : aliasAnalysis(aa), naming(N), program(P),
       targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
-    uniqueUndefNum = 0;
   }
   DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
   Program& getProgram() { return program; }
@@ -180,7 +178,6 @@ public:
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);  
 
-  const Expr* undef();
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(unsigned v);
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,

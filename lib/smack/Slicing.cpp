@@ -165,57 +165,47 @@ Slice::Slice(Instruction& I, Slices& S, string name)
 }
 
 void Slice::remove() {
-  Instruction* I = dyn_cast<Instruction>(&value);
-  assert(I && "Expected instruction value.");
+  // Instruction* I = dyn_cast<Instruction>(&value);
+  // assert(I && "Expected instruction value.");
 
-  queue<Instruction*> workList;
-  set<Instruction*> covered;
-  map<BasicBlock*,BasicBlock*> succ;
+  // map<BasicBlock*,BasicBlock*> succ;
 
-  workList.push(I);
+  queue<Value*> workList;
+  set<Value*> deleted;
+  workList.push(&value);
 
   while (!workList.empty()) {
-    Instruction* I = workList.front();
+    Value* V = workList.front();
     workList.pop();
-    if (covered.count(I))
+
+    if (deleted.count(V))
       continue;
 
-    covered.insert(I);
-
-    if (I->getNumUses() > 1)
+    if (V->getNumUses() > 0)
       continue;
 
-    if (BranchInst* Br = dyn_cast<BranchInst>(I)) {
-      if (Br->isConditional()) {
-        if (Instruction* J = dyn_cast<Instruction>(Br->getCondition()))
-          workList.push(J);
-      } else {
-        // TODO FIGURE THIS OUT & CLEAN IT UP
-        succ.insert(make_pair(Br->getParent(),Br->getSuccessor(0)));
+    if (User* U = dyn_cast<User>(V))
+      for (User::op_iterator W = U->op_begin(); W != U->op_end(); ++W)
+        workList.push(*W);
+
+    if (PHINode* I = dyn_cast<PHINode>(V))
+      for (PHINode::block_iterator A = I->block_begin(), Z = I->block_end();
+          A != Z; ++ A)
+        workList.push((*A)->getTerminator());
+
+    if (BranchInst* I = dyn_cast<BranchInst>(V)) {
+      if (I->isConditional()) {
+        Value* C = I->getCondition();
+        workList.push(C);
+        I->setCondition(UndefValue::get(C->getType()));
       }
-    } else {
-      for (User::op_iterator U = I->op_begin(); U != I->op_end(); ++U)
-        if (Instruction* J = dyn_cast<Instruction>(U))
-          workList.push(J);
+      continue;
     }
 
-    if (PHINode* Phi = dyn_cast<PHINode>(I)) {
-      for (PHINode::block_iterator A = Phi->block_begin(); A != Phi->block_end(); ++A) {
-        workList.push( (*A)->getTerminator() );
-      }
-    }
+    if (Instruction* I = dyn_cast<Instruction>(V))
+      I->eraseFromParent();
 
-    BasicBlock* B = I->getParent();
-    I->eraseFromParent();
-
-    if (B->getInstList().size() == 0) {
-      // TODO FIGURE THIS OUT & CLEAN IT UP
-      if (BasicBlock* C = succ[B]) {
-        // assert(C && "Successor not found!");
-        B->replaceAllUsesWith(C);
-        B->eraseFromParent();
-      }
-    }
+    deleted.insert(V);
   }
 }
 

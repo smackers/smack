@@ -303,12 +303,6 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
   return Expr::fn(B2I, expr(v));
 }
 
-const Expr* SmackRep::undef() {
-  stringstream s;
-  s << "$u." << uniqueUndefNum++;
-  return Expr::id(s.str());
-}
-
 const Expr* SmackRep::lit(const llvm::Value* v) {
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
     if (ci->getBitWidth() == 1)
@@ -377,6 +371,11 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
     assert(g->hasName());
     return Expr::id(naming.get(*v));
 
+  } else if (isa<UndefValue>(v)) {
+    string name = naming.get(*v);
+    program.addDecl(Decl::constant(name,type(v->getType())));
+    return Expr::id(name);
+
   } else if (naming.get(*v) != "")
     return Expr::id(naming.get(*v));
 
@@ -429,9 +428,6 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
     } else if (constant->isNullValue())
       return lit((unsigned)0);
-
-    else if (isa<UndefValue>(constant))
-      return undef();
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -749,17 +745,8 @@ string SmackRep::getPrelude() {
   for (unsigned i=0; i<memoryRegions.size(); ++i)
     s << "var " << memReg(i) 
       << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-  
-  s << endl;
 
-  if (uniqueUndefNum > 0) {
-    s << "// Undefined values" << endl;
-    s << "const ";
-    for (unsigned i=0; i<uniqueUndefNum; i++)
-      s << (i > 0 ? ", " : "") << "$u." << i;
-    s << ": " << getPtrType() << ";" << endl;  
-    s << endl;
-  }
+  s << endl;
 
   s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
 
