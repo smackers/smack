@@ -7,16 +7,17 @@ namespace smack {
 
 unsigned ContractsExtractor::uniqueSliceId = 0;
 
-const Expr* ContractsExtractor::sliceExpr(Value* V) {
+Slice* ContractsExtractor::extractSlice(Value* V) {
   Instruction* I = dyn_cast<Instruction>(V);
   assert(I && "Expected instruction.");
 
   stringstream name;
   name << "$expr" << uniqueSliceId++;
-  Slice S(name.str(),*I);
-  rep.getProgram().addDecl((Decl*) S.getBoogieDecl(naming,rep,exprs));
-  S.remove();
-  return S.getBoogieExpression(naming,rep);
+  Slice* S = new Slice(*I, slices, name.str());
+  if (Decl* D = (Decl*) S->getBoogieDecl(naming,rep))
+    rep.getProgram().addDecl(D);
+  S->remove();
+  return S;
 }
 
 void ContractsExtractor::visitCallInst(CallInst& ci) {
@@ -24,40 +25,35 @@ void ContractsExtractor::visitCallInst(CallInst& ci) {
 
   if (f && naming.get(*f).find("forall") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
-    Value* var = ci.getArgOperand(0);
     Value* arg = ci.getArgOperand(1);
-    ci.setArgOperand(1,expressionIdx(ci.getContext()));
-    const Expr* e = Expr::forall(rep.getString(var), "int", sliceExpr(arg));
-    exprs.push_back(e);
+    ci.setArgOperand(1,sliceIdx(ci.getContext()));
+    slices.push_back(extractSlice(arg));
 
   } else if (f && naming.get(*f).find("exists") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to exists.");
-    Value* var = ci.getArgOperand(0);
     Value* arg = ci.getArgOperand(1);
-    ci.setArgOperand(1,expressionIdx(ci.getContext()));
-    const Expr* e = Expr::exists(rep.getString(var), "int", sliceExpr(arg));
-    exprs.push_back(e);
+    ci.setArgOperand(1,sliceIdx(ci.getContext()));
+    slices.push_back(extractSlice(arg));
 
   } else if (f && naming.get(*f).find("requires") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
     Value* V = ci.getArgOperand(0);
     ci.setArgOperand(0,ConstantInt::getTrue(ci.getContext()));
-    proc.addRequires(sliceExpr(V));
+    proc.addRequires(extractSlice(V)->getBoogieExpression(naming,rep));
     ci.eraseFromParent();
 
   } else if (f && naming.get(*f).find("ensures") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
     Value* V = ci.getArgOperand(0);
     ci.setArgOperand(0,ConstantInt::getTrue(ci.getContext()));
-    proc.addEnsures(sliceExpr(V));
+    proc.addEnsures(extractSlice(V)->getBoogieExpression(naming,rep));
     ci.eraseFromParent();
 
   } else if (f && naming.get(*f).find("invariant") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
     Value* V = ci.getArgOperand(0);
-    Value* idx = expressionIdx(ci.getContext());
-    ci.setArgOperand(0,idx);
-    exprs.push_back(sliceExpr(V));
+    ci.setArgOperand(0,sliceIdx(ci.getContext()));
+    slices.push_back(extractSlice(V));
 
     BasicBlock* body = ci.getParent();
     BasicBlock* head = body->getSinglePredecessor();

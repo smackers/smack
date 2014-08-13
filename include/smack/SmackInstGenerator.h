@@ -14,7 +14,7 @@
 
 namespace smack {
 
-typedef vector<const Expr*> ExpressionList;
+typedef vector<Slice*> Slices;
 
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
@@ -22,7 +22,7 @@ private:
   SmackRep& rep;
   CodeContainer& proc;
   Naming& naming;
-  ExpressionList& exprs;
+  Slices& slices;
 
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*> blockMap;
@@ -51,15 +51,15 @@ public:
   }
 
 public:
-  SmackInstGenerator(SmackRep& R, CodeContainer& P, Naming& N, ExpressionList& E)
-    : rep(R), proc(P), naming(N), exprs(E) {}
+  SmackInstGenerator(SmackRep& R, CodeContainer& P, Naming& N, Slices& S)
+    : rep(R), proc(P), naming(N), slices(S) {}
 
-  const Expr* getExpression(llvm::Value* V) {
+  Slice* getSlice(llvm::Value* V) {
     using namespace llvm;
     if (ConstantInt* CI = dyn_cast<ConstantInt>(V)) {
       uint64_t i = CI->getLimitedValue();
-      assert(exprs.size() > i && "Did not find expression.");
-      return exprs[i];
+      assert(slices.size() > i && "Did not find expression.");
+      return slices[i];
     }
     assert(false && "Unexpected value.");
   }

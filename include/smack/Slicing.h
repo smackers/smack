@@ -19,25 +19,28 @@ using namespace llvm;
 
 namespace smack {
 
-typedef vector<const Expr*> ExpressionList;
+class Slice;
+typedef vector<Slice*> Slices;
 
 class Slice {
-  string name;
   Value& value;
   BasicBlock& block;
   Function& function;
   LLVMContext& context;
+  Slices& slices;
+  string name;
 
   unordered_set<Value*> inputs;
   unordered_set<Value*> values;
 
 public:
-  Slice(string name, Instruction& I);
+  Slice(Instruction& I, Slices& S, string name = "");
 
   void remove();
 
   string getName();
-  const Decl* getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& exprs);
+  const Expr* getCode(Naming& naming, SmackRep& rep);
+  const Decl* getBoogieDecl(Naming& naming, SmackRep& rep);
   const Expr* getBoogieExpression(Naming& naming, SmackRep& rep);
 };
 

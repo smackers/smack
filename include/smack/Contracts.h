@@ -13,20 +13,20 @@ private:
   SmackRep& rep;
   ProcDecl& proc;
   Naming& naming;
-  ExpressionList& exprs;
+  Slices& slices;
   static unsigned uniqueSliceId;
 
 public:
-  ContractsExtractor(SmackRep& R, ProcDecl& P, Naming& N, ExpressionList& E)
-    : rep(R), proc(P), naming(N), exprs(E) {}
+  ContractsExtractor(SmackRep& R, ProcDecl& P, Naming& N, Slices& S)
+    : rep(R), proc(P), naming(N), slices(S) {}
 
   void visitCallInst(CallInst& ci);
 
 private:
-  const Expr* sliceExpr(Value* v);
+  Slice* extractSlice(Value* v);
 
-  Value* expressionIdx(LLVMContext& ctx) {
-    return ConstantInt::get(Type::getInt32Ty(ctx),exprs.size());
+  Value* sliceIdx(LLVMContext& ctx) {
+    return ConstantInt::get(Type::getInt32Ty(ctx),slices.size());
   }
 };
 

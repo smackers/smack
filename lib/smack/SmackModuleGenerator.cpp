@@ -51,9 +51,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
       DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
 
-      ExpressionList E;
-      ContractsExtractor ce(rep, *proc, naming, E);
-      SmackInstGenerator igen(rep, *proc, naming, E);
+      Slices slices;
+      ContractsExtractor ce(rep, *proc, naming, slices);
+      SmackInstGenerator igen(rep, *proc, naming, slices);
 
       naming.enter();
       DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << " from ");

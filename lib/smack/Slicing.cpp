@@ -37,6 +37,18 @@ bool hasIncomingBackEdge(PHINode* Phi, EdgeList& backedges) {
   return false;
 }
 
+Value* getQuantifiedVariable(Instruction* I) {
+  if (CallInst* CI = dyn_cast<CallInst>(I))
+    if (Function* F = CI->getCalledFunction())
+      if (F->hasName() && F->getName().find("qvar") != string::npos)
+        if (ConstantExpr* CE = dyn_cast<ConstantExpr>(CI->getArgOperand(0)))
+          if (CE->getOpcode() == Instruction::GetElementPtr)
+            if (GlobalValue* G = dyn_cast<GlobalValue>(CE->getOperand(0)))
+              if (ConstantDataSequential* S = dyn_cast<ConstantDataSequential>(G->getOperand(0)))
+                return S;
+  return 0;
+}
+
 GlobalValue* usedGlobal(User* U) {
   GlobalValue* G = 0;
   for (User::op_iterator V = U->op_begin(), E = U->op_end(); V != E; ++V) {
@@ -50,9 +62,39 @@ GlobalValue* usedGlobal(User* U) {
   return G;
 }
 
-Slice::Slice(string name, Instruction& I)
-  : name(name), value(I), block(*I.getParent()),
-    function(*block.getParent()), context(function.getContext()) {
+Slice* getSubslice(Instruction* I, Slices& slices) {
+  if (CallInst* CI = dyn_cast<CallInst>(I))
+    if (Function* F = CI->getCalledFunction())
+      if (F->hasName())
+        if (F->getName().find("forall") != string::npos ||
+            F->getName().find("exists") != string::npos)
+          if (ConstantInt* C = dyn_cast<ConstantInt>(CI->getArgOperand(1))) {
+            uint64_t i = C->getLimitedValue();
+            assert(slices.size() > i && "Did not find expression.");
+            return slices[i];
+          }
+
+  return 0;
+}
+
+pair<string,string> getParameter(Value* V, Naming& naming, SmackRep& rep) {
+
+  if (GlobalVariable* G = dyn_cast<GlobalVariable>(V))
+    return make_pair(rep.memReg(rep.getRegion(G)), "[int] int");
+
+  else if (ConstantDataSequential* S = dyn_cast<ConstantDataSequential>(V))
+    return make_pair(S->getAsCString(), "int");
+
+  else if (V->hasName() && V->getName().find("result") != string::npos)
+    return make_pair(Naming::RET_VAR, rep.type(V));
+
+  else
+    return make_pair(naming.get(*V), rep.type(V));
+}
+
+Slice::Slice(Instruction& I, Slices& S, string name)
+  : value(I), block(*I.getParent()), function(*block.getParent()),
+    context(function.getContext()), slices(S), name(name) {
 
   EdgeList backedges;
   FindFunctionBackedges(function, backedges);
@@ -72,6 +114,19 @@ Slice::Slice(string name, Instruction& I)
         continue;
       }
     }
+
+    if (GlobalValue* G = usedGlobal(I))
+      inputs.insert(G);
+
+    if (Value* Q = getQuantifiedVariable(I))
+      inputs.insert(Q);
+
+    // Add inputs from any subslices, excluding quantified variables
+    if (Slice* S = getSubslice(I,slices))
+      for (unordered_set<Value*>::iterator V = S->inputs.begin(),
+          E = S->inputs.end(); V != E; ++V)
+        if (!inputs.count(*V) && !dyn_cast<ConstantDataSequential>(*V))
+          inputs.insert(*V);
 
     values.insert(I);
     values.insert(I->getParent());
@@ -105,9 +160,6 @@ Slice::Slice(string name, Instruction& I)
         }
       }
     }
-
-    if (GlobalValue* G = usedGlobal(I))
-      inputs.insert(G);
   }
 
 }
@@ -171,29 +223,9 @@ string Slice::getName() {
   return name;
 }
 
-const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& exprs) {
-  vector< pair<string,string> > params;
-
-  naming.enter();
-
-  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V) {
-    string param, type;
-
-    if (GlobalVariable* G = dyn_cast<GlobalVariable>(*V)) {
-      param = rep.memReg(rep.getRegion(G));
-      type = "[int] int";
-    } else if ((*V)->hasName() && (*V)->getName().find("result") != string::npos) {
-      param = Naming::RET_VAR;
-      type = rep.type(*V);
-    } else {
-      param = naming.get(**V);
-      type = rep.type(*V);
-    }
-    params.push_back(make_pair(param, type));
-  }
-
+const Expr* Slice::getCode(Naming& naming, SmackRep& rep) {
   CodeExpr* code = new CodeExpr(rep.getProgram());
-  SmackInstGenerator igen(rep, *code, naming, exprs);
+  SmackInstGenerator igen(rep, *code, naming, slices);
 
   for (Function::iterator B = function.begin(), E = function.end(); B != E; ++B) {
     if (!values.count(B))
@@ -214,26 +246,33 @@ const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep, ExpressionList& 
       igen.emit(Stmt::return_(Expr::lit(true)));
     }
   }
+  return code;
+}
 
-  naming.leave();
-
-  Decl* D = Decl::function(getName(),params,"bool",code);
+const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep) {
+  if (name == "")
+    return 0;
+  naming.enter();
+  vector< pair<string,string> > params;
+  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V)
+    params.push_back(getParameter(*V,naming,rep));
+  Decl* D = Decl::function(getName(),params,"bool",getCode(naming,rep));
   D->addAttr(Attr::attr("inline"));
+  naming.leave();
   return D;
 }
 
 const Expr* Slice::getBoogieExpression(Naming& naming, SmackRep& rep) {
-  vector<const Expr*> args;
-  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V) {
-    string arg;
-    if (GlobalVariable* G = dyn_cast<GlobalVariable>(*V))
-      arg = rep.memReg(rep.getRegion(G));
-    else if ((*V)->hasName() && (*V)->getName().find("result") != string::npos)
-      arg = Naming::RET_VAR;
-    else
-      arg = naming.get(**V);
-    args.push_back(Expr::id(arg));
+  if (name == "") {
+    naming.enter();
+    const Expr* code = getCode(naming,rep);
+    naming.leave();
+    return code;
   }
+
+  vector<const Expr*> args;
+  for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V)
+    args.push_back(Expr::id(getParameter(*V,naming,rep).first));
   return Expr::fn(getName(),args);
 }
 

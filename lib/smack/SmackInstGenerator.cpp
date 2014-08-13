@@ -494,11 +494,24 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   } else if (f && naming.get(*f).find("forall") != string::npos) {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
-    emit(Stmt::assign(rep.expr(&ci),getExpression(ci.getArgOperand(1))));
+    Value* var = ci.getArgOperand(0);
+    Value* arg = ci.getArgOperand(1);
+    Slice* S = getSlice(arg);
+    emit(Stmt::assign(rep.expr(&ci),
+      Expr::forall(rep.getString(var), "int", S->getBoogieExpression(naming,rep))));
+
+  } else if (f && naming.get(*f).find("exists") != string::npos) {
+    assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
+    Value* var = ci.getArgOperand(0);
+    Value* arg = ci.getArgOperand(1);
+    Slice* S = getSlice(arg);
+    emit(Stmt::assign(rep.expr(&ci),
+      Expr::exists(rep.getString(var), "int", S->getBoogieExpression(naming,rep))));
 
   } else if (f && naming.get(*f).find("invariant") != string::npos) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
-    emit(Stmt::assert_(getExpression(ci.getArgOperand(0))));
+    Slice* S = getSlice(ci.getArgOperand(0));
+    emit(Stmt::assert_(S->getBoogieExpression(naming,rep)));
 
   } else if (f) {
     emit(rep.call(f, ci));
