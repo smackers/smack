@@ -43,19 +43,20 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def clang(scriptPathName, inputFile, memoryModel, clangArgs):
+def clang(scriptPathName, inputFile, outputFileName, memoryModel, clangArgs):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
   smackHeaders = path.join(smackRoot, 'include', 'smack')
 
-  fileName = path.splitext(inputFile.name)[0]
+  fileName = path.join(path.dirname(path.abspath(outputFileName)),
+    path.splitext(path.basename(inputFile.name))[0]) + '.bc'
 
   clangCommand = ['clang']
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders]
   clangCommand += clangArgs.split()
-  clangCommand += [inputFile.name, '-o', fileName + '.bc']
+  clangCommand += [inputFile.name, '-o', fileName]
   #Redirect stderr to stdout, then grab stdout (communicate() calls wait())
   #This should more or less maintain stdout/stderr interleaving order
   #However, this will be problematic if any callers want to differentiate
@@ -68,7 +69,7 @@ def clang(scriptPathName, inputFile, memoryModel, clangArgs):
     print clangOutput
     sys.exit("SMACK encountered a clang error. Exiting...")
 
-  inputFileName = path.join(path.curdir, fileName + '.bc')
+  inputFileName = path.join(path.curdir, fileName)
   inputFile = open(inputFileName, 'r')
   return inputFile, clangOutput
 
@@ -92,7 +93,7 @@ def smackGenerate(sysArgv):
       if optionsMatch:
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
-    inputFile, clangOutput = clang(scriptPathName, inputFile, args.memmod, args.clang)
+    inputFile, clangOutput = clang(scriptPathName, inputFile, args.outfile, args.memmod, args.clang)
 
   bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod)
   inputFile.close()
