@@ -20,8 +20,6 @@ def smackParser():
                       help='specify entry procedures')
   parser.add_argument('--unroll', metavar='N', dest='unroll', type=int,
                       help='unroll loops/recursion in Boogie/Corral N number of times')
-  parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse',
-                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
   return parser
 
 
@@ -82,6 +80,7 @@ def smackGenerate(sysArgv):
   args = parser.parse_args(sysArgv[1:])
   inputFile = args.infile
   scriptPathName = path.dirname(sysArgv[0])
+  clangOutput = None
 
   fileExtension = path.splitext(inputFile.name)[1]
   options = []
@@ -95,7 +94,7 @@ def smackGenerate(sysArgv):
         args = parser.parse_args(options + sysArgv[1:])
     inputFile, clangOutput = clang(scriptPathName, inputFile, args.memmod, args.clang)
 
-  bpl = llvm2bpl(inputFile, args.debug, "impls" in args.memmod)
+  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
@@ -115,9 +114,11 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   bpl, options, clangOutput = smackGenerate(sys.argv)
-  print clangOutput
+  if clangOutput is not None:
+    print clangOutput
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 

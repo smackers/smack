@@ -168,8 +168,9 @@ if __name__ == '__main__':
   args = parser.parse_args(options + sys.argv[1:])
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 
-  print(verify(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd))
+  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, args.debug, args.smackd))
 
