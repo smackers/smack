@@ -97,16 +97,12 @@ void __SMACK_decls() {
   D("function {:inline} $sle(p1:int, p2:int) returns (bool) {p1 <= p2}");
   D("function {:inline} $sge(p1:int, p2:int) returns (bool) {p1 >= p2}");
   D("function $nand(p1:int, p2:int) returns (int);");
-  D("function $max(p1:int, p2:int) returns (int);");
-  D("function $min(p1:int, p2:int) returns (int);");
-  D("function $umax(p1:int, p2:int) returns (int);");
-  D("function $umin(p1:int, p2:int) returns (int);");
-  D("function $i2b(i: int) returns (bool);");
-  D("axiom (forall i:int :: $i2b(i) <==> i != 0);");
-  D("axiom $i2b(0) == false;");
-  D("function $b2i(b: bool) returns (int);");
-  D("axiom $b2i(true) == 1;");
-  D("axiom $b2i(false) == 0;");
+  D("function {:inline} $max(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
+  D("function {:inline} $min(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
+  D("function {:inline} $umax(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
+  D("function {:inline} $umin(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
+  D("function {:inline} $i2b(i: int) returns (bool) {i != 0}");
+  D("function {:inline} $b2i(b: bool) returns (int) {if b then 1 else 0}");
 
   // Floating point
   D("type float;");
@@ -150,13 +146,8 @@ void __SMACK_decls() {
   D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
   D("function {:inline} $p2i(p: int) returns (int) {p}");
   D("function {:inline} $i2p(p: int) returns (int) {p}");
-  D("function $p2b(p: int) returns (bool);");
-  D("function $b2p(b: bool) returns (int);");
-
-  D("axiom $b2p(true) == 1;");
-  D("axiom $b2p(false) == 0;");
-  D("axiom (forall i:int :: $p2b(i) <==> i != 0);");
-  D("axiom $p2b(0) == false;");
+  D("function {:inline} $p2b(p: int) returns (bool) {p != 0}");
+  D("function {:inline} $b2p(b: bool) returns (int) {if b then 1 else 0}");
 
   // Memory debugging symbols
   D("type $mop;");
