@@ -28,6 +28,8 @@ def llvm2bplParser():
                       help='output Boogie file (default: %(default)s)')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
+  parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse',
+                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
   return parser
 
 
@@ -59,7 +61,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  bpl = llvm2bpl(args.infile, args.debug, args.memmod, args.memimpls)
+  bpl = llvm2bpl(args.infile, args.debug, "impls" in args.memmod)
 
   # write final output
   args.outfile.write(bpl)
