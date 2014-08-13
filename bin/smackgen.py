@@ -14,11 +14,11 @@ def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
   parser.add_argument('--clang', dest='clang', default='',
                       help='pass arguments to clang (e.g., --clang="-w -g")')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie-plain', 'boogie-inline', 'corral'], default='boogie-inline',
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral'], default='corral',
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
-  parser.add_argument('--unroll', metavar='N', dest='unroll', default='2', type=int,
+  parser.add_argument('--unroll', metavar='N', dest='unroll', type=int,
                       help='unroll loops/recursion in Boogie/Corral N number of times')
   return parser
 
@@ -98,7 +98,7 @@ def smackGenerate(sysArgv):
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  if args.verifier == 'boogie-inline':
+  if args.verifier == 'boogie' and args.unroll is not None:
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
   elif args.verifier == 'corral':

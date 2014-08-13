@@ -63,9 +63,9 @@ void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
 
   // Integer arithmetic
-  D("function $add(p1:int, p2:int) returns (int) {p1 + p2}");
-  D("function $sub(p1:int, p2:int) returns (int) {p1 - p2}");
-  D("function $mul(p1:int, p2:int) returns (int) {p1 * p2}");
+  D("function {:inline} $add(p1:int, p2:int) returns (int) {p1 + p2}");
+  D("function {:inline} $sub(p1:int, p2:int) returns (int) {p1 - p2}");
+  D("function {:inline} $mul(p1:int, p2:int) returns (int) {p1 * p2}");
   D("function $sdiv(p1:int, p2:int) returns (int);");
   D("function $udiv(p1:int, p2:int) returns (int);");
   D("function $srem(p1:int, p2:int) returns (int);");
@@ -88,14 +88,14 @@ void __SMACK_decls() {
   D("function $lshr(p1:int, p2:int) returns (int);");
   D("function $ashr(p1:int, p2:int) returns (int);");
   D("function $shl(p1:int, p2:int) returns (int);");
-  D("function $ult(p1:int, p2:int) returns (bool) {p1 < p2}");
-  D("function $ugt(p1:int, p2:int) returns (bool) {p1 > p2}");
-  D("function $ule(p1:int, p2:int) returns (bool) {p1 <= p2}");
-  D("function $uge(p1:int, p2:int) returns (bool) {p1 >= p2}");
-  D("function $slt(p1:int, p2:int) returns (bool) {p1 < p2}");
-  D("function $sgt(p1:int, p2:int) returns (bool) {p1 > p2}");
-  D("function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}");
-  D("function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}");
+  D("function {:inline} $ult(p1:int, p2:int) returns (bool) {p1 < p2}");
+  D("function {:inline} $ugt(p1:int, p2:int) returns (bool) {p1 > p2}");
+  D("function {:inline} $ule(p1:int, p2:int) returns (bool) {p1 <= p2}");
+  D("function {:inline} $uge(p1:int, p2:int) returns (bool) {p1 >= p2}");
+  D("function {:inline} $slt(p1:int, p2:int) returns (bool) {p1 < p2}");
+  D("function {:inline} $sgt(p1:int, p2:int) returns (bool) {p1 > p2}");
+  D("function {:inline} $sle(p1:int, p2:int) returns (bool) {p1 <= p2}");
+  D("function {:inline} $sge(p1:int, p2:int) returns (bool) {p1 >= p2}");
   D("function $nand(p1:int, p2:int) returns (int);");
   D("function $max(p1:int, p2:int) returns (int);");
   D("function $min(p1:int, p2:int) returns (int);");
@@ -138,30 +138,25 @@ void __SMACK_decls() {
   D("function $ui2fp(i:int) returns (float);");
 
   // Memory Model
-  D("function $ptr(obj:int, off:int) returns (int) {obj + off}");
+  D("function {:inline} $ptr(obj:int, off:int) returns (int) {obj + off}");
   D("function $obj(int) returns (int);");
-  D("function $off(ptr:int) returns (int) {ptr}");
+  D("function {:inline} $off(ptr:int) returns (int) {ptr}");
 
   D("const unique $NULL: int;");
   D("axiom $NULL == 0;");
   D("const $UNDEF: int;");
 
-  D("function $pa(pointer: int, index: int, size: int) returns (int);");
-  D("function $trunc(p: int, size: int) returns (int);");
-  D("function $p2i(p: int) returns (int);");
-  D("function $i2p(p: int) returns (int);");
+  D("function {:inline} $pa(pointer: int, index: int, size: int) returns (int) {pointer + index * size}");
+  D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
+  D("function {:inline} $p2i(p: int) returns (int) {p}");
+  D("function {:inline} $i2p(p: int) returns (int) {p}");
   D("function $p2b(p: int) returns (bool);");
   D("function $b2p(b: bool) returns (int);");
-
-  D("axiom (forall p:int, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == p + i * s);");
-  D("axiom (forall p,s:int :: $trunc(p,s) == p);");
 
   D("axiom $b2p(true) == 1;");
   D("axiom $b2p(false) == 0;");
   D("axiom (forall i:int :: $p2b(i) <==> i != 0);");
   D("axiom $p2b(0) == false;");
-  D("axiom (forall i:int :: $p2i(i) == i);");
-  D("axiom (forall i:int :: $i2p(i) == i);");
 
   // Memory debugging symbols
   D("type $mop;");
@@ -170,7 +165,7 @@ void __SMACK_decls() {
   D("const $MOP: $mop;");
   
   D("const $GLOBALS_BOTTOM: int;");
-  D("function $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
+  D("function {:inline} $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
   
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [int] bool;");

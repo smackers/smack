@@ -118,9 +118,12 @@ def smackdOutput(corralOutput):
   print json_string
 
 def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
-  if verifier == 'boogie-plain' or verifier == 'boogie-inline':
+  if verifier == 'boogie':
     # invoke Boogie
-    p = subprocess.Popen(['boogie', bplFileName, '/nologo', '/timeLimit:' + str(timeLimit), '/loopUnroll:' + str(unroll)], stdout=subprocess.PIPE)
+    boogieCommand = ['boogie', bplFileName, '/nologo', '/timeLimit:' + str(timeLimit)]
+    if unroll is not None:
+      boogieCommand += ['/loopUnroll:' + str(unroll)]
+    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE)
     boogieOutput = p.communicate()[0]
     if p.returncode:
       return boogieOutput
@@ -134,7 +137,10 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       return boogieOutput
   else:
     # invoke Corral
-    p = subprocess.Popen(['corral', bplFileName, '/recursionBound:' + str(unroll), '/tryCTrace'], stdout=subprocess.PIPE)
+    corralCommand = ['corral', bplFileName, '/tryCTrace']
+    if unroll is not None:
+      corralCommand += ['/recursionBound:' + str(unroll)]
+    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE)
     corralOutput = p.communicate()[0]
     if p.returncode:
       return corralOutput
