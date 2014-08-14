@@ -24,9 +24,7 @@ const string SmackRep::MALLOC = "$malloc";
 const string SmackRep::FREE = "$free";
 const string SmackRep::MEMCPY = "$memcpy";
 
-const string SmackRep::PTR = "$ptr";
-const string SmackRep::OBJ = "$obj";
-const string SmackRep::OFF = "$off";
+const string SmackRep::BASE = "$base";
 const string SmackRep::PA = "$pa";
 
 const string SmackRep::FP = "$fp";

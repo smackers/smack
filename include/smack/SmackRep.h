@@ -42,9 +42,7 @@ public:
   static const string FREE;
   static const string MEMCPY;
 
-  static const string PTR;
-  static const string OBJ;
-  static const string OFF;
+  static const string BASE;
   static const string PA;
   
   static const string FP;
