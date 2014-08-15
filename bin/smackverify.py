@@ -135,7 +135,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       return sourceTrace
     else:
       return boogieOutput
-  else:
+  elif verifier == 'corral':
     # invoke Corral
     corralCommand = ['corral', bplFileName, '/tryCTrace']
     if unroll is not None:
@@ -149,6 +149,19 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       smackdOutput(corralOutput)
     else:
       return corralOutput
+  else:
+    # invoke Duality
+    dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
+    dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
+    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE)
+    dualityOutput = p.communicate()[0]
+    if p.returncode:
+      return dualityOutput
+      sys.exit("SMACK encountered an error invoking Duality. Exiting...")
+    if smackd:
+      smackdOutput(dualityOutput)
+    else:
+      return dualityOutput
  
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])

@@ -107,18 +107,16 @@ mkdir -p ${Z3_DIR}/install
 
 # Get Z3
 cd ${Z3_DIR}/src/
-wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=89c1785b73225a1b363c0e485f854613121b70a7"
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=37ed4b04d078d6d1e35db2799d769e8d4b87f775"
 unzip -o SourceControlFileDownload*
 rm -f SourceControlFileDownload*
 
 # Configure Z3 and build
 cd ${Z3_DIR}/src/
-autoconf
-./configure --prefix=${Z3_DIR}/install
-python scripts/mk_make.py
+python scripts/mk_make.py --prefix=${Z3_DIR}/install
 cd build
 make
-sudo make install
+make install
 
 cd ${BASE_DIR}
 
@@ -133,7 +131,7 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r 661c32e8d5ca https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r ec9955650676 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -155,7 +153,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout df4d2e2ace82
+git checkout 1aeddf73b63c
 
 # Build Corral
 cd ${CORRAL_DIR}/references

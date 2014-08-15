@@ -14,7 +14,7 @@ def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
   parser.add_argument('--clang', dest='clang', default='',
                       help='pass arguments to clang (e.g., --clang="-w -g")')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral'], default='boogie',
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default='boogie',
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
@@ -102,7 +102,7 @@ def smackGenerate(sysArgv):
   if args.verifier == 'boogie' and args.unroll is not None:
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
-  elif args.verifier == 'corral':
+  elif args.verifier == 'corral' or args.verifier == 'duality':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
   return bpl, options, clangOutput
