@@ -133,7 +133,7 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r 661c32e8d5ca https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r fb23488ef2fa https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -155,7 +155,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout df4d2e2ace82
+git checkout 708ce7e5e2ec
 
 # Build Corral
 cd ${CORRAL_DIR}/references

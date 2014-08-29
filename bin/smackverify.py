@@ -19,6 +19,8 @@ def verifyParser():
                       help='Boogie time limit in seconds')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
                       help='output JSON format for SMACKd')
+  parser.add_argument('--context-switches', metavar='k', dest='contextSwitches', default='2', type=int,
+                      help='switch thread contexts in Corral (only) up to k number of times')
   return parser
 
 
@@ -117,7 +119,7 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
+def verify(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, smackd):
   if verifier == 'boogie-plain' or verifier == 'boogie-inline':
     # invoke Boogie
     p = subprocess.Popen(['boogie', bplFileName, '/nologo', '/timeLimit:' + str(timeLimit), '/loopUnroll:' + str(unroll)], stdout=subprocess.PIPE)
@@ -134,7 +136,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       return boogieOutput
   else:
     # invoke Corral
-    p = subprocess.Popen(['corral', bplFileName, '/recursionBound:' + str(unroll), '/tryCTrace'], stdout=subprocess.PIPE)
+    p = subprocess.Popen(['corral', bplFileName, '/k:' + str(contextSwitches), '/recursionBound:' + str(unroll), '/tryCTrace'], stdout=subprocess.PIPE)
     corralOutput = p.communicate()[0]
     if p.returncode:
       return corralOutput
@@ -157,6 +159,9 @@ if __name__ == '__main__':
     elif sys.argv[i] == '--time-limit':
       del sysArgv[i]
       del sysArgv[i]
+    elif sys.argv[i] == '--context-switches':
+      del sysArgv[i]
+      del sysArgv[i]
 
   bpl, options, clangOutput = smackGenerate(sysArgv)
   args = parser.parse_args(options + sys.argv[1:])
@@ -165,5 +170,5 @@ if __name__ == '__main__':
   args.outfile.write(bpl)
   args.outfile.close()
 
-  print(verify(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd))
+  print(verify(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.contextSwitches, args.debug, args.smackd))
 
