@@ -422,12 +422,12 @@ void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& ci) {
 
 void SmackInstGenerator::visitICmpInst(llvm::ICmpInst& ci) {
   processInstruction(ci);
-  currBlock->addStmt(Stmt::assign(rep.expr(&ci), rep.pred(ci)));
+  currBlock->addStmt(Stmt::assign(rep.expr(&ci), rep.pred(&ci)));
 }
 
 void SmackInstGenerator::visitFCmpInst(llvm::FCmpInst& ci) {
   processInstruction(ci);
-  currBlock->addStmt(Stmt::assign(rep.expr(&ci), rep.pred(ci)));
+  currBlock->addStmt(Stmt::assign(rep.expr(&ci), rep.pred(&ci)));
 }
 
 void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {

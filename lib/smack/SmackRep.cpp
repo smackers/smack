@@ -473,6 +473,9 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       else if (Instruction::isBinaryOp(constantExpr->getOpcode()))
         return op(constantExpr);
 
+      else if (constantExpr->isCompare())
+        return pred(constantExpr);
+
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
         assert(false && "constant expression of this type not supported");
@@ -601,14 +604,22 @@ const Expr* SmackRep::op(const llvm::User* v) {
   return isBool(v) ? Expr::fn("$i2b",e) : e;
 }
 
-const Expr* SmackRep::pred(llvm::CmpInst& ci) {
+const Expr* SmackRep::pred(const llvm::User* v) {
+  using namespace llvm;
   const Expr* e = NULL;
   string o;
-  const Expr
-  *l = expr(ci.getOperand(0)),
-   *r = expr(ci.getOperand(1));
+  unsigned predicate;
+  const Expr *l = expr(v->getOperand(0)), *r = expr(v->getOperand(1));
 
-  switch (ci.getPredicate()) {
+  if (const CmpInst* ci = dyn_cast<const CmpInst>(v))
+    predicate = ci->getPredicate();
+
+  else if (const ConstantExpr* ce = dyn_cast<const ConstantExpr>(v))
+    predicate = ce->getPredicate();
+
+  else assert(false && "unexpected operator value.");
+
+  switch (predicate) {
     using llvm::CmpInst;
 
   // integer comparison

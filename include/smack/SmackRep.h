@@ -191,7 +191,7 @@ public:
   const Expr* expr(const llvm::Value* v);
   string getString(const llvm::Value* v);
   const Expr* op(const llvm::User* v);
-  const Expr* pred(llvm::CmpInst& ci);
+  const Expr* pred(const llvm::User* v);
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, llvm::CallInst& ci);
