@@ -128,9 +128,6 @@ void __pthreads_init() {
 
 void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg) {
   //__SMACK_atomic_begin();
-
-
-  *__newthread = pthread_self();
   __SMACK_code("assert $threadStatus[@] == $pthread_uninitialized;", __newthread);
   
   __SMACK_code("$threadStatus[@] := $pthread_waiting;", __newthread);
