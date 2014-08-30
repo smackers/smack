@@ -7,6 +7,13 @@ import time
 # list of regression tests with the expected outputs
 #  [(filename, outputFilter, unroll, context-switches), (...)]
 tests = [
+  ('no_lock',               r'This assertion can fail', 1, 2),
+  ('no_lock2',              r'This assertion can fail', 1, 2),
+  ('lock',                  r'Program has no bugs', 1, 2),
+  ('lock2',                 r'Program has no bugs', 1, 5),
+  ('lock3',                 r'Program has no bugs', 1, 2),
+  ('no_join',               r'This assertion can fail', 1, 2),
+  ('join',                  r'Program has no bugs', 1, 2),
   ('fib3_false',            r'Program has no bugs', 1, 2),
   ('fib3_false',            r'This assertion can fail', 1, 3),
   ('fib3_true',             r'Program has no bugs', 1, 3),
