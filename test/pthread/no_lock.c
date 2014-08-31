@@ -9,7 +9,7 @@ void *t1(void *arg) {
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $threadStatus[i] == $pthread_uninitialized);"); 
+  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
 
   pthread_t t;
 

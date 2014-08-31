@@ -4,22 +4,29 @@ import subprocess
 import re
 import time
 
+# 'pass' is a python keyword, so using good
+good = r'Program has no bugs'
+fail = r'This assertion can fail'
+
 # list of regression tests with the expected outputs
 #  [(filename, outputFilter, unroll, context-switches), (...)]
 tests = [
-  ('no_lock',               r'This assertion can fail', 1, 2),
-  ('no_lock2',              r'This assertion can fail', 1, 2),
-  ('lock',                  r'Program has no bugs', 1, 2),
-  ('lock2',                 r'Program has no bugs', 1, 5),
-  ('lock3',                 r'Program has no bugs', 1, 2),
-  ('no_join',               r'This assertion can fail', 1, 2),
-  ('join',                  r'Program has no bugs', 1, 2),
-  ('fib3_false',            r'Program has no bugs', 1, 2),
-  ('fib3_false',            r'This assertion can fail', 1, 3),
-  ('fib3_true',             r'Program has no bugs', 1, 3),
-  ('fib4_false',            r'Program has no bugs', 1, 3),
-  ('fib4_false',            r'This assertion can fail', 1, 4),
-  ('fib4_true',             r'Program has no bugs', 1, 4),
+  ('no_lock',               fail, 1, 2),
+  ('no_lock2',              fail, 1, 2),
+  ('lock',                  good, 1, 2),
+  ('lock2',                 good, 1, 2),
+  #('lock3',                 good, 1, 2),
+  ('no_join',               fail, 1, 2),
+  ('join',                  good, 1, 2),
+  ('join_return_fail',      fail, 1, 2),
+  ('join_return_pass',      good, 1, 2),
+  ('join_return2',          good, 1, 2),
+  #('fib3_false',            good, 1, 2),
+  #('fib3_false',            fail, 1, 3),
+  #('fib3_true',             good, 1, 3),
+  #('fib4_false',            good, 1, 3),
+  #('fib4_false',            fail, 1, 4),
+  #('fib4_true',             good, 1, 4),
 
 ]
 

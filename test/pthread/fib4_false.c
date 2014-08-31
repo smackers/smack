@@ -24,7 +24,7 @@ void *t2(void *arg)
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $threadStatus[i] == $pthread_uninitialized);");
+  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);");
   pthread_t tid1, tid2;
   pthread_create(&tid1, NULL, t1, NULL);
   pthread_create(&tid2, NULL, t2, NULL);
