@@ -59,6 +59,7 @@ void pthread_exit(void *retval)
   tid = pthread_self();
   __SMACK_code("assert $pthreadStatus[@][0] == $pthread_running;", tid);
   __SMACK_code("$pthreadStatus[@][1] := @;", tid, retval);
+  //__SMACK_code("assume false;");
 }
 
 //model mutex:

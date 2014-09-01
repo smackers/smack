@@ -21,6 +21,7 @@ tests = [
   ('join_return_fail',      fail, 1, 2),
   ('join_return_pass',      good, 1, 2),
   ('join_return2',          good, 1, 2),
+  ('exit',                  good, 1, 2),
   #('fib3_false',            good, 1, 2),
   #('fib3_false',            fail, 1, 3),
   #('fib3_true',             good, 1, 3),
