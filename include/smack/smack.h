@@ -38,11 +38,11 @@ void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
 void __SMACK_assert(bool v) {
-  __SMACK_code("assert {@} != 0;", v);
+  __SMACK_code("assert @ != 0;", v);
 }
 
 void __SMACK_assume(bool v) {
-  __SMACK_code("assume {@} != 0;", v);
+  __SMACK_code("assume @ != 0;", v);
 }
 
 // void __SMACK_record_int(int i) {

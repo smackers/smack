@@ -799,15 +799,8 @@ string SmackRep::code(llvm::CallInst& ci) {
     assert(idx != string::npos && "__SMACK_code: too many arguments.");
     
     ostringstream ss;
-
-    if (s.find("{@}") == idx-1 && idx != 0) {
-      a->print(ss);
-      s = s.replace(idx-1,3,ss.str());
-      
-    } else {
-      a->print(ss);
-      s = s.replace(idx,1,ss.str());
-    }      
+    a->print(ss);
+    s = s.replace(idx,1,ss.str());
   }
   return s;
 }
