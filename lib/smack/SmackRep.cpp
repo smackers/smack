@@ -800,7 +800,7 @@ string SmackRep::code(llvm::CallInst& ci) {
     
     ostringstream ss;
 
-    if (s.find("{@}") == idx-1) {
+    if (s.find("{@}") == idx-1 && idx != 0) {
       a->print(ss);
       s = s.replace(idx-1,3,ss.str());
       
