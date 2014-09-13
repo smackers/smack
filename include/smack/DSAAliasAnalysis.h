@@ -15,7 +15,7 @@
 #ifndef LLVM_ANALYSIS_DATA_STRUCTURE_AA_H
 #define LLVM_ANALYSIS_DATA_STRUCTURE_AA_H
 
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Constants.h"

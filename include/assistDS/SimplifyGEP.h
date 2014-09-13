@@ -22,13 +22,13 @@ namespace llvm {
   //
   class SimplifyGEP : public ModulePass {
   private:
-    DataLayout * TD;
+    const DataLayout * TD;
   public:
     static char ID;
     SimplifyGEP() : ModulePass(ID) {}
     virtual bool runOnModule(Module& M);
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<DataLayout>();
+      AU.addRequired<DataLayoutPass>();
     }
   };
 }

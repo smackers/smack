@@ -7,7 +7,7 @@
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include <set>
 
 namespace smack {

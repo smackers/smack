@@ -10,7 +10,7 @@
 #include "smack/DSAAliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Support/CFG.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
@@ -33,7 +33,7 @@ public:
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
-    AU.addRequired<llvm::DataLayout>();
+    AU.addRequired<llvm::DataLayoutPass>();
     AU.addRequired<DSAAliasAnalysis>();
   }
 

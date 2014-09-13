@@ -14,6 +14,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -61,8 +62,8 @@ int main(int argc, char **argv) {
   std::string error_msg;
   llvm::SMDiagnostic err;
   llvm::LLVMContext &context = llvm::getGlobalContext();  
-  llvm::OwningPtr<llvm::Module> module;
-  llvm::OwningPtr<llvm::tool_output_file> output;
+  std::unique_ptr<llvm::Module> module;
+  std::unique_ptr<llvm::tool_output_file> output;
   
   module.reset(llvm::ParseIRFile(InputFilename, err, context));
   if (module.get() == 0) {
@@ -72,7 +73,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   
-  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg));
+  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::sys::fs::F_None));
   if (!error_msg.empty()) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
     llvm::errs() << "error: " << error_msg << "\n";
@@ -89,13 +90,13 @@ int main(int argc, char **argv) {
   llvm::initializeAnalysis(Registry);
   
   // add an appropriate DataLayout instance for the module
-  llvm::DataLayout *dl = 0;
-  const std::string &moduleDataLayout = module.get()->getDataLayout();
+  const llvm::DataLayout *dl = 0;
+  const std::string &moduleDataLayout = module.get()->getDataLayoutStr();
   if (!moduleDataLayout.empty())
     dl = new llvm::DataLayout(moduleDataLayout);
   else if (!DefaultDataLayout.empty())
     dl = new llvm::DataLayout(moduleDataLayout);
-  if (dl) pass_manager.add(dl);
+  if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
     
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());

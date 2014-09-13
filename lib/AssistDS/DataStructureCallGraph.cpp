@@ -19,8 +19,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/CallSite.h"
-#include "llvm/Support/InstIterator.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/InstIterator.h"
 
 using namespace llvm;
 
@@ -31,7 +31,7 @@ namespace {
 static RegisterPass<DataStructureCallGraph>
 X("dsa-cg", "DSA-based CallGraph implementation");
 
-RegisterAnalysisGroup<CallGraph> Y(X); 
+RegisterAnalysisGroup<CallGraphWrapperPass> Y(X); 
 
 }
 

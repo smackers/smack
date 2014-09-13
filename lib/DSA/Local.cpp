@@ -31,8 +31,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/Timer.h"
 
 #include <fstream>
@@ -1440,7 +1440,7 @@ void handleMagicSections(DSGraph* GlobalsGraph, Module& M) {
 char LocalDataStructures::ID;
 
 bool LocalDataStructures::runOnModule(Module &M) {
-  init(&getAnalysis<DataLayout>());
+  init(&getAnalysis<DataLayoutPass>().getDataLayout());
   addrAnalysis = &getAnalysis<AddressTakenAnalysis>();
 
   // First step, build the globals graph.

@@ -2,6 +2,7 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#define DEBUG_TYPE "smack-mod-gen"
 #include "smack/SmackModuleGenerator.h"
 #include "smack/SmackOptions.h"
 

@@ -34,7 +34,7 @@ public:
   }
   virtual bool runOnModule (Module & M);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayout>();
+    AU.addRequired<DataLayoutPass>();
     AU.addRequired<dsa::TypeSafety<TDDataStructures> >();
   }
 };

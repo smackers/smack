@@ -45,7 +45,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Assembly/Writer.h"
 using namespace llvm;
 
 namespace {
