@@ -340,9 +340,10 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
   return Expr::fn(B2I, expr(v));
 }
 
-const Expr* SmackRep::undef() {
+const Expr* SmackRep::undef(llvm::Type* t) {
   stringstream s;
   s << "$u." << uniqueUndefNum++;
+  program->addDecl(Decl::constant(s.str(), t ? type(t) : "int"));
   return Expr::id(s.str());
 }
 
@@ -370,6 +371,8 @@ string SmackRep::id(const llvm::Value* v) {
 }
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
+  using namespace llvm;
+
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
     if (ci->getBitWidth() == 1)
       return Expr::lit(!ci->isZero());
@@ -380,7 +383,25 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     else
       return Expr::lit(val, width);
 
-  } else if (llvm::isa<const llvm::ConstantFP>(v)) {
+  } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
+    const APFloat APF = CFP->getValueAPF();
+    string str;
+    raw_string_ostream ss(str);
+    ss << *CFP;
+    istringstream iss(str);
+    string float_type;
+    int integerPart, fractionalPart, exponentPart;
+    char point, sign, exponent;
+    iss >> float_type;
+    iss >> integerPart;
+    iss >> point;
+    iss >> fractionalPart;
+    iss >> sign;
+    iss >> exponent;
+    iss >> exponentPart;
+
+    return Expr::fn(FP, Expr::lit(integerPart), Expr::lit(fractionalPart),
+      Expr::lit(exponentPart));
 
     // TODO encode floating point
     return Expr::fn(FP,Expr::lit((int) uniqueFpNum++));
@@ -494,7 +515,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return lit((unsigned)0);
 
     else if (isa<UndefValue>(constant))
-      return undef();
+      return undef(constant->getType());
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -815,16 +836,6 @@ string SmackRep::getPrelude() {
       << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
   
   s << endl;
-
-  if (uniqueUndefNum > 0) {
-    s << "// Undefined values" << endl;
-    s << "const ";
-    for (unsigned i=0; i<uniqueUndefNum; i++)
-      s << (i > 0 ? ", " : "") << "$u." << i;
-    s << ": " << getPtrType() << ";" << endl;  
-    s << endl;
-  }
-
   s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
 
   return s.str();

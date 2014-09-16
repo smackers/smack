@@ -249,7 +249,12 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  currBlock->addStmt(Stmt::assign(rep.expr(&li),rep.mem(li.getPointerOperand())));
+  const Expr* rhs = rep.mem(li.getPointerOperand());
+
+  if (rep.isFloat(&li))
+    rhs = Expr::fn("$si2fp", rhs);
+
+  currBlock->addStmt(Stmt::assign(rep.expr(&li),rhs));
 
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -261,7 +266,12 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
-  currBlock->addStmt(Stmt::assign(rep.mem(si.getPointerOperand()),rep.expr(si.getOperand(0))));
+  const Expr* rhs = rep.expr(si.getOperand(0));
+
+  if (rep.isFloat(si.getOperand(0)))
+    rhs = Expr::fn("$fp2si", rhs);
+
+  currBlock->addStmt(Stmt::assign(rep.mem(si.getPointerOperand()),rhs));
                        
   if (SmackOptions::MemoryModelDebug) {
     currBlock->addStmt(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));

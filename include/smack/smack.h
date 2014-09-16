@@ -104,7 +104,7 @@ void __SMACK_decls() {
 
   // Floating point
   D("type float;");
-  D("function $fp(a:int) returns (float);");
+  D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("const $ffalse: float;");
   D("const $ftrue: float;");
   D("function $fadd(f1:float, f2:float) returns (float);");
@@ -130,6 +130,12 @@ void __SMACK_decls() {
   D("function $fp2ui(f:float) returns (int);");
   D("function $si2fp(i:int) returns (float);");
   D("function $ui2fp(i:int) returns (float);");
+
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq(f1,f2));");
+  D("axiom (forall i: int :: $fp2ui($ui2fp(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp($fp2ui(f)) == f);");
+  D("axiom (forall i: int :: $fp2si($si2fp(i)) == i);");
+  D("axiom (forall f: float :: $si2fp($fp2si(f)) == f);");
 
   // Memory Model
   D("function $base(int) returns (int);");

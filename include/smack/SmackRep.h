@@ -183,7 +183,7 @@ public:
   const Expr* mem(unsigned region, const Expr* addr);  
 
   string id(const llvm::Value* v);
-  const Expr* undef();
+  const Expr* undef(llvm::Type* t = 0);
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(unsigned v);
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
