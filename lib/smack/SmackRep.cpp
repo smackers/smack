@@ -403,9 +403,6 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return Expr::fn(FP, Expr::lit(integerPart), Expr::lit(fractionalPart),
       Expr::lit(exponentPart));
 
-    // TODO encode floating point
-    return Expr::fn(FP,Expr::lit((int) uniqueFpNum++));
-
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
     return Expr::lit(0, width);
 
