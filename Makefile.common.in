@@ -27,3 +27,5 @@ include $(PROJ_OBJ_ROOT)/Makefile.llvm.config
 # Include all of the build rules used for making LLVM
 include $(PROJ_SRC_ROOT)/Makefile.llvm.rules
 
+# SMACK-specific scripts
+include $(PROJ_SRC_ROOT)/Makefile.smack.scripts
