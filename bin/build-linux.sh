@@ -202,7 +202,6 @@ mkdir -p ${LLVM_DIR}/build
 mkdir -p ${LLVM_DIR}/install
 
 # Get llvm and extract
-
 wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
 wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
 wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz

@@ -49,15 +49,15 @@ mkdir -p ${LLVM_DIR}/build
 mkdir -p ${LLVM_DIR}/install
 
 # Get llvm and extract
-wget http://llvm.org/releases/3.4/llvm-3.4.src.tar.gz
-wget http://llvm.org/releases/3.4/clang-3.4.src.tar.gz
-wget http://llvm.org/releases/3.4/compiler-rt-3.4.src.tar.gz
+wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
 
-tar -C ${LLVM_DIR}/src -xzvf llvm-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
 mkdir -p ${LLVM_DIR}/src/tools/clang
-tar -C ${LLVM_DIR}/src/tools/clang -xzvf clang-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
 mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
-tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/
