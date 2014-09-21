@@ -39,7 +39,7 @@ def llvm2bpl(infile, outfile, debugFlag, memImpls):
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   cmd.append('-o=' + outfile)
-  p = subprocess.Popen(cmd)
+  p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
 
   p.wait()
   if p.returncode != 0:
