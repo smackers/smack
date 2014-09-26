@@ -50,7 +50,14 @@ SMACK_DIR="${BASE_DIR}/smack"
 
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
-sudo apt-get install -y g++
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt-get update
+sudo apt-get install -y g++-4.8
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
+sudo update-alternatives --config gcc
+sudo update-alternatives --config g++
+
 sudo apt-get install -y git
 sudo apt-get install -y mercurial
 sudo apt-get install -y autoconf
@@ -86,7 +93,7 @@ if [ ${INSTALL_MONO} -eq 1 ]; then
 mkdir -p ${MONO_DIR}
 
 # Install mono
-sudo apt-get install -y git build-essential autoconf automake bison flex libtool gettext gdb mono-gmcs
+sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb mono-gmcs
 cd ${MONO_DIR}
 git clone git://github.com/mono/mono.git
 cd mono
@@ -120,7 +127,7 @@ mkdir -p ${Z3_DIR}/install
 
 # Get Z3
 cd ${Z3_DIR}/src/
-wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=37ed4b04d078d6d1e35db2799d769e8d4b87f775"
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=4995ce1fdee47ffd61d4726c89ff908f468d6450"
 unzip -o SourceControlFileDownload*
 rm -f SourceControlFileDownload*
 
@@ -144,7 +151,7 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r ec9955650676 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r b388523c1c71 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -166,7 +173,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 1aeddf73b63c
+git checkout e476c4252f7e
 
 # Build Corral
 cd ${CORRAL_DIR}/references
@@ -208,15 +215,15 @@ mkdir -p ${LLVM_DIR}/build
 mkdir -p ${LLVM_DIR}/install
 
 # Get llvm and extract
-wget http://llvm.org/releases/3.4/llvm-3.4.src.tar.gz
-wget http://llvm.org/releases/3.4/clang-3.4.src.tar.gz
-wget http://llvm.org/releases/3.4/compiler-rt-3.4.src.tar.gz
+wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
 
-tar -C ${LLVM_DIR}/src -xzvf llvm-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
 mkdir -p ${LLVM_DIR}/src/tools/clang
-tar -C ${LLVM_DIR}/src/tools/clang -xzvf clang-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
 mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
-tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/
