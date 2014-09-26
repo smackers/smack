@@ -114,7 +114,7 @@ mkdir -p ${Z3_DIR}/install
 
 # Get Z3
 cd ${Z3_DIR}/src/
-wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=37ed4b04d078d6d1e35db2799d769e8d4b87f775"
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=4995ce1fdee47ffd61d4726c89ff908f468d6450"
 unzip -o SourceControlFileDownload*
 rm -f SourceControlFileDownload*
 
@@ -138,7 +138,7 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r ec9955650676 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r b388523c1c71 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -160,7 +160,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 1aeddf73b63c
+git checkout e476c4252f7e
 
 # Build Corral
 cd ${CORRAL_DIR}/references
