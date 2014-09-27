@@ -93,13 +93,14 @@ if [ ${INSTALL_MONO} -eq 1 ]; then
 mkdir -p ${MONO_DIR}
 
 # Install mono
-sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb mono-gmcs
+sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb
 cd ${MONO_DIR}
 git clone git://github.com/mono/mono.git
 cd mono
-git checkout mono-3.2.6
+git checkout mono-3.8.0
 ./autogen.sh --prefix=/usr/local
-make
+make get-monolite-latest
+make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
 sudo make install
 
 # Install libgdiplus
@@ -111,6 +112,8 @@ cd libgdiplus
 ./autogen.sh --prefix=/usr/local
 make
 sudo make install
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 cd ${BASE_DIR}
 
