@@ -28,6 +28,12 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
   )
 
   execute_process(
+    COMMAND ${LLVM_CONFIG_EXECUTABLE} --system-libs
+    OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --ldflags
     OUTPUT_VARIABLE LLVM_LDFLAGS
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -164,7 +170,7 @@ add_executable(smack
 set_target_properties(smack smackTranslator assistDS dsa
     PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
-target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_LDFLAGS})
+target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(smack smackTranslator assistDS dsa)
 
 INSTALL(TARGETS smack smackTranslator assistDS dsa
