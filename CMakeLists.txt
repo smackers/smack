@@ -173,10 +173,8 @@ set_target_properties(smack smackTranslator assistDS dsa
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(smack smackTranslator assistDS dsa)
 
-INSTALL(TARGETS smack smackTranslator assistDS dsa
+INSTALL(TARGETS smack
   RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
 )
 
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
@@ -184,7 +182,14 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
 	${CMAKE_CURRENT_SOURCE_DIR}/bin/llvm2bpl.py
 	${CMAKE_CURRENT_SOURCE_DIR}/bin/smackgen.py
 	${CMAKE_CURRENT_SOURCE_DIR}/bin/smackverify.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack.h
 	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
 	GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
   DESTINATION bin
+)
+
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack.h
+  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
+  DESTINATION include
 )
