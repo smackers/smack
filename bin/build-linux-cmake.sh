@@ -28,7 +28,6 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
-INSTALL_CMAKE=1
 INSTALL_MONO=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
@@ -51,6 +50,7 @@ SMACK_DIR="${BASE_DIR}/smack"
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository ppa:andykimpe/cmake
 sudo apt-get update
 sudo apt-get install -y g++-4.8
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
@@ -61,6 +61,7 @@ sudo update-alternatives --config g++
 sudo apt-get install -y git
 sudo apt-get install -y mercurial
 sudo apt-get install -y autoconf
+sudo apt-get install -y cmake
 sudo apt-get install -y wget
 sudo apt-get install -y unzip
 
@@ -71,18 +72,6 @@ fi
 # Set up base directory for everything
 mkdir -p ${BASE_DIR}
 cd ${BASE_DIR}
-
-################################################################################
-
-# cmake
-
-if [ ${INSTALL_CMAKE} -eq 1 ]; then
-
-cd ${BASE_DIR}
-wget http://www.cmake.org/files/v2.8/cmake-2.8.12.2-Linux-i386.sh
-sudo sh cmake-2.8.12.2-Linux-i386.sh --prefix=/usr/local --exclude-subdir
-
-fi
 
 ################################################################################
 
