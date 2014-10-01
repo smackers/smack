@@ -36,17 +36,13 @@ typedef union {
 } pthread_attr_t;
 
 pthread_t pthread_self(void) {
-  pthread_t tid = __SMACK_nondet();
   int ctid = __SMACK_nondet();
   __SMACK_code("call @ := corral_getThreadID();", ctid);
-  __SMACK_code("assert @ != 0;", ctid);
-  __SMACK_code("assume $ctidToPtid[@] != -1;", ctid);
-  __SMACK_code("@ := $ctidToPtid[@];", tid, ctid);
-  return tid;
+  return ctid;
 }
 
 int pthread_join(pthread_t __th, void **__thread_return) {
-  void* tmp = __SMACK_nondet();
+  void* tmp = (void*)(long)__SMACK_nondet();
   __SMACK_code("assume $pthreadStatus[@][0] == $pthread_stopped;", __th);
   __SMACK_code("@ := $pthreadStatus[@][1];", tmp, __th);
   *__thread_return = tmp;
@@ -67,8 +63,20 @@ void pthread_exit(void *retval)
 //  else = locked by thread with matching id
 
 typedef int pthread_mutex_t;
+typedef int pthread_mutexattr_t;
 #define UNLOCKED 0
 #define PTHREAD_MUTEX_INITIALIZER UNLOCKED
+
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
+{
+  if(attr == 0) {
+    *mutex = UNLOCKED;
+  } else {
+    // Unimplemented
+    __SMACK_assert(0);
+  }
+  return 0;
+}
 
 int pthread_mutex_lock(pthread_mutex_t *__mutex) {
   __SMACK_code("call corral_atomic_begin();");
@@ -92,35 +100,35 @@ int pthread_mutex_unlock(pthread_mutex_t *__mutex) {
 
 //!!!!!!ENDTEST
 
-void __pthreads_init() {
+/*void __pthreads_init() {
   __SMACK_code("call corral_atomic_begin();");
   static unsigned int inserted = 0;
   if (!inserted) {
     inserted = 1;
     //Declare corral primitive procedures
     __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
+    __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
     __SMACK_top_decl("procedure corral_atomic_begin();");
     __SMACK_top_decl("procedure corral_atomic_end();");
     //Array for tracking pthreads
     __SMACK_top_decl("//dim0=tid, dim1= 0 for status, 1 for return");
     __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
     __SMACK_top_decl("const unique $pthread_uninitialized: int;");
+    __SMACK_top_decl("const unique $pthread_initialized: int;");
     __SMACK_top_decl("const unique $pthread_waiting: int;");
     __SMACK_top_decl("const unique $pthread_running: int;");
     __SMACK_top_decl("const unique $pthread_stopped: int;");
-    //Array for corral tid to pthread tid lookup
-    __SMACK_top_decl("var $ctidToPtid: [int]int;");
     
   __SMACK_code("call corral_atomic_end();");
   }
-}
+  }*/
 
 void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg) {
-  __SMACK_code("assert $pthreadStatus[@][0] == $pthread_uninitialized;", *__newthread);
+
   int ctid = __SMACK_nondet();
   __SMACK_code("call @ := corral_getThreadID();", ctid);
-  __SMACK_code("assume @ != 0;", ctid);
-  __SMACK_code("$ctidToPtid[@] := @;", ctid, *__newthread);
+  __SMACK_code("assume @ == @;", ctid, *__newthread);
+  
   
   __SMACK_code("$pthreadStatus[@][0] := $pthread_waiting;", *__newthread);
 
@@ -130,11 +138,30 @@ void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) 
 }
 
 int pthread_create(pthread_t *__restrict __newthread, __const pthread_attr_t *__restrict __attr, void *(*__start_routine) (void *), void *__restrict __arg) {
-  __pthreads_init();
-  __SMACK_code("call corral_atomic_begin();");
-  *__newthread = ++pthread_initializer;
-  __SMACK_code("call corral_atomic_end();");
+
+    //Declare corral primitive procedures
+    __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
+    __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
+    __SMACK_top_decl("procedure corral_atomic_begin();");
+    __SMACK_top_decl("procedure corral_atomic_end();");
+    //Array for tracking pthreads
+    __SMACK_top_decl("//dim0=tid, dim1= 0 for status, 1 for return");
+    __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
+    __SMACK_top_decl("const unique $pthread_uninitialized: int;");
+    __SMACK_top_decl("const unique $pthread_initialized: int;");
+    __SMACK_top_decl("const unique $pthread_waiting: int;");
+    __SMACK_top_decl("const unique $pthread_running: int;");
+    __SMACK_top_decl("const unique $pthread_stopped: int;");
+    //__pthreads_init();
+
+  //Mystery smack_nondet for procedure calls from __SMACK_code??
+  int x = __SMACK_nondet();
+  pthread_t tmp = __SMACK_nondet();
+  __SMACK_assume(x == 0);
+  if(x) __call_wrapper(__newthread, __start_routine, __arg);
   __SMACK_code("async call @(@, @, @);", __call_wrapper, __newthread, __start_routine, __arg);
+  __SMACK_code("call @ := corral_getChildThreadID();", tmp);
+  *__newthread = tmp;
 
   return 0;
 }

@@ -13,9 +13,10 @@ fail = r'This assertion can fail'
 tests = [
   ('no_lock',               fail, 1, 2),
   ('no_lock2',              fail, 1, 2),
+  ('no_lock3',              fail, 1, 2),
   ('lock',                  good, 1, 2),
   ('lock2',                 good, 1, 2),
-  #('lock3',                 good, 1, 2),
+  ('lock3',                 good, 1, 2),
   ('no_join',               fail, 1, 2),
   ('join',                  good, 1, 2),
   ('join_return_fail',      fail, 1, 2),

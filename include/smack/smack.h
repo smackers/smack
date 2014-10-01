@@ -69,6 +69,19 @@ void __SMACK_decls() {
   D("function $sdiv(p1:int, p2:int) returns (int);");
   D("function $udiv(p1:int, p2:int) returns (int);");
   D("function $srem(p1:int, p2:int) returns (int);");
+
+  //Monty's test
+
+  D("axiom (forall a: int, b: int :: {$sdiv(a,b)} (a>=0 && b>0) ==> ((b*$sdiv(a,b)<=a) && (a<b*($sdiv(a,b) + 1))));");
+  D("axiom (forall a: int, b: int :: {$sdiv(a,b)} (a>=0 && b<0) ==> ((b*$sdiv(a,b)<=a) && (a<b*($sdiv(a,b) - 1))));");
+  D("axiom (forall a: int, b: int :: {$sdiv(a,b)} (a<0 && b>0) ==> ((b*$sdiv(a,b)>=a) && (a>b*($sdiv(a,b) - 1))));");
+  D("axiom (forall a: int, b: int :: {$sdiv(a,b)} (a<0 && b<0) ==> ((b*$sdiv(a,b)>=a) && (a>b*($sdiv(a,b) + 1))));");
+
+  D("axiom(forall x:int, y:int :: {$srem(x,y)}{$sdiv(x,y)} $srem(x,y) == x - $sdiv(x,y)*y);");
+  D("axiom(forall x:int, y:int :: {$srem(x,y)} (0<y ==> (0<=$srem(x,y) && $srem(x,y)<y)) && (y<0 ==> (y<$srem(x,y) && $srem(x,y)<=0)));");
+  D("axiom(forall x:int, y:int :: {$urem(x,y)}{$sdiv(x,y)} $urem(x,y) == x - $sdiv(x,y)*y);");
+  D("axiom(forall x:int, y:int :: {$urem(x,y)} (0<y ==> (0<=$urem(x,y) && $urem(x,y)<y)) && (y<0 ==> (y<$urem(x,y) && $urem(x,y)<=0)));");
+  //End monty's test
   D("function $urem(p1:int, p2:int) returns (int);");
   D("function $and(p1:int, p2:int) returns (int);");
   D("axiom $and(0,0) == 0;");
