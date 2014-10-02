@@ -98,7 +98,7 @@ export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
 cd ${SMACK_DIR}/src/test
-./regtest.py --verifier {boogie,corral,duality}
+./regtest.py --verifier {boogie,corral}
 
 cd ${BASE_DIR}
 
