@@ -48,7 +48,7 @@ cd ${BASE_DIR}
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
 
 mkdir -p ${LLVM_DIR}/src
 mkdir -p ${LLVM_DIR}/build
@@ -73,7 +73,7 @@ make install
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
 
 fi
 
@@ -83,7 +83,7 @@ fi
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
 
 mkdir -p ${SMACK_DIR}/src
 mkdir -p ${SMACK_DIR}/build
@@ -100,7 +100,7 @@ make install
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
 export BOOGIE=/cygdrive/c/Users/zvonimir/Boogie/boogie
@@ -109,14 +109,14 @@ export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
-echo -e "\n${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
 cd ${SMACK_DIR}/src/test
 ./regtest.py --verifier {boogie,corral}
-echo -e "\n${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
 
 fi
 

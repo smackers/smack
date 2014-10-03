@@ -53,7 +53,7 @@ nocolor='\e[0m'
 
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
 
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
@@ -69,7 +69,7 @@ sudo apt-get install -y autoconf
 sudo apt-get install -y wget
 sudo apt-get install -y unzip
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
 fi
 
@@ -85,7 +85,7 @@ cd ${BASE_DIR}
 
 if [ ${INSTALL_MONO} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
 
 mkdir -p ${MONO_DIR}
 
@@ -114,7 +114,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
 
 fi
 
@@ -124,7 +124,7 @@ fi
 
 if [ ${INSTALL_Z3} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
 
 mkdir -p ${Z3_DIR}/src
 mkdir -p ${Z3_DIR}/install
@@ -144,7 +144,7 @@ make install
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
 
 fi
 
@@ -154,7 +154,7 @@ fi
 
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 
 mkdir -p ${BOOGIE_DIR}
 
@@ -168,7 +168,7 @@ ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed Boogie ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed Boogie ***${nocolor}"
 
 fi
 
@@ -178,7 +178,7 @@ fi
 
 if [ ${INSTALL_CORRAL} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing Corral ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing Corral ***${nocolor}"
 
 mkdir -p ${CORRAL_DIR}
 
@@ -214,7 +214,7 @@ ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Debug/z3.exe
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed Corral ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed Corral ***${nocolor}"
 
 fi
 
@@ -224,7 +224,7 @@ fi
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
 
 mkdir -p ${LLVM_DIR}/src
 mkdir -p ${LLVM_DIR}/build
@@ -249,7 +249,7 @@ make install
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
 
 fi
 
@@ -259,7 +259,7 @@ fi
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
 
 mkdir -p ${SMACK_DIR}/src
 mkdir -p ${SMACK_DIR}/build
@@ -276,7 +276,7 @@ make install
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
 export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
@@ -285,14 +285,14 @@ export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
-echo -e "\n${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
 cd ${SMACK_DIR}/src/test
 ./regtest.py --verifier {boogie,corral}
-echo -e "\n${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
 
 cd ${BASE_DIR}
 
-echo -e "\n${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
+echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
 
 fi
 
