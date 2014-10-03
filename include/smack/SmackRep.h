@@ -9,11 +9,11 @@
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
 #include "smack/DSAAliasAnalysis.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>

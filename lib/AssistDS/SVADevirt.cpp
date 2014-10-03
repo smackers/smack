@@ -176,7 +176,7 @@ namespace {
       std::set<Value*> safecalls;
       std::vector<Instruction*> toDelete;
 
-      for (Value::use_iterator ii = ams->use_begin(), ee = ams->use_end();
+      for (Value::user_iterator ii = ams->user_begin(), ee = ams->user_end();
            ii != ee; ++ii) {
         if (CallInst* CI = dyn_cast<CallInst>(*ii)) {
           std::cerr << "Found safe call site in " 
@@ -195,7 +195,7 @@ namespace {
 
       for(std::set<Value*>::iterator i = safecalls.begin(), e = safecalls.end();
           i != e; ++i) {
-        for (Value::use_iterator uii = (*i)->use_begin(), uie = (*i)->use_end();
+        for (Value::user_iterator uii = (*i)->user_begin(), uie = (*i)->user_end();
              uii != uie; ++uii) {
           CallSite cs = CallSite::get(*uii);
           bool isSafeCall = cs.getInstruction() && 

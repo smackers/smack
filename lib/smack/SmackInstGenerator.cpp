@@ -2,12 +2,13 @@
 // Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#define DEBUG_TYPE "smack-inst-gen"
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
-#include "llvm/InstVisitor.h"
-#include "llvm/DebugInfo.h"
+#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 

@@ -3,6 +3,7 @@
 //                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#define DEBUG_TYPE "smack-rep"
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 
