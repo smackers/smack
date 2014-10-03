@@ -43,11 +43,17 @@ CORRAL_DIR="${BASE_DIR}/corral"
 LLVM_DIR="${BASE_DIR}/llvm"
 SMACK_DIR="${BASE_DIR}/smack"
 
+# Setting colors
+textcolor='\e[0;35m'
+nocolor='\e[0m'
+
 ################################################################################
 
 # Install required packages
 
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
 
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
@@ -63,6 +69,8 @@ sudo apt-get install -y autoconf
 sudo apt-get install -y wget
 sudo apt-get install -y unzip
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -76,6 +84,8 @@ cd ${BASE_DIR}
 # mono
 
 if [ ${INSTALL_MONO} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
 
 mkdir -p ${MONO_DIR}
 
@@ -104,6 +114,8 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 cd ${BASE_DIR}
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -111,6 +123,8 @@ fi
 # Z3
 
 if [ ${INSTALL_Z3} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
 
 mkdir -p ${Z3_DIR}/src
 mkdir -p ${Z3_DIR}/install
@@ -130,6 +144,8 @@ make install
 
 cd ${BASE_DIR}
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -137,6 +153,8 @@ fi
 # Boogie
 
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 
 mkdir -p ${BOOGIE_DIR}
 
@@ -150,6 +168,8 @@ ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
 cd ${BASE_DIR}
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed Boogie ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -157,6 +177,8 @@ fi
 # Corral
 
 if [ ${INSTALL_CORRAL} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing Corral ***${nocolor}"
 
 mkdir -p ${CORRAL_DIR}
 
@@ -192,6 +214,8 @@ ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Debug/z3.exe
 
 cd ${BASE_DIR}
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed Corral ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -199,6 +223,8 @@ fi
 # LLVM
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
 
 mkdir -p ${LLVM_DIR}/src
 mkdir -p ${LLVM_DIR}/build
@@ -223,6 +249,8 @@ make install
 
 cd ${BASE_DIR}
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -230,6 +258,8 @@ fi
 # SMACK
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
+
+echo -e "\n${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
 
 mkdir -p ${SMACK_DIR}/src
 mkdir -p ${SMACK_DIR}/build
@@ -246,6 +276,8 @@ make install
 
 cd ${BASE_DIR}
 
+echo -e "\n${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
+
 # Set required paths and environment variables
 export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
 export CORRAL="mono ${CORRAL_DIR}/bin/Debug/corral.exe"
@@ -253,10 +285,14 @@ export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
+echo -e "\n${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
 cd ${SMACK_DIR}/src/test
 ./regtest.py --verifier {boogie,corral}
+echo -e "\n${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
 
 cd ${BASE_DIR}
+
+echo -e "\n${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
 
 fi
 
