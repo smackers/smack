@@ -19,7 +19,7 @@ int main(void) {
   s2->b = 5;
   s1->x = 4;
 
-  __SMACK_assert(s2->a == 4);
+  assert(s2->a == 4);
   return 0;
 }
 

@@ -14,7 +14,7 @@ int main() {
   ff1(f2);
   ff2(&f2,&f3);
 
-  __SMACK_assert(f2 == f3);
+  assert(f2 == f3);
 
   return 0;
 }

@@ -9,7 +9,7 @@ int main(void) {
     x--;
   }
 
-  __SMACK_assert(x == 0 || x == 2);
+  assert(x == 0 || x == 2);
   return 0;
 }
 

@@ -22,7 +22,7 @@ int main(void) {
   }
   fp(x);
 
-  __SMACK_assert(*x == 2);
+  assert(*x == 2);
   return 0;
 }
 

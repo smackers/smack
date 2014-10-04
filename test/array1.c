@@ -10,7 +10,7 @@ int main() {
 
   a[5] = 10;
 
-  __SMACK_assert(a[5] == 10);
+  assert(a[5] == 10);
 
   free(a);
   return 0;

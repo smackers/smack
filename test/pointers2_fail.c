@@ -26,8 +26,8 @@ int main() {
   decr(&p);
   decr(&p);
 
-  __SMACK_assert(p.a == 1);
-  __SMACK_assert(p.b == 1);
+  assert(p.a == 1);
+  assert(p.b == 1);
 
   return 0;
 }

@@ -10,6 +10,6 @@ int main(void){
   g1 = 3;
   *x = 4;
   g2 = 5;
-  __SMACK_assert(g1 != 3 || *x != 4 || g2 != 5);
+  assert(g1 != 3 || *x != 4 || g2 != 5);
 }
 

@@ -6173,7 +6173,7 @@ NTSTATUS FlAcpiConfigureFloppy(PDISKETTE_EXTENSION DisketteExtension , PFDC_INFO
 #line 949
 void __VERIFIER_assert(int cond) {
   if (!(cond)) {
-    ERROR: __SMACK_assert(0); goto ERROR;
+    ERROR: assert(0); goto ERROR;
   }
   return;
 }

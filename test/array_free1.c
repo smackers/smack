@@ -21,8 +21,8 @@ void free_array() {
   }
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(*(a[i].f) == 1);
-    __SMACK_assert(a[i].x == 2);
+    assert(*(a[i].f) == 1);
+    assert(a[i].x == 2);
     if (a[i].f != 0) {
       free(a[i].f);
       a[i].f = 0;
