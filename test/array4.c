@@ -26,7 +26,7 @@ int main() {
   initializeArray(array);
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(array[i].status == RESET);
+    assert(array[i].status == RESET);
   }
 
   free(array);

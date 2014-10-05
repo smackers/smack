@@ -46,9 +46,9 @@ int main() {
   initializeCount(arrayTwo);
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(arrayOne[i].status == RESET);
-    __SMACK_assert(arrayTwo[i].status == SET);
-    __SMACK_assert(arrayTwo[i].count == 0);
+    assert(arrayOne[i].status == RESET);
+    assert(arrayTwo[i].status == SET);
+    assert(arrayTwo[i].count == 0);
   }
 
   initializeCount(arrayOne);
@@ -56,9 +56,9 @@ int main() {
   resetArray(arrayTwo);
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(arrayOne[i].count == 0);
-    __SMACK_assert(arrayOne[i].status == SET);
-    __SMACK_assert(arrayTwo[i].status == RESET);
+    assert(arrayOne[i].count == 0);
+    assert(arrayOne[i].status == SET);
+    assert(arrayTwo[i].status == RESET);
   }
 
   free(arrayOne);

@@ -31,16 +31,16 @@ int main() {
   setArray(arrayTwo);
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(arrayOne[i] == RESET);
-    __SMACK_assert(arrayTwo[i] == SET);
+    assert(arrayOne[i] == RESET);
+    assert(arrayTwo[i] == SET);
   }
 
   setArray(arrayOne);
   resetArray(arrayTwo);
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(arrayOne[i] == SET);
-    __SMACK_assert(arrayTwo[i] == RESET);
+    assert(arrayOne[i] == SET);
+    assert(arrayTwo[i] == RESET);
   }
 
   free(arrayOne);

@@ -1,5 +1,9 @@
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
+
 #include "smack/Contracts.h"
-#include "llvm/Support/InstIterator.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/Analysis/CFG.h"
 
 using namespace llvm;

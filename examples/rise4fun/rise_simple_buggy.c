@@ -6,6 +6,6 @@ int main(void) {
   x = 10;
   y = 20;
   z = x + y;
-  __SMACK_assert(z != 30);
+  assert(z != 30);
   return 0;
 }

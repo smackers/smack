@@ -16,7 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/PatternMatch.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/DataLayout.h"
 
 #include <set>

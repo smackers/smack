@@ -7,7 +7,7 @@ struct a {
 
 int main(void) {
   struct a x = {10, 20};
-  __SMACK_assert(x.j == 10);
+  assert(x.j == 10);
   return 0;
 }
 

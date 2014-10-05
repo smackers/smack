@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "DSNodeEquivs"
 #include "assistDS/DSNodeEquivs.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/InstIterator.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/ADT/SmallSet.h"
 
 #include <deque>
@@ -245,11 +246,10 @@ const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
     std::deque<const User *> WL;
     SmallSet<const User *, 8> Visited;
 
-    // BEGIN BANDAGE: caught a bug here after upgrade to OSX Mavericks
-    // ORIGINAL: WL.insert(WL.end(), V->use_begin(), V->use_end());
-    for ( llvm::Value::const_use_iterator i = V->use_begin(); i != V->use_end(); ++i )
+    // FIXME FIXME FIXME for some reason the first attempt segfaults
+    // WL.insert(WL.end(), V->user_begin(), V->user_end());
+    for (llvm::Value::const_user_iterator i = V->user_begin(), e = V->user_end(); i != e; ++i)
       WL.push_back(*i);
-    // END BANDAGE
 
     do {
       const User *TheUser = WL.front();
@@ -276,7 +276,7 @@ const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
         //
         // If this use is of some other nature, look at the users of this use.
         //
-        WL.insert(WL.end(), TheUser->use_begin(), TheUser->use_end());
+        WL.insert(WL.end(), TheUser->user_begin(), TheUser->user_end());
       }
     } while (!WL.empty());
   }

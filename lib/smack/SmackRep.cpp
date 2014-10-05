@@ -1,8 +1,7 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#define DEBUG_TYPE "smack-rep"
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 
@@ -19,9 +18,7 @@ const string SmackRep::MALLOC = "$malloc";
 const string SmackRep::FREE = "$free";
 const string SmackRep::MEMCPY = "$memcpy";
 
-const string SmackRep::PTR = "$ptr";
-const string SmackRep::OBJ = "$obj";
-const string SmackRep::OFF = "$off";
+const string SmackRep::BASE = "$base";
 const string SmackRep::PA = "$pa";
 
 const string SmackRep::FP = "$fp";
@@ -304,6 +301,8 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
 }
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
+  using namespace llvm;
+
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
     if (ci->getBitWidth() == 1)
       return Expr::lit(!ci->isZero());
@@ -314,10 +313,25 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     else
       return Expr::lit(val, width);
 
-  } else if (llvm::isa<const llvm::ConstantFP>(v)) {
+  } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
+    const APFloat APF = CFP->getValueAPF();
+    string str;
+    raw_string_ostream ss(str);
+    ss << *CFP;
+    istringstream iss(str);
+    string float_type;
+    int integerPart, fractionalPart, exponentPart;
+    char point, sign, exponent;
+    iss >> float_type;
+    iss >> integerPart;
+    iss >> point;
+    iss >> fractionalPart;
+    iss >> sign;
+    iss >> exponent;
+    iss >> exponentPart;
 
-    // TODO encode floating point
-    return Expr::fn(FP,Expr::lit((int) uniqueFpNum++));
+    return Expr::fn(FP, Expr::lit(integerPart), Expr::lit(fractionalPart),
+      Expr::lit(exponentPart));
 
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
     return Expr::lit(0, width);
@@ -411,6 +425,9 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
       else if (Instruction::isBinaryOp(constantExpr->getOpcode()))
         return op(constantExpr);
+
+      else if (constantExpr->isCompare())
+        return pred(constantExpr);
 
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -537,14 +554,22 @@ const Expr* SmackRep::op(const llvm::User* v) {
   return isBool(v) ? Expr::fn("$i2b",e) : e;
 }
 
-const Expr* SmackRep::pred(llvm::CmpInst& ci) {
+const Expr* SmackRep::pred(const llvm::User* v) {
+  using namespace llvm;
   const Expr* e = NULL;
   string o;
-  const Expr
-  *l = expr(ci.getOperand(0)),
-   *r = expr(ci.getOperand(1));
+  unsigned predicate;
+  const Expr *l = expr(v->getOperand(0)), *r = expr(v->getOperand(1));
 
-  switch (ci.getPredicate()) {
+  if (const CmpInst* ci = dyn_cast<const CmpInst>(v))
+    predicate = ci->getPredicate();
+
+  else if (const ConstantExpr* ce = dyn_cast<const ConstantExpr>(v))
+    predicate = ce->getPredicate();
+
+  else assert(false && "unexpected operator value.");
+
+  switch (predicate) {
     using llvm::CmpInst;
 
   // integer comparison
@@ -724,15 +749,8 @@ string SmackRep::code(llvm::CallInst& ci) {
     assert(idx != string::npos && "__SMACK_code: too many arguments.");
     
     ostringstream ss;
-
-    if (s.find("{@}") == idx-1) {
-      a->print(ss);
-      s = s.replace(idx-1,3,ss.str());
-      
-    } else {
-      a->print(ss);
-      s = s.replace(idx,1,ss.str());
-    }      
+    a->print(ss);
+    s = s.replace(idx,1,ss.str());
   }
   return s;
 }
@@ -745,9 +763,7 @@ string SmackRep::getPrelude() {
   for (unsigned i=0; i<memoryRegions.size(); ++i)
     s << "var " << memReg(i) 
       << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-
   s << endl;
-
   s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
 
   return s.str();

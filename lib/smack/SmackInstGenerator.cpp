@@ -1,14 +1,14 @@
 //
-// Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#define DEBUG_TYPE "smack-inst-gen"
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
 #include "smack/Slicing.h"
-#include "llvm/InstVisitor.h"
-#include "llvm/DebugInfo.h"
+#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 
@@ -245,7 +245,12 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  emit(Stmt::assign(rep.expr(&li),rep.mem(li.getPointerOperand())));
+  const Expr* rhs = rep.mem(li.getPointerOperand());
+
+  if (rep.isFloat(&li))
+    rhs = Expr::fn("$si2fp", rhs);
+
+  emit(Stmt::assign(rep.expr(&li),rhs));
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -257,7 +262,12 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
-  emit(Stmt::assign(rep.mem(si.getPointerOperand()),rep.expr(si.getOperand(0))));
+  const Expr* rhs = rep.expr(si.getOperand(0));
+
+  if (rep.isFloat(si.getOperand(0)))
+    rhs = Expr::fn("$fp2si", rhs);
+
+  emit(Stmt::assign(rep.mem(si.getPointerOperand()),rhs));
                        
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -418,12 +428,12 @@ void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& ci) {
 
 void SmackInstGenerator::visitICmpInst(llvm::ICmpInst& ci) {
   processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci), rep.pred(ci)));
+  emit(Stmt::assign(rep.expr(&ci), rep.pred(&ci)));
 }
 
 void SmackInstGenerator::visitFCmpInst(llvm::FCmpInst& ci) {
   processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci), rep.pred(ci)));
+  emit(Stmt::assign(rep.expr(&ci), rep.pred(&ci)));
 }
 
 void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {

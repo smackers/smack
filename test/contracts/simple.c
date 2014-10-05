@@ -22,6 +22,6 @@ int main(void) {
     invariant(g > 0);
     p();
   }
-  __SMACK_assert(g > 0);
+  assert(g > 0);
   return 0;
 }

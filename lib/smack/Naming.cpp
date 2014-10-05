@@ -1,3 +1,7 @@
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
+
 #include "smack/Naming.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/IR/Type.h"

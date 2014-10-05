@@ -1,6 +1,4 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #ifndef SMACKREP_H
@@ -10,11 +8,11 @@
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
 #include "smack/DSAAliasAnalysis.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>
@@ -38,9 +36,7 @@ public:
   static const string FREE;
   static const string MEMCPY;
 
-  static const string PTR;
-  static const string OBJ;
-  static const string OFF;
+  static const string BASE;
   static const string PA;
   
   static const string FP;
@@ -185,7 +181,7 @@ public:
   const Expr* expr(const llvm::Value* v);
   string getString(const llvm::Value* v);
   const Expr* op(const llvm::User* v);
-  const Expr* pred(llvm::CmpInst& ci);
+  const Expr* pred(const llvm::User* v);
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, llvm::CallInst& ci);

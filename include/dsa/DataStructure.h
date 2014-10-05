@@ -22,7 +22,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Support/CallSite.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -45,7 +45,7 @@ class DataStructures : public ModulePass {
   typedef std::map<const Function*, DSGraph*> DSInfoTy;
 
   /// DataLayout, comes in handy
-  DataLayout* TD;
+  const DataLayout* TD;
 
   /// Pass to get Graphs from
   DataStructures* GraphSource;
@@ -87,7 +87,7 @@ protected:
   std::vector<const Function*> GlobalFunctionList; 
 
   void init(DataStructures* D, bool clone, bool useAuxCalls, bool copyGlobalAuxCalls, bool resetAux);
-  void init(DataLayout* T);
+  void init(const DataLayout* T);
 
   void formGlobalECs();
   
@@ -139,7 +139,7 @@ public:
 
   EquivalenceClasses<const GlobalValue*> &getGlobalECs() { return GlobalECs; }
 
-  DataLayout& getDataLayout() const { return *TD; }
+  const DataLayout& getDataLayout() const { return *TD; }
 
   const DSCallGraph& getCallGraph() const { return callgraph; }
 
@@ -165,7 +165,7 @@ public:
   /// getAnalysisUsage - This obviously provides a data structure graph.
   ///
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayout>();
+    AU.addRequired<DataLayoutPass>();
     AU.setPreservesAll();
   }
 };
@@ -188,7 +188,7 @@ public:
   /// getAnalysisUsage - This obviously provides a data structure graph.
   ///
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayout>();
+    AU.addRequired<DataLayoutPass>();
     AU.addRequired<AddressTakenAnalysis>();
     AU.setPreservesAll();
   }

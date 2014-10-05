@@ -1,4 +1,7 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
 
 from os import path
 import json
@@ -135,7 +138,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       return sourceTrace
     else:
       return boogieOutput
-  else:
+  elif verifier == 'corral':
     # invoke Corral
     corralCommand = ['corral', bplFileName, '/tryCTrace']
     if unroll is not None:
@@ -149,6 +152,19 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       smackdOutput(corralOutput)
     else:
       return corralOutput
+  else:
+    # invoke Duality
+    dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
+    dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
+    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE)
+    dualityOutput = p.communicate()[0]
+    if p.returncode:
+      return dualityOutput
+      sys.exit("SMACK encountered an error invoking Duality. Exiting...")
+    if smackd:
+      smackdOutput(dualityOutput)
+    else:
+      return dualityOutput
  
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])
@@ -160,7 +176,7 @@ if __name__ == '__main__':
   for i in reversed(range(len(sysArgv))):
     if sysArgv[i] == '--smackd':
       del sysArgv[i]
-    elif sys.argv[i] == '--time-limit':
+    elif sysArgv[i] == '--time-limit':
       del sysArgv[i]
       del sysArgv[i]
 
@@ -168,8 +184,9 @@ if __name__ == '__main__':
   args = parser.parse_args(options + sys.argv[1:])
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 
-  print(verify(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd))
+  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, args.debug, args.smackd))
 

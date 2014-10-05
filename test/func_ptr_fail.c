@@ -19,7 +19,7 @@ int main(void) {
   }
   x = fp(x);
 
-  __SMACK_assert(x == 0 || x == 1);
+  assert(x == 0 || x == 1);
   return 0;
 }
 

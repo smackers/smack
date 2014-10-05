@@ -39,7 +39,7 @@ void initializeCount(elem *array) {
 
 int main() {
   arraySize = __SMACK_nondet();
-  __SMACK_assume(arraySize > 0);
+  assume(arraySize > 0);
 
   elem *arrayOne = (elem*)malloc(arraySize * sizeof(elem));
   elem *arrayTwo = (elem*)malloc(arraySize * sizeof(elem));

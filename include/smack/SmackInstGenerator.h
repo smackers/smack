@@ -1,5 +1,4 @@
 //
-// Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #ifndef SMACKINSTVISITOR_H
@@ -9,8 +8,9 @@
 #include "smack/SmackRep.h"
 #include "smack/Naming.h"
 #include "smack/Slicing.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include <unordered_set>
+#include <set>
 
 namespace smack {
 

@@ -1,5 +1,9 @@
-#include "llvm/InstVisitor.h"
-#include "llvm/Support/CFG.h"
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
+
+#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/CFG.h"
 #include "smack/Slicing.h"
 #include "smack/SmackRep.h"
 #include "smack/SmackInstGenerator.h"

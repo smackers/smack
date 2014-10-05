@@ -18,7 +18,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/ValueMap.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
 
@@ -119,7 +119,7 @@ bool StructRet::runOnModule(Module& M) {
       }
     }
 
-    for(Value::use_iterator ui = F->use_begin(), ue = F->use_end();
+    for(Value::user_iterator ui = F->user_begin(), ue = F->user_end();
         ui != ue; ) {
       CallInst *CI = dyn_cast<CallInst>(*ui++);
       if(!CI)

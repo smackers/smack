@@ -1,6 +1,4 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #ifndef SMACK_H_
@@ -37,12 +35,12 @@ void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
-void __SMACK_assert(bool v) {
-  __SMACK_code("assert {@} != 0;", v);
+void assert(bool v) {
+  __SMACK_code("assert @ != 0;", v);
 }
 
-void __SMACK_assume(bool v) {
-  __SMACK_code("assume {@} != 0;", v);
+void assume(bool v) {
+  __SMACK_code("assume @ != 0;", v);
 }
 
 void requires(bool expr);
@@ -107,20 +105,16 @@ void __SMACK_decls() {
   D("function {:inline} $sle(p1:int, p2:int) returns (bool) {p1 <= p2}");
   D("function {:inline} $sge(p1:int, p2:int) returns (bool) {p1 >= p2}");
   D("function $nand(p1:int, p2:int) returns (int);");
-  D("function $max(p1:int, p2:int) returns (int);");
-  D("function $min(p1:int, p2:int) returns (int);");
-  D("function $umax(p1:int, p2:int) returns (int);");
-  D("function $umin(p1:int, p2:int) returns (int);");
-  D("function $i2b(i: int) returns (bool);");
-  D("axiom (forall i:int :: $i2b(i) <==> i != 0);");
-  D("axiom $i2b(0) == false;");
-  D("function $b2i(b: bool) returns (int);");
-  D("axiom $b2i(true) == 1;");
-  D("axiom $b2i(false) == 0;");
+  D("function {:inline} $max(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
+  D("function {:inline} $min(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
+  D("function {:inline} $umax(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
+  D("function {:inline} $umin(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
+  D("function {:inline} $i2b(i: int) returns (bool) {i != 0}");
+  D("function {:inline} $b2i(b: bool) returns (int) {if b then 1 else 0}");
 
   // Floating point
   D("type float;");
-  D("function $fp(a:int) returns (float);");
+  D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("const $ffalse: float;");
   D("const $ftrue: float;");
   D("function $fadd(f1:float, f2:float) returns (float);");
@@ -147,10 +141,14 @@ void __SMACK_decls() {
   D("function $si2fp(i:int) returns (float);");
   D("function $ui2fp(i:int) returns (float);");
 
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq(f1,f2));");
+  D("axiom (forall i: int :: $fp2ui($ui2fp(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp($fp2ui(f)) == f);");
+  D("axiom (forall i: int :: $fp2si($si2fp(i)) == i);");
+  D("axiom (forall f: float :: $si2fp($fp2si(f)) == f);");
+
   // Memory Model
-  D("function {:inline} $ptr(obj:int, off:int) returns (int) {obj + off}");
-  D("function $obj(int) returns (int);");
-  D("function {:inline} $off(ptr:int) returns (int) {ptr}");
+  D("function $base(int) returns (int);");
 
   D("const unique $NULL: int;");
   D("axiom $NULL == 0;");
@@ -160,13 +158,8 @@ void __SMACK_decls() {
   D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
   D("function {:inline} $p2i(p: int) returns (int) {p}");
   D("function {:inline} $i2p(p: int) returns (int) {p}");
-  D("function $p2b(p: int) returns (bool);");
-  D("function $b2p(b: bool) returns (int);");
-
-  D("axiom $b2p(true) == 1;");
-  D("axiom $b2p(false) == 0;");
-  D("axiom (forall i:int :: $p2b(i) <==> i != 0);");
-  D("axiom $p2b(0) == false;");
+  D("function {:inline} $p2b(p: int) returns (bool) {p != 0}");
+  D("function {:inline} $b2p(b: bool) returns (int) {if b then 1 else 0}");
 
   // Memory debugging symbols
   D("type $mop;");
@@ -226,7 +219,7 @@ void __SMACK_decls() {
     "ensures $Size[p] == n;\n"
     "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 
   D("procedure $free(p: int);\n"
     "modifies $Alloc;\n"
@@ -242,7 +235,7 @@ void __SMACK_decls() {
     "ensures $Size[p] == n;\n"
     "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [int] bool;");
@@ -256,7 +249,7 @@ void __SMACK_decls() {
     "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 
   D("procedure $free(p: int);\n"
     "modifies $Alloc;\n"
@@ -271,7 +264,7 @@ void __SMACK_decls() {
     "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 #endif
 
 #undef D

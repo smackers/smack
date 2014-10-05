@@ -1,4 +1,7 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
 
 from os import path
 import sys
@@ -14,14 +17,14 @@ def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
   parser.add_argument('--clang', dest='clang', default='',
                       help='pass arguments to clang (e.g., --clang="-w -g")')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral'], default='corral',
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default='boogie',
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
   parser.add_argument('--unroll', metavar='N', dest='unroll', type=int,
                       help='unroll loops/recursion in Boogie/Corral N number of times')
-  parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse',
-                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
+  parser.add_argument('--bc', dest='bcfile', metavar='<file>', type=str,
+                      help='output clang (bc) file')
   return parser
 
 
@@ -45,19 +48,21 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def clang(scriptPathName, inputFile, memoryModel, clangArgs):
+def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, clangArgs):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
   smackHeaders = path.join(smackRoot, 'include', 'smack')
 
-  fileName = path.splitext(inputFile.name)[0]
+  if bcFileName is None:
+    bcFileName = path.join(path.dirname(path.abspath(outputFileName)),
+      path.splitext(path.basename(inputFile.name))[0]) + '.bc'
 
   clangCommand = ['clang']
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders]
   clangCommand += clangArgs.split()
-  clangCommand += [inputFile.name, '-o', fileName + '.bc']
+  clangCommand += [inputFile.name, '-o', bcFileName]
   #Redirect stderr to stdout, then grab stdout (communicate() calls wait())
   #This should more or less maintain stdout/stderr interleaving order
   #However, this will be problematic if any callers want to differentiate
@@ -70,8 +75,7 @@ def clang(scriptPathName, inputFile, memoryModel, clangArgs):
     print clangOutput
     sys.exit("SMACK encountered a clang error. Exiting...")
 
-  inputFileName = path.join(path.curdir, fileName + '.bc')
-  inputFile = open(inputFileName, 'r')
+  inputFile = open(bcFileName, 'r')
   return inputFile, clangOutput
 
 
@@ -82,6 +86,7 @@ def smackGenerate(sysArgv):
   args = parser.parse_args(sysArgv[1:])
   inputFile = args.infile
   scriptPathName = path.dirname(sysArgv[0])
+  clangOutput = None
 
   fileExtension = path.splitext(inputFile.name)[1]
   options = []
@@ -93,13 +98,13 @@ def smackGenerate(sysArgv):
       if optionsMatch:
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
-    inputFile, clangOutput = clang(scriptPathName, inputFile, args.memmod, args.clang)
+    inputFile, clangOutput = clang(scriptPathName, inputFile, args.bcfile, args.outfile, args.memmod, args.clang)
 
-  bpl = llvm2bpl(inputFile, args.debug, "impls" in args.memmod)
+  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  si = re.compile('procedure\s+(\$static_init|__SMACK_.*|)\s*\(')
+  si = re.compile('procedure\s+(\$static_init|__SMACK_.*|assert_|assume_)\s*\(')
 
   if args.verifier == 'boogie' and args.unroll is None:
     bpl = si.sub(lambda match: addInline(match, args.entryPoints, 1), bpl)
@@ -107,8 +112,7 @@ def smackGenerate(sysArgv):
   elif args.verifier == 'boogie':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
-
-  elif args.verifier == 'corral':
+  elif args.verifier == 'corral' or args.verifier == 'duality':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
 
@@ -122,9 +126,11 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   bpl, options, clangOutput = smackGenerate(sys.argv)
-  print clangOutput
+  if clangOutput is not None:
+    print clangOutput
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 
