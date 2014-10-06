@@ -28,18 +28,16 @@
  *
  */
 
-#include <stdbool.h>
-
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
-void assert(bool v) {
+void assert(int v) {
   __SMACK_code("assert @ != 0;", v);
 }
 
-void assume(bool v) {
+void assume(int v) {
   __SMACK_code("assume @ != 0;", v);
 }
 
@@ -53,6 +51,11 @@ int __SMACK_nondet() {
   int x = XXX;
   __SMACK_code("havoc @;", x);
   return x;
+}
+
+// Used for SVCOMP
+void __VERIFIER_error(void) {
+  assert(0);
 }
 
 void __SMACK_decls() {
