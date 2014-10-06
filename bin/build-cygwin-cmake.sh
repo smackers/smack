@@ -106,8 +106,8 @@ cd ${BASE_DIR}
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
-export BOOGIE=/cygdrive/c/Users/zvonimir/Boogie/boogie
-export CORRAL=/cygdrive/c/projects/corral/corral
+export BOOGIE=/cygdrive/c/projects/boogie/Binaries/boogie
+export CORRAL=/cygdrive/c/projects/corral/bin/Debug/corral
 export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
