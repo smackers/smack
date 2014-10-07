@@ -42,13 +42,12 @@ def llvm2bpl(infile, outfile, debugFlag, memImpls):
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   cmd.append('-o=' + outfile)
-  p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  smackOutput = p.communicate()[0]
 
-  p.wait()
-  if p.returncode != 0:
-    print >> sys.stderr, "SMACK encountered an error:"
-    print >> sys.stderr, output[0:1000], "... (output truncated)"
-    sys.exit("SMACK returned exit status %s" % p.returncode)
+  if p.returncode:
+    print >> sys.stderr, smackOutput
+    sys.exit("SMACK encountered an error when invoking SMACK tool. Exiting...")
 
   with open(outfile, 'r') as outputFile:
     output = outputFile.read()

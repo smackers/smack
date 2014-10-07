@@ -68,12 +68,11 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   #However, this will be problematic if any callers want to differentiate
   #    between clangs stdout and stderr.
   p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  clangStdout, clangStderr = p.communicate()
-  clangOutput = clangStdout
+  clangOutput = p.communicate()[0]
 
-  if p.returncode != 0:
-    print clangOutput
-    sys.exit("SMACK encountered a clang error. Exiting...")
+  if p.returncode:
+    print >> sys.stderr, clangOutput
+    sys.exit("SMACK encountered an error when invoking clang. Exiting...")
 
   inputFile = open(bcFileName, 'r')
   return inputFile, clangOutput

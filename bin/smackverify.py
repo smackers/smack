@@ -126,11 +126,12 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
     boogieCommand = ['boogie', bplFileName, '/nologo', '/timeLimit:' + str(timeLimit)]
     if unroll is not None:
       boogieCommand += ['/loopUnroll:' + str(unroll)]
-    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE)
+    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     boogieOutput = p.communicate()[0]
+
     if p.returncode:
-      return boogieOutput
-      sys.exit("SMACK encountered an error invoking Boogie. Exiting...")
+      print >> sys.stderr, boogieOutput
+      sys.exit("SMACK encountered an error when invoking Boogie. Exiting...")
     if debug:
       return boogieOutput
     sourceTrace = generateSourceErrorTrace(boogieOutput, bplFileName)
@@ -143,11 +144,12 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
     corralCommand = ['corral', bplFileName, '/tryCTrace']
     if unroll is not None:
       corralCommand += ['/recursionBound:' + str(unroll)]
-    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE)
+    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     corralOutput = p.communicate()[0]
+
     if p.returncode:
-      return corralOutput
-      sys.exit("SMACK encountered an error invoking Corral. Exiting...")
+      print >> sys.stderr, corralOutput
+      sys.exit("SMACK encountered an error when invoking Corral. Exiting...")
     if smackd:
       smackdOutput(corralOutput)
     else:
@@ -156,11 +158,12 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
     # invoke Duality
     dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
     dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
-    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE)
+    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     dualityOutput = p.communicate()[0]
+
     if p.returncode:
-      return dualityOutput
-      sys.exit("SMACK encountered an error invoking Duality. Exiting...")
+      print >> sys.stderr, dualityOutput
+      sys.exit("SMACK encountered an error when invoking Duality. Exiting...")
     if smackd:
       smackdOutput(dualityOutput)
     else:
