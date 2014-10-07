@@ -2053,7 +2053,7 @@ install-local::
 	$(Verb) if test -d "$(PROJ_SRC_ROOT)/include" ; then \
 	  cd $(PROJ_SRC_ROOT)/include && \
 	  for hdr in `find . -type f \
-	      '(' -name smack.h ')' -print | grep -v CVS | \
+	      '(' -name "smack*.h" ')' -print | grep -v CVS | \
 	      grep -v .svn` ; do \
 	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$hdr"` ; \
 	    if test \! -d "$$instdir" ; then \
@@ -2067,7 +2067,7 @@ ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
 	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/include" ; then \
 	  cd $(PROJ_OBJ_ROOT)/include && \
 	  for hdr in `find . -type f \
-	      '(' -name smack.h ')' -print | grep -v CVS | \
+	      '(' -name "smack*.h" ')' -print | grep -v CVS | \
 	      grep -v .svn` ; do \
 	    instdir=`dirname "$(DESTDIR)$(PROJ_includedir)/$$hdr"` ; \
 	    if test \! -d "$$instdir" ; then \

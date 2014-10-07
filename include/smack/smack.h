@@ -41,6 +41,8 @@ void assume(int v) {
   __SMACK_code("assume @ != 0;", v);
 }
 
+//// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
+//// should have a type $ptr parameter, not an int.  How should we do this?
 // void __SMACK_record_int(int i) {
 //   __SMACK_top_decl("procedure boogie_si_record_int(i:int);");
 //   __SMACK_code("call boogie_si_record_int(@);", i);
@@ -51,11 +53,6 @@ int __SMACK_nondet() {
   int x = XXX;
   __SMACK_code("havoc @;", x);
   return x;
-}
-
-// Used for SVCOMP
-void __VERIFIER_error(void) {
-  assert(0);
 }
 
 void __SMACK_decls() {

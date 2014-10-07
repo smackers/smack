@@ -103,12 +103,18 @@ def smackGenerate(sysArgv):
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  if args.verifier == 'boogie' and args.unroll is not None:
+  si = re.compile('procedure\s+(\$static_init|__SMACK_.*|assert_|assume_|__VERIFIER_.*)\s*\(')
+
+  if args.verifier == 'boogie' and args.unroll is None:
+    bpl = si.sub(lambda match: addInline(match, args.entryPoints, 1), bpl)
+
+  elif args.verifier == 'boogie':
     # put inline on procedures
     bpl = p.sub(lambda match: addInline(match, args.entryPoints, args.unroll), bpl)
   elif args.verifier == 'corral' or args.verifier == 'duality':
     # annotate entry points
     bpl = p.sub(lambda match: addEntryPoint(match, args.entryPoints), bpl)
+
   return bpl, options, clangOutput
 
 

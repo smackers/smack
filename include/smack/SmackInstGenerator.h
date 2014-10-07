@@ -6,44 +6,65 @@
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
+#include "smack/Naming.h"
+#include "smack/Slicing.h"
 #include "llvm/IR/InstVisitor.h"
+#include <unordered_set>
 #include <set>
 
 namespace smack {
-  
+
+typedef vector<Slice*> Slices;
+
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
   SmackRep& rep;
-  ProcDecl& proc;
+  CodeContainer& proc;
+  Naming& naming;
+  Slices& slices;
+
   Block* currBlock;
-  map<const llvm::BasicBlock*, Block*>& blockMap;
-  int blockNum;
-  int varNum;
+  map<const llvm::BasicBlock*, Block*> blockMap;
+
+  Block* createBlock();
+  Block* getBlock(llvm::BasicBlock* bb);
 
   void generatePhiAssigns(llvm::TerminatorInst& i);
   void generateGotoStmts(llvm::Instruction& i,
-                         vector<pair<const Expr*, string> > target);
+                         vector<pair<const Expr*, llvm::BasicBlock*> > target);
   void processInstruction(llvm::Instruction& i);
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
+  void addDecl(Decl* d) { proc.addDecl(d); }
+  void addMod(string x) { proc.addMod(x); }
+  void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
+  void addBlock(Block* b) { proc.addBlock(b); }
+
 public:
-  SmackInstGenerator(SmackRep& r, ProcDecl& p,
-                     map<const llvm::BasicBlock*, Block*>& bm)
-    : rep(r), proc(p),
-      blockMap(bm), blockNum(0), varNum(0) {}
-
-  Block* createBlock();
-  void setCurrBlock(Block* b) {
-    currBlock = b;
-  }
-  Block* getCurrBlock() {
-    return currBlock;
+  void emit(const Stmt* s) {
+    // stringstream str;
+    // s->print(str);
+    // DEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
+    currBlock->addStmt(s);
   }
 
-  string createVar();
+public:
+  SmackInstGenerator(SmackRep& R, CodeContainer& P, Naming& N, Slices& S)
+    : rep(R), proc(P), naming(N), slices(S) {}
 
+  Slice* getSlice(llvm::Value* V) {
+    using namespace llvm;
+    if (ConstantInt* CI = dyn_cast<ConstantInt>(V)) {
+      uint64_t i = CI->getLimitedValue();
+      assert(slices.size() > i && "Did not find expression.");
+      return slices[i];
+    }
+    assert(false && "Unexpected value.");
+  }
+
+  void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);
 
   void visitReturnInst(llvm::ReturnInst& i);

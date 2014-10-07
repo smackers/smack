@@ -93,12 +93,12 @@ AllocIdentify::~AllocIdentify() {}
 
 bool AllocIdentify::runOnModule(Module& M) {
 
-  allocators.insert("malloc");
-  allocators.insert("calloc");
-  //allocators.insert("realloc");
-  //allocators.insert("memset");
-  deallocators.insert("free");
-  deallocators.insert("cfree");
+  allocators.emplace("malloc");
+  allocators.emplace("calloc");
+  //allocators.emplace("realloc");
+  //allocators.emplace("memset");
+  deallocators.emplace("free");
+  deallocators.emplace("cfree");
 
   bool changed;
   do {
@@ -143,7 +143,7 @@ bool AllocIdentify::runOnModule(Module& M) {
             changed = (allocators.find(WrapperF->getName()) == allocators.end());
             if(changed) {
               ++numAllocators;
-              allocators.insert(WrapperF->getName());
+              allocators.emplace(WrapperF->getName());
               DEBUG(errs() << WrapperF->getName().str() << "\n");
             }
           }
@@ -178,7 +178,7 @@ bool AllocIdentify::runOnModule(Module& M) {
             changed = (deallocators.find(WrapperF->getName()) == deallocators.end());
             if(changed) {
               ++numDeallocators;
-              deallocators.insert(WrapperF->getName());
+              deallocators.emplace(WrapperF->getName());
               DEBUG(errs() << WrapperF->getName().str() << "\n");
             }
           }
