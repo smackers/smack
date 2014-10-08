@@ -159,7 +159,11 @@ def verify(verifier, bplFileName, timeLimit, unroll, maxViolations, debug, verif
     else:
       return output
     
+    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
   else:
+    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
     if smackd:
       smackdOutput(output)
     else:

@@ -324,12 +324,16 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
+#ifdef BITVECTOR
+	emit(rep.load(li));
+#else
   const Expr* rhs = rep.mem(li.getPointerOperand());
 
   if (rep.isFloat(&li))
     rhs = Expr::fn("$si2fp", rhs);
 
   emit(Stmt::assign(rep.expr(&li),rhs));
+#endif
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -343,8 +347,11 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
   const llvm::Value* E = si.getOperand(0);
-  const Expr* rhs = rep.expr(E);
   const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
+#ifdef BITVECTOR
+	emit(rep.store(si));
+#else
+  const Expr* rhs = rep.expr(E);
 
   if (rep.isFloat(E))
     rhs = Expr::fn("$fp2si", rhs);
@@ -355,6 +362,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
     assert(G->hasName() && "Expected named global variable.");
     emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
   }
+#endif
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));

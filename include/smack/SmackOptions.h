@@ -14,6 +14,7 @@ public:
   static const llvm::cl::opt<bool> MemoryModelImpls;
   
   static const llvm::cl::opt<bool> SourceLocSymbols;
+  static const llvm::cl::opt<bool> BitVectors;
 };
 }
 
