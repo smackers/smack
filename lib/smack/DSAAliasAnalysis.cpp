@@ -131,7 +131,10 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
 
   const DSNode *N1 = nodeEqs->getMemberForValue(LocA.Ptr);
   const DSNode *N2 = nodeEqs->getMemberForValue(LocB.Ptr);
-  
+
+  assert(N1 && "Expected non-null node.");
+  assert(N2 && "Expected non-null node.");
+
   if ((N1->isCompleteNode() || N2->isCompleteNode()) &&
       !(N1->isExternalNode() && N2->isExternalNode()) &&
       !(N1->isUnknownNode() || N2->isUnknownNode())) {
