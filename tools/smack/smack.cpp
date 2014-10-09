@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
-  pass_manager.add(llvm::createDeadInstEliminationPass());
+  pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
