@@ -98,9 +98,9 @@ int main(int argc, char **argv) {
     dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
     
+  pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
-  pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
