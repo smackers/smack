@@ -15,13 +15,11 @@ void __VERIFIER_assume(int v) {
 //Types to be overloaded for: {bool, char, int, float, loff_t, long, pchar, pointer, pthread_t, sector_t, short, size_t, u32, uchar, uint, ulong, unsigned, ushort}
 
 char __VERIFIER_nondet_char() {
-	return (char)__SMACK_nondet();
+  return (char)__SMACK_nondet();
 }
 
 int __VERIFIER_nondet_int() {
-	return __SMACK_nondet();
+  return __SMACK_nondet();
 }
-
-
 
 #endif
