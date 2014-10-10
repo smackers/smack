@@ -255,6 +255,10 @@ void __SMACK_decls() {
     "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 #endif
 
+  D("var $exn: bool;");
+  D("var $exnv: int;");
+  D("function $extractvalue(p: int, i: int) returns (int);");
+
 #undef D
 }
 

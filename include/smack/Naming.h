@@ -28,6 +28,8 @@ class Naming {
 public:
   static const string BLOCK_LBL;
   static const string RET_VAR;
+  static const string EXN_VAR;
+  static const string EXN_VAL_VAR;
   static const string BOOL_VAR;
   static const string FLOAT_VAR;
   static const string PTR_VAR;

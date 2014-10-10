@@ -701,15 +701,22 @@ const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
   return (f && f->isVarArg() && isFloat(v)) ? fp2si(v) : expr(v);
 }
 
-const Stmt* SmackRep::call(llvm::Function* f, llvm::CallInst& ci) {
+const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
+  using namespace llvm;
 
   assert(f && "Call encountered unresolved function.");
   
   string name = naming.get(*f);
   vector<const Expr*> args;
   vector<string> rets;
+
+  unsigned num_arg_operands = ci.getNumOperands();
+  if (isa<CallInst>(ci))
+    num_arg_operands -= 1;
+  else if (isa<InvokeInst>(ci))
+    num_arg_operands -= 3;
   
-  for (unsigned i = 0; i < ci.getNumOperands() - 1; i++)
+  for (unsigned i = 0; i < num_arg_operands; i++)
     args.push_back(arg(f, i, ci.getOperand(i)));
   
   if (!ci.getType()->isVoidTy())

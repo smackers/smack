@@ -151,6 +151,7 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
   if (proc.isProc()) {
     if (v)
       emit(Stmt::assign(Expr::id(Naming::RET_VAR), rep.expr(v)));
+    emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
     emit(Stmt::return_());
   } else {
     assert (v && "Expected return value.");
@@ -207,6 +208,32 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
   generateGotoStmts(si, targets);
 }
 
+void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
+  processInstruction(ii);
+  llvm::Function* f = ii.getCalledFunction();
+  if (f) {
+    emit(rep.call(f, ii));
+  } else {
+    // assert(false && "unexpected invoke instruction.");
+    WARN("unsoundly ignoring invoke instruction... ");
+  }
+  vector<pair<const Expr*, llvm::BasicBlock*> > targets;
+  targets.push_back(make_pair(
+    Expr::not_(Expr::id(Naming::EXN_VAR)),
+    ii.getNormalDest()));
+  targets.push_back(make_pair(
+    Expr::id(Naming::EXN_VAR),
+    ii.getUnwindDest()));
+  generateGotoStmts(ii, targets);
+}
+
+void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
+  processInstruction(ri);
+  emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(true)));
+  emit(Stmt::assign(Expr::id(Naming::EXN_VAL_VAR), rep.expr(ri.getValue())));
+  emit(Stmt::return_());
+}
+
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
   processInstruction(ii);
   
@@ -232,7 +259,47 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& bo) {
 /*                  AGGREGATE                   OPERATIONS                    */
 /******************************************************************************/
 
-// TODO implement aggregate operations
+void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
+  processInstruction(evi);
+  const Expr* e = rep.expr(evi.getAggregateOperand());
+  for (unsigned i = 0; i < evi.getNumIndices(); i++)
+    e = Expr::fn("$extractvalue", e, Expr::lit((int)evi.getIndices()[i]));
+  emit(Stmt::assign(rep.expr(&evi),e));
+}
+
+void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
+  processInstruction(ivi);
+  const Expr* old = rep.expr(ivi.getAggregateOperand());
+  const Expr* res = rep.expr(&ivi);
+  const llvm::Type* t = ivi.getType();
+
+  for (unsigned i = 0; i < ivi.getNumIndices(); i++) {
+    unsigned idx = ivi.getIndices()[i];
+
+    unsigned num_elements;
+    if (const llvm::StructType* st = llvm::dyn_cast<const llvm::StructType>(t)) {
+      num_elements = st->getNumElements();
+      t = st->getElementType(idx);
+    } else if (const llvm::ArrayType* at = llvm::dyn_cast<const llvm::ArrayType>(t)) {
+      num_elements = at->getNumElements();
+      t = at->getElementType();
+    } else {
+      assert (false && "Unexpected aggregate type");
+    }
+
+    for (unsigned j = 0; j < num_elements; j++) {
+      if (j != idx) {
+        emit(Stmt::assume(Expr::eq(
+          Expr::fn("$extractvalue", res, Expr::lit((int)j)),
+          Expr::fn("$extractvalue", old, Expr::lit((int)j))
+        )));
+      }
+    }
+    res = Expr::fn("$extractvalue", res, Expr::lit((int)idx));
+    old = Expr::fn("$extractvalue", old, Expr::lit((int)idx));
+  }
+  emit(Stmt::assume(Expr::eq(res,rep.expr(ivi.getInsertedValueOperand()))));
+}
 
 /******************************************************************************/
 /*     MEMORY       ACCESS        AND       ADDRESSING       OPERATIONS       */
@@ -470,16 +537,16 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
-  } else if (f && naming.get(*f) == "__SMACK_mod") {
+  } else if (f && naming.get(*f).find("__SMACK_mod") != string::npos) {
     addMod(rep.code(ci));
 
-  } else if (f && naming.get(*f) == "__SMACK_code") {
+  } else if (f && naming.get(*f).find("__SMACK_code") != string::npos) {
     emit(Stmt::code(rep.code(ci)));
 
-  } else if (f && naming.get(*f) == "__SMACK_decl") {
+  } else if (f && naming.get(*f).find("__SMACK_decl") != string::npos) {
     addDecl(Decl::code(rep.code(ci)));
 
-  } else if (f && naming.get(*f) == "__SMACK_top_decl") {
+  } else if (f && naming.get(*f).find("__SMACK_top_decl") != string::npos) {
     string decl = rep.code(ci);
     addTopDecl(Decl::code(decl));
     if (VAR_DECL.match(decl)) {
@@ -594,6 +661,15 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   if (f && f->isDeclaration() && rep.isExternal(&ci))
     emit(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
+}
+
+void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
+  processInstruction(lpi);
+  // TODO what exactly!?
+  emit(Stmt::assign(rep.expr(&lpi),Expr::id(Naming::EXN_VAL_VAR)));
+  if (lpi.isCleanup())
+    emit(Stmt::assign(Expr::id(Naming::EXN_VAR),Expr::lit(false)));
+  WARN("unsoundly ignoring landingpad clauses...");
 }
 
 /******************************************************************************/

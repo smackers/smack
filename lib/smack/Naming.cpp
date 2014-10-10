@@ -12,6 +12,8 @@ namespace smack {
 
 const string Naming::BLOCK_LBL = "$bb";
 const string Naming::RET_VAR = "$r";
+const string Naming::EXN_VAR = "$exn";
+const string Naming::EXN_VAL_VAR = "$exnv";
 const string Naming::BOOL_VAR = "$b";
 const string Naming::FLOAT_VAR = "$f";
 const string Naming::PTR_VAR = "$p";

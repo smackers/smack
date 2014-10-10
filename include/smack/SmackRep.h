@@ -184,7 +184,7 @@ public:
   const Expr* pred(const llvm::User* v);
   
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
-  const Stmt* call(llvm::Function* f, llvm::CallInst& ci);
+  const Stmt* call(llvm::Function* f, llvm::User& u);
   string code(llvm::CallInst& ci);
   ProcDecl* proc(llvm::Function* f, int n);
   
