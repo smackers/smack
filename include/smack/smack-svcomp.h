@@ -6,7 +6,9 @@
 
 #include "smack.h"
 
-#define __inline // This removes the inline attribute
+#define __inline // Remove the inline attribute
+#define __builtin_expect __builtinx_expect // Rewrite so that clang does not complain
+#define __builtin_memcpy __builtinx_memcpy // Rewrite so that clang does not complain
 
 void __VERIFIER_error(void) {
   assert(0);
