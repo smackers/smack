@@ -4,6 +4,10 @@
 #ifndef SMACK_SVCOMP_H_
 #define SMACK_SVCOMP_H_
 
+#include "smack.h"
+
+#define __inline // This removes the inline attribute
+
 void __VERIFIER_error(void) {
   assert(0);
 }
@@ -12,7 +16,9 @@ void __VERIFIER_assume(int v) {
   assume(v);
 }
 
-//Types to be overloaded for: {bool, char, int, float, loff_t, long, pchar, pointer, pthread_t, sector_t, short, size_t, u32, uchar, uint, ulong, unsigned, ushort}
+// Types to be overloaded for: {bool, char, int, float, loff_t, long, pchar,
+// pointer, pthread_t, sector_t, short, size_t, u32, uchar, uint, ulong,
+// unsigned, ushort}
 
 char __VERIFIER_nondet_char() {
   return (char)__SMACK_nondet();
@@ -23,3 +29,4 @@ int __VERIFIER_nondet_int() {
 }
 
 #endif
+
