@@ -23,7 +23,7 @@ Regex Naming::BPL_KW(
   "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
   "|unique|finite|complete|type|const|function|axiom|var|procedure"
   "|implementation|where|returns|assume|assert|havoc|call|return|while"
-  "|break|goto|if|else|div)$");
+  "|break|goto|if|else|div|yield)$");
 
 Regex Naming::SMACK_NAME(".*__SMACK_.*");
 
