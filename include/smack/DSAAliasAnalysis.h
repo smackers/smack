@@ -15,16 +15,16 @@
 #ifndef LLVM_ANALYSIS_DATA_STRUCTURE_AA_H
 #define LLVM_ANALYSIS_DATA_STRUCTURE_AA_H
 
-#include "llvm/IR/InstVisitor.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Passes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Module.h"
+#include "assistDS/DSNodeEquivs.h"
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
-
-#include "assistDS/DSNodeEquivs.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Passes.h"
+#include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Module.h"
 
 namespace smack {
 
