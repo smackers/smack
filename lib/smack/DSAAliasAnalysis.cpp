@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -124,9 +125,41 @@ bool DSAAliasAnalysis::isExternal(const Value* v) {
   return N && N->isExternalNode();
 }
 
+bool DSAAliasAnalysis::isSingletonGlobal(const Value *V) {
+  const DSNode *N = getNode(V);
+  if (!N || !N->isGlobalNode() || N->numGlobals() > 1)
+    return false;
+
+  // Ensure this node has a unique scalar type... (?)
+  DSNode::const_type_iterator TSi = N->type_begin();
+  if (TSi == N->type_end()) return false;
+  svset<Type*>::const_iterator Ti = TSi->second->begin();
+  if (Ti == TSi->second->end()) return false;
+  const Type* T = *Ti;
+  while (T->isPointerTy()) T = T->getPointerElementType();
+  if (!T->isSingleValueType()) return false;
+  ++Ti;
+  if (Ti != TSi->second->end()) return false;
+  ++TSi;
+  if (TSi != N->type_end()) return false;
+
+  // Ensure this node is in its own class... (?)
+  const EquivalenceClasses<const DSNode*> &Cs = nodeEqs->getEquivalenceClasses();
+  EquivalenceClasses<const DSNode*>::iterator C = Cs.findValue(N);
+  assert(C != Cs.end() && "Did not find value.");
+  EquivalenceClasses<const DSNode*>::member_iterator I = Cs.member_begin(C);
+  if (I == Cs.member_end())
+    return false;
+  ++I;
+  if (I != Cs.member_end())
+    return false;
+
+  return true;
+}
+
 AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {
 
-  if (LocA.Ptr == LocB.Ptr) 
+  if (LocA.Ptr == LocB.Ptr)
     return MustAlias;
 
   const DSNode *N1 = nodeEqs->getMemberForValue(LocA.Ptr);
@@ -138,6 +171,7 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
   if ((N1->isCompleteNode() || N2->isCompleteNode()) &&
       !(N1->isExternalNode() && N2->isExternalNode()) &&
       !(N1->isUnknownNode() || N2->isUnknownNode())) {
+
     if (!equivNodes(N1,N2))
       return NoAlias;
     

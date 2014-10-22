@@ -122,7 +122,16 @@ protected:
   Naming& naming;
   Program& program;
   vector<string> bplGlobals;
-  vector< pair<const llvm::Value*, bool> > memoryRegions;
+
+  struct Region {
+    const llvm::Value* representative;
+    bool isAllocated;
+    bool isSingletonGlobal;
+    Region(const llvm::Value* r, bool a, bool s) :
+      representative(r), isAllocated(a), isSingletonGlobal(s) {}
+  };
+
+  vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
   int globalsBottom;
   
@@ -165,6 +174,7 @@ public:
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
+  string memType(unsigned r);
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
@@ -227,10 +237,29 @@ private:
 
 public:
   RegionCollector(SmackRep& r) : rep(r) {}
-  void visitAllocaInst(llvm::AllocaInst& i) { rep.getRegion(&i); }
-  void visitCallInst(llvm::CallInst& i) {
-    if (i.getType()->isPointerTy())
-      rep.getRegion(&i);
+  void visitModule(llvm::Module& M) {
+    for (llvm::Module::const_global_iterator
+         G = M.global_begin(), E = M.global_end(); G != E; ++G)
+      rep.getRegion(G);
+  }
+  void visitAllocaInst(llvm::AllocaInst& I) {
+    rep.getRegion(&I);
+  }
+  void visitLoadInst(llvm::LoadInst& I) {
+    rep.getRegion(I.getPointerOperand());
+  }
+  void visitStoreInst(llvm::StoreInst& I) {
+    rep.getRegion(I.getPointerOperand());
+  }
+  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &I) {
+    rep.getRegion(I.getPointerOperand());
+  }
+  void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
+    rep.getRegion(I.getPointerOperand());
+  }
+  void visitCallInst(llvm::CallInst& I) {
+    if (I.getType()->isPointerTy())
+      rep.getRegion(&I);
   }
 };
 

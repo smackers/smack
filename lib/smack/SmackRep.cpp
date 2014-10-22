@@ -164,45 +164,58 @@ string SmackRep::memReg(unsigned idx) {
   return s.str();
 }
 
+string SmackRep::memType(unsigned r) {
+  if (memoryRegions[r].isSingletonGlobal)
+    return getPtrType();
+  else {
+    return "[int] int";
+    stringstream s;
+    s << "[" << getPtrType() << "] " + getPtrType();
+    return s.str();
+  }
+}
+
 const Expr* SmackRep::mem(const llvm::Value* v) {
-  return mem( getRegion(v), expr(v) );
+  unsigned r = getRegion(v);
+  if (memoryRegions[r].isSingletonGlobal)
+    return Expr::id(memReg(r));
+  else
+    return Expr::sel(Expr::id(memReg(r)),expr(v));
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
-  return Expr::sel( Expr::id(memReg(region)), addr );
+  if (memoryRegions[region].isSingletonGlobal)
+    return Expr::id(memReg(region));
+  else
+    return Expr::sel(Expr::id(memReg(region)),addr);
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
   unsigned r;
-
+  
   for (r=0; r<memoryRegions.size(); ++r)
-    if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].first))
+    if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
       break;
 
-  if (r == memoryRegions.size())
-    memoryRegions.push_back(make_pair(v,false));
+  if (r == memoryRegions.size()) {
+    llvm::Type* T = v->getType();
+    while (T->isPointerTy()) T = T->getPointerElementType();
+    memoryRegions.emplace_back(v,false,
+      aliasAnalysis->isSingletonGlobal(v) && T->isSingleValueType()
+    );
+  }
 
-  memoryRegions[r].second = memoryRegions[r].second || aliasAnalysis->isAlloced(v);
-
+  memoryRegions[r].isAllocated = memoryRegions[r].isAllocated || aliasAnalysis->isAlloced(v);
   return r;
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
-  return v->getType()->isPointerTy() && !memoryRegions[getRegion(v)].second;
+  return v->getType()->isPointerTy() && !memoryRegions[getRegion(v)].isAllocated;
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {
   RegionCollector rc(*this);
-
-  for (llvm::Module::iterator func = M.begin(), e = M.end();
-       func != e; ++func) {
-
-    for (llvm::Function::iterator block = func->begin();
-        block != func->end(); ++block) {
-
-      rc.visit(*block);
-    }
-  }
+  rc.visit(M);
 }
 
 const Expr* SmackRep::trunc(const llvm::Value* v, llvm::Type* t) {
@@ -768,8 +781,7 @@ string SmackRep::getPrelude() {
   s << "// Memory region declarations";
   s << ": " << memoryRegions.size() << endl;
   for (unsigned i=0; i<memoryRegions.size(); ++i)
-    s << "var " << memReg(i) 
-      << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "var " << memReg(i) << ": " << memType(i) << ";" << endl;
   s << endl;
   s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
 

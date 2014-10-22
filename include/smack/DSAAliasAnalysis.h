@@ -95,6 +95,7 @@ public:
   llvm::DSNode *getNode(const llvm::Value* v);
   bool isAlloced(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
+  bool isSingletonGlobal(const llvm::Value *V);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
 
