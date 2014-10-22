@@ -136,7 +136,7 @@ mkdir -p ${Z3_DIR}/install
 
 # Get Z3
 cd ${Z3_DIR}/src/
-wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=4995ce1fdee47ffd61d4726c89ff908f468d6450"
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=93337fedebefdb072066f2219efe69c80adc2647"
 unzip -o SourceControlFileDownload*
 rm -f SourceControlFileDownload*
 
@@ -164,7 +164,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r b388523c1c71 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r 02815f46a6f1 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -190,7 +190,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout e476c4252f7e
+git checkout 9235ea4f8cd2
 
 # Build Corral
 cd ${CORRAL_DIR}/references
