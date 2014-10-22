@@ -103,13 +103,13 @@ void __SMACK_decls() {
   // Floating point
   D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
-  D("const $ffalse: float;");
-  D("const $ftrue: float;");
   D("function $fadd(f1:float, f2:float) returns (float);");
   D("function $fsub(f1:float, f2:float) returns (float);");
   D("function $fmul(f1:float, f2:float) returns (float);");
   D("function $fdiv(f1:float, f2:float) returns (float);");
   D("function $frem(f1:float, f2:float) returns (float);");
+  D("function $ffalse(f1:float, f2:float) returns (bool);");
+  D("function $ftrue(f1:float, f2:float) returns (bool);");
   D("function $foeq(f1:float, f2:float) returns (bool);");
   D("function $foge(f1:float, f2:float) returns (bool);");
   D("function $fogt(f1:float, f2:float) returns (bool);");
