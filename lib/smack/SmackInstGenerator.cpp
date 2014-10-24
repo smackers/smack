@@ -58,6 +58,16 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
 
 void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
 
+  // do not generate sourceloc from calls to llvm.debug since
+  // those point to variable declaration lines and such
+  if (llvm::CallInst* ci = llvm::dyn_cast<llvm::CallInst>(&i)) {
+    llvm::Function* f = ci->getCalledFunction();
+    string name = f && f->hasName() ? f->getName().str() : "";
+    if (name.find("llvm.dbg.") != string::npos) {
+      return;
+    }
+  }
+
   if (llvm::MDNode* n = i.getMetadata("dbg")) {      
     llvm::DILocation l(n);
     
