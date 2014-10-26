@@ -62,10 +62,10 @@ void __SMACK_decls() {
   D("function {:inline} $add(p1:int, p2:int) returns (int) {p1 + p2}");
   D("function {:inline} $sub(p1:int, p2:int) returns (int) {p1 - p2}");
   D("function {:inline} $mul(p1:int, p2:int) returns (int) {p1 * p2}");
-  D("function $sdiv(p1:int, p2:int) returns (int);");
-  D("function $udiv(p1:int, p2:int) returns (int);");
-  D("function $srem(p1:int, p2:int) returns (int);");
-  D("function $urem(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"div\"} $sdiv(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"div\"} $udiv(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"rem\"} $srem(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"rem\"} $urem(p1:int, p2:int) returns (int);");
   D("function $and(p1:int, p2:int) returns (int);");
   D("axiom $and(0,0) == 0;");
   D("axiom $and(0,1) == 0;");
