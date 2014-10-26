@@ -133,7 +133,7 @@ bool SmackRep::isFloat(llvm::Type* t) {
   return t->isFloatingPointTy();
 }
 
-bool SmackRep::isFloat(llvm::Value* v) {
+bool SmackRep::isFloat(const llvm::Value* v) {
   return isFloat(v->getType());
 }
 
@@ -818,7 +818,10 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
 
   if (isInt(val)) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
-    
+
+  } else if (isFloat(val)) {
+    staticInits.push_back( Stmt::assign(mem(region,addr), fp2si(val)) );
+
   } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 

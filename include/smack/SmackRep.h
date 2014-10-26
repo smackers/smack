@@ -167,7 +167,7 @@ public:
   bool isBool(llvm::Type* t);
   bool isBool(const llvm::Value* v);
   bool isFloat(llvm::Type* t);
-  bool isFloat(llvm::Value* v);
+  bool isFloat(const llvm::Value* v);
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
