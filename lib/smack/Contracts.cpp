@@ -39,34 +39,35 @@ bool looksLikeLoopHead(BasicBlock* B) {
 
 void ContractsExtractor::visitCallInst(CallInst& ci) {
   Function* f = ci.getCalledFunction();
+  string name = f && f->hasName() ? f->getName().str() : "";
 
-  if (f && naming.get(*f).find("forall") != string::npos) {
+  if (name == "forall") {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
     Value* arg = ci.getArgOperand(1);
     ci.setArgOperand(1,sliceIdx(ci.getContext()));
     slices.push_back(extractSlice(arg));
 
-  } else if (f && naming.get(*f).find("exists") != string::npos) {
+  } else if (name == "exists") {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to exists.");
     Value* arg = ci.getArgOperand(1);
     ci.setArgOperand(1,sliceIdx(ci.getContext()));
     slices.push_back(extractSlice(arg));
 
-  } else if (f && naming.get(*f).find("requires") != string::npos) {
+  } else if (name == "requires") {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
     Value* V = ci.getArgOperand(0);
     ci.setArgOperand(0,ConstantInt::getTrue(ci.getContext()));
     proc.addRequires(extractSlice(V)->getBoogieExpression(naming,rep));
     ci.eraseFromParent();
 
-  } else if (f && naming.get(*f).find("ensures") != string::npos) {
+  } else if (name == "ensures") {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to ensures.");
     Value* V = ci.getArgOperand(0);
     ci.setArgOperand(0,ConstantInt::getTrue(ci.getContext()));
     proc.addEnsures(extractSlice(V)->getBoogieExpression(naming,rep));
     ci.eraseFromParent();
 
-  } else if (f && naming.get(*f).find("invariant") != string::npos) {
+  } else if (name == "invariant") {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to invariant.");
 
     BasicBlock* body = ci.getParent();
