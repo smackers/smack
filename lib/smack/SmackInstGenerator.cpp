@@ -256,7 +256,7 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.op(&I)));
+  emit(Stmt::assign(rep.expr(&I),rep.bop(&I)));
 }
 
 /******************************************************************************/
@@ -365,55 +365,17 @@ void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {
 }
 
 void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
+  using llvm::AtomicRMWInst;
   processInstruction(i);
-  
   const Expr* res = rep.expr(&i);
   const Expr* mem = rep.mem(i.getPointerOperand());
   const Expr* val = rep.expr(i.getValOperand());  
-  const Expr* op;  
-  
-  switch (i.getOperation()) {
-    using llvm::AtomicRMWInst;
-  case AtomicRMWInst::Xchg:
-    op = val;
-    break;
-  case AtomicRMWInst::Add:
-    op = Expr::fn(SmackRep::ADD,mem,val);
-    break;
-  case AtomicRMWInst::Sub:
-    op = Expr::fn(SmackRep::SUB,mem,val);
-    break;
-  case AtomicRMWInst::And:
-    op = Expr::fn(SmackRep::AND,mem,val);
-    break;
-  case AtomicRMWInst::Nand:
-    op = Expr::fn(SmackRep::NAND,mem,val);
-    break;
-  case AtomicRMWInst::Or:
-    op = Expr::fn(SmackRep::OR,mem,val);
-    break;
-  case AtomicRMWInst::Xor:
-    op = Expr::fn(SmackRep::XOR,mem,val);
-    break;
-  case AtomicRMWInst::Max:
-    op = Expr::fn(SmackRep::MAX,mem,val);
-    break;
-  case AtomicRMWInst::Min:
-    op = Expr::fn(SmackRep::MIN,mem,val);
-    break;
-  case AtomicRMWInst::UMax:
-    op = Expr::fn(SmackRep::UMAX,mem,val);
-    break;
-  case AtomicRMWInst::UMin:
-    op = Expr::fn(SmackRep::UMIN,mem,val);
-    break;
-  default:
-    assert(false && "unexpected atomic operation.");
-  }  
-  
   emit(Stmt::assign(res,mem));
-  emit(Stmt::assign(mem,op));
-}
+  emit(Stmt::assign(mem,
+    i.getOperation() == AtomicRMWInst::Xchg
+      ? val
+      : Expr::fn(rep.armwop2fn(i.getOperation()),mem,val) ));
+  }
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
   processInstruction(gepi);
@@ -444,7 +406,7 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
 
 void SmackInstGenerator::visitCmpInst(llvm::CmpInst& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.pred(&I)));
+  emit(Stmt::assign(rep.expr(&I),rep.cmp(&I)));
 }
 
 void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {
