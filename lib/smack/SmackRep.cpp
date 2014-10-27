@@ -121,7 +121,7 @@ bool SmackRep::isInt(const llvm::Value* v) {
   return isInt(v->getType());
 }
 
-bool SmackRep::isBool(llvm::Type* t) {
+bool SmackRep::isBool(const llvm::Type* t) {
   return t->isIntegerTy(1);
 }
 
@@ -129,7 +129,7 @@ bool SmackRep::isBool(const llvm::Value* v) {
   return isBool(v->getType());
 }
 
-bool SmackRep::isFloat(llvm::Type* t) {
+bool SmackRep::isFloat(const llvm::Type* t) {
   return t->isFloatingPointTy();
 }
 
@@ -216,48 +216,6 @@ bool SmackRep::isExternal(const llvm::Value* v) {
 void SmackRep::collectRegions(llvm::Module &M) {
   RegionCollector rc(*this);
   rc.visit(M);
-}
-
-const Expr* SmackRep::trunc(const llvm::Value* v, llvm::Type* t) {
-  assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
-  const Expr* e = expr(v);
-
-  return isBool(t)
-    ? Expr::fn(I2B,e)
-    : Expr::fn(TRUNC,e,lit(t->getPrimitiveSizeInBits()));
-}
-const Expr* SmackRep::zext(const llvm::Value* v, llvm::Type* t) {
-  return isBool(v->getType()) ? b2p(v) : expr(v);
-}
-const Expr* SmackRep::sext(const llvm::Value* v, llvm::Type* t) {
-  return isBool(v->getType()) ? b2p(v) : expr(v);
-}
-const Expr* SmackRep::fptrunc(const llvm::Value* v, llvm::Type* t) {
-  return expr(v);  
-}
-const Expr* SmackRep::fpext(const llvm::Value* v, llvm::Type* t) {
-  return expr(v);
-}
-const Expr* SmackRep::fp2ui(const llvm::Value* v, llvm::Type* t) {
-  return Expr::fn(FP2UI, expr(v));
-}
-const Expr* SmackRep::fp2si(const llvm::Value* v, llvm::Type* t) {
-  return Expr::fn(FP2SI, expr(v));
-}
-const Expr* SmackRep::ui2fp(const llvm::Value* v, llvm::Type* t) {
-  return Expr::fn(UI2FP, expr(v));
-}
-const Expr* SmackRep::si2fp(const llvm::Value* v, llvm::Type* t) {
-  return Expr::fn(SI2FP, expr(v));
-}
-const Expr* SmackRep::p2i(const llvm::Value* v, llvm::Type* t) {
-  return Expr::fn(P2I, expr(v));
-}
-const Expr* SmackRep::i2p(const llvm::Value* v, llvm::Type* t) {
-  return Expr::fn(I2P, expr(v));
-}
-const Expr* SmackRep::bitcast(const llvm::Value* v, llvm::Type* t) {
-  return expr(v);
 }
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {  
@@ -420,27 +378,10 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         }
         return ptrArith(CE->getOperand(0), ps, ts);
 
-      } else if (CE->isCast()) {
-        Value* v = CE->getOperand(0);
-        Type* t = CE->getType();
-        switch (CE->getOpcode()) {
-        case Instruction::Trunc: return trunc(v,t);
-        case Instruction::ZExt: return zext(v,t);
-        case Instruction::SExt: return sext(v,t);
-        case Instruction::FPTrunc: return fptrunc(v,t);
-        case Instruction::FPExt: return fpext(v,t);
-        case Instruction::FPToUI: return fp2ui(v,t);
-        case Instruction::FPToSI: return fp2si(v,t);
-        case Instruction::UIToFP: return ui2fp(v,t);
-        case Instruction::SIToFP: return si2fp(v,t);
-        case Instruction::PtrToInt: return p2i(v,t);
-        case Instruction::IntToPtr: return i2p(v,t);
-        case Instruction::BitCast: return bitcast(v,t);
-        default:
-          assert(false && "Unexpected constant cast expression.");
-        }
+      } else if (CE->isCast())
+        return cast(CE);
 
-      } else if (Instruction::isBinaryOp(CE->getOpcode()))
+      else if (Instruction::isBinaryOp(CE->getOpcode()))
         return op(CE);
 
       else if (CE->isCompare())
@@ -481,6 +422,49 @@ string SmackRep::getString(const llvm::Value* v) {
         if (const llvm::ConstantDataSequential* cds = llvm::dyn_cast<const llvm::ConstantDataSequential>(cc->getOperand(0)))
             return cds ->getAsCString();
   return "";
+}
+
+const Expr* SmackRep::cast(const llvm::Instruction* I) {
+  return cast(I->getOpcode(), I->getOperand(0), I->getType());
+}
+
+const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
+  return cast(CE->getOpcode(), CE->getOperand(0), CE->getType());
+}
+
+const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
+  using namespace llvm;
+  switch (opcode) {
+  case Instruction::Trunc:
+    assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
+    return isBool(t)
+      ? Expr::fn(I2B,expr(v))
+      : Expr::fn(TRUNC,expr(v),lit(t->getPrimitiveSizeInBits()));
+  case Instruction::ZExt:
+    return isBool(v->getType()) ? b2p(v) : expr(v);
+  case Instruction::SExt:
+    return isBool(v->getType()) ? b2p(v) : expr(v);
+  case Instruction::FPTrunc:
+    return expr(v);
+  case Instruction::FPExt:
+    return expr(v);
+  case Instruction::FPToUI:
+    return Expr::fn(FP2UI,expr(v));
+  case Instruction::FPToSI:
+    return Expr::fn(FP2SI,expr(v));
+  case Instruction::UIToFP:
+    return Expr::fn(UI2FP,expr(v));
+  case Instruction::SIToFP:
+    return Expr::fn(SI2FP,expr(v));
+  case Instruction::PtrToInt:
+    return Expr::fn(P2I,expr(v));
+  case Instruction::IntToPtr:
+    return Expr::fn(I2P,expr(v));
+  case Instruction::BitCast:
+    return expr(v);
+  default:
+    assert(false && "Unexpected cast expression.");
+  }
 }
 
 const Expr* SmackRep::op(const llvm::User* v) {
@@ -715,8 +699,7 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  // TODO take care with this call to fp2si
-  return (f && f->isVarArg() && isFloat(v)) ? fp2si(v,0) : expr(v);
+  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn(FP2SI,expr(v)) : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
@@ -825,8 +808,7 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (isFloat(val)) {
-    // TODO take care with this call to fp2si
-    staticInits.push_back( Stmt::assign(mem(region,addr), fp2si(val,0)) );
+    staticInits.push_back( Stmt::assign(mem(region,addr), Expr::fn(FP2SI,expr(val))) );
 
   } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );

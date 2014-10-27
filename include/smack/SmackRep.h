@@ -164,9 +164,9 @@ public:
   bool isIgnore(llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
-  bool isBool(llvm::Type* t);
+  bool isBool(const llvm::Type* t);
   bool isBool(const llvm::Value* v);
-  bool isFloat(llvm::Type* t);
+  bool isFloat(const llvm::Type* t);
   bool isFloat(const llvm::Value* v);
 
   unsigned storageSize(llvm::Type* t);
@@ -190,6 +190,9 @@ public:
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
   string getString(const llvm::Value* v);
+  const Expr* cast(const llvm::Instruction* I);
+  const Expr* cast(const llvm::ConstantExpr* CE);
+  const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* op(const llvm::User* v);
   const Expr* pred(const llvm::User* v);
   
@@ -197,19 +200,6 @@ public:
   const Stmt* call(llvm::Function* f, llvm::User& u);
   string code(llvm::CallInst& ci);
   ProcDecl* proc(llvm::Function* f, int n);
-  
-  virtual const Expr* trunc(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* zext(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* sext(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* fptrunc(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* fpext(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* fp2ui(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* fp2si(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* ui2fp(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* si2fp(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* p2i(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* i2p(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* bitcast(const llvm::Value* v, llvm::Type* t);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);

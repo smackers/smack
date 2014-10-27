@@ -433,70 +433,64 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
 /*                 CONVERSION                    OPERATIONS                   */
 /******************************************************************************/
 
-void SmackInstGenerator::visitTruncInst(llvm::TruncInst& ti) {
-  processInstruction(ti);
-  emit(Stmt::assign(rep.expr(&ti),
-    rep.trunc(ti.getOperand(0),ti.getType())));
+void SmackInstGenerator::visitTruncInst(llvm::TruncInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitZExtInst(llvm::ZExtInst& ci) {
-  processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci),
-    rep.zext(ci.getOperand(0),ci.getType())));
+void SmackInstGenerator::visitZExtInst(llvm::ZExtInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitSExtInst(llvm::SExtInst& ci) {
-  processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci),
-    rep.sext(ci.getOperand(0),ci.getType())));
+void SmackInstGenerator::visitSExtInst(llvm::SExtInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitFPTruncInst(llvm::FPTruncInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),
-    rep.fptrunc(i.getOperand(0),i.getType())));  
+void SmackInstGenerator::visitFPTruncInst(llvm::FPTruncInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitFPExtInst(llvm::FPExtInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),
-    rep.fpext(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitFPExtInst(llvm::FPExtInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitFPToUIInst(llvm::FPToUIInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.fp2ui(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitFPToUIInst(llvm::FPToUIInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitFPToSIInst(llvm::FPToSIInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.fp2si(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitFPToSIInst(llvm::FPToSIInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitUIToFPInst(llvm::UIToFPInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.ui2fp(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitUIToFPInst(llvm::UIToFPInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitSIToFPInst(llvm::SIToFPInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.si2fp(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitSIToFPInst(llvm::SIToFPInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitPtrToIntInst(llvm::PtrToIntInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.p2i(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitPtrToIntInst(llvm::PtrToIntInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitIntToPtrInst(llvm::IntToPtrInst& i) {
-  processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.i2p(i.getOperand(0),i.getType())));
+void SmackInstGenerator::visitIntToPtrInst(llvm::IntToPtrInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
-void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& ci) {
-  processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci),
-    rep.bitcast(ci.getOperand(0),ci.getType())));
+void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
 
 /******************************************************************************/
