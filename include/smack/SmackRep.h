@@ -203,12 +203,12 @@ public:
   virtual const Expr* sext(const llvm::Value* v, llvm::Type* t);
   virtual const Expr* fptrunc(const llvm::Value* v, llvm::Type* t);
   virtual const Expr* fpext(const llvm::Value* v, llvm::Type* t);
-  virtual const Expr* fp2ui(const llvm::Value* v);
-  virtual const Expr* fp2si(const llvm::Value* v);
-  virtual const Expr* ui2fp(const llvm::Value* v);
-  virtual const Expr* si2fp(const llvm::Value* v);
-  virtual const Expr* p2i(const llvm::Value* v);
-  virtual const Expr* i2p(const llvm::Value* v);
+  virtual const Expr* fp2ui(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* fp2si(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* ui2fp(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* si2fp(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* p2i(const llvm::Value* v, llvm::Type* t);
+  virtual const Expr* i2p(const llvm::Value* v, llvm::Type* t);
   virtual const Expr* bitcast(const llvm::Value* v, llvm::Type* t);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);

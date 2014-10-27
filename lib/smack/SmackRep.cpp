@@ -238,22 +238,22 @@ const Expr* SmackRep::fptrunc(const llvm::Value* v, llvm::Type* t) {
 const Expr* SmackRep::fpext(const llvm::Value* v, llvm::Type* t) {
   return expr(v);
 }
-const Expr* SmackRep::fp2ui(const llvm::Value* v) {
+const Expr* SmackRep::fp2ui(const llvm::Value* v, llvm::Type* t) {
   return Expr::fn(FP2UI, expr(v));
 }
-const Expr* SmackRep::fp2si(const llvm::Value* v) {
+const Expr* SmackRep::fp2si(const llvm::Value* v, llvm::Type* t) {
   return Expr::fn(FP2SI, expr(v));
 }
-const Expr* SmackRep::ui2fp(const llvm::Value* v) {
+const Expr* SmackRep::ui2fp(const llvm::Value* v, llvm::Type* t) {
   return Expr::fn(UI2FP, expr(v));
 }
-const Expr* SmackRep::si2fp(const llvm::Value* v) {
+const Expr* SmackRep::si2fp(const llvm::Value* v, llvm::Type* t) {
   return Expr::fn(SI2FP, expr(v));
 }
-const Expr* SmackRep::p2i(const llvm::Value* v) {
+const Expr* SmackRep::p2i(const llvm::Value* v, llvm::Type* t) {
   return Expr::fn(P2I, expr(v));
 }
-const Expr* SmackRep::i2p(const llvm::Value* v) {
+const Expr* SmackRep::i2p(const llvm::Value* v, llvm::Type* t) {
   return Expr::fn(I2P, expr(v));
 }
 const Expr* SmackRep::bitcast(const llvm::Value* v, llvm::Type* t) {
@@ -408,39 +408,43 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
   else if (const Constant* constant = dyn_cast<const Constant>(v)) {
 
-    if (const ConstantExpr* constantExpr = dyn_cast<const ConstantExpr>(constant)) {
+    if (const ConstantExpr* CE = dyn_cast<const ConstantExpr>(constant)) {
 
-      if (constantExpr->getOpcode() == Instruction::GetElementPtr) {
-
-        vector<llvm::Value*> ps;
-        vector<llvm::Type*> ts;
-        llvm::gep_type_iterator typeI = gep_type_begin(constantExpr);
-        for (unsigned i = 1; i < constantExpr->getNumOperands(); i++, ++typeI) {
-          ps.push_back(constantExpr->getOperand(i));
+      if (CE->getOpcode() == Instruction::GetElementPtr) {
+        vector<Value*> ps;
+        vector<Type*> ts;
+        gep_type_iterator typeI = gep_type_begin(CE);
+        for (unsigned i = 1; i < CE->getNumOperands(); i++, ++typeI) {
+          ps.push_back(CE->getOperand(i));
           ts.push_back(*typeI);
         }
-        return ptrArith(constantExpr->getOperand(0), ps, ts);
+        return ptrArith(CE->getOperand(0), ps, ts);
 
-      } else if (constantExpr->getOpcode() == Instruction::BitCast)
+      } else if (CE->isCast()) {
+        Value* v = CE->getOperand(0);
+        Type* t = CE->getType();
+        switch (CE->getOpcode()) {
+        case Instruction::Trunc: return trunc(v,t);
+        case Instruction::ZExt: return zext(v,t);
+        case Instruction::SExt: return sext(v,t);
+        case Instruction::FPTrunc: return fptrunc(v,t);
+        case Instruction::FPExt: return fpext(v,t);
+        case Instruction::FPToUI: return fp2ui(v,t);
+        case Instruction::FPToSI: return fp2si(v,t);
+        case Instruction::UIToFP: return ui2fp(v,t);
+        case Instruction::SIToFP: return si2fp(v,t);
+        case Instruction::PtrToInt: return p2i(v,t);
+        case Instruction::IntToPtr: return i2p(v,t);
+        case Instruction::BitCast: return bitcast(v,t);
+        default:
+          assert(false && "Unexpected constant cast expression.");
+        }
 
-        // TODO: currently this is a noop instruction
-        return expr(constantExpr->getOperand(0));
+      } else if (Instruction::isBinaryOp(CE->getOpcode()))
+        return op(CE);
 
-      else if (constantExpr->getOpcode() == Instruction::IntToPtr)
-
-        // TODO test this out, formerly Expr::id("$UNDEF");
-        return i2p(constantExpr->getOperand(0));
-
-      else if (constantExpr->getOpcode() == Instruction::PtrToInt)
-
-        // TODO test this out, formerly Expr::id("$UNDEF");
-        return p2i(constantExpr->getOperand(0));
-
-      else if (Instruction::isBinaryOp(constantExpr->getOpcode()))
-        return op(constantExpr);
-
-      else if (constantExpr->isCompare())
-        return pred(constantExpr);
+      else if (CE->isCompare())
+          return pred(CE);
 
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -711,7 +715,8 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v)) ? fp2si(v) : expr(v);
+  // TODO take care with this call to fp2si
+  return (f && f->isVarArg() && isFloat(v)) ? fp2si(v,0) : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
@@ -820,7 +825,8 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (isFloat(val)) {
-    staticInits.push_back( Stmt::assign(mem(region,addr), fp2si(val)) );
+    // TODO take care with this call to fp2si
+    staticInits.push_back( Stmt::assign(mem(region,addr), fp2si(val,0)) );
 
   } else if (isa<PointerType>(val->getType())) {
     staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );

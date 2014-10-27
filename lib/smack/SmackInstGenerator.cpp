@@ -465,32 +465,32 @@ void SmackInstGenerator::visitFPExtInst(llvm::FPExtInst& i) {
 
 void SmackInstGenerator::visitFPToUIInst(llvm::FPToUIInst& i) {
   processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.fp2ui(i.getOperand(0))));
+  emit(Stmt::assign(rep.expr(&i),rep.fp2ui(i.getOperand(0),i.getType())));
 }
 
 void SmackInstGenerator::visitFPToSIInst(llvm::FPToSIInst& i) {
   processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.fp2si(i.getOperand(0))));
+  emit(Stmt::assign(rep.expr(&i),rep.fp2si(i.getOperand(0),i.getType())));
 }
 
 void SmackInstGenerator::visitUIToFPInst(llvm::UIToFPInst& i) {
   processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.ui2fp(i.getOperand(0))));
+  emit(Stmt::assign(rep.expr(&i),rep.ui2fp(i.getOperand(0),i.getType())));
 }
 
 void SmackInstGenerator::visitSIToFPInst(llvm::SIToFPInst& i) {
   processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.si2fp(i.getOperand(0))));
+  emit(Stmt::assign(rep.expr(&i),rep.si2fp(i.getOperand(0),i.getType())));
 }
 
 void SmackInstGenerator::visitPtrToIntInst(llvm::PtrToIntInst& i) {
   processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.p2i(i.getOperand(0))));
+  emit(Stmt::assign(rep.expr(&i),rep.p2i(i.getOperand(0),i.getType())));
 }
 
 void SmackInstGenerator::visitIntToPtrInst(llvm::IntToPtrInst& i) {
   processInstruction(i);
-  emit(Stmt::assign(rep.expr(&i),rep.i2p(i.getOperand(0))));
+  emit(Stmt::assign(rep.expr(&i),rep.i2p(i.getOperand(0),i.getType())));
 }
 
 void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& ci) {
