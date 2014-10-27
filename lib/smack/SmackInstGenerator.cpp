@@ -254,9 +254,9 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 /*                   BINARY                    OPERATIONS                     */
 /******************************************************************************/
 
-void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& bo) {
-  processInstruction(bo);
-  emit(Stmt::assign(rep.expr(&bo), rep.op(&bo)));
+void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.op(&I)));
 }
 
 /******************************************************************************/
@@ -433,62 +433,7 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
 /*                 CONVERSION                    OPERATIONS                   */
 /******************************************************************************/
 
-void SmackInstGenerator::visitTruncInst(llvm::TruncInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitZExtInst(llvm::ZExtInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitSExtInst(llvm::SExtInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitFPTruncInst(llvm::FPTruncInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitFPExtInst(llvm::FPExtInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitFPToUIInst(llvm::FPToUIInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitFPToSIInst(llvm::FPToSIInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitUIToFPInst(llvm::UIToFPInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitSIToFPInst(llvm::SIToFPInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitPtrToIntInst(llvm::PtrToIntInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitIntToPtrInst(llvm::IntToPtrInst& I) {
-  processInstruction(I);
-  emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
-}
-
-void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& I) {
+void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
   processInstruction(I);
   emit(Stmt::assign(rep.expr(&I),rep.cast(&I)));
 }
@@ -497,14 +442,9 @@ void SmackInstGenerator::visitBitCastInst(llvm::BitCastInst& I) {
 /*                   OTHER                     OPERATIONS                     */
 /******************************************************************************/
 
-void SmackInstGenerator::visitICmpInst(llvm::ICmpInst& ci) {
-  processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci), rep.pred(&ci)));
-}
-
-void SmackInstGenerator::visitFCmpInst(llvm::FCmpInst& ci) {
-  processInstruction(ci);
-  emit(Stmt::assign(rep.expr(&ci), rep.pred(&ci)));
+void SmackInstGenerator::visitCmpInst(llvm::CmpInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I),rep.pred(&I)));
 }
 
 void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {

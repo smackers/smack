@@ -75,7 +75,7 @@ public:
   void visitResumeInst(llvm::ResumeInst& i);
   void visitUnreachableInst(llvm::UnreachableInst& i);
   
-  void visitBinaryOperator(llvm::BinaryOperator& i);
+  void visitBinaryOperator(llvm::BinaryOperator& I);
 
   // TODO implement extractelement
   // TODO implement insertelement
@@ -92,22 +92,9 @@ public:
   void visitAtomicRMWInst(llvm::AtomicRMWInst& i);
   void visitGetElementPtrInst(llvm::GetElementPtrInst& i);
 
-  void visitTruncInst(llvm::TruncInst& i);
-  void visitZExtInst(llvm::ZExtInst& i);
-  void visitSExtInst(llvm::SExtInst& i);
-  void visitFPTruncInst(llvm::FPTruncInst& i);
-  void visitFPExtInst(llvm::FPExtInst& i);
-  void visitFPToUIInst(llvm::FPToUIInst& i);
-  void visitFPToSIInst(llvm::FPToSIInst& i);
-  void visitUIToFPInst(llvm::UIToFPInst& i);
-  void visitSIToFPInst(llvm::SIToFPInst& i);
-  void visitPtrToIntInst(llvm::PtrToIntInst& i);
-  void visitIntToPtrInst(llvm::IntToPtrInst& i);
-  void visitBitCastInst(llvm::BitCastInst& i);
-  // TODO implement addrspacecast
+  void visitCastInst(llvm::CastInst& I);
+  void visitCmpInst(llvm::CmpInst& I);
 
-  void visitICmpInst(llvm::ICmpInst& i);
-  void visitFCmpInst(llvm::FCmpInst& i);
   void visitPHINode(llvm::PHINode& i);
   void visitSelectInst(llvm::SelectInst& i);
   void visitCallInst(llvm::CallInst& i);
