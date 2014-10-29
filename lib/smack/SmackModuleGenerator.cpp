@@ -39,7 +39,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
       continue;
     }
 
-    if (!func->isVarArg())
+    // TODO: Implement function pointers of vararg functions properly
+//    if (!func->isVarArg())
       program.addDecls(rep.globalDecl(func));
 
     ProcDecl* proc = rep.proc(func,0);
