@@ -56,11 +56,11 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   addDecl(Decl::variable(naming.get(inst), rep.type(&inst)));
 }
 
-void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
+void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
 
   // do not generate sourceloc from calls to llvm.debug since
   // those point to variable declaration lines and such
-  if (llvm::CallInst* ci = llvm::dyn_cast<llvm::CallInst>(&i)) {
+  if (llvm::CallInst* ci = llvm::dyn_cast<llvm::CallInst>(&I)) {
     llvm::Function* f = ci->getCalledFunction();
     string name = f && f->hasName() ? f->getName().str() : "";
     if (name.find("llvm.dbg.") != string::npos) {
@@ -68,15 +68,12 @@ void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
     }
   }
 
-  if (llvm::MDNode* n = i.getMetadata("dbg")) {      
-    llvm::DILocation l(n);
-    
+  if (llvm::MDNode* M = I.getMetadata("dbg")) {
+    llvm::DILocation L(M);
+
     if (SmackOptions::SourceLocSymbols)
-      b->addStmt(Stmt::annot(
-                 Attr::attr("sourceloc",
-                            l.getFilename().str(),
-                            l.getLineNumber(),
-                            l.getColumnNumber())));
+      B->addStmt(Stmt::annot(Attr::attr("sourceloc", L.getFilename().str(),
+        L.getLineNumber(), L.getColumnNumber())));
   }
 }
 
@@ -339,18 +336,26 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
-  const Expr* rhs = rep.expr(si.getOperand(0));
+  const llvm::Value* P = si.getPointerOperand();
+  const llvm::Value* E = si.getOperand(0);
+  const Expr* rhs = rep.expr(E);
+  const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
 
-  if (rep.isFloat(si.getOperand(0)))
+  if (rep.isFloat(E))
     rhs = Expr::fn("$fp2si", rhs);
 
-  emit(Stmt::assign(rep.mem(si.getPointerOperand()),rhs));
-                       
+  emit(Stmt::assign(rep.mem(P),rhs));
+
+  if (SmackOptions::SourceLocSymbols && G) {
+    assert(G->hasName() && "Expected named global variable.");
+    emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
+  }
+
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
     emit(Stmt::call("boogie_si_record_int", Expr::lit(1)));
-    emit(Stmt::call("boogie_si_record_int", rep.expr(si.getPointerOperand())));
-    emit(Stmt::call("boogie_si_record_int", rep.expr(si.getOperand(0))));
+    emit(Stmt::call("boogie_si_record_int", rep.expr(P)));
+    emit(Stmt::call("boogie_si_record_int", rep.expr(E)));
   }
 }
 
@@ -439,7 +444,17 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   if (ci.isInlineAsm()) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     emit(Stmt::skip());
-    
+
+  } else if (name == "llvm.dbg.value" && SmackOptions::SourceLocSymbols) {
+    const llvm::MDNode* m1 = dyn_cast<const llvm::MDNode>(ci.getArgOperand(0));
+    const llvm::MDNode* m2 = dyn_cast<const llvm::MDNode>(ci.getArgOperand(2));
+    assert(m1 && "Expected metadata node in first argument to llvm.dbg.value.");
+    assert(m2 && "Expected metadata node in third argument to llvm.dbg.value.");
+    const llvm::MDString* m3 = dyn_cast<const llvm::MDString>(m2->getOperand(2));
+    assert(m3 && "Expected metadata string in the third argument to metadata node.");
+    emit(Stmt::call("boogie_si_record_int", rep.expr(m1->getOperand(0)),
+      Attr::attr("cexpr", m3->getString().str())));
+
   } else if (name.find("llvm.dbg.") != string::npos) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());

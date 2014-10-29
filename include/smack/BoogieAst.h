@@ -184,6 +184,7 @@ public:
   static const Stmt* assume(const Expr* e, const Attr* attr);
   static const Stmt* call(string p);
   static const Stmt* call(string p, const Expr* x);
+  static const Stmt* call(string p, const Expr* x, const Attr* attr);
   static const Stmt* call(string p, const Expr* x, string r);
   static const Stmt* call(string p, const Expr* x, const Expr* y, string r);
   static const Stmt* call(string p, vector<const Expr*> ps);

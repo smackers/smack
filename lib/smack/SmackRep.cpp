@@ -39,11 +39,11 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-bool SmackRep::isMallocOrFree(llvm::Function* f) {
+bool SmackRep::isMallocOrFree(const llvm::Function* f) {
   return PROC_MALLOC_FREE.match(naming.get(*f));
 }
 
-bool SmackRep::isIgnore(llvm::Function* f) {  
+bool SmackRep::isIgnore(const llvm::Function* f) {
   return PROC_IGNORE.match(naming.get(*f));
 }
 
@@ -71,7 +71,7 @@ bool SmackRep::isFloat(const llvm::Value* v) {
   return isFloat(v->getType());
 }
 
-string SmackRep::type(llvm::Type* t) {
+string SmackRep::type(const llvm::Type* t) {
   if (isBool(t))
     return BOOL_TYPE;
   else if (isFloat(t))
@@ -80,7 +80,7 @@ string SmackRep::type(llvm::Type* t) {
     return getPtrType();
 }
 
-string SmackRep::type(llvm::Value* v) {
+string SmackRep::type(const llvm::Value* v) {
   return type(v->getType());
 }
 

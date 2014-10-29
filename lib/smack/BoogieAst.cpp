@@ -179,6 +179,10 @@ const Stmt* Stmt::call(string p, const Expr* x) {
   return call(p, vector<const Expr*>(1, x), vector<string>());
 }
 
+const Stmt* Stmt::call(string p, const Expr* x, const Attr* attr) {
+  return call(p, vector<const Expr*>(1, x), vector<string>(), vector<const Attr*>(1, attr));
+}
+
 const Stmt* Stmt::call(string p, const Expr* x, string r) {
   return call(p, vector<const Expr*>(1, x), vector<string>(1, r));
 }

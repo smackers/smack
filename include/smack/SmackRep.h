@@ -94,8 +94,8 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  bool isMallocOrFree(llvm::Function* f);
-  bool isIgnore(llvm::Function* f);
+  bool isMallocOrFree(const llvm::Function* f);
+  bool isIgnore(const llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
   bool isBool(const llvm::Type* t);
@@ -112,8 +112,8 @@ public:
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
-  virtual string type(llvm::Type* t);
-  virtual string type(llvm::Value* v);
+  virtual string type(const llvm::Type* t);
+  virtual string type(const llvm::Value* v);
   
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);  

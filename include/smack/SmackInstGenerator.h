@@ -26,6 +26,7 @@ private:
 
   Block* currBlock;
   map<const llvm::BasicBlock*, Block*> blockMap;
+  map<const llvm::Value*, string> sourceNames;
 
   Block* createBlock();
   Block* getBlock(llvm::BasicBlock* bb);
