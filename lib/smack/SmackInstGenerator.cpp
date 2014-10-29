@@ -452,12 +452,14 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     assert(m2 && "Expected metadata node in third argument to llvm.dbg.value.");
     const llvm::MDString* m3 = dyn_cast<const llvm::MDString>(m2->getOperand(2));
     assert(m3 && "Expected metadata string in the third argument to metadata node.");
-    const llvm::Value* V = m1->getOperand(0);
-    string recordProc;
-    if (rep.isBool(V)) recordProc = "boogie_si_record_bool";
-    else if (rep.isFloat(V)) recordProc = "boogie_si_record_float";
-    else recordProc = "boogie_si_record_int";
-    emit(Stmt::call(recordProc,rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
+
+    if (const llvm::Value* V = m1->getOperand(0)) {
+      string recordProc;
+      if (rep.isBool(V)) recordProc = "boogie_si_record_bool";
+      else if (rep.isFloat(V)) recordProc = "boogie_si_record_float";
+      else recordProc = "boogie_si_record_int";
+      emit(Stmt::call(recordProc,rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
+    }
 
   } else if (name.find("llvm.dbg.") != string::npos) {
     WARN("ignoring llvm.debug call.");
