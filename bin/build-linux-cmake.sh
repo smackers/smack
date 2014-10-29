@@ -164,11 +164,11 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r 02815f46a6f1 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r f801862ae9ca https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
-xbuild Boogie.sln
+xbuild Boogie.sln /p:Configuration=Release
 ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
 cd ${BASE_DIR}
@@ -190,7 +190,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 9235ea4f8cd2
+git checkout c5528e96911d
 
 # Build Corral
 cd ${CORRAL_DIR}/references
@@ -214,8 +214,8 @@ cp ${BOOGIE_DIR}/Binaries/Doomed.dll .
 cp ${BOOGIE_DIR}/Binaries/Predication.dll .
 
 cd ${CORRAL_DIR}
-xbuild cba.sln
-ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Debug/z3.exe
+xbuild cba.sln /p:Configuration=Release
+ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
 cd ${BASE_DIR}
 
@@ -285,7 +285,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
 export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
-export CORRAL="mono ${CORRAL_DIR}/bin/Debug/corral.exe"
+export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
 export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
