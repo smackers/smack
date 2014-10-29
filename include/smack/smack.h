@@ -152,6 +152,7 @@ void __SMACK_decls() {
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
+  D("procedure boogie_si_record_bool(b: bool);");
   D("procedure boogie_si_record_int(i: int);");
   D("const $MOP: $mop;");
   
