@@ -432,7 +432,7 @@ string SmackRep::cast2fn(unsigned opcode) {
   case Instruction::FPToUI: return "$fp2ui";
   case Instruction::FPToSI: return "$fp2si";
   case Instruction::UIToFP: return "$ui2fp";
-  case Instruction::SIToFP: return "$sitofp";
+  case Instruction::SIToFP: return "$si2fp";
   case Instruction::PtrToInt: return "$p2i";
   case Instruction::IntToPtr: return "$i2p";
   default:
