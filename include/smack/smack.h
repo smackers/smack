@@ -154,6 +154,7 @@ void __SMACK_decls() {
   D("procedure boogie_si_record_mop(m: $mop);");
   D("procedure boogie_si_record_bool(b: bool);");
   D("procedure boogie_si_record_int(i: int);");
+  D("procedure boogie_si_record_float(f: float);");
   D("const $MOP: $mop;");
   
   D("const $GLOBALS_BOTTOM: int;");
