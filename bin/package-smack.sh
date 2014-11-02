@@ -27,6 +27,9 @@ echo \}                           >> test.c
 # Clean up temporary files
 rm corral* a.bpl test.* cde.options
 
+# Copy license file
+cp ../../LICENSE .
+
 # Create wrapper script
 echo \#\!/bin/sh                                                >  smackverify.sh
 echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"   >> smackverify.sh
