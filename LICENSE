@@ -41,3 +41,12 @@ poolalloc           include/assistDS
                     include/dsa
                     lib/AssistDS
                     lib/DSA
+
+In addition, a binary distribution of SMACK contains at least the following
+tools and packages, which come with their own licenses:
+- LLVM, clang, LLVM runtime (http://llvm.org/)
+- mono (http://www.mono-project.com/)
+- Boogie (http://boogie.codeplex.com/)
+- Corral (http://corral.codeplex.com/)
+- Z3 (http://z3.codeplex.com/), Non-Commercial Use Only
+
