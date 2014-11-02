@@ -17,7 +17,8 @@ VERSION = '1.4.1'
 def verifyParser():
   # parse command line arguments
   parser = argparse.ArgumentParser(add_help=False, parents=[smackParser()])
-
+  parser.add_argument('--verifier-options', dest='verifierOptions', default='',
+                      help='pass arguments to the backend verifier (e.g., --verifier-options="/trackAllVars /staticInlining")')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
                       help='Boogie time limit in seconds')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
@@ -120,12 +121,13 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
+def verify(verifier, bplFileName, timeLimit, unroll, debug, verifierOptions, smackd):
   if verifier == 'boogie':
     # invoke Boogie
     boogieCommand = ['boogie', bplFileName, '/nologo', '/errorLimit:1', '/timeLimit:' + str(timeLimit)]
     if unroll is not None:
       boogieCommand += ['/loopUnroll:' + str(unroll)]
+    boogieCommand += verifierOptions.split()
     p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     boogieOutput = p.communicate()[0]
 
@@ -144,6 +146,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
     corralCommand = ['corral', bplFileName, '/tryCTrace']
     if unroll is not None:
       corralCommand += ['/recursionBound:' + str(unroll)]
+    corralCommand += verifierOptions.split()
     p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     corralOutput = p.communicate()[0]
 
@@ -158,6 +161,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
     # invoke Duality
     dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
     dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
+    dualityCommand += verifierOptions.split()
     p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     dualityOutput = p.communicate()[0]
 
@@ -182,6 +186,8 @@ if __name__ == '__main__':
     elif sysArgv[i] == '--time-limit':
       del sysArgv[i]
       del sysArgv[i]
+    elif sysArgv[i].startswith('--verifier-options'):
+      del sysArgv[i]
 
   bpl, options, clangOutput = smackGenerate(sysArgv)
   args = parser.parse_args(options + sys.argv[1:])
@@ -191,5 +197,6 @@ if __name__ == '__main__':
     outputFile.write(bpl)
     outputFile.close()
 
-  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, args.debug, args.smackd))
+  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll,
+    args.debug, args.verifierOptions, args.smackd))
 
