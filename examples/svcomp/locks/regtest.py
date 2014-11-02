@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
   # parse command line arguments
   parser = argparse.ArgumentParser(description='Runs regressions in this folder.')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default=['boogie'], nargs='*',
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default=['corral'], nargs='*',
                       help='choose verifiers to be used')
   args = parser.parse_args()
 
