@@ -17,7 +17,7 @@ def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
   parser.add_argument('--clang', dest='clang', default='',
                       help='pass arguments to clang (e.g., --clang="-w -g")')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default='boogie',
+  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default='corral',
                       help='set the underlying verifier format')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
                       help='specify entry procedures')
