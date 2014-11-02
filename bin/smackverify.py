@@ -123,7 +123,7 @@ def smackdOutput(corralOutput):
 def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
   if verifier == 'boogie':
     # invoke Boogie
-    boogieCommand = ['boogie', bplFileName, '/nologo', '/timeLimit:' + str(timeLimit)]
+    boogieCommand = ['boogie', bplFileName, '/nologo', '/errorLimit:1', '/timeLimit:' + str(timeLimit)]
     if unroll is not None:
       boogieCommand += ['/loopUnroll:' + str(unroll)]
     p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
