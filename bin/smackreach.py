@@ -11,7 +11,7 @@ import json
 from smackgen import *
 from smackverify import *
 
-VERSION = '1.4.1'
+VERSION = '1.5.0'
 
 def reachParser():
     parser = argparse.ArgumentParser(add_help=False, parents=[verifyParser()])
