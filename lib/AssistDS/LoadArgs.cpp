@@ -17,10 +17,10 @@
 #include "assistDS/LoadArgs.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Use.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/ValueMap.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
 #include <vector>

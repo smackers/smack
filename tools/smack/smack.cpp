@@ -14,6 +14,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -48,22 +49,22 @@ std::string getFileName(const std::string &str) {
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
-  
+
   llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;
-    
+
   if (OutputFilename.empty()) {
 //    OutputFilename = getFileName(InputFilename) + ".bpl";
     OutputFilename = "a.bpl";
   }
-  
+ 
   std::string error_msg;
   llvm::SMDiagnostic err;
   llvm::LLVMContext &context = llvm::getGlobalContext();  
-  llvm::OwningPtr<llvm::Module> module;
-  llvm::OwningPtr<llvm::tool_output_file> output;
-  
+  std::unique_ptr<llvm::Module> module;
+  std::unique_ptr<llvm::tool_output_file> output;
+ 
   module.reset(llvm::ParseIRFile(InputFilename, err, context));
   if (module.get() == 0) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
@@ -71,44 +72,45 @@ int main(int argc, char **argv) {
     if (llvm::errs().has_colors()) llvm::errs().resetColor();
     return 1;
   }
-  
-  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg));
+ 
+  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::sys::fs::F_None));
   if (!error_msg.empty()) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
     llvm::errs() << "error: " << error_msg << "\n";
     if (llvm::errs().has_colors()) llvm::errs().resetColor();
     return 1;
   }
-  
+ 
   ///////////////////////////////
   // initialise and run passes //
   ///////////////////////////////
-  
+
   llvm::PassManager pass_manager;
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
-  
+ 
   // add an appropriate DataLayout instance for the module
-  llvm::DataLayout *dl = 0;
-  const std::string &moduleDataLayout = module.get()->getDataLayout();
+  const llvm::DataLayout *dl = 0;
+  const std::string &moduleDataLayout = module.get()->getDataLayoutStr();
   if (!moduleDataLayout.empty())
     dl = new llvm::DataLayout(moduleDataLayout);
   else if (!DefaultDataLayout.empty())
     dl = new llvm::DataLayout(moduleDataLayout);
-  if (dl) pass_manager.add(dl);
-    
+  if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
+
+  pass_manager.add(llvm::createLowerSwitchPass());
+  pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
-  pass_manager.add(llvm::createDeadInstEliminationPass());
-  pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());
-  
+
   output->keep();
-  
+
   return 0;
 }
+

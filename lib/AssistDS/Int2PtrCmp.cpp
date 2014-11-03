@@ -18,7 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/PatternMatch.h"
+#include "llvm/IR/PatternMatch.h"
 
 #include <set>
 #include <map>
@@ -45,7 +45,7 @@ using namespace PatternMatch;
 //  false - The module was not modified.
 //
 bool Int2PtrCmp::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayout>();
+  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
   for (Module::iterator F = M.begin(); F != M.end(); ++F) {
     for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {      
       for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {

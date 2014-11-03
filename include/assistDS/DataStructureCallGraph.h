@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class DataStructureCallGraph : public CallGraph {
+class DataStructureCallGraph : public CallGraphWrapperPass {
   // Root is root of the call graph, or the external node if a 'main' function
   // couldn't be found.
   CallGraphNode *Root;
@@ -61,7 +61,7 @@ public:
       OS << "<<null function: 0x" << getRoot() << ">>\n";
     }
     
-    CallGraph::print(OS, 0);
+    CallGraphWrapperPass::print(OS, 0);
   }
 
   virtual void releaseMemory() {
@@ -73,7 +73,7 @@ public:
   // override this to adjust the this pointer as needed for the specified pass
   // info.
   virtual void *getAdjustedAnalysisPointer(AnalysisID PI) {
-    if (PI == &CallGraph::ID)
+    if (PI == &CallGraphAnalysis::ID)
       return (CallGraph*)this;
     return this;
   }
@@ -95,11 +95,11 @@ private:
   virtual void destroy() {
     // CallsExternalNode is not in the function map, delete it explicitly.
     if (CallsExternalNode) {
-      CallsExternalNode->allReferencesDropped();
+      // CallsExternalNode->allReferencesDropped(); FIXME FIXME FIXME FIXME
       delete CallsExternalNode;
       CallsExternalNode = 0;
     }
-    CallGraph::releaseMemory();
+    CallGraphWrapperPass::releaseMemory();
   }
 };
 

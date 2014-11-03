@@ -23,7 +23,7 @@ int main() {
   initializeArray(array);
 
   for (i = 0; i < MAXSIZE; i++) {
-    __SMACK_assert(array[i] == RESET);
+    assert(array[i] == RESET);
   }
 
   free(array);

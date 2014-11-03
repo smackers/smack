@@ -1,6 +1,4 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/BoogieAst.h"
@@ -12,6 +10,18 @@ namespace smack {
 using namespace std;
 
 unsigned Decl::uniqueId = 0;
+
+const Expr* Expr::exists(string v, string t, const Expr* e) {
+  vector< pair<string,string> > vars;
+  vars.push_back(make_pair(v,t));
+  return new QuantExpr(QuantExpr::Exists, vars, e);
+}
+
+const Expr* Expr::forall(string v, string t, const Expr* e) {
+  vector< pair<string,string> > vars;
+  vars.push_back(make_pair(v,t));
+  return new QuantExpr(QuantExpr::Forall, vars, e);
+}
 
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
@@ -27,6 +37,10 @@ const Expr* Expr::eq(const Expr* l, const Expr* r) {
 
 const Expr* Expr::lt(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Lt, l, r);
+}
+
+const Expr* Expr::fn(string f, vector<const Expr*> args) {
+  return new FunExpr(f, args);
 }
 
 const Expr* Expr::fn(string f, const Expr* x) {
@@ -165,6 +179,10 @@ const Stmt* Stmt::call(string p, const Expr* x) {
   return call(p, vector<const Expr*>(1, x), vector<string>());
 }
 
+const Stmt* Stmt::call(string p, const Expr* x, const Attr* attr) {
+  return call(p, vector<const Expr*>(1, x), vector<string>(), vector<const Attr*>(1, attr));
+}
+
 const Stmt* Stmt::call(string p, const Expr* x, string r) {
   return call(p, vector<const Expr*>(1, x), vector<string>(1, r));
 }
@@ -219,6 +237,10 @@ const Stmt* Stmt::havoc(string x) {
   return new HavocStmt(vector<string>(1, x));
 }
 
+const Stmt* Stmt::return_(const Expr* e) {
+  return new ReturnStmt(e);
+}
+
 const Stmt* Stmt::return_() {
   return new ReturnStmt();
 }
@@ -236,6 +258,9 @@ Decl* Decl::typee(string name, string type) {
 }
 Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
+}
+Decl* Decl::function(string name, vector< pair<string,string> > args, string type, const Expr* e) {
+  return new FuncDecl(name,vector<const Attr*>(),args,type,e);
 }
 Decl* Decl::constant(string name, string type) {
   return Decl::constant(name, type, vector<const Attr*>(), false);
@@ -298,6 +323,11 @@ ostream& operator<<(ostream& os, Program* p) {
 }
 ostream& operator<<(ostream& os, Program& p) {
   p.print(os);
+  return os;
+}
+
+template<class T,class U> ostream& operator<<(ostream& os, pair<T,U> p) {
+  os << p.first << ": " << p.second;
   return os;
 }
 
@@ -430,16 +460,16 @@ void NotExpr::print(ostream& os) const {
 
 void QuantExpr::print(ostream& os) const {
   os << "(";
-  switch (q) {
+  switch (quant) {
   case Forall:
-    os << "forall";
+    os << "forall ";
     break;
   case Exists:
-    os << "exists";
+    os << "exists ";
     break;
   }
-  os << " -- ToDo: Implement quantified expressions. ";
-  os << ")";
+  print_seq< pair<string,string> >(os, vars, ",");
+  os << " :: " << expr << ")";
 }
 
 void SelExpr::print(ostream& os) const {
@@ -455,6 +485,14 @@ void UpdExpr::print(ostream& os) const {
 
 void VarExpr::print(ostream& os) const {
   os << var;
+}
+
+void CodeExpr::print(ostream& os) const {
+  os << "|{" << endl;
+  if (decls.size() > 0)
+    print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
+  print_seq<Block*>(os, blocks, "\n");
+  os << endl << "}|";
 }
 
 void StrVal::print(ostream& os) const {
@@ -518,7 +556,10 @@ void HavocStmt::print(ostream& os) const {
 }
 
 void ReturnStmt::print(ostream& os) const {
-  os << "return;";
+  os << "return";
+  if (expr)
+    os << " " << expr;  
+  os << ";";
 }
 
 void CodeStmt::print(ostream& os) const {
@@ -550,13 +591,18 @@ void ConstDecl::print(ostream& os) const {
 }
 
 void FuncDecl::print(ostream& os) const {
-  os << "function " << name;
+  os << "function ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name << "(";
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
-  os << ": " << type << " { " << body << " };";
+  os << ") returns (" << type << ")";
+  if (body)
+    os << " { " << body << " }";
+  else
+    os << ";";
 }
 
 void VarDecl::print(ostream& os) const {

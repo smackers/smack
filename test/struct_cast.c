@@ -18,7 +18,7 @@ int main(void) {
   s1.a = 3;
   p2->x = 4;
 
-  __SMACK_assert(s1.a == 4);
+  assert(s1.a == 4);
   return 0;
 }
 

@@ -1,4 +1,7 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
 
 from os import path
 import json
@@ -9,12 +12,13 @@ import argparse
 import platform
 from smackgen import *
 
-VERSION = '1.4.1'
+VERSION = '1.5.0'
 
 def verifyParser():
   # parse command line arguments
   parser = argparse.ArgumentParser(add_help=False, parents=[smackParser()])
-
+  parser.add_argument('--verifier-options', dest='verifierOptions', default='',
+                      help='pass arguments to the backend verifier (e.g., --verifier-options="/trackAllVars /staticInlining")')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
                       help='Boogie time limit in seconds')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
@@ -117,14 +121,19 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
-  if verifier == 'boogie-plain' or verifier == 'boogie-inline':
+def verify(verifier, bplFileName, timeLimit, unroll, debug, verifierOptions, smackd):
+  if verifier == 'boogie':
     # invoke Boogie
-    p = subprocess.Popen(['boogie', bplFileName, '/nologo', '/timeLimit:' + str(timeLimit), '/loopUnroll:' + str(unroll)], stdout=subprocess.PIPE)
+    boogieCommand = ['boogie', bplFileName, '/nologo', '/errorLimit:1', '/timeLimit:' + str(timeLimit)]
+    if unroll is not None:
+      boogieCommand += ['/loopUnroll:' + str(unroll)]
+    boogieCommand += verifierOptions.split()
+    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     boogieOutput = p.communicate()[0]
+
     if p.returncode:
-      return boogieOutput
-      sys.exit("SMACK encountered an error invoking Boogie. Exiting...")
+      print >> sys.stderr, boogieOutput
+      sys.exit("SMACK encountered an error when invoking Boogie. Exiting...")
     if debug:
       return boogieOutput
     sourceTrace = generateSourceErrorTrace(boogieOutput, bplFileName)
@@ -132,17 +141,37 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, smackd):
       return sourceTrace
     else:
       return boogieOutput
-  else:
+  elif verifier == 'corral':
     # invoke Corral
-    p = subprocess.Popen(['corral', bplFileName, '/recursionBound:' + str(unroll), '/tryCTrace'], stdout=subprocess.PIPE)
+    corralCommand = ['corral', bplFileName, '/tryCTrace']
+    if unroll is not None:
+      corralCommand += ['/recursionBound:' + str(unroll)]
+    corralCommand += verifierOptions.split()
+    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     corralOutput = p.communicate()[0]
+
     if p.returncode:
-      return corralOutput
-      sys.exit("SMACK encountered an error invoking Corral. Exiting...")
+      print >> sys.stderr, corralOutput
+      sys.exit("SMACK encountered an error when invoking Corral. Exiting...")
     if smackd:
       smackdOutput(corralOutput)
     else:
       return corralOutput
+  else:
+    # invoke Duality
+    dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
+    dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
+    dualityCommand += verifierOptions.split()
+    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    dualityOutput = p.communicate()[0]
+
+    if p.returncode:
+      print >> sys.stderr, dualityOutput
+      sys.exit("SMACK encountered an error when invoking Duality. Exiting...")
+    if smackd:
+      smackdOutput(dualityOutput)
+    else:
+      return dualityOutput
  
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])
@@ -154,16 +183,20 @@ if __name__ == '__main__':
   for i in reversed(range(len(sysArgv))):
     if sysArgv[i] == '--smackd':
       del sysArgv[i]
-    elif sys.argv[i] == '--time-limit':
+    elif sysArgv[i] == '--time-limit':
       del sysArgv[i]
+      del sysArgv[i]
+    elif sysArgv[i].startswith('--verifier-options'):
       del sysArgv[i]
 
   bpl, options, clangOutput = smackGenerate(sysArgv)
   args = parser.parse_args(options + sys.argv[1:])
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 
-  print(verify(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd))
+  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll,
+    args.debug, args.verifierOptions, args.smackd))
 

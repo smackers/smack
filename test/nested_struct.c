@@ -20,25 +20,25 @@ int main(void) {
   element elem;
 
   elem.count = 1;
-  __SMACK_assert(elem.count == 1);
+  assert(elem.count == 1);
 
   elem.count = 2;
-  __SMACK_assert(elem.count == 2);
+  assert(elem.count == 2);
 
   elem.point1.y = 100;
-  __SMACK_assert(elem.count == 2);
-  __SMACK_assert(elem.point1.y == 100);
+  assert(elem.count == 2);
+  assert(elem.point1.y == 100);
 
   elem.data = 5;
-  __SMACK_assert(elem.count == 2);
-  __SMACK_assert(elem.point1.y == 100);
-  __SMACK_assert(elem.data == 5);
+  assert(elem.count == 2);
+  assert(elem.point1.y == 100);
+  assert(elem.data == 5);
 
   elem.point2.x = 200;
-  __SMACK_assert(elem.count == 2);
-  __SMACK_assert(elem.point1.y == 100);
-  __SMACK_assert(elem.data == 5);
-  __SMACK_assert(elem.point2.x == 200);
+  assert(elem.count == 2);
+  assert(elem.point1.y == 100);
+  assert(elem.data == 5);
+  assert(elem.point2.x == 200);
 
   return 0;
 }

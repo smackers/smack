@@ -2096,7 +2096,7 @@ void errorFn(void)
 { 
 
   {
-  ERROR: __SMACK_assert(0);
+  ERROR: assert(0);
   goto ERROR;
 }
 }

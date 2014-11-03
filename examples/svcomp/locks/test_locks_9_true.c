@@ -143,7 +143,7 @@ int main()
     }
   out:
     return 0;
-  ERROR: __SMACK_assert(0);
+  ERROR: assert(0);
     return 0;  
 }
 

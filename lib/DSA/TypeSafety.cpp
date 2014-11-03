@@ -333,7 +333,7 @@ TypeSafety<dsa>::runOnModule(Module & M) {
   //
   // Get access to prerequisite passes.
   //
-  TD      = &getAnalysis<DataLayout>();
+  TD      = &getAnalysis<DataLayoutPass>().getDataLayout();
   dsaPass = &getAnalysis<dsa>();
 
   //

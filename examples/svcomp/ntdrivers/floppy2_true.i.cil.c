@@ -2431,32 +2431,32 @@ extern PKTHREAD ( __attribute__((__stdcall__)) KeGetCurrentThread)() ;
 #line 28 "C:/NTDDK/inc/poppack.h"
 #pragma warning(disable:4103)
 #line 1136 "C:/NTDDK/inc/ddk/ntddk.h"
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) RtlQueryRegistryValues)(ULONG RelativeTo ,
+NTSTATUS ( __attribute__((__stdcall__)) RtlQueryRegistryValues)(ULONG RelativeTo ,
                                                                                                 PCWSTR Path ,
                                                                                                 PRTL_QUERY_REGISTRY_TABLE QueryTable ,
                                                                                                 PVOID Context ,
                                                                                                 PVOID Environment ) ;
 #line 1159
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) RtlDeleteRegistryValue)(ULONG RelativeTo ,
+NTSTATUS ( __attribute__((__stdcall__)) RtlDeleteRegistryValue)(ULONG RelativeTo ,
                                                                                                 PCWSTR Path ,
                                                                                                 PCWSTR ValueName ) ;
 #line 1264
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlInitString)(PSTRING DestinationString ,
+void ( __attribute__((__stdcall__)) RtlInitString)(PSTRING DestinationString ,
                                                                                    PCSZ SourceString ) ;
 #line 1280
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlInitUnicodeString)(PUNICODE_STRING DestinationString ,
+void ( __attribute__((__stdcall__)) RtlInitUnicodeString)(PUNICODE_STRING DestinationString ,
                                                                                           PCWSTR SourceString ) ;
 #line 1335
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) RtlAnsiStringToUnicodeString)(PUNICODE_STRING DestinationString ,
+NTSTATUS ( __attribute__((__stdcall__)) RtlAnsiStringToUnicodeString)(PUNICODE_STRING DestinationString ,
                                                                                                       PANSI_STRING SourceString ,
                                                                                                       BOOLEAN AllocateDestinationString ) ;
 #line 1394
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlCopyUnicodeString)(PUNICODE_STRING DestinationString ,
+void ( __attribute__((__stdcall__)) RtlCopyUnicodeString)(PUNICODE_STRING DestinationString ,
                                                                                           PUNICODE_STRING SourceString ) ;
 #line 1429
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlFreeUnicodeString)(PUNICODE_STRING UnicodeString ) ;
+void ( __attribute__((__stdcall__)) RtlFreeUnicodeString)(PUNICODE_STRING UnicodeString ) ;
 #line 1516
- __attribute__((__dllimport__)) SIZE_T ( __attribute__((__stdcall__)) RtlCompareMemory)(void const   *Source1 ,
+SIZE_T ( __attribute__((__stdcall__)) RtlCompareMemory)(void const   *Source1 ,
                                                                                         void const   *Source2 ,
                                                                                         SIZE_T Length ) ;
 #line 1718 "C:/NTDDK/inc/ddk/ntddk.h"
@@ -2674,7 +2674,7 @@ __inline LUID ( __attribute__((__stdcall__)) RtlConvertUlongToLuid)(ULONG Ulong 
 }
 }
 #line 5211
-extern  __attribute__((__dllimport__)) LONG ( __attribute__((__fastcall__)) InterlockedExchange)(PLONG Target ,
+extern LONG ( __attribute__((__fastcall__)) InterlockedExchange)(PLONG Target ,
                                                                                                  LONG Value ) ;
 #line 5253
 #pragma warning(disable:4035)
@@ -2706,62 +2706,62 @@ __inline ULONG KeGetCurrentProcessorNumber(void)
 #line 28 "C:/NTDDK/inc/poppack.h"
 #pragma warning(disable:4103)
 #line 9415 "C:/NTDDK/inc/ddk/ntddk.h"
- __attribute__((__dllimport__)) void KeInitializeEvent(PRKEVENT Event , EVENT_TYPE Type ,
+void KeInitializeEvent(PRKEVENT Event , EVENT_TYPE Type ,
                                                        BOOLEAN State ) ;
 #line 9451
- __attribute__((__dllimport__)) LONG KeSetEvent(PRKEVENT Event , KPRIORITY Increment ,
+LONG KeSetEvent(PRKEVENT Event , KPRIORITY Increment ,
                                                 BOOLEAN Wait ) ;
 #line 9483
- __attribute__((__dllimport__)) void KeInitializeSemaphore(PRKSEMAPHORE Semaphore ,
+void KeInitializeSemaphore(PRKSEMAPHORE Semaphore ,
                                                            LONG Count , LONG Limit ) ;
 #line 9497
- __attribute__((__dllimport__)) LONG KeReleaseSemaphore(PRKSEMAPHORE Semaphore , KPRIORITY Increment ,
+LONG KeReleaseSemaphore(PRKSEMAPHORE Semaphore , KPRIORITY Increment ,
                                                         LONG Adjustment , BOOLEAN Wait ) ;
 #line 9506
- __attribute__((__dllimport__)) NTSTATUS KeDelayExecutionThread(KPROCESSOR_MODE WaitMode ,
+NTSTATUS KeDelayExecutionThread(KPROCESSOR_MODE WaitMode ,
                                                                 BOOLEAN Alertable ,
                                                                 PLARGE_INTEGER Interval ) ;
 #line 9527
-extern  __attribute__((__dllimport__)) KPRIORITY KeSetPriorityThread(PKTHREAD Thread ,
+extern KPRIORITY KeSetPriorityThread(PKTHREAD Thread ,
                                                                      KPRIORITY Priority ) ;
 #line 9681
- __attribute__((__dllimport__)) NTSTATUS KeWaitForSingleObject(PVOID Object , KWAIT_REASON WaitReason ,
+NTSTATUS KeWaitForSingleObject(PVOID Object , KWAIT_REASON WaitReason ,
                                                                KPROCESSOR_MODE WaitMode ,
                                                                BOOLEAN Alertable ,
                                                                PLARGE_INTEGER Timeout ) ;
 #line 9711
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) KeInitializeSpinLock)(PKSPIN_LOCK SpinLock ) ;
+void ( __attribute__((__stdcall__)) KeInitializeSpinLock)(PKSPIN_LOCK SpinLock ) ;
 #line 9737
-extern  __attribute__((__dllimport__)) KIRQL ( __attribute__((__fastcall__)) KfAcquireSpinLock)(PKSPIN_LOCK SpinLock ) ;
+extern KIRQL ( __attribute__((__fastcall__)) KfAcquireSpinLock)(PKSPIN_LOCK SpinLock ) ;
 #line 9744
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) KfReleaseSpinLock)(PKSPIN_LOCK SpinLock ,
+void ( __attribute__((__fastcall__)) KfReleaseSpinLock)(PKSPIN_LOCK SpinLock ,
                                                                                         KIRQL NewIrql ) ;
 #line 10159
- __attribute__((__dllimport__)) PVOID ( __attribute__((__stdcall__)) ExAllocatePoolWithTag)(POOL_TYPE PoolType ,
+PVOID ( __attribute__((__stdcall__)) ExAllocatePoolWithTag)(POOL_TYPE PoolType ,
                                                                                             SIZE_T NumberOfBytes ,
                                                                                             ULONG Tag ) ;
 #line 10236
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) ExFreePool)(PVOID P ) ;
+void ( __attribute__((__stdcall__)) ExFreePool)(PVOID P ) ;
 #line 10315
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex ) ;
+void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex ) ;
 #line 10322
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) ExReleaseFastMutex)(PFAST_MUTEX FastMutex ) ;
+void ( __attribute__((__fastcall__)) ExReleaseFastMutex)(PFAST_MUTEX FastMutex ) ;
 #line 10406
- __attribute__((__dllimport__)) PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertHeadList)(PLIST_ENTRY ListHead ,
+PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertHeadList)(PLIST_ENTRY ListHead ,
                                                                                                           PLIST_ENTRY ListEntry ,
                                                                                                           PKSPIN_LOCK Lock ) ;
 #line 10415
- __attribute__((__dllimport__)) PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertTailList)(PLIST_ENTRY ListHead ,
+PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertTailList)(PLIST_ENTRY ListHead ,
                                                                                                           PLIST_ENTRY ListEntry ,
                                                                                                           PKSPIN_LOCK Lock ) ;
 #line 10424
- __attribute__((__dllimport__)) PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedRemoveHeadList)(PLIST_ENTRY ListHead ,
+PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedRemoveHeadList)(PLIST_ENTRY ListHead ,
                                                                                                           PKSPIN_LOCK Lock ) ;
 #line 10547
-extern  __attribute__((__dllimport__)) PSINGLE_LIST_ENTRY ( __attribute__((__fastcall__)) ExInterlockedPopEntrySList)(PSLIST_HEADER ListHead ,
+extern PSINGLE_LIST_ENTRY ( __attribute__((__fastcall__)) ExInterlockedPopEntrySList)(PSLIST_HEADER ListHead ,
                                                                                                                       PKSPIN_LOCK Lock ) ;
 #line 10555
-extern  __attribute__((__dllimport__)) PSINGLE_LIST_ENTRY ( __attribute__((__fastcall__)) ExInterlockedPushEntrySList)(PSLIST_HEADER ListHead ,
+extern PSINGLE_LIST_ENTRY ( __attribute__((__fastcall__)) ExInterlockedPushEntrySList)(PSLIST_HEADER ListHead ,
                                                                                                                        PSINGLE_LIST_ENTRY ListEntry ,
                                                                                                                        PKSPIN_LOCK Lock ) ;
 #line 10643 "C:/NTDDK/inc/ddk/ntddk.h"
@@ -3083,29 +3083,29 @@ __inline void ExFreeToNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside , PVO
 }
 }
 #line 11906
-extern  __attribute__((__dllimport__)) void MmProbeAndLockPages(PMDL MemoryDescriptorList ,
+extern void MmProbeAndLockPages(PMDL MemoryDescriptorList ,
                                                                 KPROCESSOR_MODE AccessMode ,
                                                                 LOCK_OPERATION Operation ) ;
 #line 11915
- __attribute__((__dllimport__)) void MmUnlockPages(PMDL MemoryDescriptorList ) ;
+void MmUnlockPages(PMDL MemoryDescriptorList ) ;
 #line 11979
- __attribute__((__dllimport__)) PVOID MmMapLockedPagesSpecifyCache(PMDL MemoryDescriptorList ,
+PVOID MmMapLockedPagesSpecifyCache(PMDL MemoryDescriptorList ,
                                                                    KPROCESSOR_MODE AccessMode ,
                                                                    MEMORY_CACHING_TYPE CacheType ,
                                                                    PVOID BaseAddress ,
                                                                    ULONG BugCheckOnFailure ,
                                                                    MM_PAGE_PRIORITY Priority ) ;
 #line 12084
- __attribute__((__dllimport__)) PVOID MmAllocateContiguousMemory(SIZE_T NumberOfBytes ,
+PVOID MmAllocateContiguousMemory(SIZE_T NumberOfBytes ,
                                                                  PHYSICAL_ADDRESS HighestAcceptableAddress ) ;
 #line 12101
- __attribute__((__dllimport__)) void MmFreeContiguousMemory(PVOID BaseAddress ) ;
+void MmFreeContiguousMemory(PVOID BaseAddress ) ;
 #line 12172
- __attribute__((__dllimport__)) void MmResetDriverPaging(PVOID AddressWithinSection ) ;
+void MmResetDriverPaging(PVOID AddressWithinSection ) ;
 #line 12179
- __attribute__((__dllimport__)) PVOID MmPageEntireDriver(PVOID AddressWithinSection ) ;
+PVOID MmPageEntireDriver(PVOID AddressWithinSection ) ;
 #line 12552
- __attribute__((__dllimport__)) NTSTATUS PsCreateSystemThread(PHANDLE ThreadHandle ,
+NTSTATUS PsCreateSystemThread(PHANDLE ThreadHandle ,
                                                               ULONG DesiredAccess ,
                                                               POBJECT_ATTRIBUTES ObjectAttributes ,
                                                               HANDLE ProcessHandle ,
@@ -3113,27 +3113,27 @@ extern  __attribute__((__dllimport__)) void MmProbeAndLockPages(PMDL MemoryDescr
                                                               void (*StartRoutine)(PVOID StartContext ) ,
                                                               PVOID StartContext ) ;
 #line 12564
- __attribute__((__dllimport__)) NTSTATUS PsTerminateSystemThread(NTSTATUS ExitStatus ) ;
+NTSTATUS PsTerminateSystemThread(NTSTATUS ExitStatus ) ;
 #line 25 "C:/NTDDK/inc/pshpack4.h"
 #pragma warning(disable:4103)
 #line 28 "C:/NTDDK/inc/poppack.h"
 #pragma warning(disable:4103)
 #line 14734 "C:/NTDDK/inc/ddk/ntddk.h"
- __attribute__((__dllimport__)) PMDL IoAllocateMdl(PVOID VirtualAddress , ULONG Length ,
+PMDL IoAllocateMdl(PVOID VirtualAddress , ULONG Length ,
                                                    BOOLEAN SecondaryBuffer , BOOLEAN ChargeQuota ,
                                                    PIRP Irp ) ;
 #line 14807
- __attribute__((__dllimport__)) PDEVICE_OBJECT IoAttachDeviceToDeviceStack(PDEVICE_OBJECT SourceDevice ,
+PDEVICE_OBJECT IoAttachDeviceToDeviceStack(PDEVICE_OBJECT SourceDevice ,
                                                                            PDEVICE_OBJECT TargetDevice ) ;
 #line 14814
- __attribute__((__dllimport__)) PIRP IoBuildAsynchronousFsdRequest(ULONG MajorFunction ,
+PIRP IoBuildAsynchronousFsdRequest(ULONG MajorFunction ,
                                                                    PDEVICE_OBJECT DeviceObject ,
                                                                    PVOID Buffer ,
                                                                    ULONG Length ,
                                                                    PLARGE_INTEGER StartingOffset ,
                                                                    PIO_STATUS_BLOCK IoStatusBlock ) ;
 #line 14825
- __attribute__((__dllimport__)) PIRP IoBuildDeviceIoControlRequest(ULONG IoControlCode ,
+PIRP IoBuildDeviceIoControlRequest(ULONG IoControlCode ,
                                                                    PDEVICE_OBJECT DeviceObject ,
                                                                    PVOID InputBuffer ,
                                                                    ULONG InputBufferLength ,
@@ -3143,34 +3143,34 @@ extern  __attribute__((__dllimport__)) void MmProbeAndLockPages(PMDL MemoryDescr
                                                                    PKEVENT Event ,
                                                                    PIO_STATUS_BLOCK IoStatusBlock ) ;
 #line 14875
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__fastcall__)) IofCallDriver)(PDEVICE_OBJECT DeviceObject ,
+NTSTATUS ( __attribute__((__fastcall__)) IofCallDriver)(PDEVICE_OBJECT DeviceObject ,
                                                                                         PIRP Irp ) ;
 #line 14903
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) IofCompleteRequest)(PIRP Irp ,
+void ( __attribute__((__fastcall__)) IofCompleteRequest)(PIRP Irp ,
                                                                                          CCHAR PriorityBoost ) ;
 #line 14942
- __attribute__((__dllimport__)) NTSTATUS IoCreateDevice(PDRIVER_OBJECT DriverObject ,
+NTSTATUS IoCreateDevice(PDRIVER_OBJECT DriverObject ,
                                                         ULONG DeviceExtensionSize ,
                                                         PUNICODE_STRING DeviceName ,
                                                         ULONG DeviceType , ULONG DeviceCharacteristics ,
                                                         BOOLEAN Exclusive , PDEVICE_OBJECT *DeviceObject ) ;
 #line 14993
- __attribute__((__dllimport__)) NTSTATUS IoCreateSymbolicLink(PUNICODE_STRING SymbolicLinkName ,
+NTSTATUS IoCreateSymbolicLink(PUNICODE_STRING SymbolicLinkName ,
                                                               PUNICODE_STRING DeviceName ) ;
 #line 15057
- __attribute__((__dllimport__)) void IoDeleteDevice(PDEVICE_OBJECT DeviceObject ) ;
+void IoDeleteDevice(PDEVICE_OBJECT DeviceObject ) ;
 #line 15063
- __attribute__((__dllimport__)) NTSTATUS IoDeleteSymbolicLink(PUNICODE_STRING SymbolicLinkName ) ;
+NTSTATUS IoDeleteSymbolicLink(PUNICODE_STRING SymbolicLinkName ) ;
 #line 15069
- __attribute__((__dllimport__)) void IoDetachDevice(PDEVICE_OBJECT TargetDevice ) ;
+void IoDetachDevice(PDEVICE_OBJECT TargetDevice ) ;
 #line 15092
- __attribute__((__dllimport__)) void IoFreeIrp(PIRP Irp ) ;
+void IoFreeIrp(PIRP Irp ) ;
 #line 15098
- __attribute__((__dllimport__)) void IoFreeMdl(PMDL Mdl ) ;
+void IoFreeMdl(PMDL Mdl ) ;
 #line 15110
- __attribute__((__dllimport__)) PCONFIGURATION_INFORMATION IoGetConfigurationInformation(void) ;
+PCONFIGURATION_INFORMATION IoGetConfigurationInformation(void) ;
 #line 15234
-extern  __attribute__((__dllimport__)) void IoGetStackLimits(PULONG_PTR LowLimit ,
+extern void IoGetStackLimits(PULONG_PTR LowLimit ,
                                                              PULONG_PTR HighLimit ) ;
 #line 15246 "C:/NTDDK/inc/ddk/ntddk.h"
 __inline ULONG_PTR IoGetRemainingStackSize(void) 
@@ -3198,7 +3198,7 @@ __inline ULONG_PTR IoGetRemainingStackSize(void)
 }
 }
 #line 15426
- __attribute__((__dllimport__)) NTSTATUS IoQueryDeviceDescription(PINTERFACE_TYPE BusType ,
+NTSTATUS IoQueryDeviceDescription(PINTERFACE_TYPE BusType ,
                                                                   PULONG BusNumber ,
                                                                   PCONFIGURATION_TYPE ControllerType ,
                                                                   PULONG ControllerNumber ,
@@ -3217,37 +3217,37 @@ __inline ULONG_PTR IoGetRemainingStackSize(void)
                                                                                              PKEY_VALUE_FULL_INFORMATION *PeripheralInformation ) ,
                                                                   PVOID Context ) ;
 #line 15492
- __attribute__((__dllimport__)) void IoReleaseCancelSpinLock(KIRQL Irql ) ;
+void IoReleaseCancelSpinLock(KIRQL Irql ) ;
 #line 15641
- __attribute__((__dllimport__)) void IoSetHardErrorOrVerifyDevice(PIRP Irp , PDEVICE_OBJECT DeviceObject ) ;
+void IoSetHardErrorOrVerifyDevice(PIRP Irp , PDEVICE_OBJECT DeviceObject ) ;
 #line 16436
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) IoRegisterDeviceInterface)(PDEVICE_OBJECT PhysicalDeviceObject ,
+NTSTATUS ( __attribute__((__stdcall__)) IoRegisterDeviceInterface)(PDEVICE_OBJECT PhysicalDeviceObject ,
                                                                                                    GUID const   *InterfaceClassGuid ,
                                                                                                    PUNICODE_STRING ReferenceString ,
                                                                                                    PUNICODE_STRING SymbolicLinkName ) ;
 #line 16456
- __attribute__((__dllimport__)) NTSTATUS IoSetDeviceInterfaceState(PUNICODE_STRING SymbolicLinkName ,
+NTSTATUS IoSetDeviceInterfaceState(PUNICODE_STRING SymbolicLinkName ,
                                                                    BOOLEAN Enable ) ;
 #line 17779
 #pragma warning(disable:4200)
 #line 17785
 #pragma warning(default:4200)
 #line 18271
- __attribute__((__dllimport__)) NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject ,
+NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject ,
                                                       PIRP Irp ) ;
 #line 18278
- __attribute__((__dllimport__)) void PoStartNextPowerIrp(PIRP Irp ) ;
+void PoStartNextPowerIrp(PIRP Irp ) ;
 #line 18326
- __attribute__((__dllimport__)) NTSTATUS ObReferenceObjectByHandle(HANDLE Handle ,
+NTSTATUS ObReferenceObjectByHandle(HANDLE Handle ,
                                                                    ACCESS_MASK DesiredAccess ,
                                                                    POBJECT_TYPE ObjectType ,
                                                                    KPROCESSOR_MODE AccessMode ,
                                                                    PVOID *Object ,
                                                                    POBJECT_HANDLE_INFORMATION HandleInformation ) ;
 #line 18359
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) ObfDereferenceObject)(PVOID Object ) ;
+void ( __attribute__((__fastcall__)) ObfDereferenceObject)(PVOID Object ) ;
 #line 19155
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) ZwClose)(HANDLE Handle ) ;
+NTSTATUS ( __attribute__((__stdcall__)) ZwClose)(HANDLE Handle ) ;
 #line 25 "C:/NTDDK/inc/pshpack1.h"
 #pragma warning(disable:4103)
 #line 28 "C:/NTDDK/inc/poppack.h"
@@ -6173,7 +6173,7 @@ NTSTATUS FlAcpiConfigureFloppy(PDISKETTE_EXTENSION DisketteExtension , PFDC_INFO
 #line 949
 void __VERIFIER_assert(int cond) {
   if (!(cond)) {
-    ERROR: __SMACK_assert(0); goto ERROR;
+    ERROR: assert(0); goto ERROR;
   }
   return;
 }
@@ -29890,7 +29890,7 @@ char *malloc(int i )
 }
 }
 #line 230
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex ) ;
+void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex ) ;
 #line 230 "../slam-kernel.c"
 void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex ) 
 { 
@@ -29901,7 +29901,7 @@ void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex )
 }
 }
 #line 240
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) ExReleaseFastMutex)(PFAST_MUTEX FastMutex ) ;
+void ( __attribute__((__fastcall__)) ExReleaseFastMutex)(PFAST_MUTEX FastMutex ) ;
 #line 240 "../slam-kernel.c"
 void ( __attribute__((__fastcall__)) ExReleaseFastMutex)(PFAST_MUTEX FastMutex ) 
 { 
@@ -29912,7 +29912,7 @@ void ( __attribute__((__fastcall__)) ExReleaseFastMutex)(PFAST_MUTEX FastMutex )
 }
 }
 #line 264
- __attribute__((__dllimport__)) PVOID ( __attribute__((__stdcall__)) ExAllocatePoolWithTag)(POOL_TYPE PoolType ,
+PVOID ( __attribute__((__stdcall__)) ExAllocatePoolWithTag)(POOL_TYPE PoolType ,
                                                                                             SIZE_T NumberOfBytes ,
                                                                                             ULONG Tag ) ;
 #line 264 "../slam-kernel.c"
@@ -29936,7 +29936,7 @@ PVOID ( __attribute__((__stdcall__)) ExAllocatePoolWithTag)(POOL_TYPE PoolType ,
 }
 }
 #line 279
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) ExFreePool)(PVOID P ) ;
+void ( __attribute__((__stdcall__)) ExFreePool)(PVOID P ) ;
 #line 279 "../slam-kernel.c"
 void ( __attribute__((__stdcall__)) ExFreePool)(PVOID P ) 
 { 
@@ -29947,7 +29947,7 @@ void ( __attribute__((__stdcall__)) ExFreePool)(PVOID P )
 }
 }
 #line 288
- __attribute__((__dllimport__)) PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertHeadList)(PLIST_ENTRY ListHead ,
+PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertHeadList)(PLIST_ENTRY ListHead ,
                                                                                                           PLIST_ENTRY ListEntry ,
                                                                                                           PKSPIN_LOCK Lock ) ;
 #line 288 "../slam-kernel.c"
@@ -29966,7 +29966,7 @@ PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertHeadList)(PLIST_
 }
 }
 #line 299
- __attribute__((__dllimport__)) PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertTailList)(PLIST_ENTRY ListHead ,
+PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertTailList)(PLIST_ENTRY ListHead ,
                                                                                                           PLIST_ENTRY ListEntry ,
                                                                                                           PKSPIN_LOCK Lock ) ;
 #line 299 "../slam-kernel.c"
@@ -29985,7 +29985,7 @@ PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedInsertTailList)(PLIST_
 }
 }
 #line 311
- __attribute__((__dllimport__)) PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedRemoveHeadList)(PLIST_ENTRY ListHead ,
+PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedRemoveHeadList)(PLIST_ENTRY ListHead ,
                                                                                                           PKSPIN_LOCK Lock ) ;
 #line 311 "../slam-kernel.c"
 PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedRemoveHeadList)(PLIST_ENTRY ListHead ,
@@ -30002,7 +30002,7 @@ PLIST_ENTRY ( __attribute__((__fastcall__)) ExfInterlockedRemoveHeadList)(PLIST_
 }
 }
 #line 335
- __attribute__((__dllimport__)) PMDL IoAllocateMdl(PVOID VirtualAddress , ULONG Length ,
+PMDL IoAllocateMdl(PVOID VirtualAddress , ULONG Length ,
                                                    BOOLEAN SecondaryBuffer , BOOLEAN ChargeQuota ,
                                                    PIRP Irp ) ;
 #line 335 "../slam-kernel.c"
@@ -30051,7 +30051,7 @@ PMDL IoAllocateMdl(PVOID VirtualAddress , ULONG Length , BOOLEAN SecondaryBuffer
 }
 }
 #line 352
- __attribute__((__dllimport__)) PDEVICE_OBJECT IoAttachDeviceToDeviceStack(PDEVICE_OBJECT SourceDevice ,
+PDEVICE_OBJECT IoAttachDeviceToDeviceStack(PDEVICE_OBJECT SourceDevice ,
                                                                            PDEVICE_OBJECT TargetDevice ) ;
 #line 352 "../slam-kernel.c"
 PDEVICE_OBJECT IoAttachDeviceToDeviceStack(PDEVICE_OBJECT SourceDevice , PDEVICE_OBJECT TargetDevice ) 
@@ -30085,7 +30085,7 @@ PDEVICE_OBJECT IoAttachDeviceToDeviceStack(PDEVICE_OBJECT SourceDevice , PDEVICE
 }
 }
 #line 366
- __attribute__((__dllimport__)) PIRP IoBuildAsynchronousFsdRequest(ULONG MajorFunction ,
+PIRP IoBuildAsynchronousFsdRequest(ULONG MajorFunction ,
                                                                    PDEVICE_OBJECT DeviceObject ,
                                                                    PVOID Buffer ,
                                                                    ULONG Length ,
@@ -30140,7 +30140,7 @@ PIRP IoBuildAsynchronousFsdRequest(ULONG MajorFunction , PDEVICE_OBJECT DeviceOb
 }
 }
 #line 397
- __attribute__((__dllimport__)) PIRP IoBuildDeviceIoControlRequest(ULONG IoControlCode ,
+PIRP IoBuildDeviceIoControlRequest(ULONG IoControlCode ,
                                                                    PDEVICE_OBJECT DeviceObject ,
                                                                    PVOID InputBuffer ,
                                                                    ULONG InputBufferLength ,
@@ -30199,7 +30199,7 @@ PIRP IoBuildDeviceIoControlRequest(ULONG IoControlCode , PDEVICE_OBJECT DeviceOb
 }
 }
 #line 420
- __attribute__((__dllimport__)) NTSTATUS IoCreateDevice(PDRIVER_OBJECT DriverObject ,
+NTSTATUS IoCreateDevice(PDRIVER_OBJECT DriverObject ,
                                                         ULONG DeviceExtensionSize ,
                                                         PUNICODE_STRING DeviceName ,
                                                         ULONG DeviceType , ULONG DeviceCharacteristics ,
@@ -30246,7 +30246,7 @@ NTSTATUS IoCreateDevice(PDRIVER_OBJECT DriverObject , ULONG DeviceExtensionSize 
 }
 }
 #line 446
- __attribute__((__dllimport__)) NTSTATUS IoCreateSymbolicLink(PUNICODE_STRING SymbolicLinkName ,
+NTSTATUS IoCreateSymbolicLink(PUNICODE_STRING SymbolicLinkName ,
                                                               PUNICODE_STRING DeviceName ) ;
 #line 446 "../slam-kernel.c"
 NTSTATUS IoCreateSymbolicLink(PUNICODE_STRING SymbolicLinkName , PUNICODE_STRING DeviceName ) 
@@ -30275,7 +30275,7 @@ NTSTATUS IoCreateSymbolicLink(PUNICODE_STRING SymbolicLinkName , PUNICODE_STRING
 }
 }
 #line 460
- __attribute__((__dllimport__)) void IoDeleteDevice(PDEVICE_OBJECT DeviceObject ) ;
+void IoDeleteDevice(PDEVICE_OBJECT DeviceObject ) ;
 #line 460 "../slam-kernel.c"
 void IoDeleteDevice(PDEVICE_OBJECT DeviceObject ) 
 { 
@@ -30286,7 +30286,7 @@ void IoDeleteDevice(PDEVICE_OBJECT DeviceObject )
 }
 }
 #line 469
- __attribute__((__dllimport__)) NTSTATUS IoDeleteSymbolicLink(PUNICODE_STRING SymbolicLinkName ) ;
+NTSTATUS IoDeleteSymbolicLink(PUNICODE_STRING SymbolicLinkName ) ;
 #line 469 "../slam-kernel.c"
 NTSTATUS IoDeleteSymbolicLink(PUNICODE_STRING SymbolicLinkName ) 
 { int __BLAST_NONDET = __VERIFIER_nondet_int() ;
@@ -30314,7 +30314,7 @@ NTSTATUS IoDeleteSymbolicLink(PUNICODE_STRING SymbolicLinkName )
 }
 }
 #line 482
- __attribute__((__dllimport__)) void IoDetachDevice(PDEVICE_OBJECT TargetDevice ) ;
+void IoDetachDevice(PDEVICE_OBJECT TargetDevice ) ;
 #line 482 "../slam-kernel.c"
 void IoDetachDevice(PDEVICE_OBJECT TargetDevice ) 
 { 
@@ -30325,7 +30325,7 @@ void IoDetachDevice(PDEVICE_OBJECT TargetDevice )
 }
 }
 #line 491
- __attribute__((__dllimport__)) void IoFreeIrp(PIRP Irp ) ;
+void IoFreeIrp(PIRP Irp ) ;
 #line 491 "../slam-kernel.c"
 void IoFreeIrp(PIRP Irp ) 
 { 
@@ -30336,7 +30336,7 @@ void IoFreeIrp(PIRP Irp )
 }
 }
 #line 500
- __attribute__((__dllimport__)) void IoFreeMdl(PMDL Mdl ) ;
+void IoFreeMdl(PMDL Mdl ) ;
 #line 500 "../slam-kernel.c"
 void IoFreeMdl(PMDL Mdl ) 
 { 
@@ -30347,7 +30347,7 @@ void IoFreeMdl(PMDL Mdl )
 }
 }
 #line 509
- __attribute__((__dllimport__)) PCONFIGURATION_INFORMATION IoGetConfigurationInformation(void) ;
+PCONFIGURATION_INFORMATION IoGetConfigurationInformation(void) ;
 #line 509 "../slam-kernel.c"
 PCONFIGURATION_INFORMATION IoGetConfigurationInformation(void) 
 { char *tmp ;
@@ -30370,7 +30370,7 @@ PCONFIGURATION_INFORMATION IoGetConfigurationInformation(void)
 }
 }
 #line 517
- __attribute__((__dllimport__)) NTSTATUS IoQueryDeviceDescription(PINTERFACE_TYPE BusType ,
+NTSTATUS IoQueryDeviceDescription(PINTERFACE_TYPE BusType ,
                                                                   PULONG BusNumber ,
                                                                   PCONFIGURATION_TYPE ControllerType ,
                                                                   PULONG ControllerNumber ,
@@ -30428,7 +30428,7 @@ NTSTATUS IoQueryDeviceDescription(PINTERFACE_TYPE BusType , PULONG BusNumber , P
 }
 }
 #line 537
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) IoRegisterDeviceInterface)(PDEVICE_OBJECT PhysicalDeviceObject ,
+NTSTATUS ( __attribute__((__stdcall__)) IoRegisterDeviceInterface)(PDEVICE_OBJECT PhysicalDeviceObject ,
                                                                                                    GUID const   *InterfaceClassGuid ,
                                                                                                    PUNICODE_STRING ReferenceString ,
                                                                                                    PUNICODE_STRING SymbolicLinkName ) ;
@@ -30462,7 +30462,7 @@ NTSTATUS ( __attribute__((__stdcall__)) IoRegisterDeviceInterface)(PDEVICE_OBJEC
 }
 }
 #line 554
- __attribute__((__dllimport__)) void IoReleaseCancelSpinLock(KIRQL Irql ) ;
+void IoReleaseCancelSpinLock(KIRQL Irql ) ;
 #line 554 "../slam-kernel.c"
 void IoReleaseCancelSpinLock(KIRQL Irql ) 
 { 
@@ -30473,7 +30473,7 @@ void IoReleaseCancelSpinLock(KIRQL Irql )
 }
 }
 #line 563
- __attribute__((__dllimport__)) NTSTATUS IoSetDeviceInterfaceState(PUNICODE_STRING SymbolicLinkName ,
+NTSTATUS IoSetDeviceInterfaceState(PUNICODE_STRING SymbolicLinkName ,
                                                                    BOOLEAN Enable ) ;
 #line 563 "../slam-kernel.c"
 NTSTATUS IoSetDeviceInterfaceState(PUNICODE_STRING SymbolicLinkName , BOOLEAN Enable ) 
@@ -30502,7 +30502,7 @@ NTSTATUS IoSetDeviceInterfaceState(PUNICODE_STRING SymbolicLinkName , BOOLEAN En
 }
 }
 #line 582
- __attribute__((__dllimport__)) void IoSetHardErrorOrVerifyDevice(PIRP Irp , PDEVICE_OBJECT DeviceObject ) ;
+void IoSetHardErrorOrVerifyDevice(PIRP Irp , PDEVICE_OBJECT DeviceObject ) ;
 #line 582 "../slam-kernel.c"
 void IoSetHardErrorOrVerifyDevice(PIRP Irp , PDEVICE_OBJECT DeviceObject ) 
 { 
@@ -30532,7 +30532,7 @@ void stubMoreProcessingRequired(void)
 }
 }
 #line 602
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__fastcall__)) IofCallDriver)(PDEVICE_OBJECT DeviceObject ,
+NTSTATUS ( __attribute__((__fastcall__)) IofCallDriver)(PDEVICE_OBJECT DeviceObject ,
                                                                                         PIRP Irp ) ;
 #line 602 "../slam-kernel.c"
 NTSTATUS ( __attribute__((__fastcall__)) IofCallDriver)(PDEVICE_OBJECT DeviceObject ,
@@ -30643,7 +30643,7 @@ NTSTATUS ( __attribute__((__fastcall__)) IofCallDriver)(PDEVICE_OBJECT DeviceObj
 }
 }
 #line 665
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) IofCompleteRequest)(PIRP Irp ,
+void ( __attribute__((__fastcall__)) IofCompleteRequest)(PIRP Irp ,
                                                                                          CCHAR PriorityBoost ) ;
 #line 665 "../slam-kernel.c"
 void ( __attribute__((__fastcall__)) IofCompleteRequest)(PIRP Irp , CCHAR PriorityBoost ) 
@@ -30665,9 +30665,9 @@ void ( __attribute__((__fastcall__)) IofCompleteRequest)(PIRP Irp , CCHAR Priori
 }
 }
 #line 677
- __attribute__((__dllimport__)) KIRQL KeAcquireSpinLockRaiseToDpc(PKSPIN_LOCK SpinLock ) ;
+KIRQL KeAcquireSpinLockRaiseToDpc(PKSPIN_LOCK SpinLock ) ;
 #line 677
- __attribute__((__dllimport__)) KIRQL KeAcquireSpinLockRaiseToDpc(PKSPIN_LOCK SpinLock ) ;
+KIRQL KeAcquireSpinLockRaiseToDpc(PKSPIN_LOCK SpinLock ) ;
 #line 677 "../slam-kernel.c"
 KIRQL KeAcquireSpinLockRaiseToDpc(PKSPIN_LOCK SpinLock ) 
 { 
@@ -30678,7 +30678,7 @@ KIRQL KeAcquireSpinLockRaiseToDpc(PKSPIN_LOCK SpinLock )
 }
 }
 #line 686
- __attribute__((__dllimport__)) NTSTATUS KeDelayExecutionThread(KPROCESSOR_MODE WaitMode ,
+NTSTATUS KeDelayExecutionThread(KPROCESSOR_MODE WaitMode ,
                                                                 BOOLEAN Alertable ,
                                                                 PLARGE_INTEGER Interval ) ;
 #line 686 "../slam-kernel.c"
@@ -30708,7 +30708,7 @@ NTSTATUS KeDelayExecutionThread(KPROCESSOR_MODE WaitMode , BOOLEAN Alertable , P
 }
 }
 #line 706
- __attribute__((__dllimport__)) void KeInitializeEvent(PRKEVENT Event , EVENT_TYPE Type ,
+void KeInitializeEvent(PRKEVENT Event , EVENT_TYPE Type ,
                                                        BOOLEAN State ) ;
 #line 706 "../slam-kernel.c"
 void KeInitializeEvent(PRKEVENT Event , EVENT_TYPE Type , BOOLEAN State ) 
@@ -30720,7 +30720,7 @@ void KeInitializeEvent(PRKEVENT Event , EVENT_TYPE Type , BOOLEAN State )
 }
 }
 #line 717
- __attribute__((__dllimport__)) void KeInitializeSemaphore(PRKSEMAPHORE Semaphore ,
+void KeInitializeSemaphore(PRKSEMAPHORE Semaphore ,
                                                            LONG Count , LONG Limit ) ;
 #line 717 "../slam-kernel.c"
 void KeInitializeSemaphore(PRKSEMAPHORE Semaphore , LONG Count , LONG Limit ) 
@@ -30732,7 +30732,7 @@ void KeInitializeSemaphore(PRKSEMAPHORE Semaphore , LONG Count , LONG Limit )
 }
 }
 #line 728
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) KeInitializeSpinLock)(PKSPIN_LOCK SpinLock ) ;
+void ( __attribute__((__stdcall__)) KeInitializeSpinLock)(PKSPIN_LOCK SpinLock ) ;
 #line 728 "../slam-kernel.c"
 void ( __attribute__((__stdcall__)) KeInitializeSpinLock)(PKSPIN_LOCK SpinLock ) 
 { 
@@ -30743,7 +30743,7 @@ void ( __attribute__((__stdcall__)) KeInitializeSpinLock)(PKSPIN_LOCK SpinLock )
 }
 }
 #line 738
- __attribute__((__dllimport__)) LONG KeReleaseSemaphore(PRKSEMAPHORE Semaphore , KPRIORITY Increment ,
+LONG KeReleaseSemaphore(PRKSEMAPHORE Semaphore , KPRIORITY Increment ,
                                                         LONG Adjustment , BOOLEAN Wait ) ;
 #line 738 "../slam-kernel.c"
 LONG KeReleaseSemaphore(PRKSEMAPHORE Semaphore , KPRIORITY Increment , LONG Adjustment ,
@@ -30756,7 +30756,7 @@ LONG KeReleaseSemaphore(PRKSEMAPHORE Semaphore , KPRIORITY Increment , LONG Adju
 }
 }
 #line 751
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) KfReleaseSpinLock)(PKSPIN_LOCK SpinLock ,
+void ( __attribute__((__fastcall__)) KfReleaseSpinLock)(PKSPIN_LOCK SpinLock ,
                                                                                         KIRQL NewIrql ) ;
 #line 751 "../slam-kernel.c"
 void ( __attribute__((__fastcall__)) KfReleaseSpinLock)(PKSPIN_LOCK SpinLock , KIRQL NewIrql ) 
@@ -30768,7 +30768,7 @@ void ( __attribute__((__fastcall__)) KfReleaseSpinLock)(PKSPIN_LOCK SpinLock , K
 }
 }
 #line 762
- __attribute__((__dllimport__)) LONG KeSetEvent(PRKEVENT Event , KPRIORITY Increment ,
+LONG KeSetEvent(PRKEVENT Event , KPRIORITY Increment ,
                                                 BOOLEAN Wait ) ;
 #line 762 "../slam-kernel.c"
 LONG KeSetEvent(PRKEVENT Event , KPRIORITY Increment , BOOLEAN Wait ) 
@@ -30782,7 +30782,7 @@ LONG KeSetEvent(PRKEVENT Event , KPRIORITY Increment , BOOLEAN Wait )
 }
 }
 #line 777
- __attribute__((__dllimport__)) NTSTATUS KeWaitForSingleObject(PVOID Object , KWAIT_REASON WaitReason ,
+NTSTATUS KeWaitForSingleObject(PVOID Object , KWAIT_REASON WaitReason ,
                                                                KPROCESSOR_MODE WaitMode ,
                                                                BOOLEAN Alertable ,
                                                                PLARGE_INTEGER Timeout ) ;
@@ -30845,7 +30845,7 @@ NTSTATUS KeWaitForSingleObject(PVOID Object , KWAIT_REASON WaitReason , KPROCESS
 }
 }
 #line 810
- __attribute__((__dllimport__)) PVOID MmAllocateContiguousMemory(SIZE_T NumberOfBytes ,
+PVOID MmAllocateContiguousMemory(SIZE_T NumberOfBytes ,
                                                                  PHYSICAL_ADDRESS HighestAcceptableAddress ) ;
 #line 810 "../slam-kernel.c"
 PVOID MmAllocateContiguousMemory(SIZE_T NumberOfBytes , PHYSICAL_ADDRESS HighestAcceptableAddress ) 
@@ -30886,7 +30886,7 @@ PVOID MmAllocateContiguousMemory(SIZE_T NumberOfBytes , PHYSICAL_ADDRESS Highest
 }
 }
 #line 823
- __attribute__((__dllimport__)) void MmFreeContiguousMemory(PVOID BaseAddress ) ;
+void MmFreeContiguousMemory(PVOID BaseAddress ) ;
 #line 823 "../slam-kernel.c"
 void MmFreeContiguousMemory(PVOID BaseAddress ) 
 { 
@@ -30897,7 +30897,7 @@ void MmFreeContiguousMemory(PVOID BaseAddress )
 }
 }
 #line 832
- __attribute__((__dllimport__)) PVOID MmMapLockedPagesSpecifyCache(PMDL MemoryDescriptorList ,
+PVOID MmMapLockedPagesSpecifyCache(PMDL MemoryDescriptorList ,
                                                                    KPROCESSOR_MODE AccessMode ,
                                                                    MEMORY_CACHING_TYPE CacheType ,
                                                                    PVOID BaseAddress ,
@@ -30915,7 +30915,7 @@ PVOID MmMapLockedPagesSpecifyCache(PMDL MemoryDescriptorList , KPROCESSOR_MODE A
 }
 }
 #line 846
- __attribute__((__dllimport__)) PVOID MmPageEntireDriver(PVOID AddressWithinSection ) ;
+PVOID MmPageEntireDriver(PVOID AddressWithinSection ) ;
 #line 846 "../slam-kernel.c"
 PVOID MmPageEntireDriver(PVOID AddressWithinSection ) 
 { 
@@ -30926,7 +30926,7 @@ PVOID MmPageEntireDriver(PVOID AddressWithinSection )
 }
 }
 #line 855
- __attribute__((__dllimport__)) void MmResetDriverPaging(PVOID AddressWithinSection ) ;
+void MmResetDriverPaging(PVOID AddressWithinSection ) ;
 #line 855 "../slam-kernel.c"
 void MmResetDriverPaging(PVOID AddressWithinSection ) 
 { 
@@ -30937,7 +30937,7 @@ void MmResetDriverPaging(PVOID AddressWithinSection )
 }
 }
 #line 865
- __attribute__((__dllimport__)) void MmUnlockPages(PMDL MemoryDescriptorList ) ;
+void MmUnlockPages(PMDL MemoryDescriptorList ) ;
 #line 865 "../slam-kernel.c"
 void MmUnlockPages(PMDL MemoryDescriptorList ) 
 { 
@@ -30948,7 +30948,7 @@ void MmUnlockPages(PMDL MemoryDescriptorList )
 }
 }
 #line 874
- __attribute__((__dllimport__)) NTSTATUS ObReferenceObjectByHandle(HANDLE Handle ,
+NTSTATUS ObReferenceObjectByHandle(HANDLE Handle ,
                                                                    ACCESS_MASK DesiredAccess ,
                                                                    POBJECT_TYPE ObjectType ,
                                                                    KPROCESSOR_MODE AccessMode ,
@@ -30982,7 +30982,7 @@ NTSTATUS ObReferenceObjectByHandle(HANDLE Handle , ACCESS_MASK DesiredAccess , P
 }
 }
 #line 899
- __attribute__((__dllimport__)) void ( __attribute__((__fastcall__)) ObfDereferenceObject)(PVOID Object ) ;
+void ( __attribute__((__fastcall__)) ObfDereferenceObject)(PVOID Object ) ;
 #line 899 "../slam-kernel.c"
 void ( __attribute__((__fastcall__)) ObfDereferenceObject)(PVOID Object ) 
 { 
@@ -30993,7 +30993,7 @@ void ( __attribute__((__fastcall__)) ObfDereferenceObject)(PVOID Object )
 }
 }
 #line 909
- __attribute__((__dllimport__)) NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject ,
+NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject ,
                                                       PIRP Irp ) ;
 #line 909 "../slam-kernel.c"
 NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject , PIRP Irp ) 
@@ -31100,7 +31100,7 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject , PIRP Irp )
 }
 }
 #line 956
- __attribute__((__dllimport__)) void PoStartNextPowerIrp(PIRP Irp ) ;
+void PoStartNextPowerIrp(PIRP Irp ) ;
 #line 956 "../slam-kernel.c"
 void PoStartNextPowerIrp(PIRP Irp ) 
 { 
@@ -31111,7 +31111,7 @@ void PoStartNextPowerIrp(PIRP Irp )
 }
 }
 #line 965
- __attribute__((__dllimport__)) NTSTATUS PsCreateSystemThread(PHANDLE ThreadHandle ,
+NTSTATUS PsCreateSystemThread(PHANDLE ThreadHandle ,
                                                               ULONG DesiredAccess ,
                                                               POBJECT_ATTRIBUTES ObjectAttributes ,
                                                               HANDLE ProcessHandle ,
@@ -31147,7 +31147,7 @@ NTSTATUS PsCreateSystemThread(PHANDLE ThreadHandle , ULONG DesiredAccess , POBJE
 }
 }
 #line 984
- __attribute__((__dllimport__)) NTSTATUS PsTerminateSystemThread(NTSTATUS ExitStatus ) ;
+NTSTATUS PsTerminateSystemThread(NTSTATUS ExitStatus ) ;
 #line 984 "../slam-kernel.c"
 NTSTATUS PsTerminateSystemThread(NTSTATUS ExitStatus ) 
 { int __BLAST_NONDET = __VERIFIER_nondet_int() ;
@@ -31175,7 +31175,7 @@ NTSTATUS PsTerminateSystemThread(NTSTATUS ExitStatus )
 }
 }
 #line 998
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) RtlAnsiStringToUnicodeString)(PUNICODE_STRING DestinationString ,
+NTSTATUS ( __attribute__((__stdcall__)) RtlAnsiStringToUnicodeString)(PUNICODE_STRING DestinationString ,
                                                                                                       PANSI_STRING SourceString ,
                                                                                                       BOOLEAN AllocateDestinationString ) ;
 #line 998 "../slam-kernel.c"
@@ -31207,7 +31207,7 @@ NTSTATUS ( __attribute__((__stdcall__)) RtlAnsiStringToUnicodeString)(PUNICODE_S
 }
 }
 #line 1014
- __attribute__((__dllimport__)) SIZE_T ( __attribute__((__stdcall__)) RtlCompareMemory)(void const   *Source1 ,
+SIZE_T ( __attribute__((__stdcall__)) RtlCompareMemory)(void const   *Source1 ,
                                                                                         void const   *Source2 ,
                                                                                         SIZE_T Length ) ;
 #line 1014 "../slam-kernel.c"
@@ -31221,7 +31221,7 @@ SIZE_T ( __attribute__((__stdcall__)) RtlCompareMemory)(void const   *Source1 , 
 }
 }
 #line 1027
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlCopyUnicodeString)(PUNICODE_STRING DestinationString ,
+void ( __attribute__((__stdcall__)) RtlCopyUnicodeString)(PUNICODE_STRING DestinationString ,
                                                                                           PUNICODE_STRING SourceString ) ;
 #line 1027 "../slam-kernel.c"
 void ( __attribute__((__stdcall__)) RtlCopyUnicodeString)(PUNICODE_STRING DestinationString ,
@@ -31234,7 +31234,7 @@ void ( __attribute__((__stdcall__)) RtlCopyUnicodeString)(PUNICODE_STRING Destin
 }
 }
 #line 1038
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) RtlDeleteRegistryValue)(ULONG RelativeTo ,
+NTSTATUS ( __attribute__((__stdcall__)) RtlDeleteRegistryValue)(ULONG RelativeTo ,
                                                                                                 PCWSTR Path ,
                                                                                                 PCWSTR ValueName ) ;
 #line 1038 "../slam-kernel.c"
@@ -31265,7 +31265,7 @@ NTSTATUS ( __attribute__((__stdcall__)) RtlDeleteRegistryValue)(ULONG RelativeTo
 }
 }
 #line 1054
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlFreeUnicodeString)(PUNICODE_STRING UnicodeString ) ;
+void ( __attribute__((__stdcall__)) RtlFreeUnicodeString)(PUNICODE_STRING UnicodeString ) ;
 #line 1054 "../slam-kernel.c"
 void ( __attribute__((__stdcall__)) RtlFreeUnicodeString)(PUNICODE_STRING UnicodeString ) 
 { 
@@ -31276,7 +31276,7 @@ void ( __attribute__((__stdcall__)) RtlFreeUnicodeString)(PUNICODE_STRING Unicod
 }
 }
 #line 1064
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlInitString)(PSTRING DestinationString ,
+void ( __attribute__((__stdcall__)) RtlInitString)(PSTRING DestinationString ,
                                                                                    PCSZ SourceString ) ;
 #line 1064 "../slam-kernel.c"
 void ( __attribute__((__stdcall__)) RtlInitString)(PSTRING DestinationString , PCSZ SourceString ) 
@@ -31288,7 +31288,7 @@ void ( __attribute__((__stdcall__)) RtlInitString)(PSTRING DestinationString , P
 }
 }
 #line 1075
- __attribute__((__dllimport__)) void ( __attribute__((__stdcall__)) RtlInitUnicodeString)(PUNICODE_STRING DestinationString ,
+void ( __attribute__((__stdcall__)) RtlInitUnicodeString)(PUNICODE_STRING DestinationString ,
                                                                                           PCWSTR SourceString ) ;
 #line 1075 "../slam-kernel.c"
 void ( __attribute__((__stdcall__)) RtlInitUnicodeString)(PUNICODE_STRING DestinationString ,
@@ -31301,7 +31301,7 @@ void ( __attribute__((__stdcall__)) RtlInitUnicodeString)(PUNICODE_STRING Destin
 }
 }
 #line 1087
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) RtlQueryRegistryValues)(ULONG RelativeTo ,
+NTSTATUS ( __attribute__((__stdcall__)) RtlQueryRegistryValues)(ULONG RelativeTo ,
                                                                                                 PCWSTR Path ,
                                                                                                 PRTL_QUERY_REGISTRY_TABLE QueryTable ,
                                                                                                 PVOID Context ,
@@ -31335,7 +31335,7 @@ NTSTATUS ( __attribute__((__stdcall__)) RtlQueryRegistryValues)(ULONG RelativeTo
 }
 }
 #line 1109
- __attribute__((__dllimport__)) NTSTATUS ( __attribute__((__stdcall__)) ZwClose)(HANDLE Handle ) ;
+NTSTATUS ( __attribute__((__stdcall__)) ZwClose)(HANDLE Handle ) ;
 #line 1109 "../slam-kernel.c"
 NTSTATUS ( __attribute__((__stdcall__)) ZwClose)(HANDLE Handle ) 
 { int __BLAST_NONDET = __VERIFIER_nondet_int() ;

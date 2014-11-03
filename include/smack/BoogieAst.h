@@ -1,6 +1,4 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #ifndef BOOGIEAST_H
@@ -15,12 +13,13 @@ namespace smack {
 
 using namespace std;
 
-class Block;
 class Program;
 
 class Expr {
 public:
   virtual void print(ostream& os) const = 0;
+  static const Expr* exists(string v, string t, const Expr* e);
+  static const Expr* forall(string v, string t, const Expr* e);
   static const Expr* and_(const Expr* l, const Expr* r);
   static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
@@ -28,6 +27,7 @@ public:
   static const Expr* fn(string f, const Expr* x);
   static const Expr* fn(string f, const Expr* x, const Expr* y);
   static const Expr* fn(string f, const Expr* x, const Expr* y, const Expr* z);
+  static const Expr* fn(string f, vector<const Expr*> args);
   static const Expr* id(string x);
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(int i);
@@ -100,10 +100,13 @@ public:
 
 class QuantExpr : public Expr {
 public:
-  enum Quantifier { Forall, Exists };
+  enum Quantifier { Exists, Forall };
 private:
-  Quantifier q;
+  Quantifier quant;
+  vector< pair<string,string> > vars;
+  const Expr* expr;
 public:
+  QuantExpr(Quantifier q, vector< pair<string,string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
   void print(ostream& os) const;
 };
 
@@ -181,6 +184,7 @@ public:
   static const Stmt* assume(const Expr* e, const Attr* attr);
   static const Stmt* call(string p);
   static const Stmt* call(string p, const Expr* x);
+  static const Stmt* call(string p, const Expr* x, const Attr* attr);
   static const Stmt* call(string p, const Expr* x, string r);
   static const Stmt* call(string p, const Expr* x, const Expr* y, string r);
   static const Stmt* call(string p, vector<const Expr*> ps);
@@ -193,6 +197,7 @@ public:
   static const Stmt* goto_(vector<string> ts);
   static const Stmt* havoc(string x);
   static const Stmt* return_();
+  static const Stmt* return_(const Expr* e);
   static const Stmt* skip();
   static const Stmt* code(string s);
   virtual void print(ostream& os) const = 0;
@@ -258,8 +263,9 @@ public:
 };
 
 class ReturnStmt : public Stmt {
+  const Expr* expr;
 public:
-  ReturnStmt() {}
+  ReturnStmt(const Expr* e = nullptr) : expr(e) {}
   void print(ostream& os) const;
 };
 
@@ -285,9 +291,11 @@ public:
   unsigned getId() const { return id; }
   string getName() const { return name; }
   virtual kind getKind() const = 0;
+  void addAttr(const Attr* a) { attrs.push_back(a); }
   
   static Decl* typee(string name, string type);
   static Decl* axiom(const Expr* e);
+  static Decl* function(string name, vector< pair<string,string> > args, string type, const Expr* e);
   static Decl* constant(string name, string type);
   static Decl* constant(string name, string type, bool unique);
   static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
@@ -341,8 +349,9 @@ class FuncDecl : public Decl {
   string type;
   const Expr* body;
 public:
-  FuncDecl(string n, vector< pair<string, string> > ps, string t, Expr* b)
-    : Decl(n), params(ps), type(t), body(b) {}
+  FuncDecl(string n, vector<const Attr*> ax, vector< pair<string, string> > ps,
+    string t, const Expr* b)
+    : Decl(n,ax), params(ps), type(t), body(b) {}
   kind getKind() const { return FUNC; }
   void print(ostream& os) const;
 };
@@ -355,20 +364,72 @@ public:
   void print(ostream& os) const;
 };
 
-class ProcDecl : public Decl {
+class Block {
+  string name;
+  vector<const Stmt*> stmts;
+public:
+  Block() : name("") {}
+  Block(string n) : name(n) {}
+  void print(ostream& os) const;
+  void insert(const Stmt* s) {
+    stmts.insert(stmts.begin(), s);
+  }
+  void addStmt(const Stmt* s) {
+    stmts.push_back(s);
+  }
+  string getName() {
+    return name;
+  }
+};
+
+class CodeContainer {
+protected:
   Program& prog;
-  vector< pair<string,string> > params;
-  vector< pair<string,string> > rets;
-  vector<string> mods;
-  vector<const Expr*> requires;
-  vector<const Expr*> ensures;
   set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
+  vector<string> mods;
+  CodeContainer(Program& p) : prog(p) {}
+public:
+  Program& getProg() const {
+    return prog;
+  }
+  void addDecl(Decl* d) {
+    decls.insert(d);
+  }
+  void insert(const Stmt* s) {
+    blocks.front()->insert(s);
+  }
+  void addBlock(Block* b) {
+    blocks.push_back(b);
+  }
+  bool hasBody() {
+    return decls.size() > 0 || blocks.size() > 0;
+  }
+  void addMod(string m) {
+    mods.push_back(m);
+  }
+  void addMods(vector<string> ms) {
+    for (unsigned i = 0; i < ms.size(); i++)
+      addMod(ms[i]);
+  }
+  virtual bool isProc() { return false; }
+};
+
+class CodeExpr : public Expr, public CodeContainer {
+public:
+  CodeExpr(Program& p) : CodeContainer(p) {}
+  void print(ostream& os) const;
+};
+
+class ProcDecl : public Decl, public CodeContainer {
+  vector< pair<string,string> > params;
+  vector< pair<string,string> > rets;
+  vector<const Expr*> requires;
+  vector<const Expr*> ensures;
 public:
   ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
-    : Decl(n), prog(p), params(ps), rets(rs) {}
+    : Decl(n), CodeContainer(p), params(ps), rets(rs) {}
   kind getKind() const { return PROC; }
-  Program& getProg() const { return prog; }
   void addParam(string x, string t) {
     params.push_back(make_pair(x, t));
   }
@@ -378,28 +439,13 @@ public:
   vector< pair<string,string> > getRets() {
     return rets;
   }
-  void addMod(string m) {
-    mods.push_back(m);
-  }
-  void addMods(vector<string> ms) {
-    for (unsigned i = 0; i < ms.size(); i++)
-      addMod(ms[i]);
-  }
   void addRequires(const Expr* e) {
     requires.push_back(e);
   }
   void addEnsures(const Expr* e) {
     ensures.push_back(e);
   }
-  void addDecl(Decl* d) {
-    decls.insert(d);
-  }
-  void addBlock(Block* b) {
-    blocks.push_back(b);
-  }
-  bool hasBody() {
-    return decls.size() > 0 || blocks.size() > 0;
-  }
+  bool isProc() { return true; }
   void print(ostream& os) const;
 };
 
@@ -408,23 +454,6 @@ public:
   CodeDecl(string s) : Decl(s) {}
   kind getKind() const { return CODE; }
   void print(ostream& os) const;
-};
-
-class Block {
-  ProcDecl& proc;
-  string name;
-  vector<const Stmt*> stmts;
-public:
-  Block(ProcDecl& p) : proc(p), name("") {}
-  Block(ProcDecl& p, string n) : proc(p), name(n) {}
-  void print(ostream& os) const;
-  ProcDecl& getProc() const { return proc; }
-  void addStmt(const Stmt* s) {
-    stmts.push_back(s);
-  }
-  string getName() {
-    return name;
-  }
 };
 
 class Program {

@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
 
 ################################################################################
 #
@@ -32,6 +35,10 @@ INSTALL_SMACK=1
 LLVM_DIR="${BASE_DIR}/llvm"
 SMACK_DIR="${BASE_DIR}/smack"
 
+# Setting colors
+textcolor='\e[0;35m'
+nocolor='\e[0m'
+
 ################################################################################
 
 # Set up base directory for everything
@@ -44,20 +51,22 @@ cd ${BASE_DIR}
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
 
+echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
+
 mkdir -p ${LLVM_DIR}/src
 mkdir -p ${LLVM_DIR}/build
 mkdir -p ${LLVM_DIR}/install
 
 # Get llvm and extract
-wget http://llvm.org/releases/3.4/llvm-3.4.src.tar.gz
-wget http://llvm.org/releases/3.4/clang-3.4.src.tar.gz
-wget http://llvm.org/releases/3.4/compiler-rt-3.4.src.tar.gz
+wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
 
-tar -C ${LLVM_DIR}/src -xzvf llvm-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
 mkdir -p ${LLVM_DIR}/src/tools/clang
-tar -C ${LLVM_DIR}/src/tools/clang -xzvf clang-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
 mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
-tar -C ${LLVM_DIR}/src/projects/compiler-rt -xzvf compiler-rt-3.4.src.tar.gz --strip 1
+tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
 
 # Configure llvm and build
 cd ${LLVM_DIR}/build/
@@ -67,6 +76,8 @@ make install
 
 cd ${BASE_DIR}
 
+echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
+
 fi
 
 ################################################################################
@@ -74,6 +85,8 @@ fi
 # SMACK
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
+
+echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
 
 mkdir -p ${SMACK_DIR}/src
 mkdir -p ${SMACK_DIR}/build
@@ -90,19 +103,23 @@ make install
 
 cd ${BASE_DIR}
 
+echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
+
 # Set required paths and environment variables
-export BOOGIE=/cygdrive/c/Users/zvonimir/Boogie/boogie
-export CORRAL=/cygdrive/c/projects/corral/corral
+export BOOGIE=/cygdrive/c/projects/boogie/Binaries/boogie
+export CORRAL=/cygdrive/c/projects/corral/bin/Debug/corral
 export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
+echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
 cd ${SMACK_DIR}/src/test
-make
-./regtest.py
-./regtest-corral.py
+./regtest.py --verifier {boogie,corral}
+echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
 
 cd ${BASE_DIR}
+
+echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
 
 fi
 
