@@ -180,6 +180,7 @@ public:
   static const Stmt* annot(const Attr* a);
   static const Stmt* assert_(const Expr* e);
   static const Stmt* assign(const Expr* e, const Expr* f);
+  static const Stmt* assign(vector<const Expr*> lhs, vector<const Expr*> rhs);
   static const Stmt* assume(const Expr* e);
   static const Stmt* assume(const Expr* e, const Attr* attr);
   static const Stmt* call(string p);

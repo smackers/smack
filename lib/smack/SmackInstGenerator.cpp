@@ -95,6 +95,8 @@ void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
 
 void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst& ti) {
   llvm::BasicBlock* block = ti.getParent();
+  vector<const Expr*> lhs;
+  vector<const Expr*> rhs;
   for (unsigned i = 0; i < ti.getNumSuccessors(); i++) {
 
     // write to the phi-node variable of the successor
@@ -105,11 +107,14 @@ void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst& ti) {
       llvm::PHINode* phi = llvm::cast<llvm::PHINode>(s);
       if (llvm::Value* v =
             phi->getIncomingValueForBlock(block)) {
-
         nameInstruction(*phi);
-        emit(Stmt::assign(rep.expr(phi), rep.expr(v)));
+        lhs.push_back(rep.expr(phi));
+        rhs.push_back(rep.expr(v));
       }
     }
+  }
+  if (!lhs.empty()) {
+    emit(Stmt::assign(lhs, rhs));
   }
 }
 

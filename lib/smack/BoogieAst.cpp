@@ -161,6 +161,10 @@ const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
   return new AssignStmt(vector<const Expr*>(1, e), vector<const Expr*>(1, f));
 }
 
+const Stmt* Stmt::assign(vector<const Expr*> lhs, vector<const Expr*> rhs) {
+  return new AssignStmt(lhs, rhs);
+}
+
 const Stmt* Stmt::assume(const Expr* e) {
   return new AssumeStmt(e);
 }
