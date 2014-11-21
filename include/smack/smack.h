@@ -31,7 +31,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define BITVECTOR
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
@@ -183,10 +182,9 @@ void __SMACK_decls() {
 	#endif
 
 	// Memory Model
-	D("function $base(ref) returns (ref);");
-
 	D("const $UNDEF: int;");
 #ifdef BITVECTOR
+	D("function $base(ref) returns (ref);");
 	D("const unique $NULL: ref;");
 	D("axiom $NULL == 0bv32;");
 	D("function {:inline} $pa(pointer: ref, index: ref, size: ref) returns (ref) {$add(pointer, $mul(index, size))}");
@@ -238,6 +236,7 @@ void __SMACK_decls() {
 	D("function {:inline} $sext.i16i32(p: i16) returns (i32) {if $sge16(p, 0bv16) then $zext.i16i32(p) else $neg16(1bv16)++p}");
 	D("function {:inline} $sext.i32i64(p: i32) returns (i64) {p}");
 #else
+	D("function $base(int) returns (int);");
 	D("const unique $NULL: int;");
 	D("axiom $NULL == 0;");
 	D("function {:inline} $pa(pointer: int, index: int, size: int) returns (int) {pointer + index * size}");
@@ -253,7 +252,10 @@ void __SMACK_decls() {
 	D("procedure boogie_si_record_mop(m: $mop);");
   D("procedure boogie_si_record_bool(b: bool);");
 #ifdef BITVECTOR
-	D("procedure boogie_si_record_int(i: i64);");
+	D("procedure boogie_si_record_i8(i: i8);");
+	D("procedure boogie_si_record_i16(i: i16);");
+	D("procedure boogie_si_record_i32(i: i32);");
+	D("procedure boogie_si_record_i64(i: i64);");
 #else
 	D("procedure boogie_si_record_int(i: int);");
   D("procedure boogie_si_record_float(f: float);");

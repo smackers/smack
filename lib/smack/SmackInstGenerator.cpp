@@ -324,16 +324,17 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-#ifdef BITVECTOR
-	emit(rep.load(li));
-#else
-  const Expr* rhs = rep.mem(li.getPointerOperand());
 
-  if (rep.isFloat(&li))
-    rhs = Expr::fn("$si2fp", rhs);
+  if (SmackOptions::BitVectors) 
+	  emit(rep.load(li));
+  else {
+	  const Expr* rhs = rep.mem(li.getPointerOperand());
 
-  emit(Stmt::assign(rep.expr(&li),rhs));
-#endif
+	  if (rep.isFloat(&li))
+		  rhs = Expr::fn("$si2fp", rhs);
+
+	  emit(Stmt::assign(rep.expr(&li),rhs));
+  }
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -347,22 +348,23 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
   const llvm::Value* E = si.getOperand(0);
-  const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
-#ifdef BITVECTOR
-	emit(rep.store(si));
-#else
-  const Expr* rhs = rep.expr(E);
 
-  if (rep.isFloat(E))
-    rhs = Expr::fn("$fp2si", rhs);
+  if (SmackOptions::BitVectors)
+	  emit(rep.store(si));
+  else {
+	  const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
+	  const Expr* rhs = rep.expr(E);
 
-  emit(Stmt::assign(rep.mem(P),rhs));
+	  if (rep.isFloat(E))
+		  rhs = Expr::fn("$fp2si", rhs);
 
-  if (SmackOptions::SourceLocSymbols && G) {
-    assert(G->hasName() && "Expected named global variable.");
-    emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
+	  emit(Stmt::assign(rep.mem(P),rhs));
+
+	  if (SmackOptions::SourceLocSymbols && G) {
+		  assert(G->hasName() && "Expected named global variable.");
+		  emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
+	  }
   }
-#endif
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -470,7 +472,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       string recordProc;
       if (rep.isBool(V)) recordProc = "boogie_si_record_bool";
       else if (rep.isFloat(V)) recordProc = "boogie_si_record_float";
-      else recordProc = "boogie_si_record_int";
+      else if (rep.isInt(V)) recordProc = rep.uopName(rep.getIntSize(V), "boogie_si_record_", 1);
+      else recordProc = rep.uopName(32, "boogie_si_record_", 1);
       emit(Stmt::call(recordProc,rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
     }
 

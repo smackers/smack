@@ -6,6 +6,7 @@
 #include "smack/SmackOptions.h"
 
 #include <iostream>
+#define TRUNC(v) (((v) > 32)? 32 : (v))
 
 namespace smack {
 
@@ -13,11 +14,10 @@ const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 const string SmackRep::NULL_VAL = "$NULL";
 
-#ifdef BITVECTOR
 const string SmackRep::BYTE_TYPE = "i8";
 const string SmackRep::LOAD = "$load.i";
 const string SmackRep::STORE = "$store.i";
-#endif
+const string SmackRep::NEG = "$neg";
 
 const string SmackRep::ALLOCA = "$alloca";
 const string SmackRep::MALLOC = "$malloc";
@@ -28,9 +28,6 @@ const string SmackRep::B2P = "$b2p";
 const string SmackRep::I2B = "$i2b";
 const string SmackRep::B2I = "$b2i";
 
-#ifdef BITVECTOR
-const string SmackRep::NEG = "$neg";
-#endif
 // used for memory model debugging
 const string SmackRep::MEM_OP = "$mop";
 const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
@@ -40,13 +37,7 @@ const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 
 const string SmackRep::STATIC_INIT = "$static_init";
 
-#ifdef BITVECTOR
-//Shaobo: width as a class member is a good design choice for debugging, I guess.
-//I prefer to localize it after full extension for bitvector 
-//int SmackRep::width = 32;
-#else
 const int SmackRep::width = 0;
-#endif
 
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
@@ -70,7 +61,6 @@ bool SmackRep::isInt(const llvm::Value* v) {
   return isInt(v->getType());
 }
 
-#ifdef BITVECTOR
 unsigned SmackRep::getIntSize(const llvm::Value* v) {
 	return getIntSize(v->getType());
 }
@@ -99,7 +89,6 @@ bool SmackRep::isPointer(const llvm::Type* t) {
 bool SmackRep::isPointer(const llvm::Value* v) {
   return isPointer(v->getType());
 }
-#endif
 
   return t->isIntegerTy(1);
 }
@@ -121,15 +110,15 @@ string SmackRep::type(const llvm::Type* t) {
 		return BOOL_TYPE;
 	else if (isFloat(t))
 		return FLOAT_TYPE;
-#ifdef BITVECTOR
-// Shaobo: a bad implementation here, multiple calls for llvm:Type::isIntegerTy().
 	else if (isInt(t)) {
-		stringstream s;
-		s << "i" << getIntSize(t);
-		return s.str();
+		if (SmackOptions::BitVectors) {
+			stringstream s;
+			s << "i" << getIntSize(t);
+			return s.str();
+		} else
+			return getPtrType();
 	} else if (isPointer(t))
 		return getPtrType();
-#endif
 	else 
 //Shaobo: undefined type here...
 		return getPtrType();
@@ -166,20 +155,18 @@ string SmackRep::memType(unsigned r) {
 
 const Expr* SmackRep::mem(const llvm::Value* v) {
   unsigned r = getRegion(v);
-  if (memoryRegions[r].isSingletonGlobal)
+  if (memoryRegions[r].isSingletonGlobal && !SmackOptions::BitVectors)
     return Expr::id(memReg(r));
   else
     return Expr::sel(Expr::id(memReg(r)),expr(v));
-#endif
     return Expr::sel(Expr::id(memReg(r)),expr(v));
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
-  if (memoryRegions[region].isSingletonGlobal)
+  if (memoryRegions[region].isSingletonGlobal && !SmackOptions::BitVectors)
     return Expr::id(memReg(region));
   else
   else
-#endif
     return Expr::sel(Expr::id(memReg(region)),addr);
 }
 
@@ -244,7 +231,6 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   return Stmt::call(name.str(),args);
 }
 
-#ifdef BITVECTOR
 const Stmt* SmackRep::load(const llvm::LoadInst& li) {
 	const llvm::Value* P = li.getPointerOperand();
 	int r = getRegion(P);
@@ -267,21 +253,16 @@ const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* p, const
 	return Stmt::assign(Expr::id(memReg(region)), Expr::fn(name.str(), Expr::id(memReg(region)), p, e));
 		
 }
-#endif
 
 const Expr* SmackRep::pa(const Expr* base, int index, int size) {
-#ifdef BITVECTOR
-  return pa(base, lit(index), lit(size));
-#else
-  return pa(base, Expr::lit(index), Expr::lit(size));
-#endif
+	if (SmackOptions::BitVectors)
+		return pa(base, lit(index), lit(size));
+	else
+		return pa(base, Expr::lit(index), Expr::lit(size));
 }
+
 const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size) {
-#ifdef BITVECTOR
   return pa(base, index, lit(size));
-#else
-  return pa(base, index, lit(size));
-#endif
 }
 const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size) {
   return Expr::fn("$pa", base, index, size);
@@ -296,35 +277,20 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
   return Expr::fn(B2I, expr(v));
 }
 
-#ifdef BITVECTOR
-inline int SmackRep::getConstInt(const llvm::Value* v) {
-	using namespace llvm;
-	const llvm::ConstantInt* ci; 
-	assert(ci = llvm::dyn_cast<const llvm::ConstantInt>(v));
-	uint64_t val = ci->getLimitedValue();
-	return val;
-}
-#endif
-
 const Expr* SmackRep::lit(const llvm::Value* v) {
   using namespace llvm;
-  unsigned width = 0;
+  unsigned wd = 0;
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
-#ifdef BITVECTOR
-    width = ci->getBitWidth();
-    width = (width > 32)? 32 : width;
-#endif
-    if (ci->getBitWidth() == 1)
+    wd = ci->getBitWidth();
+    wd = TRUNC(wd);
+    if (wd == 1)
       return Expr::lit(!ci->isZero());
-
     uint64_t val = ci->getSExtValue();
-    if (width > 0 && ci->isNegative())
-#ifdef BITVECTOR
-      return Expr::fn(NEG, Expr::lit(-val, width));
-#else
-#endif
+    if (wd > 0 && ci->isNegative())
+      //return (SmackOptions::BitVectors? Expr::fn(NEG, Expr::lit(val, wd)) : Expr::fn("$sub", Expr::lit(0, width), Expr::lit(-val, width)));
+      return (SmackOptions::BitVectors? Expr::fn("$sub", Expr::lit(0, wd), Expr::lit(-(ci->getSExtValue()), wd)) : Expr::fn("$sub", Expr::lit(0, width), Expr::lit(-val, width)));
     else
-      return Expr::lit(val, width);
+      return (SmackOptions::BitVectors? Expr::lit(val, wd) : Expr::lit(val, width));
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();
@@ -356,7 +322,10 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
 
 const Expr* SmackRep::lit(int v) {
   // TODO why doesn't this one do the thing with negative as well?
-  return lit(v, 32);
+	if (SmackOptions::BitVectors)
+		return lit(v, 32);
+	else
+		return lit(v, width);
 }
 
 // Shaobo: if we add multiple types to SMACK, then integer literals generated by SMACK source code should have the sense of type widths
@@ -389,11 +358,7 @@ const Expr* SmackRep::ptrArith(
     } else {
       llvm::Type* et =
         llvm::cast<llvm::SequentialType>(ts[i])->getElementType();
-      //#ifdef BITVECTOR
-      //e = pa(e, lit(ps[i], 0), storageSize(et));
-      //#else
       e = pa(e, lit(ps[i]), storageSize(et));
-      //#endif
     }
   }
 
@@ -483,41 +448,54 @@ const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
   return cast(CE->getOpcode(), CE->getOperand(0), CE->getType());
 }
 
-string SmackRep::castFunName(unsigned src, unsigned dest, const string& func)
+string SmackRep::bopName(unsigned operand1, unsigned operand2, const string& operation)
 {
-	stringstream cst;
-	cst << func << ".i" << src << "i" << dest;
-	return cst.str();
+	stringstream s;
+	s << operation << ".i" << operand1 << "i" << operand2;
+	return s.str();
+}
+
+string SmackRep::bopName(unsigned operand1, const string& operation)
+{
+	stringstream s;
+	s << operation << ".i" << operand1;
+	return s.str();
+}
+
+string SmackRep::uopName(unsigned operand, const string& operation, unsigned debug)
+{
+	stringstream s;
+	s << operation << (debug? "i" : ".i") << operand;
+	return s.str();
 }
 
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
   using namespace llvm;
   switch (opcode) {
-  case Instruction::Trunc:
-#ifdef BITVECTOR
-    return isBool(t)
-      ? Expr::fn("$i2b",expr(v))
-      : Expr::fn(castFunName(getIntSize(v), getIntSize(t), "trunc"),expr(v));
-#else
-    assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
-    return isBool(t)
-      ? Expr::fn("$i2b",expr(v))
-      : Expr::fn("$trunc",expr(v),lit(t->getPrimitiveSizeInBits()));
-#endif
-  case Instruction::ZExt:
-#ifdef BITVECTOR
-    return isBool(v->getType())
-      ? b2p(v)
-      : Expr::fn(castFunName(getIntSize(v), getIntSize(t), "$zext"),expr(v));
-#endif
-  case Instruction::SExt:
-#ifdef BITVECTOR
-    return isBool(v->getType())
-      ? b2p(v)
-      : Expr::fn(castFunName(getIntSize(v), getIntSize(t), "$sext"),expr(v));
-#else
-    return isBool(v->getType()) ? b2p(v) : expr(v);
-#endif
+	  case Instruction::Trunc:
+		  if (SmackOptions::BitVectors) {
+			  return isBool(t)
+				  ? Expr::fn("$i2b",expr(v))
+				  : Expr::fn(bopName(getIntSize(v), getIntSize(t), "trunc"),expr(v));
+		  } else {
+			  assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
+			  return isBool(t)
+				  ? Expr::fn("$i2b",expr(v))
+				  : Expr::fn("$trunc",expr(v),lit(t->getPrimitiveSizeInBits()));
+		  }
+	  case Instruction::ZExt:
+		  if (SmackOptions::BitVectors) {
+			  return isBool(v->getType())
+				  ? b2p(v)
+				  : Expr::fn(bopName(getIntSize(v), getIntSize(t), "$zext"),expr(v));
+		  } 
+	  case Instruction::SExt:
+		  if (SmackOptions::BitVectors) {
+			  return isBool(v->getType())
+				  ? b2p(v)
+				  : Expr::fn(bopName(getIntSize(v), getIntSize(t), "$sext"),expr(v));
+		  } else
+			  return isBool(v->getType()) ? b2p(v) : expr(v);
 
   case Instruction::FPTrunc:
   case Instruction::FPExt:
@@ -763,22 +741,22 @@ string SmackRep::getPrelude() {
 	s << endl;
 	s << "// Memory region declarations";
 	s << ": " << memoryRegions.size() << endl;
-	for (unsigned i=0; i<memoryRegions.size(); ++i)
+// TODO: Shaobo: I messed up memType method. I will fixed this evening.
     s << "var " << memReg(i) << ": " << memType(i) << ";" << endl;
-	#ifdef BITVECTOR
-		getByteType() 
-	#else
-		getPtrType() 
-	#endif
-	<< ";" << endl;
+		if (SmackOptions::BitVectors) {
+ 			<< getByteType() << ";" << endl;
+		} else {
+			s << "var " << memReg(i) << ": " << memType(i) << ";" << endl;
+		}
+	}
 	s << endl;
-	#ifdef BITVECTOR
-	s << "axiom $GLOBALS_BOTTOM == ";
-	lit(globalsBottom)->print(s);
-        s << ";" << endl;
-	#else
-	s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
-	#endif
+
+	if (SmackOptions::BitVectors) {
+		s << "axiom $GLOBALS_BOTTOM == ";
+		lit(globalsBottom)->print(s);
+		s << ";" << endl;
+	} else
+		s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
 
 	return s.str();
 }
@@ -812,25 +790,11 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   using namespace llvm;
 
   if (isInt(val)) {
-#ifdef BITVECTOR
-    staticInits.push_back( store(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) );
-#else
-    staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
-#endif
+    staticInits.push_back( SmackOptions::BitVectors? store(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) : Stmt::assign(mem(region,addr), expr(val)) );
 
-  } else if (isFloat(val)) {
-#ifdef BITVECTOR
-    staticInits.push_back( store(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn("$fp2si",expr(val))) );
-#else
-    staticInits.push_back( Stmt::assign(mem(region,addr), Expr::fn("$fp2si",expr(val))) );
-#endif
-
+    staticInits.push_back( SmackOptions::BitVectors? store(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn("$fp2si",expr(val))) : Stmt::assign(mem(region,addr), Expr::fn("$fp2si",expr(val))) );
   } else if (isa<PointerType>(val->getType())) {
-#ifdef BITVECTOR
-    staticInits.push_back( store(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) );
-#else
-    staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
-#endif
+    staticInits.push_back( SmackOptions::BitVectors? store(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) : Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (ArrayType* at = dyn_cast<ArrayType>(val->getType())) {
 
@@ -860,9 +824,10 @@ bool SmackRep::hasStaticInits() {
 Decl* SmackRep::getStaticInit() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
   Block* b = new Block();
-#ifdef BITVECTOR
-    b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit(1024)) );
-#endif
+
+  if (SmackOptions::BitVectors)
+	  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit(1024)) );
+
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);
   b->addStmt(Stmt::return_());
@@ -903,11 +868,7 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
 			if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
 				if (numElems > 1)
 					ax.push_back(Attr::attr("count",numElems));
-#ifdef BITVECTOR
-				decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom))));
-#else
-				decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))));
-#endif
+				decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
 				addInit(getRegion(g), g, init);
 
 				// Expr::fn("$slt",
@@ -928,76 +889,73 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
 }
 
 string SmackRep::getPtrType() {
-#ifdef BITVECTOR
-  return "ref";
-#else
-  return "int";
-#endif
+	if (SmackOptions::BitVectors)
+		return "ref";
+	else
+		return "int";
 }
 
-#ifdef BITVECTOR
 string SmackRep::getByteType() {
 	return BYTE_TYPE;
 }
-#endif
 
 string SmackRep::memcpyProc(int dstReg, int srcReg) {
   stringstream s;
 
   if (SmackOptions::MemoryModelImpls) {
-#ifdef BITVECTOR
-// TODO
-    s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool)" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "{" << endl;
-    s << "  var $oldSrc: [" << getPtrType() << "] " << getByteType() << ";" << endl;
-    s << "  var $oldDst: [" << getPtrType() << "] " << getByteType() << ";" << endl;
-    s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
-    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-    s << "  havoc " << memReg(dstReg) << ";" << endl;
-    s << "  assume (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
-      << memReg(dstReg) << "[x] == $oldSrc[$add($sub(src, dest), x)]);" << endl;
-    s << "  assume (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
-      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
-    s << "}" << endl;
-#else
-    s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool)" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "{" << endl;
-    s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-    s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
-    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-    s << "  havoc " << memReg(dstReg) << ";" << endl;
-    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
-    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
-    s << "}" << endl;
-#endif
+	  if (SmackOptions::BitVectors) {
+		  // TODO
+		  s << "procedure $memcpy." << dstReg << "." << srcReg;
+		  s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool)" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "{" << endl;
+		  s << "  var $oldSrc: [" << getPtrType() << "] " << getByteType() << ";" << endl;
+		  s << "  var $oldDst: [" << getPtrType() << "] " << getByteType() << ";" << endl;
+		  s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
+		  s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+		  s << "  havoc " << memReg(dstReg) << ";" << endl;
+		  s << "  assume (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
+			  << memReg(dstReg) << "[x] == $oldSrc[$add($sub(src, dest), x)]);" << endl;
+		  s << "  assume (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
+			  << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+		  s << "}" << endl;
+	  } else {
+		  s << "procedure $memcpy." << dstReg << "." << srcReg;
+		  s << "(dest: int, src: int, len: int, align: int, isvolatile: bool)" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "{" << endl;
+		  s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+		  s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+		  s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
+		  s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+		  s << "  havoc " << memReg(dstReg) << ";" << endl;
+		  s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
+			  << memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
+		  s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+			  << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+		  s << "}" << endl;
+	  }
   } else {
-#ifdef BITVECTOR
-// TODO
-    s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[$add($sub(src, dest), x)]);" 
-      << endl;
-    s << "ensures (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-#else
-    s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
-      << endl;
-    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-#endif
+	  if (SmackOptions::BitVectors) {
+		  // TODO
+		  s << "procedure $memcpy." << dstReg << "." << srcReg;
+		  s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool);" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "ensures (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
+			  << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[$add($sub(src, dest), x)]);" 
+			  << endl;
+		  s << "ensures (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
+			  << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+	  } else {
+		  s << "procedure $memcpy." << dstReg << "." << srcReg;
+		  s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+			  << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
+			  << endl;
+		  s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+			  << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+	  }
   }
 
   return s.str();
@@ -1007,54 +965,54 @@ string SmackRep::memsetProc(int dstReg) {
   stringstream s;
 
   if (SmackOptions::MemoryModelImpls) {
-#ifdef BITVECTOR
-// TODO
-    s << "procedure $memset." << dstReg;
-    s << "(dest: ref, val: i8, len: ref, align: i32, isvolatile: bool)" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "{" << endl;
-    s << "  var $oldDst: [" << getPtrType() << "] " << getByteType() << ";" << endl;
-    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-    s << "  havoc " << memReg(dstReg) << ";" << endl;
-    s << "  assume (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
-      << memReg(dstReg) << "[x] == val);" << endl;
-    s << "  assume (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
-      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
-    s << "}" << endl;
-#else
-    s << "procedure $memset." << dstReg;
-    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool)" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "{" << endl;
-    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-    s << "  havoc " << memReg(dstReg) << ";" << endl;
-    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == val);" << endl;
-    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
-    s << "}" << endl;
-#endif
+	  if (SmackOptions::BitVectors) {
+		  // TODO
+		  s << "procedure $memset." << dstReg;
+		  s << "(dest: ref, val: i8, len: ref, align: i32, isvolatile: bool)" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "{" << endl;
+		  s << "  var $oldDst: [" << getPtrType() << "] " << getByteType() << ";" << endl;
+		  s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+		  s << "  havoc " << memReg(dstReg) << ";" << endl;
+		  s << "  assume (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
+			  << memReg(dstReg) << "[x] == val);" << endl;
+		  s << "  assume (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
+			  << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+		  s << "}" << endl;
+	  } else {
+		  s << "procedure $memset." << dstReg;
+		  s << "(dest: int, val: int, len: int, align: int, isvolatile: bool)" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "{" << endl;
+		  s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+		  s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
+		  s << "  havoc " << memReg(dstReg) << ";" << endl;
+		  s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
+			  << memReg(dstReg) << "[x] == val);" << endl;
+		  s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
+			  << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+		  s << "}" << endl;
+	  }
   } else {
-#ifdef BITVECTOR
-    s << "procedure $memset." << dstReg;
-    s << "(dest: ref, val: i8, len: ref, align: i32, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
-      << memReg(dstReg) << "[x] == val);"
-      << endl;
-    s << "ensures (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-#else
-    s << "procedure $memset." << dstReg;
-    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == val);"
-      << endl;
-    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-#endif
+	  if (SmackOptions::BitVectors) {
+		  s << "procedure $memset." << dstReg;
+		  s << "(dest: ref, val: i8, len: ref, align: i32, isvolatile: bool);" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "ensures (forall x:i64 :: $ule(dest, x) && $ult(x, $add(dest, len)) ==> "
+			  << memReg(dstReg) << "[x] == val);"
+			  << endl;
+		  s << "ensures (forall x:i64 :: !($ule(dest, x) && $ult(x, $add(dest, len))) ==> "
+			  << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+	  } else {
+		  s << "procedure $memset." << dstReg;
+		  s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
+		  s << "modifies " << memReg(dstReg) << ";" << endl;
+		  s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+			  << memReg(dstReg) << "[x] == val);"
+			  << endl;
+		  s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+			  << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+	  }
   }
 
   return s.str();

@@ -42,6 +42,7 @@ def llvm2bpl(infile, outfile, debugFlag, memImpls):
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   cmd.append('-bpl=' + outfile)
+  cmd.append('-bit-vector')
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   smackOutput = p.communicate()[0]
 

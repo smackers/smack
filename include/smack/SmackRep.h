@@ -5,8 +5,7 @@
 #define SMACKREP_H
 
 #include "smack/Naming.h"
-#include "smack/Naming.h"
-#define BITVECTOR
+//#define BITVECTOR
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
@@ -30,11 +29,11 @@ using namespace std;
   
 class SmackRep {
 public:
-#ifdef BITVECTOR
   static const string BYTE_TYPE;
   static const string LOAD;
   static const string STORE;
-#endif
+  static const string NEG;
+
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
   static const string NULL_VAL;
@@ -48,9 +47,6 @@ public:
   static const string I2B;
   static const string B2I;
   
-#ifdef BITVECTOR
-  static const string NEG;
-#endif
   static const string MEM_OP;
   static const string REC_MEM_OP;
   static const string MEM_OP_VAL;
@@ -60,7 +56,7 @@ public:
   static const string STATIC_INIT;
 
   // TODO Make this width a parameter to generate bitvector-based code.
-  //static int width;
+  static const int width;
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
@@ -104,10 +100,6 @@ private:
   const Expr* i2b(const llvm::Value* v);
   const Expr* b2i(const llvm::Value* v);
 
-#ifdef BITVECTOR
-  inline int getConstInt(const llvm::Value* v);
-#endif
-
 public:
   bool isMallocOrFree(const llvm::Function* f);
   bool isIgnore(const llvm::Function* f);
@@ -117,7 +109,6 @@ public:
   bool isBool(const llvm::Value* v);
   bool isFloat(const llvm::Type* t);
   bool isFloat(const llvm::Value* v);
-#ifdef BITVECTOR
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
   unsigned getPtrSize(const llvm::Value* v);
@@ -125,7 +116,6 @@ public:
   bool isPointer(const llvm::Value* v);
   bool isPointer(const llvm::Type* t);
   virtual string getByteType();
-#endif
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
@@ -145,9 +135,8 @@ public:
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(int v);
   const Expr* lit(int v, unsigned size);
-#ifdef BITVECTOR
   const Expr* lit(const llvm::Value* v, unsigned flag);
-#endif
+
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
@@ -161,9 +150,9 @@ public:
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
-#ifdef BITVECTOR
-  string castFunName(unsigned src, unsigned dest, const string& func);
-#endif
+  string bopName(unsigned operand1, unsigned operand2, const string& operation);
+  string bopName(unsigned operand1, const string& operation);
+  string uopName(unsigned operand, const string& operation, unsigned debug);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);
@@ -181,11 +170,9 @@ public:
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
   virtual const Stmt* memset(const llvm::MemSetInst& msi);
-#ifdef BITVECTOR
   virtual const Stmt* load(const llvm::LoadInst& li);
   virtual const Stmt* store(const llvm::StoreInst& si);
   virtual const Stmt* store(unsigned region, unsigned size, const Expr* p, const Expr* e);
-#endif
   
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual void addBplGlobal(string name);
