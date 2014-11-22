@@ -18,6 +18,7 @@
 #include "assistDS/DSNodeEquivs.h"
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
+#include "dsa/TypeSafety.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -66,6 +67,8 @@ private:
   llvm::TDDataStructures *TD;
   llvm::BUDataStructures *BU;
   llvm::DSNodeEquivs *nodeEqs;
+  //dsa::TypeSafety<llvm::EQTDDataStructures> *TS; 
+  dsa::TypeSafety<llvm::TDDataStructures> *TS; 
   vector<const llvm::DSNode*> staticInits;
   vector<const llvm::DSNode*> memcpys;
 
@@ -79,6 +82,9 @@ public:
     AU.addRequiredTransitive<llvm::TDDataStructures>();
     AU.addRequiredTransitive<llvm::BUDataStructures>();
     AU.addRequiredTransitive<llvm::DSNodeEquivs>();
+    //AU.addRequired<llvm::EQTDDataStructures>();
+    AU.addRequired<dsa::TypeSafety<llvm::TDDataStructures> >();
+    //AU.setPreservesCFG();
   }
 
   virtual bool runOnModule(llvm::Module &M) {
@@ -86,6 +92,8 @@ public:
     TD = &getAnalysis<llvm::TDDataStructures>();
     BU = &getAnalysis<llvm::BUDataStructures>();
     nodeEqs = &getAnalysis<llvm::DSNodeEquivs>();
+    //TS = &getAnalysis<dsa::TypeSafety<llvm::EQTDDataStructures> >();
+    TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures> >();
     memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
     staticInits = collectStaticInits(M);
 
@@ -96,6 +104,7 @@ public:
   bool isAlloced(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
   bool isSingletonGlobal(const llvm::Value *V);
+  bool isSafe(const llvm::Value* ptr, const llvm::StoreInst &si);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
 

@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include "smack.h"
 
-int incr(int x) {
-  return x;
+short incr(short x) {
+  return ++x;
 }
 
 int main(void) {
-  int a;
+  short a;
 
   a = -1;
   a = incr(a);
-  assert(a == -1);
+  assert(a == 0);
   return a;
 }
 

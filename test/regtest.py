@@ -111,7 +111,7 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests(verifier):
+def runtests(verifier, bitVector):
   passed = failed = 0
   for test in tests:
     
@@ -130,9 +130,10 @@ def runtests(verifier):
 
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smackverify.py', sourceFile, '--verifier=' + verifier,
-                            '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl'],
-                            stdout=subprocess.PIPE)
+      cmd = ['smackverify.py', sourceFile, '--verifier=' + verifier,
+                            '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl']
+      if bitVector: cmd.append('--bit-vector')
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
       
       smackOutput = p.communicate()[0]
       elapsed = time.time() - t0
@@ -153,11 +154,13 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Runs regressions in this folder.')
   parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default=['corral'], nargs='*',
                       help='choose verifiers to be used')
+  parser.add_argument('--bit-vector', dest='bitvector', action="store_true", default=False, 
+                      help='enable a bit-vector implementation of SMACK')
   args = parser.parse_args()
 
   for verifier in args.verifier:
     print '\nRunning regressions using', verifier
-    passed, failed = runtests(verifier)
+    passed, failed = runtests(verifier, args.bitvector)
   
     print '\nPASSED count: ', passed
     print 'FAILED count: ', failed

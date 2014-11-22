@@ -173,6 +173,8 @@ public:
   virtual const Stmt* load(const llvm::LoadInst& li);
   virtual const Stmt* store(const llvm::StoreInst& si);
   virtual const Stmt* store(unsigned region, unsigned size, const Expr* p, const Expr* e);
+  bool isSafe(const llvm::Value* ptr, const llvm::StoreInst& si);
+  bool isCollapsed(const llvm::Value* v);
   
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual void addBplGlobal(string name);

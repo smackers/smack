@@ -13,6 +13,8 @@
 #include <sstream>
 
 #include <iostream>
+#include "llvm/Support/raw_ostream.h"
+#include "dsa/DSNode.h"
 
 namespace smack {
 
@@ -348,6 +350,16 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
   const llvm::Value* E = si.getOperand(0);
+    
+   
+   assert(rep.isSafe(P, si) && "P is not a safe pointer");
+   //assert((!rep.isCollapsed(P)) && "Caught collapsed node");
+   //if (!(rep.isSafe(P, si)))
+   //	WARN("P is not a safe pointer");
+   //stringstream NA;
+   //NA << "P node address is " << (long int)(rep.isCollapsed(P)) << " E node address is " << (long int)(rep.isCollapsed(E));
+   //NA << " P node size is " << ((DSNode *)rep.isCollapsed(P))->getSize();
+   //WARN(NA.str());
 
   if (SmackOptions::BitVectors)
 	  emit(rep.store(si));
@@ -472,8 +484,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       string recordProc;
       if (rep.isBool(V)) recordProc = "boogie_si_record_bool";
       else if (rep.isFloat(V)) recordProc = "boogie_si_record_float";
-      else if (rep.isInt(V)) recordProc = rep.uopName(rep.getIntSize(V), "boogie_si_record_", 1);
-      else recordProc = rep.uopName(32, "boogie_si_record_", 1);
+      else if (rep.isInt(V)) recordProc = (SmackOptions::BitVectors? rep.uopName(rep.getIntSize(V), "boogie_si_record_", 1) : "boogie_si_record_int");
+      else recordProc = (SmackOptions::BitVectors? rep.uopName(32, "boogie_si_record_", 1) : "boogie_si_record_int");
       emit(Stmt::call(recordProc,rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
     }
 

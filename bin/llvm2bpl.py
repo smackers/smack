@@ -33,16 +33,18 @@ def llvm2bplParser():
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
                       help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
+  parser.add_argument('--bit-vector', dest='bitvector', action="store_true", default=False,
+                      help='enable a bit-vector implemenation of SMACK')
   return parser
 
 
-def llvm2bpl(infile, outfile, debugFlag, memImpls):
+def llvm2bpl(infile, outfile, debugFlag, memImpls, bitVector):
     
   cmd = ['smack', '-source-loc-syms', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   cmd.append('-bpl=' + outfile)
-  cmd.append('-bit-vector')
+  if bitVector: cmd.append('-bit-vector')
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   smackOutput = p.communicate()[0]
 
@@ -66,7 +68,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod)
+  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod, args.bitvector)
 
   # write final output
   with open(args.outfile, 'w') as outputFile:

@@ -72,6 +72,11 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
   return false;
 }
 
+bool DSAAliasAnalysis::isSafe(const llvm::Value* ptr, const llvm::StoreInst& si) {\
+	const llvm::Function *F = (&si)->getParent()->getParent();
+        return TS->isTypeSafe(ptr, F);
+}
+
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return TD->getDSGraph(*I->getParent()->getParent());

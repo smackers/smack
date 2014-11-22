@@ -203,6 +203,16 @@ TypeSafety<dsa>::typeFieldsOverlap (const DSNode * N) {
     SuperSet<Type*>::setPtr TypeSet = tn->second;
 
     //
+    // If there are multiple types in the current field, then the node is type-unsafe.
+    //
+    if (TypeSet) {
+	    svset<Type*>::const_iterator tb = TypeSet->begin();
+	    if (++tb != TypeSet->end()) {
+		    overlaps = true;
+		    break;
+	    }
+    }
+    //
     // If this is the last field, then we are done searching.
     //
     if ((++tn) == N->type_end()) {
