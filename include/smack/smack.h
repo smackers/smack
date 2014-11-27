@@ -28,6 +28,10 @@
  *
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
@@ -263,5 +267,9 @@ void __SMACK_decls() {
 
 #undef D
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*SMACK_H_*/
