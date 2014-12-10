@@ -41,7 +41,7 @@ def llvm2bpl(infile, outfile, debugFlag, memImpls):
   cmd = ['smack', '-source-loc-syms', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
-  cmd.append('-o=' + outfile)
+  cmd.append('-bpl=' + outfile)
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   smackOutput = p.communicate()[0]
 
