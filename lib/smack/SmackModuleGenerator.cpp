@@ -15,6 +15,11 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   Naming naming;
   SmackRep rep(&getAnalysis<DSAAliasAnalysis>(), naming, program);
+  SmackBV* bv = &getAnalysis<SmackBV>();
+  if (SmackOptions::BitVectors || bv->isBVRequired())
+	rep.useBitVector();
+  if (SmackOptions::UseDSA)
+	rep.useDSA();
   rep.collectRegions(m);
   
   DEBUG(errs() << "Analyzing globals...\n");

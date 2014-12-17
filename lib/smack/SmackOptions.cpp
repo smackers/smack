@@ -22,4 +22,8 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
 const llvm::cl::opt<bool> SmackOptions::BitVectors(
   "bit-vector", llvm::cl::desc("A bit-vector version of SMACK.")
 );
+
+const llvm::cl::opt<bool> SmackOptions::UseDSA(
+  "use-dsa", llvm::cl::desc("Optimize bit-vector with DSA.")
+);
 }

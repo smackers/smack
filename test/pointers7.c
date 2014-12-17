@@ -1,5 +1,8 @@
 #include "smack.h"
-
+//	Node Layout
+//	int 		0
+//	int, char	4
+//
 struct a {
   int i;
   int j;
@@ -7,8 +10,10 @@ struct a {
 
 int main(void) {
   struct a x = {10, 20};
-  char *p = (char *)&x + 1;
+  char *p = (char *)(&(x.j));
+  x.i = 2;
   *p = 1;
-  assert(x.j == 20);
+  assert(x.i == 2);
   return 0;
 }
+

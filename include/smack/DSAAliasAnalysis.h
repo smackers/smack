@@ -104,7 +104,10 @@ public:
   bool isAlloced(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
   bool isSingletonGlobal(const llvm::Value *V);
-  bool isSafe(const llvm::Value* ptr, const llvm::StoreInst &si);
+  bool isFieldsOverlap(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldsOverlap(const GlobalValue* V, unsigned offset);
+  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isTypeSafe(const GlobalValue* V);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
 

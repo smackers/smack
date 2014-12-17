@@ -37,6 +37,8 @@ tests = [
   RegTest('pointers1_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers2',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers2_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('pointers4',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('pointers4_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers3',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers3_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('globals',               r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
@@ -100,6 +102,8 @@ tests = [
   RegTest('two_arrays5',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('two_arrays6',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('two_arrays6_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('num_conversion_1_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  RegTest('num_conversion_2_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
 #  RegTest('floats_in_memory',      r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('gcd',                   r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2)
@@ -111,7 +115,7 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests(verifier, bitVector):
+def runtests(verifier, bitVector, useDSA):
   passed = failed = 0
   for test in tests:
     
@@ -133,6 +137,7 @@ def runtests(verifier, bitVector):
       cmd = ['smackverify.py', sourceFile, '--verifier=' + verifier,
                             '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl']
       if bitVector: cmd.append('--bit-vector')
+      if useDSA: cmd.append('--use-dsa')
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
       
       smackOutput = p.communicate()[0]
@@ -156,11 +161,13 @@ if __name__ == '__main__':
                       help='choose verifiers to be used')
   parser.add_argument('--bit-vector', dest='bitvector', action="store_true", default=False, 
                       help='enable a bit-vector implementation of SMACK')
+  parser.add_argument('--use-dsa', dest='usedsa', action="store_true", default=False, 
+                      help='optimize bit-vector with DSA')
   args = parser.parse_args()
 
   for verifier in args.verifier:
     print '\nRunning regressions using', verifier
-    passed, failed = runtests(verifier, args.bitvector)
+    passed, failed = runtests(verifier, args.bitvector, args.usedsa)
   
     print '\nPASSED count: ', passed
     print 'FAILED count: ', failed

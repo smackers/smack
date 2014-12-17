@@ -7,6 +7,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/SmackInstGenerator.h"
 #include "smack/DSAAliasAnalysis.h"
+#include "smack/SmackBV.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/CFG.h"
@@ -34,6 +35,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayoutPass>();
     AU.addRequired<DSAAliasAnalysis>();
+    AU.addRequired<SmackBV>();
   }
 
   virtual bool runOnModule(llvm::Module& m) {

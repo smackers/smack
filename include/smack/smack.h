@@ -282,17 +282,21 @@ void __SMACK_decls() {
 	D("function {:inline} $sext.i16i64(p: i16) returns (i64) {if $sge.i16(p, 0bv16) then $zext.i16i64(p) else $neg.i16(1bv16)++p}");
 	D("function {:inline} $sext.i16i32(p: i16) returns (i32) {if $sge.i16(p, 0bv16) then $zext.i16i32(p) else $neg.i16(1bv16)++p}");
 	D("function {:inline} $sext.i32i64(p: i32) returns (i64) {p}");
+
+	D("function {:inline} $p2i(p: ref) returns (i64) {p}");
+	D("function {:inline} $i2p(p: i64) returns (ref) {p}");
+	D("function {:inline} $p2b(p: ref) returns (bool) {p != 0bv32}");
 #else
 	D("function $base(int) returns (int);");
 	D("const unique $NULL: int;");
 	D("axiom $NULL == 0;");
 	D("function {:inline} $pa(pointer: int, index: int, size: int) returns (int) {pointer + index * size}");
 	D("function {:inline} $b2p(b: bool) returns (int) {if b then 1 else 0}");
-#endif
-	D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
 	D("function {:inline} $p2i(p: int) returns (int) {p}");
 	D("function {:inline} $i2p(p: int) returns (int) {p}");
 	D("function {:inline} $p2b(p: int) returns (bool) {p != 0}");
+#endif
+	D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
 
 	// Memory debugging symbols
 	D("type $mop;");

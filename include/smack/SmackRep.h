@@ -57,7 +57,6 @@ public:
 
   // TODO Make this width a parameter to generate bitvector-based code.
   static const int width;
-
 protected:
   DSAAliasAnalysis* aliasAnalysis;
   Naming& naming;
@@ -90,7 +89,16 @@ public:
   Program& getProgram() { return program; }
 
 private:
-  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
+  // 
+  // Pointer size: 32
+  //
+  static const unsigned ptrsize;
+  //
+  // A flag for bit-vector
+  //
+  static bool BIT_VECTOR;
+  static bool USE_DSA;
+  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
   const Expr* pa(const Expr* base, int index, int size);
   const Expr* pa(const Expr* base, const Expr* index, int size);
@@ -101,6 +109,23 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
+  //
+  // Setter for BIT_VECTOR flag
+  //
+  void useBitVector();
+  //
+  // Setter for USE_DSA flag
+  //
+  void useDSA();
+  //
+  // Getter for BIT_VECTOR flag
+  //
+  bool tryBitVector();
+  //
+  // Getter for USE_DSA flag
+  //
+  bool tryDSA();
+
   bool isMallocOrFree(const llvm::Function* f);
   bool isIgnore(const llvm::Function* f);
   bool isInt(const llvm::Type* t);
@@ -122,7 +147,9 @@ public:
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
+  string memReg(unsigned i, bool safety, unsigned type);
   string memType(unsigned r);
+  string memType(unsigned r, unsigned type);
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
@@ -131,6 +158,8 @@ public:
   
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);  
+  const Expr* mem(const llvm::Value* v, bool safety);
+  const Expr* mem(unsigned region, const Expr* addr, bool safety, unsigned type);  
 
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(int v);
@@ -170,10 +199,13 @@ public:
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
   virtual const Stmt* memset(const llvm::MemSetInst& msi);
-  virtual const Stmt* load(const llvm::LoadInst& li);
-  virtual const Stmt* store(const llvm::StoreInst& si);
-  virtual const Stmt* store(unsigned region, unsigned size, const Expr* p, const Expr* e);
-  bool isSafe(const llvm::Value* ptr, const llvm::StoreInst& si);
+  virtual const Stmt* load_bytes(const llvm::LoadInst& li);
+  virtual const Stmt* store_bytes(const llvm::StoreInst& si);
+  virtual const Stmt* store_bytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
+  bool isFieldsOverlap(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldsOverlap(const llvm::GlobalValue* V, unsigned offset);
+  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isTypeSafe(const llvm::GlobalValue* V);
   bool isCollapsed(const llvm::Value* v);
   
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
