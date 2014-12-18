@@ -122,56 +122,46 @@ def smackdOutput(corralOutput):
   print json_string
 
 def verify(verifier, bplFileName, timeLimit, unroll, debug, verifierOptions, smackd):
-  if verifier == 'boogie':
-    # invoke Boogie
-    boogieCommand = ['boogie', bplFileName, '/nologo', '/errorLimit:1', '/timeLimit:' + str(timeLimit)]
-    if unroll is not None:
-      boogieCommand += ['/loopUnroll:' + str(unroll)]
-    boogieCommand += verifierOptions.split()
-    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    boogieOutput = p.communicate()[0]
 
-    if p.returncode:
-      print >> sys.stderr, boogieOutput
-      sys.exit("SMACK encountered an error when invoking Boogie. Exiting...")
+  # TODO factor out unrolling from the following
+  if verifier == 'boogie':
+    command = "boogie %(bplFileName)s /nologo /errorLimit:1 /timeLimit:%(timeLimit)s" % locals()
+    if unroll is not None:
+      command += (" /loopUnroll:%(unroll)s" % locals())
+
+  elif verifier == 'corral':
+    command = ("corral %(bplFileName)s /tryCTrace" % locals())
+    if unroll is not None:
+      command += (" /recursionBound:%(unroll)s" % locals())
+  else:
+    # TODO why isn't unroll a parameter??
+    command = "corral %(bplFileName)s /tryCTrace /useDuality /recursionBound:10000" % locals()
+
+  if verifierOptions:
+    command += " " + verifierOptions
+
+  p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  output = p.communicate()[0]
+
+  if p.returncode:
+    print >> sys.stderr, output
+    sys.exit("SMACK encountered an error when invoking %(verifier)s. Exiting..." % locals())
+
+  # TODO clean up the following mess
+  if verifier == 'boogie':
     if debug:
-      return boogieOutput
-    sourceTrace = generateSourceErrorTrace(boogieOutput, bplFileName)
+      return output
+    sourceTrace = generateSourceErrorTrace(output, bplFileName)
     if sourceTrace:
       return sourceTrace
     else:
-      return boogieOutput
-  elif verifier == 'corral':
-    # invoke Corral
-    corralCommand = ['corral', bplFileName, '/tryCTrace']
-    if unroll is not None:
-      corralCommand += ['/recursionBound:' + str(unroll)]
-    corralCommand += verifierOptions.split()
-    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    corralOutput = p.communicate()[0]
-
-    if p.returncode:
-      print >> sys.stderr, corralOutput
-      sys.exit("SMACK encountered an error when invoking Corral. Exiting...")
-    if smackd:
-      smackdOutput(corralOutput)
-    else:
-      return corralOutput
+      return output
+    
   else:
-    # invoke Duality
-    dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
-    dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
-    dualityCommand += verifierOptions.split()
-    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    dualityOutput = p.communicate()[0]
-
-    if p.returncode:
-      print >> sys.stderr, dualityOutput
-      sys.exit("SMACK encountered an error when invoking Duality. Exiting...")
     if smackd:
-      smackdOutput(dualityOutput)
+      smackdOutput(output)
     else:
-      return dualityOutput
+      return output
  
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])
