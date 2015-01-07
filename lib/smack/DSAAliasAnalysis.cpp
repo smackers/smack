@@ -72,22 +72,22 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
   return false;
 }
 
-bool DSAAliasAnalysis::isFieldsOverlap(const llvm::Value* ptr, const llvm::Instruction* inst) {
-	const llvm::Function *F = inst->getParent()->getParent();
-        return TS->isFieldsOverlap(ptr, F);
+bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
+  const llvm::Function *F = inst->getParent()->getParent();
+  return TS->isFieldDisjoint(ptr, F);
 }
 
-bool DSAAliasAnalysis::isFieldsOverlap(const GlobalValue* V, unsigned offset) {
-	return TS->isFieldsOverlap(V, offset);
+bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
+  return TS->isFieldDisjoint(V, offset);
 }
 
 bool DSAAliasAnalysis::isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst) {
-	const llvm::Function *F = inst->getParent()->getParent();
-        return TS->isTypeSafe(ptr, F);
+  const llvm::Function *F = inst->getParent()->getParent();
+  return TS->isTypeSafe(ptr, F);
 }
 
 bool DSAAliasAnalysis::isTypeSafe(const GlobalValue* V) {
-	return TS->isTypeSafe(V);	
+  return TS->isTypeSafe(V);	
 }
 
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {

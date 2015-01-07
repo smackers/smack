@@ -83,8 +83,8 @@ struct TypeSafety : public ModulePass {
     // Methods for clients to use
     virtual bool isTypeSafe (const Value * V, const Function * F);
     virtual bool isTypeSafe (const GlobalValue * V);
-    virtual bool isFieldsOverlap(const Value * V, const Function *F);
-    virtual bool isFieldsOverlap(const GlobalValue * V, unsigned offset);
+    virtual bool isFieldDisjoint(const Value * V, const Function *F);
+    virtual bool isFieldDisjoint(const GlobalValue * V, unsigned offset);
 };
 
 }

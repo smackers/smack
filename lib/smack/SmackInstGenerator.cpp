@@ -328,26 +328,26 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
 
   if (rep.tryBitVector()) { 
-	  if (rep.tryDSA()) {
-		  bool unsafety;
-		  if ((unsafety = rep.isFieldsOverlap(li.getPointerOperand(), &li))) {
-			  WARN("P is not a safe pointer");
-			  emit(rep.load_bytes(li));
-		  }
-		  else {
-			  WARN("P is a safe pointer");
-			  const Expr* rhs = rep.mem(li.getPointerOperand(), !unsafety);
-			  emit(Stmt::assign(rep.expr(&li),rhs));
-		  }
-	  } else 
-		  emit(rep.load_bytes(li));
+    if (rep.tryDSA()) {
+      bool safety;
+      if ((safety = rep.isFieldDisjoint(li.getPointerOperand(), &li))) {
+	WARN("P is a safe pointer");
+	const Expr* rhs = rep.mem(li.getPointerOperand(), safety);
+	emit(Stmt::assign(rep.expr(&li),rhs));
+      }
+      else {
+	WARN("P is not a safe pointer");
+	emit(rep.loadAsBytes(li));
+      }
+    } else 
+      emit(rep.loadAsBytes(li));
   } else {
-	  const Expr* rhs = rep.mem(li.getPointerOperand());
+    const Expr* rhs = rep.mem(li.getPointerOperand());
 
-	  if (rep.isFloat(&li))
-		  rhs = Expr::fn("$si2fp", rhs);
+    if (rep.isFloat(&li))
+      rhs = Expr::fn("$si2fp", rhs);
 
-	  emit(Stmt::assign(rep.expr(&li),rhs));
+    emit(Stmt::assign(rep.expr(&li),rhs));
   }
 
   if (SmackOptions::MemoryModelDebug) {
@@ -362,37 +362,35 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
   const llvm::Value* E = si.getOperand(0);
-   
-   //assert(!rep.isFieldsOverlap(P, &si) && "P is not a safe pointer");
 
   if (rep.tryBitVector()) {
-	  if (rep.tryDSA()) {
-		  bool unsafety;
-		  if ((unsafety = rep.isFieldsOverlap(P, &si))) {
-			  WARN("P is not a safe pointer");
-			  emit(rep.store_bytes(si));
-		  }
-		  else {
-			  WARN("P is a safe pointer");
-			  const Expr* rhs = rep.expr(E);
-			  emit(Stmt::assign(rep.mem(P, !unsafety),rhs));
-		  }
-	  } else
-		  emit(rep.store_bytes(si));
+    if (rep.tryDSA()) {
+      bool safety;
+      if ((safety = rep.isFieldDisjoint(P, &si))) {
+	WARN("P is a safe pointer");
+	const Expr* rhs = rep.expr(E);
+	emit(Stmt::assign(rep.mem(P, safety),rhs));
+      }
+      else {
+	WARN("P is not a safe pointer");
+	emit(rep.storeAsBytes(si));
+      }
+    } else
+      emit(rep.storeAsBytes(si));
 
   } else {
-	  const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
-	  const Expr* rhs = rep.expr(E);
+    const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
+    const Expr* rhs = rep.expr(E);
 
-	  if (rep.isFloat(E))
-		  rhs = Expr::fn("$fp2si", rhs);
+    if (rep.isFloat(E))
+      rhs = Expr::fn("$fp2si", rhs);
 
-	  emit(Stmt::assign(rep.mem(P),rhs));
+    emit(Stmt::assign(rep.mem(P),rhs));
 
-	  if (SmackOptions::SourceLocSymbols && G) {
-		  assert(G->hasName() && "Expected named global variable.");
-		  emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
-	  }
+    if (SmackOptions::SourceLocSymbols && G) {
+      assert(G->hasName() && "Expected named global variable.");
+      emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
+    }
   }
 
   if (SmackOptions::MemoryModelDebug) {

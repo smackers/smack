@@ -150,7 +150,7 @@ TypeSafety<dsa>::isTypeSafe (const Value * V, const Function * F) {
 }
 
 template<class dsa> bool
-TypeSafety<dsa>::isFieldsOverlap (const Value * V, const Function * F) {
+TypeSafety<dsa>::isFieldDisjoint (const Value * V, const Function * F) {
   //
   // Get the DSNode for the specified value.
   //
@@ -166,14 +166,14 @@ TypeSafety<dsa>::isFieldsOverlap (const Value * V, const Function * F) {
     return false;
   }
 
-  return (NodeInfo[node])[offset]; 
+  return !((NodeInfo[node])[offset]); 
 }
 
 //
 // TODO
 //
 template<class dsa> bool
-TypeSafety<dsa>::isFieldsOverlap (const GlobalValue * V, unsigned offset) {
+TypeSafety<dsa>::isFieldDisjoint (const GlobalValue * V, unsigned offset) {
   //
   // Get the DSNode for the specified value.
   //
@@ -189,7 +189,7 @@ TypeSafety<dsa>::isFieldsOverlap (const GlobalValue * V, unsigned offset) {
     return false;
   }
 
-  return (NodeInfo[node])[offset]; 
+  return !((NodeInfo[node])[offset]); 
 }
 
 template<class dsa> bool
@@ -235,12 +235,12 @@ TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
   //
   DSNode::const_type_iterator tn =  N->type_begin();
   while (true) {
-	    //
-	    // If this is the last field, then we are done updating.
-	    //
-	    if (tn == N->type_end()) {
-	    	    break;
-	    }
+    //
+    // If this is the last field, then we are done updating.
+    //
+    if (tn == N->type_end()) {
+      break;
+    }
     //
     // Get the information about the current field.
     //
@@ -252,60 +252,60 @@ TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
     // If there are multiple types in the current field, then the field is type-unsafe.
     //
     if (TypeSet) {
-	    svset<Type*>::const_iterator tb = TypeSet->begin();
-	    if (++tb != TypeSet->end()) {
-		    fmap[offset] = true;
-		    DEBUG(errs() << "Shaobo: multiple fields at " << offset << "\n");
-	    }
+      svset<Type*>::const_iterator tb = TypeSet->begin();
+      if (++tb != TypeSet->end()) {
+	fmap[offset] = true;
+	DEBUG(errs() << "Shaobo: multiple fields at " << offset << "\n");
+      }
     }
 
     for (DSNode::const_type_iterator ti = ++tn; ti != N->type_end(); ++ti) {
 
-	    //
-	    // Get the offset of the next field.
-	    //
-	    unsigned next_offset = ti->first;
-	    assert((next_offset >= offset) && "next offset should be larger than offset.");
+      //
+      // Get the offset of the next field.
+      //
+      unsigned next_offset = ti->first;
+      assert((next_offset >= offset) && "next offset should be larger than offset.");
 
-	    //
-	    // Check to see if any of the types in the current field extend into the
-	    // next field.
-	    //
-	    if (TypeSet) {
-		    bool overlaps = false;
-		    for (svset<Type*>::const_iterator ni = TypeSet->begin(),
-				    ne = TypeSet->end(); ni != ne; ++ni) {
-			    unsigned field_length = TD->getTypeStoreSize (*ni);
-			    if ((offset + field_length) > next_offset) {
-				    if(TypeInferenceOptimize) {
-					    if(const ArrayType *AT = dyn_cast<ArrayType>(*ni)) {
-						    Type *ElemTy = AT->getElementType();
-						    while(ArrayType *AT1 = dyn_cast<ArrayType>(ElemTy))
-							    ElemTy = AT1->getElementType();
-						    if(next_offset < (TD->getTypeStoreSize(ElemTy) + offset)) {
-							    assert(isa<StructType>(ElemTy) && "Array Not of Struct Type??");
-							    //overlaps = false;
-							    //fmap[next_offset] = false;
-							    continue;
-						    }
-					    }
-				    }
-				    fmap[offset] = true;
-				    fmap[next_offset] = true;
-				    overlaps = true;
-				    if(overlaps) {
-					    DEBUG(errs() << " Shaobo: Found overlap at " << offset << " with " << next_offset << "\n");
-					    break;
-				    }
-			    }
-		    }
-		    if (!overlaps)
-			    break;
+      //
+      // Check to see if any of the types in the current field extend into the
+      // next field.
+      //
+      if (TypeSet) {
+	bool overlaps = false;
+	for (svset<Type*>::const_iterator ni = TypeSet->begin(),
+	    ne = TypeSet->end(); ni != ne; ++ni) {
+	  unsigned field_length = TD->getTypeStoreSize (*ni);
+	  if ((offset + field_length) > next_offset) {
+	    if(TypeInferenceOptimize) {
+	      if(const ArrayType *AT = dyn_cast<ArrayType>(*ni)) {
+		Type *ElemTy = AT->getElementType();
+		while(ArrayType *AT1 = dyn_cast<ArrayType>(ElemTy))
+		  ElemTy = AT1->getElementType();
+		if(next_offset < (TD->getTypeStoreSize(ElemTy) + offset)) {
+		  assert(isa<StructType>(ElemTy) && "Array Not of Struct Type??");
+		  //overlaps = false;
+		  //fmap[next_offset] = false;
+		  continue;
+		}
+	      }
 	    }
+	    fmap[offset] = true;
+	    fmap[next_offset] = true;
+	    overlaps = true;
+	    if(overlaps) {
+	      DEBUG(errs() << " Shaobo: Found overlap at " << offset << " with " << next_offset << "\n");
+	      break;
+	    }
+	  }
+	}
+	if (!overlaps)
+	  break;
+      }
     }
 
     if (fmap.find(offset) == fmap.end())
-		fmap[offset] = false;
+      fmap[offset] = false;
   }
 
   //

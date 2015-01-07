@@ -15,7 +15,7 @@ public:
   
   static const llvm::cl::opt<bool> SourceLocSymbols;
   static const llvm::cl::opt<bool> BitVectors;
-  static const llvm::cl::opt<bool> UseDSA;
+  static const llvm::cl::opt<bool> InferFieldOverlap;
 };
 }
 

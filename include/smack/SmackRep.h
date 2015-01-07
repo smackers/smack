@@ -5,7 +5,6 @@
 #define SMACKREP_H
 
 #include "smack/Naming.h"
-//#define BITVECTOR
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
@@ -29,7 +28,6 @@ using namespace std;
   
 class SmackRep {
 public:
-  static const string BYTE_TYPE;
   static const string LOAD;
   static const string STORE;
   static const string NEG;
@@ -57,6 +55,7 @@ public:
 
   // TODO Make this width a parameter to generate bitvector-based code.
   static const int width;
+
 protected:
   DSAAliasAnalysis* aliasAnalysis;
   Naming& naming;
@@ -97,7 +96,7 @@ private:
   // A flag for bit-vector
   //
   static bool BIT_VECTOR;
-  static bool USE_DSA;
+  static bool inferFieldOverlap;
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
   const Expr* pa(const Expr* base, int index, int size);
@@ -109,21 +108,9 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  //
-  // Setter for BIT_VECTOR flag
-  //
   void useBitVector();
-  //
-  // Setter for USE_DSA flag
-  //
   void useDSA();
-  //
-  // Getter for BIT_VECTOR flag
-  //
   bool tryBitVector();
-  //
-  // Getter for USE_DSA flag
-  //
   bool tryDSA();
 
   bool isMallocOrFree(const llvm::Function* f);
@@ -140,7 +127,6 @@ public:
   unsigned getPtrSize(llvm::Type* t);
   bool isPointer(const llvm::Value* v);
   bool isPointer(const llvm::Type* t);
-  virtual string getByteType();
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
@@ -153,6 +139,7 @@ public:
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
+  string int_type(unsigned width);
   virtual string type(const llvm::Type* t);
   virtual string type(const llvm::Value* v);
   
@@ -199,11 +186,11 @@ public:
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
   virtual const Stmt* memset(const llvm::MemSetInst& msi);
-  virtual const Stmt* load_bytes(const llvm::LoadInst& li);
-  virtual const Stmt* store_bytes(const llvm::StoreInst& si);
-  virtual const Stmt* store_bytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
-  bool isFieldsOverlap(const llvm::Value* ptr, const llvm::Instruction* inst);
-  bool isFieldsOverlap(const llvm::GlobalValue* V, unsigned offset);
+  virtual const Stmt* loadAsBytes(const llvm::LoadInst& li);
+  virtual const Stmt* storeAsBytes(const llvm::StoreInst& si);
+  virtual const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
+  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
   bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
   bool isTypeSafe(const llvm::GlobalValue* V);
   bool isCollapsed(const llvm::Value* v);

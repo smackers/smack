@@ -35,19 +35,19 @@ def llvm2bplParser():
                       help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
   parser.add_argument('--bit-vector', dest='bitvector', action="store_true", default=False,
                       help='enable a bit-vector implemenation of SMACK')
-  parser.add_argument('--use-dsa', dest='usedsa', action="store_true", default=False,
+  parser.add_argument('--infer-field-overlap', dest='inferfieldoverlap', action="store_true", default=False,
                       help='optimize bit-vector with DSA')
   return parser
 
 
-def llvm2bpl(infile, outfile, debugFlag, memImpls, bitVector, useDSA):
+def llvm2bpl(infile, outfile, debugFlag, memImpls, bitVector, inferField):
     
   cmd = ['smack', '-source-loc-syms', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   cmd.append('-bpl=' + outfile)
   if bitVector: cmd.append('-bit-vector')
-  if useDSA: cmd.append('-use-dsa')
+  if inferField: cmd.append('-infer-field-overlap')
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   smackOutput = p.communicate()[0]
 

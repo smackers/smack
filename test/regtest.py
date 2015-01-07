@@ -11,6 +11,7 @@ RegTest = namedtuple('RegTest', 'name boogie corral duality unroll')
 
 # list of regression tests with the expected outputs
 tests = [
+  RegTest('interleave_bits_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 10),
   RegTest('absolute',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('jain_1_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
@@ -115,7 +116,7 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests(verifier, bitVector, useDSA):
+def runtests(verifier, bitVector, inferField):
   passed = failed = 0
   for test in tests:
     
@@ -137,7 +138,7 @@ def runtests(verifier, bitVector, useDSA):
       cmd = ['smackverify.py', sourceFile, '--verifier=' + verifier,
                             '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl']
       if bitVector: cmd.append('--bit-vector')
-      if useDSA: cmd.append('--use-dsa')
+      if inferField: cmd.append('--infer-field-overlap')
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
       
       smackOutput = p.communicate()[0]
@@ -161,13 +162,13 @@ if __name__ == '__main__':
                       help='choose verifiers to be used')
   parser.add_argument('--bit-vector', dest='bitvector', action="store_true", default=False, 
                       help='enable a bit-vector implementation of SMACK')
-  parser.add_argument('--use-dsa', dest='usedsa', action="store_true", default=False, 
+  parser.add_argument('--infer-field-overlap', dest='inferfieldoverlap', action="store_true", default=False, 
                       help='optimize bit-vector with DSA')
   args = parser.parse_args()
 
   for verifier in args.verifier:
     print '\nRunning regressions using', verifier
-    passed, failed = runtests(verifier, args.bitvector, args.usedsa)
+    passed, failed = runtests(verifier, args.bitvector, args.inferfieldoverlap)
   
     print '\nPASSED count: ', passed
     print 'FAILED count: ', failed

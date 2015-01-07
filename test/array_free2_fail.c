@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-#define MAXSIZE 8
+#define MAXSIZE 10
 
 typedef struct _DATA DATA, *PDATA;
 
