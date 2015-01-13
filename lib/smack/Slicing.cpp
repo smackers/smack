@@ -79,7 +79,7 @@ pair<string,string> getParameter(Value* V, Naming& naming, SmackRep& rep) {
   
   if (GlobalVariable* G = dyn_cast<GlobalVariable>(V)) {
     unsigned r = rep.getRegion(G);
-    return make_pair(rep.memReg(r), rep.memType(r));
+    return make_pair(rep.memReg(r), rep.memType(r, 32));
   }
 
   else if (ConstantDataSequential* S = dyn_cast<ConstantDataSequential>(V))

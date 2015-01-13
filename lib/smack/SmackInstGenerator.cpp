@@ -326,29 +326,15 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
+  const Expr* rhs = rep.mem(li.getPointerOperand());
 
-  if (rep.tryBitVector()) { 
-    if (rep.tryDSA()) {
-      bool safety;
-      if ((safety = rep.isFieldDisjoint(li.getPointerOperand(), &li))) {
-	WARN("P is a safe pointer");
-	const Expr* rhs = rep.mem(li.getPointerOperand(), safety);
-	emit(Stmt::assign(rep.expr(&li),rhs));
-      }
-      else {
-	WARN("P is not a safe pointer");
-	emit(rep.loadAsBytes(li));
-      }
-    } else 
-      emit(rep.loadAsBytes(li));
-  } else {
-    const Expr* rhs = rep.mem(li.getPointerOperand());
+  if (rep.isFloat(&li))
+    rhs = Expr::fn("$si2fp", rhs);
 
-    if (rep.isFloat(&li))
-      rhs = Expr::fn("$si2fp", rhs);
-
+  if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && rep.isFieldDisjoint(li.getPointerOperand(), &li)))
     emit(Stmt::assign(rep.expr(&li),rhs));
-  }
+  else
+    emit(rep.loadAsBytes(li));
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
@@ -362,35 +348,20 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
   const llvm::Value* E = si.getOperand(0);
+  const Expr* rhs = rep.expr(E);
+  const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
 
-  if (rep.tryBitVector()) {
-    if (rep.tryDSA()) {
-      bool safety;
-      if ((safety = rep.isFieldDisjoint(P, &si))) {
-	WARN("P is a safe pointer");
-	const Expr* rhs = rep.expr(E);
-	emit(Stmt::assign(rep.mem(P, safety),rhs));
-      }
-      else {
-	WARN("P is not a safe pointer");
-	emit(rep.storeAsBytes(si));
-      }
-    } else
-      emit(rep.storeAsBytes(si));
+  if (rep.isFloat(E))
+    rhs = Expr::fn("$fp2si", rhs);
 
-  } else {
-    const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
-    const Expr* rhs = rep.expr(E);
-
-    if (rep.isFloat(E))
-      rhs = Expr::fn("$fp2si", rhs);
-
+  if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && rep.isFieldDisjoint(P, &si)))
     emit(Stmt::assign(rep.mem(P),rhs));
+  else
+    emit(rep.storeAsBytes(si));
 
-    if (SmackOptions::SourceLocSymbols && G) {
-      assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_int", rhs, Attr::attr("cexpr", G->getName().str())));
-    }
+  if (SmackOptions::SourceLocSymbols && G) {
+    assert(G->hasName() && "Expected named global variable.");
+    emit(Stmt::call("boogie_si_record_" + rep.type(G), rhs, Attr::attr("cexpr", G->getName().str())));
   }
 
   if (SmackOptions::MemoryModelDebug) {
@@ -496,12 +467,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     assert(m3 && "Expected metadata string in the third argument to metadata node.");
 
     if (const llvm::Value* V = m1->getOperand(0)) {
-      string recordProc;
-      if (rep.isBool(V)) recordProc = "boogie_si_record_bool";
-      else if (rep.isFloat(V)) recordProc = "boogie_si_record_float";
-      else if (rep.isInt(V)) recordProc = (rep.tryBitVector()? rep.uopName(rep.getIntSize(V), "boogie_si_record_", 1) : "boogie_si_record_int");
-      else recordProc = (rep.tryBitVector()? rep.uopName(32, "boogie_si_record_", 1) : "boogie_si_record_int");
-      emit(Stmt::call(recordProc,rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
+      stringstream recordProc;
+      recordProc << "boogie_si_record_" << rep.type(V);
+      emit(Stmt::call(recordProc.str(),rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
     }
 
   } else if (name.find("llvm.dbg.") != string::npos) {

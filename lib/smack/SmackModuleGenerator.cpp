@@ -15,10 +15,6 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   Naming naming;
   SmackRep rep(&getAnalysis<DSAAliasAnalysis>(), naming, program);
-  if (SmackOptions::BitVectors)
-    rep.useBitVector();
-  if (SmackOptions::InferFieldOverlap)
-    rep.useDSA();
   rep.collectRegions(m);
   
   DEBUG(errs() << "Analyzing globals...\n");

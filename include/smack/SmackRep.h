@@ -28,8 +28,6 @@ using namespace std;
   
 class SmackRep {
 public:
-  static const string LOAD;
-  static const string STORE;
   static const string NEG;
 
   static const string BOOL_TYPE;
@@ -88,15 +86,6 @@ public:
   Program& getProgram() { return program; }
 
 private:
-  // 
-  // Pointer size: 32
-  //
-  static const unsigned ptrsize;
-  //
-  // A flag for bit-vector
-  //
-  static bool BIT_VECTOR;
-  static bool inferFieldOverlap;
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
   const Expr* pa(const Expr* base, int index, int size);
@@ -108,11 +97,6 @@ private:
   const Expr* b2i(const llvm::Value* v);
 
 public:
-  void useBitVector();
-  void useDSA();
-  bool tryBitVector();
-  bool tryDSA();
-
   bool isMallocOrFree(const llvm::Function* f);
   bool isIgnore(const llvm::Function* f);
   bool isInt(const llvm::Type* t);
@@ -123,19 +107,16 @@ public:
   bool isFloat(const llvm::Value* v);
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
-  unsigned getPtrSize(const llvm::Value* v);
-  unsigned getPtrSize(llvm::Type* t);
-  bool isPointer(const llvm::Value* v);
-  bool isPointer(const llvm::Type* t);
+  unsigned getElementSize(const llvm::Value* v);
+  unsigned getElementSize(llvm::Type* t);
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
-  string memReg(unsigned i, bool safety, unsigned type);
-  string memType(unsigned r);
-  string memType(unsigned r, unsigned type);
+  string memType(unsigned region, unsigned size);
+  string memPath(unsigned region, unsigned size);
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
@@ -145,8 +126,7 @@ public:
   
   const Expr* mem(const llvm::Value* v);
   const Expr* mem(unsigned region, const Expr* addr);  
-  const Expr* mem(const llvm::Value* v, bool safety);
-  const Expr* mem(unsigned region, const Expr* addr, bool safety, unsigned type);  
+  const Expr* mem(unsigned region, const Expr* addr, unsigned size);
 
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(int v);
@@ -166,9 +146,7 @@ public:
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
-  string bopName(unsigned operand1, unsigned operand2, const string& operation);
-  string bopName(unsigned operand1, const string& operation);
-  string uopName(unsigned operand, const string& operation, unsigned debug);
+  string opName(const string& operation, initializer_list<unsigned> operands);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);

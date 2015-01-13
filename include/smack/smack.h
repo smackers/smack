@@ -64,9 +64,24 @@ void __SMACK_decls() {
   // Integer arithmetic
 #ifdef BITVECTOR
   // Bitvector arithmetic
+  D("function {:bvbuiltin \"bvadd\"}   $add.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvsub\"}   $sub.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvmul\"}   $mul.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvudiv\"}  $udiv.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvsdiv\"}  $sdiv.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvneg\"}   $neg.i64(p1:i64)   	    returns (i64);");
+  D("function {:bvbuiltin \"bvsmod\"}  $smod.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvsrem\"}  $srem.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvurem\"}  $urem.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvshl\"}   $shl.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvlshr\"}  $lshr.i64(p1:i64, p2:i64)  returns (i64);");
+  D("function {:bvbuiltin \"bvashr\"}  $ashr.i64(p1:i64, p2:i64)  returns (i64);");
+
   D("function {:bvbuiltin \"bvadd\"}   $add.i32(p1:i32, p2:i32)   returns (i32);");
   D("function {:bvbuiltin \"bvsub\"}   $sub.i32(p1:i32, p2:i32)   returns (i32);");
   D("function {:bvbuiltin \"bvmul\"}   $mul.i32(p1:i32, p2:i32)   returns (i32);");
+  D("function {:bvbuiltin \"bvudiv\"}  $udiv.i32(p1:i32, p2:i32)   returns (i32);");
+  D("function {:bvbuiltin \"bvsdiv\"}  $sdiv.i32(p1:i32, p2:i32)   returns (i32);");
   D("function {:bvbuiltin \"bvneg\"}   $neg.i32(p1:i32)   	    returns (i32);");
   D("function {:bvbuiltin \"bvsmod\"}  $smod.i32(p1:i32, p2:i32)   returns (i32);");
   D("function {:bvbuiltin \"bvsrem\"}  $srem.i32(p1:i32, p2:i32)   returns (i32);");
@@ -78,6 +93,8 @@ void __SMACK_decls() {
   D("function {:bvbuiltin \"bvadd\"}   $add.i16(p1:i16, p2:i16)   returns (i16);");
   D("function {:bvbuiltin \"bvsub\"}   $sub.i16(p1:i16, p2:i16)   returns (i16);");
   D("function {:bvbuiltin \"bvmul\"}   $mul.i16(p1:i16, p2:i16)   returns (i16);");
+  D("function {:bvbuiltin \"bvudiv\"}  $udiv.i16(p1:i16, p2:i16)   returns (i16);");
+  D("function {:bvbuiltin \"bvsdiv\"}  $sdiv.i16(p1:i16, p2:i16)   returns (i16);");
   D("function {:bvbuiltin \"bvneg\"}   $neg.i16(p1:i16)   	    returns (i16);");
   D("function {:bvbuiltin \"bvsmod\"}  $smod.i16(p1:i16, p2:i16)   returns (i16);");
   D("function {:bvbuiltin \"bvsrem\"}  $srem.i16(p1:i16, p2:i16)   returns (i16);");
@@ -89,6 +106,8 @@ void __SMACK_decls() {
   D("function {:bvbuiltin \"bvadd\"}   $add.i8(p1:i8, p2:i8)   returns (i8);");
   D("function {:bvbuiltin \"bvsub\"}   $sub.i8(p1:i8, p2:i8)   returns (i8);");
   D("function {:bvbuiltin \"bvmul\"}   $mul.i8(p1:i8, p2:i8)   returns (i8);");
+  D("function {:bvbuiltin \"bvudiv\"}  $udiv.i8(p1:i8, p2:i8)   returns (i8);");
+  D("function {:bvbuiltin \"bvsdiv\"}  $sdiv.i8(p1:i8, p2:i8)   returns (i8);");
   D("function {:bvbuiltin \"bvneg\"}   $neg.i8(p1:i8)   	    returns (i8);");
   D("function {:bvbuiltin \"bvsmod\"}  $smod.i8(p1:i8, p2:i8)   returns (i8);");
   D("function {:bvbuiltin \"bvsrem\"}  $srem.i8(p1:i8, p2:i8)   returns (i8);");
@@ -98,6 +117,11 @@ void __SMACK_decls() {
   D("function {:bvbuiltin \"bvashr\"}  $ashr.i8(p1:i8, p2:i8)  returns (i8);");
   // Bitwise operations
   // Shaobo: Z3 supports more bitwise operations than listed. However, C only supports the listed ones.
+  D("function {:bvbuiltin \"bvand\"}   $and.i64(p1:i64, p2:i64)   returns (i64);");
+  D("function {:bvbuiltin \"bvor\"}    $or.i64(p1:i64, p2:i64)    returns (i64);");
+  D("function {:bvbuiltin \"bvnot\"}   $not.i64(p1:i64)           returns (i64);");
+  D("function {:bvbuiltin \"bvxor\"}   $xor.i64(p1:i64, p2:i64)   returns (i64);");
+
   D("function {:bvbuiltin \"bvand\"}   $and.i32(p1:i32, p2:i32)   returns (i32);");
   D("function {:bvbuiltin \"bvor\"}    $or.i32(p1:i32, p2:i32)    returns (i32);");
   D("function {:bvbuiltin \"bvnot\"}   $not.i32(p1:i32)           returns (i32);");
@@ -113,6 +137,15 @@ void __SMACK_decls() {
   D("function {:bvbuiltin \"bvnot\"}   $not.i8(p1:i8)           returns (i8);");
   D("function {:bvbuiltin \"bvxor\"}   $xor.i8(p1:i8, p2:i8)   returns (i8);");
   // Predicates
+  D("function {:bvbuiltin \"bvule\"}   $ule.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvult\"}   $ult.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvuge\"}   $uge.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvugt\"}   $ugt.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvsle\"}   $sle.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvslt\"}   $slt.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvsge\"}   $sge.i64(p1:i64, p2:i64)   returns (bool);");
+  D("function {:bvbuiltin \"bvsgt\"}   $sgt.i64(p1:i64, p2:i64)   returns (bool);");
+
   D("function {:bvbuiltin \"bvule\"}   $ule.i32(p1:i32, p2:i32)   returns (bool);");
   D("function {:bvbuiltin \"bvult\"}   $ult.i32(p1:i32, p2:i32)   returns (bool);");
   D("function {:bvbuiltin \"bvuge\"}   $uge.i32(p1:i32, p2:i32)   returns (bool);");
@@ -219,76 +252,75 @@ void __SMACK_decls() {
   D("axiom (forall i: int :: $fp2si($si2fp(i)) == i);");
   D("axiom (forall f: float :: $si2fp($fp2si(f)) == f);");
 
-  // Bit vectors
 #ifdef BITVECTOR
   D("type i8 = bv8;");
   D("type i16 = bv16;");
   D("type i32 = bv32;");
-  D("type i64 = bv32;");
-  D("type ref = i64;");
+  D("type i64 = bv64;");
+  D("type ref = i32;");
+  D("type size_t = i32;");
+#else
+  D("type i8 = int;");
+  D("type i16 = int;");
+  D("type i32 = int;");
+  D("type i64 = int;");
+  D("type ref = int;");
+  D("type size_t = int;");
 #endif
 
   // Memory Model
   D("const $UNDEF: int;");
-#ifdef BITVECTOR
   D("function $base(ref) returns (ref);");
   D("const unique $NULL: ref;");
+#ifdef BITVECTOR
   D("axiom $NULL == 0bv32;");
   D("function {:inline} $pa(pointer: ref, index: ref, size: ref) returns (ref) {$add.i32(pointer, $mul.i32(index, size))}");
   D("function {:inline} $b2p(b: bool) returns (ref) {if b then 1bv32 else 0bv32}");
   // Load
-  D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (i64){M[$add.i32(p, 3bv32)]++M[$add.i32(p, 2bv32)]++M[$add.i32(p, 1bv32)]++M[p]}");
+  D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (i64){$load.i32(M, $add.i32(p, 4bv32))++$load.i32(M, p)}");
   D("function {:inline} $load.i32(M:[ref]i8, p:ref) returns (i32){M[$add.i32(p, 3bv32)]++M[$add.i32(p, 2bv32)]++M[$add.i32(p, 1bv32)]++M[p]}");
   D("function {:inline} $load.i16(M:[ref]i8, p:ref) returns (i16){M[$add.i32(p, 1bv32)]++M[p]}");
   D("function {:inline} $load.i8(M:[ref]i8, p:ref) returns (i8){M[p]}");
   // Shaobo: temporary representation for aggregate
-  D("function {:inline} $load.i0(M:[ref]i8, p:ref) returns (i64){M[$add.i32(p, 3bv32)]++M[$add.i32(p, 2bv32)]++M[$add.i32(p, 1bv32)]++M[p]}");
-  //D("function {:inline} $load.i8(M:[ref]i8, p:ref) returns (i8){M[p]}");
-  //D("function {:inline} $load.i16(M:[ref]i8, p:ref) returns (i16){M[p]}");
-  //D("function {:inline} $load.i32(M:[ref]i8, p:ref) returns (i32){M[p]}");
-  //D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (ref){M[p]}");
+  D("function {:inline} $load.i0(M:[ref]i8, p:ref) returns (i32){M[$add.i32(p, 3bv32)]++M[$add.i32(p, 2bv32)]++M[$add.i32(p, 1bv32)]++M[p]}");
 
   // Store
-  D("function {:inline} $store.i64(M:[ref]i8, p:ref, v:i64) returns ([ref]i8) {M[p := v[8:0]][$add.i32(p, 1bv32) := v[16:8]][$add.i32(p, 2bv32) := v[24:16]][$add.i32(p, 3bv32) := v[32:24]]}");
+  D("function {:inline} $store.i64(M:[ref]i8, p:ref, v:i64) returns ([ref]i8)"
+    "{M[p := v[8:0]][$add.i32(p, 1bv32) := v[16:8]][$add.i32(p, 2bv32) := v[24:16]][$add.i32(p, 3bv32) := v[32:24]]"
+    "[$add.i32(p, 4bv32) := v[40:32]][$add.i32(p, 5bv32) := v[48:40]][$add.i32(p, 6bv32) := v[56:48]][$add.i32(p, 7bv32) := v[64:56]]}");
   D("function {:inline} $store.i32(M:[ref]i8, p:ref, v:i32) returns ([ref]i8) {M[p := v[8:0]][$add.i32(p, 1bv32) := v[16:8]][$add.i32(p, 2bv32) := v[24:16]][$add.i32(p, 3bv32) := v[32:24]]}");
   D("function {:inline} $store.i16(M:[ref]i8, p:ref, v:i16) returns ([ref]i8) {M[p := v[8:0]][$add.i32(p, 1bv32) := v[16:8]]}");
   D("function {:inline} $store.i8(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
   // Shaobo: temporary representation for aggregate
-  D("function {:inline} $store.i0(M:[ref]i8, p:ref, v:i64) returns ([ref]i8) {M[p := v[8:0]][$add.i32(p, 1bv32) := v[16:8]][$add.i32(p, 2bv32) := v[24:16]][$add.i32(p, 3bv32) := v[32:24]]}");
-  //D("function {:inline} $store.i8(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
-  //D("function {:inline} $store.i16(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
-  //D("function {:inline} $store.i32(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
-  //D("function {:inline} $store.i64(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
+  D("function {:inline} $store.i0(M:[ref]i8, p:ref, v:i32) returns ([ref]i8) {M[p := v[8:0]][$add.i32(p, 1bv32) := v[16:8]][$add.i32(p, 2bv32) := v[24:16]][$add.i32(p, 3bv32) := v[32:24]]}");
 
   // Cast
   // Truncate
-  D("function {:inline} $trunc.i64i32(p: i64) returns (i32) {p[32:0]}");
-  D("function {:inline} $trunc.i64i16(p: i64) returns (i16) {p[16:0]}");
-  D("function {:inline} $trunc.i64i8(p: i64) returns (i8) {p[8:0]}");
-  D("function {:inline} $trunc.i32i16(p: i32) returns (i16) {p[16:0]}");
-  D("function {:inline} $trunc.i32i8(p: i32) returns (i8) {p[8:0]}");
-  D("function {:inline} $trunc.i16i8(p: i16) returns (i8) {p[8:0]}");
+  D("function {:inline} $trunc.i64.i32(p: i64) returns (i32) {p[32:0]}");
+  D("function {:inline} $trunc.i64.i16(p: i64) returns (i16) {p[16:0]}");
+  D("function {:inline} $trunc.i64.i8(p: i64) returns (i8) {p[8:0]}");
+  D("function {:inline} $trunc.i32.i16(p: i32) returns (i16) {p[16:0]}");
+  D("function {:inline} $trunc.i32.i8(p: i32) returns (i8) {p[8:0]}");
+  D("function {:inline} $trunc.i16.i8(p: i16) returns (i8) {p[8:0]}");
   // Zext
-  D("function {:inline} $zext.i8i64(p: i8) returns (i64) {(0bv24)++p}");
-  D("function {:inline} $zext.i8i32(p: i8) returns (i32) {(0bv24)++p}");
-  D("function {:inline} $zext.i8i16(p: i8) returns (i16) {(0bv8)++p}");
-  D("function {:inline} $zext.i16i64(p: i16) returns (i64) {(0bv16)++p}");
-  D("function {:inline} $zext.i16i32(p: i16) returns (i32) {(0bv16)++p}");
-  D("function {:inline} $zext.i32i64(p: i32) returns (i64) {p}");
+  D("function {:inline} $zext.i8.i64(p: i8) returns (i64) {(0bv56)++p}");
+  D("function {:inline} $zext.i8.i32(p: i8) returns (i32) {(0bv24)++p}");
+  D("function {:inline} $zext.i8.i16(p: i8) returns (i16) {(0bv8)++p}");
+  D("function {:inline} $zext.i16.i64(p: i16) returns (i64) {(0bv48)++p}");
+  D("function {:inline} $zext.i16.i32(p: i16) returns (i32) {(0bv16)++p}");
+  D("function {:inline} $zext.i32.i64(p: i32) returns (i64) {(0bv32)++p}");
   // Sext
-  D("function {:inline} $sext.i8i64(p: i8) returns (i64) {if $sge.i8(p, 0bv8) then $zext.i8i64(p) else (($neg.i32(1bv32))[32:8])++p}");
-  D("function {:inline} $sext.i8i32(p: i8) returns (i32) {if $sge.i8(p, 0bv8) then $zext.i8i32(p) else (($neg.i32(1bv32))[32:8])++p}");
-  D("function {:inline} $sext.i8i16(p: i8) returns (i16) {if $sge.i8(p, 0bv8) then $zext.i8i16(p) else $neg.i8(1bv8)++p}");
-  D("function {:inline} $sext.i16i64(p: i16) returns (i64) {if $sge.i16(p, 0bv16) then $zext.i16i64(p) else $neg.i16(1bv16)++p}");
-  D("function {:inline} $sext.i16i32(p: i16) returns (i32) {if $sge.i16(p, 0bv16) then $zext.i16i32(p) else $neg.i16(1bv16)++p}");
-  D("function {:inline} $sext.i32i64(p: i32) returns (i64) {p}");
+  D("function {:inline} $sext.i8.i64(p: i8) returns (i64) {if $sge.i8(p, 0bv8) then $zext.i8.i64(p) else (($neg.i64(1bv64))[64:8])++p}");
+  D("function {:inline} $sext.i8.i32(p: i8) returns (i32) {if $sge.i8(p, 0bv8) then $zext.i8.i32(p) else (($neg.i32(1bv32))[32:8])++p}");
+  D("function {:inline} $sext.i8.i16(p: i8) returns (i16) {if $sge.i8(p, 0bv8) then $zext.i8.i16(p) else $neg.i8(1bv8)++p}");
+  D("function {:inline} $sext.i16.i64(p: i16) returns (i64) {if $sge.i16(p, 0bv16) then $zext.i16.i64(p) else $neg.i64(1bv64)[64:16]++p}");
+  D("function {:inline} $sext.i16.i32(p: i16) returns (i32) {if $sge.i16(p, 0bv16) then $zext.i16.i32(p) else $neg.i16(1bv16)++p}");
+  D("function {:inline} $sext.i32.i64(p: i32) returns (i64) {if $sge.i32(p, 0bv32) then $zext.i32.i64(p) else $neg.i32(1bv32)++p}");
 
-  D("function {:inline} $p2i(p: ref) returns (i64) {p}");
-  D("function {:inline} $i2p(p: i64) returns (ref) {p}");
+  D("function {:inline} $p2i(p: ref) returns (i32) {p}");
+  D("function {:inline} $i2p(p: i32) returns (ref) {p}");
   D("function {:inline} $p2b(p: ref) returns (bool) {p != 0bv32}");
 #else
-  D("function $base(int) returns (int);");
-  D("const unique $NULL: int;");
   D("axiom $NULL == 0;");
   D("function {:inline} $pa(pointer: int, index: int, size: int) returns (int) {pointer + index * size}");
   D("function {:inline} $b2p(b: bool) returns (int) {if b then 1 else 0}");
@@ -296,7 +328,9 @@ void __SMACK_decls() {
   D("function {:inline} $i2p(p: int) returns (int) {p}");
   D("function {:inline} $p2b(p: int) returns (bool) {p != 0}");
 #endif
-  D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
+  D("function {:inline} $trunc(p: int) returns (int) {p}");
+  D("function {:inline} $zext(p: int) returns (int) {p}");
+  D("function {:inline} $sext(p: int) returns (int) {p}");
 
   // Memory debugging symbols
   D("type $mop;");
@@ -307,17 +341,16 @@ void __SMACK_decls() {
   D("procedure boogie_si_record_i16(i: i16);");
   D("procedure boogie_si_record_i32(i: i32);");
   D("procedure boogie_si_record_i64(i: i64);");
-#else
-  D("procedure boogie_si_record_int(i: int);");
   D("procedure boogie_si_record_float(f: float);");
+  D("procedure boogie_si_record_ref(i: ref);");
+  D("procedure boogie_si_record_int(i: int);");
   D("procedure boogie_si_record_float(f: float);");
   D("const $MOP: $mop;");
 
-#ifdef BITVECTOR
   D("const $GLOBALS_BOTTOM: ref;");
+#ifdef BITVECTOR
   D("function {:inline} $isExternal(p: ref) returns (bool) { $slt.i32(p, $sub.i32($GLOBALS_BOTTOM, 32768bv32)) }");
 #else
-  D("const $GLOBALS_BOTTOM: int;");
   D("function {:inline} $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
 #endif
 
@@ -326,7 +359,7 @@ void __SMACK_decls() {
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
 
-  D("procedure $malloc(n: i32) returns (p: ref)\n"
+  D("procedure $malloc(n: size_t) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
     "  assume $ugt.i32($CurrAddr, 0bv32);\n"
@@ -345,7 +378,7 @@ void __SMACK_decls() {
     "  $Alloc[p] := false;\n"
     "}");
 
-  D("procedure $alloca(n: i32) returns (p: ref)\n"
+  D("procedure $alloca(n: size_t) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
     "  assume $ugt.i32($CurrAddr, 0bv32);\n"
