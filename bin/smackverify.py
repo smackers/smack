@@ -130,7 +130,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, debug, verifierOptions, sma
       command += (" /loopUnroll:%(unroll)s" % locals())
 
   elif verifier == 'corral':
-    command = ("corral %(bplFileName)s /tryCTrace" % locals())
+    command = ("corral %(bplFileName)s /tryCTrace /printDataValues:1 /useProverEvaluate" % locals())
     if unroll is not None:
       command += (" /recursionBound:%(unroll)s" % locals())
   else:
