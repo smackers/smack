@@ -7,7 +7,7 @@
 
 #include <iostream>
 #define MAXSIZE 32
-#define TRUNC(v) (((v) > MAXSIZE)? MAXSIZE : (v))
+//#define TRUNC(v) (((v) > MAXSIZE)? MAXSIZE : (v))
 
 namespace smack {
 
@@ -147,12 +147,7 @@ string SmackRep::memPath(unsigned region, unsigned size) {
 
 const Expr* SmackRep::mem(const llvm::Value* v) {
   unsigned r = getRegion(v);
-  if (SmackOptions::BitVectors)
-    return mem(r, expr(v), getElementSize(v));
-  if (memoryRegions[r].isSingletonGlobal)
-    return Expr::id(memReg(r));
-  else
-    return Expr::sel(Expr::id(memReg(r)),expr(v));
+  return SmackOptions::BitVectors? mem(r, expr(v), getElementSize(v)) : mem(r, expr(v));
     return Expr::sel(Expr::id(memReg(r)),expr(v));
 }
 
@@ -232,19 +227,33 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   return Stmt::call(name.str(),args);
 }
 
-const Stmt* SmackRep::loadAsBytes(const llvm::LoadInst& li) {
-  const llvm::Value* P = li.getPointerOperand();
-  int r = getRegion(P);
-  stringstream name;
-  name << "$load." << int_type(getElementSize(P));
-  return Stmt::assign(expr(&li), Expr::fn(name.str(), Expr::id(memPath(r, 8)), expr(P)));
+const Stmt* SmackRep::load(const llvm::Value* addr, const llvm::Value* val) {
+// The tricky part is that we could expr(li) is actually expr(val) so that it is possible to pass li to val. 
+  const Expr* rhs = mem(addr);
+
+  if (isFloat(val))
+    rhs = Expr::fn("$si2fp", rhs);
+
+  if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, llvm::cast<const llvm::Instruction>(val))))
+    return Stmt::assign(expr(val), rhs);
+  else {
+    stringstream name;
+    name << "$load." << int_type(getElementSize(addr));
+    return Stmt::assign(expr(val), Expr::fn(name.str(), Expr::id(memPath(getRegion(addr), 8)), expr(addr)));
+  }
 }
 
-const Stmt* SmackRep::storeAsBytes(const llvm::StoreInst& si) {
-  const llvm::Value* P = si.getPointerOperand();
-  const llvm::Value* E = si.getOperand(0);	
-  int r = getRegion(P);
-  return storeAsBytes(r, getElementSize(P), expr(P), expr(E));
+const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si) {
+// Having a default value of si (NULL) is unsound.
+  const Expr* rhs = expr(val);
+
+  if (isFloat(val))
+    rhs = Expr::fn("$fp2si", rhs);
+
+  if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, si)))
+    return Stmt::assign(mem(addr),rhs);
+  else
+    return storeAsBytes(getRegion(addr), getElementSize(addr), expr(addr), expr(val));
 }
 
 const Stmt* SmackRep::storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e)
@@ -330,7 +339,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       Expr::lit(exponentPart));
 
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
-    return Expr::lit(0, MAXSIZE);
+    return Expr::id("$NULL");
 
   else
     return expr(v);
