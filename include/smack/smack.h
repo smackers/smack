@@ -37,13 +37,8 @@ void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
-void assert(int v) {
-  __SMACK_code("assert @ != 0;", v);
-}
-
-void assume(int v) {
-  __SMACK_code("assume @ != 0;", v);
-}
+#define assert(EX) __SMACK_code("assert @ != 0;", EX)
+#define assume(EX) __SMACK_code("assume @ != 0;", EX)
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
 //// should have a type $ptr parameter, not an int.  How should we do this?
