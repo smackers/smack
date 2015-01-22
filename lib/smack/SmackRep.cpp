@@ -212,7 +212,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     if (ci->getBitWidth() == 1)
       return Expr::lit(!ci->isZero());
 
-    uint64_t val = ci->getLimitedValue();
+    uint64_t val = ci->getSExtValue();
     if (width > 0 && ci->isNegative())
       return Expr::fn("$sub", Expr::lit(0, width), Expr::lit(-val, width));
     else
