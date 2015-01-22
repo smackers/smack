@@ -20,7 +20,9 @@ def verifyParser():
   parser.add_argument('--verifier-options', dest='verifierOptions', default='',
                       help='pass arguments to the backend verifier (e.g., --verifier-options="/trackAllVars /staticInlining")')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
-                      help='Boogie time limit in seconds')
+                      help='Verifier or solver time limit in seconds [default: %(default)s]')
+  parser.add_argument('--cex', metavar='N', dest='cex', default='1', type=int,
+                      help='Limit the number of reported assertion violations [default: %(default)s]')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
                       help='output JSON format for SMACKd')
   return parser
@@ -121,16 +123,16 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, debug, verifierOptions, smackd):
+def verify(verifier, bplFileName, timeLimit, unroll, cex, debug, verifierOptions, smackd):
 
   # TODO factor out unrolling from the following
   if verifier == 'boogie':
-    command = "boogie %(bplFileName)s /nologo /errorLimit:1 /timeLimit:%(timeLimit)s" % locals()
+    command = "boogie %(bplFileName)s /nologo /timeLimit:%(timeLimit)s /errorLimit:%(cex)s" % locals()
     if unroll is not None:
       command += (" /loopUnroll:%(unroll)s" % locals())
 
   elif verifier == 'corral':
-    command = ("corral %(bplFileName)s /tryCTrace /printDataValues:1 /useProverEvaluate" % locals())
+    command = ("corral %(bplFileName)s /tryCTrace /printDataValues:1 /useProverEvaluate /timeLimit:%(timeLimit)s /cex:%(cex)s" % locals())
     if unroll is not None:
       command += (" /recursionBound:%(unroll)s" % locals())
   else:
@@ -176,6 +178,9 @@ if __name__ == '__main__':
     elif sysArgv[i] == '--time-limit':
       del sysArgv[i]
       del sysArgv[i]
+    elif sysArgv[i] == '--cex':
+      del sysArgv[i]
+      del sysArgv[i]
     elif sysArgv[i].startswith('--verifier-options'):
       del sysArgv[i]
 
@@ -187,6 +192,6 @@ if __name__ == '__main__':
     outputFile.write(bpl)
     outputFile.close()
 
-  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll,
+  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, args.cex,
     args.debug, args.verifierOptions, args.smackd))
 

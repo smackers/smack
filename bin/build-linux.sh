@@ -188,7 +188,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 05dc786b8a92
+git checkout 3ac79f5d2607
 
 # Build Corral
 cd ${CORRAL_DIR}/references

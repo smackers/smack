@@ -28,11 +28,11 @@ def llvm2bplParser():
                       help='input LLVM file')
   parser.add_argument('-o', '--output', dest='outfile', metavar='<file>', default='a.bpl',
                       type=str,
-                      help='output Boogie file (default: %(default)s)')
+                      help='output Boogie file [default: %(default)s]')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
-                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
+                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
   return parser
 
 

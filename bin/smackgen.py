@@ -18,9 +18,9 @@ def smackParser():
   parser.add_argument('--clang', dest='clang', default='',
                       help='pass arguments to clang (e.g., --clang="-w -g")')
   parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default='corral',
-                      help='set the underlying verifier format')
+                      help='set the underlying verifier format [default: %(default)s]')
   parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
-                      help='specify entry procedures')
+                      help='specify entry procedures [default: %(default)s]')
   parser.add_argument('--unroll', metavar='N', dest='unroll', type=int,
                       help='unroll loops/recursion in Boogie/Corral N number of times')
   parser.add_argument('--bc', dest='bcfile', metavar='<file>', type=str,
@@ -72,10 +72,10 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
                    '-include' + 'smack.h']
   clangCommand += clangArgs.split()
   clangCommand += [inputFile.name, '-o', bcFileName]
-  #Redirect stderr to stdout, then grab stdout (communicate() calls wait())
-  #This should more or less maintain stdout/stderr interleaving order
-  #However, this will be problematic if any callers want to differentiate
-  #    between clangs stdout and stderr.
+  # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
+  # This should more or less maintain stdout/stderr interleaving order.
+  # However, this will be problematic if any callers want to differentiate
+  # between clangs stdout and stderr.
   p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   clangOutput = p.communicate()[0]
 
