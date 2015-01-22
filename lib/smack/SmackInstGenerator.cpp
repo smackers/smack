@@ -345,7 +345,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
   if (SmackOptions::SourceLocSymbols && G) {
     assert(G->hasName() && "Expected named global variable.");
-    emit(Stmt::call("boogie_si_record_" + rep.type(G), rep.expr(E), Attr::attr("cexpr", G->getName().str())));
+    emit(Stmt::call("boogie_si_record_" + rep.int_type(rep.getElementSize(G)), rep.expr(E), Attr::attr("cexpr", G->getName().str())));
   }
 
   if (SmackOptions::MemoryModelDebug) {

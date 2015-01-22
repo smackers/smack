@@ -51,9 +51,6 @@ public:
   
   static const string STATIC_INIT;
 
-  // TODO Make this width a parameter to generate bitvector-based code.
-  static const int width;
-
 protected:
   DSAAliasAnalysis* aliasAnalysis;
   Naming& naming;
@@ -70,6 +67,10 @@ protected:
 
   vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
+
+  // TODO Make this width a parameter to generate bitvector-based code.
+  unsigned width;
+
   int globalsBottom;
   
   vector<const Stmt*> staticInits;
@@ -81,6 +82,7 @@ public:
     : aliasAnalysis(aa), naming(N), program(P),
       targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
+    width = targetData->getPointerSizeInBits();
   }
   DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
   Program& getProgram() { return program; }
@@ -88,13 +90,13 @@ public:
 private:
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
-  const Expr* pa(const Expr* base, int index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
+  const Expr* pa(const Expr* base, int index, int size, int i_size = 0, int t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, int size, int i_size = 0, int t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size, int i_size = 0, int t_size = 0);
   
   const Expr* b2p(const llvm::Value* v);
   const Expr* i2b(const llvm::Value* v);
-  const Expr* b2i(const llvm::Value* v);
+  const Expr* b2i(const llvm::Value* v, unsigned size = 0);
 
 public:
   bool isMallocOrFree(const llvm::Function* f);
@@ -120,17 +122,16 @@ public:
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
+  string bits_type(unsigned width);
   string int_type(unsigned width);
   virtual string type(const llvm::Type* t);
   virtual string type(const llvm::Value* v);
   
   const Expr* mem(const llvm::Value* v);
-  const Expr* mem(unsigned region, const Expr* addr);  
-  const Expr* mem(unsigned region, const Expr* addr, unsigned size);
+  const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
 
   const Expr* lit(const llvm::Value* v);
-  const Expr* lit(int v);
-  const Expr* lit(int v, unsigned size);
+  const Expr* lit(int v, unsigned size = 0);
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
@@ -164,8 +165,8 @@ public:
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
   virtual const Stmt* memset(const llvm::MemSetInst& msi);
-  virtual const Stmt* loadAsBytes(const llvm::LoadInst& li);
-  virtual const Stmt* storeAsBytes(const llvm::StoreInst& si);
+  virtual const Stmt* load(const llvm::Value* addr, const llvm::Value* val);
+  virtual const Stmt* store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si = NULL);
   virtual const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
   bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
   bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
