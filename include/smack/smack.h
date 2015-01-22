@@ -37,8 +37,15 @@ void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
-#define assert(EX) __SMACK_code("assert @ != 0;", EX)
-#define assume(EX) __SMACK_code("assume @ != 0;", EX)
+// We need this to enforce that assert/assume are function calls
+// with an integer argument (DSA gets confused otherwise)
+__attribute__((always_inline))
+void __SMACK_dummy(int v) {
+  __SMACK_code("assume true;");
+}
+
+#define assert(EX) __SMACK_dummy(EX); __SMACK_code("assert @ != 0;", EX)
+#define assume(EX) __SMACK_dummy(EX); __SMACK_code("assume @ != 0;", EX)
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
 //// should have a type $ptr parameter, not an int.  How should we do this?
