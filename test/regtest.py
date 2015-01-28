@@ -11,16 +11,14 @@ RegTest = namedtuple('RegTest', 'name boogie corral duality unroll')
 
 # list of regression tests with the expected outputs
 tests = [
-  RegTest('interleave_bits_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 10),
-  RegTest('absolute',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('jain_1_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('jain_2_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('jain_4_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('jain_5_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 10),
+  RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('simple_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple_pre',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
@@ -38,10 +36,12 @@ tests = [
   RegTest('pointers1_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers2',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers2_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('pointers4',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('pointers4_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers3',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers3_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('pointers4',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('pointers4_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('pointers7',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('pointers7_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('globals',               r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('globals_fail',          r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('loop',                  r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
@@ -88,7 +88,7 @@ tests = [
   RegTest('array_free',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
   RegTest('array_free_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('array_free1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('array_free1_fail',      r'0 verified, 4 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  #RegTest('array_free1_fail',      r'0 verified, 4 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('array_free2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
 #  RegTest('array_free2_fail',      r'0 verified, 5 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('lock',                  r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
@@ -104,10 +104,15 @@ tests = [
   RegTest('two_arrays6',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('two_arrays6_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('num_conversion_1_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  RegTest('num_conversion_1_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('num_conversion_2_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-#  RegTest('floats_in_memory',      r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('gcd',                   r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2)
+  RegTest('num_conversion_2_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('interleave_bits_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 33),
+  RegTest('interleave_bits_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 33),
+  RegTest('absolute',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('absolute_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('floats_in_memory',      r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2)
 ]
 
 def red(text):

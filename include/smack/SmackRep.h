@@ -67,12 +67,9 @@ protected:
 
   vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
-
-  // TODO Make this width a parameter to generate bitvector-based code.
-  unsigned width;
+  unsigned ptrSizeInBits;
 
   int globalsBottom;
-  
   vector<const Stmt*> staticInits;
   
   unsigned uniqueFpNum;
@@ -82,7 +79,7 @@ public:
     : aliasAnalysis(aa), naming(N), program(P),
       targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
-    width = targetData->getPointerSizeInBits();
+    ptrSizeInBits = targetData->getPointerSizeInBits();
   }
   DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
   Program& getProgram() { return program; }
@@ -96,7 +93,7 @@ private:
   
   const Expr* b2p(const llvm::Value* v);
   const Expr* i2b(const llvm::Value* v);
-  const Expr* b2i(const llvm::Value* v, unsigned size = 0);
+  const Expr* b2i(const llvm::Value* v);
 
 public:
   bool isMallocOrFree(const llvm::Function* f);
@@ -107,10 +104,10 @@ public:
   bool isBool(const llvm::Value* v);
   bool isFloat(const llvm::Type* t);
   bool isFloat(const llvm::Value* v);
+  unsigned getElementSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
-  unsigned getElementSize(const llvm::Value* v);
-  unsigned getElementSize(llvm::Type* t);
+  unsigned getSize(llvm::Type* t);
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);

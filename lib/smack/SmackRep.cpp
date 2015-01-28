@@ -53,21 +53,20 @@ bool SmackRep::isInt(const llvm::Value* v) {
   return isInt(v->getType());
 }
 
+unsigned SmackRep::getElementSize(const llvm::Value* v) {
+  return getSize(v->getType()->getPointerElementType());
+} 
+
 unsigned SmackRep::getIntSize(const llvm::Value* v) {
-  return getIntSize(v->getType());
+  return getSize(v->getType());
 }
 
 unsigned SmackRep::getIntSize(const llvm::Type* t) {
-  const llvm::IntegerType* intType = llvm::cast<llvm::IntegerType>(t);
-  return intType->getBitWidth();
+  return t->getIntegerBitWidth();
 }
 
-unsigned SmackRep::getElementSize(const llvm::Value* v) {
-  return getElementSize(v->getType()->getPointerElementType());
-} 
-
-unsigned SmackRep::getElementSize(llvm::Type* t) {
-  unsigned size = targetData->getTypeStoreSize(t);
+unsigned SmackRep::getSize(llvm::Type* t) {
+  unsigned size = 0;
   if (t->isSingleValueType())
     size = targetData->getTypeSizeInBits(t);
   return size;
@@ -191,7 +190,7 @@ void SmackRep::collectRegions(llvm::Module &M) {
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {  
   const Expr* size = 
-    Expr::fn("$mul.ref", lit(storageSize(i.getAllocatedType()), width), SmackOptions::BitVectors? Expr::fn("$zext.i32.ref", lit(i.getArraySize())) : lit(i.getArraySize()));
+    Expr::fn("$mul.ref", lit(storageSize(i.getAllocatedType()), ptrSizeInBits), SmackOptions::BitVectors? Expr::fn("$zext.i32.ref", lit(i.getArraySize())) : lit(i.getArraySize()));
                    
   return Stmt::call(ALLOCA,size,naming.get(i));
 }
@@ -233,18 +232,20 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 
 const Stmt* SmackRep::load(const llvm::Value* addr, const llvm::Value* val) {
 // The tricky part is that we could expr(li) is actually expr(val) so that it is possible to pass li to val. 
-  const Expr* rhs = mem(addr);
-
-  if (isFloat(val))
-    rhs = Expr::fn("$si2fp", rhs);
+  const Expr* rhs;
 
   if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, llvm::cast<const llvm::Instruction>(val))))
-    return Stmt::assign(expr(val), rhs);
+    rhs = mem(addr);
   else {
     stringstream name;
     name << "$load." << int_type(getElementSize(addr));
-    return Stmt::assign(expr(val), Expr::fn(name.str(), Expr::id(memPath(getRegion(addr), 8)), expr(addr)));
+    rhs = Expr::fn(name.str(), Expr::id(memPath(getRegion(addr), 8)), expr(addr));
   }
+
+  if (isFloat(val))
+    rhs = Expr::fn("$si2fp", rhs);
+  
+  return Stmt::assign(expr(val), rhs);
 }
 
 const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si) {
@@ -257,7 +258,7 @@ const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, con
   if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, si)))
     return Stmt::assign(mem(addr),rhs);
   else
-    return storeAsBytes(getRegion(addr), getElementSize(addr), expr(addr), expr(val));
+    return storeAsBytes(getRegion(addr), getElementSize(addr), expr(addr), rhs);
 }
 
 const Stmt* SmackRep::storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e)
@@ -295,7 +296,6 @@ const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size, int i_si
   return pa(base, index, lit(size, t_size), i_size, t_size);
 }
 const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size, int i_size, int t_size) {
-  if (SmackOptions::BitVectors) {
     if (i_size == 32) 
       // The index of struct type is 32 bit
       return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", index, size)));
@@ -305,8 +305,6 @@ const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size, 
       DEBUG(errs() << "index size : " << i_size << "\n");
       assert(0 && "Unhandled index type");
     }
-  } else
-    return Expr::fn("$pa", base, index, size);
 }
 const Expr* SmackRep::b2p(const llvm::Value* v) {
   return Expr::fn(B2P, expr(v));
@@ -314,8 +312,8 @@ const Expr* SmackRep::b2p(const llvm::Value* v) {
 const Expr* SmackRep::i2b(const llvm::Value* v) {
   return Expr::fn(I2B, expr(v));
 }
-const Expr* SmackRep::b2i(const llvm::Value* v, unsigned size) {
-  return Expr::fn(opName(B2I, {size}), expr(v));
+const Expr* SmackRep::b2i(const llvm::Value* v) {
+  return Expr::fn(B2I, expr(v));
 }
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
@@ -324,13 +322,12 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
     wd = ci->getBitWidth();
     if (wd == 1)
-      return Expr::lit(!ci->isZero(), width);
+      return Expr::lit(!ci->isZero());
     uint64_t val = ci->getSExtValue();
     if (wd > 0 && ci->isNegative())
-      //return (SmackOptions::BitVectors? Expr::fn(NEG, Expr::lit(val, wd)) : Expr::fn("$sub", Expr::lit(0, width), Expr::lit(-val, width)));
-      return (SmackOptions::BitVectors? Expr::fn(opName("$sub", {wd}), Expr::lit(0, wd), Expr::lit(-(ci->getSExtValue()), wd)) : Expr::fn("$sub", Expr::lit(0, 0), Expr::lit(-val, 0)));
+      return Expr::fn(opName("$sub", {wd}), lit(0, wd), lit(-val, wd));
     else
-      return (SmackOptions::BitVectors? Expr::lit(val, wd) : Expr::lit(val, 0));
+      return lit(val, wd);
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();
@@ -452,7 +449,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return lit(cf);
 
     } else if (constant->isNullValue())
-      return lit((unsigned)0, width);
+      return lit((unsigned)0, ptrSizeInBits);
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -493,24 +490,19 @@ string SmackRep::opName(const string& operation, initializer_list<unsigned> oper
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
   using namespace llvm;
   switch (opcode) {
-    case Instruction::Trunc:
+    case Instruction::Trunc: {
       assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
-      return isBool(t)
-//TODO: bool variable is not necessarily cast to 32 bit
-	? Expr::fn("$i2b",expr(v))
-	: Expr::fn(opName("$trunc", {getIntSize(v), getIntSize(t)}),expr(v));
-
+      const Expr* arg = Expr::fn(opName("$trunc", {getIntSize(v), getIntSize(t)}), expr(v)); 
+      return (isBool(t)? Expr::fn("$i2b", arg) : arg);
+    }
+         
     case Instruction::ZExt:
-//TODO: bool variable is not necessarily cast to 32 bit
-      return isBool(v->getType())
-	? b2i(v, getIntSize(t))
-	: Expr::fn(opName("$zext", {getIntSize(v), getIntSize(t)}),expr(v));
+      return Expr::fn(opName("$zext", {getIntSize(v), getIntSize(t)}),
+                      (isBool(v->getType()))? Expr::fn("$b2i", expr(v)) : expr(v));
 
     case Instruction::SExt:
-//TODO: bool variable is not necessarily cast to 32 bit
-      return isBool(v->getType())
-	? b2i(v, getIntSize(t))
-	: Expr::fn(opName("$sext", {getIntSize(v), getIntSize(t)}),expr(v));
+      return Expr::fn(opName("$sext", {getIntSize(v), getIntSize(t)}),
+                      (isBool(v->getType()))? Expr::fn("$b2i", expr(v)) : expr(v));
 
     case Instruction::FPTrunc:
     case Instruction::FPExt:
@@ -531,10 +523,10 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 }
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
-  const Expr* e = Expr::fn(opName(bop2fn(opcode), {(isBool(t)? width : getIntSize(t))}),
-                           (isBool(lhs) ? b2i(lhs, width) : expr(lhs)),
-                           (isBool(rhs) ? b2i(rhs, width) : expr(rhs)));
-
+  const Expr* e = Expr::fn(isFloat(t)? bop2fn(opcode): 
+                           opName(bop2fn(opcode), {getIntSize(t)}),
+      			   (isBool(lhs) ? b2i(lhs) : expr(lhs)),
+      			   (isBool(rhs) ? b2i(rhs) : expr(rhs)));
   return isBool(t) ? Expr::fn("$i2b",e) : e;
 }
 
@@ -555,7 +547,7 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   case CmpInst::ICMP_NE:
     return Expr::neq(expr(lhs), expr(rhs));
   default:
-    return Expr::fn(opName(pred2fn(predicate), {getIntSize(lhs)}), expr(lhs), expr(rhs));
+    return Expr::fn(isFloat(lhs)? pred2fn(predicate) : opName(pred2fn(predicate), {getIntSize(lhs)}), expr(lhs), expr(rhs));
   }
 }
 
@@ -766,26 +758,26 @@ string SmackRep::getPrelude() {
   }
   s << endl;
   s << "// Type declarations" << endl;
-  for (unsigned i = 8; i <= width; i <<= 1) {
+  for (unsigned i = 8; i <= ptrSizeInBits; i <<= 1) {
     s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
   }
 
-  s << "type ref = " << bits_type(width) << ";" << endl; 
-  s << "type size = " << bits_type(width) << ";" << endl; 
+  s << "type ref = " << bits_type(ptrSizeInBits) << ";" << endl; 
+  s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl; 
   for (int i = 1; i < 8; ++i) {
     s << "axiom $REF_CONST_" << i << " == ";
-    lit(i, width)->print(s);
+    lit(i, ptrSizeInBits)->print(s);
     s << ";" << endl;
   }
-  s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((width == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
+  s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((ptrSizeInBits == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
 
   s << "axiom $NULL == ";
-  lit(0, width)->print(s); 
+  lit(0, ptrSizeInBits)->print(s); 
   s << ";" << endl; 
   s << endl;
 
   s << "axiom $GLOBALS_BOTTOM == ";
-  lit(globalsBottom, width)->print(s);
+  lit(globalsBottom, ptrSizeInBits)->print(s);
   s << ";" << endl;
 
   return s.str();
@@ -876,9 +868,7 @@ Decl* SmackRep::getStaticInit() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
   Block* b = new Block();
 
-  if (SmackOptions::BitVectors)
-	  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit(1024, width)) );
-
+  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit(1024, ptrSizeInBits)) );
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);
   b->addStmt(Stmt::return_());
@@ -919,7 +909,7 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
 	if (numElems > 1)
 	  ax.push_back(Attr::attr("count",numElems));
-	decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom, width))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
+	decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom, ptrSizeInBits))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
 	addInit(getRegion(g), g, init);
 
 	// Expr::fn("$slt",
@@ -947,89 +937,39 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
   stringstream s;
 
   if (SmackOptions::MemoryModelImpls) {
-    if (SmackOptions::BitVectors) {
-      // TODO
-      s << "procedure $memcpy." << dstReg << "." << srcReg;
-      s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool)" << endl;
-      s << "modifies " << memPath(dstReg, 8) << ";" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "modifies " << memPath(dstReg, size) << ";" << endl;
-	}
-      }
-      s << "{" << endl;
-      s << "  var $oldSrc" << ".i8" << ": [" << getPtrType() << "] " << int_type(8) << ";" << endl;
-      s << "  var $oldDst" << ".i8" << ": [" << getPtrType() << "] " << int_type(8) << ";" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "  var $oldSrc" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
-	  s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
-	}
-      }
-      s << "  $oldSrc" << ".i8" << " := " << memPath(dstReg, 8) << ";" << endl;
-      s << "  $oldDst" << ".i8" << " := " << memPath(dstReg, 8) << ";" << endl;
-      s << "  havoc " << memPath(dstReg, 8) << ";" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
-	  s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
-	  s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-	}
-      }
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool)" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+
+    s << "{" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  var $oldSrc" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+      s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+    }
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
+      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
+      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
       s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	<< memPath(dstReg, 8) << "[x] == $oldSrc.i8[$add.ref($sub.ref(src, dest), x)]);" << endl;
+	<< memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
       s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	<< memPath(dstReg, 8) << "[x] == $oldDst.i8[x]);" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	    << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-	  s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	    << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
-	}
-      }
-      s << "}" << endl;
-    } else {
-      s << "procedure $memcpy." << dstReg << "." << srcReg;
-      s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool)" << endl;
-      s << "modifies " << memReg(dstReg) << ";" << endl;
-      s << "{" << endl;
-      s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-      s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-      s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
-      s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-      s << "  havoc " << memReg(dstReg) << ";" << endl;
-      s << "  assume (forall x:ref :: dest <= x && x < dest + len ==> "
-	<< memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
-      s << "  assume (forall x:ref :: !(dest <= x && x < dest + len) ==> "
-	<< memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
-      s << "}" << endl;
+	<< memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
+    s << "}" << endl;
   } else {
-    if (SmackOptions::BitVectors) {
-      // TODO
-      s << "procedure $memcpy." << dstReg << "." << srcReg;
-      s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool);" << endl;
-      s << "modifies " << memReg(dstReg) << ";" << endl;
-      s << "ensures (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	<< memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[$add.ref($sub.ref(src, dest), x)]);" 
-	<< endl;
-      s << "ensures (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	<< memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-    } else {
-      s << "procedure $memcpy." << dstReg << "." << srcReg;
-      s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool);" << endl;
-      s << "modifies " << memReg(dstReg) << ";" << endl;
-      s << "ensures (forall x:ref :: dest <= x && x < dest + len ==> "
-	<< memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
-	<< endl;
-      s << "ensures (forall x:ref :: !(dest <= x && x < dest + len) ==> "
-	<< memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-    }
+    s << "procedure $memcpy." << dstReg << "." << srcReg;
+    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[$add.ref($sub.ref(src, dest), x)]);" 
+      << endl;
+    s << "ensures (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
   }
 
   return s.str();
@@ -1039,86 +979,42 @@ string SmackRep::memsetProc(int dstReg) {
   stringstream s;
 
   if (SmackOptions::MemoryModelImpls) {
-    if (SmackOptions::BitVectors) {
-      // TODO
-      s << "procedure $memset." << dstReg;
-      s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool)" << endl;
-      s << "modifies " << memPath(dstReg, 8) << ";" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "modifies " << memPath(dstReg, size) << ";" << endl;
-	}
-      }
-      s << "{" << endl;
-      s << "  var $oldDst" << ".i8" << " : [" << getPtrType() << "] " << int_type(8) << ";" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
-	}
-      }
-      s << "  $oldDst" << ".i8" << ":= " << memPath(dstReg, 8) << ";" << endl;
-      s << "  havoc " << memPath(dstReg, 8) << ";" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 1; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
-	  s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-	}
-      }
+    s << "procedure $memset." << dstReg;
+    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool)" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+
+    s << "{" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+    }
+
+    string val = "val";
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
+      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
       s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	<< memPath(dstReg, 8) << "[x] == val);" << endl;
+	<< memPath(dstReg, size) << "[x] == "
+	<< val
+	<< ");" << endl;
       s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	<< memPath(dstReg, 8) << "[x] == $oldDst.i8[x]);" << endl;
-      if (SmackOptions::InferFieldOverlap) {
-	for (int i = 0; i < 4; ++i) {
-	  unsigned size = 8 << i;
-	  s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	    << memPath(dstReg, size) << "[x] == "
-	    << ((i >= 2)? "val++val++val++val" :
-		(i == 1)? "val++val" :
-		"val")
-	    << ");" << endl;
-	  s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	    << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
-	}
-      }
-      s << "}" << endl;
-    } else {
-      s << "procedure $memset." << dstReg;
-      s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool)" << endl;
-      s << "modifies " << memReg(dstReg) << ";" << endl;
-      s << "{" << endl;
-      s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-      s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-      s << "  havoc " << memReg(dstReg) << ";" << endl;
-      s << "  assume (forall x:ref :: dest <= x && x < dest + len ==> "
-	<< memReg(dstReg) << "[x] == val);" << endl;
-      s << "  assume (forall x:ref :: !(dest <= x && x < dest + len) ==> "
-	<< memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
-      s << "}" << endl;
+	<< memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
+      val = val + "++" + val;
     }
+    s << "}" << endl;
   } else {
-    if (SmackOptions::BitVectors) {
-      s << "procedure $memset." << dstReg;
-      s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool);" << endl;
-      s << "modifies " << memReg(dstReg) << ";" << endl;
-      s << "ensures (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	<< memReg(dstReg) << "[x] == val);"
-	<< endl;
-      s << "ensures (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	<< memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-    } else {
-      s << "procedure $memset." << dstReg;
-      s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool);" << endl;
-      s << "modifies " << memReg(dstReg) << ";" << endl;
-      s << "ensures (forall x:ref :: dest <= x && x < dest + len ==> "
-	<< memReg(dstReg) << "[x] == val);"
-	<< endl;
-      s << "ensures (forall x:ref :: !(dest <= x && x < dest + len) ==> "
-	<< memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
-    }
+    s << "procedure $memset." << dstReg;
+    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool);" << endl;
+    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "ensures (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
+      << memReg(dstReg) << "[x] == val);"
+      << endl;
+    s << "ensures (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
+      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
   }
 
   return s.str();
