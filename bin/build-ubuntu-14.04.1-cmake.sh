@@ -11,9 +11,7 @@
 # - git
 # - mercurial
 # - python
-# - gcc, g++
 # - LLVM, clang
-# - make
 # - cmake
 # - mono
 #
@@ -54,16 +52,19 @@ if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
 echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
 
-sudo zypper --non-interactive install llvm-clang
-sudo zypper --non-interactive install llvm-devel
-sudo zypper --non-interactive install gcc-c++
-sudo zypper --non-interactive install ncurses-devel
-sudo zypper --non-interactive install zlib-devel
-sudo zypper --non-interactive install mono-complete
-sudo zypper --non-interactive install git
-sudo zypper --non-interactive install mercurial
-sudo zypper --non-interactive install cmake
-sudo zypper --non-interactive install make
+sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
+wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+sudo apt-get update
+sudo apt-get install -y clang-3.5 clang-3.5-doc libclang-common-3.5-dev libclang-3.5-dev libclang1-3.5 libclang1-3.5-dbg libllvm3.5 libllvm3.5-dbg lldb-3.5 llvm-3.5 llvm-3.5-dev llvm-3.5-doc llvm-3.5-runtime lldb-3.5-dev
+sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
+sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
+sudo apt-get install -y libz-dev
+sudo apt-get install -y libedit-dev
+sudo apt-get install -y mono-complete
+sudo apt-get install -y git
+sudo apt-get install -y mercurial
+sudo apt-get install -y cmake
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 

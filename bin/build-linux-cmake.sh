@@ -168,6 +168,9 @@ hg clone -r a776dc352a84 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
+mozroots --import --sync
+wget https://nuget.org/nuget.exe
+mono ./nuget.exe restore Boogie.sln
 xbuild Boogie.sln /p:Configuration=Release
 ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
