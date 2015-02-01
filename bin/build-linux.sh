@@ -58,7 +58,7 @@ if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
 echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
 
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get install -y g++-4.8
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
@@ -104,7 +104,7 @@ make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
 sudo make install
 
 # Install libgdiplus
-sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev 
+sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev
 sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
 cd ${MONO_DIR}
 git clone git://github.com/mono/libgdiplus.git
@@ -303,4 +303,3 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
-
