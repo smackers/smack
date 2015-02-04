@@ -326,13 +326,15 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  emit(rep.load(li.getPointerOperand(), &li));
+  if (!li.getType()->isAggregateType()) {
+    emit(rep.load(li.getPointerOperand(), &li));
 
-  if (SmackOptions::MemoryModelDebug) {
-    emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
-    emit(Stmt::call("boogie_si_record_int", Expr::lit(0)));
-    emit(Stmt::call("boogie_si_record_int", rep.expr(li.getPointerOperand())));
-    emit(Stmt::call("boogie_si_record_int", rep.expr(&li)));
+    if (SmackOptions::MemoryModelDebug) {
+      emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+      emit(Stmt::call("boogie_si_record_int", Expr::lit(0)));
+      emit(Stmt::call("boogie_si_record_int", rep.expr(li.getPointerOperand())));
+      emit(Stmt::call("boogie_si_record_int", rep.expr(&li)));
+    }
   }
 }
 
@@ -340,19 +342,21 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
   const llvm::Value* E = si.getOperand(0);
-  const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
-  emit(rep.store(P, E, &si));
+  if (!E->getType()->isAggregateType()) {
+    const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
+    emit(rep.store(P, E, &si));
 
-  if (SmackOptions::SourceLocSymbols && G) {
-    assert(G->hasName() && "Expected named global variable.");
-    emit(Stmt::call("boogie_si_record_" + rep.int_type(rep.getElementSize(G)), rep.expr(E), Attr::attr("cexpr", G->getName().str())));
-  }
+    if (SmackOptions::SourceLocSymbols && G) {
+      assert(G->hasName() && "Expected named global variable.");
+      emit(Stmt::call("boogie_si_record_" + rep.int_type(rep.getElementSize(G)), rep.expr(E), Attr::attr("cexpr", G->getName().str())));
+    }
 
-  if (SmackOptions::MemoryModelDebug) {
-    emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
-    emit(Stmt::call("boogie_si_record_int", Expr::lit(1)));
-    emit(Stmt::call("boogie_si_record_int", rep.expr(P)));
-    emit(Stmt::call("boogie_si_record_int", rep.expr(E)));
+    if (SmackOptions::MemoryModelDebug) {
+      emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
+      emit(Stmt::call("boogie_si_record_int", Expr::lit(1)));
+      emit(Stmt::call("boogie_si_record_int", rep.expr(P)));
+      emit(Stmt::call("boogie_si_record_int", rep.expr(E)));
+    }
   }
 }
 
