@@ -87,7 +87,7 @@ bool DSAAliasAnalysis::isTypeSafe(const llvm::Value* ptr, const llvm::Instructio
 }
 
 bool DSAAliasAnalysis::isTypeSafe(const GlobalValue* V) {
-  return TS->isTypeSafe(V);	
+  return TS->isTypeSafe(V);
 }
 
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {

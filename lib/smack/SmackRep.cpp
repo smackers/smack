@@ -111,7 +111,7 @@ string SmackRep::type(const llvm::Type* t) {
     return int_type(getIntSize(t));
   else
     return getPtrType();
-    //assert(0 && "unsupported type");
+  //assert(0 && "unsupported type");
 }
 
 string SmackRep::type(const llvm::Value* v) {
@@ -163,7 +163,7 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
   unsigned r;
-  
+
   for (r=0; r<memoryRegions.size(); ++r)
     if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
       break;
@@ -189,9 +189,8 @@ void SmackRep::collectRegions(llvm::Module &M) {
   rc.visit(M);
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {  
-  const Expr* size = 
-    Expr::fn("$mul.ref", lit(storageSize(i.getAllocatedType()), ptrSizeInBits), SmackOptions::BitVectors? Expr::fn("$zext.i32.ref", lit(i.getArraySize())) : lit(i.getArraySize()));
-                   
+  const Expr* size = Expr::fn("$mul.ref", lit(storageSize(i.getAllocatedType()), ptrSizeInBits), SmackOptions::BitVectors? Expr::fn("$zext.i32.ref", lit(i.getArraySize())) : lit(i.getArraySize()));
+
   return Stmt::call(ALLOCA,size,naming.get(i));
 }
 
@@ -243,7 +242,7 @@ const Stmt* SmackRep::load(const llvm::Value* addr, const llvm::Value* val) {
   }
 
   if (isFloat(val))
-    rhs = Expr::fn("$si2fp", rhs);
+    rhs = Expr::fn(opName("$si2fp", {getElementSize(addr)}), rhs);
   
   return Stmt::assign(expr(val), rhs);
 }
@@ -253,7 +252,7 @@ const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, con
   const Expr* rhs = expr(val);
 
   if (isFloat(val))
-    rhs = Expr::fn("$fp2si", rhs);
+    rhs = Expr::fn(opName("$fp2si", {getElementSize(addr)}), rhs);
 
   if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, si)))
     return Stmt::assign(mem(addr),rhs);
@@ -290,21 +289,21 @@ bool SmackRep::isTypeSafe(const llvm::GlobalValue *V)
 }
 
 const Expr* SmackRep::pa(const Expr* base, int index, int size, int i_size, int t_size) {
-    return pa(base, lit(index, i_size), lit(size, t_size), i_size, t_size);
+  return pa(base, lit(index, i_size), lit(size, t_size), i_size, t_size);
 }
 const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size, int i_size, int t_size) {
   return pa(base, index, lit(size, t_size), i_size, t_size);
 }
 const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size, int i_size, int t_size) {
-    if (i_size == 32) 
-      // The index of struct type is 32 bit
-      return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", index, size)));
-    else if (i_size == 64)
-      return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", index, Expr::fn("$zext.i32.ref", size)));
-    else {
-      DEBUG(errs() << "index size : " << i_size << "\n");
-      assert(0 && "Unhandled index type");
-    }
+  if (i_size == 32) 
+    // The index of struct type is 32 bit
+    return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", index, size)));
+  else if (i_size == 64)
+    return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", index, Expr::fn("$zext.i32.ref", size)));
+  else {
+    DEBUG(errs() << "index size : " << i_size << "\n");
+    assert(0 && "Unhandled index type");
+  }
 }
 const Expr* SmackRep::b2p(const llvm::Value* v) {
   return Expr::fn(B2P, expr(v));
@@ -364,8 +363,7 @@ const Expr* SmackRep::lit(int v, unsigned size) {
     return Expr::lit(v);
 }
 
-const Expr* SmackRep::ptrArith(
-  const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
+const Expr* SmackRep::ptrArith(const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
 
   assert(ps.size() > 0 && ps.size() == ts.size());
 
@@ -375,12 +373,12 @@ const Expr* SmackRep::ptrArith(
     if (llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(ts[i])) {
 
       assert(ps[i]->getType()->isIntegerTy()
-	  && ps[i]->getType()->getPrimitiveSizeInBits() == 32
-	  && "Illegal struct idx");
+        && ps[i]->getType()->getPrimitiveSizeInBits() == 32
+        && "Illegal struct idx");
 
       // Get structure layout information...
       unsigned fieldNo =
-	llvm::cast<llvm::ConstantInt>(ps[i])->getZExtValue();
+        llvm::cast<llvm::ConstantInt>(ps[i])->getZExtValue();
 
       // Add in the offset, as calculated by the
       // structure layout info...
@@ -388,7 +386,7 @@ const Expr* SmackRep::ptrArith(
 
     } else {
       llvm::Type* et =
-	llvm::cast<llvm::SequentialType>(ts[i])->getElementType();
+        llvm::cast<llvm::SequentialType>(ts[i])->getElementType();
       e = pa(e, lit(ps[i]), storageSize(et), getIntSize(ps[i]), 32);
     }
   }
@@ -432,7 +430,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return bop(CE);
 
       else if (CE->isCompare())
-          return cmp(CE);
+        return cmp(CE);
 
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -444,7 +442,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return Expr::lit(!ci->isZero());
 
       else return lit(ci);
-      
+
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
 
@@ -467,7 +465,7 @@ string SmackRep::getString(const llvm::Value* v) {
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
       if (const llvm::GlobalValue* cc = llvm::dyn_cast<const llvm::GlobalValue>(constantExpr->getOperand(0)))
         if (const llvm::ConstantDataSequential* cds = llvm::dyn_cast<const llvm::ConstantDataSequential>(cc->getOperand(0)))
-            return cds ->getAsCString();
+          return cds ->getAsCString();
   return "";
 }
 
@@ -510,7 +508,7 @@ const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Ty
       return expr(v);
 
     default:
-      return Expr::fn(cast2fn(opcode), expr(v));
+      return Expr::fn(opName(cast2fn(opcode), {isInt(t)? getIntSize(t) : getIntSize(v)}), expr(v));
   }
 }
 
@@ -525,8 +523,8 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
   const Expr* e = Expr::fn(isFloat(t)? bop2fn(opcode): 
                            opName(bop2fn(opcode), {getIntSize(t)}),
-      			   (isBool(lhs) ? b2i(lhs) : expr(lhs)),
-      			   (isBool(rhs) ? b2i(rhs) : expr(rhs)));
+                           (isBool(lhs) ? b2i(lhs) : expr(lhs)),
+                           (isBool(rhs) ? b2i(rhs) : expr(rhs)));
   return isBool(t) ? Expr::fn("$i2b",e) : e;
 }
 
@@ -660,10 +658,10 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
       name = indexedName("p",i);
       arg->setName(name);
     }
-    
+
     args.push_back(make_pair(name, type(arg->getType()) ));
   }
-  
+
   for (; i < nargs; i++)
     args.push_back(make_pair(indexedName("p",i), getPtrType()));
 
@@ -679,14 +677,14 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn("$fp2si",expr(v)) : expr(v);
+  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn(opName("$fp2si", {getSize(v->getType())}),expr(v)) : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
   using namespace llvm;
 
   assert(f && "Call encountered unresolved function.");
-  
+
   string name = naming.get(*f);
   vector<const Expr*> args;
   vector<string> rets;
@@ -696,10 +694,10 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
     num_arg_operands -= 1;
   else if (isa<InvokeInst>(ci))
     num_arg_operands -= 3;
-  
+
   for (unsigned i = 0; i < num_arg_operands; i++)
     args.push_back(arg(f, i, ci.getOperand(i)));
-  
+
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming.get(ci));
 
@@ -712,30 +710,30 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
     return Stmt::call(FREE, args[0]);
 
   } else if (f->isVarArg() || (f->isDeclaration() && !Naming::isSmackName(name))) {
-    
+
     Decl* p = proc(f,args.size());
     program.addDecl(p);
     return Stmt::call(p->getName(), args, rets);
-    
+
   } else {
     return Stmt::call(name, args, rets);
   }
 }
 
 string SmackRep::code(llvm::CallInst& ci) {
-  
+
   llvm::Function* f = ci.getCalledFunction();
   assert(f && "Inline code embedded in unresolved function.");
-  
+
   string fmt = getString(ci.getOperand(0));
   assert(!fmt.empty() && "__SMACK_code: missing format string.");
-  
+
   string s = fmt;
   for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
     const Expr* a = arg(f, i, ci.getOperand(i));
     string::size_type idx = s.find('@');
     assert(idx != string::npos && "__SMACK_code: too many arguments.");
-    
+
     ostringstream ss;
     a->print(ss);
     s = s.replace(idx,1,ss.str());
@@ -752,13 +750,13 @@ string SmackRep::getPrelude() {
     for (unsigned j = 0; j < (SmackOptions::InferFieldOverlap? 4 : 1); j++) {
       unsigned size = 8 << j;
       s << "var " << memPath(i, size) 
-	<< ": " << memType(i, size) 
-	<< ";" << endl;
+        << ": " << memType(i, size) 
+        << ";" << endl;
     }
   }
   s << endl;
   s << "// Type declarations" << endl;
-  for (unsigned i = 8; i <= ptrSizeInBits; i <<= 1) {
+  for (unsigned i = 8; i <= 64; i <<= 1) {
     s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
   }
 
@@ -770,6 +768,19 @@ string SmackRep::getPrelude() {
     s << ";" << endl;
   }
   s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((ptrSizeInBits == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
+
+  for (unsigned i = 8; i <= 64; i <<= 1) {
+    if (i < ptrSizeInBits) {
+      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {" << opName("$trunc", {ptrSizeInBits, i}) << "(p)}" << endl;
+      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {" << opName("$zext", {i, ptrSizeInBits}) << "(p)}" << endl;
+    } else if (i > ptrSizeInBits) {
+      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {" << opName("$zext", {ptrSizeInBits, i}) << "(p)}" << endl;
+      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {" << opName("$trunc", {i, ptrSizeInBits}) << "(p)}" << endl;
+    } else {
+      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {p}" << endl;
+      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {p}" << endl;
+    }
+  }
 
   s << "axiom $NULL == ";
   lit(0, ptrSizeInBits)->print(s); 
@@ -794,8 +805,8 @@ vector<string> SmackRep::getModifies() {
   for (unsigned i=0; i<memoryRegions.size(); ++i) {
     if (SmackOptions::BitVectors) {
       for (unsigned j=0; j<(SmackOptions::InferFieldOverlap?4:1); ++j) {
-	unsigned size = 8 << j;
-	mods.push_back(memPath(i, size));
+        unsigned size = 8 << j;
+        mods.push_back(memPath(i, size));
       }
     } else
       mods.push_back(memReg(i));
@@ -813,13 +824,13 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
 
 void SmackRep::addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val) {
   if (const llvm::GlobalValue* V = dyn_cast<const GlobalValue>(addr)) { 
-	if (SmackOptions::InferFieldOverlap)
-	  addInit(region, expr(addr), val, V, isFieldDisjoint(V, 0));
-	else
-	  addInit(region, expr(addr), val, V, false);
+    if (SmackOptions::InferFieldOverlap)
+      addInit(region, expr(addr), val, V, isFieldDisjoint(V, 0));
+    else
+      addInit(region, expr(addr), val, V, false);
   }
   else
-	  assert(0 && "addInit() should initialize global values?");
+    assert(0 && "addInit() should initialize global values?");
 }
 
 void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety) {
@@ -828,8 +839,7 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   if (isInt(val)) {
     staticInits.push_back( SmackOptions::BitVectors? (safety? Stmt::assign(mem(region, addr, getIntSize(val)), expr(val)) : storeAsBytes(region, getIntSize(val), addr, expr(val))) : Stmt::assign(mem(region,addr), expr(val)) );
 
-    // TODO
-    staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn("$fp2si",expr(val))) : Stmt::assign(mem(region,addr), Expr::fn("$fp2si",expr(val))) );
+    staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) : Stmt::assign(mem(region,addr), Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) );
   } else if (isa<PointerType>(val->getType())) {
     // TODO
     staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) : Stmt::assign(mem(region,addr), expr(val)) );
@@ -838,18 +848,18 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
     for (unsigned i = 0; i < at->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
       if (SmackOptions::InferFieldOverlap)
-	      addInit( region, pa(addr,i,storageSize(at->getElementType()), 32, 32), elem, V, isFieldDisjoint(V, i*storageSize(at->getElementType())));
+        addInit( region, pa(addr,i,storageSize(at->getElementType()), 32, 32), elem, V, isFieldDisjoint(V, i*storageSize(at->getElementType())));
       else
-	      addInit( region, pa(addr,i,storageSize(at->getElementType()), 32, 32), elem, V, false);	
+        addInit( region, pa(addr,i,storageSize(at->getElementType()), 32, 32), elem, V, false);  
     }
 
   } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
       if (SmackOptions::InferFieldOverlap)
-	      addInit( region, pa(addr,fieldOffset(st,i),1, 32, 32), elem, V, isFieldDisjoint(V, fieldOffset(st, i)));
+        addInit( region, pa(addr,fieldOffset(st,i),1, 32, 32), elem, V, isFieldDisjoint(V, fieldOffset(st, i)));
       else
-	      addInit( region, pa(addr,fieldOffset(st,i),1, 32, 32), elem, V, false);
+        addInit( region, pa(addr,fieldOffset(st,i),1, 32, 32), elem, V, false);
     }
 
   } else if (val->getType()->isX86_FP80Ty()) {
@@ -891,30 +901,30 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
 
       // NOTE: all global variables have pointer type in LLVM
       if (g->getType()->isPointerTy()) {
-	PointerType *t = (PointerType*) g->getType();
+        PointerType *t = (PointerType*) g->getType();
 
-	// in case we can determine the size of the element type ...
-	if (t->getElementType()->isSized())
-	  size = storageSize(t->getElementType());
+        // in case we can determine the size of the element type ...
+        if (t->getElementType()->isSized())
+          size = storageSize(t->getElementType());
 
-	// otherwise (e.g. for function declarations), use a default size
-	else
-	  size = 1024;
+        // otherwise (e.g. for function declarations), use a default size
+        else
+          size = 1024;
 
       } else
-	size = storageSize(g->getType());
+        size = storageSize(g->getType());
 
       globalsBottom -= size;
 
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
-	if (numElems > 1)
-	  ax.push_back(Attr::attr("count",numElems));
-	decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom, ptrSizeInBits))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
-	addInit(getRegion(g), g, init);
+        if (numElems > 1)
+        ax.push_back(Attr::attr("count",numElems));
+        decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom, ptrSizeInBits))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
+        addInit(getRegion(g), g, init);
 
-	// Expr::fn("$slt",
-	//     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-	//     Expr::lit(globalsBottom)) ));
+        // Expr::fn("$slt",
+        //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
+        //     Expr::lit(globalsBottom)) ));
       }
 
     } else {
@@ -930,7 +940,7 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
 }
 
 string SmackRep::getPtrType() {
-    return "ref";
+  return "ref";
 }
 
 string SmackRep::memcpyProc(int dstReg, int srcReg) {
@@ -956,9 +966,9 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
       s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	<< memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
+        << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
       s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	<< memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
+        << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
     s << "}" << endl;
   } else {
@@ -998,11 +1008,11 @@ string SmackRep::memsetProc(int dstReg) {
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
       s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-	<< memPath(dstReg, size) << "[x] == "
-	<< val
-	<< ");" << endl;
+        << memPath(dstReg, size) << "[x] == "
+        << val
+        << ");" << endl;
       s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-	<< memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
+        << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
     s << "}" << endl;

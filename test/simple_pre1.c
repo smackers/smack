@@ -9,9 +9,9 @@ short incr(short x) {
 int main(void) {
   short a;
 
-  a = -1;
+  a = -2;
   a = incr(a);
-  assert(a == 0);
+  assert(a > -2);
   return a;
 }
 

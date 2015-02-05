@@ -165,6 +165,29 @@ TypeSafety<dsa>::isFieldDisjoint (const Value * V, const Function * F) {
   if (DH.isNull()) {
     return false;
   }
+  //
+  // If the DSNode is completely folded, then we know for sure that it is not
+  // type-safe.
+  //
+  if (node->isNodeCompletelyFolded())
+    return false;
+
+  //
+  // If the memory object represented by this DSNode can be manipulated by
+  // external code or DSA has otherwise not finished analyzing all operations
+  // on it, declare it type-unsafe.
+  //
+  if (node->isExternalNode() || node->isIncompleteNode())
+    return false;
+
+  //
+  // If the pointer to the memory object came from some source not understood
+  // by DSA or somehow came from/escapes to the realm of integers, declare it
+  // type-unsafe.
+  //
+  if (node->isUnknownNode() || node->isIntToPtrNode() || node->isPtrToIntNode()) {
+    return false;
+  }
 
   return !((NodeInfo[node])[offset]); 
 }
@@ -186,6 +209,29 @@ TypeSafety<dsa>::isFieldDisjoint (const GlobalValue * V, unsigned offset) {
   // If there is no DSNode, claim that it is not type safe.
   //
   if (DH.isNull()) {
+    return false;
+  }
+  //
+  // If the DSNode is completely folded, then we know for sure that it is not
+  // type-safe.
+  //
+  if (node->isNodeCompletelyFolded())
+    return false;
+
+  //
+  // If the memory object represented by this DSNode can be manipulated by
+  // external code or DSA has otherwise not finished analyzing all operations
+  // on it, declare it type-unsafe.
+  //
+  if (node->isExternalNode() || node->isIncompleteNode())
+    return false;
+
+  //
+  // If the pointer to the memory object came from some source not understood
+  // by DSA or somehow came from/escapes to the realm of integers, declare it
+  // type-unsafe.
+  //
+  if (node->isUnknownNode() || node->isIntToPtrNode() || node->isPtrToIntNode()) {
     return false;
   }
 
@@ -254,8 +300,8 @@ TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
     if (TypeSet) {
       svset<Type*>::const_iterator tb = TypeSet->begin();
       if (++tb != TypeSet->end()) {
-	fmap[offset] = true;
-	DEBUG(errs() << "Shaobo: multiple fields at " << offset << "\n");
+        fmap[offset] = true;
+        DEBUG(errs() << "Multiple fields at " << offset << "\n");
       }
     }
 
@@ -272,35 +318,35 @@ TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
       // next field.
       //
       if (TypeSet) {
-	bool overlaps = false;
-	for (svset<Type*>::const_iterator ni = TypeSet->begin(),
-	    ne = TypeSet->end(); ni != ne; ++ni) {
-	  unsigned field_length = TD->getTypeStoreSize (*ni);
-	  if ((offset + field_length) > next_offset) {
-	    if(TypeInferenceOptimize) {
-	      if(const ArrayType *AT = dyn_cast<ArrayType>(*ni)) {
-		Type *ElemTy = AT->getElementType();
-		while(ArrayType *AT1 = dyn_cast<ArrayType>(ElemTy))
-		  ElemTy = AT1->getElementType();
-		if(next_offset < (TD->getTypeStoreSize(ElemTy) + offset)) {
-		  assert(isa<StructType>(ElemTy) && "Array Not of Struct Type??");
-		  //overlaps = false;
-		  //fmap[next_offset] = false;
-		  continue;
-		}
-	      }
-	    }
-	    fmap[offset] = true;
-	    fmap[next_offset] = true;
-	    overlaps = true;
-	    if(overlaps) {
-	      DEBUG(errs() << " Shaobo: Found overlap at " << offset << " with " << next_offset << "\n");
-	      break;
-	    }
-	  }
-	}
-	if (!overlaps)
-	  break;
+        bool overlaps = false;
+        for (svset<Type*>::const_iterator ni = TypeSet->begin(),
+            ne = TypeSet->end(); ni != ne; ++ni) {
+          unsigned field_length = TD->getTypeStoreSize (*ni);
+          if ((offset + field_length) > next_offset) {
+            if(TypeInferenceOptimize) {
+              if(const ArrayType *AT = dyn_cast<ArrayType>(*ni)) {
+                Type *ElemTy = AT->getElementType();
+                while(ArrayType *AT1 = dyn_cast<ArrayType>(ElemTy))
+                  ElemTy = AT1->getElementType();
+                if(next_offset < (TD->getTypeStoreSize(ElemTy) + offset)) {
+                  assert(isa<StructType>(ElemTy) && "Array Not of Struct Type??");
+                  //overlaps = false;
+                  //fmap[next_offset] = false;
+                  continue;
+                }
+              }
+            }
+            fmap[offset] = true;
+            fmap[next_offset] = true;
+            overlaps = true;
+            if(overlaps) {
+              DEBUG(errs() << "Found overlap at " << offset << " with " << next_offset << "\n");
+              break;
+            }
+          }
+        }
+        if (!overlaps)
+          break;
       }
     }
 
