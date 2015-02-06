@@ -91,7 +91,6 @@ private:
   const Expr* pa(const Expr* base, const Expr* index, int size, int i_size = 0, int t_size = 0);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size, int i_size = 0, int t_size = 0);
   
-  const Expr* b2p(const llvm::Value* v);
   const Expr* i2b(const llvm::Value* v);
   const Expr* b2i(const llvm::Value* v);
 

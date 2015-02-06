@@ -18,7 +18,6 @@ const string SmackRep::MALLOC = "$malloc";
 const string SmackRep::FREE = "$free";
 const string SmackRep::MEMCPY = "$memcpy";
 
-const string SmackRep::B2P = "$b2p";
 const string SmackRep::I2B = "$i2b";
 const string SmackRep::B2I = "$b2i";
 
@@ -305,9 +304,7 @@ const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size, 
     assert(0 && "Unhandled index type");
   }
 }
-const Expr* SmackRep::b2p(const llvm::Value* v) {
-  return Expr::fn(B2P, expr(v));
-}
+
 const Expr* SmackRep::i2b(const llvm::Value* v) {
   return Expr::fn(I2B, expr(v));
 }
