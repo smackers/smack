@@ -71,6 +71,7 @@ unsigned SmackRep::getSize(llvm::Type* t) {
   return size;
 } 
 
+bool SmackRep::isBool(const llvm::Type* t) {
   return t->isIntegerTy(1);
 }
 
@@ -149,8 +150,6 @@ string SmackRep::memPath(unsigned region, unsigned size) {
 const Expr* SmackRep::mem(const llvm::Value* v) {
   unsigned r = getRegion(v);
   return mem(r, expr(v), getElementSize(v));
-    return Expr::sel(Expr::id(memReg(r)),expr(v));
-  else
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
@@ -186,6 +185,7 @@ bool SmackRep::isExternal(const llvm::Value* v) {
 void SmackRep::collectRegions(llvm::Module &M) {
   RegionCollector rc(*this);
   rc.visit(M);
+}
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {  
   const Expr* size = Expr::fn("$mul.ref", lit(storageSize(i.getAllocatedType()), ptrSizeInBits), SmackOptions::BitVectors? Expr::fn("$zext.i32.ref", lit(i.getArraySize())) : lit(i.getArraySize()));
@@ -836,7 +836,9 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   if (isInt(val)) {
     staticInits.push_back( SmackOptions::BitVectors? (safety? Stmt::assign(mem(region, addr, getIntSize(val)), expr(val)) : storeAsBytes(region, getIntSize(val), addr, expr(val))) : Stmt::assign(mem(region,addr), expr(val)) );
 
+  } else if (isFloat(val)) {
     staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) : Stmt::assign(mem(region,addr), Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) );
+
   } else if (isa<PointerType>(val->getType())) {
     // TODO
     staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) : Stmt::assign(mem(region,addr), expr(val)) );

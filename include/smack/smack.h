@@ -41,15 +41,15 @@ void __SMACK_top_decl(const char *fmt, ...);
 __attribute__((always_inline))
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
-#endif
-#ifdef BITVECTOR
-  __SMACK_code("assume @ != 0bv32;", v);
-#else
-#endif
 }
 
+#ifdef BITVECTOR
+#define assert(EX) __SMACK_dummy(EX); __SMACK_code("assert @ != 0bv32;", EX)
+#define assume(EX) __SMACK_dummy(EX); __SMACK_code("assume @ != 0bv32;", EX)
+#else
 #define assert(EX) __SMACK_dummy(EX); __SMACK_code("assert @ != 0;", EX)
 #define assume(EX) __SMACK_dummy(EX); __SMACK_code("assume @ != 0;", EX)
+#endif
 
 int __SMACK_nondet() {
   static int XXX;
@@ -175,7 +175,7 @@ void __SMACK_decls() {
   D("function {:bvbuiltin \"bvsge\"} $sge.i8(p1:i8, p2:i8) returns (bool);");
   D("function {:bvbuiltin \"bvsgt\"} $sgt.i8(p1:i8, p2:i8) returns (bool);");
 
-  D("type i1 = bv1;")
+  D("type i1 = bv1;");
   D("function {:inline} $i2b(i: i1) returns (bool) {i != 0bv1}");
   D("function {:inline} $b2i(b: bool) returns (i1) {if b then 1bv1 else 0bv1}");
 #else
@@ -300,7 +300,7 @@ void __SMACK_decls() {
   D("function {:inline} $sle.i8(p1:i8, p2:i8) returns (bool) {p1 <= p2}");
   D("function {:inline} $sge.i8(p1:i8, p2:i8) returns (bool) {p1 >= p2}");
 
-  D("type i1 = int;")
+  D("type i1 = int;");
   D("function {:inline} $i2b(i: i1) returns (bool) {i != 0}");
   D("function {:inline} $b2i(b: bool) returns (i8) {if b then 1 else 0}");
 

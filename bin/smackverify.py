@@ -132,7 +132,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, maxViolations, debug, verif
       command += (" /loopUnroll:%(unroll)s" % locals())
 
   elif verifier == 'corral':
-    command = ("corral %(bplFileName)s /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /timeLimit:%(timeLimit)s /cex:%(maxViolations)s" % locals())
+    command = ("corral %(bplFileName)s /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /staticInlining /trackAllVars /timeLimit:%(timeLimit)s /cex:%(maxViolations)s" % locals())
     if unroll is not None:
       command += (" /recursionBound:%(unroll)s" % locals())
   else:
@@ -158,12 +158,8 @@ def verify(verifier, bplFileName, timeLimit, unroll, maxViolations, debug, verif
       return sourceTrace
     else:
       return output
-    
-    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
   else:
-    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
     if smackd:
       smackdOutput(output)
     else:
