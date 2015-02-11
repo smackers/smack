@@ -43,7 +43,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 //    if (!func->isVarArg())
       program.addDecls(rep.globalDecl(func));
 
-    ProcDecl* proc = rep.proc(func,0);
+    ProcDecl* proc = rep.proc(func);
     if (proc->getName() != "__SMACK_decls")
       program.addDecl(proc);
 

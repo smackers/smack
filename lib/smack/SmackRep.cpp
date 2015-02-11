@@ -636,16 +636,29 @@ string SmackRep::armwop2fn(unsigned opcode) {
   }
 }
 
-string indexedName(string name, int idx) {
+string SmackRep::indexedName(string name, vector<string> idxs) {
+  stringstream idxd;
+  idxd << name;
+  for (vector<string>::iterator i = idxs.begin(); i != idxs.end(); ++i)
+    idxd << "." << *i;
+  return idxd.str();
+}
+
+string SmackRep::indexedName(string name, int idx) {
   stringstream idxd;
   idxd << name << "#" << idx;
   return idxd.str();
 }
 
-ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
-  vector< pair<string,string> > args, rets;
+ProcDecl* SmackRep::proc(llvm::Function* f) {
+  return proc(f,NULL);
+}
 
-  int i = 0;
+ProcDecl* SmackRep::proc(llvm::Function* f, llvm::User* ci) {
+  vector<string> idxs;
+  vector< pair<string,string> > parameters, returns;
+
+  unsigned i = 0;
   for (llvm::Function::arg_iterator
        arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
     string name;
@@ -656,20 +669,25 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
       arg->setName(name);
     }
 
-    args.push_back(make_pair(name, type(arg->getType()) ));
+    parameters.push_back(make_pair(name, type(arg->getType()) ));
   }
 
-  for (; i < nargs; i++)
-    args.push_back(make_pair(indexedName("p",i), getPtrType()));
+  if (ci) {
+    for (; i < ci->getNumOperands()-1; i++) {
+      string t = type(ci->getOperand(i)->getType());
+      parameters.push_back(make_pair(indexedName("p",i), t));
+      idxs.push_back(t);
+    }
+  }
 
   if (!f->getReturnType()->isVoidTy())
-    rets.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
+    returns.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
 
   return (ProcDecl*) Decl::procedure(
     program,
-    f->isVarArg() ? indexedName(naming.get(*f),nargs) : naming.get(*f), 
-    args, 
-    rets
+    f->isVarArg() ? indexedName(naming.get(*f),idxs) : naming.get(*f),
+    parameters,
+    returns
   );
 }
 
@@ -708,7 +726,7 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
 
   } else if (f->isVarArg() || (f->isDeclaration() && !Naming::isSmackName(name))) {
 
-    Decl* p = proc(f,args.size());
+    Decl* p = proc(f,&ci);
     program.addDecl(p);
     return Stmt::call(p->getName(), args, rets);
 

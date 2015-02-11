@@ -94,6 +94,9 @@ private:
   const Expr* i2b(const llvm::Value* v);
   const Expr* b2i(const llvm::Value* v);
 
+  string indexedName(string name, int idx);
+  string indexedName(string name, vector<string> idxs);
+
 public:
   bool isMallocOrFree(const llvm::Function* f);
   bool isIgnore(const llvm::Function* f);
@@ -156,7 +159,8 @@ public:
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, llvm::User& u);
   string code(llvm::CallInst& ci);
-  ProcDecl* proc(llvm::Function* f, int n);
+  ProcDecl* proc(llvm::Function* f);
+  ProcDecl* proc(llvm::Function* f, llvm::User* ci);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
