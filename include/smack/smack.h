@@ -607,10 +607,6 @@ void __SMACK_decls() {
   D("var $exnv: int;");
   D("function $extractvalue(p: int, i: int) returns (int);");
 
-  D("var $exn: bool;");
-  D("var $exnv: int;");
-  D("function $extractvalue(p: int, i: int) returns (int);");
-
 #undef D
 }
 
