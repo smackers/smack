@@ -5,7 +5,6 @@
 #define SMACKREP_H
 
 #include "smack/Naming.h"
-
 #include "smack/BoogieAst.h"
 #include "smack/SmackOptions.h"
 #include "smack/DSAAliasAnalysis.h"

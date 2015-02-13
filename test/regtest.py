@@ -11,10 +11,6 @@ RegTest = namedtuple('RegTest', 'name boogie corral duality unroll')
 
 # list of regression tests with the expected outputs
 tests = [
-  RegTest('jain_1_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('jain_2_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('jain_4_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('jain_5_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 10),
   # RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   # RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
@@ -27,6 +23,8 @@ tests = [
   RegTest('simple_pre2_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple_pre3',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('simple_pre3_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('simple_pre4',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('simple_pre4_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
 #  RegTest('simple_double_free',    r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers',              r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers_fail',         r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
@@ -84,7 +82,7 @@ tests = [
   RegTest('array4',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
   RegTest('array4_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('array_free',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('array_free_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('array_free_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('array_free1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
   #RegTest('array_free1_fail',      r'0 verified, 4 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('array_free2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
@@ -102,13 +100,13 @@ tests = [
   RegTest('two_arrays6',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('two_arrays6_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('num_conversion_1_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('num_conversion_1_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('num_conversion_1_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('num_conversion_2_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('num_conversion_2_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('num_conversion_2_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('interleave_bits_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 33),
-  RegTest('interleave_bits_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 33),
+  RegTest('interleave_bits_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 33),
   RegTest('absolute',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('absolute_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('absolute_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('floats_in_memory',      r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2)
 ]
@@ -123,9 +121,9 @@ def runtests(verifier, bitVector, inferField):
   passed = failed = 0
   for test in tests:
     
-    #for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
+    for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
     #for mem in ['no-reuse']:
-    for mem in ['no-reuse-impls']:
+    #for mem in ['no-reuse-impls']:
     
       print "{0:>25} {1:>16}:".format(test.name, "(" + mem + ")"),
 

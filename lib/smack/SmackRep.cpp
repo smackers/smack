@@ -982,21 +982,27 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
       s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
         << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
     s << "}" << endl;
   } else {
     s << "procedure $memcpy." << dstReg << "." << srcReg;
     s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[$add.ref($sub.ref(src, dest), x)]);" 
-      << endl;
-    s << "ensures (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+        << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
+        << endl;
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+        << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
+    }
   }
 
   return s.str();
@@ -1024,11 +1030,11 @@ string SmackRep::memsetProc(int dstReg) {
       unsigned size = 8 << i;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "  assume (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
@@ -1036,12 +1042,22 @@ string SmackRep::memsetProc(int dstReg) {
   } else {
     s << "procedure $memset." << dstReg;
     s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:ref :: $ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len)) ==> "
-      << memReg(dstReg) << "[x] == val);"
-      << endl;
-    s << "ensures (forall x:ref :: !($ule.ref(dest, x) && $ult.ref(x, $add.ref(dest, len))) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+
+    string val = "val";
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+        << memPath(dstReg, size) << "[x] == "
+        << val
+        << ");" << endl;
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+        << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
+      val = val + "++" + val;
+    }
   }
 
   return s.str();
