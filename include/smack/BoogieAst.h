@@ -73,7 +73,7 @@ public:
 
 class LitExpr : public Expr {
 public:
-  enum Literal { True, False, Num, Bv8, Bv32, Bv64 };
+  enum Literal { True, False, Num, Bv8, Bv16, Bv32, Bv64 };
 private:
   const Literal lit;
   int val;

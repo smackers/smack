@@ -27,6 +27,8 @@ using namespace std;
   
 class SmackRep {
 public:
+  static const string NEG;
+
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
   static const string NULL_VAL;
@@ -48,9 +50,6 @@ public:
   
   static const string STATIC_INIT;
 
-  // TODO Make this width a parameter to generate bitvector-based code.
-  static const int width;
-
 protected:
   DSAAliasAnalysis* aliasAnalysis;
   Naming& naming;
@@ -67,8 +66,9 @@ protected:
 
   vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
+  unsigned ptrSizeInBits;
+
   int globalsBottom;
-  
   vector<const Stmt*> staticInits;
   
   unsigned uniqueFpNum;
@@ -78,20 +78,23 @@ public:
     : aliasAnalysis(aa), naming(N), program(P),
       targetData(aa->getDataLayout()), globalsBottom(0) {
     uniqueFpNum = 0;
+    ptrSizeInBits = targetData->getPointerSizeInBits();
   }
   DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
   Program& getProgram() { return program; }
 
 private:
-  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
+  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
-  const Expr* pa(const Expr* base, int index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
+  const Expr* pa(const Expr* base, int index, int size, int i_size = 0, int t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, int size, int i_size = 0, int t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size, int i_size = 0, int t_size = 0);
   
-  const Expr* b2p(const llvm::Value* v);
   const Expr* i2b(const llvm::Value* v);
   const Expr* b2i(const llvm::Value* v);
+
+  string indexedName(string name, int idx);
+  string indexedName(string name, vector<string> idxs);
 
 public:
   bool isMallocOrFree(const llvm::Function* f);
@@ -102,24 +105,33 @@ public:
   bool isBool(const llvm::Value* v);
   bool isFloat(const llvm::Type* t);
   bool isFloat(const llvm::Value* v);
+  unsigned getElementSize(const llvm::Value* v);
+  unsigned getIntSize(const llvm::Value* v);
+  unsigned getIntSize(const llvm::Type* t);
+  unsigned getSize(llvm::Type* t);
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
-  string memType(unsigned r);
+  string memType(unsigned region, unsigned size);
+  string memPath(unsigned region, unsigned size);
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
+  string bits_type(unsigned width);
+  string int_type(unsigned width);
   virtual string type(const llvm::Type* t);
   virtual string type(const llvm::Value* v);
   
   const Expr* mem(const llvm::Value* v);
-  const Expr* mem(unsigned region, const Expr* addr);  
+  const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
 
   const Expr* lit(const llvm::Value* v);
-  const Expr* lit(unsigned v);
+  const Expr* lit(int v, unsigned size = 0);
+  const Expr* lit(const llvm::Value* v, unsigned flag);
+
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
@@ -133,6 +145,7 @@ public:
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
+  string opName(const string& operation, initializer_list<unsigned> operands);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);
@@ -145,11 +158,20 @@ public:
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, llvm::User& u);
   string code(llvm::CallInst& ci);
-  ProcDecl* proc(llvm::Function* f, int n);
+  ProcDecl* proc(llvm::Function* f);
+  ProcDecl* proc(llvm::Function* f, llvm::User* ci);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
   virtual const Stmt* memset(const llvm::MemSetInst& msi);
+  virtual const Stmt* load(const llvm::Value* addr, const llvm::Value* val);
+  virtual const Stmt* store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si = NULL);
+  virtual const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
+  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
+  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isTypeSafe(const llvm::GlobalValue* V);
+  bool isCollapsed(const llvm::Value* v);
   
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual void addBplGlobal(string name);

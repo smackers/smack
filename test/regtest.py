@@ -11,8 +11,8 @@ RegTest = namedtuple('RegTest', 'name boogie corral duality unroll')
 
 # list of regression tests with the expected outputs
 tests = [
-  RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  # RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  # RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('simple_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple_pre',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
@@ -23,6 +23,8 @@ tests = [
   RegTest('simple_pre2_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('simple_pre3',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('simple_pre3_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('simple_pre4',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('simple_pre4_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
 #  RegTest('simple_double_free',    r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers',              r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers_fail',         r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
@@ -32,6 +34,10 @@ tests = [
   RegTest('pointers2_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('pointers3',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('pointers3_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('pointers4',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('pointers4_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('pointers7',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('pointers7_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('globals',               r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('globals_fail',          r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('loop',                  r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
@@ -75,11 +81,11 @@ tests = [
   RegTest('array3_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('array4',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
   RegTest('array4_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-#  RegTest('array_free',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-#  RegTest('array_free_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-#  RegTest('array_free1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-#  RegTest('array_free1_fail',      r'0 verified, 4 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-#  RegTest('array_free2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  RegTest('array_free',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  RegTest('array_free_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('array_free1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  #RegTest('array_free1_fail',      r'0 verified, 4 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('array_free2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
 #  RegTest('array_free2_fail',      r'0 verified, 5 errors?', r'This assertion can fail', r'This assertion can fail', 11),
   RegTest('lock',                  r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('lock_fail',             r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
@@ -93,9 +99,16 @@ tests = [
   RegTest('two_arrays5',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('two_arrays6',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
   RegTest('two_arrays6_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
+  RegTest('num_conversion_1_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  RegTest('num_conversion_1_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('num_conversion_2_true',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
+  RegTest('num_conversion_2_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
+  RegTest('interleave_bits_true',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 33),
+  RegTest('interleave_bits_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 33),
+  RegTest('absolute',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
+  RegTest('absolute_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
   RegTest('floats_in_memory',      r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('gcd',                   r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2)
+  RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2)
 ]
 
 def red(text):
@@ -104,11 +117,13 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests(verifier):
+def runtests(verifier, bitVector, inferField):
   passed = failed = 0
   for test in tests:
     
     for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
+    #for mem in ['no-reuse']:
+    #for mem in ['no-reuse-impls']:
     
       print "{0:>25} {1:>16}:".format(test.name, "(" + mem + ")"),
 
@@ -121,9 +136,11 @@ def runtests(verifier):
 
       # invoke SMACK
       t0 = time.time()
-      p = subprocess.Popen(['smackverify.py', sourceFile, '--verifier=' + verifier,
-                            '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl'],
-                            stdout=subprocess.PIPE)
+      cmd = ['smackverify.py', sourceFile, '--verifier=' + verifier,
+                            '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl']
+      if bitVector: cmd.append('--bit-vector')
+      if inferField: cmd.append('--infer-field-overlap')
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
       
       smackOutput = p.communicate()[0]
       elapsed = time.time() - t0
@@ -144,11 +161,15 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Runs regressions in this folder.')
   parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default=['corral'], nargs='*',
                       help='choose verifiers to be used')
+  parser.add_argument('--bit-vector', dest='bitvector', action="store_true", default=False, 
+                      help='enable a bit-vector implementation of SMACK')
+  parser.add_argument('--infer-field-overlap', dest='inferfieldoverlap', action="store_true", default=False, 
+                      help='optimize bit-vector with DSA')
   args = parser.parse_args()
 
   for verifier in args.verifier:
     print '\nRunning regressions using', verifier
-    passed, failed = runtests(verifier)
+    passed, failed = runtests(verifier, args.bitvector, args.inferfieldoverlap)
   
     print '\nPASSED count: ', passed
     print 'FAILED count: ', failed

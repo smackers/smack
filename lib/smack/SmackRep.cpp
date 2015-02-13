@@ -5,20 +5,19 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 
-#include <iostream>
-
 namespace smack {
 
 const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 const string SmackRep::NULL_VAL = "$NULL";
 
+const string SmackRep::NEG = "$neg";
+
 const string SmackRep::ALLOCA = "$alloca";
 const string SmackRep::MALLOC = "$malloc";
 const string SmackRep::FREE = "$free";
 const string SmackRep::MEMCPY = "$memcpy";
 
-const string SmackRep::B2P = "$b2p";
 const string SmackRep::I2B = "$i2b";
 const string SmackRep::B2I = "$b2i";
 
@@ -30,8 +29,6 @@ const string SmackRep::MEM_OP_VAL = "$MOP";
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 
 const string SmackRep::STATIC_INIT = "$static_init";
-
-const int SmackRep::width = 0;
 
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
@@ -55,6 +52,25 @@ bool SmackRep::isInt(const llvm::Value* v) {
   return isInt(v->getType());
 }
 
+unsigned SmackRep::getElementSize(const llvm::Value* v) {
+  return getSize(v->getType()->getPointerElementType());
+} 
+
+unsigned SmackRep::getIntSize(const llvm::Value* v) {
+  return getSize(v->getType());
+}
+
+unsigned SmackRep::getIntSize(const llvm::Type* t) {
+  return t->getIntegerBitWidth();
+}
+
+unsigned SmackRep::getSize(llvm::Type* t) {
+  unsigned size = 0;
+  if (t->isSingleValueType())
+    size = targetData->getTypeSizeInBits(t);
+  return size;
+} 
+
 bool SmackRep::isBool(const llvm::Type* t) {
   return t->isIntegerTy(1);
 }
@@ -71,13 +87,31 @@ bool SmackRep::isFloat(const llvm::Value* v) {
   return isFloat(v->getType());
 }
 
+string SmackRep::bits_type(unsigned width) {
+  stringstream s;
+  if (SmackOptions::BitVectors)
+    s << "bv" << width;
+  else
+    s << "int";
+  return s.str();
+}
+
+string SmackRep::int_type(unsigned width) {
+  stringstream s;
+  s << "i" << width;
+  return s.str();
+}
+
 string SmackRep::type(const llvm::Type* t) {
   if (isBool(t))
     return BOOL_TYPE;
   else if (isFloat(t))
     return FLOAT_TYPE;
+  else if (isInt(t))
+    return int_type(getIntSize(t));
   else
     return getPtrType();
+  //assert(0 && "unsupported type");
 }
 
 string SmackRep::type(const llvm::Value* v) {
@@ -98,35 +132,36 @@ string SmackRep::memReg(unsigned idx) {
   return s.str();
 }
 
-string SmackRep::memType(unsigned r) {
-  if (memoryRegions[r].isSingletonGlobal)
-    return getPtrType();
-  else {
-    return "[int] int";
-    stringstream s;
-    s << "[" << getPtrType() << "] " + getPtrType();
-    return s.str();
-  }
+string SmackRep::memType(unsigned region, unsigned size) {
+  stringstream s;
+  if (!memoryRegions[region].isSingletonGlobal || (SmackOptions::BitVectors && !SmackOptions::InferFieldOverlap))
+    s << "[" << getPtrType() << "] ";
+  s << bits_type(size);
+  return s.str();
+}
+
+string SmackRep::memPath(unsigned region, unsigned size) {
+  if (SmackOptions::BitVectors)
+    return (memReg(region) + "." + int_type(size));
+  else
+    return memReg(region);
 }
 
 const Expr* SmackRep::mem(const llvm::Value* v) {
   unsigned r = getRegion(v);
-  if (memoryRegions[r].isSingletonGlobal)
-    return Expr::id(memReg(r));
-  else
-    return Expr::sel(Expr::id(memReg(r)),expr(v));
+  return mem(r, expr(v), getElementSize(v));
 }
 
-const Expr* SmackRep::mem(unsigned region, const Expr* addr) {
+const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
   if (memoryRegions[region].isSingletonGlobal)
-    return Expr::id(memReg(region));
+    return Expr::id(memPath(region, size));
   else
-    return Expr::sel(Expr::id(memReg(region)),addr);
+    return Expr::sel(Expr::id(memPath(region, size)),addr);
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
   unsigned r;
-  
+
   for (r=0; r<memoryRegions.size(); ++r)
     if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
       break;
@@ -153,9 +188,8 @@ void SmackRep::collectRegions(llvm::Module &M) {
 }
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {  
-  const Expr* size = 
-    Expr::fn("$mul",lit(storageSize(i.getAllocatedType())),lit(i.getArraySize()));
-                       
+  const Expr* size = Expr::fn("$mul.ref", lit(storageSize(i.getAllocatedType()), ptrSizeInBits), SmackOptions::BitVectors? Expr::fn("$zext.i32.ref", lit(i.getArraySize())) : lit(i.getArraySize()));
+
   return Stmt::call(ALLOCA,size,naming.get(i));
 }
 
@@ -168,7 +202,11 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   stringstream name;
   name << "$memcpy." << dstRegion << "." << srcRegion;
   vector<const Expr*> args;
-  for (unsigned i = 0; i < mci.getNumOperands() - 1; i++)
+  args.push_back(expr(mci.getOperand(0)));
+  args.push_back(expr(mci.getOperand(1)));
+  const llvm::Value* cpySize = mci.getOperand(2);
+  args.push_back((getIntSize(cpySize) == 32)? Expr::fn("$zext.i32.ref", expr(cpySize)): expr(cpySize));
+  for (unsigned i = 3; i < mci.getNumOperands() - 1; i++)
     args.push_back(expr(mci.getOperand(i)));
   return Stmt::call(name.str(),args);
 }
@@ -181,23 +219,92 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   stringstream name;
   vector<const Expr*> args;
   name << "$memset." << region;
-  for (unsigned i = 0; i < msi.getNumOperands() - 1; i++)
+  args.push_back(expr(msi.getOperand(0)));
+  args.push_back(expr(msi.getOperand(1)));
+  const llvm::Value* setSize = msi.getOperand(2);
+  args.push_back((getIntSize(setSize) == 32)? Expr::fn("$zext.i32.ref", expr(setSize)): expr(setSize));
+  for (unsigned i = 3; i < msi.getNumOperands() - 1; i++)
     args.push_back(expr(msi.getOperand(i)));
   return Stmt::call(name.str(),args);
 }
 
-const Expr* SmackRep::pa(const Expr* base, int index, int size) {
-  return pa(base, Expr::lit(index), Expr::lit(size));
+const Stmt* SmackRep::load(const llvm::Value* addr, const llvm::Value* val) {
+// The tricky part is that we could expr(li) is actually expr(val) so that it is possible to pass li to val. 
+  const Expr* rhs;
+
+  if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, llvm::cast<const llvm::Instruction>(val))))
+    rhs = mem(addr);
+  else {
+    stringstream name;
+    name << "$load." << int_type(getElementSize(addr));
+    rhs = Expr::fn(name.str(), Expr::id(memPath(getRegion(addr), 8)), expr(addr));
+  }
+
+  if (isFloat(val))
+    rhs = Expr::fn(opName("$si2fp", {getElementSize(addr)}), rhs);
+  
+  return Stmt::assign(expr(val), rhs);
 }
-const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size) {
-  return pa(base, index, Expr::lit(size));
+
+const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si) {
+// Having a default value of si (NULL) is unsound.
+  const Expr* rhs = expr(val);
+
+  if (isFloat(val))
+    rhs = Expr::fn(opName("$fp2si", {getElementSize(addr)}), rhs);
+
+  if (!SmackOptions::BitVectors || (SmackOptions::InferFieldOverlap && isFieldDisjoint(addr, si)))
+    return Stmt::assign(mem(addr),rhs);
+  else
+    return storeAsBytes(getRegion(addr), getElementSize(addr), expr(addr), rhs);
 }
-const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size) {
-  return Expr::fn("$pa", base, index, size);
+
+const Stmt* SmackRep::storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e)
+{
+  stringstream name;
+  name << "$store." << int_type(size);
+  return Stmt::assign(Expr::id(memPath(region, 8)), Expr::fn(name.str(), Expr::id(memPath(region, 8)), p, e));
+
 }
-const Expr* SmackRep::b2p(const llvm::Value* v) {
-  return Expr::fn(B2P, expr(v));
+
+bool SmackRep::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) 
+{
+  return aliasAnalysis->isFieldDisjoint(ptr, inst); 
 }
+
+bool SmackRep::isFieldDisjoint(const llvm::GlobalValue *V, unsigned offset) 
+{
+  return aliasAnalysis->isFieldDisjoint(V, offset); 
+}
+
+bool SmackRep::isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst) 
+{
+  return aliasAnalysis->isTypeSafe(ptr, inst); 
+}
+
+bool SmackRep::isTypeSafe(const llvm::GlobalValue *V) 
+{
+  return aliasAnalysis->isTypeSafe(V); 
+}
+
+const Expr* SmackRep::pa(const Expr* base, int index, int size, int i_size, int t_size) {
+  return pa(base, lit(index, i_size), lit(size, t_size), i_size, t_size);
+}
+const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size, int i_size, int t_size) {
+  return pa(base, index, lit(size, t_size), i_size, t_size);
+}
+const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size, int i_size, int t_size) {
+  if (i_size == 32) 
+    // The index of struct type is 32 bit
+    return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", index, size)));
+  else if (i_size == 64)
+    return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", index, Expr::fn("$zext.i32.ref", size)));
+  else {
+    DEBUG(errs() << "index size : " << i_size << "\n");
+    assert(0 && "Unhandled index type");
+  }
+}
+
 const Expr* SmackRep::i2b(const llvm::Value* v) {
   return Expr::fn(I2B, expr(v));
 }
@@ -207,16 +314,16 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
   using namespace llvm;
-
+  unsigned wd = 0;
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
-    if (ci->getBitWidth() == 1)
+    wd = ci->getBitWidth();
+    if (wd == 1)
       return Expr::lit(!ci->isZero());
-
     uint64_t val = ci->getSExtValue();
-    if (width > 0 && ci->isNegative())
-      return Expr::fn("$sub", Expr::lit(0, width), Expr::lit(-val, width));
+    if (wd > 0 && ci->isNegative())
+      return Expr::fn(opName("$sub", {wd}), lit(0, wd), lit(-val, wd));
     else
-      return Expr::lit(val, width);
+      return lit(val, wd);
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();
@@ -239,20 +346,21 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       Expr::lit(exponentPart));
 
   } else if (llvm::isa<llvm::ConstantPointerNull>(v))
-    return Expr::lit(0, width);
+    return Expr::id("$NULL");
 
   else
     return expr(v);
   // assert( false && "value type not supported" );
 }
 
-const Expr* SmackRep::lit(unsigned v) {
-  // TODO why doesn't this one do the thing with negative as well?
-  return Expr::lit(v, width);
+const Expr* SmackRep::lit(int v, unsigned size) {
+  if (SmackOptions::BitVectors)
+    return (v >= 0 ? Expr::lit(v, size) : Expr::fn(opName(NEG, {size}), Expr::lit(-v, size)));
+  else
+    return Expr::lit(v);
 }
 
-const Expr* SmackRep::ptrArith(
-  const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
+const Expr* SmackRep::ptrArith(const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
 
   assert(ps.size() > 0 && ps.size() == ts.size());
 
@@ -262,8 +370,8 @@ const Expr* SmackRep::ptrArith(
     if (llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(ts[i])) {
 
       assert(ps[i]->getType()->isIntegerTy()
-             && ps[i]->getType()->getPrimitiveSizeInBits() == 32
-             && "Illegal struct idx");
+        && ps[i]->getType()->getPrimitiveSizeInBits() == 32
+        && "Illegal struct idx");
 
       // Get structure layout information...
       unsigned fieldNo =
@@ -271,12 +379,12 @@ const Expr* SmackRep::ptrArith(
 
       // Add in the offset, as calculated by the
       // structure layout info...
-      e = pa(e, fieldOffset(st, fieldNo), 1);
+      e = pa(e, fieldOffset(st, fieldNo), 1, 32, 32);
 
     } else {
       llvm::Type* et =
         llvm::cast<llvm::SequentialType>(ts[i])->getElementType();
-      e = pa(e, lit(ps[i]), storageSize(et));
+      e = pa(e, lit(ps[i]), storageSize(et), getIntSize(ps[i]), 32);
     }
   }
 
@@ -319,7 +427,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return bop(CE);
 
       else if (CE->isCompare())
-          return cmp(CE);
+        return cmp(CE);
 
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -331,12 +439,12 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return Expr::lit(!ci->isZero());
 
       else return lit(ci);
-      
+
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
 
     } else if (constant->isNullValue())
-      return lit((unsigned)0);
+      return lit((unsigned)0, ptrSizeInBits);
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -354,7 +462,7 @@ string SmackRep::getString(const llvm::Value* v) {
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
       if (const llvm::GlobalValue* cc = llvm::dyn_cast<const llvm::GlobalValue>(constantExpr->getOperand(0)))
         if (const llvm::ConstantDataSequential* cds = llvm::dyn_cast<const llvm::ConstantDataSequential>(cc->getOperand(0)))
-            return cds ->getAsCString();
+          return cds ->getAsCString();
   return "";
 }
 
@@ -366,26 +474,38 @@ const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
   return cast(CE->getOpcode(), CE->getOperand(0), CE->getType());
 }
 
+string SmackRep::opName(const string& operation, initializer_list<unsigned> operands) {
+  stringstream s;
+  s << operation;
+  for (initializer_list<unsigned>::const_iterator i = operands.begin(), e = operands.end(); i != e; ++i)
+    s << "." << int_type(*i);
+  return s.str();
+}
+
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
   using namespace llvm;
   switch (opcode) {
-  case Instruction::Trunc:
-    assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
-    return isBool(t)
-      ? Expr::fn("$i2b",expr(v))
-      : Expr::fn("$trunc",expr(v),lit(t->getPrimitiveSizeInBits()));
+    case Instruction::Trunc: {
+      assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
+      const Expr* arg = Expr::fn(opName("$trunc", {getIntSize(v), getIntSize(t)}), expr(v)); 
+      return (isBool(t)? Expr::fn("$i2b", arg) : arg);
+    }
+         
+    case Instruction::ZExt:
+      return Expr::fn(opName("$zext", {getIntSize(v), getIntSize(t)}),
+                      (isBool(v->getType()))? Expr::fn("$b2i", expr(v)) : expr(v));
 
-  case Instruction::ZExt:
-  case Instruction::SExt:
-    return isBool(v->getType()) ? b2p(v) : expr(v);
+    case Instruction::SExt:
+      return Expr::fn(opName("$sext", {getIntSize(v), getIntSize(t)}),
+                      (isBool(v->getType()))? Expr::fn("$b2i", expr(v)) : expr(v));
 
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::BitCast:
-    return expr(v);
+    case Instruction::FPTrunc:
+    case Instruction::FPExt:
+    case Instruction::BitCast:
+      return expr(v);
 
-  default:
-    return Expr::fn(cast2fn(opcode), expr(v));
+    default:
+      return Expr::fn(opName(cast2fn(opcode), {isInt(t)? getIntSize(t) : getIntSize(v)}), expr(v));
   }
 }
 
@@ -398,10 +518,10 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 }
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
-  const Expr* e = Expr::fn(bop2fn(opcode),
+  const Expr* e = Expr::fn(isFloat(t)? bop2fn(opcode): 
+                           opName(bop2fn(opcode), {getIntSize(t)}),
                            (isBool(lhs) ? b2i(lhs) : expr(lhs)),
                            (isBool(rhs) ? b2i(rhs) : expr(rhs)));
-
   return isBool(t) ? Expr::fn("$i2b",e) : e;
 }
 
@@ -422,7 +542,7 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   case CmpInst::ICMP_NE:
     return Expr::neq(expr(lhs), expr(rhs));
   default:
-    return Expr::fn(pred2fn(predicate), expr(lhs), expr(rhs));
+    return Expr::fn(isFloat(lhs)? pred2fn(predicate) : opName(pred2fn(predicate), {getIntSize(lhs)}), expr(lhs), expr(rhs));
   }
 }
 
@@ -516,16 +636,29 @@ string SmackRep::armwop2fn(unsigned opcode) {
   }
 }
 
-string indexedName(string name, int idx) {
+string SmackRep::indexedName(string name, vector<string> idxs) {
+  stringstream idxd;
+  idxd << name;
+  for (vector<string>::iterator i = idxs.begin(); i != idxs.end(); ++i)
+    idxd << "." << *i;
+  return idxd.str();
+}
+
+string SmackRep::indexedName(string name, int idx) {
   stringstream idxd;
   idxd << name << "#" << idx;
   return idxd.str();
 }
 
-ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
-  vector< pair<string,string> > args, rets;
+ProcDecl* SmackRep::proc(llvm::Function* f) {
+  return proc(f,NULL);
+}
 
-  int i = 0;
+ProcDecl* SmackRep::proc(llvm::Function* f, llvm::User* ci) {
+  vector<string> idxs;
+  vector< pair<string,string> > parameters, returns;
+
+  unsigned i = 0;
   for (llvm::Function::arg_iterator
        arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
     string name;
@@ -535,33 +668,38 @@ ProcDecl* SmackRep::proc(llvm::Function* f, int nargs) {
       name = indexedName("p",i);
       arg->setName(name);
     }
-    
-    args.push_back(make_pair(name, type(arg->getType()) ));
+
+    parameters.push_back(make_pair(name, type(arg->getType()) ));
   }
-  
-  for (; i < nargs; i++)
-    args.push_back(make_pair(indexedName("p",i), getPtrType()));
+
+  if (ci) {
+    for (; i < ci->getNumOperands()-1; i++) {
+      string t = type(ci->getOperand(i)->getType());
+      parameters.push_back(make_pair(indexedName("p",i), t));
+      idxs.push_back(t);
+    }
+  }
 
   if (!f->getReturnType()->isVoidTy())
-    rets.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
+    returns.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
 
   return (ProcDecl*) Decl::procedure(
     program,
-    f->isVarArg() ? indexedName(naming.get(*f),nargs) : naming.get(*f), 
-    args, 
-    rets
+    f->isVarArg() ? indexedName(naming.get(*f),idxs) : naming.get(*f),
+    parameters,
+    returns
   );
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn("$fp2si",expr(v)) : expr(v);
+  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn(opName("$fp2si", {getSize(v->getType())}),expr(v)) : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
   using namespace llvm;
 
   assert(f && "Call encountered unresolved function.");
-  
+
   string name = naming.get(*f);
   vector<const Expr*> args;
   vector<string> rets;
@@ -571,10 +709,10 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
     num_arg_operands -= 1;
   else if (isa<InvokeInst>(ci))
     num_arg_operands -= 3;
-  
+
   for (unsigned i = 0; i < num_arg_operands; i++)
     args.push_back(arg(f, i, ci.getOperand(i)));
-  
+
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming.get(ci));
 
@@ -587,30 +725,30 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
     return Stmt::call(FREE, args[0]);
 
   } else if (f->isVarArg() || (f->isDeclaration() && !Naming::isSmackName(name))) {
-    
-    Decl* p = proc(f,args.size());
+
+    Decl* p = proc(f,&ci);
     program.addDecl(p);
     return Stmt::call(p->getName(), args, rets);
-    
+
   } else {
     return Stmt::call(name, args, rets);
   }
 }
 
 string SmackRep::code(llvm::CallInst& ci) {
-  
+
   llvm::Function* f = ci.getCalledFunction();
   assert(f && "Inline code embedded in unresolved function.");
-  
+
   string fmt = getString(ci.getOperand(0));
   assert(!fmt.empty() && "__SMACK_code: missing format string.");
-  
+
   string s = fmt;
   for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
     const Expr* a = arg(f, i, ci.getOperand(i));
     string::size_type idx = s.find('@');
     assert(idx != string::npos && "__SMACK_code: too many arguments.");
-    
+
     ostringstream ss;
     a->print(ss);
     s = s.replace(idx,1,ss.str());
@@ -623,10 +761,50 @@ string SmackRep::getPrelude() {
   s << endl;
   s << "// Memory region declarations";
   s << ": " << memoryRegions.size() << endl;
-  for (unsigned i=0; i<memoryRegions.size(); ++i)
-    s << "var " << memReg(i) << ": " << memType(i) << ";" << endl;
+  for (unsigned i=0; i<memoryRegions.size(); ++i) {
+    for (unsigned j = 0; j < (SmackOptions::InferFieldOverlap? 4 : 1); j++) {
+      unsigned size = 8 << j;
+      s << "var " << memPath(i, size) 
+        << ": " << memType(i, size) 
+        << ";" << endl;
+    }
+  }
   s << endl;
-  s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
+  s << "// Type declarations" << endl;
+  for (unsigned i = 8; i <= 64; i <<= 1) {
+    s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
+  }
+
+  s << "type ref = " << bits_type(ptrSizeInBits) << ";" << endl; 
+  s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl; 
+  for (int i = 1; i < 8; ++i) {
+    s << "axiom $REF_CONST_" << i << " == ";
+    lit(i, ptrSizeInBits)->print(s);
+    s << ";" << endl;
+  }
+  s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((ptrSizeInBits == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
+
+  for (unsigned i = 8; i <= 64; i <<= 1) {
+    if (i < ptrSizeInBits) {
+      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {" << opName("$trunc", {ptrSizeInBits, i}) << "(p)}" << endl;
+      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {" << opName("$zext", {i, ptrSizeInBits}) << "(p)}" << endl;
+    } else if (i > ptrSizeInBits) {
+      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {" << opName("$zext", {ptrSizeInBits, i}) << "(p)}" << endl;
+      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {" << opName("$trunc", {i, ptrSizeInBits}) << "(p)}" << endl;
+    } else {
+      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {p}" << endl;
+      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {p}" << endl;
+    }
+  }
+
+  s << "axiom $NULL == ";
+  lit(0, ptrSizeInBits)->print(s); 
+  s << ";" << endl; 
+  s << endl;
+
+  s << "axiom $GLOBALS_BOTTOM == ";
+  lit(globalsBottom, ptrSizeInBits)->print(s);
+  s << ";" << endl;
 
   return s.str();
 }
@@ -639,8 +817,15 @@ vector<string> SmackRep::getModifies() {
   vector<string> mods;
   for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
     mods.push_back(*i);
-  for (unsigned i=0; i<memoryRegions.size(); ++i)
-    mods.push_back(memReg(i));
+  for (unsigned i=0; i<memoryRegions.size(); ++i) {
+    if (SmackOptions::BitVectors) {
+      for (unsigned j=0; j<(SmackOptions::InferFieldOverlap?4:1); ++j) {
+        unsigned size = 8 << j;
+        mods.push_back(memPath(i, size));
+      }
+    } else
+      mods.push_back(memReg(i));
+  }
   return mods;
 }
 
@@ -653,32 +838,45 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
 }
 
 void SmackRep::addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val) {
-  addInit(region, expr(addr), val);
+  if (const llvm::GlobalValue* V = dyn_cast<const GlobalValue>(addr)) { 
+    if (SmackOptions::InferFieldOverlap)
+      addInit(region, expr(addr), val, V, isFieldDisjoint(V, 0));
+    else
+      addInit(region, expr(addr), val, V, false);
+  }
+  else
+    assert(0 && "addInit() should initialize global values?");
 }
 
-void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val) {
+void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety) {
   using namespace llvm;
 
   if (isInt(val)) {
-    staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
+    staticInits.push_back( SmackOptions::BitVectors? (safety? Stmt::assign(mem(region, addr, getIntSize(val)), expr(val)) : storeAsBytes(region, getIntSize(val), addr, expr(val))) : Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (isFloat(val)) {
-    staticInits.push_back( Stmt::assign(mem(region,addr), Expr::fn("$fp2si",expr(val))) );
+    staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) : Stmt::assign(mem(region,addr), Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) );
 
   } else if (isa<PointerType>(val->getType())) {
-    staticInits.push_back( Stmt::assign(mem(region,addr), expr(val)) );
+    // TODO
+    staticInits.push_back( SmackOptions::BitVectors? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) : Stmt::assign(mem(region,addr), expr(val)) );
 
   } else if (ArrayType* at = dyn_cast<ArrayType>(val->getType())) {
-
     for (unsigned i = 0; i < at->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
-      addInit( region, pa(addr,i,storageSize(at->getElementType())), elem );
+      if (SmackOptions::InferFieldOverlap)
+        addInit( region, pa(addr,i,storageSize(at->getElementType()), 32, 32), elem, V, isFieldDisjoint(V, i*storageSize(at->getElementType())));
+      else
+        addInit( region, pa(addr,i,storageSize(at->getElementType()), 32, 32), elem, V, false);  
     }
 
   } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
       const Constant* elem = val->getAggregateElement(i);
-      addInit( region, pa(addr,fieldOffset(st,i),1), elem );
+      if (SmackOptions::InferFieldOverlap)
+        addInit( region, pa(addr,fieldOffset(st,i),1, 32, 32), elem, V, isFieldDisjoint(V, fieldOffset(st, i)));
+      else
+        addInit( region, pa(addr,fieldOffset(st,i),1, 32, 32), elem, V, false);
     }
 
   } else if (val->getType()->isX86_FP80Ty()) {
@@ -696,6 +894,8 @@ bool SmackRep::hasStaticInits() {
 Decl* SmackRep::getStaticInit() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
   Block* b = new Block();
+
+  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit(1024, ptrSizeInBits)) );
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);
   b->addStmt(Stmt::return_());
@@ -735,9 +935,8 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
 
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
         if (numElems > 1)
-          ax.push_back(Attr::attr("count",numElems));
-
-        decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))));
+        ax.push_back(Attr::attr("count",numElems));
+        decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom, ptrSizeInBits))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
         addInit(getRegion(g), g, init);
 
         // Expr::fn("$slt",
@@ -758,7 +957,7 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
 }
 
 string SmackRep::getPtrType() {
-  return "int";
+  return "ref";
 }
 
 string SmackRep::memcpyProc(int dstReg, int srcReg) {
@@ -766,28 +965,44 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
 
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool)" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool)" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+
     s << "{" << endl;
-    s << "  var $oldSrc: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-    s << "  $oldSrc := " << memReg(srcReg) << ";" << endl;
-    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-    s << "  havoc " << memReg(dstReg) << ";" << endl;
-    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == $oldSrc[src - dest + x]);" << endl;
-    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  var $oldSrc" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+      s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+    }
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
+      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
+      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+        << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+        << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
+    }
     s << "}" << endl;
   } else {
     s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: int, src: int, len: int, align: int, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(srcReg) << ")[src - dest + x]);" 
-      << endl;
-    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool);" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+        << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
+        << endl;
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+        << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
+    }
   }
 
   return s.str();
@@ -798,26 +1013,51 @@ string SmackRep::memsetProc(int dstReg) {
 
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $memset." << dstReg;
-    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool)" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
+    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool)" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+
     s << "{" << endl;
-    s << "  var $oldDst: [" << getPtrType() << "] " << getPtrType() << ";" << endl;
-    s << "  $oldDst := " << memReg(dstReg) << ";" << endl;
-    s << "  havoc " << memReg(dstReg) << ";" << endl;
-    s << "  assume (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == val);" << endl;
-    s << "  assume (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+    }
+
+    string val = "val";
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
+      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+        << memPath(dstReg, size) << "[x] == "
+        << val
+        << ");" << endl;
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+        << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
+      val = val + "++" + val;
+    }
     s << "}" << endl;
   } else {
     s << "procedure $memset." << dstReg;
-    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == val);"
-      << endl;
-    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool);" << endl;
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "modifies " << memPath(dstReg, size) << ";" << endl;
+    }
+
+    string val = "val";
+    for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
+      unsigned size = 8 << i;
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+        << memPath(dstReg, size) << "[x] == "
+        << val
+        << ");" << endl;
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+        << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
+      val = val + "++" + val;
+    }
   }
 
   return s.str();
