@@ -101,8 +101,6 @@ public:
   bool isIgnore(const llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
-  bool isBool(const llvm::Type* t);
-  bool isBool(const llvm::Value* v);
   bool isFloat(const llvm::Type* t);
   bool isFloat(const llvm::Value* v);
   unsigned getElementSize(const llvm::Value* v);
