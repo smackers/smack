@@ -904,11 +904,33 @@ Decl* SmackRep::getStaticInit() {
 }
 Regex STRING_CONSTANT("^\\.str[0-9]*$");
 
+bool isCodeString(const llvm::Value* V) {
+  for (llvm::Value::const_user_iterator U1 = V->user_begin(); U1 != V->user_end(); ++U1) {
+    if (const Constant* C = dyn_cast<const Constant>(*U1)) {
+      for (llvm::Value::const_user_iterator U2 = C->user_begin(); U2 != C->user_end(); ++U2) {
+        if (const CallInst* CI = dyn_cast<const CallInst>(*U2)) {
+          llvm::Function* F = CI->getCalledFunction();
+          string name = F && F->hasName() ? F->getName().str() : "";
+          if (name.find("__SMACK_code") != string::npos ||
+              name.find("__SMACK_top_decl") != string::npos ||
+              name.find("__SMACK_decl") != string::npos) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
   using namespace llvm;
   vector<Decl*> decls;
   vector<const Attr*> ax;
   string name = naming.get(*v);
+
+  if (isCodeString(v))
+    return decls;
 
   if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
     if (g->hasInitializer()) {
