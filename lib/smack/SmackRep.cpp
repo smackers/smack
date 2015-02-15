@@ -71,14 +71,6 @@ unsigned SmackRep::getSize(llvm::Type* t) {
   return size;
 } 
 
-bool SmackRep::isBool(const llvm::Type* t) {
-  return t->isIntegerTy(1);
-}
-
-bool SmackRep::isBool(const llvm::Value* v) {
-  return isBool(v->getType());
-}
-
 bool SmackRep::isFloat(const llvm::Type* t) {
   return t->isFloatingPointTy();
 }
@@ -103,9 +95,7 @@ string SmackRep::int_type(unsigned width) {
 }
 
 string SmackRep::type(const llvm::Type* t) {
-  if (isBool(t))
-    return BOOL_TYPE;
-  else if (isFloat(t))
+  if (isFloat(t))
     return FLOAT_TYPE;
   else if (isInt(t))
     return int_type(getIntSize(t));
@@ -318,7 +308,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
   if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
     wd = ci->getBitWidth();
     if (wd == 1)
-      return Expr::lit(!ci->isZero());
+      return lit(ci->isZero() ? 0 : 1, wd);
     uint64_t val = ci->getSExtValue();
     if (wd > 0 && ci->isNegative())
       return Expr::fn(opName("$sub", {wd}), lit(0, wd), lit(-val, wd));
@@ -435,10 +425,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       }
 
     } else if (const ConstantInt* ci = dyn_cast<const ConstantInt>(constant)) {
-      if (ci->getBitWidth() == 1)
-        return Expr::lit(!ci->isZero());
-
-      else return lit(ci);
+      return lit(ci);
 
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -487,17 +474,14 @@ const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Ty
   switch (opcode) {
     case Instruction::Trunc: {
       assert(t->isIntegerTy() && "TODO: implement truncate for non-integer types.");
-      const Expr* arg = Expr::fn(opName("$trunc", {getIntSize(v), getIntSize(t)}), expr(v)); 
-      return (isBool(t)? Expr::fn("$i2b", arg) : arg);
+      return Expr::fn(opName("$trunc", {getIntSize(v), getIntSize(t)}), expr(v));
     }
          
     case Instruction::ZExt:
-      return Expr::fn(opName("$zext", {getIntSize(v), getIntSize(t)}),
-                      (isBool(v->getType()))? Expr::fn("$b2i", expr(v)) : expr(v));
+      return Expr::fn(opName("$zext", {getIntSize(v), getIntSize(t)}), expr(v));
 
     case Instruction::SExt:
-      return Expr::fn(opName("$sext", {getIntSize(v), getIntSize(t)}),
-                      (isBool(v->getType()))? Expr::fn("$b2i", expr(v)) : expr(v));
+      return Expr::fn(opName("$sext", {getIntSize(v), getIntSize(t)}), expr(v));
 
     case Instruction::FPTrunc:
     case Instruction::FPExt:
@@ -518,11 +502,9 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 }
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
-  const Expr* e = Expr::fn(isFloat(t)? bop2fn(opcode): 
-                           opName(bop2fn(opcode), {getIntSize(t)}),
-                           (isBool(lhs) ? b2i(lhs) : expr(lhs)),
-                           (isBool(rhs) ? b2i(rhs) : expr(rhs)));
-  return isBool(t) ? Expr::fn("$i2b",e) : e;
+  return Expr::fn( isFloat(t)
+    ? bop2fn(opcode)
+    : opName(bop2fn(opcode), {getIntSize(t)}), expr(lhs), expr(rhs));
 }
 
 const Expr* SmackRep::cmp(const llvm::CmpInst* I) {
@@ -534,16 +516,7 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
-  using namespace llvm;
-  switch (predicate) {
-    using llvm::CmpInst;
-  case CmpInst::ICMP_EQ:
-    return Expr::eq(expr(lhs), expr(rhs));
-  case CmpInst::ICMP_NE:
-    return Expr::neq(expr(lhs), expr(rhs));
-  default:
-    return Expr::fn(isFloat(lhs)? pred2fn(predicate) : opName(pred2fn(predicate), {getIntSize(lhs)}), expr(lhs), expr(rhs));
-  }
+  return Expr::fn(isFloat(lhs)? pred2fn(predicate) : opName(pred2fn(predicate), {getIntSize(lhs)}), expr(lhs), expr(rhs));
 }
 
 string SmackRep::cast2fn(unsigned opcode) {
@@ -589,6 +562,8 @@ string SmackRep::bop2fn(unsigned opcode) {
 string SmackRep::pred2fn(unsigned predicate) {
   switch (predicate) {
     using llvm::CmpInst;
+  case CmpInst::ICMP_EQ: return "$eq";
+  case CmpInst::ICMP_NE: return "$ne";
   case CmpInst::ICMP_SGE: return "$sge";
   case CmpInst::ICMP_UGE: return "$uge";
   case CmpInst::ICMP_SLE: return "$sle";
@@ -771,7 +746,7 @@ string SmackRep::getPrelude() {
   }
   s << endl;
   s << "// Type declarations" << endl;
-  for (unsigned i = 8; i <= 64; i <<= 1) {
+  for (unsigned i = 1; i <= 64; i <<= 1) {
     s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
   }
 
@@ -987,7 +962,7 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
 
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool)" << endl;
+    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: i1)" << endl;
     for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
       unsigned size = 8 << i;
       s << "modifies " << memPath(dstReg, size) << ";" << endl;
@@ -1004,25 +979,25 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
       s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+      s << "  assume (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "  assume (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
     s << "}" << endl;
   } else {
     s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: bool);" << endl;
+    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: i1);" << endl;
     for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
       unsigned size = 8 << i;
       s << "modifies " << memPath(dstReg, size) << ";" << endl;
     }
     for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+      s << "ensures (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
         << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "ensures (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
     }
   }
@@ -1035,7 +1010,7 @@ string SmackRep::memsetProc(int dstReg) {
 
   if (SmackOptions::MemoryModelImpls) {
     s << "procedure $memset." << dstReg;
-    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool)" << endl;
+    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: i1)" << endl;
     for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
       unsigned size = 8 << i;
       s << "modifies " << memPath(dstReg, size) << ";" << endl;
@@ -1052,18 +1027,18 @@ string SmackRep::memsetProc(int dstReg) {
       unsigned size = 8 << i;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+      s << "  assume (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "  assume (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
     s << "}" << endl;
   } else {
     s << "procedure $memset." << dstReg;
-    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: bool);" << endl;
+    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: i1);" << endl;
     for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
       unsigned size = 8 << i;
       s << "modifies " << memPath(dstReg, size) << ";" << endl;
@@ -1072,11 +1047,11 @@ string SmackRep::memsetProc(int dstReg) {
     string val = "val";
     for (int i = 0; i < (SmackOptions::InferFieldOverlap? 4 : 1); ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len)) ==> "
+      s << "ensures (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) && $slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "ensures (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
       val = val + "++" + val;
     }

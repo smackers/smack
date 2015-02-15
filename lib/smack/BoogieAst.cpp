@@ -78,6 +78,8 @@ const Expr* Expr::lit(int i, unsigned w) {
   switch (w) {
   case 0:
     return new LitExpr(i);
+  case 1:
+    return new LitExpr(LitExpr::Bv1, i);
   case 8:
     return new LitExpr(LitExpr::Bv8, i);
   case 16:
@@ -444,6 +446,9 @@ void LitExpr::print(ostream& os) const {
     break;
   case Num:
     os << val;
+    break;
+  case Bv1:
+    os << val << "bv1";
     break;
   case Bv8:
     os << val << "bv8";
