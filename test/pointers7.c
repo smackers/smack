@@ -1,4 +1,4 @@
-#include "smack.h"
+#include "smack-defs.h"
 //	Node Layout
 //	int 		0
 //	int, char	4

@@ -1,4 +1,4 @@
-#include "smack.h"
+#include "smack-defs.h"
 
 extern const struct process *procinit[];
 

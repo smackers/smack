@@ -1,5 +1,5 @@
 /* https://graphics.stanford.edu/~seander/bithacks.html#InterleaveTableObvious */
-#include "smack.h"
+#include "smack-defs.h"
 
 int main()
 {

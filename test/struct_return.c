@@ -1,4 +1,4 @@
-#include "smack.h"
+#include "smack-defs.h"
 #include <inttypes.h>
 
 struct a {

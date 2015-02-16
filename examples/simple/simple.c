@@ -1,5 +1,5 @@
 // simple.c
-#include "../../include/smack/smack.h"
+#include "../../include/smack/smack-defs.h"
 
 int incr(int x) {
   return x + 1;

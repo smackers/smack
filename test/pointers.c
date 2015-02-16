@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
+#include "smack-defs.h"
 
 void incr(int *x) {
   (*x)++;

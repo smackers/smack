@@ -1,4 +1,4 @@
-#include "smack.h"
+#include "smack-defs.h"
 
 int incr(int x) {
   return ++x;

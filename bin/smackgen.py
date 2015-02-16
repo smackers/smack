@@ -51,7 +51,7 @@ def addEntryPoint(match, entryPoints):
 def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, clangArgs, bitVector):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
-  smackHeaders = path.join(smackRoot, 'include', 'smack')
+  smackHeaders = path.join(smackRoot, 'share', 'include')
 
   fileName, fileExtension = path.splitext(path.basename(inputFile.name))
 
@@ -70,7 +70,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders,
-                   '-include' + 'smack.h']
+                   '-include' + 'smack-defs.h']
   clangCommand += clangArgs.split()
   clangCommand += [inputFile.name, '-o', bcFileName]
   # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).

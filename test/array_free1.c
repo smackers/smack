@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "smack.h"
+#include "smack-defs.h"
 
 #define MAXSIZE 10
 

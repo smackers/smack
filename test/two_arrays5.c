@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
+#include "smack-defs.h"
 
 #define RESET 0
 #define SET 1

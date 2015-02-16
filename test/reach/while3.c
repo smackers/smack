@@ -1,4 +1,4 @@
-#include "smack.h"
+#include "smack-defs.h"
 
 int main() {
   int a = 0;

@@ -1,4 +1,4 @@
-#include <smack.h>
+#include <smack-defs.h>
 
 void ff1(float f);
 void ff2(float *f1, float *f2) {

@@ -1,4 +1,4 @@
-#include "smack.h"
+#include "smack-defs.h"
 extern void *malloc(unsigned long sz );
 extern char __VERIFIER_nondet_char(void);
 extern int __VERIFIER_nondet_int(void);
