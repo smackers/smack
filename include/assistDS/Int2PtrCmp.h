@@ -26,13 +26,13 @@ namespace llvm {
   //
   class Int2PtrCmp : public ModulePass {
   private:
-    DataLayout * TD;
+    const DataLayout * TD;
   public:
     static char ID;
     Int2PtrCmp() : ModulePass(ID) {}
     virtual bool runOnModule(Module& M);
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<DataLayout>();
+      AU.addRequired<DataLayoutPass>();
     }
 
   };

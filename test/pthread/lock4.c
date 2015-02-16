@@ -28,7 +28,7 @@ int main() {
   pthread_join(tid[2], NULL);
   pthread_join(tid[3], NULL);
   //pthread_join(tid[4], NULL);
-  __SMACK_assert(x == 6);
+  assert(x == 6);
   
 
 }

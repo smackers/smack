@@ -1,8 +1,10 @@
 CC = clang
+CPP = clang++
 INC = ../include/smack
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
-SOURCES = simple.c simple_fail.c \
+SOURCES = hello.cc hello_fail.cc \
+          simple.c simple_fail.c \
           simple_pre.c simple_pre_fail.c \
           simple_pre1.c simple_pre1_fail.c \
           simple_pre2.c simple_pre2_fail.c \
@@ -48,14 +50,21 @@ SOURCES = simple.c simple_fail.c \
           two_arrays3.c \
           two_arrays4.c \
           two_arrays5.c \
-          two_arrays6.c two_arrays6_fail.c
+          two_arrays6.c two_arrays6_fail.c \
+					floats_in_memory.c floats_in_memory_fail.c
 
-BITCODE = $(SOURCES:.c=.bc)
+BITCODE = $(SOURCES:.c=.bc) $(SOURCES:.cc=.bc) $(SOURCES:.cpp=.bc)
 
 all: $(BITCODE)
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@
+
+%.bc: %.cc
+	$(CPP) $(CFLAGS) $< -o $@
+
+%.bc: %.cpp
+	$(CPP) $(CFLAGS) $< -o $@
 
 clean:
 	rm -f *.bc *.bpl

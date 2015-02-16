@@ -15,7 +15,7 @@ struct a foo(struct a bar) {
 int main(void) {
   struct a x;
   x = foo(x);
-  __SMACK_assert(x.j == 20);
+  assert(x.j == 20);
   return 0;
 }
 

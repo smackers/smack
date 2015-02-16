@@ -1,6 +1,4 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #ifndef SMACK_H_
@@ -30,19 +28,17 @@
  *
  */
 
-#include <stdbool.h>
-
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
-void __SMACK_assert(bool v) {
-  __SMACK_code("assert {@} != 0;", v);
+void assert(int v) {
+  __SMACK_code("assert @ != 0;", v);
 }
 
-void __SMACK_assume(bool v) {
-  __SMACK_code("assume {@} != 0;", v);
+void assume(int v) {
+  __SMACK_code("assume @ != 0;", v);
 }
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
@@ -63,12 +59,13 @@ void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
 
   // Integer arithmetic
-  D("function $add(p1:int, p2:int) returns (int) {p1 + p2}");
-  D("function $sub(p1:int, p2:int) returns (int) {p1 - p2}");
-  D("function $mul(p1:int, p2:int) returns (int) {p1 * p2}");
-  D("function $sdiv(p1:int, p2:int) returns (int);");
-  D("function $udiv(p1:int, p2:int) returns (int);");
-  D("function $srem(p1:int, p2:int) returns (int);");
+  D("function {:inline} $add(p1:int, p2:int) returns (int) {p1 + p2}");
+  D("function {:inline} $sub(p1:int, p2:int) returns (int) {p1 - p2}");
+  D("function {:inline} $mul(p1:int, p2:int) returns (int) {p1 * p2}");
+  D("function {:builtin \"div\"} $sdiv(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"div\"} $udiv(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"rem\"} $srem(p1:int, p2:int) returns (int);");
+  D("function {:builtin \"rem\"} $urem(p1:int, p2:int) returns (int);");
 
   //Monty's test
 
@@ -82,7 +79,7 @@ void __SMACK_decls() {
   D("axiom(forall x:int, y:int :: {$urem(x,y)}{$sdiv(x,y)} $urem(x,y) == x - $sdiv(x,y)*y);");
   D("axiom(forall x:int, y:int :: {$urem(x,y)} (0<y ==> (0<=$urem(x,y) && $urem(x,y)<y)) && (y<0 ==> (y<$urem(x,y) && $urem(x,y)<=0)));");
   //End monty's test
-  D("function $urem(p1:int, p2:int) returns (int);");
+
   D("function $and(p1:int, p2:int) returns (int);");
   D("axiom $and(0,0) == 0;");
   D("axiom $and(0,1) == 0;");
@@ -101,36 +98,32 @@ void __SMACK_decls() {
   D("function $lshr(p1:int, p2:int) returns (int);");
   D("function $ashr(p1:int, p2:int) returns (int);");
   D("function $shl(p1:int, p2:int) returns (int);");
-  D("function $ult(p1:int, p2:int) returns (bool) {p1 < p2}");
-  D("function $ugt(p1:int, p2:int) returns (bool) {p1 > p2}");
-  D("function $ule(p1:int, p2:int) returns (bool) {p1 <= p2}");
-  D("function $uge(p1:int, p2:int) returns (bool) {p1 >= p2}");
-  D("function $slt(p1:int, p2:int) returns (bool) {p1 < p2}");
-  D("function $sgt(p1:int, p2:int) returns (bool) {p1 > p2}");
-  D("function $sle(p1:int, p2:int) returns (bool) {p1 <= p2}");
-  D("function $sge(p1:int, p2:int) returns (bool) {p1 >= p2}");
+  D("function {:inline} $ult(p1:int, p2:int) returns (bool) {p1 < p2}");
+  D("function {:inline} $ugt(p1:int, p2:int) returns (bool) {p1 > p2}");
+  D("function {:inline} $ule(p1:int, p2:int) returns (bool) {p1 <= p2}");
+  D("function {:inline} $uge(p1:int, p2:int) returns (bool) {p1 >= p2}");
+  D("function {:inline} $slt(p1:int, p2:int) returns (bool) {p1 < p2}");
+  D("function {:inline} $sgt(p1:int, p2:int) returns (bool) {p1 > p2}");
+  D("function {:inline} $sle(p1:int, p2:int) returns (bool) {p1 <= p2}");
+  D("function {:inline} $sge(p1:int, p2:int) returns (bool) {p1 >= p2}");
   D("function $nand(p1:int, p2:int) returns (int);");
-  D("function $max(p1:int, p2:int) returns (int);");
-  D("function $min(p1:int, p2:int) returns (int);");
-  D("function $umax(p1:int, p2:int) returns (int);");
-  D("function $umin(p1:int, p2:int) returns (int);");
-  D("function $i2b(i: int) returns (bool);");
-  D("axiom (forall i:int :: $i2b(i) <==> i != 0);");
-  D("axiom $i2b(0) == false;");
-  D("function $b2i(b: bool) returns (int);");
-  D("axiom $b2i(true) == 1;");
-  D("axiom $b2i(false) == 0;");
+  D("function {:inline} $max(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
+  D("function {:inline} $min(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
+  D("function {:inline} $umax(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
+  D("function {:inline} $umin(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
+  D("function {:inline} $i2b(i: int) returns (bool) {i != 0}");
+  D("function {:inline} $b2i(b: bool) returns (int) {if b then 1 else 0}");
 
   // Floating point
   D("type float;");
-  D("function $fp(a:int) returns (float);");
-  D("const $ffalse: float;");
-  D("const $ftrue: float;");
+  D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("function $fadd(f1:float, f2:float) returns (float);");
   D("function $fsub(f1:float, f2:float) returns (float);");
   D("function $fmul(f1:float, f2:float) returns (float);");
   D("function $fdiv(f1:float, f2:float) returns (float);");
   D("function $frem(f1:float, f2:float) returns (float);");
+  D("function $ffalse(f1:float, f2:float) returns (bool);");
+  D("function $ftrue(f1:float, f2:float) returns (bool);");
   D("function $foeq(f1:float, f2:float) returns (bool);");
   D("function $foge(f1:float, f2:float) returns (bool);");
   D("function $fogt(f1:float, f2:float) returns (bool);");
@@ -150,40 +143,36 @@ void __SMACK_decls() {
   D("function $si2fp(i:int) returns (float);");
   D("function $ui2fp(i:int) returns (float);");
 
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq(f1,f2));");
+  D("axiom (forall i: int :: $fp2ui($ui2fp(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp($fp2ui(f)) == f);");
+  D("axiom (forall i: int :: $fp2si($si2fp(i)) == i);");
+  D("axiom (forall f: float :: $si2fp($fp2si(f)) == f);");
+
   // Memory Model
-  D("function $ptr(obj:int, off:int) returns (int) {obj + off}");
-  D("function $obj(int) returns (int);");
-  D("function $off(ptr:int) returns (int) {ptr}");
+  D("function $base(int) returns (int);");
 
   D("const unique $NULL: int;");
   D("axiom $NULL == 0;");
   D("const $UNDEF: int;");
 
-  D("function $pa(pointer: int, index: int, size: int) returns (int);");
-  D("function $trunc(p: int, size: int) returns (int);");
-  D("function $p2i(p: int) returns (int);");
-  D("function $i2p(p: int) returns (int);");
-  D("function $p2b(p: int) returns (bool);");
-  D("function $b2p(b: bool) returns (int);");
-
-  D("axiom (forall p:int, i:int, s:int :: {$pa(p,i,s)} $pa(p,i,s) == p + i * s);");
-  D("axiom (forall p,s:int :: $trunc(p,s) == p);");
-
-  D("axiom $b2p(true) == 1;");
-  D("axiom $b2p(false) == 0;");
-  D("axiom (forall i:int :: $p2b(i) <==> i != 0);");
-  D("axiom $p2b(0) == false;");
-  D("axiom (forall i:int :: $p2i(i) == i);");
-  D("axiom (forall i:int :: $i2p(i) == i);");
+  D("function {:inline} $pa(pointer: int, index: int, size: int) returns (int) {pointer + index * size}");
+  D("function {:inline} $trunc(p: int, size: int) returns (int) {p}");
+  D("function {:inline} $p2i(p: int) returns (int) {p}");
+  D("function {:inline} $i2p(p: int) returns (int) {p}");
+  D("function {:inline} $p2b(p: int) returns (bool) {p != 0}");
+  D("function {:inline} $b2p(b: bool) returns (int) {if b then 1 else 0}");
 
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
+  D("procedure boogie_si_record_bool(b: bool);");
   D("procedure boogie_si_record_int(i: int);");
+  D("procedure boogie_si_record_float(f: float);");
   D("const $MOP: $mop;");
   
   D("const $GLOBALS_BOTTOM: int;");
-  D("function $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
+  D("function {:inline} $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
   
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [int] bool;");
@@ -234,7 +223,7 @@ void __SMACK_decls() {
     "ensures $Size[p] == n;\n"
     "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 
   D("procedure $free(p: int);\n"
     "modifies $Alloc;\n"
@@ -250,7 +239,7 @@ void __SMACK_decls() {
     "ensures $Size[p] == n;\n"
     "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [int] bool;");
@@ -264,7 +253,7 @@ void __SMACK_decls() {
     "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 
   D("procedure $free(p: int);\n"
     "modifies $Alloc;\n"
@@ -279,8 +268,12 @@ void __SMACK_decls() {
     "ensures n >= 0 ==> $CurrAddr >= old($CurrAddr) + n;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+    "ensures n >= 0 ==> (forall q: int :: {$base(q)} p <= q && q < p+n ==> $base(q) == p);");
 #endif
+
+  D("var $exn: bool;");
+  D("var $exnv: int;");
+  D("function $extractvalue(p: int, i: int) returns (int);");
 
 #undef D
 }

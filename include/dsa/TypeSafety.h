@@ -49,7 +49,7 @@ struct TypeSafety : public ModulePass {
     bool typeFieldsOverlap (const DSNode * N);
 
     // Pointers to prerequisite passes
-    DataLayout * TD;
+    const DataLayout * TD;
     dsa * dsaPass;
 
     // Data structures
@@ -65,7 +65,7 @@ struct TypeSafety : public ModulePass {
     }
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<DataLayout>();
+      AU.addRequired<DataLayoutPass>();
       AU.addRequired<dsa>();
       AU.setPreservesAll();
     }

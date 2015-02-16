@@ -13,7 +13,7 @@ int main() {
     a[i] = RESET;
   }
 
-  __SMACK_assert(a[5] == RESET);
+  assert(a[5] == RESET);
 
   free(a);
   return 0;

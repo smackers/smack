@@ -30,7 +30,7 @@ SMACK can verify C programs, such as the following:
 
       a = 1;
       a = incr(a);
-      __SMACK_assert(a == 2);
+      assert(a == 2);
       return 0;
     }
 
@@ -44,9 +44,10 @@ then translates the bitcode `simple.bc` to a program in the
 
     smackgen.py simple.bc -o simple.bpl
 
-and finally verifies `simple.bpl` with the [Boogie Verifier](http://boogie.codeplex.com)
+and finally verifies `simple.bpl` with the [Boogie](http://boogie.codeplex.com)
+or [Corral/Duality](http://corral.codeplex.com) verifiers
 
-    Boogie simple.bpl
+    boogie simple.bpl
 
 concluding that the original program `simple.c` is verified to be correct.
 While SMACK is designed to be a *modular* verifier, for our convenience, this

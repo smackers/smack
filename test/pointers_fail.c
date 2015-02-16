@@ -16,8 +16,8 @@ int main() {
   incr(b);
   incr(a);
 
-  __SMACK_assert(*a == 1);
-  __SMACK_assert(*b == 1);
+  assert(*a == 1);
+  assert(*b == 1);
 
   return 0;
 }

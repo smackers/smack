@@ -1,3 +1,7 @@
+// This file has a race between caller and callee threads
+//  (though no race exists between the two callee threads)
+//  when calling the x++ instruction.
+
 #include <pthread.h>
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -26,7 +30,7 @@ int main() {
   x++;
   pthread_join(tid1, NULL);
   pthread_join(tid2, NULL);
-  __SMACK_assert(x == 4);
+  assert(x == 4);
   
 
 }

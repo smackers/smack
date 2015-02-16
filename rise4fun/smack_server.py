@@ -1,3 +1,6 @@
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
 import BaseHTTPServer
 import SimpleHTTPServer
 import json
@@ -9,25 +12,25 @@ PORT = 8080
 version = "1.4.4"
 rise_simple = """#include "smack.h"
 //__SMACK_nondet() : Is used to permit assigned memory to have unconstrained values
-//__SMACK_assume(): Is used to enforce constraints on specified regions of memory
-//__SMACK_assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values.
+//assume(): Is used to enforce constraints on specified regions of memory
+//assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values.
 int main() {
   int x = __SMACK_nondet();
   int n = __SMACK_nondet();
-  __SMACK_assume(n>0);
-  __SMACK_assert(x+n > x);
+  assume(n>0);
+  assert(x+n > x);
   return 0;
 }"""
 
 rise_simple_buggy = """#include "smack.h"
 //__SMACK_nondet() : Is used to permit assigned memory to have unconstrained values
-//__SMACK_assume(): Is used to enforce constraints on specified regions of memory
-//__SMACK_assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values
+//assume(): Is used to enforce constraints on specified regions of memory
+//assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values
 int main() {
   int x = __SMACK_nondet();
   int n = __SMACK_nondet();
-  __SMACK_assume(n>=0);
-  __SMACK_assert(x+n > x);
+  assume(n>=0);
+  assert(x+n > x);
   return 0;
 }"""
 
@@ -52,7 +55,7 @@ int main(void) {
   }
   x = fp(x);
 
-  __SMACK_assert(x == old_x-1 || x == old_x+1);
+  assert(x == old_x-1 || x == old_x+1);
   return 0;
 }"""
 
@@ -73,7 +76,7 @@ int main()
   int i = __SMACK_nondet();
   initDescArray(num,size);
   if(i >= 1 && i < 6)
-    __SMACK_assert(num[i] > num[i-1]);
+    assert(num[i] > num[i-1]);
 }"""
 
 
@@ -114,7 +117,7 @@ int main(void) {
   int b;
 
   b = foo(__SMACK_nondet(), __SMACK_nondet());
-  __SMACK_assert(b != 0);
+  assert(b != 0);
   return 0;
 }"""
 
@@ -129,7 +132,7 @@ int main(void) {
   a = __SMACK_nondet();
   b = __SMACK_nondet();
   if(a>=0 && b>=0)
-        __SMACK_assert(z != (a*x+b*y));
+        assert(z != (a*x+b*y));
   return 0;
 }"""
 
@@ -153,7 +156,7 @@ int main(void) {
   s1.a = 3;
   p2->x = 4;
 
-  __SMACK_assert(s1.a == 4);
+  assert(s1.a == 4);
   return 0;
 }"""
 
@@ -163,9 +166,9 @@ tutorialsource = """SMACK is a SMACK is a tool for statically checking propertie
 		The tool is open-source and integrates into the well-known LLVM compiler infrastructure.\r\n 
 		There are 3 types of annotations that SMACK allows the user to specify. They are the assert, assume and nondet statements.\r\n
 		Assert: Allows the user to specify a predicate on the variables in scope. SMACK statically checks the assertion in this 
-		program location. The predicate P can be specified in an assert in the syntax __SMACK_assert(P)  \r\n
+		program location. The predicate P can be specified in an assert in the syntax assert(P)  \r\n
 		Assume: Assume statement allows the user to specify the assumptions of the program from the point of specification. If the 
-		assumption is denoted by A, __SMACK_assume(A) is the syntax for specifying it. Eg: __SMACK_assume(n > 0)
+		assumption is denoted by A, assume(A) is the syntax for specifying it. Eg: assume(n > 0)
 		Nondet: Allows the user to specify a "random" value. This is specified by __SMACK_nondet(). The statement returns a 
 		nondeterministic type safe value."""
 metadata = {

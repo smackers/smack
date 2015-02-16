@@ -18,7 +18,7 @@ int main() {
 
   pthread_create(&t, NULL, t1, NULL);
   pthread_join(t, &ret);
-  __SMACK_assert(x == 2);
-  __SMACK_assert((int)ret == 6);
+  assert(x == 2);
+  assert((int)ret == 6);
   return 0;
 }

@@ -14,5 +14,5 @@ int main() {
   *x = 1;
   *y = 2;
 
-  __SMACK_assert(x != y);
+  assert(x != y);
 }

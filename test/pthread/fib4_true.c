@@ -28,5 +28,5 @@ int main() {
   pthread_t tid1, tid2;
   pthread_create(&tid1, NULL, t1, NULL);
   pthread_create(&tid2, NULL, t2, NULL);
-  __SMACK_assert(x <= 55 && y <= 55);
+  assert(x <= 55 && y <= 55);
 }

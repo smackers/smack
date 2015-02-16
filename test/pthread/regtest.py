@@ -44,6 +44,7 @@ def runtests():
     
     print "{0:>20} {1:>20}:".format(test[0], "(ContextSwitches: " + str(test[3]) + ")"),
 
+
     # invoke SMACK
     t0 = time.time()
     p = subprocess.Popen(['smackverify.py', test[0] + '.c', '--verifier=corral',

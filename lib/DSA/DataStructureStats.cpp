@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "DSStats"
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
 #include "dsa/TypeSafety.h"
@@ -18,7 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
@@ -80,7 +81,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.setPreservesAll();
       AU.addRequired<TDDataStructures>();
-      AU.addRequired<DataLayout>();
+      AU.addRequired<DataLayoutPass>();
       AU.addRequired<dsa::TypeSafety<TDDataStructures> >();
     }
 
@@ -236,7 +237,7 @@ void DSGraphStats::visitStore(StoreInst &SI) {
 
 bool DSGraphStats::runOnFunction(Function& F) {
   DS = &getAnalysis<TDDataStructures>();
-  TD = &getAnalysis<DataLayout>();
+  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
   TS = &getAnalysis<dsa::TypeSafety<TDDataStructures> >();
   TDGraph = DS->getDSGraph(F);
   countCallees(F);

@@ -24,7 +24,7 @@ int main() {
   x++;
   pthread_mutex_unlock(&lock);
   pthread_join(tid1, NULL);
-  __SMACK_assert(x == 3);
+  assert(x == 3);
   
 
 }

@@ -7,6 +7,6 @@ int main() {
   int y = 0;
   int *z = x;
   CAS(&z,x,&y); // if (z == x) z = &y;
-  __SMACK_assert(*z == y);
+  assert(*z == y);
   return 0;
 }

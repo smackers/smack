@@ -25,7 +25,7 @@ int main(void) {
   elem.data = 5;
   elem.point2.x = 200;
 
-  __SMACK_assert(elem.count != 2 || elem.point1.y != 100 || elem.data != 5 || elem.point2.x != 200);
+  assert(elem.count != 2 || elem.point1.y != 100 || elem.data != 5 || elem.point2.x != 200);
 
   return 0;
 }

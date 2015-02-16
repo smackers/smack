@@ -11,7 +11,7 @@ int main(void) {
 
   a = -1;
   a = returnOne();
-  __SMACK_assert(a == 1 || a == 2);
+  assert(a == 1 || a == 2);
   return a;
 }
 

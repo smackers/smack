@@ -1,5 +1,4 @@
 //
-// Copyright (c) 2008 Zvonimir Rakamaric (zvonimir@cs.utah.edu)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #ifndef SMACKMODULEGENERATOR_H
@@ -10,7 +9,7 @@
 #include "smack/DSAAliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Support/CFG.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
@@ -33,17 +32,16 @@ public:
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
-    AU.addRequired<llvm::DataLayout>();
+    AU.addRequired<llvm::DataLayoutPass>();
     AU.addRequired<DSAAliasAnalysis>();
   }
 
   virtual bool runOnModule(llvm::Module& m) {
-    SmackRep* rep = new SmackRep(&getAnalysis<DSAAliasAnalysis>());
-    generateProgram(m,rep);
+    generateProgram(m);
     return false;
   }
   
-  void generateProgram(llvm::Module& m, SmackRep* rep);
+  void generateProgram(llvm::Module& m);
 
   Program& getProgram() {
     return program;

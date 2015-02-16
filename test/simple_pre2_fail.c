@@ -11,7 +11,7 @@ int main(void) {
 
   a = 1;
   a = incr(a);
-  __SMACK_assert(a == 1);
+  assert(a == 1);
   return a;
 }
 

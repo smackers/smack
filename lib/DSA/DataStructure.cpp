@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "data-structure"
 #include "dsa/DSGraphTraits.h"
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
@@ -22,7 +23,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Assembly/Writer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -1496,7 +1496,7 @@ void DataStructures::init(DataStructures* D, bool clone, bool useAuxCalls,
   if (!clone) D->DSGraphsStolen = true;
 }
 
-void DataStructures::init(DataLayout* T) {
+void DataStructures::init(const DataLayout* T) {
   assert (!TD && "Already init");
   GraphSource = 0;
   Clone = false;

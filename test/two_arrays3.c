@@ -41,7 +41,7 @@ int main() {
   int i = 0;
 
   arraySize = __SMACK_nondet();
-  __SMACK_assume(arraySize > 0);
+  assume(arraySize > 0);
 
   elem *arrayOne = (elem*)malloc(arraySize * sizeof(elem));
   elem *arrayTwo = (elem*)malloc(arraySize * sizeof(elem));
@@ -51,9 +51,9 @@ int main() {
   initializeCount(arrayTwo);
 
   for (i = 0; i < arraySize; i++) {
-    __SMACK_assert(arrayOne[i].status == RESET);
-    __SMACK_assert(arrayTwo[i].status == SET);
-    __SMACK_assert(arrayTwo[i].count == 0);
+    assert(arrayOne[i].status == RESET);
+    assert(arrayTwo[i].status == SET);
+    assert(arrayTwo[i].count == 0);
   }
 
   initializeCount(arrayOne);
@@ -61,9 +61,9 @@ int main() {
   resetArray(arrayTwo);
 
   for (i = 0; i < arraySize; i++) {
-    __SMACK_assert(arrayOne[i].count == 0);
-    __SMACK_assert(arrayOne[i].status == SET);
-    __SMACK_assert(arrayTwo[i].status == RESET);
+    assert(arrayOne[i].count == 0);
+    assert(arrayOne[i].status == SET);
+    assert(arrayTwo[i].status == RESET);
   }
 
   free(arrayOne);

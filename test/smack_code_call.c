@@ -13,10 +13,10 @@ int main(void) {
 
   // using a dummy unreachable call, force DSA to analyze foo so
   // that __SMACK_code works properly
-  __SMACK_assume(tmp == 0);
+  assume(tmp == 0);
   if (tmp) foo(y);
   __SMACK_code("call foo(@);",y);
 
-  __SMACK_assert(*y == 20);
+  assert(*y == 20);
 }
 

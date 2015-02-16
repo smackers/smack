@@ -14,6 +14,6 @@ int main() {
   pthread_t t;
 
   pthread_create(&t, NULL, t1, NULL);
-  __SMACK_assert(x == 2);
+  assert(x == 2);
   return 0;
 }

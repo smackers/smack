@@ -42,7 +42,7 @@ int main() {
   fp = my_ops.iops->incr;
   x = fp(x);
 
-  __SMACK_assert(x == 1);
+  assert(x == 1);
 
   return 0;
 }

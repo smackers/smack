@@ -69,7 +69,7 @@ bool FuncSpec::runOnModule(Module& M) {
         } 
       }
       // Now find all call sites that it is called from
-      for(Value::use_iterator ui = I->use_begin(), ue = I->use_end();
+      for(Value::user_iterator ui = I->user_begin(), ue = I->user_end();
           ui != ue; ++ui) {
         if (CallInst* CI = dyn_cast<CallInst>(*ui)) {
           // Check that it is the called value (and not an argument)

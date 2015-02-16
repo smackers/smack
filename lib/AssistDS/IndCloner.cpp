@@ -71,7 +71,7 @@ IndClone::runOnModule(Module& M) {
     // function by the linker.
     //
     if (!I->isDeclaration() && !I->mayBeOverridden()) {
-      for (Value::use_iterator ui = I->use_begin(), ue = I->use_end();
+      for (Value::user_iterator ui = I->user_begin(), ue = I->user_end();
           ui != ue; ++ui) {
         if (!isa<CallInst>(*ui) && !isa<InvokeInst>(*ui)) {
           if(!ui->use_empty())
@@ -146,8 +146,8 @@ IndClone::runOnModule(Module& M) {
     // Find all uses of the function that use it as a direct call.  Change
     // them to use the clone.
     //
-    for (Value::use_iterator ui = Original->use_begin(),
-                             ue = Original->use_end();
+    for (Value::user_iterator ui = Original->user_begin(),
+                             ue = Original->user_end();
         ui != ue; ) {
       CallInst *CI = dyn_cast<CallInst>(*ui);
       ui++;

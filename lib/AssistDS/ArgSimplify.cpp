@@ -34,14 +34,14 @@ namespace {
   static void simplify(Function *F, unsigned arg_count, Type* type) {
 
     // Go through all uses of the function
-    for(Value::use_iterator ui = F->use_begin(), ue = F->use_end();
+    for(Value::user_iterator ui = F->user_begin(), ue = F->user_end();
         ui != ue; ++ui) {
 
       if (Constant *C = dyn_cast<Constant>(*ui)) {
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
           if (CE->getOpcode() == Instruction::BitCast) {
             if(CE->getOperand(0) == F) {                    
-              for(Value::use_iterator uii = CE->use_begin(), uee = CE->use_end();
+              for(Value::user_iterator uii = CE->user_begin(), uee = CE->user_end();
                   uii != uee; ) {
                 // check if it is ever used as a call (bitcast F to ...)()
                 if (CallInst* CI = dyn_cast<CallInst>(*uii++)) {
@@ -150,7 +150,7 @@ namespace {
           for (Function::arg_iterator ii = I->arg_begin(), ee = I->arg_end();
                ii != ee; ++ii) {
             bool change = true;
-            for(Value::use_iterator ui = ii->use_begin(), ue = ii->use_end();
+            for(Value::user_iterator ui = ii->user_begin(), ue = ii->user_end();
                 ui != ue; ++ui) {
               // check if the argument is used exclusively in ICmp Instructions
               if(!isa<ICmpInst>(*ui)){

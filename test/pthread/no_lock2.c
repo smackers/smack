@@ -1,3 +1,6 @@
+// This file should have a race since only the callee thread is locking
+//  before doing x++
+
 #include <pthread.h>
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -18,7 +21,7 @@ int main() {
   pthread_create(&t, NULL, t1, NULL);
   x++;
   pthread_join(t, NULL);
-  __SMACK_assert(x == 3);
+  assert(x == 3);
   
 
 }

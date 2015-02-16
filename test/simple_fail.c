@@ -7,7 +7,7 @@ int main(void) {
 
   a = 1;
   a = -1;
-  __SMACK_assert(a != -1);
+  assert(a != -1);
   return a;
 }
 

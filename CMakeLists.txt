@@ -1,38 +1,43 @@
-# 
-# Copyright (c) 2013 Pantazis Deligiannis (p.deligiannis@imperial.ac.uk)
+#
 # This file is distributed under the MIT License. See LICENSE for details.
-# 
+#
 
 cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
   find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config PATHS ${LLVM_CONFIG} NO_DEFAULT_PATH DOC "llvm-config")
-    
+
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
   endif()
-    
+
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --cxxflags
     OUTPUT_VARIABLE LLVM_CXXFLAGS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-  
+
   set(LLVM_CXXFLAGS "${LLVM_CXXFLAGS} -fno-exceptions -fno-rtti")
-  
+
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
     OUTPUT_VARIABLE LLVM_LIBS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-  
+
+  execute_process(
+    COMMAND ${LLVM_CONFIG_EXECUTABLE} --system-libs
+    OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --ldflags
     OUTPUT_VARIABLE LLVM_LDFLAGS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-  
+
 else()
   set(LLVM_SRC "" CACHE PATH "LLVM source directory")
   set(LLVM_BUILD "" CACHE PATH "LLVM build directory")
@@ -50,7 +55,7 @@ else()
   set(LLVM_CXXFLAGS "\"/I${LLVM_SRC}/include\" \"/I${LLVM_BUILD}/include\" -D_SCL_SECURE_NO_WARNINGS -wd4146 -wd4244 -wd4355 -wd4482 -wd4800")
   set(LLVM_LDFLAGS "")
   set(LLVM_LIBS "${LLVM_LIBDIR}/LLVMTransformUtils.lib" "${LLVM_LIBDIR}/LLVMipa.lib" "${LLVM_LIBDIR}/LLVMAnalysis.lib" "${LLVM_LIBDIR}/LLVMTarget.lib" "${LLVM_LIBDIR}/LLVMMC.lib" "${LLVM_LIBDIR}/LLVMObject.lib" "${LLVM_LIBDIR}/LLVMBitReader.lib" "${LLVM_LIBDIR}/LLVMCore.lib" "${LLVM_LIBDIR}/LLVMSupport.lib")
-  
+
 endif()
 
 include_directories(include)
@@ -136,26 +141,29 @@ add_library(dsa STATIC
 )
 
 add_library(smackTranslator STATIC
-  include/smack/smack.h
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
+  include/smack/Contracts.h
   include/smack/DSAAliasAnalysis.h
+  include/smack/Naming.h
+  include/smack/Slicing.h
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
   include/smack/SmackRep.h
-  include/smack/SmackRep2dMem.h
   include/smack/SmackRepFlatMem.h
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
+  lib/smack/Contracts.cpp
   lib/smack/DSAAliasAnalysis.cpp
+  lib/smack/Naming.cpp
+  lib/smack/Slicing.cpp
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
   lib/smack/SmackRep.cpp
-  lib/smack/SmackRep2dMem.cpp
   lib/smack/SmackRepFlatMem.cpp
 )
 
@@ -166,22 +174,28 @@ add_executable(smack
 set_target_properties(smack smackTranslator assistDS dsa
     PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
-target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_LDFLAGS})
+target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(smack smackTranslator assistDS dsa)
 
-INSTALL(TARGETS smack smackTranslator assistDS dsa
+INSTALL(TARGETS smack
   RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
 )
 
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
-	${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
-	${CMAKE_CURRENT_SOURCE_DIR}/bin/llvm2bpl.py
-	${CMAKE_CURRENT_SOURCE_DIR}/bin/smackgen.py
-	${CMAKE_CURRENT_SOURCE_DIR}/bin/smackverify.py
-	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-	GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/llvm2bpl.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smackgen.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smackverify.py
+  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
   DESTINATION bin
 )
-	
+
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack-contracts.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack-svcomp.h
+  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
+  DESTINATION include/smack
+)
+

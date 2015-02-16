@@ -26,7 +26,7 @@ void init(int size) {
   }
 
   for (i = 0; i < size; i++) {
-    __SMACK_assert(a1[i].f1 == 1);
+    assert(a1[i].f1 == 1);
   }
 }
 

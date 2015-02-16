@@ -22,6 +22,6 @@ int main() {
 
   pthread_create(&t, NULL, t1, NULL);
   pthread_join(t, &ret);
-  __SMACK_assert((int)ret == 5);
+  assert((int)ret == 5);
   return 0;
 }

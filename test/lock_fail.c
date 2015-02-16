@@ -14,12 +14,12 @@ lock main_lock;
 lock global_lock;
 
 void acquire_lock(lock *l) {
-  __SMACK_assert(l->locked == UNLOCKED);
+  assert(l->locked == UNLOCKED);
   l->locked = LOCKED;
 }
 
 void release_lock(lock *l) {
-  __SMACK_assert(l->locked == LOCKED);
+  assert(l->locked == LOCKED);
   l->locked = UNLOCKED;
 }
 

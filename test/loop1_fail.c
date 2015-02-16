@@ -14,7 +14,7 @@ int main() {
   for (i = 0; i < MAXSIZE; i++) {
     j = i;
   }
-  __SMACK_assert(x != 1);
+  assert(x != 1);
   return 0;
 }
 
