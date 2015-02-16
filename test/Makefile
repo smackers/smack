@@ -1,6 +1,6 @@
 CC = clang
 CPP = clang++
-INC = ../include/smack
+INC = ../share/smack/include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = hello.cc hello_fail.cc \

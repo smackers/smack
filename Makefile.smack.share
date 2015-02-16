@@ -1,0 +1,61 @@
+#------------------------------------------------------------------------
+# Installation of SMACK share
+#------------------------------------------------------------------------
+ifdef NO_INSTALL
+install-local::
+	$(Echo) Install circumvented with NO_INSTALL
+uninstall-local::
+	$(Echo) Uninstall circumvented with NO_INSTALL
+else
+install-local::
+	$(Echo) Installing share
+	$(Verb) $(MKDIR) $(DESTDIR)$(PROJ_datadir)/smack/include
+	$(Verb) if test -d "$(PROJ_SRC_ROOT)/share/smack/include" ; then \
+	  cd $(PROJ_SRC_ROOT)/share/smack/include && \
+	  for hdr in `find . -type f | \
+	      grep -v CVS | grep -v .svn` ; do \
+	    instdir=`dirname "$(DESTDIR)$(PROJ_datadir)/smack/include/$$hdr"` ; \
+	    if test \! -d "$$instdir" ; then \
+	      $(EchoCmd) Making install directory $$instdir ; \
+	      $(MKDIR) $$instdir ;\
+	    fi ; \
+	    $(DataInstall) $$hdr $(DESTDIR)$(PROJ_datadir)/smack/include/$$hdr ; \
+	  done ; \
+	fi
+	$(Verb) $(MKDIR) $(DESTDIR)$(PROJ_datadir)/smack/lib
+	$(Verb) if test -d "$(PROJ_SRC_ROOT)/share/smack/lib" ; then \
+	  cd $(PROJ_SRC_ROOT)/share/smack/lib && \
+	  for hdr in `find . -type f | \
+	      grep -v CVS | grep -v .svn` ; do \
+	    instdir=`dirname "$(DESTDIR)$(PROJ_datadir)/smack/lib/$$hdr"` ; \
+	    if test \! -d "$$instdir" ; then \
+	      $(EchoCmd) Making install directory $$instdir ; \
+	      $(MKDIR) $$instdir ;\
+	    fi ; \
+	    $(DataInstall) $$hdr $(DESTDIR)$(PROJ_datadir)/smack/lib/$$hdr ; \
+	  done ; \
+	fi
+
+uninstall-local::
+	$(Echo) Uninstalling share
+	$(Verb) if [ -d "$(PROJ_SRC_ROOT)/share/smack/include" ] ; then \
+	  cd $(PROJ_SRC_ROOT)/share/smack/include && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f \
+	      '!' '(' -name '*~' -o -name '.#*' \
+        -o -name '*.in' ')' -print ')' | \
+        grep -v CVS | sed 's#^#$(DESTDIR)$(PROJ_datadir)/smack/include/#'` ; \
+	  cd $(PROJ_SRC_ROOT)/share/smack/include && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f -name '*.in' \
+      -print ')' | sed 's#\.in$$##;s#^#$(DESTDIR)$(PROJ_datadir)/smack/include/#'` ; \
+	fi
+	$(Verb) if [ -d "$(PROJ_SRC_ROOT)/share/smack/lib" ] ; then \
+	  cd $(PROJ_SRC_ROOT)/share/smack/lib && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f \
+	      '!' '(' -name '*~' -o -name '.#*' \
+        -o -name '*.in' ')' -print ')' | \
+        grep -v CVS | sed 's#^#$(DESTDIR)$(PROJ_datadir)/smack/lib/#'` ; \
+	  cd $(PROJ_SRC_ROOT)/share/smack/lib && \
+	    $(RM) -f `find . -path '*/Internal' -prune -o '(' -type f -name '*.in' \
+      -print ')' | sed 's#\.in$$##;s#^#$(DESTDIR)$(PROJ_datadir)/smack/lib/#'` ; \
+	fi
+endif

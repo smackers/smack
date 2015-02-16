@@ -101,8 +101,6 @@ cmake -DLLVM_CONFIG=${LLVM_DIR}/install/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/
 make
 make install
 
-cd ${BASE_DIR}
-
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
@@ -124,4 +122,3 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
-
