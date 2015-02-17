@@ -52,6 +52,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
   smackHeaders = path.join(smackRoot, 'share', 'include')
+  smackDefs = path.join(smackRoot, 'share', 'lib', 'smack-defs.bc')
 
   fileName, fileExtension = path.splitext(path.basename(inputFile.name))
 
@@ -76,13 +77,26 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
   # This should more or less maintain stdout/stderr interleaving order.
   # However, this will be problematic if any callers want to differentiate
-  # between clangs stdout and stderr.
+  # between clang's stdout and stderr.
   p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   clangOutput = p.communicate()[0]
 
   if p.returncode:
     print >> sys.stderr, clangOutput
     sys.exit("SMACK encountered an error when invoking clang. Exiting...")
+
+  linkCommand = ['llvm-link']
+  linkCommand += [bcFileName, smackDefs, '-o', bcFileName]
+  # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
+  # This should more or less maintain stdout/stderr interleaving order.
+  # However, this will be problematic if any callers want to differentiate
+  # between llvm-link's stdout and stderr.
+  p = subprocess.Popen(linkCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  linkOutput = p.communicate()[0]
+
+  if p.returncode:
+    print >> sys.stderr, linkOutput
+    sys.exit("SMACK encountered an error when invoking llvm-link. Exiting...")
 
   inputFile = open(bcFileName, 'r')
   return inputFile, clangOutput

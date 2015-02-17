@@ -29,3 +29,7 @@ include $(PROJ_SRC_ROOT)/Makefile.llvm.rules
 
 # SMACK-specific scripts
 include $(PROJ_SRC_ROOT)/Makefile.smack.scripts
+
+# SMACK share
+include $(PROJ_SRC_ROOT)/Makefile.smack.share
+
