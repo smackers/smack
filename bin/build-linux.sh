@@ -58,7 +58,7 @@ if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
 echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
 
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get install -y g++-4.8
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
@@ -104,7 +104,7 @@ make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
 sudo make install
 
 # Install libgdiplus
-sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev 
+sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev
 sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
 cd ${MONO_DIR}
 git clone git://github.com/mono/libgdiplus.git
@@ -162,10 +162,13 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r f801862ae9ca https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r a776dc352a84 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
+mozroots --import --sync
+wget https://nuget.org/nuget.exe
+mono ./nuget.exe restore Boogie.sln
 xbuild Boogie.sln /p:Configuration=Release
 ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
@@ -188,7 +191,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 05dc786b8a92
+git checkout 6d808d06c23c
 
 # Build Corral
 cd ${CORRAL_DIR}/references
@@ -300,4 +303,3 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
-

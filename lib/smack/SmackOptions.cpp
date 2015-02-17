@@ -19,4 +19,11 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
   "source-loc-syms", llvm::cl::desc("Include source locations in generated code.")
 );
 
+const llvm::cl::opt<bool> SmackOptions::BitVectors(
+  "bit-vector", llvm::cl::desc("A bit-vector version of SMACK.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::InferFieldOverlap(
+  "infer-field-overlap", llvm::cl::desc("Optimize bit-vector with DSA.")
+);
 }

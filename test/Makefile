@@ -51,7 +51,8 @@ SOURCES = hello.cc hello_fail.cc \
           two_arrays4.c \
           two_arrays5.c \
           two_arrays6.c two_arrays6_fail.c \
-					floats_in_memory.c floats_in_memory_fail.c
+          floats_in_memory.c floats_in_memory_fail.c \
+          gcd.c
 
 BITCODE = $(SOURCES:.c=.bc) $(SOURCES:.cc=.bc) $(SOURCES:.cpp=.bc)
 

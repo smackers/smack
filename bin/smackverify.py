@@ -20,7 +20,9 @@ def verifyParser():
   parser.add_argument('--verifier-options', dest='verifierOptions', default='',
                       help='pass arguments to the backend verifier (e.g., --verifier-options="/trackAllVars /staticInlining")')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
-                      help='Boogie time limit in seconds')
+                      help='Verifier or solver time limit in seconds [default: %(default)s]')
+  parser.add_argument('--max-violations', metavar='N', dest='maxViolations', default='1', type=int,
+                      help='Limit the number of reported assertion violations [default: %(default)s]')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
                       help='output JSON format for SMACKd')
   parser.add_argument('--context-switches', metavar='k', dest='contextSwitches', default='2', type=int,
@@ -123,57 +125,49 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, verifierOptions, smackd):
-  if verifier == 'boogie':
-    # invoke Boogie
-    boogieCommand = ['boogie', bplFileName, '/nologo', '/errorLimit:1', '/timeLimit:' + str(timeLimit)]
-    if unroll is not None:
-      boogieCommand += ['/loopUnroll:' + str(unroll)]
-    boogieCommand += verifierOptions.split()
-    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    boogieOutput = p.communicate()[0]
+def verify(verifier, bplFileName, timeLimit, unroll, maxViolations, contextSwitches, debug, verifierOptions, smackd):
 
-    if p.returncode:
-      print >> sys.stderr, boogieOutput
-      sys.exit("SMACK encountered an error when invoking Boogie. Exiting...")
-    #if debug:
-      return boogieOutput
-    sourceTrace = generateSourceErrorTrace(boogieOutput, bplFileName)
+  # TODO factor out unrolling from the following
+  if verifier == 'boogie':
+    command = "boogie %(bplFileName)s /nologo /timeLimit:%(timeLimit)s /errorLimit:%(maxViolations)s" % locals()
+    if unroll is not None:
+      command += (" /loopUnroll:%(unroll)s" % locals())
+
+  elif verifier == 'corral':
+    command = ("corral %(bplFileName)s /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /staticInlining /trackAllVars /timeLimit:%(timeLimit)s /cex:%(maxViolations)s" % locals())
+    if unroll is not None:
+      command += (" /recursionBound:%(unroll)s" % locals())
+    if contextSwitches:
+      command += " /k:" + str(contextSwitches)
+  else:
+    # TODO why isn't unroll a parameter??
+    command = "corral %(bplFileName)s /tryCTrace /useDuality /recursionBound:10000" % locals()
+
+  if verifierOptions:
+    command += " " + verifierOptions
+
+  p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  output = p.communicate()[0]
+
+  if p.returncode:
+    print >> sys.stderr, output
+    sys.exit("SMACK encountered an error when invoking %(verifier)s. Exiting..." % locals())
+
+  # TODO clean up the following mess
+  if verifier == 'boogie':
+    if debug:
+      return output
+    sourceTrace = generateSourceErrorTrace(output, bplFileName)
     if sourceTrace:
       return sourceTrace
     else:
-      return boogieOutput
-  elif verifier == 'corral':
-    # invoke Corral
-    corralCommand = ['corral', bplFileName, '/tryCTrace', '/k:' + str(contextSwitches)]
-    if unroll is not None:
-      corralCommand += ['/recursionBound:' + str(unroll)]
-    corralCommand += verifierOptions.split()
-    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    corralOutput = p.communicate()[0]
+      return output
 
-    if p.returncode:
-      print >> sys.stderr, corralOutput
-      sys.exit("SMACK encountered an error when invoking Corral. Exiting...")
-    if smackd:
-      smackdOutput(corralOutput)
-    else:
-      return corralOutput
   else:
-    # invoke Duality
-    dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
-    dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
-    dualityCommand += verifierOptions.split()
-    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    dualityOutput = p.communicate()[0]
-
-    if p.returncode:
-      print >> sys.stderr, dualityOutput
-      sys.exit("SMACK encountered an error when invoking Duality. Exiting...")
     if smackd:
-      smackdOutput(dualityOutput)
+      smackdOutput(output)
     else:
-      return dualityOutput
+      return output
  
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])
@@ -186,6 +180,9 @@ if __name__ == '__main__':
     if sysArgv[i] == '--smackd':
       del sysArgv[i]
     elif sysArgv[i] == '--time-limit':
+      del sysArgv[i]
+      del sysArgv[i]
+    elif sysArgv[i] == '--max-violations':
       del sysArgv[i]
       del sysArgv[i]
     elif sysArgv[i].startswith('--verifier-options'):
@@ -202,6 +199,5 @@ if __name__ == '__main__':
     outputFile.write(bpl)
     outputFile.close()
 
-  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, 
+  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, args.maxViolations,
                args.contextSwitches, args.debug, args.verifierOptions, args.smackd))
-

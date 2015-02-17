@@ -73,7 +73,7 @@ public:
 
 class LitExpr : public Expr {
 public:
-  enum Literal { True, False, Num, Bv8, Bv32, Bv64 };
+  enum Literal { True, False, Num, Bv1, Bv8, Bv16, Bv32, Bv64 };
 private:
   const Literal lit;
   int val;
@@ -180,6 +180,7 @@ public:
   static const Stmt* annot(const Attr* a);
   static const Stmt* assert_(const Expr* e);
   static const Stmt* assign(const Expr* e, const Expr* f);
+  static const Stmt* assign(vector<const Expr*> lhs, vector<const Expr*> rhs);
   static const Stmt* assume(const Expr* e);
   static const Stmt* assume(const Expr* e, const Attr* attr);
   static const Stmt* call(string p);

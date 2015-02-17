@@ -2,12 +2,12 @@
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-int x = 1;
+int z = 1;
 
 void *t1(void *arg) {
   pthread_mutex_t* lock = arg;
   pthread_mutex_lock(lock);
-  x++;
+  z++;
   pthread_mutex_unlock(lock);
 }
 
@@ -21,10 +21,10 @@ int main() {
 
   pthread_create(&tid1, NULL, t1, &lock);
   pthread_mutex_lock(&lock);
-  x++;
+  z++;
   pthread_mutex_unlock(&lock);
   pthread_join(tid1, NULL);
-  assert(x == 3);
+  assert(z == 3);
   
 
 }

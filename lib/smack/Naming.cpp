@@ -111,9 +111,6 @@ string Naming::freshVarName(const llvm::Value& V) {
   if (llvm::isa<llvm::UndefValue>(&V))
     s << UNDEF_SYM;
 
-  else if (V.getType()->isIntegerTy(1))
-    s << BOOL_VAR;
-
   else if (V.getType()->isFloatingPointTy())
     s << FLOAT_VAR;
 

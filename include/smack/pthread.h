@@ -73,7 +73,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
     *mutex = UNLOCKED;
   } else {
     // Unimplemented
-    __SMACK_assert(0);
+    assert(0);
   }
   return 0;
 }
@@ -157,7 +157,7 @@ int pthread_create(pthread_t *__restrict __newthread, __const pthread_attr_t *__
   //Mystery smack_nondet for procedure calls from __SMACK_code??
   int x = __SMACK_nondet();
   pthread_t tmp = __SMACK_nondet();
-  __SMACK_assume(x == 0);
+  assume(x == 0);
   if(x) __call_wrapper(__newthread, __start_routine, __arg);
   __SMACK_code("async call @(@, @, @);", __call_wrapper, __newthread, __start_routine, __arg);
   __SMACK_code("call @ := corral_getChildThreadID();", tmp);

@@ -11,10 +11,8 @@
 # - git
 # - mercurial
 # - python
-# - gcc
-# - g++
-# - make
-# - autoconf
+# - LLVM, clang
+# - cmake
 # - mono
 #
 ################################################################################
@@ -31,19 +29,15 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
-INSTALL_MONO=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
-INSTALL_LLVM=1
 INSTALL_SMACK=1
 
 # Other dirs
-MONO_DIR="${BASE_DIR}/mono-3"
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
 CORRAL_DIR="${BASE_DIR}/corral"
-LLVM_DIR="${BASE_DIR}/llvm"
 SMACK_DIR="${BASE_DIR}/smack"
 
 # Setting colors
@@ -58,21 +52,19 @@ if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 
 echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
 
-sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-sudo add-apt-repository -y ppa:andykimpe/cmake
+sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
+wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
 sudo apt-get update
-sudo apt-get install -y g++-4.8
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
-sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
-sudo update-alternatives --config gcc
-sudo update-alternatives --config g++
-
+sudo apt-get install -y clang-3.5 clang-3.5-doc libclang-common-3.5-dev libclang-3.5-dev libclang1-3.5 libclang1-3.5-dbg libllvm3.5 libllvm3.5-dbg lldb-3.5 llvm-3.5 llvm-3.5-dev llvm-3.5-doc llvm-3.5-runtime lldb-3.5-dev
+sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
+sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
+sudo apt-get install -y libz-dev
+sudo apt-get install -y libedit-dev
+sudo apt-get install -y mono-complete
 sudo apt-get install -y git
 sudo apt-get install -y mercurial
-sudo apt-get install -y autoconf
 sudo apt-get install -y cmake
-sudo apt-get install -y wget
-sudo apt-get install -y unzip
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
@@ -83,45 +75,6 @@ fi
 # Set up base directory for everything
 mkdir -p ${BASE_DIR}
 cd ${BASE_DIR}
-
-################################################################################
-
-# mono
-
-if [ ${INSTALL_MONO} -eq 1 ]; then
-
-echo -e "${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
-
-mkdir -p ${MONO_DIR}
-
-# Install mono
-sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb
-cd ${MONO_DIR}
-git clone git://github.com/mono/mono.git
-cd mono
-git checkout mono-3.8.0
-./autogen.sh --prefix=/usr/local
-make get-monolite-latest
-make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
-sudo make install
-
-# Install libgdiplus
-sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev
-sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
-cd ${MONO_DIR}
-git clone git://github.com/mono/libgdiplus.git
-cd libgdiplus
-./autogen.sh --prefix=/usr/local
-make
-sudo make install
-
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-
-cd ${BASE_DIR}
-
-echo -e "${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
-
-fi
 
 ################################################################################
 
@@ -228,41 +181,6 @@ fi
 
 ################################################################################
 
-# LLVM
-
-if [ ${INSTALL_LLVM} -eq 1 ]; then
-
-echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
-
-mkdir -p ${LLVM_DIR}/src
-mkdir -p ${LLVM_DIR}/build
-mkdir -p ${LLVM_DIR}/install
-
-# Get llvm and extract
-wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
-wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
-wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
-
-tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
-mkdir -p ${LLVM_DIR}/src/tools/clang
-tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
-mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
-tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
-
-# Configure llvm and build
-cd ${LLVM_DIR}/build/
-cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
-make
-make install
-
-cd ${BASE_DIR}
-
-echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
-
-fi
-
-################################################################################
-
 # SMACK
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
@@ -278,7 +196,7 @@ git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
 # Configure SMACK and build
 cd ${SMACK_DIR}/build/
-cmake -DLLVM_CONFIG=${LLVM_DIR}/install/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
 make
 make install
 
@@ -289,7 +207,6 @@ echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 # Set required paths and environment variables
 export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
 export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
-export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
 # Run SMACK regressions
@@ -305,3 +222,4 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
+

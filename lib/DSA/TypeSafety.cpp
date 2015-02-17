@@ -150,6 +150,95 @@ TypeSafety<dsa>::isTypeSafe (const Value * V, const Function * F) {
 }
 
 template<class dsa> bool
+TypeSafety<dsa>::isFieldDisjoint (const Value * V, const Function * F) {
+  //
+  // Get the DSNode for the specified value.
+  //
+  DSNodeHandle DH = getDSNodeHandle (V, F);
+  DSNode *node = DH.getNode();
+  unsigned offset = DH.getOffset();
+  DEBUG(errs() << " check fields overlap at: " << offset << "\n");
+
+  //
+  // If there is no DSNode, claim that it is not type safe.
+  //
+  if (DH.isNull()) {
+    return false;
+  }
+  //
+  // If the DSNode is completely folded, then we know for sure that it is not
+  // type-safe.
+  //
+  if (node->isNodeCompletelyFolded())
+    return false;
+
+  //
+  // If the memory object represented by this DSNode can be manipulated by
+  // external code or DSA has otherwise not finished analyzing all operations
+  // on it, declare it type-unsafe.
+  //
+  if (node->isExternalNode() || node->isIncompleteNode())
+    return false;
+
+  //
+  // If the pointer to the memory object came from some source not understood
+  // by DSA or somehow came from/escapes to the realm of integers, declare it
+  // type-unsafe.
+  //
+  if (node->isUnknownNode() || node->isIntToPtrNode() || node->isPtrToIntNode()) {
+    return false;
+  }
+
+  return !((NodeInfo[node])[offset]); 
+}
+
+//
+// TODO
+//
+template<class dsa> bool
+TypeSafety<dsa>::isFieldDisjoint (const GlobalValue * V, unsigned offset) {
+  //
+  // Get the DSNode for the specified value.
+  //
+  DSNodeHandle DH = getDSNodeHandle (V);
+  DSNode *node = DH.getNode();
+  //unsigned offset = DH.getOffset();
+  DEBUG(errs() << " check fields overlap at: " << offset << "\n");
+
+  //
+  // If there is no DSNode, claim that it is not type safe.
+  //
+  if (DH.isNull()) {
+    return false;
+  }
+  //
+  // If the DSNode is completely folded, then we know for sure that it is not
+  // type-safe.
+  //
+  if (node->isNodeCompletelyFolded())
+    return false;
+
+  //
+  // If the memory object represented by this DSNode can be manipulated by
+  // external code or DSA has otherwise not finished analyzing all operations
+  // on it, declare it type-unsafe.
+  //
+  if (node->isExternalNode() || node->isIncompleteNode())
+    return false;
+
+  //
+  // If the pointer to the memory object came from some source not understood
+  // by DSA or somehow came from/escapes to the realm of integers, declare it
+  // type-unsafe.
+  //
+  if (node->isUnknownNode() || node->isIntToPtrNode() || node->isPtrToIntNode()) {
+    return false;
+  }
+
+  return !((NodeInfo[node])[offset]); 
+}
+
+template<class dsa> bool
 TypeSafety<dsa>::isTypeSafe(const GlobalValue *V) {
   //
   // Get the DSNode for the specified value.
@@ -169,6 +258,107 @@ TypeSafety<dsa>::isTypeSafe(const GlobalValue *V) {
     return true;
 
   return false;
+}
+
+//
+// Method: fieldMapUpdate()
+//
+// Description:
+//  Update the fieldmap
+//
+template<class dsa> void
+TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
+  FieldMap fmap;
+  //
+  // There are no overlapping fields if the DSNode has no fields.
+  //
+  if (N->type_begin() == N->type_end())
+    return;
+
+  //
+  // Iterate through the DSNode to see if the previous fields overlaps with the
+  // current field.
+  //
+  DSNode::const_type_iterator tn =  N->type_begin();
+  while (true) {
+    //
+    // If this is the last field, then we are done updating.
+    //
+    if (tn == N->type_end()) {
+      break;
+    }
+    //
+    // Get the information about the current field.
+    //
+    unsigned offset = tn->first;
+    SuperSet<Type*>::setPtr TypeSet = tn->second;
+
+
+    //
+    // If there are multiple types in the current field, then the field is type-unsafe.
+    //
+    if (TypeSet) {
+      svset<Type*>::const_iterator tb = TypeSet->begin();
+      if (++tb != TypeSet->end()) {
+        fmap[offset] = true;
+        DEBUG(errs() << "Multiple fields at " << offset << "\n");
+      }
+    }
+
+    for (DSNode::const_type_iterator ti = ++tn; ti != N->type_end(); ++ti) {
+
+      //
+      // Get the offset of the next field.
+      //
+      unsigned next_offset = ti->first;
+      assert((next_offset >= offset) && "next offset should be larger than offset.");
+
+      //
+      // Check to see if any of the types in the current field extend into the
+      // next field.
+      //
+      if (TypeSet) {
+        bool overlaps = false;
+        for (svset<Type*>::const_iterator ni = TypeSet->begin(),
+            ne = TypeSet->end(); ni != ne; ++ni) {
+          unsigned field_length = TD->getTypeStoreSize (*ni);
+          if ((offset + field_length) > next_offset) {
+            if(TypeInferenceOptimize) {
+              if(const ArrayType *AT = dyn_cast<ArrayType>(*ni)) {
+                Type *ElemTy = AT->getElementType();
+                while(ArrayType *AT1 = dyn_cast<ArrayType>(ElemTy))
+                  ElemTy = AT1->getElementType();
+                if(next_offset < (TD->getTypeStoreSize(ElemTy) + offset)) {
+                  assert(isa<StructType>(ElemTy) && "Array Not of Struct Type??");
+                  //overlaps = false;
+                  //fmap[next_offset] = false;
+                  continue;
+                }
+              }
+            }
+            fmap[offset] = true;
+            fmap[next_offset] = true;
+            overlaps = true;
+            if(overlaps) {
+              DEBUG(errs() << "Found overlap at " << offset << " with " << next_offset << "\n");
+              break;
+            }
+          }
+        }
+        if (!overlaps)
+          break;
+      }
+    }
+
+    if (fmap.find(offset) == fmap.end())
+      fmap[offset] = false;
+  }
+
+  //
+  // Return the result.
+  //
+  NodeInfo[N] = fmap;
+  return;
 }
 
 //
@@ -202,6 +392,16 @@ TypeSafety<dsa>::typeFieldsOverlap (const DSNode * N) {
     unsigned offset = tn->first;
     SuperSet<Type*>::setPtr TypeSet = tn->second;
 
+    //
+    // If there are multiple types in the current field, then the node is type-unsafe.
+    //
+    if (TypeSet) {
+	    svset<Type*>::const_iterator tb = TypeSet->begin();
+	    if (++tb != TypeSet->end()) {
+		    overlaps = true;
+		    break;
+	    }
+    }
     //
     // If this is the last field, then we are done searching.
     //
@@ -325,6 +525,7 @@ TypeSafety<dsa>::findTypeSafeDSNodes (const DSGraph * Graph) {
     if (isTypeSafe (N)) {
       TypeSafeNodes.insert (&*N);
     }
+    fieldMapUpdate(N);
   }
 }
 

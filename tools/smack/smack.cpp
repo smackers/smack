@@ -30,7 +30,7 @@ InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
   llvm::cl::Required, llvm::cl::value_desc("filename"));
 
 static llvm::cl::opt<std::string>
-OutputFilename("o", llvm::cl::desc("Override output filename"),
+OutputFilename("bpl", llvm::cl::desc("Output Boogie filename"),
   llvm::cl::init(""), llvm::cl::value_desc("filename"));
 
 static llvm::cl::opt<std::string>

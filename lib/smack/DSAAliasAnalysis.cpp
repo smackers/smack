@@ -72,6 +72,24 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
   return false;
 }
 
+bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
+  const llvm::Function *F = inst->getParent()->getParent();
+  return TS->isFieldDisjoint(ptr, F);
+}
+
+bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
+  return TS->isFieldDisjoint(V, offset);
+}
+
+bool DSAAliasAnalysis::isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst) {
+  const llvm::Function *F = inst->getParent()->getParent();
+  return TS->isTypeSafe(ptr, F);
+}
+
+bool DSAAliasAnalysis::isTypeSafe(const GlobalValue* V) {
+  return TS->isTypeSafe(V);
+}
+
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return TD->getDSGraph(*I->getParent()->getParent());

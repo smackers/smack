@@ -4,6 +4,7 @@
 #include "smack/BoogieAst.h"
 #include "llvm/IR/Constants.h"
 #include <sstream>
+#include <iostream>
 
 namespace smack {
 
@@ -77,8 +78,12 @@ const Expr* Expr::lit(int i, unsigned w) {
   switch (w) {
   case 0:
     return new LitExpr(i);
+  case 1:
+    return new LitExpr(LitExpr::Bv1, i);
   case 8:
     return new LitExpr(LitExpr::Bv8, i);
+  case 16:
+    return new LitExpr(LitExpr::Bv16, i);
   case 32:
     return new LitExpr(LitExpr::Bv32, i);
   case 64:
@@ -159,6 +164,10 @@ const Stmt* Stmt::assert_(const Expr* e) {
 
 const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
   return new AssignStmt(vector<const Expr*>(1, e), vector<const Expr*>(1, f));
+}
+
+const Stmt* Stmt::assign(vector<const Expr*> lhs, vector<const Expr*> rhs) {
+  return new AssignStmt(lhs, rhs);
 }
 
 const Stmt* Stmt::assume(const Expr* e) {
@@ -438,8 +447,14 @@ void LitExpr::print(ostream& os) const {
   case Num:
     os << val;
     break;
+  case Bv1:
+    os << val << "bv1";
+    break;
   case Bv8:
     os << val << "bv8";
+    break;
+  case Bv16:
+    os << val << "bv16";
     break;
   case Bv32:
     os << val << "bv32";
