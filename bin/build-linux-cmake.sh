@@ -282,8 +282,6 @@ cmake -DLLVM_CONFIG=${LLVM_DIR}/install/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/
 make
 make install
 
-cd ${BASE_DIR}
-
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
@@ -291,6 +289,12 @@ export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
 export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
 export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
+
+# Compile SMACK definitions and models in the share folder
+echo -e "${textcolor}*** SMACK BUILD: Compiling SMACK definitions and models ***${nocolor}"
+cd ${SMACK_DIR}/install/share/lib
+make
+echo -e "${textcolor}*** SMACK BUILD: Compiled SMACK definitions and models ***${nocolor}"
 
 # Run SMACK regressions
 echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"

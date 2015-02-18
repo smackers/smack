@@ -101,8 +101,6 @@ ${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_
 make
 make install
 
-cd ${BASE_DIR}
-
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
@@ -110,6 +108,12 @@ export BOOGIE=/cygdrive/c/projects/boogie/Binaries/boogie
 export CORRAL=/cygdrive/c/projects/corral/bin/Debug/corral
 export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
+
+# Compile SMACK definitions and models in the share folder
+echo -e "${textcolor}*** SMACK BUILD: Compiling SMACK definitions and models ***${nocolor}"
+cd ${SMACK_DIR}/install/share/lib
+make
+echo -e "${textcolor}*** SMACK BUILD: Compiled SMACK definitions and models ***${nocolor}"
 
 # Run SMACK regressions
 echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
@@ -124,4 +128,3 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
-
