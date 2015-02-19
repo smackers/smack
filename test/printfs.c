@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "smack-defs.h"
+#include "smack.h"
 
 int main(void) {
   printf("Hello World\n");

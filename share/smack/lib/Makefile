@@ -2,7 +2,7 @@ CC = clang
 INC = ../include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
-SOURCES = smack-defs.c
+SOURCES = smack.c
 
 BITCODE = $(SOURCES:.c=.bc)
 

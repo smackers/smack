@@ -1,4 +1,4 @@
-#include "smack-defs.h"
+#include "smack.h"
 
 extern int foo(int x);
 

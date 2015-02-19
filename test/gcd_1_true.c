@@ -1,4 +1,4 @@
-#include "smack-defs.h"
+#include "smack.h"
 signed int gcd_test(signed int a, signed int b)
 {
     signed int t;

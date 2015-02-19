@@ -1,7 +1,7 @@
 CC = clang
 LD = llvm-link
 INC = ../../../install/share/include
-LDLIBS = ../../../install/share/lib/smack-defs.bc
+LDLIBS = ../../../install/share/lib/smack.bc
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = incr.c simple.c

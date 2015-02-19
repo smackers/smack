@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <smack-defs.h>
+#include <smack.h>
 #include <smack-contracts.h>
 
 // @expect 1 verified, 1 errors?

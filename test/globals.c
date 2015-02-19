@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "smack-defs.h"
+#include "smack.h"
 
 int g1;
 int g2;

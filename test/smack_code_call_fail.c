@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "smack-defs.h"
+#include "smack.h"
 
 void foo(int *x) {
   *x = *x + 10;

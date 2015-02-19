@@ -1,4 +1,4 @@
-#include "smack-defs.h"
+#include "smack.h"
 extern int __VERIFIER_nondet_int();
 int main()
 {

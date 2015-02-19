@@ -4,7 +4,7 @@
 #ifndef INCR_H
 #define INCR_H
 
-#include "smack-defs.h"
+#include "smack.h"
 
 int incr(int);
 

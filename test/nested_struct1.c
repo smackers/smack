@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack-defs.h"
+#include "smack.h"
 
 typedef struct {
   int x;

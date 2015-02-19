@@ -1,5 +1,5 @@
 // This test shows why we need parallel assignment when translating Phi nodes
-#include "smack-defs.h"
+#include "smack.h"
 
 int gcd_test(int a, int b) {
   int t;
