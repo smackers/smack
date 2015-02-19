@@ -191,18 +191,18 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   DESTINATION bin
 )
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/include/smack-defs.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/include/smack-contracts.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/include/smack-svcomp.h
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-defs.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-contracts.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-svcomp.h
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
   GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
-  DESTINATION share/include
+  DESTINATION share/smack/include
 )
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/lib/Makefile
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/lib/smack-defs.c
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/Makefile
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack-defs.c
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
   GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
-  DESTINATION share/lib
+  DESTINATION share/smack/lib
 )
 
