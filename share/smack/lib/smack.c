@@ -439,14 +439,14 @@ void __SMACK_decls() {
   // Memory Model
   D("const $UNDEF: ref;");
   D("function $base(ref) returns (ref);");
-  D("const unique $NULL: ref;");
-  D("const unique $REF_CONST_1: ref;");
-  D("const unique $REF_CONST_2: ref;");
-  D("const unique $REF_CONST_3: ref;");
-  D("const unique $REF_CONST_4: ref;");
-  D("const unique $REF_CONST_5: ref;");
-  D("const unique $REF_CONST_6: ref;");
-  D("const unique $REF_CONST_7: ref;");
+  D("const $NULL: ref;");
+  D("const $REF_CONST_1: ref;");
+  D("const $REF_CONST_2: ref;");
+  D("const $REF_CONST_3: ref;");
+  D("const $REF_CONST_4: ref;");
+  D("const $REF_CONST_5: ref;");
+  D("const $REF_CONST_6: ref;");
+  D("const $REF_CONST_7: ref;");
   D("function {:inline} $b2p(b: bool) returns (ref) {if b then $REF_CONST_1 else $NULL}");
   D("function {:inline} $p2b(p: ref) returns (bool) {p != $NULL}");
 #ifdef BITVECTOR
