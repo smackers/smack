@@ -288,12 +288,6 @@ export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
 export PATH=${LLVM_DIR}/install/bin:$PATH
 export PATH=${SMACK_DIR}/install/bin:$PATH
 
-# Compile SMACK definitions and models in the share folder
-echo -e "${textcolor}*** SMACK BUILD: Compiling SMACK definitions and models ***${nocolor}"
-cd ${SMACK_DIR}/install/share/lib
-make
-echo -e "${textcolor}*** SMACK BUILD: Compiled SMACK definitions and models ***${nocolor}"
-
 # Run SMACK regressions
 echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
 cd ${SMACK_DIR}/src/test
