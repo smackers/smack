@@ -280,8 +280,6 @@ ${SMACK_DIR}/src/configure --with-llvmsrc=${LLVM_DIR}/src --with-llvmobj=${LLVM_
 make
 make install
 
-cd ${BASE_DIR}
-
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables

@@ -431,7 +431,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return lit(cf);
 
     } else if (constant->isNullValue())
-      return lit((unsigned)0, ptrSizeInBits);
+      return lit(0, ptrSizeInBits);
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");

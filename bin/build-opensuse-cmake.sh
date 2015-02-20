@@ -199,8 +199,6 @@ cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/b
 make
 make install
 
-cd ${BASE_DIR}
-
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
@@ -221,4 +219,3 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
-

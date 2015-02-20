@@ -1,8 +1,8 @@
 CC = clang
-INC = ../../share/smack/include
+INC = ../include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
-SOURCES = simple.c
+SOURCES = smack.c smack-svcomp.c
 
 BITCODE = $(SOURCES:.c=.bc)
 
@@ -12,5 +12,5 @@ all: $(BITCODE)
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f *.bc *.bpl
+	rm -f *.bc
 
