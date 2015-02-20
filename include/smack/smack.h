@@ -504,7 +504,7 @@ void __SMACK_decls() {
   D("function {:inline} $store.i16(M:[ref]i8, p:ref, v:i16) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]]}");
   D("function {:inline} $store.i8(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
 
-  D("function {:inline} $isExternal(p: ref) returns (bool) {$i2b($slt.ref(p, $sub.ref($GLOBALS_BOTTOM, 32768bv64)))}");
+  D("function {:inline} $isExternal(p: ref) returns (bool) {$i2b($slt.ref(p, $EXTERNS_BOTTOM))}");
   D("function {:inline} $trunc.i64.i32(p: i64) returns (i32) {p[32:0]}");
   D("function {:inline} $trunc.i64.i16(p: i64) returns (i16) {p[16:0]}");
   D("function {:inline} $trunc.i64.i8(p: i64) returns (i8) {p[8:0]}");
@@ -551,7 +551,7 @@ void __SMACK_decls() {
   D("function {:inline} $sle.ref(p1:ref, p2:ref) returns (i1) {if p1 <= p2 then 1 else 0}");
   D("function {:inline} $sge.ref(p1:ref, p2:ref) returns (i1) {if p1 >= p2 then 1 else 0}");
 
-  D("function {:inline} $isExternal(p: ref) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
+  D("function {:inline} $isExternal(p: ref) returns (bool) { p < $EXTERNS_BOTTOM }");
 #endif
 
   // Memory debugging symbols
@@ -567,6 +567,7 @@ void __SMACK_decls() {
   D("const $MOP: $mop;");
 
   D("const $GLOBALS_BOTTOM: ref;");
+  D("const $EXTERNS_BOTTOM: ref;");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
