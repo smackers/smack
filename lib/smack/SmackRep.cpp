@@ -781,6 +781,10 @@ string SmackRep::getPrelude() {
   lit(globalsBottom, ptrSizeInBits)->print(s);
   s << ";" << endl;
 
+  s << "axiom $EXTERNS_BOTTOM == ";
+  lit(externsBottom, ptrSizeInBits)->print(s);
+  s << ";" << endl;
+
   return s.str();
 }
 
@@ -907,15 +911,16 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
   if (isCodeString(v))
     return decls;
 
+  unsigned size = 0;
+  bool external = false;
+
   if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
     if (g->hasInitializer()) {
       const Constant* init = g->getInitializer();
       unsigned numElems = numElements(init);
-      unsigned size;
 
       // NOTE: all global variables have pointer type in LLVM
-      if (g->getType()->isPointerTy()) {
-        PointerType *t = (PointerType*) g->getType();
+      if (const PointerType* t = dyn_cast<const PointerType>(g->getType())) {
 
         // in case we can determine the size of the element type ...
         if (t->getElementType()->isSized())
@@ -928,24 +933,27 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
       } else
         size = storageSize(g->getType());
 
-      globalsBottom -= size;
-
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
         if (numElems > 1)
-        ax.push_back(Attr::attr("count",numElems));
-        decls.push_back(SmackOptions::BitVectors? Decl::axiom(Expr::eq(Expr::id(name),lit(globalsBottom, ptrSizeInBits))) : Decl::axiom(Expr::eq(Expr::id(name),Expr::lit(globalsBottom))) );
-        addInit(getRegion(g), g, init);
+          ax.push_back(Attr::attr("count",numElems));
 
-        // Expr::fn("$slt",
-        //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
-        //     Expr::lit(globalsBottom)) ));
+        addInit(getRegion(g), g, init);
       }
 
     } else {
-      decls.push_back(Decl::axiom(declareIsExternal(Expr::id(name))));
+      external = true;
     }
   }
-  decls.push_back(Decl::constant(name, getPtrType(), ax, true));
+
+  decls.push_back(Decl::constant(name, getPtrType(), ax, false));
+
+  if (!size)
+    size = targetData->getPrefTypeAlignment(v->getType());
+
+  decls.push_back(Decl::axiom(Expr::eq(Expr::id(name),lit(
+    external ? externsBottom -= size : globalsBottom -= size,
+    ptrSizeInBits))));
+
   return decls;
 }
 

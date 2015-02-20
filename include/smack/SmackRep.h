@@ -69,6 +69,7 @@ protected:
   unsigned ptrSizeInBits;
 
   int globalsBottom;
+  int externsBottom;
   vector<const Stmt*> staticInits;
   
   unsigned uniqueFpNum;
@@ -76,7 +77,7 @@ protected:
 public:
   SmackRep(DSAAliasAnalysis* aa, Naming& N, Program& P)
     : aliasAnalysis(aa), naming(N), program(P),
-      targetData(aa->getDataLayout()), globalsBottom(0) {
+      targetData(aa->getDataLayout()), globalsBottom(0), externsBottom(-32768) {
     uniqueFpNum = 0;
     ptrSizeInBits = targetData->getPointerSizeInBits();
   }
