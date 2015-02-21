@@ -3,7 +3,8 @@
 #include <smack.h>
 #include <smack-contracts.h>
 
-// @expect 1 verified, 1 errors?
+// @skip
+// @expect error
 
 int g;
 

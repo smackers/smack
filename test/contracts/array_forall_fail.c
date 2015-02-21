@@ -3,7 +3,8 @@
 #include <smack.h>
 #include <smack-contracts.h>
 
-// @expect 0 verified, 1 errors?
+// @skip
+// @expect error
 
 #define SIZE 10
 int g[SIZE];
