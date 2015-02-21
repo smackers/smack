@@ -59,6 +59,7 @@ sudo apt-get install -y clang-3.5 clang-3.5-doc libclang-common-3.5-dev libclang
 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
 sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
 sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
+sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
 sudo apt-get install -y libz-dev
 sudo apt-get install -y libedit-dev
 sudo apt-get install -y mono-complete
