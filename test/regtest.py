@@ -62,7 +62,7 @@ def metadata(file):
       if match:
         m['expect'] = match.group(1)
 
-  if not 'expect' in m:
+  if not m['skip'] and not 'expect' in m:
     print red("WARNING: @expect MISSING IN %s" % file)
     m['expect'] = 'verified'
 
