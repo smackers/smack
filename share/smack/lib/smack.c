@@ -41,7 +41,7 @@ int __SMACK_nondet() {
 void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
   // Integer arithmetic
-#ifdef BITVECTOR
+#ifdef BITPRECISE
   D("function {:bvbuiltin \"bvneg\"} $neg.i64(p1:i64) returns (i64);");
   D("function {:bvbuiltin \"bvadd\"} $add.i64(p1:i64, p2:i64) returns (i64);");
   D("function {:bvbuiltin \"bvsub\"} $sub.i64(p1:i64, p2:i64) returns (i64);");
@@ -449,7 +449,7 @@ void __SMACK_decls() {
   D("const $REF_CONST_7: ref;");
   D("function {:inline} $b2p(b: bool) returns (ref) {if b then $REF_CONST_1 else $NULL}");
   D("function {:inline} $p2b(p: ref) returns (bool) {p != $NULL}");
-#ifdef BITVECTOR
+#ifdef BITPRECISE
   //Pointer Arithmetic
   D("function {:bvbuiltin \"bvadd\"} $add.ref(p1:ref, p2:ref) returns (ref);");
   D("function {:bvbuiltin \"bvsub\"} $sub.ref(p1:ref, p2:ref) returns (ref);");

@@ -72,7 +72,7 @@ print "Running regression tests..."
 print
 
 passed = failed = 0
-for test in glob.glob("./**/*.c"):
+for test in glob.glob("./bits/*.c"):
   meta = metadata(test)
 
   if meta['skip']:

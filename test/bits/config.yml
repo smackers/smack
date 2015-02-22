@@ -1,1 +1,1 @@
-flags: ['--bit-vector', '--infer-field-overlap']
+flags: ['--bit-precise']

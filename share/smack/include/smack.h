@@ -21,7 +21,7 @@ void __SMACK_top_decl(const char *fmt, ...);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#ifdef BITVECTOR
+#ifdef BITPRECISE
 #define assert(EX) __SMACK_dummy(EX); __SMACK_code("assert @ != 0bv32;", EX)
 #define assume(EX) __SMACK_dummy(EX); __SMACK_code("assume @ != 0bv32;", EX)
 #else

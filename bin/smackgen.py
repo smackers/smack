@@ -48,7 +48,7 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, clangArgs, bitVector):
+def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, clangArgs, bitPrecise):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
   smackHeaders = path.join(smackRoot, 'share', 'smack', 'include')
@@ -62,7 +62,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
 
   # Compile SMACK header file
   clangCommand = ['clang']
-  if bitVector: clangCommand += ['-DBITVECTOR']
+  if bitPrecise: clangCommand += ['-DBITPRECISE']
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders,
@@ -88,7 +88,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   else:
     sys.exit('Unexpected source file extension `' + fileExtension + '\'')
 
-  if bitVector: clangCommand += ['-DBITVECTOR']
+  if bitPrecise: clangCommand += ['-DBITPRECISE']
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders,
@@ -143,14 +143,14 @@ def smackGenerate(sysArgv):
       if optionsMatch:
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
-    inputFile, clangOutput = clang(scriptPathName, inputFile, args.bcfile, args.outfile, args.memmod, args.clang, args.bitvector)
+    inputFile, clangOutput = clang(scriptPathName, inputFile, args.bcfile, args.outfile, args.memmod, args.clang, args.bitprecise)
 
   elif fileExtension in ['.bc', '.ll']:
     pass # do nothing
   else:
     sys.exit('Unexpected source file extension `' + fileExtension + '\'')
 
-  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod, args.bitvector, args.inferfieldoverlap)
+  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise, args.nobyteaccessinference)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
