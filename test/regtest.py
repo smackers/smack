@@ -7,9 +7,8 @@ import re
 import glob
 import time
 
-VERIFIERS = ['boogie', 'corral']
-MEMORY_MODELS = ['no-reuse', 'no-reuse-impls', 'reuse']
-TIME_LIMIT = 10
+OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
+APPEND_FIELDS = ['flags']
 
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
@@ -23,37 +22,45 @@ def check_result(expected, actual):
   else:
     return re.search(r'0 verified, [1-9]\d* errors?|can fail', actual)
 
+def merge(metadata, yamldata):
+
+  for key in OVERRIDE_FIELDS:
+    if key in yamldata:
+      metadata[key] = yamldata[key]
+
+  for key in APPEND_FIELDS:
+    if key in yamldata:
+      if key in metadata:
+        metadata[key] += yamldata[key]
+      else:
+        metadata[key] = yamldata[key]
+
 def metadata(file):
   m = {}
-  m['skip'] = False
-  m['flags'] = []
-  m['verifiers'] = VERIFIERS
-  m['memory'] = MEMORY_MODELS
+  prefix = []
 
-  dirs = path.dirname(file).split('/')
-  i = 1
-  while i <= len(dirs):
-    yaml_file = path.join(*(dirs + ['config.yml']))
+  for d in path.dirname(file).split('/'):
+    prefix += [d]
+    yaml_file = path.join(*(prefix + ['config.yml']))
     if path.isfile(yaml_file):
       with open(yaml_file, "r") as f:
         data = yaml.safe_load(f)
-        if 'flags' in data:
-          for flag in data['flags']:
-            m['flags'] += [flag]
-    i += 1
+        merge(m,data)
 
-  for line in open(file).readlines():
-    match = re.search(r'@skip', line)
-    if match:
-      m['skip'] = True
+  with open(file, "r") as f:
+    for line in f.readlines():
 
-    match = re.search(r'@flag (.*)',line)
-    if match:
-      m['flags'] += [match.group(1)]
+      match = re.search(r'@skip', line)
+      if match:
+        m['skip'] = True
 
-    match = re.search(r'@expect (.*)',line)
-    if match:
-      m['expect'] = match.group(1)
+      match = re.search(r'@flag (.*)',line)
+      if match:
+        m['flags'] += [match.group(1)]
+
+      match = re.search(r'@expect (.*)',line)
+      if match:
+        m['expect'] = match.group(1)
 
   if not 'expect' in m:
     print red("WARNING: @expect MISSING IN %s" % file)
@@ -65,7 +72,7 @@ print "Running regression tests..."
 print
 
 passed = failed = 0
-for test in glob.glob("**/*.c"):
+for test in glob.glob("./**/*.c"):
   meta = metadata(test)
 
   if meta['skip']:
@@ -74,7 +81,7 @@ for test in glob.glob("**/*.c"):
   print "{0:>20}".format(test)
 
   cmd = ['smackverify.py', test]
-  cmd += ['--time-limit', str(TIME_LIMIT)]
+  cmd += ['--time-limit', str(meta['time-limit'])]
   cmd += meta['flags']
 
   for memory in meta['memory']:

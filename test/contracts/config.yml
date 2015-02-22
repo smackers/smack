@@ -1,0 +1,3 @@
+verifiers: [boogie]
+memory: [no-reuse]
+skip: true

@@ -3,7 +3,6 @@
 #include <smack.h>
 #include <smack-contracts.h>
 
-// @skip
 // @expect error
 
 int g;
