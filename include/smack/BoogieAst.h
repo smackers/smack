@@ -480,6 +480,10 @@ public:
     for (unsigned i = 0; i < ds.size(); i++)
       addDecl(ds[i]);
   }
+  void addDecls(vector<string> ds) {
+    for (unsigned i=0; i < ds.size(); i++)
+      addDecl(ds[i]);
+  }
   vector<ProcDecl*> getProcs() {
     vector<ProcDecl*> procs;
     for (set<Decl*>::iterator i = decls.begin(); i != decls.end(); ++i)

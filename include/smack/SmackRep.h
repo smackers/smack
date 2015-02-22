@@ -155,10 +155,12 @@ public:
   const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
 
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
-  const Stmt* call(llvm::Function* f, llvm::User& u);
+  const Stmt* call(llvm::Function* f, const llvm::User& u);
   string code(llvm::CallInst& ci);
+  string procName(const llvm::User& U);
+  string procName(const llvm::User& U, llvm::Function* F);
+  vector<string> decl(llvm::Function* F);
   ProcDecl* proc(llvm::Function* f);
-  ProcDecl* proc(llvm::Function* f, llvm::User* ci);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
@@ -184,8 +186,8 @@ public:
 
   virtual const Expr* declareIsExternal(const Expr* e);
 
-  virtual string memcpyProc(int dstReg, int srcReg);
-  virtual string memsetProc(int dstReg);
+  virtual string memcpyProc(llvm::Function* F, int dstReg, int srcReg);
+  virtual string memsetProc(llvm::Function* F, int dstReg);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {

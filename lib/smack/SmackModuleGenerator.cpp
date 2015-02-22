@@ -31,21 +31,19 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
 
-    if (rep.isIgnore(func))
-      continue;
-
-    if (rep.isMallocOrFree(func)) {
-      program.addDecls(rep.globalDecl(func));
-      continue;
-    }
-
     // TODO: Implement function pointers of vararg functions properly
-//    if (!func->isVarArg())
-      program.addDecls(rep.globalDecl(func));
+    // if (!func->isVarArg())
+    program.addDecls(rep.globalDecl(func));
 
     ProcDecl* proc = rep.proc(func);
-    if (proc->getName() != "__SMACK_decls")
+    if (!func->isDeclaration() && proc->getName() != "__SMACK_decls")
       program.addDecl(proc);
+
+    // TODO this will cover the cases of malloc, memcpy, memset, …
+    if (func->isDeclaration()) {
+      program.addDecls(rep.decl(func));
+      continue;
+    }
 
     if (!func->isDeclaration() && !func->empty()
         && !func->getEntryBlock().empty()) {

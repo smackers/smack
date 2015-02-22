@@ -184,13 +184,8 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
-  int dstRegion = getRegion(mci.getOperand(0));
-  int srcRegion = getRegion(mci.getOperand(1));
-
-  program.addDecl(memcpyProc(dstRegion,srcRegion));
-
   stringstream name;
-  name << "$memcpy." << dstRegion << "." << srcRegion;
+  name << procName(mci) << ".r" << getRegion(mci.getOperand(0)) << ".r" << getRegion(mci.getOperand(1));
   vector<const Expr*> args;
   args.push_back(expr(mci.getOperand(0)));
   args.push_back(expr(mci.getOperand(1)));
@@ -202,13 +197,9 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 }
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
-  int region = getRegion(msi.getOperand(0));
-
-  program.addDecl(memsetProc(region));
-
   stringstream name;
   vector<const Expr*> args;
-  name << "$memset." << region;
+  name << procName(msi) << ".r" << getRegion(msi.getOperand(0));
   args.push_back(expr(msi.getOperand(0)));
   args.push_back(expr(msi.getOperand(1)));
   const llvm::Value* setSize = msi.getOperand(2);
@@ -611,6 +602,23 @@ string SmackRep::armwop2fn(unsigned opcode) {
   }
 }
 
+string SmackRep::procName(const llvm::User& U) {
+  if (const llvm::CallInst* CI = llvm::dyn_cast<const llvm::CallInst>(&U))
+    return procName(U, CI->getCalledFunction());
+  else
+    assert(false && "Unexpected user expression.");
+}
+
+string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
+  stringstream name;
+  name << naming.get(*F);
+  if (F->isVarArg()) {
+    for (unsigned i = 0; i < U.getNumOperands()-1; i++)
+      name << "." << type(U.getOperand(i)->getType());
+  }
+  return name.str();
+}
+
 string SmackRep::indexedName(string name, vector<string> idxs) {
   stringstream idxd;
   idxd << name;
@@ -625,11 +633,42 @@ string SmackRep::indexedName(string name, int idx) {
   return idxd.str();
 }
 
-ProcDecl* SmackRep::proc(llvm::Function* f) {
-  return proc(f,NULL);
+vector<string> SmackRep::decl(llvm::Function* F) {
+  vector<string> decls;
+
+  for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
+    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U))
+      decls.push_back(memcpyProc(F,getRegion(MCI->getOperand(0)),getRegion(MCI->getOperand(1))));
+
+    else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U))
+      decls.push_back(memsetProc(F,getRegion(MSI->getOperand(0))));
+
+    else {
+      stringstream decl;
+      decl << "procedure " << naming.get(*F);
+
+      if (F->isVarArg())
+        for (unsigned i = 0; i < U->getNumOperands()-1; i++)
+          decl << "." << type(U->getOperand(i)->getType());
+
+      decl << "(";
+      for (unsigned i = 0; i < U->getNumOperands()-1; i++) {
+        if (i > 0)
+          decl << ", ";
+        decl << "p" << i << ":" << type(U->getOperand(i)->getType());
+      }
+      decl << ")";
+      if (!F->getReturnType()->isVoidTy())
+        decl << " returns (r: " << type(F->getReturnType()) << ")";
+      decl << ";";
+      decls.push_back(decl.str());
+
+    }
+
+  return decls;
 }
 
-ProcDecl* SmackRep::proc(llvm::Function* f, llvm::User* ci) {
+ProcDecl* SmackRep::proc(llvm::Function* f) {
   vector<string> idxs;
   vector< pair<string,string> > parameters, returns;
 
@@ -647,14 +686,6 @@ ProcDecl* SmackRep::proc(llvm::Function* f, llvm::User* ci) {
     parameters.push_back(make_pair(name, type(arg->getType()) ));
   }
 
-  if (ci) {
-    for (; i < ci->getNumOperands()-1; i++) {
-      string t = type(ci->getOperand(i)->getType());
-      parameters.push_back(make_pair(indexedName("p",i), t));
-      idxs.push_back(t);
-    }
-  }
-
   if (!f->getReturnType()->isVoidTy())
     returns.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
 
@@ -670,7 +701,7 @@ const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
   return (f && f->isVarArg() && isFloat(v)) ? Expr::fn(opName("$fp2si", {getSize(v->getType())}),expr(v)) : expr(v);
 }
 
-const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
+const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   using namespace llvm;
 
   assert(f && "Call encountered unresolved function.");
@@ -699,14 +730,8 @@ const Stmt* SmackRep::call(llvm::Function* f, llvm::User& ci) {
     assert(args.size() == 1);
     return Stmt::call(FREE, args[0]);
 
-  } else if (f->isVarArg() || (f->isDeclaration() && !Naming::isSmackName(name))) {
-
-    Decl* p = proc(f,&ci);
-    program.addDecl(p);
-    return Stmt::call(p->getName(), args, rets);
-
   } else {
-    return Stmt::call(name, args, rets);
+    return Stmt::call(procName(ci, f), args, rets);
   }
 }
 
@@ -964,18 +989,18 @@ string SmackRep::getPtrType() {
   return "ref";
 }
 
-string SmackRep::memcpyProc(int dstReg, int srcReg) {
+string SmackRep::memcpyProc(llvm::Function* F, int dstReg, int srcReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: i1)" << endl;
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned size = 8 << i;
-      s << "modifies " << memPath(dstReg, size) << ";" << endl;
-    }
+  s << "procedure " << naming.get(*F) << ".r" << dstReg << ".r" << srcReg;
+  s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: i1)";
+  s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
 
+  for (unsigned i = 0; i < n; ++i)
+    s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
+
+  if (SmackOptions::MemoryModelImpls) {
     s << "{" << endl;
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
@@ -994,12 +1019,6 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
     }
     s << "}" << endl;
   } else {
-    s << "procedure $memcpy." << dstReg << "." << srcReg;
-    s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: i1);" << endl;
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned size = 8 << i;
-      s << "modifies " << memPath(dstReg, size) << ";" << endl;
-    }
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
       s << "ensures (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
@@ -1013,18 +1032,18 @@ string SmackRep::memcpyProc(int dstReg, int srcReg) {
   return s.str();
 }
 
-string SmackRep::memsetProc(int dstReg) {
+string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
-  if (SmackOptions::MemoryModelImpls) {
-    s << "procedure $memset." << dstReg;
-    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: i1)" << endl;
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned size = 8 << i;
-      s << "modifies " << memPath(dstReg, size) << ";" << endl;
-    }
+  s << "procedure " << naming.get(*F) << ".r" << dstReg;
+  s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: i1)";
+  s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
 
+  for (unsigned i = 0; i < n; ++i)
+    s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
+
+  if (SmackOptions::MemoryModelImpls) {
     s << "{" << endl;
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
@@ -1046,13 +1065,6 @@ string SmackRep::memsetProc(int dstReg) {
     }
     s << "}" << endl;
   } else {
-    s << "procedure $memset." << dstReg;
-    s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: i1);" << endl;
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned size = 8 << i;
-      s << "modifies " << memPath(dstReg, size) << ";" << endl;
-    }
-
     string val = "val";
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
