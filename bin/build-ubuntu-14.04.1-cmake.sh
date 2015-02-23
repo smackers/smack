@@ -66,6 +66,7 @@ sudo apt-get install -y mono-complete
 sudo apt-get install -y git
 sudo apt-get install -y mercurial
 sudo apt-get install -y cmake
+sudo apt-get install -y unzip
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
@@ -90,9 +91,9 @@ mkdir -p ${Z3_DIR}/install
 
 # Get Z3
 cd ${Z3_DIR}/src/
-wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=cee7dd39444c9060186df79c2a2c7f8845de415b"
-unzip -o SourceControlFileDownload*
-rm -f SourceControlFileDownload*
+wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=cee7dd39444c9060186df79c2a2c7f8845de415b" -O z3_download
+unzip -o z3_download
+rm -f z3_download
 
 # Configure Z3 and build
 cd ${Z3_DIR}/src/

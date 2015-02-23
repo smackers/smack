@@ -26,10 +26,10 @@ Vagrant.configure(2) do |config|
     # Provision the VM
     ubuntu.vm.provision "shell" do |s|
       # replace Windows line endings with Unix line endings
-      s.binary = false
+      s.binary = true
 
       s.inline = "sudo apt-get update;
-                  sudo ./vagrant/bin/build-ubuntu-14.04.1-cmake.sh"
+                  sudo bash /vagrant/bin/build-ubuntu-14.04.1-cmake.sh;"
     end
   end
 
@@ -49,7 +49,7 @@ Vagrant.configure(2) do |config|
     # Provision the VM
     opensuse.vm.provision "shell" do |s|
       # replace Windows line endings with Unix line endings
-      s.binary = false
+      s.binary = true
 
       s.inline = "sudo zypper refresh;
                   sudo zypper --non-interactive update"
