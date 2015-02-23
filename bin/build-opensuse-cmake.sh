@@ -64,6 +64,7 @@ sudo zypper --non-interactive install git
 sudo zypper --non-interactive install mercurial
 sudo zypper --non-interactive install cmake
 sudo zypper --non-interactive install make
+sudo zypper --non-interactive install python-yaml
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
@@ -116,7 +117,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r a776dc352a84 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r 15f47e2eec5d https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -145,7 +146,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 6d808d06c23c
+git checkout 8fee716e3665
 
 # Build Corral
 cd ${CORRAL_DIR}/references
