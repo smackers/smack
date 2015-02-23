@@ -16,11 +16,15 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def check_result(expected, actual):
-  if re.search(r'verified', expected):
-    return re.search(r'[1-9]\d* verified, 0 errors?|no bugs', actual)
+def get_result(output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources', output):
+    return 'timeout'
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
+    return 'verified'
+  elif re.search(r'0 verified, [1-9]\d* errors?|can fail', output):
+    return 'error'
   else:
-    return re.search(r'0 verified, [1-9]\d* errors?|can fail', actual)
+    return 'unknown'
 
 def merge(metadata, yamldata):
 
@@ -56,11 +60,11 @@ def metadata(file):
 
       match = re.search(r'@flag (.*)',line)
       if match:
-        m['flags'] += [match.group(1)]
+        m['flags'] += [match.group(1).strip()]
 
       match = re.search(r'@expect (.*)',line)
       if match:
-        m['expect'] = match.group(1)
+        m['expect'] = match.group(1).strip()
 
   if not m['skip'] and not 'expect' in m:
     print red("WARNING: @expect MISSING IN %s" % file)
@@ -71,39 +75,63 @@ def metadata(file):
 print "Running regression tests..."
 print
 
-passed = failed = 0
-for test in glob.glob("./**/*.c"):
-  meta = metadata(test)
+passed = failed = timeouts = unknowns = 0
 
-  if meta['skip']:
-    continue
+try:
+  for test in glob.glob("./**/*.c"):
+    meta = metadata(test)
 
-  print "{0:>20}".format(test)
+    if meta['skip']:
+      continue
 
-  cmd = ['smackverify.py', test]
-  cmd += ['--time-limit', str(meta['time-limit'])]
-  cmd += meta['flags']
+    print "{0:>20}".format(test)
 
-  for memory in meta['memory']:
-    cmd += ['--mem-mod=' + memory]
+    cmd = ['smackverify.py', test]
+    cmd += ['--time-limit', str(meta['time-limit'])]
+    cmd += meta['flags']
 
-    for verifier in meta['verifiers']:
-      cmd += ['--verifier=' + verifier]
+    for memory in meta['memory']:
+      cmd += ['--mem-mod=' + memory]
 
-      print "{0:>20} {1:>10}    :".format(memory, verifier),
+      for verifier in meta['verifiers']:
+        cmd += ['--verifier=' + verifier]
 
-      t0 = time.time()
-      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      result = p.communicate()[0]
-      elapsed = time.time() - t0
+        print "{0:>20} {1:>10}    :".format(memory, verifier),
 
-      if check_result(meta['expect'], result):
-        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
-        passed += 1
-      else:
-        print red('FAILED')
-        failed += 1
+        t0 = time.time()
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err  = p.communicate()
+        elapsed = time.time() - t0
+
+        result = get_result(out+err)
+
+        if result == meta['expect']:
+          print green('PASSED '),
+          passed += 1
+
+        elif result == 'timeout':
+          print red('TIMEOUT'),
+          timeouts += 1
+
+        elif result == 'unknown':
+          print red('UNKNOWN'),
+          unknowns += 1
+
+        else:
+          print red('FAILED '),
+          failed += 1
+
+        print '  [%.2fs]' % round(elapsed, 2)
   
+except KeyboardInterrupt:
+  pass
+
 print
-print 'PASSED count: ', passed
-print 'FAILED count: ', failed
+print ' PASSED count:', passed
+print ' FAILED count:', failed
+
+if timeouts > 0:
+  print 'TIMEOUT count:', timeouts
+
+if unknowns > 0:
+  print 'UNKNOWN count:', unknowns

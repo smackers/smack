@@ -42,13 +42,11 @@ def generateSourceErrorTrace(boogieOutput, bplFileName):
 
   sourceTrace = '\nSMACK verifier version ' + VERSION + '\n\n'
   for traceLine in boogieOutput.splitlines(True):
-    resultMatch = re.match('Boogie .* (\d+) verified, (\d+) error.*', traceLine)
+    resultMatch = re.match('Boogie .* f(inished with .*)', traceLine)
     traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
     errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (.*)', traceLine)
     if resultMatch:
-      verified = int(resultMatch.group(1))
-      errors = int(resultMatch.group(2))
-      sourceTrace += '\nFinished with ' + str(verified) + ' verified, ' + str(errors) + ' errors\n'
+      sourceTrace += '\nF' + resultMatch.group(1)
     elif traceMatch:
       spaces = str(traceMatch.group(1))
       filename = str(traceMatch.group(2))
