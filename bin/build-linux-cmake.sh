@@ -73,6 +73,7 @@ sudo apt-get install -y autoconf
 sudo apt-get install -y cmake
 sudo apt-get install -y wget
 sudo apt-get install -y unzip
+sudo apt-get install -y python-yaml
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 

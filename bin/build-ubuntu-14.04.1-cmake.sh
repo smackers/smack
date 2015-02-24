@@ -66,6 +66,7 @@ sudo apt-get install -y mono-complete
 sudo apt-get install -y git
 sudo apt-get install -y mercurial
 sudo apt-get install -y cmake
+sudo apt-get install -y python-yaml
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
