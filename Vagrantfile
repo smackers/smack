@@ -2,6 +2,7 @@ Vagrant.configure(2) do |config|
 
   project_name = File.dirname(__FILE__).split("/").last
 
+  config.vm.provider "virtualbox"
   config.vm.box = "ubuntu/trusty64"
   config.vm.synced_folder ".", "/home/vagrant/#{project_name}"
 
