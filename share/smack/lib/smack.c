@@ -538,6 +538,7 @@ void __SMACK_decls() {
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
   D("procedure boogie_si_record_bool(b: bool);");
+  D("procedure boogie_si_record_i1(i: i1);");
   D("procedure boogie_si_record_i8(i: i8);");
   D("procedure boogie_si_record_i16(i: i16);");
   D("procedure boogie_si_record_i32(i: i32);");
