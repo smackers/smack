@@ -71,7 +71,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise)
+  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise, args.nobyteaccessinference)
 
   # write final output
   with open(args.outfile, 'w') as outputFile:
