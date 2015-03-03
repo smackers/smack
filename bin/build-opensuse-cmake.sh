@@ -117,7 +117,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r 15f47e2eec5d https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r d6a7f2bd79c9 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -146,7 +146,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 8fee716e3665
+git checkout 3aa62d7425b5
 
 # Build Corral
 cd ${CORRAL_DIR}/references

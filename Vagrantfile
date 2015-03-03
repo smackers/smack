@@ -1,7 +1,7 @@
 REVISIONS = {
   z3: 'cee7dd39444c9060186df79c2a2c7f8845de415b',
-  boogie: '15f47e2eec5d',
-  corral: '8fee716e3665',
+  boogie: 'd6a7f2bd79c9',
+  corral: '3aa62d7425b5',
 }
 
 Vagrant.configure(2) do |config|
