@@ -12,6 +12,11 @@ OBJS = $(subst .c,.bc,$(SOURCES)) smack.bc
 all: $(OBJS)
 	$(LD) -o simple-project.bc $(OBJS)
 
+# BITPRECISE has to be set during compilation to enable bit-precise mode
+bitprecise: CFLAGS = -DBITPRECISE -c -Wall -emit-llvm -O0 -g -I$(INC)
+bitprecise: $(OBJS)
+	$(LD) -o simple-project.bc $(OBJS)
+
 simple.bc: simple.c simple.h
 incr.bc: incr.c incr.h
 

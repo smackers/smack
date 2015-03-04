@@ -5,7 +5,7 @@
 
 int incr(int x) {
   int y = __SMACK_nondet();
-  assume(y > 0);
+  assume(y > 0 && y < 10000); // prevents overflow when bit-precise
   return x + y;
 }
 
