@@ -232,8 +232,8 @@ const Expr* Slice::getCode(Naming& naming, SmackRep& rep) {
       igen.emit(Stmt::return_(rep.expr(&value)));
 
     } else if (!values.count(B->getTerminator())) {
-      igen.emit(Stmt::assume(Expr::lit(false)));
-      igen.emit(Stmt::return_(Expr::lit(true)));
+      igen.emit(Stmt::assume(rep.lit(false)));
+      igen.emit(Stmt::return_(rep.lit(true)));
     }
   }
   return code;

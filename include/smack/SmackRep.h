@@ -68,8 +68,8 @@ protected:
   const llvm::DataLayout* targetData;
   unsigned ptrSizeInBits;
 
-  int globalsBottom;
-  int externsBottom;
+  long globalsBottom;
+  long externsBottom;
   vector<const Stmt*> staticInits;
   
   unsigned uniqueFpNum;
@@ -87,9 +87,9 @@ public:
 private:
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
-  const Expr* pa(const Expr* base, int index, int size, int i_size = 0, int t_size = 0);
-  const Expr* pa(const Expr* base, const Expr* index, int size, int i_size = 0, int t_size = 0);
-  const Expr* pa(const Expr* base, const Expr* index, const Expr* size, int i_size = 0, int t_size = 0);
+  const Expr* pa(const Expr* base, unsigned index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size, unsigned i_size = 0, unsigned t_size = 0);
   
   const Expr* i2b(const llvm::Value* v);
   const Expr* b2i(const llvm::Value* v);
@@ -128,7 +128,12 @@ public:
   const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
 
   const Expr* lit(const llvm::Value* v);
-  const Expr* lit(int v, unsigned size = 0);
+
+  const Expr* lit(bool val);
+  const Expr* lit(string val, unsigned width = 0);
+  const Expr* lit(unsigned val, unsigned width = 0);
+  const Expr* lit(long val, unsigned width = 0);
+
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,

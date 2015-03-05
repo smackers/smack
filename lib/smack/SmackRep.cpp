@@ -268,18 +268,18 @@ bool SmackRep::isTypeSafe(const llvm::GlobalValue *V)
   return aliasAnalysis->isTypeSafe(V); 
 }
 
-const Expr* SmackRep::pa(const Expr* base, int index, int size, int i_size, int t_size) {
-  return pa(base, lit(index, i_size), lit(size, t_size), i_size, t_size);
+const Expr* SmackRep::pa(const Expr* base, unsigned idx, unsigned size, unsigned i_size, unsigned t_size) {
+  return pa(base, lit(idx, i_size), lit(size, t_size), i_size, t_size);
 }
-const Expr* SmackRep::pa(const Expr* base, const Expr* index, int size, int i_size, int t_size) {
-  return pa(base, index, lit(size, t_size), i_size, t_size);
+const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned size, unsigned i_size, unsigned t_size) {
+  return pa(base, idx, lit(size, t_size), i_size, t_size);
 }
-const Expr* SmackRep::pa(const Expr* base, const Expr* index, const Expr* size, int i_size, int t_size) {
+const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size, unsigned i_size, unsigned t_size) {
   if (i_size == 32) 
     // The index of struct type is 32 bit
-    return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", index, size)));
+    return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", idx, size)));
   else if (i_size == 64)
-    return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", index, Expr::fn("$zext.i32.ref", size)));
+    return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", idx, Expr::fn("$zext.i32.ref", size)));
   else {
     DEBUG(errs() << "index size : " << i_size << "\n");
     assert(0 && "Unhandled index type");
@@ -295,25 +295,18 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
   using namespace llvm;
-  unsigned wd = 0;
-  if (const llvm::ConstantInt* ci = llvm::dyn_cast<const llvm::ConstantInt>(v)) {
-    wd = ci->getBitWidth();
-    if (wd == 1)
-      return lit(ci->isZero() ? 0 : 1, wd);
-    uint64_t val = ci->getSExtValue();
-    if (wd > 0 && ci->isNegative())
-      return Expr::fn(opName("$sub", {wd}), lit(0, wd), lit(-val, wd));
-    else
-      return lit(val, wd);
 
-  } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
+  if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v))
+    return lit(ci->getValue().toString(10,ci->isNegative()),ci->getBitWidth());
+
+  else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();
     string str;
     raw_string_ostream ss(str);
     ss << *CFP;
     istringstream iss(str);
     string float_type;
-    int integerPart, fractionalPart, exponentPart;
+    long integerPart, fractionalPart, exponentPart;
     char point, sign, exponent;
     iss >> float_type;
     iss >> integerPart;
@@ -326,7 +319,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
       Expr::lit(exponentPart));
 
-  } else if (llvm::isa<llvm::ConstantPointerNull>(v))
+  } else if (llvm::isa<ConstantPointerNull>(v))
     return Expr::id("$NULL");
 
   else
@@ -334,11 +327,20 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
   // assert( false && "value type not supported" );
 }
 
-const Expr* SmackRep::lit(int v, unsigned size) {
-  if (SmackOptions::BitPrecise)
-    return (v >= 0 ? Expr::lit(v, size) : Expr::fn(opName(NEG, {size}), Expr::lit(-v, size)));
-  else
-    return Expr::lit(v);
+const Expr* SmackRep::lit(bool val) {
+  return Expr::lit(val);
+}
+
+const Expr* SmackRep::lit(string val, unsigned width) {
+  return SmackOptions::BitPrecise && width > 0 ? Expr::lit(val,width) : Expr::lit(val);
+}
+
+const Expr* SmackRep::lit(unsigned val, unsigned width) {
+  return SmackOptions::BitPrecise && width > 0 ? Expr::lit(val,width) : Expr::lit(val);
+}
+
+const Expr* SmackRep::lit(long val, unsigned width) {
+  return SmackOptions::BitPrecise && width > 0 ? Expr::lit((unsigned)val,width) : Expr::lit(val);
 }
 
 const Expr* SmackRep::ptrArith(const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
@@ -422,7 +424,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return lit(cf);
 
     } else if (constant->isNullValue())
-      return lit(0, ptrSizeInBits);
+      return lit((unsigned)0, ptrSizeInBits);
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -780,7 +782,7 @@ string SmackRep::getPrelude() {
   s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl; 
   for (int i = 1; i < 8; ++i) {
     s << "axiom $REF_CONST_" << i << " == ";
-    lit(i, ptrSizeInBits)->print(s);
+    lit((unsigned)i,ptrSizeInBits)->print(s);
     s << ";" << endl;
   }
   s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((ptrSizeInBits == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
@@ -799,7 +801,7 @@ string SmackRep::getPrelude() {
   }
 
   s << "axiom $NULL == ";
-  lit(0, ptrSizeInBits)->print(s); 
+  lit((long)0,ptrSizeInBits)->print(s); 
   s << ";" << endl; 
   s << endl;
 
@@ -898,7 +900,7 @@ Decl* SmackRep::getStaticInit() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
   Block* b = new Block();
 
-  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit(1024, ptrSizeInBits)) );
+  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit((long)1024,ptrSizeInBits)) );
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);
   b->addStmt(Stmt::return_());
