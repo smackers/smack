@@ -52,7 +52,8 @@ Vagrant.configure(2) do |config|
       s.binary = true
 
       s.inline = "sudo zypper refresh;
-                  sudo zypper --non-interactive update"
+                  sudo zypper --non-interactive update;
+                  sudo bash /vagrant/bin/build-opensuse-cmake.sh;"
     end
   end
 
