@@ -49,6 +49,7 @@ public:
   static const Expr* NUL;
   
   static const string STATIC_INIT;
+  static const string INIT_FUNCS;
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
@@ -71,6 +72,7 @@ protected:
   long globalsBottom;
   long externsBottom;
   vector<const Stmt*> staticInits;
+  vector<const Stmt*> initFuncs;
   
   unsigned uniqueFpNum;
 
@@ -184,8 +186,10 @@ public:
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
+  void addInitFunc(const Stmt* s);
   bool hasStaticInits();
   Decl* getStaticInit();
+  Decl* getInitFuncs();
   virtual string getPtrType();
   virtual string getPrelude();
 

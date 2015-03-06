@@ -29,6 +29,7 @@ const string SmackRep::MEM_OP_VAL = "$MOP";
 const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
 
 const string SmackRep::STATIC_INIT = "$static_init";
+const string SmackRep::INIT_FUNCS = "$init_funcs";
 
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
@@ -892,6 +893,10 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   }
 }
 
+void SmackRep::addInitFunc(const Stmt* s) {
+  initFuncs.push_back(s);
+}
+
 bool SmackRep::hasStaticInits() {
   return staticInits.size() > 0;
 }
@@ -907,6 +912,18 @@ Decl* SmackRep::getStaticInit() {
   proc->addBlock(b);
   return proc;
 }
+
+Decl* SmackRep::getInitFuncs() {
+  ProcDecl* proc = (ProcDecl*) Decl::procedure(program, INIT_FUNCS);
+  Block* b = new Block();
+
+  for (unsigned i=0; i<initFuncs.size(); i++)
+    b->addStmt(initFuncs[i]);
+  b->addStmt(Stmt::return_());
+  proc->addBlock(b);
+  return proc;
+}
+
 Regex STRING_CONSTANT("^\\.str[0-9]*$");
 
 bool isCodeString(const llvm::Value* V) {
