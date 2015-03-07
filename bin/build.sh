@@ -37,6 +37,7 @@ INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
 INSTALL_SMACK=1
+INSTALL_LLVM=0 # LLVM is typically installed from packages (see below)
 
 # Other dirs
 Z3_DIR="${BASE_DIR}/z3"
