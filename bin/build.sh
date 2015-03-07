@@ -24,8 +24,7 @@ set -e
 
 # Settings
 
-# Used versions of Z3, Boogie, and Corral
-Z3_COMMIT=
+# Used versions of Boogie and Corral
 BOOGIE_COMMIT=d6a7f2bd79c9
 CORRAL_COMMIT=3aa62d7425b5
 
@@ -34,7 +33,6 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
-INSTALL_LLVM=0
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
@@ -141,6 +139,37 @@ echo -e "${textcolor}Detected distribution: $distro${nocolor}"
 
 ################################################################################
 
+# Set platform-dependent flags
+
+case "$distro" in
+  linux-opensuse*)
+    Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436282&FileTime=130700549966730000&Build=20959"
+    ;;
+
+  linux-ubuntu-14*)
+    Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+    ;;
+
+  linux-ubuntu-12*)
+    Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+    INSTALL_LLVM=1
+    ;;
+
+  linux-cygwin*)
+    INSTALL_LLVM=1
+    INSTALL_Z3=0
+    INSTALL_BOOGIE=0
+    INSTALL_CORRAL=0
+    ;;
+
+  *)
+    echo -e "${textcolor}Distribution not supported. Manual install required.${nocolor}"
+    exit 1
+    ;;
+esac
+
+################################################################################
+
 # Install required packages
 
 if [ ${INSTALL_PACKAGES} -eq 1 ]; then
@@ -228,7 +257,6 @@ case "$distro" in
     sudo make install
 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-    INSTALL_LLVM=1
     cd ${BASE_DIR}
 
     echo -e "${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
@@ -236,10 +264,7 @@ case "$distro" in
     ;;
 
   linux-cygwin*)
-    INSTALL_LLVM=0
-    INSTALL_Z3=0
-    INSTALL_BOOGIE=0
-    INSTALL_CORRAL=0
+    ;;
 
   *)
     echo -e "${textcolor}Distribution not supported. Manually install dependencies.${nocolor}"
@@ -292,23 +317,10 @@ if [ ${INSTALL_Z3} -eq 1 ]; then
 
 echo -e "${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
 
-mkdir -p ${Z3_DIR}/src
-mkdir -p ${Z3_DIR}/install
-
-# Get Z3
-cd ${Z3_DIR}/src/
-wget "http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=z3&changeSetId=cee7dd39444c9060186df79c2a2c7f8845de415b"
-unzip -o SourceControlFileDownload*
-rm -f SourceControlFileDownload*
-
-# Configure Z3 and build
-cd ${Z3_DIR}/src/
-python scripts/mk_make.py --prefix=${Z3_DIR}/install
-cd build
-make
-make install
-
-cd ${BASE_DIR}
+wget ${Z3_DOWNLOAD_LINK} -O z3_download.zip
+unzip -o z3_download.zip
+rm -f z3_download.zip
+mv z3-* ${Z3_DIR}
 
 echo -e "${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
 
@@ -333,7 +345,7 @@ mozroots --import --sync
 wget https://nuget.org/nuget.exe
 mono ./nuget.exe restore Boogie.sln
 xbuild Boogie.sln /p:Configuration=Release
-ln -s ${Z3_DIR}/install/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
 cd ${BASE_DIR}
 
@@ -379,7 +391,7 @@ cp ${BOOGIE_DIR}/Binaries/Predication.dll .
 
 cd ${CORRAL_DIR}
 xbuild cba.sln /p:Configuration=Release
-ln -s ${Z3_DIR}/install/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
 cd ${BASE_DIR}
 
