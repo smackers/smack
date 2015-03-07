@@ -24,6 +24,11 @@ set -e
 
 # Settings
 
+# Used versions of Z3, Boogie, and Corral
+Z3_COMMIT=
+BOOGIE_COMMIT=d6a7f2bd79c9
+CORRAL_COMMIT=3aa62d7425b5
+
 # Change this to the desired path (default uses working-dir/smack-project)
 BASE_DIR=`pwd`/smack-project
 
@@ -320,7 +325,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r d6a7f2bd79c9 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -349,7 +354,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 3aa62d7425b5
+git checkout ${CORRAL_COMMIT}
 
 # Build Corral
 cd ${CORRAL_DIR}/references
