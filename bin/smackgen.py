@@ -48,10 +48,11 @@ def addEntryPoint(match, entryPoints):
   return procDef
 
 
-def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, clangArgs, bitVector):
+def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, clangArgs, bitPrecise):
   scriptFullPath = path.abspath(scriptPathName)
   smackRoot = path.dirname(scriptFullPath)
-  smackHeaders = path.join(smackRoot, 'include', 'smack')
+  smackHeaders = path.join(smackRoot, 'share', 'smack', 'include')
+  smackC = path.join(smackRoot, 'share', 'smack', 'lib', 'smack.c')
 
   fileName, fileExtension = path.splitext(path.basename(inputFile.name))
 
@@ -59,6 +60,27 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
     bcFileName = path.join(path.dirname(path.abspath(outputFileName)),
       fileName) + '.bc'
 
+  # Compile SMACK header file
+  clangCommand = ['clang']
+  if bitPrecise: clangCommand += ['-DBITPRECISE']
+  clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
+                   '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
+                   '-I' + smackHeaders,
+                   '-include' + 'smack.h']
+  clangCommand += clangArgs.split()
+  clangCommand += [smackC, '-o', 'smack.bc']
+  # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
+  # This should more or less maintain stdout/stderr interleaving order.
+  # However, this will be problematic if any callers want to differentiate
+  # between clang's stdout and stderr.
+  p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  clangOutput = p.communicate()[0]
+
+  if p.returncode:
+    print >> sys.stderr, clangOutput
+    sys.exit("SMACK encountered an error when invoking clang. Exiting...")
+
+  # Compile input file
   if fileExtension in ['.c']:
     clangCommand = ['clang']
   elif fileExtension in ['.cc', '.cpp']:
@@ -66,7 +88,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   else:
     sys.exit('Unexpected source file extension `' + fileExtension + '\'')
 
-  if bitVector: clangCommand += ['-DBITVECTOR']
+  if bitPrecise: clangCommand += ['-DBITPRECISE']
   clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
                    '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
                    '-I' + smackHeaders,
@@ -76,13 +98,27 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
   # This should more or less maintain stdout/stderr interleaving order.
   # However, this will be problematic if any callers want to differentiate
-  # between clangs stdout and stderr.
+  # between clang's stdout and stderr.
   p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   clangOutput = p.communicate()[0]
 
   if p.returncode:
     print >> sys.stderr, clangOutput
     sys.exit("SMACK encountered an error when invoking clang. Exiting...")
+
+  # Invoke LLVM linker
+  linkCommand = ['llvm-link']
+  linkCommand += [bcFileName, 'smack.bc', '-o', bcFileName]
+  # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
+  # This should more or less maintain stdout/stderr interleaving order.
+  # However, this will be problematic if any callers want to differentiate
+  # between llvm-link's stdout and stderr.
+  p = subprocess.Popen(linkCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  linkOutput = p.communicate()[0]
+
+  if p.returncode:
+    print >> sys.stderr, linkOutput
+    sys.exit("SMACK encountered an error when invoking llvm-link. Exiting...")
 
   inputFile = open(bcFileName, 'r')
   return inputFile, clangOutput
@@ -107,14 +143,14 @@ def smackGenerate(sysArgv):
       if optionsMatch:
         options = optionsMatch.group(1).split()
         args = parser.parse_args(options + sysArgv[1:])
-    inputFile, clangOutput = clang(scriptPathName, inputFile, args.bcfile, args.outfile, args.memmod, args.clang, args.bitvector)
+    inputFile, clangOutput = clang(scriptPathName, inputFile, args.bcfile, args.outfile, args.memmod, args.clang, args.bitprecise)
 
   elif fileExtension in ['.bc', '.ll']:
     pass # do nothing
   else:
     sys.exit('Unexpected source file extension `' + fileExtension + '\'')
 
-  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod, args.bitvector, args.inferfieldoverlap)
+  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise, args.nobyteaccessinference)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')

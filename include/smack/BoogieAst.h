@@ -5,6 +5,7 @@
 #define BOOGIEAST_H
 
 #include <cassert>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <set>
@@ -30,9 +31,12 @@ public:
   static const Expr* fn(string f, vector<const Expr*> args);
   static const Expr* id(string x);
   static const Expr* impl(const Expr* l, const Expr* r);
-  static const Expr* lit(int i);
-  static const Expr* lit(int i, unsigned w);
   static const Expr* lit(bool b);
+  static const Expr* lit(string v);
+  static const Expr* lit(unsigned v);
+  static const Expr* lit(long v);
+  static const Expr* lit(string v, unsigned w);
+  static const Expr* lit(unsigned v, unsigned w);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
@@ -71,16 +75,40 @@ public:
   void print(ostream& os) const;
 };
 
-class LitExpr : public Expr {
+class BoolLit : public Expr {
+  bool val;
 public:
-  enum Literal { True, False, Num, Bv1, Bv8, Bv16, Bv32, Bv64 };
-private:
-  const Literal lit;
-  int val;
+  BoolLit(bool b) : val(b) {}
+  void print(ostream& os) const;
+};
+
+class IntLit : public Expr {
+  string val;
 public:
-  LitExpr(bool b) : lit(b ? True : False) {}
-  LitExpr(int i) : lit(Num), val(i) {}
-  LitExpr(const Literal l, int i) : lit(l), val(i) {}
+  IntLit(string v) : val(v) {}
+  IntLit(unsigned v) {
+    stringstream s;
+    s << v;
+    val = s.str();
+  }
+  IntLit(long v) {
+    stringstream s;
+    s << v;
+    val = s.str();
+  }
+  void print(ostream& os) const;
+};
+
+class BvLit : public Expr {
+  string val;
+  unsigned width;
+public:
+  BvLit(string v, unsigned w) : val(v), width(w) {}
+  BvLit(unsigned v, unsigned w) : width(w) {
+    stringstream s;
+    s << v;
+    val = s.str();
+  }
   void print(ostream& os) const;
 };
 
@@ -478,6 +506,10 @@ public:
   }
   void addDecls(vector<Decl*> ds) {
     for (unsigned i = 0; i < ds.size(); i++)
+      addDecl(ds[i]);
+  }
+  void addDecls(vector<string> ds) {
+    for (unsigned i=0; i < ds.size(); i++)
       addDecl(ds[i]);
   }
   vector<ProcDecl*> getProcs() {

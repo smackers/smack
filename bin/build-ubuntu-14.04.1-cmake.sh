@@ -59,12 +59,14 @@ sudo apt-get install -y clang-3.5 clang-3.5-doc libclang-common-3.5-dev libclang
 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
 sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
 sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
+sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
 sudo apt-get install -y libz-dev
 sudo apt-get install -y libedit-dev
 sudo apt-get install -y mono-complete
 sudo apt-get install -y git
 sudo apt-get install -y mercurial
 sudo apt-get install -y cmake
+sudo apt-get install -y python-yaml
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
@@ -117,7 +119,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r a776dc352a84 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r d6a7f2bd79c9 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -146,7 +148,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 6d808d06c23c
+git checkout 3aa62d7425b5
 
 # Build Corral
 cd ${CORRAL_DIR}/references
@@ -200,8 +202,6 @@ cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/b
 make
 make install
 
-cd ${BASE_DIR}
-
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
 # Set required paths and environment variables
@@ -222,4 +222,3 @@ echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment v
 fi
 
 ################################################################################
-

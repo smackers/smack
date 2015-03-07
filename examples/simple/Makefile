@@ -1,5 +1,5 @@
 CC = clang
-INC = ../../include/smack
+INC = ../../share/smack/include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = simple.c

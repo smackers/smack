@@ -73,6 +73,7 @@ sudo apt-get install -y autoconf
 sudo apt-get install -y cmake
 sudo apt-get install -y wget
 sudo apt-get install -y unzip
+sudo apt-get install -y python-yaml
 
 echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
 
@@ -164,7 +165,7 @@ echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 mkdir -p ${BOOGIE_DIR}
 
 # Get Boogie
-hg clone -r a776dc352a84 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+hg clone -r d6a7f2bd79c9 https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
 # Build Boogie
 cd ${BOOGIE_DIR}/Source
@@ -193,7 +194,7 @@ mkdir -p ${CORRAL_DIR}
 # Get Corral
 git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 cd ${CORRAL_DIR}
-git checkout 6d808d06c23c
+git checkout 3aa62d7425b5
 
 # Build Corral
 cd ${CORRAL_DIR}/references
@@ -281,8 +282,6 @@ cd ${SMACK_DIR}/build/
 cmake -DLLVM_CONFIG=${LLVM_DIR}/install/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
 make
 make install
-
-cd ${BASE_DIR}
 
 echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
