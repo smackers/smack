@@ -150,7 +150,7 @@ case "$distro" in
     echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
 
-  linux-ubuntu*)
+  linux-ubuntu-14*)
     echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
     sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
     wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
@@ -167,6 +167,58 @@ case "$distro" in
     sudo apt-get install -y mercurial
     sudo apt-get install -y cmake
     sudo apt-get install -y python-yaml
+    echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
+    ;;
+
+  linux-ubuntu-12*)
+    echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
+    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+    sudo add-apt-repository -y ppa:andykimpe/cmake
+    sudo apt-get update
+    sudo apt-get install -y g++-4.8
+    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
+    sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
+    sudo update-alternatives --config gcc
+    sudo update-alternatives --config g++
+
+    sudo apt-get install -y git
+    sudo apt-get install -y mercurial
+    sudo apt-get install -y autoconf
+    sudo apt-get install -y cmake
+    sudo apt-get install -y wget
+    sudo apt-get install -y unzip
+    sudo apt-get install -y python-yaml
+
+    # Install mono
+    echo -e "${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
+
+    MONO_DIR="${BASE_DIR}/mono-3"
+    mkdir -p ${MONO_DIR}
+
+    sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb
+    cd ${MONO_DIR}
+    git clone git://github.com/mono/mono.git
+    cd mono
+    git checkout mono-3.8.0
+    ./autogen.sh --prefix=/usr/local
+    make get-monolite-latest
+    make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
+    sudo make install
+
+    # Install libgdiplus
+    sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev
+    sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
+    cd ${MONO_DIR}
+    git clone git://github.com/mono/libgdiplus.git
+    cd libgdiplus
+    ./autogen.sh --prefix=/usr/local
+    make
+    sudo make install
+
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+    cd ${BASE_DIR}
+
+    echo -e "${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
     echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
 
