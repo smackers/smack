@@ -29,6 +29,7 @@ BASE_DIR=`pwd`/smack-project
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
+INSTALL_LLVM=0
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
@@ -43,6 +44,12 @@ SMACK_DIR="${BASE_DIR}/smack"
 # Setting colors
 textcolor='\e[0;35m'
 nocolor='\e[0m'
+
+################################################################################
+
+# Set up base directory for everything
+mkdir -p ${BASE_DIR}
+cd ${BASE_DIR}
 
 ################################################################################
 
@@ -216,11 +223,18 @@ case "$distro" in
     sudo make install
 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+    INSTALL_LLVM=1
     cd ${BASE_DIR}
 
     echo -e "${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
     echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
+
+  linux-cygwin*)
+    INSTALL_LLVM=0
+    INSTALL_Z3=0
+    INSTALL_BOOGIE=0
+    INSTALL_CORRAL=0
 
   *)
     echo -e "${textcolor}Distribution not supported. Manually install dependencies.${nocolor}"
@@ -232,9 +246,38 @@ fi
 
 ################################################################################
 
-# Set up base directory for everything
-mkdir -p ${BASE_DIR}
+# LLVM
+
+if [ ${INSTALL_LLVM} -eq 1 ]; then
+
+echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
+
+mkdir -p ${LLVM_DIR}/src
+mkdir -p ${LLVM_DIR}/build
+mkdir -p ${LLVM_DIR}/install
+
+# Get llvm and extract
+wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
+wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
+
+tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
+mkdir -p ${LLVM_DIR}/src/tools/clang
+tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
+mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
+tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
+
+# Configure llvm and build
+cd ${LLVM_DIR}/build/
+cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+make
+make install
+
 cd ${BASE_DIR}
+
+echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
+
+fi
 
 ################################################################################
 
