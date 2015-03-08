@@ -5,16 +5,20 @@ int y = 1;
 
 void *t1(void *arg)
 {
-  for(int i = 0; i < 4; i++)
-    x += y;
-
+  x += y;
+  x += y;
+  x += y;
+  x += y;
+    
   pthread_exit(NULL);
 }
 
 void *t2(void *arg)
 {
-  for(int i = 0; i < 4; i++)
-    y += x;
+  y += x;
+  y += x;
+  y += x;
+  y += x;
 
   pthread_exit(NULL);
 }
