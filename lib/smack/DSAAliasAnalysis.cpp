@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "smack/DSAAliasAnalysis.h"
+#include <iostream>
 
 namespace smack {
 
@@ -52,6 +53,13 @@ vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M
   return sis;
 }
 
+bool DSAAliasAnalysis::hasIntConversion(const llvm::DSNode* n) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+    = nodeEqs->getEquivalenceClasses();
+  std::cout << "HAS-INT-CONVERSION? " << (intConversions.count(eqs.getLeaderValue(n)) > 0) << std::endl;
+  return intConversions.count(eqs.getLeaderValue(n)) > 0;
+}
+
 bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
     = nodeEqs->getEquivalenceClasses();
@@ -74,20 +82,20 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
 
 bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
   const llvm::Function *F = inst->getParent()->getParent();
-  return TS->isFieldDisjoint(ptr, F);
+  return !hasIntConversion(getNode(ptr)) && TS->isFieldDisjoint(ptr, F);
 }
 
 bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
-  return TS->isFieldDisjoint(V, offset);
+  return !hasIntConversion(getNode(V)) && TS->isFieldDisjoint(V, offset);
 }
 
 bool DSAAliasAnalysis::isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst) {
   const llvm::Function *F = inst->getParent()->getParent();
-  return TS->isTypeSafe(ptr, F);
+  return !hasIntConversion(getNode(ptr)) && TS->isTypeSafe(ptr, F);
 }
 
 bool DSAAliasAnalysis::isTypeSafe(const GlobalValue* V) {
-  return TS->isTypeSafe(V);
+  return !hasIntConversion(getNode(V)) && TS->isTypeSafe(V);
 }
 
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
@@ -179,6 +187,7 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
   assert(N2 && "Expected non-null node.");
 
   if ((N1->isCompleteNode() || N2->isCompleteNode()) &&
+      !(hasIntConversion(N1) && hasIntConversion(N2)) &&
       !(N1->isExternalNode() && N2->isExternalNode()) &&
       !(N1->isUnknownNode() || N2->isUnknownNode())) {
 

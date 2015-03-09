@@ -26,10 +26,36 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Module.h"
+#include <unordered_set>
 
 namespace smack {
 
 using namespace std;
+
+class IntConversionCollector : public llvm::InstVisitor<IntConversionCollector> {
+  llvm::DSNodeEquivs *nodeEqs;
+  unordered_set<const llvm::DSNode*> intConversions;
+
+public:
+  IntConversionCollector(llvm::DSNodeEquivs* neqs) : nodeEqs(neqs) { }
+  void visitPtrToIntInst(llvm::PtrToIntInst& I) {
+    const llvm::Value* V = I.getOperand(0);
+    const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+      = nodeEqs->getEquivalenceClasses();
+    const llvm::DSNode *N = eqs.getLeaderValue(nodeEqs->getMemberForValue(V));
+    intConversions.insert(N);
+  }
+  void visitIntToPtrInst(llvm::IntToPtrInst& I) {
+    const llvm::Value* V = &I;
+    const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+      = nodeEqs->getEquivalenceClasses();
+    const llvm::DSNode *N = eqs.getLeaderValue(nodeEqs->getMemberForValue(V));
+    intConversions.insert(N);
+  }
+  unordered_set<const llvm::DSNode*>& get() {
+    return intConversions;
+  }
+};
 
 class MemcpyCollector : public llvm::InstVisitor<MemcpyCollector> {
 private:
@@ -70,6 +96,7 @@ private:
   dsa::TypeSafety<llvm::TDDataStructures> *TS; 
   vector<const llvm::DSNode*> staticInits;
   vector<const llvm::DSNode*> memcpys;
+  unordered_set<const llvm::DSNode*> intConversions;
 
 public:
   static char ID;
@@ -85,12 +112,18 @@ public:
   }
 
   virtual bool runOnModule(llvm::Module &M) {
+
     InitializeAliasAnalysis(this);
     TD = &getAnalysis<llvm::TDDataStructures>();
     BU = &getAnalysis<llvm::BUDataStructures>();
     nodeEqs = &getAnalysis<llvm::DSNodeEquivs>();
     TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures> >();
     memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
+
+    IntConversionCollector icc(nodeEqs);
+    icc.visit(M);
+    intConversions = icc.get();
+
     staticInits = collectStaticInits(M);
 
     return false;
@@ -108,6 +141,7 @@ public:
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
 
 private:
+  bool hasIntConversion(const llvm::DSNode* n);
   bool isMemcpyd(const llvm::DSNode* n);
   bool isStaticInitd(const llvm::DSNode* n);
   vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
