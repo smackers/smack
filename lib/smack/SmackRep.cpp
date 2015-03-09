@@ -296,8 +296,10 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
 const Expr* SmackRep::lit(const llvm::Value* v) {
   using namespace llvm;
 
-  if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v))
-    return lit(ci->getValue().toString(10,ci->isNegative()),ci->getBitWidth());
+  if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v)) {
+    unsigned w = ci->getBitWidth();
+    return lit(ci->getValue().toString(10,w>1 && ci->isNegative()),w);
+  }
 
   else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();

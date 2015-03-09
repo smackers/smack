@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import yaml
+import argparse
 from os import path
 import subprocess
 import re
@@ -72,6 +73,10 @@ def metadata(file):
 
   return m
   
+parser = argparse.ArgumentParser()
+parser.add_argument("--fast", help="be less exhaustive", action="store_true")
+args = parser.parse_args()
+
 print "Running regression tests..."
 print
 
@@ -90,10 +95,10 @@ try:
     cmd += ['--time-limit', str(meta['time-limit'])]
     cmd += meta['flags']
 
-    for memory in meta['memory']:
+    for memory in meta['memory'][:1 if args.fast else 100]:
       cmd += ['--mem-mod=' + memory]
 
-      for verifier in meta['verifiers']:
+      for verifier in meta['verifiers'][:1 if args.fast else 100]:
         cmd += ['--verifier=' + verifier]
 
         print "{0:>20} {1:>10}    :".format(memory, verifier),
