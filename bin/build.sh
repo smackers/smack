@@ -178,17 +178,8 @@ if [ ${INSTALL_PACKAGES} -eq 1 ]; then
 case "$distro" in
   linux-opensuse*)
     echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
-    sudo zypper --non-interactive install llvm-clang
-    sudo zypper --non-interactive install llvm-devel
-    sudo zypper --non-interactive install gcc-c++
-    sudo zypper --non-interactive install ncurses-devel
-    sudo zypper --non-interactive install zlib-devel
-    sudo zypper --non-interactive install mono-complete
-    sudo zypper --non-interactive install git
-    sudo zypper --non-interactive install mercurial
-    sudo zypper --non-interactive install cmake
-    sudo zypper --non-interactive install make
-    sudo zypper --non-interactive install python-yaml
+    sudo zypper --non-interactive install llvm-clang llvm-devel gcc-c++ ncurses-devel zlib-devel \
+      mono-complete git mercurial cmake make python-yaml
     echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
 
@@ -197,18 +188,14 @@ case "$distro" in
     sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
     wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update
-    sudo apt-get install -y clang-3.5 clang-3.5-doc libclang-common-3.5-dev libclang-3.5-dev libclang1-3.5 libclang1-3.5-dbg libllvm3.5 libllvm3.5-dbg lldb-3.5 llvm-3.5 llvm-3.5-dev llvm-3.5-doc llvm-3.5-runtime lldb-3.5-dev
+    sudo apt-get install -y clang-3.5 clang-3.5-doc libclang-common-3.5-dev libclang-3.5-dev \
+      libclang1-3.5 libclang1-3.5-dbg libllvm3.5 libllvm3.5-dbg lldb-3.5 llvm-3.5 llvm-3.5-dev \
+      llvm-3.5-doc llvm-3.5-runtime lldb-3.5-dev
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
     sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
     sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
-    sudo apt-get install -y libz-dev
-    sudo apt-get install -y libedit-dev
-    sudo apt-get install -y mono-complete
-    sudo apt-get install -y git
-    sudo apt-get install -y mercurial
-    sudo apt-get install -y cmake
-    sudo apt-get install -y python-yaml
+    sudo apt-get install -y libz-dev libedit-dev mono-complete git mercurial cmake python-yaml
     echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
 
@@ -222,14 +209,7 @@ case "$distro" in
     sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
     sudo update-alternatives --config gcc
     sudo update-alternatives --config g++
-
-    sudo apt-get install -y git
-    sudo apt-get install -y mercurial
-    sudo apt-get install -y autoconf
-    sudo apt-get install -y cmake
-    sudo apt-get install -y wget
-    sudo apt-get install -y unzip
-    sudo apt-get install -y python-yaml
+    sudo apt-get install -y git mercurial autoconf cmake wget unzip python-yaml
 
     # Install mono
     echo -e "${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
@@ -281,32 +261,32 @@ fi
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
 
-echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
 
-mkdir -p ${LLVM_DIR}/src
-mkdir -p ${LLVM_DIR}/build
-mkdir -p ${LLVM_DIR}/install
+  mkdir -p ${LLVM_DIR}/src
+  mkdir -p ${LLVM_DIR}/build
+  mkdir -p ${LLVM_DIR}/install
 
-# Get llvm and extract
-wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
-wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
-wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
+  # Get llvm and extract
+  wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
+  wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
+  wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
 
-tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
-mkdir -p ${LLVM_DIR}/src/tools/clang
-tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
-mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
-tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
+  mkdir -p ${LLVM_DIR}/src/tools/clang
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
+  mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
 
-# Configure llvm and build
-cd ${LLVM_DIR}/build/
-cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
-make
-make install
+  # Configure llvm and build
+  cd ${LLVM_DIR}/build/
+  cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+  make
+  make install
 
-cd ${BASE_DIR}
+  cd ${BASE_DIR}
 
-echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
 
 fi
 
@@ -316,14 +296,14 @@ fi
 
 if [ ${INSTALL_Z3} -eq 1 ]; then
 
-echo -e "${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
 
-wget ${Z3_DOWNLOAD_LINK} -O z3_download.zip
-unzip -o z3_download.zip
-rm -f z3_download.zip
-mv z3-* ${Z3_DIR}
+  wget ${Z3_DOWNLOAD_LINK} -O z3_download.zip
+  unzip -o z3_download.zip
+  rm -f z3_download.zip
+  mv z3-* ${Z3_DIR}
 
-echo -e "${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
 
 fi
 
@@ -333,24 +313,24 @@ fi
 
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 
-echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
 
-mkdir -p ${BOOGIE_DIR}
+  mkdir -p ${BOOGIE_DIR}
 
-# Get Boogie
-hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+  # Get Boogie
+  hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
 
-# Build Boogie
-cd ${BOOGIE_DIR}/Source
-mozroots --import --sync
-wget https://nuget.org/nuget.exe
-mono ./nuget.exe restore Boogie.sln
-xbuild Boogie.sln /p:Configuration=Release
-ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+  # Build Boogie
+  cd ${BOOGIE_DIR}/Source
+  mozroots --import --sync
+  wget https://nuget.org/nuget.exe
+  mono ./nuget.exe restore Boogie.sln
+  xbuild Boogie.sln /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
-cd ${BASE_DIR}
+  cd ${BASE_DIR}
 
-echo -e "${textcolor}*** SMACK BUILD: Installed Boogie ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installed Boogie ***${nocolor}"
 
 fi
 
@@ -360,43 +340,43 @@ fi
 
 if [ ${INSTALL_CORRAL} -eq 1 ]; then
 
-echo -e "${textcolor}*** SMACK BUILD: Installing Corral ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installing Corral ***${nocolor}"
 
-mkdir -p ${CORRAL_DIR}
+  mkdir -p ${CORRAL_DIR}
 
-# Get Corral
-git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
-cd ${CORRAL_DIR}
-git checkout ${CORRAL_COMMIT}
+  # Get Corral
+  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+  cd ${CORRAL_DIR}
+  git checkout ${CORRAL_COMMIT}
 
-# Build Corral
-cd ${CORRAL_DIR}/references
+  # Build Corral
+  cd ${CORRAL_DIR}/references
 
-cp ${BOOGIE_DIR}/Binaries/AbsInt.dll .
-cp ${BOOGIE_DIR}/Binaries/Basetypes.dll .
-cp ${BOOGIE_DIR}/Binaries/CodeContractsExtender.dll .
-cp ${BOOGIE_DIR}/Binaries/Concurrency.dll .
-cp ${BOOGIE_DIR}/Binaries/Core.dll .
-cp ${BOOGIE_DIR}/Binaries/ExecutionEngine.dll .
-cp ${BOOGIE_DIR}/Binaries/Graph.dll .
-cp ${BOOGIE_DIR}/Binaries/Houdini.dll .
-cp ${BOOGIE_DIR}/Binaries/Model.dll .
-cp ${BOOGIE_DIR}/Binaries/ParserHelper.dll .
-cp ${BOOGIE_DIR}/Binaries/Provers.SMTLib.dll .
-cp ${BOOGIE_DIR}/Binaries/VCExpr.dll .
-cp ${BOOGIE_DIR}/Binaries/VCGeneration.dll .
-cp ${BOOGIE_DIR}/Binaries/Boogie.exe .
-cp ${BOOGIE_DIR}/Binaries/BVD.exe .
-cp ${BOOGIE_DIR}/Binaries/Doomed.dll .
-cp ${BOOGIE_DIR}/Binaries/Predication.dll .
+  cp ${BOOGIE_DIR}/Binaries/AbsInt.dll .
+  cp ${BOOGIE_DIR}/Binaries/Basetypes.dll .
+  cp ${BOOGIE_DIR}/Binaries/CodeContractsExtender.dll .
+  cp ${BOOGIE_DIR}/Binaries/Concurrency.dll .
+  cp ${BOOGIE_DIR}/Binaries/Core.dll .
+  cp ${BOOGIE_DIR}/Binaries/ExecutionEngine.dll .
+  cp ${BOOGIE_DIR}/Binaries/Graph.dll .
+  cp ${BOOGIE_DIR}/Binaries/Houdini.dll .
+  cp ${BOOGIE_DIR}/Binaries/Model.dll .
+  cp ${BOOGIE_DIR}/Binaries/ParserHelper.dll .
+  cp ${BOOGIE_DIR}/Binaries/Provers.SMTLib.dll .
+  cp ${BOOGIE_DIR}/Binaries/VCExpr.dll .
+  cp ${BOOGIE_DIR}/Binaries/VCGeneration.dll .
+  cp ${BOOGIE_DIR}/Binaries/Boogie.exe .
+  cp ${BOOGIE_DIR}/Binaries/BVD.exe .
+  cp ${BOOGIE_DIR}/Binaries/Doomed.dll .
+  cp ${BOOGIE_DIR}/Binaries/Predication.dll .
 
-cd ${CORRAL_DIR}
-xbuild cba.sln /p:Configuration=Release
-ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+  cd ${CORRAL_DIR}
+  xbuild cba.sln /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
-cd ${BASE_DIR}
+  cd ${BASE_DIR}
 
-echo -e "${textcolor}*** SMACK BUILD: Installed Corral ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installed Corral ***${nocolor}"
 
 fi
 
@@ -406,37 +386,37 @@ fi
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
 
-echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
 
-mkdir -p ${SMACK_DIR}/src
-mkdir -p ${SMACK_DIR}/build
-mkdir -p ${SMACK_DIR}/install
+  mkdir -p ${SMACK_DIR}/src
+  mkdir -p ${SMACK_DIR}/build
+  mkdir -p ${SMACK_DIR}/install
 
-# Get SMACK
-git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
+  # Get SMACK
+  git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
-# Configure SMACK and build
-cd ${SMACK_DIR}/build/
-cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
-make
-make install
+  # Configure SMACK and build
+  cd ${SMACK_DIR}/build/
+  cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+  make
+  make install
 
-echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
 
-# Set required paths and environment variables
-export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
-export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
-export PATH=${SMACK_DIR}/install/bin:$PATH
+  # Set required paths and environment variables
+  export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
+  export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
+  export PATH=${SMACK_DIR}/install/bin:$PATH
 
-# Run SMACK regressions
-echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
-cd ${SMACK_DIR}/src/test
-./regtest.py --verifier {boogie,corral}
-echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
+  # Run SMACK regressions
+  echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
+  cd ${SMACK_DIR}/src/test
+  ./regtest.py --verifier {boogie,corral}
+  echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
 
-cd ${BASE_DIR}
+  cd ${BASE_DIR}
 
-echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
+  echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
 
 fi
 
