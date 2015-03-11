@@ -22,14 +22,18 @@ set -e
 
 ################################################################################
 
-# Settings
+# Settings; change these as needed and/or desired
 
 # Used versions of Boogie and Corral
 BOOGIE_COMMIT=d6a7f2bd79c9
 CORRAL_COMMIT=3aa62d7425b5
 
-# Change this to the desired path (default uses working-dir/smack-project)
-BASE_DIR=`pwd`/smack-project
+# Base project path (default is script-location-path/../..)
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+BASE_DIR=${SCRIPT_DIR}/../..
+
+# Installation prefix (system default is used unless changed)
+PREFIX=
 
 # Set these flags to control various installation options
 INSTALL_PACKAGES=1
@@ -43,7 +47,7 @@ INSTALL_LLVM=0 # LLVM is typically installed from packages (see below)
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
 CORRAL_DIR="${BASE_DIR}/corral"
-SMACK_DIR="${BASE_DIR}/smack"
+SMACK_DIR="${SCRIPT_DIR}/.."
 
 # Setting colors
 textcolor='\e[0;35m'
@@ -388,16 +392,11 @@ if [ ${INSTALL_SMACK} -eq 1 ]; then
 
   echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
 
-  mkdir -p ${SMACK_DIR}/src
   mkdir -p ${SMACK_DIR}/build
-  mkdir -p ${SMACK_DIR}/install
-
-  # Get SMACK
-  git clone git://github.com/smackers/smack.git ${SMACK_DIR}/src/
 
   # Configure SMACK and build
   cd ${SMACK_DIR}/build/
-  cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+  cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Release ..
   make
   make install
 
@@ -406,11 +405,11 @@ if [ ${INSTALL_SMACK} -eq 1 ]; then
   # Set required paths and environment variables
   export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
   export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
-  export PATH=${SMACK_DIR}/install/bin:$PATH
+#  export PATH=${SMACK_DIR}/install/bin:$PATH
 
   # Run SMACK regressions
   echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
-  cd ${SMACK_DIR}/src/test
+  cd ${SMACK_DIR}/test
   ./regtest.py --verifier {boogie,corral}
   echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
 
