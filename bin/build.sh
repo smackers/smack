@@ -26,26 +26,26 @@ CORRAL_COMMIT=3aa62d7425b5
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
-INSTALL_Z3=1
-INSTALL_BOOGIE=1
-INSTALL_CORRAL=1
-INSTALL_SMACK=1
-INSTALL_LLVM=0 # LLVM is typically installed from packages (see below)
-INSTALL_MONO=0
+BUILD_Z3=1
+BUILD_BOOGIE=1
+BUILD_CORRAL=1
+BUILD_SMACK=1
+BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
+BUILD_MONO=0
 
 # PATHS
-SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-BASE_DIR=${SCRIPT_DIR}/../..
+SCRIPT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+ROOT=${SCRIPT_PATH}/../..
 
-Z3_DIR="${BASE_DIR}/z3"
-BOOGIE_DIR="${BASE_DIR}/boogie"
-CORRAL_DIR="${BASE_DIR}/corral"
-MONO_DIR="${BASE_DIR}/mono-3"
-SMACK_DIR="${SCRIPT_DIR}/.."
+Z3_DIR="${ROOT}/z3"
+BOOGIE_DIR="${ROOT}/boogie"
+CORRAL_DIR="${ROOT}/corral"
+MONO_DIR="${ROOT}/mono"
+SMACK_DIR="${SCRIPT_PATH}/.."
 
 # Install prefix -- system default is used if left unspecified
-PREFIX=
-CONFIGURE_PREFIX=
+INSTALL_PREFIX=
+CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 ################################################################################
@@ -149,9 +149,9 @@ while [[ $# > 0 ]]
 do
   case "$1" in
   --prefix)
-    puts "Using prefix $2"
-    PREFIX="$2"
-    CONFIGURE_PREFIX="--prefix=$2"
+    puts "Using install prefix $2"
+    INSTALL_PREFIX="$2"
+    CONFIGURE_INSTALL_PREFIX="--prefix=$2"
     CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
     shift
     shift
@@ -179,15 +179,15 @@ linux-ubuntu-14*)
 
 linux-ubuntu-12*)
   Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
-  INSTALL_LLVM=1
-  INSTALL_MONO=1
+  BUILD_LLVM=1
+  BUILD_MONO=1
   ;;
 
 linux-cygwin*)
-  INSTALL_LLVM=1
-  INSTALL_Z3=0
-  INSTALL_BOOGIE=0
-  INSTALL_CORRAL=0
+  BUILD_LLVM=1
+  BUILD_Z3=0
+  BUILD_BOOGIE=0
+  BUILD_CORRAL=0
   ;;
 
 *)
@@ -246,15 +246,15 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ]; then
 fi
 
 
-if [ ${INSTALL_MONO} -eq 1 ]
+if [ ${BUILD_MONO} -eq 1 ]
 then
   puts "Installing mono"
 
-  cd ${BASE_DIR}
+  cd ${ROOT}
   git clone git://github.com/mono/mono.git ${MONO_DIR}
   cd ${MONO_DIR}
   git checkout ${MONO_VERSION}
-  ./autogen.sh ${CONFIGURE_PREFIX}
+  ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
   make get-monolite-latest
   make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
   sudo make install
@@ -263,18 +263,18 @@ then
   cd ${MONO_DIR}
   git clone git://github.com/mono/libgdiplus.git
   cd libgdiplus
-  ./autogen.sh ${CONFIGURE_PREFIX}
+  ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
   make
   sudo make install
 
-  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${PREFIX}/lib >> ~/.bashrc
+  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ~/.bashrc
   source ~/.bashrc
 
   puts "Installed mono"
 fi
 
 
-if [ ${INSTALL_LLVM} -eq 1 ]
+if [ ${BUILD_LLVM} -eq 1 ]
 then
   puts "Installing LLVM"
 
@@ -303,11 +303,11 @@ then
 fi
 
 
-if [ ${INSTALL_Z3} -eq 1 ]
+if [ ${BUILD_Z3} -eq 1 ]
 then
   puts "Installing Z3"
 
-  cd ${BASE_DIR}
+  cd ${ROOT}
   wget ${Z3_DOWNLOAD_LINK} -O z3_download.zip
   unzip -o z3_download.zip
   rm -f z3_download.zip
@@ -317,10 +317,10 @@ then
 fi
 
 
-if [ ${INSTALL_BOOGIE} -eq 1 ]; then
+if [ ${BUILD_BOOGIE} -eq 1 ]; then
   puts "Installing Boogie"
 
-  cd ${BASE_DIR}
+  cd ${ROOT}
   hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
@@ -333,11 +333,11 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 fi
 
 
-if [ ${INSTALL_CORRAL} -eq 1 ]
+if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Installing Corral"
 
-  cd ${BASE_DIR}
+  cd ${ROOT}
   git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
   cd ${CORRAL_DIR}
   git checkout ${CORRAL_COMMIT}
@@ -349,7 +349,7 @@ then
 fi
 
 
-if [ ${INSTALL_SMACK} -eq 1 ]
+if [ ${BUILD_SMACK} -eq 1 ]
 then
   puts "Installing SMACK"
 
