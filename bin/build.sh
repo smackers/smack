@@ -30,6 +30,7 @@ BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
 BUILD_SMACK=1
+TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
@@ -353,16 +354,22 @@ then
   make
   sudo make install
 
-  puts "Built SMACK"
-
   puts "Configuring shell environment"
   echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ~/.bashrc
   echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ~/.bashrc
   source ~/.bashrc
   puts "The required environment variables have been set in ~/.bashrc"
-  
+
+  puts "Built SMACK"
+fi
+
+
+if [ ${TEST_SMACK} -eq 1 ]
   puts "Running SMACK regression tests"
+
   cd ${SMACK_DIR}/test
   ./regtest.py
+
   puts "Regression tests complete"
+then
 fi
