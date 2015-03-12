@@ -34,8 +34,8 @@ BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
 # PATHS
-SCRIPT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-ROOT=${SCRIPT_PATH}/../..
+SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROOT="${SCRIPT_PATH}/../.."
 
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
