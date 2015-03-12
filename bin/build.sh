@@ -19,7 +19,8 @@
 #
 ################################################################################
 
-# Used versions of Boogie and Corral
+# Required versions
+MONO_VERSION=mono-3.8.0
 BOOGIE_COMMIT=d6a7f2bd79c9
 CORRAL_COMMIT=3aa62d7425b5
 
@@ -30,6 +31,7 @@ INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
 INSTALL_SMACK=1
 INSTALL_LLVM=0 # LLVM is typically installed from packages (see below)
+INSTALL_MONO=0
 
 # PATHS
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
@@ -38,6 +40,7 @@ BASE_DIR=${SCRIPT_DIR}/../..
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
 CORRAL_DIR="${BASE_DIR}/corral"
+MONO_DIR="${BASE_DIR}/mono-3"
 SMACK_DIR="${SCRIPT_DIR}/.."
 
 # Install prefix -- system default is used if left unspecified
@@ -177,6 +180,7 @@ linux-ubuntu-14*)
 linux-ubuntu-12*)
   Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
   INSTALL_LLVM=1
+  INSTALL_MONO=1
   ;;
 
 linux-cygwin*)
@@ -198,8 +202,8 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ]; then
 
   case "$distro" in
   linux-opensuse*)
-    sudo zypper --non-interactive install llvm-clang llvm-devel gcc-c++ ncurses-devel zlib-devel \
-      mono-complete git mercurial cmake make python-yaml
+    sudo zypper --non-interactive install llvm-clang llvm-devel gcc-c++ \
+      ncurses-devel zlib-devel mono-complete git mercurial cmake make python-yaml
     ;;
 
   linux-ubuntu-14*)
@@ -224,36 +228,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ]; then
     sudo update-alternatives --config gcc
     sudo update-alternatives --config g++
     sudo apt-get install -y git mercurial autoconf cmake wget unzip python-yaml
-
-    puts "Installing mono"
-
-    MONO_DIR="${BASE_DIR}/mono-3"
-    mkdir -p ${MONO_DIR}
-
     sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb
-    cd ${MONO_DIR}
-    git clone git://github.com/mono/mono.git
-    cd mono
-    git checkout mono-3.8.0
-    ./autogen.sh ${CONFIGURE_PREFIX}
-    make get-monolite-latest
-    make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
-    sudo make install
-
-    # Install libgdiplus
     sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev
     sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
-    cd ${MONO_DIR}
-    git clone git://github.com/mono/libgdiplus.git
-    cd libgdiplus
-    ./autogen.sh ${CONFIGURE_PREFIX}
-    make
-    sudo make install
-  
-    echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${PREFIX}/lib >> ~/.bashrc
-    source ~/.bashrc
-
-    puts "Installed mono"
     ;;
 
   linux-cygwin*)
@@ -269,7 +246,36 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ]; then
 fi
 
 
-if [ ${INSTALL_LLVM} -eq 1 ]; then
+if [ ${INSTALL_MONO} -eq 1 ]
+then
+  puts "Installing mono"
+
+  cd ${BASE_DIR}
+  git clone git://github.com/mono/mono.git ${MONO_DIR}
+  cd ${MONO_DIR}
+  git checkout ${MONO_VERSION}
+  ./autogen.sh ${CONFIGURE_PREFIX}
+  make get-monolite-latest
+  make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
+  sudo make install
+
+  # Install libgdiplus
+  cd ${MONO_DIR}
+  git clone git://github.com/mono/libgdiplus.git
+  cd libgdiplus
+  ./autogen.sh ${CONFIGURE_PREFIX}
+  make
+  sudo make install
+
+  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${PREFIX}/lib >> ~/.bashrc
+  source ~/.bashrc
+
+  puts "Installed mono"
+fi
+
+
+if [ ${INSTALL_LLVM} -eq 1 ]
+then
   puts "Installing LLVM"
 
   mkdir -p ${LLVM_DIR}/src
@@ -297,7 +303,8 @@ if [ ${INSTALL_LLVM} -eq 1 ]; then
 fi
 
 
-if [ ${INSTALL_Z3} -eq 1 ]; then
+if [ ${INSTALL_Z3} -eq 1 ]
+then
   puts "Installing Z3"
 
   cd ${BASE_DIR}
@@ -308,6 +315,7 @@ if [ ${INSTALL_Z3} -eq 1 ]; then
 
   puts "Installed Z3"
 fi
+
 
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
   puts "Installing Boogie"
@@ -325,7 +333,8 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
 fi
 
 
-if [ ${INSTALL_CORRAL} -eq 1 ]; then
+if [ ${INSTALL_CORRAL} -eq 1 ]
+then
   puts "Installing Corral"
 
   cd ${BASE_DIR}
@@ -340,7 +349,8 @@ if [ ${INSTALL_CORRAL} -eq 1 ]; then
 fi
 
 
-if [ ${INSTALL_SMACK} -eq 1 ]; then
+if [ ${INSTALL_SMACK} -eq 1 ]
+then
   puts "Installing SMACK"
 
   mkdir -p ${SMACK_DIR}/build
