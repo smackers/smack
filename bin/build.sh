@@ -293,7 +293,7 @@ if [ ${INSTALL_LLVM} -eq 1 ]; then
   cd ${LLVM_DIR}/build/
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
-  make install
+  sudo make install
 
   puts "Installed LLVM"
 fi
@@ -349,7 +349,7 @@ if [ ${INSTALL_SMACK} -eq 1 ]; then
   cd ${SMACK_DIR}/build/
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_BUILD_TYPE=Release ..
   make
-  make install
+  sudo make install
 
   puts "Installed SMACK"
 
