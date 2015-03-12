@@ -310,7 +310,8 @@ then
   wget ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
   unzip -o z3-downloaded.zip -d z3-extracted
   mv z3-extracted/z3-* ${Z3_DIR}
-  rm -f z3-downloaded.zip z3-extracted
+  rm -f z3-downloaded.zip
+  rmdir z3-extracted
 
   puts "Built Z3"
 fi
