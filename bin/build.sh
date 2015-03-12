@@ -19,6 +19,9 @@
 #
 ################################################################################
 
+# Partial list of dependnecies; the rest are added depending on the platform
+DEPENDENCIES="git mercurial cmake python-yaml unzip wget"
+
 # Required versions
 MONO_VERSION=mono-3.8.0
 BOOGIE_COMMIT=d6a7f2bd79c9
@@ -42,7 +45,8 @@ BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
 
-BASHRC=~/.bashrc
+SMACKENV=${ROOT}/smack.environment
+WGET="wget --no-verbose"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -172,14 +176,20 @@ puts "Detected distribution: $distro"
 case "$distro" in
 linux-opensuse*)
   Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436282&FileTime=130700549966730000&Build=20959"
+  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
+  DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-ubuntu-14*)
   Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
   Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
+  DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
+  DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
   BUILD_LLVM=1
   BUILD_MONO=1
   ;;
@@ -204,35 +214,29 @@ then
 
   case "$distro" in
   linux-opensuse*)
-    sudo zypper --non-interactive install llvm-clang llvm-devel gcc-c++ \
-      ncurses-devel zlib-devel mono-complete git mercurial cmake make python-yaml
+    sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
   linux-ubuntu-14*)
     sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
-    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+    ${WGET} -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo apt-get update
-    sudo apt-get install -y clang-3.5 libllvm3.5 llvm-3.5 llvm-3.5-dev llvm-3.5-runtime
+    sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
     sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
     sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
-    sudo apt-get install -y libz-dev libedit-dev mono-complete git mercurial cmake python-yaml unzip
     ;;
 
   linux-ubuntu-12*)
     sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
     sudo add-apt-repository -y ppa:andykimpe/cmake
     sudo apt-get update
-    sudo apt-get install -y g++-4.8
+    sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
     sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
     sudo update-alternatives --config gcc
     sudo update-alternatives --config g++
-    sudo apt-get install -y git mercurial autoconf cmake wget unzip python-yaml
-    sudo apt-get install -y git autoconf automake bison flex libtool gettext gdb
-    sudo apt-get install -y libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev
-    sudo apt-get install -y libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev
     ;;
 
   linux-cygwin*)
@@ -268,8 +272,8 @@ then
   make
   sudo make install
 
-  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${BASHRC}
-  source ${BASHRC}
+  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
+  source ${SMACKENV}
 
   puts "Built mono"
 fi
@@ -279,22 +283,18 @@ if [ ${BUILD_LLVM} -eq 1 ]
 then
   puts "Building LLVM"
 
-  mkdir -p ${LLVM_DIR}/src
+  mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
   mkdir -p ${LLVM_DIR}/install
 
-  # Get llvm and extract
-  wget http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
-  wget http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
-  wget http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
 
   tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
-  mkdir -p ${LLVM_DIR}/src/tools/clang
   tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
-  mkdir -p ${LLVM_DIR}/src/projects/compiler-rt
   tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
 
-  # Configure llvm and build
   cd ${LLVM_DIR}/build/
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
@@ -308,11 +308,10 @@ if [ ${BUILD_Z3} -eq 1 ]
 then
   puts "Building Z3"
 
-  wget ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
+  ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
   unzip -o z3-downloaded.zip -d z3-extracted
   mv z3-extracted/z3-* ${Z3_DIR}
-  rm -f z3-downloaded.zip
-  rmdir z3-extracted
+  rm -rf z3-downloaded.zip z3-extracted
 
   puts "Built Z3"
 fi
@@ -325,7 +324,7 @@ then
   hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
-  wget https://nuget.org/nuget.exe
+  ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
@@ -354,16 +353,17 @@ then
   puts "Building SMACK"
 
   mkdir -p ${SMACK_DIR}/build
-  cd ${SMACK_DIR}/build/
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_BUILD_TYPE=Release ..
+  cd ${SMACK_DIR}/build
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release ..
   make
   sudo make install
 
   puts "Configuring shell environment"
-  echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ${BASHRC}
-  echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ${BASHRC}
-  source ${BASHRC}
-  puts "The required environment variables have been set in ${BASHRC}"
+  echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ${SMACKENV}
+  echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ${SMACKENV}
+  source ${SMACKENV}
+  puts "The required environment variables have been set in ${SMACKENV}"
+  puts "You should source ${SMACKENV} in your .bashrc"
 
   puts "Built SMACK"
 fi
