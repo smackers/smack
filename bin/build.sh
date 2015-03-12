@@ -198,7 +198,8 @@ linux-cygwin*)
 esac
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ]; then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ]
+then
   puts "Installing required packages"
 
   case "$distro" in
@@ -316,7 +317,8 @@ then
 fi
 
 
-if [ ${BUILD_BOOGIE} -eq 1 ]; then
+if [ ${BUILD_BOOGIE} -eq 1 ]
+then
   puts "Building Boogie"
 
   hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
