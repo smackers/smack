@@ -365,11 +365,11 @@ fi
 
 
 if [ ${TEST_SMACK} -eq 1 ]
+then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
   ./regtest.py
 
   puts "Regression tests complete"
-then
 fi
