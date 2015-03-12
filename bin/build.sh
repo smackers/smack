@@ -1,68 +1,56 @@
 #!/bin/bash
+################################################################################
 #
 # This file is distributed under the MIT License. See LICENSE for details.
 #
-
 ################################################################################
 #
-# Builds and installs SMACK in BASE_DIR (see shell var below in settings).
-#
-# Requirements (see "Install required packages" below):
-# - git
-# - mercurial
-# - python
-# - LLVM, clang
-# - cmake
-# - mono
+# This script builds and installs SMACK, including the following dependencies:
+# - Git
+# - Mercurial
+# - Python
+# - CMake
+# - LLVM
+# - Clang
+# - Mono
+# - Z3
+# - Boogie
+# - Corral
 #
 ################################################################################
-
-# Exit on error
-set -e
-
-################################################################################
-
-# Settings; change these as needed and/or desired
 
 # Used versions of Boogie and Corral
 BOOGIE_COMMIT=d6a7f2bd79c9
 CORRAL_COMMIT=3aa62d7425b5
 
-# Base project path (default is script-location-path/../..)
-SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-BASE_DIR=${SCRIPT_DIR}/../..
-
-# Installation prefix (system default is used unless changed)
-PREFIX=
-
 # Set these flags to control various installation options
-INSTALL_PACKAGES=1
+INSTALL_DEPENDENCIES=1
 INSTALL_Z3=1
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
 INSTALL_SMACK=1
 INSTALL_LLVM=0 # LLVM is typically installed from packages (see below)
 
-# Other dirs
+# PATHS
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+BASE_DIR=${SCRIPT_DIR}/../..
+
 Z3_DIR="${BASE_DIR}/z3"
 BOOGIE_DIR="${BASE_DIR}/boogie"
 CORRAL_DIR="${BASE_DIR}/corral"
 SMACK_DIR="${SCRIPT_DIR}/.."
 
-# Setting colors
-textcolor='\e[0;35m'
-nocolor='\e[0m'
+# Install prefix -- system default is used if left unspecified
+PREFIX=
+CONFIGURE_PREFIX=
+CMAKE_INSTALL_PREFIX=
 
 ################################################################################
-
-# Set up base directory for everything
-mkdir -p ${BASE_DIR}
-cd ${BASE_DIR}
-
-################################################################################
-
-# Detect Linux distribution
-
+#
+# A FEW HELPER FUNCTIONS
+#
+# Detecting OS distributions
+#
 # The format of the output is:
 #   <plat>-<dist>-<ver>-<arch>
 #   ^      ^      ^     ^
@@ -71,6 +59,7 @@ cd ${BASE_DIR}
 #   |      +------------------ distribution: centos, rhel, nexentaos
 #   +------------------------- platform: linux, sunos
 #
+################################################################################
 
 # ================================================================
 # Trim a string, remove internal spaces, convert to lower case.
@@ -92,10 +81,10 @@ function get-platform-root {
       # Solaris variant
       uname -s | tr 'A-Z' 'a-z'
     else
-      echo "unkown"
+      echo "unknown"
     fi
   else
-    echo "unkown"
+    echo "unknown"
   fi
 }
 
@@ -139,56 +128,81 @@ function get-platform {
   esac
 }
 
-distro=$(get-platform)
-echo -e "${textcolor}Detected distribution: $distro${nocolor}"
+function puts {
+  echo -e "\033[35m*** SMACK BUILD: ${1} ***\033[0m"
+}
 
 ################################################################################
+#
+# END HELPER FUNCTIONS
+#
+################################################################################
 
-# Set platform-dependent flags
+# Exit on error
+set -e
 
-case "$distro" in
-  linux-opensuse*)
-    Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436282&FileTime=130700549966730000&Build=20959"
-    ;;
-
-  linux-ubuntu-14*)
-    Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
-    ;;
-
-  linux-ubuntu-12*)
-    Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
-    INSTALL_LLVM=1
-    ;;
-
-  linux-cygwin*)
-    INSTALL_LLVM=1
-    INSTALL_Z3=0
-    INSTALL_BOOGIE=0
-    INSTALL_CORRAL=0
+# Parse command line options
+while [[ $# > 0 ]]
+do
+  case "$1" in
+  --prefix)
+    puts "Using prefix $2"
+    PREFIX="$2"
+    CONFIGURE_PREFIX="--prefix=$2"
+    CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
+    shift
+    shift
     ;;
 
   *)
-    echo -e "${textcolor}Distribution not supported. Manual install required.${nocolor}"
+    puts "Unknown option: $1"
     exit 1
     ;;
+  esac
+done
+
+distro=$(get-platform)
+puts "Detected distribution: $distro"
+
+# Set platform-dependent flags
+case "$distro" in
+linux-opensuse*)
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436282&FileTime=130700549966730000&Build=20959"
+  ;;
+
+linux-ubuntu-14*)
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  ;;
+
+linux-ubuntu-12*)
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  INSTALL_LLVM=1
+  ;;
+
+linux-cygwin*)
+  INSTALL_LLVM=1
+  INSTALL_Z3=0
+  INSTALL_BOOGIE=0
+  INSTALL_CORRAL=0
+  ;;
+
+*)
+  puts "Distribution ${distro} not supported. Manual installation required."
+  exit 1
+  ;;
 esac
 
-################################################################################
 
-# Install required packages
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ]; then
+  puts "Installing required packages"
 
-if [ ${INSTALL_PACKAGES} -eq 1 ]; then
-
-case "$distro" in
+  case "$distro" in
   linux-opensuse*)
-    echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
     sudo zypper --non-interactive install llvm-clang llvm-devel gcc-c++ ncurses-devel zlib-devel \
       mono-complete git mercurial cmake make python-yaml
-    echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
 
   linux-ubuntu-14*)
-    echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
     sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
     wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update
@@ -200,11 +214,9 @@ case "$distro" in
     sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
     sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
     sudo apt-get install -y libz-dev libedit-dev mono-complete git mercurial cmake python-yaml
-    echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
     ;;
 
   linux-ubuntu-12*)
-    echo -e "${textcolor}*** SMACK BUILD: Installing required packages ***${nocolor}"
     sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
     sudo add-apt-repository -y ppa:andykimpe/cmake
     sudo apt-get update
@@ -215,8 +227,7 @@ case "$distro" in
     sudo update-alternatives --config g++
     sudo apt-get install -y git mercurial autoconf cmake wget unzip python-yaml
 
-    # Install mono
-    echo -e "${textcolor}*** SMACK BUILD: Installing mono ***${nocolor}"
+    puts "Installing mono"
 
     MONO_DIR="${BASE_DIR}/mono-3"
     mkdir -p ${MONO_DIR}
@@ -226,7 +237,7 @@ case "$distro" in
     git clone git://github.com/mono/mono.git
     cd mono
     git checkout mono-3.8.0
-    ./autogen.sh --prefix=/usr/local
+    ./autogen.sh ${CONFIGURE_PREFIX}
     make get-monolite-latest
     make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
     sudo make install
@@ -237,35 +248,31 @@ case "$distro" in
     cd ${MONO_DIR}
     git clone git://github.com/mono/libgdiplus.git
     cd libgdiplus
-    ./autogen.sh --prefix=/usr/local
+    ./autogen.sh ${CONFIGURE_PREFIX}
     make
     sudo make install
+  
+    echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${PREFIX}/lib >> ~/.bashrc
+    source ~/.bashrc
 
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-    cd ${BASE_DIR}
-
-    echo -e "${textcolor}*** SMACK BUILD: Installed mono ***${nocolor}"
-    echo -e "${textcolor}*** SMACK BUILD: Installed required packages ***${nocolor}"
+    puts "Installed mono"
     ;;
 
   linux-cygwin*)
     ;;
 
   *)
-    echo -e "${textcolor}Distribution not supported. Manually install dependencies.${nocolor}"
+    puts "Distribution ${distro} not supported. Dependencies must be installed manually."
     exit 1
     ;;
-esac
+  esac
 
+  puts "Installed required packages"
 fi
 
-################################################################################
-
-# LLVM
 
 if [ ${INSTALL_LLVM} -eq 1 ]; then
-
-  echo -e "${textcolor}*** SMACK BUILD: Installing LLVM ***${nocolor}"
+  puts "Installing LLVM"
 
   mkdir -p ${LLVM_DIR}/src
   mkdir -p ${LLVM_DIR}/build
@@ -284,47 +291,31 @@ if [ ${INSTALL_LLVM} -eq 1 ]; then
 
   # Configure llvm and build
   cd ${LLVM_DIR}/build/
-  cmake -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install -DCMAKE_BUILD_TYPE=Release ../src
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
   make install
 
-  cd ${BASE_DIR}
-
-  echo -e "${textcolor}*** SMACK BUILD: Installed LLVM ***${nocolor}"
-
+  puts "Installed LLVM"
 fi
 
-################################################################################
-
-# Z3
 
 if [ ${INSTALL_Z3} -eq 1 ]; then
+  puts "Installing Z3"
 
-  echo -e "${textcolor}*** SMACK BUILD: Installing Z3 ***${nocolor}"
-
+  cd ${BASE_DIR}
   wget ${Z3_DOWNLOAD_LINK} -O z3_download.zip
   unzip -o z3_download.zip
   rm -f z3_download.zip
   mv z3-* ${Z3_DIR}
 
-  echo -e "${textcolor}*** SMACK BUILD: Installed Z3 ***${nocolor}"
-
+  puts "Installed Z3"
 fi
 
-################################################################################
-
-# Boogie
-
 if [ ${INSTALL_BOOGIE} -eq 1 ]; then
+  puts "Installing Boogie"
 
-  echo -e "${textcolor}*** SMACK BUILD: Installing Boogie ***${nocolor}"
-
-  mkdir -p ${BOOGIE_DIR}
-
-  # Get Boogie
+  cd ${BASE_DIR}
   hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
-
-  # Build Boogie
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   wget https://nuget.org/nuget.exe
@@ -332,91 +323,44 @@ if [ ${INSTALL_BOOGIE} -eq 1 ]; then
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
-  cd ${BASE_DIR}
-
-  echo -e "${textcolor}*** SMACK BUILD: Installed Boogie ***${nocolor}"
-
+  puts "Installed Boogie"
 fi
 
-################################################################################
-
-# Corral
 
 if [ ${INSTALL_CORRAL} -eq 1 ]; then
+  puts "Installing Corral"
 
-  echo -e "${textcolor}*** SMACK BUILD: Installing Corral ***${nocolor}"
-
-  mkdir -p ${CORRAL_DIR}
-
-  # Get Corral
+  cd ${BASE_DIR}
   git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
   cd ${CORRAL_DIR}
   git checkout ${CORRAL_COMMIT}
-
-  # Build Corral
-  cd ${CORRAL_DIR}/references
-
-  cp ${BOOGIE_DIR}/Binaries/AbsInt.dll .
-  cp ${BOOGIE_DIR}/Binaries/Basetypes.dll .
-  cp ${BOOGIE_DIR}/Binaries/CodeContractsExtender.dll .
-  cp ${BOOGIE_DIR}/Binaries/Concurrency.dll .
-  cp ${BOOGIE_DIR}/Binaries/Core.dll .
-  cp ${BOOGIE_DIR}/Binaries/ExecutionEngine.dll .
-  cp ${BOOGIE_DIR}/Binaries/Graph.dll .
-  cp ${BOOGIE_DIR}/Binaries/Houdini.dll .
-  cp ${BOOGIE_DIR}/Binaries/Model.dll .
-  cp ${BOOGIE_DIR}/Binaries/ParserHelper.dll .
-  cp ${BOOGIE_DIR}/Binaries/Provers.SMTLib.dll .
-  cp ${BOOGIE_DIR}/Binaries/VCExpr.dll .
-  cp ${BOOGIE_DIR}/Binaries/VCGeneration.dll .
-  cp ${BOOGIE_DIR}/Binaries/Boogie.exe .
-  cp ${BOOGIE_DIR}/Binaries/BVD.exe .
-  cp ${BOOGIE_DIR}/Binaries/Doomed.dll .
-  cp ${BOOGIE_DIR}/Binaries/Predication.dll .
-
-  cd ${CORRAL_DIR}
+  cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
-  cd ${BASE_DIR}
-
-  echo -e "${textcolor}*** SMACK BUILD: Installed Corral ***${nocolor}"
-
+  puts "Installed Corral"
 fi
 
-################################################################################
-
-# SMACK
 
 if [ ${INSTALL_SMACK} -eq 1 ]; then
-
-  echo -e "${textcolor}*** SMACK BUILD: Installing SMACK ***${nocolor}"
+  puts "Installing SMACK"
 
   mkdir -p ${SMACK_DIR}/build
-
-  # Configure SMACK and build
   cd ${SMACK_DIR}/build/
-  cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Release ..
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_CONFIG=/usr/bin -DCMAKE_BUILD_TYPE=Release ..
   make
   make install
 
-  echo -e "${textcolor}*** SMACK BUILD: Installed SMACK ***${nocolor}"
+  puts "Installed SMACK"
 
-  # Set required paths and environment variables
-  export BOOGIE="mono ${BOOGIE_DIR}/Binaries/Boogie.exe"
-  export CORRAL="mono ${CORRAL_DIR}/bin/Release/corral.exe"
-#  export PATH=${SMACK_DIR}/install/bin:$PATH
-
-  # Run SMACK regressions
-  echo -e "${textcolor}*** SMACK BUILD: Running regressions ***${nocolor}"
+  puts "Configuring shell environment"
+  echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ~/.bashrc
+  echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ~/.bashrc
+  source ~/.bashrc
+  puts "The required environment variables have been set in ~/.bashrc"
+  
+  puts "Running SMACK regression tests"
   cd ${SMACK_DIR}/test
-  ./regtest.py --verifier {boogie,corral}
-  echo -e "${textcolor}*** SMACK BUILD: Regressions done ***${nocolor}"
-
-  cd ${BASE_DIR}
-
-  echo -e "${textcolor}*** SMACK BUILD: You have to set the required environment variables! ***${nocolor}"
-
+  ./regtest.py
+  puts "Regression tests complete"
 fi
-
-################################################################################
