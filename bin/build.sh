@@ -42,6 +42,8 @@ BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
 
+BASHRC=~/.bashrc
+
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
 CONFIGURE_INSTALL_PREFIX=
@@ -265,8 +267,8 @@ then
   make
   sudo make install
 
-  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ~/.bashrc
-  source ~/.bashrc
+  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${BASHRC}
+  source ${BASHRC}
 
   puts "Built mono"
 fi
@@ -355,10 +357,10 @@ then
   sudo make install
 
   puts "Configuring shell environment"
-  echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ~/.bashrc
-  echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ~/.bashrc
-  source ~/.bashrc
-  puts "The required environment variables have been set in ~/.bashrc"
+  echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ${BASHRC}
+  echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ${BASHRC}
+  source ${BASHRC}
+  puts "The required environment variables have been set in ${BASHRC}"
 
   puts "Built SMACK"
 fi
