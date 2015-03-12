@@ -34,14 +34,12 @@ BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
 # PATHS
-SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ROOT="${SCRIPT_PATH}/../.."
-
+SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
-SMACK_DIR="${SCRIPT_PATH}/.."
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -248,9 +246,8 @@ fi
 
 if [ ${BUILD_MONO} -eq 1 ]
 then
-  puts "Installing mono"
+  puts "Building mono"
 
-  cd ${ROOT}
   git clone git://github.com/mono/mono.git ${MONO_DIR}
   cd ${MONO_DIR}
   git checkout ${MONO_VERSION}
@@ -270,13 +267,13 @@ then
   echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ~/.bashrc
   source ~/.bashrc
 
-  puts "Installed mono"
+  puts "Built mono"
 fi
 
 
 if [ ${BUILD_LLVM} -eq 1 ]
 then
-  puts "Installing LLVM"
+  puts "Building LLVM"
 
   mkdir -p ${LLVM_DIR}/src
   mkdir -p ${LLVM_DIR}/build
@@ -299,28 +296,26 @@ then
   make
   sudo make install
 
-  puts "Installed LLVM"
+  puts "Built LLVM"
 fi
 
 
 if [ ${BUILD_Z3} -eq 1 ]
 then
-  puts "Installing Z3"
+  puts "Building Z3"
 
-  cd ${ROOT}
-  wget ${Z3_DOWNLOAD_LINK} -O z3_download.zip
-  unzip -o z3_download.zip
-  rm -f z3_download.zip
-  mv z3-* ${Z3_DIR}
+  wget ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
+  unzip -o z3-downloaded.zip -d z3-extracted
+  mv z3-extracted/z3-* ${Z3_DIR}
+  rm -f z3-downloaded.zip z3-extracted
 
-  puts "Installed Z3"
+  puts "Built Z3"
 fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ]; then
-  puts "Installing Boogie"
+  puts "Building Boogie"
 
-  cd ${ROOT}
   hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
@@ -329,15 +324,14 @@ if [ ${BUILD_BOOGIE} -eq 1 ]; then
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
-  puts "Installed Boogie"
+  puts "Built Boogie"
 fi
 
 
 if [ ${BUILD_CORRAL} -eq 1 ]
 then
-  puts "Installing Corral"
+  puts "Building Corral"
 
-  cd ${ROOT}
   git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
   cd ${CORRAL_DIR}
   git checkout ${CORRAL_COMMIT}
@@ -345,13 +339,13 @@ then
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
-  puts "Installed Corral"
+  puts "Built Corral"
 fi
 
 
 if [ ${BUILD_SMACK} -eq 1 ]
 then
-  puts "Installing SMACK"
+  puts "Building SMACK"
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build/
@@ -359,7 +353,7 @@ then
   make
   sudo make install
 
-  puts "Installed SMACK"
+  puts "Built SMACK"
 
   puts "Configuring shell environment"
   echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ~/.bashrc
