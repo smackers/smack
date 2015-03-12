@@ -19,9 +19,6 @@
 #
 ################################################################################
 
-# Partial list of dependnecies; the rest are added depending on the platform
-DEPENDENCIES="git mercurial cmake python-yaml unzip wget"
-
 # Required versions
 MONO_VERSION=mono-3.8.0
 BOOGIE_COMMIT=d6a7f2bd79c9
@@ -52,6 +49,9 @@ WGET="wget --no-verbose"
 INSTALL_PREFIX=
 CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
+
+# Partial list of dependnecies; the rest are added depending on the platform
+DEPENDENCIES="git mercurial cmake python-yaml unzip wget"
 
 ################################################################################
 #
@@ -359,8 +359,8 @@ then
   sudo make install
 
   puts "Configuring shell environment"
-  echo export BOOGIE=\\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\\" >> ${SMACKENV}
-  echo export CORRAL=\\"mono ${CORRAL_DIR}/bin/Release/corral.exe\\" >> ${SMACKENV}
+  echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
+  echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"
