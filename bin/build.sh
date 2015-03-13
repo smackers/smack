@@ -174,8 +174,8 @@ linux-ubuntu-12*)
   BUILD_LLVM=1
   BUILD_MONO=1
   INSTALL_PREFIX="/usr/local"
-  CONFIGURE_INSTALL_PREFIX="--prefix=$2"
-  CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
+  CONFIGURE_INSTALL_PREFIX="--prefix=${INSTALL_PREFIX}"
+  CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}"
   ;;
 
 linux-cygwin*)
@@ -291,7 +291,6 @@ then
 
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
-  mkdir -p ${LLVM_DIR}/install
 
   ${WGET} http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
   ${WGET} http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
@@ -312,14 +311,14 @@ fi
 
 if [ ${BUILD_Z3} -eq 1 ]
 then
-  puts "Building Z3"
+  puts "Installing Z3"
 
   ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
   unzip -o z3-downloaded.zip -d z3-extracted
   mv z3-extracted/z3-* ${Z3_DIR}
   rm -rf z3-downloaded.zip z3-extracted
 
-  puts "Built Z3"
+  puts "Installed Z3"
 fi
 
 
