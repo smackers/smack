@@ -41,6 +41,7 @@ Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
+LLVM_DIR="${ROOT}/llvm"
 
 SMACKENV=${ROOT}/smack.environment
 WGET="wget --no-verbose"
