@@ -150,27 +150,6 @@ function puts {
 # Exit on error
 set -e
 
-# Parse command line options
-while [[ $# > 0 ]]
-do
-  case "$1" in
-  --prefix)
-    puts "Using install prefix $2"
-    INSTALL_PREFIX="$2"
-    CONFIGURE_INSTALL_PREFIX="--prefix=$2"
-    CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=$PATH:${INSTALL_PREFIX}/bin >> ${SMACKENV}
-    shift
-    shift
-    ;;
-
-  *)
-    puts "Unknown option: $1"
-    exit 1
-    ;;
-  esac
-done
-
 distro=$(get-platform)
 puts "Detected distribution: $distro"
 
@@ -194,6 +173,9 @@ linux-ubuntu-12*)
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
   BUILD_LLVM=1
   BUILD_MONO=1
+  INSTALL_PREFIX="/usr/local"
+  CONFIGURE_INSTALL_PREFIX="--prefix=$2"
+  CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
   ;;
 
 linux-cygwin*)
@@ -208,6 +190,27 @@ linux-cygwin*)
   exit 1
   ;;
 esac
+
+# Parse command line options
+while [[ $# > 0 ]]
+do
+  case "$1" in
+  --prefix)
+    puts "Using install prefix $2"
+    INSTALL_PREFIX="$2"
+    CONFIGURE_INSTALL_PREFIX="--prefix=$2"
+    CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
+    echo export PATH=$PATH:${INSTALL_PREFIX}/bin >> ${SMACKENV}
+    shift
+    shift
+    ;;
+
+  *)
+    puts "Unknown option: $1"
+    exit 1
+    ;;
+  esac
+done
 
 
 if [ ${INSTALL_DEPENDENCIES} -eq 1 ]
@@ -274,6 +277,7 @@ then
   make
   sudo make install
 
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib
   echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
   source ${SMACKENV}
 
