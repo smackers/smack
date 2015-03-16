@@ -105,8 +105,6 @@ public:
   bool isSingletonGlobal(const llvm::Value *V);
   bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
   bool isFieldDisjoint(const GlobalValue* V, unsigned offset);
-  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
-  bool isTypeSafe(const GlobalValue* V);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
 
