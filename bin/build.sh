@@ -277,9 +277,11 @@ then
   make
   sudo make install
 
-  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib
-  echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
-  source ${SMACKENV}
+  if [[ ${INSTALL_PREFIX} ]]
+  then
+    echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
+    source ${SMACKENV}
+  fi
 
   puts "Built mono"
 fi
