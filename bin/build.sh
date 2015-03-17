@@ -332,7 +332,7 @@ then
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
-  mono ./nuget.exe restore Boogie.sln
+  sudo mono ./nuget.exe restore Boogie.sln
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
