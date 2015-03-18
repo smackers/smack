@@ -10,16 +10,31 @@
 
 #define NULL (void*)0
 
-/* pthread types */
-typedef int pthread_t;
+/* Mutex types.  */
+enum
+{
+  PTHREAD_MUTEX_TIMED_NP,
+  PTHREAD_MUTEX_RECURSIVE_NP,
+  PTHREAD_MUTEX_ERRORCHECK_NP,
+  PTHREAD_MUTEX_ADAPTIVE_NP,
+  PTHREAD_MUTEX_NORMAL = PTHREAD_MUTEX_TIMED_NP,
+  PTHREAD_MUTEX_RECURSIVE = PTHREAD_MUTEX_RECURSIVE_NP,
+  PTHREAD_MUTEX_ERRORCHECK = PTHREAD_MUTEX_ERRORCHECK_NP,
+  PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL,
+  PTHREAD_MUTEX_FAST_NP = PTHREAD_MUTEX_TIMED_NP
+};
 
+typedef int pthread_t;
 typedef int pthread_attr_t;
 
 typedef struct{
-  int lock, init;
-} pthread_mutex_t;
+  int prioceil, proto, pshared, type;
+} pthread_mutexattr_t;
 
-typedef int pthread_mutexattr_t;
+typedef struct{
+  int lock, init;
+  pthread_mutexattr_t attr;
+} pthread_mutex_t;
 
 typedef struct{
   int cond, init;
@@ -62,23 +77,43 @@ void pthread_exit(void *retval) {
 //        of initialization should be undefined
 #define PTHREAD_MUTEX_INITIALIZER {UNLOCKED, INITIALIZED}
 
+int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
+  attr->type = PTHREAD_MUTEX_NORMAL;
+}
+
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
+  attr->type = type;
+  return 0;
+}
+
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
+  // Can't check for already initialized error, 
+  //  since uninitialized values are nondet and could be INITIALIZED
+  mutex->lock = UNLOCKED;
+  mutex->init = INITIALIZED;
   if(attr == 0) {
-    mutex->lock = UNLOCKED;
-    mutex->init = INITIALIZED;
+    pthread_mutexattr_init(&mutex->attr);
   } else {
-    // Unimplemented
-    assert(0);
+    mutex->attr.type = attr->type;
   }
   return 0;
 }
 
 int pthread_mutex_lock(pthread_mutex_t *__mutex) {
-  // Ensure mutex is initialized
-  assert(__mutex->init == INITIALIZED);
   int tid = (int)pthread_self();
-  // Ensure mutex hasn't already been locked caller
-  assert(tid != __mutex->lock);
+  // Ensure mutex is initialized & hasn't already been locked by caller
+  if(__mutex->attr.type==PTHREAD_MUTEX_NORMAL) {
+    assert(__mutex->init == INITIALIZED);
+    assert(__mutex->lock != tid);
+  } else if(__mutex->attr.type==PTHREAD_MUTEX_ERRORCHECK) {
+    if(__mutex->init != INITIALIZED)
+      return 22;    // This is EINVAL
+    if(__mutex->lock == tid)
+      return 35;    // This is EDEADLK
+  } else {
+    // Other types not currently implemented
+    assert(0);
+  }
   __SMACK_code("call corral_atomic_begin();");
   // Wait for lock to become free
   assume(__mutex->lock == UNLOCKED);
@@ -88,12 +123,19 @@ int pthread_mutex_lock(pthread_mutex_t *__mutex) {
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *__mutex) {
-  // Ensure mutex is initialized
-  assert(__mutex->init == INITIALIZED);
   int tid = (int)pthread_self();
-  // Ensure the caller is the current owner
-  if(tid != __mutex->lock) {
-    return 1;        // This is EPERM
+  // Ensure mutex is initialized & caller is current owner
+  if(__mutex->attr.type==PTHREAD_MUTEX_NORMAL) {
+    assert(__mutex->init == INITIALIZED);
+    assert(__mutex->lock == tid);
+  } else if(__mutex->attr.type==PTHREAD_MUTEX_ERRORCHECK) {
+    if(__mutex->init != INITIALIZED)
+      return 22;    // This is EINVAL
+    if(__mutex->lock != tid) 
+      return 1;     // This is EPERM
+  } else {
+    // Other types not currently implemented
+    assert(0);
   }
   __SMACK_code("call corral_atomic_begin();");
   __mutex->lock = UNLOCKED;

@@ -23,6 +23,7 @@ tests = [
   #('lock4',                 good, 1, 2),
   ('lock5',                 fail, 1, 2),
   ('lock6',                 fail, 1, 2),
+  ('lockattr',              good, 1, 2),
   ('no_join',               fail, 1, 2),
   ('join',                  good, 1, 2),
   ('join2',                 good, 1, 2),
