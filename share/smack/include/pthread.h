@@ -92,7 +92,9 @@ int pthread_mutex_unlock(pthread_mutex_t *__mutex) {
   assert(__mutex->init == INITIALIZED);
   int tid = (int)pthread_self();
   // Ensure the caller is the current owner
-  assert(tid == __mutex->lock);
+  if(tid != __mutex->lock) {
+    return 1;        // This is EPERM
+  }
   __SMACK_code("call corral_atomic_begin();");
   __mutex->lock = UNLOCKED;
   __SMACK_code("call corral_atomic_end();");
