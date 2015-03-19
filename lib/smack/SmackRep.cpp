@@ -290,7 +290,11 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
 
   if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v)) {
     unsigned w = ci->getBitWidth();
-    return lit(ci->getValue().toString(10,w>1 && ci->isNegative()),w);
+    if (w>1 && ci->isNegative()) {
+      return Expr::fn(opName("$sub", {w}), lit((long)0, w), lit(ci->getValue().abs().toString(10,false),w));
+    } else {
+      return lit(ci->getValue().toString(10,false),w);
+    }
   }
 
   else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
