@@ -1,4 +1,8 @@
 #include "smack.h"
+
+// @flag --unroll=2
+// @expect verified
+
 extern int __VERIFIER_nondet_int();
 int main()
 {
