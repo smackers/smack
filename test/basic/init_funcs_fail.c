@@ -3,13 +3,16 @@
 // @expect error
 // @flag --unroll=1
 
-void __SMACK_INIT(test) {
-  // A call to this function should be injected in main, and
-  //  cause verification to fail
-  assert(0);
+int g = 10;
+
+__SMACK_INIT(g1) {
+  g=11;
+}
+
+__SMACK_INIT(g2) {
+  g=12;
 }
 
 void main() {
-  int a = 1;
-  assert(a==1);
+  assert(g==0 || g==10 || g==11);
 }

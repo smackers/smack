@@ -894,6 +894,8 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
 }
 
 void SmackRep::addInitFunc(const llvm::Function* f) {
+  assert(f->getReturnType()->isVoidTy() && "Init functions cannot return a value");
+  assert(f->getArgumentList().empty() && "Init functions cannot take parameters");  
   initFuncs.push_back(Stmt::call(naming.get(*f)));
 }
 
