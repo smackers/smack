@@ -186,7 +186,7 @@ public:
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
-  void addInitFunc(const Stmt* s);
+  void addInitFunc(const llvm::Function* f);
   bool hasStaticInits();
   Decl* getStaticInit();
   Decl* getInitFuncs();

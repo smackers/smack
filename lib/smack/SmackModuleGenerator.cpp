@@ -71,9 +71,11 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
         proc->insert(Stmt::call(SmackRep::INIT_FUNCS));
         if(rep.hasStaticInits())
           proc->insert(Stmt::call(SmackRep::STATIC_INIT));
-      } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_")
-        // TODO? Check for no arguments?
-        rep.addInitFunc(Stmt::call(naming.get(*func)));
+      } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_") {
+        assert(!func->doesNotReturn() && "Init functions cannot return a value");
+        assert(func->getArgumentList().empty() && "Init functions cannot take parameters");
+        rep.addInitFunc(func);
+      }
 
       DEBUG(errs() << "Finished analyzing function: " << naming.get(*func) << "\n\n");
     }

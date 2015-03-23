@@ -6,7 +6,6 @@ import subprocess
 import re
 import glob
 import time
-import sys
 
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
 APPEND_FIELDS = ['flags']
@@ -79,9 +78,7 @@ print
 passed = failed = timeouts = unknowns = 0
 
 try:
-  #Allow for specific (or expanded wildcard) tests to be selected on command line
-  testlist = sys.argv[1:] if len(sys.argv)> 1 else glob.glob("./**/*.c")
-  for test in testlist:
+  for test in glob.glob("./**/*.c"):
     meta = metadata(test)
 
     if meta['skip']:

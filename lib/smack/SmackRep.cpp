@@ -893,8 +893,8 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
   }
 }
 
-void SmackRep::addInitFunc(const Stmt* s) {
-  initFuncs.push_back(s);
+void SmackRep::addInitFunc(const llvm::Function* f) {
+  initFuncs.push_back(Stmt::call(naming.get(*f)));
 }
 
 bool SmackRep::hasStaticInits() {
