@@ -168,13 +168,26 @@ int pthread_cond_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex) {
   // Ensure conditional var is initialized, and mutex is locked properly
   assert(__cond->init == INITIALIZED);
   assert((int)pthread_self() == __mutex->lock);
-  
+  pthread_mutex_unlock(__mutex);
+  assume(__cond->cond == 1);
+  __cond->cond = 0;
+  // Wait to be woken up
+  // No need to check for signal on __cond, since OS can do spurious wakeup
+  // Call to pthread_cond_wait should always be protected by while loop
+  pthread_mutex_lock(__mutex);
+}
+
+int pthread_cond_signal(pthread_cond_t *__cond) {
+  // Do nothing, since state of __cond doesn't matter
+  //  due to possibility of spurious wakeup from OS
+  __cond->cond = 1;
 }
 
 void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg) {
 
   int ctid = __SMACK_nondet();
   __SMACK_code("call @ := corral_getThreadID();", ctid);
+  int test = ctid;
   assume(ctid == *__newthread);
   
   

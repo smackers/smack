@@ -11,6 +11,7 @@ fail = r'This assertion can fail'
 # list of regression tests with the expected outputs
 #  [(filename, outputFilter, unroll, context-switches), (...)]
 tests = [
+  ('cond',                  good, 1, 2),
   ('no_lock',               fail, 1, 2),
   ('no_lock2',              fail, 1, 2),
   ('no_lock3',              fail, 1, 2),
