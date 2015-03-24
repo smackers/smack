@@ -132,7 +132,7 @@ def verify(verifier, bplFileName, timeLimit, unroll, maxViolations, contextSwitc
       command += (" /loopUnroll:%(unroll)s" % locals())
 
   elif verifier == 'corral':
-    command = ("corral %(bplFileName)s /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /staticInlining /trackAllVars /timeLimit:%(timeLimit)s /cex:%(maxViolations)s" % locals())
+    command = ("corral %(bplFileName)s /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /timeLimit:%(timeLimit)s /cex:%(maxViolations)s" % locals())
     if unroll is not None:
       command += (" /recursionBound:%(unroll)s" % locals())
     if contextSwitches:

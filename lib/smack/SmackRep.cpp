@@ -240,41 +240,32 @@ const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, con
     return storeAsBytes(getRegion(addr), getElementSize(addr), expr(addr), rhs);
 }
 
-const Stmt* SmackRep::storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e)
-{
+const Stmt* SmackRep::storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e) {
   stringstream name;
   name << "$store." << int_type(size);
   return Stmt::assign(Expr::id(memPath(region, 8)), Expr::fn(name.str(), Expr::id(memPath(region, 8)), p, e));
-
 }
 
-bool SmackRep::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) 
-{
+bool SmackRep::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
   return aliasAnalysis->isFieldDisjoint(ptr, inst); 
 }
 
-bool SmackRep::isFieldDisjoint(const llvm::GlobalValue *V, unsigned offset) 
-{
+bool SmackRep::isFieldDisjoint(const llvm::GlobalValue *V, unsigned offset) {
   return aliasAnalysis->isFieldDisjoint(V, offset); 
 }
 
-bool SmackRep::isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst) 
-{
-  return aliasAnalysis->isTypeSafe(ptr, inst); 
-}
-
-bool SmackRep::isTypeSafe(const llvm::GlobalValue *V) 
-{
-  return aliasAnalysis->isTypeSafe(V); 
-}
-
-const Expr* SmackRep::pa(const Expr* base, unsigned idx, unsigned size, unsigned i_size, unsigned t_size) {
+const Expr* SmackRep::pa(const Expr* base, unsigned idx, unsigned size,
+    unsigned i_size, unsigned t_size) {
   return pa(base, lit(idx, i_size), lit(size, t_size), i_size, t_size);
 }
-const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned size, unsigned i_size, unsigned t_size) {
+
+const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned size,
+    unsigned i_size, unsigned t_size) {
   return pa(base, idx, lit(size, t_size), i_size, t_size);
 }
-const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size, unsigned i_size, unsigned t_size) {
+
+const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size,
+    unsigned i_size, unsigned t_size) {
   if (i_size == 32) 
     // The index of struct type is 32 bit
     return Expr::fn("$add.ref", base, Expr::fn("$zext.i32.ref", Expr::fn("$mul.i32", idx, size)));
@@ -289,6 +280,7 @@ const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size, un
 const Expr* SmackRep::i2b(const llvm::Value* v) {
   return Expr::fn(I2B, expr(v));
 }
+
 const Expr* SmackRep::b2i(const llvm::Value* v) {
   return Expr::fn(B2I, expr(v));
 }
@@ -296,8 +288,14 @@ const Expr* SmackRep::b2i(const llvm::Value* v) {
 const Expr* SmackRep::lit(const llvm::Value* v) {
   using namespace llvm;
 
-  if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v))
-    return lit(ci->getValue().toString(10,ci->isNegative()),ci->getBitWidth());
+  if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v)) {
+    unsigned w = ci->getBitWidth();
+    if (w>1 && ci->isNegative()) {
+      return Expr::fn(opName("$sub", {w}), lit((long)0, w), lit(ci->getValue().abs().toString(10,false),w));
+    } else {
+      return lit(ci->getValue().toString(10,false),w);
+    }
+  }
 
   else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();

@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 
 import yaml
+import argparse
 from os import path
 import subprocess
 import re
 import glob
 import time
+import sys
 
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
 APPEND_FIELDS = ['flags']
@@ -17,7 +19,7 @@ def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
 def get_result(output):
-  if re.search(r'[1-9]\d* time out|Z3 ran out of resources', output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out', output):
     return 'timeout'
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
     return 'verified'
@@ -72,28 +74,34 @@ def metadata(file):
 
   return m
   
+parser = argparse.ArgumentParser()
+parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
+args = parser.parse_args()
+
 print "Running regression tests..."
 print
 
 passed = failed = timeouts = unknowns = 0
 
 try:
-  for test in glob.glob("./**/*.c"):
+  for test in glob.glob("./**/*.c") if args.exhaustive else glob.glob("./basic/*.c"):
     meta = metadata(test)
 
     if meta['skip']:
       continue
 
     print "{0:>20}".format(test)
+    sys.stdout.flush()
 
     cmd = ['smackverify.py', test]
     cmd += ['--time-limit', str(meta['time-limit'])]
+    cmd += ['-o', test + '.bpl']
     cmd += meta['flags']
 
-    for memory in meta['memory']:
+    for memory in meta['memory'][:100 if args.exhaustive else 1]:
       cmd += ['--mem-mod=' + memory]
 
-      for verifier in meta['verifiers']:
+      for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
         cmd += ['--verifier=' + verifier]
 
         print "{0:>20} {1:>10}    :".format(memory, verifier),
@@ -122,6 +130,7 @@ try:
           failed += 1
 
         print '  [%.2fs]' % round(elapsed, 2)
+        sys.stdout.flush()
   
 except KeyboardInterrupt:
   pass

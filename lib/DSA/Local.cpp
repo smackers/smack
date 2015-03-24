@@ -566,10 +566,9 @@ void GraphBuilder::visitIntToPtrInst(IntToPtrInst &I) {
       NumBoringIntToPtr++;
       return;
     }
-  } else {
-    N->setIntToPtrMarker();
-    N->setUnknownMarker();
   }
+  N->setIntToPtrMarker();
+  N->setUnknownMarker();
   setDestTo(I, N); 
 }
 
