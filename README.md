@@ -1,3 +1,5 @@
+[![Build Status](http://kepler.cs.utah.edu:8080/buildStatus/icon?job=smack)](http://kepler.cs.utah.edu:8080/job/smack/)
+
 At its core, SMACK is a translator from the [LLVM](http://www.llvm.org)
 compiler's popular intermediate representation (IR) into the
 [Boogie](http://boogie.codeplex.com) intermediate verification language (IVL).
