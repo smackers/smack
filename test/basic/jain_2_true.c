@@ -20,8 +20,8 @@ void main()
 
   while(1)
     {
-      x = x +2*__SMACK_nondet();
-      y = y +2*__SMACK_nondet();
+      x = x +2*__VERIFIER_nondet_int();
+      y = y +2*__VERIFIER_nondet_int();
 
 
       assert(x+y!=1);

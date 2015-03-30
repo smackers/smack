@@ -154,7 +154,7 @@ def smackGenerate(sysArgv):
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  si = re.compile('procedure\s+(\$static_init|__SMACK_.*|assert_|assume_|__VERIFIER_.*)\s*\(')
+  si = re.compile('procedure\s+(\$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*)\s*\(')
 
   if args.verifier == 'boogie' and args.unroll is None:
     bpl = si.sub(lambda match: addInline(match, args.entryPoints, 1), bpl)

@@ -4,7 +4,7 @@
 // @expect verified
 
 int main() {
-  int x = __SMACK_nondet();
+  int x = __VERIFIER_nondet_int();
 
   if (x == 0) {
     goto ERROR;

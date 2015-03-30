@@ -45,7 +45,7 @@ int main() {
   elem *arrayOne;
   elem *arrayTwo;
 
-  arraySize = __SMACK_nondet();
+  arraySize = __VERIFIER_nondet_int();
   assume(arraySize > 0);
 
   arrayOne = (elem*)malloc(arraySize * sizeof(elem));
