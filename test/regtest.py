@@ -98,7 +98,7 @@ try:
 
     cmd = ['smackverify.py', test]
     cmd += ['--time-limit', str(meta['time-limit'])]
-    cmd += ['-o', test + '.bpl']
+    cmd += ['-o', path.splitext(test)[0] + '.bpl']
     cmd += meta['flags']
 
     for memory in meta['memory'][:100 if args.exhaustive else 1]:
