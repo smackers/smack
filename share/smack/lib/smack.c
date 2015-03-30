@@ -38,6 +38,34 @@ int __SMACK_nondet() {
   return x;
 }
 
+NONDET_DEF(short);
+NONDET_DEF(short,int);
+NONDET_DEF(signed,short);
+NONDET_DEF(signed,short,int);
+NONDET_DEF(unsigned,short);
+NONDET_DEF(unsigned,short,int);
+NONDET_DEF(int);
+NONDET_DEF(signed,int);
+NONDET_DEF(unsigned);
+NONDET_DEF(unsigned,int);
+NONDET_DEF(long);
+NONDET_DEF(long,int);
+NONDET_DEF(signed,long);
+NONDET_DEF(signed,long,int);
+NONDET_DEF(unsigned,long);
+NONDET_DEF(unsigned,long,int);
+NONDET_DEF(long,long);
+NONDET_DEF(long,long,int);
+NONDET_DEF(signed,long,long);
+NONDET_DEF(signed,long,long,int);
+NONDET_DEF(unsigned,long,long);
+NONDET_DEF(unsigned,long,long,int);
+
+// TODO fix definitions for floating point
+// NONDET_DEF(float);
+// NONDET_DEF(double);
+// NONDET_DEF(long,double);
+
 void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
   // Integer arithmetic

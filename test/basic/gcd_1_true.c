@@ -21,8 +21,8 @@ signed int gcd_test(signed int a, signed int b)
 
 int main()
 {
-    //signed int x = __SMACK_nondet();
-    //signed int y = __SMACK_nondet();
+    //signed int x = __VERIFIER_nondet_int();
+    //signed int y = __VERIFIER_nondet_int();
     signed int x = 12;
     signed int y = 4;
     signed int g;
