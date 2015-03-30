@@ -49,12 +49,6 @@ int __SMACK_nondet();
 #define U(...) TY(__VA_ARGS__, U4, U3, U2, U1)(__VA_ARGS__)
 
 #define NONDET_DECL(ty...) S(ty) U(__VERIFIER_nondet,U(ty)) ()
-#define NONDET_DEF(ty...) S(ty) U(__VERIFIER_nondet,U(ty)) () { \
-  static S(ty) XXX; \
-  S(ty) x = XXX; \
-  __SMACK_code("havoc @;", x); \
-  return x; \
-}
 
 NONDET_DECL(char);
 NONDET_DECL(signed,char);
@@ -84,9 +78,6 @@ NONDET_DECL(unsigned,long,long,int);
 NONDET_DECL(float);
 NONDET_DECL(double);
 NONDET_DECL(long,double);
-NONDET_DECL(char);
-NONDET_DECL(signed,char);
-NONDET_DECL(unsigned,char);
 
 void __SMACK_decls();
 
