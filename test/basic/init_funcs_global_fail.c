@@ -6,13 +6,14 @@
 int g = 10;
 
 __SMACK_INIT(g1) {
-  g=11;
+  g = 11;
 }
 
 __SMACK_INIT(g2) {
-  g=12;
+  g = 12;
 }
 
 void main() {
-  assert(g==0 || g==10 || g==11);
+  assert(g == 0 || g == 10 || g == 11);
 }
+
