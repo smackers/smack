@@ -17,6 +17,9 @@ void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
+// Sugar for __SMACK_init_func_XXX()
+#define __SMACK_INIT(x) void __SMACK_init_func_##x()
+
 // We need this to enforce that assert/assume are function calls
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
