@@ -1,3 +1,8 @@
+/* Useful
+ * Verifies true with u4, cs2, tav, si in 76s
+ */
+
+
 //extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 #define __VERIFIER_error() assert(0);
 
@@ -111,6 +116,7 @@ void *t2(void *arg)
 
 int main(void) 
 {
+  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
   pthread_t id1, id2;
 
   pthread_mutex_init(&m, 0);

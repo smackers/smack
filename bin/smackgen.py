@@ -53,6 +53,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   smackRoot = path.dirname(scriptFullPath)
   smackHeaders = path.join(smackRoot, 'share', 'smack', 'include')
   smackC = path.join(smackRoot, 'share', 'smack', 'lib', 'smack.c')
+  smacksvC = path.join(smackRoot, 'share', 'smack', 'lib', 'smack-svcomp.c')
 
   fileName, fileExtension = path.splitext(path.basename(inputFile.name))
 
@@ -75,6 +76,26 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
   # between clang's stdout and stderr.
   p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   clangOutput = p.communicate()[0]
+
+  if p.returncode:
+    print >> sys.stderr, clangOutput
+    sys.exit("SMACK encountered an error when invoking clang. Exiting...")
+
+  # Compile SMACK header file
+  clangCommand = ['clang']
+  if bitPrecise: clangCommand += ['-DBITPRECISE']
+  clangCommand += ['-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info',
+                   '-DMEMORY_MODEL_' + memoryModel.upper().replace('-','_'),
+                   '-I' + smackHeaders,
+                   '-include' + 'smack-svcomp.h']
+  clangCommand += clangArgs.split()
+  clangCommand += [smacksvC, '-o', 'smack-svcomp.bc']
+  # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
+  # This should more or less maintain stdout/stderr interleaving order.
+  # However, this will be problematic if any callers want to differentiate
+  # between clang's stdout and stderr.
+  p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  clangOutput += p.communicate()[0]
 
   if p.returncode:
     print >> sys.stderr, clangOutput
@@ -108,7 +129,7 @@ def clang(scriptPathName, inputFile, bcFileName, outputFileName, memoryModel, cl
 
   # Invoke LLVM linker
   linkCommand = ['llvm-link']
-  linkCommand += [bcFileName, 'smack.bc', '-o', bcFileName]
+  linkCommand += [bcFileName, 'smack.bc', 'smack-svcomp.bc', '-o', bcFileName]
   # Redirect stderr to stdout, then grab stdout (communicate() calls wait()).
   # This should more or less maintain stdout/stderr interleaving order.
   # However, this will be problematic if any callers want to differentiate

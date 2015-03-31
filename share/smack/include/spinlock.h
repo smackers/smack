@@ -8,8 +8,6 @@
 
 #include "smack.h"
 
-#define NULL (void*)0
-
 // Begin:: A bunch of stuff to support multiple methods to init locks:
 typedef unsigned int spinlock_t;
 

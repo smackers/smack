@@ -3,45 +3,14 @@
 //                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+
+// Include pthreadtypes.h
+#include <pthreadtypes.h>
+#include <smack.h>
+
+
 #ifndef PTHREAD_H
 #define PTHREAD_H
-
-#include "smack.h"
-
-#define NULL (void*)0
-
-/* Mutex types.  */
-enum
-{
-  PTHREAD_MUTEX_TIMED_NP,
-  PTHREAD_MUTEX_RECURSIVE_NP,
-  PTHREAD_MUTEX_ERRORCHECK_NP,
-  PTHREAD_MUTEX_ADAPTIVE_NP,
-  PTHREAD_MUTEX_NORMAL = PTHREAD_MUTEX_TIMED_NP,
-  PTHREAD_MUTEX_RECURSIVE = PTHREAD_MUTEX_RECURSIVE_NP,
-  PTHREAD_MUTEX_ERRORCHECK = PTHREAD_MUTEX_ERRORCHECK_NP,
-  PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL,
-  PTHREAD_MUTEX_FAST_NP = PTHREAD_MUTEX_TIMED_NP
-};
-
-typedef int pthread_t;
-typedef int pthread_attr_t;
-
-typedef struct{
-  int prioceil, proto, pshared, type;
-} pthread_mutexattr_t;
-
-typedef struct{
-  int lock, init;
-  pthread_mutexattr_t attr;
-} pthread_mutex_t;
-
-typedef struct{
-  int cond, init;
-} pthread_cond_t;
-
-typedef int pthread_condattr_t;
-
 
 pthread_t pthread_self(void) {
   int ctid = __SMACK_nondet();
@@ -95,6 +64,8 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
     pthread_mutexattr_init(&mutex->attr);
   } else {
     mutex->attr.type = attr->type;
+    // Any additional info modeled from attr should be copied,
+    //  as changes to attr should not apply to mutexes alread initialized
   }
   return 0;
 }
@@ -159,6 +130,8 @@ int pthread_cond_init(pthread_cond_t *__cond, pthread_condattr_t *__condattr) {
     __cond->init = INITIALIZED;
   } else {
     // Unimplemented
+    // NOTE: if implemented, attr should be a copy of __condattr passed in
+    //       (spec says changes to condattr doesn't affect initialized conds
     assert(0);
   }
   return 0;  
@@ -169,18 +142,45 @@ int pthread_cond_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex) {
   assert(__cond->init == INITIALIZED);
   assert((int)pthread_self() == __mutex->lock);
   pthread_mutex_unlock(__mutex);
-  assume(__cond->cond == 1);
-  __cond->cond = 0;
   // Wait to be woken up
   // No need to check for signal on __cond, since OS can do spurious wakeup
   // Call to pthread_cond_wait should always be protected by while loop
+
+  // Adding var checks in improves performance
+
+  //assume(__cond->cond == 1);
+  //__cond->cond = 0;
   pthread_mutex_lock(__mutex);
 }
 
 int pthread_cond_signal(pthread_cond_t *__cond) {
   // Do nothing, since state of __cond doesn't matter
   //  due to possibility of spurious wakeup from OS
-  __cond->cond = 1;
+
+  //__cond->cond = 1;
+}
+
+// NOTE: How to handle broadcast?  Technically, as is, all threads have
+//       the opportunity to read __cond->cond before one of the other threads
+//       switch this value back to 0...  I guess this is sufficient, but
+//       will this require a high number of context switches for a true
+//       broadcast to happen?
+//
+//       I thought about using cond->cond = 2 to signal broadcast, but then
+//       how to know which thread to have switch it back to 0?
+
+int pthread_cond_broadcast(pthread_cond_t *__cond) {
+  // Do nothing, since state of __cond doesn't matter
+  //  due to possibility of spurious wakeup from OS
+
+  //__cond->cond = 1;
+}
+
+int pthread_cond_destroy(pthread_cond_t *__cond) {
+  // Make sure the cond is initialized
+  assert(__cond->init == INITIALIZED);
+  __cond->init = UNINITIALIZED;
+  return 0;
 }
 
 void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg) {
