@@ -84,10 +84,13 @@ print
 passed = failed = timeouts = unknowns = 0
 
 try:
-  for test in glob.glob("./**/*.c") if args.exhaustive else glob.glob("./basic/*.c"):
+  for test in glob.glob("./**/*.c"):
     meta = metadata(test)
 
-    if meta['skip']:
+    if meta['skip'] == True:
+      continue
+
+    if meta['skip'] != False and not args.exhaustive:
       continue
 
     print "{0:>20}".format(test)
@@ -95,7 +98,7 @@ try:
 
     cmd = ['smackverify.py', test]
     cmd += ['--time-limit', str(meta['time-limit'])]
-    cmd += ['-o', test + '.bpl']
+    cmd += ['-o', path.splitext(test)[0] + '.bpl']
     cmd += meta['flags']
 
     for memory in meta['memory'][:100 if args.exhaustive else 1]:

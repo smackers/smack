@@ -43,7 +43,7 @@ void initializeCount(elem *array) {
 int main() {
   int i = 0;
 
-  arraySize = __SMACK_nondet();
+  arraySize = __VERIFIER_nondet_int();
   assume(arraySize > 0);
 
   elem *arrayOne = (elem*)malloc(arraySize * sizeof(elem));

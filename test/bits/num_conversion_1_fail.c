@@ -5,7 +5,7 @@
 
 int main()
 {
-    unsigned char x = __SMACK_nondet();
+    unsigned char x = __VERIFIER_nondet_unsigned_char();
     unsigned char y;
     unsigned char c;
 

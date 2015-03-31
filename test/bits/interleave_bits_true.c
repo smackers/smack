@@ -8,8 +8,8 @@ int main()
 {
     /* Interleave bits of x and y, so that all of the */
     /* bits of x are in the even positions and y in the odd; */
-    unsigned short x = __SMACK_nondet();
-    unsigned short y = __SMACK_nondet();
+    unsigned short x = __VERIFIER_nondet_unsigned_short();
+    unsigned short y = __VERIFIER_nondet_unsigned_short();
 
     unsigned int xx;
     unsigned int yy;
