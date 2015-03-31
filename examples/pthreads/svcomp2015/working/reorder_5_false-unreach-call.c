@@ -22,7 +22,6 @@ void set();
 int check();
 
 int main(int argc, char *argv[]) {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
     int i, err;
 
     if (argc != 1) {

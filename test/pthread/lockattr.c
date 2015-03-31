@@ -25,13 +25,12 @@ void* t1(void *arg) {
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);");
   x = 0;
   pthread_mutexattr_init(&lockattr);
   pthread_mutexattr_settype(&lockattr, PTHREAD_MUTEX_ERRORCHECK);
   pthread_mutex_init(&lock, &lockattr);
   pthread_t t;
-  pthread_create(&t, NULL, t1, NULL);
-  pthread_join(t, NULL);
+  pthread_create(&t, 0, t1, 0);
+  pthread_join(t, 0);
   assert(x==1);
 }

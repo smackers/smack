@@ -5,16 +5,15 @@ int x = 1;
 void *t1(void *arg)
 {
   x++;
-  pthread_exit(NULL);
+  pthread_exit(0);
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);");
 
   pthread_t t;
 
-  pthread_create(&t, NULL, t1, NULL);
-  pthread_join(t, NULL);
+  pthread_create(&t, 0, t1, 0);
+  pthread_join(t, 0);
   x++;
   assert(x == 3);
   return 0;

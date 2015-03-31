@@ -46,7 +46,6 @@ void * thread2(void * arg)
 
 int main()
 {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
   pthread_t  t1, t2;
 
   num = 1;

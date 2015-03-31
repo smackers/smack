@@ -34,7 +34,6 @@ void *thread(void * arg)
 
 int main()
 {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
         int tid, sum;
 	pthread_t *t;
 

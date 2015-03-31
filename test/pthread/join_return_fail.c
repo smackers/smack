@@ -9,14 +9,13 @@ void *t1(void *arg)
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);");
 
   pthread_t t;
 
   int a;
   void *ret;
 
-  pthread_create(&t, NULL, t1, NULL);
+  pthread_create(&t, 0, t1, 0);
   pthread_join(t, &ret);
   assert(x == 2);
   assert((int)ret == 6);

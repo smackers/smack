@@ -12,6 +12,28 @@
 #ifndef PTHREAD_H
 #define PTHREAD_H
 
+//Declare corral primitive procedures
+__SMACK_INIT(corral_primitives) {
+  __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
+  __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
+  __SMACK_top_decl("procedure corral_atomic_begin();");
+  __SMACK_top_decl("procedure corral_atomic_end();");
+}
+
+// Initialize thread status tracking variables (OS level behavior)
+__SMACK_INIT(thread) {
+  //Array for tracking pthreads
+  __SMACK_top_decl("//dim0=tid, dim1= 0 for status, 1 for return");
+  __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
+  __SMACK_top_decl("const unique $pthread_uninitialized: int;");
+  __SMACK_top_decl("const unique $pthread_initialized: int;");
+  __SMACK_top_decl("const unique $pthread_waiting: int;");
+  __SMACK_top_decl("const unique $pthread_running: int;");
+  __SMACK_top_decl("const unique $pthread_stopped: int;");
+  // Initialize this array so all threads begin as uninitialized
+  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
+}
+
 pthread_t pthread_self(void) {
   int ctid = __SMACK_nondet();
   __SMACK_code("call @ := corral_getThreadID();", ctid);
@@ -199,21 +221,6 @@ void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) 
 }
 
 int pthread_create(pthread_t *__restrict __newthread, __const pthread_attr_t *__restrict __attr, void *(*__start_routine) (void *), void *__restrict __arg) {
-
-    //Declare corral primitive procedures
-    __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
-    __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
-    __SMACK_top_decl("procedure corral_atomic_begin();");
-    __SMACK_top_decl("procedure corral_atomic_end();");
-    //Array for tracking pthreads
-    __SMACK_top_decl("//dim0=tid, dim1= 0 for status, 1 for return");
-    __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
-    __SMACK_top_decl("const unique $pthread_uninitialized: int;");
-    __SMACK_top_decl("const unique $pthread_initialized: int;");
-    __SMACK_top_decl("const unique $pthread_waiting: int;");
-    __SMACK_top_decl("const unique $pthread_running: int;");
-    __SMACK_top_decl("const unique $pthread_stopped: int;");
-    //__pthreads_init();
 
   //Mystery smack_nondet for procedure calls from __SMACK_code??
   int x = __SMACK_nondet();

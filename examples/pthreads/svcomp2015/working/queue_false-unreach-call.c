@@ -8,7 +8,10 @@
  *   
  *   SMACK encountered an error when invoking corral. Exiting...
  * 
- * 
+ * I solved this failure issue - it was due to not enough system memory
+ * This benchmark requires over 6GB memory when SIZE==10, u11,c2,tav,si
+ * Now, using these setting, verifies false in 180s
+ *
  */
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
@@ -157,7 +160,6 @@ void *t2(void *arg)
 
 int main(void) 
 {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
   pthread_t id1, id2;
 
   enqueue_flag=TRUE;

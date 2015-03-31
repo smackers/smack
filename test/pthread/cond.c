@@ -27,7 +27,6 @@ void *j2(void *arg) {
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
   pthread_t t1, t2;
   pthread_cond_init(&cond, 0);
   pthread_mutex_init(&lock, 0);

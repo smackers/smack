@@ -11,18 +11,17 @@ void *t1(void *arg) {
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
 
   spinlock_t lock;
   spin_lock_init(&lock);
 
   pthread_t tid1;
 
-  pthread_create(&tid1, NULL, t1, &lock);
+  pthread_create(&tid1, 0, t1, &lock);
   spin_lock(&lock);
   z++;
   spin_unlock(&lock);
-  pthread_join(tid1, NULL);
+  pthread_join(tid1, 0);
   assert(z == 3);
   
 

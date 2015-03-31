@@ -57,6 +57,7 @@ def runtests():
     # invoke SMACK
     t0 = time.time()
     p = subprocess.Popen(['smackverify.py', test[0] + '.c', '--verifier=corral',
+                          '--verifier-options=' + '/trackAllVars /staticInlining',
                           '--unroll=' + str(test[2]), '--mem-mod=no-reuse-impls',
                           '--context-switches', str(test[3]),
                           '-o', test[0] +'.bpl'],

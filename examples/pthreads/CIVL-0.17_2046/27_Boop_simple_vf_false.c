@@ -76,7 +76,6 @@ void* thr1 (void* arg)
 }
 
 int main(){
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
   pthread_t t;
 
   pthread_create(&t, 0, thr1, 0);

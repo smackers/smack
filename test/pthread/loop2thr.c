@@ -14,16 +14,15 @@ void *t1(void *arg) {
 }
 
 int main() {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
 
   pthread_mutex_t lock;
-  pthread_mutex_init(&lock, NULL);
+  pthread_mutex_init(&lock, 0);
 
   pthread_t tid1;
 
-  pthread_create(&tid1, NULL, t1, &lock);
+  pthread_create(&tid1, 0, t1, &lock);
   t1(&lock);
-  pthread_join(tid1, NULL);
+  pthread_join(tid1, 0);
   assert(z == (count * 2+1));
   
 

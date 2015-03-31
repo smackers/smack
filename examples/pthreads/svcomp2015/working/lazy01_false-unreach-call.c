@@ -41,7 +41,6 @@ void *thread3(void *arg)
 
 int main()
 {
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);");
   pthread_mutex_init(&mutex, 0);
 
   pthread_t t1, t2, t3;
