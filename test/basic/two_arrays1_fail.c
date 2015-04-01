@@ -3,7 +3,7 @@
 #include "smack.h"
 
 // @flag --unroll=11
-// @expect verified
+// @expect error
 
 #define MAXSIZE 10
 #define RESET 0
@@ -26,7 +26,7 @@ void resetArray(elem *array) {
 void setArray(elem *array) {
   int i = 0;
 
-  for (i = 0; i < MAXSIZE; i++) {
+  for (i = 0; i < MAXSIZE - 1; i++) {
     array[i].status = SET;
   }
 }
