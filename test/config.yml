@@ -1,4 +1,4 @@
-verifiers: [corral, boogie]
+verifiers: [boogie, corral]
 memory: [no-reuse, no-reuse-impls, reuse]
 time-limit: 300
 flags: [ ]
