@@ -1,6 +1,6 @@
 #include "smack.h"
 
-// @flag --unroll=11
+// @flag --loop-limit=11
 // @expect verified
 
 int main()

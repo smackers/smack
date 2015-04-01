@@ -1,6 +1,5 @@
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 signed int gcd_test(signed int a, signed int b)

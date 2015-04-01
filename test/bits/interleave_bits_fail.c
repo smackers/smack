@@ -1,7 +1,7 @@
 /* https://graphics.stanford.edu/~seander/bithacks.html#InterleaveTableObvious */
 #include "smack.h"
 
-// @flag --unroll=33
+// @flag --loop-limit=33
 // @expect error
 
 int main()

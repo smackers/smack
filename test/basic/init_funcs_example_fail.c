@@ -1,7 +1,6 @@
 #include "smack.h"
 
 // @expect error
-// @flag --unroll=1
 
 // This file provides an example of the intended use for init_funcs
 // The functionality of both __SMACK_INIT calls would be implemented

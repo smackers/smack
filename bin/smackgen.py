@@ -15,16 +15,31 @@ VERSION = '1.5.0'
 
 def smackParser():
   parser = argparse.ArgumentParser(add_help=False, parents=[llvm2bplParser()])
-  parser.add_argument('--clang', dest='clang', default='',
-                      help='pass arguments to clang (e.g., --clang="-w -g")')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default='corral',
-                      help='set the underlying verifier format [default: %(default)s]')
-  parser.add_argument('--entry-points', metavar='PROC', dest='entryPoints', default='main', nargs='+',
-                      help='specify entry procedures [default: %(default)s]')
-  parser.add_argument('--unroll', metavar='N', dest='unroll', type=int,
-                      help='unroll loops/recursion in Boogie/Corral N number of times')
-  parser.add_argument('--bc', dest='bcfile', metavar='<file>', type=str,
-                      help='output clang (bc) file')
+
+  parser.add_argument('--clang',
+    dest='clang', default='',
+    help='pass arguments to clang (e.g., --clang="-w -g")')
+
+  parser.add_argument('--verifier',
+    dest='verifier', choices=['boogie', 'corral', 'duality'], default='corral',
+    help='set the underlying verifier format [default: %(default)s]')
+
+  parser.add_argument('--entry-points',
+    metavar='PROC', dest='entryPoints',default='main', nargs='+',
+    help='specify entry procedures [default: %(default)s]')
+
+  parser.add_argument('--unroll',
+    metavar='N', dest='unroll', default='2', type=int,
+    help='the depth at which to unroll loops and recursion (default: %(default)s)')
+
+  parser.add_argument('--loop-limit',
+    metavar='N', dest='loopLimit', default='1', type=int,
+    help='an upper bound on the minimum number of iterations per loop (default: %(default)s)')
+
+  parser.add_argument('--bc',
+    dest='bcfile', metavar='<file>', type=str,
+    help='output clang (bc) file')
+
   return parser
 
 

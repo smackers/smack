@@ -1,6 +1,5 @@
 #include <smack.h>
 
-// @flag --unroll=2
 // @expect verified
 
 void ff1(float f);

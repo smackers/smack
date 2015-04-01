@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 void foo(int *x) {

@@ -121,44 +121,50 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, maxViolations, debug, verifierOptions, smackd):
+def verify(args):
 
-  # TODO factor out unrolling from the following
-  if verifier == 'boogie':
-    command = "boogie %(bplFileName)s /nologo /timeLimit:%(timeLimit)s /errorLimit:%(maxViolations)s" % locals()
-    if unroll is not None:
-      command += (" /loopUnroll:%(unroll)s" % locals())
+  if args.verifier == 'boogie':
+    command = "boogie %s" % args.outfile
+    command += " /nologo"
+    command += " /timeLimit:%s" % args.timeLimit
+    command += " /errorLimit:%s" % args.maxViolations
+    command += " /loopUnroll:%d" % (args.unroll + args.loopLimit)
 
-  elif verifier == 'corral':
-    command = ("corral %(bplFileName)s /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /timeLimit:%(timeLimit)s /cex:%(maxViolations)s" % locals())
-    if unroll is not None:
-      command += (" /recursionBound:%(unroll)s" % locals())
+  elif args.verifier == 'corral':
+    command = "corral %s" % args.outfile
+    command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate"
+    command += " /timeLimit:%s" % args.timeLimit
+    command += " /cex:%s" % args.maxViolations
+    command += " /maxStaticLoopBound:%d" % args.loopLimit
+    command += " /recursionBound:%d" % args.unroll
+
   else:
     # TODO why isn't unroll a parameter??
-    command = "corral %(bplFileName)s /tryCTrace /useDuality /recursionBound:10000" % locals()
+    command = "corral %s" % args.outfile
+    command += "/tryCTrace /useDuality /recursionBound:10000"
 
-  if verifierOptions:
-    command += " " + verifierOptions
+  if args.verifierOptions:
+    command += " " + args.verifierOptions
 
   p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   output = p.communicate()[0]
 
   if p.returncode:
     print >> sys.stderr, output
-    sys.exit("SMACK encountered an error when invoking %(verifier)s. Exiting..." % locals())
+    sys.exit("SMACK encountered an error when invoking %s. Exiting..." % args.verifier)
 
   # TODO clean up the following mess
-  if verifier == 'boogie':
-    if debug:
+  if args.verifier == 'boogie':
+    if args.debug:
       return output
-    sourceTrace = generateSourceErrorTrace(output, bplFileName)
+    sourceTrace = generateSourceErrorTrace(output, args.outfile)
     if sourceTrace:
       return sourceTrace
     else:
       return output
 
   else:
-    if smackd:
+    if args.smackd:
       smackdOutput(output)
     else:
       return output
@@ -190,6 +196,5 @@ if __name__ == '__main__':
     outputFile.write(bpl)
     outputFile.close()
 
-  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll, args.maxViolations,
-    args.debug, args.verifierOptions, args.smackd))
+  print(verify(args))
 
