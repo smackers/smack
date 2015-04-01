@@ -30,11 +30,11 @@ def smackParser():
 
   parser.add_argument('--unroll',
     metavar='N', dest='unroll', default='2', type=int,
-    help='the depth at which to unroll loops and recursion (default: %(default)s)')
+    help='the depth at which to unroll loops and recursion [default: %(default)s]')
 
   parser.add_argument('--loop-limit',
     metavar='N', dest='loopLimit', default='1', type=int,
-    help='an upper bound on the minimum number of iterations per loop (default: %(default)s)')
+    help='an upper bound on the minimum number of iterations per loop [default: %(default)s]')
 
   parser.add_argument('--bc',
     dest='bcfile', metavar='<file>', type=str,
