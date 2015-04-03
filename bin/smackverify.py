@@ -143,6 +143,10 @@ def verify(args):
     command = "corral %s" % args.outfile
     command += "/tryCTrace /useDuality /recursionBound:10000"
 
+  if args.bitprecise:
+    x = "bopt:" if args.verifier != 'boogie' else ""
+    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0" % (x,x)
+
   if args.verifierOptions:
     command += " " + args.verifierOptions
 
