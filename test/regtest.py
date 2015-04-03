@@ -19,7 +19,7 @@ def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
 def get_result(output):
-  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out', output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out|Corral timed out', output):
     return 'timeout'
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
     return 'verified'
