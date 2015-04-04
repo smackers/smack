@@ -134,6 +134,7 @@ def verify(args):
     command = "corral %s" % args.outfile
     command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate"
     command += " /killAfter:%s" % args.timeLimit
+    command += " /timeLimit:%s" % args.timeLimit
     command += " /cex:%s" % args.maxViolations
     command += " /maxStaticLoopBound:%d" % args.loopLimit
     command += " /recursionBound:%d" % args.unroll
