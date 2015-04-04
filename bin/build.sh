@@ -7,7 +7,6 @@
 #
 # This script builds and installs SMACK, including the following dependencies:
 # - Git
-# - Mercurial
 # - Python
 # - CMake
 # - LLVM
@@ -21,8 +20,8 @@
 
 # Required versions
 MONO_VERSION=mono-3.8.0
-BOOGIE_COMMIT=d6a7f2bd79c9
-CORRAL_COMMIT=3aa62d7425b5
+BOOGIE_COMMIT=bd71be7f9a
+CORRAL_COMMIT=4d980290c055
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
@@ -52,7 +51,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependnecies; the rest are added depending on the platform
-DEPENDENCIES="git mercurial cmake python-yaml unzip wget"
+DEPENDENCIES="git cmake python-yaml unzip wget"
 
 ################################################################################
 #
@@ -156,18 +155,18 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436282&FileTime=130700549966730000&Build=20959"
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923681&FileTime=130586905110730000&Build=20983"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-ubuntu-14*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923684&FileTime=130586905368570000&Build=20983"
   DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923684&FileTime=130586905368570000&Build=20983"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -328,7 +327,9 @@ if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
 
-  hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+  git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+  cd ${BOOGIE_DIR}
+  git checkout ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
