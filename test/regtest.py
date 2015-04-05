@@ -141,7 +141,7 @@ test_results = []
 def tally_result(result):
     """
     Called whenever a worker has finished its process. Only the main process
-    will modify test_result.
+    will modify test_results.
     """
     test_results.append(result)
 
