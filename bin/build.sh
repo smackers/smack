@@ -37,7 +37,7 @@ CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
 
-source ${SMACK_DIR}/versions
+source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
 WGET="wget --no-verbose"
