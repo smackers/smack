@@ -185,7 +185,7 @@ def main():
     """
     Main entry point for the test suite.
     """
-    
+    t0 = time.time()
     num_cpus = multiprocessing.cpu_count()
 
     # configure the CLI
@@ -264,6 +264,10 @@ def main():
       # close the pool. this prevents any more tasks from being submitted.
       p.close()
       p.join() # wait for all workers to finish their tasks
+
+    # log the elapsed time
+    elapsed_time = time.time() - t0
+    logging.info(' ELAPSED TIME [%.2fs]' % round(elapsed_time, 2))
 
     # log the test results
     logging.info(' PASSED count: %d' % passed)
