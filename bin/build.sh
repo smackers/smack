@@ -18,11 +18,6 @@
 #
 ################################################################################
 
-# Required versions
-MONO_VERSION=3.8.0
-BOOGIE_COMMIT=bd71be7f9a
-CORRAL_COMMIT=4d980290c055
-
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
@@ -41,6 +36,8 @@ BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
+
+source ${SMACK_DIR}/versions
 
 SMACKENV=${ROOT}/smack.environment
 WGET="wget --no-verbose"
