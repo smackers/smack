@@ -292,7 +292,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
   if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v)) {
     unsigned w = ci->getBitWidth();
     if (w>1 && ci->isNegative()) {
-      return Expr::fn(opName("$sub", {w}), lit((long)0, w), lit(ci->getValue().abs().toString(10,false),w));
+      return Expr::fn(opName("$sub", {w}), lit(0u, w), lit(ci->getValue().abs().toString(10,false),w));
     } else {
       return lit(ci->getValue().toString(10,false),w);
     }
@@ -339,7 +339,15 @@ const Expr* SmackRep::lit(unsigned val, unsigned width) {
 }
 
 const Expr* SmackRep::lit(long val, unsigned width) {
-  return SmackOptions::BitPrecise && width > 0 ? Expr::lit((unsigned)val,width) : Expr::lit(val);
+  if (SmackOptions::BitPrecise && width > 0) {
+    if (val >= 0) {
+      return Expr::lit((unsigned)val,width);
+    } else {
+      return Expr::fn(opName("$sub", {width}), lit(0u, width), lit((unsigned)abs(val),width));
+    }
+  } else {
+    return Expr::lit(val);
+  }
 }
 
 const Expr* SmackRep::ptrArith(const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
