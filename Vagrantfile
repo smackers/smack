@@ -14,7 +14,7 @@ Vagrant.configure(2) do |config|
   #   opensuse_config.vm.box = "chef/opensuse-13.1"
   # end
 
-  config.vm.provision "shell", inline: <<-SHELL
+  config.vm.provision "shell", binary: true, inline: <<-SHELL
     cd /home/vagrant
     ./#{project_name}/bin/build.sh
     echo source smack.environment >> .bashrc

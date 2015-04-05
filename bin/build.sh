@@ -18,11 +18,6 @@
 #
 ################################################################################
 
-# Required versions
-MONO_VERSION=mono-3.8.0
-BOOGIE_COMMIT=bd71be7f9a
-CORRAL_COMMIT=4d980290c055
-
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
@@ -41,6 +36,8 @@ BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
+
+source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
 WGET="wget --no-verbose"
@@ -262,7 +259,7 @@ then
 
   git clone git://github.com/mono/mono.git ${MONO_DIR}
   cd ${MONO_DIR}
-  git checkout ${MONO_VERSION}
+  git checkout mono-${MONO_VERSION}
   ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
   make get-monolite-latest
   make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
