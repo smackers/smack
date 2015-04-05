@@ -41,7 +41,6 @@ def get_result(output):
     return 'unknown'
 
 def merge(metadata, yamldata):
-
   for key in OVERRIDE_FIELDS:
     if key in yamldata:
       metadata[key] = yamldata[key]
@@ -90,96 +89,61 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
 args = parser.parse_args()
 
-print "Running regression tests..."
-print
+def process_test(cmd, test, memory, verifier, meta):
+    """
+    This is the worker function for each process. This function process the supplied
+    test and returns an integer indicating the test results.
 
-passed = failed = timeouts = unknowns = 0
-
-try:
-  for test in glob.glob("./**/*.c"):
-    meta = metadata(test)
-
-    if meta['skip'] == True:
-      continue
-
-    if meta['skip'] != False and not args.exhaustive:
-      return
-
+    :return: 0 (PASSED), -1 (FAILED), 1 (TIMEDOUT), 2 (UNKNOWN)
+    """
     str_result = "{0:>20}\n".format(test)
+    str_result += "{0:>20} {1:>10}    :".format(memory, verifier)
 
-    print "{0:>20}".format(test)
-    sys.stdout.flush()
+    t0 = time.time()
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err  = p.communicate()
+    elapsed = time.time() - t0
 
-    cmd = ['smackverify.py', test]
-    cmd += ['--time-limit', str(meta['time-limit'])]
-    cmd += ['-o', path.splitext(test)[0] + '.bpl']
-    cmd += meta['flags']
+    # get the test results
+    result = get_result(out+err)
+    passed = timedout = unknown = False
+    if result == meta['expect']:
+      str_result += 'PASSED '
+      passed = True
 
-    for memory in meta['memory'][:100 if args.exhaustive else 1]:
-      cmd += ['--mem-mod=' + memory]
+    elif result == 'timeout':
+      str_result += 'TIMEOUT'
+      timedout = True
 
-      for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
-        cmd += ['--verifier=' + verifier]
+    elif result == 'unknown':
+      str_result += 'UNKNOWN'
+      unknown = True
 
-        print "{0:>20} {1:>10}    :".format(memory, verifier),
+    else:
+      str_result += 'FAILED '
 
-        try:
-          t0 = time.time()
-          p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-          out, err  = p.communicate()
-          elapsed = time.time() - t0
+    str_result += '  [%.2fs]' % round(elapsed, 2)
 
-        except OSError:
-          print >> sys.stderr
-          sys.exit("Error executing command:\n%s" % " ".join(cmd))
+    # log the info for this test
+    logging.info(str_result)
 
-        result = get_result(out+err)
+    # returns a status code based on the results of the test
+    if passed:
+      return PASSED
+    elif timedout:
+      return TIMEDOUT
+    elif unknown:
+      return UNKNOWN
+    else:
+      return FAILED
 
-        if result == meta['expect']:
-          print green('PASSED '),
-          passed += 1
-
-        elif result == 'timeout':
-          print red('TIMEOUT'),
-          timeouts += 1
-
-        elif result == 'unknown':
-          print red('UNKNOWN'),
-          unknowns += 1
-
-        else:
-          print red('FAILED '),
-          failed += 1
-
-        print '  [%.2fs]' % round(elapsed, 2)
-        sys.stdout.flush()
-  
-except KeyboardInterrupt:
-  pass
-
-print
-print ' PASSED count:', passed
-print ' FAILED count:', failed
-
-        # returns a status code based on the results of the test
-        if passed:
-            return PASSED
-        elif timedout:
-            return TIMEDOUT
-        elif unknown:
-            return UNKNOWN
-        else:
-            return FAILED
-
-
-def init_worker():
+test_results = []
+def tally_result(result):
     """
-    Set up the worker processes to ignore SIGINT altogether. This confines all
-    the cleanup code to the parent process.
-
-    Reference: http://stackoverflow.com/a/6191991/3342427
+    Called whenever a worker has finished its process. Only the main process
+    will modify test_result.
     """
-    #signal.signal(signal.SIGINT, signal.SIG_IGN)
+    test_results.append(result)
 
 def main():
     """
@@ -206,54 +170,53 @@ def main():
 
     # add more log levels later (if needed)
     if args.log_level.upper() == "INFO":
-        log_level = logging.INFO
+      log_level = logging.INFO
     elif args.log_level.upper() == "WARNING":
-        log_level = logging.WARNING
+      log_level = logging.WARNING
 
     # if the user supplied a log path, write the logs to that file.
     # otherwise, write the logs to std out.
     if args.log_path:
-        logging.basicConfig(filename=args.log_path, format=log_format, level=log_level)
+      logging.basicConfig(filename=args.log_path, format=log_format, level=log_level)
     else:
-        logging.basicConfig(format=log_format, level=log_level)
+      logging.basicConfig(format=log_format, level=log_level)
 
     logging.debug("Creating Pool with '%d' Workers" % args.n_threads)
-    p = ThreadPool(processes=args.n_threads, initializer=init_worker)
+    p = ThreadPool(processes=args.n_threads)
 
     # start the tests
     logging.info("Running regression tests...")
-    passed = failed = timeouts = unknowns = 0
 
-    # start processing the tests. this blocks the main thread
-    async_results = []
+    # start processing the tests.
+    results = []
     for test in glob.glob("./**/*.c"):
-        async_results.append(p.apply_async(process_test, args=(test, args,)))
+      # get the meta data for this test
+      meta = metadata(test)
+
+      if meta['skip']:
+        continue
+
+      if meta['skip'] != False and not args.exhaustive:
+        continue
+
+      # build up the subprocess command
+      cmd = ['smackverify.py', test]
+      cmd += ['--time-limit', str(meta['time-limit'])]
+      cmd += ['-o', test + '.bpl']
+      cmd += meta['flags']
+
+      for memory in meta['memory'][:100 if args.exhaustive else 1]:
+        cmd += ['--mem-mod=' + memory]
+
+        for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
+          cmd += ['--verifier=' + verifier]
+          r = p.apply_async(process_test, args=(cmd, test, memory, verifier, meta,), callback=tally_result)
+          results.append(r)
 
     try:
-        # keep the main thread active while there are active workers
-        count = 0
-        while True:
-            if count == len(async_results):
-                break;
-
-            # iterate over the results from each worker
-            for r in async_results:
-                try:
-                    # if the worker has completed its task, get the result
-                    # from it.
-                    if r.successful:
-                        test_result = r.get()
-                        if test_result == PASSED:
-                            passed += 1
-                        elif test_result == TIMEDOUT:
-                            timeouts += 1
-                        elif test_result == UNKNOWN:
-                            unknowns += 1
-                        elif test_result == FAILED:
-                            failed += 1
-                        count += 1
-                except AssertionError:
-                    continue
+      # keep the main thread active while there are active workers
+      for r in results:
+        r.wait()
 
     except KeyboardInterrupt:
       logging.debug("Caught KeyboardInterrupt, terminating workers")
@@ -268,6 +231,18 @@ def main():
     # log the elapsed time
     elapsed_time = time.time() - t0
     logging.info(' ELAPSED TIME [%.2fs]' % round(elapsed_time, 2))
+
+    # tally up the results
+    passed = failed = timeouts = unknowns = 0
+    for r in test_results:
+      if r == PASSED:
+        passed += 1
+      elif r == TIMEDOUT:
+        timeouts += 1
+      elif r == UNKNOWN:
+        unknowns += 1
+      elif r == FAILED:
+        failed += 1
 
     # log the test results
     logging.info(' PASSED count: %d' % passed)
