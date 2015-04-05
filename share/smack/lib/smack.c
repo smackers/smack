@@ -520,7 +520,6 @@ void __SMACK_decls() {
   D("function {:inline} $sext.i16.i32(p: i16) returns (i32) {if $i2b($sge.i16(p, 0bv16)) then $zext.i16.i32(p) else $neg.i16(1bv16)++p}");
   D("function {:inline} $sext.i32.i64(p: i32) returns (i64) {if $i2b($sge.i32(p, 0bv32)) then $zext.i32.i64(p) else $neg.i32(1bv32)++p}");
 #else
-  D("axiom $NULL == 0;");
   D("function {:inline} $add.ref(p1:ref, p2:ref) returns (ref) {p1 + p2}");
   D("function {:inline} $sub.ref(p1:ref, p2:ref) returns (ref) {p1 - p2}");
   D("function {:inline} $mul.ref(p1:ref, p2:ref) returns (ref) {p1 * p2}");

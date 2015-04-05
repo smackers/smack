@@ -11,6 +11,8 @@ const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 
 const string SmackRep::NULL_VAL = "$NULL";
+const string SmackRep::GLOBALS_BOTTOM = "$GLOBALS_BOTTOM";
+const string SmackRep::EXTERNS_BOTTOM = "$EXTERNS_BOTTOM";
 const string SmackRep::MALLOC_TOP = "$MALLOC_TOP";
 
 const string SmackRep::NEG = "$neg";
@@ -778,14 +780,33 @@ string SmackRep::getPrelude() {
   for (unsigned i = 1; i <= 64; i <<= 1) {
     s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
   }
+  s << "type ref = " << bits_type(ptrSizeInBits) << ";" << endl;
+  s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl;
+  s << endl;
 
-  s << "type ref = " << bits_type(ptrSizeInBits) << ";" << endl; 
-  s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl; 
+  s << "axiom " << NULL_VAL << " == ";
+  lit(0u,ptrSizeInBits)->print(s);
+  s << ";" << endl;
+
+  s << "axiom " << GLOBALS_BOTTOM << " == ";
+  lit(globalsBottom, ptrSizeInBits)->print(s);
+  s << ";" << endl;
+
+  s << "axiom " << EXTERNS_BOTTOM << " == ";
+  lit(externsBottom, ptrSizeInBits)->print(s);
+  s << ";" << endl;
+
+  s << "axiom " << MALLOC_TOP << " == ";
+  lit(LONG_MAX/2,ptrSizeInBits)->print(s);
+  s << ";" << endl;
+
   for (int i = 1; i < 8; ++i) {
     s << "axiom $REF_CONST_" << i << " == ";
     lit((unsigned)i,ptrSizeInBits)->print(s);
     s << ";" << endl;
   }
+  s << endl;
+
   s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((ptrSizeInBits == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
 
   for (unsigned i = 8; i <= 64; i <<= 1) {
@@ -800,23 +821,6 @@ string SmackRep::getPrelude() {
       s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {p}" << endl;
     }
   }
-
-  s << "axiom " << NULL_VAL << " == ";
-  lit(0u,ptrSizeInBits)->print(s);
-  s << ";" << endl;
-  s << endl;
-
-  s << "axiom $GLOBALS_BOTTOM == ";
-  lit(globalsBottom, ptrSizeInBits)->print(s);
-  s << ";" << endl;
-
-  s << "axiom $EXTERNS_BOTTOM == ";
-  lit(externsBottom, ptrSizeInBits)->print(s);
-  s << ";" << endl;
-
-  s << "axiom " << MALLOC_TOP << " == ";
-  lit(LONG_MAX/2,ptrSizeInBits)->print(s);
-  s << ";" << endl;
   s << endl;
 
   return s.str();
@@ -912,7 +916,7 @@ Decl* SmackRep::getStaticInit() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
   Block* b = new Block();
 
-  b->addStmt( Stmt::assign(Expr::id("$CurrAddr"), lit((long)1024,ptrSizeInBits)) );
+  b->addStmt(Stmt::assign(Expr::id("$CurrAddr"), lit(1024u,ptrSizeInBits)));
   for (unsigned i=0; i<staticInits.size(); i++)
     b->addStmt(staticInits[i]);
   b->addStmt(Stmt::return_());

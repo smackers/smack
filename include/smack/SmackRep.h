@@ -33,6 +33,8 @@ public:
   static const string FLOAT_TYPE;
 
   static const string NULL_VAL;
+  static const string GLOBALS_BOTTOM;
+  static const string EXTERNS_BOTTOM;
   static const string MALLOC_TOP;
 
   static const string ALLOCA;
