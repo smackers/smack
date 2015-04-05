@@ -19,7 +19,7 @@
 ################################################################################
 
 # Required versions
-MONO_VERSION=mono-3.8.0
+MONO_VERSION=3.8.0
 BOOGIE_COMMIT=bd71be7f9a
 CORRAL_COMMIT=4d980290c055
 
@@ -262,7 +262,7 @@ then
 
   git clone git://github.com/mono/mono.git ${MONO_DIR}
   cd ${MONO_DIR}
-  git checkout ${MONO_VERSION}
+  git checkout mono-${MONO_VERSION}
   ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
   make get-monolite-latest
   make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
