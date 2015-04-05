@@ -9,7 +9,9 @@ namespace smack {
 
 const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
+
 const string SmackRep::NULL_VAL = "$NULL";
+const string SmackRep::MALLOC_TOP = "$MALLOC_TOP";
 
 const string SmackRep::NEG = "$neg";
 
@@ -800,8 +802,8 @@ string SmackRep::getPrelude() {
   }
 
   s << "axiom " << NULL_VAL << " == ";
-  lit((long)0,ptrSizeInBits)->print(s); 
-  s << ";" << endl; 
+  lit(0u,ptrSizeInBits)->print(s);
+  s << ";" << endl;
   s << endl;
 
   s << "axiom $GLOBALS_BOTTOM == ";
@@ -811,6 +813,11 @@ string SmackRep::getPrelude() {
   s << "axiom $EXTERNS_BOTTOM == ";
   lit(externsBottom, ptrSizeInBits)->print(s);
   s << ";" << endl;
+
+  s << "axiom " << MALLOC_TOP << " == ";
+  lit(LONG_MAX/2,ptrSizeInBits)->print(s);
+  s << ";" << endl;
+  s << endl;
 
   return s.str();
 }

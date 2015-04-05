@@ -437,9 +437,12 @@ void __SMACK_decls() {
   D("axiom (forall f: float :: $si2fp.i8($fp2si.i8(f)) == f);");
 
   // Memory Model
+  D("const $NULL: ref;");
+  D("const $GLOBALS_BOTTOM: ref;");
+  D("const $EXTERNS_BOTTOM: ref;");
+  D("const $MALLOC_TOP: ref;");
   D("const $UNDEF: ref;");
   D("function $base(ref) returns (ref);");
-  D("const $NULL: ref;");
   D("const $REF_CONST_1: ref;");
   D("const $REF_CONST_2: ref;");
   D("const $REF_CONST_3: ref;");
@@ -547,9 +550,6 @@ void __SMACK_decls() {
   D("procedure boogie_si_record_float(f: float);");
   D("const $MOP: $mop;");
 
-  D("const $GLOBALS_BOTTOM: ref;");
-  D("const $EXTERNS_BOTTOM: ref;");
-
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
@@ -594,6 +594,7 @@ void __SMACK_decls() {
   D("procedure $malloc(n: size) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $i2b($sgt.ref(p, $NULL));\n"
+    "ensures $i2b($slt.ref(p, $MALLOC_TOP));\n"
     "ensures !old($Alloc[p]);\n"
     "ensures (forall q: ref :: old($Alloc[q]) ==> ($i2b($slt.ref($add.ref(p, n), q)) || $i2b($sgt.ref(p, $add.ref(q, $Size[q])))));\n"
     "ensures $Alloc[p];\n"
@@ -610,6 +611,7 @@ void __SMACK_decls() {
   D("procedure $alloca(n: size) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $i2b($sgt.ref(p, $NULL));\n"
+    "ensures $i2b($slt.ref(p, $MALLOC_TOP));\n"
     "ensures !old($Alloc[p]);\n"
     "ensures (forall q: ref :: old($Alloc[q]) ==> ($i2b($slt.ref($add.ref(p, n), q)) || $i2b($sgt.ref(p, $add.ref(q, $Size[q])))));\n"
     "ensures $Alloc[p];\n"

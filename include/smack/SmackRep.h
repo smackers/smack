@@ -31,7 +31,9 @@ public:
 
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
+
   static const string NULL_VAL;
+  static const string MALLOC_TOP;
 
   static const string ALLOCA;
   static const string MALLOC;
