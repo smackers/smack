@@ -46,8 +46,6 @@ public:
   static const string REC_MEM_OP;
   static const string MEM_OP_VAL;
 
-  static const Expr* NUL;
-  
   static const string STATIC_INIT;
   static const string INIT_FUNCS;
 

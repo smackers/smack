@@ -26,8 +26,6 @@ const string SmackRep::MEM_OP = "$mop";
 const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
 const string SmackRep::MEM_OP_VAL = "$MOP";
 
-const Expr* SmackRep::NUL = Expr::id(NULL_VAL);
-
 const string SmackRep::STATIC_INIT = "$static_init";
 const string SmackRep::INIT_FUNCS = "$init_funcs";
 
@@ -313,7 +311,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       Expr::lit(exponentPart));
 
   } else if (llvm::isa<ConstantPointerNull>(v))
-    return Expr::id("$NULL");
+    return Expr::id(NULL_VAL);
 
   else
     return expr(v);
@@ -801,7 +799,7 @@ string SmackRep::getPrelude() {
     }
   }
 
-  s << "axiom $NULL == ";
+  s << "axiom " << NULL_VAL << " == ";
   lit((long)0,ptrSizeInBits)->print(s); 
   s << ";" << endl; 
   s << endl;
