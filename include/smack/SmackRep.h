@@ -136,6 +136,7 @@ public:
   const Expr* lit(bool val);
   const Expr* lit(string val, unsigned width = 0);
   const Expr* lit(unsigned val, unsigned width = 0);
+  const Expr* lit(unsigned long val, unsigned width = 0);
   const Expr* lit(long val, unsigned width = 0);
 
   const Expr* lit(const llvm::Value* v, unsigned flag);

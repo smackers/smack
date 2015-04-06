@@ -335,15 +335,19 @@ const Expr* SmackRep::lit(string val, unsigned width) {
 }
 
 const Expr* SmackRep::lit(unsigned val, unsigned width) {
+  return lit((unsigned long)val, width);
+}
+
+const Expr* SmackRep::lit(unsigned long val, unsigned width) {
   return SmackOptions::BitPrecise && width > 0 ? Expr::lit(val,width) : Expr::lit(val);
 }
 
 const Expr* SmackRep::lit(long val, unsigned width) {
   if (SmackOptions::BitPrecise && width > 0) {
     if (val >= 0) {
-      return Expr::lit((unsigned)val,width);
+      return Expr::lit((unsigned long)val,width);
     } else {
-      return Expr::fn(opName("$sub", {width}), lit(0u, width), lit((unsigned)abs(val),width));
+      return Expr::fn(opName("$sub", {width}), lit(0u, width), lit((unsigned long)abs(val),width));
     }
   } else {
     return Expr::lit(val);
@@ -431,7 +435,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return lit(cf);
 
     } else if (constant->isNullValue())
-      return lit((unsigned)0, ptrSizeInBits);
+      return lit(0u, ptrSizeInBits);
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -804,9 +808,9 @@ string SmackRep::getPrelude() {
   lit(LONG_MAX/2,ptrSizeInBits)->print(s);
   s << ";" << endl;
 
-  for (int i = 1; i < 8; ++i) {
+  for (unsigned i = 1; i < 8; ++i) {
     s << "axiom $REF_CONST_" << i << " == ";
-    lit((unsigned)i,ptrSizeInBits)->print(s);
+    lit(i,ptrSizeInBits)->print(s);
     s << ";" << endl;
   }
   s << endl;

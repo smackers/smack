@@ -79,7 +79,7 @@ const Expr* Expr::lit(string v) {
   return new IntLit(v);
 }
 
-const Expr* Expr::lit(unsigned v) {
+const Expr* Expr::lit(unsigned long v) {
   return new IntLit(v);
 }
 
@@ -91,7 +91,7 @@ const Expr* Expr::lit(string v, unsigned w) {
   return new BvLit(v,w);
 }
 
-const Expr* Expr::lit(unsigned v, unsigned w) {
+const Expr* Expr::lit(unsigned long v, unsigned w) {
   return new BvLit(v,w);
 }
 

@@ -33,10 +33,10 @@ public:
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(bool b);
   static const Expr* lit(string v);
-  static const Expr* lit(unsigned v);
+  static const Expr* lit(unsigned long v);
   static const Expr* lit(long v);
   static const Expr* lit(string v, unsigned w);
-  static const Expr* lit(unsigned v, unsigned w);
+  static const Expr* lit(unsigned long v, unsigned w);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
@@ -86,7 +86,7 @@ class IntLit : public Expr {
   string val;
 public:
   IntLit(string v) : val(v) {}
-  IntLit(unsigned v) {
+  IntLit(unsigned long v) {
     stringstream s;
     s << v;
     val = s.str();
@@ -104,7 +104,7 @@ class BvLit : public Expr {
   unsigned width;
 public:
   BvLit(string v, unsigned w) : val(v), width(w) {}
-  BvLit(unsigned v, unsigned w) : width(w) {
+  BvLit(unsigned long v, unsigned w) : width(w) {
     stringstream s;
     s << v;
     val = s.str();

@@ -188,7 +188,7 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
 
     // Conditional branch
     assert(bi.getNumSuccessors() == 2);
-    const Expr* e = Expr::eq(rep.expr(bi.getCondition()), rep.lit((unsigned)1,1));
+    const Expr* e = Expr::eq(rep.expr(bi.getCondition()), rep.lit(1u,1));
     targets.push_back(make_pair(e,bi.getSuccessor(0)));
     targets.push_back(make_pair(Expr::not_(e),bi.getSuccessor(1)));
   }
