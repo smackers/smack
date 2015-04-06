@@ -805,7 +805,7 @@ string SmackRep::getPrelude() {
   s << ";" << endl;
 
   s << "axiom " << MALLOC_TOP << " == ";
-  lit(LONG_MAX/2,ptrSizeInBits)->print(s);
+  lit((unsigned)(INT_MAX - 10485760),ptrSizeInBits)->print(s);
   s << ";" << endl;
 
   for (unsigned i = 1; i < 8; ++i) {
