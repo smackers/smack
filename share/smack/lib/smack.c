@@ -441,7 +441,6 @@ void __SMACK_decls() {
   D("const $GLOBALS_BOTTOM: ref;");
   D("const $EXTERNS_BOTTOM: ref;");
   D("const $MALLOC_TOP: ref;");
-  D("const $UNDEF: ref;");
   D("function $base(ref) returns (ref);");
   D("const $REF_CONST_1: ref;");
   D("const $REF_CONST_2: ref;");
