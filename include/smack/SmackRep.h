@@ -42,10 +42,6 @@ public:
   static const string FREE;
   static const string MEMCPY;
 
-  static const string B2P;
-  static const string I2B;
-  static const string B2I;
-  
   static const string MEM_OP;
   static const string REC_MEM_OP;
   static const string MEM_OP_VAL;
@@ -95,9 +91,6 @@ private:
   const Expr* pa(const Expr* base, const Expr* index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size, unsigned i_size = 0, unsigned t_size = 0);
   
-  const Expr* i2b(const llvm::Value* v);
-  const Expr* b2i(const llvm::Value* v);
-
   string indexedName(string name, int idx);
   string indexedName(string name, vector<string> idxs);
 

@@ -22,9 +22,6 @@ const string SmackRep::MALLOC = "$malloc";
 const string SmackRep::FREE = "$free";
 const string SmackRep::MEMCPY = "$memcpy";
 
-const string SmackRep::I2B = "$i2b";
-const string SmackRep::B2I = "$b2i";
-
 // used for memory model debugging
 const string SmackRep::MEM_OP = "$mop";
 const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
@@ -278,14 +275,6 @@ const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size,
     DEBUG(errs() << "index size : " << i_size << "\n");
     assert(0 && "Unhandled index type");
   }
-}
-
-const Expr* SmackRep::i2b(const llvm::Value* v) {
-  return Expr::fn(I2B, expr(v));
-}
-
-const Expr* SmackRep::b2i(const llvm::Value* v) {
-  return Expr::fn(B2I, expr(v));
 }
 
 const Expr* SmackRep::lit(const llvm::Value* v) {
@@ -1050,19 +1039,19 @@ string SmackRep::memcpyProc(llvm::Function* F, int dstReg, int srcReg) {
       s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
         << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
     s << "}" << endl;
   } else {
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
         << endl;
-      s << "ensures (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
     }
   }
@@ -1093,11 +1082,11 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
       unsigned size = 8 << i;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "  assume (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
@@ -1106,11 +1095,11 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
     string val = "val";
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len))) ==> "
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "ensures (forall x:ref :: !($i2b($sle.ref(dest, x)) && $i2b($slt.ref(x, $add.ref(dest, len)))) ==> "
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
       val = val + "++" + val;
     }

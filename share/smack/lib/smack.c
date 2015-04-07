@@ -167,10 +167,6 @@ void __SMACK_decls() {
   D(xstr(INLINE_CONVERSION(i16,i64,$sext,{if $sge.i16.bi(p, 0bv16) then $zext.i16.i64(p) else $neg.i64(1bv64)[64:16] ++ p})));
   D(xstr(INLINE_CONVERSION(i32,i64,$sext,{if $sge.i32.bi(p, 0bv32) then $zext.i32.i64(p) else $neg.i32(1bv32) ++ p})));
 
-  // TODO is this still used?
-  D("function {:inline} $i2b(i: i1) returns (bool) {i != 0bv1}");
-  D("function {:inline} $b2i(b: bool) returns (i1) {if b then 1bv1 else 0bv1}");
-
 #else
 
   D("axiom $TRUE == 1;");
@@ -251,10 +247,6 @@ void __SMACK_decls() {
   D(xstr(INLINE_CONVERSION(i16,i64,$sext,{p})));
   D(xstr(INLINE_CONVERSION(i32,i64,$sext,{p})));
 
-  // TODO is this still used?
-  D("function {:inline} $i2b(i: i1) returns (bool) {i != 0}");
-  D("function {:inline} $b2i(b: bool) returns (i8) {if b then 1 else 0}");
-
 #endif
 
   // TODO it’s not clear whether these are used.
@@ -263,8 +255,6 @@ void __SMACK_decls() {
   D("function {:inline} $min(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
   D("function {:inline} $umax(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
   D("function {:inline} $umin(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
-
-  D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref(p,$EXTERNS_BOTTOM) == $TRUE}");
 
   D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
@@ -306,7 +296,7 @@ void __SMACK_decls() {
   D("function $si2fp.i8(i:i8) returns (float);");
   D("function $ui2fp.i8(i:i8) returns (float);");
 
-  D("axiom (forall f1, f2: float :: f1 != f2 || $i2b($foeq(f1,f2)));");
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq(f1,f2) == $TRUE);");
   D("axiom (forall i: i64 :: $fp2ui.i64($ui2fp.i64(i)) == i);");
   D("axiom (forall f: float :: $ui2fp.i64($fp2ui.i64(f)) == f);");
   D("axiom (forall i: i64 :: $fp2si.i64($si2fp.i64(i)) == i);");
@@ -329,8 +319,7 @@ void __SMACK_decls() {
   D("const $EXTERNS_BOTTOM: ref;");
   D("const $MALLOC_TOP: ref;");
   D("function $base(ref) returns (ref);");
-  D("function {:inline} $b2p(b: bool) returns (ref) {if b then $REF_CONST_1 else $NULL}");
-  D("function {:inline} $p2b(p: ref) returns (bool) {p != $NULL}");
+  D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref(p,$EXTERNS_BOTTOM) == $TRUE}");
 
 #ifdef BITPRECISE
   D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (i64){$load.i32(M, $add.ref(p, $REF_CONST_4))++$load.i32(M, p)}");
@@ -366,9 +355,9 @@ void __SMACK_decls() {
   D("procedure $malloc(n: size) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
-    "  assume $i2b($sgt.ref($CurrAddr, $NULL));\n"
+    "  assume $sgt.ref($CurrAddr, $NULL) == $TRUE;\n"
     "  p := $CurrAddr;\n"
-    "  if ($i2b($sgt.ref(n, $NULL))) {\n"
+    "  if ($sgt.ref(n, $NULL) == $TRUE) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
     "  } else {\n"
     "    $CurrAddr := $add.ref($CurrAddr, $REF_CONST_1);\n"
@@ -385,9 +374,9 @@ void __SMACK_decls() {
   D("procedure $alloca(n: size) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
-    "  assume $i2b($sgt.ref($CurrAddr, $NULL));\n"
+    "  assume $sgt.ref($CurrAddr, $NULL) == $TRUE;\n"
     "  p := $CurrAddr;\n"
-    "  if ($i2b($sgt.ref(n, $NULL))) {\n"
+    "  if ($sgt.ref(n, $NULL) == $TRUE) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
     "  } else {\n"
     "    $CurrAddr := $add.ref($CurrAddr, $REF_CONST_1);\n"
@@ -402,15 +391,15 @@ void __SMACK_decls() {
 
   D("procedure $malloc(n: size) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
-    "ensures $i2b($slt.ref(p, $MALLOC_TOP));\n"
+    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
+    "ensures $slt.ref(p, $MALLOC_TOP) == $TRUE;\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($i2b($slt.ref($add.ref(p, n), q)) || $i2b($sgt.ref(p, $add.ref(q, $Size[q])))));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref($add.ref(p, n), q) == $TRUE || $sgt.ref(p, $add.ref(q, $Size[q])) == $TRUE));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
+    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
@@ -419,28 +408,28 @@ void __SMACK_decls() {
 
   D("procedure $alloca(n: size) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
-    "ensures $i2b($slt.ref(p, $MALLOC_TOP));\n"
+    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
+    "ensures $slt.ref(p, $MALLOC_TOP) == $TRUE;\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($i2b($slt.ref($add.ref(p, n), q)) || $i2b($sgt.ref(p, $add.ref(q, $Size[q])))));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref($add.ref(p, n), q) == $TRUE || $sgt.ref(p, $add.ref(q, $Size[q])) == $TRUE));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
+    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
   D("procedure $malloc(n: size) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
+    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $i2b($sgt.ref($CurrAddr, old($CurrAddr)));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> $i2b($sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)));\n"
+    "ensures $sgt.ref($CurrAddr, old($CurrAddr)) == $TRUE;\n"
+    "ensures $sge.ref(n, $NULL) == $TRUE ==> $sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)) == $TRUE;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
+    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
@@ -449,13 +438,13 @@ void __SMACK_decls() {
 
   D("procedure $alloca(n: size) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
+    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $i2b($sgt.ref($CurrAddr, old($CurrAddr)));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> $i2b($sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)));\n"
+    "ensures $sgt.ref($CurrAddr, old($CurrAddr)) == $TRUE;\n"
+    "ensures $sge.ref(n, $NULL) == $TRUE ==> $sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)) == $TRUE;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
+    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
 #endif
 
   D("var $exn: bool;");

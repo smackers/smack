@@ -431,9 +431,9 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
   emit(Stmt::havoc(x));
   emit(Stmt::assume(Expr::and_(
-                                    Expr::impl(Expr::fn("$i2b",c), Expr::eq(Expr::id(x), v1)),
-                                    Expr::impl(Expr::not_(Expr::fn("$i2b",c)), Expr::eq(Expr::id(x), v2))
-                                  )));
+    Expr::impl(Expr::eq(c,Expr::lit("$TRUE")), Expr::eq(Expr::id(x), v1)),
+    Expr::impl(Expr::neq(c,Expr::lit("$TRUE")), Expr::eq(Expr::id(x), v2))
+  )));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
