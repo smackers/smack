@@ -4,15 +4,11 @@
 #include "smack-svcomp.h"
 
 void __VERIFIER_error(void) {
-  assert(0);
-}
-
-void __VERIFIER_assume(int v) {
-  assume(v);
+  __VERIFIER_assert(0);
 }
 
 void exit(int x) {
-  assume(0);
+  __VERIFIER_assume(0);
 }
 
 // Types to be overloaded for: {bool, float, loff_t, pchar,

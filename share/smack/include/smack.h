@@ -24,8 +24,13 @@ void __SMACK_top_decl(const char *fmt, ...);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#define assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $ZERO;", EX); } while (0)
-#define assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $ZERO;", EX); } while (0)
+#define __VERIFIER_assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $ZERO;", EX); } while (0)
+#define __VERIFIER_assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $ZERO;", EX); } while (0)
+
+#ifndef AVOID_NAME_CONFLICTS
+#define assert(EX) __VERIFIER_assert(EX)
+#define assume(EX) __VERIFIER_assume(EX)
+#endif
 
 #define S4(a,b,c,d) a b c d
 #define S3(a,b,c) a b c
