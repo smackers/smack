@@ -151,8 +151,14 @@ def verify(args):
   if args.verifierOptions:
     command += " " + args.verifierOptions
 
-  p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  output = p.communicate()[0]
+  try:
+    p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = p.communicate()[0]
+
+  except OSError:
+    print
+    print "Error executing command:\n%s" % command
+    sys.exit()
 
   if p.returncode:
     print >> sys.stderr, output
