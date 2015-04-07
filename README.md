@@ -1,8 +1,8 @@
 [![Build Status](http://kepler.cs.utah.edu:8080/buildStatus/icon?job=smack)](http://kepler.cs.utah.edu:8080/job/smack/)
 
-SMACK is a bounded software model checker, verifying the assertions in its
+SMACK is a bounded software verifier, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
-SMACK can verify C programs, such as the following:
+SMACK can verify C programs, such as the following (see `examples/simple`):
 
     // simple.c
     #include "smack.h"
@@ -24,7 +24,7 @@ The command
 
     smackverify.py simple.c
 
-reports that the assertion `a == 2` cannot be violated. Besides the features of
+reports that the assertion `a == b + 1` cannot be violated. Besides the features of
 this very simple example, SMACK handles every complicated feature of the C
 language, including dynamic memory allocation, pointer arithmetic, and bitwise
 operations.
