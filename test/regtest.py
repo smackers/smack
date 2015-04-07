@@ -18,12 +18,6 @@ import sys
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
 APPEND_FIELDS = ['flags']
 
-# integer constants
-PASSED = 0
-TIMEDOUT = 1
-UNKNOWN = 2
-FAILED = -1
-
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
   
@@ -89,12 +83,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
 args = parser.parse_args()
 
-def process_test(cmd, test, memory, verifier, meta):
+# integer constants
+PASSED = 0; TIMEDOUT = 1; UNKNOWN = 2; FAILED = -1;
+def process_test(cmd, test, memory, verifier, expect):
     """
     This is the worker function for each process. This function process the supplied
-    test and returns an integer indicating the test results.
+    test and returns a tuple containing  indicating the test results.
 
-    :return: 0 (PASSED), -1 (FAILED), 1 (TIMEDOUT), 2 (UNKNOWN)
+    :return: A tuple with the
     """
     str_result = "{0:>20}\n".format(test)
     str_result += "{0:>20} {1:>10}    :".format(memory, verifier)
@@ -104,46 +100,38 @@ def process_test(cmd, test, memory, verifier, meta):
     out, err  = p.communicate()
     elapsed = time.time() - t0
 
-    # get the test results
-    result = get_result(out+err)
-    passed = timedout = unknown = False
-    if result == meta['expect']:
-      str_result += 'PASSED '
-      passed = True
-
-    elif result == 'timeout':
-      str_result += 'TIMEOUT'
-      timedout = True
-
-    elif result == 'unknown':
-      str_result += 'UNKNOWN'
-      unknown = True
-
-    else:
-      str_result += 'FAILED '
-
     str_result += '  [%.2fs]' % round(elapsed, 2)
 
-    # log the info for this test
-    logging.info(str_result)
-
-    # returns a status code based on the results of the test
-    if passed:
-      return PASSED
-    elif timedout:
-      return TIMEDOUT
-    elif unknown:
-      return UNKNOWN
+    # get the test results
+    result = get_result(out+err)
+    if result == expect:
+      str_result += ' PASSED'
+    elif result == 'timeout':
+      str_result += ' TIMEOUT'
+    elif result == 'unknown':
+      str_result += ' UNKNOWN'
     else:
-      return FAILED
+      str_result += ' FAILED'
 
-test_results = []
+    return str_result
+
+passed = failed = timeouts = unknowns = 0
 def tally_result(result):
     """
-    Called whenever a worker has finished its process. Only the main process
-    will modify test_results.
+    Tallies the result of each worker. This will only be called by the main thread.
     """
-    test_results.append(result)
+    # log the info
+    logging.info(result)
+
+    global passed, failed, timeouts, unknowns
+    if "PASSED" in result:
+        passed += 1
+    elif "FAILED" in result:
+        failed += 1
+    elif "TIMEOUT" in result:
+        timeouts += 1
+    elif "UNKNOWN" in result:
+        unknowns += 1
 
 def main():
     """
@@ -210,7 +198,8 @@ def main():
 
         for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
           cmd += ['--verifier=' + verifier]
-          r = p.apply_async(process_test, args=(cmd, test, memory, verifier, meta,), callback=tally_result)
+          r = p.apply_async(process_test, args=(cmd, test, memory, verifier,
+            meta['expect'],), callback=tally_result)
           results.append(r)
 
     try:
@@ -231,18 +220,6 @@ def main():
     # log the elapsed time
     elapsed_time = time.time() - t0
     logging.info(' ELAPSED TIME [%.2fs]' % round(elapsed_time, 2))
-
-    # tally up the results
-    passed = failed = timeouts = unknowns = 0
-    for r in test_results:
-      if r == PASSED:
-        passed += 1
-      elif r == TIMEDOUT:
-        timeouts += 1
-      elif r == UNKNOWN:
-        unknowns += 1
-      elif r == FAILED:
-        failed += 1
 
     # log the test results
     logging.info(' PASSED count: %d' % passed)
