@@ -1,10 +1,10 @@
 [![Build Status](http://kepler.cs.utah.edu:8080/buildStatus/icon?job=smack)](http://kepler.cs.utah.edu:8080/job/smack/)
 
-SMACK is a bounded software verifier, verifying the assertions in its
+SMACK is a *bounded software verifier*, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
-SMACK can verify C programs, such as the following (see `examples/simple`):
+SMACK can verify C programs, such as the following:
 
-    // simple.c
+    // examples/simple.c
     #include "smack.h"
 
     int incr(int x) {
@@ -24,10 +24,10 @@ The command
 
     smackverify.py simple.c
 
-reports that the assertion `a == b + 1` cannot be violated. Besides the features of
-this very simple example, SMACK handles every complicated feature of the C
-language, including dynamic memory allocation, pointer arithmetic, and bitwise
-operations.
+reports that the assertion `a == b + 1` cannot be violated. Besides the
+features of this very simple example, SMACK handles every complicated feature
+of the C language, including dynamic memory allocation, pointer arithmetic, and
+bitwise operations.
 
 Under the hood, SMACK is a translator from the [LLVM](http://www.llvm.org)
 compiler’s popular intermediate representation (IR) into the
@@ -41,8 +41,8 @@ model checking, and abstract interpretation. Currently, SMACK leverages the
 [Boogie](http://boogie.codeplex.com) and [Corral](http://corral.codeplex.com)
 verifiers.
 
-For information about system requirements, installation, usage, and everything
-else, please consult our [Wiki](https://github.com/smackers/smack/wiki).
+Consult [the Wiki](https://github.com/smackers/smack/wiki) for system
+requirements, installation, usage, and everything else.
 
 *We are very interested in your experience using SMACK. Please do contact
 [Zvonimir](mailto:zvonimir@cs.utah.edu) or
