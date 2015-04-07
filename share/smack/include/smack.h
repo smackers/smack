@@ -78,6 +78,19 @@ NONDET_DECL(float);
 NONDET_DECL(double);
 NONDET_DECL(long,double);
 
+#undef S1
+#undef S2
+#undef S3
+#undef S4
+#undef U1
+#undef U2
+#undef U3
+#undef U4
+#undef TY
+#undef S
+#undef U
+#undef NONDET_DECL
+
 void __SMACK_decls();
 
 #ifdef __cplusplus
