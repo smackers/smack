@@ -342,9 +342,14 @@ if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Building Corral"
 
-  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+  cd ${ROOT}
+  ${WGET} ${CORRAL_DOWNLOAD_LINK} -O corral-downloaded.zip
+  unzip -o corral-downloaded.zip -d ${CORRAL_DIR}
+  rm -f corral-downloaded.zip
   cd ${CORRAL_DIR}
-  git checkout ${CORRAL_COMMIT}
+#  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+#  cd ${CORRAL_DIR}
+#  git checkout ${CORRAL_COMMIT}
   cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
