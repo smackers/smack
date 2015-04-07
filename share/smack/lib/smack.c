@@ -78,6 +78,9 @@ void __SMACK_dummy(int v) {
   function {:bvbuiltin xstr(prim)} name.type.bi(p1: type, p2: type) returns (bool); \
   function {:inline} name.type(p1: type, p2: type) returns (i1) {if name.type.bi(p1,p2) then 1bv1 else 0bv1}
 
+#define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
+  function {:inline} name.type(p1: type, p2: type) returns (type) {if pred.type.bi(p1,p2) then p1 else p2}
+
 #define D(d) __SMACK_top_decl(d)
 
 #define DECLARE(M,args...) \
@@ -113,6 +116,11 @@ void __SMACK_decls() {
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $srem, bvsrem)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $urem, bvurem)
 
+  DECLARE_EACH_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $min, $slt)
+  DECLARE_EACH_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $max, $sgt)
+  DECLARE_EACH_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $umin, $ult)
+  DECLARE_EACH_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $umax, $ugt)
+
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $shl, bvshl)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $lshr, bvlshr)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $ashr, bvashr)
@@ -120,6 +128,7 @@ void __SMACK_decls() {
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $and, bvand)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $or, bvor)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $xor, bvxor)
+  DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $nand, bvnand)
 
   DECLARE_EACH_TYPE(INLINE_BINARY_PRED, $eq, {if p1 == p2 then 1bv1 else 0bv1})
   DECLARE_EACH_TYPE(INLINE_BINARY_PRED, $ne, {if p1 != p2 then 1bv1 else 0bv1})
@@ -181,6 +190,11 @@ void __SMACK_decls() {
   DECLARE_EACH_TYPE(BUILTIN_BINARY_OP, $srem, rem)
   DECLARE_EACH_TYPE(BUILTIN_BINARY_OP, $urem, rem)
 
+  DECLARE_EACH_TYPE(INLINE_BINARY_OP, $min, {if p1 < p2 then p1 else p2})
+  DECLARE_EACH_TYPE(INLINE_BINARY_OP, $max, {if p1 > p2 then p1 else p2})
+  DECLARE_EACH_TYPE(INLINE_BINARY_OP, $umin, {if p1 < p2 then p1 else p2})
+  DECLARE_EACH_TYPE(INLINE_BINARY_OP, $umax, {if p1 > p2 then p1 else p2})
+
   DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $shl)
   DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $lshr)
   DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $ashr)
@@ -188,6 +202,7 @@ void __SMACK_decls() {
   DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $and)
   DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $or)
   DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $xor)
+  DECLARE_EACH_TYPE(UNINTERPRETED_BINARY_OP, $nand)
 
   DECLARE_EACH_TYPE(INLINE_BINARY_PRED, $eq, {if p1 == p2 then 1 else 0})
   DECLARE_EACH_TYPE(INLINE_BINARY_PRED, $ne, {if p1 != p2 then 1 else 0})
@@ -247,13 +262,6 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i32,i64,$sext,{p});
 
 #endif
-
-  // TODO it’s not clear whether these are used.
-  D("function $nand(p1:int, p2:int) returns (int);");
-  D("function {:inline} $max(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
-  D("function {:inline} $min(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
-  D("function {:inline} $umax(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
-  D("function {:inline} $umin(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
 
   D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
