@@ -4,7 +4,7 @@ SMACK is a *bounded software verifier*, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
 SMACK can verify C programs, such as the following:
 
-    // examples/simple.c
+    // examples/simple/simple.c
     #include "smack.h"
 
     int incr(int x) {
