@@ -32,8 +32,6 @@ __attribute__((always_inline)) void __SMACK_dummy(int v);
 #define assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != 0;", EX); } while (0)
 #endif
 
-int __SMACK_nondet();
-
 #define S4(a,b,c,d) a b c d
 #define S3(a,b,c) a b c
 #define S2(a,b) a b
@@ -50,6 +48,7 @@ int __SMACK_nondet();
 
 #define NONDET_DECL(ty...) S(ty) U(__VERIFIER_nondet,U(ty)) ()
 
+void* __VERIFIER_nondet(void);
 NONDET_DECL(char);
 NONDET_DECL(signed,char);
 NONDET_DECL(unsigned,char);

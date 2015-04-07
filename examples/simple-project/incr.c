@@ -4,7 +4,7 @@
 #include "incr.h"
 
 int incr(int x) {
-  int y = __SMACK_nondet();
+  int y = __VERIFIER_nondet();
   assume(y > 0 && y < 10000); // prevents overflow when bit-precise
   return x + y;
 }

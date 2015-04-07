@@ -31,13 +31,6 @@ void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
 
-int __SMACK_nondet() {
-  static int XXX;
-  int x = XXX;
-  __SMACK_code("havoc @;", x);
-  return x;
-}
-
 void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
   // Integer arithmetic
