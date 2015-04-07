@@ -93,22 +93,15 @@ void __SMACK_dummy(int v) {
 
 void __SMACK_decls() {
 
-  D("const $TRUE, $FALSE: i1;");
-  D("const $ZERO: i32;");
-  D("const $NULL: ref;");
-  D("const $REF_CONST_1: ref;");
-  D("const $REF_CONST_2: ref;");
-  D("const $REF_CONST_3: ref;");
-  D("const $REF_CONST_4: ref;");
-  D("const $REF_CONST_5: ref;");
-  D("const $REF_CONST_6: ref;");
-  D("const $REF_CONST_7: ref;");
+  D("const $0.i1, $1.i1: i1;");
+  D("const $0.i32: i32;");
+  D("const $0.ref, $1.ref, $2.ref, $3.ref, $4.ref, $5.ref, $6.ref, $7.ref: ref;");
 
 #ifdef BITPRECISE
 
-  D("axiom $TRUE == 1bv1;");
-  D("axiom $FALSE == 0bv1;");
-  D("axiom $ZERO == 0bv32;");
+  D("axiom $0.i1 == 0bv1;");
+  D("axiom $1.i1 == 1bv1;");
+  D("axiom $0.i32 == 0bv32;");
 
   DECLARE_EACH_TYPE(BVBUILTIN_UNARY_OP, $neg, bvneg)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
@@ -174,9 +167,9 @@ void __SMACK_decls() {
 
 #else
 
-  D("axiom $TRUE == 1;");
-  D("axiom $FALSE == 0;");
-  D("axiom $ZERO == 0;");
+  D("axiom $0.i1 == 0;");
+  D("axiom $1.i1 == 1;");
+  D("axiom $0.i32 == 0;");
 
   DECLARE_EACH_TYPE(INLINE_UNARY_OP, $neg, {0 - p})
   DECLARE_EACH_TYPE(INLINE_BINARY_OP, $add, {p1 + p2})
@@ -302,7 +295,7 @@ void __SMACK_decls() {
   D("function $si2fp.i8(i:i8) returns (float);");
   D("function $ui2fp.i8(i:i8) returns (float);");
 
-  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq(f1,f2) == $TRUE);");
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq(f1,f2) == $1.i1);");
   D("axiom (forall i: i64 :: $fp2ui.i64($ui2fp.i64(i)) == i);");
   D("axiom (forall f: float :: $ui2fp.i64($fp2ui.i64(f)) == f);");
   D("axiom (forall i: i64 :: $fp2si.i64($si2fp.i64(i)) == i);");
@@ -325,19 +318,19 @@ void __SMACK_decls() {
   D("const $EXTERNS_BOTTOM: ref;");
   D("const $MALLOC_TOP: ref;");
   D("function $base(ref) returns (ref);");
-  D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref(p,$EXTERNS_BOTTOM) == $TRUE}");
+  D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref(p,$EXTERNS_BOTTOM) == $1.i1}");
 
 #ifdef BITPRECISE
-  D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (i64){$load.i32(M, $add.ref(p, $REF_CONST_4))++$load.i32(M, p)}");
-  D("function {:inline} $load.i32(M:[ref]i8, p:ref) returns (i32){M[$add.ref(p, $REF_CONST_3)]++M[$add.ref(p, $REF_CONST_2)]++M[$add.ref(p, $REF_CONST_1)]++M[p]}");
-  D("function {:inline} $load.i16(M:[ref]i8, p:ref) returns (i16){M[$add.ref(p, $REF_CONST_1)]++M[p]}");
+  D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (i64){$load.i32(M, $add.ref(p, $4.ref))++$load.i32(M, p)}");
+  D("function {:inline} $load.i32(M:[ref]i8, p:ref) returns (i32){M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.i16(M:[ref]i8, p:ref) returns (i16){M[$add.ref(p, $1.ref)]++M[p]}");
   D("function {:inline} $load.i8(M:[ref]i8, p:ref) returns (i8){M[p]}");
 
   D("function {:inline} $store.i64(M:[ref]i8, p:ref, v:i64) returns ([ref]i8)"
-    "{M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]][$add.ref(p, $REF_CONST_2) := v[24:16]][$add.ref(p, $REF_CONST_3) := v[32:24]]"
-    "[$add.ref(p, $REF_CONST_4) := v[40:32]][$add.ref(p, $REF_CONST_5) := v[48:40]][$add.ref(p, $REF_CONST_6) := v[56:48]][$add.ref(p, $REF_CONST_7) := v[64:56]]}");
-  D("function {:inline} $store.i32(M:[ref]i8, p:ref, v:i32) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]][$add.ref(p, $REF_CONST_2) := v[24:16]][$add.ref(p, $REF_CONST_3) := v[32:24]]}");
-  D("function {:inline} $store.i16(M:[ref]i8, p:ref, v:i16) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]]}");
+    "{M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]][$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
+  D("function {:inline} $store.i32(M:[ref]i8, p:ref, v:i32) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
+  D("function {:inline} $store.i16(M:[ref]i8, p:ref, v:i16) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.i8(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
 #endif
 
@@ -361,12 +354,12 @@ void __SMACK_decls() {
   D("procedure $malloc(n: size) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
-    "  assume $sgt.ref($CurrAddr, $NULL) == $TRUE;\n"
+    "  assume $sgt.ref($CurrAddr, $0.ref) == $1.i1;\n"
     "  p := $CurrAddr;\n"
-    "  if ($sgt.ref(n, $NULL) == $TRUE) {\n"
+    "  if ($sgt.ref(n, $0.ref) == $1.i1) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
     "  } else {\n"
-    "    $CurrAddr := $add.ref($CurrAddr, $REF_CONST_1);\n"
+    "    $CurrAddr := $add.ref($CurrAddr, $1.ref);\n"
     "  }\n"
     "  $Alloc[p] := true;\n"
     "}");
@@ -380,12 +373,12 @@ void __SMACK_decls() {
   D("procedure $alloca(n: size) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
-    "  assume $sgt.ref($CurrAddr, $NULL) == $TRUE;\n"
+    "  assume $sgt.ref($CurrAddr, $0.ref) == $1.i1;\n"
     "  p := $CurrAddr;\n"
-    "  if ($sgt.ref(n, $NULL) == $TRUE) {\n"
+    "  if ($sgt.ref(n, $0.ref) == $1.i1) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
     "  } else {\n"
-    "    $CurrAddr := $add.ref($CurrAddr, $REF_CONST_1);\n"
+    "    $CurrAddr := $add.ref($CurrAddr, $1.ref);\n"
     "  }\n"
     "  $Alloc[p] := true;\n"
     "}");
@@ -397,15 +390,15 @@ void __SMACK_decls() {
 
   D("procedure $malloc(n: size) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
-    "ensures $slt.ref(p, $MALLOC_TOP) == $TRUE;\n"
+    "ensures $sgt.ref(p, $0.ref) == $1.i1;\n"
+    "ensures $slt.ref(p, $MALLOC_TOP) == $1.i1;\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref($add.ref(p, n), q) == $TRUE || $sgt.ref(p, $add.ref(q, $Size[q])) == $TRUE));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref($add.ref(p, n), q) == $1.i1 || $sgt.ref(p, $add.ref(q, $Size[q])) == $1.i1));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
+    "ensures $sge.ref(n, $0.ref) == $1.i1 ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $1.i1 && $slt.ref(q, $add.ref(p, n)) == $1.i1 ==> $base(q) == p);");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
@@ -414,28 +407,28 @@ void __SMACK_decls() {
 
   D("procedure $alloca(n: size) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
-    "ensures $slt.ref(p, $MALLOC_TOP) == $TRUE;\n"
+    "ensures $sgt.ref(p, $0.ref) == $1.i1;\n"
+    "ensures $slt.ref(p, $MALLOC_TOP) == $1.i1;\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref($add.ref(p, n), q) == $TRUE || $sgt.ref(p, $add.ref(q, $Size[q])) == $TRUE));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref($add.ref(p, n), q) == $1.i1 || $sgt.ref(p, $add.ref(q, $Size[q])) == $1.i1));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
+    "ensures $sge.ref(n, $0.ref) == $1.i1 ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $1.i1 && $slt.ref(q, $add.ref(p, n)) == $1.i1 ==> $base(q) == p);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
   D("procedure $malloc(n: size) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
-    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
+    "ensures $sgt.ref(p, $0.ref) == $1.i1;\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $sgt.ref($CurrAddr, old($CurrAddr)) == $TRUE;\n"
-    "ensures $sge.ref(n, $NULL) == $TRUE ==> $sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)) == $TRUE;\n"
+    "ensures $sgt.ref($CurrAddr, old($CurrAddr)) == $1.i1;\n"
+    "ensures $sge.ref(n, $0.ref) == $1.i1 ==> $sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)) == $1.i1;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
+    "ensures $sge.ref(n, $0.ref) == $1.i1 ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $1.i1 && $slt.ref(q, $add.ref(p, n)) == $1.i1 ==> $base(q) == p);");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
@@ -444,13 +437,13 @@ void __SMACK_decls() {
 
   D("procedure $alloca(n: size) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
-    "ensures $sgt.ref(p, $NULL) == $TRUE;\n"
+    "ensures $sgt.ref(p, $0.ref) == $1.i1;\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $sgt.ref($CurrAddr, old($CurrAddr)) == $TRUE;\n"
-    "ensures $sge.ref(n, $NULL) == $TRUE ==> $sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)) == $TRUE;\n"
+    "ensures $sgt.ref($CurrAddr, old($CurrAddr)) == $1.i1;\n"
+    "ensures $sge.ref(n, $0.ref) == $1.i1 ==> $sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)) == $1.i1;\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref(n, $NULL) == $TRUE ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $TRUE && $slt.ref(q, $add.ref(p, n)) == $TRUE ==> $base(q) == p);");
+    "ensures $sge.ref(n, $0.ref) == $1.i1 ==> (forall q: ref :: {$base(q)} $sle.ref(p, q) == $1.i1 && $slt.ref(q, $add.ref(p, n)) == $1.i1 ==> $base(q) == p);");
 #endif
 
   D("var $exn: bool;");

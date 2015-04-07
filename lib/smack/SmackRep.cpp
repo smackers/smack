@@ -10,7 +10,7 @@ namespace smack {
 const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 
-const string SmackRep::NULL_VAL = "$NULL";
+const string SmackRep::NULL_VAL = "$0.ref";
 const string SmackRep::GLOBALS_BOTTOM = "$GLOBALS_BOTTOM";
 const string SmackRep::EXTERNS_BOTTOM = "$EXTERNS_BOTTOM";
 const string SmackRep::MALLOC_TOP = "$MALLOC_TOP";
@@ -798,7 +798,7 @@ string SmackRep::getPrelude() {
   s << ";" << endl;
 
   for (unsigned i = 1; i < 8; ++i) {
-    s << "axiom $REF_CONST_" << i << " == ";
+    s << "axiom $" << i << ".ref == ";
     lit(i,ptrSizeInBits)->print(s);
     s << ";" << endl;
   }
@@ -1039,19 +1039,19 @@ string SmackRep::memcpyProc(llvm::Function* F, int dstReg, int srcReg) {
       s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
     s << "}" << endl;
   } else {
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
         << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
     }
   }
@@ -1082,11 +1082,11 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
       unsigned size = 8 << i;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
+      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
@@ -1095,11 +1095,11 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
     string val = "val";
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE ==> "
+      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $TRUE && $slt.ref(x, $add.ref(dest, len)) == $TRUE) ==> "
+      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
       val = val + "++" + val;
     }
