@@ -80,6 +80,9 @@ void __SMACK_dummy(int v) {
 
 #define D(d) __SMACK_top_decl(d)
 
+#define DECLARE(M,args...) \
+  D(xstr(M(args)))
+
 #define DECLARE_EACH_TYPE(M,args...) \
   D(xstr(M(ref,args))); \
   D(xstr(M(i64,args))); \
@@ -136,38 +139,38 @@ void __SMACK_decls() {
   DECLARE_EACH_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sge, bvsge)
   DECLARE_EACH_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sgt, bvsgt)
 
-  D(xstr(INLINE_CONVERSION(i64,i32,$trunc,{p[32:0]})));
-  D(xstr(INLINE_CONVERSION(i64,i16,$trunc,{p[16:0]})));
-  D(xstr(INLINE_CONVERSION(i64,i8,$trunc,{p[8:0]})));
-  D(xstr(INLINE_CONVERSION(i64,i1,$trunc,{if p == 0bv64 then 0bv1 else 1bv1})));
-  D(xstr(INLINE_CONVERSION(i32,i16,$trunc,{p[16:0]})));
-  D(xstr(INLINE_CONVERSION(i32,i8,$trunc,{p[8:0]})));
-  D(xstr(INLINE_CONVERSION(i32,i1,$trunc,{if p == 0bv32 then 0bv1 else 1bv1})));
-  D(xstr(INLINE_CONVERSION(i16,i8,$trunc,{p[8:0]})));
-  D(xstr(INLINE_CONVERSION(i16,i1,$trunc,{if p == 0bv16 then 0bv1 else 1bv1})));
-  D(xstr(INLINE_CONVERSION(i8,i1,$trunc,{if p == 0bv8 then 0bv1 else 1bv1})));
+  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{p[32:0]});
+  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{p[16:0]});
+  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{p[8:0]});
+  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{if p == 0bv64 then 0bv1 else 1bv1});
+  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{p[16:0]});
+  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{p[8:0]});
+  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{if p == 0bv32 then 0bv1 else 1bv1});
+  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{p[8:0]});
+  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{if p == 0bv16 then 0bv1 else 1bv1});
+  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{if p == 0bv8 then 0bv1 else 1bv1});
 
-  D(xstr(INLINE_CONVERSION(i1,i8,$zext,{if p == 0bv1 then 0bv8 else 1bv8})));
-  D(xstr(INLINE_CONVERSION(i1,i16,$zext,{if p == 0bv1 then 0bv16 else 1bv16})));
-  D(xstr(INLINE_CONVERSION(i1,i32,$zext,{if p == 0bv1 then 0bv32 else 1bv32})));
-  D(xstr(INLINE_CONVERSION(i1,i64,$zext,{if p == 0bv1 then 0bv64 else 1bv64})));
-  D(xstr(INLINE_CONVERSION(i8,i16,$zext,{0bv8 ++ p})));
-  D(xstr(INLINE_CONVERSION(i8,i32,$zext,{0bv24 ++ p})));
-  D(xstr(INLINE_CONVERSION(i8,i64,$zext,{0bv56 ++ p})));
-  D(xstr(INLINE_CONVERSION(i16,i32,$zext,{0bv16 ++ p})));
-  D(xstr(INLINE_CONVERSION(i16,i64,$zext,{0bv48 ++ p})));
-  D(xstr(INLINE_CONVERSION(i32,i64,$zext,{0bv32 ++ p})));
+  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{if p == 0bv1 then 0bv8 else 1bv8});
+  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{if p == 0bv1 then 0bv16 else 1bv16});
+  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{if p == 0bv1 then 0bv32 else 1bv32});
+  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{if p == 0bv1 then 0bv64 else 1bv64});
+  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{0bv8 ++ p});
+  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{0bv24 ++ p});
+  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{0bv56 ++ p});
+  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{0bv16 ++ p});
+  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{0bv48 ++ p});
+  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{0bv32 ++ p});
 
-  D(xstr(INLINE_CONVERSION(i1,i8,$sext,{if p == 0bv1 then 0bv8 else 1bv8})));
-  D(xstr(INLINE_CONVERSION(i1,i16,$sext,{if p == 0bv1 then 0bv16 else 1bv16})));
-  D(xstr(INLINE_CONVERSION(i1,i32,$sext,{if p == 0bv1 then 0bv32 else 1bv32})));
-  D(xstr(INLINE_CONVERSION(i1,i64,$sext,{if p == 0bv1 then 0bv64 else 1bv64})));
-  D(xstr(INLINE_CONVERSION(i8,i16,$sext,{if $sge.i8.bi(p, 0bv8) then $zext.i8.i16(p) else $neg.i8(1bv8) ++ p})));
-  D(xstr(INLINE_CONVERSION(i8,i32,$sext,{if $sge.i8.bi(p, 0bv8) then $zext.i8.i32(p) else $neg.i32(1bv32)[32:8] ++ p})));
-  D(xstr(INLINE_CONVERSION(i8,i64,$sext,{if $sge.i8.bi(p, 0bv8) then $zext.i8.i64(p) else $neg.i64(1bv64)[64:8] ++ p})));
-  D(xstr(INLINE_CONVERSION(i16,i32,$sext,{if $sge.i16.bi(p, 0bv16) then $zext.i16.i32(p) else $neg.i16(1bv16) ++ p})));
-  D(xstr(INLINE_CONVERSION(i16,i64,$sext,{if $sge.i16.bi(p, 0bv16) then $zext.i16.i64(p) else $neg.i64(1bv64)[64:16] ++ p})));
-  D(xstr(INLINE_CONVERSION(i32,i64,$sext,{if $sge.i32.bi(p, 0bv32) then $zext.i32.i64(p) else $neg.i32(1bv32) ++ p})));
+  DECLARE(INLINE_CONVERSION,i1,i8,$sext,{if p == 0bv1 then 0bv8 else 1bv8});
+  DECLARE(INLINE_CONVERSION,i1,i16,$sext,{if p == 0bv1 then 0bv16 else 1bv16});
+  DECLARE(INLINE_CONVERSION,i1,i32,$sext,{if p == 0bv1 then 0bv32 else 1bv32});
+  DECLARE(INLINE_CONVERSION,i1,i64,$sext,{if p == 0bv1 then 0bv64 else 1bv64});
+  DECLARE(INLINE_CONVERSION,i8,i16,$sext,{if $sge.i8.bi(p, 0bv8) then $zext.i8.i16(p) else $neg.i8(1bv8) ++ p});
+  DECLARE(INLINE_CONVERSION,i8,i32,$sext,{if $sge.i8.bi(p, 0bv8) then $zext.i8.i32(p) else $neg.i32(1bv32)[32:8] ++ p});
+  DECLARE(INLINE_CONVERSION,i8,i64,$sext,{if $sge.i8.bi(p, 0bv8) then $zext.i8.i64(p) else $neg.i64(1bv64)[64:8] ++ p});
+  DECLARE(INLINE_CONVERSION,i16,i32,$sext,{if $sge.i16.bi(p, 0bv16) then $zext.i16.i32(p) else $neg.i16(1bv16) ++ p});
+  DECLARE(INLINE_CONVERSION,i16,i64,$sext,{if $sge.i16.bi(p, 0bv16) then $zext.i16.i64(p) else $neg.i64(1bv64)[64:16] ++ p});
+  DECLARE(INLINE_CONVERSION,i32,i64,$sext,{if $sge.i32.bi(p, 0bv32) then $zext.i32.i64(p) else $neg.i32(1bv32) ++ p});
 
 #else
 
@@ -217,38 +220,38 @@ void __SMACK_decls() {
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
 
-  D(xstr(INLINE_CONVERSION(i64,i32,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i64,i16,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i64,i8,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i64,i1,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i32,i16,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i32,i8,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i32,i1,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i16,i8,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i16,i1,$trunc,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i1,$trunc,{p})));
+  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{p});
+  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{p});
 
-  D(xstr(INLINE_CONVERSION(i1,i8,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i1,i16,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i1,i32,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i1,i64,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i16,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i32,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i64,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i16,i32,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i16,i64,$zext,{p})));
-  D(xstr(INLINE_CONVERSION(i32,i64,$zext,{p})));
+  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{p});
+  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{p});
 
-  D(xstr(INLINE_CONVERSION(i1,i8,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i1,i16,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i1,i32,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i1,i64,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i16,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i32,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i8,i64,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i16,i32,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i16,i64,$sext,{p})));
-  D(xstr(INLINE_CONVERSION(i32,i64,$sext,{p})));
+  DECLARE(INLINE_CONVERSION,i1,i8,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i1,i16,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i1,i32,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i1,i64,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i8,i16,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i8,i32,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i8,i64,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i16,i32,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i16,i64,$sext,{p});
+  DECLARE(INLINE_CONVERSION,i32,i64,$sext,{p});
 
 #endif
 
