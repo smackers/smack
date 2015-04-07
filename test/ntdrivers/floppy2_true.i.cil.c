@@ -6173,13 +6173,6 @@ NTSTATUS FlAcpiConfigureFloppy(PDISKETTE_EXTENSION DisketteExtension , PFDC_INFO
   return (0L);
 }
 }
-#line 949
-void __VERIFIER_assert(int cond) {
-  if (!(cond)) {
-    ERROR: assert(0); goto ERROR;
-  }
-  return;
-}
 #line 841 "floppy.c"
 NTSTATUS FlQueueIrpToThread(PIRP Irp , PDISKETTE_EXTENSION DisketteExtension ) 
 { NTSTATUS status ;
