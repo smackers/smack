@@ -91,6 +91,7 @@ void __SMACK_dummy(int v) {
 void __SMACK_decls() {
 
   D("const $TRUE, $FALSE: i1;");
+  D("const $ZERO: i32;");
   D("const $NULL: ref;");
   D("const $REF_CONST_1: ref;");
   D("const $REF_CONST_2: ref;");
@@ -104,6 +105,7 @@ void __SMACK_decls() {
 
   D("axiom $TRUE == 1bv1;");
   D("axiom $FALSE == 0bv1;");
+  D("axiom $ZERO == 0bv32;");
 
   DECLARE_EACH_TYPE(BVBUILTIN_UNARY_OP, $neg, bvneg)
   DECLARE_EACH_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
@@ -171,6 +173,7 @@ void __SMACK_decls() {
 
   D("axiom $TRUE == 1;");
   D("axiom $FALSE == 0;");
+  D("axiom $ZERO == 0;");
 
   DECLARE_EACH_TYPE(INLINE_UNARY_OP, $neg, {0 - p})
   DECLARE_EACH_TYPE(INLINE_BINARY_OP, $add, {p1 + p2})
