@@ -156,9 +156,8 @@ def verify(args):
     output = p.communicate()[0]
 
   except OSError:
-    print
-    print "Error executing command:\n%s" % command
-    sys.exit()
+    print >> sys.stderr
+    sys.exit("Error executing command:\n%s" % command)
 
   if p.returncode:
     print >> sys.stderr, output

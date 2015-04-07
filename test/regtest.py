@@ -116,9 +116,8 @@ try:
           elapsed = time.time() - t0
 
         except OSError:
-          print
-          print red("Error executing command:\n%s" % " ".join(cmd))
-          sys.exit()
+          print >> sys.stderr
+          sys.exit("Error executing command:\n%s" % " ".join(cmd))
 
         result = get_result(out+err)
 
