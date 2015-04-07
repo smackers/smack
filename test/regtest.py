@@ -109,10 +109,16 @@ try:
 
         print "{0:>20} {1:>10}    :".format(memory, verifier),
 
-        t0 = time.time()
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err  = p.communicate()
-        elapsed = time.time() - t0
+        try:
+          t0 = time.time()
+          p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          out, err  = p.communicate()
+          elapsed = time.time() - t0
+
+        except OSError:
+          print
+          print red("Error executing command:\n%s" % " ".join(cmd))
+          sys.exit()
 
         result = get_result(out+err)
 
