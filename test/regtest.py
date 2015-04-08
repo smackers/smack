@@ -18,11 +18,19 @@ import sys
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
 APPEND_FIELDS = ['flags']
 
-def red(text):
-  return '\033[0;31m' + text + '\033[0m'
-  
-def green(text):
-  return '\033[0;32m' + text + '\033[0m'
+def red(text, log_file):
+
+  if log_file:
+    return text
+  else:
+    return '\033[0;31m' + text + '\033[0m'
+
+def green(text, log_file):
+
+  if log_file:
+      return text
+  else:
+      return '\033[0;32m' + text + '\033[0m'
 
 def get_result(output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out|Corral timed out', output):
@@ -85,7 +93,7 @@ args = parser.parse_args()
 
 # integer constants
 PASSED = 0; TIMEDOUT = 1; UNKNOWN = 2; FAILED = -1;
-def process_test(cmd, test, memory, verifier, expect):
+def process_test(cmd, test, memory, verifier, expect, log_file):
     """
     This is the worker function for each process. This function process the supplied
     test and returns a tuple containing  indicating the test results.
@@ -100,20 +108,23 @@ def process_test(cmd, test, memory, verifier, expect):
     out, err  = p.communicate()
     elapsed = time.time() - t0
 
-    str_result += '  [%.2fs]' % round(elapsed, 2)
+
 
     # get the test results
     result = get_result(out+err)
     if result == expect:
-      str_result += ' PASSED'
+      str_result += 'PASSED '
+      str_result += '  [%.2fs]' % round(elapsed, 2)
+      return green(str_result, log_file)
     elif result == 'timeout':
-      str_result += ' TIMEOUT'
+      str_result += 'TIMEOUT'
     elif result == 'unknown':
-      str_result += ' UNKNOWN'
+      str_result += 'UNKNOWN'
     else:
-      str_result += ' FAILED'
+      str_result += 'FAILED '
 
-    return str_result
+    str_result += '  [%.2fs]' % round(elapsed, 2)
+    return red(str_result, log_file)
 
 passed = failed = timeouts = unknowns = 0
 def tally_result(result):
@@ -190,7 +201,6 @@ def main():
       # build up the subprocess command
       cmd = ['smackverify.py', test]
       cmd += ['--time-limit', str(meta['time-limit'])]
-      cmd += ['-o', test + '.bpl']
       cmd += meta['flags']
 
       for memory in meta['memory'][:100 if args.exhaustive else 1]:
@@ -198,8 +208,10 @@ def main():
 
         for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
           cmd += ['--verifier=' + verifier]
-          r = p.apply_async(process_test, args=(cmd, test, memory, verifier,
-            meta['expect'],), callback=tally_result)
+          cmd += ['-o', test + memory + verifier + '.bpl']
+          r = p.apply_async(process_test,
+                args=(cmd, test, memory, verifier, meta['expect'], args.log_path,),
+                callback=tally_result)
           results.append(r)
 
     try:
