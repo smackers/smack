@@ -27,29 +27,27 @@ using namespace std;
   
 class SmackRep {
 public:
+  static const string NEG;
+
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
+
   static const string NULL_VAL;
+  static const string GLOBALS_BOTTOM;
+  static const string EXTERNS_BOTTOM;
+  static const string MALLOC_TOP;
 
   static const string ALLOCA;
   static const string MALLOC;
   static const string FREE;
   static const string MEMCPY;
 
-  static const string B2P;
-  static const string I2B;
-  static const string B2I;
-  
   static const string MEM_OP;
   static const string REC_MEM_OP;
   static const string MEM_OP_VAL;
 
-  static const Expr* NUL;
-  
   static const string STATIC_INIT;
-
-  // TODO Make this width a parameter to generate bitvector-based code.
-  static const int width;
+  static const string INIT_FUNCS;
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
@@ -67,59 +65,75 @@ protected:
 
   vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
-  int globalsBottom;
-  
+  unsigned ptrSizeInBits;
+
+  long globalsBottom;
+  long externsBottom;
   vector<const Stmt*> staticInits;
+  vector<const Stmt*> initFuncs;
   
   unsigned uniqueFpNum;
 
 public:
   SmackRep(DSAAliasAnalysis* aa, Naming& N, Program& P)
     : aliasAnalysis(aa), naming(N), program(P),
-      targetData(aa->getDataLayout()), globalsBottom(0) {
+      targetData(aa->getDataLayout()), globalsBottom(0), externsBottom(-32768) {
     uniqueFpNum = 0;
+    ptrSizeInBits = targetData->getPointerSizeInBits();
   }
   DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
   Program& getProgram() { return program; }
 
 private:
-  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val);
+  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
-  const Expr* pa(const Expr* base, int index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, int size);
-  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
+  const Expr* pa(const Expr* base, unsigned index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size, unsigned i_size = 0, unsigned t_size = 0);
   
-  const Expr* b2p(const llvm::Value* v);
-  const Expr* i2b(const llvm::Value* v);
-  const Expr* b2i(const llvm::Value* v);
+  string indexedName(string name, int idx);
+  string indexedName(string name, vector<string> idxs);
 
 public:
   bool isMallocOrFree(const llvm::Function* f);
   bool isIgnore(const llvm::Function* f);
   bool isInt(const llvm::Type* t);
   bool isInt(const llvm::Value* v);
-  bool isBool(const llvm::Type* t);
-  bool isBool(const llvm::Value* v);
   bool isFloat(const llvm::Type* t);
   bool isFloat(const llvm::Value* v);
+  unsigned getElementSize(const llvm::Value* v);
+  unsigned getIntSize(const llvm::Value* v);
+  unsigned getIntSize(const llvm::Type* t);
+  unsigned getSize(llvm::Type* t);
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
   
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
-  string memType(unsigned r);
+  string memType(unsigned region, unsigned size);
+  string memPath(unsigned region, unsigned size);
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
+  string bits_type(unsigned width);
+  string int_type(unsigned width);
   virtual string type(const llvm::Type* t);
   virtual string type(const llvm::Value* v);
   
   const Expr* mem(const llvm::Value* v);
-  const Expr* mem(unsigned region, const Expr* addr);  
+  const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
 
   const Expr* lit(const llvm::Value* v);
-  const Expr* lit(unsigned v);
+
+  const Expr* lit(bool val);
+  const Expr* lit(string val, unsigned width = 0);
+  const Expr* lit(unsigned val, unsigned width = 0);
+  const Expr* lit(unsigned long val, unsigned width = 0);
+  const Expr* lit(long val, unsigned width = 0);
+
+  const Expr* lit(const llvm::Value* v, unsigned flag);
+
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
@@ -133,6 +147,7 @@ public:
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
+  string opName(const string& operation, initializer_list<unsigned> operands);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);
@@ -143,28 +158,41 @@ public:
   const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
 
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
-  const Stmt* call(llvm::Function* f, llvm::User& u);
+  const Stmt* call(llvm::Function* f, const llvm::User& u);
   string code(llvm::CallInst& ci);
-  ProcDecl* proc(llvm::Function* f, int n);
+  string procName(const llvm::User& U);
+  string procName(const llvm::User& U, llvm::Function* F);
+  vector<string> decl(llvm::Function* F);
+  ProcDecl* proc(llvm::Function* f);
 
   virtual const Stmt* alloca(llvm::AllocaInst& i);
   virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
   virtual const Stmt* memset(const llvm::MemSetInst& msi);
+  virtual const Stmt* load(const llvm::Value* addr, const llvm::Value* val);
+  virtual const Stmt* store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si = NULL);
+  virtual const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
+  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
+  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isTypeSafe(const llvm::GlobalValue* V);
+  bool isCollapsed(const llvm::Value* v);
   
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual void addBplGlobal(string name);
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
+  void addInitFunc(const llvm::Function* f);
   bool hasStaticInits();
   Decl* getStaticInit();
+  Decl* getInitFuncs();
   virtual string getPtrType();
   virtual string getPrelude();
 
   virtual const Expr* declareIsExternal(const Expr* e);
 
-  virtual string memcpyProc(int dstReg, int srcReg);
-  virtual string memsetProc(int dstReg);
+  virtual string memcpyProc(llvm::Function* F, int dstReg, int srcReg);
+  virtual string memsetProc(llvm::Function* F, int dstReg);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {

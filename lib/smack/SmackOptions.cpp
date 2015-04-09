@@ -19,4 +19,11 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
   "source-loc-syms", llvm::cl::desc("Include source locations in generated code.")
 );
 
+const llvm::cl::opt<bool> SmackOptions::BitPrecise(
+  "bit-precise", llvm::cl::desc("Model bits and bit operations precisely.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
+  "no-byte-access-inference", llvm::cl::desc("Optimize bit-precision with DSA.")
+);
 }

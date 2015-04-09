@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config PATHS ${LLVM_CONFIG} NO_DEFAULT_PATH DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -191,11 +191,19 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   DESTINATION bin
 )
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack-contracts.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/smack/smack-svcomp.h
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-contracts.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-svcomp.h
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
   GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
-  DESTINATION include/smack
+  DESTINATION share/smack/include
+)
+
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/Makefile
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack-svcomp.c
+  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
+  DESTINATION share/smack/lib
 )
 

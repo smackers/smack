@@ -1,24 +1,10 @@
-At its core, SMACK is a translator from the [LLVM](http://www.llvm.org)
-compiler's popular intermediate representation (IR) into the
-[Boogie](http://boogie.codeplex.com) intermediate verification language (IVL).
-Sourcing LLVM IR exploits an increasing number of compiler frontends,
-optimizations, and analyses. Targeting Boogie exploits a canonical platform
-which simplifies the implementation of algorithms for verification, model
-checking, and abstract interpretation. The main purpose of SMACK is to decouple
-the implementations of verification algorithms from the details of source
-languages, and enable rapid prototyping on production code.  Our initial
-experience verifying C language programs is encouraging: SMACK is competitive
-in SV-COMP benchmarks, is able to translate large programs (100 KLOC), and is
-used in several verification research prototypes.
+[![Build Status](http://kepler.cs.utah.edu:8080/buildStatus/icon?job=smack)](http://kepler.cs.utah.edu:8080/job/smack/)
 
-*Please drop us a note if using SMACK in your research or teaching. We would
-love to learn more about your experience.*
-
-## A Quick Demo
-
+SMACK is a *bounded software verifier*, verifying the assertions in its
+input programs up to a given bound on loop iterations and recursion depth.
 SMACK can verify C programs, such as the following:
 
-    // simple.c
+    // examples/simple/simple.c
     #include "smack.h"
 
     int incr(int x) {
@@ -26,38 +12,38 @@ SMACK can verify C programs, such as the following:
     }
 
     int main(void) {
-      int a;
+      int a, b;
 
-      a = 1;
+      a = b = __VERIFIER_nondet_int();
       a = incr(a);
-      assert(a == 2);
+      assert(a == b + 1);
       return 0;
     }
 
-To do so, SMACK invokes [Clang](http://clang.llvm.org) to compile `simple.c`
-into LLVM bitcode `simple.bc`:
+The command
 
-    clang -c -Wall -emit-llvm -O0 -g -I../../include/smack simple.c -o simple.bc
+    smackverify.py simple.c
 
-then translates the bitcode `simple.bc` to a program in the
-[Boogie](http://boogie.codeplex.com) verification language,
+reports that the assertion `a == b + 1` cannot be violated. Besides the
+features of this very simple example, SMACK handles every complicated feature
+of the C language, including dynamic memory allocation, pointer arithmetic, and
+bitwise operations.
 
-    smackgen.py simple.bc -o simple.bpl
+Under the hood, SMACK is a translator from the [LLVM](http://www.llvm.org)
+compiler’s popular intermediate representation (IR) into the
+[Boogie](http://boogie.codeplex.com) intermediate verification language (IVL).
+Sourcing LLVM IR exploits an increasing number of compiler front-ends,
+optimizations, and analyses. Currently SMACK only supports the C language via
+the [Clang](http://clang.llvm.org) compiler, though we are working on providing
+support for additional languages. Targeting Boogie exploits a canonical
+platform which simplifies the implementation of algorithms for verification,
+model checking, and abstract interpretation. Currently, SMACK leverages the
+[Boogie](http://boogie.codeplex.com) and [Corral](http://corral.codeplex.com)
+verifiers.
 
-and finally verifies `simple.bpl` with the [Boogie](http://boogie.codeplex.com)
-or [Corral/Duality](http://corral.codeplex.com) verifiers
+Consult [the Wiki](https://github.com/smackers/smack/wiki) for system
+requirements, installation, usage, and everything else.
 
-    boogie simple.bpl
-
-concluding that the original program `simple.c` is verified to be correct.
-While SMACK is designed to be a *modular* verifier, for our convenience, this
-whole process has also been wrapped into a single command in SMACK:
-
-    smackverify.py simple.c -o simple.bpl
-    
-which equally reports that the program `simple.c` is verified.
-
-## Further Information
-
-For requirements, installation, usage, and whatever else, please consult the
-[SMACK Wiki on Github](https://github.com/smackers/smack/wiki).
+*We are very interested in your experience using SMACK. Please do contact
+[Zvonimir](mailto:zvonimir@cs.utah.edu) or
+[Michael](mailto:michael.emmi@gmail.com) with any possible feedback.*

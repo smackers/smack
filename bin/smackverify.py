@@ -12,7 +12,7 @@ import argparse
 import platform
 from smackgen import *
 
-VERSION = '1.5.0'
+VERSION = '1.5.1'
 
 def verifyParser():
   # parse command line arguments
@@ -20,7 +20,9 @@ def verifyParser():
   parser.add_argument('--verifier-options', dest='verifierOptions', default='',
                       help='pass arguments to the backend verifier (e.g., --verifier-options="/trackAllVars /staticInlining")')
   parser.add_argument('--time-limit', metavar='N', dest='timeLimit', default='1200', type=int,
-                      help='Boogie time limit in seconds')
+                      help='Verifier or solver time limit in seconds [default: %(default)s]')
+  parser.add_argument('--max-violations', metavar='N', dest='maxViolations', default='1', type=int,
+                      help='Limit the number of reported assertion violations [default: %(default)s]')
   parser.add_argument('--smackd', dest='smackd', action="store_true", default=False,
                       help='output JSON format for SMACKd')
   return parser
@@ -40,13 +42,11 @@ def generateSourceErrorTrace(boogieOutput, bplFileName):
 
   sourceTrace = '\nSMACK verifier version ' + VERSION + '\n\n'
   for traceLine in boogieOutput.splitlines(True):
-    resultMatch = re.match('Boogie .* (\d+) verified, (\d+) error.*', traceLine)
+    resultMatch = re.match('Boogie .* f(inished with .*)', traceLine)
     traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
     errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (.*)', traceLine)
     if resultMatch:
-      verified = int(resultMatch.group(1))
-      errors = int(resultMatch.group(2))
-      sourceTrace += '\nFinished with ' + str(verified) + ' verified, ' + str(errors) + ' errors\n'
+      sourceTrace += '\nF' + resultMatch.group(1)
     elif traceMatch:
       spaces = str(traceMatch.group(1))
       filename = str(traceMatch.group(2))
@@ -121,57 +121,63 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   print json_string
 
-def verify(verifier, bplFileName, timeLimit, unroll, debug, verifierOptions, smackd):
-  if verifier == 'boogie':
-    # invoke Boogie
-    boogieCommand = ['boogie', bplFileName, '/nologo', '/errorLimit:1', '/timeLimit:' + str(timeLimit)]
-    if unroll is not None:
-      boogieCommand += ['/loopUnroll:' + str(unroll)]
-    boogieCommand += verifierOptions.split()
-    p = subprocess.Popen(boogieCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    boogieOutput = p.communicate()[0]
+def verify(args):
 
-    if p.returncode:
-      print >> sys.stderr, boogieOutput
-      sys.exit("SMACK encountered an error when invoking Boogie. Exiting...")
-    if debug:
-      return boogieOutput
-    sourceTrace = generateSourceErrorTrace(boogieOutput, bplFileName)
+  if args.verifier == 'boogie':
+    command = "boogie %s" % args.outfile
+    command += " /nologo"
+    command += " /timeLimit:%s" % args.timeLimit
+    command += " /errorLimit:%s" % args.maxViolations
+    command += " /loopUnroll:%d" % (args.unroll + args.loopLimit)
+
+  elif args.verifier == 'corral':
+    command = "corral %s" % args.outfile
+    command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate"
+    command += " /killAfter:%s" % args.timeLimit
+    command += " /timeLimit:%s" % args.timeLimit
+    command += " /cex:%s" % args.maxViolations
+    command += " /maxStaticLoopBound:%d" % args.loopLimit
+    command += " /recursionBound:%d" % args.unroll
+
+  else:
+    # TODO why isn't unroll a parameter??
+    command = "corral %s" % args.outfile
+    command += "/tryCTrace /useDuality /recursionBound:10000"
+
+  if args.bitprecise:
+    x = "bopt:" if args.verifier != 'boogie' else ""
+    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0" % (x,x)
+
+  if args.verifierOptions:
+    command += " " + args.verifierOptions
+
+  try:
+    p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = p.communicate()[0]
+
+  except OSError:
+    print >> sys.stderr
+    sys.exit("Error executing command:\n%s" % command)
+
+  if p.returncode:
+    print >> sys.stderr, output
+    sys.exit("SMACK encountered an error when invoking %s. Exiting..." % args.verifier)
+
+  # TODO clean up the following mess
+  if args.verifier == 'boogie':
+    if args.debug:
+      return output
+    sourceTrace = generateSourceErrorTrace(output, args.outfile)
     if sourceTrace:
       return sourceTrace
     else:
-      return boogieOutput
-  elif verifier == 'corral':
-    # invoke Corral
-    corralCommand = ['corral', bplFileName, '/tryCTrace']
-    if unroll is not None:
-      corralCommand += ['/recursionBound:' + str(unroll)]
-    corralCommand += verifierOptions.split()
-    p = subprocess.Popen(corralCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    corralOutput = p.communicate()[0]
+      return output
 
-    if p.returncode:
-      print >> sys.stderr, corralOutput
-      sys.exit("SMACK encountered an error when invoking Corral. Exiting...")
-    if smackd:
-      smackdOutput(corralOutput)
-    else:
-      return corralOutput
   else:
-    # invoke Duality
-    dualityCommand = ['corral', bplFileName, '/tryCTrace', '/useDuality']
-    dualityCommand += ['/recursionBound:10000'] # hack for providing infinite recursion bound
-    dualityCommand += verifierOptions.split()
-    p = subprocess.Popen(dualityCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    dualityOutput = p.communicate()[0]
-
-    if p.returncode:
-      print >> sys.stderr, dualityOutput
-      sys.exit("SMACK encountered an error when invoking Duality. Exiting...")
-    if smackd:
-      smackdOutput(dualityOutput)
+    if args.smackd:
+      smackdOutput(output)
     else:
-      return dualityOutput
+      return output
  
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Checks the input LLVM file for assertion violations.', parents=[verifyParser()])
@@ -186,6 +192,9 @@ if __name__ == '__main__':
     elif sysArgv[i] == '--time-limit':
       del sysArgv[i]
       del sysArgv[i]
+    elif sysArgv[i] == '--max-violations':
+      del sysArgv[i]
+      del sysArgv[i]
     elif sysArgv[i].startswith('--verifier-options'):
       del sysArgv[i]
 
@@ -197,6 +206,5 @@ if __name__ == '__main__':
     outputFile.write(bpl)
     outputFile.close()
 
-  print(verify(args.verifier, args.outfile, args.timeLimit, args.unroll,
-    args.debug, args.verifierOptions, args.smackd))
+  print(verify(args))
 

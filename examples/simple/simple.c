@@ -1,16 +1,16 @@
 // simple.c
-#include "../../include/smack/smack.h"
+#include "smack.h"
 
 int incr(int x) {
   return x + 1;
 }
 
 int main(void) {
-  int a;
+  int a, b;
 
-  a = 1;
+  a = b = __VERIFIER_nondet_int();
   a = incr(a);
-  assert(a == 2);
+  assert(a == b + 1);
   return 0;
 }
 

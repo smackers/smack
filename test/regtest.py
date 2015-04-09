@@ -1,154 +1,154 @@
 #! /usr/bin/env python
 
+import yaml
+import argparse
+from os import path
 import subprocess
 import re
-import argparse
+import glob
 import time
-from collections import namedtuple
-import os.path
+import sys
 
-RegTest = namedtuple('RegTest', 'name boogie corral duality unroll')
-
-# list of regression tests with the expected outputs
-tests = [
-  RegTest('hello',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('hello_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('simple',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('simple_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('simple_pre',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('simple_pre_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('simple_pre1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('simple_pre1_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('simple_pre2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('simple_pre2_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('simple_pre3',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('simple_pre3_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-#  RegTest('simple_double_free',    r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('pointers',              r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('pointers_fail',         r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('pointers1',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('pointers1_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('pointers2',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('pointers2_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('pointers3',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('pointers3_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('globals',               r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('globals_fail',          r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('loop',                  r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('loop_fail',             r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-  RegTest('loop1',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('loop1_fail',            r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-  RegTest('nondet',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('printfs',               r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_return',         r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_init',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_init_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('extern_struct',         r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('extern_func',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('extern_mem',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('extern_mem_fail',       r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('smack_code_call',       r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('smack_code_call_fail',  r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('return_label',          r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_cast',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_cast_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('struct_cast1',          r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_cast1_fail',     r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('nested_struct',         r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('nested_struct_fail',    r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('nested_struct1',        r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('nested_struct1_fail',   r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('nested_struct2',        r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('nested_struct2_fail',   r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('struct_assign',         r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('struct_assign_fail',    r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('func_ptr',              r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('func_ptr_fail',         r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('func_ptr1',             r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('func_ptr1_fail',        r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('array',                 r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('array1',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('array1_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('array2',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('array2_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-  RegTest('array3',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('array3_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-  RegTest('array4',                r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('array4_fail',           r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-#  RegTest('array_free',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-#  RegTest('array_free_fail',       r'0 verified, 3 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-#  RegTest('array_free1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-#  RegTest('array_free1_fail',      r'0 verified, 4 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-#  RegTest('array_free2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-#  RegTest('array_free2_fail',      r'0 verified, 5 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-  RegTest('lock',                  r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('lock_fail',             r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('ase_example',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 11),
-  RegTest('ase_example_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 11),
-  RegTest('two_arrays',            r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays1',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays2',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays3',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays4',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays5',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays6',           r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('two_arrays6_fail',      r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2),
-  RegTest('floats_in_memory',      r'1 verified, 0 errors?', r'Program has no bugs', r'Program has no bugs', 2),
-  RegTest('floats_in_memory_fail', r'0 verified, 1 errors?', r'This assertion can fail', r'This assertion can fail', 2)
-]
+OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
+APPEND_FIELDS = ['flags']
 
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
-
+  
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests(verifier):
-  passed = failed = 0
-  for test in tests:
-    
-    for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
-    
-      print "{0:>25} {1:>16}:".format(test.name, "(" + mem + ")"),
+def get_result(output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out|Corral timed out', output):
+    return 'timeout'
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
+    return 'verified'
+  elif re.search(r'0 verified, [1-9]\d* errors?|can fail', output):
+    return 'error'
+  else:
+    return 'unknown'
 
-      if os.path.isfile(test.name + '.c'):
-        sourceFile = test.name + '.c'
-      elif os.path.isfile(test.name + '.cc'):
-        sourceFile = test.name + '.cc'
-      elif os.path.isfile(test[0] + '.cpp'):
-        sourceFile = test.name + '.cpp'
+def merge(metadata, yamldata):
 
-      # invoke SMACK
-      t0 = time.time()
-      p = subprocess.Popen(['smackverify.py', sourceFile, '--verifier=' + verifier,
-                            '--unroll=' + str(test.unroll), '--mem-mod=' + mem, '-o', test.name +'.bpl'],
-                            stdout=subprocess.PIPE)
-      
-      smackOutput = p.communicate()[0]
-      elapsed = time.time() - t0
+  for key in OVERRIDE_FIELDS:
+    if key in yamldata:
+      metadata[key] = yamldata[key]
 
-      # check SMACK output
-      if re.search(getattr(test, verifier), smackOutput):
-        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
-        passed += 1
+  for key in APPEND_FIELDS:
+    if key in yamldata:
+      if key in metadata:
+        metadata[key] += yamldata[key]
       else:
-        print red('FAILED')
-        failed += 1
+        metadata[key] = yamldata[key]
+
+def metadata(file):
+  m = {}
+  prefix = []
+
+  for d in path.dirname(file).split('/'):
+    prefix += [d]
+    yaml_file = path.join(*(prefix + ['config.yml']))
+    if path.isfile(yaml_file):
+      with open(yaml_file, "r") as f:
+        data = yaml.safe_load(f)
+        merge(m,data)
+
+  with open(file, "r") as f:
+    for line in f.readlines():
+
+      match = re.search(r'@skip', line)
+      if match:
+        m['skip'] = True
+
+      match = re.search(r'@flag (.*)',line)
+      if match:
+        m['flags'] += [match.group(1).strip()]
+
+      match = re.search(r'@expect (.*)',line)
+      if match:
+        m['expect'] = match.group(1).strip()
+
+  if not m['skip'] and not 'expect' in m:
+    print red("WARNING: @expect MISSING IN %s" % file)
+    m['expect'] = 'verified'
+
+  return m
   
-  return passed, failed
+parser = argparse.ArgumentParser()
+parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
+args = parser.parse_args()
 
-if __name__ == '__main__':
+print "Running regression tests..."
+print
 
-  # parse command line arguments
-  parser = argparse.ArgumentParser(description='Runs regressions in this folder.')
-  parser.add_argument('--verifier', dest='verifier', choices=['boogie', 'corral', 'duality'], default=['corral'], nargs='*',
-                      help='choose verifiers to be used')
-  args = parser.parse_args()
+passed = failed = timeouts = unknowns = 0
 
-  for verifier in args.verifier:
-    print '\nRunning regressions using', verifier
-    passed, failed = runtests(verifier)
+try:
+  for test in glob.glob("./**/*.c"):
+    meta = metadata(test)
+
+    if meta['skip'] == True:
+      continue
+
+    if meta['skip'] != False and not args.exhaustive:
+      continue
+
+    print "{0:>20}".format(test)
+    sys.stdout.flush()
+
+    cmd = ['smackverify.py', test]
+    cmd += ['--time-limit', str(meta['time-limit'])]
+    cmd += ['-o', path.splitext(test)[0] + '.bpl']
+    cmd += meta['flags']
+
+    for memory in meta['memory'][:100 if args.exhaustive else 1]:
+      cmd += ['--mem-mod=' + memory]
+
+      for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
+        cmd += ['--verifier=' + verifier]
+
+        print "{0:>20} {1:>10}    :".format(memory, verifier),
+
+        try:
+          t0 = time.time()
+          p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          out, err  = p.communicate()
+          elapsed = time.time() - t0
+
+        except OSError:
+          print >> sys.stderr
+          sys.exit("Error executing command:\n%s" % " ".join(cmd))
+
+        result = get_result(out+err)
+
+        if result == meta['expect']:
+          print green('PASSED '),
+          passed += 1
+
+        elif result == 'timeout':
+          print red('TIMEOUT'),
+          timeouts += 1
+
+        elif result == 'unknown':
+          print red('UNKNOWN'),
+          unknowns += 1
+
+        else:
+          print red('FAILED '),
+          failed += 1
+
+        print '  [%.2fs]' % round(elapsed, 2)
+        sys.stdout.flush()
   
-    print '\nPASSED count: ', passed
-    print 'FAILED count: ', failed
+except KeyboardInterrupt:
+  pass
 
+print
+print ' PASSED count:', passed
+print ' FAILED count:', failed
+
+if timeouts > 0:
+  print 'TIMEOUT count:', timeouts
+
+if unknowns > 0:
+  print 'UNKNOWN count:', unknowns

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "smack/DSAAliasAnalysis.h"
+#include <iostream>
 
 namespace smack {
 
@@ -52,6 +53,12 @@ vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M
   return sis;
 }
 
+bool DSAAliasAnalysis::isComplicatedNode(const llvm::DSNode* N) {
+  return
+    N->isIntToPtrNode() || N->isPtrToIntNode() ||
+    N->isExternalNode() || N->isUnknownNode();
+}
+
 bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
     = nodeEqs->getEquivalenceClasses();
@@ -70,6 +77,15 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
     if (staticInits[i] == nn)
       return true;
   return false;
+}
+
+bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
+  const llvm::Function *F = inst->getParent()->getParent();
+  return TS->isFieldDisjoint(ptr, F);
+}
+
+bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
+  return TS->isFieldDisjoint(V, offset);
 }
 
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
@@ -160,21 +176,27 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
   assert(N1 && "Expected non-null node.");
   assert(N2 && "Expected non-null node.");
 
-  if ((N1->isCompleteNode() || N2->isCompleteNode()) &&
-      !(N1->isExternalNode() && N2->isExternalNode()) &&
-      !(N1->isUnknownNode() || N2->isUnknownNode())) {
+  if (N1->isIncompleteNode() && N2->isIncompleteNode())
+    goto surrender;
 
-    if (!equivNodes(N1,N2))
-      return NoAlias;
+  if (isComplicatedNode(N1) && isComplicatedNode(N2))
+    goto surrender;
+
+  if (!equivNodes(N1,N2))
+    return NoAlias;
+
+  if (isMemcpyd(N1) || isMemcpyd(N2))
+    goto surrender;
     
-    if (!isMemcpyd(N1) && !isMemcpyd(N2) 
-      && !isStaticInitd(N1) && !isStaticInitd(N2) 
-      && disjoint(&LocA,&LocB))
-      return NoAlias;
-  }
+  if (isStaticInitd(N1) || isStaticInitd(N2))
+    goto surrender;
+
+  if (disjoint(&LocA,&LocB))
+    return NoAlias;
   
   // FIXME: we could improve on this by checking the globals graph for aliased
   // global queries...
+surrender:
   return AliasAnalysis::alias(LocA, LocB);
 }
 

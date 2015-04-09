@@ -4,6 +4,7 @@
 #include "smack/BoogieAst.h"
 #include "llvm/IR/Constants.h"
 #include <sstream>
+#include <iostream>
 
 namespace smack {
 
@@ -70,26 +71,28 @@ const Expr* Expr::impl(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Imp, l, r);
 }
 
-const Expr* Expr::lit(int i) {
-  return new LitExpr(i);
-}
-const Expr* Expr::lit(int i, unsigned w) {
-  switch (w) {
-  case 0:
-    return new LitExpr(i);
-  case 8:
-    return new LitExpr(LitExpr::Bv8, i);
-  case 32:
-    return new LitExpr(LitExpr::Bv32, i);
-  case 64:
-    return new LitExpr(LitExpr::Bv64, i);
-  default:
-    assert(false && "unexpected integer width.");
-  }
+const Expr* Expr::lit(bool b) {
+  return new BoolLit(b);
 }
 
-const Expr* Expr::lit(bool b) {
-  return new LitExpr(b);
+const Expr* Expr::lit(string v) {
+  return new IntLit(v);
+}
+
+const Expr* Expr::lit(unsigned long v) {
+  return new IntLit(v);
+}
+
+const Expr* Expr::lit(long v) {
+  return new IntLit(v);
+}
+
+const Expr* Expr::lit(string v, unsigned w) {
+  return new BvLit(v,w);
+}
+
+const Expr* Expr::lit(unsigned long v, unsigned w) {
+  return new BvLit(v,w);
 }
 
 const Expr* Expr::neq(const Expr* l, const Expr* r) {
@@ -124,21 +127,21 @@ const Attr* Attr::attr(string s, string v) {
 }
 
 const Attr* Attr::attr(string s, int v) {
-  return attr(s, vector<const Expr*>(1, Expr::lit(v)));
+  return attr(s, vector<const Expr*>(1, Expr::lit((long) v)));
 }
 
 const Attr* Attr::attr(string s, string v, int i) {
   vector<const AttrVal*> vals;
   vals.push_back(new StrVal(v));
-  vals.push_back(new ExprVal(Expr::lit(i)));
+  vals.push_back(new ExprVal(Expr::lit((long) i)));
   return new Attr(s, vals);
 }
 
 const Attr* Attr::attr(string s, string v, int i, int j) {
   vector<const AttrVal*> vals;
   vals.push_back(new StrVal(v));
-  vals.push_back(new ExprVal(Expr::lit(i)));
-  vals.push_back(new ExprVal(Expr::lit(j)));
+  vals.push_back(new ExprVal(Expr::lit((long) i)));
+  vals.push_back(new ExprVal(Expr::lit((long) j)));
   return new Attr(s, vals);
 }
 
@@ -159,6 +162,10 @@ const Stmt* Stmt::assert_(const Expr* e) {
 
 const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
   return new AssignStmt(vector<const Expr*>(1, e), vector<const Expr*>(1, f));
+}
+
+const Stmt* Stmt::assign(vector<const Expr*> lhs, vector<const Expr*> rhs) {
+  return new AssignStmt(lhs, rhs);
 }
 
 const Stmt* Stmt::assume(const Expr* e) {
@@ -427,27 +434,16 @@ void FunExpr::print(ostream& os) const {
   print_seq<const Expr*>(os, args, "(", ", ", ")");
 }
 
-void LitExpr::print(ostream& os) const {
-  switch (lit) {
-  case True:
-    os << "true";
-    break;
-  case False:
-    os << "false";
-    break;
-  case Num:
-    os << val;
-    break;
-  case Bv8:
-    os << val << "bv8";
-    break;
-  case Bv32:
-    os << val << "bv32";
-    break;
-  case Bv64:
-    os << val << "bv64";
-    break;
-  }
+void BoolLit::print(ostream& os) const {
+  os << (val ? "true" : "false");
+}
+
+void IntLit::print(ostream& os) const {
+  os << val;
+}
+
+void BvLit::print(ostream& os) const {
+  os << val << "bv" << width;
 }
 
 void NegExpr::print(ostream& os) const {

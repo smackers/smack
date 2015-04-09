@@ -10,7 +10,7 @@ import argparse
 import io
 import platform
 
-VERSION = '1.5.0'
+VERSION = '1.5.1'
 
 
 def is_valid_file(parser, arg):
@@ -28,20 +28,26 @@ def llvm2bplParser():
                       help='input LLVM file')
   parser.add_argument('-o', '--output', dest='outfile', metavar='<file>', default='a.bpl',
                       type=str,
-                      help='output Boogie file (default: %(default)s)')
+                      help='output Boogie file [default: %(default)s]')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
   parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
-                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses)')
+                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
+  parser.add_argument('--bit-precise', dest='bitprecise', action="store_true", default=False,
+                      help='enable bit precision')
+  parser.add_argument('--no-byte-access-inference', dest='nobyteaccessinference', action="store_true", default=False,
+                      help='do not optimize bit-precision with DSA')
   return parser
 
 
-def llvm2bpl(infile, outfile, debugFlag, memImpls):
+def llvm2bpl(infile, outfile, debugFlag, memImpls, bitPrecise, noByteAccessInference):
     
   cmd = ['smack', '-source-loc-syms', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
-  cmd.append('-o=' + outfile)
+  cmd.append('-bpl=' + outfile)
+  if bitPrecise: cmd.append('-bit-precise')
+  if noByteAccessInference: cmd.append('-no-byte-access-inference')
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   smackOutput = p.communicate()[0]
 
@@ -65,7 +71,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod)
+  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise, args.nobyteaccessinference)
 
   # write final output
   with open(args.outfile, 'w') as outputFile:
