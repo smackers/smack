@@ -113,18 +113,16 @@ def process_test(cmd, test, memory, verifier, expect, log_file):
     # get the test results
     result = get_result(out+err)
     if result == expect:
-      str_result += 'PASSED '
-      str_result += '  [%.2fs]' % round(elapsed, 2)
-      return green(str_result, log_file)
+      str_result += green('PASSED ', log_file)
     elif result == 'timeout':
-      str_result += 'TIMEOUT'
+      str_result += red('TIMEOUT', log_file)
     elif result == 'unknown':
-      str_result += 'UNKNOWN'
+      str_result += red('UNKNOWN', log_file)
     else:
-      str_result += 'FAILED '
+      str_result += red('FAILED ', log_file)
 
     str_result += '  [%.2fs]' % round(elapsed, 2)
-    return red(str_result, log_file)
+    return str_result
 
 passed = failed = timeouts = unknowns = 0
 def tally_result(result):
