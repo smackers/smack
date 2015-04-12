@@ -10,8 +10,6 @@ import re
 import argparse
 import platform
 
-VERSION = '1.5.1'
-
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
   
