@@ -48,13 +48,12 @@ def check_command(cmd):
     check("%s is executable" % cmd, rc == 1 or rc == 2)
 
 def check_verifier(cmd):
-  name = cmd.capitalize()
-  exe = full_path(name)
-  var = name.upper()
+  exe = full_path(cmd)
+  var = cmd.upper()
 
   if exe is not None:
-    check("%s is a batch script" % name, '#!/bin/bash' in open(exe).read())
-    check("%s redirects to %s" % (name, var), ("$%s $@" % var) in open(exe).read())
+    check("%s is a batch script" % cmd, '#!/bin/bash' in open(exe).read())
+    check("%s redirects to %s" % (cmd, var), ("$%s $@" % var) in open(exe).read())
 
   check("%s environment variable is set" % var, var in os.environ)
   if var in os.environ:
