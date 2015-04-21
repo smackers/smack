@@ -759,6 +759,8 @@ string SmackRep::code(llvm::CallInst& ci) {
 }
 
 string SmackRep::getPrelude() {
+  string pointerType = "i64";
+
   stringstream s;
   s << endl;
   s << "// Memory region declarations";
@@ -773,13 +775,26 @@ string SmackRep::getPrelude() {
     }
   }
   s << endl;
-  s << "// Type declarations" << endl;
-  for (unsigned i = 1; i <= 64; i <<= 1) {
-    s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
-  }
-  s << "type ref = " << bits_type(ptrSizeInBits) << ";" << endl;
+  s << "type ref = " << pointerType << ";" << endl;
   s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl;
   s << endl;
+
+  const string predicates[] = {"$sge", "$sgt", "$sle", "$slt"};
+  for (unsigned i = 0; i < 4; i++) {
+
+    s << "function {:inline} " << predicates[i] << ".ref.bool(p1: ref, p2: ref)"
+      << " returns (bool)"
+      << " { " << predicates[i] << "." << pointerType << ".bool(p1,p2) }"
+      << endl;
+  }
+  const string operations[] = {"$add", "$mul"};
+  for (unsigned i = 0; i < 2; i++) {
+
+    s << "function {:inline} " << operations[i] << ".ref(p1: ref, p2: ref)"
+      << " returns (ref)"
+      << " { " << operations[i] << "." << pointerType << "(p1,p2) }"
+      << endl;
+  }
 
   s << "axiom " << NULL_VAL << " == ";
   lit(0u,ptrSizeInBits)->print(s);
@@ -1039,19 +1054,19 @@ string SmackRep::memcpyProc(llvm::Function* F, int dstReg, int srcReg) {
       s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "  assume (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
         << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
     s << "}" << endl;
   } else {
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "ensures (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
         << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "ensures (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
     }
   }
@@ -1082,11 +1097,11 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
       unsigned size = 8 << i;
       s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
       s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "  assume (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "  assume (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
@@ -1095,11 +1110,11 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
     string val = "val";
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "ensures (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "ensures (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
       val = val + "++" + val;
     }
