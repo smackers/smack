@@ -33,7 +33,9 @@ void __SMACK_dummy(int v) {
 
 #define xstr(s) str(s)
 #define str(s) #s
-#define foo(x) 4 ## x
+
+#define RECORD_PROC(type) \
+  procedure boogie_si_record_ ## type (i: type);
 
 #define UNINTERPRETED_UNARY_OP(type,name) \
   function name.type(p: type) returns (type);
@@ -348,15 +350,21 @@ void __SMACK_decls() {
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
-  D("procedure boogie_si_record_bool(b: bool);");
-  D("procedure boogie_si_record_i1(i: i1);");
-  D("procedure boogie_si_record_i8(i: i8);");
-  D("procedure boogie_si_record_i16(i: i16);");
-  D("procedure boogie_si_record_i32(i: i32);");
-  D("procedure boogie_si_record_i64(i: i64);");
-  D("procedure boogie_si_record_ref(i: ref);");
-  D("procedure boogie_si_record_float(f: float);");
   D("const $MOP: $mop;");
+
+  DECLARE(RECORD_PROC, bool);
+  DECLARE(RECORD_PROC, i1);
+  DECLARE(RECORD_PROC, i8);
+  DECLARE(RECORD_PROC, i16);
+  DECLARE(RECORD_PROC, i32);
+  DECLARE(RECORD_PROC, i64);
+  DECLARE(RECORD_PROC, bv1);
+  DECLARE(RECORD_PROC, bv8);
+  DECLARE(RECORD_PROC, bv16);
+  DECLARE(RECORD_PROC, bv32);
+  DECLARE(RECORD_PROC, bv64);
+  DECLARE(RECORD_PROC, ref);
+  DECLARE(RECORD_PROC, float);
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");

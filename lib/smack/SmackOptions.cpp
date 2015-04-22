@@ -20,7 +20,11 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
 );
 
 const llvm::cl::opt<bool> SmackOptions::BitPrecise(
-  "bit-precise", llvm::cl::desc("Model bits and bit operations precisely.")
+  "bit-precise", llvm::cl::desc("Model non-pointer values as bit vectors.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
+  "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(

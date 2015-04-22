@@ -33,6 +33,7 @@ public:
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(bool b);
   static const Expr* lit(string v);
+  static const Expr* lit(unsigned v) { return lit((unsigned long) v); }
   static const Expr* lit(unsigned long v);
   static const Expr* lit(long v);
   static const Expr* lit(string v, unsigned w);

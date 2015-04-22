@@ -31,6 +31,7 @@ public:
 
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
+  static const string PTR_TYPE;
 
   static const string NULL_VAL;
   static const string GLOBALS_BOTTOM;
@@ -87,9 +88,9 @@ public:
 private:
   void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
 
-  const Expr* pa(const Expr* base, unsigned index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
-  const Expr* pa(const Expr* base, const Expr* index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
-  const Expr* pa(const Expr* base, const Expr* index, const Expr* size, unsigned i_size = 0, unsigned t_size = 0);
+  const Expr* pa(const Expr* base, unsigned long index, unsigned long size);
+  const Expr* pa(const Expr* base, const Expr* index, unsigned long size);
+  const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
   
   string indexedName(string name, int idx);
   string indexedName(string name, vector<string> idxs);
@@ -116,8 +117,16 @@ public:
   bool isExternal(const llvm::Value* v);
   void collectRegions(llvm::Module &M);
 
-  string bits_type(unsigned width);
-  string int_type(unsigned width);
+  string pointerType();
+  string intType(unsigned width);
+
+  const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
+  const Expr* pointerLit(unsigned long v);
+  const Expr* pointerLit(long v);
+  const Expr* integerLit(unsigned v, unsigned width) { return integerLit((unsigned long) v, width); }
+  const Expr* integerLit(unsigned long v, unsigned width);
+  const Expr* integerLit(long v, unsigned width);
+
   virtual string type(const llvm::Type* t);
   virtual string type(const llvm::Value* v);
   
@@ -125,13 +134,6 @@ public:
   const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
 
   const Expr* lit(const llvm::Value* v);
-
-  const Expr* lit(bool val);
-  const Expr* lit(string val, unsigned width = 0);
-  const Expr* lit(unsigned val, unsigned width = 0);
-  const Expr* lit(unsigned long val, unsigned width = 0);
-  const Expr* lit(long val, unsigned width = 0);
-
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
   const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
@@ -186,7 +188,6 @@ public:
   bool hasStaticInits();
   Decl* getStaticInit();
   Decl* getInitFuncs();
-  virtual string getPtrType();
   virtual string getPrelude();
 
   virtual const Expr* declareIsExternal(const Expr* e);
