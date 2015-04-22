@@ -521,6 +521,10 @@ public:
     return procs;
   }
 };
+
+ostream& operator<<(ostream& os, const Expr& e);
+ostream& operator<<(ostream& os, const Expr* e);
+
 }
 
 #endif // BOOGIEAST_H

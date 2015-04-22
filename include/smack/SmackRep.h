@@ -95,6 +95,10 @@ private:
   string indexedName(string name, int idx);
   string indexedName(string name, vector<string> idxs);
 
+  const Expr* bitConversion(const Expr* e, bool src, bool dst);
+  const Expr* pointerToInteger(const Expr* e);
+  const Expr* integerToPointer(const Expr* e);
+
 public:
   bool isMallocOrFree(const llvm::Function* f);
   bool isIgnore(const llvm::Function* f);
@@ -162,6 +166,9 @@ public:
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, const llvm::User& u);
   string code(llvm::CallInst& ci);
+
+  string name(const llvm::Function* F, initializer_list<unsigned> regions);
+
   string procName(const llvm::User& U);
   string procName(const llvm::User& U, llvm::Function* F);
   vector<string> decl(llvm::Function* F);
@@ -192,8 +199,8 @@ public:
 
   virtual const Expr* declareIsExternal(const Expr* e);
 
-  virtual string memcpyProc(llvm::Function* F, int dstReg, int srcReg);
-  virtual string memsetProc(llvm::Function* F, int dstReg);
+  virtual string memcpyProc(llvm::Function* F, unsigned dstReg, unsigned srcReg);
+  virtual string memsetProc(llvm::Function* F, unsigned dstReg);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {

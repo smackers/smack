@@ -108,14 +108,6 @@ void __SMACK_dummy(int v) {
 
 void __SMACK_decls() {
 
-  D("type i1 = int;");
-  D("type i8 = int;");
-  D("type i16 = int;");
-  D("type i32 = int;");
-  D("type i64 = int;");
-
-  D("const $0.ref, $1.ref, $2.ref, $3.ref, $4.ref, $5.ref, $6.ref, $7.ref: ref;");
-
   DECLARE_EACH_BV_TYPE(BVBUILTIN_UNARY_OP, $neg, bvneg)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sub, bvsub)
@@ -370,7 +362,7 @@ void __SMACK_decls() {
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
 
-  D("procedure $malloc(n: size) returns (p: ref)\n"
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
     "  assume $sgt.ref.bool($CurrAddr, $0.ref);\n"
@@ -389,7 +381,7 @@ void __SMACK_decls() {
     "  $Alloc[p] := false;\n"
     "}");
 
-  D("procedure $alloca(n: size) returns (p: ref)\n"
+  D("procedure $alloca(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
     "  assume $sgt.ref.bool($CurrAddr, $0.ref);\n"
@@ -404,10 +396,10 @@ void __SMACK_decls() {
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
-  D("var $Size: [ref] size;");
+  D("var $Size: [ref] ref;");
   D("var $CurrAddr:ref;");
 
-  D("procedure $malloc(n: size) returns (p: ref);\n"
+  D("procedure $malloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
@@ -424,7 +416,7 @@ void __SMACK_decls() {
     "ensures !$Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
 
-  D("procedure $alloca(n: size) returns (p: ref);\n"
+  D("procedure $alloca(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
@@ -439,7 +431,7 @@ void __SMACK_decls() {
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
-  D("procedure $malloc(n: size) returns (p: ref);\n"
+  D("procedure $malloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
@@ -454,7 +446,7 @@ void __SMACK_decls() {
     "ensures !$Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
 
-  D("procedure $alloca(n: size) returns (p: ref);\n"
+  D("procedure $alloca(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"

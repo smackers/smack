@@ -12,6 +12,9 @@ import sys
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
 APPEND_FIELDS = ['flags']
 
+def bold(text):
+  return '\033[1m' + text + '\033[0m'
+
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
   
@@ -93,7 +96,7 @@ try:
     if meta['skip'] != False and not args.exhaustive:
       continue
 
-    print "{0:>20}".format(test)
+    print bold("{0:>20}".format(test))
     sys.stdout.flush()
 
     cmd = ['smackverify.py', test]
