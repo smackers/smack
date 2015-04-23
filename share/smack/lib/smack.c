@@ -277,7 +277,7 @@ void __SMACK_decls() {
   D("function $frem(f1:float, f2:float) returns (float);");
   D("function $ffalse(f1:float, f2:float) returns (i1);");
   D("function $ftrue(f1:float, f2:float) returns (i1);");
-  D("function $foeq(f1:float, f2:float) returns (i1);");
+  D("function {:inline} $foeq(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
   D("function $foeq.bool(f1:float, f2:float) returns (bool);");
   D("function $foge(f1:float, f2:float) returns (i1);");
   D("function $fogt(f1:float, f2:float) returns (i1);");

@@ -165,7 +165,8 @@ def smackGenerate(sysArgv):
   else:
     sys.exit('Unexpected source file extension `' + fileExtension + '\'')
 
-  bpl = llvm2bpl(inputFile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise, args.nobyteaccessinference)
+  args.infile = inputFile
+  bpl = llvm2bpl(args)
   inputFile.close()
 
   p = re.compile('procedure\s+([^\s(]*)\s*\(')
