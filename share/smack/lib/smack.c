@@ -224,6 +224,12 @@ void __SMACK_decls() {
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
 
+  // FIXME the following definitions of $trunc are unsound
+  // FIXME for arguments larger than the target width
+  // FIXME $trunc.i8.i1(5) != 5
+  // FIXME (forall x: int :: -128 <= x && x < 128 ==> $trunc.iXX.i8(x) == x)
+  // FIXME (forall x: int :: $trunc.iXX.i1(x) == x % 2)
+
   DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{p});
   DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{p});
   DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{p});
@@ -234,6 +240,11 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{p});
   DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{p});
   DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{p});
+
+  // FIXME the following definitions of $zext are unsound
+  // FIXME for negative arguments
+  // FIXME $zext.i1.i8(-1) != -1
+  // FIXME (forall x: int :: x >= 0 ==> $zext.iXX.iYY(x) == x)
 
   DECLARE(INLINE_CONVERSION,i1,i8,$zext,{p});
   DECLARE(INLINE_CONVERSION,i1,i16,$zext,{p});

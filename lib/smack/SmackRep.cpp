@@ -282,12 +282,22 @@ const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size) {
   return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", idx, size));
 }
 
-const Expr* SmackRep::pointerToInteger(const Expr* e) {
-  return bitConversion(e, SmackOptions::BitPrecisePointers, SmackOptions::BitPrecise);
+const Expr* SmackRep::pointerToInteger(const Expr* e, unsigned width) {
+  e = bitConversion(e, SmackOptions::BitPrecisePointers, SmackOptions::BitPrecise);
+  if (ptrSizeInBits < width)
+    e = Expr::fn(opName("$zext", {ptrSizeInBits, width}), e);
+  else if (ptrSizeInBits > width)
+    e = Expr::fn(opName("$trunc", {ptrSizeInBits, width}), e);
+  return e;
 }
 
-const Expr* SmackRep::integerToPointer(const Expr* e) {
-  return bitConversion(e, SmackOptions::BitPrecise, SmackOptions::BitPrecisePointers);
+const Expr* SmackRep::integerToPointer(const Expr* e, unsigned width) {
+  if (width < ptrSizeInBits)
+    e = Expr::fn(opName("$zext", {width, ptrSizeInBits}), e);
+  else if (width > ptrSizeInBits)
+    e = Expr::fn(opName("$trunc", {width, ptrSizeInBits}), e);
+  e = bitConversion(e, SmackOptions::BitPrecise, SmackOptions::BitPrecisePointers);
+  return e;
 }
 
 const Expr* SmackRep::bitConversion(const Expr* e, bool src, bool dst) {
@@ -668,45 +678,53 @@ vector<string> SmackRep::decl(llvm::Function* F) {
       P->addParam("dst", type(T->getParamType(0)));
       P->addParam("src", type(T->getParamType(1)));
       P->addParam("len", type(T->getParamType(2)));
-      P->addParam("align", type(T->getParamType(2)));
-      P->addParam("volatile", type(T->getParamType(2)));
+      P->addParam("align", type(T->getParamType(3)));
+      P->addParam("volatile", type(T->getParamType(4)));
       P->addBlock(new Block());
+
       vector<const Expr*> args;
-
-      // TODO convert arguments
-
       args.push_back(Expr::id("dst"));
       args.push_back(Expr::id("src"));
-      args.push_back(Expr::id("len"));
-      args.push_back(Expr::id("align"));
-      args.push_back(Expr::id("volatile"));
+      args.push_back(integerToPointer(Expr::id("len"),T->getParamType(2)->getIntegerBitWidth()));
+      args.push_back(integerToPointer(Expr::id("align"),T->getParamType(3)->getIntegerBitWidth()));
+      args.push_back(Expr::eq(Expr::id("volatile"), integerLit(1UL,1)));
       stringstream qualifiedName;
       P->insert(Stmt::call(indexedName("$memcpy",{r1,r2}), args));
       program.addDecl(P);
 
       decls.push_back(memcpyProc(r1,r2));
 
-    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U))
-      decls.push_back(memsetProc(getRegion(MSI->getOperand(0))));
+    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U)) {
+      unsigned r = getRegion(MSI->getOperand(0));
+      llvm::FunctionType* T = F->getFunctionType();
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program, indexedName(name,{r}));
+      P->addParam("dst", type(T->getParamType(0)));
+      P->addParam("val", type(T->getParamType(1)));
+      P->addParam("len", type(T->getParamType(2)));
+      P->addParam("align", type(T->getParamType(3)));
+      P->addParam("volatile", type(T->getParamType(4)));
+      P->addBlock(new Block());
+      vector<const Expr*> args;
+      args.push_back(Expr::id("dst"));
+      args.push_back(Expr::id("val"));
+      args.push_back(integerToPointer(Expr::id("len"),T->getParamType(2)->getIntegerBitWidth()));
+      args.push_back(integerToPointer(Expr::id("align"),T->getParamType(3)->getIntegerBitWidth()));
+      args.push_back(Expr::eq(Expr::id("volatile"), integerLit(1UL,1)));
+      P->insert(Stmt::call(indexedName("$memset",{r}), args));
+      program.addDecl(P);
 
-    else if (name == "malloc") {
+      decls.push_back(memsetProc(r));
+
+    } else if (name == "malloc") {
       llvm::Type* T = F->getFunctionType()->getParamType(0);
       assert (T->isIntegerTy() && "Expected integer argument.");
 
       unsigned width = T->getIntegerBitWidth();
-
-      const Expr* e = Expr::id("n");
-      if (ptrSizeInBits < width)
-        e = Expr::fn(opName("$trunc", {width, ptrSizeInBits}), e);
-      else if (ptrSizeInBits > width)
-        e = Expr::fn(opName("$zext", {width, ptrSizeInBits}), e);
-      e = integerToPointer(e);
-
       ProcDecl* P = (ProcDecl*) Decl::procedure(program,name);
       P->addParam("n", type(T));
       P->addRet("r", "ref");
       P->addBlock(new Block());
-      P->insert(Stmt::call("$alloc", e, "r"));
+      P->insert(Stmt::call("$alloc", integerToPointer(Expr::id("n"),width), "r"));
       program.addDecl(P);
 
     } else if (name == "free_") {
@@ -885,18 +903,10 @@ string SmackRep::getPrelude() {
     << endl;
   s << endl;
 
-  s << "// Pointer-number onversions" << endl;
+  s << "// Pointer-number conversions" << endl;
   for (unsigned i = 8; i <= 64; i <<= 1) {
-    if (i < ptrSizeInBits) {
-      s << functionDecl(opName("$p2i", {i}), {"p"}, {"ref", intType(i)}, Expr::fn(opName("$trunc", {ptrSizeInBits, i}), pointerToInteger(Expr::id("p")))) << endl;
-      s << functionDecl(opName("$i2p", {i}), {"p"}, {intType(i), "ref"}, integerToPointer(Expr::fn(opName("$zext", {i, ptrSizeInBits}), Expr::id("p")))) << endl;
-    } else if (i > ptrSizeInBits) {
-      s << functionDecl(opName("$p2i", {i}), {"p"}, {"ref", intType(i)}, Expr::fn(opName("$zext", {ptrSizeInBits, i}), pointerToInteger(Expr::id("p")))) << endl;
-      s << functionDecl(opName("$i2p", {i}), {"p"}, {intType(i), "ref"}, integerToPointer(Expr::fn(opName("$trunc", {i, ptrSizeInBits}), Expr::id("p")))) << endl;
-    } else {
-      s << functionDecl(opName("$p2i", {i}), {"p"}, {"ref", intType(i)}, pointerToInteger(Expr::id("p"))) << endl;
-      s << functionDecl(opName("$i2p", {i}), {"p"}, {intType(i), "ref"}, integerToPointer(Expr::id("p"))) << endl;
-    }
+    s << functionDecl(opName("$p2i", {i}), {"p"}, {"ref", intType(i)}, pointerToInteger(Expr::id("p"),i)) << endl;
+    s << functionDecl(opName("$i2p", {i}), {"p"}, {intType(i), "ref"}, integerToPointer(Expr::id("p"),i)) << endl;
   }
   s << endl;
 
@@ -1160,7 +1170,7 @@ string SmackRep::memsetProc(unsigned dstReg) {
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
   s << "procedure $memset." << dstReg;
-  s << "(dest: ref, val: ref, len: ref, align: ref, isvolatile: bool)";
+  s << "(dest: ref, val: " << intType(8) << ", len: ref, align: ref, isvolatile: bool)";
   s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
 
   for (unsigned i = 0; i < n; ++i)

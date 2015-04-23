@@ -95,8 +95,8 @@ private:
   string indexedName(string name, initializer_list<unsigned> idxs);
 
   const Expr* bitConversion(const Expr* e, bool src, bool dst);
-  const Expr* pointerToInteger(const Expr* e);
-  const Expr* integerToPointer(const Expr* e);
+  const Expr* pointerToInteger(const Expr* e, unsigned width);
+  const Expr* integerToPointer(const Expr* e, unsigned width);
 
 public:
   bool isMallocOrFree(const llvm::Function* f);
@@ -198,6 +198,7 @@ public:
 
   virtual const Expr* declareIsExternal(const Expr* e);
 
+private:
   virtual string memcpyProc(unsigned dstReg, unsigned srcReg);
   virtual string memsetProc(unsigned dstReg);
 };
