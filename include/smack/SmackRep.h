@@ -92,8 +92,7 @@ private:
   const Expr* pa(const Expr* base, const Expr* index, unsigned long size);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
   
-  string indexedName(string name, int idx);
-  string indexedName(string name, vector<string> idxs);
+  string indexedName(string name, initializer_list<unsigned> idxs);
 
   const Expr* bitConversion(const Expr* e, bool src, bool dst);
   const Expr* pointerToInteger(const Expr* e);
@@ -199,8 +198,8 @@ public:
 
   virtual const Expr* declareIsExternal(const Expr* e);
 
-  virtual string memcpyProc(llvm::Function* F, unsigned dstReg, unsigned srcReg);
-  virtual string memsetProc(llvm::Function* F, unsigned dstReg);
+  virtual string memcpyProc(unsigned dstReg, unsigned srcReg);
+  virtual string memsetProc(unsigned dstReg);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {

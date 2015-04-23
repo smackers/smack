@@ -203,23 +203,26 @@ string SmackRep::name(const llvm::Function* F, initializer_list<unsigned> region
   // }
 
   for (auto r : regions)
-    name << ".r" << r;
+    name << "." << r;
 
   return name.str();
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
+  unsigned r1 = getRegion(mci.getOperand(0));
+  unsigned r2 = getRegion(mci.getOperand(1));
   for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
     args.push_back(expr(mci.getOperand(i)));
-  return Stmt::call(name(mci.getCalledFunction(), {getRegion(mci.getOperand(0)), getRegion(mci.getOperand(1))}), args);
+  return Stmt::call(indexedName(naming.get(*mci.getCalledFunction()), {r1,r2}), args);
 }
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   vector<const Expr*> args;
+  unsigned r = getRegion(msi.getOperand(0));
   for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
     args.push_back(expr(msi.getOperand(i)));
-  return Stmt::call(name(msi.getCalledFunction(), {getRegion(msi.getOperand(0))}), args);
+  return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
 }
 
 const Stmt* SmackRep::load(const llvm::Value* addr, const llvm::Value* val) {
@@ -643,17 +646,11 @@ string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
   return name.str();
 }
 
-string SmackRep::indexedName(string name, vector<string> idxs) {
+string SmackRep::indexedName(string name, initializer_list<unsigned> idxs) {
   stringstream idxd;
   idxd << name;
-  for (vector<string>::iterator i = idxs.begin(); i != idxs.end(); ++i)
-    idxd << "." << *i;
-  return idxd.str();
-}
-
-string SmackRep::indexedName(string name, int idx) {
-  stringstream idxd;
-  idxd << name << "#" << idx;
+  for (auto idx : idxs)
+    idxd << "." << idx;
   return idxd.str();
 }
 
@@ -662,11 +659,35 @@ vector<string> SmackRep::decl(llvm::Function* F) {
   string name = naming.get(*F);
 
   for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
-    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U))
-      decls.push_back(memcpyProc(F,getRegion(MCI->getOperand(0)),getRegion(MCI->getOperand(1))));
+    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U)) {
+      unsigned r1 = getRegion(MCI->getOperand(0));
+      unsigned r2 = getRegion(MCI->getOperand(1));      
 
-    else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U))
-      decls.push_back(memsetProc(F,getRegion(MSI->getOperand(0))));
+      llvm::FunctionType* T = F->getFunctionType();
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program,indexedName(name,{r1,r2}));
+      P->addParam("dst", type(T->getParamType(0)));
+      P->addParam("src", type(T->getParamType(1)));
+      P->addParam("len", type(T->getParamType(2)));
+      P->addParam("align", type(T->getParamType(2)));
+      P->addParam("volatile", type(T->getParamType(2)));
+      P->addBlock(new Block());
+      vector<const Expr*> args;
+
+      // TODO convert arguments
+
+      args.push_back(Expr::id("dst"));
+      args.push_back(Expr::id("src"));
+      args.push_back(Expr::id("len"));
+      args.push_back(Expr::id("align"));
+      args.push_back(Expr::id("volatile"));
+      stringstream qualifiedName;
+      P->insert(Stmt::call(indexedName("$memcpy",{r1,r2}), args));
+      program.addDecl(P);
+
+      decls.push_back(memcpyProc(r1,r2));
+
+    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U))
+      decls.push_back(memsetProc(getRegion(MSI->getOperand(0))));
 
     else if (name == "malloc") {
       llvm::Type* T = F->getFunctionType()->getParamType(0);
@@ -721,7 +742,6 @@ vector<string> SmackRep::decl(llvm::Function* F) {
 }
 
 ProcDecl* SmackRep::proc(llvm::Function* f) {
-  vector<string> idxs;
   vector< pair<string,string> > parameters, returns;
 
   unsigned i = 0;
@@ -731,7 +751,7 @@ ProcDecl* SmackRep::proc(llvm::Function* f) {
     if (arg->hasName()) {
       name = naming.get(*arg);
     } else {
-      name = indexedName("p",i);
+      name = indexedName("p",{i});
       arg->setName(name);
     }
 
@@ -743,7 +763,7 @@ ProcDecl* SmackRep::proc(llvm::Function* f) {
 
   return (ProcDecl*) Decl::procedure(
     program,
-    f->isVarArg() ? indexedName(naming.get(*f),idxs) : naming.get(*f),
+    f->isVarArg() ? indexedName(naming.get(*f),{}) : naming.get(*f),
     parameters,
     returns
   );
@@ -1092,12 +1112,12 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
   return Expr::fn("$isExternal",e);
 }
 
-string SmackRep::memcpyProc(llvm::Function* F, unsigned dstReg, unsigned srcReg) {
+string SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
-  s << "procedure " << name(F, {dstReg, srcReg});
-  s << "(dest: ref, src: ref, len: ref, align: i32, isvolatile: i1)";
+  s << "procedure $memcpy." << dstReg << "." << srcReg;
+  s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool)";
   s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
 
   for (unsigned i = 0; i < n; ++i)
@@ -1135,12 +1155,12 @@ string SmackRep::memcpyProc(llvm::Function* F, unsigned dstReg, unsigned srcReg)
   return s.str();
 }
 
-string SmackRep::memsetProc(llvm::Function* F, unsigned dstReg) {
+string SmackRep::memsetProc(unsigned dstReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
-  s << "procedure " << name(F, {dstReg});
-  s << "(dest: ref, val: i8, len: ref, align: i32, isvolatile: i1)";
+  s << "procedure $memset." << dstReg;
+  s << "(dest: ref, val: ref, len: ref, align: ref, isvolatile: bool)";
   s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
 
   for (unsigned i = 0; i < n; ++i)
