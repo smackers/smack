@@ -190,7 +190,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
       pointerLit((unsigned long) llvm::cast<llvm::ConstantInt>(i.getArraySize())->getZExtValue()));
 
   // TODO this should not be a pointer type.
-  return Stmt::call(ALLOCA,size,naming.get(i));
+  return Stmt::call("$alloc",size,naming.get(i));
 }
 
 string SmackRep::name(const llvm::Function* F, initializer_list<unsigned> regions) {
@@ -659,6 +659,7 @@ string SmackRep::indexedName(string name, int idx) {
 
 vector<string> SmackRep::decl(llvm::Function* F) {
   vector<string> decls;
+  string name = naming.get(*F);
 
   for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
     if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U))
@@ -667,9 +668,36 @@ vector<string> SmackRep::decl(llvm::Function* F) {
     else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U))
       decls.push_back(memsetProc(F,getRegion(MSI->getOperand(0))));
 
-    else {
+    else if (name == "malloc") {
+      llvm::Type* T = F->getFunctionType()->getParamType(0);
+      assert (T->isIntegerTy() && "Expected integer argument.");
+
+      unsigned width = T->getIntegerBitWidth();
+
+      const Expr* e = Expr::id("n");
+      if (ptrSizeInBits < width)
+        e = Expr::fn(opName("$trunc", {width, ptrSizeInBits}), e);
+      else if (ptrSizeInBits > width)
+        e = Expr::fn(opName("$zext", {width, ptrSizeInBits}), e);
+      e = integerToPointer(e);
+
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program,name);
+      P->addParam("n", type(T));
+      P->addRet("r", "ref");
+      P->addBlock(new Block());
+      P->insert(Stmt::call("$alloc", e, "r"));
+      program.addDecl(P);
+
+    } else if (name == "free_") {
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program,name);
+      P->addParam("n", "ref");
+      P->addBlock(new Block());
+      P->insert(Stmt::call("$free", Expr::id("n")));
+      program.addDecl(P);
+
+    } else {
       stringstream decl;
-      decl << "procedure " << naming.get(*F);
+      decl << "procedure " << name;
 
       if (F->isVarArg())
         for (unsigned i = 0; i < U->getNumOperands()-1; i++)
@@ -746,17 +774,7 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming.get(ci));
 
-  if (name == "malloc") {
-    assert(args.size() == 1);
-    return Stmt::call(MALLOC, args[0], rets[0]);
-
-  } else if (name == "free_") {
-    assert(args.size() == 1);
-    return Stmt::call(FREE, args[0]);
-
-  } else {
-    return Stmt::call(procName(ci, f), args, rets);
-  }
+  return Stmt::call(procName(ci, f), args, rets);
 }
 
 string SmackRep::code(llvm::CallInst& ci) {
@@ -842,7 +860,7 @@ string SmackRep::getPrelude() {
   s << "function {:builtin \"bv2int\"} $bv2int." << ptrSizeInBits
     << "(i: bv" << ptrSizeInBits << ") returns (i" << ptrSizeInBits << ");"
     << endl;
-  s << "function {:builtin \"int2bv\"} $int2bv." << ptrSizeInBits
+  s << "function {:builtin \"int2bv\", " << ptrSizeInBits << "} $int2bv." << ptrSizeInBits
     << "(i: i" << ptrSizeInBits << ") returns (bv" << ptrSizeInBits << ");"
     << endl;
   s << endl;
