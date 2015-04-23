@@ -16,6 +16,7 @@ const string Naming::EXN_VAR = "$exn";
 const string Naming::EXN_VAL_VAR = "$exnv";
 const string Naming::BOOL_VAR = "$b";
 const string Naming::FLOAT_VAR = "$f";
+const string Naming::INT_VAR = "$i";
 const string Naming::PTR_VAR = "$p";
 const string Naming::UNDEF_SYM = "$u";
 
@@ -113,6 +114,9 @@ string Naming::freshVarName(const llvm::Value& V) {
 
   else if (V.getType()->isFloatingPointTy())
     s << FLOAT_VAR;
+
+  else if (V.getType()->isIntegerTy())
+    s << INT_VAR;
 
   else
     s << PTR_VAR;
