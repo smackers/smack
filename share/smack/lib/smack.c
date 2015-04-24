@@ -348,8 +348,6 @@ void __SMACK_decls() {
   D("function $base(ref) returns (ref);");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
 
-// #ifdef BITPRECISE
-
   D("function {:inline} $load.bv64(M:[ref]bv8, p:ref) returns (bv64){$load.bv32(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
   D("function {:inline} $load.bv32(M:[ref]bv8, p:ref) returns (bv32){M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
   D("function {:inline} $load.bv16(M:[ref]bv8, p:ref) returns (bv16){M[$add.ref(p, $1.ref)]++M[p]}");
@@ -361,8 +359,6 @@ void __SMACK_decls() {
   D("function {:inline} $store.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
   D("function {:inline} $store.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
-
-// #endif
 
   // Memory debugging symbols
   D("type $mop;");
