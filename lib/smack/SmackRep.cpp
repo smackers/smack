@@ -928,7 +928,7 @@ string SmackRep::getPrelude() {
   s << "// Pointer-number conversions" << endl;
   for (unsigned i = 8; i <= 64; i <<= 1) {
     s << functionDecl(opName("$p2i", {i}), {"p"}, {"ref", intType(i)}, pointerToInteger(Expr::id("p"),i)) << endl;
-    s << functionDecl(opName("$i2p", {i}), {"p"}, {intType(i), "ref"}, integerToPointer(Expr::id("p"),i)) << endl;
+    s << functionDecl(opName("$i2p", {i}), {"i"}, {intType(i), "ref"}, integerToPointer(Expr::id("i"),i)) << endl;
   }
   s << endl;
 
