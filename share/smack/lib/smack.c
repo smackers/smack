@@ -260,21 +260,16 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{$mod(i,LIMIT_1)});
   DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{$mod(i,LIMIT_1)});
 
-  // FIXME the following definitions of $zext are unsound
-  // FIXME for negative arguments
-  // FIXME $zext.i1.i8(-1) != -1
-  // FIXME (forall x: int :: x >= 0 ==> $zext.iXX.iYY(x) == x)
-
-  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{i});
-  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{$s2u.i1(i)});
+  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{$s2u.i1(i)});
+  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{$s2u.i1(i)});
+  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{$s2u.i1(i)});
+  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{$s2u.i8(i)});
+  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{$s2u.i8(i)});
+  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{$s2u.i8(i)});
+  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{$s2u.i16(i)});
+  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{$s2u.i16(i)});
+  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{$s2u.i32(i)});
 
   DECLARE(INLINE_CONVERSION,i1,i8,$sext,{i});
   DECLARE(INLINE_CONVERSION,i1,i16,$sext,{i});
