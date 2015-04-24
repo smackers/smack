@@ -190,7 +190,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
       pointerLit((unsigned long) llvm::cast<llvm::ConstantInt>(i.getArraySize())->getZExtValue()));
 
   // TODO this should not be a pointer type.
-  return Stmt::call("$alloc",size,naming.get(i));
+  return Stmt::call("$alloc",{size},{naming.get(i)});
 }
 
 string SmackRep::name(const llvm::Function* F, initializer_list<unsigned> regions) {
@@ -670,68 +670,90 @@ vector<string> SmackRep::decl(llvm::Function* F) {
 
   for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
     if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U)) {
-      unsigned r1 = getRegion(MCI->getOperand(0));
-      unsigned r2 = getRegion(MCI->getOperand(1));      
-
       llvm::FunctionType* T = F->getFunctionType();
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program,indexedName(name,{r1,r2}));
-      P->addParam("dst", type(T->getParamType(0)));
-      P->addParam("src", type(T->getParamType(1)));
-      P->addParam("len", type(T->getParamType(2)));
-      P->addParam("align", type(T->getParamType(3)));
-      P->addParam("volatile", type(T->getParamType(4)));
-      P->addBlock(new Block());
+      llvm::Type
+        *dst = T->getParamType(0),
+        *src = T->getParamType(1),
+        *len = T->getParamType(2),
+        *align = T->getParamType(3),
+        *vol  = T->getParamType(4);
+      unsigned r1 = getRegion(MCI->getOperand(0));
+      unsigned r2 = getRegion(MCI->getOperand(1));
 
-      vector<const Expr*> args;
-      args.push_back(Expr::id("dst"));
-      args.push_back(Expr::id("src"));
-      args.push_back(integerToPointer(Expr::id("len"),T->getParamType(2)->getIntegerBitWidth()));
-      args.push_back(integerToPointer(Expr::id("align"),T->getParamType(3)->getIntegerBitWidth()));
-      args.push_back(Expr::eq(Expr::id("volatile"), integerLit(1UL,1)));
-      stringstream qualifiedName;
-      P->insert(Stmt::call(indexedName("$memcpy",{r1,r2}), args));
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program, indexedName(name,{r1,r2}), {
+        make_pair("dst", type(dst)),
+        make_pair("src", type(src)),
+        make_pair("len", type(len)),
+        make_pair("align", type(align)),
+        make_pair("volatile", type(vol)),
+      }, {}, {
+        Block::block("", {
+          Stmt::call(indexedName("$memcpy",{r1,r2}), {
+            Expr::id("dst"),
+            Expr::id("src"),
+            integerToPointer(Expr::id("len"), len->getIntegerBitWidth()),
+            integerToPointer(Expr::id("align"), align->getIntegerBitWidth()),
+            Expr::eq(Expr::id("volatile"), integerLit(1UL,1))
+          })
+        })
+      });
+
       program.addDecl(P);
-
       decls.push_back(memcpyProc(r1,r2));
 
     } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U)) {
-      unsigned r = getRegion(MSI->getOperand(0));
       llvm::FunctionType* T = F->getFunctionType();
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program, indexedName(name,{r}));
-      P->addParam("dst", type(T->getParamType(0)));
-      P->addParam("val", type(T->getParamType(1)));
-      P->addParam("len", type(T->getParamType(2)));
-      P->addParam("align", type(T->getParamType(3)));
-      P->addParam("volatile", type(T->getParamType(4)));
-      P->addBlock(new Block());
-      vector<const Expr*> args;
-      args.push_back(Expr::id("dst"));
-      args.push_back(Expr::id("val"));
-      args.push_back(integerToPointer(Expr::id("len"),T->getParamType(2)->getIntegerBitWidth()));
-      args.push_back(integerToPointer(Expr::id("align"),T->getParamType(3)->getIntegerBitWidth()));
-      args.push_back(Expr::eq(Expr::id("volatile"), integerLit(1UL,1)));
-      P->insert(Stmt::call(indexedName("$memset",{r}), args));
-      program.addDecl(P);
+      llvm::Type
+        *dst = T->getParamType(0),
+        *val = T->getParamType(1),
+        *len = T->getParamType(2),
+        *align = T->getParamType(3),
+        *vol  = T->getParamType(4);
+      unsigned r = getRegion(MSI->getOperand(0));
 
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program, indexedName(name,{r}), {
+        make_pair("dst", type(dst)),
+        make_pair("val", type(val)),
+        make_pair("len", type(len)),
+        make_pair("align", type(align)),
+        make_pair("volatile", type(vol)),
+      }, {}, {
+        Block::block("", {
+          Stmt::call(indexedName("$memset",{r}), {
+            Expr::id("dst"),
+            Expr::id("val"),
+            integerToPointer(Expr::id("len"), len->getIntegerBitWidth()),
+            integerToPointer(Expr::id("align"), align->getIntegerBitWidth()),
+            Expr::eq(Expr::id("volatile"), integerLit(1UL,1))
+          })
+        })
+      });
+
+      program.addDecl(P);
       decls.push_back(memsetProc(r));
 
     } else if (name == "malloc") {
       llvm::Type* T = F->getFunctionType()->getParamType(0);
       assert (T->isIntegerTy() && "Expected integer argument.");
-
       unsigned width = T->getIntegerBitWidth();
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program,name);
-      P->addParam("n", type(T));
-      P->addRet("r", "ref");
-      P->addBlock(new Block());
-      P->insert(Stmt::call("$alloc", integerToPointer(Expr::id("n"),width), "r"));
+
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program, name, {
+        make_pair("n", type(T))
+      }, {
+        make_pair("r", PTR_TYPE)
+      }, {
+        Block::block("", {
+          Stmt::call("$alloc", {integerToPointer(Expr::id("n"),width)}, {"r"})
+        })
+      });
       program.addDecl(P);
 
     } else if (name == "free_") {
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program,name);
-      P->addParam("n", "ref");
-      P->addBlock(new Block());
-      P->insert(Stmt::call("$free", Expr::id("n")));
+      ProcDecl* P = (ProcDecl*) Decl::procedure(program, name, {
+        make_pair("n", PTR_TYPE)
+      }, {}, {
+        Block::block("", { Stmt::call("$free", {Expr::id("n")}) })
+      });
       program.addDecl(P);
 
     } else {
@@ -1021,7 +1043,7 @@ bool SmackRep::hasStaticInits() {
 
 Decl* SmackRep::getStaticInit() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
-  Block* b = new Block();
+  Block* b = Block::block();
 
   b->addStmt(Stmt::assign(Expr::id("$CurrAddr"), pointerLit(1024UL)));
   for (unsigned i=0; i<staticInits.size(); i++)
@@ -1033,7 +1055,7 @@ Decl* SmackRep::getStaticInit() {
 
 Decl* SmackRep::getInitFuncs() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, INIT_FUNCS);
-  Block* b = new Block();
+  Block* b = Block::block();
 
   for (unsigned i=0; i<initFuncs.size(); i++)
     b->addStmt(initFuncs[i]);

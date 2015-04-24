@@ -40,7 +40,7 @@ string i2s(llvm::Instruction& i) {
 }
 
 Block* SmackInstGenerator::createBlock() {
-  Block* b = new Block(naming.freshBlockName());
+  Block* b = Block::block(naming.freshBlockName());
   addBlock(b);
   return b;
 }
@@ -330,10 +330,10 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
     emit(rep.load(li.getPointerOperand(), &li));
 
     if (SmackOptions::MemoryModelDebug) {
-      emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
-      emit(Stmt::call("boogie_si_record_int", Expr::lit(0L)));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(li.getPointerOperand())));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(&li)));
+      emit(Stmt::call(SmackRep::REC_MEM_OP, {Expr::id(SmackRep::MEM_OP_VAL)}));
+      emit(Stmt::call("boogie_si_record_int", {Expr::lit(0L)}));
+      emit(Stmt::call("boogie_si_record_int", {rep.expr(li.getPointerOperand())}));
+      emit(Stmt::call("boogie_si_record_int", {rep.expr(&li)}));
     }
   }
 }
@@ -348,14 +348,14 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
     if (SmackOptions::SourceLocSymbols && G) {
       assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_" + rep.type(G->getType()), rep.expr(E), Attr::attr("cexpr", G->getName().str())));
+      emit(Stmt::call("boogie_si_record_" + rep.type(G->getType()), {rep.expr(E)}, {}, {Attr::attr("cexpr", G->getName().str())}));
     }
 
     if (SmackOptions::MemoryModelDebug) {
-      emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
-      emit(Stmt::call("boogie_si_record_int", Expr::lit(1L)));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(P)));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(E)));
+      emit(Stmt::call(SmackRep::REC_MEM_OP, {Expr::id(SmackRep::MEM_OP_VAL)}));
+      emit(Stmt::call("boogie_si_record_int", {Expr::lit(1L)}));
+      emit(Stmt::call("boogie_si_record_int", {rep.expr(P)}));
+      emit(Stmt::call("boogie_si_record_int", {rep.expr(E)}));
     }
   }
 }
@@ -457,7 +457,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     if (const llvm::Value* V = m1->getOperand(0)) {
       stringstream recordProc;
       recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(),rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
+      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", m3->getString().str())}));
     }
 
   } else if (name.find("llvm.dbg.") != string::npos) {

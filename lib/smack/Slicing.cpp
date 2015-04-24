@@ -214,7 +214,7 @@ string Slice::getName() {
 }
 
 const Expr* Slice::getCode(Naming& naming, SmackRep& rep) {
-  CodeExpr* code = new CodeExpr(rep.getProgram());
+  CodeExpr* code = new CodeExpr(rep.getProgram(), {});
   SmackInstGenerator igen(rep, *code, naming, slices);
 
   for (Function::iterator B = function.begin(), E = function.end(); B != E; ++B) {
