@@ -152,13 +152,13 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,bv64,bv32,$trunc,{i[32:0]});
   DECLARE(INLINE_CONVERSION,bv64,bv16,$trunc,{i[16:0]});
   DECLARE(INLINE_CONVERSION,bv64,bv8,$trunc,{i[8:0]});
-  DECLARE(INLINE_CONVERSION,bv64,bv1,$trunc,{if i == 0bv64 then 0bv1 else 1bv1});
+  DECLARE(INLINE_CONVERSION,bv64,bv1,$trunc,{i[1:0]});
   DECLARE(INLINE_CONVERSION,bv32,bv16,$trunc,{i[16:0]});
   DECLARE(INLINE_CONVERSION,bv32,bv8,$trunc,{i[8:0]});
-  DECLARE(INLINE_CONVERSION,bv32,bv1,$trunc,{if i == 0bv32 then 0bv1 else 1bv1});
+  DECLARE(INLINE_CONVERSION,bv32,bv1,$trunc,{i[1:0]});
   DECLARE(INLINE_CONVERSION,bv16,bv8,$trunc,{i[8:0]});
-  DECLARE(INLINE_CONVERSION,bv16,bv1,$trunc,{if i == 0bv16 then 0bv1 else 1bv1});
-  DECLARE(INLINE_CONVERSION,bv8,bv1,$trunc,{if i == 0bv8 then 0bv1 else 1bv1});
+  DECLARE(INLINE_CONVERSION,bv16,bv1,$trunc,{i[1:0]});
+  DECLARE(INLINE_CONVERSION,bv8,bv1,$trunc,{i[1:0]});
 
   DECLARE(INLINE_CONVERSION,bv1,bv8,$zext,{if i == 0bv1 then 0bv8 else 1bv8});
   DECLARE(INLINE_CONVERSION,bv1,bv16,$zext,{if i == 0bv1 then 0bv16 else 1bv16});
