@@ -230,16 +230,21 @@ void __SMACK_decls() {
   // FIXME (forall x: int :: -128 <= x && x < 128 ==> $trunc.iXX.i8(x) == x)
   // FIXME (forall x: int :: $trunc.iXX.i1(x) == x % 2)
 
-  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{p});
-  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{p});
+  #define POW1 2
+  #define POW7 128
+  #define POW15 32768
+  #define POW31 2147483648
+
+  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{$smod.i64(p,POW31)});
+  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{$smod.i64(p,POW15)});
+  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{$smod.i64(p,POW7)});
+  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{$smod.i64(p,POW1)});
+  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{$smod.i32(p,POW15)});
+  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{$smod.i32(p,POW7)});
+  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{$smod.i32(p,POW1)});
+  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{$smod.i16(p,POW7)});
+  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{$smod.i16(p,POW1)});
+  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{$smod.i8(p,POW1)});
 
   // FIXME the following definitions of $zext are unsound
   // FIXME for negative arguments
