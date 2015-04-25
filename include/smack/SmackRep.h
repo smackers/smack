@@ -103,6 +103,21 @@ private:
   string opName(const string& operation, initializer_list<const llvm::Type*> types);
   string opName(const string& operation, initializer_list<unsigned> types);
 
+  const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
+
+  const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
+  const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
+  const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
+
+  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
+  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isTypeSafe(const llvm::GlobalValue* V);
+  bool isCollapsed(const llvm::Value* v);
+
+  string procName(const llvm::User& U);
+  string procName(const llvm::User& U, llvm::Function* F);
+
 public:
   unsigned getElementSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Value* v);
@@ -111,7 +126,9 @@ public:
 
   unsigned storageSize(llvm::Type* t);
   unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
-  
+
+  string getString(const llvm::Value* v);
+
   unsigned getRegion(const llvm::Value* v);
   string memReg(unsigned i);
   string memType(unsigned region, unsigned size);
@@ -129,55 +146,43 @@ public:
   const Expr* integerLit(unsigned long v, unsigned width);
   const Expr* integerLit(long v, unsigned width);
 
-  virtual string type(const llvm::Type* t);
-  virtual string type(const llvm::Value* v);
+  string type(const llvm::Type* t);
+  string type(const llvm::Value* v);
   
   const Expr* mem(const llvm::Value* v);
-  const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
 
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
-  const Expr* ptrArith(const llvm::Value* p, vector<llvm::Value*> ps,
-                       vector<llvm::Type*> ts);
+  const Expr* ptrArith(const llvm::GetElementPtrInst* I);
+  const Expr* ptrArith(const llvm::ConstantExpr* CE);
+  const Expr* ptrArith(const llvm::Value* p, vector< pair<llvm::Value*,llvm::Type*> > args);
+
   const Expr* expr(const llvm::Value* v);
-  string getString(const llvm::Value* v);
 
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
-  const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);
-  const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
 
   const Expr* cmp(const llvm::CmpInst* I);
   const Expr* cmp(const llvm::ConstantExpr* CE);
-  const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
 
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, const llvm::User& u);
   string code(llvm::CallInst& ci);
 
-  string name(const llvm::Function* F, initializer_list<unsigned> regions);
+  const Stmt* alloca(llvm::AllocaInst& i);
+  const Stmt* memcpy(const llvm::MemCpyInst& msi);
+  const Stmt* memset(const llvm::MemSetInst& msi);
+  const Stmt* load(const llvm::Value* addr, const llvm::Value* val);
+  const Stmt* store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si = NULL);
+  const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
 
-  string procName(const llvm::User& U);
-  string procName(const llvm::User& U, llvm::Function* F);
   vector<Decl*> decl(llvm::Function* F);
   ProcDecl* proc(llvm::Function* f);
 
-  virtual const Stmt* alloca(llvm::AllocaInst& i);
-  virtual const Stmt* memcpy(const llvm::MemCpyInst& msi);
-  virtual const Stmt* memset(const llvm::MemSetInst& msi);
-  virtual const Stmt* load(const llvm::Value* addr, const llvm::Value* val);
-  virtual const Stmt* store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si = NULL);
-  virtual const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
-  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
-  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
-  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
-  bool isTypeSafe(const llvm::GlobalValue* V);
-  bool isCollapsed(const llvm::Value* v);
-  
   virtual vector<Decl*> globalDecl(const llvm::Value* g);
   virtual void addBplGlobal(string name);
   virtual vector<string> getModifies();

@@ -383,18 +383,9 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
       : Expr::fn(SmackRep::ATOMICRMWINST_TABLE.at(i.getOperation()),mem,val) ));
   }
 
-void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
-  processInstruction(gepi);
-
-  vector<llvm::Value*> ps;
-  vector<llvm::Type*> ts;
-  llvm::gep_type_iterator typeI = gep_type_begin(gepi);
-  for (unsigned i = 1; i < gepi.getNumOperands(); i++, ++typeI) {
-    ps.push_back(gepi.getOperand(i));
-    ts.push_back(*typeI);
-  }
-  emit(Stmt::assign(rep.expr(&gepi),
-                                  rep.ptrArith(gepi.getPointerOperand(), ps, ts)));
+void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I), rep.ptrArith(&I)));
 }
 
 /******************************************************************************/

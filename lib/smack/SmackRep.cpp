@@ -329,21 +329,6 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
   return Stmt::call("$alloc",{size},{naming.get(i)});
 }
 
-string SmackRep::name(const llvm::Function* F, initializer_list<unsigned> regions) {
-  stringstream name;
-  name << naming.get(*F);
-
-  // if (F->isVarArg()) {
-  //   for (unsigned i = 0; i < U.getNumOperands()-1; i++)
-  //     name << "." << type(U.getOperand(i)->getType());
-  // }
-
-  for (auto r : regions)
-    name << "." << r;
-
-  return name.str();
-}
-
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
   unsigned r1 = getRegion(mci.getOperand(0));
@@ -509,36 +494,43 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     assert( false && "literal type not supported" );
 }
 
-const Expr* SmackRep::ptrArith(const llvm::Value* p, vector<llvm::Value*> ps, vector<llvm::Type*> ts) {
+const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
+  vector< pair<Value*, Type*> > args;
+  gep_type_iterator T = gep_type_begin(I);
+  for (unsigned i = 1; i < I->getNumOperands(); i++, ++T)
+    args.push_back({I->getOperand(i), *T});
+  return ptrArith(I->getPointerOperand(), args);
+}
 
-  assert(ps.size() > 0 && ps.size() == ts.size());
+const Expr* SmackRep::ptrArith(const llvm::ConstantExpr* CE) {
+  assert (CE->getOpcode() == Instruction::GetElementPtr);
+  vector< pair<Value*, Type*> > args;
+  gep_type_iterator T = gep_type_begin(CE);
+  for (unsigned i = 1; i < CE->getNumOperands(); i++, ++T)
+    args.push_back({CE->getOperand(i), *T});
+  return ptrArith(CE->getOperand(0), args);
+}
+
+const Expr* SmackRep::ptrArith(const llvm::Value* p,
+    vector< pair<llvm::Value*, llvm::Type*> > args) {
+  using namespace llvm;
 
   const Expr* e = expr(p);
 
-  for (unsigned i = 0; i < ps.size(); i++) {
-    if (llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(ts[i])) {
-
-      assert(ps[i]->getType()->isIntegerTy()
-        && ps[i]->getType()->getPrimitiveSizeInBits() == 32
-        && "Illegal struct idx");
-
-      // Get structure layout information...
-      unsigned fieldNo =
-        llvm::cast<llvm::ConstantInt>(ps[i])->getZExtValue();
-
-      // Add in the offset, as calculated by the
-      // structure layout info...
+  for (auto a : args) {
+    if (StructType* st = dyn_cast<StructType>(a.second)) {
+      assert(a.first->getType()->isIntegerTy()
+        && a.first->getType()->getPrimitiveSizeInBits() == 32
+        && "Illegal struct index");
+      unsigned fieldNo = dyn_cast<ConstantInt>(a.first)->getZExtValue();
       e = pa(e, fieldOffset(st, fieldNo), 1);
-
     } else {
-      llvm::Type* et =
-        llvm::cast<llvm::SequentialType>(ts[i])->getElementType();
-      assert(ps[i]->getType()->isIntegerTy() && "Illegal index");
-
-      if (const llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(ps[i]))
+      Type* et = dyn_cast<SequentialType>(a.second)->getElementType();
+      assert(a.first->getType()->isIntegerTy() && "Illegal index");
+      if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first))
         e = pa(e, (unsigned long) ci->getZExtValue(), storageSize(et));
       else
-        e = pa(e, expr(ps[i]), storageSize(et));
+        e = pa(e, expr(a.first), storageSize(et));
     }
   }
 
@@ -564,17 +556,10 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
     if (const ConstantExpr* CE = dyn_cast<const ConstantExpr>(constant)) {
 
-      if (CE->getOpcode() == Instruction::GetElementPtr) {
-        vector<Value*> ps;
-        vector<Type*> ts;
-        gep_type_iterator typeI = gep_type_begin(CE);
-        for (unsigned i = 1; i < CE->getNumOperands(); i++, ++typeI) {
-          ps.push_back(CE->getOperand(i));
-          ts.push_back(*typeI);
-        }
-        return ptrArith(CE->getOperand(0), ps, ts);
+      if (CE->getOpcode() == Instruction::GetElementPtr)
+        return ptrArith(CE);
 
-      } else if (CE->isCast())
+      else if (CE->isCast())
         return cast(CE);
 
       else if (Instruction::isBinaryOp(CE->getOpcode()))
