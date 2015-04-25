@@ -182,6 +182,8 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,bv16,bv64,$sext,{if $sge.bv16.bool(i, 0bv16) then $zext.bv16.bv64(i) else $neg.bv64(1bv64)[64:16] ++ i});
   DECLARE(INLINE_CONVERSION,bv32,bv64,$sext,{if $sge.bv32.bool(i, 0bv32) then $zext.bv32.bv64(i) else $neg.bv32(1bv32) ++ i});
 
+  DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
+
   DECLARE_EACH_INT_TYPE(INLINE_UNARY_OP, $neg, {-i})
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $add, {i1 + i2})
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $sub, {i1 - i2})

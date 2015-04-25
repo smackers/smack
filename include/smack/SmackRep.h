@@ -96,13 +96,10 @@ private:
   const Expr* pointerToInteger(const Expr* e, unsigned width);
   const Expr* integerToPointer(const Expr* e, unsigned width);
 
+  string opName(const string& operation, initializer_list<const llvm::Type*> types);
+  string opName(const string& operation, initializer_list<unsigned> types);
+
 public:
-  bool isMallocOrFree(const llvm::Function* f);
-  bool isIgnore(const llvm::Function* f);
-  bool isInt(const llvm::Type* t);
-  bool isInt(const llvm::Value* v);
-  bool isFloat(const llvm::Type* t);
-  bool isFloat(const llvm::Value* v);
   unsigned getElementSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
@@ -150,7 +147,6 @@ public:
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
-  string opName(const string& operation, initializer_list<unsigned> operands);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);
@@ -189,7 +185,6 @@ public:
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
   void addInitFunc(const llvm::Function* f);
-  bool hasStaticInits();
   Decl* getStaticInit();
   Decl* getInitFuncs();
   virtual string getPrelude();
