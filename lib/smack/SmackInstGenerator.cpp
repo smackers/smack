@@ -348,7 +348,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
     if (SmackOptions::SourceLocSymbols && G) {
       assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_" + rep.type(G->getType()), {rep.expr(E)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+      emit(Stmt::call("boogie_si_record_" + rep.type(G), {rep.expr(E)}, {}, {Attr::attr("cexpr", G->getName().str())}));
     }
 
     if (SmackOptions::MemoryModelDebug) {
@@ -380,7 +380,7 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
   emit(Stmt::assign(mem,
     i.getOperation() == AtomicRMWInst::Xchg
       ? val
-      : Expr::fn(rep.armwop2fn(i.getOperation()),mem,val) ));
+      : Expr::fn(SmackRep::ATOMICRMWINST_TABLE.at(i.getOperation()),mem,val) ));
   }
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {

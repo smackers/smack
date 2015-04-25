@@ -37,6 +37,81 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
+const map<unsigned,string> SmackRep::INSTRUCTION_TABLE {
+  {Instruction::Trunc, "$trunc"},
+  {Instruction::ZExt, "$zext"},
+  {Instruction::SExt, "$sext"},
+  {Instruction::FPTrunc, "$fptrunc"},
+  {Instruction::FPExt, "$fpext"},
+  {Instruction::BitCast, "$bitcast"},
+  {Instruction::FPToUI, "$fp2ui"},
+  {Instruction::FPToSI, "$fp2si"},
+  {Instruction::UIToFP, "$ui2fp"},
+  {Instruction::SIToFP, "$si2fp"},
+  {Instruction::PtrToInt, "$p2i"},
+  {Instruction::IntToPtr, "$i2p"},
+  {Instruction::Add, "$add"},
+  {Instruction::Sub, "$sub"},
+  {Instruction::Mul, "$mul"},
+  {Instruction::SDiv, "$sdiv"},
+  {Instruction::UDiv, "$udiv"},
+  {Instruction::SRem, "$srem"},
+  {Instruction::URem, "$urem"},
+  {Instruction::And, "$and"},
+  {Instruction::Or, "$or"},
+  {Instruction::Xor, "$xor"},
+  {Instruction::LShr, "$lshr"},
+  {Instruction::AShr, "$ashr"},
+  {Instruction::Shl, "$shl"},
+  {Instruction::FAdd, "$fadd"},
+  {Instruction::FSub, "$fsub"},
+  {Instruction::FMul, "$fmul"},
+  {Instruction::FDiv, "$fdiv"},
+  {Instruction::FRem, "$frem"}
+};
+
+const map<unsigned,string> SmackRep::CMPINST_TABLE {
+  {CmpInst::ICMP_EQ, "$eq"},
+  {CmpInst::ICMP_NE, "$ne"},
+  {CmpInst::ICMP_SGE, "$sge"},
+  {CmpInst::ICMP_UGE, "$uge"},
+  {CmpInst::ICMP_SLE, "$sle"},
+  {CmpInst::ICMP_ULE, "$ule"},
+  {CmpInst::ICMP_SLT, "$slt"},
+  {CmpInst::ICMP_ULT, "$ult"},
+  {CmpInst::ICMP_SGT, "$sgt"},
+  {CmpInst::ICMP_UGT, "$ugt"},
+  {CmpInst::FCMP_FALSE, "$ffalse"},
+  {CmpInst::FCMP_OEQ, "$foeq"},
+  {CmpInst::FCMP_OGE, "$foge"},
+  {CmpInst::FCMP_OGT, "$fogt"},
+  {CmpInst::FCMP_OLE, "$fole"},
+  {CmpInst::FCMP_OLT, "$folt"},
+  {CmpInst::FCMP_ONE, "$fone"},
+  {CmpInst::FCMP_ORD, "$ford"},
+  {CmpInst::FCMP_TRUE, "$ftrue"},
+  {CmpInst::FCMP_UEQ, "$fueq"},
+  {CmpInst::FCMP_UGE, "$fuge"},
+  {CmpInst::FCMP_UGT, "$fugt"},
+  {CmpInst::FCMP_ULE, "$fule"},
+  {CmpInst::FCMP_ULT, "$fult"},
+  {CmpInst::FCMP_UNE, "$fune"},
+  {CmpInst::FCMP_UNO, "$funo"}
+};
+
+const map<unsigned,string> SmackRep::ATOMICRMWINST_TABLE {
+  {AtomicRMWInst::Add, "$add"},
+  {AtomicRMWInst::Sub, "$sub"},
+  {AtomicRMWInst::And, "$and"},
+  {AtomicRMWInst::Nand, "$nand"},
+  {AtomicRMWInst::Or, "$or"},
+  {AtomicRMWInst::Xor, "$xor"},
+  {AtomicRMWInst::Max, "$max"},
+  {AtomicRMWInst::Min, "$min"},
+  {AtomicRMWInst::UMax, "$umax"},
+  {AtomicRMWInst::UMin, "$umin"}
+};
+
 string indexedName(string name, initializer_list<string> idxs) {
   stringstream idxd;
   idxd << name;
@@ -122,6 +197,39 @@ string SmackRep::intType(unsigned width) {
   s << (SmackOptions::BitPrecise ? "bv" : "i");
   s << width;
   return s.str();
+}
+
+string SmackRep::opName(const string& operation, initializer_list<const llvm::Type*> types) {
+  stringstream s;
+  s << operation;
+  for (auto t : types)
+    s << "." << type(t);
+  return s.str();
+}
+
+string SmackRep::opName(const string& operation, initializer_list<unsigned> types) {
+  stringstream s;
+  s << operation;
+  for (auto t : types)
+    s << "." << intType(t);
+  return s.str();
+}
+
+string SmackRep::procName(const llvm::User& U) {
+  if (const llvm::CallInst* CI = llvm::dyn_cast<const llvm::CallInst>(&U))
+    return procName(U, CI->getCalledFunction());
+  else
+    assert(false && "Unexpected user expression.");
+}
+
+string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
+  stringstream name;
+  name << naming.get(*F);
+  if (F->isVarArg()) {
+    for (unsigned i = 0; i < U.getNumOperands()-1; i++)
+      name << "." << type(U.getOperand(i)->getType());
+  }
+  return name.str();
 }
 
 string SmackRep::type(const llvm::Type* t) {
@@ -446,7 +554,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
   } else if (isa<UndefValue>(v)) {
     string name = naming.get(*v);
-    program.addDecl(Decl::constant(name,type(v->getType())));
+    program.addDecl(Decl::constant(name,type(v)));
     return Expr::id(name);
 
   } else if (naming.get(*v) != "")
@@ -508,24 +616,8 @@ const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
   return cast(CE->getOpcode(), CE->getOperand(0), CE->getType());
 }
 
-string SmackRep::opName(const string& operation, initializer_list<const llvm::Type*> types) {
-  stringstream s;
-  s << operation;
-  for (auto t : types)
-    s << "." << type(t);
-  return s.str();
-}
-
-string SmackRep::opName(const string& operation, initializer_list<unsigned> types) {
-  stringstream s;
-  s << operation;
-  for (auto t : types)
-    s << "." << intType(t);
-  return s.str();
-}
-
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
-  return Expr::fn(opName(cast2fn(opcode), {v->getType(), t}), expr(v));
+  return Expr::fn(opName(INSTRUCTION_TABLE.at(opcode), {v->getType(), t}), expr(v));
 }
 
 const Expr* SmackRep::bop(const llvm::ConstantExpr* CE) {
@@ -537,9 +629,8 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 }
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
-  return Expr::fn( isFloat(t)
-    ? bop2fn(opcode)
-    : opName(bop2fn(opcode), {getIntSize(t)}), expr(lhs), expr(rhs));
+  string fn = INSTRUCTION_TABLE.at(opcode);
+  return Expr::fn( isFloat(t) ? fn : opName(fn, {getIntSize(t)}), expr(lhs), expr(rhs));
 }
 
 const Expr* SmackRep::cmp(const llvm::CmpInst* I) {
@@ -551,122 +642,8 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
-  return Expr::fn(isFloat(lhs)? pred2fn(predicate) : opName(pred2fn(predicate), {getIntSize(lhs)}), expr(lhs), expr(rhs));
-}
-
-string SmackRep::cast2fn(unsigned opcode) {
-  using llvm::Instruction;
-  switch (opcode) {
-  case Instruction::Trunc: return "$trunc";
-  case Instruction::ZExt: return "$zext";
-  case Instruction::SExt: return "$sext";
-  case Instruction::FPTrunc: return "$fptrunc";
-  case Instruction::FPExt: return "$fpext";
-  case Instruction::BitCast: return "$bitcast";
-  case Instruction::FPToUI: return "$fp2ui";
-  case Instruction::FPToSI: return "$fp2si";
-  case Instruction::UIToFP: return "$ui2fp";
-  case Instruction::SIToFP: return "$si2fp";
-  case Instruction::PtrToInt: return "$p2i";
-  case Instruction::IntToPtr: return "$i2p";
-  default:
-    assert(false && "Unexpected cast expression.");
-  }
-}
-
-string SmackRep::bop2fn(unsigned opcode) {
-  switch (opcode) {
-    using llvm::Instruction;
-  case Instruction::Add: return "$add";
-  case Instruction::Sub: return "$sub";
-  case Instruction::Mul: return "$mul";
-  case Instruction::SDiv: return "$sdiv";
-  case Instruction::UDiv: return "$udiv";
-  case Instruction::SRem: return "$srem";
-  case Instruction::URem: return "$urem";
-  case Instruction::And: return "$and";
-  case Instruction::Or: return "$or";
-  case Instruction::Xor: return "$xor";
-  case Instruction::LShr: return "$lshr";
-  case Instruction::AShr: return "$ashr";
-  case Instruction::Shl: return "$shl";
-  case Instruction::FAdd: return "$fadd";
-  case Instruction::FSub: return "$fsub";
-  case Instruction::FMul: return "$fmul";
-  case Instruction::FDiv: return "$fdiv";
-  case Instruction::FRem: return "$frem";
-  default:
-    assert(false && "unexpected predicate.");
-  }
-}
-
-string SmackRep::pred2fn(unsigned predicate) {
-  switch (predicate) {
-    using llvm::CmpInst;
-  case CmpInst::ICMP_EQ: return "$eq";
-  case CmpInst::ICMP_NE: return "$ne";
-  case CmpInst::ICMP_SGE: return "$sge";
-  case CmpInst::ICMP_UGE: return "$uge";
-  case CmpInst::ICMP_SLE: return "$sle";
-  case CmpInst::ICMP_ULE: return "$ule";
-  case CmpInst::ICMP_SLT: return "$slt";
-  case CmpInst::ICMP_ULT: return "$ult";
-  case CmpInst::ICMP_SGT: return "$sgt";
-  case CmpInst::ICMP_UGT: return "$ugt";
-  case CmpInst::FCMP_FALSE: return "$ffalse";
-  case CmpInst::FCMP_OEQ: return "$foeq";
-  case CmpInst::FCMP_OGE: return "$foge";
-  case CmpInst::FCMP_OGT: return "$fogt";
-  case CmpInst::FCMP_OLE: return "$fole";
-  case CmpInst::FCMP_OLT: return "$folt";
-  case CmpInst::FCMP_ONE: return "$fone";
-  case CmpInst::FCMP_ORD: return "$ford";
-  case CmpInst::FCMP_TRUE: return "$ftrue";
-  case CmpInst::FCMP_UEQ: return "$fueq";
-  case CmpInst::FCMP_UGE: return "$fuge";
-  case CmpInst::FCMP_UGT: return "$fugt";
-  case CmpInst::FCMP_ULE: return "$fule";
-  case CmpInst::FCMP_ULT: return "$fult";
-  case CmpInst::FCMP_UNE: return "$fune";
-  case CmpInst::FCMP_UNO: return "$funo";
-  default:
-    assert(false && "unexpected predicate.");
-  }
-}
-
-string SmackRep::armwop2fn(unsigned opcode) {
-  using llvm::AtomicRMWInst;
-  switch (opcode) {
-  case AtomicRMWInst::Add: return "$add";
-  case AtomicRMWInst::Sub: return "$sub";
-  case AtomicRMWInst::And: return "$and";
-  case AtomicRMWInst::Nand: return "$nand";
-  case AtomicRMWInst::Or: return "$or";
-  case AtomicRMWInst::Xor: return "$xor";
-  case AtomicRMWInst::Max: return "$max";
-  case AtomicRMWInst::Min: return "$min";
-  case AtomicRMWInst::UMax: return "$umax";
-  case AtomicRMWInst::UMin: return "$umin";
-  default:
-    assert(false && "unexpected atomic operation.");
-  }
-}
-
-string SmackRep::procName(const llvm::User& U) {
-  if (const llvm::CallInst* CI = llvm::dyn_cast<const llvm::CallInst>(&U))
-    return procName(U, CI->getCalledFunction());
-  else
-    assert(false && "Unexpected user expression.");
-}
-
-string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
-  stringstream name;
-  name << naming.get(*F);
-  if (F->isVarArg()) {
-    for (unsigned i = 0; i < U.getNumOperands()-1; i++)
-      name << "." << type(U.getOperand(i)->getType());
-  }
-  return name.str();
+  string fn = CMPINST_TABLE.at(predicate);
+  return Expr::fn(isFloat(lhs) ? fn : opName(fn, {getIntSize(lhs)}), expr(lhs), expr(rhs));
 }
 
 vector<Decl*> SmackRep::decl(llvm::Function* F) {

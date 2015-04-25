@@ -50,6 +50,10 @@ public:
   static const string STATIC_INIT;
   static const string INIT_FUNCS;
 
+  static const map<unsigned,string> INSTRUCTION_TABLE;
+  static const map<unsigned,string> CMPINST_TABLE;
+  static const map<unsigned,string> ATOMICRMWINST_TABLE;
+
 protected:
   DSAAliasAnalysis* aliasAnalysis;
   Naming& naming;
@@ -138,11 +142,6 @@ public:
                        vector<llvm::Type*> ts);
   const Expr* expr(const llvm::Value* v);
   string getString(const llvm::Value* v);
-
-  string cast2fn(unsigned opcode);
-  string bop2fn(unsigned opcode);
-  string armwop2fn(unsigned opcode);
-  string pred2fn(unsigned predicate);
 
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
