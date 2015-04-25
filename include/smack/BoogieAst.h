@@ -326,7 +326,12 @@ public:
   
   static Decl* typee(string name, string type);
   static Decl* axiom(const Expr* e);
-  static Decl* function(string name, vector< pair<string,string> > args, string type, const Expr* e);
+  static Decl* function(
+    string name,
+    vector< pair<string,string> > args,
+    string type,
+    const Expr* e = NULL,
+    vector<const Attr*> attrs = vector<const Attr*>());
   static Decl* constant(string name, string type);
   static Decl* constant(string name, string type, bool unique);
   static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
@@ -528,6 +533,9 @@ public:
 
 ostream& operator<<(ostream& os, const Expr& e);
 ostream& operator<<(ostream& os, const Expr* e);
+
+ostream& operator<<(ostream& os, Decl& e);
+ostream& operator<<(ostream& os, Decl* e);
 
 }
 

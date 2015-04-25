@@ -37,6 +37,22 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
+string indexedName(string name, initializer_list<string> idxs) {
+  stringstream idxd;
+  idxd << name;
+  for (auto idx : idxs)
+    idxd << "." << idx;
+  return idxd.str();
+}
+
+string indexedName(string name, initializer_list<unsigned> idxs) {
+  stringstream idxd;
+  idxd << name;
+  for (auto idx : idxs)
+    idxd << "." << idx;
+  return idxd.str();
+}
+
 bool SmackRep::isMallocOrFree(const llvm::Function* f) {
   return PROC_MALLOC_FREE.match(naming.get(*f));
 }
@@ -656,16 +672,8 @@ string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
   return name.str();
 }
 
-string SmackRep::indexedName(string name, initializer_list<unsigned> idxs) {
-  stringstream idxd;
-  idxd << name;
-  for (auto idx : idxs)
-    idxd << "." << idx;
-  return idxd.str();
-}
-
-vector<string> SmackRep::decl(llvm::Function* F) {
-  vector<string> decls;
+vector<Decl*> SmackRep::decl(llvm::Function* F) {
+  vector<Decl*> decls;
   string name = naming.get(*F);
 
   for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
@@ -680,12 +688,12 @@ vector<string> SmackRep::decl(llvm::Function* F) {
       unsigned r1 = getRegion(MCI->getOperand(0));
       unsigned r2 = getRegion(MCI->getOperand(1));
 
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program, indexedName(name,{r1,r2}), {
-        make_pair("dst", type(dst)),
-        make_pair("src", type(src)),
-        make_pair("len", type(len)),
-        make_pair("align", type(align)),
-        make_pair("volatile", type(vol)),
+      decls.push_back(Decl::procedure(program, indexedName(name,{r1,r2}), {
+        {"dst", type(dst)},
+        {"src", type(src)},
+        {"len", type(len)},
+        {"align", type(align)},
+        {"volatile", type(vol)},
       }, {}, {
         Block::block("", {
           Stmt::call(indexedName("$memcpy",{r1,r2}), {
@@ -696,9 +704,7 @@ vector<string> SmackRep::decl(llvm::Function* F) {
             Expr::eq(Expr::id("volatile"), integerLit(1UL,1))
           })
         })
-      });
-
-      program.addDecl(P);
+      }));
       decls.push_back(memcpyProc(r1,r2));
 
     } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U)) {
@@ -711,12 +717,12 @@ vector<string> SmackRep::decl(llvm::Function* F) {
         *vol  = T->getParamType(4);
       unsigned r = getRegion(MSI->getOperand(0));
 
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program, indexedName(name,{r}), {
-        make_pair("dst", type(dst)),
-        make_pair("val", type(val)),
-        make_pair("len", type(len)),
-        make_pair("align", type(align)),
-        make_pair("volatile", type(vol)),
+      decls.push_back(Decl::procedure(program, indexedName(name,{r}), {
+        {"dst", type(dst)},
+        {"val", type(val)},
+        {"len", type(len)},
+        {"align", type(align)},
+        {"volatile", type(vol)},
       }, {}, {
         Block::block("", {
           Stmt::call(indexedName("$memset",{r}), {
@@ -727,55 +733,32 @@ vector<string> SmackRep::decl(llvm::Function* F) {
             Expr::eq(Expr::id("volatile"), integerLit(1UL,1))
           })
         })
-      });
-
-      program.addDecl(P);
+      }));
       decls.push_back(memsetProc(r));
 
     } else if (name == "malloc") {
       llvm::Type* T = F->getFunctionType()->getParamType(0);
       assert (T->isIntegerTy() && "Expected integer argument.");
       unsigned width = T->getIntegerBitWidth();
-
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program, name, {
-        make_pair("n", type(T))
-      }, {
-        make_pair("r", PTR_TYPE)
-      }, {
-        Block::block("", {
-          Stmt::call("$alloc", {integerToPointer(Expr::id("n"),width)}, {"r"})
-        })
-      });
-      program.addDecl(P);
+      decls.push_back(Decl::procedure(program, name, {{"n", type(T)}}, {{"r", PTR_TYPE}}, {
+        Block::block("", { Stmt::call("$alloc", {integerToPointer(Expr::id("n"),width)}, {"r"}) })
+      }));
 
     } else if (name == "free_") {
-      ProcDecl* P = (ProcDecl*) Decl::procedure(program, name, {
-        make_pair("n", PTR_TYPE)
-      }, {}, {
+      decls.push_back(Decl::procedure(program, name, {{"n", PTR_TYPE}}, {}, {
         Block::block("", { Stmt::call("$free", {Expr::id("n")}) })
-      });
-      program.addDecl(P);
+      }));
 
     } else {
-      stringstream decl;
-      decl << "procedure " << name;
-
-      if (F->isVarArg())
-        for (unsigned i = 0; i < U->getNumOperands()-1; i++)
-          decl << "." << type(U->getOperand(i)->getType());
-
-      decl << "(";
+      Naming N;
+      vector< pair<string,string> > params, rets;
       for (unsigned i = 0; i < U->getNumOperands()-1; i++) {
-        if (i > 0)
-          decl << ", ";
-        decl << "p" << i << ":" << type(U->getOperand(i)->getType());
+        const llvm::Value* V = U->getOperand(i);
+        params.push_back({N.freshVarName(*V),type(V->getType())});
       }
-      decl << ")";
       if (!F->getReturnType()->isVoidTy())
-        decl << " returns (r: " << type(F->getReturnType()) << ")";
-      decl << ";";
-      decls.push_back(decl.str());
-
+        rets.push_back({"r", type(F->getReturnType())});
+      decls.push_back(Decl::procedure(program, procName(**U,F), params, rets));
     }
 
   return decls;
@@ -795,15 +778,15 @@ ProcDecl* SmackRep::proc(llvm::Function* f) {
       arg->setName(name);
     }
 
-    parameters.push_back(make_pair(name, type(arg->getType()) ));
+    parameters.push_back({name, type(arg->getType())});
   }
 
   if (!f->getReturnType()->isVoidTy())
-    returns.push_back(make_pair(Naming::RET_VAR,type(f->getReturnType())));
+    returns.push_back({Naming::RET_VAR,type(f->getReturnType())});
 
   return (ProcDecl*) Decl::procedure(
     program,
-    f->isVarArg() ? indexedName(naming.get(*f),{}) : naming.get(*f),
+    f->isVarArg() ? naming.get(*f) : naming.get(*f),
     parameters,
     returns
   );
@@ -858,44 +841,30 @@ string SmackRep::code(llvm::CallInst& ci) {
   return s;
 }
 
-string functionDecl(string name, initializer_list<string> args, initializer_list<string> types, const Expr* body = 0) {
-  stringstream s;
-  s << "function ";
-  if (body)
-    s << "{:inline} ";
-  s << name << "(";
-  initializer_list<string>::iterator t = types.begin();
-  for (initializer_list<string>::iterator a = args.begin(); a != args.end(); ++a, ++t) {
-    if (a != args.begin())
-      s << ", ";
-    s << *a << ": " << *t;
-  }
-  s << ") returns (" << *t << ")";
-  if (body)
-    s << " { " << body << " }";
-  else
-    s << ";";
-  return s.str();
-}
-
 string SmackRep::getPrelude() {
   stringstream s;
   s << endl;
 
   s << "// Basic types" << endl;
-  s << "type i1 = int;" << endl;
-  for (unsigned i = 8; i <= 64; i <<= 1)
-    s << "type i" << i << " = int;" << endl;
-  s << "type ref = " << pointerType() << ";" << endl;
+  s << Decl::typee("i1","int") << endl;
+  for (unsigned i = 8; i <= 64; i <<= 1) {
+    stringstream t;
+    t << "i" << i;
+    s << Decl::typee(t.str(),"int") << endl;
+  }
+  s << Decl::typee(PTR_TYPE, pointerType()) << endl;
   s << endl;
 
   s << "// Basic constants" << endl;
-  s << "const $0: " << intType(32) << ";" << endl;
-  s << "axiom $0 == " << integerLit(0UL,32) << ";" << endl;
+  s << Decl::constant("$0",intType(32)) << endl;
+  s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << endl;
 
   s << "const $0.ref, $1.ref, $2.ref, $3.ref, $4.ref, $5.ref, $6.ref, $7.ref: ref;" << endl;
-  for (unsigned i = 0; i < 8; ++i)
-    s << "axiom $" << i << ".ref == " << pointerLit((unsigned long) i) << ";" << endl;
+  for (unsigned i = 0; i < 8; ++i) {
+    stringstream t;
+    t << "$" << i << ".ref";
+    s << Decl::axiom(Expr::eq(Expr::id(t.str()),pointerLit((unsigned long) i))) << endl;
+  }
   s << endl;
 
   s << "// Memory maps (" << memoryRegions.size() << " regions)" << endl;
@@ -911,33 +880,33 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Memory address bounds" << endl;
-  s << "axiom " << GLOBALS_BOTTOM << " == " << pointerLit(globalsBottom) << ";" << endl;
-  s << "axiom " << EXTERNS_BOTTOM << " == " << pointerLit(externsBottom) << ";" << endl;
-  s << "axiom " << MALLOC_TOP << " == " << pointerLit((unsigned long) INT_MAX - 10485760) << ";" << endl;
+  s << Decl::axiom(Expr::eq(Expr::id(GLOBALS_BOTTOM),pointerLit(globalsBottom))) << endl;
+  s << Decl::axiom(Expr::eq(Expr::id(EXTERNS_BOTTOM),pointerLit(externsBottom))) << endl;
+  s << Decl::axiom(Expr::eq(Expr::id(MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << endl;
   s << endl;
 
   s << "// Bitvector-integer conversions" << endl;
-  s << "function {:builtin \"bv2int\"} $bv2int." << ptrSizeInBits
-    << "(i: bv" << ptrSizeInBits << ") returns (i" << ptrSizeInBits << ");"
-    << endl;
-  s << "function {:builtin \"int2bv\", " << ptrSizeInBits << "} $int2bv." << ptrSizeInBits
-    << "(i: i" << ptrSizeInBits << ") returns (bv" << ptrSizeInBits << ");"
-    << endl;
+  stringstream bv, iv;
+  bv << "bv" << ptrSizeInBits;
+  iv << "i" << ptrSizeInBits;
+  s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bv.str()}}, iv.str(), NULL, {Attr::attr("builtin", "bv2int")}) << endl;
+  s << Decl::function(indexedName("$int2bv",{ptrSizeInBits}), {{"i",iv.str()}}, bv.str(), NULL, {Attr::attr("builtin", "int2bv", ptrSizeInBits)}) << endl;
   s << endl;
 
   s << "// Pointer-number conversions" << endl;
   for (unsigned i = 8; i <= 64; i <<= 1) {
-    s << functionDecl(opName("$p2i", {i}), {"p"}, {"ref", intType(i)}, pointerToInteger(Expr::id("p"),i)) << endl;
-    s << functionDecl(opName("$i2p", {i}), {"i"}, {intType(i), "ref"}, integerToPointer(Expr::id("i"),i)) << endl;
+    s << Decl::function(opName("$p2i", {i}), {{"p",PTR_TYPE}}, intType(i), pointerToInteger(Expr::id("p"),i), {Attr::attr("inline")}) << endl;
+    s << Decl::function(opName("$i2p", {i}), {{"i",intType(i)}}, PTR_TYPE, integerToPointer(Expr::id("i"),i), {Attr::attr("inline")}) << endl;
   }
   s << endl;
 
   s << "// Pointer predicates" << endl;
   const string predicates[] = {"$sge", "$sgt", "$sle", "$slt"};
   for (unsigned i = 0; i < 4; i++) {
-    s << "function {:inline} " << predicates[i] << ".ref.bool(p1: ref, p2: ref)"
-      << " returns (bool)"
-      << " { " << predicates[i] << "." << pointerType() << ".bool(p1,p2) }"
+    s << Decl::function(indexedName(predicates[i],{PTR_TYPE,BOOL_TYPE}),
+      {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, BOOL_TYPE,
+      Expr::fn(indexedName(predicates[i],{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
+      {Attr::attr("inline")} )
       << endl;
   }
   s << endl;
@@ -945,9 +914,10 @@ string SmackRep::getPrelude() {
   s << "// Pointer operations" << endl;
   const string operations[] = {"$add", "$sub", "$mul"};
   for (unsigned i = 0; i < 3; i++) {
-    s << "function {:inline} " << operations[i] << ".ref(p1: ref, p2: ref)"
-      << " returns (ref)"
-      << " { " << operations[i] << "." << pointerType() << "(p1,p2) }"
+    s << Decl::function(indexedName(operations[i],{PTR_TYPE}),
+      {{"p1",PTR_TYPE},{"p2",PTR_TYPE}}, PTR_TYPE,
+      Expr::fn(indexedName(operations[i],{pointerType()}), {Expr::id("p1"), Expr::id("p2")}),
+      {Attr::attr("inline")})
       << endl;
   }
   s << endl;
@@ -1144,7 +1114,7 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
   return Expr::fn("$isExternal",e);
 }
 
-string SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
+Decl* SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
@@ -1184,10 +1154,10 @@ string SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
     }
   }
 
-  return s.str();
+  return Decl::code(s.str());
 }
 
-string SmackRep::memsetProc(unsigned dstReg) {
+Decl* SmackRep::memsetProc(unsigned dstReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
@@ -1233,7 +1203,7 @@ string SmackRep::memsetProc(unsigned dstReg) {
     }
   }
 
-  return s.str();
+  return Decl::code(s.str());
 }
 
 } // namespace smack

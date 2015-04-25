@@ -228,8 +228,9 @@ Decl* Decl::typee(string name, string type) {
 Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
-Decl* Decl::function(string name, vector< pair<string,string> > args, string type, const Expr* e) {
-  return new FuncDecl(name,vector<const Attr*>(),args,type,e);
+Decl* Decl::function(string name, vector< pair<string,string> > args,
+    string type, const Expr* e, vector<const Attr*> attrs) {
+  return new FuncDecl(name,attrs,args,type,e);
 }
 Decl* Decl::constant(string name, string type) {
   return Decl::constant(name, type, vector<const Attr*>(), false);
@@ -274,6 +275,10 @@ ostream& operator<<(ostream& os, const Stmt* s) {
 }
 ostream& operator<<(ostream& os, const Block* b) {
   b->print(os);
+  return os;
+}
+ostream& operator<<(ostream& os, Decl& d) {
+  d.print(os);
   return os;
 }
 ostream& operator<<(ostream& os, Decl* d) {
@@ -528,7 +533,7 @@ void TypeDecl::print(ostream& os) const {
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << name;
   if (alias != "")
-    os << " = " << alias << ";";
+    os << " = " << alias;
   os << ";";
 }
 
