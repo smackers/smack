@@ -845,11 +845,11 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Bitvector-integer conversions" << endl;
-  stringstream bv, iv;
-  bv << "bv" << ptrSizeInBits;
-  iv << "i" << ptrSizeInBits;
-  s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bv.str()}}, iv.str(), NULL, {Attr::attr("builtin", "bv2int")}) << endl;
-  s << Decl::function(indexedName("$int2bv",{ptrSizeInBits}), {{"i",iv.str()}}, bv.str(), NULL, {Attr::attr("builtin", "int2bv", ptrSizeInBits)}) << endl;
+  string b = to_string(ptrSizeInBits);
+  string bt = "bv" + b;
+  string it = "i" + b;
+  s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << endl;
+  s << Decl::function(indexedName("$int2bv",{ptrSizeInBits}), {{"i",it}}, bt, NULL, {Attr::attr("builtin", "(_ int2bv " + b + ")")}) << endl;
   s << endl;
 
   s << "// Pointer-number conversions" << endl;
