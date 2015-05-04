@@ -90,7 +90,12 @@ public:
   Program& getProgram() { return program; }
 
 private:
-  void addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety);
+  void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
+  void addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool safe);
+
+  unsigned storageSize(llvm::Type* T);
+  unsigned offset(llvm::ArrayType* T, unsigned idx);
+  unsigned offset(llvm::StructType* T, unsigned idx);
 
   const Expr* pa(const Expr* base, unsigned long index, unsigned long size);
   const Expr* pa(const Expr* base, const Expr* index, unsigned long size);
@@ -103,7 +108,7 @@ private:
   string opName(const string& operation, initializer_list<const llvm::Type*> types);
   string opName(const string& operation, initializer_list<unsigned> types);
 
-  const Expr* mem(unsigned region, const Expr* addr, unsigned size = 0);
+  const Expr* mem(unsigned region, const Expr* addr, unsigned size);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
@@ -123,9 +128,6 @@ public:
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
   unsigned getSize(llvm::Type* t);
-
-  unsigned storageSize(llvm::Type* t);
-  unsigned fieldOffset(llvm::StructType* t, unsigned fieldNo);
 
   string getString(const llvm::Value* v);
 
@@ -176,9 +178,9 @@ public:
   const Stmt* alloca(llvm::AllocaInst& i);
   const Stmt* memcpy(const llvm::MemCpyInst& msi);
   const Stmt* memset(const llvm::MemSetInst& msi);
-  const Stmt* load(const llvm::Value* addr, const llvm::Value* val);
-  const Stmt* store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si = NULL);
-  const Stmt* storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e);
+  const Stmt* load(const llvm::LoadInst& LI);
+  const Stmt* store(const llvm::StoreInst& SI);
+  const Stmt* store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool safe = true);
 
   vector<Decl*> decl(llvm::Function* F);
   ProcDecl* proc(llvm::Function* f);
@@ -187,7 +189,6 @@ public:
   virtual void addBplGlobal(string name);
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
-  void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
   void addInitFunc(const llvm::Function* f);
   Decl* getStaticInit();
   Decl* getInitFuncs();

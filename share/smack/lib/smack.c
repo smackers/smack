@@ -66,8 +66,9 @@ void __SMACK_dummy(int v) {
   function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
   function {:inline} name.type(i1: type, i2: type) returns (i1) {if cond then 1 else 0}
 
-#define INLINE_BINARY_BV_PRED(type,name,body) \
-  function {:inline} name.type(i1: type, i2: type) returns (bv1) body
+#define INLINE_BINARY_BV_PRED(type,name,cond) \
+  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
+  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if cond then 1bv1 else 0bv1}
 
 #define INLINE_CONVERSION(t1,t2,name,body) \
   function {:inline} name.t1.t2(i: t1) returns (t2) body
@@ -142,8 +143,8 @@ void __SMACK_decls() {
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $xor, bvxor)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $nand, bvnand)
 
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, {if i1 == i2 then 1bv1 else 0bv1})
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, {if i1 != i2 then 1bv1 else 0bv1})
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, i1 == i2)
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, i1 != i2)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ule, bvule)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ult, bvult)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $uge, bvuge)
@@ -290,28 +291,28 @@ void __SMACK_decls() {
 
   D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
-  D("function $fadd(f1:float, f2:float) returns (float);");
-  D("function $fsub(f1:float, f2:float) returns (float);");
-  D("function $fmul(f1:float, f2:float) returns (float);");
-  D("function $fdiv(f1:float, f2:float) returns (float);");
-  D("function $frem(f1:float, f2:float) returns (float);");
-  D("function $ffalse(f1:float, f2:float) returns (i1);");
-  D("function $ftrue(f1:float, f2:float) returns (i1);");
-  D("function {:inline} $foeq(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
+  D("function $fadd.float(f1:float, f2:float) returns (float);");
+  D("function $fsub.float(f1:float, f2:float) returns (float);");
+  D("function $fmul.float(f1:float, f2:float) returns (float);");
+  D("function $fdiv.float(f1:float, f2:float) returns (float);");
+  D("function $frem.float(f1:float, f2:float) returns (float);");
+  D("function $ffalse.float(f1:float, f2:float) returns (i1);");
+  D("function $ftrue.float(f1:float, f2:float) returns (i1);");
+  D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
   D("function $foeq.bool(f1:float, f2:float) returns (bool);");
-  D("function $foge(f1:float, f2:float) returns (i1);");
-  D("function $fogt(f1:float, f2:float) returns (i1);");
-  D("function $fole(f1:float, f2:float) returns (i1);");
-  D("function $folt(f1:float, f2:float) returns (i1);");
-  D("function $fone(f1:float, f2:float) returns (i1);");
-  D("function $ford(f1:float, f2:float) returns (i1);");
-  D("function $fueq(f1:float, f2:float) returns (i1);");
-  D("function $fuge(f1:float, f2:float) returns (i1);");
-  D("function $fugt(f1:float, f2:float) returns (i1);");
-  D("function $fule(f1:float, f2:float) returns (i1);");
-  D("function $fult(f1:float, f2:float) returns (i1);");
-  D("function $fune(f1:float, f2:float) returns (i1);");
-  D("function $funo(f1:float, f2:float) returns (i1);");
+  D("function $foge.float(f1:float, f2:float) returns (i1);");
+  D("function $fogt.float(f1:float, f2:float) returns (i1);");
+  D("function $fole.float(f1:float, f2:float) returns (i1);");
+  D("function $folt.float(f1:float, f2:float) returns (i1);");
+  D("function $fone.float(f1:float, f2:float) returns (i1);");
+  D("function $ford.float(f1:float, f2:float) returns (i1);");
+  D("function $fueq.float(f1:float, f2:float) returns (i1);");
+  D("function $fuge.float(f1:float, f2:float) returns (i1);");
+  D("function $fugt.float(f1:float, f2:float) returns (i1);");
+  D("function $fule.float(f1:float, f2:float) returns (i1);");
+  D("function $fult.float(f1:float, f2:float) returns (i1);");
+  D("function $fune.float(f1:float, f2:float) returns (i1);");
+  D("function $funo.float(f1:float, f2:float) returns (i1);");
   D("function $fp2si.i64(f:float) returns (i64);");
   D("function $fp2ui.i64(f:float) returns (i64);");
   D("function $si2fp.i64(i:i64) returns (float);");

@@ -252,12 +252,16 @@ string SmackRep::type(const llvm::Value* v) {
   return type(v->getType());
 }
 
-unsigned SmackRep::storageSize(llvm::Type* t) {
-  return targetData->getTypeStoreSize(t);
+unsigned SmackRep::storageSize(llvm::Type* T) {
+  return targetData->getTypeStoreSize(T);
 }
 
-unsigned SmackRep::fieldOffset(llvm::StructType* t, unsigned fieldNo) {
-  return targetData->getStructLayout(t)->getElementOffset(fieldNo);
+unsigned SmackRep::offset(llvm::ArrayType* T, unsigned idx) {
+  return storageSize(T->getElementType()) * idx;
+}
+
+unsigned SmackRep::offset(llvm::StructType* T, unsigned idx) {
+  return targetData->getStructLayout(T)->getElementOffset(idx);
 }
 
 string SmackRep::memReg(unsigned idx) {
@@ -280,15 +284,14 @@ string SmackRep::memPath(unsigned region, unsigned size) {
 }
 
 const Expr* SmackRep::mem(const llvm::Value* v) {
-  unsigned r = getRegion(v);
-  return mem(r, expr(v), getElementSize(v));
+  return mem(getRegion(v), expr(v), getElementSize(v));
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
   if (memoryRegions[region].isSingletonGlobal)
     return Expr::id(memPath(region, size));
   else
-    return Expr::sel(Expr::id(memPath(region, size)),addr);
+    return Expr::sel(Expr::id(memPath(region, size)), addr);
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
@@ -346,41 +349,55 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
 }
 
-const Stmt* SmackRep::load(const llvm::Value* addr, const llvm::Value* val) {
-// The tricky part is that we could expr(li) is actually expr(val) so that it is possible to pass li to val. 
+const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
+  const llvm::Value* P = LI.getPointerOperand();
+  const unsigned size = getElementSize(P);
   const Expr* rhs;
 
-  if (!SmackOptions::BitPrecise || (!SmackOptions::NoByteAccessInference && isFieldDisjoint(addr, llvm::cast<const llvm::Instruction>(val))))
-    rhs = mem(addr);
+  if (!SmackOptions::BitPrecise || (!SmackOptions::NoByteAccessInference && isFieldDisjoint(P, &LI)))
+    rhs = mem(P);
+
   else {
     stringstream name;
-    name << "$load." << intType(getElementSize(addr));
-    rhs = Expr::fn(name.str(), Expr::id(memPath(getRegion(addr), 8)), expr(addr));
+    name << "$load." << intType(size);
+    rhs = Expr::fn(name.str(), Expr::id(memPath(getRegion(P), 8)), expr(P));
   }
 
-  if (isFloat(val))
-    rhs = Expr::fn(opName("$si2fp", {getElementSize(addr)}), rhs);
-  
-  return Stmt::assign(expr(val), rhs);
+  if (isFloat(&LI))
+    rhs = Expr::fn(opName("$si2fp", {size}), rhs);
+
+  else if (LI.getType()->isPointerTy())
+    rhs = integerToPointer(rhs, size);
+
+  return Stmt::assign(expr(&LI), rhs);
 }
 
-const Stmt* SmackRep::store(const llvm::Value* addr, const llvm::Value* val, const llvm::StoreInst* si) {
-// Having a default value of si (NULL) is unsound.
+const Stmt* SmackRep::store(const llvm::StoreInst& SI) {
+  const llvm::Value* P = SI.getPointerOperand();
+  const llvm::Value* V = SI.getOperand(0);
+  const unsigned size = getElementSize(P);
+
+  return store(getRegion(P), size, expr(P), V,
+    !SmackOptions::NoByteAccessInference && isFieldDisjoint(P,&SI));
+}
+
+const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool safe) {
   const Expr* rhs = expr(val);
 
-  if (isFloat(val))
-    rhs = Expr::fn(opName("$fp2si", {getElementSize(addr)}), rhs);
+  if (val->getType()->isFloatingPointTy())
+    rhs = Expr::fn(opName("$fp2si",{size}), rhs);
 
-  if (!SmackOptions::BitPrecise || (!SmackOptions::NoByteAccessInference && isFieldDisjoint(addr, si)))
-    return Stmt::assign(mem(addr),rhs);
+  else if (val->getType()->isPointerTy())
+    rhs = pointerToInteger(rhs, size);
+
+  if (SmackOptions::BitPrecise && !safe)
+    return Stmt::assign(
+      Expr::id(memPath(region, 8)),
+      Expr::fn("$store." + intType(size), Expr::id(memPath(region,8)), addr, rhs)
+    );
+
   else
-    return storeAsBytes(getRegion(addr), getElementSize(addr), expr(addr), rhs);
-}
-
-const Stmt* SmackRep::storeAsBytes(unsigned region, unsigned size, const Expr* p, const Expr* e) {
-  stringstream name;
-  name << "$store." << intType(size);
-  return Stmt::assign(Expr::id(memPath(region, 8)), Expr::fn(name.str(), Expr::id(memPath(region, 8)), p, e));
+    return Stmt::assign(mem(region, addr, size), rhs);
 }
 
 bool SmackRep::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
@@ -523,7 +540,7 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
         && a.first->getType()->getPrimitiveSizeInBits() == 32
         && "Illegal struct index");
       unsigned fieldNo = dyn_cast<ConstantInt>(a.first)->getZExtValue();
-      e = pa(e, fieldOffset(st, fieldNo), 1);
+      e = pa(e, offset(st, fieldNo), 1);
     } else {
       Type* et = dyn_cast<SequentialType>(a.second)->getElementType();
       assert(a.first->getType()->isIntegerTy() && "Illegal index");
@@ -616,7 +633,7 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
   string fn = INSTRUCTION_TABLE.at(opcode);
-  return Expr::fn( isFloat(t) ? fn : opName(fn, {getIntSize(t)}), expr(lhs), expr(rhs));
+  return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
 const Expr* SmackRep::cmp(const llvm::CmpInst* I) {
@@ -629,7 +646,7 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
   string fn = CMPINST_TABLE.at(predicate);
-  return Expr::fn(opName(fn,{lhs->getType()}), expr(lhs), expr(rhs));
+  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
 }
 
 vector<Decl*> SmackRep::decl(llvm::Function* F) {
@@ -861,30 +878,30 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Pointer predicates" << endl;
-  const string predicates[] = {"$eq", "$sge", "$sgt", "$sle", "$slt"};
-  for (unsigned i = 0; i < 5; i++) {
-    s << Decl::function(indexedName(predicates[i],{PTR_TYPE}),
+  const vector<string> predicates {"$eq", "$ne", "$sge", "$sgt", "$sle", "$slt"};
+  for (auto pred : predicates) {
+    s << Decl::function(indexedName(pred,{PTR_TYPE}),
       {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, intType(1),
       Expr::cond(
-        Expr::fn(indexedName(predicates[i],{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
+        Expr::fn(indexedName(pred,{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
         integerLit(1L,1),
         integerLit(0L,1)),
       {Attr::attr("inline")} )
       << endl;
-    s << Decl::function(indexedName(predicates[i],{PTR_TYPE,BOOL_TYPE}),
+    s << Decl::function(indexedName(pred,{PTR_TYPE,BOOL_TYPE}),
       {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, BOOL_TYPE,
-      Expr::fn(indexedName(predicates[i],{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
+      Expr::fn(indexedName(pred,{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
       {Attr::attr("inline")} )
       << endl;
   }
   s << endl;
 
   s << "// Pointer operations" << endl;
-  const string operations[] = {"$add", "$sub", "$mul"};
-  for (unsigned i = 0; i < 3; i++) {
-    s << Decl::function(indexedName(operations[i],{PTR_TYPE}),
+  const vector<string> operations = {"$add", "$sub", "$mul"};
+  for (auto op : operations) {
+    s << Decl::function(indexedName(op,{PTR_TYPE}),
       {{"p1",PTR_TYPE},{"p2",PTR_TYPE}}, PTR_TYPE,
-      Expr::fn(indexedName(operations[i],{pointerType()}), {Expr::id("p1"), Expr::id("p2")}),
+      Expr::fn(indexedName(op,{pointerType()}), {Expr::id("p1"), Expr::id("p2")}),
       {Attr::attr("inline")})
       << endl;
   }
@@ -919,49 +936,33 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
     return 1;
 }
 
-void SmackRep::addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val) {
-  if (const llvm::GlobalValue* V = dyn_cast<const GlobalValue>(addr)) { 
-    if (SmackOptions::NoByteAccessInference)
-      addInit(region, expr(addr), val, V, false);
-    else
-      addInit(region, expr(addr), val, V, isFieldDisjoint(V, 0));
-  }
-  else
-    assert(0 && "addInit() should initialize global values?");
+void SmackRep::addInit(const llvm::GlobalValue* G, const llvm::Constant* C) {
+  addInit(G, expr(G), C, !SmackOptions::NoByteAccessInference && isFieldDisjoint(G, 0));
 }
 
-void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* val, const llvm::GlobalValue* V, bool safety) {
+void SmackRep::addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool safe) {
   using namespace llvm;
 
-  if (val->getType()->isIntegerTy()) {
-    staticInits.push_back( SmackOptions::BitPrecise? (safety? Stmt::assign(mem(region, addr, getIntSize(val)), expr(val)) : storeAsBytes(region, getIntSize(val), addr, expr(val))) : Stmt::assign(mem(region,addr), expr(val)) );
+  if (C->getType()->isIntegerTy() ||
+      C->getType()->isPointerTy() ||
+      C->getType()->isFloatingPointTy()) {
+    staticInits.push_back(store(getRegion(G), getSize(C->getType()), addr, C, safe));
 
-  } else if (isFloat(val)) {
-    staticInits.push_back( SmackOptions::BitPrecise? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) : Stmt::assign(mem(region,addr), Expr::fn(opName("$fp2si", {getSize(val->getType())}),expr(val))) );
-
-  } else if (isa<PointerType>(val->getType())) {
-    // TODO
-    staticInits.push_back( SmackOptions::BitPrecise? storeAsBytes(region, targetData->getTypeSizeInBits(val->getType()), addr, expr(val)) : Stmt::assign(mem(region,addr), expr(val)) );
-
-  } else if (ArrayType* at = dyn_cast<ArrayType>(val->getType())) {
+  } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType())) {
     for (unsigned i = 0; i < at->getNumElements(); i++) {
-      const Constant* elem = val->getAggregateElement(i);
-      if (SmackOptions::NoByteAccessInference)
-        addInit( region, pa(addr,i,storageSize(at->getElementType())), elem, V, false);  
-      else
-        addInit( region, pa(addr,i,storageSize(at->getElementType())), elem, V, isFieldDisjoint(V, i*storageSize(at->getElementType())));
+      addInit(G, pa(addr,i,storageSize(at->getElementType())), C->getAggregateElement(i),
+        !SmackOptions::NoByteAccessInference
+        && isFieldDisjoint(G, offset(at,i)));
     }
 
-  } else if (StructType* st = dyn_cast<StructType>(val->getType())) {
+  } else if (StructType* st = dyn_cast<StructType>(C->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
-      const Constant* elem = val->getAggregateElement(i);
-      if (SmackOptions::NoByteAccessInference)
-        addInit( region, pa(addr,fieldOffset(st,i),1), elem, V, false);
-      else
-        addInit( region, pa(addr,fieldOffset(st,i),1), elem, V, isFieldDisjoint(V, fieldOffset(st, i)));
+      addInit(G, pa(addr,offset(st,i),1), C->getAggregateElement(i),
+        !SmackOptions::NoByteAccessInference
+        && isFieldDisjoint(G, offset(st,i)));
     }
 
-  } else if (val->getType()->isX86_FP80Ty()) {
+  } else if (C->getType()->isX86_FP80Ty()) {
     staticInits.push_back(Stmt::code("// ignored X86 FP80 initializer"));
 
   } else {
@@ -1033,7 +1034,7 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
         if (numElems > 1)
           ax.push_back(Attr::attr("count",numElems));
 
-        addInit(getRegion(g), g, init);
+        addInit(g, init);
       }
 
     } else {
