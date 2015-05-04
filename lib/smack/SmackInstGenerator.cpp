@@ -326,7 +326,9 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  assert (!li.getType()->isAggregateType() && "Unexpected load value.");
+
+  // TODO what happens with aggregate types?
+  // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
   emit(rep.load(li));
 
