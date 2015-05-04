@@ -33,9 +33,13 @@ void __SMACK_dummy(int v) {
 
 #define LIMIT_1 2
 #define LIMIT_7 128
+#define LIMIT_8 256
 #define LIMIT_15 32768
+#define LIMIT_16 65536
 #define LIMIT_31 2147483648
-#define LIMIT_63 18446744073709551616
+#define LIMIT_32 4294967296
+#define LIMIT_63 9223372036854775808
+#define LIMIT_64 18446744073709551616
 
 #define xstr(s) str(s)
 #define str(s) #s
@@ -195,10 +199,10 @@ void __SMACK_decls() {
   DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $smod, mod)
   DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $srem, rem)
 
-  DECLARE(INLINE_UNARY_OP, i64, $s2u, { if i < 0 then $mod(i,LIMIT_63) else i });
-  DECLARE(INLINE_UNARY_OP, i32, $s2u, { if i < 0 then $mod(i,LIMIT_31) else i });
-  DECLARE(INLINE_UNARY_OP, i16, $s2u, { if i < 0 then $mod(i,LIMIT_15) else i });
-  DECLARE(INLINE_UNARY_OP, i8,  $s2u, { if i < 0 then $mod(i,LIMIT_7) else i });
+  DECLARE(INLINE_UNARY_OP, i64, $s2u, { if i < 0 then $mod(i,LIMIT_64) else i });
+  DECLARE(INLINE_UNARY_OP, i32, $s2u, { if i < 0 then $mod(i,LIMIT_32) else i });
+  DECLARE(INLINE_UNARY_OP, i16, $s2u, { if i < 0 then $mod(i,LIMIT_16) else i });
+  DECLARE(INLINE_UNARY_OP, i8,  $s2u, { if i < 0 then $mod(i,LIMIT_8) else i });
   DECLARE(INLINE_UNARY_OP, i1,  $s2u, { if i < 0 then $mod(i,LIMIT_1) else i });
 
   DECLARE(INLINE_BINARY_OP, i64, $udiv, { $div($s2u.i64(i1),$s2u.i64(i2)) });
