@@ -409,15 +409,23 @@ bool SmackRep::isFieldDisjoint(const llvm::GlobalValue *V, unsigned offset) {
 }
 
 const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
-  return pa(base, pointerLit(idx), pointerLit(size));
+  return pa(base, idx * size);
 }
 
 const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned long size) {
   return pa(base, idx, pointerLit(size));
 }
 
+const Expr* SmackRep::pa(const Expr* base, unsigned long offset) {
+  return offset > 0 ? pa(base, pointerLit(offset)) : base;
+}
+
 const Expr* SmackRep::pa(const Expr* base, const Expr* idx, const Expr* size) {
-  return Expr::fn("$add.ref", base, Expr::fn("$mul.ref", idx, size));
+  return pa(base, Expr::fn("$mul.ref", idx, size));
+}
+
+const Expr* SmackRep::pa(const Expr* base, const Expr* offset) {
+  return Expr::fn("$add.ref", base, offset);
 }
 
 const Expr* SmackRep::pointerToInteger(const Expr* e, unsigned width) {

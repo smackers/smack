@@ -99,7 +99,9 @@ private:
 
   const Expr* pa(const Expr* base, unsigned long index, unsigned long size);
   const Expr* pa(const Expr* base, const Expr* index, unsigned long size);
+  const Expr* pa(const Expr* base, unsigned long offset);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
+  const Expr* pa(const Expr* base, const Expr* offset);
   
   const Expr* bitConversion(const Expr* e, bool src, bool dst);
   const Expr* pointerToInteger(const Expr* e, unsigned width);
