@@ -530,7 +530,8 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
       if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first))
         e = pa(e, (unsigned long) ci->getZExtValue(), storageSize(et));
       else
-        e = pa(e, expr(a.first), storageSize(et));
+        e = pa(e, integerToPointer(expr(a.first), a.first->getType()->getIntegerBitWidth()),
+          storageSize(et));
     }
   }
 
@@ -628,7 +629,7 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
   string fn = CMPINST_TABLE.at(predicate);
-  return Expr::fn(isFloat(lhs) ? fn : opName(fn, {getIntSize(lhs)}), expr(lhs), expr(rhs));
+  return Expr::fn(opName(fn,{lhs->getType()}), expr(lhs), expr(rhs));
 }
 
 vector<Decl*> SmackRep::decl(llvm::Function* F) {
@@ -860,8 +861,16 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Pointer predicates" << endl;
-  const string predicates[] = {"$sge", "$sgt", "$sle", "$slt"};
-  for (unsigned i = 0; i < 4; i++) {
+  const string predicates[] = {"$eq", "$sge", "$sgt", "$sle", "$slt"};
+  for (unsigned i = 0; i < 5; i++) {
+    s << Decl::function(indexedName(predicates[i],{PTR_TYPE}),
+      {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, intType(1),
+      Expr::cond(
+        Expr::fn(indexedName(predicates[i],{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
+        integerLit(1L,1),
+        integerLit(0L,1)),
+      {Attr::attr("inline")} )
+      << endl;
     s << Decl::function(indexedName(predicates[i],{PTR_TYPE,BOOL_TYPE}),
       {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, BOOL_TYPE,
       Expr::fn(indexedName(predicates[i],{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
