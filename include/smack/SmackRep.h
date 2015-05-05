@@ -124,24 +124,19 @@ private:
   bool bytewiseAccess(const llvm::Value* V, const llvm::Function* F);
   bool bytewiseAccess(const llvm::GlobalValue* V, unsigned offset);
 
-public:
-  unsigned getElementSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
   unsigned getSize(llvm::Type* t);
 
-  string getString(const llvm::Value* v);
-
-  unsigned getRegion(const llvm::Value* v);
-  string memReg(unsigned i);
-  string memType(unsigned region, unsigned size);
-  string memPath(unsigned region, unsigned size);
-  bool isExternal(const llvm::Value* v);
-  void collectRegions(llvm::Module &M);
-
   string pointerType();
   string intType(unsigned width);
 
+  unsigned numElements(const llvm::Constant* v);
+
+  Decl* memcpyProc(unsigned dstReg, unsigned srcReg);
+  Decl* memsetProc(unsigned dstReg);
+
+public:
   const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
   const Expr* pointerLit(unsigned long v);
   const Expr* pointerLit(long v);
@@ -185,20 +180,28 @@ public:
   vector<Decl*> decl(llvm::Function* F);
   ProcDecl* proc(llvm::Function* f);
 
-  virtual vector<Decl*> globalDecl(const llvm::GlobalValue* g);
-  virtual void addBplGlobal(string name);
-  virtual vector<string> getModifies();
-  unsigned numElements(const llvm::Constant* v);
+  // used in Slicing
+  unsigned getElementSize(const llvm::Value* v);
+  unsigned getRegion(const llvm::Value* v);
+  string memReg(unsigned i);
+  string memType(unsigned region, unsigned size);
+  string memPath(unsigned region, unsigned size);
+
+  // used in SmackInstGenerator
+  string getString(const llvm::Value* v);
+  bool isExternal(const llvm::Value* v);
+  void addBplGlobal(string name);
+
+  // used in SmackModuleGenerator
+  void collectRegions(llvm::Module &M);
+  vector<Decl*> globalDecl(const llvm::GlobalValue* g);
+  vector<string> getModifies();
   void addInitFunc(const llvm::Function* f);
-  Decl* getStaticInit();
   Decl* getInitFuncs();
-  virtual string getPrelude();
+  Decl* getStaticInit();
+  string getPrelude();
+  const Expr* declareIsExternal(const Expr* e);
 
-  virtual const Expr* declareIsExternal(const Expr* e);
-
-private:
-  virtual Decl* memcpyProc(unsigned dstReg, unsigned srcReg);
-  virtual Decl* memsetProc(unsigned dstReg);
 };
 
 class RegionCollector : public llvm::InstVisitor<RegionCollector> {
