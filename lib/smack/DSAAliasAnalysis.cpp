@@ -79,9 +79,8 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
   return false;
 }
 
-bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
-  const llvm::Function *F = inst->getParent()->getParent();
-  return TS->isFieldDisjoint(ptr, F);
+bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* V, const llvm::Function* F) {
+  return TS->isFieldDisjoint(V, F);
 }
 
 bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {

@@ -91,7 +91,7 @@ public:
 
 private:
   void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
-  void addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool safe);
+  void addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool bytewise);
 
   unsigned storageSize(llvm::Type* T);
   unsigned offset(llvm::ArrayType* T, unsigned idx);
@@ -111,19 +111,18 @@ private:
   string opName(const string& operation, initializer_list<unsigned> types);
 
   const Expr* mem(unsigned region, const Expr* addr, unsigned size);
+  const Stmt* store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool bytewise = false);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
   const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
 
-  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
-  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
-  bool isTypeSafe(const llvm::Value* ptr, const llvm::Instruction* inst);
-  bool isTypeSafe(const llvm::GlobalValue* V);
-  bool isCollapsed(const llvm::Value* v);
-
   string procName(const llvm::User& U);
   string procName(const llvm::User& U, llvm::Function* F);
+
+  bool uniformMemoryAccesses();
+  bool bytewiseAccess(const llvm::Value* V, const llvm::Function* F);
+  bool bytewiseAccess(const llvm::GlobalValue* V, unsigned offset);
 
 public:
   unsigned getElementSize(const llvm::Value* v);
@@ -182,12 +181,11 @@ public:
   const Stmt* memset(const llvm::MemSetInst& msi);
   const Stmt* load(const llvm::LoadInst& LI);
   const Stmt* store(const llvm::StoreInst& SI);
-  const Stmt* store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool safe = true);
 
   vector<Decl*> decl(llvm::Function* F);
   ProcDecl* proc(llvm::Function* f);
 
-  virtual vector<Decl*> globalDecl(const llvm::Value* g);
+  virtual vector<Decl*> globalDecl(const llvm::GlobalValue* g);
   virtual void addBplGlobal(string name);
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);

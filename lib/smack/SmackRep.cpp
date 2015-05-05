@@ -268,6 +268,20 @@ string SmackRep::memReg(unsigned idx) {
   return indexedName("$M",{idx});
 }
 
+bool SmackRep::uniformMemoryAccesses() {
+  return !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference;
+}
+
+bool SmackRep::bytewiseAccess(const GlobalValue* V, unsigned offset) {
+  return SmackOptions::BitPrecise &&
+    (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,offset));
+}
+
+bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
+  return SmackOptions::BitPrecise &&
+    (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,F));
+}
+
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
   if (!memoryRegions[region].isSingletonGlobal || (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
@@ -354,14 +368,13 @@ const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
   const unsigned size = getElementSize(P);
   const Expr* rhs;
 
-  if (!SmackOptions::BitPrecise || (!SmackOptions::NoByteAccessInference && isFieldDisjoint(P, &LI)))
-    rhs = mem(P);
-
-  else {
+  if (bytewiseAccess(P, LI.getParent()->getParent())) {
     stringstream name;
     name << "$load." << intType(size);
     rhs = Expr::fn(name.str(), Expr::id(memPath(getRegion(P), 8)), expr(P));
-  }
+
+  } else
+    rhs = mem(P);
 
   if (isFloat(&LI))
     rhs = Expr::fn(opName("$si2fp", {size}), rhs);
@@ -377,11 +390,10 @@ const Stmt* SmackRep::store(const llvm::StoreInst& SI) {
   const llvm::Value* V = SI.getOperand(0);
   const unsigned size = getElementSize(P);
 
-  return store(getRegion(P), size, expr(P), V,
-    !SmackOptions::NoByteAccessInference && isFieldDisjoint(P,&SI));
+  return store(getRegion(P), size, expr(P), V, bytewiseAccess(P, SI.getParent()->getParent()));
 }
 
-const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool safe) {
+const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool bytewise) {
   const Expr* rhs = expr(val);
 
   if (val->getType()->isFloatingPointTy())
@@ -390,22 +402,13 @@ const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* addr, co
   else if (val->getType()->isPointerTy())
     rhs = pointerToInteger(rhs, size);
 
-  if (SmackOptions::BitPrecise && !safe)
+  if (bytewise)
     return Stmt::assign(
       Expr::id(memPath(region, 8)),
       Expr::fn("$store." + intType(size), Expr::id(memPath(region,8)), addr, rhs)
     );
-
   else
     return Stmt::assign(mem(region, addr, size), rhs);
-}
-
-bool SmackRep::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
-  return aliasAnalysis->isFieldDisjoint(ptr, inst); 
-}
-
-bool SmackRep::isFieldDisjoint(const llvm::GlobalValue *V, unsigned offset) {
-  return aliasAnalysis->isFieldDisjoint(V, offset); 
 }
 
 const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
@@ -854,7 +857,7 @@ string SmackRep::getPrelude() {
 
   s << "// Memory maps (" << memoryRegions.size() << " regions)" << endl;
   for (unsigned i=0; i<memoryRegions.size(); ++i) {
-    unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
+    unsigned n = uniformMemoryAccesses() ? 1 : 4;
     for (unsigned j = 0; j < n; j++) {
       unsigned size = 8 << j;
       s << "var " << memPath(i, size) 
@@ -927,7 +930,7 @@ vector<string> SmackRep::getModifies() {
   for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
     mods.push_back(*i);
   for (unsigned i=0; i<memoryRegions.size(); ++i) {
-    unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
+    unsigned n = uniformMemoryAccesses() ? 1 : 4;
     for (unsigned j=0; j < n; ++j) {
       unsigned size = 8 << j;
       mods.push_back(memPath(i, size));
@@ -945,29 +948,31 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
 }
 
 void SmackRep::addInit(const llvm::GlobalValue* G, const llvm::Constant* C) {
-  addInit(G, expr(G), C, !SmackOptions::NoByteAccessInference && isFieldDisjoint(G, 0));
+  addInit(G, expr(G), C, bytewiseAccess(G,0));
 }
 
-void SmackRep::addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool safe) {
+void SmackRep::addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool bytewise) {
   using namespace llvm;
 
   if (C->getType()->isIntegerTy() ||
       C->getType()->isPointerTy() ||
       C->getType()->isFloatingPointTy()) {
-    staticInits.push_back(store(getRegion(G), getSize(C->getType()), addr, C, safe));
+    staticInits.push_back(store(getRegion(G), getSize(C->getType()), addr, C, bytewise));
 
   } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType())) {
     for (unsigned i = 0; i < at->getNumElements(); i++) {
+
+      // TODO shouldn’t we be accummulating the offset from G?
       addInit(G, pa(addr,i,storageSize(at->getElementType())), C->getAggregateElement(i),
-        !SmackOptions::NoByteAccessInference
-        && isFieldDisjoint(G, offset(at,i)));
+        bytewiseAccess(G, offset(at,i)));
     }
 
   } else if (StructType* st = dyn_cast<StructType>(C->getType())) {
     for (unsigned i = 0; i < st->getNumElements(); i++) {
+
+      // TODO shouldn’t we be accummulating the offset from G?
       addInit(G, pa(addr,offset(st,i),1), C->getAggregateElement(i),
-        !SmackOptions::NoByteAccessInference
-        && isFieldDisjoint(G, offset(st,i)));
+        bytewiseAccess(G, offset(st,i)));
     }
 
   } else if (C->getType()->isX86_FP80Ty()) {
@@ -1007,7 +1012,7 @@ Decl* SmackRep::getInitFuncs() {
   return proc;
 }
 
-vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
+vector<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   using namespace llvm;
   vector<Decl*> decls;
   vector<const Attr*> ax;
@@ -1068,7 +1073,7 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
 
 Decl* SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
   stringstream s;
-  unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
+  unsigned n = uniformMemoryAccesses() ? 1 : 4;
 
   s << "procedure $memcpy." << dstReg << "." << srcReg;
   s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool)";
@@ -1111,7 +1116,7 @@ Decl* SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
 
 Decl* SmackRep::memsetProc(unsigned dstReg) {
   stringstream s;
-  unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
+  unsigned n = uniformMemoryAccesses() ? 1 : 4;
 
   s << "procedure $memset." << dstReg;
   s << "(dest: ref, val: " << intType(8) << ", len: ref, align: ref, isvolatile: bool)";
