@@ -78,8 +78,14 @@ def metadata(file):
   return m
   
 parser = argparse.ArgumentParser()
-parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
+parser.add_argument("--exhaustive", help="check all configurations on all examples", action="store_true")
+parser.add_argument("--all-configs", help="check all configurations per example", action="store_true")
+parser.add_argument("--all-examples", help="check all examples", action="store_true")
 args = parser.parse_args()
+
+if args.exhaustive:
+  args.all_examples = True;
+  args.all_configs = True;
 
 print "Running regression tests..."
 print
@@ -93,7 +99,7 @@ try:
     if meta['skip'] == True:
       continue
 
-    if meta['skip'] != False and not args.exhaustive:
+    if meta['skip'] != False and not args.all_examples:
       continue
 
     print bold("{0:>20}".format(test))
@@ -104,10 +110,10 @@ try:
     cmd += ['-o', path.splitext(test)[0] + '.bpl']
     cmd += meta['flags']
 
-    for memory in meta['memory'][:100 if args.exhaustive else 1]:
+    for memory in meta['memory'][:100 if args.all_configs else 1]:
       cmd += ['--mem-mod=' + memory]
 
-      for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
+      for verifier in meta['verifiers'][:100 if args.all_configs else 1]:
         cmd += ['--verifier=' + verifier]
 
         print "{0:>20} {1:>10}    :".format(memory, verifier),
