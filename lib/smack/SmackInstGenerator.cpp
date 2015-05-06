@@ -351,7 +351,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_" + rep.type(G), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+      emit(Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
     }
   }
 
