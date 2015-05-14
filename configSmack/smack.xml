@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE benchmark SYSTEM "benchmark.dtd">
+<benchmark tool="smack" timelimit="900" hardtimelimit="930" memlimit="15000" cpuCores="8">
+
+  <require cpuCores="8"/>
+
+  <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
+
+  <resultfiles>**.[!b]*</resultfiles>
+  <!-- bpl-files are big (summed up over 40G). pbl-files contain formulas, we do not need them, so we ignore them in VCloud -->
+  
+  <rundefinition name="defaultArgs"></rundefinition>
+  <rundefinition name="unroll 10">
+    <option name="--unroll">10</option>
+  </rundefinition>
+
+  <sourcefiles name="Simple">
+    <includesfile>sv-benchmarks/SimpleNew.set</includesfile>
+  </sourcefiles>
+</benchmark>
