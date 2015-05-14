@@ -1,3 +1,6 @@
+# Ignore the docs
+docs/
+
 # Compiled Object files
 *.slo
 *.lo
