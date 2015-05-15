@@ -15,5 +15,5 @@ if [[ $1 == "debug" ]]
     else
     ../benchexec/bin/benchexec smack.xml
 fi
-
+../benchexec/bin/table-generator 'results/*.xml'
 cd ..

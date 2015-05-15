@@ -22,12 +22,7 @@
   <option name="-o">results/${benchmark_name}.${benchmark_date}.logfiles/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option>
 
   <columns>
-    <column title="test">scratch/${benchmark_date}/${sourcefile_path}/${sourcefile_name}</column>
-    <column title="test2">scratch/${benchmark_date}/${sourcefile_path}/${sourcefile_name}</column>
+    <!-- the 'results/' directory gets relatively "prepended" since output html is in this folder -->
+    <column title="Output Files">${benchmark_name}.${benchmark_date}.logfiles/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
   </columns>
-  <!--
-  <column title="test">1234</column>
-  <column>1234</column>
--->
-
 </benchmark>
