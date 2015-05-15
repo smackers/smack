@@ -72,6 +72,13 @@ class Tool(benchexec.tools.template.BaseTool):
     def get_value_from_output(self, lines, identifier):
         #identifier comes from pattern field of input xml <column> node,
         # which then has variable substitution performed on it first
-        ret  = '<a style="display: inline" href="' + identifier + '.bc">.bc</a>'
-        ret += '<a style="display: inline" href="' + identifier + '.bpl">.bpl</a>'
+        #If identifier is the input source file path+name, this will create
+        # links in the output table for bpl and bc files
+        ret = ""
+        ret += '<div align="center">\n'
+        ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
+        ret +=      'href="' + identifier + '.bc">.bc</a>\n'
+        ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
+        ret +=      'href="' + identifier + '.bpl">.bpl</a>\n'
+        ret += '</div>\n'
         return ret
