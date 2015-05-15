@@ -6,11 +6,11 @@ int incr(int x) {
 }
 
 int main(void) {
-  int a;
+  int a, b;
 
-  a = 1;
+  a = b = __VERIFIER_nondet_int();
   a = incr(a);
-  assert(a == 2);
+  assert(a == b + 1);
   return 0;
 }
 

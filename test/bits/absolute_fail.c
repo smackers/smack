@@ -1,12 +1,11 @@
 #include "smack.h"
 #include <limits.h>
 
-// @flag --unroll=2
 // @expect error
 
 int main()
 {
-	int v = __SMACK_nondet();           	// we want to find the absolute value of v
+	int v = __VERIFIER_nondet_int();           	// we want to find the absolute value of v
 	unsigned int r;       			// the result goes here 
 	int mask;
 	assume(v < 0);

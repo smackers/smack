@@ -188,7 +188,7 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
 
     // Conditional branch
     assert(bi.getNumSuccessors() == 2);
-    const Expr* e = Expr::eq(rep.expr(bi.getCondition()), rep.lit((unsigned)1,1));
+    const Expr* e = Expr::eq(rep.expr(bi.getCondition()), rep.lit(1u,1));
     targets.push_back(make_pair(e,bi.getSuccessor(0)));
     targets.push_back(make_pair(Expr::not_(e),bi.getSuccessor(1)));
   }
@@ -431,9 +431,9 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
   emit(Stmt::havoc(x));
   emit(Stmt::assume(Expr::and_(
-                                    Expr::impl(Expr::fn("$i2b",c), Expr::eq(Expr::id(x), v1)),
-                                    Expr::impl(Expr::not_(Expr::fn("$i2b",c)), Expr::eq(Expr::id(x), v2))
-                                  )));
+    Expr::impl(Expr::eq(c,Expr::id("$1.i1")), Expr::eq(Expr::id(x), v1)),
+    Expr::impl(Expr::neq(c,Expr::id("$1.i1")), Expr::eq(Expr::id(x), v2))
+  )));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {

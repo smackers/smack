@@ -31,24 +31,23 @@ public:
 
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
+
   static const string NULL_VAL;
+  static const string GLOBALS_BOTTOM;
+  static const string EXTERNS_BOTTOM;
+  static const string MALLOC_TOP;
 
   static const string ALLOCA;
   static const string MALLOC;
   static const string FREE;
   static const string MEMCPY;
 
-  static const string B2P;
-  static const string I2B;
-  static const string B2I;
-  
   static const string MEM_OP;
   static const string REC_MEM_OP;
   static const string MEM_OP_VAL;
 
-  static const Expr* NUL;
-  
   static const string STATIC_INIT;
+  static const string INIT_FUNCS;
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
@@ -71,6 +70,7 @@ protected:
   long globalsBottom;
   long externsBottom;
   vector<const Stmt*> staticInits;
+  vector<const Stmt*> initFuncs;
   
   unsigned uniqueFpNum;
 
@@ -91,9 +91,6 @@ private:
   const Expr* pa(const Expr* base, const Expr* index, unsigned size, unsigned i_size = 0, unsigned t_size = 0);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size, unsigned i_size = 0, unsigned t_size = 0);
   
-  const Expr* i2b(const llvm::Value* v);
-  const Expr* b2i(const llvm::Value* v);
-
   string indexedName(string name, int idx);
   string indexedName(string name, vector<string> idxs);
 
@@ -132,6 +129,7 @@ public:
   const Expr* lit(bool val);
   const Expr* lit(string val, unsigned width = 0);
   const Expr* lit(unsigned val, unsigned width = 0);
+  const Expr* lit(unsigned long val, unsigned width = 0);
   const Expr* lit(long val, unsigned width = 0);
 
   const Expr* lit(const llvm::Value* v, unsigned flag);
@@ -184,8 +182,10 @@ public:
   virtual vector<string> getModifies();
   unsigned numElements(const llvm::Constant* v);
   void addInit(unsigned region, const llvm::Value* addr, const llvm::Constant* val);
+  void addInitFunc(const llvm::Function* f);
   bool hasStaticInits();
   Decl* getStaticInit();
+  Decl* getInitFuncs();
   virtual string getPtrType();
   virtual string getPrelude();
 

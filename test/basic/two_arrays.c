@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=2
+// @flag --loop-limit=11
 // @expect verified
 
 #define MAXSIZE 10

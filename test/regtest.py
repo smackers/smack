@@ -19,7 +19,7 @@ def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
 def get_result(output):
-  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out', output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out|Corral timed out', output):
     return 'timeout'
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
     return 'verified'
@@ -84,10 +84,13 @@ print
 passed = failed = timeouts = unknowns = 0
 
 try:
-  for test in glob.glob("./**/*.c") if args.exhaustive else glob.glob("./basic/*.c"):
+  for test in glob.glob("./**/*.c"):
     meta = metadata(test)
 
-    if meta['skip']:
+    if meta['skip'] == True:
+      continue
+
+    if meta['skip'] != False and not args.exhaustive:
       continue
 
     print "{0:>20}".format(test)
@@ -95,7 +98,7 @@ try:
 
     cmd = ['smackverify.py', test]
     cmd += ['--time-limit', str(meta['time-limit'])]
-    cmd += ['-o', test + '.bpl']
+    cmd += ['-o', path.splitext(test)[0] + '.bpl']
     cmd += meta['flags']
 
     for memory in meta['memory'][:100 if args.exhaustive else 1]:
@@ -106,10 +109,15 @@ try:
 
         print "{0:>20} {1:>10}    :".format(memory, verifier),
 
-        t0 = time.time()
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err  = p.communicate()
-        elapsed = time.time() - t0
+        try:
+          t0 = time.time()
+          p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          out, err  = p.communicate()
+          elapsed = time.time() - t0
+
+        except OSError:
+          print >> sys.stderr
+          sys.exit("Error executing command:\n%s" % " ".join(cmd))
 
         result = get_result(out+err)
 

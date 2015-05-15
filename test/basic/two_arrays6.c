@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 #define RESET 0
@@ -45,7 +44,7 @@ int main() {
   elem *arrayOne;
   elem *arrayTwo;
 
-  arraySize = __SMACK_nondet();
+  arraySize = __VERIFIER_nondet_int();
   assume(arraySize > 0);
 
   arrayOne = (elem*)malloc(arraySize * sizeof(elem));

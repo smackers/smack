@@ -1,12 +1,11 @@
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 int main(void) {
   int x = 1;
 
-  if (__SMACK_nondet()) {
+  if (__VERIFIER_nondet_int()) {
     x++;
   } else {
     x--;

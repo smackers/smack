@@ -1,7 +1,6 @@
 #include "smack.h"
 #include <inttypes.h>
 
-// @flag --unroll=2
 // @expect verified
 
 struct a {

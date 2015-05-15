@@ -1,6 +1,5 @@
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 /*extern int __VERIFIER_nondet_int(void);
@@ -18,7 +17,7 @@ void main()
 
   while(1)
     {
-      y = y +2*__SMACK_nondet();
+      y = y +2*__VERIFIER_nondet_int();
 
 
       assert (y!=0);

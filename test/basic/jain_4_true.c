@@ -1,6 +1,5 @@
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 /*extern int __VERIFIER_nondet_int(void);
@@ -21,9 +20,9 @@ void main()
 
   while(1)
     {
-      x = x +4*__SMACK_nondet();
-      y = y +4*__SMACK_nondet();
-      z = z +8*__SMACK_nondet();
+      x = x +4*__VERIFIER_nondet_int();
+      y = y +4*__VERIFIER_nondet_int();
+      z = z +8*__VERIFIER_nondet_int();
 
       assert(x+y+z!=1);
     }

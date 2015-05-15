@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 void foo(int *x) {
@@ -10,7 +9,7 @@ void foo(int *x) {
 
 int main(void) {
   int *y = malloc(sizeof(int));
-  int tmp = __SMACK_nondet();
+  int tmp = __VERIFIER_nondet_int();
 
   *y = 10;
 

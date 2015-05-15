@@ -23,8 +23,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
        x = m.global_begin(), e = m.global_end(); x != e; ++x)
     program.addDecls(rep.globalDecl(x));
   
-  if (rep.hasStaticInits())
-    program.addDecl(rep.getStaticInit());
+  program.addDecl(rep.getStaticInit());
 
   DEBUG(errs() << "Analyzing functions...\n");
 
@@ -67,8 +66,11 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
       naming.leave();
 
       // First execute static initializers, in the main procedure.
-      if (naming.get(*func) == "main" && rep.hasStaticInits())
+      if (naming.get(*func) == "main") {
+        proc->insert(Stmt::call(SmackRep::INIT_FUNCS));
         proc->insert(Stmt::call(SmackRep::STATIC_INIT));
+      } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_")
+        rep.addInitFunc(func);
 
       DEBUG(errs() << "Finished analyzing function: " << naming.get(*func) << "\n\n");
     }
@@ -76,6 +78,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
     // MODIFIES
     // ... to do below, after memory splitting is determined.
   }
+
+  program.addDecl(rep.getInitFuncs());
 
   // MODIFIES
   vector<ProcDecl*> procs = program.getProcs();

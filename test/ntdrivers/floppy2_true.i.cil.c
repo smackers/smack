@@ -1,6 +1,5 @@
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 extern char __VERIFIER_nondet_char(void);
@@ -6173,13 +6172,6 @@ NTSTATUS FlAcpiConfigureFloppy(PDISKETTE_EXTENSION DisketteExtension , PFDC_INFO
 #line 838
   return (0L);
 }
-}
-#line 949
-void __VERIFIER_assert(int cond) {
-  if (!(cond)) {
-    ERROR: assert(0); goto ERROR;
-  }
-  return;
 }
 #line 841 "floppy.c"
 NTSTATUS FlQueueIrpToThread(PIRP Irp , PDISKETTE_EXTENSION DisketteExtension ) 
