@@ -46,10 +46,10 @@ wget https://pypi.python.org/packages/3.3/T/Tempita/Tempita-0.5.3dev-py3.3.egg
 #The following extracts only the Tempita-0.5.3dev/tempita folder, and when it does so,
 #  replaces the 'Tempita-0.5.3dev/' portion with 'benchexec/'.
 #  In other words, it extracts just the module portion of tempita to the benchexec folder
-unzip Tempita-0.5.3dev-py3.3.egg tempita/\* -d benchexec/
-#tar --transform='s,Tempita-0.5.3dev/,benchexec/,' -xvf Tempita-0.5.3dev.tar.gz Tempita-0.5.3dev/tempita
+#  -n means don't overwrite existing target files, tempita/\* means get only files in tempita dir
+unzip -n Tempita-0.5.3dev-py3.3.egg tempita/\* -d benchexec/
 rm Tempita-0.5.3dev-py3.3.egg
 #Copy smack's BenchExec wrapper to the benchexec installation
-cp toBenchExecTools/smack.py benchexec/benchexec/tools/
+cp toBenchExecRoot/* benchexec/ -r
 
 

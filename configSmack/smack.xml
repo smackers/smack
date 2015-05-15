@@ -10,11 +10,24 @@
   <!-- bpl-files are big (summed up over 40G). pbl-files contain formulas, we do not need them, so we ignore them in VCloud -->
   
   <rundefinition name="defaultArgs"></rundefinition>
-  <rundefinition name="unroll 10">
+  <rundefinition name="unroll10">
     <option name="--unroll">10</option>
   </rundefinition>
 
   <sourcefiles name="Simple">
     <includesfile>sv-benchmarks/SimpleNew.set</includesfile>
   </sourcefiles>
+
+  <option name="--bc">results/${benchmark_name}.${benchmark_date}.logfiles/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bc</option>
+  <option name="-o">results/${benchmark_name}.${benchmark_date}.logfiles/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option>
+
+  <columns>
+    <column title="test">scratch/${benchmark_date}/${sourcefile_path}/${sourcefile_name}</column>
+    <column title="test2">scratch/${benchmark_date}/${sourcefile_path}/${sourcefile_name}</column>
+  </columns>
+  <!--
+  <column title="test">1234</column>
+  <column>1234</column>
+-->
+
 </benchmark>

@@ -1,5 +1,19 @@
 #!/bin/bash
 
+if [[ $1 == "clean" ]]
+    then
+    rm configSmack/results -rf
+    rm configSmack/scratch -rf
+    rm configSmack/*.bc configSmack/*.bpl
+    exit
+fi
+
 cd configSmack
-../benchexec/bin/benchexec smack.xml
+if [[ $1 == "debug" ]]
+    then
+    ../benchexec/bin/benchexec -d smack.xml
+    else
+    ../benchexec/bin/benchexec smack.xml
+fi
+
 cd ..

@@ -23,6 +23,23 @@ class Tool(benchexec.tools.template.BaseTool):
 
     def cmdline(self, executable, options, tasks, propertyfile=None, rlimits={}):
         assert len(tasks) == 1
+        try:
+            #If options contains -o, get next option element, and its dirname
+            targetDir = os.path.dirname(options[options.index("-o")+1])
+            if not os.path.exists(targetDir):
+                os.makedirs(targetDir)
+        except:
+            #If it doesn't contain -o, nothing to do...
+            pass
+        try:
+            #If options contains --bc, get next option element, and its dirname
+            targetDir = os.path.dirname(options[options.index("--bc")+1])
+            if not os.path.exists(targetDir):
+                os.makedirs(targetDir)
+        except:
+            #If it doesn't contain --bc, nothing to do...
+            pass
+            
         return [executable] + \
                [s for s in tasks] + \
                options
@@ -51,3 +68,10 @@ class Tool(benchexec.tools.template.BaseTool):
             status = result.RESULT_UNKNOWN
 
         return status
+
+    def get_value_from_output(self, lines, identifier):
+        #identifier comes from pattern field of input xml <column> node,
+        # which then has variable substitution performed on it first
+        ret  = '<a style="display: inline" href="' + identifier + '.bc">.bc</a>'
+        ret += '<a style="display: inline" href="' + identifier + '.bpl">.bpl</a>'
+        return ret
