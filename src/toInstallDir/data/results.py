@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+import cgitb
+import cgi
+cgitb.enable()
+
+from lib import *
+
+runRoot = "."
+runFolderPrefix = "exec"
+
+def printError(msg):
+    print("<h1>Bad results.py query</h1><hr/>")
+    print("<p>Query failed with the following message:</p>")
+    print("<p>" + msg + "</p>")
+    exit()
+
+def filterResultsByCategory(runSets, form):
+    ret = []
+    for runset in runSets:
+        if runset.fileSet == form['category'].value:
+            ret.append(runset)
+    return ret
+
+def filterResultsByOptions(runSets, form, allOptions):
+    badOpts = dict()
+    #If the option was passed, we'll build a set of negative options, 
+    # based on set difference between allOptions and form passed options
+    for opt in allOptions.keys():
+        if opt in form:
+            #detect whether single value was passed, or a list
+            if isinstance(form[opt].value, list):
+                badOpts[opt] = set(allOptions[opt]) - set(form[opt].value)
+            else:
+                badOpts[opt] = set(allOptions[opt]) - set([form[opt].value])
+    #Only keep set if it doesn't have any badopts
+    ret = []
+    for runset in runSets:
+        keep = True
+        for opt in badOpts.keys():
+            #If option exists for run, and it is in bad list, unkeep it
+            if opt in runset.options and runset.options[opt] in badOpts[opt]:
+                keep = False
+        if keep:
+            ret.append(runset)
+    return ret
+
+
+if __name__ == '__main__':
+    print("Content-Type: text/html")    # HTML is following
+    print()                             # blank line, end of headers
+    form = cgi.FieldStorage()
+
+    runSets = getAllRunSets(runRoot, runFolderPrefix)
+    allOptions = getAllOptionsUsed(runSets)
+
+    if not "category" in form:
+        printError("No category parameter passed")
+    runSets = filterResultsByCategory(runSets, form)
+    runSets = filterResultsByOptions(runSets, form, allOptions)
+    for runset in runSets:
+        print("<hr>Name: " + runset.name)
+        print("<br/>Category: " + runset.fileSet)
+        for opt in runset.options.keys():
+            print("<br/>Option: " + opt + ", " + runset.options[opt])
