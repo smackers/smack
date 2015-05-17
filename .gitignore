@@ -2,7 +2,4 @@
 #*#
 *.bc
 *.bpl
-/benchexec/
-configSmack/sv-benchmarks/
-configSmack/results/
-configSmack/scratch/
+/install/

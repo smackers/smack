@@ -1,14 +1,30 @@
 #!/bin/bash
 
+INSTALLDIR=../install
+
+#Gets rid of installation
 if [[ $1 == "clean" ]]
     then
-    rm benchexec/ -rf
-    rm configSmack/results -rf
-    rm configSmack/*.bc configSmack/*.bpl
+    rm ${INSTALLDIR} -rf
     exit
 fi
 
+#Gets rid of everything except sv-benchmarks, since they're big
+if [[ $1 == "tidy" ]]
+    then
+    rm ${INSTALLDIR}/benchexec/ -rf
+    rm ${INSTALLDIR}/executions/ -rf
+    rm ${INSTALLDIR}/inputXMLFiles/ -rf
+    rm ${INSTALLDIR}/runSmackBench.sh -f
+    exit
+fi
 
+#Copies things over again
+if [[ $1 == "refresh" ]]
+    then
+    cp toInstallDir/* ${INSTALLDIR} -r
+    exit
+fi
 
 ##########################
 # Setup cgroups
@@ -30,26 +46,32 @@ fi
 
 
 ##########################
+# Setup install folder
+##########################
+mkdir -p ${INSTALLDIR}
+
+##########################
 # Get svcomp benchmarks
 ##########################
 #Download svcomp benchmarks
-#svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ configSmack/sv-benchmarks
+#svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/sv-benchmarks
 
 
 ##########################
 # Prepare benchexec
 ##########################
 #Get BenchExec package
-git clone https://github.com/dbeyer/benchexec.git
+git clone https://github.com/dbeyer/benchexec.git ${INSTALLDIR}/benchexec/
+#git clone https://github.com/MontyCarter/benchexec.git ./install/
 #And its dependency, tempita
-wget https://pypi.python.org/packages/3.3/T/Tempita/Tempita-0.5.3dev-py3.3.egg
+wget https://pypi.python.org/packages/3.3/T/Tempita/Tempita-0.5.3dev-py3.3.egg --directory-prefix=${INSTALLDIR}
 #The following extracts only the Tempita-0.5.3dev/tempita folder, and when it does so,
 #  replaces the 'Tempita-0.5.3dev/' portion with 'benchexec/'.
 #  In other words, it extracts just the module portion of tempita to the benchexec folder
 #  -n means don't overwrite existing target files, tempita/\* means get only files in tempita dir
-unzip -n Tempita-0.5.3dev-py3.3.egg tempita/\* -d benchexec/
-rm Tempita-0.5.3dev-py3.3.egg
+unzip -n ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg tempita/\* -d ${INSTALLDIR}/benchexec/
+rm ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg
 #Copy smack's BenchExec wrapper to the benchexec installation
-cp toBenchExecRoot/* benchexec/ -r
+cp toInstallDir/* ${INSTALLDIR} -r
 
 

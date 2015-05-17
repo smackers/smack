@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!DOCTYPE benchmark SYSTEM "benchmark.dtd">
+<benchmark tool="smack" timelimit="900" hardtimelimit="930" memlimit="15000" cpuCores="8">
+
+  <require cpuCores="8"/>
+
+  <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
+
+  <rundefinition name="defaultArgs"></rundefinition>
+  <rundefinition name="unroll10">
+    <option name="--unroll">10</option>
+  </rundefinition>
+
+  <sourcefiles name="Simple">
+    <includesfile>../../sv-benchmarks/SimpleNew.set</includesfile>
+  </sourcefiles>
+
+  <!-- Stuff below sets up bc and bpl file download links in table...  -->
+  <option name="--bc">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bc</option>
+  <option name="-o">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option>
+
+  <columns>
+    <!-- The output html page sits in the exec_<timestamp>/results/ folder, so file paths should be 
+         relative to this.  ${logfile_path} gests whole relative path from install folder, so we have 
+	 to recreate the portion from the exec_<timestamp>/results/ folder on -->
+    <column title="Output Files">${benchmark_name}.${benchmark_date}.logfiles/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
+  </columns>
+</benchmark>
