@@ -607,8 +607,8 @@ class Run():
             self.status = self.runSet.benchmark.tool.determine_result(returncode, returnsignal, output, isTimeout)
         self.category = result.get_result_category(self.identifier, self.status, self.properties)
         for column in self.columns:
-            subbed = substitute_vars([column.text], self.runSet, self.sourcefiles[0])[0]
-            column.value = self.runSet.benchmark.tool.get_value_from_output(output, subbed)
+            substitutedColumnText = substitute_vars([column.text], self.runSet, self.sourcefiles[0])[0]
+            column.value = self.runSet.benchmark.tool.get_value_from_output(output, substitutedColumnText)
 
 
         # Tools sometimes produce a result even after a timeout.
