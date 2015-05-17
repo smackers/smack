@@ -15,6 +15,7 @@ class RunSet:
         self.outXml = outputXml
         self.name = ET.parse(self.outXml).getroot().get("name")
         self.options = self.getOptions()
+        self.fileSet = self.getSetName()
 
     def getOptions(self):
         inRoot = ET.parse(self.inXml).getroot()
@@ -24,6 +25,13 @@ class RunSet:
         for opt in rundefOptions:
             options[opt.get("name")] =  opt.text
         return options
+
+    def getSetName(self):
+        #sourcefile Set name is found as last token before .xml in output filename
+        #Remove file extension
+        noExt = path.splitext(self.outXml)[0]
+        #Use rundefinition name  plus "." as delimiter
+        return noExt.split(self.name + ".")[1]
 
 #Finds all xml files matching the path searchRoot/folderPrefix*/results/*.xml
 def getAllRunSets(searchRoot, folderPrefix):
@@ -38,6 +46,13 @@ def getAllRunSets(searchRoot, folderPrefix):
         
     return runSets
 
+def getSourcefileSetsUsed(runSets):
+    usedSets = set()
+    for runset in runSets:
+        usedSets.add(runset.fileSet)
+    return sorted(list(usedSets))
+
+
 def getAllOptionsUsed(runSets):
     possibleOptions = dict()
     for runset in runSets:
@@ -51,34 +66,47 @@ def getAllOptionsUsed(runSets):
         possibleOptions[opt] = sorted(possibleOptions[opt])
     return possibleOptions
 
-def printOptions(options):
-    optionKeys = sorted(options.keys())
-
-    print('''
-<form method="post" action="index.py">''')
-    for key in optionKeys:
-        print('''
-    <p>
-        {0}: '''.format(key))
-        for val in options[key]:
-            print('''
-        <input type="checkbox" name="--unroll" value="{0}" /> {0}'''.format(val))
-
-        print('''
-    </p>''')
-    print('''
-</form>''')
-
-
-
-    
 
 if __name__ == '__main__':
     print("Content-Type: text/html")    # HTML is following
     print()                             # blank line, end of headers
-
+    form = cgi.FieldStorage()
     
     runSets = getAllRunSets(runRoot, runFolderPrefix)
-    usedOptions = getAllOptionsUsed(runSets)
-    printOptions(usedOptions)
+    options = getAllOptionsUsed(runSets)
+    optionKeys = sorted(options.keys())
+    print('''
+<h1>SMACK+CORRAL Benchmark Results</h1><hr/>
+<p>Select a set, and select the command line options to include</p>
+<p>Any option with no selected values will include all values for that option</p><hr/>
+<form method="post" action="index.py">''')
 
+    usedFilesets = getSourcefileSetsUsed(runSets)
+    print('''
+    <table>
+    <tr><td>Category:</td><td><select name="filesets">''')
+
+    for fileset in usedFilesets:
+        print('''
+        <option value="{0}">{0}</option>'''.format(fileset))
+    print('''
+    </select></td></tr>''')
+
+    for key in optionKeys:
+        print('''
+        <tr><td>{0}:</td>'''.format(key))
+        for val in options[key]:
+            print('''
+        <td><input type="checkbox" name="--unroll" value="{0}" /> {0}</td>'''.format(val))
+        print('''
+        </tr>''')
+
+    print('''
+    <tr><td><input type="submit" value="Submit" name="Submit"></td>
+        <td><input type="submit" value="Clear" name="Clear"></td></tr>
+    </table>''')
+    print('''
+</form>''')
+
+    if "Submit" in form:
+        print("Submitting form")
