@@ -4,7 +4,7 @@
 #Gets rid of existing results
 if [[ $1 == "clean" ]]
     then
-    rm executions -rf
+    rm data/exec* -rf
     rm *.bc *.bpl -f
     exit
 fi
@@ -19,7 +19,7 @@ INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 # Generate folder for this run
 ################################
 OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
-OUTFOLDER=executions/exec_${OUTFOLDER}
+OUTFOLDER=data/exec_${OUTFOLDER}
 mkdir -p ${OUTFOLDER}
 
 ################################

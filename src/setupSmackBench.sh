@@ -13,7 +13,7 @@ fi
 if [[ $1 == "tidy" ]]
     then
     rm ${INSTALLDIR}/benchexec/ -rf
-    rm ${INSTALLDIR}/executions/ -rf
+    rm ${INSTALLDIR}/data/ -rf
     rm ${INSTALLDIR}/inputXMLFiles/ -rf
     rm ${INSTALLDIR}/runSmackBench.sh -f
     exit
@@ -54,7 +54,7 @@ mkdir -p ${INSTALLDIR}
 # Get svcomp benchmarks
 ##########################
 #Download svcomp benchmarks
-#svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/sv-benchmarks
+svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/sv-benchmarks
 
 
 ##########################
