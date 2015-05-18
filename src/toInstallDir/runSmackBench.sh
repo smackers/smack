@@ -9,9 +9,11 @@ if [[ $1 == "clean" ]]
     exit
 fi
 
-BENCHEXECPATH=benchexec/bin
+cd data
 
-INPUTXMLPATH=inputXMLFiles
+BENCHEXECPATH=../benchexec/bin
+
+INPUTXMLPATH=../inputXMLFiles
 INPUTXMLFILE=smack.xml
 INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 
@@ -19,7 +21,7 @@ INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 # Generate folder for this run
 ################################
 OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
-OUTFOLDER=data/exec_${OUTFOLDER}
+OUTFOLDER=exec_${OUTFOLDER}
 mkdir -p ${OUTFOLDER}
 
 ################################
@@ -34,6 +36,4 @@ then
 else
     ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/
 fi
-${BENCHEXECPATH}/table-generator "${OUTFOLDER}/results/*.xml"
-rm loopBound.bpl smack.bc
-
+cd ..
