@@ -7,7 +7,6 @@ from lib import *
 
 runRoot = "."
 runFolderPrefix = "exec"
-
 if __name__ == '__main__':
     print("Content-Type: text/html")    # HTML is following
     print()                             # blank line, end of headers

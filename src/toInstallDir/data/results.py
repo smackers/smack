@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 import cgitb
 import cgi
+import datetime
+import subprocess
+import sys
+import os
 cgitb.enable()
 
 from lib import *
+sys.dont_write_bytecode = True # prevent creation of .pyc files
+
 
 runRoot = "."
 runFolderPrefix = "exec"
+tblGenExe = "../benchexec/bin/table-generator"
+scratchDir = "."
 
 def printError(msg):
     print("<h1>Bad results.py query</h1><hr/>")
@@ -44,10 +52,26 @@ def filterResultsByOptions(runSets, form, allOptions):
             ret.append(runset)
     return ret
 
+def generateTable(runSets):
+    #Get list of output xml files
+    xmlFiles = []
+    for runset in runSets:
+        xmlFiles.append(runset.outXml)
+    filenameBase = "results"
+    
+    cmd = [tblGenExe, "-o", scratchDir, "-n", filenameBase, "--printHTML"] + xmlFiles
+    try:
+        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        print(out.decode('utf-8'))
+    except subprocess.CalledProcessError as e:
+        out = e.output
+        printError("table-generator failed with the following output:\n<pre>" + out.decode('utf-8') + "</pre>")
+
 
 if __name__ == '__main__':
     print("Content-Type: text/html")    # HTML is following
     print()                             # blank line, end of headers
+    print("something")
     form = cgi.FieldStorage()
 
     runSets = getAllRunSets(runRoot, runFolderPrefix)
@@ -57,8 +81,4 @@ if __name__ == '__main__':
         printError("No category parameter passed")
     runSets = filterResultsByCategory(runSets, form)
     runSets = filterResultsByOptions(runSets, form, allOptions)
-    for runset in runSets:
-        print("<hr>Name: " + runset.name)
-        print("<br/>Category: " + runset.fileSet)
-        for opt in runset.options.keys():
-            print("<br/>Option: " + opt + ", " + runset.options[opt])
+    generateTable(runSets)

@@ -54,7 +54,7 @@ mkdir -p ${INSTALLDIR}
 # Get svcomp benchmarks
 ##########################
 #Download svcomp benchmarks
-svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/sv-benchmarks
+svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/data/sv-benchmarks
 
 
 ##########################
@@ -73,5 +73,6 @@ unzip -n ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg tempita/\* -d ${INSTALLDIR}/be
 rm ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg
 #Copy smack's BenchExec wrapper to the benchexec installation
 cp toInstallDir/* ${INSTALLDIR} -r
-
+#Set up scratch folder
+mkdir ${INSTALLDIR}/scratch
 

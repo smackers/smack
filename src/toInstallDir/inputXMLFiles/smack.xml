@@ -12,7 +12,7 @@
   </rundefinition>
 
   <sourcefiles name="Simple">
-    <includesfile>../../sv-benchmarks/SimpleNew.set</includesfile>
+    <includesfile>../sv-benchmarks/Simple.set</includesfile>
   </sourcefiles>
 
   <!-- Stuff below sets up bc and bpl file download links in table...  -->
@@ -20,9 +20,6 @@
   <option name="-o">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option>
 
   <columns>
-    <!-- The output html page sits in the exec_<timestamp>/results/ folder, so file paths should be 
-         relative to this.  ${logfile_path} gests whole relative path from install folder, so we have 
-	 to recreate the portion from the exec_<timestamp>/results/ folder on -->
-    <column title="Output Files">${benchmark_name}.${benchmark_date}.logfiles/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
+    <column title="Output Files">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
   </columns>
 </benchmark>

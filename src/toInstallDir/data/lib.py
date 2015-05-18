@@ -1,7 +1,8 @@
 import glob
 import xml.etree.ElementTree as ET
 from os import path
-
+import sys
+sys.dont_write_bytecode = True # prevent creation of .pyc files
 
 class RunSet:
     def __init__(self, outputXml, inputXml):
