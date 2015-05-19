@@ -30,14 +30,15 @@ mkdir -p ${OUTFOLDER}
 # be the target set name
 ################################
 SETNAME=Simple
-sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${SETNAME}_input.xml
+THREADCOUNT=4
+sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 
 
 
 if [[ $1 == "debug" ]]
 then
-    ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${SETNAME}_input.xml -o ${OUTFOLDER}/results/
+    ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 else
-    ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${SETNAME}_input.xml -o ${OUTFOLDER}/results/
+    ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 fi
 cd ..
