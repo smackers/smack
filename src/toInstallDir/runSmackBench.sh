@@ -25,15 +25,19 @@ OUTFOLDER=exec_${OUTFOLDER}
 mkdir -p ${OUTFOLDER}
 
 ################################
-# Copy over input xml file
+# Copy over input xml file,
+# while replacing {SETNAME} to
+# be the target set name
 ################################
-cp ${INPUTXML} ${OUTFOLDER}
+SETNAME=Simple
+sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${SETNAME}_input.xml
+
 
 
 if [[ $1 == "debug" ]]
 then
-    ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/
+    ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${SETNAME}_input.xml -o ${OUTFOLDER}/results/
 else
-    ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/
+    ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${SETNAME}_input.xml -o ${OUTFOLDER}/results/
 fi
 cd ..
