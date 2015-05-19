@@ -6,13 +6,66 @@
 
   <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
 
-  <rundefinition name="defaultArgs"></rundefinition>
-  <rundefinition name="unroll10">
-    <option name="--unroll">10</option>
+  <rundefinition name="corral_u2">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">2</option>
+  </rundefinition>
+  <rundefinition name="corral_u4">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">4</option>
+  </rundefinition>
+  <rundefinition name="corral_u8">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">8</option>
+  </rundefinition>
+  <rundefinition name="corral_u12">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">12</option>
+  </rundefinition>
+  <rundefinition name="corral_u16">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">16</option>
+  </rundefinition>
+  <rundefinition name="corral_u24">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">24</option>
+  </rundefinition>
+  <rundefinition name="corral_u32">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">32</option>
+  </rundefinition>
+  <rundefinition name="boogie_u2">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">2</option>
+  </rundefinition>
+  <rundefinition name="boogie_u4">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">4</option>
+  </rundefinition>
+  <rundefinition name="boogie_u8">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">8</option>
+  </rundefinition>
+  <rundefinition name="boogie_u12">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">12</option>
+  </rundefinition>
+  <rundefinition name="boogie_u16">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">16</option>
+  </rundefinition>
+  <rundefinition name="boogie_u24">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">24</option>
+  </rundefinition>
+  <rundefinition name="boogie_u32">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">32</option>
   </rundefinition>
 
-  <sourcefiles name="Simple">
-    <includesfile>../sv-benchmarks/Simple.set</includesfile>
+
+  <sourcefiles name="{SETNAME}">
+    <includesfile>../sv-benchmarks/{SETNAME}.set</includesfile>
   </sourcefiles>
 
   <!-- Stuff below sets up bc and bpl file download links in table...  -->
