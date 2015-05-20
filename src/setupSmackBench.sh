@@ -1,11 +1,19 @@
 #!/bin/bash
 
+# MAJOR SYSTEM CHANGES:
+#  -Installs cgroups, modifies grub, requires restart
+#  -Installs java7, and sets this to be primary java executable
+#  -Installs ant
+
 INSTALLDIR=../install
+SRCDIR=`pwd`
 
 #Gets rid of installation
 if [[ $1 == "clean" ]]
     then
     rm ${INSTALLDIR} -rf
+    echo SMACKBench Install Removed
+    echo
     exit
 fi
 
@@ -13,9 +21,14 @@ fi
 if [[ $1 == "tidy" ]]
     then
     rm ${INSTALLDIR}/benchexec/ -rf
-    rm ${INSTALLDIR}/data/ -rf
+    rm ${INSTALLDIR}/data/exec* -rf
+    rm ${INSTALLDIR}/data/*.py -f
+    rm ${INSTALLDIR}/data/__pycache__/ -rf
     rm ${INSTALLDIR}/inputXMLFiles/ -rf
     rm ${INSTALLDIR}/runSmackBench.sh -f
+    rm ${INSTALLDIR}/cpachecker/ -rf
+    echo "SMACKBench Install Removed (except for svcomp benchmarks)"
+    echo
     exit
 fi
 
@@ -23,6 +36,8 @@ fi
 if [[ $1 == "refresh" ]]
     then
     cp toInstallDir/* ${INSTALLDIR} -r
+    echo SMACKBench Installation Refreshed
+    echo
     exit
 fi
 
@@ -31,8 +46,8 @@ fi
 ##########################
 #In ubuntu 14+, this cgroup-bin seems to properly mount the various
 #  copies of cgroup for each category.
-#sudo apt-get update 
-#sudo apt-get install cgroup-bin
+#sudo apt-get update
+#sudo apt-get install cgroup-bin -y
 #And then restart
 #However, for BenchExec's actual documentation, it says to do the following:
 #sudo mount -t cgroup cgroup /sys/fs/cgroup
@@ -54,7 +69,8 @@ mkdir -p ${INSTALLDIR}
 # Get svcomp benchmarks
 ##########################
 #Download svcomp benchmarks
-svn checkout https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/data/sv-benchmarks
+#Using export instead of clone so it isn't 6GB of DL (still 3.2GB - is it worth the extra 3 to do checkout?)
+svn export https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/data/sv-benchmarks
 
 
 ##########################
@@ -73,6 +89,29 @@ unzip -n ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg tempita/\* -d ${INSTALLDIR}/be
 rm ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg
 #Copy smack's BenchExec wrapper to the benchexec installation
 cp toInstallDir/* ${INSTALLDIR} -r
-#Set up scratch folder
-mkdir ${INSTALLDIR}/scratch
 
+
+################################
+# Prepare CPAchecker as witness
+################################
+#Update this to be the most recent stable tag
+svn checkout https://svn.sosy-lab.org/software/cpachecker/tags/cpachecker-1.4/ ${INSTALLDIR}/cpachecker
+JAVAVER=`java -version 2>&1 | head -n 1 | awk -F '"' '{print substr($2,0,3)}'`
+JAVACVER=`javac -version 2>&1 | head -n 1 | awk -F ' ' '{print substr($2,0,3)}'`
+# If java/javac not installed, or java/javac version is less than 1.7, install java 1.7
+if [[ -z `which java` || -z `which javac` || (( ${JAVAVER} < 1.7 )) || (( ${JAVACVER} < 1.7 )) ]]
+then
+    sudo apt-get install openjdk-7-jdk -y
+    sudo update-alternatives --config java
+    sudo update-alternatives --config javac
+fi
+#If ant is not installed, install it
+if [[ -z `which ant` ]]
+then
+    sudo apt-get install ant -y
+fi
+
+#Install CPAchecker
+cd ${INSTALLDIR}/cpachecker
+ant
+cd ${SRCDIR}
