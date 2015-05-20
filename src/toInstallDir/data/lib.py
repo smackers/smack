@@ -1,8 +1,14 @@
+import cgi 
 import glob
 import xml.etree.ElementTree as ET
 from os import path
 import sys
 sys.dont_write_bytecode = True # prevent creation of .pyc files
+import re
+
+def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
+    return [int(text) if text.isdigit() else text.lower()
+            for text in re.split(_nsre, s)]
 
 class RunSet:
     def __init__(self, outputXml, inputXml):
@@ -19,6 +25,8 @@ class RunSet:
         options = dict()
         for opt in rundefOptions:
             options[opt.get("name")] =  opt.text
+            if options[opt.get("name")] == None:
+                options[opt.get("name")] = "True"
         return options
 
     def getSetName(self):
@@ -39,6 +47,13 @@ def getAllRunSets(searchRoot, folderPrefix):
         inFile = path.join(inputPath,inputFilename)
         runSets.append(RunSet(outFile,inFile))
         
+    #For each set, if an option isn't used, set it to false.
+    allOpts = getAllOptionsUsed(runSets)
+    for runset in runSets:
+        for opt in allOpts:
+            if opt not in runset.options:
+                runset.options[opt] = "False"
+        
     return runSets
 
 def getSourcefileSetsUsed(runSets):
@@ -58,7 +73,11 @@ def getAllOptionsUsed(runSets):
                 possibleOptions[opt] = set([runset.options[opt]])
     #Convert from set to list and sort
     for opt in possibleOptions:
-        possibleOptions[opt] = sorted(possibleOptions[opt])
+        #Add True/False for flag options
+        if possibleOptions[opt] == {None}:
+            possibleOptions[opt] = ["True", "False"]
+        else:
+            possibleOptions[opt] = sorted(possibleOptions[opt], key=natural_sort_key)
     return possibleOptions
 
 

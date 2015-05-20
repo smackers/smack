@@ -4,41 +4,47 @@
 
   <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
 
-  <rundefinition name="corral_u2">
-    <option name="--verifier">corral</option>
-    <option name="--unroll">2</option>
-  </rundefinition>
-  <rundefinition name="corral_u4">
-    <option name="--verifier">corral</option>
-    <option name="--unroll">4</option>
-  </rundefinition>
   <rundefinition name="corral_u8">
     <option name="--verifier">corral</option>
     <option name="--unroll">8</option>
+  </rundefinition>
+  <rundefinition name="corral_u8_si">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">8</option>
+    <option name="--verifier-options=/staticInlining"></option>
+  </rundefinition>
+  <rundefinition name="corral_u8_si_tav">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">8</option>
+    <option name="--verifier-options=/staticInlining /trackAllVars"></option>
   </rundefinition>
   <rundefinition name="corral_u12">
     <option name="--verifier">corral</option>
     <option name="--unroll">12</option>
   </rundefinition>
+  <rundefinition name="corral_u12_si">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">12</option>
+    <option name="--verifier-options=/staticInlining"></option>
+  </rundefinition>
+  <rundefinition name="corral_u12_si_tav">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">12</option>
+    <option name="--verifier-options=/staticInlining /trackAllVars"></option>
+  </rundefinition>
   <rundefinition name="corral_u16">
     <option name="--verifier">corral</option>
     <option name="--unroll">16</option>
   </rundefinition>
-  <rundefinition name="corral_u24">
+  <rundefinition name="corral_u16_si">
     <option name="--verifier">corral</option>
-    <option name="--unroll">24</option>
+    <option name="--unroll">16</option>
+    <option name="--verifier-options=/staticInlining"></option>
   </rundefinition>
-  <rundefinition name="corral_u32">
+  <rundefinition name="corral_u16_si_tav">
     <option name="--verifier">corral</option>
-    <option name="--unroll">32</option>
-  </rundefinition>
-  <rundefinition name="boogie_u2">
-    <option name="--verifier">boogie</option>
-    <option name="--unroll">2</option>
-  </rundefinition>
-  <rundefinition name="boogie_u4">
-    <option name="--verifier">boogie</option>
-    <option name="--unroll">4</option>
+    <option name="--unroll">16</option>
+    <option name="--verifier-options=/staticInlining /trackAllVars"></option>
   </rundefinition>
   <rundefinition name="boogie_u8">
     <option name="--verifier">boogie</option>
@@ -51,14 +57,6 @@
   <rundefinition name="boogie_u16">
     <option name="--verifier">boogie</option>
     <option name="--unroll">16</option>
-  </rundefinition>
-  <rundefinition name="boogie_u24">
-    <option name="--verifier">boogie</option>
-    <option name="--unroll">24</option>
-  </rundefinition>
-  <rundefinition name="boogie_u32">
-    <option name="--verifier">boogie</option>
-    <option name="--unroll">32</option>
   </rundefinition>
 
 

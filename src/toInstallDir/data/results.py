@@ -36,8 +36,8 @@ def filterResultsByOptions(runSets, form, allOptions):
     for opt in allOptions.keys():
         if opt in form:
             #detect whether single value was passed, or a list
-            if isinstance(form[opt].value, list):
-                badOpts[opt] = set(allOptions[opt]) - set(form[opt].value)
+            if isinstance(form.getvalue(opt), list):
+                badOpts[opt] = set(allOptions[opt]) - set(form.getvalue(opt))
             else:
                 badOpts[opt] = set(allOptions[opt]) - set([form[opt].value])
     #Only keep set if it doesn't have any badopts
