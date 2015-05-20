@@ -37,6 +37,8 @@ sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 
 
 # Use nohup, so job doesn't terminate if SSH session dies
+#  First, remove any existing nohup.out
+rm nohup.out -f
 if [[ $1 == "debug" ]]
 then
     nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
