@@ -831,7 +831,6 @@ string SmackRep::code(llvm::CallInst& ci) {
 
 string SmackRep::getPrelude() {
   stringstream s;
-  s << endl;
 
   s << "// Basic types" << endl;
   s << Decl::typee("i1","int") << endl;

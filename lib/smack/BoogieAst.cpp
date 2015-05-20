@@ -625,12 +625,9 @@ void Block::print(ostream& os) const {
 }
 
 void Program::print(ostream& os) const {
-  os << "// BEGIN SMACK-GENERATED CODE" << endl;
   os << prelude;
   print_set<Decl*>(os, decls, "\n");
   os << endl;
-  os << endl;
-  os << "// END SMACK-GENERATED CODE" << endl;
 }
 }
 
