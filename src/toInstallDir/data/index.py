@@ -34,15 +34,20 @@ if __name__ == '__main__':
 
     for key in optionKeys:
         print('''
-        <tr><td>{0}:</td>'''.format(key))
+        <tr><td>{0}:</td><td>'''.format(key))
         for val in options[key]:
             print('''
-        <td><input type="checkbox" name="{0}" value="{1}" /> {1}</td>'''.format(key, val))
+        <input type="checkbox" name="{0}" value="{1}" /> {1}'''.format(key, val))
         print('''
-        </tr>''')
+        </td></tr>''')
 
     print('''
-    <tr><td><input type="submit" value="Submit" name="Submit"></form></td>
-        <td><form method="post" action="index.py">
-            <input type="submit" value="Clear" name="Clear"></form></td></tr>
+    <tr><td align="center" colspan="2" valign="middle">
+          <input type="submit" value="Submit" name="Submit"></form>
+    </td></tr>
+    <tr><td align="center" colspan="2" valign="middle">
+          <form method="post" action="index.py">
+            <input type="submit" value="Clear" name="Clear">
+          </form>
+    </td></tr>
     </table>''')

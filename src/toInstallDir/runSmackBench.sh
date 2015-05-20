@@ -5,7 +5,8 @@
 if [[ $1 == "clean" ]]
     then
     rm data/exec* -rf
-    rm *.bc *.bpl -f
+    rm data/*.bc data/*.bpl -f
+    rm data/nohup.out -f
     exit
 fi
 
@@ -38,8 +39,8 @@ sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 # Use nohup, so job doesn't terminate if SSH session dies
 if [[ $1 == "debug" ]]
 then
-    nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
+    nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
 else
-    nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
+    nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
 fi
 cd ..
