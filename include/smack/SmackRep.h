@@ -27,8 +27,6 @@ using namespace std;
   
 class SmackRep {
 public:
-  static const string NEG;
-
   static const string BOOL_TYPE;
   static const string FLOAT_TYPE;
   static const string PTR_TYPE;

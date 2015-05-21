@@ -16,8 +16,6 @@ const string SmackRep::GLOBALS_BOTTOM = "$GLOBALS_BOTTOM";
 const string SmackRep::EXTERNS_BOTTOM = "$EXTERNS_BOTTOM";
 const string SmackRep::MALLOC_TOP = "$MALLOC_TOP";
 
-const string SmackRep::NEG = "$neg";
-
 const string SmackRep::ALLOCA = "$alloca";
 const string SmackRep::MALLOC = "$malloc";
 const string SmackRep::FREE = "$free";

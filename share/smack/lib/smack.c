@@ -119,7 +119,6 @@ void __SMACK_dummy(int v) {
 
 void __SMACK_decls() {
 
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_UNARY_OP, $neg, bvneg)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sub, bvsub)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $mul, bvmul)
@@ -169,27 +168,26 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,bv1,bv16,$zext,{if i == 0bv1 then 0bv16 else 1bv16});
   DECLARE(INLINE_CONVERSION,bv1,bv32,$zext,{if i == 0bv1 then 0bv32 else 1bv32});
   DECLARE(INLINE_CONVERSION,bv1,bv64,$zext,{if i == 0bv1 then 0bv64 else 1bv64});
-  DECLARE(INLINE_CONVERSION,bv8,bv16,$zext,{0bv8 ++ i});
-  DECLARE(INLINE_CONVERSION,bv8,bv32,$zext,{0bv24 ++ i});
-  DECLARE(INLINE_CONVERSION,bv8,bv64,$zext,{0bv56 ++ i});
-  DECLARE(INLINE_CONVERSION,bv16,bv32,$zext,{0bv16 ++ i});
-  DECLARE(INLINE_CONVERSION,bv16,bv64,$zext,{0bv48 ++ i});
-  DECLARE(INLINE_CONVERSION,bv32,bv64,$zext,{0bv32 ++ i});
+  D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv8.bv16(i: bv8) returns (bv16);");
+  D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv8.bv32(i: bv8) returns (bv32);");
+  D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv16.bv32(i: bv16) returns (bv32);");
+  D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv32.bv64(i: bv32) returns (bv64);");
 
-  DECLARE(INLINE_CONVERSION,bv1,bv8,$sext,{if i == 0bv1 then 0bv8 else 1bv8});
-  DECLARE(INLINE_CONVERSION,bv1,bv16,$sext,{if i == 0bv1 then 0bv16 else 1bv16});
-  DECLARE(INLINE_CONVERSION,bv1,bv32,$sext,{if i == 0bv1 then 0bv32 else 1bv32});
-  DECLARE(INLINE_CONVERSION,bv1,bv64,$sext,{if i == 0bv1 then 0bv64 else 1bv64});
-  DECLARE(INLINE_CONVERSION,bv8,bv16,$sext,{if $sge.bv8.bool(i, 0bv8) then $zext.bv8.bv16(i) else $neg.bv8(1bv8) ++ i});
-  DECLARE(INLINE_CONVERSION,bv8,bv32,$sext,{if $sge.bv8.bool(i, 0bv8) then $zext.bv8.bv32(i) else $neg.bv32(1bv32)[32:8] ++ i});
-  DECLARE(INLINE_CONVERSION,bv8,bv64,$sext,{if $sge.bv8.bool(i, 0bv8) then $zext.bv8.bv64(i) else $neg.bv64(1bv64)[64:8] ++ i});
-  DECLARE(INLINE_CONVERSION,bv16,bv32,$sext,{if $sge.bv16.bool(i, 0bv16) then $zext.bv16.bv32(i) else $neg.bv16(1bv16) ++ i});
-  DECLARE(INLINE_CONVERSION,bv16,bv64,$sext,{if $sge.bv16.bool(i, 0bv16) then $zext.bv16.bv64(i) else $neg.bv64(1bv64)[64:16] ++ i});
-  DECLARE(INLINE_CONVERSION,bv32,bv64,$sext,{if $sge.bv32.bool(i, 0bv32) then $zext.bv32.bv64(i) else $neg.bv32(1bv32) ++ i});
+  DECLARE(INLINE_CONVERSION,bv1,bv8,$sext,{if i == 0bv1 then 0bv8 else 255bv8});
+  DECLARE(INLINE_CONVERSION,bv1,bv16,$sext,{if i == 0bv1 then 0bv16 else 65535bv16});
+  DECLARE(INLINE_CONVERSION,bv1,bv32,$sext,{if i == 0bv1 then 0bv32 else 4294967295bv32});
+  DECLARE(INLINE_CONVERSION,bv1,bv64,$sext,{if i == 0bv1 then 0bv64 else 18446744073709551615bv64});
+  D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv8.bv16(i: bv8) returns (bv16);");
+  D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv8.bv32(i: bv8) returns (bv32);");
+  D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv16.bv32(i: bv16) returns (bv32);");
+  D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv32.bv64(i: bv32) returns (bv64);");
 
   DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
-  DECLARE_EACH_INT_TYPE(INLINE_UNARY_OP, $neg, {-i})
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $add, {i1 + i2})
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $sub, {i1 - i2})
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $mul, {i1 * i2})
