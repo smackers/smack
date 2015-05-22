@@ -12,6 +12,12 @@ SRCDIR=`pwd`
 #Gets rid of installation
 if [[ $1 == "clean" ]]
     then
+    #Check for alternate install dir to clean
+    if [[ ! -z $2 ]] 
+    then
+	#Strip trailing slash, if any
+	INSTALLDIR=${2%/}
+    fi
     rm ${INSTALLDIR} -rf
     echo SMACKBench Install Removed
     echo
@@ -21,6 +27,12 @@ fi
 #Gets rid of everything except sv-benchmarks, since they're big
 if [[ $1 == "tidy" ]]
     then
+    #Check for alternate install dir to tidy
+    if [[ ! -z $2 ]] 
+    then
+	#Strip trailing slash, if any
+	INSTALLDIR=${2%/}
+    fi
     rm ${INSTALLDIR}/benchexec/ -rf
     rm ${INSTALLDIR}/data/exec* -rf
     rm ${INSTALLDIR}/data/*.py -f
@@ -36,6 +48,12 @@ fi
 #Copies things over again
 if [[ $1 == "refresh" ]]
     then
+    #Check for alternate install dir to refresh
+    if [[ ! -z $2 ]] 
+    then
+	#Strip trailing slash, if any
+	INSTALLDIR=${2%/}
+    fi
     cp toInstallDir/* ${INSTALLDIR} -r
     echo SMACKBench Installation Refreshed
     echo
@@ -44,8 +62,6 @@ fi
 
 #Set install dir if first argument is not empty string 
 #  (or "clean" or "tidy" or "refresh")
-#Note that custom INSTALLDIR not currently compatible with
-#  the clean, tidy and refresh switches
 if [[ ! -z $1 ]] 
 then
     #Strip trailing slash, if any
