@@ -34,7 +34,6 @@ if [[ $1 == "tidy" ]]
 	INSTALLDIR=${2%/}
     fi
     rm ${INSTALLDIR}/benchexec/ -rf
-    rm ${INSTALLDIR}/data/exec* -rf
     rm ${INSTALLDIR}/data/*.py -f
     rm ${INSTALLDIR}/data/__pycache__/ -rf
     rm ${INSTALLDIR}/inputXMLFiles/ -rf
