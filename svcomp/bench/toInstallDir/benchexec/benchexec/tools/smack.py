@@ -80,5 +80,7 @@ class Tool(benchexec.tools.template.BaseTool):
         ret +=      'href="' + identifier + '.bc">.bc</a>\n'
         ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
         ret +=      'href="' + identifier + '.bpl">.bpl</a>\n'
+        ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
+        ret +=      'href="' + identifier + '.witness.graphml">witness</a>\n'
         ret += '</div>\n'
         return ret
