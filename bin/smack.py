@@ -6,12 +6,14 @@
 import argparse
 import io
 import json
+import os
 import platform
-from os import path
 import re
 import shutil
+import signal
 import subprocess
 import sys
+from threading import Timer
 
 VERSION = '1.5.1'
 
@@ -29,8 +31,8 @@ def frontends():
 def validate_input_file(file):
   """Check whether the given input file is valid, returning a reason if not."""
 
-  file_extension = path.splitext(file)[1]
-  if not path.isfile(file):
+  file_extension = os.path.splitext(file)[1]
+  if not os.path.isfile(file):
     return ("Cannot find file %s." % x)
 
   elif not file_extension in frontends():
@@ -123,8 +125,17 @@ def arguments():
 def try_command(cmd):
   output = None
   try:
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    killed = [False]
+    def kill_proc(p, killed):
+      os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+      killed[0] = True
+    timer = Timer(args.time_limit, kill_proc, [p, killed])
+    timer.start()
     output = p.communicate()[0]
+    timer.cancel()
+    if killed[0]:
+      sys.exit("%s timed out." % cmd[0])
     if not p.returncode:
       return output
   except OSError:
@@ -139,9 +150,9 @@ def empty_frontend(args):
 def clang_frontend(args):
   """Generate an LLVM bitcode file from C-language source(s)."""
 
-  smack_root = path.dirname(path.dirname(path.abspath(sys.argv[0])))
-  smack_headers = path.join(smack_root, 'share', 'smack', 'include')
-  smack_lib = path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
+  smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+  smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
+  smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
 
   # TODO better naming to avoid conflicts with parallel invocations
   smack_bc = 'smack.bc'
@@ -223,7 +234,6 @@ def verify_bpl(args):
   elif args.verifier == 'corral':
     command = "corral %s" % args.bpl_file
     command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate"
-    command += " /killAfter:%s" % args.time_limit
     command += " /timeLimit:%s" % args.time_limit
     command += " /cex:%s" % args.max_violations
     command += " /maxStaticLoopBound:%d" % args.loop_limit
@@ -354,7 +364,7 @@ def smackdOutput(corralOutput):
 
 if __name__ == '__main__':
   args = arguments()
-  frontends()[path.splitext(args.input_file)[1]](args)
+  frontends()[os.path.splitext(args.input_file)[1]](args)
   llvm_to_bpl(args)
 
   if args.no_verify:
