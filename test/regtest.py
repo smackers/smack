@@ -190,7 +190,7 @@ def main():
       # get the meta data for this test
       meta = metadata(test)
 
-      if meta['skip']:
+      if meta['skip'] == True:
         continue
 
       if meta['skip'] != False and not args.all_examples:
