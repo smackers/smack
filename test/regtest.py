@@ -197,7 +197,7 @@ def main():
         continue
 
       # build up the subprocess command
-      cmd = ['smackverify.py', test]
+      cmd = ['smack.py', test]
       cmd += ['--time-limit', str(meta['time-limit'])]
       cmd += meta['flags']
 
@@ -205,10 +205,12 @@ def main():
         cmd += ['--mem-mod=' + memory]
 
         for verifier in meta['verifiers'][:100 if args.all_configs else 1]:
+          name = path.splitext(path.basename(test))[0]
           cmd += ['--verifier=' + verifier]
-          cmd += ['-o', test + memory + verifier + '.bpl']
+          cmd += ['-bc', "%s-%s-%s.bc" % (name, memory, verifier)]
+          cmd += ['-bpl', "%s-%s-%s.bpl" % (name, memory, verifier)]
           r = p.apply_async(process_test,
-                args=(cmd, test, memory, verifier, meta['expect'], args.log_path,),
+                args=(cmd[:], test, memory, verifier, meta['expect'], args.log_path,),
                 callback=tally_result)
           results.append(r)
 
