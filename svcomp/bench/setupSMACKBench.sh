@@ -38,7 +38,7 @@ if [[ $1 == "tidy" ]]
     rm ${INSTALLDIR}/data/*.py -f
     rm ${INSTALLDIR}/data/__pycache__/ -rf
     rm ${INSTALLDIR}/inputXMLFiles/ -rf
-    rm ${INSTALLDIR}/runSmackBench.sh -f
+    rm ${INSTALLDIR}/runSMACKBench.sh -f
     rm ${INSTALLDIR}/cpachecker/ -rf
     echo "SMACKBench Install Removed (except for svcomp benchmarks)"
     echo
