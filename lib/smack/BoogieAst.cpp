@@ -178,47 +178,9 @@ const Stmt* Stmt::assume(const Expr* e, const Attr* a) {
   return (const AssumeStmt*) s;
 }
 
-const Stmt* Stmt::call(string p) {
-  return call(p, vector<const Expr*>(), vector<string>());
-}
-
-const Stmt* Stmt::call(string p, const Expr* x) {
-  return call(p, vector<const Expr*>(1, x), vector<string>());
-}
-
-const Stmt* Stmt::call(string p, const Expr* x, const Attr* attr) {
-  return call(p, vector<const Expr*>(1, x), vector<string>(), vector<const Attr*>(1, attr));
-}
-
-const Stmt* Stmt::call(string p, const Expr* x, string r) {
-  return call(p, vector<const Expr*>(1, x), vector<string>(1, r));
-}
-
-const Stmt* Stmt::call(string p, const Expr* x, const Expr* y, string r) {
-  vector<const Expr*> ps;
-  ps.push_back(x);
-  ps.push_back(y);
-  return call(p, ps, vector<string>(1, r));
-}
-
-const Stmt* Stmt::call(string p, vector<const Expr*> ps) {
-  return call(p, ps, vector<string>());
-}
-
-const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs) {
-  return call(p, ps, rs, vector<const Attr*>());
-}
-
-const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs,
-  const Attr* attr) {
-
-  return call(p, ps, rs, vector<const Attr*>(1, attr));
-}
-
-const Stmt* Stmt::call(string p, vector<const Expr*> ps, vector<string> rs, 
-  vector<const Attr*> ax) {
-
-  return new CallStmt(p, ps, rs, ax);
+const Stmt* Stmt::call(string p, vector<const Expr*> args, vector<string> rets,
+    vector<const Attr*> attrs) {
+  return new CallStmt(p, attrs, args, rets);
 }
 
 const Stmt* Stmt::comment(string s) {
@@ -266,8 +228,9 @@ Decl* Decl::typee(string name, string type) {
 Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
-Decl* Decl::function(string name, vector< pair<string,string> > args, string type, const Expr* e) {
-  return new FuncDecl(name,vector<const Attr*>(),args,type,e);
+Decl* Decl::function(string name, vector< pair<string,string> > args,
+    string type, const Expr* e, vector<const Attr*> attrs) {
+  return new FuncDecl(name,attrs,args,type,e);
 }
 Decl* Decl::constant(string name, string type) {
   return Decl::constant(name, type, vector<const Attr*>(), false);
@@ -281,12 +244,10 @@ Decl* Decl::constant(string name, string type, vector<const Attr*> ax, bool uniq
 Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
 }
-Decl* Decl::procedure(Program& p, string name) {
-  return procedure(p,name,vector< pair<string,string> >(),vector< pair<string,string> >());
-}
 Decl* Decl::procedure(Program& p, string name, 
-    vector< pair<string,string> > args, vector< pair<string,string> > rets) {
-  return new ProcDecl(p,name,args,rets);
+    vector< pair<string,string> > args, vector< pair<string,string> > rets,
+    vector<Block*> blocks) {
+  return new ProcDecl(p,name,args,rets,blocks);
 }
 Decl* Decl::code(string s) {
   return new CodeDecl(s);
@@ -314,6 +275,10 @@ ostream& operator<<(ostream& os, const Stmt* s) {
 }
 ostream& operator<<(ostream& os, const Block* b) {
   b->print(os);
+  return os;
+}
+ostream& operator<<(ostream& os, Decl& d) {
+  d.print(os);
   return os;
 }
 ostream& operator<<(ostream& os, Decl* d) {
@@ -568,7 +533,7 @@ void TypeDecl::print(ostream& os) const {
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << name;
   if (alias != "")
-    os << " = " << alias << ";";
+    os << " = " << alias;
   os << ";";
 }
 
@@ -660,12 +625,9 @@ void Block::print(ostream& os) const {
 }
 
 void Program::print(ostream& os) const {
-  os << "// BEGIN SMACK-GENERATED CODE" << endl;
   os << prelude;
   print_set<Decl*>(os, decls, "\n");
   os << endl;
-  os << endl;
-  os << "// END SMACK-GENERATED CODE" << endl;
 }
 }
 

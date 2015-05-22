@@ -15,6 +15,7 @@ public:
   
   static const llvm::cl::opt<bool> SourceLocSymbols;
   static const llvm::cl::opt<bool> BitPrecise;
+  static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> NoByteAccessInference;
 };
 }

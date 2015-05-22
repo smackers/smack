@@ -3,6 +3,7 @@
 #include "smack.h"
 
 // @expect verified
+// @flag --bit-precise-pointers
 
 int main() {
   int *a = (int*)malloc(sizeof(int));

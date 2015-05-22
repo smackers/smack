@@ -24,8 +24,8 @@ void __SMACK_top_decl(const char *fmt, ...);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#define __VERIFIER_assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $0.i32;", EX); } while (0)
-#define __VERIFIER_assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $0.i32;", EX); } while (0)
+#define __VERIFIER_assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $0;", EX); } while (0)
+#define __VERIFIER_assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $0;", EX); } while (0)
 
 #ifndef AVOID_NAME_CONFLICTS
 #define assert(EX) __VERIFIER_assert(EX)

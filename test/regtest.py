@@ -18,19 +18,20 @@ import sys
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
 APPEND_FIELDS = ['flags']
 
-def red(text, log_file):
+def bold(text):
+  return '\033[1m' + text + '\033[0m'
 
+def red(text, log_file):
   if log_file:
     return text
   else:
     return '\033[0;31m' + text + '\033[0m'
 
 def green(text, log_file):
-
   if log_file:
-      return text
+    return text
   else:
-      return '\033[0;32m' + text + '\033[0m'
+    return '\033[0;32m' + text + '\033[0m'
 
 def get_result(output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out|Corral timed out', output):
@@ -104,8 +105,6 @@ def process_test(cmd, test, memory, verifier, expect, log_file):
     out, err  = p.communicate()
     elapsed = time.time() - t0
 
-
-
     # get the test results
     result = get_result(out+err)
     if result == expect:
@@ -147,7 +146,9 @@ def main():
 
     # configure the CLI
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exhaustive", help="execute regressions using all present verifiers", action="store_true")
+    parser.add_argument("--exhaustive", help="check all configurations on all examples", action="store_true")
+    parser.add_argument("--all-configs", help="check all configurations per example", action="store_true")
+    parser.add_argument("--all-examples", help="check all examples", action="store_true")
     parser.add_argument("--threads", action="store", dest="n_threads", default=num_cpus, type=int,
                         help="execute regressions using the selected number of threads in parallel")
     parser.add_argument("--log", action="store", dest="log_level", default="DEBUG", type=str,
@@ -156,6 +157,9 @@ def main():
                         help="sets the output log path. (std out by default)")
     args = parser.parse_args()
 
+    if args.exhaustive:
+      args.all_examples = True;
+      args.all_configs = True;
 
     # configure the logging
     log_format = ''
@@ -189,7 +193,7 @@ def main():
       if meta['skip']:
         continue
 
-      if meta['skip'] != False and not args.exhaustive:
+      if meta['skip'] != False and not args.all_examples:
         continue
 
       # build up the subprocess command
@@ -197,10 +201,10 @@ def main():
       cmd += ['--time-limit', str(meta['time-limit'])]
       cmd += meta['flags']
 
-      for memory in meta['memory'][:100 if args.exhaustive else 1]:
+      for memory in meta['memory'][:100 if args.all_configs else 1]:
         cmd += ['--mem-mod=' + memory]
 
-        for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
+        for verifier in meta['verifiers'][:100 if args.all_configs else 1]:
           cmd += ['--verifier=' + verifier]
           cmd += ['-o', test + memory + verifier + '.bpl']
           r = p.apply_async(process_test,

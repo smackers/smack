@@ -103,7 +103,7 @@ public:
   bool isAlloced(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
   bool isSingletonGlobal(const llvm::Value *V);
-  bool isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst);
+  bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
   bool isFieldDisjoint(const GlobalValue* V, unsigned offset);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
