@@ -5,7 +5,8 @@
 #  -Installs java7, and sets this to be primary java executable
 #  -Installs ant
 
-INSTALLDIR=../install
+#Default directory is <parent of smack project>/SMACKBench
+INSTALLDIR=../../../SMACKBench
 SRCDIR=`pwd`
 
 #Gets rid of installation
@@ -40,6 +41,17 @@ if [[ $1 == "refresh" ]]
     echo
     exit
 fi
+
+#Set install dir if first argument is not empty string 
+#  (or "clean" or "tidy" or "refresh")
+#Note that custom INSTALLDIR not currently compatible with
+#  the clean, tidy and refresh switches
+if [[ ! -z $1 ]] 
+then
+    #Strip trailing slash, if any
+    INSTALLDIR=${1%/}
+fi
+
 
 ##########################
 # Setup cgroups
