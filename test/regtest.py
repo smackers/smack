@@ -86,10 +86,6 @@ def metadata(file):
     m['expect'] = 'verified'
 
   return m
-  
-parser = argparse.ArgumentParser()
-parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
-args = parser.parse_args()
 
 # integer constants
 PASSED = 0; TIMEDOUT = 1; UNKNOWN = 2; FAILED = -1;
@@ -151,7 +147,7 @@ def main():
 
     # configure the CLI
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
+    parser.add_argument("--exhaustive", help="execute regressions using all present verifiers", action="store_true")
     parser.add_argument("--threads", action="store", dest="n_threads", default=num_cpus, type=int,
                         help="execute regressions using the selected number of threads in parallel")
     parser.add_argument("--log", action="store", dest="log_level", default="DEBUG", type=str,
