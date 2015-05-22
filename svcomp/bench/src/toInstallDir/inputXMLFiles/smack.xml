@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<!DOCTYPE benchmark SYSTEM "benchmark.dtd">
+<benchmark tool="smack" timelimit="900" hardtimelimit="930" memlimit="4000" cpuCores="2">
+
+  <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
+
+  <rundefinition name="corral_u8">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">8</option>
+  </rundefinition>
+  <rundefinition name="corral_u8_si">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">8</option>
+    <option name="--verifier-options=/staticInlining"></option>
+  </rundefinition>
+  <rundefinition name="corral_u8_si_tav">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">8</option>
+    <option name="--verifier-options=/staticInlining /trackAllVars"></option>
+  </rundefinition>
+  <rundefinition name="corral_u12">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">12</option>
+  </rundefinition>
+  <rundefinition name="corral_u12_si">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">12</option>
+    <option name="--verifier-options=/staticInlining"></option>
+  </rundefinition>
+  <rundefinition name="corral_u12_si_tav">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">12</option>
+    <option name="--verifier-options=/staticInlining /trackAllVars"></option>
+  </rundefinition>
+  <rundefinition name="corral_u16">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">16</option>
+  </rundefinition>
+  <rundefinition name="corral_u16_si">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">16</option>
+    <option name="--verifier-options=/staticInlining"></option>
+  </rundefinition>
+  <rundefinition name="corral_u16_si_tav">
+    <option name="--verifier">corral</option>
+    <option name="--unroll">16</option>
+    <option name="--verifier-options=/staticInlining /trackAllVars"></option>
+  </rundefinition>
+  <rundefinition name="boogie_u8">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">8</option>
+  </rundefinition>
+  <rundefinition name="boogie_u12">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">12</option>
+  </rundefinition>
+  <rundefinition name="boogie_u16">
+    <option name="--verifier">boogie</option>
+    <option name="--unroll">16</option>
+  </rundefinition>
+
+
+  <sourcefiles name="{SETNAME}">
+    <includesfile>../sv-benchmarks/{SETNAME}.set</includesfile>
+  </sourcefiles>
+
+  <!-- Stuff below sets up bc and bpl file download links in table...  -->
+  <option name="--bc">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bc</option>
+  <option name="-o">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option>
+
+  <columns>
+    <column title="Output Files">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
+  </columns>
+</benchmark>
