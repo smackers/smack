@@ -126,22 +126,21 @@ def try_command(cmd):
   output = None
   try:
     p = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    killed = [False]
-    def kill_proc(p, killed):
-      os.killpg(os.getpgid(p.pid), signal.SIGKILL)
-      killed[0] = True
-    timer = Timer(args.time_limit, kill_proc, [p, killed])
+    timer = Timer(args.time_limit, lambda: os.killpg(os.getpgid(p.pid), signal.SIGKILL))
     timer.start()
     output = p.communicate()[0]
     timer.cancel()
-    if killed[0]:
-      sys.exit("%s timed out." % cmd[0])
-    if not p.returncode:
-      return output
-  except OSError:
-    pass
-  print >> sys.stderr, output
-  sys.exit("SMACK encountered an error when invoking %s." % cmd[0])
+    if p.returncode < 0:
+      raise RuntimeError("%s timed out." % cmd[0])
+    if p.returncode > 0:
+      raise RuntimeError("%s returned non-zero." % cmd[0])
+
+  except (RuntimeError, OSError) as err:
+    if output:
+      print >> sys.stderr, output
+    sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
+
+  return output
 
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
