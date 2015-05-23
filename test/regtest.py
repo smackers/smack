@@ -153,7 +153,7 @@ def main():
                         help="execute regressions using the selected number of threads in parallel")
     parser.add_argument("--log", action="store", dest="log_level", default="DEBUG", type=str,
                         help="sets the logging level (DEBUG, INFO, WARNING)")
-    parser.add_argument("--output_log", action="store", dest="log_path", type=str,
+    parser.add_argument("--output-log", action="store", dest="log_path", type=str,
                         help="sets the output log path. (std out by default)")
     args = parser.parse_args()
 
