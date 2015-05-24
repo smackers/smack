@@ -13,7 +13,7 @@ import benchexec.result as result
 class Tool(benchexec.tools.template.BaseTool):
 
     def executable(self):
-        return util.find_executable('smackverify.py')
+        return util.find_executable('smack.py')
 
     def version(self, executable):
         return '1.5.1dev'
