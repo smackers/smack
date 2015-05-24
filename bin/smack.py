@@ -17,10 +17,10 @@ import tempfile
 from threading import Timer
 
 VERSION = '1.5.1'
+temporary_files = []
 
 def frontends():
   """A dictionary of front-ends per file extension."""
-
   return {
     '.c': clang_frontend,
     '.cc': clang_frontend,
@@ -113,20 +113,12 @@ def arguments():
     help='generate JSON-format output for SMACKd')
 
   args = parser.parse_args()
-  args.temp_files = []
 
   if not args.bc_file:
-    f, args.bc_file = tempfile.mkstemp('.bc', 'a-', os.getcwd(), True)
-    os.close(f)
-    args.temp_files += [args.bc_file]
+    args.bc_file = temporary_file('a', '.bc', args)
 
   if not args.bpl_file:
-    if args.no_verify:
-      args.bpl_file = 'a.bpl'
-    else:
-      f, args.bpl_file = tempfile.mkstemp('.bpl', 'a-', os.getcwd(), True)
-      os.close(f)
-      args.temp_files += [args.bpl_file]
+    args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
 
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
@@ -136,6 +128,12 @@ def arguments():
   #       return args = parser.parse_args(m.group(1).split() + sys.argv[1:])
 
   return args
+
+def temporary_file(prefix, extension, args):
+  f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
+  os.close(f)
+  temporary_files.append(name)
+  return name
 
 def timeout_killer(proc, timed_out):
   if not timed_out[0]:
@@ -171,6 +169,10 @@ def try_command(cmd):
     if timer: timer.cancel()
     if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
+def frontend(args):
+  """Generate the LLVM bitcode file."""
+  return frontends()[os.path.splitext(args.input_file)[1]](args)
+
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
   shutil.copy(args.input_file, args.bc_file)
@@ -181,9 +183,7 @@ def clang_frontend(args):
   smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
   smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
-  f, smack_bc = tempfile.mkstemp('.bc', 'smack-', os.getcwd(), True)
-  os.close(f)
-  args.temp_files += [smack_bc]
+  smack_bc = temporary_file('smack', '.bc', args)
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
@@ -379,7 +379,7 @@ def smackdOutput(corralOutput):
 if __name__ == '__main__':
   try:
     args = arguments()
-    frontends()[os.path.splitext(args.input_file)[1]](args)
+    frontend(args)
     llvm_to_bpl(args)
     annotate_bpl(args)
 
@@ -392,6 +392,5 @@ if __name__ == '__main__':
     print >> sys.stderr, "SMACK aborted by keyboard interrupt."
 
   finally:
-    if 'args' in vars():
-      for f in args.temp_files:
-        os.unlink(f)
+    for f in temporary_files:
+      os.unlink(f)
