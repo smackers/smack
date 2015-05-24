@@ -62,16 +62,16 @@ def arguments():
 
   frontend_group = parser.add_argument_group('front-end options')
 
-  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default='a.bc',
-    type=str, help='specify (intermediate) bitcode file [default: %(default)s]')
+  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
+    type=str, help='save (intermediate) bitcode to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
     help='additional compiler arguments (e.g., --clang-options="-w -g")')
 
   translate_group = parser.add_argument_group('translation options')
 
-  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default='a.bpl',
-    type=str, help='specify (intermediate) Boogie file [default: %(default)s]')
+  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
+    type=str, help='save (intermediate) Boogie code to FILE')
 
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
@@ -113,6 +113,20 @@ def arguments():
     help='generate JSON-format output for SMACKd')
 
   args = parser.parse_args()
+  args.temp_files = []
+
+  if not args.bc_file:
+    f, args.bc_file = tempfile.mkstemp('.bc', 'a-', os.getcwd(), True)
+    os.close(f)
+    args.temp_files += [args.bc_file]
+
+  if not args.bpl_file:
+    if args.no_verify:
+      args.bpl_file = 'a.bpl'
+    else:
+      f, args.bpl_file = tempfile.mkstemp('.bpl', 'a-', os.getcwd(), True)
+      os.close(f)
+      args.temp_files += [args.bpl_file]
 
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
@@ -164,6 +178,7 @@ def clang_frontend(args):
   smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
   f, smack_bc = tempfile.mkstemp('.bc', 'smack-', os.getcwd(), True)
   os.close(f)
+  args.temp_files += [smack_bc]
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
@@ -174,7 +189,6 @@ def clang_frontend(args):
   try_command(compile_command + [smack_lib, '-o', smack_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
   try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
-  os.unlink(smack_bc)
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
@@ -361,10 +375,12 @@ if __name__ == '__main__':
   args = arguments()
   frontends()[os.path.splitext(args.input_file)[1]](args)
   llvm_to_bpl(args)
+  annotate_bpl(args)
 
   if args.no_verify:
     print "SMACK generated %s" % args.bpl_file
-
   else:
-    annotate_bpl(args)
     verify_bpl(args)
+
+  for f in args.temp_files:
+    os.unlink(f)
