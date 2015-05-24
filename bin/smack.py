@@ -13,6 +13,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from threading import Timer
 
 VERSION = '1.5.1'
@@ -161,9 +162,8 @@ def clang_frontend(args):
   smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
   smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
-
-  # TODO better naming to avoid conflicts with parallel invocations
-  smack_bc = 'smack.bc'
+  f, smack_bc = tempfile.mkstemp('.bc', 'smack-', os.getcwd(), True)
+  os.close(f)
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
@@ -174,6 +174,7 @@ def clang_frontend(args):
   try_command(compile_command + [smack_lib, '-o', smack_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
   try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
+  os.unlink(smack_bc)
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
