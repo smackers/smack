@@ -137,34 +137,39 @@ def arguments():
 
   return args
 
+def timeout_killer(proc, timed_out):
+  if not timed_out[0]:
+    timed_out[0] = True
+    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
 def try_command(cmd):
   output = None
   proc = None
   timer = None
   try:
     proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    timer = Timer(args.time_limit, lambda: os.killpg(os.getpgid(proc.pid), signal.SIGKILL))
+    timed_out = [False]
+    timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
     output = proc.communicate()[0]
     timer.cancel()
-    if proc.returncode < 0:
+    rc = proc.returncode
+    proc = None
+    if timed_out[0]:
       raise RuntimeError("%s timed out." % cmd[0])
-    if proc.returncode > 0:
+    elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
-
-  except KeyboardInterrupt:
-    if timer: timer.cancel()
-    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-    if output:
-      print >> sys.stderr, output
-    sys.exit("User aborted.")
+    else:
+      return output
 
   except (RuntimeError, OSError) as err:
     if output:
       print >> sys.stderr, output
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
-  return output
+  finally:
+    if timer: timer.cancel()
+    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
@@ -372,15 +377,21 @@ def smackdOutput(corralOutput):
   print json_string
 
 if __name__ == '__main__':
-  args = arguments()
-  frontends()[os.path.splitext(args.input_file)[1]](args)
-  llvm_to_bpl(args)
-  annotate_bpl(args)
+  try:
+    args = arguments()
+    frontends()[os.path.splitext(args.input_file)[1]](args)
+    llvm_to_bpl(args)
+    annotate_bpl(args)
 
-  if args.no_verify:
-    print "SMACK generated %s" % args.bpl_file
-  else:
-    verify_bpl(args)
+    if args.no_verify:
+      print "SMACK generated %s" % args.bpl_file
+    else:
+      verify_bpl(args)
 
-  for f in args.temp_files:
-    os.unlink(f)
+  except KeyboardInterrupt:
+    print >> sys.stderr, "SMACK aborted by keyboard interrupt."
+
+  finally:
+    if 'args' in vars():
+      for f in args.temp_files:
+        os.unlink(f)
