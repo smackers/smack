@@ -112,6 +112,17 @@ def arguments():
   verifier_group.add_argument('--smackd', action="store_true", default=False,
     help='generate JSON-format output for SMACKd')
 
+  svcomp_group = parser.add_argument_group('svcomp options')
+
+  svcomp_group.add_argument('--svcomp', action="store_true", default=False,
+    help='enter svcomp mode')
+
+  svcomp_group.add_argument('--syntax-check', action="store_true", default=False,
+    help='do syntax check on generated boogie file only')
+
+  svcomp_group.add_argument('--error-witness', metavar='FILE', default='a.xml', type=str, 
+    help='save error witness to FILE')
+
   args = parser.parse_args()
 
   if not args.bc_file:
@@ -182,18 +193,23 @@ def clang_frontend(args):
 
   smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
-  smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
+  smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib')
   smack_bc = temporary_file('smack', '.bc', args)
+  smack_svcomp_bc = temporary_file('smack-svcomp', '.bc', args)
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
-  compile_command += ['-I' + smack_headers, '-include' + 'smack.h']
+  compile_command += ['-I' + smack_headers, '-include' + ('smack-svcomp.h' if args.svcomp else 'smack.h')]
   compile_command += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
+  if args.svcomp:
+    compile_command += ['-DSVCOMP']
   link_command = ['llvm-link']
 
-  try_command(compile_command + [smack_lib, '-o', smack_bc])
+  try_command(compile_command + [os.path.join(smack_lib, 'smack.c'), '-o', smack_bc])
+  if args.svcomp:
+    try_command(compile_command + [os.path.join(smack_lib, 'smack-svcomp.c'), '-o', smack_svcomp_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
-  try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
+  try_command((lambda t, x, y, l1, l2: l1 + ([x, y] if t else [x,]) + l2) (args.svcomp, smack_bc, smack_svcomp_bc, link_command + [args.bc_file,], ['-o', args.bc_file]))
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
