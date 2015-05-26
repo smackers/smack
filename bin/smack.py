@@ -33,7 +33,7 @@ def validate_input_file(file):
 
   file_extension = os.path.splitext(file)[1]
   if not os.path.isfile(file):
-    return ("Cannot find file %s." % x)
+    return ("Cannot find file %s." % file)
 
   elif not file_extension in frontends():
     return ("Unexpected source file extension '%s'." % file_extension)
