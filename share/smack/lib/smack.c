@@ -119,6 +119,10 @@ void __SMACK_dummy(int v) {
 
 void __SMACK_decls() {
 
+  DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
+
+  // BITVECTOR MODELING
+
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sub, bvsub)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $mul, bvmul)
@@ -186,7 +190,7 @@ void __SMACK_decls() {
   D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv16.bv64(i: bv16) returns (bv64);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv32.bv64(i: bv32) returns (bv64);");
 
-  DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
+  // INTEGER MODELING
 
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $add, {i1 + i2})
   DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $sub, {i1 - i2})
@@ -194,38 +198,19 @@ void __SMACK_decls() {
   D("function {:builtin \"div\"} $div(i1: int, i2: int) returns (int);");
   D("function {:builtin \"mod\"} $mod(i1: int, i2: int) returns (int);");
   D("function {:builtin \"rem\"} $rem(i1: int, i2: int) returns (int);");
+  D("function {:inline} $min(i1: int, i2: int) returns (int) {if i1 < i2 then i1 else i2}");
+  D("function {:inline} $max(i1: int, i2: int) returns (int) {if i1 > i2 then i1 else i2}");
+
   DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $sdiv, div)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smod, {if ((i1 >= 0 && i2 >= 0) || (i1 < 0 && i2 < 0)) then $mod(i1,i2) else -$mod(i1,i2)})
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $smod, mod)
   DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $srem, rem)
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $udiv, div);
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $urem, rem);
 
-  DECLARE(INLINE_UNARY_OP, i64, $s2u, { if i < 0 then $mod(i,LIMIT_64) else i });
-  DECLARE(INLINE_UNARY_OP, i32, $s2u, { if i < 0 then $mod(i,LIMIT_32) else i });
-  DECLARE(INLINE_UNARY_OP, i16, $s2u, { if i < 0 then $mod(i,LIMIT_16) else i });
-  DECLARE(INLINE_UNARY_OP, i8,  $s2u, { if i < 0 then $mod(i,LIMIT_8) else i });
-  DECLARE(INLINE_UNARY_OP, i1,  $s2u, { if i < 0 then $mod(i,LIMIT_1) else i });
-
-  DECLARE(INLINE_UNARY_OP, i64, $u2s, {if i < LIMIT_63 then i else i - LIMIT_64});
-  DECLARE(INLINE_UNARY_OP, i32, $u2s, {if i < LIMIT_31 then i else i - LIMIT_32});
-  DECLARE(INLINE_UNARY_OP, i16, $u2s, {if i < LIMIT_15 then i else i - LIMIT_16});
-  DECLARE(INLINE_UNARY_OP, i8,  $u2s, {if i < LIMIT_7 then i else i - LIMIT_8});
-  DECLARE(INLINE_UNARY_OP, i1,  $u2s, {i});
-
-  DECLARE(INLINE_BINARY_OP, i64, $udiv, { $div($s2u.i64(i1),$s2u.i64(i2)) });
-  DECLARE(INLINE_BINARY_OP, i32, $udiv, { $div($s2u.i32(i1),$s2u.i32(i2)) });
-  DECLARE(INLINE_BINARY_OP, i16, $udiv, { $div($s2u.i16(i1),$s2u.i16(i2)) });
-  DECLARE(INLINE_BINARY_OP, i8,  $udiv, { $div($s2u.i8(i1),$s2u.i8(i2)) });
-  DECLARE(INLINE_BINARY_OP, i1,  $udiv, { $div($s2u.i1(i1),$s2u.i1(i2)) });
-
-  DECLARE(INLINE_BINARY_OP, i64, $urem, { $rem($s2u.i64(i1),$s2u.i64(i2)) });
-  DECLARE(INLINE_BINARY_OP, i32, $urem, { $rem($s2u.i32(i1),$s2u.i32(i2)) });
-  DECLARE(INLINE_BINARY_OP, i16, $urem, { $rem($s2u.i16(i1),$s2u.i16(i2)) });
-  DECLARE(INLINE_BINARY_OP, i8,  $urem, { $rem($s2u.i8(i1),$s2u.i8(i2)) });
-  DECLARE(INLINE_BINARY_OP, i1,  $urem, { $rem($s2u.i1(i1),$s2u.i1(i2)) });
-
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $min, {if i1 < i2 then i1 else i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $max, {if i1 > i2 then i1 else i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umin, {if i1 < i2 then i1 else i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umax, {if i1 > i2 then i1 else i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smin, {$min(i1,i2)})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smax, {$max(i1,i2)})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umin, {$min(i1,i2)})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umax, {$max(i1,i2)})
 
   DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $shl)
   DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $lshr)
@@ -260,27 +245,27 @@ void __SMACK_decls() {
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
 
-  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{$u2s.i32($mod(i,LIMIT_32))});
-  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{$u2s.i16($mod(i,LIMIT_16))});
-  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{$u2s.i8($mod(i,LIMIT_8))});
-  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{$u2s.i1($mod(i,LIMIT_1))});
-  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{$u2s.i16($mod(i,LIMIT_16))});
-  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{$u2s.i8($mod(i,LIMIT_8))});
-  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{$u2s.i1($mod(i,LIMIT_1))});
-  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{$u2s.i8($mod(i,LIMIT_8))});
-  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{$u2s.i1($mod(i,LIMIT_1))});
-  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{$u2s.i1($mod(i,LIMIT_1))});
+  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{i});
 
-  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{$s2u.i1(i)});
-  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{$s2u.i1(i)});
-  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{$s2u.i1(i)});
-  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{$s2u.i1(i)});
-  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{$s2u.i8(i)});
-  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{$s2u.i8(i)});
-  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{$s2u.i8(i)});
-  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{$s2u.i16(i)});
-  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{$s2u.i16(i)});
-  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{$s2u.i32(i)});
+  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{i});
 
   DECLARE(INLINE_CONVERSION,i1,i8,$sext,{i});
   DECLARE(INLINE_CONVERSION,i1,i16,$sext,{i});

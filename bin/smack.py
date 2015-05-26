@@ -13,13 +13,14 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from threading import Timer
 
 VERSION = '1.5.1'
+temporary_files = []
 
 def frontends():
   """A dictionary of front-ends per file extension."""
-
   return {
     '.c': clang_frontend,
     '.cc': clang_frontend,
@@ -61,16 +62,16 @@ def arguments():
 
   frontend_group = parser.add_argument_group('front-end options')
 
-  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default='a.bc',
-    type=str, help='specify (intermediate) bitcode file [default: %(default)s]')
+  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
+    type=str, help='save (intermediate) bitcode to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
     help='additional compiler arguments (e.g., --clang-options="-w -g")')
 
   translate_group = parser.add_argument_group('translation options')
 
-  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default='a.bpl',
-    type=str, help='specify (intermediate) Boogie file [default: %(default)s]')
+  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
+    type=str, help='save (intermediate) Boogie code to FILE')
 
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
@@ -113,6 +114,12 @@ def arguments():
 
   args = parser.parse_args()
 
+  if not args.bc_file:
+    args.bc_file = temporary_file('a', '.bc', args)
+
+  if not args.bpl_file:
+    args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
+
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
   #   for line in f.readlines():
@@ -122,34 +129,49 @@ def arguments():
 
   return args
 
+def temporary_file(prefix, extension, args):
+  f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
+  os.close(f)
+  temporary_files.append(name)
+  return name
+
+def timeout_killer(proc, timed_out):
+  if not timed_out[0]:
+    timed_out[0] = True
+    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
 def try_command(cmd):
   output = None
   proc = None
   timer = None
   try:
     proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    timer = Timer(args.time_limit, lambda: os.killpg(os.getpgid(proc.pid), signal.SIGKILL))
+    timed_out = [False]
+    timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
     output = proc.communicate()[0]
     timer.cancel()
-    if proc.returncode < 0:
+    rc = proc.returncode
+    proc = None
+    if timed_out[0]:
       raise RuntimeError("%s timed out." % cmd[0])
-    if proc.returncode > 0:
+    elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
-
-  except KeyboardInterrupt:
-    if timer: timer.cancel()
-    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-    if output:
-      print >> sys.stderr, output
-    sys.exit("User aborted.")
+    else:
+      return output
 
   except (RuntimeError, OSError) as err:
     if output:
       print >> sys.stderr, output
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
-  return output
+  finally:
+    if timer: timer.cancel()
+    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
+def frontend(args):
+  """Generate the LLVM bitcode file."""
+  return frontends()[os.path.splitext(args.input_file)[1]](args)
 
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
@@ -161,9 +183,7 @@ def clang_frontend(args):
   smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
   smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
-
-  # TODO better naming to avoid conflicts with parallel invocations
-  smack_bc = 'smack.bc'
+  smack_bc = temporary_file('smack', '.bc', args)
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
@@ -357,13 +377,20 @@ def smackdOutput(corralOutput):
   print json_string
 
 if __name__ == '__main__':
-  args = arguments()
-  frontends()[os.path.splitext(args.input_file)[1]](args)
-  llvm_to_bpl(args)
-
-  if args.no_verify:
-    print "SMACK generated %s" % args.bpl_file
-
-  else:
+  try:
+    args = arguments()
+    frontend(args)
+    llvm_to_bpl(args)
     annotate_bpl(args)
-    verify_bpl(args)
+
+    if args.no_verify:
+      print "SMACK generated %s" % args.bpl_file
+    else:
+      verify_bpl(args)
+
+  except KeyboardInterrupt:
+    print >> sys.stderr, "SMACK aborted by keyboard interrupt."
+
+  finally:
+    for f in temporary_files:
+      os.unlink(f)

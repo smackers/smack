@@ -104,8 +104,8 @@ const map<unsigned,string> SmackRep::ATOMICRMWINST_TABLE {
   {AtomicRMWInst::Nand, "$nand"},
   {AtomicRMWInst::Or, "$or"},
   {AtomicRMWInst::Xor, "$xor"},
-  {AtomicRMWInst::Max, "$max"},
-  {AtomicRMWInst::Min, "$min"},
+  {AtomicRMWInst::Max, "$smax"},
+  {AtomicRMWInst::Min, "$smin"},
   {AtomicRMWInst::UMax, "$umax"},
   {AtomicRMWInst::UMin, "$umin"}
 };
