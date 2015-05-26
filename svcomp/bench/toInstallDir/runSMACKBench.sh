@@ -10,6 +10,17 @@ if [[ $1 == "clean" ]]
     exit
 fi
 
+#Kills all executing instances of BenchExec and smack for
+# calling user
+if [[ $1 == "cancel" ]]
+then
+    pkill -KILL -u ${USER} -f benchexec
+    pkill -u ${USER} -f corral
+    pkill -u ${USER} -f boogie
+    pkill -u ${USER} -f z3
+    exit
+fi
+
 cd data
 
 BENCHEXECPATH=../benchexec/bin
