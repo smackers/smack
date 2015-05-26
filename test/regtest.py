@@ -153,7 +153,7 @@ def main():
                         help="execute regressions using the selected number of threads in parallel")
     parser.add_argument("--log", action="store", dest="log_level", default="DEBUG", type=str,
                         help="sets the logging level (DEBUG, INFO, WARNING)")
-    parser.add_argument("--output_log", action="store", dest="log_path", type=str,
+    parser.add_argument("--output-log", action="store", dest="log_path", type=str,
                         help="sets the output log path. (std out by default)")
     args = parser.parse_args()
 
@@ -181,40 +181,40 @@ def main():
     logging.debug("Creating Pool with '%d' Workers" % args.n_threads)
     p = ThreadPool(processes=args.n_threads)
 
-    # start the tests
-    logging.info("Running regression tests...")
-
-    # start processing the tests.
-    results = []
-    for test in glob.glob("./**/*.c"):
-      # get the meta data for this test
-      meta = metadata(test)
-
-      if meta['skip'] == True:
-        continue
-
-      if meta['skip'] != False and not args.all_examples:
-        continue
-
-      # build up the subprocess command
-      cmd = ['smack.py', test]
-      cmd += ['--time-limit', str(meta['time-limit'])]
-      cmd += meta['flags']
-
-      for memory in meta['memory'][:100 if args.all_configs else 1]:
-        cmd += ['--mem-mod=' + memory]
-
-        for verifier in meta['verifiers'][:100 if args.all_configs else 1]:
-          name = path.splitext(path.basename(test))[0]
-          cmd += ['--verifier=' + verifier]
-          cmd += ['-bc', "%s-%s-%s.bc" % (name, memory, verifier)]
-          cmd += ['-bpl', "%s-%s-%s.bpl" % (name, memory, verifier)]
-          r = p.apply_async(process_test,
-                args=(cmd[:], test, memory, verifier, meta['expect'], args.log_path,),
-                callback=tally_result)
-          results.append(r)
-
     try:
+      # start the tests
+      logging.info("Running regression tests...")
+
+      # start processing the tests.
+      results = []
+      for test in glob.glob("./**/*.c"):
+        # get the meta data for this test
+        meta = metadata(test)
+
+        if meta['skip'] == True:
+          continue
+
+        if meta['skip'] != False and not args.all_examples:
+          continue
+
+        # build up the subprocess command
+        cmd = ['smack.py', test]
+        cmd += ['--time-limit', str(meta['time-limit'])]
+        cmd += meta['flags']
+
+        for memory in meta['memory'][:100 if args.all_configs else 1]:
+          cmd += ['--mem-mod=' + memory]
+
+          for verifier in meta['verifiers'][:100 if args.all_configs else 1]:
+            name = path.splitext(path.basename(test))[0]
+            cmd += ['--verifier=' + verifier]
+            cmd += ['-bc', "%s-%s-%s.bc" % (name, memory, verifier)]
+            cmd += ['-bpl', "%s-%s-%s.bpl" % (name, memory, verifier)]
+            r = p.apply_async(process_test,
+                  args=(cmd[:], test, memory, verifier, meta['expect'], args.log_path,),
+                  callback=tally_result)
+            results.append(r)
+
       # keep the main thread active while there are active workers
       for r in results:
         r.wait()

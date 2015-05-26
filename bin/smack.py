@@ -13,13 +13,14 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from threading import Timer
 
 VERSION = '1.5.1'
+temporary_files = []
 
 def frontends():
   """A dictionary of front-ends per file extension."""
-
   return {
     '.c': clang_frontend,
     '.cc': clang_frontend,
@@ -33,7 +34,7 @@ def validate_input_file(file):
 
   file_extension = os.path.splitext(file)[1]
   if not os.path.isfile(file):
-    return ("Cannot find file %s." % x)
+    return ("Cannot find file %s." % file)
 
   elif not file_extension in frontends():
     return ("Unexpected source file extension '%s'." % file_extension)
@@ -61,16 +62,16 @@ def arguments():
 
   frontend_group = parser.add_argument_group('front-end options')
 
-  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default='a.bc',
-    type=str, help='specify (intermediate) bitcode file [default: %(default)s]')
+  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
+    type=str, help='save (intermediate) bitcode to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
     help='additional compiler arguments (e.g., --clang-options="-w -g")')
 
   translate_group = parser.add_argument_group('translation options')
 
-  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default='a.bpl',
-    type=str, help='specify (intermediate) Boogie file [default: %(default)s]')
+  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
+    type=str, help='save (intermediate) Boogie code to FILE')
 
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
@@ -113,6 +114,12 @@ def arguments():
 
   args = parser.parse_args()
 
+  if not args.bc_file:
+    args.bc_file = temporary_file('a', '.bc', args)
+
+  if not args.bpl_file:
+    args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
+
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
   #   for line in f.readlines():
@@ -122,26 +129,49 @@ def arguments():
 
   return args
 
+def temporary_file(prefix, extension, args):
+  f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
+  os.close(f)
+  temporary_files.append(name)
+  return name
+
+def timeout_killer(proc, timed_out):
+  if not timed_out[0]:
+    timed_out[0] = True
+    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
 def try_command(cmd):
   output = None
+  proc = None
+  timer = None
   try:
-    p = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    killed = [False]
-    def kill_proc(p, killed):
-      os.killpg(os.getpgid(p.pid), signal.SIGKILL)
-      killed[0] = True
-    timer = Timer(args.time_limit, kill_proc, [p, killed])
+    proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    timed_out = [False]
+    timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
-    output = p.communicate()[0]
+    output = proc.communicate()[0]
     timer.cancel()
-    if killed[0]:
-      sys.exit("%s timed out." % cmd[0])
-    if not p.returncode:
+    rc = proc.returncode
+    proc = None
+    if timed_out[0]:
+      raise RuntimeError("%s timed out." % cmd[0])
+    elif rc:
+      raise RuntimeError("%s returned non-zero." % cmd[0])
+    else:
       return output
-  except OSError:
-    pass
-  print >> sys.stderr, output
-  sys.exit("SMACK encountered an error when invoking %s." % cmd[0])
+
+  except (RuntimeError, OSError) as err:
+    if output:
+      print >> sys.stderr, output
+    sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
+
+  finally:
+    if timer: timer.cancel()
+    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
+def frontend(args):
+  """Generate the LLVM bitcode file."""
+  return frontends()[os.path.splitext(args.input_file)[1]](args)
 
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
@@ -153,9 +183,7 @@ def clang_frontend(args):
   smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
   smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
-
-  # TODO better naming to avoid conflicts with parallel invocations
-  smack_bc = 'smack.bc'
+  smack_bc = temporary_file('smack', '.bc', args)
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
@@ -179,44 +207,30 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   try_command(cmd)
 
-def addInline(match, entry_points, unroll):
-  procName = match.group(1)
-  procDef = ''
-  if procName in entry_points:
-    procDef += 'procedure ' + procName + '('
-  else:
-    procDef += 'procedure {:inline ' + str(unroll) + '} ' + procName + '('
-  return procDef
+def procedure_annotation(name, args):
+  specials = re.compile('\$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*')
 
-def addEntryPoint(match, entry_points):
-  procName = match.group(1)
-  procDef = ''
-  if procName in entry_points:
-    procDef += 'procedure {:entrypoint} ' + procName + '('
-  else:
-    procDef += 'procedure ' + procName + '('
-  return procDef
+  if name in args.entry_points:
+    return "{:entrypoint}"
 
-def decorate_bpl(args):
+  elif args.verifier == 'boogie' and specials.match(name):
+    return "{:inline 1}"
+
+  elif args.verifier == 'boogie' and args.unroll:
+    return ("{:inline %s}" % args.unroll)
+
+  else:
+    return ""
+
+def annotate_bpl(args):
   """Annotate the Boogie source file with additional metadata."""
 
-  p = re.compile('procedure\s+([^\s(]*)\s*\(')
-  si = re.compile('procedure\s+(\$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*)\s*\(')
+  proc_decl = re.compile('procedure\s+([^\s(]*)\s*\(')
 
   with open(args.bpl_file, 'r+') as f:
     bpl = "// generated by SMACK version %s for %s\n" % (VERSION, args.verifier)
     bpl += "// via %s\n\n" % " ".join(sys.argv)
-    bpl += f.read()
-
-    if args.verifier == 'boogie' and args.unroll is None:
-      bpl = si.sub(lambda match: addInline(match, args.entry_points, 1), bpl)
-
-    elif args.verifier == 'boogie':
-      bpl = p.sub(lambda match: addInline(match, args.entry_points, args.unroll), bpl)
-
-    elif args.verifier == 'corral' or args.verifier == 'duality':
-      bpl = p.sub(lambda match: addEntryPoint(match, args.entry_points), bpl)
-
+    bpl += proc_decl.sub(lambda m: ("procedure %s %s(" % (procedure_annotation(m.group(1), args), m.group(1))), f.read())
     f.seek(0)
     f.truncate()
     f.write(bpl)
@@ -363,13 +377,20 @@ def smackdOutput(corralOutput):
   print json_string
 
 if __name__ == '__main__':
-  args = arguments()
-  frontends()[os.path.splitext(args.input_file)[1]](args)
-  llvm_to_bpl(args)
+  try:
+    args = arguments()
+    frontend(args)
+    llvm_to_bpl(args)
+    annotate_bpl(args)
 
-  if args.no_verify:
-    print "SMACK generated %s" % args.bpl_file
+    if args.no_verify:
+      print "SMACK generated %s" % args.bpl_file
+    else:
+      verify_bpl(args)
 
-  else:
-    decorate_bpl(args)
-    verify_bpl(args)
+  except KeyboardInterrupt:
+    print >> sys.stderr, "SMACK aborted by keyboard interrupt."
+
+  finally:
+    for f in temporary_files:
+      os.unlink(f)
