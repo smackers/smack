@@ -39,26 +39,29 @@ def replacer(args):
   with open(inputFileName, "r") as inputFile:
     inputStr = inputFile.read()
 
-  # if error witness flag is enabled, do tokenizing
-  # get rid of these patterns
+  """ If error witness flag is enabled, do tokenizing """
+  """ First get rid of these patterns which cause errors """
   inputStr = re.sub(r'#line .*', '', inputStr)
   inputStr = re.sub(r'# \d+.*', '', inputStr)
   inputStr = re.sub(r'#pragma .*','',inputStr)
   inputStr = beforeTokenReplace(inputStr)
-  # write back to the input file
-  beforeTokenizedName = os.path.join(os.path.dirname(os.path.abspath(errorWitnessFile)), fileName) + '.tmp'
+  """ Save valid tokens a tmp file in the folder containing bc files """
+  """ since tokenizer binary only accepts file as argument """
+  beforeTokenizedName = os.path.join(os.path.dirname(args.bcFolder, fileName) + '.tmp'
   with open(beforeTokenizedName, 'w') as replacedFile:
     replacedFile.write(inputStr)
-  # tokenize this tmp file
-  tokenizedName = os.path.join(os.path.dirname(os.path.abspath(errorWitnessFile)), fileName) + '.tokenized.c'
-  os.system('tokenizer ' + replacedFile.name + ' > ' + tokenizedName)
-  # after tokenizing
+  tokenizedName = os.path.join(os.path.dirname(args.bcFolder, fileName) + '.tokenized.c'
+
+  try_command(['tokenizer'] + [tokenizedName, '>', tokenizedName])
+
   with open(tokenizedName) as tokenizedFile:
     tokens = tokenizedFile.read()
   tokens = afterTokenReplace(tokens)
   with open(tokenizedName, 'w') as tokenizedFile:
     tokenizedFile.write(tokens)
-  return open(tokenizedName, 'r')
+  
+  args.input_file = tokenizedName
+  return args
 
 def frontends():
   """A dictionary of front-ends per file extension."""
@@ -187,6 +190,8 @@ def arguments():
       args.errorWitnessFolder = os.path.dirname(os.path.abspath(args.error_witness))
     if os.path.splitext(args.input_file)[1] == ".i":
       args.input_file = rewriteIExtensionToC(args)
+    if args.error_witness:
+      args = replacer(args)
 
   return args
 
