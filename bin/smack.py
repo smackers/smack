@@ -19,9 +19,51 @@ from threading import Timer
 VERSION = '1.5.1'
 temporary_files = []
 
+def rewriteIExtensionToC(args):
+  """ For svcomp mode, if file extension ends in .i, we need to make a copy as
+a .c file.  If we don't, clang treats the file as if preprocessing has already 
+occurred (and so doesn't run preprocessor)"""
+  #TODO check if there is a clang switch that causes clang to run preprocessor
+  #     even if file extension is .i
+  fileName = os.path.splitext(os.path.basename(args.input_file))[0]
+  newFileName = os.path.join(args.bcFolder, fileName) + '.original.c'
+  shutil.copyfile(args.input_file, newFileName)
+  return newFileName
+
+def replacer(args):
+  inputFileName = args.input_file
+  errorWitnessFileName = args.error_witness
+  outputFileName = args.bpl_file
+
+  fileName, fileExtension = os.path.splitext(os.path.basename(inputFileName))
+  with open(inputFileName, "r") as inputFile:
+    inputStr = inputFile.read()
+
+  # if error witness flag is enabled, do tokenizing
+  # get rid of these patterns
+  inputStr = re.sub(r'#line .*', '', inputStr)
+  inputStr = re.sub(r'# \d+.*', '', inputStr)
+  inputStr = re.sub(r'#pragma .*','',inputStr)
+  inputStr = beforeTokenReplace(inputStr)
+  # write back to the input file
+  beforeTokenizedName = os.path.join(os.path.dirname(os.path.abspath(errorWitnessFile)), fileName) + '.tmp'
+  with open(beforeTokenizedName, 'w') as replacedFile:
+    replacedFile.write(inputStr)
+  # tokenize this tmp file
+  tokenizedName = os.path.join(os.path.dirname(os.path.abspath(errorWitnessFile)), fileName) + '.tokenized.c'
+  os.system('tokenizer ' + replacedFile.name + ' > ' + tokenizedName)
+  # after tokenizing
+  with open(tokenizedName) as tokenizedFile:
+    tokens = tokenizedFile.read()
+  tokens = afterTokenReplace(tokens)
+  with open(tokenizedName, 'w') as tokenizedFile:
+    tokenizedFile.write(tokens)
+  return open(tokenizedName, 'r')
+
 def frontends():
   """A dictionary of front-ends per file extension."""
   return {
+    '.i': clang_frontend,
     '.c': clang_frontend,
     '.cc': clang_frontend,
     '.cpp': clang_frontend,
@@ -120,14 +162,14 @@ def arguments():
   svcomp_group.add_argument('--syntax-check', action="store_true", default=False,
     help='do syntax check on generated boogie file only')
 
-  svcomp_group.add_argument('--error-witness', metavar='FILE', default='a.xml', type=str, 
+  svcomp_group.add_argument('--error-witness', metavar='FILE', default=None, type=str, 
     help='save error witness to FILE')
 
   args = parser.parse_args()
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
-
+    
   if not args.bpl_file:
     args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
 
@@ -137,6 +179,14 @@ def arguments():
   #     m = re.match('.*SMACK-OPTIONS:[ ]+(.*)$', line)
   #     if m:
   #       return args = parser.parse_args(m.group(1).split() + sys.argv[1:])
+
+  if args.svcomp:
+    args.bcFolder = os.path.dirname(os.path.abspath(args.bc_file))
+    args.bplFolder = os.path.dirname(os.path.abspath(args.bpl_file))
+    if args.error_witness:
+      args.errorWitnessFolder = os.path.dirname(os.path.abspath(args.error_witness))
+    if os.path.splitext(args.input_file)[1] == ".i":
+      args.input_file = rewriteIExtensionToC(args)
 
   return args
 
