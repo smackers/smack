@@ -15,6 +15,8 @@ import subprocess
 import sys
 import tempfile
 from threading import Timer
+from toSVCOMPformat import *
+from token_replace import *
 
 VERSION = '1.5.1'
 temporary_files = []
@@ -47,19 +49,30 @@ def replacer(args):
   inputStr = beforeTokenReplace(inputStr)
   """ Save valid tokens a tmp file in the folder containing bc files """
   """ since tokenizer binary only accepts file as argument """
-  beforeTokenizedName = os.path.join(os.path.dirname(args.bcFolder, fileName) + '.tmp'
+  beforeTokenizedName = os.path.join(args.bcFolder, fileName) + '.tmp'
   with open(beforeTokenizedName, 'w') as replacedFile:
     replacedFile.write(inputStr)
-  tokenizedName = os.path.join(os.path.dirname(args.bcFolder, fileName) + '.tokenized.c'
+  tokenizedName = os.path.join(args.bcFolder, fileName) + '.tokenized.c'
+  cmd = ['tokenizer', beforeTokenizedName]
 
-  try_command(['tokenizer'] + [tokenizedName, '>', tokenizedName])
+  try:
+    with open(tokenizedName, 'w') as tokenizedFile:
+      proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      output = proc.communicate()[0]
+      output = afterTokenReplace(output)
+      tokenizedFile.write(output)
+      rc = proc.returncode
+      proc = None
+    if rc:
+      raise RuntimeError("%s returned non-zero." % cmd[0])
+  except (RuntimeError, OSError) as err:
+    if output:
+      print >> sys.stderr, output
+    sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
+  finally:
+    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
-  with open(tokenizedName) as tokenizedFile:
-    tokens = tokenizedFile.read()
-  tokens = afterTokenReplace(tokens)
-  with open(tokenizedName, 'w') as tokenizedFile:
-    tokenizedFile.write(tokens)
-  
+  temporary_files.append(beforeTokenizedName)
   args.input_file = tokenizedName
   return args
 
@@ -184,10 +197,10 @@ def arguments():
   #       return args = parser.parse_args(m.group(1).split() + sys.argv[1:])
 
   if args.svcomp:
-    args.bcFolder = os.path.dirname(os.path.abspath(args.bc_file))
-    args.bplFolder = os.path.dirname(os.path.abspath(args.bpl_file))
+    args.bcFolder = os.path.relpath(os.path.abspath(os.path.dirname(args.bc_file)))
+    args.bplFolder = os.path.relpath(os.path.abspath(os.path.dirname(args.bpl_file)))
     if args.error_witness:
-      args.errorWitnessFolder = os.path.dirname(os.path.abspath(args.error_witness))
+      args.errorWitnessFolder = os.path.relpath(os.path.abspath(os.path.dirname(args.error_witness)))
     if os.path.splitext(args.input_file)[1] == ".i":
       args.input_file = rewriteIExtensionToC(args)
     if args.error_witness:
@@ -351,9 +364,14 @@ def verify_bpl(args):
 
   else:
     if args.smackd:
-      smackdOutput(verifier_output)
+      print smackdOutput(verifier_output)
     else:
       print verifier_output
+
+  if args.error_witness:
+    witnessStr = smackJsonToXmlGraph(smackdOutput(verifier_output))
+    with open(args.error_witness, 'w') as witnessFile:
+      witnessFile.write(witnessStr)
 
 def generateSourceErrorTrace(boogieOutput, bplFileName):
   FILENAME = '[\w#$~%.\/-]+'
@@ -421,6 +439,7 @@ def smackdOutput(corralOutput):
     traces = []
     for traceLine in corralOutput.splitlines(True):
       traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
+      traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\W*\w+\W*=\W*\w+\W*)\))$', traceLine)
       errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
       if traceMatch:
         filename = str(traceMatch.group(1))
@@ -428,7 +447,15 @@ def smackdOutput(corralOutput):
         colno = int(traceMatch.group(3))
         threadid = int(traceMatch.group(4))
         desc = str(traceMatch.group(6))
-        trace = { 'threadid': threadid, 'file': filename, 'line': lineno, 'column': colno, 'description': '' if desc == 'None' else desc }
+        assm = ''
+        if traceAssumeMatch:
+          assm = str(traceAssumeMatch.group(6))
+        trace = { 'threadid': threadid, 
+                  'file': filename, 
+                  'line': lineno, 
+                  'column': colno, 
+                  'description': '' if desc == 'None' else desc, 
+                  'assumption': assm }
         traces.append(trace)
       elif errorMatch:
         filename = str(errorMatch.group(1))
@@ -445,7 +472,7 @@ def smackdOutput(corralOutput):
       'traces': traces
     }
   json_string = json.dumps(json_data)
-  print json_string
+  return json_string
 
 if __name__ == '__main__':
   try:
