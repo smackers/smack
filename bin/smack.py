@@ -260,7 +260,7 @@ def verify_bpl(args):
 
   elif args.verifier == 'corral':
     command = "corral %s" % args.bpl_file
-    command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate"
+    command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /newStratifiedInlining"
     command += " /timeLimit:%s" % args.time_limit
     command += " /cex:%s" % args.max_violations
     command += " /maxStaticLoopBound:%d" % args.loop_limit
@@ -273,7 +273,7 @@ def verify_bpl(args):
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
-    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0" % (x,x)
+    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0 /%sboolControlVC" % (x,x,x)
 
   if args.verifier_options:
     command += " " + args.verifier_options
