@@ -393,4 +393,5 @@ if __name__ == '__main__':
 
   finally:
     for f in temporary_files:
-      os.unlink(f)
+      if os.path.isfile(f):
+        os.unlink(f)
