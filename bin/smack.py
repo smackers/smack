@@ -51,8 +51,11 @@ def arguments():
     type = lambda x: (lambda r: x if r is None else parser.error(r))(validate_input_file(x)),
     help = 'source file to be translated/verified')
 
-  parser.add_argument('-v', '--version', action='version',
+  parser.add_argument('--version', action='version',
     version='SMACK version ' + VERSION)
+
+  parser.add_argument('-v', '--verbose', action='store_true', default=False,
+    help='enable verbose output')
 
   parser.add_argument('-d', '--debug', action="store_true", default=False,
     help='enable debugging output')
@@ -149,6 +152,16 @@ def try_command(cmd):
     timed_out = [False]
     timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
+
+    if args.verbose or args.debug:
+      print "Running %s" % " ".join(cmd)
+      while proc.poll() is None:
+        line = proc.stdout.readline()
+        if line:
+          sys.stdout.write(line)
+        else:
+          break
+
     output = proc.communicate()[0]
     timer.cancel()
     rc = proc.returncode
