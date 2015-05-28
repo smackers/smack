@@ -59,7 +59,7 @@ def generateTable(runSets):
         xmlFiles.append(runset.outXml)
     filenameBase = "results"
     
-    cmd = [tblGenExe, "-o", scratchDir, "-n", filenameBase, "--printHTML", "--no-diff"] + xmlFiles
+    cmd = [tblGenExe, "-o", "-", "-f", "html", "-q", "--no-diff"] + xmlFiles
     try:
         out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         print(out.decode('utf-8'))
