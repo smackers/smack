@@ -208,7 +208,7 @@ def llvm_to_bpl(args):
   try_command(cmd)
 
 def procedure_annotation(name, args):
-  specials = re.compile('\$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*')
+  specials = re.compile('\$alloc|\$free|$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*')
 
   if name in args.entry_points:
     return "{:entrypoint}"
