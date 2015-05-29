@@ -273,7 +273,7 @@ def verify_bpl(args):
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
-    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0 /%sboolControlVC" % (x,x,x)
+    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0 /%sz3opt:smt.bv.enable_int2bv=true /%sboolControlVC" % (x,x,x,x)
 
   if args.verifier_options:
     command += " " + args.verifier_options
