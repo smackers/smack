@@ -256,7 +256,7 @@ def verify_bpl(args):
     command += " /nologo"
     command += " /timeLimit:%s" % args.time_limit
     command += " /errorLimit:%s" % args.max_violations
-    command += " /loopUnroll:%d" % (args.unroll + args.loop_limit)
+    command += " /loopUnroll:%d" % args.unroll
 
   elif args.verifier == 'corral':
     command = "corral %s" % args.bpl_file
