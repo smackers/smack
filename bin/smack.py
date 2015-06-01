@@ -252,33 +252,39 @@ def verify_bpl(args):
   """Verify the Boogie source file with a back-end verifier."""
 
   if args.verifier == 'boogie':
-    command = "boogie %s" % args.bpl_file
-    command += " /nologo"
-    command += " /timeLimit:%s" % args.time_limit
-    command += " /errorLimit:%s" % args.max_violations
-    command += " /loopUnroll:%d" % args.unroll
+    command = ["boogie"]
+    command += [args.bpl_file]
+    command += ["/nologo"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/errorLimit:%s" % args.max_violations]
+    command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
-    command = "corral %s" % args.bpl_file
-    command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate /newStratifiedInlining"
-    command += " /timeLimit:%s" % args.time_limit
-    command += " /cex:%s" % args.max_violations
-    command += " /maxStaticLoopBound:%d" % args.loop_limit
-    command += " /recursionBound:%d" % args.unroll
+    command = ["corral"]
+    command += [args.bpl_file]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/useProverEvaluate", "/newStratifiedInlining"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/cex:%s" % args.max_violations]
+    command += ["/maxStaticLoopBound:%d" % args.loop_limit]
+    command += ["/recursionBound:%d" % args.unroll]
 
   else:
-    # TODO why isn't unroll a parameter??
-    command = "corral %s" % args.bpl_file
-    command += "/tryCTrace /useDuality /recursionBound:10000"
+    # Duality!
+    command = ["corral %s" % args.bpl_file]
+    command += ["/tryCTrace", "/useDuality", "/recursionBound:10000"]
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
-    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0 /%sz3opt:smt.bv.enable_int2bv=true /%sboolControlVC" % (x,x,x,x)
+    command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
+    command += ["/%sz3opt:smt.relevancy=0" % x]
+    command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
+    command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:
-    command += " " + args.verifier_options
+    command += args.verifier_options
 
-  verifier_output = try_command(command.split())
+  verifier_output = try_command(command)
 
   # TODO clean up the following mess
   if args.verifier == 'boogie':
