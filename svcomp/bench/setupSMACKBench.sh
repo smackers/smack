@@ -59,6 +59,32 @@ if [[ $1 == "refresh" ]]
     exit
 fi
 
+#Compares overlay files with those in target install dir
+if [[ $1 == "compare" ]]
+    then
+    #Check for alternate install dir to refresh
+    if [[ ! -z $2 ]] 
+    then
+	#Strip trailing slash, if any
+	INSTALLDIR=${2%/}
+    else	echo "Must provide installation directory as second parameter"
+	exit
+    fi
+    cd toInstallDir
+    for f in $(find . -type f)
+    do
+	echo
+	echo
+	echo ----------------------
+	echo $f
+	echo ----------------------
+	diff $f ${INSTALLDIR}/$f -s
+    done
+    cd ..
+    exit
+fi
+
+
 #Set install dir if first argument is not empty string 
 #  (or "clean" or "tidy" or "refresh")
 if [[ ! -z $1 ]] 
