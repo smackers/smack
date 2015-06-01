@@ -271,7 +271,7 @@ def verify_bpl(args):
 
   else:
     # Duality!
-    command = ["corral %s" % args.bpl_file]
+    command = ["corral", args.bpl_file]
     command += ["/tryCTrace", "/useDuality", "/recursionBound:10000"]
 
   if args.bit_precise:
