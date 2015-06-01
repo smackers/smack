@@ -193,10 +193,10 @@ do
   case "$1" in
   --prefix)
     puts "Using install prefix $2"
-    INSTALL_PREFIX="$2"
+    INSTALL_PREFIX="${2%/}"
     CONFIGURE_INSTALL_PREFIX="--prefix=$2"
     CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=$PATH:${INSTALL_PREFIX}/bin >> ${SMACKENV}
+    echo export PATH=${INSTALL_PREFIX}/bin:$PATH >> ${SMACKENV}
     shift
     shift
     ;;
@@ -331,6 +331,7 @@ then
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
+  rm /tmp/nuget/ -rf 
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
