@@ -282,7 +282,7 @@ def verify_bpl(args):
     command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:
-    command += args.verifier_options
+    command += args.verifier_options.split()
 
   verifier_output = try_command(command)
 
