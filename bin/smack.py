@@ -329,44 +329,38 @@ def verify_bpl(args):
       if not args.quiet:
         print trace
 
-def error_trace(verifier_output, args):
+def error_step(step):
   FILENAME = '[\w#$~%.\/-]*'
-  LABEL = '[\w$]+'
+  step = re.match("(\s*)(%s)\((\d+),\d+\): (.*)" % FILENAME, step)
+  if step:
+    if re.match('.*[.]bpl$', step.group(2)):
+      line_no = int(step.group(3))
+      message = step.group(4)
+      if re.match('.*\$bb\d+.*', message):
+        message = ""
+      with open(step.group(2)) as f:
+        for line in f.read().splitlines(True)[line_no:line_no+10]:
+          src = re.match(".*{:sourceloc \"(%s)\", (\d+), (\d+)}" % FILENAME, line)
+          if src:
+            return "%s%s(%s,%s): %s" % (step.group(1), src.group(1), src.group(2), src.group(3), message)
+    else:
+      return step.group(0)
 
-  with open(args.bpl_file, 'r') as f:
-    bpl = f.read()
+  else:
+    return None
 
-  if not re.search('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bpl):
-    if not args.quiet:
-      print >> sys.stderr, "Warning: missing {:sourceloc} annotations in %s." % args.bpl_file
-    bpl = None
-
-  sourceTrace = ""
-
+def error_trace(verifier_output, args):
+  trace = ""
   for line in verifier_output.splitlines(True):
-    trace = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', line)
-    error = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (.*)', line)
+    step = error_step(line)
+    if step:
+      m = re.match('(.*): [Ee]rror [A-Z0-9]+: (.*)', step)
+      if m:
+        trace += "%s: %s\nExecution trace:\n" % (m.group(1), m.group(2))
+      else:
+        trace += ('' if step[0] == ' ' else '    ') + step + "\n"
 
-    if bpl is None and (trace or error):
-      sourceTrace += line
-
-    elif trace:
-      lineno = int(trace.group(3))
-      for line in bpl.splitlines(True)[lineno:lineno+10]:
-        m = re.match('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', line)
-        if m:
-          sourceTrace += "%s%s(%s,%s)\n" % (trace.group(1), m.group(1), m.group(2), m.group(3))
-          break
-
-    elif error:
-      lineno = int(error.group(2))
-      for line in bpl.splitlines(True)[lineno-2:lineno+8]:
-        m = re.match('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', line)
-        if m:
-          sourceTrace += ("%s(%s,%s): %s\n" % (m.group(1), m.group(2), m.gropu(3), error.group(4)))
-          break
-
-  return sourceTrace
+  return trace
 
 def smackdOutput(corralOutput):
   FILENAME = '[\w#$~%.\/-]+'
