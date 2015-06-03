@@ -71,7 +71,6 @@ def generateTable(runSets):
 if __name__ == '__main__':
     print("Content-Type: text/html")    # HTML is following
     print()                             # blank line, end of headers
-    print("something")
     form = cgi.FieldStorage()
 
     runSets = getAllRunSets(runRoot, runFolderPrefix)

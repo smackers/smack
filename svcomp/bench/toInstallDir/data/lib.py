@@ -33,12 +33,11 @@ class RunSet:
         #sourcefile Set name is found as last token before .xml in output filename
         #Remove file extension
         noExt = path.splitext(self.outXml)[0]
-        #Use rundefinition name  plus "." as delimiter
-        return noExt.split(self.name + ".")[1]
+        return noExt.split(".")[-1]
 
 #Finds all xml files matching the path searchRoot/folderPrefix*/results/*.xml
 def getAllRunSets(searchRoot, folderPrefix):
-    allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*.xml")
+    allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*witchecked.*.xml")
     runSets = []
     for outFile in allOutXml:
         inputFilename = ET.parse(outFile).getroot().get("benchmarkname") + ".xml"
@@ -53,7 +52,7 @@ def getAllRunSets(searchRoot, folderPrefix):
         for opt in allOpts:
             if opt not in runset.options:
                 runset.options[opt] = "False"
-        
+
     return runSets
 
 def getSourcefileSetsUsed(runSets):
