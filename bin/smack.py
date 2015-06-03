@@ -87,6 +87,15 @@ def frontends():
     '.ll': empty_frontend,
   }
 
+def results():
+  """A dictionary of the result output messages."""
+  return {
+    'verified': 'SMACK found no errors.',
+    'error': 'SMACK found an error.',
+    'timeout': 'SMACK timed out.',
+    'unknown': 'SMACK result is unknown.'
+  }
+
 def validate_input_file(file):
   """Check whether the given input file is valid, returning a reason if not."""
 
@@ -109,14 +118,25 @@ def arguments():
     type = lambda x: (lambda r: x if r is None else parser.error(r))(validate_input_file(x)),
     help = 'source file to be translated/verified')
 
-  parser.add_argument('-v', '--version', action='version',
+  parser.add_argument('--version', action='version',
     version='SMACK version ' + VERSION)
 
-  parser.add_argument('-d', '--debug', action="store_true", default=False,
+  noise_group = parser.add_mutually_exclusive_group()
+
+  noise_group.add_argument('-q', '--quiet', action='store_true', default=False,
+    help='enable quiet output')
+
+  noise_group.add_argument('-v', '--verbose', action='store_true', default=False,
+    help='enable verbose output')
+
+  noise_group.add_argument('-d', '--debug', action="store_true", default=False,
     help='enable debugging output')
 
-  parser.add_argument('-t', '--no-verify', action="store_true", default=False,
+  parser.add_argument('-tx', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
+
+  parser.add_argument('-tr', '--trace-file', metavar='FILE', default=None,
+    type=str, help='save error trace to FILE')
 
   frontend_group = parser.add_argument_group('front-end options')
 
@@ -220,7 +240,7 @@ def timeout_killer(proc, timed_out):
     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 def try_command(cmd):
-  output = None
+  output = ""
   proc = None
   timer = None
   try:
@@ -228,12 +248,24 @@ def try_command(cmd):
     timed_out = [False]
     timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
-    output = proc.communicate()[0]
+
+    if args.verbose or args.debug:
+      output = ""
+      print "Running %s" % " ".join(cmd)
+      while proc.poll() is None:
+        line = proc.stdout.readline()
+        if line:
+          sys.stdout.write(line)
+          output += line
+        else:
+          break
+
+    output += proc.communicate()[0]
     timer.cancel()
     rc = proc.returncode
     proc = None
     if timed_out[0]:
-      raise RuntimeError("%s timed out." % cmd[0])
+      return output + ("\n%s timed out." % cmd[0])
     elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
     else:
@@ -292,7 +324,7 @@ def llvm_to_bpl(args):
   try_command(cmd)
 
 def procedure_annotation(name, args):
-  specials = re.compile('\$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*')
+  specials = re.compile('\$alloc|\$free|$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*')
 
   if name in args.entry_points:
     return "{:entrypoint}"
@@ -319,111 +351,106 @@ def annotate_bpl(args):
     f.truncate()
     f.write(bpl)
 
+def verification_result(verifier_output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
+    return 'timeout'
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
+    return 'verified'
+  elif re.search(r'0 verified, [1-9]\d* errors?|can fail', verifier_output):
+    return 'error'
+  else:
+    return 'unknown'
+
 def verify_bpl(args):
   """Verify the Boogie source file with a back-end verifier."""
 
   if args.verifier == 'boogie':
-    command = "boogie %s" % args.bpl_file
-    command += " /nologo"
-    command += " /timeLimit:%s" % args.time_limit
-    command += " /errorLimit:%s" % args.max_violations
-    command += " /loopUnroll:%d" % (args.unroll + args.loop_limit)
+    command = ["boogie"]
+    command += [args.bpl_file]
+    command += ["/nologo"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/errorLimit:%s" % args.max_violations]
+    command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
-    command = "corral %s" % args.bpl_file
-    command += " /tryCTrace /noTraceOnDisk /printDataValues:1 /useProverEvaluate"
-    command += " /timeLimit:%s" % args.time_limit
-    command += " /cex:%s" % args.max_violations
-    command += " /maxStaticLoopBound:%d" % args.loop_limit
-    command += " /recursionBound:%d" % args.unroll
+    command = ["corral"]
+    command += [args.bpl_file]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/useProverEvaluate", "/newStratifiedInlining"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/cex:%s" % args.max_violations]
+    command += ["/maxStaticLoopBound:%d" % args.loop_limit]
+    command += ["/recursionBound:%d" % args.unroll]
 
   else:
-    # TODO why isn't unroll a parameter??
-    command = "corral %s" % args.bpl_file
-    command += "/tryCTrace /useDuality /recursionBound:10000"
+    # Duality!
+    command = ["corral", args.bpl_file]
+    command += ["/tryCTrace", "/useDuality", "/recursionBound:10000"]
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
-    command += " /%sproverOpt:OPTIMIZE_FOR_BV=true /%sz3opt:smt.relevancy=0" % (x,x)
+    command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
+    command += ["/%sz3opt:smt.relevancy=0" % x]
+    command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
+    command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:
-    command += " " + args.verifier_options
+    command += args.verifier_options.split()
 
-  verifier_output = try_command(command.split())
+  verifier_output = try_command(command)
+  result = verification_result(verifier_output)
 
-  # TODO clean up the following mess
-  if args.verifier == 'boogie':
-    if args.debug:
-      print verifier_output
-
-    sourceTrace = generateSourceErrorTrace(verifier_output, args.bpl_file)
-    if sourceTrace:
-      print sourceTrace
-    else:
-      print verifier_output
+  if args.smackd:
+    print smackdOutput(verifier_output)
 
   else:
-    if args.smackd:
-      print smackdOutput(verifier_output)
-    else:
-      print verifier_output
+    print results()[result]
+    if result == 'error':
+      trace = error_trace(verifier_output, args)
+      if args.trace_file:
+        with open(args.trace_file, 'w') as f:
+          f.write(trace)
+      if not args.quiet:
+        print trace
 
+def error_step(step):
+  FILENAME = '[\w#$~%.\/-]*'
+  step = re.match("(\s*)(%s)\((\d+),\d+\): (.*)" % FILENAME, step)
+  if step:
+    if re.match('.*[.]bpl$', step.group(2)):
+      line_no = int(step.group(3))
+      message = step.group(4)
+      if re.match('.*\$bb\d+.*', message):
+        message = ""
+      with open(step.group(2)) as f:
+        for line in f.read().splitlines(True)[line_no:line_no+10]:
+          src = re.match(".*{:sourceloc \"(%s)\", (\d+), (\d+)}" % FILENAME, line)
+          if src:
+            return "%s%s(%s,%s): %s" % (step.group(1), src.group(1), src.group(2), src.group(3), message)
+    else:
+      return step.group(0)
+      print smackdOutput(verifier_output)
   if args.error_witness:
     witnessStr = smackJsonToXmlGraph(smackdOutput(verifier_output))
     with open(args.error_witness, 'w') as witnessFile:
       witnessFile.write(witnessStr)
 
-def generateSourceErrorTrace(boogieOutput, bplFileName):
-  FILENAME = '[\w#$~%.\/-]+'
-  LABEL = '[\w$]+'
 
-  bplFile = open(bplFileName)
-  bpl = bplFile.read()
-  bplFile.close()
-
-  if not re.search('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bpl):
-    # no debug info in bpl file
+  else:
     return None
 
-  sourceTrace = '\nSMACK verifier version ' + VERSION + '\n\n'
-  for traceLine in boogieOutput.splitlines(True):
-    resultMatch = re.match('Boogie .* f(inished with .*)', traceLine)
-    traceMatch = re.match('([ ]+)(' + FILENAME + ')\((\d+),(\d+)\): (' + LABEL + ')', traceLine)
-    errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (.*)', traceLine)
-    if resultMatch:
-      sourceTrace += '\nF' + resultMatch.group(1)
-    elif traceMatch:
-      spaces = str(traceMatch.group(1))
-      filename = str(traceMatch.group(2))
-      lineno = int(traceMatch.group(3))
-      colno = int(traceMatch.group(4))
-      label = str(traceMatch.group(5))
+def error_trace(verifier_output, args):
+  trace = ""
+  for line in verifier_output.splitlines(True):
+    step = error_step(line)
+    if step:
+      m = re.match('(.*): [Ee]rror [A-Z0-9]+: (.*)', step)
+      if m:
+        trace += "%s: %s\nExecution trace:\n" % (m.group(1), m.group(2))
+      else:
+        trace += ('' if step[0] == ' ' else '    ') + step + "\n"
 
-      for bplLine in bpl.splitlines(True)[lineno:lineno+10]:
-        m = re.match('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bplLine)
-        if m:
-          filename = str(m.group(1))
-          lineno = int(m.group(2))
-          colno = int(m.group(3))
- 
-          sourceTrace += spaces + filename + '(' + str(lineno) + ',' + str(colno) + ')\n'
-          break
-    elif errorMatch:
-      filename = str(errorMatch.group(1))
-      lineno = int(errorMatch.group(2))
-      colno = int(errorMatch.group(3))
-      message = str(errorMatch.group(4))
- 
-      for bplLine in bpl.splitlines(True)[lineno-2:lineno+8]:
-        m = re.match('.*{:sourceloc \"(' + FILENAME + ')\", (\d+), (\d+)}.*', bplLine)
-        if m:
-          filename = str(m.group(1))
-          lineno = int(m.group(2))
-          colno = int(m.group(3))
- 
-          sourceTrace += filename + '(' + str(lineno) + ',' + str(colno) + '): ' + message + '\n'
-          break
-  return sourceTrace
+  return trace
 
 def smackdOutput(corralOutput):
   FILENAME = '[\w#$~%.\/-]+'
@@ -477,18 +504,25 @@ def smackdOutput(corralOutput):
 if __name__ == '__main__':
   try:
     args = arguments()
+
+    if not args.quiet:
+      print "SMACK program verifier version %s" % VERSION
+
     frontend(args)
     llvm_to_bpl(args)
     annotate_bpl(args)
 
     if args.no_verify:
-      print "SMACK generated %s" % args.bpl_file
+      if not args.quiet:
+        print "SMACK generated %s" % args.bpl_file
     else:
       verify_bpl(args)
 
   except KeyboardInterrupt:
-    print >> sys.stderr, "SMACK aborted by keyboard interrupt."
+    if not args.quiet:
+      print >> sys.stderr, "SMACK aborted by keyboard interrupt."
 
   finally:
     for f in temporary_files:
-      os.unlink(f)
+      if os.path.isfile(f):
+        os.unlink(f)
