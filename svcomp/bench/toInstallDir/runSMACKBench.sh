@@ -56,4 +56,5 @@ then
 else
     nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
 fi
+../checkWitnesses.py ${OUTFOLDER}
 cd ..

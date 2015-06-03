@@ -20,6 +20,9 @@ targetDir = os.path.join(targetDir, 'results')
 outXmls = glob.glob(targetDir + '/*results*.xml')
 
 for outXml in outXmls:
+    # Don't do it again - allows overwriting
+    if '.witchecked' in outXml:
+        continue
     baseXml,setName = os.path.splitext(os.path.splitext(outXml)[0])
     outXmlNew = baseXml + '.witchecked' + setName + '.xml'
     tree = ET.parse(outXml)
@@ -50,7 +53,7 @@ for outXml in outXmls:
         basefile = os.path.splitext(sourcefile)[0]
         tokenizedInputFile = basefile + '.tokenized.c'
         witnessfile = sourcefile + '.witness.graphml'
-        witnesscheckOutput = basefile + '.witnessCheckOutput'
+        witnesscheckOutput = sourcefile + '.witnessCheckOutput'
         categoryCol = run.find('./column[@title="category"]')
         statusCol = run.find('./column[@title="status"]')
         outputfilesCol = run.find('./column[@title="Output Files"]')
@@ -78,7 +81,7 @@ for outXml in outXmls:
                 os.chdir('cpachecker')
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 cmdOut = p.communicate()[0]
-                checktime = re.search('cputime=(.*)s', cmdOut.decode('utf-8')).group(1)
+                checktime = float(re.search('cputime=(.*)s', cmdOut.decode('utf-8')).group(1))
                 
                 os.chdir(execDir)
                 witSuccess = False
@@ -92,12 +95,8 @@ for outXml in outXmls:
                 else:
                     statusCol.set('value', 'something went wrong')
                 if outputfilesCol is not None:
-                    oldVal = outputfilesCol.get('value')
-                    withoutData = witnesscheckOutput[len('data/'):]
-                    endDivIdx = oldVal.find('</div>')
-                    toInsert  = '<a style="display: inline; text-decoration: underline; color: blue" '
-                    toInsert += 'href="' + withoutData + '">witout</a>\n'
-                    newVal = oldVal[0:endDivIdx] + toInsert + oldVal[endDivIdx:]
+                    newVal = outputfilesCol.get('value').replace(' hidden','')
                     outputfilesCol.set('value', newVal)
-                ET.SubElement(run, 'column', {'title':'time(s)\nfor\nwitness', 'value':str(checktime)})
+                ET.SubElement(run, 'column', {'title':'time(s)\nfor\nwitness',
+                                              'value':"{0:.3f}s".format(checktime)})
     tree.write(outXmlNew)

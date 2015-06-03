@@ -76,11 +76,12 @@ class Tool(benchexec.tools.template.BaseTool):
         # links in the output table for bpl and bc files
         ret = ""
         ret += '<div align="center">\n'
-        ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
-        ret +=      'href="' + identifier + '.bc">.bc</a>\n'
-        ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
-        ret +=      'href="' + identifier + '.bpl">.bpl</a>\n'
-        ret += '  <a style="display: inline; text-decoration: underline; color: blue" '
-        ret +=      'href="' + identifier + '.witness.graphml">witness</a>\n'
+        ret += '  <select onChange="window.location.href=this.value">\n'
+        ret += '    <option value=""></option>\n'
+        ret += '    <option value="' + identifier + '.bc">.bc</option>\n'
+        ret += '    <option value="' + identifier + '.bpl">.bpl</option>\n'
+        ret += '    <option value="' + identifier + '.witness.graphml" hidden>Witness In</option>\n'
+        ret += '    <option value="' + identifier + '.witnessCheckOutput" hidden>Witness Out</option>\n'
+        ret += '  </select>\n'
         ret += '</div>\n'
         return ret
