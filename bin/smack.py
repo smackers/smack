@@ -38,6 +38,14 @@ def results():
     'unknown': 'SMACK result is unknown.'
   }
 
+def inlined_procedures():
+  return [
+    '$alloc',
+    '$free',
+    '$memset',
+    '$memcpy',
+  ]
+
 def validate_input_file(file):
   """Check whether the given input file is valid, returning a reason if not."""
 
@@ -240,17 +248,12 @@ def llvm_to_bpl(args):
   try_command(cmd)
 
 def procedure_annotation(name, args):
-  specials = re.compile('\$alloc|\$free|$static_init|\$init_funcs|__SMACK_.*|assert_|assume_|__VERIFIER_.*')
-
   if name in args.entry_points:
     return "{:entrypoint}"
-
-  elif args.verifier == 'boogie' and specials.match(name):
+  elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-
   elif args.verifier == 'boogie' and args.unroll:
     return ("{:inline %s}" % args.unroll)
-
   else:
     return ""
 
