@@ -403,7 +403,14 @@ def verify_bpl(args):
   if args.smackd:
     print smackdOutput(verifier_output)
 
+
+
   else:
+    if args.error_witness and result == 'error':
+      witnessStr = smackJsonToXmlGraph(smackdOutput(verifier_output))
+      with open(args.error_witness, 'w') as witnessFile:
+        witnessFile.write(witnessStr)
+
     print results()[result]
     if result == 'error':
       trace = error_trace(verifier_output, args)
@@ -429,13 +436,6 @@ def error_step(step):
             return "%s%s(%s,%s): %s" % (step.group(1), src.group(1), src.group(2), src.group(3), message)
     else:
       return step.group(0)
-      print smackdOutput(verifier_output)
-  if args.error_witness:
-    witnessStr = smackJsonToXmlGraph(smackdOutput(verifier_output))
-    with open(args.error_witness, 'w') as witnessFile:
-      witnessFile.write(witnessStr)
-
-
   else:
     return None
 
