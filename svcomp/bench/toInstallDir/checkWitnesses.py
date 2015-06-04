@@ -20,9 +20,6 @@ targetDir = os.path.join(targetDir, 'results')
 outXmls = glob.glob(targetDir + '/*results*.xml')
 
 for outXml in outXmls:
-    # Don't do it again - allows overwriting
-    if '.witchecked' in outXml:
-        continue
     baseXml,setName = os.path.splitext(os.path.splitext(outXml)[0])
     outXmlNew = baseXml + '.witchecked' + setName + '.xml'
     tree = ET.parse(outXml)

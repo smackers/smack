@@ -48,11 +48,11 @@ class Tool(benchexec.tools.template.BaseTool):
         #       options
 
     def get_result(self,output):
-        if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out', output):
+        if re.search(r'SMACK timed out.', output):
             return 'timeout'
-        elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
+        elif re.search(r'SMACK found no errors.', output):
             return 'verified'
-        elif re.search(r'0 verified, [1-9]\d* errors?|can fail', output):
+        elif re.search(r'SMACK found an error.*', output):
             return 'error'
         else:
             return 'unknown'
