@@ -1,11 +1,11 @@
 /* Useful
- * Verifies true with u4, cs2, tav, si in 76s (SIZE=3)
+ * verifies false with u6,c2,tav,si in 18s
  */
 
 
-//extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-#define __VERIFIER_error() assert(0);
+extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
+#include <smack-svcomp.h>
 #include <pthread.h>
 #include <stdio.h>
 
@@ -15,7 +15,7 @@
 #define OVERFLOW  (-1)
 #define UNDERFLOW (-2)
 
-//unsigned int __VERIFIER_nondet_uint();
+unsigned int __VERIFIER_nondet_uint();
 static int top=0;
 static unsigned int arr[SIZE];
 pthread_mutex_t m;
@@ -64,7 +64,7 @@ int push(unsigned int *stack, int x)
 
 int pop(unsigned int *stack)
 {
-  if (top==0) 
+  if (get_top()==0) 
   {
     printf("stack underflow\n");	
     return UNDERFLOW;
@@ -85,14 +85,10 @@ void *t1(void *arg)
   for(i=0; i<SIZE; i++)
   {
     pthread_mutex_lock(&m);
-    //tmp = __VERIFIER_nondet_uint()%SIZE;
-    tmp = __SMACK_nondet();
-    if( tmp < 0) {
-      tmp *= -1;
-    }
-    assume(0 <= tmp < SIZE);
-    if ((push(arr,tmp)==OVERFLOW))
+    tmp = __VERIFIER_nondet_uint()%SIZE;
+    if (push(arr,tmp)==OVERFLOW)
       error();
+    flag=TRUE;
     pthread_mutex_unlock(&m);
   }
 }
@@ -104,11 +100,11 @@ void *t2(void *arg)
   for(i=0; i<SIZE; i++)
   {
     pthread_mutex_lock(&m);
-    if (top>0)
-    {    
-      if ((pop(arr)==UNDERFLOW))
+    if (flag)
+    {
+      if (!(pop(arr)!=UNDERFLOW))
         error();
-    }    
+    }
     pthread_mutex_unlock(&m);
   }
 }
@@ -120,11 +116,11 @@ int main(void)
 
   pthread_mutex_init(&m, 0);
 
-  pthread_create(&id1, NULL, t1, NULL);
-  pthread_create(&id2, NULL, t2, NULL);
+  pthread_create(&id1, 0, t1, 0);
+  pthread_create(&id2, 0, t2, 0);
 
-  pthread_join(id1, NULL);
-  pthread_join(id2, NULL);
+  pthread_join(id1, 0);
+  pthread_join(id2, 0);
 
   return 0;
 }
