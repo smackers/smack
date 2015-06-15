@@ -53,7 +53,7 @@ if [[ $1 == "refresh" ]]
 	#Strip trailing slash, if any
 	INSTALLDIR=${2%/}
     fi
-    cp toInstallDir/* ${INSTALLDIR} -r
+    cp src/* ${INSTALLDIR} -r
     echo SMACKBench Installation Refreshed
     echo
     exit
@@ -68,14 +68,14 @@ if [[ $1 == "compare" ]]
 	#Strip trailing slash, if any
 	INSTALLDIR=${2%/}
     fi
-    for f in $(cd toInstallDir; find . -type f; cd ..)
+    for f in $(cd src; find . -type f; cd ..)
     do
 	echo
 	echo
 	echo ----------------------
 	echo $f
 	echo ----------------------
-	diff ./toInstallDir/${f:2} ${INSTALLDIR}/${f:2} -s
+	diff ./src/${f:2} ${INSTALLDIR}/${f:2} -s
     done
     exit
 fi
@@ -137,7 +137,7 @@ wget https://pypi.python.org/packages/3.3/T/Tempita/Tempita-0.5.3dev-py3.3.egg -
 unzip -n ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg tempita/\* -d ${INSTALLDIR}/benchexec/
 rm ${INSTALLDIR}/Tempita-0.5.3dev-py3.3.egg
 #Copy smack's BenchExec wrapper to the benchexec installation
-cp toInstallDir/* ${INSTALLDIR} -r
+cp src/* ${INSTALLDIR} -r
 
 
 ################################

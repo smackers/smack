@@ -1,5 +1,23 @@
 #!/bin/bash
 
+#This file executes SMACK using BenchExec, on the sv-comp benchmarks.
+#
+#It creates a folder called data/exec_<timestamp>/, copies input xml file 
+#smack.xml into this directory, and executes benchexec, passing smack.xml
+#as an argument.
+#
+#With the current configuration of smack.xml, this causes benchexec to execute
+#smack on the sv-comp Simple set, using a limit of 4GB of memory and two cores.
+#These low limits were set to enable running 4 benchmarks concurrently.
+#
+#The memory and core limits are set in the input xml file (smack.xml), and the
+#number of concurrent threads is set here in this file.  These should be modified
+#appropriately based on specs of the hardware, as well as desired accuracy of
+#benchmark timing (if memory is fully allocated, swapping is likely to occur,
+#which can negatively impact benchmark times).
+#
+#In the future, number of threads and sv-comp benchmark set should be 
+#parameterized.
 
 #Gets rid of existing results
 if [[ $1 == "clean" ]]

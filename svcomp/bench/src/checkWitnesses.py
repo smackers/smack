@@ -9,6 +9,22 @@ import re
 import sys
 sys.dont_write_bytecode = True # prevent creation of .pyc files
 
+"""
+This file takes an execution results directory as an argument, and generates a
+list of all output xml results files.  For each output xml result file, it runs
+cpachecker as a witness checker on each benchmark for which an error was found
+(i.e., had a 'false' result).
+
+The original output xml file is modified in memory to include results statuses
+from the witness checker for each benchmark 'false' benchmark, as well as
+enabling the witness related output file download links.
+
+The modified in-memory output xml is then written as a new output xml file, with
+the string ".witchecked" injected into the original output xml file name.  E.g.,
+this file will write a file called "a.witchecked.Simple.xml" if it encounters an
+original output xml file called "a.Simple.xml".
+"""
+
 if not 2 == len(sys.argv) or not os.path.isdir(sys.argv[1]):
     print('You suck')
     exit()

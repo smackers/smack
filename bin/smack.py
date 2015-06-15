@@ -203,9 +203,6 @@ def arguments():
   svcomp_group.add_argument('--svcomp', action="store_true", default=False,
     help='enter svcomp mode')
 
-  svcomp_group.add_argument('--syntax-check', action="store_true", default=False,
-    help='do syntax check on generated boogie file only')
-
   svcomp_group.add_argument('--error-witness', metavar='FILE', default=None, type=str, 
     help='save error witness to FILE')
 
@@ -213,7 +210,7 @@ def arguments():
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
-    
+
   if not args.bpl_file:
     args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
 
