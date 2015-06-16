@@ -214,7 +214,7 @@ string Slice::getName() {
 }
 
 const Expr* Slice::getCode(Naming& naming, SmackRep& rep) {
-  CodeExpr* code = new CodeExpr(rep.getProgram());
+  CodeExpr* code = new CodeExpr(rep.getProgram(), {});
   SmackInstGenerator igen(rep, *code, naming, slices);
 
   for (Function::iterator B = function.begin(), E = function.end(); B != E; ++B) {
@@ -232,8 +232,8 @@ const Expr* Slice::getCode(Naming& naming, SmackRep& rep) {
       igen.emit(Stmt::return_(rep.expr(&value)));
 
     } else if (!values.count(B->getTerminator())) {
-      igen.emit(Stmt::assume(rep.lit(false)));
-      igen.emit(Stmt::return_(rep.lit(true)));
+      igen.emit(Stmt::assume(Expr::lit(false)));
+      igen.emit(Stmt::return_(Expr::lit(true)));
     }
   }
   return code;

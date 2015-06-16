@@ -31,376 +31,277 @@ void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
 
-int __SMACK_nondet() {
-  static int XXX;
-  int x = XXX;
-  __SMACK_code("havoc @;", x);
-  return x;
-}
+#define LIMIT_1 2
+#define LIMIT_7 128
+#define LIMIT_8 256
+#define LIMIT_15 32768
+#define LIMIT_16 65536
+#define LIMIT_31 2147483648
+#define LIMIT_32 4294967296
+#define LIMIT_63 9223372036854775808
+#define LIMIT_64 18446744073709551616
+
+#define xstr(s) str(s)
+#define str(s) #s
+
+#define RECORD_PROC(type) \
+  procedure boogie_si_record_ ## type (i: type);
+
+#define UNINTERPRETED_UNARY_OP(type,name) \
+  function name.type(i: type) returns (type);
+
+#define UNINTERPRETED_BINARY_OP(type,name) \
+  function name.type(i1: type, i2: type) returns (type);
+
+#define UNINTERPRETED_BINARY_PRED(type,name) \
+  function name.type(i1: type, i2: type) returns (i1);
+
+#define INLINE_UNARY_OP(type,name,body) \
+  function {:inline} name.type(i: type) returns (type) body
+
+#define INLINE_BINARY_OP(type,name,body) \
+  function {:inline} name.type(i1: type, i2: type) returns (type) body
+
+#define INLINE_BINARY_PRED(type,name,cond) \
+  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
+  function {:inline} name.type(i1: type, i2: type) returns (i1) {if cond then 1 else 0}
+
+#define INLINE_BINARY_BV_PRED(type,name,cond) \
+  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
+  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if cond then 1bv1 else 0bv1}
+
+#define INLINE_CONVERSION(t1,t2,name,body) \
+  function {:inline} name.t1.t2(i: t1) returns (t2) body
+
+#define BUILTIN_UNARY_OP(type,name,prim) \
+  function {:builtin xstr(prim)} name.type(i: type) returns (type);
+
+#define BUILTIN_BINARY_OP(type,name,prim) \
+  function {:builtin xstr(prim)} name.type(i1: type, i2: type) returns (type);
+
+#define BUILTIN_BINARY_PRED(type,name,prim) \
+  function {:builtin xstr(prim)} name.type(i1: type, i2: type) returns (i1);
+
+#define BVBUILTIN_UNARY_OP(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type(i: type) returns (type);
+
+#define BVBUILTIN_BINARY_OP(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type(i1: type, i2: type) returns (type);
+
+#define BVBUILTIN_BINARY_PRED(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type(i1: type, i2: type) returns (i1);
+
+#define INLINE_BVBUILTIN_BINARY_PRED(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type.bool(i1: type, i2: type) returns (bool); \
+  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
+
+#define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
+  function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
+
+#define D(d) __SMACK_top_decl(d)
+
+#define DECLARE(M,args...) \
+  D(xstr(M(args)))
+
+#define DECLARE_EACH_INT_TYPE(M,args...) \
+  D(xstr(M(i64,args))); \
+  D(xstr(M(i32,args))); \
+  D(xstr(M(i16,args))); \
+  D(xstr(M(i8,args))); \
+  D(xstr(M(i1,args)));
+
+#define DECLARE_EACH_BV_TYPE(M,args...) \
+  D(xstr(M(bv64,args))); \
+  D(xstr(M(bv32,args))); \
+  D(xstr(M(bv16,args))); \
+  D(xstr(M(bv8,args))); \
+  D(xstr(M(bv1,args)));
 
 void __SMACK_decls() {
-#define D(d) __SMACK_top_decl(d)
-  // Integer arithmetic
-#ifdef BITPRECISE
-  D("function {:bvbuiltin \"bvneg\"} $neg.i64(p1:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvadd\"} $add.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvsub\"} $sub.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvmul\"} $mul.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvshl\"} $shl.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvudiv\"} $udiv.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvsdiv\"} $sdiv.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvsmod\"} $smod.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvsrem\"} $srem.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvurem\"} $urem.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvlshr\"} $lshr.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvashr\"} $ashr.i64(p1:i64, p2:i64) returns (i64);");
 
-  D("function {:bvbuiltin \"bvneg\"} $neg.i32(p1:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvadd\"} $add.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvsub\"} $sub.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvmul\"} $mul.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvshl\"} $shl.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvudiv\"} $udiv.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvsdiv\"} $sdiv.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvsmod\"} $smod.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvsrem\"} $srem.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvurem\"} $urem.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvlshr\"} $lshr.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvashr\"} $ashr.i32(p1:i32, p2:i32) returns (i32);");
+  DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
-  D("function {:bvbuiltin \"bvneg\"} $neg.i16(p1:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvadd\"} $add.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvsub\"} $sub.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvmul\"} $mul.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvshl\"} $shl.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvudiv\"} $udiv.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvsdiv\"} $sdiv.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvsmod\"} $smod.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvsrem\"} $srem.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvurem\"} $urem.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvlshr\"} $lshr.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvashr\"} $ashr.i16(p1:i16, p2:i16) returns (i16);");
+  // BITVECTOR MODELING
 
-  D("function {:bvbuiltin \"bvneg\"} $neg.i8(p1:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvadd\"} $add.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvsub\"} $sub.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvmul\"} $mul.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvshl\"} $shl.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvudiv\"} $udiv.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvsdiv\"} $sdiv.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvsmod\"} $smod.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvsrem\"} $srem.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvurem\"} $urem.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvlshr\"} $lshr.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvashr\"} $ashr.i8(p1:i8, p2:i8) returns (i8);");
-  // Bitwise operations
-  D("function {:bvbuiltin \"bvnot\"} $not.i64(p1:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvand\"} $and.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvor\"} $or.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:bvbuiltin \"bvxor\"} $xor.i64(p1:i64, p2:i64) returns (i64);");
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sub, bvsub)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $mul, bvmul)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $udiv, bvudiv)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sdiv, bvsdiv)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $smod, bvsmod)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $srem, bvsrem)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $urem, bvurem)
 
-  D("function {:bvbuiltin \"bvnot\"} $not.i32(p1:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvand\"} $and.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvor\"} $or.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:bvbuiltin \"bvxor\"} $xor.i32(p1:i32, p2:i32) returns (i32);");
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $min, $slt)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $max, $sgt)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $umin, $ult)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $umax, $ugt)
 
-  D("function {:bvbuiltin \"bvnot\"} $not.i16(p1:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvand\"} $and.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvor\"} $or.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:bvbuiltin \"bvxor\"} $xor.i16(p1:i16, p2:i16) returns (i16);");
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $shl, bvshl)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $lshr, bvlshr)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $ashr, bvashr)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_UNARY_OP, $not, bvnot)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $and, bvand)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $or, bvor)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $xor, bvxor)
+  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $nand, bvnand)
 
-  D("function {:bvbuiltin \"bvnot\"} $not.i8(p1:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvand\"} $and.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvor\"} $or.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:bvbuiltin \"bvxor\"} $xor.i8(p1:i8, p2:i8) returns (i8);");
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, i1 == i2)
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, i1 != i2)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ule, bvule)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ult, bvult)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $uge, bvuge)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ugt, bvugt)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sle, bvsle)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $slt, bvslt)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sge, bvsge)
+  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sgt, bvsgt)
 
-  D("function {:bvbuiltin \"bvnot\"} $not.i1(p1:i1) returns (i1);");
-  D("function {:bvbuiltin \"bvand\"} $and.i1(p1:i1, p2:i1) returns (i1);");
-  D("function {:bvbuiltin \"bvor\"} $or.i1(p1:i1, p2:i1) returns (i1);");
-  D("function {:bvbuiltin \"bvxor\"} $xor.i1(p1:i1, p2:i1) returns (i1);");
-  // Predicates
-  D("function {:inline} $eq.i64(p1:i64, p2:i64) returns (i1) {if p1 == p2 then 1bv1 else 0bv1}");
-  D("function {:inline} $ne.i64(p1:i64, p2:i64) returns (i1) {if p1 != p2 then 1bv1 else 0bv1}");
+  DECLARE(INLINE_CONVERSION,bv64,bv32,$trunc,{i[32:0]});
+  DECLARE(INLINE_CONVERSION,bv64,bv16,$trunc,{i[16:0]});
+  DECLARE(INLINE_CONVERSION,bv64,bv8,$trunc,{i[8:0]});
+  DECLARE(INLINE_CONVERSION,bv64,bv1,$trunc,{i[1:0]});
+  DECLARE(INLINE_CONVERSION,bv32,bv16,$trunc,{i[16:0]});
+  DECLARE(INLINE_CONVERSION,bv32,bv8,$trunc,{i[8:0]});
+  DECLARE(INLINE_CONVERSION,bv32,bv1,$trunc,{i[1:0]});
+  DECLARE(INLINE_CONVERSION,bv16,bv8,$trunc,{i[8:0]});
+  DECLARE(INLINE_CONVERSION,bv16,bv1,$trunc,{i[1:0]});
+  DECLARE(INLINE_CONVERSION,bv8,bv1,$trunc,{i[1:0]});
 
-  D("function {:bvbuiltin \"bvule\"} $ule.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvult\"} $ult.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvuge\"} $uge.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvugt\"} $ugt.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvsle\"} $sle.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvslt\"} $slt.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvsge\"} $sge.i64.bi(p1:i64, p2:i64) returns (bool);");
-  D("function {:bvbuiltin \"bvsgt\"} $sgt.i64.bi(p1:i64, p2:i64) returns (bool);");
+  DECLARE(INLINE_CONVERSION,bv1,bv8,$zext,{if i == 0bv1 then 0bv8 else 1bv8});
+  DECLARE(INLINE_CONVERSION,bv1,bv16,$zext,{if i == 0bv1 then 0bv16 else 1bv16});
+  DECLARE(INLINE_CONVERSION,bv1,bv32,$zext,{if i == 0bv1 then 0bv32 else 1bv32});
+  DECLARE(INLINE_CONVERSION,bv1,bv64,$zext,{if i == 0bv1 then 0bv64 else 1bv64});
+  D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv8.bv16(i: bv8) returns (bv16);");
+  D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv8.bv32(i: bv8) returns (bv32);");
+  D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv16.bv32(i: bv16) returns (bv32);");
+  D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv32.bv64(i: bv32) returns (bv64);");
 
-  D("function {:inline} $ule.i64(p1:i64, p2:i64) returns (i1) {if $ule.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ult.i64(p1:i64, p2:i64) returns (i1) {if $ult.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $uge.i64(p1:i64, p2:i64) returns (i1) {if $uge.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ugt.i64(p1:i64, p2:i64) returns (i1) {if $ugt.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sle.i64(p1:i64, p2:i64) returns (i1) {if $sle.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $slt.i64(p1:i64, p2:i64) returns (i1) {if $slt.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sge.i64(p1:i64, p2:i64) returns (i1) {if $sge.i64.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sgt.i64(p1:i64, p2:i64) returns (i1) {if $sgt.i64.bi(p1,p2) then 1bv1 else 0bv1}");
+  DECLARE(INLINE_CONVERSION,bv1,bv8,$sext,{if i == 0bv1 then 0bv8 else 255bv8});
+  DECLARE(INLINE_CONVERSION,bv1,bv16,$sext,{if i == 0bv1 then 0bv16 else 65535bv16});
+  DECLARE(INLINE_CONVERSION,bv1,bv32,$sext,{if i == 0bv1 then 0bv32 else 4294967295bv32});
+  DECLARE(INLINE_CONVERSION,bv1,bv64,$sext,{if i == 0bv1 then 0bv64 else 18446744073709551615bv64});
+  D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv8.bv16(i: bv8) returns (bv16);");
+  D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv8.bv32(i: bv8) returns (bv32);");
+  D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv16.bv32(i: bv16) returns (bv32);");
+  D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv32.bv64(i: bv32) returns (bv64);");
 
-  D("function {:inline} $eq.i32(p1:i32, p2:i32) returns (i1) {if p1 == p2 then 1bv1 else 0bv1}");
-  D("function {:inline} $ne.i32(p1:i32, p2:i32) returns (i1) {if p1 != p2 then 1bv1 else 0bv1}");
+  // INTEGER MODELING
 
-  D("function {:bvbuiltin \"bvule\"} $ule.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvult\"} $ult.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvuge\"} $uge.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvugt\"} $ugt.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvsle\"} $sle.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvslt\"} $slt.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvsge\"} $sge.i32.bi(p1:i32, p2:i32) returns (bool);");
-  D("function {:bvbuiltin \"bvsgt\"} $sgt.i32.bi(p1:i32, p2:i32) returns (bool);");
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $add, {i1 + i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $sub, {i1 - i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $mul, {i1 * i2})
+  D("function {:builtin \"div\"} $div(i1: int, i2: int) returns (int);");
+  D("function {:builtin \"mod\"} $mod(i1: int, i2: int) returns (int);");
+  D("function {:builtin \"rem\"} $rem(i1: int, i2: int) returns (int);");
+  D("function {:inline} $min(i1: int, i2: int) returns (int) {if i1 < i2 then i1 else i2}");
+  D("function {:inline} $max(i1: int, i2: int) returns (int) {if i1 > i2 then i1 else i2}");
 
-  D("function {:inline} $ule.i32(p1:i32, p2:i32) returns (i1) {if $ule.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ult.i32(p1:i32, p2:i32) returns (i1) {if $ult.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $uge.i32(p1:i32, p2:i32) returns (i1) {if $uge.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ugt.i32(p1:i32, p2:i32) returns (i1) {if $ugt.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sle.i32(p1:i32, p2:i32) returns (i1) {if $sle.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $slt.i32(p1:i32, p2:i32) returns (i1) {if $slt.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sge.i32(p1:i32, p2:i32) returns (i1) {if $sge.i32.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sgt.i32(p1:i32, p2:i32) returns (i1) {if $sgt.i32.bi(p1,p2) then 1bv1 else 0bv1}");
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $sdiv, div)
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $smod, mod)
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $srem, rem)
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $udiv, div);
+  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $urem, rem);
 
-  D("function {:inline} $eq.i16(p1:i16, p2:i16) returns (i1) {if p1 == p2 then 1bv1 else 0bv1}");
-  D("function {:inline} $ne.i16(p1:i16, p2:i16) returns (i1) {if p1 != p2 then 1bv1 else 0bv1}");
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smin, {$min(i1,i2)})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smax, {$max(i1,i2)})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umin, {$min(i1,i2)})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umax, {$max(i1,i2)})
 
-  D("function {:bvbuiltin \"bvule\"} $ule.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvult\"} $ult.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvuge\"} $uge.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvugt\"} $ugt.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvsle\"} $sle.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvslt\"} $slt.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvsge\"} $sge.i16.bi(p1:i16, p2:i16) returns (bool);");
-  D("function {:bvbuiltin \"bvsgt\"} $sgt.i16.bi(p1:i16, p2:i16) returns (bool);");
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $shl)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $lshr)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $ashr)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_UNARY_OP, $not)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $and)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $or)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $xor)
+  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $nand)
 
-  D("function {:inline} $ule.i16(p1:i16, p2:i16) returns (i1) {if $ule.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ult.i16(p1:i16, p2:i16) returns (i1) {if $ult.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $uge.i16(p1:i16, p2:i16) returns (i1) {if $uge.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ugt.i16(p1:i16, p2:i16) returns (i1) {if $ugt.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sle.i16(p1:i16, p2:i16) returns (i1) {if $sle.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $slt.i16(p1:i16, p2:i16) returns (i1) {if $slt.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sge.i16(p1:i16, p2:i16) returns (i1) {if $sge.i16.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sgt.i16(p1:i16, p2:i16) returns (i1) {if $sgt.i16.bi(p1,p2) then 1bv1 else 0bv1}");
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $eq, i1 == i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ne, i1 != i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ule, i1 <= i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ult, i1 < i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $uge, i1 >= i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ugt, i1 > i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sle, i1 <= i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $slt, i1 < i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sge, i1 >= i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sgt, i1 > i2)
 
-  D("function {:inline} $eq.i8(p1:i8, p2:i8) returns (i1) {if p1 == p2 then 1bv1 else 0bv1}");
-  D("function {:inline} $ne.i8(p1:i8, p2:i8) returns (i1) {if p1 != p2 then 1bv1 else 0bv1}");
-
-  D("function {:bvbuiltin \"bvule\"} $ule.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvult\"} $ult.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvuge\"} $uge.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvugt\"} $ugt.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvsle\"} $sle.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvslt\"} $slt.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvsge\"} $sge.i8.bi(p1:i8, p2:i8) returns (bool);");
-  D("function {:bvbuiltin \"bvsgt\"} $sgt.i8.bi(p1:i8, p2:i8) returns (bool);");
-
-  D("function {:inline} $ule.i8(p1:i8, p2:i8) returns (i1) {if $ule.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ult.i8(p1:i8, p2:i8) returns (i1) {if $ult.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $uge.i8(p1:i8, p2:i8) returns (i1) {if $uge.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ugt.i8(p1:i8, p2:i8) returns (i1) {if $ugt.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sle.i8(p1:i8, p2:i8) returns (i1) {if $sle.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $slt.i8(p1:i8, p2:i8) returns (i1) {if $slt.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sge.i8(p1:i8, p2:i8) returns (i1) {if $sge.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sgt.i8(p1:i8, p2:i8) returns (i1) {if $sgt.i8.bi(p1,p2) then 1bv1 else 0bv1}");
-
-  D("function {:inline} $i2b(i: i1) returns (bool) {i != 0bv1}");
-  D("function {:inline} $b2i(b: bool) returns (i1) {if b then 1bv1 else 0bv1}");
-#else
-  D("function {:inline} $add.i64(p1:i64, p2:i64) returns (i64) {p1 + p2}");
-  D("function {:inline} $sub.i64(p1:i64, p2:i64) returns (i64) {p1 - p2}");
-  D("function {:inline} $mul.i64(p1:i64, p2:i64) returns (i64) {p1 * p2}");
-  D("function {:inline} $neg.i64(p:i64) returns (i64) {0 - p}");
-  D("function {:builtin \"div\"} $udiv.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:builtin \"div\"} $sdiv.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:buildin \"mod\"} $smod.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:buildin \"rem\"} $srem.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:buildin \"rem\"} $urem.i64(p1:i64, p2:i64) returns (i64);");
-  D("function {:inline} $shl.i64(p1:i64, p2:i64) returns (i64){p1}");
-  D("function {:inline} $lshr.i64(p1:i64, p2:i64) returns (i64){p1}");
-  D("function {:inline} $ashr.i64(p1:i64, p2:i64) returns (i64){p1}");
-
-  D("function {:inline} $add.i32(p1:i32, p2:i32) returns (i32) {p1 + p2}");
-  D("function {:inline} $sub.i32(p1:i32, p2:i32) returns (i32) {p1 - p2}");
-  D("function {:inline} $mul.i32(p1:i32, p2:i32) returns (i32) {p1 * p2}");
-  D("function {:inline} $neg.i32(p:i32) returns (i32) {0 - p}");
-  D("function {:builtin \"div\"} $udiv.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:builtin \"div\"} $sdiv.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:buildin \"mod\"} $smod.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:buildin \"rem\"} $srem.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:buildin \"rem\"} $urem.i32(p1:i32, p2:i32) returns (i32);");
-  D("function {:inline} $shl.i32(p1:i32, p2:i32) returns (i32){p1}");
-  D("function {:inline} $lshr.i32(p1:i32, p2:i32) returns (i32){p1}");
-  D("function {:inline} $ashr.i32(p1:i32, p2:i32) returns (i32){p1}");
-
-  D("function {:inline} $add.i16(p1:i16, p2:i16) returns (i16) {p1 + p2}");
-  D("function {:inline} $sub.i16(p1:i16, p2:i16) returns (i16) {p1 - p2}");
-  D("function {:inline} $mul.i16(p1:i16, p2:i16) returns (i16) {p1 * p2}");
-  D("function {:inline} $neg.i16(p:i16) returns (i16) {0 - p}");
-  D("function {:builtin \"div\"} $udiv.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:builtin \"div\"} $sdiv.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:buildin \"mod\"} $smod.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:buildin \"rem\"} $srem.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:buildin \"rem\"} $urem.i16(p1:i16, p2:i16) returns (i16);");
-  D("function {:inline} $shl.i16(p1:i16, p2:i16) returns (i16){p1}");
-  D("function {:inline} $lshr.i16(p1:i16, p2:i16) returns (i16){p1}");
-  D("function {:inline} $ashr.i16(p1:i16, p2:i16) returns (i16){p1}");
-
-  D("function {:inline} $add.i8(p1:i8, p2:i8) returns (i8) {p1 + p2}");
-  D("function {:inline} $sub.i8(p1:i8, p2:i8) returns (i8) {p1 - p2}");
-  D("function {:inline} $mul.i8(p1:i8, p2:i8) returns (i8) {p1 * p2}");
-  D("function {:inline} $neg.i8(p:i8) returns (i8) {0 - p}");
-  D("function {:builtin \"div\"} $udiv.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:builtin \"div\"} $sdiv.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:buildin \"mod\"} $smod.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:buildin \"rem\"} $srem.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:buildin \"rem\"} $urem.i8(p1:i8, p2:i8) returns (i8);");
-  D("function {:inline} $shl.i8(p1:i8, p2:i8) returns (i8){p1}");
-  D("function {:inline} $lshr.i8(p1:i8, p2:i8) returns (i8){p1}");
-  D("function {:inline} $ashr.i8(p1:i8, p2:i8) returns (i8){p1}");
-
-  D("function $and.i64(p64:i64, p2:i64) returns (i64);");
-  D("function $or.i64(p64:i64, p2:i64) returns (i64);");
-  D("function $xor.i64(p64:i64, p2:i64) returns (i64);");
-
-  D("function $and.i32(p32:i32, p2:i32) returns (i32);");
-  D("function $or.i32(p32:i32, p2:i32) returns (i32);");
-  D("function $xor.i32(p32:i32, p2:i32) returns (i32);");
-
-  D("function $and.i16(p16:i16, p2:i16) returns (i16);");
-  D("function $or.i16(p16:i16, p2:i16) returns (i16);");
-  D("function $xor.i16(p16:i16, p2:i16) returns (i16);");
-
-  D("function $and.i8(p8:i8, p2:i8) returns (i8);");
-  D("function $or.i8(p8:i8, p2:i8) returns (i8);");
-  D("function $xor.i8(p8:i8, p2:i8) returns (i8);");
-
-  D("function $and.i1(p1:i1, p2:i1) returns (i1);");
   D("axiom $and.i1(0,0) == 0;");
   D("axiom $and.i1(0,1) == 0;");
   D("axiom $and.i1(1,0) == 0;");
   D("axiom $and.i1(1,1) == 1;");
-  D("function $or.i1(p1:i1, p2:i1) returns (i1);");
   D("axiom $or.i1(0,0) == 0;");
   D("axiom $or.i1(0,1) == 1;");
   D("axiom $or.i1(1,0) == 1;");
   D("axiom $or.i1(1,1) == 1;");
-  D("function $xor.i1(p1:i1, p2:i1) returns (i1);");
   D("axiom $xor.i1(0,0) == 0;");
   D("axiom $xor.i1(0,1) == 1;");
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
 
-  // Predicates
-  D("function {:inline} $eq.i64(p1:i64, p2:i64) returns (i1) {if p1 == p2 then 1 else 0}");
-  D("function {:inline} $ne.i64(p1:i64, p2:i64) returns (i1) {if p1 != p2 then 1 else 0}");
-  D("function {:inline} $ult.i64(p1:i64, p2:i64) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $ugt.i64(p1:i64, p2:i64) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $ule.i64(p1:i64, p2:i64) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $uge.i64(p1:i64, p2:i64) returns (i1) {if p1 >= p2 then 1 else 0}");
-  D("function {:inline} $slt.i64(p1:i64, p2:i64) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $sgt.i64(p1:i64, p2:i64) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $sle.i64(p1:i64, p2:i64) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $sge.i64(p1:i64, p2:i64) returns (i1) {if p1 >= p2 then 1 else 0}");
+  DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i64,i1,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i32,i16,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i32,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i32,i1,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i16,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i16,i1,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i8,i1,$trunc,{i});
 
-  D("function {:inline} $eq.i32(p1:i32, p2:i32) returns (i1) {if p1 == p2 then 1 else 0}");
-  D("function {:inline} $ne.i32(p1:i32, p2:i32) returns (i1) {if p1 != p2 then 1 else 0}");
-  D("function {:inline} $ult.i32(p1:i32, p2:i32) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $ugt.i32(p1:i32, p2:i32) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $ule.i32(p1:i32, p2:i32) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $uge.i32(p1:i32, p2:i32) returns (i1) {if p1 >= p2 then 1 else 0}");
-  D("function {:inline} $slt.i32(p1:i32, p2:i32) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $sgt.i32(p1:i32, p2:i32) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $sle.i32(p1:i32, p2:i32) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $sge.i32(p1:i32, p2:i32) returns (i1) {if p1 >= p2 then 1 else 0}");
+  DECLARE(INLINE_CONVERSION,i1,i8,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i16,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i32,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i16,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i32,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i32,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i64,$zext,{i});
 
-  D("function {:inline} $eq.i16(p1:i16, p2:i16) returns (i1) {if p1 == p2 then 1 else 0}");
-  D("function {:inline} $ne.i16(p1:i16, p2:i16) returns (i1) {if p1 != p2 then 1 else 0}");
-  D("function {:inline} $ult.i16(p1:i16, p2:i16) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $ugt.i16(p1:i16, p2:i16) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $ule.i16(p1:i16, p2:i16) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $uge.i16(p1:i16, p2:i16) returns (i1) {if p1 >= p2 then 1 else 0}");
-  D("function {:inline} $slt.i16(p1:i16, p2:i16) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $sgt.i16(p1:i16, p2:i16) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $sle.i16(p1:i16, p2:i16) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $sge.i16(p1:i16, p2:i16) returns (i1) {if p1 >= p2 then 1 else 0}");
+  DECLARE(INLINE_CONVERSION,i1,i8,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i16,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i32,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i16,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i32,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i32,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i64,$sext,{i});
 
-  D("function {:inline} $eq.i8(p1:i8, p2:i8) returns (i1) {if p1 == p2 then 1 else 0}");
-  D("function {:inline} $ne.i8(p1:i8, p2:i8) returns (i1) {if p1 != p2 then 1 else 0}");
-  D("function {:inline} $ult.i8(p1:i8, p2:i8) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $ugt.i8(p1:i8, p2:i8) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $ule.i8(p1:i8, p2:i8) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $uge.i8(p1:i8, p2:i8) returns (i1) {if p1 >= p2 then 1 else 0}");
-  D("function {:inline} $slt.i8(p1:i8, p2:i8) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $sgt.i8(p1:i8, p2:i8) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $sle.i8(p1:i8, p2:i8) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $sge.i8(p1:i8, p2:i8) returns (i1) {if p1 >= p2 then 1 else 0}");
-
-  D("function {:inline} $i2b(i: i1) returns (bool) {i != 0}");
-  D("function {:inline} $b2i(b: bool) returns (i8) {if b then 1 else 0}");
-
-  D("function {:inline} $trunc.i64.i32(p: i64) returns (i32) {p}");
-  D("function {:inline} $trunc.i64.i16(p: i64) returns (i16) {p}");
-  D("function {:inline} $trunc.i64.i8(p: i64) returns (i8) {p}");
-  D("function {:inline} $trunc.i64.i1(p: i64) returns (i1) {p}");
-  D("function {:inline} $trunc.i32.i16(p: i32) returns (i16) {p}");
-  D("function {:inline} $trunc.i32.i8(p: i32) returns (i8) {p}");
-  D("function {:inline} $trunc.i32.i1(p: i32) returns (i1) {p}");
-  D("function {:inline} $trunc.i16.i8(p: i16) returns (i8) {p}");
-  D("function {:inline} $trunc.i16.i1(p: i16) returns (i1) {p}");
-  D("function {:inline} $trunc.i8.i1(p: i8) returns (i1) {p}");
-
-  D("function {:inline} $zext.i1.i64(p: i1) returns (i64) {p}");
-  D("function {:inline} $zext.i1.i32(p: i1) returns (i32) {p}");
-  D("function {:inline} $zext.i1.i16(p: i1) returns (i16) {p}");
-  D("function {:inline} $zext.i1.i8(p: i1) returns (i8) {p}");
-  D("function {:inline} $zext.i8.i64(p: i8) returns (i64) {p}");
-  D("function {:inline} $zext.i8.i32(p: i8) returns (i32) {p}");
-  D("function {:inline} $zext.i8.i16(p: i8) returns (i16) {p}");
-  D("function {:inline} $zext.i16.i64(p: i16) returns (i64) {p}");
-  D("function {:inline} $zext.i16.i32(p: i16) returns (i32) {p}");
-  D("function {:inline} $zext.i32.i64(p: i32) returns (i64) {p}");
-
-  D("function {:inline} $sext.i1.i64(p: i1) returns (i64) {p}");
-  D("function {:inline} $sext.i1.i32(p: i1) returns (i32) {p}");
-  D("function {:inline} $sext.i1.i16(p: i1) returns (i16) {p}");
-  D("function {:inline} $sext.i1.i8(p: i1) returns (i8) {p}");
-  D("function {:inline} $sext.i8.i64(p: i8) returns (i64) {p}");
-  D("function {:inline} $sext.i8.i32(p: i8) returns (i32) {p}");
-  D("function {:inline} $sext.i8.i16(p: i8) returns (i16) {p}");
-  D("function {:inline} $sext.i16.i64(p: i16) returns (i64) {p}");
-  D("function {:inline} $sext.i16.i32(p: i16) returns (i32) {p}");
-  D("function {:inline} $sext.i32.i64(p: i32) returns (i64) {p}");
-
-  D("function $nand(p1:int, p2:int) returns (int);");
-  D("function {:inline} $max(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
-  D("function {:inline} $min(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
-  D("function {:inline} $umax(p1:int, p2:int) returns (int) {if p1 > p2 then p1 else p2}");
-  D("function {:inline} $umin(p1:int, p2:int) returns (int) {if p1 > p2 then p2 else p1}");
-#endif
-  // Floating point
   D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
-  D("function $fadd(f1:float, f2:float) returns (float);");
-  D("function $fsub(f1:float, f2:float) returns (float);");
-  D("function $fmul(f1:float, f2:float) returns (float);");
-  D("function $fdiv(f1:float, f2:float) returns (float);");
-  D("function $frem(f1:float, f2:float) returns (float);");
-  D("function $ffalse(f1:float, f2:float) returns (i1);");
-  D("function $ftrue(f1:float, f2:float) returns (i1);");
-  D("function $foeq(f1:float, f2:float) returns (i1);");
-  D("function $foge(f1:float, f2:float) returns (i1);");
-  D("function $fogt(f1:float, f2:float) returns (i1);");
-  D("function $fole(f1:float, f2:float) returns (i1);");
-  D("function $folt(f1:float, f2:float) returns (i1);");
-  D("function $fone(f1:float, f2:float) returns (i1);");
-  D("function $ford(f1:float, f2:float) returns (i1);");
-  D("function $fueq(f1:float, f2:float) returns (i1);");
-  D("function $fuge(f1:float, f2:float) returns (i1);");
-  D("function $fugt(f1:float, f2:float) returns (i1);");
-  D("function $fule(f1:float, f2:float) returns (i1);");
-  D("function $fult(f1:float, f2:float) returns (i1);");
-  D("function $fune(f1:float, f2:float) returns (i1);");
-  D("function $funo(f1:float, f2:float) returns (i1);");
+  D("function $fadd.float(f1:float, f2:float) returns (float);");
+  D("function $fsub.float(f1:float, f2:float) returns (float);");
+  D("function $fmul.float(f1:float, f2:float) returns (float);");
+  D("function $fdiv.float(f1:float, f2:float) returns (float);");
+  D("function $frem.float(f1:float, f2:float) returns (float);");
+  D("function $ffalse.float(f1:float, f2:float) returns (i1);");
+  D("function $ftrue.float(f1:float, f2:float) returns (i1);");
+  D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
+  D("function $foeq.bool(f1:float, f2:float) returns (bool);");
+  D("function $foge.float(f1:float, f2:float) returns (i1);");
+  D("function $fogt.float(f1:float, f2:float) returns (i1);");
+  D("function $fole.float(f1:float, f2:float) returns (i1);");
+  D("function $folt.float(f1:float, f2:float) returns (i1);");
+  D("function $fone.float(f1:float, f2:float) returns (i1);");
+  D("function $ford.float(f1:float, f2:float) returns (i1);");
+  D("function $fueq.float(f1:float, f2:float) returns (i1);");
+  D("function $fuge.float(f1:float, f2:float) returns (i1);");
+  D("function $fugt.float(f1:float, f2:float) returns (i1);");
+  D("function $fule.float(f1:float, f2:float) returns (i1);");
+  D("function $fult.float(f1:float, f2:float) returns (i1);");
+  D("function $fune.float(f1:float, f2:float) returns (i1);");
+  D("function $funo.float(f1:float, f2:float) returns (i1);");
   D("function $fp2si.i64(f:float) returns (i64);");
   D("function $fp2ui.i64(f:float) returns (i64);");
   D("function $si2fp.i64(i:i64) returns (float);");
@@ -418,7 +319,7 @@ void __SMACK_decls() {
   D("function $si2fp.i8(i:i8) returns (float);");
   D("function $ui2fp.i8(i:i8) returns (float);");
 
-  D("axiom (forall f1, f2: float :: f1 != f2 || $i2b($foeq(f1,f2)));");
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
   D("axiom (forall i: i64 :: $fp2ui.i64($ui2fp.i64(i)) == i);");
   D("axiom (forall f: float :: $ui2fp.i64($fp2ui.i64(f)) == f);");
   D("axiom (forall i: i64 :: $fp2si.i64($si2fp.i64(i)) == i);");
@@ -437,132 +338,56 @@ void __SMACK_decls() {
   D("axiom (forall f: float :: $si2fp.i8($fp2si.i8(f)) == f);");
 
   // Memory Model
-  D("const $UNDEF: ref;");
+  D("const $GLOBALS_BOTTOM: ref;");
+  D("const $EXTERNS_BOTTOM: ref;");
+  D("const $MALLOC_TOP: ref;");
   D("function $base(ref) returns (ref);");
-  D("const $NULL: ref;");
-  D("const $REF_CONST_1: ref;");
-  D("const $REF_CONST_2: ref;");
-  D("const $REF_CONST_3: ref;");
-  D("const $REF_CONST_4: ref;");
-  D("const $REF_CONST_5: ref;");
-  D("const $REF_CONST_6: ref;");
-  D("const $REF_CONST_7: ref;");
-  D("function {:inline} $b2p(b: bool) returns (ref) {if b then $REF_CONST_1 else $NULL}");
-  D("function {:inline} $p2b(p: ref) returns (bool) {p != $NULL}");
-#ifdef BITPRECISE
-  //Pointer Arithmetic
-  D("function {:bvbuiltin \"bvadd\"} $add.ref(p1:ref, p2:ref) returns (ref);");
-  D("function {:bvbuiltin \"bvsub\"} $sub.ref(p1:ref, p2:ref) returns (ref);");
-  D("function {:bvbuiltin \"bvmul\"} $mul.ref(p1:ref, p2:ref) returns (ref);");
-  D("function {:bvbuiltin \"bvult\"} $ult.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvugt\"} $ugt.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvule\"} $ule.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvuge\"} $uge.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvslt\"} $slt.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvsgt\"} $sgt.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvsle\"} $sle.ref.bi(p1:ref, p2:ref) returns (bool);");
-  D("function {:bvbuiltin \"bvsge\"} $sge.ref.bi(p1:ref, p2:ref) returns (bool);");
+  D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
 
-  D("function {:inline} $ule.ref(p1:ref, p2:ref) returns (i1) {if $ule.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ult.ref(p1:ref, p2:ref) returns (i1) {if $ult.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $uge.ref(p1:ref, p2:ref) returns (i1) {if $uge.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $ugt.ref(p1:ref, p2:ref) returns (i1) {if $ugt.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sle.ref(p1:ref, p2:ref) returns (i1) {if $sle.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $slt.ref(p1:ref, p2:ref) returns (i1) {if $slt.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sge.ref(p1:ref, p2:ref) returns (i1) {if $sge.ref.bi(p1,p2) then 1bv1 else 0bv1}");
-  D("function {:inline} $sgt.ref(p1:ref, p2:ref) returns (i1) {if $sgt.ref.bi(p1,p2) then 1bv1 else 0bv1}");
+  D("function {:inline} $load.bv64(M:[ref]bv8, p:ref) returns (bv64){$load.bv32(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
+  D("function {:inline} $load.bv32(M:[ref]bv8, p:ref) returns (bv32){M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.bv16(M:[ref]bv8, p:ref) returns (bv16){M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.bv8(M:[ref]bv8, p:ref) returns (bv8){M[p]}");
 
-  D("function {:inline} $load.i64(M:[ref]i8, p:ref) returns (i64){$load.i32(M, $add.ref(p, $REF_CONST_4))++$load.i32(M, p)}");
-  D("function {:inline} $load.i32(M:[ref]i8, p:ref) returns (i32){M[$add.ref(p, $REF_CONST_3)]++M[$add.ref(p, $REF_CONST_2)]++M[$add.ref(p, $REF_CONST_1)]++M[p]}");
-  D("function {:inline} $load.i16(M:[ref]i8, p:ref) returns (i16){M[$add.ref(p, $REF_CONST_1)]++M[p]}");
-  D("function {:inline} $load.i8(M:[ref]i8, p:ref) returns (i8){M[p]}");
-
-  D("function {:inline} $store.i64(M:[ref]i8, p:ref, v:i64) returns ([ref]i8)"
-    "{M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]][$add.ref(p, $REF_CONST_2) := v[24:16]][$add.ref(p, $REF_CONST_3) := v[32:24]]"
-    "[$add.ref(p, $REF_CONST_4) := v[40:32]][$add.ref(p, $REF_CONST_5) := v[48:40]][$add.ref(p, $REF_CONST_6) := v[56:48]][$add.ref(p, $REF_CONST_7) := v[64:56]]}");
-  D("function {:inline} $store.i32(M:[ref]i8, p:ref, v:i32) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]][$add.ref(p, $REF_CONST_2) := v[24:16]][$add.ref(p, $REF_CONST_3) := v[32:24]]}");
-  D("function {:inline} $store.i16(M:[ref]i8, p:ref, v:i16) returns ([ref]i8) {M[p := v[8:0]][$add.ref(p, $REF_CONST_1) := v[16:8]]}");
-  D("function {:inline} $store.i8(M:[ref]i8, p:ref, v:i8) returns ([ref]i8) {M[p := v]}");
-
-  D("function {:inline} $isExternal(p: ref) returns (bool) {$i2b($slt.ref(p, $EXTERNS_BOTTOM))}");
-  D("function {:inline} $trunc.i64.i32(p: i64) returns (i32) {p[32:0]}");
-  D("function {:inline} $trunc.i64.i16(p: i64) returns (i16) {p[16:0]}");
-  D("function {:inline} $trunc.i64.i8(p: i64) returns (i8) {p[8:0]}");
-  D("function {:inline} $trunc.i64.i1(p: i64) returns (i1) {if p != 0bv64 then 1bv1 else 0bv1}");
-  D("function {:inline} $trunc.i32.i16(p: i32) returns (i16) {p[16:0]}");
-  D("function {:inline} $trunc.i32.i8(p: i32) returns (i8) {p[8:0]}");
-  D("function {:inline} $trunc.i32.i1(p: i32) returns (i1) {if p != 0bv32 then 1bv1 else 0bv1}");
-  D("function {:inline} $trunc.i16.i8(p: i16) returns (i8) {p[8:0]}");
-  D("function {:inline} $trunc.i8.i1(p: i8) returns (i1) {if p != 0bv8 then 1bv1 else 0bv1}");
-
-  D("function {:inline} $zext.i1.i64(p: i1) returns (i64) {if p != 0bv1 then 1bv64 else 0bv64}");
-  D("function {:inline} $zext.i1.i32(p: i1) returns (i32) {if p != 0bv1 then 1bv32 else 0bv32}");
-  D("function {:inline} $zext.i1.i16(p: i1) returns (i16) {if p != 0bv1 then 1bv16 else 0bv16}");
-  D("function {:inline} $zext.i1.i8(p: i1) returns (i8) {if p != 0bv1 then 1bv8 else 0bv8}");
-  D("function {:inline} $zext.i8.i64(p: i8) returns (i64) {(0bv56)++p}");
-  D("function {:inline} $zext.i8.i32(p: i8) returns (i32) {(0bv24)++p}");
-  D("function {:inline} $zext.i8.i16(p: i8) returns (i16) {(0bv8)++p}");
-  D("function {:inline} $zext.i16.i64(p: i16) returns (i64) {(0bv48)++p}");
-  D("function {:inline} $zext.i16.i32(p: i16) returns (i32) {(0bv16)++p}");
-  D("function {:inline} $zext.i32.i64(p: i32) returns (i64) {(0bv32)++p}");
-
-  D("function {:inline} $sext.i1.i64(p: i1) returns (i64) {if p != 0bv1 then 1bv64 else 0bv64}");
-  D("function {:inline} $sext.i1.i32(p: i1) returns (i32) {if p != 0bv1  then 1bv32 else 0bv32}");
-  D("function {:inline} $sext.i1.i16(p: i1) returns (i16) {if p != 0bv1 then 1bv16 else 0bv16}");
-  D("function {:inline} $sext.i1.i8(p: i1) returns (i8) {if p != 0bv1 then 1bv8 else 0bv8}");
-  D("function {:inline} $sext.i8.i64(p: i8) returns (i64) {if $i2b($sge.i8(p, 0bv8)) then $zext.i8.i64(p) else (($neg.i64(1bv64))[64:8])++p}");
-  D("function {:inline} $sext.i8.i32(p: i8) returns (i32) {if $i2b($sge.i8(p, 0bv8)) then $zext.i8.i32(p) else (($neg.i32(1bv32))[32:8])++p}");
-  D("function {:inline} $sext.i8.i16(p: i8) returns (i16) {if $i2b($sge.i8(p, 0bv8)) then $zext.i8.i16(p) else $neg.i8(1bv8)++p}");
-  D("function {:inline} $sext.i16.i64(p: i16) returns (i64) {if $i2b($sge.i16(p, 0bv16)) then $zext.i16.i64(p) else $neg.i64(1bv64)[64:16]++p}");
-  D("function {:inline} $sext.i16.i32(p: i16) returns (i32) {if $i2b($sge.i16(p, 0bv16)) then $zext.i16.i32(p) else $neg.i16(1bv16)++p}");
-  D("function {:inline} $sext.i32.i64(p: i32) returns (i64) {if $i2b($sge.i32(p, 0bv32)) then $zext.i32.i64(p) else $neg.i32(1bv32)++p}");
-#else
-  D("axiom $NULL == 0;");
-  D("function {:inline} $add.ref(p1:ref, p2:ref) returns (ref) {p1 + p2}");
-  D("function {:inline} $sub.ref(p1:ref, p2:ref) returns (ref) {p1 - p2}");
-  D("function {:inline} $mul.ref(p1:ref, p2:ref) returns (ref) {p1 * p2}");
-  D("function {:inline} $neg.ref(p:ref) returns (ref) {0 - p}");
-  D("function {:inline} $ult.ref(p1:ref, p2:ref) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $ugt.ref(p1:ref, p2:ref) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $ule.ref(p1:ref, p2:ref) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $uge.ref(p1:ref, p2:ref) returns (i1) {if p1 >= p2 then 1 else 0}");
-  D("function {:inline} $slt.ref(p1:ref, p2:ref) returns (i1) {if p1 < p2 then 1 else 0}");
-  D("function {:inline} $sgt.ref(p1:ref, p2:ref) returns (i1) {if p1 > p2 then 1 else 0}");
-  D("function {:inline} $sle.ref(p1:ref, p2:ref) returns (i1) {if p1 <= p2 then 1 else 0}");
-  D("function {:inline} $sge.ref(p1:ref, p2:ref) returns (i1) {if p1 >= p2 then 1 else 0}");
-
-  D("function {:inline} $isExternal(p: ref) returns (bool) { p < $EXTERNS_BOTTOM }");
-#endif
+  D("function {:inline} $store.bv64(M:[ref]bv8, p:ref, v:bv64) returns ([ref]bv8)"
+    "{M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]][$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
+  D("function {:inline} $store.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
+  D("function {:inline} $store.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
+  D("function {:inline} $store.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
 
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
-  D("procedure boogie_si_record_bool(b: bool);");
-  D("procedure boogie_si_record_i1(i: i1);");
-  D("procedure boogie_si_record_i8(i: i8);");
-  D("procedure boogie_si_record_i16(i: i16);");
-  D("procedure boogie_si_record_i32(i: i32);");
-  D("procedure boogie_si_record_i64(i: i64);");
-  D("procedure boogie_si_record_ref(i: ref);");
-  D("procedure boogie_si_record_float(f: float);");
   D("const $MOP: $mop;");
 
-  D("const $GLOBALS_BOTTOM: ref;");
-  D("const $EXTERNS_BOTTOM: ref;");
+  DECLARE(RECORD_PROC, bool);
+  DECLARE(RECORD_PROC, i1);
+  DECLARE(RECORD_PROC, i8);
+  DECLARE(RECORD_PROC, i16);
+  DECLARE(RECORD_PROC, i32);
+  DECLARE(RECORD_PROC, i64);
+  DECLARE(RECORD_PROC, bv1);
+  DECLARE(RECORD_PROC, bv8);
+  DECLARE(RECORD_PROC, bv16);
+  DECLARE(RECORD_PROC, bv32);
+  DECLARE(RECORD_PROC, bv64);
+  DECLARE(RECORD_PROC, ref);
+  DECLARE(RECORD_PROC, float);
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
 
-  D("procedure $malloc(n: size) returns (p: ref)\n"
+  D("procedure $alloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
-    "  assume $i2b($sgt.ref($CurrAddr, $NULL));\n"
+    "  assume $sgt.ref.bool($CurrAddr, $0.ref);\n"
     "  p := $CurrAddr;\n"
-    "  if ($i2b($sgt.ref(n, $NULL))) {\n"
+    "  if ($sgt.ref.bool(n, $0.ref)) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
     "  } else {\n"
-    "    $CurrAddr := $add.ref($CurrAddr, $REF_CONST_1);\n"
+    "    $CurrAddr := $add.ref($CurrAddr, $1.ref);\n"
     "  }\n"
     "  $Alloc[p] := true;\n"
     "}");
@@ -573,78 +398,45 @@ void __SMACK_decls() {
     "  $Alloc[p] := false;\n"
     "}");
 
-  D("procedure $alloca(n: size) returns (p: ref)\n"
-    "modifies $CurrAddr, $Alloc;\n"
-    "{\n"
-    "  assume $i2b($sgt.ref($CurrAddr, $NULL));\n"
-    "  p := $CurrAddr;\n"
-    "  if ($i2b($sgt.ref(n, $NULL))) {\n"
-    "    $CurrAddr := $add.ref($CurrAddr, n);\n"
-    "  } else {\n"
-    "    $CurrAddr := $add.ref($CurrAddr, $REF_CONST_1);\n"
-    "  }\n"
-    "  $Alloc[p] := true;\n"
-    "}");
-
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
-  D("var $Size: [ref] size;");
+  D("var $Size: [ref] ref;");
   D("var $CurrAddr:ref;");
 
-  D("procedure $malloc(n: size) returns (p: ref);\n"
+  D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
+    "ensures $sgt.ref.bool(p, $0.ref);\n"
+    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($i2b($slt.ref($add.ref(p, n), q)) || $i2b($sgt.ref(p, $add.ref(q, $Size[q])))));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $sgt.ref.bool(p, $add.ref(q, $Size[q]))));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
+    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
     "ensures !$Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
-
-  D("procedure $alloca(n: size) returns (p: ref);\n"
-    "modifies $Alloc, $Size;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
-    "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($i2b($slt.ref($add.ref(p, n), q)) || $i2b($sgt.ref(p, $add.ref(q, $Size[q])))));\n"
-    "ensures $Alloc[p];\n"
-    "ensures $Size[p] == n;\n"
-    "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
   D("var $CurrAddr:ref;");
-  D("procedure $malloc(n: size) returns (p: ref);\n"
+  D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
+    "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $i2b($sgt.ref($CurrAddr, old($CurrAddr)));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> $i2b($sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)));\n"
+    "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
+    "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
+    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
     "ensures !$Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
-
-  D("procedure $alloca(n: size) returns (p: ref);\n"
-    "modifies $CurrAddr, $Alloc;\n"
-    "ensures $i2b($sgt.ref(p, $NULL));\n"
-    "ensures p == old($CurrAddr);\n"
-    "ensures $i2b($sgt.ref($CurrAddr, old($CurrAddr)));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> $i2b($sge.ref($CurrAddr, $add.ref(old($CurrAddr), n)));\n"
-    "ensures $Alloc[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $i2b($sge.ref(n, $NULL)) ==> (forall q: ref :: {$base(q)} $i2b($sle.ref(p, q)) && $i2b($slt.ref(q, $add.ref(p, n))) ==> $base(q) == p);");
 #endif
 
   D("var $exn: bool;");

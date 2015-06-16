@@ -33,10 +33,11 @@ public:
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(bool b);
   static const Expr* lit(string v);
-  static const Expr* lit(unsigned v);
+  static const Expr* lit(unsigned v) { return lit((unsigned long) v); }
+  static const Expr* lit(unsigned long v);
   static const Expr* lit(long v);
   static const Expr* lit(string v, unsigned w);
-  static const Expr* lit(unsigned v, unsigned w);
+  static const Expr* lit(unsigned long v, unsigned w);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
@@ -86,7 +87,7 @@ class IntLit : public Expr {
   string val;
 public:
   IntLit(string v) : val(v) {}
-  IntLit(unsigned v) {
+  IntLit(unsigned long v) {
     stringstream s;
     s << v;
     val = s.str();
@@ -104,7 +105,7 @@ class BvLit : public Expr {
   unsigned width;
 public:
   BvLit(string v, unsigned w) : val(v), width(w) {}
-  BvLit(unsigned v, unsigned w) : width(w) {
+  BvLit(unsigned long v, unsigned w) : width(w) {
     stringstream s;
     s << v;
     val = s.str();
@@ -211,15 +212,11 @@ public:
   static const Stmt* assign(vector<const Expr*> lhs, vector<const Expr*> rhs);
   static const Stmt* assume(const Expr* e);
   static const Stmt* assume(const Expr* e, const Attr* attr);
-  static const Stmt* call(string p);
-  static const Stmt* call(string p, const Expr* x);
-  static const Stmt* call(string p, const Expr* x, const Attr* attr);
-  static const Stmt* call(string p, const Expr* x, string r);
-  static const Stmt* call(string p, const Expr* x, const Expr* y, string r);
-  static const Stmt* call(string p, vector<const Expr*> ps);
-  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs);
-  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs, const Attr* attr);
-  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs, vector<const Attr*> ax);
+  static const Stmt* call(
+    string p,
+    vector<const Expr*> args = vector<const Expr*>(),
+    vector<string> rets = vector<string>(),
+    vector<const Attr*> attrs = vector<const Attr*>());
   static const Stmt* comment(string c);
   static const Stmt* goto_(string t);
   static const Stmt* goto_(string t, string u);
@@ -260,13 +257,16 @@ public:
 
 class CallStmt : public Stmt {
   string proc;
+  vector<const Attr*> attrs;
   vector<const Expr*> params;
   vector<string> returns;
-  vector<const Attr*> attrs;
 public:
-  CallStmt(string p, vector<const Expr*> ps, vector<string> rs, 
-    vector<const Attr*> ax)
-    : proc(p), params(ps), returns(rs), attrs(ax) {}
+  CallStmt(string p,
+    vector<const Attr*> attrs,
+    vector<const Expr*> args,
+    vector<string> rets)
+    : proc(p), attrs(attrs), params(args), returns(rets) {}
+
   void print(ostream& os) const;
 };
 
@@ -305,6 +305,8 @@ public:
   void print(ostream& os) const;
 };
 
+class Block;
+
 class Decl {
   static unsigned uniqueId;
 public:
@@ -324,14 +326,20 @@ public:
   
   static Decl* typee(string name, string type);
   static Decl* axiom(const Expr* e);
-  static Decl* function(string name, vector< pair<string,string> > args, string type, const Expr* e);
+  static Decl* function(
+    string name,
+    vector< pair<string,string> > args,
+    string type,
+    const Expr* e = NULL,
+    vector<const Attr*> attrs = vector<const Attr*>());
   static Decl* constant(string name, string type);
   static Decl* constant(string name, string type, bool unique);
   static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
   static Decl* variable(string name, string type);
-  static Decl* procedure(Program& p, string name);
   static Decl* procedure(Program& p, string name,
-    vector< pair<string,string> > args, vector< pair<string,string> > rets);
+    vector< pair<string,string> > params = vector< pair<string,string> >(),
+    vector< pair<string,string> > rets = vector< pair<string,string> >(),
+    vector<Block*> blocks = vector<Block*>());
   static Decl* code(string s);
 };
 
@@ -397,8 +405,10 @@ class Block {
   string name;
   vector<const Stmt*> stmts;
 public:
-  Block() : name("") {}
-  Block(string n) : name(n) {}
+  static Block* block(string n = "", vector<const Stmt*> stmts = vector<const Stmt*>()) {
+    return new Block(n,stmts);
+  }
+  Block(string n, vector<const Stmt*> stmts) : name(n), stmts(stmts) {}
   void print(ostream& os) const;
   void insert(const Stmt* s) {
     stmts.insert(stmts.begin(), s);
@@ -417,7 +427,7 @@ protected:
   set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
   vector<string> mods;
-  CodeContainer(Program& p) : prog(p) {}
+  CodeContainer(Program& p, vector<Block*> blocks) : prog(p), blocks(blocks) {}
 public:
   Program& getProg() const {
     return prog;
@@ -446,7 +456,7 @@ public:
 
 class CodeExpr : public Expr, public CodeContainer {
 public:
-  CodeExpr(Program& p) : CodeContainer(p) {}
+  CodeExpr(Program& p, vector<Block*> blocks) : CodeContainer(p,blocks) {}
   void print(ostream& os) const;
 };
 
@@ -456,8 +466,8 @@ class ProcDecl : public Decl, public CodeContainer {
   vector<const Expr*> requires;
   vector<const Expr*> ensures;
 public:
-  ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
-    : Decl(n), CodeContainer(p), params(ps), rets(rs) {}
+  ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs, vector<Block*> blocks)
+    : Decl(n), CodeContainer(p,blocks), params(ps), rets(rs) {}
   kind getKind() const { return PROC; }
   void addParam(string x, string t) {
     params.push_back(make_pair(x, t));
@@ -520,6 +530,13 @@ public:
     return procs;
   }
 };
+
+ostream& operator<<(ostream& os, const Expr& e);
+ostream& operator<<(ostream& os, const Expr* e);
+
+ostream& operator<<(ostream& os, Decl& e);
+ostream& operator<<(ostream& os, Decl* e);
+
 }
 
 #endif // BOOGIEAST_H

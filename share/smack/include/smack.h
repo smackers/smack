@@ -24,15 +24,13 @@ void __SMACK_top_decl(const char *fmt, ...);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#ifdef BITPRECISE
-#define assert(EX) __SMACK_dummy(EX); __SMACK_code("assert @ != 0bv32;", EX)
-#define assume(EX) __SMACK_dummy(EX); __SMACK_code("assume @ != 0bv32;", EX)
-#else
-#define assert(EX) __SMACK_dummy(EX); __SMACK_code("assert @ != 0;", EX)
-#define assume(EX) __SMACK_dummy(EX); __SMACK_code("assume @ != 0;", EX)
-#endif
+#define __VERIFIER_assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $0;", EX); } while (0)
+#define __VERIFIER_assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $0;", EX); } while (0)
 
-int __SMACK_nondet();
+#ifndef AVOID_NAME_CONFLICTS
+#define assert(EX) __VERIFIER_assert(EX)
+#define assume(EX) __VERIFIER_assume(EX)
+#endif
 
 #define S4(a,b,c,d) a b c d
 #define S3(a,b,c) a b c
@@ -50,6 +48,7 @@ int __SMACK_nondet();
 
 #define NONDET_DECL(ty...) S(ty) U(__VERIFIER_nondet,U(ty)) ()
 
+void* __VERIFIER_nondet(void);
 NONDET_DECL(char);
 NONDET_DECL(signed,char);
 NONDET_DECL(unsigned,char);
@@ -78,6 +77,19 @@ NONDET_DECL(unsigned,long,long,int);
 NONDET_DECL(float);
 NONDET_DECL(double);
 NONDET_DECL(long,double);
+
+#undef S1
+#undef S2
+#undef S3
+#undef S4
+#undef U1
+#undef U2
+#undef U3
+#undef U4
+#undef TY
+#undef S
+#undef U
+#undef NONDET_DECL
 
 void __SMACK_decls();
 

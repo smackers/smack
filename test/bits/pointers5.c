@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
+// @flag --bit-precise-pointers
 
 int main() {
   int *a = (int*)malloc(sizeof(int));

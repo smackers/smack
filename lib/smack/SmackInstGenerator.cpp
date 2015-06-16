@@ -40,7 +40,7 @@ string i2s(llvm::Instruction& i) {
 }
 
 Block* SmackInstGenerator::createBlock() {
-  Block* b = new Block(naming.freshBlockName());
+  Block* b = Block::block(naming.freshBlockName());
   addBlock(b);
   return b;
 }
@@ -165,7 +165,7 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst& ri) {
   if (proc.isProc()) {
     if (v)
       emit(Stmt::assign(Expr::id(Naming::RET_VAR), rep.expr(v)));
-    emit(Stmt::assign(Expr::id(Naming::EXN_VAR), rep.lit(false)));
+    emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
     emit(Stmt::return_());
   } else {
     assert (v && "Expected return value.");
@@ -182,13 +182,13 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
   if (bi.getNumSuccessors() == 1) {
 
     // Unconditional branch
-    targets.push_back(make_pair(rep.lit(true),bi.getSuccessor(0)));
+    targets.push_back(make_pair(Expr::lit(true),bi.getSuccessor(0)));
 
   } else {
 
     // Conditional branch
     assert(bi.getNumSuccessors() == 2);
-    const Expr* e = Expr::eq(rep.expr(bi.getCondition()), rep.lit((unsigned)1,1));
+    const Expr* e = Expr::eq(rep.expr(bi.getCondition()), rep.integerLit(1UL,1));
     targets.push_back(make_pair(e,bi.getSuccessor(0)));
     targets.push_back(make_pair(Expr::not_(e),bi.getSuccessor(1)));
   }
@@ -203,7 +203,7 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
   vector<pair<const Expr*, llvm::BasicBlock*> > targets;
 
   const Expr* e = rep.expr(si.getCondition());
-  const Expr* n = rep.lit(true);
+  const Expr* n = Expr::lit(true);
 
   for (llvm::SwitchInst::CaseIt
        i = si.case_begin(); i != si.case_begin(); ++i) {
@@ -243,7 +243,7 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
 
 void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
   processInstruction(ri);
-  emit(Stmt::assign(Expr::id(Naming::EXN_VAR), rep.lit(true)));
+  emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(true)));
   emit(Stmt::assign(Expr::id(Naming::EXN_VAL_VAR), rep.expr(ri.getValue())));
   emit(Stmt::return_());
 }
@@ -251,7 +251,7 @@ void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
   processInstruction(ii);
   
-  emit(Stmt::assume(rep.lit(false)));
+  emit(Stmt::assume(Expr::lit(false)));
 }
 
 /******************************************************************************/
@@ -277,7 +277,7 @@ void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
   processInstruction(evi);
   const Expr* e = rep.expr(evi.getAggregateOperand());
   for (unsigned i = 0; i < evi.getNumIndices(); i++)
-    e = Expr::fn("$extractvalue", e, rep.lit(evi.getIndices()[i]));
+    e = Expr::fn("$extractvalue", e, Expr::lit((unsigned long) evi.getIndices()[i]));
   emit(Stmt::assign(rep.expr(&evi),e));
 }
 
@@ -304,13 +304,13 @@ void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
     for (unsigned j = 0; j < num_elements; j++) {
       if (j != idx) {
         emit(Stmt::assume(Expr::eq(
-          Expr::fn("$extractvalue", res, rep.lit(j)),
-          Expr::fn("$extractvalue", old, rep.lit(j))
+          Expr::fn("$extractvalue", res, Expr::lit(j)),
+          Expr::fn("$extractvalue", old, Expr::lit(j))
         )));
       }
     }
-    res = Expr::fn("$extractvalue", res, rep.lit(idx));
-    old = Expr::fn("$extractvalue", old, rep.lit(idx));
+    res = Expr::fn("$extractvalue", res, Expr::lit(idx));
+    old = Expr::fn("$extractvalue", old, Expr::lit(idx));
   }
   emit(Stmt::assume(Expr::eq(res,rep.expr(ivi.getInsertedValueOperand()))));
 }
@@ -326,37 +326,40 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
-  if (!li.getType()->isAggregateType()) {
-    emit(rep.load(li.getPointerOperand(), &li));
 
-    if (SmackOptions::MemoryModelDebug) {
-      emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
-      emit(Stmt::call("boogie_si_record_int", rep.lit((unsigned)0)));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(li.getPointerOperand())));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(&li)));
-    }
+  // TODO what happens with aggregate types?
+  // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
+
+  emit(rep.load(li));
+
+  if (SmackOptions::MemoryModelDebug) {
+    emit(Stmt::call(SmackRep::REC_MEM_OP, {Expr::id(SmackRep::MEM_OP_VAL)}));
+    emit(Stmt::call("boogie_si_record_int", {Expr::lit(0L)}));
+    emit(Stmt::call("boogie_si_record_int", {rep.expr(li.getPointerOperand())}));
+    emit(Stmt::call("boogie_si_record_int", {rep.expr(&li)}));
   }
 }
 
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
-  const llvm::Value* E = si.getOperand(0);
-  if (!E->getType()->isAggregateType()) {
-    const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P);
-    emit(rep.store(P, E, &si));
+  const llvm::Value* V = si.getOperand(0);
+  assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
-    if (SmackOptions::SourceLocSymbols && G) {
+  emit(rep.store(si));
+
+  if (SmackOptions::SourceLocSymbols) {
+    if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_" + rep.int_type(rep.getElementSize(G)), rep.expr(E), Attr::attr("cexpr", G->getName().str())));
+      emit(Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
     }
+  }
 
-    if (SmackOptions::MemoryModelDebug) {
-      emit(Stmt::call(SmackRep::REC_MEM_OP, Expr::id(SmackRep::MEM_OP_VAL)));
-      emit(Stmt::call("boogie_si_record_int", rep.lit((unsigned)1)));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(P)));
-      emit(Stmt::call("boogie_si_record_int", rep.expr(E)));
-    }
+  if (SmackOptions::MemoryModelDebug) {
+    emit(Stmt::call(SmackRep::REC_MEM_OP, {Expr::id(SmackRep::MEM_OP_VAL)}));
+    emit(Stmt::call("boogie_si_record_int", {Expr::lit(1L)}));
+    emit(Stmt::call("boogie_si_record_int", {rep.expr(P)}));
+    emit(Stmt::call("boogie_si_record_int", {rep.expr(V)}));
   }
 }
 
@@ -380,21 +383,12 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
   emit(Stmt::assign(mem,
     i.getOperation() == AtomicRMWInst::Xchg
       ? val
-      : Expr::fn(rep.armwop2fn(i.getOperation()),mem,val) ));
+      : Expr::fn(SmackRep::ATOMICRMWINST_TABLE.at(i.getOperation()),mem,val) ));
   }
 
-void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& gepi) {
-  processInstruction(gepi);
-
-  vector<llvm::Value*> ps;
-  vector<llvm::Type*> ts;
-  llvm::gep_type_iterator typeI = gep_type_begin(gepi);
-  for (unsigned i = 1; i < gepi.getNumOperands(); i++, ++typeI) {
-    ps.push_back(gepi.getOperand(i));
-    ts.push_back(*typeI);
-  }
-  emit(Stmt::assign(rep.expr(&gepi),
-                                  rep.ptrArith(gepi.getPointerOperand(), ps, ts)));
+void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& I) {
+  processInstruction(I);
+  emit(Stmt::assign(rep.expr(&I), rep.ptrArith(&I)));
 }
 
 /******************************************************************************/
@@ -431,9 +425,9 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
   emit(Stmt::havoc(x));
   emit(Stmt::assume(Expr::and_(
-                                    Expr::impl(Expr::fn("$i2b",c), Expr::eq(Expr::id(x), v1)),
-                                    Expr::impl(Expr::not_(Expr::fn("$i2b",c)), Expr::eq(Expr::id(x), v2))
-                                  )));
+    Expr::impl(Expr::eq(c,rep.integerLit(1L,1)), Expr::eq(Expr::id(x), v1)),
+    Expr::impl(Expr::neq(c,rep.integerLit(1L,1)), Expr::eq(Expr::id(x), v2))
+  )));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
@@ -457,7 +451,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     if (const llvm::Value* V = m1->getOperand(0)) {
       stringstream recordProc;
       recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(),rep.expr(V),Attr::attr("cexpr", m3->getString().str())));
+      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", m3->getString().str())}));
     }
 
   } else if (name.find("llvm.dbg.") != string::npos) {
@@ -595,7 +589,7 @@ void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
   // TODO what exactly!?
   emit(Stmt::assign(rep.expr(&lpi),Expr::id(Naming::EXN_VAL_VAR)));
   if (lpi.isCleanup())
-    emit(Stmt::assign(Expr::id(Naming::EXN_VAR),rep.lit(false)));
+    emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
   WARN("unsoundly ignoring landingpad clauses...");
 }
 

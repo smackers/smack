@@ -1,7 +1,6 @@
 // This test shows why we need parallel assignment when translating Phi nodes
 #include "smack.h"
 
-// @flag --unroll=2
 // @expect verified
 
 int gcd_test(int a, int b) {

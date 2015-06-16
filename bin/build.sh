@@ -7,7 +7,6 @@
 #
 # This script builds and installs SMACK, including the following dependencies:
 # - Git
-# - Mercurial
 # - Python
 # - CMake
 # - LLVM
@@ -18,11 +17,6 @@
 # - Corral
 #
 ################################################################################
-
-# Required versions
-MONO_VERSION=mono-3.8.0
-BOOGIE_COMMIT=d6a7f2bd79c9
-CORRAL_COMMIT=3aa62d7425b5
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
@@ -43,6 +37,8 @@ CORRAL_DIR="${ROOT}/corral"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
 
+source ${SMACK_DIR}/bin/versions
+
 SMACKENV=${ROOT}/smack.environment
 WGET="wget --no-verbose"
 
@@ -52,7 +48,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependnecies; the rest are added depending on the platform
-DEPENDENCIES="git mercurial cmake python-yaml unzip wget"
+DEPENDENCIES="git cmake python-yaml unzip wget"
 
 ################################################################################
 #
@@ -156,18 +152,18 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436282&FileTime=130700549966730000&Build=20959"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/bin/blob/a696d1f9550f98849c30479fba047496ac86236f/nightly/z3-4.4.1.cd8f82ebc213-x64-debian-7.8.zip?raw=true"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-ubuntu-14*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/bin/blob/3585913086b6d63a276893069b6bcaf67697ccf5/nightly/z3-4.4.1.cd8f82ebc213-x64-ubuntu-14.04.zip?raw=true"
   DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=1436285&FileTime=130700551242630000&Build=20959"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/bin/blob/3585913086b6d63a276893069b6bcaf67697ccf5/nightly/z3-4.4.1.cd8f82ebc213-x64-ubuntu-14.04.zip?raw=true"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -197,10 +193,10 @@ do
   case "$1" in
   --prefix)
     puts "Using install prefix $2"
-    INSTALL_PREFIX="$2"
+    INSTALL_PREFIX="${2%/}"
     CONFIGURE_INSTALL_PREFIX="--prefix=$2"
     CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=$PATH:${INSTALL_PREFIX}/bin >> ${SMACKENV}
+    echo export PATH=${INSTALL_PREFIX}/bin:$PATH >> ${SMACKENV}
     shift
     shift
     ;;
@@ -263,7 +259,7 @@ then
 
   git clone git://github.com/mono/mono.git ${MONO_DIR}
   cd ${MONO_DIR}
-  git checkout ${MONO_VERSION}
+  git checkout mono-${MONO_VERSION}
   ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
   make get-monolite-latest
   make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
@@ -328,11 +324,14 @@ if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
 
-  hg clone -r ${BOOGIE_COMMIT} https://hg.codeplex.com/boogie ${BOOGIE_DIR}
+  git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+  cd ${BOOGIE_DIR}
+  git checkout ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
+  rm -rf /tmp/nuget/
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
@@ -344,9 +343,14 @@ if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Building Corral"
 
-  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+  cd ${ROOT}
+  ${WGET} ${CORRAL_DOWNLOAD_LINK} -O corral-downloaded.zip
+  unzip -o corral-downloaded.zip -d ${CORRAL_DIR}
+  rm -f corral-downloaded.zip
   cd ${CORRAL_DIR}
-  git checkout ${CORRAL_COMMIT}
+#  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
+#  cd ${CORRAL_DIR}
+#  git checkout ${CORRAL_COMMIT}
   cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe

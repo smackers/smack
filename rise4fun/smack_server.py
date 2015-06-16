@@ -11,24 +11,24 @@ import random
 PORT = 8080
 version = "1.4.4"
 rise_simple = """#include "smack.h"
-//__SMACK_nondet() : Is used to permit assigned memory to have unconstrained values
+//__VERIFIER_nondet() : Is used to permit assigned memory to have unconstrained values
 //assume(): Is used to enforce constraints on specified regions of memory
 //assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values.
 int main() {
-  int x = __SMACK_nondet();
-  int n = __SMACK_nondet();
+  int x = __VERIFIER_nondet();
+  int n = __VERIFIER_nondet();
   assume(n>0);
   assert(x+n > x);
   return 0;
 }"""
 
 rise_simple_buggy = """#include "smack.h"
-//__SMACK_nondet() : Is used to permit assigned memory to have unconstrained values
+//__VERIFIER_nondet() : Is used to permit assigned memory to have unconstrained values
 //assume(): Is used to enforce constraints on specified regions of memory
 //assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values
 int main() {
-  int x = __SMACK_nondet();
-  int n = __SMACK_nondet();
+  int x = __VERIFIER_nondet();
+  int n = __VERIFIER_nondet();
   assume(n>=0);
   assert(x+n > x);
   return 0;
@@ -46,7 +46,7 @@ int decr(int x) {
 
 int main(void) {
   int (*fp)(int);
-  int x = __SMACK_nondet(), y = __SMACK_nondet(), old_x = x;
+  int x = __VERIFIER_nondet(), y = __VERIFIER_nondet(), old_x = x;
 
   if (y > 0) {
     fp = incr;
@@ -73,7 +73,7 @@ void initDescArray(int number[], int size)
 int main()
 {
   int num[6], size = 6;
-  int i = __SMACK_nondet();
+  int i = __VERIFIER_nondet();
   initDescArray(num,size);
   if(i >= 1 && i < 6)
     assert(num[i] > num[i-1]);
@@ -116,7 +116,7 @@ int foo(int x, int y) {
 int main(void) {
   int b;
 
-  b = foo(__SMACK_nondet(), __SMACK_nondet());
+  b = foo(__VERIFIER_nondet(), __VERIFIER_nondet());
   assert(b != 0);
   return 0;
 }"""
@@ -129,8 +129,8 @@ int main(void) {
   x = 4;
   y = 3;
   z = 19;
-  a = __SMACK_nondet();
-  b = __SMACK_nondet();
+  a = __VERIFIER_nondet();
+  b = __VERIFIER_nondet();
   if(a>=0 && b>=0)
         assert(z != (a*x+b*y));
   return 0;
@@ -169,7 +169,7 @@ tutorialsource = """SMACK is a SMACK is a tool for statically checking propertie
 		program location. The predicate P can be specified in an assert in the syntax assert(P)  \r\n
 		Assume: Assume statement allows the user to specify the assumptions of the program from the point of specification. If the 
 		assumption is denoted by A, assume(A) is the syntax for specifying it. Eg: assume(n > 0)
-		Nondet: Allows the user to specify a "random" value. This is specified by __SMACK_nondet(). The statement returns a 
+		Nondet: Allows the user to specify a "random" value. This is specified by __VERIFIER_nondet(). The statement returns a 
 		nondeterministic type safe value."""
 metadata = {
 	"Name": "smack",

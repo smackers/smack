@@ -1,5 +1,6 @@
 #include "smack.h"
 
+// @flag --loop-limit=11
 // @flag --unroll=11
 // @expect error
 
