@@ -2,6 +2,8 @@
 //  (though no race exists between the two callee threads)
 //  when calling the x++ instruction.
 
+// @expect error
+
 #include <pthread.h>
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;

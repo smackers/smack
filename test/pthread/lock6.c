@@ -1,5 +1,7 @@
 // Tests that uninitialized mutex fails on use
 
+// @expect error
+
 #include <pthread.h>
 
 int main() {

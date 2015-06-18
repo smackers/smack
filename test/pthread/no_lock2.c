@@ -1,6 +1,8 @@
 // This file should have a race since only the callee thread is locking
 //  before doing x++
 
+// @expect error
+
 #include <pthread.h>
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;

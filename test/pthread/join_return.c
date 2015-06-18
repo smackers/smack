@@ -1,3 +1,6 @@
+
+// @skip
+
 #include <pthread.h>
 
 int x = 1;

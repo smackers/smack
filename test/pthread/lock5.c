@@ -1,5 +1,7 @@
 // Tests that using mutex fails after being destroyed
 
+// @expect error
+
 #include <pthread.h>
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;

@@ -1,3 +1,6 @@
+
+// @expect verified
+
 #include <pthread.h>
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;

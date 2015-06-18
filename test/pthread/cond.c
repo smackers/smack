@@ -1,6 +1,8 @@
 // Generally tests pthread_cond_wait, pthread_cond_signal,
 //  pthread_cond_init
 
+// @expect verified
+
 #include <pthread.h>
 
 pthread_cond_t cond;

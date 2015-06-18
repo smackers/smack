@@ -1,6 +1,8 @@
 // Uses error handling from error checking mutex
 //  to avoid what would otherwise be deadlock or permitted error
 
+// @expect verified
+
 #include <pthread.h>
 
 pthread_mutex_t lock;

@@ -1,3 +1,6 @@
+
+// @expect error
+
 #include <pthread.h>
 
 int x = 1;

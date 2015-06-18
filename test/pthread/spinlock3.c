@@ -1,3 +1,6 @@
+
+// @expect verified
+
 #include <pthread.h>
 #include <spinlock.h>
 

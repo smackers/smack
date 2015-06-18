@@ -1,3 +1,7 @@
+
+// @skip
+// @expect verified
+
 #include <pthread.h>
 
 int x = 1;
