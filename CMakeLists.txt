@@ -203,6 +203,8 @@ INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack.h
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/Makefile
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.c
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack-svcomp.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/pthread.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/spinlock.c
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
   GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
   DESTINATION share/smack/lib

@@ -104,6 +104,9 @@ def arguments():
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
 
+  translate_group.add_argument('--pthread', action='store_true', default=False,
+    help='enable support for pthread programs')
+
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='enable bit precision for non-pointer values')
 
@@ -227,6 +230,11 @@ def clang_frontend(args):
   smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
   smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
   smack_bc = temporary_file('smack', '.bc', args)
+  if args.pthread:
+    pthread_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'pthread.c')
+    pthread_bc = temporary_file('pthread', '.bc', args)
+    spinlock_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'spinlock.c')
+    spinlock_bc = temporary_file('spinlock', '.bc', args)
 
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
@@ -236,7 +244,12 @@ def clang_frontend(args):
 
   try_command(compile_command + [smack_lib, '-o', smack_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
-  try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
+  link_targets = [args.bc_file, smack_bc]
+  if args.pthread:
+    try_command(compile_command + [pthread_lib, '-o', pthread_bc])
+    try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
+    link_targets = [pthread_bc, spinlock_bc] + link_targets
+  try_command(link_command + link_targets + ['-o', args.bc_file])
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""

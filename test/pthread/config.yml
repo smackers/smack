@@ -1,2 +1,3 @@
+flags: ['--pthread']
 time-limit: 300
 verifiers: [corral]

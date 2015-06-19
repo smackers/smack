@@ -34,6 +34,4 @@ typedef struct{
 
 typedef int pthread_condattr_t;
 
-
-
 #endif
