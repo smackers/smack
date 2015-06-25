@@ -1,6 +1,6 @@
 // Tests SPIN_LOCK_UNLOCKED macro
 
-// @expect verified
+// @expect error
 
 #include <pthread.h>
 #include <spinlock.h>
@@ -16,9 +16,7 @@ void *t1(void *arg) {
 }
 
 void *t2(void *arg) {
-  spin_lock(&lock);
   x++;
-  spin_unlock(&lock);
 }
 
 int main() {

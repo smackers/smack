@@ -1,6 +1,7 @@
 #include "pthread.h"
 
 __SMACK_INIT(corral_primitives) {
+  //Declare these, so bpl parsing doesn't complain
   __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
   __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
   __SMACK_top_decl("procedure corral_atomic_begin();");
@@ -8,8 +9,8 @@ __SMACK_INIT(corral_primitives) {
 }
 
 __SMACK_INIT(thread) {
-  //Array for tracking pthreads
-  __SMACK_top_decl("//dim0=tid, dim1= 0 for status, 1 for return");
+  //Array and possible statuses for tracking pthreads
+  __SMACK_top_decl("//dim0=tid, dim1= idx 0 gets status, 1 gets return value");
   __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
   __SMACK_top_decl("const unique $pthread_uninitialized: int;");
   __SMACK_top_decl("const unique $pthread_initialized: int;");
@@ -21,26 +22,42 @@ __SMACK_INIT(thread) {
 }
 
 pthread_t pthread_self(void) {
-  int ctid = __SMACK_nondet();
-  __SMACK_code("call @ := corral_getThreadID();", ctid);
-  return ctid;
+  int tmp_tid = __SMACK_nondet();
+  __SMACK_code("call @ := corral_getThreadID();", tmp_tid);
+
+  // Print actual tid to SMACK traces
+  int actual_tid = tmp_tid;
+
+  return actual_tid;
 }
 
 int pthread_join(pthread_t __th, void **__thread_return) {
-  void* tmp = (void*)(long)__SMACK_nondet();
+  // Print the tid of the thread being joined to SMACK traces
+  void* joining_tid = (void*)__th;
+
   // Wait for the thread to terminate
   __SMACK_code("assume $pthreadStatus[@][0] == $pthread_stopped;", __th);
+
   // Get the thread's return value
-  __SMACK_code("@ := $pthreadStatus[@][1];", tmp, __th);
-  *__thread_return = tmp;
+  void* tmp_thread_return_pointer = (void*)__SMACK_nondet();
+  __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
+  *__thread_return = tmp_thread_return_pointer;
+
+  // Print return pointer value to SMACK traces
+  void* actual_thread_return_pointer = *__thread_return;
+
   return 0;
 }
 
 void pthread_exit(void *retval) {
-  pthread_t tid = __SMACK_nondet();
-  tid = pthread_self();
+  pthread_t tid = pthread_self();
+
+  // Ensure exit hasn't already been called
   __SMACK_code("assert $pthreadStatus[@][0] == $pthread_running;", tid);
   __SMACK_code("$pthreadStatus[@][1] := @;", tid, retval);
+
+  // Set return pointer value for display in SMACK traces
+  void* pthread_return_pointer = retval;
 }
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
@@ -63,6 +80,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
     mutex->attr.type = attr->type;
     // Any additional info modeled from attr should be copied,
     //  as changes to attr should not apply to mutexes alread initialized
+    //  (as opposed to directly setting mutex->attr = attr)
   }
   return 0;
 }

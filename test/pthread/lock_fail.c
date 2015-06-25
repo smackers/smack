@@ -1,6 +1,6 @@
-// Tests pthread_mutex_init()
+// Tests failure on use of uninitialized mutex
 
-// @expect verified
+// @expect error
 
 #include <pthread.h>
 
@@ -16,9 +16,6 @@ void *t1(void *arg) {
 int main() {
 
   pthread_mutex_t lock;
-  pthread_mutex_init(&lock, 0);
-  assert(lock.lock == UNLOCKED);
-  assert(lock.init == INITIALIZED);
 
   pthread_t tid1;
 

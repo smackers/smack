@@ -1,3 +1,4 @@
+// Tests DEFINE_SPINLOCK() macro
 
 // @expect verified
 
@@ -26,6 +27,4 @@ int main() {
   pthread_join(tid1, 0);
   pthread_join(tid2, 0);
   assert(x == 4);
-  
-
 }

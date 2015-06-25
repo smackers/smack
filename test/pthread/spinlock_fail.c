@@ -1,6 +1,6 @@
 // Tests spin_lock_init() function
 
-// @expect verified
+// @expect error
 
 #include <pthread.h>
 #include <spinlock.h>
@@ -22,9 +22,7 @@ int main() {
   pthread_t tid1;
 
   pthread_create(&tid1, 0, t1, &lock);
-  spin_lock(&lock);
   z++;
-  spin_unlock(&lock);
   pthread_join(tid1, 0);
   assert(z == 3);
 }

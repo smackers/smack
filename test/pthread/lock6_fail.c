@@ -1,6 +1,6 @@
 // Tests that locks are independent
 
-// @expect verified
+// @expect error
 
 #include <pthread.h>
 
@@ -8,7 +8,6 @@ pthread_mutex_t lock1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lock2 = PTHREAD_MUTEX_INITIALIZER;
 
 int x = 1;
-int y = 1;
 
 void *t1(void *arg) {
   pthread_mutex_lock(&lock1);
@@ -18,7 +17,7 @@ void *t1(void *arg) {
 
 void *t2(void *arg) {
   pthread_mutex_lock(&lock2);
-  y++;
+  x++;
   pthread_mutex_unlock(&lock2);
 }
 
@@ -36,10 +35,9 @@ int main() {
   x++;
   pthread_mutex_unlock(&lock1);
   pthread_mutex_lock(&lock2);
-  y++;
+  x++;
   pthread_mutex_unlock(&lock2);
   pthread_join(tid1, 0);
   pthread_join(tid2, 0);
-  assert(x == 3);
-  assert(y == 3);
+  assert(x == 5);
 }

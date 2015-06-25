@@ -1,6 +1,4 @@
-// This file has a race between caller and callee threads
-//  (though no race exists between the two callee threads)
-//  when calling the x++ instruction.
+// Tests with multiple threads
 
 // @expect error
 
@@ -17,9 +15,7 @@ void *t1(void *arg) {
 }
 
 void *t2(void *arg) {
-  pthread_mutex_lock(&lock);
   x++;
-  pthread_mutex_unlock(&lock);
 }
 
 int main() {
@@ -28,10 +24,10 @@ int main() {
 
   pthread_create(&tid1, 0, t1, 0);
   pthread_create(&tid2, 0, t2, 0);
+  pthread_mutex_lock(&lock);
   x++;
+  pthread_mutex_unlock(&lock);
   pthread_join(tid1, 0);
   pthread_join(tid2, 0);
   assert(x == 4);
-  
-
 }

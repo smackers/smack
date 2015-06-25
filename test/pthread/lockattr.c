@@ -13,21 +13,25 @@ void* t1(void *arg) {
   int err = __SMACK_nondet();
   pthread_mutex_lock(&lock);
   err = pthread_mutex_lock(&lock);
-  if(35 != err) {
-    // Should be an EDEADLK error
-    assert(0);
-  }
+  // Should be an EDEADLK error
+  assert(35 == err);
   x++;
   pthread_mutex_unlock(&lock);
   err = pthread_mutex_unlock(&lock);
-  if(1 != err) {
-    // Should be an EPERM error
-    assert(0);
-  }
+  // Should be an EPERM error
+  assert(1 == err);
 }
 
 int main() {
   x = 0;
+  lock.attr.type = PTHREAD_MUTEX_ERRORCHECK;
+  int err = pthread_mutex_lock(&lock);
+  // Should be an EINVAL error
+  assert(err = 22);
+  err = 0;
+  err = pthread_mutex_unlock(&lock);
+  // Should be an EINVAL error
+  assert(err = 22);
   pthread_mutexattr_init(&lockattr);
   pthread_mutexattr_settype(&lockattr, PTHREAD_MUTEX_ERRORCHECK);
   pthread_mutex_init(&lock, &lockattr);

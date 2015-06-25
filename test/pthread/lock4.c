@@ -1,5 +1,5 @@
+// Tests that using mutex fails after being destroyed
 
-// @skip
 // @expect verified
 
 #include <pthread.h>
@@ -16,22 +16,14 @@ void *t1(void *arg) {
 
 int main() {
 
-  pthread_t tid[5];
+  pthread_t tid1;
+  assert(lock.lock == UNLOCKED);
+  assert(lock.init == INITIALIZED);
 
-  pthread_create(&tid[0], 0, t1, 0);
-  pthread_create(&tid[1], 0, t1, 0);
-  pthread_create(&tid[2], 0, t1, 0);
-  pthread_create(&tid[3], 0, t1, 0);
-  //pthread_create(&tid[4], 0, t1, 0);
+  pthread_create(&tid1, 0, t1, 0);
   pthread_mutex_lock(&lock);
   x++;
   pthread_mutex_unlock(&lock);
-  pthread_join(tid[0], 0);
-  pthread_join(tid[1], 0);
-  pthread_join(tid[2], 0);
-  pthread_join(tid[3], 0);
-  //pthread_join(tid[4], 0);
-  assert(x == 6);
-  
-
+  pthread_join(tid1, 0);
+  assert(x == 3);
 }

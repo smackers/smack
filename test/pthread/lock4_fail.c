@@ -1,5 +1,4 @@
-// This file should have a race since only the callee thread is locking
-//  before doing x++
+// Tests that using mutex fails after being destroyed
 
 // @expect error
 
@@ -17,12 +16,13 @@ void *t1(void *arg) {
 
 int main() {
 
-  pthread_t t;
+  pthread_t tid1;
 
-  pthread_create(&t, 0, t1, 0);
+  pthread_create(&tid1, 0, t1, 0);
+  pthread_mutex_destroy(&lock);
+  pthread_mutex_lock(&lock);
   x++;
-  pthread_join(t, 0);
+  pthread_mutex_unlock(&lock);
+  pthread_join(tid1, 0);
   assert(x == 3);
-  
-
 }

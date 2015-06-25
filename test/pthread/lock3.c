@@ -1,3 +1,4 @@
+// Tests with multiple threads
 
 // @expect verified
 
@@ -22,6 +23,8 @@ void *t2(void *arg) {
 int main() {
 
   pthread_t tid1, tid2;
+  assert(lock.lock == UNLOCKED);
+  assert(lock.init == INITIALIZED);
 
   pthread_create(&tid1, 0, t1, 0);
   pthread_create(&tid2, 0, t2, 0);
@@ -31,6 +34,4 @@ int main() {
   pthread_join(tid1, 0);
   pthread_join(tid2, 0);
   assert(x == 4);
-  
-
 }

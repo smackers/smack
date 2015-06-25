@@ -1,5 +1,6 @@
+// Shows join.c fails when parent doesn't wait for child before x++ call
 
-// @expect verified
+// @expect error
 
 #include <pthread.h>
 
@@ -16,8 +17,8 @@ int main() {
   pthread_t t;
 
   pthread_create(&t, 0, t1, 0);
-  pthread_join(t, 0);
   x++;
+  pthread_join(t, 0);
   assert(x == 3);
   return 0;
 }

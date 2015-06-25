@@ -2,7 +2,7 @@
 //   held simultaneously.
 
 
-// @expect verified
+// @expect error
 
 #include <pthread.h>
 
@@ -32,6 +32,6 @@ int main() {
   pthread_join(tid1, &ret1);
   pthread_join(tid2, &ret2);
   assert((int)ret1 == 5);
-  assert((int)ret2 == 6);
+  assert((int)ret2 == (int)ret1);
   return 0;
 }

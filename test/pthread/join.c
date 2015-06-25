@@ -1,3 +1,4 @@
+// Shows pthread_join effectively blocks until child thread done
 
 // @expect verified
 
@@ -17,6 +18,7 @@ int main() {
 
   pthread_create(&t, 0, t1, 0);
   pthread_join(t, 0);
-  assert(x == 2);
+  x++;
+  assert(x == 3);
   return 0;
 }
