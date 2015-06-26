@@ -198,14 +198,17 @@ int pthread_cond_destroy(pthread_cond_t *__cond) {
   return 0;
 }
 
-void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg) {
+void __call_wrapper(pthread_t *__restrict __newthread,
+                    void *(*__start_routine) (void *),
+                    void *__restrict __arg) {
 
-  int ctid = __SMACK_nondet();
-  __SMACK_code("call @ := corral_getThreadID();", ctid);
-  int test = ctid;
+  pthread_t ctid = pthread_self();
   assume(ctid == *__newthread);
   
-  
+  // I think Zvonimir proposed to just use ctid to index into $pthreadStatus
+  // This would work in most situations, HOWEVER, what if the parameter __arg
+  // points to __newthread?  Then, __start_routine() could modify this
+  // object before the parent thread sets __newthread to the ctid.
   __SMACK_code("$pthreadStatus[@][0] := $pthread_waiting;", *__newthread);
 
   __SMACK_code("$pthreadStatus[@][0] := $pthread_running;", *__newthread);
@@ -213,14 +216,22 @@ void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) 
   __SMACK_code("$pthreadStatus[@][0] := $pthread_stopped;", *__newthread);
 }
 
-int pthread_create(pthread_t *__restrict __newthread, __const pthread_attr_t *__restrict __attr, void *(*__start_routine) (void *), void *__restrict __arg) {
+int pthread_create(pthread_t *__restrict __newthread,
+                   __const pthread_attr_t *__restrict __attr,
+                   void *(*__start_routine) (void *),
+                   void *__restrict __arg) {
 
-  //Mystery smack_nondet for procedure calls from __SMACK_code??
-  int x = __SMACK_nondet();
   pthread_t tmp = __SMACK_nondet();
+
+  // Add unreachable C-level call to __call_wrapper, so llvm sees
+  // the call to __call_wrapper and performs DSA on it.
+  int x = __SMACK_nondet();
   assume(x == 0);
   if(x) __call_wrapper(__newthread, __start_routine, __arg);
-  __SMACK_code("async call @(@, @, @);", __call_wrapper, __newthread, __start_routine, __arg);
+
+  __SMACK_code("async call @(@, @, @);",
+               __call_wrapper, __newthread,
+               __start_routine, __arg);
   __SMACK_code("call @ := corral_getChildThreadID();", tmp);
   *__newthread = tmp;
 
