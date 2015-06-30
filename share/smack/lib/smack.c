@@ -374,6 +374,15 @@ void __SMACK_decls() {
   D("function $fult.float(f1:float, f2:float) returns (i1);");
   D("function $fune.float(f1:float, f2:float) returns (i1);");
   D("function $funo.float(f1:float, f2:float) returns (i1);");
+
+  D("function $fp2si.float.i128(f:float) returns (i128);");
+  D("function $fp2ui.float.i128(f:float) returns (i128);");
+  D("function $si2fp.i128.float(i:i128) returns (float);");
+  D("function $ui2fp.i128.float(i:i128) returns (float);");
+  D("function $fp2si.float.i96(f:float) returns (i96);");
+  D("function $fp2ui.float.i96(f:float) returns (i96);");
+  D("function $si2fp.i96.float(i:i96) returns (float);");
+  D("function $ui2fp.i96.float(i:i96) returns (float);");
   D("function $fp2si.float.i64(f:float) returns (i64);");
   D("function $fp2ui.float.i64(f:float) returns (i64);");
   D("function $si2fp.i64.float(i:i64) returns (float);");
@@ -391,7 +400,41 @@ void __SMACK_decls() {
   D("function $si2fp.i8.float(i:i8) returns (float);");
   D("function $ui2fp.i8.float(i:i8) returns (float);");
 
+  D("function $fp2si.float.bv128(f:float) returns (bv128);");
+  D("function $fp2ui.float.bv128(f:float) returns (bv128);");
+  D("function $si2fp.bv128.float(i:bv128) returns (float);");
+  D("function $ui2fp.bv128.float(i:bv128) returns (float);");
+  D("function $fp2si.float.bv96(f:float) returns (bv96);");
+  D("function $fp2ui.float.bv96(f:float) returns (bv96);");
+  D("function $si2fp.bv96.float(i:bv96) returns (float);");
+  D("function $ui2fp.bv96.float(i:bv96) returns (float);");
+  D("function $fp2si.float.bv64(f:float) returns (bv64);");
+  D("function $fp2ui.float.bv64(f:float) returns (bv64);");
+  D("function $si2fp.bv64.float(i:bv64) returns (float);");
+  D("function $ui2fp.bv64.float(i:bv64) returns (float);");
+  D("function $fp2si.float.bv32(f:float) returns (bv32);");
+  D("function $fp2ui.float.bv32(f:float) returns (bv32);");
+  D("function $si2fp.bv32.float(i:bv32) returns (float);");
+  D("function $ui2fp.bv32.float(i:bv32) returns (float);");
+  D("function $fp2si.float.bv16(f:float) returns (bv16);");
+  D("function $fp2ui.float.bv16(f:float) returns (bv16);");
+  D("function $si2fp.bv16.float(i:bv16) returns (float);");
+  D("function $ui2fp.bv16.float(i:bv16) returns (float);");
+  D("function $fp2si.float.bv8(f:float) returns (bv8);");
+  D("function $fp2ui.float.bv8(f:float) returns (bv8);");
+  D("function $si2fp.bv8.float(i:bv8) returns (float);");
+  D("function $ui2fp.bv8.float(i:bv8) returns (float);");
+
   D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
+
+  D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i128.float($fp2ui.float.i128(f)) == f);");
+  D("axiom (forall i: i128 :: $fp2si.float.i128($si2fp.i128.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i128.float($fp2si.float.i128(f)) == f);");
+  D("axiom (forall i: i96 :: $fp2ui.float.i96($ui2fp.i96.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i96.float($fp2ui.float.i96(f)) == f);");
+  D("axiom (forall i: i96 :: $fp2si.float.i96($si2fp.i96.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i96.float($fp2si.float.i96(f)) == f);");
   D("axiom (forall i: i64 :: $fp2ui.float.i64($ui2fp.i64.float(i)) == i);");
   D("axiom (forall f: float :: $ui2fp.i64.float($fp2ui.float.i64(f)) == f);");
   D("axiom (forall i: i64 :: $fp2si.float.i64($si2fp.i64.float(i)) == i);");
