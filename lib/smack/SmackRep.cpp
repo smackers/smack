@@ -375,7 +375,7 @@ const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
     rhs = mem(P);
 
   if (isFloat(&LI))
-    rhs = Expr::fn(opName("$si2fp", {size}), rhs);
+    rhs = Expr::fn(opName("$si2fp", {IntegerType::get(LI.getContext(),size), LI.getType()}), rhs);
 
   else if (LI.getType()->isPointerTy())
     rhs = integerToPointer(rhs, size);
