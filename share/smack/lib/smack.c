@@ -374,40 +374,40 @@ void __SMACK_decls() {
   D("function $fult.float(f1:float, f2:float) returns (i1);");
   D("function $fune.float(f1:float, f2:float) returns (i1);");
   D("function $funo.float(f1:float, f2:float) returns (i1);");
-  D("function $fp2si.i64(f:float) returns (i64);");
-  D("function $fp2ui.i64(f:float) returns (i64);");
-  D("function $si2fp.i64(i:i64) returns (float);");
-  D("function $ui2fp.i64(i:i64) returns (float);");
-  D("function $fp2si.i32(f:float) returns (i32);");
-  D("function $fp2ui.i32(f:float) returns (i32);");
-  D("function $si2fp.i32(i:i32) returns (float);");
-  D("function $ui2fp.i32(i:i32) returns (float);");
-  D("function $fp2si.i16(f:float) returns (i16);");
-  D("function $fp2ui.i16(f:float) returns (i16);");
-  D("function $si2fp.i16(i:i16) returns (float);");
-  D("function $ui2fp.i16(i:i16) returns (float);");
-  D("function $fp2si.i8(f:float) returns (i8);");
-  D("function $fp2ui.i8(f:float) returns (i8);");
-  D("function $si2fp.i8(i:i8) returns (float);");
-  D("function $ui2fp.i8(i:i8) returns (float);");
+  D("function $fp2si.float.i64(f:float) returns (i64);");
+  D("function $fp2ui.float.i64(f:float) returns (i64);");
+  D("function $si2fp.i64.float(i:i64) returns (float);");
+  D("function $ui2fp.i64.float(i:i64) returns (float);");
+  D("function $fp2si.float.i32(f:float) returns (i32);");
+  D("function $fp2ui.float.i32(f:float) returns (i32);");
+  D("function $si2fp.i32.float(i:i32) returns (float);");
+  D("function $ui2fp.i32.float(i:i32) returns (float);");
+  D("function $fp2si.float.i16(f:float) returns (i16);");
+  D("function $fp2ui.float.i16(f:float) returns (i16);");
+  D("function $si2fp.i16.float(i:i16) returns (float);");
+  D("function $ui2fp.i16.float(i:i16) returns (float);");
+  D("function $fp2si.float.i8(f:float) returns (i8);");
+  D("function $fp2ui.float.i8(f:float) returns (i8);");
+  D("function $si2fp.i8.float(i:i8) returns (float);");
+  D("function $ui2fp.i8.float(i:i8) returns (float);");
 
   D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
-  D("axiom (forall i: i64 :: $fp2ui.i64($ui2fp.i64(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i64($fp2ui.i64(f)) == f);");
-  D("axiom (forall i: i64 :: $fp2si.i64($si2fp.i64(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i64($fp2si.i64(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2ui.i32($ui2fp.i32(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i32($fp2ui.i32(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2si.i32($si2fp.i32(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i32($fp2si.i32(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2ui.i16($ui2fp.i16(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i16($fp2ui.i16(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2si.i16($si2fp.i16(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i16($fp2si.i16(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2ui.i8($ui2fp.i8(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i8($fp2ui.i8(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2si.i8($si2fp.i8(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i8($fp2si.i8(f)) == f);");
+  D("axiom (forall i: i64 :: $fp2ui.float.i64($ui2fp.i64.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i64.float($fp2ui.float.i64(f)) == f);");
+  D("axiom (forall i: i64 :: $fp2si.float.i64($si2fp.i64.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i64.float($fp2si.float.i64(f)) == f);");
+  D("axiom (forall i: i32 :: $fp2ui.float.i32($ui2fp.i32.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i32.float($fp2ui.float.i32(f)) == f);");
+  D("axiom (forall i: i32 :: $fp2si.float.i32($si2fp.i32.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i32.float($fp2si.float.i32(f)) == f);");
+  D("axiom (forall i: i16 :: $fp2ui.float.i16($ui2fp.i16.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i16.float($fp2ui.float.i16(f)) == f);");
+  D("axiom (forall i: i16 :: $fp2si.float.i16($si2fp.i16.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i16.float($fp2si.float.i16(f)) == f);");
+  D("axiom (forall i: i8 :: $fp2ui.float.i8($ui2fp.i8.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i8.float($fp2ui.float.i8(f)) == f);");
+  D("axiom (forall i: i8 :: $fp2si.float.i8($si2fp.i8.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
 
   // Memory Model
   D("const $GLOBALS_BOTTOM: ref;");
@@ -416,16 +416,44 @@ void __SMACK_decls() {
   D("function $base(ref) returns (ref);");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
 
-  D("function {:inline} $load.bv64(M:[ref]bv8, p:ref) returns (bv64){$load.bv32(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
-  D("function {:inline} $load.bv32(M:[ref]bv8, p:ref) returns (bv32){M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
-  D("function {:inline} $load.bv16(M:[ref]bv8, p:ref) returns (bv16){M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.bv128(M:[ref]bv8, p:ref) returns (bv128){"
+    "$load.bv64(M, $add.ref(p, $4.ref))++$load.bv64(M, p)}");
+  D("function {:inline} $load.bv96(M:[ref]bv8, p:ref) returns (bv96){"
+    "$load.bv64(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
+  D("function {:inline} $load.bv64(M:[ref]bv8, p:ref) returns (bv64){"
+    "$load.bv32(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
+  D("function {:inline} $load.bv32(M:[ref]bv8, p:ref) returns (bv32){"
+    "M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.bv16(M:[ref]bv8, p:ref) returns (bv16){"
+    "M[$add.ref(p, $1.ref)]++M[p]}");
   D("function {:inline} $load.bv8(M:[ref]bv8, p:ref) returns (bv8){M[p]}");
 
-  D("function {:inline} $store.bv64(M:[ref]bv8, p:ref, v:bv64) returns ([ref]bv8)"
-    "{M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]][$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
-  D("function {:inline} $store.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
-  D("function {:inline} $store.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
+  D("function {:inline} $store.bv128(M:[ref]bv8, p:ref, v:bv128) returns ([ref]bv8){"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
+    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
+    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
+    "[$add.ref(p, $9.ref) := v[88:80]][$add.ref(p, $10.ref) := v[96:88]]"
+    "[$add.ref(p, $11.ref) := v[104:96]][$add.ref(p, $12.ref) := v[112:104]]"
+    "[$add.ref(p, $13.ref) := v[120:112]][$add.ref(p, $14.ref) := v[128:120]]}");
+  D("function {:inline} $store.bv96(M:[ref]bv8, p:ref, v:bv96) returns ([ref]bv8){"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
+    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
+    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
+    "[$add.ref(p, $9.ref) := v[88:80]][$add.ref(p, $10.ref) := v[96:88]]}");
+  D("function {:inline} $store.bv64(M:[ref]bv8, p:ref, v:bv64) returns ([ref]bv8){"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
+    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
+  D("function {:inline} $store.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
+  D("function {:inline} $store.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
 
   // Memory debugging symbols

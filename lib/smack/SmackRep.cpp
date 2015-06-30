@@ -395,7 +395,7 @@ const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* addr, co
   const Expr* rhs = expr(val);
 
   if (val->getType()->isFloatingPointTy())
-    rhs = Expr::fn(opName("$fp2si",{size}), rhs);
+    rhs = Expr::fn(opName("$fp2si",{val->getType(), llvm::IntegerType::get(val->getContext(),size)}), rhs);
 
   else if (val->getType()->isPointerTy())
     rhs = pointerToInteger(rhs, size);
@@ -779,7 +779,9 @@ ProcDecl* SmackRep::proc(llvm::Function* f) {
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn(opName("$fp2si", {getSize(v->getType())}),expr(v)) : expr(v);
+  return (f && f->isVarArg() && isFloat(v))
+    ? Expr::fn(opName("$fp2si", {f->getType(), v->getType()}), expr(v))
+    : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
@@ -840,7 +842,9 @@ string SmackRep::getPrelude() {
   s << Decl::constant("$0",intType(32)) << endl;
   s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << endl;
 
-  s << "const $0.ref, $1.ref, $2.ref, $3.ref, $4.ref, $5.ref, $6.ref, $7.ref: ref;" << endl;
+  for (int i=0; i<15; i++)
+    s << "const $" << i << ".ref: ref;" << endl;
+
   for (unsigned i = 0; i < 8; ++i) {
     stringstream t;
     t << "$" << i << ".ref";
