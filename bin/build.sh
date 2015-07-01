@@ -40,7 +40,7 @@ LLVM_DIR="${ROOT}/llvm"
 source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
-WGET="wget --no-verbose"
+WGET="wget --no-verbose --method=GET"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
