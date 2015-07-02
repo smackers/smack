@@ -294,7 +294,7 @@ def verify_bpl(args):
   elif args.verifier == 'corral':
     command = ["corral"]
     command += [args.bpl_file]
-    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
     command += ["/useProverEvaluate", "/newStratifiedInlining"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
@@ -304,7 +304,7 @@ def verify_bpl(args):
   else:
     # Duality!
     command = ["corral", args.bpl_file]
-    command += ["/tryCTrace", "/useDuality", "/recursionBound:10000"]
+    command += ["/tryCTrace", "/useDuality", "/recursionBound:10000", "/k:1"]
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
