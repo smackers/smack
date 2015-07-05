@@ -243,7 +243,6 @@ def clang_frontend(args):
   smack_bc = temporary_file('smack', '.bc', args)
   smack_svcomp_bc = temporary_file('smack-svcomp', '.bc', args)
 
-  # NOTE the preprocessor is run in any case
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
   compile_command += ['-I' + smack_headers, '-include' + ('smack-svcomp.h' if args.svcomp else 'smack.h')]
