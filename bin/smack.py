@@ -21,70 +21,16 @@ from token_replace import *
 VERSION = '1.5.1'
 temporary_files = []
 
-def rewriteIExtensionToC(args):
-  """ For svcomp mode, if file extension ends in .i, we need to make a copy as
-a .c file.  If we don't, clang treats the file as if preprocessing has already 
-occurred (and so doesn't run preprocessor)"""
-  #TODO check if there is a clang switch that causes clang to run preprocessor
-  #     even if file extension is .i
-  fileName = os.path.splitext(os.path.basename(args.input_file))[0]
-  newFileName = os.path.join(args.bcFolder, fileName) + '.original.c'
-  shutil.copyfile(args.input_file, newFileName)
-  return newFileName
-
-def replacer(args):
-  inputFileName = args.input_file
-  errorWitnessFileName = args.error_witness
-  outputFileName = args.bpl_file
-
-  fileName, fileExtension = os.path.splitext(os.path.basename(inputFileName))
-  with open(inputFileName, "r") as inputFile:
-    inputStr = inputFile.read()
-
-  """ If error witness flag is enabled, do tokenizing """
-  """ First get rid of these patterns which cause errors """
-  inputStr = re.sub(r'#line .*', '', inputStr)
-  inputStr = re.sub(r'# \d+.*', '', inputStr)
-  inputStr = re.sub(r'#pragma .*','',inputStr)
-  inputStr = beforeTokenReplace(inputStr)
-  """ Save valid tokens a tmp file in the folder containing bc files """
-  """ since tokenizer binary only accepts file as argument """
-  beforeTokenizedName = os.path.join(args.bcFolder, fileName) + '.tmp'
-  with open(beforeTokenizedName, 'w') as replacedFile:
-    replacedFile.write(inputStr)
-  tokenizedName = os.path.join(args.bcFolder, fileName) + '.tokenized.c'
-  cmd = ['tokenizer', beforeTokenizedName]
-
-  try:
-    with open(tokenizedName, 'w') as tokenizedFile:
-      proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-      output = proc.communicate()[0]
-      output = afterTokenReplace(output)
-      tokenizedFile.write(output)
-      rc = proc.returncode
-      proc = None
-    if rc:
-      raise RuntimeError("%s returned non-zero." % cmd[0])
-  except (RuntimeError, OSError) as err:
-    if output:
-      print >> sys.stderr, output
-    sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
-  finally:
-    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-
-  temporary_files.append(beforeTokenizedName)
-  args.input_file = tokenizedName
-  return args
-
 def frontends():
   """A dictionary of front-ends per file extension."""
   return {
-    '.i': clang_frontend,
-    '.c': clang_frontend,
-    '.cc': clang_frontend,
-    '.cpp': clang_frontend,
-    '.bc': empty_frontend,
-    '.ll': empty_frontend,
+    'c': clang_frontend,
+    'i': clang_frontend,
+    'cc': clang_frontend,
+    'cpp': clang_frontend,
+    'svcomp': svcomp_frontend,
+    'bc': empty_frontend,
+    'll': empty_frontend,
   }
 
 def results():
@@ -107,7 +53,7 @@ def inlined_procedures():
 def validate_input_file(file):
   """Check whether the given input file is valid, returning a reason if not."""
 
-  file_extension = os.path.splitext(file)[1]
+  file_extension = os.path.splitext(file)[1][1:]
   if not os.path.isfile(file):
     return ("Cannot find file %s." % file)
 
@@ -143,10 +89,14 @@ def arguments():
   parser.add_argument('-tx', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
-  parser.add_argument('-tr', '--trace-file', metavar='FILE', default=None,
-    type=str, help='save error trace to FILE')
+  parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
+    type=str, help='save error trace/witness to FILE')
 
   frontend_group = parser.add_argument_group('front-end options')
+
+  frontend_group.add_argument('-x', '--language', metavar='LANG',
+    choices=frontends().keys(), default=None,
+    help='Treat input files as having type LANG.')
 
   frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
     type=str, help='save (intermediate) bitcode to FILE')
@@ -203,7 +153,7 @@ def arguments():
   svcomp_group.add_argument('--svcomp', action="store_true", default=False,
     help='enter svcomp mode')
 
-  svcomp_group.add_argument('--error-witness', metavar='FILE', default=None, type=str, 
+  svcomp_group.add_argument('--error-witness', metavar='FILE', default=None, type=str,
     help='save error witness to FILE')
 
   args = parser.parse_args()
@@ -220,16 +170,6 @@ def arguments():
   #     m = re.match('.*SMACK-OPTIONS:[ ]+(.*)$', line)
   #     if m:
   #       return args = parser.parse_args(m.group(1).split() + sys.argv[1:])
-
-  if args.svcomp:
-    args.bcFolder = os.path.relpath(os.path.abspath(os.path.dirname(args.bc_file)))
-    args.bplFolder = os.path.relpath(os.path.abspath(os.path.dirname(args.bpl_file)))
-    if args.error_witness:
-      args.errorWitnessFolder = os.path.relpath(os.path.abspath(os.path.dirname(args.error_witness)))
-    if os.path.splitext(args.input_file)[1] == ".i":
-      args.input_file = rewriteIExtensionToC(args)
-    if args.error_witness:
-      args = replacer(args)
 
   return args
 
@@ -287,7 +227,8 @@ def try_command(cmd):
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
-  return frontends()[os.path.splitext(args.input_file)[1]](args)
+  lang = args.language if args.language else os.path.splitext(args.input_file)[1][1:]
+  return frontends()[lang](args)
 
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
@@ -302,6 +243,7 @@ def clang_frontend(args):
   smack_bc = temporary_file('smack', '.bc', args)
   smack_svcomp_bc = temporary_file('smack-svcomp', '.bc', args)
 
+  # NOTE the preprocessor is run in any case
   compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   compile_command += args.clang_options.split()
   compile_command += ['-I' + smack_headers, '-include' + ('smack-svcomp.h' if args.svcomp else 'smack.h')]
@@ -315,6 +257,34 @@ def clang_frontend(args):
     try_command(compile_command + [os.path.join(smack_lib, 'smack-svcomp.c'), '-o', smack_svcomp_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
   try_command((lambda t, x, y, l1, l2: l1 + ([x, y] if t else [x,]) + l2) (args.svcomp, smack_bc, smack_svcomp_bc, link_command + [args.bc_file,], ['-o', args.bc_file]))
+
+def svcomp_frontend(args):
+  """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
+
+  name = os.path.splitext(os.path.basename(args.input_file))[0]
+
+  if os.path.splitext(args.input_file)[1] == ".i":
+    # Ensure clang runs the preprocessor, even with .i extension.
+    args.clang_options += " -x c"
+
+  if args.error_witness:
+    clean = temporary_file(name, '.clean.c', args)
+    tokenized = temporary_file(name, '.tokenized.c', args)
+
+    with open(args.input_file, "r") as f:
+      cleanup = f.read()
+    cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
+    cleanup = beforeTokenReplace(cleanup)
+    with open(clean, 'w') as f:
+      f.write(cleanup)
+
+    output = try_command(['tokenizer', clean])
+    with open(tokenized, 'w') as f:
+      f.write(afterTokenReplace(output))
+
+    args.input_file = tokenized
+
+  clang_frontend(args)
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
@@ -403,22 +373,20 @@ def verify_bpl(args):
   if args.smackd:
     print smackdOutput(verifier_output)
 
-
-
   else:
-    if args.error_witness and result == 'error':
-      witnessStr = smackJsonToXmlGraph(smackdOutput(verifier_output))
-      with open(args.error_witness, 'w') as witnessFile:
-        witnessFile.write(witnessStr)
-
     print results()[result]
     if result == 'error':
-      trace = error_trace(verifier_output, args)
-      if args.trace_file:
-        with open(args.trace_file, 'w') as f:
-          f.write(trace)
+      if args.language == 'svcomp':
+        error = smackJsonToXmlGraph(smackdOutput(verifier_output))
+      else:
+        error = error_trace(verifier_ouptut, args)
+
+      if args.error_file:
+        with open(args.error_file, 'w') as f:
+          f.write(error)
+
       if not args.quiet:
-        print trace
+        print error
 
 def error_step(step):
   FILENAME = '[\w#$~%.\/-]*'
@@ -477,11 +445,11 @@ def smackdOutput(corralOutput):
         assm = ''
         if traceAssumeMatch:
           assm = str(traceAssumeMatch.group(6))
-        trace = { 'threadid': threadid, 
-                  'file': filename, 
-                  'line': lineno, 
-                  'column': colno, 
-                  'description': '' if desc == 'None' else desc, 
+        trace = { 'threadid': threadid,
+                  'file': filename,
+                  'line': lineno,
+                  'column': colno,
+                  'description': '' if desc == 'None' else desc,
                   'assumption': assm }
         traces.append(trace)
       elif errorMatch:
