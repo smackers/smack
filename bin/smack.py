@@ -86,7 +86,7 @@ def arguments():
   noise_group.add_argument('-d', '--debug', action="store_true", default=False,
     help='enable debugging output')
 
-  parser.add_argument('-tx', '--no-verify', action="store_true", default=False,
+  parser.add_argument('-t', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
   parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
