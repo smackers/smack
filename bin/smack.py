@@ -148,14 +148,6 @@ def arguments():
   verifier_group.add_argument('--smackd', action="store_true", default=False,
     help='generate JSON-format output for SMACKd')
 
-  svcomp_group = parser.add_argument_group('svcomp options')
-
-  svcomp_group.add_argument('--svcomp', action="store_true", default=False,
-    help='enter svcomp mode')
-
-  svcomp_group.add_argument('--error-witness', metavar='FILE', default=None, type=str,
-    help='save error witness to FILE')
-
   args = parser.parse_args()
 
   if not args.bc_file:
