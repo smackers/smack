@@ -27,6 +27,43 @@
  *
  */
 
+void __VERIFIER_error(void) {
+  __VERIFIER_assert(0);
+}
+
+void exit(int x) {
+  __VERIFIER_assume(0);
+}
+
+// Apparently used in SVCCOMP benchmarks
+unsigned char __VERIFIER_nondet_uchar(void) {
+  unsigned char x = __VERIFIER_nondet_unsigned_char();
+  assume(x >= 0);
+  return x;
+}
+
+unsigned short __VERIFIER_nondet_ushort(void) {
+  unsigned short x = __VERIFIER_nondet_unsigned_short();
+  assume(x >= 0);
+  return x;
+}
+
+unsigned int __VERIFIER_nondet_uint(void) {
+  unsigned int x = __VERIFIER_nondet_unsigned_int();
+  assume(x >= 0);
+  return x;
+ }
+
+unsigned long __VERIFIER_nondet_ulong(void) {
+  unsigned long x = __VERIFIER_nondet_unsigned_long();
+  assume(x >= 0);
+  return x;
+}
+
+void* __VERIFIER_nondet_pointer(void) {
+  return __VERIFIER_nondet();
+}
+
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }

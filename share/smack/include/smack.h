@@ -12,6 +12,13 @@
 extern "C" {
 #endif
 
+// Apprently needed by SVCOMP benchmarks
+#define __inline
+#define __builtin_expect __builtinx_expect
+#define __builtin_memcpy __builtinx_memcpy
+#define __builtin_va_start __builtinx_va_start
+#define __builtin_object_size __builtinx_object_size
+
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
@@ -24,17 +31,15 @@ void __SMACK_top_decl(const char *fmt, ...);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#ifdef SVCOMP
-#define assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $0;", EX); } while (0)
-#define assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $0;", EX); } while (0)
-#else
+void __VERIFIER_error(void);
+void exit(int);
+
 #define __VERIFIER_assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $0;", EX); } while (0)
 #define __VERIFIER_assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $0;", EX); } while (0)
 
 #ifndef AVOID_NAME_CONFLICTS
 #define assert(EX) __VERIFIER_assert(EX)
 #define assume(EX) __VERIFIER_assume(EX)
-#endif
 #endif
 
 #define S4(a,b,c,d) a b c d
@@ -83,6 +88,13 @@ NONDET_DECL(float);
 NONDET_DECL(double);
 NONDET_DECL(long,double);
 
+// Apparently used in SVCOMP benchmarks
+unsigned char __VERIFIER_nondet_uchar(void);
+unsigned short __VERIFIER_nondet_ushort(void);
+unsigned __VERIFIER_nondet_uint(void);
+unsigned long __VERIFIER_nondet_ulong(void);
+void* __VERIFIER_nondet_pointer(void);
+
 #undef S1
 #undef S2
 #undef S3
@@ -103,4 +115,3 @@ void __SMACK_decls();
 #endif
 
 #endif /*SMACK_H_*/
-
