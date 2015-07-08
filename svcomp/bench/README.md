@@ -1,0 +1,2 @@
+#SMACKBench
+These scripts serve two purposes.  The first is to document how the SMACK benchmarking framework is set up to provide preliminary evaluation of SMACK for SVCOMP.  The second is to provide a method for automatically deploying this framework.  Note that from year to year, these scripts will need to be updated to reflect any changes in dependencies.

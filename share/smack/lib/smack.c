@@ -27,6 +27,43 @@
  *
  */
 
+void __VERIFIER_error(void) {
+  __VERIFIER_assert(0);
+}
+
+void exit(int x) {
+  __VERIFIER_assume(0);
+}
+
+// Apparently used in SVCCOMP benchmarks
+unsigned char __VERIFIER_nondet_uchar(void) {
+  unsigned char x = __VERIFIER_nondet_unsigned_char();
+  assume(x >= 0);
+  return x;
+}
+
+unsigned short __VERIFIER_nondet_ushort(void) {
+  unsigned short x = __VERIFIER_nondet_unsigned_short();
+  assume(x >= 0);
+  return x;
+}
+
+unsigned int __VERIFIER_nondet_uint(void) {
+  unsigned int x = __VERIFIER_nondet_unsigned_int();
+  assume(x >= 0);
+  return x;
+ }
+
+unsigned long __VERIFIER_nondet_ulong(void) {
+  unsigned long x = __VERIFIER_nondet_unsigned_long();
+  assume(x >= 0);
+  return x;
+}
+
+void* __VERIFIER_nondet_pointer(void) {
+  return __VERIFIER_nondet();
+}
+
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
@@ -104,6 +141,8 @@ void __SMACK_dummy(int v) {
   D(xstr(M(args)))
 
 #define DECLARE_EACH_INT_TYPE(M,args...) \
+  D(xstr(M(i128,args))); \
+  D(xstr(M(i96,args))); \
   D(xstr(M(i64,args))); \
   D(xstr(M(i32,args))); \
   D(xstr(M(i16,args))); \
@@ -111,6 +150,8 @@ void __SMACK_dummy(int v) {
   D(xstr(M(i1,args)));
 
 #define DECLARE_EACH_BV_TYPE(M,args...) \
+  D(xstr(M(bv128,args))); \
+  D(xstr(M(bv96,args))); \
   D(xstr(M(bv64,args))); \
   D(xstr(M(bv32,args))); \
   D(xstr(M(bv16,args))); \
@@ -157,6 +198,17 @@ void __SMACK_decls() {
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sge, bvsge)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sgt, bvsgt)
 
+  DECLARE(INLINE_CONVERSION,bv128,bv96,$trunc,{i[96:0]});
+  DECLARE(INLINE_CONVERSION,bv128,bv64,$trunc,{i[64:0]});
+  DECLARE(INLINE_CONVERSION,bv128,bv32,$trunc,{i[32:0]});
+  DECLARE(INLINE_CONVERSION,bv128,bv16,$trunc,{i[16:0]});
+  DECLARE(INLINE_CONVERSION,bv128,bv8,$trunc,{i[8:0]});
+  DECLARE(INLINE_CONVERSION,bv128,bv1,$trunc,{i[1:0]});
+  DECLARE(INLINE_CONVERSION,bv96,bv64,$trunc,{i[64:0]});
+  DECLARE(INLINE_CONVERSION,bv96,bv32,$trunc,{i[32:0]});
+  DECLARE(INLINE_CONVERSION,bv96,bv16,$trunc,{i[16:0]});
+  DECLARE(INLINE_CONVERSION,bv96,bv8,$trunc,{i[8:0]});
+  DECLARE(INLINE_CONVERSION,bv96,bv1,$trunc,{i[1:0]});
   DECLARE(INLINE_CONVERSION,bv64,bv32,$trunc,{i[32:0]});
   DECLARE(INLINE_CONVERSION,bv64,bv16,$trunc,{i[16:0]});
   DECLARE(INLINE_CONVERSION,bv64,bv8,$trunc,{i[8:0]});
@@ -172,23 +224,45 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,bv1,bv16,$zext,{if i == 0bv1 then 0bv16 else 1bv16});
   DECLARE(INLINE_CONVERSION,bv1,bv32,$zext,{if i == 0bv1 then 0bv32 else 1bv32});
   DECLARE(INLINE_CONVERSION,bv1,bv64,$zext,{if i == 0bv1 then 0bv64 else 1bv64});
+  DECLARE(INLINE_CONVERSION,bv1,bv96,$zext,{if i == 0bv1 then 0bv96 else 1bv96});
+  DECLARE(INLINE_CONVERSION,bv1,bv128,$zext,{if i == 0bv1 then 0bv128 else 1bv128});
   D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv8.bv16(i: bv8) returns (bv16);");
   D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv8.bv32(i: bv8) returns (bv32);");
   D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 88)\"} $zext.bv8.bv96(i: bv8) returns (bv96);");
+  D("function {:bvbuiltin \"(_ zero_extend 120)\"} $zext.bv8.bv128(i: bv8) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv16.bv32(i: bv16) returns (bv32);");
   D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 80)\"} $zext.bv16.bv96(i: bv16) returns (bv96);");
+  D("function {:bvbuiltin \"(_ zero_extend 112)\"} $zext.bv16.bv128(i: bv16) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv32.bv64(i: bv32) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 64)\"} $zext.bv32.bv96(i: bv32) returns (bv96);");
+  D("function {:bvbuiltin \"(_ zero_extend 96)\"} $zext.bv32.bv128(i: bv32) returns (bv128);");
+  D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv64.bv96(i: bv64) returns (bv96);");
+  D("function {:bvbuiltin \"(_ zero_extend 64)\"} $zext.bv64.bv128(i: bv64) returns (bv128);");
+  D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv96.bv128(i: bv96) returns (bv128);");
 
   DECLARE(INLINE_CONVERSION,bv1,bv8,$sext,{if i == 0bv1 then 0bv8 else 255bv8});
   DECLARE(INLINE_CONVERSION,bv1,bv16,$sext,{if i == 0bv1 then 0bv16 else 65535bv16});
   DECLARE(INLINE_CONVERSION,bv1,bv32,$sext,{if i == 0bv1 then 0bv32 else 4294967295bv32});
   DECLARE(INLINE_CONVERSION,bv1,bv64,$sext,{if i == 0bv1 then 0bv64 else 18446744073709551615bv64});
+  DECLARE(INLINE_CONVERSION,bv1,bv96,$sext,{if i == 0bv1 then 0bv96 else 79228162514264337593543950335bv96});
+  DECLARE(INLINE_CONVERSION,bv1,bv128,$sext,{if i == 0bv1 then 0bv128 else 340282366920938463463374607431768211455bv128});
   D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv8.bv16(i: bv8) returns (bv16);");
   D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv8.bv32(i: bv8) returns (bv32);");
   D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 88)\"} $sext.bv8.bv96(i: bv8) returns (bv96);");
+  D("function {:bvbuiltin \"(_ sign_extend 120)\"} $sext.bv8.bv128(i: bv8) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv16.bv32(i: bv16) returns (bv32);");
   D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 80)\"} $sext.bv16.bv96(i: bv16) returns (bv96);");
+  D("function {:bvbuiltin \"(_ sign_extend 112)\"} $sext.bv16.bv128(i: bv16) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv32.bv64(i: bv32) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 64)\"} $sext.bv32.bv96(i: bv32) returns (bv96);");
+  D("function {:bvbuiltin \"(_ sign_extend 96)\"} $sext.bv32.bv128(i: bv32) returns (bv128);");
+  D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv64.bv96(i: bv64) returns (bv96);");
+  D("function {:bvbuiltin \"(_ sign_extend 64)\"} $sext.bv64.bv128(i: bv64) returns (bv128);");
+  D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv96.bv128(i: bv96) returns (bv128);");
 
   // INTEGER MODELING
 
@@ -245,6 +319,19 @@ void __SMACK_decls() {
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
 
+  DECLARE(INLINE_CONVERSION,i128,i96,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i128,i64,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i128,i32,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i128,i16,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i128,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i128,i1,$trunc,{i});
+
+  DECLARE(INLINE_CONVERSION,i96,i64,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i96,i32,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i96,i16,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i96,i8,$trunc,{i});
+  DECLARE(INLINE_CONVERSION,i96,i1,$trunc,{i});
+
   DECLARE(INLINE_CONVERSION,i64,i32,$trunc,{i});
   DECLARE(INLINE_CONVERSION,i64,i16,$trunc,{i});
   DECLARE(INLINE_CONVERSION,i64,i8,$trunc,{i});
@@ -260,23 +347,45 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i1,i16,$zext,{i});
   DECLARE(INLINE_CONVERSION,i1,i32,$zext,{i});
   DECLARE(INLINE_CONVERSION,i1,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i96,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i128,$zext,{i});
   DECLARE(INLINE_CONVERSION,i8,i16,$zext,{i});
   DECLARE(INLINE_CONVERSION,i8,i32,$zext,{i});
   DECLARE(INLINE_CONVERSION,i8,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i96,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i128,$zext,{i});
   DECLARE(INLINE_CONVERSION,i16,i32,$zext,{i});
   DECLARE(INLINE_CONVERSION,i16,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i96,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i128,$zext,{i});
   DECLARE(INLINE_CONVERSION,i32,i64,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i96,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i128,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i64,i96,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i64,i128,$zext,{i});
+  DECLARE(INLINE_CONVERSION,i96,i128,$zext,{i});
 
   DECLARE(INLINE_CONVERSION,i1,i8,$sext,{i});
   DECLARE(INLINE_CONVERSION,i1,i16,$sext,{i});
   DECLARE(INLINE_CONVERSION,i1,i32,$sext,{i});
   DECLARE(INLINE_CONVERSION,i1,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i96,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i1,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i8,i16,$sext,{i});
   DECLARE(INLINE_CONVERSION,i8,i32,$sext,{i});
   DECLARE(INLINE_CONVERSION,i8,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i96,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i8,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i16,i32,$sext,{i});
   DECLARE(INLINE_CONVERSION,i16,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i96,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i16,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i32,i64,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i96,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i32,i128,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i64,i96,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i64,i128,$sext,{i});
+  DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
 
   D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
@@ -302,40 +411,83 @@ void __SMACK_decls() {
   D("function $fult.float(f1:float, f2:float) returns (i1);");
   D("function $fune.float(f1:float, f2:float) returns (i1);");
   D("function $funo.float(f1:float, f2:float) returns (i1);");
-  D("function $fp2si.i64(f:float) returns (i64);");
-  D("function $fp2ui.i64(f:float) returns (i64);");
-  D("function $si2fp.i64(i:i64) returns (float);");
-  D("function $ui2fp.i64(i:i64) returns (float);");
-  D("function $fp2si.i32(f:float) returns (i32);");
-  D("function $fp2ui.i32(f:float) returns (i32);");
-  D("function $si2fp.i32(i:i32) returns (float);");
-  D("function $ui2fp.i32(i:i32) returns (float);");
-  D("function $fp2si.i16(f:float) returns (i16);");
-  D("function $fp2ui.i16(f:float) returns (i16);");
-  D("function $si2fp.i16(i:i16) returns (float);");
-  D("function $ui2fp.i16(i:i16) returns (float);");
-  D("function $fp2si.i8(f:float) returns (i8);");
-  D("function $fp2ui.i8(f:float) returns (i8);");
-  D("function $si2fp.i8(i:i8) returns (float);");
-  D("function $ui2fp.i8(i:i8) returns (float);");
+
+  D("function $fp2si.float.i128(f:float) returns (i128);");
+  D("function $fp2ui.float.i128(f:float) returns (i128);");
+  D("function $si2fp.i128.float(i:i128) returns (float);");
+  D("function $ui2fp.i128.float(i:i128) returns (float);");
+  D("function $fp2si.float.i96(f:float) returns (i96);");
+  D("function $fp2ui.float.i96(f:float) returns (i96);");
+  D("function $si2fp.i96.float(i:i96) returns (float);");
+  D("function $ui2fp.i96.float(i:i96) returns (float);");
+  D("function $fp2si.float.i64(f:float) returns (i64);");
+  D("function $fp2ui.float.i64(f:float) returns (i64);");
+  D("function $si2fp.i64.float(i:i64) returns (float);");
+  D("function $ui2fp.i64.float(i:i64) returns (float);");
+  D("function $fp2si.float.i32(f:float) returns (i32);");
+  D("function $fp2ui.float.i32(f:float) returns (i32);");
+  D("function $si2fp.i32.float(i:i32) returns (float);");
+  D("function $ui2fp.i32.float(i:i32) returns (float);");
+  D("function $fp2si.float.i16(f:float) returns (i16);");
+  D("function $fp2ui.float.i16(f:float) returns (i16);");
+  D("function $si2fp.i16.float(i:i16) returns (float);");
+  D("function $ui2fp.i16.float(i:i16) returns (float);");
+  D("function $fp2si.float.i8(f:float) returns (i8);");
+  D("function $fp2ui.float.i8(f:float) returns (i8);");
+  D("function $si2fp.i8.float(i:i8) returns (float);");
+  D("function $ui2fp.i8.float(i:i8) returns (float);");
+
+  D("function $fp2si.float.bv128(f:float) returns (bv128);");
+  D("function $fp2ui.float.bv128(f:float) returns (bv128);");
+  D("function $si2fp.bv128.float(i:bv128) returns (float);");
+  D("function $ui2fp.bv128.float(i:bv128) returns (float);");
+  D("function $fp2si.float.bv96(f:float) returns (bv96);");
+  D("function $fp2ui.float.bv96(f:float) returns (bv96);");
+  D("function $si2fp.bv96.float(i:bv96) returns (float);");
+  D("function $ui2fp.bv96.float(i:bv96) returns (float);");
+  D("function $fp2si.float.bv64(f:float) returns (bv64);");
+  D("function $fp2ui.float.bv64(f:float) returns (bv64);");
+  D("function $si2fp.bv64.float(i:bv64) returns (float);");
+  D("function $ui2fp.bv64.float(i:bv64) returns (float);");
+  D("function $fp2si.float.bv32(f:float) returns (bv32);");
+  D("function $fp2ui.float.bv32(f:float) returns (bv32);");
+  D("function $si2fp.bv32.float(i:bv32) returns (float);");
+  D("function $ui2fp.bv32.float(i:bv32) returns (float);");
+  D("function $fp2si.float.bv16(f:float) returns (bv16);");
+  D("function $fp2ui.float.bv16(f:float) returns (bv16);");
+  D("function $si2fp.bv16.float(i:bv16) returns (float);");
+  D("function $ui2fp.bv16.float(i:bv16) returns (float);");
+  D("function $fp2si.float.bv8(f:float) returns (bv8);");
+  D("function $fp2ui.float.bv8(f:float) returns (bv8);");
+  D("function $si2fp.bv8.float(i:bv8) returns (float);");
+  D("function $ui2fp.bv8.float(i:bv8) returns (float);");
 
   D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
-  D("axiom (forall i: i64 :: $fp2ui.i64($ui2fp.i64(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i64($fp2ui.i64(f)) == f);");
-  D("axiom (forall i: i64 :: $fp2si.i64($si2fp.i64(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i64($fp2si.i64(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2ui.i32($ui2fp.i32(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i32($fp2ui.i32(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2si.i32($si2fp.i32(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i32($fp2si.i32(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2ui.i16($ui2fp.i16(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i16($fp2ui.i16(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2si.i16($si2fp.i16(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i16($fp2si.i16(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2ui.i8($ui2fp.i8(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i8($fp2ui.i8(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2si.i8($si2fp.i8(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i8($fp2si.i8(f)) == f);");
+
+  D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i128.float($fp2ui.float.i128(f)) == f);");
+  D("axiom (forall i: i128 :: $fp2si.float.i128($si2fp.i128.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i128.float($fp2si.float.i128(f)) == f);");
+  D("axiom (forall i: i96 :: $fp2ui.float.i96($ui2fp.i96.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i96.float($fp2ui.float.i96(f)) == f);");
+  D("axiom (forall i: i96 :: $fp2si.float.i96($si2fp.i96.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i96.float($fp2si.float.i96(f)) == f);");
+  D("axiom (forall i: i64 :: $fp2ui.float.i64($ui2fp.i64.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i64.float($fp2ui.float.i64(f)) == f);");
+  D("axiom (forall i: i64 :: $fp2si.float.i64($si2fp.i64.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i64.float($fp2si.float.i64(f)) == f);");
+  D("axiom (forall i: i32 :: $fp2ui.float.i32($ui2fp.i32.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i32.float($fp2ui.float.i32(f)) == f);");
+  D("axiom (forall i: i32 :: $fp2si.float.i32($si2fp.i32.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i32.float($fp2si.float.i32(f)) == f);");
+  D("axiom (forall i: i16 :: $fp2ui.float.i16($ui2fp.i16.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i16.float($fp2ui.float.i16(f)) == f);");
+  D("axiom (forall i: i16 :: $fp2si.float.i16($si2fp.i16.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i16.float($fp2si.float.i16(f)) == f);");
+  D("axiom (forall i: i8 :: $fp2ui.float.i8($ui2fp.i8.float(i)) == i);");
+  D("axiom (forall f: float :: $ui2fp.i8.float($fp2ui.float.i8(f)) == f);");
+  D("axiom (forall i: i8 :: $fp2si.float.i8($si2fp.i8.float(i)) == i);");
+  D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
 
   // Memory Model
   D("const $GLOBALS_BOTTOM: ref;");
@@ -344,16 +496,44 @@ void __SMACK_decls() {
   D("function $base(ref) returns (ref);");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
 
-  D("function {:inline} $load.bv64(M:[ref]bv8, p:ref) returns (bv64){$load.bv32(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
-  D("function {:inline} $load.bv32(M:[ref]bv8, p:ref) returns (bv32){M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
-  D("function {:inline} $load.bv16(M:[ref]bv8, p:ref) returns (bv16){M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.bv128(M:[ref]bv8, p:ref) returns (bv128){"
+    "$load.bv64(M, $add.ref(p, $4.ref))++$load.bv64(M, p)}");
+  D("function {:inline} $load.bv96(M:[ref]bv8, p:ref) returns (bv96){"
+    "$load.bv64(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
+  D("function {:inline} $load.bv64(M:[ref]bv8, p:ref) returns (bv64){"
+    "$load.bv32(M, $add.ref(p, $4.ref))++$load.bv32(M, p)}");
+  D("function {:inline} $load.bv32(M:[ref]bv8, p:ref) returns (bv32){"
+    "M[$add.ref(p, $3.ref)]++M[$add.ref(p, $2.ref)]++M[$add.ref(p, $1.ref)]++M[p]}");
+  D("function {:inline} $load.bv16(M:[ref]bv8, p:ref) returns (bv16){"
+    "M[$add.ref(p, $1.ref)]++M[p]}");
   D("function {:inline} $load.bv8(M:[ref]bv8, p:ref) returns (bv8){M[p]}");
 
-  D("function {:inline} $store.bv64(M:[ref]bv8, p:ref, v:bv64) returns ([ref]bv8)"
-    "{M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]][$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
-  D("function {:inline} $store.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]][$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
-  D("function {:inline} $store.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
+  D("function {:inline} $store.bv128(M:[ref]bv8, p:ref, v:bv128) returns ([ref]bv8){"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
+    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
+    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
+    "[$add.ref(p, $9.ref) := v[88:80]][$add.ref(p, $10.ref) := v[96:88]]"
+    "[$add.ref(p, $11.ref) := v[104:96]][$add.ref(p, $12.ref) := v[112:104]]"
+    "[$add.ref(p, $13.ref) := v[120:112]][$add.ref(p, $14.ref) := v[128:120]]}");
+  D("function {:inline} $store.bv96(M:[ref]bv8, p:ref, v:bv96) returns ([ref]bv8){"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
+    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
+    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
+    "[$add.ref(p, $9.ref) := v[88:80]][$add.ref(p, $10.ref) := v[96:88]]}");
+  D("function {:inline} $store.bv64(M:[ref]bv8, p:ref, v:bv64) returns ([ref]bv8){"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
+    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
+    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
+  D("function {:inline} $store.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
+    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
+  D("function {:inline} $store.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {"
+    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
 
   // Memory debugging symbols
@@ -367,11 +547,15 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, i16);
   DECLARE(RECORD_PROC, i32);
   DECLARE(RECORD_PROC, i64);
+  DECLARE(RECORD_PROC, i96);
+  DECLARE(RECORD_PROC, i128);
   DECLARE(RECORD_PROC, bv1);
   DECLARE(RECORD_PROC, bv8);
   DECLARE(RECORD_PROC, bv16);
   DECLARE(RECORD_PROC, bv32);
   DECLARE(RECORD_PROC, bv64);
+  DECLARE(RECORD_PROC, bv96);
+  DECLARE(RECORD_PROC, bv128);
   DECLARE(RECORD_PROC, ref);
   DECLARE(RECORD_PROC, float);
 
@@ -445,4 +629,3 @@ void __SMACK_decls() {
 
 #undef D
 }
-

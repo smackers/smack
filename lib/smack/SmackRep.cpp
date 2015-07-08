@@ -166,7 +166,7 @@ string SmackRep::getString(const llvm::Value* v) {
 
 unsigned SmackRep::getElementSize(const llvm::Value* v) {
   return getSize(v->getType()->getPointerElementType());
-} 
+}
 
 unsigned SmackRep::getIntSize(const llvm::Value* v) {
   return getSize(v->getType());
@@ -181,7 +181,7 @@ unsigned SmackRep::getSize(llvm::Type* t) {
   if (t->isSingleValueType())
     size = targetData->getTypeSizeInBits(t);
   return size;
-} 
+}
 
 string SmackRep::pointerType() {
   stringstream s;
@@ -334,7 +334,7 @@ void SmackRep::collectRegions(llvm::Module &M) {
   rc.visit(M);
 }
 
-const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {  
+const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
   const Expr* size =
     Expr::fn("$mul.ref",
       pointerLit(storageSize(i.getAllocatedType())),
@@ -375,7 +375,7 @@ const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
     rhs = mem(P);
 
   if (isFloat(&LI))
-    rhs = Expr::fn(opName("$si2fp", {size}), rhs);
+    rhs = Expr::fn(opName("$si2fp", {IntegerType::get(LI.getContext(),size), LI.getType()}), rhs);
 
   else if (LI.getType()->isPointerTy())
     rhs = integerToPointer(rhs, size);
@@ -395,7 +395,7 @@ const Stmt* SmackRep::store(unsigned region, unsigned size, const Expr* addr, co
   const Expr* rhs = expr(val);
 
   if (val->getType()->isFloatingPointTy())
-    rhs = Expr::fn(opName("$fp2si",{size}), rhs);
+    rhs = Expr::fn(opName("$fp2si",{val->getType(), llvm::IntegerType::get(val->getContext(),size)}), rhs);
 
   else if (val->getType()->isPointerTy())
     rhs = pointerToInteger(rhs, size);
@@ -779,7 +779,9 @@ ProcDecl* SmackRep::proc(llvm::Function* f) {
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v)) ? Expr::fn(opName("$fp2si", {getSize(v->getType())}),expr(v)) : expr(v);
+  return (f && f->isVarArg() && isFloat(v))
+    ? Expr::fn(opName("$fp2si", {f->getType(), v->getType()}), expr(v))
+    : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
@@ -831,12 +833,8 @@ string SmackRep::getPrelude() {
   stringstream s;
 
   s << "// Basic types" << endl;
-  s << Decl::typee("i1","int") << endl;
-  for (unsigned i = 8; i <= 64; i <<= 1) {
-    stringstream t;
-    t << "i" << i;
-    s << Decl::typee(t.str(),"int") << endl;
-  }
+  for (auto t : {"i1", "i8", "i16", "i32", "i64", "i96", "i128"})
+    s << Decl::typee(t,"int") << endl;
   s << Decl::typee(PTR_TYPE, pointerType()) << endl;
   s << endl;
 
@@ -844,7 +842,9 @@ string SmackRep::getPrelude() {
   s << Decl::constant("$0",intType(32)) << endl;
   s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << endl;
 
-  s << "const $0.ref, $1.ref, $2.ref, $3.ref, $4.ref, $5.ref, $6.ref, $7.ref: ref;" << endl;
+  for (int i=0; i<15; i++)
+    s << "const $" << i << ".ref: ref;" << endl;
+
   for (unsigned i = 0; i < 8; ++i) {
     stringstream t;
     t << "$" << i << ".ref";
@@ -857,8 +857,8 @@ string SmackRep::getPrelude() {
     unsigned n = uniformMemoryAccesses() ? 1 : 4;
     for (unsigned j = 0; j < n; j++) {
       unsigned size = 8 << j;
-      s << "var " << memPath(i, size) 
-        << ": " << memType(i, size) 
+      s << "var " << memPath(i, size)
+        << ": " << memType(i, size)
         << ";" << endl;
     }
   }
@@ -982,7 +982,7 @@ void SmackRep::addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm:
 
 void SmackRep::addInitFunc(const llvm::Function* f) {
   assert(f->getReturnType()->isVoidTy() && "Init functions cannot return a value");
-  assert(f->getArgumentList().empty() && "Init functions cannot take parameters");  
+  assert(f->getArgumentList().empty() && "Init functions cannot take parameters");
   initFuncs.push_back(Stmt::call(naming.get(*f)));
 }
 
@@ -1101,7 +1101,7 @@ Decl* SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
       s << "ensures (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
-        << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
+        << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);"
         << endl;
       s << "ensures (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
@@ -1161,4 +1161,3 @@ Decl* SmackRep::memsetProc(unsigned dstReg) {
 }
 
 } // namespace smack
-

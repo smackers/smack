@@ -15,6 +15,8 @@ import subprocess
 import sys
 import tempfile
 from threading import Timer
+from toSVCOMPformat import *
+from token_replace import *
 
 VERSION = '1.5.1'
 temporary_files = []
@@ -22,11 +24,13 @@ temporary_files = []
 def frontends():
   """A dictionary of front-ends per file extension."""
   return {
-    '.c': clang_frontend,
-    '.cc': clang_frontend,
-    '.cpp': clang_frontend,
-    '.bc': empty_frontend,
-    '.ll': empty_frontend,
+    'c': clang_frontend,
+    'i': clang_frontend,
+    'cc': clang_frontend,
+    'cpp': clang_frontend,
+    'svcomp': svcomp_frontend,
+    'bc': empty_frontend,
+    'll': empty_frontend,
   }
 
 def results():
@@ -49,7 +53,7 @@ def inlined_procedures():
 def validate_input_file(file):
   """Check whether the given input file is valid, returning a reason if not."""
 
-  file_extension = os.path.splitext(file)[1]
+  file_extension = os.path.splitext(file)[1][1:]
   if not os.path.isfile(file):
     return ("Cannot find file %s." % file)
 
@@ -82,13 +86,17 @@ def arguments():
   noise_group.add_argument('-d', '--debug', action="store_true", default=False,
     help='enable debugging output')
 
-  parser.add_argument('-tx', '--no-verify', action="store_true", default=False,
+  parser.add_argument('-t', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
-  parser.add_argument('-tr', '--trace-file', metavar='FILE', default=None,
-    type=str, help='save error trace to FILE')
+  parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
+    type=str, help='save error trace/witness to FILE')
 
   frontend_group = parser.add_argument_group('front-end options')
+
+  frontend_group.add_argument('-x', '--language', metavar='LANG',
+    choices=frontends().keys(), default=None,
+    help='Treat input files as having type LANG.')
 
   frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
     type=str, help='save (intermediate) bitcode to FILE')
@@ -217,7 +225,8 @@ def try_command(cmd):
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
-  return frontends()[os.path.splitext(args.input_file)[1]](args)
+  lang = args.language if args.language else os.path.splitext(args.input_file)[1][1:]
+  return frontends()[lang](args)
 
 def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
@@ -250,6 +259,34 @@ def clang_frontend(args):
     try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
     link_targets = [pthread_bc, spinlock_bc] + link_targets
   try_command(link_command + link_targets + ['-o', args.bc_file])
+
+def svcomp_frontend(args):
+  """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
+
+  name = os.path.splitext(os.path.basename(args.input_file))[0]
+
+  if os.path.splitext(args.input_file)[1] == ".i":
+    # Ensure clang runs the preprocessor, even with .i extension.
+    args.clang_options += " -x c"
+
+  if args.error_file:
+    clean = temporary_file(name, '.clean.c', args)
+    tokenized = temporary_file(name, '.tokenized.c', args)
+
+    with open(args.input_file, "r") as f:
+      cleanup = f.read()
+    cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
+    cleanup = beforeTokenReplace(cleanup)
+    with open(clean, 'w') as f:
+      f.write(cleanup)
+
+    output = try_command(['tokenizer', clean])
+    with open(tokenized, 'w') as f:
+      f.write(afterTokenReplace(output))
+
+    args.input_file = tokenized
+
+  clang_frontend(args)
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
@@ -310,7 +347,7 @@ def verify_bpl(args):
   elif args.verifier == 'corral':
     command = ["corral"]
     command += [args.bpl_file]
-    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
     command += ["/useProverEvaluate", "/newStratifiedInlining"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
@@ -322,7 +359,7 @@ def verify_bpl(args):
   else:
     # Duality!
     command = ["corral", args.bpl_file]
-    command += ["/tryCTrace", "/useDuality", "/recursionBound:10000"]
+    command += ["/tryCTrace", "/useDuality", "/recursionBound:10000", "/k:1"]
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
@@ -343,12 +380,17 @@ def verify_bpl(args):
   else:
     print results()[result]
     if result == 'error':
-      trace = error_trace(verifier_output, args)
-      if args.trace_file:
-        with open(args.trace_file, 'w') as f:
-          f.write(trace)
+      if args.language == 'svcomp':
+        error = smackJsonToXmlGraph(smackdOutput(verifier_output))
+      else:
+        error = error_trace(verifier_ouptut, args)
+
+      if args.error_file:
+        with open(args.error_file, 'w') as f:
+          f.write(error)
+
       if not args.quiet:
-        print trace
+        print error
 
 def error_step(step):
   FILENAME = '[\w#$~%.\/-]*'
@@ -366,7 +408,6 @@ def error_step(step):
             return "%s%s(%s,%s): %s" % (step.group(1), src.group(1), src.group(2), src.group(3), message)
     else:
       return step.group(0)
-
   else:
     return None
 
@@ -397,6 +438,7 @@ def smackdOutput(corralOutput):
     traces = []
     for traceLine in corralOutput.splitlines(True):
       traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
+      traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\W*\w+\W*=\W*\w+\W*)\))$', traceLine)
       errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
       if traceMatch:
         filename = str(traceMatch.group(1))
@@ -404,7 +446,15 @@ def smackdOutput(corralOutput):
         colno = int(traceMatch.group(3))
         threadid = int(traceMatch.group(4))
         desc = str(traceMatch.group(6))
-        trace = { 'threadid': threadid, 'file': filename, 'line': lineno, 'column': colno, 'description': '' if desc == 'None' else desc }
+        assm = ''
+        if traceAssumeMatch:
+          assm = str(traceAssumeMatch.group(6))
+        trace = { 'threadid': threadid,
+                  'file': filename,
+                  'line': lineno,
+                  'column': colno,
+                  'description': '' if desc == 'None' else desc,
+                  'assumption': assm }
         traces.append(trace)
       elif errorMatch:
         filename = str(errorMatch.group(1))
