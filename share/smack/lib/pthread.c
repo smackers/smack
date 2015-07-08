@@ -22,7 +22,7 @@ __SMACK_INIT(thread) {
 }
 
 pthread_t pthread_self(void) {
-  int tmp_tid = __SMACK_nondet();
+  int tmp_tid = __VERIFIER_nondet_int();
   __SMACK_code("call @ := corral_getThreadID();", tmp_tid);
 
   // Print actual tid to SMACK traces
@@ -32,14 +32,20 @@ pthread_t pthread_self(void) {
 }
 
 int pthread_join(pthread_t __th, void **__thread_return) {
+  pthread_t calling_tid = pthread_self();
+
   // Print the tid of the thread being joined to SMACK traces
-  void* joining_tid = (void*)__th;
+  int joining_tid = __th;
+
+  // Check for self-joining deadlock
+  if(calling_tid == __th)
+    return 35;    // This is EDEADLK
 
   // Wait for the thread to terminate
   __SMACK_code("assume $pthreadStatus[@][0] == $pthread_stopped;", __th);
 
   // Get the thread's return value
-  void* tmp_thread_return_pointer = (void*)__SMACK_nondet();
+  void* tmp_thread_return_pointer = (void*)__VERIFIER_nondet_long();
   __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
   *__thread_return = tmp_thread_return_pointer;
 
@@ -49,6 +55,12 @@ int pthread_join(pthread_t __th, void **__thread_return) {
   return 0;
 }
 
+// TODO: A terminating thread that DOESN'T call pthread_exit() should have
+//       an implicit call to pthread_exit().  This is not currently modeled.
+//       Further, a child thread's routine which uses `return` calls should
+//       have the returned value passed to this implicit call to pthread_exit().
+//       In other words, a `return` should pass its value to an implicit call to
+//       pthread_exit().
 void pthread_exit(void *retval) {
   pthread_t tid = pthread_self();
 
@@ -62,6 +74,7 @@ void pthread_exit(void *retval) {
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
   attr->type = PTHREAD_MUTEX_NORMAL;
+  return 0;
 }
 
 int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
@@ -166,6 +179,7 @@ int pthread_cond_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex) {
   //assume(__cond->cond == 1);
   //__cond->cond = 0;
   pthread_mutex_lock(__mutex);
+  return 0;
 }
 
 int pthread_cond_signal(pthread_cond_t *__cond) {
@@ -173,6 +187,7 @@ int pthread_cond_signal(pthread_cond_t *__cond) {
   //  due to possibility of spurious wakeup from OS
 
   //__cond->cond = 1;
+  return 0;
 }
 
 // NOTE: How to handle broadcast?  Technically, as is, all threads have
@@ -189,6 +204,7 @@ int pthread_cond_broadcast(pthread_cond_t *__cond) {
   //  due to possibility of spurious wakeup from OS
 
   //__cond->cond = 1;
+  return 0;
 }
 
 int pthread_cond_destroy(pthread_cond_t *__cond) {
@@ -203,17 +219,15 @@ void __call_wrapper(pthread_t *__restrict __newthread,
                     void *__restrict __arg) {
 
   pthread_t ctid = pthread_self();
+  // Wait for parent to set child's thread ID in original pthread_t struct
   assume(ctid == *__newthread);
-  
-  // I think Zvonimir proposed to just use ctid to index into $pthreadStatus
-  // This would work in most situations, HOWEVER, what if the parameter __arg
-  // points to __newthread?  Then, __start_routine() could modify this
-  // object before the parent thread sets __newthread to the ctid.
-  __SMACK_code("$pthreadStatus[@][0] := $pthread_waiting;", *__newthread);
 
-  __SMACK_code("$pthreadStatus[@][0] := $pthread_running;", *__newthread);
+  // Cycle through thread statuses properly, as thread is started, run,
+  // and stopped.
+  __SMACK_code("$pthreadStatus[@][0] := $pthread_waiting;", ctid);
+  __SMACK_code("$pthreadStatus[@][0] := $pthread_running;", ctid);
   __start_routine(__arg);
-  __SMACK_code("$pthreadStatus[@][0] := $pthread_stopped;", *__newthread);
+  __SMACK_code("$pthreadStatus[@][0] := $pthread_stopped;", ctid);
 }
 
 int pthread_create(pthread_t *__restrict __newthread,
@@ -221,11 +235,11 @@ int pthread_create(pthread_t *__restrict __newthread,
                    void *(*__start_routine) (void *),
                    void *__restrict __arg) {
 
-  pthread_t tmp = __SMACK_nondet();
+  pthread_t tmp = __VERIFIER_nondet_int();
 
   // Add unreachable C-level call to __call_wrapper, so llvm sees
   // the call to __call_wrapper and performs DSA on it.
-  int x = __SMACK_nondet();
+  int x = __VERIFIER_nondet_int();
   assume(x == 0);
   if(x) __call_wrapper(__newthread, __start_routine, __arg);
 
