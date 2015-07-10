@@ -779,9 +779,10 @@ ProcDecl* SmackRep::proc(llvm::Function* f) {
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v))
-    ? Expr::fn(opName("$fp2si", {f->getType(), v->getType()}), expr(v))
-    : expr(v);
+  return expr(v);
+  // (f && f->isVarArg() && isFloat(v))
+  //   ? Expr::fn(opName("$fp2si", {v->getType(), f->getType()}), expr(v))
+  //   : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
