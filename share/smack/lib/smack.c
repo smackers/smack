@@ -437,6 +437,8 @@ void __SMACK_decls() {
   D("function $si2fp.i8.float(i:i8) returns (float);");
   D("function $ui2fp.i8.float(i:i8) returns (float);");
 
+  D("function $fptrunc.float.float(f:float) returns (float);");
+  D("function $fpext.float.float(f:float) returns (float);");
   D("function $fp2si.float.bv128(f:float) returns (bv128);");
   D("function $fp2ui.float.bv128(f:float) returns (bv128);");
   D("function $si2fp.bv128.float(i:bv128) returns (float);");
