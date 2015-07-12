@@ -48,6 +48,7 @@ def inlined_procedures():
     '$free',
     '$memset',
     '$memcpy',
+    '__VERIFIER_'
   ]
 
 def validate_input_file(file):
@@ -248,6 +249,8 @@ def svcomp_frontend(args):
   """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
 
   name = os.path.splitext(os.path.basename(args.input_file))[0]
+
+  args.clang_options += " -DCUSTOM_VERIFIER_FUNCTIONS"
 
   if os.path.splitext(args.input_file)[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
