@@ -27,21 +27,22 @@
  *
  */
 
-#ifndef CUSTOM_VERIFIER_FUNCTIONS
 void __VERIFIER_assume(int x) {
   __SMACK_dummy(x); __SMACK_code("assume @ != $0;", x);
 }
+
+#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
   __SMACK_dummy(x); __SMACK_code("assert @ != $0;", x);
 }
 #endif
 
 void __VERIFIER_error(void) {
-  __VERIFIER_assert(0);
+  __SMACK_code("assert false;");
 }
 
 void exit(int x) {
-  __VERIFIER_assume(0);
+  __SMACK_code("assume false;");
 }
 
 // Apparently used in SVCCOMP benchmarks
