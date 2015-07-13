@@ -25,6 +25,17 @@ this file will write a file called "a.witchecked.Simple.xml" if it encounters an
 original output xml file called "a.Simple.xml".
 """
 
+def beforeTokenReplace(inputStr):
+  inputStr = inputStr.replace('SSLv3_server_data.ssl_accept = & ssl3_accept;','SSLv3_server_data.ssl_accept = +0;')
+  inputStr = inputStr.replace('void exit(int s)','void exitxxx(int s)')
+  inputStr = inputStr.replace('100000','10')
+  return inputStr
+
+def afterTokenReplace(token):
+  token = token.replace('sizeof\n(\nstruct\nwatchdog_info\n[\n1\n]\n)','sizeof\n(\nstruct\nwatchdog_info[\n\n1\n]\n)')
+  token = token.replace('\n__attribute__',' __attribute__\n')
+  return token
+
 if not 2 == len(sys.argv) or not os.path.isdir(sys.argv[1]):
     print('You suck')
     exit()
@@ -58,6 +69,7 @@ for outXml in outXmls:
     fileRoot = os.path.join(logFolder, runName)
     for run in root.findall('run'):
         sourcefile = run.get('name')
+        origsourcefile = os.path.join('data', sourcefile)
         # Get property file from input benchmark folder
         propfile = os.path.join(os.path.join('data', os.path.split(sourcefile)[0]), 'ALL.prp')
         # Now set sourcefile to where it WOULD be in output folders, 
@@ -65,6 +77,18 @@ for outXml in outXmls:
         sourcefile = os.path.join(fileRoot,sourcefile)
         basefile = os.path.splitext(sourcefile)[0]
         tokenizedInputFile = basefile + '.tokenized.c'
+        cleanedInputFile = basefile + '.clean.c'
+        # We need the original c input file here, to regenerate tokenized file
+        with open(origsourcefile, "r") as f:
+            cleanup = f.read()
+        cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
+        cleanup = beforeTokenReplace(cleanup)
+        with open(cleanedInputFile, 'w') as f:
+            f.write(cleanup)
+        output = subprocess.check_output(['tokenizer', cleanedInputFile])
+        with open(tokenizedInputFile, 'w') as f:
+            f.write(afterTokenReplace(output))
+        ### End regenerate tokenized input
         witnessfile = sourcefile + '.witness.graphml'
         witnesscheckOutput = sourcefile + '.witnessCheckOutput'
         categoryCol = run.find('./column[@title="category"]')
