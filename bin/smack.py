@@ -368,7 +368,7 @@ def verify_bpl(args):
       if args.language == 'svcomp':
         error = smackJsonToXmlGraph(smackdOutput(verifier_output))
       else:
-        error = error_trace(verifier_ouptut, args)
+        error = error_trace(verifier_output, args)
 
       if args.error_file:
         with open(args.error_file, 'w') as f:
