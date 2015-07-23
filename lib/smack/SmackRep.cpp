@@ -309,9 +309,12 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
 unsigned SmackRep::getRegion(const llvm::Value* v) {
   unsigned r;
 
-  for (r=0; r<memoryRegions.size(); ++r)
-    if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
-      break;
+  if (SmackOptions::NoMemoryRegionSplitting)
+    r = 0;
+  else
+    for (r=0; r<memoryRegions.size(); ++r)
+      if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
+        break;
 
   if (r == memoryRegions.size()) {
     llvm::Type* T = v->getType();

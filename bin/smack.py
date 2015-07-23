@@ -111,6 +111,9 @@ def arguments():
   translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
     type=str, help='save (intermediate) Boogie code to FILE')
 
+  translate_group.add_argument('--no-memory-splitting', action="store_true", default=False,
+    help='disable region-based memory splitting')
+
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
 
@@ -313,6 +316,7 @@ def llvm_to_bpl(args):
   if args.bit_precise: cmd += ['-bit-precise']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
+  if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   try_command(cmd)
 
 def procedure_annotation(name, args):
