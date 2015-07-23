@@ -28,6 +28,7 @@ def frontends():
     'i': clang_frontend,
     'cc': clang_frontend,
     'cpp': clang_frontend,
+    'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
     'bc': empty_frontend,
     'll': empty_frontend,
@@ -177,12 +178,12 @@ def timeout_killer(proc, timed_out):
     timed_out[0] = True
     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
-def try_command(cmd):
+def try_command(cmd, cwd=None):
   output = ""
   proc = None
   timer = None
   try:
-    proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     timed_out = [False]
     timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
@@ -244,6 +245,33 @@ def clang_frontend(args):
   try_command(compile_command + [smack_lib, '-o', smack_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
   try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
+
+def json_compilation_database_frontend(args):
+  """Generate an LLVM bitcode file from a JSON compilation database."""
+  output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
+  optimization_flags = re.compile(r"-O[1-9]\b")
+  bit_codes = []
+
+  with open(args.input_file) as f:
+    for cc in json.load(f):
+      out_file = output_flags.findall(cc['command'])[0] + '.bc'
+
+      # HACK to avoid duplicate linking
+      duplicate = False
+      for bc in bit_codes:
+        if os.path.basename(bc) == out_file:
+          duplicate = True
+      if duplicate:
+        continue
+
+      command = cc['command']
+      command = output_flags.sub(r"-o \1.bc", command)
+      command = optimization_flags.sub("-O0", command)
+      command = command + " -emit-llvm"
+      try_command(command.split(),cc['directory'])
+      bit_codes += [os.path.join(cc['directory'],out_file)]
+
+  try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
 
 def svcomp_frontend(args):
   """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
