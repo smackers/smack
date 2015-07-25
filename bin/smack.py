@@ -257,24 +257,19 @@ def json_compilation_database_frontend(args):
 
   with open(args.input_file) as f:
     for cc in json.load(f):
-      out_file = output_flags.findall(cc['command'])[0] + '.bc'
+      if 'objects' in cc:
+        # TODO what to do when there are multiple linkings?
+        bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
 
-      # HACK to avoid duplicate linking
-      duplicate = False
-      for bc in bit_codes:
-        if os.path.basename(bc) == out_file:
-          duplicate = True
-      if duplicate:
-        continue
-
-      command = cc['command']
-      command = output_flags.sub(r"-o \1.bc", command)
-      command = optimization_flags.sub("-O0", command)
-      command = command + " -emit-llvm"
-      try_command(command.split(),cc['directory'])
-      bit_codes += [os.path.join(cc['directory'],out_file)]
-
-  try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
+      else:
+        out_file = output_flags.findall(cc['command'])[0] + '.bc'
+        command = cc['command']
+        command = output_flags.sub(r"-o \1.bc", command)
+        command = optimization_flags.sub("-O0", command)
+        command = command + " -emit-llvm"
+        try_command(command.split(),cc['directory'])
+        bit_codes += [os.path.join(cc['directory'],out_file)]
 
 def svcomp_frontend(args):
   """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
