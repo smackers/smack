@@ -890,7 +890,9 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Pointer predicates" << endl;
-  const vector<string> predicates {"$eq", "$ne", "$sge", "$sgt", "$sle", "$slt"};
+  const vector<string> predicates {
+    "$eq", "$ne", "$ugt", "$uge", "$ult", "$ule", "$sgt", "$sge", "$slt", "$sle"
+  };
   for (auto pred : predicates) {
     s << Decl::function(indexedName(pred,{PTR_TYPE}),
       {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, intType(1),
