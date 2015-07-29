@@ -271,12 +271,12 @@ bool SmackRep::uniformMemoryAccesses() {
 }
 
 bool SmackRep::bytewiseAccess(const GlobalValue* V, unsigned offset) {
-  return SmackOptions::BitPrecise &&
+  return aliasAnalysis && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,offset));
 }
 
 bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
-  return SmackOptions::BitPrecise &&
+  return aliasAnalysis && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,F));
 }
 
@@ -320,11 +320,12 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
     llvm::Type* T = v->getType();
     while (T->isPointerTy()) T = T->getPointerElementType();
     memoryRegions.emplace_back(v,false,
-      aliasAnalysis->isSingletonGlobal(v) && T->isSingleValueType()
+      aliasAnalysis && aliasAnalysis->isSingletonGlobal(v) && T->isSingleValueType()
     );
   }
 
-  memoryRegions[r].isAllocated = memoryRegions[r].isAllocated || aliasAnalysis->isAlloced(v);
+  memoryRegions[r].isAllocated = memoryRegions[r].isAllocated ||
+    aliasAnalysis && aliasAnalysis->isAlloced(v);
   return r;
 }
 

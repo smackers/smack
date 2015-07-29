@@ -24,7 +24,7 @@ using llvm::Regex;
 using llvm::SmallVector;
 using llvm::StringRef;
 using namespace std;
-  
+
 class SmackRep {
 public:
   static const string BOOL_TYPE;
@@ -74,17 +74,16 @@ protected:
   long externsBottom;
   vector<const Stmt*> staticInits;
   vector<const Stmt*> initFuncs;
-  
+
   unsigned uniqueFpNum;
 
 public:
-  SmackRep(DSAAliasAnalysis* aa, Naming& N, Program& P)
-    : aliasAnalysis(aa), naming(N), program(P),
-      targetData(aa->getDataLayout()), globalsBottom(0), externsBottom(-32768) {
+  SmackRep(const DataLayout* L, DSAAliasAnalysis* aa, Naming& N, Program& P)
+    : targetData(L), aliasAnalysis(aa), naming(N), program(P),
+      globalsBottom(0), externsBottom(-32768) {
     uniqueFpNum = 0;
     ptrSizeInBits = targetData->getPointerSizeInBits();
   }
-  DSAAliasAnalysis* getAliasAnalysis() { return aliasAnalysis; }
   Program& getProgram() { return program; }
 
 private:
@@ -100,7 +99,7 @@ private:
   const Expr* pa(const Expr* base, unsigned long offset);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
   const Expr* pa(const Expr* base, const Expr* offset);
-  
+
   const Expr* bitConversion(const Expr* e, bool src, bool dst);
   const Expr* pointerToInteger(const Expr* e, unsigned width);
   const Expr* integerToPointer(const Expr* e, unsigned width);
@@ -144,7 +143,7 @@ public:
 
   string type(const llvm::Type* t);
   string type(const llvm::Value* v);
-  
+
   const Expr* mem(const llvm::Value* v);
 
   const Expr* lit(const llvm::Value* v);
@@ -237,4 +236,3 @@ public:
 }
 
 #endif // SMACKREP_H
-

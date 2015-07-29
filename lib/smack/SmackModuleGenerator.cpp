@@ -14,9 +14,13 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   Naming naming;
-  SmackRep rep(&getAnalysis<DSAAliasAnalysis>(), naming, program);
+  SmackRep rep(
+    m.getDataLayout(),
+    SmackOptions::NoMemoryRegionSplitting ? NULL : &getAnalysis<DSAAliasAnalysis>(),
+    naming, program);
+
   rep.collectRegions(m);
-  
+
   DEBUG(errs() << "Analyzing globals...\n");
 
   for (llvm::Module::const_global_iterator
@@ -84,25 +88,24 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   // MODIFIES
   vector<ProcDecl*> procs = program.getProcs();
   for (unsigned i=0; i<procs.size(); i++) {
-    
+
     if (procs[i]->hasBody()) {
       procs[i]->addMods(rep.getModifies());
-    
+
     } else {
       vector< pair<string,string> > rets = procs[i]->getRets();
       for (vector< pair<string,string> >::iterator r = rets.begin();
           r != rets.end(); ++r) {
-        
+
         // TODO should only do this for returned POINTERS.
         // procs[i]->addEnsures(rep.declareIsExternal(Expr::id(r->first)));
       }
     }
   }
-  
-  // NOTE we must do this after instruction generation, since we would not 
+
+  // NOTE we must do this after instruction generation, since we would not
   // otherwise know how many regions to declare.
   program.appendPrelude(rep.getPrelude());
 }
 
 } // namespace smack
-
