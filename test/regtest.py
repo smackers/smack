@@ -239,5 +239,10 @@ def main():
     logging.info(' TIMEOUT count: %d' % timeouts)
     logging.info(' UNKNOWN count: %d' % unknowns)
 
+    # if there are any failed tests or tests that timed out, set the system
+    # exit code to a failure status
+    if timeouts > 0 or failed > 0:
+        sys.exit(1)
+
 if __name__=="__main__":
     main()
