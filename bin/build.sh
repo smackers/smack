@@ -386,6 +386,9 @@ then
 
   cd ${SMACK_DIR}/test
   ./regtest.py
+  res=$?
 
   puts "Regression tests complete"
 fi
+
+exit $res
