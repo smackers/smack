@@ -38,44 +38,45 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
     // if (!func->isVarArg())
     program.addDecls(rep.globalDecl(func));
 
-    ProcDecl* proc = rep.proc(func);
-    if (!func->isDeclaration() && proc->getName() != "__SMACK_decls")
-      program.addDecl(proc);
-
     // TODO this will cover the cases of malloc, memcpy, memset, …
     if (func->isDeclaration()) {
       program.addDecls(rep.decl(func));
       continue;
     }
 
-    if (!func->isDeclaration() && !func->empty()
-        && !func->getEntryBlock().empty()) {
+    vector<ProcDecl*> procs = rep.proc(func);
+    assert(procs.size() > 0);
+    if (procs[0]->getName() != "__SMACK_decls")
+      program.addDecls(procs);
+
+    if (!func->empty() && !func->getEntryBlock().empty()) {
 
       DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
 
-      Slices slices;
-      ContractsExtractor ce(rep, *proc, naming, slices);
-      SmackInstGenerator igen(rep, *proc, naming, slices);
+      for (vector<ProcDecl*>::iterator proc = procs.begin(); proc != procs.end(); ++proc) {
+        Slices slices;
+        ContractsExtractor ce(rep, **proc, naming, slices);
+        SmackInstGenerator igen(rep, **proc, naming, slices);
 
-      naming.enter();
-      DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << " from ");
-      DEBUG(errs() << *func << "\n");
-      ce.visit(func);
-      DEBUG(errs() << "\n");
+        naming.enter();
+        DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << " from ");
+        DEBUG(errs() << *func << "\n");
+        ce.visit(func);
+        DEBUG(errs() << "\n");
 
-      DEBUG(errs() << "Generating body for " << naming.get(*func) << " from ");
-      DEBUG(errs() << *func << "\n");
-      igen.visit(func);
-      DEBUG(errs() << "\n");
-      naming.leave();
+        DEBUG(errs() << "Generating body for " << naming.get(*func) << " from ");
+        DEBUG(errs() << *func << "\n");
+        igen.visit(func);
+        DEBUG(errs() << "\n");
+        naming.leave();
 
-      // First execute static initializers, in the main procedure.
-      if (naming.get(*func) == "main") {
-        proc->insert(Stmt::call(SmackRep::INIT_FUNCS));
-        proc->insert(Stmt::call(SmackRep::STATIC_INIT));
-      } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_")
-        rep.addInitFunc(func);
-
+        // First execute static initializers, in the main procedure.
+        if (naming.get(*func) == "main") {
+          (*proc)->insert(Stmt::call(SmackRep::INIT_FUNCS));
+          (*proc)->insert(Stmt::call(SmackRep::STATIC_INIT));
+        } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_")
+          rep.addInitFunc(func);
+      }
       DEBUG(errs() << "Finished analyzing function: " << naming.get(*func) << "\n\n");
     }
 

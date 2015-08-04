@@ -19,6 +19,9 @@ extern "C" {
 #define __builtin_va_start __builtinx_va_start
 #define __builtin_object_size __builtinx_object_size
 
+// For handling of va_start macro
+void __builtinx_va_start(char*,char*);
+
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);

@@ -175,7 +175,7 @@ public:
   const Stmt* store(const llvm::StoreInst& SI);
 
   vector<Decl*> decl(llvm::Function* F);
-  ProcDecl* proc(llvm::Function* f);
+  vector<ProcDecl*> proc(llvm::Function* F);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
