@@ -231,36 +231,46 @@ def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
   shutil.copy(args.input_file, args.bc_file)
 
+def smack_root():
+  return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+def smack_headers():
+  return os.path.join(smack_root(), 'share', 'smack', 'include')
+
+def smack_lib():
+  return os.path.join(smack_root(), 'share', 'smack', 'lib', 'smack.c')
+
+def default_clang_compile_command(args):
+  cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
+  cmd += args.clang_options.split()
+  cmd += ['-I' + smack_headers(), '-include' + 'smack.h']
+  cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
+  return cmd
+
 def clang_frontend(args):
   """Generate an LLVM bitcode file from C-language source(s)."""
 
-  smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-  smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
-  smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
+  compile_command = default_clang_compile_command(args)
   smack_bc = temporary_file('smack', '.bc', args)
-
-  compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
-  compile_command += args.clang_options.split()
-  compile_command += ['-I' + smack_headers, '-include' + 'smack.h']
-  compile_command += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
-  link_command = ['llvm-link']
-
-  try_command(compile_command + [smack_lib, '-o', smack_bc])
+  try_command(compile_command + [smack_lib(), '-o', smack_bc])
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
-  try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
+  try_command(['llvm-link', args.bc_file, smack_bc, '-o', args.bc_file])
 
 def json_compilation_database_frontend(args):
   """Generate an LLVM bitcode file from a JSON compilation database."""
+
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
-  bit_codes = []
+  smack_bc = temporary_file('smack', '.bc', args)
+
+  try_command(default_clang_compile_command(args) + [smack_lib(), '-o', smack_bc])
 
   with open(args.input_file) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
         bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
-        try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + [smack_bc])
 
       else:
         out_file = output_flags.findall(cc['command'])[0] + '.bc'
@@ -269,7 +279,6 @@ def json_compilation_database_frontend(args):
         command = optimization_flags.sub("-O0", command)
         command = command + " -emit-llvm"
         try_command(command.split(),cc['directory'])
-        bit_codes += [os.path.join(cc['directory'],out_file)]
 
 def svcomp_frontend(args):
   """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""

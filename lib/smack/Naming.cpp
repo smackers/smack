@@ -21,10 +21,10 @@ const string Naming::PTR_VAR = "$p";
 const string Naming::UNDEF_SYM = "$u";
 
 Regex Naming::BPL_KW(
-  "^(bool|int|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
+  "^(bool|int|real|false|true|old|forall|exists|requires|modifies|ensures|invariant|free"
   "|unique|finite|complete|type|const|function|axiom|var|procedure"
   "|implementation|where|returns|assume|assert|havoc|call|return|while"
-  "|break|goto|if|else|div|mod|yield|par|async)$");
+  "|break|goto|if|else|div|mod|yield|par|async|lambda)$");
 
 Regex Naming::SMACK_NAME(".*__SMACK_.*");
 
@@ -94,7 +94,7 @@ string Naming::get(const llvm::Value& V) {
   } else {
     name = "";
   }
-  
+
   if (nameStack.size() > 0)
     nameStack.top()[&V] = name;
   return name;
