@@ -765,21 +765,19 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
 
 vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
   vector<ProcDecl*> procs;
-
   vector< pair<string,string> > params, rets;
 
-  unsigned i = 0;
-  for (llvm::Function::arg_iterator
-       arg = F->arg_begin(), e = F->arg_end(); arg != e; ++arg, ++i) {
+  FunctionType* T = F->getFunctionType();
+  
+  for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A) {
     string name;
-    if (arg->hasName()) {
-      name = naming.get(*arg);
-    } else {
-      name = indexedName("p",{i});
-      arg->setName(name);
+    if (A->hasName())
+      name = naming.get(*A);
+    else {
+      name = indexedName("p",{A->getArgNo()});
+      A->setName(name);
     }
-
-    params.push_back({name, type(arg->getType())});
+    params.push_back({name, type(A->getType())});
   }
 
   if (!F->getReturnType()->isVoidTy())
@@ -787,17 +785,22 @@ vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
 
   if (!F->isVarArg() || F->use_empty()) {
     procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, naming.get(*F), params, rets)));
+
   } else {
     // in case this is a vararg function
-    for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U) {
-      vector< pair<string,string> > varArgParams(params);
+    for (auto U : F->users()) {
+      CallInst* C = dyn_cast<CallInst>(U);
 
-      for (; i < U->getNumOperands()-1; i++) {
+      if (!C || C->getCalledFunction() != F)
+        continue;
+      
+      vector< pair<string,string> > varArgParams(params);
+      for (unsigned i = T->getNumParams(); i < C->getNumArgOperands(); i++) {
         const llvm::Value* V = U->getOperand(i);
         varArgParams.push_back({indexedName("p",{i}),type(V->getType())});
       }
 
-      procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, procName(**U,F), varArgParams, rets)));
+      procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, procName(*U,F), varArgParams, rets)));
     }
   }
   return procs;
