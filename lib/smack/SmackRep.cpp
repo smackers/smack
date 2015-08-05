@@ -665,9 +665,10 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
 vector<Decl*> SmackRep::decl(llvm::Function* F) {
   vector<Decl*> decls;
   string name = naming.get(*F);
+  for (auto U : F->users()) {
+    assert( isa<CallInst>(U) && "Expected call instruction." );
 
-  for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
-    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U)) {
+    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(U)) {
       llvm::FunctionType* T = F->getFunctionType();
       llvm::Type
         *dst = T->getParamType(0),
@@ -697,7 +698,7 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
       }));
       decls.push_back(memcpyProc(r1,r2));
 
-    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U)) {
+    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(U)) {
       llvm::FunctionType* T = F->getFunctionType();
       llvm::Type
         *dst = T->getParamType(0),
@@ -742,15 +743,23 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
     } else {
       Naming N;
       vector< pair<string,string> > params, rets;
-      for (unsigned i = 0; i < U->getNumOperands()-1; i++) {
-        const llvm::Value* V = U->getOperand(i);
-        params.push_back({N.freshVarName(*V),type(V->getType())});
-      }
+      CallInst* C = dyn_cast<CallInst>(U);
+
+      if (C->getCalledFunction() == F)
+        // For uses which are actual calls to this function
+        for (const Value* V : C->arg_operands())
+          params.push_back({N.freshVarName(*V),type(V->getType())});
+      else
+        // For uses which do not actually call this function
+        // NOTE: use indicates that this function might be called indirectly
+        for (unsigned i = 0; i < F->getFunctionType()->getNumParams(); i++)
+          params.push_back({N.freshVarName(*F),type(F->getFunctionType()->getParamType(i))});
+
       if (!F->getReturnType()->isVoidTy())
         rets.push_back({"r", type(F->getReturnType())});
-      decls.push_back(Decl::procedure(program, procName(**U,F), params, rets));
+      decls.push_back(Decl::procedure(program, procName(*U,F), params, rets));
     }
-
+  }
   return decls;
 }
 
@@ -779,7 +788,7 @@ vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
   if (!F->isVarArg() || F->use_empty()) {
     procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, naming.get(*F), params, rets)));
   } else {
-    // in case this is a vararg function 
+    // in case this is a vararg function
     for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U) {
       vector< pair<string,string> > varArgParams(params);
 
