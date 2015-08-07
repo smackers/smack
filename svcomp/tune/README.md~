@@ -1,0 +1,56 @@
+# SMACKTune
+An automatic parameter tuning framework for SMACK
+
+## Installation
+
+To install, simply run `./setup.sh`.  This installs ruby, downloads the
+paramils tool, and copies this tool, along with the paramils configuration
+for SMACK to ../../../SMACKTune, by default.
+
+## ParamILS Scenario Configuration
+
+This section cant be written yet since I don't know exactly how SMACKTune will
+ultimately be organized.
+
+## Establishing Performance Baselines
+
+Our configuration of paramils optimizes the geometric mean of speedups for 
+defining the "best" parameter configuration.  To accomodate this, it is
+necessary to collect run times of benchmarks on which tuning will be done,
+to establish a baseline run time for each benchmark.  (Consider two benchmarks.
+One takes 30 seconds to verify, the other 90 seconds, using the default SMACK
+paramaters.  If we used strict runtime instead of speedup, it wouldn't make
+sense to compare runtimes of the two benchmarks, since one is inherently more
+complex -- trying different parameters for the 90 second benchmark is still
+likely to take longer than the 30 second benchmark, and so a strict runtime
+comparison will look like an inferior parameter selection as compared to the 30
+second benchmark, even though the 90 second benchmark may finish in 70 seconds
+with the new parameter selection - obviously an improvement).
+
+To establish this baseline for each benchmark in a configuration set, it is
+necessary to run SMACK with its default parameters on each benchmark.  To do
+this, simply run `<command here>`.  This will also generate a paramils
+"instance file" for the input benchmark set.  This file contains each benchmark
+file name, along with its baseline execution time.  This instance file
+generation should be performed any time SMACKTune is deployed to a new machine,
+to make sure that the baselines are calibrated for that specific machine's
+hardware.
+
+## Tuning Parameters
+
+Once an instance file has been generated for a scenario, tuning can begin.  To 
+begin the tuning process, simply run `run.py <scenarioFolder> <threadCount>`.
+This will launch paramILS `<threadCount>` times.  Each concurrent run is an
+independent tuning of SMACK -- because paramILS does a local search, it is 
+possible that each concurrent run will return different optimum input
+parameters.  Ideally, convergence on a single set of input parameters will be
+seen across the set of multiple concurrent runs.
+
+All results for a call to `run.py` will be placed in a folder called
+`results-<scenarioFolder>-<timestamp>`, where `<scenarioFolder>` is the same
+folder identified by the input parameter to `run.py`.
+
+## Selecting Best Parameters
+
+Something about finding convergence of multiple runs, and running these on
+an additional set of benchmarks.

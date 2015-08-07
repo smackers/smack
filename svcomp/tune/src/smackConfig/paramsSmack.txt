@@ -1,0 +1,31 @@
+-unroll {1,2,3,4,8,12,16,32} [12]
+-mem-mod {no-reuse,no-reuse-impls,reuse} [no-reuse-impls]
+-verifier {corral,boogie} [corral]
+CORRAL__bool__staticInlining {0,1} [0]
+CORRAL__bool__trackAllVars {0,1} [0]
+Z3__int__smt.arith.branch_cut_ratio {1,2,3,4} [2]
+Z3__bool__smt.arith.euclidean_solver {0,1} [0]
+Z3__bool__smt.arith.ignore_int {0,1} [0]
+Z3__bool__smt.arith.int_eq_branch {0,1} [0]
+Z3__bool__smt.arith.nl {0,1} [1]
+Z3__bool__smt.arith.nl.branching {0,1} [1]
+Z3__bool__smt.arith.nl.gb {0,1} [1]
+Z3__bool__smt.arith.propagate_eqs {0,1} [1]
+Z3__bool__smt.arith.random_initial_value {0,1} [0]
+Z3__bool__smt.array.extensional {0,1} [1]
+Z3__bool__smt.array.weak {0,1} [0]
+Z3__bool__smt.auto_config {0,1} [1]
+Z3__bool__smt.delay_units {0,1} [0]
+Z3__bool__smt.ematching {0,1} [1]
+Z3__bool__smt.macro_finder {0,1} [0]
+Z3__bool__smt.mbqi {0,1} [1]
+Z3__bool__smt.mbqi.trace {0,1} [0]
+Z3__bool__smt.pull_nested_quantifiers {0,1} [0]
+Z3__bool__smt.qi.profile {0,1} [0]
+Z3__bool__smt.refine_inj_axioms {0,1} [1]
+
+
+Conditionals:
+CORRAL__bool__staticInlining|-verifier in {corral} #Don't use staticInlining for boogie
+CORRAL__bool__trackAllVars|-verifier in {corral}   #Don't use trackAllVars for boogie
+
