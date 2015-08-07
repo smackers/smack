@@ -175,6 +175,7 @@ public:
   const Stmt* store(const llvm::StoreInst& SI);
 
   vector<Decl*> decl(llvm::Function* F);
+  Decl* decl(llvm::Function* F, llvm::CallInst* C);
   vector<ProcDecl*> proc(llvm::Function* F);
 
   // used in Slicing

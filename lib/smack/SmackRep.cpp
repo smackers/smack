@@ -662,13 +662,34 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
 }
 
+Decl* SmackRep::decl(Function* F, CallInst *C) {
+  Naming N;
+  vector< pair<string,string> > params, rets;
+
+  assert (F && "Unknown function call.");
+  
+  if (C)
+    for (const Value* V : C->arg_operands())
+      params.push_back({N.freshVarName(*V),type(V->getType())});
+
+  else
+    for (unsigned i = 0; i < F->getFunctionType()->getNumParams(); i++)
+      params.push_back({
+        N.freshVarName(*F),
+        type(F->getFunctionType()->getParamType(i))
+      });
+
+  if (!F->getReturnType()->isVoidTy())
+    rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
+
+  return Decl::procedure(program, procName(*C,F), params, rets);
+}
+
 vector<Decl*> SmackRep::decl(llvm::Function* F) {
   vector<Decl*> decls;
   string name = naming.get(*F);
   for (auto U : F->users()) {
-    if (!isa<CallInst>(U))
-      continue;
-    
+
     if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(U)) {
       llvm::FunctionType* T = F->getFunctionType();
       llvm::Type
@@ -741,24 +762,25 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         Block::block("", { Stmt::call("$free", {Expr::id("n")}) })
       }));
 
-    } else {
-      Naming N;
-      vector< pair<string,string> > params, rets;
-      CallInst* C = dyn_cast<CallInst>(U);
+    } else if (auto C = dyn_cast<CallInst>(U)) {
 
+      // NOTE: it could be that F is used by a call to another function.
       if (C->getCalledFunction() == F)
-        // For uses which are actual calls to this function
-        for (const Value* V : C->arg_operands())
-          params.push_back({N.freshVarName(*V),type(V->getType())});
+        decls.push_back(decl(F,C));
       else
-        // For uses which do not actually call this function
-        // NOTE: use indicates that this function might be called indirectly
-        for (unsigned i = 0; i < F->getFunctionType()->getNumParams(); i++)
-          params.push_back({N.freshVarName(*F),type(F->getFunctionType()->getParamType(i))});
+        decls.push_back(decl(F,NULL));
 
-      if (!F->getReturnType()->isVoidTy())
-        rets.push_back({"r", type(F->getReturnType())});
-      decls.push_back(Decl::procedure(program, procName(*U,F), params, rets));
+    } else if (auto CE = dyn_cast<ConstantExpr>(U)) {
+      assert (CE->isCast() && "Expected bitcast.");
+      for (auto C : CE->users()) {
+        decls.push_back(decl(F,dyn_cast<CallInst>(C)));
+
+        // NOTE: each use ought to have the same type anyways
+        break;
+      }
+
+    } else {
+      decls.push_back(decl(F,NULL));
     }
   }
   return decls;
