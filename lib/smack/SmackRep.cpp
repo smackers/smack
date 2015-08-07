@@ -666,8 +666,9 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
   vector<Decl*> decls;
   string name = naming.get(*F);
   for (auto U : F->users()) {
-    assert( isa<CallInst>(U) && "Expected call instruction." );
-
+    if (!isa<CallInst>(U))
+      continue;
+    
     if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(U)) {
       llvm::FunctionType* T = F->getFunctionType();
       llvm::Type
@@ -768,7 +769,7 @@ vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
   vector< pair<string,string> > params, rets;
 
   FunctionType* T = F->getFunctionType();
-  
+
   for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A) {
     string name;
     if (A->hasName())
@@ -793,7 +794,7 @@ vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
 
       if (!C || C->getCalledFunction() != F)
         continue;
-      
+
       vector< pair<string,string> > varArgParams(params);
       for (unsigned i = T->getNumParams(); i < C->getNumArgOperands(); i++) {
         const llvm::Value* V = U->getOperand(i);

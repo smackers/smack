@@ -26,13 +26,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   for (llvm::Module::const_global_iterator
        x = m.global_begin(), e = m.global_end(); x != e; ++x)
     program.addDecls(rep.globalDecl(x));
-  
+
   program.addDecl(rep.getStaticInit());
 
   DEBUG(errs() << "Analyzing functions...\n");
 
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
+
+    DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
 
     // TODO: Implement function pointers of vararg functions properly
     // if (!func->isVarArg())
@@ -51,7 +53,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
     if (!func->empty() && !func->getEntryBlock().empty()) {
 
-      DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
+      DEBUG(errs() << "Analyzing function body: " << naming.get(*func) << "\n");
 
       for (vector<ProcDecl*>::iterator proc = procs.begin(); proc != procs.end(); ++proc) {
         Slices slices;
