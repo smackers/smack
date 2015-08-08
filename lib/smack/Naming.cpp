@@ -54,24 +54,15 @@ string Naming::escape(string s) {
   return Str;
 }
 
-void Naming::enter() {
-  NameMap N;
-  nameStack.push(N);
-}
-
-void Naming::leave() {
-  assert(nameStack.size() > 0 && "Name stack should not be empty.");
-  nameStack.pop();
-  if (nameStack.size() == 0) {
-    varNum = 0;
-    blockNum = 0;
-  }
+void Naming::reset() {
+  blockNum = 0;
+  varNum = 0;
 }
 
 string Naming::get(const llvm::Value& V) {
 
-  if (nameStack.size() > 0 && nameStack.top().count(&V))
-    return nameStack.top()[&V];
+  if (names.count(&V))
+    return names[&V];
 
   string name;
 
@@ -80,23 +71,27 @@ string Naming::get(const llvm::Value& V) {
     if (isBplKeyword(name))
       name = name + "_";
 
+  } else if (llvm::isa<llvm::GlobalValue>(&V)) {
+    // XXX is this a problem?
+    assert( false && "Unexpected unnamed global vlaue." );
+
   } else if (llvm::isa<llvm::BasicBlock>(&V)) {
-    assert(nameStack.size() > 0 && "Name stack should not be empty.");
     name = freshBlockName();
 
   } else if (llvm::isa<llvm::UndefValue>(&V)) {
-    return freshVarName(V);
+    name = freshUndefName();
 
   } else if (llvm::isa<llvm::Instruction>(&V)) {
-    assert(nameStack.size() > 0 && "Name stack should not be empty.");
+    name = freshVarName(V);
+
+  } else if (llvm::isa<llvm::Argument>(&V)) {
     name = freshVarName(V);
 
   } else {
     name = "";
   }
 
-  if (nameStack.size() > 0)
-    nameStack.top()[&V] = name;
+  names[&V] = name;
   return name;
 }
 
@@ -106,13 +101,16 @@ string Naming::freshBlockName() {
   return s.str();
 }
 
+string Naming::freshUndefName() {
+  stringstream s;
+  s << UNDEF_SYM << undefNum++;
+  return s.str();
+}
+
 string Naming::freshVarName(const llvm::Value& V) {
   stringstream s;
 
-  if (llvm::isa<llvm::UndefValue>(&V))
-    s << UNDEF_SYM;
-
-  else if (V.getType()->isFloatingPointTy())
+  if (V.getType()->isFloatingPointTy())
     s << FLOAT_VAR;
 
   else if (V.getType()->isIntegerTy())

@@ -34,6 +34,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
 
+    // Reset the counters for per-function names     
+    naming.reset();
+
     DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
 
     // TODO: Implement function pointers of vararg functions properly
@@ -60,7 +63,6 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
         ContractsExtractor ce(rep, **proc, naming, slices);
         SmackInstGenerator igen(rep, **proc, naming, slices);
 
-        naming.enter();
         DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << " from ");
         DEBUG(errs() << *func << "\n");
         ce.visit(func);
@@ -70,7 +72,6 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
         DEBUG(errs() << *func << "\n");
         igen.visit(func);
         DEBUG(errs() << "\n");
-        naming.leave();
 
         // First execute static initializers, in the main procedure.
         if (naming.get(*func) == "main") {

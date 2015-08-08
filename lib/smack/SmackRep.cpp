@@ -663,22 +663,18 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
 }
 
 Decl* SmackRep::decl(Function* F, CallInst *C) {
-  Naming N;
   vector< pair<string,string> > params, rets;
 
   assert (F && "Unknown function call.");
-  
+
   if (C)
     for (const Value* V : C->arg_operands())
-      params.push_back({N.freshVarName(*V),type(V->getType())});
+      params.push_back({naming.freshVarName(*V),type(V->getType())});
 
   else
-    for (unsigned i = 0; i < F->getFunctionType()->getNumParams(); i++)
-      params.push_back({
-        N.freshVarName(*F),
-        type(F->getFunctionType()->getParamType(i))
-      });
-
+    for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A)
+      params.push_back({naming.get(*A), type(A->getType())});
+    
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
@@ -793,14 +789,7 @@ vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
   FunctionType* T = F->getFunctionType();
 
   for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A) {
-    string name;
-    if (A->hasName())
-      name = naming.get(*A);
-    else {
-      name = indexedName("p",{A->getArgNo()});
-      A->setName(name);
-    }
-    params.push_back({name, type(A->getType())});
+    params.push_back({naming.get(*A), type(A->getType())});
   }
 
   if (!F->getReturnType()->isVoidTy())

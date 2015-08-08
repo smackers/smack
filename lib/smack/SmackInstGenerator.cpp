@@ -20,7 +20,7 @@ namespace smack {
 
 using llvm::errs;
 using namespace std;
-  
+
 const bool CODE_WARN = true;
 const bool SHOW_ORIG = false;
 
@@ -250,7 +250,7 @@ void SmackInstGenerator::visitResumeInst(llvm::ResumeInst& ri) {
 
 void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
   processInstruction(ii);
-  
+
   emit(Stmt::assume(Expr::lit(false)));
 }
 
@@ -378,7 +378,7 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
   processInstruction(i);
   const Expr* res = rep.expr(&i);
   const Expr* mem = rep.mem(i.getPointerOperand());
-  const Expr* val = rep.expr(i.getValOperand());  
+  const Expr* val = rep.expr(i.getValOperand());
   emit(Stmt::assign(res,mem));
   emit(Stmt::assign(mem,
     i.getOperation() == AtomicRMWInst::Xchg
@@ -432,7 +432,7 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
-  
+
   llvm::Function* f = ci.getCalledFunction();
   string name = f && f->hasName() ? f->getName().str() : "";
 
