@@ -66,6 +66,11 @@ protected:
       isAllocated(a), isSingletonGlobal(s) {
       representatives.insert(r);
     }
+    void unifyWith(Region r) {
+      representatives.insert(r.representatives.begin(), r.representatives.end());
+      isAllocated = isAllocated || r.isAllocated;
+      assert(isSingletonGlobal == r.isSingletonGlobal);
+    }
   };
 
   vector<Region> memoryRegions;

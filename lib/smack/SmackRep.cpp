@@ -308,6 +308,7 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
   unsigned mr;
+  unsigned firstMR = UINT_MAX;
   set<const llvm::Value*>::iterator r;
 
   if (SmackOptions::NoMemoryRegionSplitting)
@@ -334,12 +335,18 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
           assert(false && "Region type should be pointer.");
       }
       if (r != memoryRegions[mr].representatives.end()) {
-        memoryRegions[mr].representatives.insert(v);
-        break;
+        if (firstMR == UINT_MAX) {
+          firstMR = mr;
+          memoryRegions[firstMR].representatives.insert(v);
+        } else {
+          memoryRegions[firstMR].unifyWith(memoryRegions[mr]);
+          memoryRegions.erase(memoryRegions.begin() + mr);
+        }
       }
     }
 
-  if (mr == memoryRegions.size()) {
+  if (firstMR == UINT_MAX) {
+    firstMR = mr;
     llvm::Type* T = v->getType();
     while (T->isPointerTy()) T = T->getPointerElementType();
     memoryRegions.emplace_back(v,false,
@@ -347,9 +354,9 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
     );
   }
 
-  memoryRegions[mr].isAllocated = memoryRegions[mr].isAllocated ||
+  memoryRegions[firstMR].isAllocated = memoryRegions[firstMR].isAllocated ||
     (aliasAnalysis && aliasAnalysis->isAlloced(v));
-  return mr;
+  return firstMR;
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
