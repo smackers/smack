@@ -312,9 +312,25 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
   if (SmackOptions::NoMemoryRegionSplitting)
     r = 0;
   else
-    for (r=0; r<memoryRegions.size(); ++r)
-      if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
-        break;
+    for (r=0; r<memoryRegions.size(); ++r) {
+      if (llvm::PointerType* vType = llvm::dyn_cast<llvm::PointerType>(v->getType()))
+        if (llvm::PointerType* rType = llvm::dyn_cast<llvm::PointerType>(memoryRegions[r].representative->getType())) {
+          llvm::Type* vPointedType = vType->getTypeAtIndex(0u);
+          llvm::Type* rPointedType = rType->getTypeAtIndex(0u);
+
+          if (vPointedType->isSized() && rPointedType->isSized()) {
+            uint64_t vSize = targetData->getTypeStoreSize(vPointedType);
+            uint64_t rSize = targetData->getTypeStoreSize(rPointedType);
+            if (!aliasAnalysis->isNoAlias(v, vSize, memoryRegions[r].representative, rSize))
+              break;
+          } else
+            if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
+              break;
+        } else
+          assert(false && "Region type should be pointer.");
+      else
+        assert(false && "Region type should be pointer.");
+    }
 
   if (r == memoryRegions.size()) {
     llvm::Type* T = v->getType();
