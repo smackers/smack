@@ -43,6 +43,7 @@ void __VERIFIER_error(void) {
 
 void exit(int x) {
   __SMACK_code("assume false;");
+  while(1);
 }
 
 // Apparently used in SVCCOMP benchmarks
