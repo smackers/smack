@@ -59,11 +59,13 @@ protected:
   vector<string> bplGlobals;
 
   struct Region {
-    const llvm::Value* representative;
+    set<const llvm::Value*> representatives;
     bool isAllocated;
     bool isSingletonGlobal;
     Region(const llvm::Value* r, bool a, bool s) :
-      representative(r), isAllocated(a), isSingletonGlobal(s) {}
+      isAllocated(a), isSingletonGlobal(s) {
+      representatives.insert(r);
+    }
   };
 
   vector<Region> memoryRegions;
