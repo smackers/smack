@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+import sys
+import time
+import subprocess
+import traceback
 sys.dont_write_bytecode = True # prevent creation of .pyc files
 
 #Args Passed by ParamILS:
@@ -25,16 +30,16 @@ class ToolRun:
     ### Takes argv array passed during paramils call to tool
     ### Parses these arguments, creating a "ToolRun" for the tool
     ###
-    def __init__(self, toolArgs)
+    def __init__(self, toolArgs):
         self.inputFile    = toolArgs[1]
         self.rest         = toolArgs[2]
         self.cutoffTime   = int(float(toolArgs[3]))
         self.cutoffLength = int(float(toolArgs[4]))
         self.seed         = int(float(toolArgs[5]))
         self.rawArgs      = toolArgs[6:]
-        self.preparedArgs = self.prepareArgs(self.inputFile, self.rest,
-                                             self.cutoffTime,self.cutoffLength,
-                                             self.seed, self.rawArgs)
+        self.preparedArgs = self.prepareCmd(self.inputFile, self.rest,
+                                            self.cutoffTime,self.cutoffLength,
+                                            self.seed, self.rawArgs)
 
     ### Child class must define
     ### Prepares cmd arglist for python's subprocess module
@@ -49,10 +54,10 @@ class ToolRun:
     ### Child class must define
     ### Parses the output returned from the tool
     ### Must return "CORRECT", "WRONG", or "TIMEOUT"
-    def parseOutput(self, inputFilename, output):
+    def parseOutput(self, inputFile, output):
         raise NotImplementedError("Must Implement This Method")
     
-    ### Calls the child class's implementation of execute(),
+    ### Calls the child class's implementation of executeRun(),
     ### and times the execution.
     ### Then calls child class's parseOutput()
     ###
@@ -60,17 +65,19 @@ class ToolRun:
     ### Returns a list of six items, 
     def executeRun(self):
         startTime = time.time()
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(self.preparedArgs,
+                             stdout=subprocess.PIPE, 
                              stderr=subprocess.PIPE)
         out, err  = p.communicate()
         endTime = time.time()
         self.output = (out+err).decode('utf-8')
         self.runtime = endTime - startTime
         try:
-            self.outcome = self.parseOutput(self.inputFilename, self.output)
+            self.outcome = self.parseOutput(self.inputFile, self.output)
         except AttributeError as e:
-            print("###" + output + "###", file=sys.stderr)
+            print("###" + self.output + "###", file=sys.stderr)
             traceback.print_exc()
+            exit()
         self.runlength = -1
         self.best_sol  = -1
         self.seed      = -1

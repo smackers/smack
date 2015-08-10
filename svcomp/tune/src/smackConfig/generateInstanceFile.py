@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
 import sys
+sys.dont_write_bytecode = True # prevent creation of .pyc files
 import glob
 import os
-from wrapperSmack import *
-sys.dont_write_bytecode = True # prevent creation of .pyc files
+from helperSmack import *
 
-dfltTimeout = 120
+
+dfltTimeout = '120'
 dfltArgs = ['--unroll', '12', '--verifier', 'boogie']
 
 def getFileList(folder):
@@ -15,7 +16,7 @@ def getFileList(folder):
     return sorted(glob.glob(folder + "*.c"))
 
 def genInstanceFile(fileList, timeout=dfltTimeout, addArgs=dfltArgs):
-    res = batchRunSmack(fileList, timeout, addArgs, showProgress=True)
+    res = batchToolRun(fileList, timeout, addArgs, showProgress=True)
     stats = getBatchStats(res)
     formattedStats = formatBatchStatSummary(stats)
     print(formattedStats)

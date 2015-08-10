@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
 from __future__ import print_function
-import re
+import sys
 sys.dont_write_bytecode = True # prevent creation of .pyc files
+import re
 
 ###
 ### This file contains functions for converting parameters as passed by 
@@ -55,7 +56,7 @@ class Param:
             self.prefix = ''
             self.delim = '='
         elif tool == 'SMACK':
-            self.prefix = '-'
+            self.prefix = '--'
             self.delim = ''
         else:
             raise "Unsupported Tool: {0}".format(tool)
@@ -72,7 +73,7 @@ class Param:
             allowedFlagTrue =  ['True','true','t','yes','1']
             allowedFlagFalse = ['False','false','f','no','0']
             if self.value in allowedFlagTrue:
-                return self.prefix + self.name
+                return [self.prefix + self.name]
             elif self.value in allowedFlagFalse:
                 return list()
             else:

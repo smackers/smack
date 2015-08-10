@@ -1,12 +1,11 @@
 #!/usr/bin/python
 
 from __future__ import print_function
-import subprocess
 import sys
-import os
-import re
-import traceback
-import time
+sys.dont_write_bytecode = True # prevent creation of .pyc files
+import subprocess
+from smackWrapper import *
+
 
 #############################
 ### Batch execution functions
@@ -19,12 +18,16 @@ def batchToolRun(fileList, timeout, addArgs, showProgress=False):
     lastlength = 0
     #Collect results from each benchmark
     for inFile in fileList:
-        toolRun = ToolRun([inFile,'',str(timeout),'',''] + addArgs)
-        toolRun.execute()
+        toolRun = SmackToolRun(['',inFile,'',timeout,'-1','-1'] + addArgs)
+        toolRun.executeRun()
         res.append(toolRun)
         if showProgress:
             cnt += 1
-            msg = str(cnt) + '/' + str(len(fileList)) + ' : ' + ' '.join(map(str,res[-1][:-1]))
+            msg = (str(cnt) + 
+                   '/' + str(len(fileList)) + 
+                   ' : ' + res[-1].inputFile +
+                   ' ' + str(res[-1].runtime) +
+                   ' ' + res[-1].outcome)
             #Clear the line (in case last one was longer)
             print(' '*lastlength, end='\r')
             print(msg, end='\r')
@@ -37,11 +40,11 @@ def batchToolRun(fileList, timeout, addArgs, showProgress=False):
 def getBatchStats(resultList):
     satCnt = unsatCnt = timeoutCnt = totalTime = 0
     for result in resultList:
-        if result[2] == "CORRECT":
+        if result.outcome == "CORRECT":
             satCnt += 1
-        elif result[2] == "WRONG":
+        elif result.outcome == "WRONG":
             unsatCnt += 1
-        elif result[2] == "TIMEOUT":
+        elif result.outcome == "TIMEOUT":
             timeoutCnt += 1
         totalTime += result[1]
     return [satCnt, unsatCnt, timeoutCnt, totalTime]
@@ -62,16 +65,18 @@ def formatBatchFile(resultList, printSummary=False):
     longestFile = longestFloat = 0
     for result in resultList:
         #track longest filename for printing alignment
-        longestFile = longestFile if len(result[0])<=longestFile else len(result[0])
-        longestFloat = longestFloat if len(str(result[1]))<=longestFloat else len(str(result[1]))
-
+        if len(result.inputFile) >= longestFile:
+            longestFile = len(result.inputFile)
+        if len(result.runtime) >= longestFloat:
+            longestFloat = len(result.runtime)
     for result in resultList:
         #Align printing
         #Convert from list of lists to list of output lines
-        toFile.append(result[0] + " "*(longestFile-len(result[0])+1) + 
-                      str(result[1]) + " "*(longestFloat-len(str(result[1]))+1) + 
-                      result[2])
-
+        toFile.append(result.inputFile + 
+                      " "*(longestFile-len(result.inputFile)+1) + 
+                      str(result.runtime) + 
+                      " "*(longestFloat-len(str(result.runtime))+1) + 
+                      result.outcome)
     ret = "\n".join(toFile)
     if printSummary:
         stats = getBatchStats(resultList)

@@ -11,7 +11,8 @@ sys.dont_write_bytecode = True # prevent creation of .pyc files
 #Parses a ParamILS result file, returns the parameters in ParamILS format
 def getResultFileParams(resultFilename):
     with open(resultFilename, 'r') as resultFile:
-        rawArgs = re.search(r'Active parameters: (.*)', resultFile.read()).group(1)
+        rawArgs = re.search(r'Active parameters: (.*)',
+                            resultFile.read()).group(1)
     #Break in to individual args
     rawArgs = rawArgs.split(', ')
     #Add SMACK wrapper's expected "-" to the front
