@@ -4,10 +4,11 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
-#include "smack/Naming.h"
 #include "smack/BoogieAst.h"
-#include "smack/SmackOptions.h"
 #include "smack/DSAAliasAnalysis.h"
+#include "smack/Naming.h"
+#include "smack/Regions.h"
+#include "smack/SmackOptions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
@@ -16,7 +17,6 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>
-#include <set>
 
 namespace smack {
 
@@ -54,26 +54,10 @@ public:
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
+  RegionManager* regionManager;
   Naming& naming;
   Program& program;
   vector<string> bplGlobals;
-
-  struct Region {
-    set<const llvm::Value*> representatives;
-    bool isAllocated;
-    bool isSingletonGlobal;
-    Region(const llvm::Value* r, bool a, bool s) :
-      isAllocated(a), isSingletonGlobal(s) {
-      representatives.insert(r);
-    }
-    void unifyWith(Region r) {
-      representatives.insert(r.representatives.begin(), r.representatives.end());
-      isAllocated = isAllocated || r.isAllocated;
-      assert(isSingletonGlobal == r.isSingletonGlobal);
-    }
-  };
-
-  vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
   unsigned ptrSizeInBits;
 
@@ -88,6 +72,7 @@ public:
   SmackRep(const DataLayout* L, DSAAliasAnalysis* aa, Naming& N, Program& P)
     : targetData(L), aliasAnalysis(aa), naming(N), program(P),
       globalsBottom(0), externsBottom(-32768) {
+    regionManager = new RegionManager(L, aa);
     uniqueFpNum = 0;
     ptrSizeInBits = targetData->getPointerSizeInBits();
   }
@@ -206,39 +191,6 @@ public:
   Decl* getStaticInit();
   string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
-
-};
-
-class RegionCollector : public llvm::InstVisitor<RegionCollector> {
-private:
-  SmackRep& rep;
-
-public:
-  RegionCollector(SmackRep& r) : rep(r) {}
-  void visitModule(llvm::Module& M) {
-    for (llvm::Module::const_global_iterator
-         G = M.global_begin(), E = M.global_end(); G != E; ++G)
-      rep.getRegion(G);
-  }
-  void visitAllocaInst(llvm::AllocaInst& I) {
-    rep.getRegion(&I);
-  }
-  void visitLoadInst(llvm::LoadInst& I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitStoreInst(llvm::StoreInst& I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitCallInst(llvm::CallInst& I) {
-    if (I.getType()->isPointerTy())
-      rep.getRegion(&I);
-  }
 };
 
 }
