@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 import sys
 sys.dont_write_bytecode = True # prevent creation of .pyc files
 import re
@@ -25,14 +26,13 @@ class SmackToolRun(ToolRun):
                                         p not in boogieParams and
                                         p not in corralParams)]
         #Join all boogie  corral params into a space delimited string
-        verArgStr = " ".join([p.asStringList()[0] for p in (boogieParams + 
-                                                            corralParams)])
-        if verArgStr:
+        if len(boogieParams + corralParams) > 0:
             #Add verifier-options param (as switch, 
             #  since it must be all one word)
-            veropts = Param('SMACK', ('verifier-options="' + 
-                                      verArgStr + '"', 
-                                      'True'),
+            verArgStr = " ".join([p.asStringList()[0] for p in (boogieParams +
+                                                                corralParams)])
+            veropts = Param('SMACK', 'verifier-options=' + verArgStr,
+                            'True',
                             True)
             others.append(veropts)
         asArgList = param2cmdArgList(others)
@@ -40,9 +40,10 @@ class SmackToolRun(ToolRun):
     
     def prepareCmd(self, inputFile, rest, cutoffTime, 
                     cutoffLength, seed, rawArgs):
-        cmd =  ['smackverify.py', inputFile]
+        cmd =  ['smack.py', inputFile]
         cmd += ['--time-limit',   str(cutoffTime)]
         cmd += self.argHelper(rawArgs)
+        #print("\n\nCOMMAND: " + " ".join(cmd) + "\n\n", file=sys.stderr)
         return cmd
 
     ###Parse output of SMACK to determine whether we got the right outcome
@@ -54,12 +55,11 @@ class SmackToolRun(ToolRun):
             expected = False
             #Get actual result
             passed = False
-        reStr = r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out'
-        if re.search(reStr, output):
+        if re.search(r'SMACK timed out.', output):
             return 'TIMEOUT'
-        elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
+        elif re.search(r'SMACK found no errors.', output):
             passed = True
-        elif re.search(r'0 verified, [1-9]\d* errors?|can fail', output):
+        elif re.search(r'SMACK found an error.', output):
             passed = False
         else:
             #return 'unknown'

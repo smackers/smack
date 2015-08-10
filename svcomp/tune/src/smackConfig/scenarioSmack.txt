@@ -1,11 +1,11 @@
-algo               = ../lib/smackWrapper.py
+algo               = ./smackWrapper.py
 execdir            = .
 deterministic      = 1
 run_obj            = speedup
 overall_obj        = geomean
 cutoff_time        = 120
 cutoff_length      = max
-tunerTimeout       = 14400
+tunerTimeout       = 60
 paramfile          = paramsSmack.txt
 outdir             = paramils-out
 instance_file      = instanceSmack.txt

@@ -13,11 +13,11 @@ import re
 #Creates list of Param objects from extraArgs
 def parseParams(extraArgs):
     params = list()
-    for i in range(len(extraArgs), 2):
+    for i in range(0, len(extraArgs), 2):
         nameStr,valueStr = extraArgs[i], extraArgs[i+1]
-        arg = re.match(r'-(SMACK|CORRAL|BOOGIE|Z3)__(isFlag__)(.*)', nameStr)
-        isFlag = True if arg.group(2) else False
-        params += Param(arg.group(1), arg.group(3), valueStr, isFlag)
+        arg = re.match(r'-(SMACK|CORRAL|BOOGIE|Z3)__(isFlag__)?(.*)', nameStr)
+        isFlag = True if arg.group(2)=="isFlag__" else False
+        params += [Param(arg.group(1), arg.group(3), valueStr, isFlag)]
     return params
 
 #Wraps a Z3 option as a Corral/Boogie Option (e.g., a.b=10 -> /z3opt:a.b=10)
@@ -75,7 +75,7 @@ class Param:
             if self.value in allowedFlagTrue:
                 return [self.prefix + self.name]
             elif self.value in allowedFlagFalse:
-                return list()
+                return ['']
             else:
                 msg = "Flags parameters must be one of the following: {0}"
                 raise msg.format(",".join(allowedFlagTrue) + "," + 

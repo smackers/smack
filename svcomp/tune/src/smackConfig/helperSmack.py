@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 sys.dont_write_bytecode = True # prevent creation of .pyc files
 import subprocess
+import time
 from smackWrapper import *
 
 
@@ -30,7 +31,9 @@ def batchToolRun(fileList, timeout, addArgs, showProgress=False):
                    ' ' + res[-1].outcome)
             #Clear the line (in case last one was longer)
             print(' '*lastlength, end='\r')
+
             print(msg, end='\r')
+            sys.stdout.flush()
             lastlength = len(msg)
     if showProgress:
         print(' '*lastlength, end='\r')
@@ -46,7 +49,7 @@ def getBatchStats(resultList):
             unsatCnt += 1
         elif result.outcome == "TIMEOUT":
             timeoutCnt += 1
-        totalTime += result[1]
+        totalTime += result.runtime
     return [satCnt, unsatCnt, timeoutCnt, totalTime]
 
 ###Formats stats from a batch run for printing
@@ -67,8 +70,8 @@ def formatBatchFile(resultList, printSummary=False):
         #track longest filename for printing alignment
         if len(result.inputFile) >= longestFile:
             longestFile = len(result.inputFile)
-        if len(result.runtime) >= longestFloat:
-            longestFloat = len(result.runtime)
+        if len(str(result.runtime)) >= longestFloat:
+            longestFloat = len(str(result.runtime))
     for result in resultList:
         #Align printing
         #Convert from list of lists to list of output lines

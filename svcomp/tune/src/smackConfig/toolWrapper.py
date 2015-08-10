@@ -85,9 +85,12 @@ class ToolRun:
     ### Prints result string to console expected by ParamILS
     def printResults(self):
         #Print paramils result string
-        msg  = "Result for ParamILS: %(self.outcome)s, "
-        msg += "%(self.runtime)f, %(self.runlength)d, %(self.best_sol)d, "
-        msg += "%(seed)d"
-        print(msg % locals())
+        msg  = "Result for ParamILS: "
+        msg += self.outcome + ", "
+        msg += str(self.runtime) + ", "
+        msg += str(self.runlength) + ", "
+        msg += str(self.best_sol) + ", "
+        msg += str(self.seed)
+        print(msg)
         #Print smack output
         print(self.output)
