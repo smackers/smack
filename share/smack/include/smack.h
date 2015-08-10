@@ -19,6 +19,9 @@ extern "C" {
 #define __builtin_va_start __builtinx_va_start
 #define __builtin_object_size __builtinx_object_size
 
+// For handling of va_start macro
+void __builtinx_va_start(char*,char*);
+
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
@@ -31,11 +34,10 @@ void __SMACK_top_decl(const char *fmt, ...);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
+void __VERIFIER_assume(int);
+void __VERIFIER_assert(int);
 void __VERIFIER_error(void);
 void exit(int);
-
-#define __VERIFIER_assert(EX) do { __SMACK_dummy(EX); __SMACK_code("assert @ != $0;", EX); } while (0)
-#define __VERIFIER_assume(EX) do { __SMACK_dummy(EX); __SMACK_code("assume @ != $0;", EX); } while (0)
 
 #ifndef AVOID_NAME_CONFLICTS
 #define assert(EX) __VERIFIER_assert(EX)
