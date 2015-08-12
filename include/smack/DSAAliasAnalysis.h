@@ -19,6 +19,7 @@
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
 #include "dsa/TypeSafety.h"
+#include "smack/Region.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -72,6 +73,7 @@ private:
   vector<const llvm::DSNode*> staticInits;
   vector<const llvm::DSNode*> memcpys;
   unordered_set<const llvm::DSNode*> intConversions;
+  const DataLayout* dataLayout;
 
 public:
   static char ID;
@@ -80,6 +82,7 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     llvm::AliasAnalysis::getAnalysisUsage(AU);
     AU.setPreservesAll();
+    AU.addRequired<llvm::DataLayoutPass>();
     AU.addRequiredTransitive<llvm::TDDataStructures>();
     AU.addRequiredTransitive<llvm::BUDataStructures>();
     AU.addRequiredTransitive<llvm::DSNodeEquivs>();
@@ -95,23 +98,27 @@ public:
     TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures> >();
     memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
     staticInits = collectStaticInits(M);
+    dataLayout = M.getDataLayout();
 
     return false;
   }
 
-  llvm::DSNode *getNode(const llvm::Value* v);
+  const llvm::DSNode *getNode(const llvm::Value* v);
   bool isAlloced(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
   bool isSingletonGlobal(const llvm::Value *V);
   bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
   bool isFieldDisjoint(const GlobalValue* V, unsigned offset);
+  bool isMemcpyd(const llvm::DSNode* n);
+  bool isStaticInitd(const llvm::DSNode* n);
+  unsigned getPointedTypeSize(const Value* v);
+  unsigned getOffset(const Value* v);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
+  AliasResult alias(Region regA, const Value* valB);
 
 private:
   bool isComplicatedNode(const llvm::DSNode* n);
-  bool isMemcpyd(const llvm::DSNode* n);
-  bool isStaticInitd(const llvm::DSNode* n);
   vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
   vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);

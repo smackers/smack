@@ -1,33 +1,18 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef REGIONS_H
-#define REGIONS_H
+#ifndef REGIONMANAGER_H
+#define REGIONMANAGER_H
 
 #include "smack/DSAAliasAnalysis.h"
+#include "smack/Region.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstVisitor.h"
-#include <set>
 
 namespace smack {
 
 using namespace std;
-
-struct Region {
-  set<const llvm::Value*> representatives;
-  bool isAllocated;
-  bool isSingletonGlobal;
-  Region(const llvm::Value* r, bool a, bool s) :
-    isAllocated(a), isSingletonGlobal(s) {
-    representatives.insert(r);
-  }
-  void unifyWith(Region r) {
-    representatives.insert(r.representatives.begin(), r.representatives.end());
-    isAllocated = isAllocated || r.isAllocated;
-    assert(isSingletonGlobal == r.isSingletonGlobal);
-  }
-};
 
 class RegionManager : public llvm::InstVisitor<RegionManager> {
 private:
@@ -45,6 +30,7 @@ public:
          G = M.global_begin(), E = M.global_end(); G != E; ++G)
       getRegion(G);
   }
+  // TODO: Why invoking for alloca?
   void visitAllocaInst(llvm::AllocaInst& I) {
     getRegion(&I);
   }
@@ -60,6 +46,7 @@ public:
   void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
     getRegion(I.getPointerOperand());
   }
+  // TODO: Why invoking for call?
   void visitCallInst(llvm::CallInst& I) {
     if (I.getType()->isPointerTy())
       getRegion(&I);
@@ -68,4 +55,4 @@ public:
 
 }
 
-#endif // REGIONS_H
+#endif // REGIONMANAGER_H

@@ -282,7 +282,8 @@ bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
 
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
-  if (!regionManager->getRegion(region).isSingletonGlobal || (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
+  if (!regionManager->getRegion(region).isSingletonGlobal() ||
+      (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << PTR_TYPE << "] ";
   s << intType(size);
   return s.str();
@@ -300,7 +301,7 @@ const Expr* SmackRep::mem(const llvm::Value* v) {
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
-  if (regionManager->getRegion(region).isSingletonGlobal)
+  if (regionManager->getRegion(region).isSingletonGlobal())
     return Expr::id(memPath(region, size));
   else
     return Expr::sel(Expr::id(memPath(region, size)), addr);
@@ -311,7 +312,7 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
-  return v->getType()->isPointerTy() && !regionManager->getRegion(getRegion(v)).isAllocated;
+  return v->getType()->isPointerTy() && !regionManager->getRegion(getRegion(v)).isAllocated();
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {

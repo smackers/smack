@@ -7,7 +7,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "smack/Naming.h"
-#include "smack/Regions.h"
+#include "smack/RegionManager.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"

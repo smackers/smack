@@ -11,7 +11,6 @@
 // context sensitive alias analysis.
 //
 //===----------------------------------------------------------------------===//
-
 #include "smack/DSAAliasAnalysis.h"
 #include <iostream>
 
@@ -118,8 +117,11 @@ bool DSAAliasAnalysis::disjoint(const Location* l1, const Location* l2) {
     || (o2 < o1 && o2 + l2->Size <= o1);
 }
 
-DSNode *DSAAliasAnalysis::getNode(const Value* v) {
-  return getGraphForValue(v)->getNodeForValue(v).getNode();
+// TODO: Should this return the node or its leader?
+const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+    = nodeEqs->getEquivalenceClasses();
+  return eqs.getLeaderValue(nodeEqs->getMemberForValue(v));
 }
 
 bool DSAAliasAnalysis::isAlloced(const Value* v) {
@@ -164,6 +166,21 @@ bool DSAAliasAnalysis::isSingletonGlobal(const Value *V) {
   return true;
 }
 
+unsigned DSAAliasAnalysis::getPointedTypeSize(const Value* v) {
+  if (llvm::PointerType* t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
+    llvm::Type* pointedType = t->getTypeAtIndex(0u);
+    if (pointedType->isSized())
+      return dataLayout->getTypeStoreSize(pointedType);
+    else
+      return UINT_MAX;
+  } else
+    assert(false && "Type should be pointer.");
+}
+
+unsigned DSAAliasAnalysis::getOffset(const Value* v) {
+  return getOffset(new Location(v));
+}
+
 AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {
 
   if (LocA.Ptr == LocB.Ptr)
@@ -197,6 +214,41 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
   // global queries...
 surrender:
   return AliasAnalysis::alias(LocA, LocB);
+}
+
+AliasAnalysis::AliasResult DSAAliasAnalysis::alias(Region regA, const Value* valB) {
+  const DSNode* nodeA = regA.getRepresentative();
+// TODO: Should this return the node or its leader?
+//  const DSNode *nodeB = nodeEqs->getMemberForValue(valB);
+  const DSNode *nodeB = getNode(valB);
+
+  assert(nodeA && "Expected non-null node.");
+  assert(nodeB && "Expected non-null node.");
+
+  if (nodeA->isIncompleteNode() && nodeB->isIncompleteNode())
+    return MayAlias;
+
+  // TODO: A node can be complicated why its leader is maybe not. Is that expected?
+  if (isComplicatedNode(nodeA) && isComplicatedNode(nodeB))
+    return MayAlias;
+
+  if (!equivNodes(nodeA, nodeB))
+    return NoAlias;
+
+  // TODO: It is not clear why we have || here
+  if (regA.isMemcpyd() || isMemcpyd(nodeB))
+    return MayAlias;
+
+  // TODO: It is not clear why we have || here
+  if (regA.isStaticInitd() || isStaticInitd(nodeB))
+    return MayAlias;
+
+  unsigned long sizeB = getPointedTypeSize(valB);
+  unsigned long offsetB = getOffset(valB);
+  if (offsetB + sizeB <= regA.getLowOffset() || regA.getHighOffset() < offsetB)
+    return NoAlias;
+
+  return MayAlias;
 }
 
 }
