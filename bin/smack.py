@@ -262,9 +262,9 @@ def clang_frontend(args):
   try_command(compile_command + [args.input_file, '-o', args.bc_file])
   link_targets = [args.bc_file, smack_bc]
   if args.pthread:
-    pthread_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'pthread.c')
+    pthread_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'pthread.c')
     pthread_bc = temporary_file('pthread', '.bc', args)
-    spinlock_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'spinlock.c')
+    spinlock_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'spinlock.c')
     spinlock_bc = temporary_file('spinlock', '.bc', args)
     try_command(compile_command + [pthread_lib, '-o', pthread_bc])
     try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
@@ -282,9 +282,9 @@ def json_compilation_database_frontend(args):
   smack_lib_bcs = [smack_bc]
 
   if args.pthread:
-    pthread_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'pthread.c')
+    pthread_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'pthread.c')
     pthread_bc = temporary_file('pthread', '.bc', args)
-    spinlock_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'spinlock.c')
+    spinlock_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'spinlock.c')
     spinlock_bc = temporary_file('spinlock', '.bc', args)
     try_command(default_clang_compile_command(args) + [pthread_lib, '-o', pthread_bc])
     try_command(default_clang_compile_command(args) + [spinlock_lib, '-o', spinlock_bc])
