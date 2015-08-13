@@ -7,7 +7,6 @@
 
 #include "llvm/Support/Regex.h"
 #include "llvm/IR/Value.h"
-#include <stack>
 #include <map>
 
 namespace smack {
@@ -20,10 +19,10 @@ class Naming {
   static Regex BPL_KW;
   static Regex SMACK_NAME;
 
-  typedef map<const Value*, string> NameMap;
-  stack<NameMap> nameStack;
+  map<const Value*, string> names;
   unsigned blockNum;
   unsigned varNum;
+  unsigned undefNum;
 
 public:
   static const string BLOCK_LBL;
@@ -36,11 +35,14 @@ public:
   static const string PTR_VAR;
   static const string UNDEF_SYM;
 
-  Naming() : blockNum(0), varNum(0) { }
-  void enter();
-  void leave();
+  Naming() : blockNum(0), varNum(0), undefNum(0) { }
+  Naming(Naming& n) : blockNum(n.blockNum), varNum(n.varNum) { }
+
+  void reset();
   string get(const Value& V);
+
   string freshBlockName();
+  string freshUndefName();
   string freshVarName(const Value& V);
 
   static bool isBplKeyword(string s);

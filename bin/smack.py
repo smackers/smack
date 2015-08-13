@@ -28,6 +28,7 @@ def frontends():
     'i': clang_frontend,
     'cc': clang_frontend,
     'cpp': clang_frontend,
+    'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
     'bc': empty_frontend,
     'll': empty_frontend,
@@ -48,6 +49,7 @@ def inlined_procedures():
     '$free',
     '$memset',
     '$memcpy',
+    '__VERIFIER_'
   ]
 
 def validate_input_file(file):
@@ -108,6 +110,9 @@ def arguments():
 
   translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
     type=str, help='save (intermediate) Boogie code to FILE')
+
+  translate_group.add_argument('--no-memory-splitting', action="store_true", default=False,
+    help='disable region-based memory splitting')
 
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
@@ -182,12 +187,12 @@ def timeout_killer(proc, timed_out):
     timed_out[0] = True
     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
-def try_command(cmd):
+def try_command(cmd, cwd=None):
   output = ""
   proc = None
   timer = None
   try:
-    proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     timed_out = [False]
     timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
     timer.start()
@@ -232,38 +237,80 @@ def empty_frontend(args):
   """Generate the LLVM bitcode file by copying the input file."""
   shutil.copy(args.input_file, args.bc_file)
 
+def smack_root():
+  return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+def smack_headers():
+  return os.path.join(smack_root(), 'share', 'smack', 'include')
+
+def smack_lib():
+  return os.path.join(smack_root(), 'share', 'smack', 'lib', 'smack.c')
+
+def default_clang_compile_command(args):
+  cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
+  cmd += args.clang_options.split()
+  cmd += ['-I' + smack_headers(), '-include' + 'smack.h']
+  cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
+  return cmd
+
 def clang_frontend(args):
   """Generate an LLVM bitcode file from C-language source(s)."""
 
-  smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-  smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
-  smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
+  compile_command = default_clang_compile_command(args)
   smack_bc = temporary_file('smack', '.bc', args)
+  try_command(compile_command + [smack_lib(), '-o', smack_bc])
+  try_command(compile_command + [args.input_file, '-o', args.bc_file])
+  link_targets = [args.bc_file, smack_bc]
   if args.pthread:
     pthread_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'pthread.c')
     pthread_bc = temporary_file('pthread', '.bc', args)
     spinlock_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'spinlock.c')
     spinlock_bc = temporary_file('spinlock', '.bc', args)
-
-  compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
-  compile_command += args.clang_options.split()
-  compile_command += ['-I' + smack_headers, '-include' + 'smack.h']
-  compile_command += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
-  link_command = ['llvm-link']
-
-  try_command(compile_command + [smack_lib, '-o', smack_bc])
-  try_command(compile_command + [args.input_file, '-o', args.bc_file])
-  link_targets = [args.bc_file, smack_bc]
-  if args.pthread:
     try_command(compile_command + [pthread_lib, '-o', pthread_bc])
     try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
     link_targets = [pthread_bc, spinlock_bc] + link_targets
-  try_command(link_command + link_targets + ['-o', args.bc_file])
+  try_command('llvm-link' + link_targets + ['-o', args.bc_file])
+
+def json_compilation_database_frontend(args):
+  """Generate an LLVM bitcode file from a JSON compilation database."""
+
+  output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
+  optimization_flags = re.compile(r"-O[1-9]\b")
+  smack_bc = temporary_file('smack', '.bc', args)
+
+  try_command(default_clang_compile_command(args) + [smack_lib(), '-o', smack_bc])
+  smack_lib_bcs = [smack_bc]
+
+  if args.pthread:
+    pthread_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'pthread.c')
+    pthread_bc = temporary_file('pthread', '.bc', args)
+    spinlock_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'spinlock.c')
+    spinlock_bc = temporary_file('spinlock', '.bc', args)
+    try_command(default_clang_compile_command(args) + [pthread_lib, '-o', pthread_bc])
+    try_command(default_clang_compile_command(args) + [spinlock_lib, '-o', spinlock_bc])
+    smack_lib_bcs += [pthread_bc, spinlock_bc]
+
+  with open(args.input_file) as f:
+    for cc in json.load(f):
+      if 'objects' in cc:
+        # TODO what to do when there are multiple linkings?
+        bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + smack_lib_bcs)
+
+      else:
+        out_file = output_flags.findall(cc['command'])[0] + '.bc'
+        command = cc['command']
+        command = output_flags.sub(r"-o \1.bc", command)
+        command = optimization_flags.sub("-O0", command)
+        command = command + " -emit-llvm"
+        try_command(command.split(),cc['directory'])
 
 def svcomp_frontend(args):
   """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
 
   name = os.path.splitext(os.path.basename(args.input_file))[0]
+
+  args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
 
   if os.path.splitext(args.input_file)[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
@@ -298,6 +345,7 @@ def llvm_to_bpl(args):
   if args.bit_precise: cmd += ['-bit-precise']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
+  if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   try_command(cmd)
 
 def procedure_annotation(name, args):
@@ -383,7 +431,7 @@ def verify_bpl(args):
       if args.language == 'svcomp':
         error = smackJsonToXmlGraph(smackdOutput(verifier_output))
       else:
-        error = error_trace(verifier_ouptut, args)
+        error = error_trace(verifier_output, args)
 
       if args.error_file:
         with open(args.error_file, 'w') as f:

@@ -27,6 +27,10 @@ const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
   "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
 );
 
+const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
+  "no-memory-splitting", llvm::cl::desc("Disable splitting memory into regions.")
+);
+
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
   "no-byte-access-inference", llvm::cl::desc("Optimize bit-precision with DSA.")
 );

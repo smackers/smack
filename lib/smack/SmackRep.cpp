@@ -271,12 +271,12 @@ bool SmackRep::uniformMemoryAccesses() {
 }
 
 bool SmackRep::bytewiseAccess(const GlobalValue* V, unsigned offset) {
-  return SmackOptions::BitPrecise &&
+  return aliasAnalysis && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,offset));
 }
 
 bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
-  return SmackOptions::BitPrecise &&
+  return aliasAnalysis && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,F));
 }
 
@@ -307,22 +307,56 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* v) {
-  unsigned r;
+  unsigned mr;
+  unsigned firstMR = UINT_MAX;
+  set<const llvm::Value*>::iterator r;
 
-  for (r=0; r<memoryRegions.size(); ++r)
-    if (!aliasAnalysis->isNoAlias(v, memoryRegions[r].representative))
-      break;
+  if (SmackOptions::NoMemoryRegionSplitting)
+    mr = 0;
+  else
+    for (mr=0; mr<memoryRegions.size(); ++mr) {
+      for (r = memoryRegions[mr].representatives.begin(); r != memoryRegions[mr].representatives.end(); ++r) {
+        if (llvm::PointerType* vType = llvm::dyn_cast<llvm::PointerType>(v->getType()))
+          if (llvm::PointerType* rType = llvm::dyn_cast<llvm::PointerType>((*r)->getType())) {
+            llvm::Type* vPointedType = vType->getTypeAtIndex(0u);
+            llvm::Type* rPointedType = rType->getTypeAtIndex(0u);
 
-  if (r == memoryRegions.size()) {
+            if (vPointedType->isSized() && rPointedType->isSized()) {
+              uint64_t vSize = targetData->getTypeStoreSize(vPointedType);
+              uint64_t rSize = targetData->getTypeStoreSize(rPointedType);
+              if (!aliasAnalysis->isNoAlias(v, vSize, *r, rSize))
+                break;
+            } else
+              if (!aliasAnalysis->isNoAlias(v, *r))
+                break;
+          } else
+            assert(false && "Region type should be pointer.");
+        else
+          assert(false && "Region type should be pointer.");
+      }
+      if (r != memoryRegions[mr].representatives.end()) {
+        if (firstMR == UINT_MAX) {
+          firstMR = mr;
+          memoryRegions[firstMR].representatives.insert(v);
+        } else {
+          memoryRegions[firstMR].unifyWith(memoryRegions[mr]);
+          memoryRegions.erase(memoryRegions.begin() + mr);
+        }
+      }
+    }
+
+  if (firstMR == UINT_MAX) {
+    firstMR = mr;
     llvm::Type* T = v->getType();
     while (T->isPointerTy()) T = T->getPointerElementType();
     memoryRegions.emplace_back(v,false,
-      aliasAnalysis->isSingletonGlobal(v) && T->isSingleValueType()
+      aliasAnalysis && aliasAnalysis->isSingletonGlobal(v) && T->isSingleValueType()
     );
   }
 
-  memoryRegions[r].isAllocated = memoryRegions[r].isAllocated || aliasAnalysis->isAlloced(v);
-  return r;
+  memoryRegions[firstMR].isAllocated = memoryRegions[firstMR].isAllocated ||
+    (aliasAnalysis && aliasAnalysis->isAlloced(v));
+  return firstMR;
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
@@ -658,12 +692,31 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
 }
 
+Decl* SmackRep::decl(Function* F, CallInst *C) {
+  vector< pair<string,string> > params, rets;
+
+  assert (F && "Unknown function call.");
+
+  if (C)
+    for (const Value* V : C->arg_operands())
+      params.push_back({naming.freshVarName(*V),type(V->getType())});
+
+  else
+    for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A)
+      params.push_back({naming.get(*A), type(A->getType())});
+    
+  if (!F->getReturnType()->isVoidTy())
+    rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
+
+  return Decl::procedure(program, procName(*C,F), params, rets);
+}
+
 vector<Decl*> SmackRep::decl(llvm::Function* F) {
   vector<Decl*> decls;
   string name = naming.get(*F);
+  for (auto U : F->users()) {
 
-  for (llvm::Value::user_iterator U = F->user_begin(); U != F->user_end(); ++U)
-    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(*U)) {
+    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(U)) {
       llvm::FunctionType* T = F->getFunctionType();
       llvm::Type
         *dst = T->getParamType(0),
@@ -693,7 +746,7 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
       }));
       decls.push_back(memcpyProc(r1,r2));
 
-    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(*U)) {
+    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(U)) {
       llvm::FunctionType* T = F->getFunctionType();
       llvm::Type
         *dst = T->getParamType(0),
@@ -735,53 +788,71 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         Block::block("", { Stmt::call("$free", {Expr::id("n")}) })
       }));
 
-    } else {
-      Naming N;
-      vector< pair<string,string> > params, rets;
-      for (unsigned i = 0; i < U->getNumOperands()-1; i++) {
-        const llvm::Value* V = U->getOperand(i);
-        params.push_back({N.freshVarName(*V),type(V->getType())});
-      }
-      if (!F->getReturnType()->isVoidTy())
-        rets.push_back({"r", type(F->getReturnType())});
-      decls.push_back(Decl::procedure(program, procName(**U,F), params, rets));
-    }
+    } else if (auto C = dyn_cast<CallInst>(U)) {
 
+      // NOTE: it could be that F is used by a call to another function.
+      if (C->getCalledFunction() == F)
+        decls.push_back(decl(F,C));
+      else
+        decls.push_back(decl(F,NULL));
+
+    } else if (auto CE = dyn_cast<ConstantExpr>(U)) {
+      assert (CE->isCast() && "Expected bitcast.");
+      for (auto C : CE->users()) {
+        decls.push_back(decl(F,dyn_cast<CallInst>(C)));
+
+        // NOTE: each use ought to have the same type anyways
+        break;
+      }
+
+    } else {
+      decls.push_back(decl(F,NULL));
+    }
+  }
   return decls;
 }
 
-ProcDecl* SmackRep::proc(llvm::Function* f) {
-  vector< pair<string,string> > parameters, returns;
+vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
+  vector<ProcDecl*> procs;
+  vector< pair<string,string> > params, rets;
 
-  unsigned i = 0;
-  for (llvm::Function::arg_iterator
-       arg = f->arg_begin(), e = f->arg_end(); arg != e; ++arg, ++i) {
-    string name;
-    if (arg->hasName()) {
-      name = naming.get(*arg);
-    } else {
-      name = indexedName("p",{i});
-      arg->setName(name);
-    }
+  FunctionType* T = F->getFunctionType();
 
-    parameters.push_back({name, type(arg->getType())});
+  for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A) {
+    params.push_back({naming.get(*A), type(A->getType())});
   }
 
-  if (!f->getReturnType()->isVoidTy())
-    returns.push_back({Naming::RET_VAR,type(f->getReturnType())});
+  if (!F->getReturnType()->isVoidTy())
+    rets.push_back({Naming::RET_VAR,type(F->getReturnType())});
 
-  return (ProcDecl*) Decl::procedure(
-    program,
-    f->isVarArg() ? naming.get(*f) : naming.get(*f),
-    parameters,
-    returns
-  );
+  if (!F->isVarArg() || F->use_empty()) {
+    procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, naming.get(*F), params, rets)));
+
+  } else {
+    // in case this is a vararg function
+    for (auto U : F->users()) {
+      CallInst* C = dyn_cast<CallInst>(U);
+
+      if (!C || C->getCalledFunction() != F)
+        continue;
+
+      vector< pair<string,string> > varArgParams(params);
+      for (unsigned i = T->getNumParams(); i < C->getNumArgOperands(); i++) {
+        const llvm::Value* V = U->getOperand(i);
+        varArgParams.push_back({indexedName("p",{i}),type(V->getType())});
+      }
+
+      procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, procName(*U,F), varArgParams, rets)));
+    }
+  }
+  return procs;
 }
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
-  return (f && f->isVarArg() && isFloat(v))
-    ? Expr::fn(opName("$fp2si", {f->getType(), v->getType()}), expr(v))
-    : expr(v);
+  return expr(v);
+  // (f && f->isVarArg() && isFloat(v))
+  //   ? Expr::fn(opName("$fp2si", {v->getType(), f->getType()}), expr(v))
+  //   : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
@@ -886,7 +957,9 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Pointer predicates" << endl;
-  const vector<string> predicates {"$eq", "$ne", "$sge", "$sgt", "$sle", "$slt"};
+  const vector<string> predicates {
+    "$eq", "$ne", "$ugt", "$uge", "$ult", "$ule", "$sgt", "$sge", "$slt", "$sle"
+  };
   for (auto pred : predicates) {
     s << Decl::function(indexedName(pred,{PTR_TYPE}),
       {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, intType(1),

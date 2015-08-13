@@ -518,6 +518,10 @@ public:
     for (unsigned i = 0; i < ds.size(); i++)
       addDecl(ds[i]);
   }
+  void addDecls(vector<ProcDecl*> ds) {
+    for (unsigned i = 0; i < ds.size(); i++)
+      addDecl(ds[i]);
+  }
   void addDecls(vector<string> ds) {
     for (unsigned i=0; i < ds.size(); i++)
       addDecl(ds[i]);

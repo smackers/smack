@@ -184,6 +184,7 @@ INSTALL(TARGETS smack
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor.py
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/tokenizer
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/token_replace.py
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/toSVCOMPformat.py
