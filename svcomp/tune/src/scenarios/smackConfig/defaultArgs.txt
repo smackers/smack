@@ -1,0 +1,6 @@
+#A timeout MUST be specified
+Timeout	   	120
+
+#The remaining args must be formatted in the SMACKTune format
+SMACK__unroll	12
+SMACK__verifier	boogie

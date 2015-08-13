@@ -1,0 +1,5 @@
+*~
+paramils-out/
+*.bc
+*.bpl
+__pycache__

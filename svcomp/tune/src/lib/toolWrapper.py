@@ -63,11 +63,12 @@ class ToolRun:
     ###
     ### Takes an input file name, a time limit, and the arguments
     ### Returns a list of six items, 
-    def executeRun(self):
+    def executeRun(self, execDir='.'):
         startTime = time.time()
         p = subprocess.Popen(self.preparedArgs,
                              stdout=subprocess.PIPE, 
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.PIPE,
+                             cwd=execDir)
         out, err  = p.communicate()
         endTime = time.time()
         self.output = (out+err).decode('utf-8')

@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
 import sys
-from helperSmack import *
 sys.dont_write_bytecode = True # prevent creation of .pyc files
+from helperSmack import *
+from paramilsHelper import *
+
 
 def getInstanceList(instanceFileFilename):
     with open(instanceFileFilename, 'r') as instFile:
@@ -10,7 +12,7 @@ def getInstanceList(instanceFileFilename):
     return files
 
 def genResultTestFile(fileList, timeout, addArgs):
-    res = batchRunSmack(fileList, timeout, addArgs, showProgress=True)
+    res = batchToolRun(fileList, timeout, addArgs, showProgress=True)
     stats = getBatchStats(res)
     print(formatBatchStatSummary(stats))
     return formatBatchFile(res, printSummary=True)
@@ -28,7 +30,6 @@ if __name__ == '__main__':
     resultantParams = getResultFileParams(resultFilename)
     cutoffTime = getResultFileCutoffTime(resultFilename)
     #Convert paramils formatted params to smack formatted params
-    resultantParams = collectVerifierOptions(resultantParams)
     instanceList = getInstanceList(instanceFileFilename)
     rsltTestFileString = genResultTestFile(instanceList, cutoffTime, resultantParams)
     writeBatchFile(outputFilename, rsltTestFileString)

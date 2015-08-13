@@ -13,14 +13,14 @@ from smackWrapper import *
 #############################
 
 ###Runs a tool on a list of files
-def batchToolRun(fileList, timeout, addArgs, showProgress=False):
+def batchToolRun(execDir, fileList, timeout, addArgs, showProgress=False):
     res = []
     cnt = 0
     lastlength = 0
     #Collect results from each benchmark
     for inFile in fileList:
         toolRun = SmackToolRun(['',inFile,'',timeout,'-1','-1'] + addArgs)
-        toolRun.executeRun()
+        toolRun.executeRun(execDir)
         res.append(toolRun)
         if showProgress:
             cnt += 1
