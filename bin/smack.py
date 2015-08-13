@@ -269,7 +269,7 @@ def clang_frontend(args):
     try_command(compile_command + [pthread_lib, '-o', pthread_bc])
     try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
     link_targets = [pthread_bc, spinlock_bc] + link_targets
-  try_command('llvm-link' + link_targets + ['-o', args.bc_file])
+  try_command(['llvm-link'] + link_targets + ['-o', args.bc_file])
 
 def json_compilation_database_frontend(args):
   """Generate an LLVM bitcode file from a JSON compilation database."""
