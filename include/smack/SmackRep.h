@@ -115,7 +115,9 @@ private:
   string opName(const string& operation, initializer_list<unsigned> types);
 
   const Expr* mem(unsigned region, const Expr* addr, unsigned size);
+  const Stmt* store(const llvm::Value* P, const llvm::Value* V, bool bytewise = false);
   const Stmt* store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool bytewise = false);
+  const Expr* load(const llvm::Value* P, bool bytewise = false);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
@@ -124,7 +126,7 @@ private:
   string procName(const llvm::User& U);
   string procName(const llvm::User& U, llvm::Function* F);
 
-  bool uniformMemoryAccesses();
+  vector<unsigned> memoryAccessSizes();
   bool bytewiseAccess(const llvm::Value* V, const llvm::Function* F);
   bool bytewiseAccess(const llvm::GlobalValue* V, unsigned offset);
 
