@@ -372,7 +372,7 @@ const Expr* SmackRep::load(const llvm::Value* P, bool bytewise) {
   const unsigned size = getElementSize(P);
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   string N = string("$load.") + (bytewise ? "bytes." : "") + intType(size);
-  return memoryRegions[R].isSingletonGlobal ? M : Expr::fn(N, M, expr(P));
+  return memoryRegions[R].isSingletonGlobal() ? M : Expr::fn(N, M, expr(P));
 }
 
 const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
@@ -407,7 +407,7 @@ const Stmt* SmackRep::store(unsigned R, unsigned size, const Expr* addr, const l
     rhs = Expr::fn(opName("$fp2si",{V->getType(), llvm::IntegerType::get(V->getContext(),size)}), rhs);
   else if (V->getType()->isPointerTy())
     rhs = pointerToInteger(rhs, size);
-  return Stmt::assign(M, memoryRegions[R].isSingletonGlobal ? rhs : Expr::fn(N,M,addr,rhs));
+  return Stmt::assign(M, memoryRegions[R].isSingletonGlobal() ? rhs : Expr::fn(N,M,addr,rhs));
 }
 
 const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
