@@ -80,7 +80,8 @@ public:
 
 private:
   void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
-  void addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool bytewise);
+  void addInit(const llvm::GlobalValue* G, unsigned offset,
+    const llvm::Constant* C, bool bytewise);
 
   unsigned storageSize(llvm::Type* T);
   unsigned offset(llvm::ArrayType* T, unsigned idx);
@@ -101,7 +102,8 @@ private:
 
   const Expr* mem(unsigned region, const Expr* addr, unsigned size);
   const Stmt* store(const llvm::Value* P, const llvm::Value* V, bool bytewise = false);
-  const Stmt* store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool bytewise = false);
+  const Stmt* store(const llvm::Value* P, unsigned offset, unsigned length,
+    const llvm::Value* val, bool bytewise = false);
   const Expr* load(const llvm::Value* P, bool bytewise = false);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
@@ -174,7 +176,8 @@ public:
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
-  unsigned getRegion(const llvm::Value* v);
+  unsigned getRegion(const llvm::Value* V, unsigned offset, unsigned length);
+  unsigned getRegion(const llvm::Value* V);
 
   string memReg(unsigned i);
   string memType(unsigned region, unsigned size);

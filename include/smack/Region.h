@@ -12,8 +12,8 @@ namespace smack {
 class Region {
 private:
   const llvm::DSNode* representative;
-  unsigned long offset;
-  unsigned long length;
+  unsigned offset;
+  unsigned length;
   bool allocated;
   bool singleton;
   bool memcpyd;
@@ -32,13 +32,13 @@ private:
         || representative->isUnknownNode();
   }
 
-  bool isDisjoint(unsigned long offset, unsigned long length) {
+  bool isDisjoint(unsigned offset, unsigned length) {
     return this->offset + this->length <= offset
         || offset + length <= this->offset;
   }
 
 public:
-  Region(const llvm::Value* V, DSAAliasAnalysis* AA);
+  Region(const llvm::Value* V, unsigned offset, unsigned length, DSAAliasAnalysis* AA);
   void merge(Region& R);
   bool overlaps(Region& R);
 
@@ -59,11 +59,10 @@ class RegionCollector : public llvm::InstVisitor<RegionCollector> {
 public:
   RegionCollector(std::function<void(const llvm::Value*)> fn) : collect(fn) { }
 
-  void visitModule(llvm::Module& M) {
-    for (llvm::Module::const_global_iterator
-         G = M.global_begin(), E = M.global_end(); G != E; ++G)
-      collect(G);
-  }
+  // void visitModule(llvm::Module& M) {
+  //   for (const GlobalValue& G : M.globals())
+  //     collect(&G);
+  // }
 
   // void visitAllocaInst(llvm::AllocaInst& I) {
     // getRegion(&I);

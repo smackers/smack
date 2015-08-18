@@ -5,21 +5,23 @@
 
 namespace smack {
 
-Region::Region(const llvm::Value* V, DSAAliasAnalysis* AA) {
+Region::Region(const llvm::Value* V, unsigned offset, unsigned length,
+    DSAAliasAnalysis* AA) {
+
   if (AA) {
     llvm::Type* T = V->getType();
     while (T->isPointerTy()) T = T->getPointerElementType();
     representative = AA->getNode(V);
-    offset = AA->getOffset(V);
-    length = AA->getPointedTypeSize(V);
+    this->offset = offset;
+    this->length = length;
     allocated = AA->isAlloced(V);
     singleton = AA->isSingletonGlobal(V) && T->isSingleValueType();
     memcpyd = AA->isMemcpyd(representative);
     staticInitd = AA->isStaticInitd(representative);
   } else {
     representative = nullptr;
-    offset = 0;
-    length = std::numeric_limits<unsigned long>::max();
+    this->offset = offset;
+    this->length = length;
     allocated = false;
     singleton = false;
     memcpyd = false;

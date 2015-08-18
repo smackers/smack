@@ -16,7 +16,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   Naming naming;
   SmackRep rep(
     m.getDataLayout(),
-    SmackOptions::NoMemoryRegionSplitting ? NULL : &getAnalysis<DSAAliasAnalysis>(),
+    SmackOptions::NoMemoryRegionSplitting ? nullptr : &getAnalysis<DSAAliasAnalysis>(),
     naming, program);
 
   rep.collectRegions(m);

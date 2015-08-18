@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "smack/DSAAliasAnalysis.h"
-// #define DEBUG_TYPE "dsa-aa"
+#define DEBUG_TYPE "dsa-aa"
 
 namespace smack {
 
@@ -102,7 +102,15 @@ DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
     return TD->getDSGraph(*A->getParent());
   else if (const BasicBlock *BB = dyn_cast<BasicBlock>(V))
     return TD->getDSGraph(*BB->getParent());
-  return TD->getGlobalsGraph();
+  else if (isa<GlobalValue>(V))
+    return TD->getGlobalsGraph();
+
+  // XXX I know this looks bad, but it works for now
+  for (auto U : V->users()) {
+    return getGraphForValue(U);
+  }
+
+  llvm_unreachable("Unexpected value.");
 }
 
 bool DSAAliasAnalysis::equivNodes(const DSNode* n1, const DSNode* n2) {

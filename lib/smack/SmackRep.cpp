@@ -302,10 +302,12 @@ string SmackRep::memPath(unsigned region, unsigned size) {
     return memReg(region);
 }
 
+// TODO revise uses of this function: should use ::load and ::store instead.
 const Expr* SmackRep::mem(const llvm::Value* v) {
   return mem(getRegion(v), expr(v), getElementSize(v));
 }
 
+// TODO revise uses of this function: should use ::load and ::store instead.
 const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
   if (memoryRegions[region].isSingletonGlobal())
     return Expr::id(memPath(region, size));
@@ -314,7 +316,17 @@ const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
 }
 
 unsigned SmackRep::getRegion(const llvm::Value* V) {
-  Region R(V, SmackOptions::NoMemoryRegionSplitting ? nullptr : aliasAnalysis);
+  if (aliasAnalysis)
+    return getRegion(V, aliasAnalysis->getOffset(V),
+      aliasAnalysis->getPointedTypeSize(V));
+  else
+    return getRegion(V, 0, std::numeric_limits<unsigned>::max());
+}
+
+unsigned SmackRep::getRegion(const llvm::Value* V,
+    unsigned offset, unsigned length) {
+
+  Region R(V, offset, length, aliasAnalysis);
   unsigned r;
 
   for (r = 0; r < memoryRegions.size(); ++r) {
@@ -352,8 +364,9 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
-  unsigned r1 = getRegion(mci.getOperand(0));
-  unsigned r2 = getRegion(mci.getOperand(1));
+  unsigned length = dyn_cast<ConstantInt>(mci.getLength())->getZExtValue();
+  unsigned r1 = getRegion(mci.getOperand(0),0,length);
+  unsigned r2 = getRegion(mci.getOperand(1),0,length);
   for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
     args.push_back(expr(mci.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*mci.getCalledFunction()), {r1,r2}), args);
@@ -361,7 +374,8 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   vector<const Expr*> args;
-  unsigned r = getRegion(msi.getOperand(0));
+  unsigned length = dyn_cast<ConstantInt>(msi.getLength())->getZExtValue();
+  unsigned r = getRegion(msi.getOperand(0),0,length);
   for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
     args.push_back(expr(msi.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
@@ -396,18 +410,29 @@ const Stmt* SmackRep::store(const llvm::StoreInst& SI) {
 }
 
 const Stmt* SmackRep::store(const llvm::Value* P, const llvm::Value* V, bool bytewise) {
-  return store(getRegion(P), getElementSize(P), expr(P), V, bytewise);
+  if (aliasAnalysis)
+    return store(P, aliasAnalysis->getOffset(P),
+      aliasAnalysis->getPointedTypeSize(P), V, bytewise);
+  else
+    return store(P, 0, std::numeric_limits<unsigned>::max(), V, bytewise);
 }
 
-const Stmt* SmackRep::store(unsigned R, unsigned size, const Expr* addr, const llvm::Value* V, bool bytewise) {
+// XXX This is terrible; globals intializers should be handled separately FIXME
+const Stmt* SmackRep::store(const llvm::Value* P,
+    unsigned offset, unsigned length,
+    const llvm::Value* V, bool bytewise) {
+
+  unsigned size = length * 8;
+  unsigned R = getRegion(P, offset, length);
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
+  const Expr* A = isa<GlobalValue>(P) ? pa(expr(P),1,offset): expr(P);
   const Expr* rhs = expr(V);
   string N = string("$store.") + (bytewise ? "bytes." : "") + intType(size);
   if (V->getType()->isFloatingPointTy())
     rhs = Expr::fn(opName("$fp2si",{V->getType(), llvm::IntegerType::get(V->getContext(),size)}), rhs);
   else if (V->getType()->isPointerTy())
     rhs = pointerToInteger(rhs, size);
-  return Stmt::assign(M, memoryRegions[R].isSingletonGlobal() ? rhs : Expr::fn(N,M,addr,rhs));
+  return Stmt::assign(M, memoryRegions[R].isSingletonGlobal() ? rhs : Expr::fn(N,M,A,rhs));
 }
 
 const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
@@ -691,8 +716,9 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *len = T->getParamType(2),
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
-      unsigned r1 = getRegion(MCI->getOperand(0));
-      unsigned r2 = getRegion(MCI->getOperand(1));
+      unsigned length = dyn_cast<ConstantInt>(MCI->getLength())->getZExtValue();
+      unsigned r1 = getRegion(MCI->getOperand(0),0,length);
+      unsigned r2 = getRegion(MCI->getOperand(1),0,length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r1,r2}), {
         {"dst", type(dst)},
@@ -721,7 +747,8 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *len = T->getParamType(2),
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
-      unsigned r = getRegion(MSI->getOperand(0));
+      unsigned length = dyn_cast<ConstantInt>(MCI->getLength())->getZExtValue();
+      unsigned r = getRegion(MSI->getOperand(0),0,length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r}), {
         {"dst", type(dst)},
@@ -979,34 +1006,31 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
 }
 
 void SmackRep::addInit(const llvm::GlobalValue* G, const llvm::Constant* C) {
-  addInit(G, expr(G), C, bytewiseAccess(G,0));
+  addInit(G, 0, C, bytewiseAccess(G,0));
 }
 
-void SmackRep::addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool bytewise) {
-  using namespace llvm;
+void SmackRep::addInit(const llvm::GlobalValue* G, unsigned offset,
+    const llvm::Constant* C, bool bytewise) {
 
   if (C->getType()->isIntegerTy() ||
       C->getType()->isPointerTy() ||
       C->getType()->isFloatingPointTy()) {
-    staticInits.push_back(store(getRegion(G), getSize(C->getType()), addr, C, bytewise));
+    unsigned length = targetData->getTypeStoreSize(C->getType());
+    staticInits.push_back(store(G, offset, length, C, bytewise));
 
-  } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType())) {
-    for (unsigned i = 0; i < at->getNumElements(); i++) {
+  } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType()))
+    for (unsigned i = 0; i < at->getNumElements(); i++)
+      addInit(G, offset + SmackRep::offset(at,i),
+        C->getAggregateElement(i),
+        bytewiseAccess(G, offset + SmackRep::offset(at,i)));
 
-      // TODO shouldn’t we be accummulating the offset from G?
-      addInit(G, pa(addr,i,storageSize(at->getElementType())), C->getAggregateElement(i),
-        bytewiseAccess(G, offset(at,i)));
-    }
+  else if (StructType* st = dyn_cast<StructType>(C->getType()))
+    for (unsigned i = 0; i < st->getNumElements(); i++)
+      addInit(G, offset + SmackRep::offset(st,i),
+        C->getAggregateElement(i),
+        bytewiseAccess(G, offset + SmackRep::offset(st,i)));
 
-  } else if (StructType* st = dyn_cast<StructType>(C->getType())) {
-    for (unsigned i = 0; i < st->getNumElements(); i++) {
-
-      // TODO shouldn’t we be accummulating the offset from G?
-      addInit(G, pa(addr,offset(st,i),1), C->getAggregateElement(i),
-        bytewiseAccess(G, offset(st,i)));
-    }
-
-  } else if (C->getType()->isX86_FP80Ty()) {
+  else if (C->getType()->isX86_FP80Ty()) {
     staticInits.push_back(Stmt::code("// ignored X86 FP80 initializer"));
 
   } else {
