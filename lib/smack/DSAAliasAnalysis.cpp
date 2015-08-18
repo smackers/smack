@@ -11,9 +11,8 @@
 // context sensitive alias analysis.
 //
 //===----------------------------------------------------------------------===//
-
 #include "smack/DSAAliasAnalysis.h"
-#include <iostream>
+// #define DEBUG_TYPE "dsa-aa"
 
 namespace smack {
 
@@ -23,15 +22,24 @@ RegisterPass<DSAAliasAnalysis> A("ds-aa", "Data Structure Graph Based Alias Anal
 RegisterAnalysisGroup<AliasAnalysis> B(A);
 char DSAAliasAnalysis::ID = 0;
 
+void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
+  std::string EC;
+  sys::fs::OpenFlags Flags;
+  llvm::raw_fd_ostream F(Filename, EC, Flags);
+  TD->print(F, module);
+  BU->print(F, module);
+  TS->print(F, module);
+}
+
 vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
     llvm::Module &M, MemcpyCollector *mcc) {
 
   for (llvm::Module::iterator func = M.begin(), e = M.end();
        func != e; ++func) {
-         
-    for (llvm::Function::iterator block = func->begin(); 
+
+    for (llvm::Function::iterator block = func->begin();
         block != func->end(); ++block) {
-        
+
       mcc->visit(*block);
     }
   }
@@ -42,7 +50,7 @@ vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
 vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M) {
   vector<const llvm::DSNode*> sis;
 
-  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
   for (llvm::Module::const_global_iterator
        g = M.global_begin(), e = M.global_end(); g != e; ++g) {
@@ -60,7 +68,7 @@ bool DSAAliasAnalysis::isComplicatedNode(const llvm::DSNode* N) {
 }
 
 bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
-  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
   const llvm::DSNode* nn = eqs.getLeaderValue(n);
   for (unsigned i=0; i<memcpys.size(); i++)
@@ -70,7 +78,7 @@ bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
 }
 
 bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
-  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
   const llvm::DSNode* nn = eqs.getLeaderValue(n);
   for (unsigned i=0; i<staticInits.size(); i++)
@@ -98,9 +106,9 @@ DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
 }
 
 bool DSAAliasAnalysis::equivNodes(const DSNode* n1, const DSNode* n2) {
-  const EquivalenceClasses<const DSNode*> &eqs 
+  const EquivalenceClasses<const DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
-  
+
   return eqs.getLeaderValue(n1) == eqs.getLeaderValue(n2);
 }
 
@@ -113,13 +121,16 @@ unsigned DSAAliasAnalysis::getOffset(const Location* l) {
 bool DSAAliasAnalysis::disjoint(const Location* l1, const Location* l2) {
   unsigned o1 = getOffset(l1);
   unsigned o2 = getOffset(l2);
-  return 
+  return
     (o1 < o2 && o1 + l1->Size <= o2)
     || (o2 < o1 && o2 + l2->Size <= o1);
 }
 
-DSNode *DSAAliasAnalysis::getNode(const Value* v) {
-  return getGraphForValue(v)->getNodeForValue(v).getNode();
+// TODO: Should this return the node or its leader?
+const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+    = nodeEqs->getEquivalenceClasses();
+  return eqs.getLeaderValue(nodeEqs->getMemberForValue(v));
 }
 
 bool DSAAliasAnalysis::isAlloced(const Value* v) {
@@ -164,6 +175,21 @@ bool DSAAliasAnalysis::isSingletonGlobal(const Value *V) {
   return true;
 }
 
+unsigned DSAAliasAnalysis::getPointedTypeSize(const Value* v) {
+  if (llvm::PointerType* t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
+    llvm::Type* pointedType = t->getTypeAtIndex(0u);
+    if (pointedType->isSized())
+      return dataLayout->getTypeStoreSize(pointedType);
+    else
+      return UINT_MAX;
+  } else
+    assert(false && "Type should be pointer.");
+}
+
+unsigned DSAAliasAnalysis::getOffset(const Value* v) {
+  return getOffset(new Location(v));
+}
+
 AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {
 
   if (LocA.Ptr == LocB.Ptr)
@@ -186,13 +212,13 @@ AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const L
 
   if (isMemcpyd(N1) || isMemcpyd(N2))
     goto surrender;
-    
+
   if (isStaticInitd(N1) || isStaticInitd(N2))
     goto surrender;
 
   if (disjoint(&LocA,&LocB))
     return NoAlias;
-  
+
   // FIXME: we could improve on this by checking the globals graph for aliased
   // global queries...
 surrender:

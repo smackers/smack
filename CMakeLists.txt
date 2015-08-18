@@ -147,6 +147,7 @@ add_library(smackTranslator STATIC
   include/smack/Contracts.h
   include/smack/DSAAliasAnalysis.h
   include/smack/Naming.h
+  include/smack/Region.h
   include/smack/Slicing.h
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
@@ -159,6 +160,7 @@ add_library(smackTranslator STATIC
   lib/smack/Contracts.cpp
   lib/smack/DSAAliasAnalysis.cpp
   lib/smack/Naming.cpp
+  lib/smack/Region.cpp
   lib/smack/Slicing.cpp
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp

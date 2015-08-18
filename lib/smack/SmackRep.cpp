@@ -288,7 +288,8 @@ bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
 
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
-  if (!memoryRegions[region].isSingletonGlobal || (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
+  if (!memoryRegions[region].isSingletonGlobal() ||
+      (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << PTR_TYPE << "] ";
   s << intType(size);
   return s.str();
@@ -306,72 +307,37 @@ const Expr* SmackRep::mem(const llvm::Value* v) {
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
-  if (memoryRegions[region].isSingletonGlobal)
+  if (memoryRegions[region].isSingletonGlobal())
     return Expr::id(memPath(region, size));
   else
     return Expr::sel(Expr::id(memPath(region, size)), addr);
 }
 
-unsigned SmackRep::getRegion(const llvm::Value* v) {
-  unsigned mr;
-  unsigned firstMR = UINT_MAX;
-  set<const llvm::Value*>::iterator r;
+unsigned SmackRep::getRegion(const llvm::Value* V) {
+  Region R(V, SmackOptions::NoMemoryRegionSplitting ? nullptr : aliasAnalysis);
+  unsigned r;
 
-  if (SmackOptions::NoMemoryRegionSplitting)
-    mr = 0;
-  else
-    for (mr=0; mr<memoryRegions.size(); ++mr) {
-      for (r = memoryRegions[mr].representatives.begin(); r != memoryRegions[mr].representatives.end(); ++r) {
-        if (llvm::PointerType* vType = llvm::dyn_cast<llvm::PointerType>(v->getType()))
-          if (llvm::PointerType* rType = llvm::dyn_cast<llvm::PointerType>((*r)->getType())) {
-            llvm::Type* vPointedType = vType->getTypeAtIndex(0u);
-            llvm::Type* rPointedType = rType->getTypeAtIndex(0u);
-
-            if (vPointedType->isSized() && rPointedType->isSized()) {
-              uint64_t vSize = targetData->getTypeStoreSize(vPointedType);
-              uint64_t rSize = targetData->getTypeStoreSize(rPointedType);
-              if (!aliasAnalysis->isNoAlias(v, vSize, *r, rSize))
-                break;
-            } else
-              if (!aliasAnalysis->isNoAlias(v, *r))
-                break;
-          } else
-            assert(false && "Region type should be pointer.");
-        else
-          assert(false && "Region type should be pointer.");
-      }
-      if (r != memoryRegions[mr].representatives.end()) {
-        if (firstMR == UINT_MAX) {
-          firstMR = mr;
-          memoryRegions[firstMR].representatives.insert(v);
-        } else {
-          memoryRegions[firstMR].unifyWith(memoryRegions[mr]);
-          memoryRegions.erase(memoryRegions.begin() + mr);
-        }
-      }
+  for (r = 0; r < memoryRegions.size(); ++r) {
+    if (memoryRegions[r].overlaps(R)) {
+      memoryRegions[r].merge(R);
+      break;
     }
-
-  if (firstMR == UINT_MAX) {
-    firstMR = mr;
-    llvm::Type* T = v->getType();
-    while (T->isPointerTy()) T = T->getPointerElementType();
-    memoryRegions.emplace_back(v,false,
-      aliasAnalysis && aliasAnalysis->isSingletonGlobal(v) && T->isSingleValueType()
-    );
   }
 
-  memoryRegions[firstMR].isAllocated = memoryRegions[firstMR].isAllocated ||
-    (aliasAnalysis && aliasAnalysis->isAlloced(v));
-  return firstMR;
+  if (r == memoryRegions.size())
+    memoryRegions.emplace_back(R);
+
+  return r;
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
-  return v->getType()->isPointerTy() && !memoryRegions[getRegion(v)].isAllocated;
+  return v->getType()->isPointerTy()
+      && !memoryRegions[getRegion(v)].isAllocated();
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {
-  RegionCollector rc(*this);
-  rc.visit(M);
+  RegionCollector RC([this](const llvm::Value* V){ getRegion(V); });
+  RC.visit(M);
 }
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {

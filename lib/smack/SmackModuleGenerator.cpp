@@ -21,6 +21,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   rep.collectRegions(m);
 
+  // rep.print("dsa-graphs.txt");
+
   DEBUG(errs() << "Analyzing globals...\n");
 
   for (llvm::Module::const_global_iterator
@@ -34,7 +36,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   for (llvm::Module::iterator func = m.begin(), e = m.end();
        func != e; ++func) {
 
-    // Reset the counters for per-function names     
+    // Reset the counters for per-function names
     naming.reset();
 
     DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
