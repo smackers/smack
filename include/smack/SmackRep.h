@@ -7,7 +7,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "smack/Naming.h"
-#include "smack/RegionManager.h"
+#include "smack/Region.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
@@ -54,7 +54,7 @@ public:
 
 protected:
   DSAAliasAnalysis* aliasAnalysis;
-  RegionManager* regionManager;
+  vector<Region> memoryRegions;
   Naming& naming;
   Program& program;
   vector<string> bplGlobals;
@@ -72,7 +72,6 @@ public:
   SmackRep(const DataLayout* L, DSAAliasAnalysis* aa, Naming& N, Program& P)
     : targetData(L), aliasAnalysis(aa), naming(N), program(P),
       globalsBottom(0), externsBottom(-32768) {
-    regionManager = new RegionManager(L, aa);
     uniqueFpNum = 0;
     ptrSizeInBits = targetData->getPointerSizeInBits();
   }
@@ -174,6 +173,7 @@ public:
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
   unsigned getRegion(const llvm::Value* v);
+
   string memReg(unsigned i);
   string memType(unsigned region, unsigned size);
   string memPath(unsigned region, unsigned size);

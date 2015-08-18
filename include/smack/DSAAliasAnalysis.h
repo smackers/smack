@@ -19,7 +19,6 @@
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
 #include "dsa/TypeSafety.h"
-#include "smack/Region.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -118,7 +117,6 @@ public:
   unsigned getOffset(const Value* v);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
-  AliasResult alias(Region regA, const Value* valB);
 
 private:
   bool isComplicatedNode(const llvm::DSNode* n);

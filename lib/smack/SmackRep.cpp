@@ -282,7 +282,7 @@ bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
 
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
-  if (!regionManager->getRegion(region).isSingletonGlobal() ||
+  if (!memoryRegions[region].isSingletonGlobal() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << PTR_TYPE << "] ";
   s << intType(size);
@@ -301,22 +301,37 @@ const Expr* SmackRep::mem(const llvm::Value* v) {
 }
 
 const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
-  if (regionManager->getRegion(region).isSingletonGlobal())
+  if (memoryRegions[region].isSingletonGlobal())
     return Expr::id(memPath(region, size));
   else
     return Expr::sel(Expr::id(memPath(region, size)), addr);
 }
 
-unsigned SmackRep::getRegion(const llvm::Value* v) {
-  return regionManager->getRegion(v);
+unsigned SmackRep::getRegion(const llvm::Value* V) {
+  Region R(V, SmackOptions::NoMemoryRegionSplitting ? nullptr : aliasAnalysis);
+  unsigned r;
+
+  for (r = 0; r < memoryRegions.size(); ++r) {
+    if (memoryRegions[r].overlaps(R)) {
+      memoryRegions[r].merge(R);
+      break;
+    }
+  }
+
+  if (r == memoryRegions.size())
+    memoryRegions.emplace_back(R);
+
+  return r;
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
-  return v->getType()->isPointerTy() && !regionManager->getRegion(getRegion(v)).isAllocated();
+  return v->getType()->isPointerTy()
+      && !memoryRegions[getRegion(v)].isAllocated();
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {
-  regionManager->visit(M);
+  RegionCollector RC([this](const llvm::Value* V){ getRegion(V); });
+  RC.visit(M);
 }
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
@@ -655,7 +670,7 @@ Decl* SmackRep::decl(Function* F, CallInst *C) {
   else
     for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A)
       params.push_back({naming.get(*A), type(A->getType())});
-    
+
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
@@ -874,8 +889,8 @@ string SmackRep::getPrelude() {
   }
   s << endl;
 
-  s << "// Memory maps (" << regionManager->size() << " regions)" << endl;
-  for (unsigned i=0; i<regionManager->size(); ++i) {
+  s << "// Memory maps (" << memoryRegions.size() << " regions)" << endl;
+  for (unsigned i=0; i<memoryRegions.size(); ++i) {
     unsigned n = uniformMemoryAccesses() ? 1 : 4;
     for (unsigned j = 0; j < n; j++) {
       unsigned size = 8 << j;
@@ -950,7 +965,7 @@ vector<string> SmackRep::getModifies() {
   vector<string> mods;
   for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
     mods.push_back(*i);
-  for (unsigned i=0; i<regionManager->size(); ++i) {
+  for (unsigned i=0; i<memoryRegions.size(); ++i) {
     unsigned n = uniformMemoryAccesses() ? 1 : 4;
     for (unsigned j=0; j < n; ++j) {
       unsigned size = 8 << j;

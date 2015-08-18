@@ -5,54 +5,95 @@
 #define REGION_H
 
 #include "dsa/DSGraph.h"
+#include "smack/DSAAliasAnalysis.h"
 
 namespace smack {
-
-using namespace std;
 
 class Region {
 private:
   const llvm::DSNode* representative;
-  unsigned long lowOffset;
-  unsigned long highOffset;
+  unsigned long offset;
+  unsigned long length;
   bool allocated;
-  bool singletonGlobal;
+  bool singleton;
   bool memcpyd;
   bool staticInitd;
 
-public:
-  Region(const llvm::DSNode* r, unsigned long lo, unsigned long ho, bool a, bool s = false, bool m = false, bool i = false) :
-    representative(r), lowOffset(lo), highOffset(ho), allocated(a), singletonGlobal(s), memcpyd(m), staticInitd(i) {}
-  void unifyWith(const llvm::DSNode* node, unsigned long offset, unsigned long size, bool a, bool m, bool i);
-  void unifyWith(Region r);
-
-  unsigned long getHighOffset() const {
-    return highOffset;
+  bool isIncomplete() {
+    return !representative
+        || representative->isIncompleteNode();
   }
+
+  bool isComplicated() {
+    return !representative
+        || representative->isIntToPtrNode()
+        || representative->isIntToPtrNode()
+        || representative->isExternalNode()
+        || representative->isUnknownNode();
+  }
+
+  bool isDisjoint(unsigned long offset, unsigned long length) {
+    return this->offset + this->length <= offset
+        || offset + length <= this->offset;
+  }
+
+public:
+  Region(const llvm::Value* V, DSAAliasAnalysis* AA);
+  void merge(Region& R);
+  bool overlaps(Region& R);
 
   bool isAllocated() const {
     return allocated;
   }
 
-  unsigned long getLowOffset() const {
-    return lowOffset;
-  }
-
-  const llvm::DSNode* getRepresentative() const {
-    return representative;
-  }
-
   bool isSingletonGlobal() const {
-    return singletonGlobal;
+    return singleton;
   }
 
-  bool isMemcpyd() const {
-    return memcpyd;
+};
+
+class RegionCollector : public llvm::InstVisitor<RegionCollector> {
+
+  std::function<void(const llvm::Value*)> collect;
+
+public:
+  RegionCollector(std::function<void(const llvm::Value*)> fn) : collect(fn) { }
+
+  void visitModule(llvm::Module& M) {
+    for (llvm::Module::const_global_iterator
+         G = M.global_begin(), E = M.global_end(); G != E; ++G)
+      collect(G);
   }
 
-  bool isStaticInitd() const {
-    return staticInitd;
+  // void visitAllocaInst(llvm::AllocaInst& I) {
+    // getRegion(&I);
+  // }
+
+  void visitLoadInst(llvm::LoadInst& I) {
+    collect(I.getPointerOperand());
   }
+
+  void visitStoreInst(llvm::StoreInst& I) {
+    collect(I.getPointerOperand());
+  }
+
+  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &I) {
+    collect(I.getPointerOperand());
+  }
+
+  void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
+    collect(I.getPointerOperand());
+  }
+
+  void visitMemIntrinsic(MemIntrinsic &I) {
+    collect(I.getDest());
+  }
+
+  void visitCallInst(llvm::CallInst& I) {
+    if (I.getType()->isPointerTy())
+      collect(&I);
+  }
+
 };
 
 }
