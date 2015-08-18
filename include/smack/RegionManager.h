@@ -32,7 +32,7 @@ public:
   }
   // TODO: Why invoking for alloca?
   void visitAllocaInst(llvm::AllocaInst& I) {
-    getRegion(&I);
+    // getRegion(&I);
   }
   void visitLoadInst(llvm::LoadInst& I) {
     getRegion(I.getPointerOperand());
@@ -48,8 +48,8 @@ public:
   }
   // TODO: Why invoking for call?
   void visitCallInst(llvm::CallInst& I) {
-    if (I.getType()->isPointerTy())
-      getRegion(&I);
+    // if (I.getType()->isPointerTy())
+    //  getRegion(&I);
   }
 };
 

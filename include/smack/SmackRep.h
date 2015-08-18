@@ -76,6 +76,7 @@ public:
     uniqueFpNum = 0;
     ptrSizeInBits = targetData->getPointerSizeInBits();
   }
+  void print(const char* Filename) { aliasAnalysis->printDSAGraphs(Filename); }
   Program& getProgram() { return program; }
 
 private:

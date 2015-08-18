@@ -37,18 +37,18 @@ class MemcpyCollector : public llvm::InstVisitor<MemcpyCollector> {
 private:
   llvm::DSNodeEquivs *nodeEqs;
   vector<const llvm::DSNode*> memcpys;
-  
+
 public:
   MemcpyCollector(llvm::DSNodeEquivs *neqs) : nodeEqs(neqs) { }
 
   void visitMemCpyInst(llvm::MemCpyInst& mci) {
-    const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+    const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
       = nodeEqs->getEquivalenceClasses();
     const llvm::DSNode *n1 = eqs.getLeaderValue(
       nodeEqs->getMemberForValue(mci.getOperand(0)) );
     const llvm::DSNode *n2 = eqs.getLeaderValue(
       nodeEqs->getMemberForValue(mci.getOperand(1)) );
-    
+
     bool f1 = false, f2 = false;
     for (unsigned i=0; i<memcpys.size() && (!f1 || !f2); i++) {
       f1 = f1 || memcpys[i] == n1;
@@ -63,13 +63,14 @@ public:
     return memcpys;
   }
 };
-  
+
 class DSAAliasAnalysis : public llvm::ModulePass, public llvm::AliasAnalysis {
 private:
+  llvm::Module *module;
   llvm::TDDataStructures *TD;
   llvm::BUDataStructures *BU;
   llvm::DSNodeEquivs *nodeEqs;
-  dsa::TypeSafety<llvm::TDDataStructures> *TS; 
+  dsa::TypeSafety<llvm::TDDataStructures> *TS;
   vector<const llvm::DSNode*> staticInits;
   vector<const llvm::DSNode*> memcpys;
   unordered_set<const llvm::DSNode*> intConversions;
@@ -78,6 +79,8 @@ private:
 public:
   static char ID;
   DSAAliasAnalysis() : ModulePass(ID) {}
+
+  void printDSAGraphs(const char* Filename);
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     llvm::AliasAnalysis::getAnalysisUsage(AU);
@@ -99,7 +102,7 @@ public:
     memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
     staticInits = collectStaticInits(M);
     dataLayout = M.getDataLayout();
-
+    module = &M;
     return false;
   }
 

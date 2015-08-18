@@ -2,6 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/RegionManager.h"
+// #define DEBUG_TYPE "region-manager"
 
 namespace smack {
 
@@ -14,6 +15,7 @@ Region RegionManager::getRegion(unsigned idx) {
 }
 
 unsigned RegionManager::getRegion(const llvm::Value* v) {
+  // DEBUG(errs() << "YYY - getRegion(" << *v << ")\n");
 
   if (SmackOptions::NoMemoryRegionSplitting) {
     llvm::Type* T = v->getType();
@@ -56,6 +58,8 @@ unsigned RegionManager::getRegion(const llvm::Value* v) {
           aliasAnalysis->isStaticInitd(aliasAnalysis->getNode(v))
       );
     }
+
+    // DEBUG(errs() << "YYY - getRegion(" << *v << ") => " << firstMR << "\n");
     return firstMR;
   }
 }
