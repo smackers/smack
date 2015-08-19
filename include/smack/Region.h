@@ -11,13 +11,19 @@ namespace smack {
 
 class Region {
 private:
-  const llvm::DSNode* representative;
+  const DSNode* representative;
   unsigned offset;
   unsigned length;
   bool allocated;
   bool singleton;
+  bool bytewise;
   bool memcpyd;
   bool staticInitd;
+
+  static DSAAliasAnalysis* DSA;
+  static DSAAliasAnalysis* getDSA() { return DSA; }
+
+  void init(const Value* V, unsigned offset, unsigned length);
 
   bool isIncomplete() {
     return !representative
@@ -38,7 +44,11 @@ private:
   }
 
 public:
-  Region(const llvm::Value* V, unsigned offset, unsigned length, DSAAliasAnalysis* AA);
+  Region(const Value* V);
+  Region(const Value* V, unsigned offset, unsigned length);
+
+  static void setDSA(DSAAliasAnalysis& dsa) { DSA = &dsa; }
+
   void merge(Region& R);
   bool overlaps(Region& R);
 
@@ -50,37 +60,41 @@ public:
     return singleton;
   }
 
+  bool bytewiseAccess() const {
+    return bytewise;
+  }
+
 };
 
-class RegionCollector : public llvm::InstVisitor<RegionCollector> {
+class RegionCollector : public InstVisitor<RegionCollector> {
 
-  std::function<void(const llvm::Value*)> collect;
+  std::function<void(const Value*)> collect;
 
 public:
-  RegionCollector(std::function<void(const llvm::Value*)> fn) : collect(fn) { }
+  RegionCollector(std::function<void(const Value*)> fn) : collect(fn) { }
 
-  // void visitModule(llvm::Module& M) {
+  // void visitModule(Module& M) {
   //   for (const GlobalValue& G : M.globals())
   //     collect(&G);
   // }
 
-  // void visitAllocaInst(llvm::AllocaInst& I) {
+  // void visitAllocaInst(AllocaInst& I) {
     // getRegion(&I);
   // }
 
-  void visitLoadInst(llvm::LoadInst& I) {
+  void visitLoadInst(LoadInst& I) {
     collect(I.getPointerOperand());
   }
 
-  void visitStoreInst(llvm::StoreInst& I) {
+  void visitStoreInst(StoreInst& I) {
     collect(I.getPointerOperand());
   }
 
-  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &I) {
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
     collect(I.getPointerOperand());
   }
 
-  void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
+  void visitAtomicRMWInst(AtomicRMWInst &I) {
     collect(I.getPointerOperand());
   }
 
@@ -88,7 +102,7 @@ public:
     collect(I.getDest());
   }
 
-  void visitCallInst(llvm::CallInst& I) {
+  void visitCallInst(CallInst& I) {
     if (I.getType()->isPointerTy())
       collect(&I);
   }

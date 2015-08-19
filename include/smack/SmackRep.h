@@ -53,7 +53,6 @@ public:
   static const map<unsigned,string> ATOMICRMWINST_TABLE;
 
 protected:
-  DSAAliasAnalysis* aliasAnalysis;
   vector<Region> memoryRegions;
   Naming& naming;
   Program& program;
@@ -69,19 +68,17 @@ protected:
   unsigned uniqueFpNum;
 
 public:
-  SmackRep(const DataLayout* L, DSAAliasAnalysis* aa, Naming& N, Program& P)
-    : targetData(L), aliasAnalysis(aa), naming(N), program(P),
-      globalsBottom(0), externsBottom(-32768) {
-    uniqueFpNum = 0;
-    ptrSizeInBits = targetData->getPointerSizeInBits();
-  }
-  void print(const char* Filename) { aliasAnalysis->printDSAGraphs(Filename); }
+  SmackRep(const DataLayout* L, Naming& N, Program& P)
+    : targetData(L), naming(N), program(P),
+      globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
+      ptrSizeInBits(targetData->getPointerSizeInBits())
+  { }
   Program& getProgram() { return program; }
 
 private:
   void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
   void addInit(const llvm::GlobalValue* G, unsigned offset,
-    const llvm::Constant* C, bool bytewise);
+    const llvm::Constant* C);
 
   unsigned storageSize(llvm::Type* T);
   unsigned offset(llvm::ArrayType* T, unsigned idx);
@@ -101,10 +98,10 @@ private:
   string opName(const string& operation, initializer_list<unsigned> types);
 
   const Expr* mem(unsigned region, const Expr* addr, unsigned size);
-  const Stmt* store(const llvm::Value* P, const llvm::Value* V, bool bytewise = false);
-  const Stmt* store(const llvm::Value* P, unsigned offset, unsigned length,
-    const llvm::Value* val, bool bytewise = false);
-  const Expr* load(const llvm::Value* P, bool bytewise = false);
+  const Stmt* store(const llvm::GlobalValue* P, unsigned offset,
+    const llvm::Value* val);
+  const Stmt* store(unsigned R, const Expr* A, const llvm::Value* V);
+  const Expr* load(const llvm::Value* P);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
@@ -114,8 +111,6 @@ private:
   string procName(const llvm::User& U, llvm::Function* F);
 
   vector<unsigned> memoryAccessSizes();
-  bool bytewiseAccess(const llvm::Value* V, const llvm::Function* F);
-  bool bytewiseAccess(const llvm::GlobalValue* V, unsigned offset);
 
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
@@ -176,8 +171,9 @@ public:
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
-  unsigned getRegion(const llvm::Value* V, unsigned offset, unsigned length);
-  unsigned getRegion(const llvm::Value* V);
+  unsigned getRegion(const llvm::Value* v);
+  unsigned getRegion(const llvm::Value* v, unsigned offset, unsigned length);
+  unsigned getRegion(Region& R);
 
   string memReg(unsigned i);
   string memType(unsigned region, unsigned size);
