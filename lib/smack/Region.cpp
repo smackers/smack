@@ -42,8 +42,6 @@ void Region::init(const Value* V, unsigned offset, unsigned length) {
   singleton = DSA && DSA->isSingletonGlobal(V) && T->isSingleValueType();
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset));
-  memcpyd = DSA && DSA->isMemcpyd(representative);
-  staticInitd = DSA && DSA->isStaticInitd(representative);
 }
 
 Region::Region(const Value* V) {
@@ -89,8 +87,6 @@ void Region::merge(Region& R) {
   length = high - low;
   bytewise = bytewise || R.bytewise;
   allocated = allocated || R.allocated;
-  memcpyd = memcpyd || R.memcpyd;
-  staticInitd = staticInitd || R.staticInitd;
 }
 
 bool Region::overlaps(Region& R) {

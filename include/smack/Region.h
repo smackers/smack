@@ -17,8 +17,6 @@ private:
   bool allocated;
   bool singleton;
   bool bytewise;
-  bool memcpyd;
-  bool staticInitd;
 
   static DSAAliasAnalysis* DSA;
   static DSAAliasAnalysis* getDSA() { return DSA; }
