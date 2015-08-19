@@ -74,6 +74,7 @@ public:
       ptrSizeInBits(targetData->getPointerSizeInBits())
   { }
   Program& getProgram() { return program; }
+  void print(raw_ostream&);
 
 private:
   void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
@@ -172,6 +173,7 @@ public:
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
   unsigned getRegion(const llvm::Value* v);
+  unsigned getRegion(const llvm::Value* v, unsigned offset);
   unsigned getRegion(const llvm::Value* v, unsigned offset, unsigned length);
   unsigned getRegion(Region& R);
 

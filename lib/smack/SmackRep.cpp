@@ -157,6 +157,16 @@ bool isCodeString(const llvm::Value* V) {
   return false;
 }
 
+void SmackRep::print(raw_ostream &O) {
+  O << "";
+  for (auto & R : memoryRegions) {
+    O << "XXX Region(";
+    R.print(O);
+    O << ")\n";
+  }
+  O << "\n";
+}
+
 string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
@@ -311,9 +321,15 @@ unsigned SmackRep::getRegion(const llvm::Value* V) {
   return getRegion(R);
 }
 
+unsigned SmackRep::getRegion(const Value* V, unsigned length) {
+  DEBUG(errs() << "XXX getRegion[" << length << "](" << *V << ")");
+  Region R(V,length);
+  return getRegion(R);
+}
+
 unsigned SmackRep::getRegion(const llvm::Value* V,
     unsigned offset, unsigned length) {
-  DEBUG(errs() << "XXX getRegion[" << offset << ", " << length << "](" << *V << ")");
+  DEBUG(errs() << "XXX getRegion[" << offset << "," << length << "](" << *V << ")");
   Region R(V,offset,length);
   return getRegion(R);
 }
@@ -331,6 +347,20 @@ unsigned SmackRep::getRegion(Region& R) {
   if (r == memoryRegions.size())
     memoryRegions.emplace_back(R);
 
+  else {
+    // Here is the tricky part: in case R was merged with an existing region,
+    // we must now also merge any other region which intersects with R.
+    unsigned q = r+1;
+    while (q < memoryRegions.size()) {
+      if (memoryRegions[r].overlaps(memoryRegions[q])) {
+        memoryRegions[r].merge(memoryRegions[q]);
+        memoryRegions.erase(memoryRegions.begin()+q);
+      } else {
+        q++;
+      }
+    }
+  }
+
   DEBUG(errs() << " => " << r << "\n");
 
   return r;
@@ -342,7 +372,9 @@ bool SmackRep::isExternal(const llvm::Value* v) {
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {
-  RegionCollector RC([this](const llvm::Value* V){ getRegion(V); });
+  RegionCollector RC(
+    [this](const Value* V){ getRegion(V); },
+    [this](const Value* V, unsigned len){ getRegion(V,len); });
   RC.visit(M);
 }
 
@@ -359,8 +391,8 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
   unsigned length = dyn_cast<ConstantInt>(mci.getLength())->getZExtValue();
-  unsigned r1 = getRegion(mci.getOperand(0),0,length);
-  unsigned r2 = getRegion(mci.getOperand(1),0,length);
+  unsigned r1 = getRegion(mci.getOperand(0),length);
+  unsigned r2 = getRegion(mci.getOperand(1),length);
   for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
     args.push_back(expr(mci.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*mci.getCalledFunction()), {r1,r2}), args);
@@ -369,7 +401,7 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   vector<const Expr*> args;
   unsigned length = dyn_cast<ConstantInt>(msi.getLength())->getZExtValue();
-  unsigned r = getRegion(msi.getOperand(0),0,length);
+  unsigned r = getRegion(msi.getOperand(0),length);
   for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
     args.push_back(expr(msi.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
@@ -710,8 +742,8 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
       unsigned length = dyn_cast<ConstantInt>(MCI->getLength())->getZExtValue();
-      unsigned r1 = getRegion(MCI->getOperand(0),0,length);
-      unsigned r2 = getRegion(MCI->getOperand(1),0,length);
+      unsigned r1 = getRegion(MCI->getOperand(0),length);
+      unsigned r2 = getRegion(MCI->getOperand(1),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r1,r2}), {
         {"dst", type(dst)},
@@ -741,7 +773,7 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
       unsigned length = dyn_cast<ConstantInt>(MSI->getLength())->getZExtValue();
-      unsigned r = getRegion(MSI->getOperand(0),0,length);
+      unsigned r = getRegion(MSI->getOperand(0),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r}), {
         {"dst", type(dst)},

@@ -19,7 +19,6 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
     Region::setDSA(getAnalysis<DSAAliasAnalysis>());
 
   SmackRep rep(m.getDataLayout(), naming, program);
-
   rep.collectRegions(m);
 
   DEBUG(errs() << "Analyzing globals...\n");

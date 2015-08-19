@@ -24,27 +24,13 @@ private:
   static DSAAliasAnalysis* getDSA() { return DSA; }
 
   void init(const Value* V, unsigned offset, unsigned length);
-
-  bool isIncomplete() {
-    return !representative
-        || representative->isIncompleteNode();
-  }
-
-  bool isComplicated() {
-    return !representative
-        || representative->isIntToPtrNode()
-        || representative->isIntToPtrNode()
-        || representative->isExternalNode()
-        || representative->isUnknownNode();
-  }
-
-  bool isDisjoint(unsigned offset, unsigned length) {
-    return this->offset + this->length <= offset
-        || offset + length <= this->offset;
-  }
+  bool isIncomplete();
+  bool isComplicated();
+  bool isDisjoint(unsigned offset, unsigned length);
 
 public:
   Region(const Value* V);
+  Region(const Value* V, unsigned length);
   Region(const Value* V, unsigned offset, unsigned length);
 
   static void setDSA(DSAAliasAnalysis& dsa) { DSA = &dsa; }
@@ -52,26 +38,23 @@ public:
   void merge(Region& R);
   bool overlaps(Region& R);
 
-  bool isAllocated() const {
-    return allocated;
-  }
+  bool isAllocated() const { return allocated; }
+  bool isSingletonGlobal() const { return singleton; }
+  bool bytewiseAccess() const { return bytewise; }
 
-  bool isSingletonGlobal() const {
-    return singleton;
-  }
-
-  bool bytewiseAccess() const {
-    return bytewise;
-  }
+  void print(raw_ostream&);
 
 };
 
 class RegionCollector : public InstVisitor<RegionCollector> {
 
   std::function<void(const Value*)> collect;
+  std::function<void(const Value*,unsigned)> collectWithLength;
 
 public:
-  RegionCollector(std::function<void(const Value*)> fn) : collect(fn) { }
+  RegionCollector(std::function<void(const Value*)> fn,
+    std::function<void(const Value*,unsigned)> wlFn)
+    : collect(fn), collectWithLength(wlFn) { }
 
   // void visitModule(Module& M) {
   //   for (const GlobalValue& G : M.globals())
@@ -82,30 +65,12 @@ public:
     // getRegion(&I);
   // }
 
-  void visitLoadInst(LoadInst& I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitStoreInst(StoreInst& I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitAtomicRMWInst(AtomicRMWInst &I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitMemIntrinsic(MemIntrinsic &I) {
-    collect(I.getDest());
-  }
-
-  void visitCallInst(CallInst& I) {
-    if (I.getType()->isPointerTy())
-      collect(&I);
-  }
+  void visitLoadInst(LoadInst&);
+  void visitStoreInst(StoreInst&);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst&);
+  void visitAtomicRMWInst(AtomicRMWInst&);
+  void visitMemIntrinsic(MemIntrinsic&);
+  void visitCallInst(CallInst&);
 
 };
 

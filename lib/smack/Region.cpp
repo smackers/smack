@@ -53,9 +53,34 @@ Region::Region(const Value* V) {
   init(V, offset, length);
 }
 
+Region::Region(const Value* V, unsigned length) {
+  unsigned offset = DSA ? DSA->getOffset(V) : 0;
+  init(V, offset, length);
+}
+
 Region::Region(const Value* V, unsigned offset, unsigned length) {
   init(V, offset, length);
 }
+
+bool Region::isIncomplete() {
+  return !representative
+      || representative->isIncompleteNode();
+}
+
+bool Region::isComplicated() {
+  return !representative
+      || representative->isIntToPtrNode()
+      || representative->isIntToPtrNode()
+      || representative->isExternalNode()
+      || representative->isUnknownNode()
+      || representative->isCollapsedNode();
+}
+
+bool Region::isDisjoint(unsigned offset, unsigned length) {
+  return this->offset + this->length <= offset
+      || offset + length <= this->offset;
+}
+
 
 void Region::merge(Region& R) {
   assert(singleton == R.singleton);
@@ -74,6 +99,40 @@ bool Region::overlaps(Region& R) {
       || (isComplicated() && R.isComplicated())
       || (representative == R.representative
           && !isDisjoint(R.offset, R.length));
+}
+
+void Region::print(raw_ostream& O) {
+  O << "<Node>[" << offset << "," << (offset + length) << "]{";
+  if (singleton) O << "S";
+  if (bytewise) O << "B";
+  if (allocated) O << "A";
+  O << "}";
+}
+
+void RegionCollector::visitLoadInst(LoadInst& I) {
+  collect(I.getPointerOperand());
+}
+
+void RegionCollector::visitStoreInst(StoreInst& I) {
+  collect(I.getPointerOperand());
+}
+
+void RegionCollector::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  collect(I.getPointerOperand());
+}
+
+void RegionCollector::visitAtomicRMWInst(AtomicRMWInst &I) {
+  collect(I.getPointerOperand());
+}
+
+void RegionCollector::visitMemIntrinsic(MemIntrinsic &I) {
+  unsigned length = dyn_cast<ConstantInt>(I.getLength())->getZExtValue();
+  collectWithLength(I.getDest(),length);
+}
+
+void RegionCollector::visitCallInst(CallInst& I) {
+  if (I.getType()->isPointerTy())
+    collect(&I);
 }
 
 } // namespace smack
