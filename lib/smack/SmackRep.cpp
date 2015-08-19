@@ -302,19 +302,6 @@ string SmackRep::memPath(unsigned region, unsigned size) {
     return memReg(region);
 }
 
-// TODO revise uses of this function: should use ::load and ::store instead.
-const Expr* SmackRep::mem(const llvm::Value* v) {
-  return mem(getRegion(v), expr(v), getElementSize(v));
-}
-
-// TODO revise uses of this function: should use ::load and ::store instead.
-const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
-  if (memoryRegions[region].isSingletonGlobal())
-    return Expr::id(memPath(region, size));
-  else
-    return Expr::sel(Expr::id(memPath(region, size)), addr);
-}
-
 unsigned SmackRep::getRegion(const llvm::Value* V) {
   DEBUG(errs() << "XXX getRegion(" << *V << ")");
   Region R(V);
@@ -408,56 +395,58 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 }
 
 const Expr* SmackRep::load(const llvm::Value* P) {
+  const PointerType* T = dyn_cast<PointerType>(P->getType());
+  assert(T && "Expected pointer type.");
   const unsigned R = getRegion(P);
   const unsigned size = getElementSize(P);
   bool bytewise = memoryRegions[R].bytewiseAccess();
   bool singleton = memoryRegions[R].isSingletonGlobal();
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   string N = string("$load.") + (bytewise ? "bytes." : "") + intType(size);
-  return singleton ? M : Expr::fn(N, M, expr(P));
+  const Expr* expr = singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
+
+  if (T->getElementType()->isFloatingPointTy())
+    expr = Expr::fn(opName("$si2fp",
+      {IntegerType::get(P->getContext(),size), T->getElementType()}), expr);
+
+  else if (T->getElementType()->isPointerTy())
+    expr = integerToPointer(expr, size);
+
+  return expr;
 }
 
-const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
-  const llvm::Value* P = LI.getPointerOperand();
-  const unsigned size = getElementSize(P);
-  const Expr* rhs = load(P);
-
-  if (isFloat(&LI))
-    rhs = Expr::fn(opName("$si2fp", {IntegerType::get(LI.getContext(),size), LI.getType()}), rhs);
-
-  else if (LI.getType()->isPointerTy())
-    rhs = integerToPointer(rhs, size);
-
-  return Stmt::assign(expr(&LI), rhs);
+const Stmt* SmackRep::store(const Value* P, const Value* V) {
+  return store(P, expr(V));
 }
 
-const Stmt* SmackRep::store(const llvm::StoreInst& SI) {
-  const llvm::Value* P = SI.getPointerOperand();
-  const llvm::Value* V = SI.getOperand(0);
-  return store(getRegion(P), expr(P), V);
+const Stmt* SmackRep::store(const Value* P, const Expr* V) {
+  const PointerType* T = dyn_cast<PointerType>(P->getType());
+  assert(T && "Expected pointer type.");
+  return store(getRegion(P), T->getElementType(), expr(P), V);
 }
 
-const Stmt* SmackRep::store(const llvm::GlobalValue* G,
-    unsigned offset, const llvm::Value* V) {
-  unsigned length = targetData->getTypeStoreSize(V->getType());
-  return store(getRegion(G, offset, length), pa(expr(G), 1, offset), V);
+const Stmt* SmackRep::store(const GlobalValue* G, unsigned offset,
+    const Value* V) {
+  return store(
+    getRegion(G, offset, targetData->getTypeStoreSize(V->getType())),
+    V->getType(),
+    pa(expr(G), 1, offset),
+    expr(V));
 }
 
-const Stmt* SmackRep::store(unsigned R, const Expr* A, const llvm::Value* V) {
-
-  unsigned size = targetData->getTypeStoreSizeInBits(V->getType());
+const Stmt* SmackRep::store(unsigned R, const Type* T,
+    const Expr* P, const Expr* V) {
+  unsigned size = targetData->getTypeStoreSizeInBits((Type*) T);
   bool bytewise = memoryRegions[R].bytewiseAccess();
   bool singleton = memoryRegions[R].isSingletonGlobal();
   string N = string("$store.") + (bytewise ? "bytes." : "") + intType(size);
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
-
-  const Expr* rhs = expr(V);
-  if (V->getType()->isFloatingPointTy())
-    rhs = Expr::fn(opName("$fp2si",{V->getType(), llvm::IntegerType::get(V->getContext(),size)}), rhs);
-  else if (V->getType()->isPointerTy())
-    rhs = pointerToInteger(rhs, size);
-
-  return Stmt::assign(M, singleton ? rhs : Expr::fn(N,M,A,rhs));
+  if (T->isFloatingPointTy())
+    V = Expr::fn(opName("$fp2si",
+      {T, llvm::IntegerType::get(T->getContext(),size)}), V);
+  else if (T->isPointerTy())
+    V = pointerToInteger(V, size);
+  return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
 
 const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {

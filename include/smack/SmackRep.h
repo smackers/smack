@@ -98,11 +98,8 @@ private:
   string opName(const string& operation, initializer_list<const llvm::Type*> types);
   string opName(const string& operation, initializer_list<unsigned> types);
 
-  const Expr* mem(unsigned region, const Expr* addr, unsigned size);
-  const Stmt* store(const llvm::GlobalValue* P, unsigned offset,
-    const llvm::Value* val);
-  const Stmt* store(unsigned R, const Expr* A, const llvm::Value* V);
-  const Expr* load(const llvm::Value* P);
+  const Stmt* store(const GlobalValue* P, unsigned offset, const Value* val);
+  const Stmt* store(unsigned R, const Type* T, const Expr* P, const Expr* V);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
@@ -136,8 +133,6 @@ public:
   string type(const llvm::Type* t);
   string type(const llvm::Value* v);
 
-  const Expr* mem(const llvm::Value* v);
-
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
@@ -163,8 +158,9 @@ public:
   const Stmt* alloca(llvm::AllocaInst& i);
   const Stmt* memcpy(const llvm::MemCpyInst& msi);
   const Stmt* memset(const llvm::MemSetInst& msi);
-  const Stmt* load(const llvm::LoadInst& LI);
-  const Stmt* store(const llvm::StoreInst& SI);
+  const Expr* load(const llvm::Value* P);
+  const Stmt* store(const Value* P, const Value* V);
+  const Stmt* store(const Value* P, const Expr* V);
 
   vector<Decl*> decl(llvm::Function* F);
   Decl* decl(llvm::Function* F, llvm::CallInst* C);
