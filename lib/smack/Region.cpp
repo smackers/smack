@@ -72,8 +72,7 @@ bool Region::isComplicated() {
       || representative->isIntToPtrNode()
       || representative->isIntToPtrNode()
       || representative->isExternalNode()
-      || representative->isUnknownNode()
-      || representative->isCollapsedNode();
+      || representative->isUnknownNode();
 }
 
 bool Region::isDisjoint(unsigned offset, unsigned length) {
@@ -98,7 +97,8 @@ bool Region::overlaps(Region& R) {
   return (isIncomplete() && R.isIncomplete())
       || (isComplicated() && R.isComplicated())
       || (representative == R.representative
-          && !isDisjoint(R.offset, R.length));
+          && (representative->isCollapsedNode()
+              || !isDisjoint(R.offset, R.length)));
 }
 
 void Region::print(raw_ostream& O) {
