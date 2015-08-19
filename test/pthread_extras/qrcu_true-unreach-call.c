@@ -1,5 +1,13 @@
-#define __VERIFIER_nondet_int() __SMACK_nondet()
-#define __VERIFIER_assume(x)    assume(x)
+/*
+ * Verifies in 190 s using new SMACK default call to corral, with 
+ * context-switches set to 2.
+ * 
+ */
+
+
+extern void __VERIFIER_error() __attribute__ ((__noreturn__));
+
+extern int __VERIFIER_nondet_int();
 /* Testcase from Threader's distribution. For details see:
    http://www.model.in.tum.de/~popeea/research/threader
 
@@ -8,8 +16,9 @@
    by Paul McKenney
 */
 
+#include <smack-svcomp.h>
 #include <pthread.h>
-
+#define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 
 int idx=0; // boolean to control which of the two elements will be used by readers
   // (idx <= 0) then ctr1 is used
@@ -69,7 +78,7 @@ void __VERIFIER_atomic_check_progress2(int readerstart2) {
   return;
 }
 
-void *qrcu_reader1() {
+void *qrcu_reader1(void *arg) {
   int myidx;
   /* rcu_read_lock */
   while (1) {
@@ -91,7 +100,7 @@ void *qrcu_reader1() {
   return 0;
 }
 
-void *qrcu_reader2() {
+void *qrcu_reader2(void *arg) {
   int myidx;
   /* rcu_read_lock */
   while (1) {
@@ -113,7 +122,7 @@ void *qrcu_reader2() {
   return 0;
 }
 
-void* qrcu_updater() {
+void* qrcu_updater(void *arg) {
   int i;
   int readerstart1, readerstart2;
   int sum;
@@ -143,6 +152,6 @@ int main() {
   pthread_join(t1, 0);
   pthread_join(t2, 0);
   pthread_join(t3, 0);
-  //pthread_mutex_destroy(&mutex);
+  pthread_mutex_destroy(&mutex);
   return 0;
 }

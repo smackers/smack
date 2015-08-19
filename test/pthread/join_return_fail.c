@@ -1,6 +1,6 @@
 // Tests join & return in general - would fail if join doesn't block.
-//  Also tests that exit and join successfully store/load a return value
-//  and that return values work when pointers.
+// Also tests that exit and join successfully store/load a return value
+// and that return values work when pointers.
 
 // @expect error
 
@@ -14,8 +14,7 @@ typedef struct pair{
   int y;
 } pair;
 
-void *t1(void *arg)
-{
+void *t1(void *arg) {
   x++;
   pair* retptr = (pair*)malloc(sizeof(pair));
   retptr->x = 2;

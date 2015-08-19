@@ -6,8 +6,7 @@
 
 int x = 1;
 
-void *t1(void *arg)
-{
+void *t1(void *arg) {
   x++;
   pthread_exit(0);
 }

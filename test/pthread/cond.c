@@ -1,5 +1,5 @@
 // Generally tests pthread_cond_wait, pthread_cond_signal,
-//  pthread_cond_init
+// pthread_cond_init
 
 // @expect verified
 

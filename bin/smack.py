@@ -144,7 +144,7 @@ def arguments():
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
     help='upper bound on minimum loop iterations [default: %(default)s]')
 
-  verifier_group.add_argument('--context-switches', metavar='k', default='2', type=int,
+  verifier_group.add_argument('--context-switches', metavar='k', default='1', type=int,
     help='switch thread contexts in Corral (only) up to k number of times')
 
   verifier_group.add_argument('--verifier-options', metavar='OPTIONS', default='',
@@ -395,14 +395,13 @@ def verify_bpl(args):
   elif args.verifier == 'corral':
     command = ["corral"]
     command += [args.bpl_file]
-    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/k:%d" % args.context_switches]
     command += ["/useProverEvaluate", "/newStratifiedInlining"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
-    if args.context_switches:
-      command += ["/k:%d" % args.context_switches]
 
   else:
     # Duality!

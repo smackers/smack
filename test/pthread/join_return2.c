@@ -1,5 +1,5 @@
 // Ensures return values from multiple threads can be 
-//   held simultaneously.
+// held simultaneously.
 
 
 // @expect verified
@@ -8,14 +8,12 @@
 
 int x = 1;
 
-void *t1(void *arg)
-{
+void *t1(void *arg) {
   x++;
   pthread_exit((void*)5);
 }
 
-void *t2(void *arg)
-{
+void *t2(void *arg) {
   x++;
   pthread_exit((void*)6);
 }

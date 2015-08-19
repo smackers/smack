@@ -1,5 +1,5 @@
 // Uses error handling from error checking mutex
-//  to avoid what would otherwise be deadlock or permitted error
+// to avoid what would otherwise be deadlock or permitted error
 
 // @expect verified
 

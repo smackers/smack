@@ -1,7 +1,10 @@
-/* Useful
- * verifies false with u2,c2,tav,si in 2.1s
+/* Uses __VERIFIER_atomic_*() functions, which aren't yet supported in SMACK
+ * 
+ *
+ *
+ *
+ *
  */
-
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
@@ -13,11 +16,10 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
    by Cormac Flanagan, Stephen Freund, Shaz Qadeer.
 */
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 
-int w=0, r=0, x, y;
+int w=0, r=0, x=0, y=0;
 
 void __VERIFIER_atomic_take_write_lock() {
   __VERIFIER_assume(w==0 && r==0);
@@ -29,6 +31,10 @@ void __VERIFIER_atomic_take_read_lock() {
   r = r+1;
 }
 
+void __VERIFIER_atomic_release_read_lock() {
+  r = r-1;
+}
+
 void *writer(void *arg) { //writer
   __VERIFIER_atomic_take_write_lock();  
   x = 3;
@@ -36,13 +42,12 @@ void *writer(void *arg) { //writer
 }
 
 void *reader(void *arg) { //reader
-  int l;
+  int l = __SMACK_nondet();
   __VERIFIER_atomic_take_read_lock();
   l = x;
   y = l;
   assert(y == x);
-  l = r-1;
-  r = l;
+  __VERIFIER_atomic_release_read_lock();
 }
 
 int main() {
