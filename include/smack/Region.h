@@ -11,88 +11,66 @@ namespace smack {
 
 class Region {
 private:
-  const llvm::DSNode* representative;
-  unsigned long offset;
-  unsigned long length;
+  const DSNode* representative;
+  unsigned offset;
+  unsigned length;
   bool allocated;
   bool singleton;
+  bool bytewise;
   bool memcpyd;
   bool staticInitd;
 
-  bool isIncomplete() {
-    return !representative
-        || representative->isIncompleteNode();
-  }
+  static DSAAliasAnalysis* DSA;
+  static DSAAliasAnalysis* getDSA() { return DSA; }
 
-  bool isComplicated() {
-    return !representative
-        || representative->isIntToPtrNode()
-        || representative->isIntToPtrNode()
-        || representative->isExternalNode()
-        || representative->isUnknownNode();
-  }
-
-  bool isDisjoint(unsigned long offset, unsigned long length) {
-    return this->offset + this->length <= offset
-        || offset + length <= this->offset;
-  }
+  void init(const Value* V, unsigned offset, unsigned length);
+  bool isIncomplete();
+  bool isComplicated();
+  bool isDisjoint(unsigned offset, unsigned length);
 
 public:
-  Region(const llvm::Value* V, DSAAliasAnalysis* AA);
+  Region(const Value* V);
+  Region(const Value* V, unsigned length);
+  Region(const Value* V, unsigned offset, unsigned length);
+
+  static void setDSA(DSAAliasAnalysis& dsa) { DSA = &dsa; }
+
   void merge(Region& R);
   bool overlaps(Region& R);
 
-  bool isAllocated() const {
-    return allocated;
-  }
+  bool isAllocated() const { return allocated; }
+  bool isSingletonGlobal() const { return singleton; }
+  bool bytewiseAccess() const { return bytewise; }
 
-  bool isSingletonGlobal() const {
-    return singleton;
-  }
+  void print(raw_ostream&);
 
 };
 
-class RegionCollector : public llvm::InstVisitor<RegionCollector> {
+class RegionCollector : public InstVisitor<RegionCollector> {
 
-  std::function<void(const llvm::Value*)> collect;
+  std::function<void(const Value*)> collect;
+  std::function<void(const Value*,unsigned)> collectWithLength;
 
 public:
-  RegionCollector(std::function<void(const llvm::Value*)> fn) : collect(fn) { }
+  RegionCollector(std::function<void(const Value*)> fn,
+    std::function<void(const Value*,unsigned)> wlFn)
+    : collect(fn), collectWithLength(wlFn) { }
 
-  void visitModule(llvm::Module& M) {
-    for (llvm::Module::const_global_iterator
-         G = M.global_begin(), E = M.global_end(); G != E; ++G)
-      collect(G);
-  }
+  // void visitModule(Module& M) {
+  //   for (const GlobalValue& G : M.globals())
+  //     collect(&G);
+  // }
 
-  // void visitAllocaInst(llvm::AllocaInst& I) {
+  // void visitAllocaInst(AllocaInst& I) {
     // getRegion(&I);
   // }
 
-  void visitLoadInst(llvm::LoadInst& I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitStoreInst(llvm::StoreInst& I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
-    collect(I.getPointerOperand());
-  }
-
-  void visitMemIntrinsic(MemIntrinsic &I) {
-    collect(I.getDest());
-  }
-
-  void visitCallInst(llvm::CallInst& I) {
-    if (I.getType()->isPointerTy())
-      collect(&I);
-  }
+  void visitLoadInst(LoadInst&);
+  void visitStoreInst(StoreInst&);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst&);
+  void visitAtomicRMWInst(AtomicRMWInst&);
+  void visitMemIntrinsic(MemIntrinsic&);
+  void visitCallInst(CallInst&);
 
 };
 

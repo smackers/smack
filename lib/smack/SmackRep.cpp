@@ -157,6 +157,16 @@ bool isCodeString(const llvm::Value* V) {
   return false;
 }
 
+void SmackRep::print(raw_ostream &O) {
+  O << "";
+  for (auto & R : memoryRegions) {
+    O << "XXX Region(";
+    R.print(O);
+    O << ")\n";
+  }
+  O << "\n";
+}
+
 string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
@@ -276,16 +286,6 @@ vector<unsigned> SmackRep::memoryAccessSizes() {
     return {8, 16, 32, 64, 96, 128};
 }
 
-bool SmackRep::bytewiseAccess(const GlobalValue* V, unsigned offset) {
-  return aliasAnalysis && SmackOptions::BitPrecise &&
-    (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,offset));
-}
-
-bool SmackRep::bytewiseAccess(const Value* V, const Function* F) {
-  return aliasAnalysis && SmackOptions::BitPrecise &&
-    (SmackOptions::NoByteAccessInference || !aliasAnalysis->isFieldDisjoint(V,F));
-}
-
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
   if (!memoryRegions[region].isSingletonGlobal() ||
@@ -302,19 +302,26 @@ string SmackRep::memPath(unsigned region, unsigned size) {
     return memReg(region);
 }
 
-const Expr* SmackRep::mem(const llvm::Value* v) {
-  return mem(getRegion(v), expr(v), getElementSize(v));
-}
-
-const Expr* SmackRep::mem(unsigned region, const Expr* addr, unsigned size) {
-  if (memoryRegions[region].isSingletonGlobal())
-    return Expr::id(memPath(region, size));
-  else
-    return Expr::sel(Expr::id(memPath(region, size)), addr);
-}
-
 unsigned SmackRep::getRegion(const llvm::Value* V) {
-  Region R(V, SmackOptions::NoMemoryRegionSplitting ? nullptr : aliasAnalysis);
+  DEBUG(errs() << "XXX getRegion(" << *V << ")");
+  Region R(V);
+  return getRegion(R);
+}
+
+unsigned SmackRep::getRegion(const Value* V, unsigned length) {
+  DEBUG(errs() << "XXX getRegion[" << length << "](" << *V << ")");
+  Region R(V,length);
+  return getRegion(R);
+}
+
+unsigned SmackRep::getRegion(const llvm::Value* V,
+    unsigned offset, unsigned length) {
+  DEBUG(errs() << "XXX getRegion[" << offset << "," << length << "](" << *V << ")");
+  Region R(V,offset,length);
+  return getRegion(R);
+}
+
+unsigned SmackRep::getRegion(Region& R) {
   unsigned r;
 
   for (r = 0; r < memoryRegions.size(); ++r) {
@@ -327,6 +334,22 @@ unsigned SmackRep::getRegion(const llvm::Value* V) {
   if (r == memoryRegions.size())
     memoryRegions.emplace_back(R);
 
+  else {
+    // Here is the tricky part: in case R was merged with an existing region,
+    // we must now also merge any other region which intersects with R.
+    unsigned q = r+1;
+    while (q < memoryRegions.size()) {
+      if (memoryRegions[r].overlaps(memoryRegions[q])) {
+        memoryRegions[r].merge(memoryRegions[q]);
+        memoryRegions.erase(memoryRegions.begin()+q);
+      } else {
+        q++;
+      }
+    }
+  }
+
+  DEBUG(errs() << " => " << r << "\n");
+
   return r;
 }
 
@@ -336,7 +359,9 @@ bool SmackRep::isExternal(const llvm::Value* v) {
 }
 
 void SmackRep::collectRegions(llvm::Module &M) {
-  RegionCollector RC([this](const llvm::Value* V){ getRegion(V); });
+  RegionCollector RC(
+    [this](const Value* V){ getRegion(V); },
+    [this](const Value* V, unsigned len){ getRegion(V,len); });
   RC.visit(M);
 }
 
@@ -352,8 +377,9 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
-  unsigned r1 = getRegion(mci.getOperand(0));
-  unsigned r2 = getRegion(mci.getOperand(1));
+  unsigned length = dyn_cast<ConstantInt>(mci.getLength())->getZExtValue();
+  unsigned r1 = getRegion(mci.getOperand(0),length);
+  unsigned r2 = getRegion(mci.getOperand(1),length);
   for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
     args.push_back(expr(mci.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*mci.getCalledFunction()), {r1,r2}), args);
@@ -361,53 +387,66 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   vector<const Expr*> args;
-  unsigned r = getRegion(msi.getOperand(0));
+  unsigned length = dyn_cast<ConstantInt>(msi.getLength())->getZExtValue();
+  unsigned r = getRegion(msi.getOperand(0),length);
   for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
     args.push_back(expr(msi.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
 }
 
-const Expr* SmackRep::load(const llvm::Value* P, bool bytewise) {
+const Expr* SmackRep::load(const llvm::Value* P) {
+  const PointerType* T = dyn_cast<PointerType>(P->getType());
+  assert(T && "Expected pointer type.");
   const unsigned R = getRegion(P);
   const unsigned size = getElementSize(P);
+  bool bytewise = memoryRegions[R].bytewiseAccess();
+  bool singleton = memoryRegions[R].isSingletonGlobal();
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   string N = string("$load.") + (bytewise ? "bytes." : "") + intType(size);
-  return memoryRegions[R].isSingletonGlobal() ? M : Expr::fn(N, M, expr(P));
+  const Expr* expr = singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
+
+  if (T->getElementType()->isFloatingPointTy())
+    expr = Expr::fn(opName("$si2fp",
+      {IntegerType::get(P->getContext(),size), T->getElementType()}), expr);
+
+  else if (T->getElementType()->isPointerTy())
+    expr = integerToPointer(expr, size);
+
+  return expr;
 }
 
-const Stmt* SmackRep::load(const llvm::LoadInst& LI) {
-  const llvm::Value* P = LI.getPointerOperand();
-  const unsigned size = getElementSize(P);
-  const Expr* rhs = load(P, bytewiseAccess(P, LI.getParent()->getParent()));
-
-  if (isFloat(&LI))
-    rhs = Expr::fn(opName("$si2fp", {IntegerType::get(LI.getContext(),size), LI.getType()}), rhs);
-
-  else if (LI.getType()->isPointerTy())
-    rhs = integerToPointer(rhs, size);
-
-  return Stmt::assign(expr(&LI), rhs);
+const Stmt* SmackRep::store(const Value* P, const Value* V) {
+  return store(P, expr(V));
 }
 
-const Stmt* SmackRep::store(const llvm::StoreInst& SI) {
-  const llvm::Value* P = SI.getPointerOperand();
-  const llvm::Value* V = SI.getOperand(0);
-  return store(P, V, bytewiseAccess(P, SI.getParent()->getParent()));
+const Stmt* SmackRep::store(const Value* P, const Expr* V) {
+  const PointerType* T = dyn_cast<PointerType>(P->getType());
+  assert(T && "Expected pointer type.");
+  return store(getRegion(P), T->getElementType(), expr(P), V);
 }
 
-const Stmt* SmackRep::store(const llvm::Value* P, const llvm::Value* V, bool bytewise) {
-  return store(getRegion(P), getElementSize(P), expr(P), V, bytewise);
+const Stmt* SmackRep::store(const GlobalValue* G, unsigned offset,
+    const Value* V) {
+  return store(
+    getRegion(G, offset, targetData->getTypeStoreSize(V->getType())),
+    V->getType(),
+    pa(expr(G), 1, offset),
+    expr(V));
 }
 
-const Stmt* SmackRep::store(unsigned R, unsigned size, const Expr* addr, const llvm::Value* V, bool bytewise) {
-  const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
-  const Expr* rhs = expr(V);
+const Stmt* SmackRep::store(unsigned R, const Type* T,
+    const Expr* P, const Expr* V) {
+  unsigned size = targetData->getTypeStoreSizeInBits((Type*) T);
+  bool bytewise = memoryRegions[R].bytewiseAccess();
+  bool singleton = memoryRegions[R].isSingletonGlobal();
   string N = string("$store.") + (bytewise ? "bytes." : "") + intType(size);
-  if (V->getType()->isFloatingPointTy())
-    rhs = Expr::fn(opName("$fp2si",{V->getType(), llvm::IntegerType::get(V->getContext(),size)}), rhs);
-  else if (V->getType()->isPointerTy())
-    rhs = pointerToInteger(rhs, size);
-  return Stmt::assign(M, memoryRegions[R].isSingletonGlobal() ? rhs : Expr::fn(N,M,addr,rhs));
+  const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
+  if (T->isFloatingPointTy())
+    V = Expr::fn(opName("$fp2si",
+      {T, llvm::IntegerType::get(T->getContext(),size)}), V);
+  else if (T->isPointerTy())
+    V = pointerToInteger(V, size);
+  return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
 
 const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
@@ -691,8 +730,9 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *len = T->getParamType(2),
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
-      unsigned r1 = getRegion(MCI->getOperand(0));
-      unsigned r2 = getRegion(MCI->getOperand(1));
+      unsigned length = dyn_cast<ConstantInt>(MCI->getLength())->getZExtValue();
+      unsigned r1 = getRegion(MCI->getOperand(0),length);
+      unsigned r2 = getRegion(MCI->getOperand(1),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r1,r2}), {
         {"dst", type(dst)},
@@ -721,7 +761,8 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *len = T->getParamType(2),
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
-      unsigned r = getRegion(MSI->getOperand(0));
+      unsigned length = dyn_cast<ConstantInt>(MSI->getLength())->getZExtValue();
+      unsigned r = getRegion(MSI->getOperand(0),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r}), {
         {"dst", type(dst)},
@@ -979,34 +1020,26 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
 }
 
 void SmackRep::addInit(const llvm::GlobalValue* G, const llvm::Constant* C) {
-  addInit(G, expr(G), C, bytewiseAccess(G,0));
+  addInit(G, 0, C);
 }
 
-void SmackRep::addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool bytewise) {
-  using namespace llvm;
+void SmackRep::addInit(const llvm::GlobalValue* G, unsigned offset,
+    const llvm::Constant* C) {
 
   if (C->getType()->isIntegerTy() ||
       C->getType()->isPointerTy() ||
       C->getType()->isFloatingPointTy()) {
-    staticInits.push_back(store(getRegion(G), getSize(C->getType()), addr, C, bytewise));
+    staticInits.push_back(store(G, offset, C));
 
-  } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType())) {
-    for (unsigned i = 0; i < at->getNumElements(); i++) {
+  } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType()))
+    for (unsigned i = 0; i < at->getNumElements(); i++)
+      addInit(G, offset + SmackRep::offset(at,i), C->getAggregateElement(i));
 
-      // TODO shouldn’t we be accummulating the offset from G?
-      addInit(G, pa(addr,i,storageSize(at->getElementType())), C->getAggregateElement(i),
-        bytewiseAccess(G, offset(at,i)));
-    }
+  else if (StructType* st = dyn_cast<StructType>(C->getType()))
+    for (unsigned i = 0; i < st->getNumElements(); i++)
+      addInit(G, offset + SmackRep::offset(st,i), C->getAggregateElement(i));
 
-  } else if (StructType* st = dyn_cast<StructType>(C->getType())) {
-    for (unsigned i = 0; i < st->getNumElements(); i++) {
-
-      // TODO shouldn’t we be accummulating the offset from G?
-      addInit(G, pa(addr,offset(st,i),1), C->getAggregateElement(i),
-        bytewiseAccess(G, offset(st,i)));
-    }
-
-  } else if (C->getType()->isX86_FP80Ty()) {
+  else if (C->getType()->isX86_FP80Ty()) {
     staticInits.push_back(Stmt::code("// ignored X86 FP80 initializer"));
 
   } else {

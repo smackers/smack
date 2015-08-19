@@ -14,14 +14,12 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   Naming naming;
-  SmackRep rep(
-    m.getDataLayout(),
-    SmackOptions::NoMemoryRegionSplitting ? NULL : &getAnalysis<DSAAliasAnalysis>(),
-    naming, program);
 
+  if (!SmackOptions::NoMemoryRegionSplitting)
+    Region::setDSA(getAnalysis<DSAAliasAnalysis>());
+
+  SmackRep rep(m.getDataLayout(), naming, program);
   rep.collectRegions(m);
-
-  // rep.print("dsa-graphs.txt");
 
   DEBUG(errs() << "Analyzing globals...\n");
 

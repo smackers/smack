@@ -78,6 +78,7 @@ Slice* getSubslice(Instruction* I, Slices& slices) {
 pair<string,string> getParameter(Value* V, Naming& naming, SmackRep& rep) {
 
   if (GlobalVariable* G = dyn_cast<GlobalVariable>(V)) {
+    // XXX I need to be fixed FIXME
     unsigned r = rep.getRegion(G);
     return make_pair(rep.memReg(r), rep.memType(r, rep.getElementSize(V)));
   }
