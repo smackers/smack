@@ -288,7 +288,7 @@ vector<unsigned> SmackRep::memoryAccessSizes() {
 
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
-  if (!memoryRegions[region].isSingletonGlobal() ||
+  if (!memoryRegions[region].isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << PTR_TYPE << "] ";
   s << intType(size);
@@ -400,7 +400,7 @@ const Expr* SmackRep::load(const llvm::Value* P) {
   const unsigned R = getRegion(P);
   const unsigned size = getElementSize(P);
   bool bytewise = memoryRegions[R].bytewiseAccess();
-  bool singleton = memoryRegions[R].isSingletonGlobal();
+  bool singleton = memoryRegions[R].isSingleton();
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   string N = string("$load.") + (bytewise ? "bytes." : "") + intType(size);
   const Expr* expr = singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
@@ -438,7 +438,7 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
   unsigned size = targetData->getTypeStoreSizeInBits((Type*) T);
   bool bytewise = memoryRegions[R].bytewiseAccess();
-  bool singleton = memoryRegions[R].isSingletonGlobal();
+  bool singleton = memoryRegions[R].isSingleton();
   string N = string("$store.") + (bytewise ? "bytes." : "") + intType(size);
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   if (T->isFloatingPointTy())

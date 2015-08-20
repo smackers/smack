@@ -14,10 +14,7 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   Naming naming;
-
-  if (!SmackOptions::NoMemoryRegionSplitting)
-    Region::setDSA(getAnalysis<DSAAliasAnalysis>());
-
+  Region::init(m, *this);
   SmackRep rep(m.getDataLayout(), naming, program);
   rep.collectRegions(m);
 

@@ -14,12 +14,11 @@ private:
   const DSNode* representative;
   unsigned offset;
   unsigned length;
-  bool allocated;
-  bool singleton;
   bool bytewise;
 
+  static const DataLayout* DL;
   static DSAAliasAnalysis* DSA;
-  static DSAAliasAnalysis* getDSA() { return DSA; }
+  static DSNodeEquivs* NEQS;
 
   void init(const Value* V, unsigned offset, unsigned length);
   bool isIncomplete();
@@ -31,13 +30,13 @@ public:
   Region(const Value* V, unsigned length);
   Region(const Value* V, unsigned offset, unsigned length);
 
-  static void setDSA(DSAAliasAnalysis& dsa) { DSA = &dsa; }
+  static void init(Module& M, Pass& P);
 
   void merge(Region& R);
   bool overlaps(Region& R);
 
-  bool isAllocated() const { return allocated; }
-  bool isSingletonGlobal() const { return singleton; }
+  bool isSingleton() const;
+  bool isAllocated() const;
   bool bytewiseAccess() const { return bytewise; }
 
   void print(raw_ostream&);
