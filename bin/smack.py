@@ -315,6 +315,7 @@ def llvm_to_bpl(args):
 
   cmd = ['smack', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-source-loc-syms']
+  cmd += ['-enable-type-inference-opts']
   if args.debug: cmd += ['-debug']
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.bit_precise: cmd += ['-bit-precise']
