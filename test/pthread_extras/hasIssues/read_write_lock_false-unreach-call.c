@@ -1,3 +1,7 @@
+/*
+ * From svcomp2015
+ */
+
 /* Uses __VERIFIER_atomic_*() functions, which aren't yet supported in SMACK
  * 
  * Useful

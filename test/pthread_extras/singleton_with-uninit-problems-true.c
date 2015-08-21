@@ -1,11 +1,17 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * Verifies true with u2,c2,tav,si in 202s
  */
 
+// @expect verified
+// @flag -x=svcomp
+// @flag --verifier-options=/trackAllVars
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>

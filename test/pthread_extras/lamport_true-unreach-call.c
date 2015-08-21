@@ -1,7 +1,14 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * verifies true with u4,c3,tav,si in 3.2s
  */
 
+// @expect verified
+// @flag -x=svcomp
+// @flag --unroll=4
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
@@ -9,7 +16,6 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
    http://www.model.in.tum.de/~popeea/research/threader
 */
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 

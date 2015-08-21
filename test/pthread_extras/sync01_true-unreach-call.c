@@ -1,11 +1,17 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * Verifies true with unroll 3, cs 2, trackallvars, staticinlining in 27s
  * z3 out of resources with unroll 3, cs 3, trackallvars, staticinlining
  */
 
+// @expect verified
+// @flag -x=svcomp
+// @flag --unroll=3
 
-//extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-#define __VERIFIER_error() assert(0)
+extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #include <pthread.h>
 #include <stdio.h> 

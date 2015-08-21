@@ -1,12 +1,18 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * verifies true with u6,cs2,tav,si in 45s
  * Also verifies true with SIZE==10, u11,cs2,tav,si in 295s
  */
 
+// @expect verified
+// @flag -x=svcomp
+// @flag --unroll=6
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #include <stdio.h>
 //#include <assert.h>

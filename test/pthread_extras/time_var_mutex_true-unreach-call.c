@@ -1,7 +1,13 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * verifies with u2,c2,tav,si in 22s
  */
 
+// @expect verified
+// @flag -x=svcomp
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
@@ -13,7 +19,6 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
    by Cormac Flanagan, Stephen Freund, Shaz Qadeer.
 */
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 

@@ -1,3 +1,7 @@
+/*
+ * From svcomp2015
+ */
+
 #define inode int // the lock
 #define file int
 #define scull_dev int 

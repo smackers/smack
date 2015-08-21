@@ -1,6 +1,12 @@
-/* Useful
- * verifies false with u2,c3,tav,si in 102s
+/*
+ * From svcomp2015
  */
+
+/* 
+ * Uses unsupported __VERIFIER_atomic_*() functions
+ */
+
+// @expect error
 
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
@@ -14,7 +20,6 @@ extern int __VERIFIER_nondet_int();
    by Paul McKenney
 */
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 

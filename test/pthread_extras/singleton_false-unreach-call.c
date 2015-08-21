@@ -1,11 +1,16 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * Verifies false with u2,cs2,tav,si in 75s
  */
 
+// @expect error
+// @flag -x=svcomp
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>

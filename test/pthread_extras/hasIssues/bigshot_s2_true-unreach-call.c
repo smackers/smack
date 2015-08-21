@@ -1,3 +1,7 @@
+/*
+ * From svcomp2015
+ */
+
 // Not useful - uses strcpy, has disallowed (by svcomp) malloc fail
 
 //extern void __VERIFIER_error() __attribute__ ((__noreturn__));

@@ -1,7 +1,9 @@
 /*
- *
+ * From svcomp2015
  */
 
+// @expect verified
+// @flag -x=svcomp
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
@@ -10,7 +12,6 @@ extern int __VERIFIER_nondet_int();
    http://www.model.in.tum.de/~popeea/research/threader
 */
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #include "scull_safe.h"
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();

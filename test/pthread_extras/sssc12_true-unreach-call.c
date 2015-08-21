@@ -1,12 +1,18 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * Verifies false with u11,s2,tav,si in 54s
  */
+
+// @expect verified
+// @flag -x=svcomp
 
 // Source: Alejandro Sanchez, Sriram Sankaranarayanan, Cesar Sanchez, Bor-Yuh
 // Evan Chang: "Invariant Generation for Paramterized Systems using
 // Self-Reflection", SAS 2012
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 #include "assert.h"
 

@@ -1,10 +1,15 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * Verifies true with u4, cs2, tav, si in 76s (SIZE=3)
  */
 
+// @expect verified
+// @flag -x=svcomp
 
-//extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-#define __VERIFIER_error() assert(0);
+extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #include <pthread.h>
 #include <stdio.h>

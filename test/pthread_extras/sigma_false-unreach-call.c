@@ -1,7 +1,14 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * Verifies false with u6,cs2,tav,si in 85s
  */
 
+// @expect error
+// @flag -x=svcomp
+// @flag --unroll=6
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 

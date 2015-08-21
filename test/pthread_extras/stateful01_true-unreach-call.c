@@ -1,11 +1,17 @@
+/*
+ * From svcomp2015
+ */
+
 /* Useful
  * verifies true with u2,c2,tav,si in 14s
  */
 
+// @expect verified
+// @flag -x=svcomp
+
 
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
-#include <smack-svcomp.h>
 #include <pthread.h>
 
 pthread_mutex_t  ma, mb;
