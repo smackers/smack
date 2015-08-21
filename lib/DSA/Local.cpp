@@ -797,7 +797,7 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
          || (!isa<ArrayType>(CurTy)
              && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
         DEBUG(
-          errs() << "[local] FOLDING" << "\n";
+          errs() << "[local] FOLDING FOR ARRAY ACCESS" << "\n";
           errs() << "[local] type:    " << *CurTy << "\n";
           errs() << "[local] offset:  " << Offset
                  << " (" << NodeH.getOffset() << ")\n";
@@ -890,6 +890,16 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
         if (NodeH.getOffset() || Offset != 0 ||
             (!isa<ArrayType>(CurTy) &&
              (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+          DEBUG(
+            errs() << "[local] FOLDING FOR POINTER ACCESS" << "\n";
+            errs() << "[local] type:    " << *CurTy << "\n";
+            errs() << "[local] offset:  " << Offset
+                   << " (" << NodeH.getOffset() << ")\n";
+            errs() << "[local] size:    " << TD.getTypeAllocSize(CurTy)
+                   << " (" << NodeH.getNode()->getSize() << ")\n";
+            errs() << "[local] value: " << GEP << "\n";
+            errs() << "[local] index: " << *I.getOperand() << "\n";
+          );
           NodeH.getNode()->foldNodeCompletely();
           NodeH.getNode();
           Offset = 0;
