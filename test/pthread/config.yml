@@ -1,4 +1,3 @@
-flags: ['--pthread']
+flags: ['--pthread','--context-switches=2']
 time-limit: 300
 verifiers: [corral]
-context-switches: 2
