@@ -79,7 +79,8 @@ pair<string,string> getParameter(Value* V, Naming& naming, SmackRep& rep) {
 
   if (GlobalVariable* G = dyn_cast<GlobalVariable>(V)) {
     // XXX I need to be fixed FIXME
-    unsigned r = rep.getRegion(G);
+    unsigned r = 0; // rep.getRegion(G);
+    assert(false && "This code is under contsruction.");
     return make_pair(rep.memReg(r), rep.memType(r, rep.getElementSize(V)));
   }
 

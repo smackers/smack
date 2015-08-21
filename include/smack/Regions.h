@@ -18,7 +18,7 @@ private:
 
   static const DataLayout* DL;
   static DSAAliasAnalysis* DSA;
-  static DSNodeEquivs* NEQS;
+  // static DSNodeEquivs* NEQS;
 
   void init(const Value* V, unsigned offset, unsigned length);
   bool isIncomplete();
@@ -43,15 +43,22 @@ public:
 
 };
 
-class RegionCollector : public InstVisitor<RegionCollector> {
+class Regions : public ModulePass, public InstVisitor<Regions> {
 
-  std::function<void(const Value*)> collect;
-  std::function<void(const Value*,unsigned)> collectWithLength;
+  vector<Region> regions;
+  unsigned idx(Region& R);
 
 public:
-  RegionCollector(std::function<void(const Value*)> fn,
-    std::function<void(const Value*,unsigned)> wlFn)
-    : collect(fn), collectWithLength(wlFn) { }
+  static char ID;
+  Regions() : ModulePass(ID) { }
+  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
+  virtual bool runOnModule(llvm::Module& M);
+
+  unsigned size() const;
+  unsigned idx(const llvm::Value* v);
+  unsigned idx(const llvm::Value* v, unsigned offset);
+  unsigned idx(const llvm::Value* v, unsigned offset, unsigned length);
+  Region& get(unsigned R);
 
   // void visitModule(Module& M) {
   //   for (const GlobalValue& G : M.globals())

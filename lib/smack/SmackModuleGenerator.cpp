@@ -14,9 +14,7 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
   Naming naming;
-  Region::init(m, *this);
-  SmackRep rep(m.getDataLayout(), naming, program);
-  rep.collectRegions(m);
+  SmackRep rep(m.getDataLayout(), naming, program, getAnalysis<Regions>());
 
   DEBUG(errs() << "Analyzing globals...\n");
 

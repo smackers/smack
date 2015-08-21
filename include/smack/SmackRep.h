@@ -7,7 +7,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "smack/Naming.h"
-#include "smack/Region.h"
+#include "smack/Regions.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
@@ -53,7 +53,7 @@ public:
   static const map<unsigned,string> ATOMICRMWINST_TABLE;
 
 protected:
-  vector<Region> memoryRegions;
+  Regions& regions;
   Naming& naming;
   Program& program;
   vector<string> bplGlobals;
@@ -68,13 +68,12 @@ protected:
   unsigned uniqueFpNum;
 
 public:
-  SmackRep(const DataLayout* L, Naming& N, Program& P)
-    : targetData(L), naming(N), program(P),
+  SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
+    : targetData(L), naming(N), program(P), regions(R),
       globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
   { }
   Program& getProgram() { return program; }
-  void print(raw_ostream&);
 
 private:
   void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
@@ -168,10 +167,6 @@ public:
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
-  unsigned getRegion(const llvm::Value* v);
-  unsigned getRegion(const llvm::Value* v, unsigned offset);
-  unsigned getRegion(const llvm::Value* v, unsigned offset, unsigned length);
-  unsigned getRegion(Region& R);
 
   string memReg(unsigned i);
   string memType(unsigned region, unsigned size);
@@ -183,7 +178,6 @@ public:
   void addBplGlobal(string name);
 
   // used in SmackModuleGenerator
-  void collectRegions(llvm::Module &M);
   vector<Decl*> globalDecl(const llvm::GlobalValue* g);
   vector<string> getModifies();
   void addInitFunc(const llvm::Function* f);

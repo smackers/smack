@@ -1,14 +1,15 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "smack/Region.h"
+#include "smack/Regions.h"
 #include "smack/SmackOptions.h"
+#define DEBUG_TYPE "smack-region"
 
 namespace smack {
 
 const DataLayout* Region::DL = nullptr;
 DSAAliasAnalysis* Region::DSA = nullptr;
-DSNodeEquivs* Region::NEQS = nullptr;
+// DSNodeEquivs* Region::NEQS = nullptr;
 
 namespace {
   const Function* getFunction(const Value* V) {
@@ -35,11 +36,8 @@ namespace {
 }
 
 void Region::init(Module& M, Pass& P) {
-  if (SmackOptions::NoMemoryRegionSplitting) return;
-
   DL = M.getDataLayout();
   DSA = &P.getAnalysis<DSAAliasAnalysis>();
-  // NEQS = &P.getAnalysis<DSNodeEquivs>();
 }
 
 void Region::init(const Value* V, unsigned offset, unsigned length) {
@@ -154,30 +152,141 @@ void Region::print(raw_ostream& O) {
   O << "}";
 }
 
-void RegionCollector::visitLoadInst(LoadInst& I) {
-  collect(I.getPointerOperand());
+char Regions::ID;
+RegisterPass<Regions> RegionsPass("smack-regions", "SMACK Memory Regions Pass");
+
+void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  if (!SmackOptions::NoMemoryRegionSplitting) {
+    AU.addRequired<DataLayoutPass>();
+    AU.addRequiredTransitive<LocalDataStructures>();
+    AU.addRequiredTransitive<BUDataStructures>();
+    AU.addRequiredTransitive<TDDataStructures>();
+    AU.addRequiredTransitive<DSNodeEquivs>();
+    AU.addRequiredTransitive<dsa::TypeSafety<TDDataStructures> >();
+    AU.addRequired<DSAAliasAnalysis>();
+  }
 }
 
-void RegionCollector::visitStoreInst(StoreInst& I) {
-  collect(I.getPointerOperand());
+bool Regions::runOnModule(Module& M) {
+  if (!SmackOptions::NoMemoryRegionSplitting) {
+    Region::init(M,*this);
+
+    DataStructures
+      &local = getAnalysis<LocalDataStructures>(),
+      &BU = getAnalysis<BUDataStructures>(),
+      &TD = getAnalysis<TDDataStructures>();
+    DSNodeEquivs
+      &EQ = getAnalysis<DSNodeEquivs>();
+
+    DEBUG(
+      local.print(errs(), &M);
+      BU.print(errs(), &M);
+      TD.print(errs(), &M);
+      EQ.print(errs(), &M);
+    );
+
+    visit(M);
+  }
+
+  return false;
 }
 
-void RegionCollector::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
-  collect(I.getPointerOperand());
+unsigned Regions::size() const {
+  return regions.size();
 }
 
-void RegionCollector::visitAtomicRMWInst(AtomicRMWInst &I) {
-  collect(I.getPointerOperand());
+Region& Regions::get(unsigned R) {
+  return regions[R];
 }
 
-void RegionCollector::visitMemIntrinsic(MemIntrinsic &I) {
+unsigned Regions::idx(const Value* V) {
+  DEBUG(errs() << "XXX getRegion(" << *V << ")");
+  Region R(V);
+  return idx(R);
+}
+
+unsigned Regions::idx(const Value* V, unsigned length) {
+  DEBUG(errs() << "XXX getRegion[" << length << "](" << *V << ")");
+  Region R(V,length);
+  return idx(R);
+}
+
+unsigned Regions::idx(const Value* V, unsigned offset, unsigned length) {
+  DEBUG(errs() << "XXX getRegion[" << offset << "," << length << "](" << *V << ")");
+  Region R(V,offset,length);
+  return idx(R);
+}
+
+unsigned Regions::idx(Region& R) {
+  unsigned r;
+
+  DEBUG(errs() << "\nXXX REGION ");
+  DEBUG(R.print(errs()));
+  DEBUG(errs() << "\nXXX ");
+
+  for (r = 0; r < regions.size(); ++r) {
+    if (regions[r].overlaps(R)) {
+
+      DEBUG(errs() << "\nXXX OVERLAP WITH ");
+      DEBUG(regions[r].print(errs()));
+      DEBUG(errs() << "\nXXX ");
+
+      regions[r].merge(R);
+      break;
+    } else {
+      DEBUG(errs() << "\nXXX NO OVERLAP WITH ");
+      DEBUG(regions[r].print(errs()));
+      DEBUG(errs() << "\nXXX ");
+    }
+  }
+
+  if (r == regions.size())
+    regions.emplace_back(R);
+
+  else {
+    // Here is the tricky part: in case R was merged with an existing region,
+    // we must now also merge any other region which intersects with R.
+    unsigned q = r+1;
+    while (q < regions.size()) {
+      if (regions[r].overlaps(regions[q])) {
+        regions[r].merge(regions[q]);
+        regions.erase(regions.begin()+q);
+      } else {
+        q++;
+      }
+    }
+  }
+
+  DEBUG(errs() << " => " << r << "\n");
+
+  return r;
+}
+
+void Regions::visitLoadInst(LoadInst& I) {
+  idx(I.getPointerOperand());
+}
+
+void Regions::visitStoreInst(StoreInst& I) {
+  idx(I.getPointerOperand());
+}
+
+void Regions::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  idx(I.getPointerOperand());
+}
+
+void Regions::visitAtomicRMWInst(AtomicRMWInst &I) {
+  idx(I.getPointerOperand());
+}
+
+void Regions::visitMemIntrinsic(MemIntrinsic &I) {
   unsigned length = dyn_cast<ConstantInt>(I.getLength())->getZExtValue();
-  collectWithLength(I.getDest(),length);
+  idx(I.getDest(),length);
 }
 
-void RegionCollector::visitCallInst(CallInst& I) {
+void Regions::visitCallInst(CallInst& I) {
   if (I.getType()->isPointerTy())
-    collect(&I);
+    idx(&I);
 }
 
 } // namespace smack

@@ -85,8 +85,8 @@ public:
     llvm::AliasAnalysis::getAnalysisUsage(AU);
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayoutPass>();
-    AU.addRequiredTransitive<llvm::TDDataStructures>();
     AU.addRequiredTransitive<llvm::BUDataStructures>();
+    AU.addRequiredTransitive<llvm::TDDataStructures>();
     AU.addRequiredTransitive<llvm::DSNodeEquivs>();
     AU.addRequired<dsa::TypeSafety<llvm::TDDataStructures> >();
   }

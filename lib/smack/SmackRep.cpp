@@ -157,16 +157,6 @@ bool isCodeString(const llvm::Value* V) {
   return false;
 }
 
-void SmackRep::print(raw_ostream &O) {
-  O << "";
-  for (auto & R : memoryRegions) {
-    O << "XXX Region(";
-    R.print(O);
-    O << ")\n";
-  }
-  O << "\n";
-}
-
 string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
@@ -288,7 +278,7 @@ vector<unsigned> SmackRep::memoryAccessSizes() {
 
 string SmackRep::memType(unsigned region, unsigned size) {
   stringstream s;
-  if (!memoryRegions[region].isSingleton() ||
+  if (!regions.get(region).isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << PTR_TYPE << "] ";
   s << intType(size);
@@ -302,67 +292,9 @@ string SmackRep::memPath(unsigned region, unsigned size) {
     return memReg(region);
 }
 
-unsigned SmackRep::getRegion(const llvm::Value* V) {
-  DEBUG(errs() << "XXX getRegion(" << *V << ")");
-  Region R(V);
-  return getRegion(R);
-}
-
-unsigned SmackRep::getRegion(const Value* V, unsigned length) {
-  DEBUG(errs() << "XXX getRegion[" << length << "](" << *V << ")");
-  Region R(V,length);
-  return getRegion(R);
-}
-
-unsigned SmackRep::getRegion(const llvm::Value* V,
-    unsigned offset, unsigned length) {
-  DEBUG(errs() << "XXX getRegion[" << offset << "," << length << "](" << *V << ")");
-  Region R(V,offset,length);
-  return getRegion(R);
-}
-
-unsigned SmackRep::getRegion(Region& R) {
-  unsigned r;
-
-  for (r = 0; r < memoryRegions.size(); ++r) {
-    if (memoryRegions[r].overlaps(R)) {
-      memoryRegions[r].merge(R);
-      break;
-    }
-  }
-
-  if (r == memoryRegions.size())
-    memoryRegions.emplace_back(R);
-
-  else {
-    // Here is the tricky part: in case R was merged with an existing region,
-    // we must now also merge any other region which intersects with R.
-    unsigned q = r+1;
-    while (q < memoryRegions.size()) {
-      if (memoryRegions[r].overlaps(memoryRegions[q])) {
-        memoryRegions[r].merge(memoryRegions[q]);
-        memoryRegions.erase(memoryRegions.begin()+q);
-      } else {
-        q++;
-      }
-    }
-  }
-
-  DEBUG(errs() << " => " << r << "\n");
-
-  return r;
-}
-
 bool SmackRep::isExternal(const llvm::Value* v) {
   return v->getType()->isPointerTy()
-      && !memoryRegions[getRegion(v)].isAllocated();
-}
-
-void SmackRep::collectRegions(llvm::Module &M) {
-  RegionCollector RC(
-    [this](const Value* V){ getRegion(V); },
-    [this](const Value* V, unsigned len){ getRegion(V,len); });
-  RC.visit(M);
+      && !regions.get(regions.idx(v)).isAllocated();
 }
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
@@ -378,8 +310,8 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
   unsigned length = dyn_cast<ConstantInt>(mci.getLength())->getZExtValue();
-  unsigned r1 = getRegion(mci.getOperand(0),length);
-  unsigned r2 = getRegion(mci.getOperand(1),length);
+  unsigned r1 = regions.idx(mci.getOperand(0),length);
+  unsigned r2 = regions.idx(mci.getOperand(1),length);
   for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
     args.push_back(expr(mci.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*mci.getCalledFunction()), {r1,r2}), args);
@@ -388,7 +320,7 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   vector<const Expr*> args;
   unsigned length = dyn_cast<ConstantInt>(msi.getLength())->getZExtValue();
-  unsigned r = getRegion(msi.getOperand(0),length);
+  unsigned r = regions.idx(msi.getOperand(0),length);
   for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
     args.push_back(expr(msi.getOperand(i)));
   return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
@@ -397,10 +329,10 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  const unsigned R = getRegion(P);
+  const unsigned R = regions.idx(P);
   const unsigned size = getElementSize(P);
-  bool bytewise = memoryRegions[R].bytewiseAccess();
-  bool singleton = memoryRegions[R].isSingleton();
+  bool bytewise = regions.get(R).bytewiseAccess();
+  bool singleton = regions.get(R).isSingleton();
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   string N = string("$load.") + (bytewise ? "bytes." : "") + intType(size);
   const Expr* expr = singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
@@ -422,13 +354,13 @@ const Stmt* SmackRep::store(const Value* P, const Value* V) {
 const Stmt* SmackRep::store(const Value* P, const Expr* V) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  return store(getRegion(P), T->getElementType(), expr(P), V);
+  return store(regions.idx(P), T->getElementType(), expr(P), V);
 }
 
 const Stmt* SmackRep::store(const GlobalValue* G, unsigned offset,
     const Value* V) {
   return store(
-    getRegion(G, offset, targetData->getTypeStoreSize(V->getType())),
+    regions.idx(G, offset, targetData->getTypeStoreSize(V->getType())),
     V->getType(),
     pa(expr(G), 1, offset),
     expr(V));
@@ -437,8 +369,8 @@ const Stmt* SmackRep::store(const GlobalValue* G, unsigned offset,
 const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
   unsigned size = targetData->getTypeStoreSizeInBits((Type*) T);
-  bool bytewise = memoryRegions[R].bytewiseAccess();
-  bool singleton = memoryRegions[R].isSingleton();
+  bool bytewise = regions.get(R).bytewiseAccess();
+  bool singleton = regions.get(R).isSingleton();
   string N = string("$store.") + (bytewise ? "bytes." : "") + intType(size);
   const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
   if (T->isFloatingPointTy())
@@ -731,8 +663,8 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
       unsigned length = dyn_cast<ConstantInt>(MCI->getLength())->getZExtValue();
-      unsigned r1 = getRegion(MCI->getOperand(0),length);
-      unsigned r2 = getRegion(MCI->getOperand(1),length);
+      unsigned r1 = regions.idx(MCI->getOperand(0),length);
+      unsigned r2 = regions.idx(MCI->getOperand(1),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r1,r2}), {
         {"dst", type(dst)},
@@ -762,7 +694,7 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
       unsigned length = dyn_cast<ConstantInt>(MSI->getLength())->getZExtValue();
-      unsigned r = getRegion(MSI->getOperand(0),length);
+      unsigned r = regions.idx(MSI->getOperand(0),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r}), {
         {"dst", type(dst)},
@@ -931,8 +863,8 @@ string SmackRep::getPrelude() {
   }
   s << endl;
 
-  s << "// Memory maps (" << memoryRegions.size() << " regions)" << endl;
-  for (unsigned i=0; i<memoryRegions.size(); ++i) {
+  s << "// Memory maps (" << regions.size() << " regions)" << endl;
+  for (unsigned i=0; i<regions.size(); ++i) {
     for (unsigned size : memoryAccessSizes())
       s << "var " << memPath(i, size)
         << ": " << memType(i, size)
@@ -1004,7 +936,7 @@ vector<string> SmackRep::getModifies() {
   vector<string> mods;
   for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
     mods.push_back(*i);
-  for (unsigned i=0; i<memoryRegions.size(); ++i) {
+  for (unsigned i=0; i<regions.size(); ++i) {
     for (unsigned size : memoryAccessSizes())
       mods.push_back(memPath(i, size));
   }

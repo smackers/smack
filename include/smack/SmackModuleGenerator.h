@@ -33,8 +33,7 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayoutPass>();
-    if (!SmackOptions::NoMemoryRegionSplitting)
-      AU.addRequired<DSAAliasAnalysis>();
+    AU.addRequired<Regions>();
   }
 
   virtual bool runOnModule(llvm::Module& m) {
