@@ -145,6 +145,7 @@ bool Region::overlaps(Region& R) {
 }
 
 void Region::print(raw_ostream& O) {
+  // TODO identify the representative
   O << "<Node>[" << offset << "," << (offset + length) << "]{";
   if (isSingleton()) O << "S";
   if (bytewise) O << "B";
@@ -201,19 +202,21 @@ Region& Regions::get(unsigned R) {
 }
 
 unsigned Regions::idx(const Value* V) {
-  DEBUG(errs() << "XXX getRegion(" << *V << ")");
+  DEBUG(errs() << "[regions] getting index for: " << *V << "\n");
   Region R(V);
   return idx(R);
 }
 
 unsigned Regions::idx(const Value* V, unsigned length) {
-  DEBUG(errs() << "XXX getRegion[" << length << "](" << *V << ")");
+  DEBUG(errs() << "[regions] getting index for: " << *V
+               << " with length " << length << "\n");
   Region R(V,length);
   return idx(R);
 }
 
 unsigned Regions::idx(const Value* V, unsigned offset, unsigned length) {
-  DEBUG(errs() << "XXX getRegion[" << offset << "," << length << "](" << *V << ")");
+  DEBUG(errs() << "[regions] getting index for: " << *V
+               << " with offset " << offset << ", length " << length << "\n");
   Region R(V,offset,length);
   return idx(R);
 }
@@ -221,23 +224,24 @@ unsigned Regions::idx(const Value* V, unsigned offset, unsigned length) {
 unsigned Regions::idx(Region& R) {
   unsigned r;
 
-  DEBUG(errs() << "\nXXX REGION ");
+  DEBUG(errs() << "[regions]   using region: ");
   DEBUG(R.print(errs()));
-  DEBUG(errs() << "\nXXX ");
+  DEBUG(errs() << "\n");
 
   for (r = 0; r < regions.size(); ++r) {
     if (regions[r].overlaps(R)) {
 
-      DEBUG(errs() << "\nXXX OVERLAP WITH ");
+      DEBUG(errs() << "[regions]   found overlap at index " << r << ": ");
       DEBUG(regions[r].print(errs()));
-      DEBUG(errs() << "\nXXX ");
+      DEBUG(errs() << "\n");
 
       regions[r].merge(R);
-      break;
-    } else {
-      DEBUG(errs() << "\nXXX NO OVERLAP WITH ");
+
+      DEBUG(errs() << "[regions]   merged region: ");
       DEBUG(regions[r].print(errs()));
-      DEBUG(errs() << "\nXXX ");
+      DEBUG(errs() << "\n");
+
+      break;
     }
   }
 
@@ -250,15 +254,25 @@ unsigned Regions::idx(Region& R) {
     unsigned q = r+1;
     while (q < regions.size()) {
       if (regions[r].overlaps(regions[q])) {
+
+        DEBUG(errs() << "[regions]   found extra overlap at index " << q << ": ");
+        DEBUG(regions[q].print(errs()));
+        DEBUG(errs() << "\n");
+
         regions[r].merge(regions[q]);
         regions.erase(regions.begin()+q);
+
+        DEBUG(errs() << "[regions]   merged region: ");
+        DEBUG(regions[r].print(errs()));
+        DEBUG(errs() << "\n");
+
       } else {
         q++;
       }
     }
   }
 
-  DEBUG(errs() << " => " << r << "\n");
+  DEBUG(errs() << "[regions]   returning index: " << r << "\n");
 
   return r;
 }
