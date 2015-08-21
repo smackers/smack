@@ -147,6 +147,10 @@ namespace {
   public:
     GraphBuilder(Function &f, DSGraph &g, LocalDataStructures& DSi)
       : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0) {
+
+      DEBUG(errs() << "[local] Building graph for function: "
+                   << f.getName() << "\n");
+
       // Create scalar nodes for all pointer arguments...
       for (Function::arg_iterator I = f.arg_begin(), E = f.arg_end();
            I != E; ++I) {
@@ -363,6 +367,8 @@ void GraphBuilder::setDestTo(Value &V, const DSNodeHandle &NH) {
 // incoming values point to... which effectively causes them to be merged.
 //
 void GraphBuilder::visitPHINode(PHINode &PN) {
+  DEBUG(errs() << "[local] visiting phi node: " << PN.getName() << "\n");
+
   if (!isa<PointerType>(PN.getType())) return; // Only pointer PHIs
 
   DSNodeHandle &PNDest = G.getNodeForValue(&PN);
@@ -382,6 +388,7 @@ void GraphBuilder::visitSelectInst(SelectInst &SI) {
 }
 
 void GraphBuilder::visitLoadInst(LoadInst &LI) {
+  DEBUG(errs() << "[local] visiting load: " << LI << "\n");
   //
   // Create a DSNode for the pointer dereferenced by the load.  If the DSNode
   // is NULL, do nothing more (this can occur if the load is loading from a
@@ -411,6 +418,7 @@ void GraphBuilder::visitLoadInst(LoadInst &LI) {
 }
 
 void GraphBuilder::visitStoreInst(StoreInst &SI) {
+  DEBUG(errs() << "[local] visiting store: " << SI << "\n");
   Type *StoredTy = SI.getOperand(0)->getType();
   DSNodeHandle Dest = getValueDest(SI.getOperand(1));
   if (Dest.isNull()) return;
@@ -435,6 +443,7 @@ void GraphBuilder::visitStoreInst(StoreInst &SI) {
 }
 
 void GraphBuilder::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  DEBUG(errs() << "[local] visiting atomic cmpxchg: " << I << "\n");
   if (isa<PointerType>(I.getType())) {
     visitInstruction (I);
     return;
@@ -486,6 +495,7 @@ void GraphBuilder::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 }
 
 void GraphBuilder::visitAtomicRMWInst(AtomicRMWInst &I) {
+  DEBUG(errs() << "[local] visiting atomic RMW: " << I << "\n");
   //
   // Create a DSNode for the dereferenced pointer .  If the DSNode is NULL, do
   // nothing more (this can occur if the pointer is a NULL constant; bugpoint
@@ -510,11 +520,13 @@ void GraphBuilder::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void GraphBuilder::visitReturnInst(ReturnInst &RI) {
+  DEBUG(errs() << "[local] visiting return: " << RI << "\n");
   if (RI.getNumOperands() && isa<PointerType>(RI.getOperand(0)->getType()))
     G.getOrCreateReturnNodeFor(*FB).mergeWith(getValueDest(RI.getOperand(0)));
 }
 
 void GraphBuilder::visitVAArgInst(VAArgInst &I) {
+  DEBUG(errs() << "[local] visiting vaarg: " << I << "\n");
   Module *M = FB->getParent();
   Triple TargetTriple(M->getTargetTriple());
   Triple::ArchType Arch = TargetTriple.getArch();
@@ -560,6 +572,7 @@ void GraphBuilder::visitVAArgInst(VAArgInst &I) {
 }
 
 void GraphBuilder::visitIntToPtrInst(IntToPtrInst &I) {
+  DEBUG(errs() << "[local] visiting inttoptr: " << I << "\n");
   DSNode *N = createNode();
   if(I.hasOneUse()) {
     if(isa<ICmpInst>(*(I.use_begin()))) {
@@ -573,6 +586,7 @@ void GraphBuilder::visitIntToPtrInst(IntToPtrInst &I) {
 }
 
 void GraphBuilder::visitPtrToIntInst(PtrToIntInst& I) {
+  DEBUG(errs() << "[local] visiting ptrtoint: " << I << "\n");
   DSNode* N = getValueDest(I.getOperand(0)).getNode();
   if(I.hasOneUse()) {
     if(isa<ICmpInst>(*(I.use_begin()))) {
@@ -604,6 +618,7 @@ void GraphBuilder::visitPtrToIntInst(PtrToIntInst& I) {
 
 
 void GraphBuilder::visitBitCastInst(BitCastInst &I) {
+  DEBUG(errs() << "[local] visiting bitcast: " << I << "\n");
   if (!isa<PointerType>(I.getType())) return; // Only pointers
   DSNodeHandle Ptr = getValueDest(I.getOperand(0));
   if (Ptr.isNull()) return;
@@ -611,6 +626,7 @@ void GraphBuilder::visitBitCastInst(BitCastInst &I) {
 }
 
 void GraphBuilder::visitCmpInst(CmpInst &I) {
+  DEBUG(errs() << "[local] visiting compare: " << I << "\n");
   //Address can escape through cmps
 }
 
@@ -645,6 +661,7 @@ unsigned getValueOffset(Type *Ty, ArrayRef<unsigned> Idxs,
 }
 
 void GraphBuilder::visitInsertValueInst(InsertValueInst& I) {
+  DEBUG(errs() << "[local] visiting insertvalue: " << I << "\n");
   setDestTo(I, createNode()->setAllocaMarker());
 
   Type *StoredTy = I.getInsertedValueOperand()->getType();
@@ -666,6 +683,7 @@ void GraphBuilder::visitInsertValueInst(InsertValueInst& I) {
 }
 
 void GraphBuilder::visitExtractValueInst(ExtractValueInst& I) {
+  DEBUG(errs() << "[local] visiting extractvalue: " << I << "\n");
   DSNodeHandle Ptr = getValueDest(I.getAggregateOperand());
 
   // Make that the node is read from...
@@ -682,6 +700,7 @@ void GraphBuilder::visitExtractValueInst(ExtractValueInst& I) {
 }
 
 void GraphBuilder::visitGetElementPtrInst(User &GEP) {
+  DEBUG(errs() << "[local] visiting GEP: " << GEP << "\n");
   //
   // Ensure that the indexed pointer has a DSNode.
   //
@@ -921,14 +940,19 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
 
 
 void GraphBuilder::visitCallInst(CallInst &CI) {
+  DEBUG(errs() << "[local] visiting call: " << CI << "\n");
   visitCallSite(&CI);
 }
 
 void GraphBuilder::visitInvokeInst(InvokeInst &II) {
+  DEBUG(errs() << "[local] visiting invoke: " << II << "\n");
   visitCallSite(&II);
 }
 
 void GraphBuilder::visitVAStart(CallSite CS) {
+  DEBUG(errs() << "[local] visiting VA start: "
+               << CS.getCalledValue()->getName() << "\n");
+
   // Build out DSNodes for the va_list depending on the target arch
   // And assosiate the right node with the VANode for this function
   // so it can be merged with the right arguments from callsites
@@ -1017,6 +1041,8 @@ void GraphBuilder::visitVAStartNode(DSNode* N) {
 ///   false - This intrinsic is not recognized by DSA.
 ///
 bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
+  DEBUG(errs() << "[local] visiting intrinsic: " << F->getName() << "\n");
+
   ++NumIntrinsicCall;
 
   //
@@ -1246,6 +1272,7 @@ void GraphBuilder::visitCallSite(CallSite CS) {
 // that are of pointer type, make them have unknown composition bits, and merge
 // the nodes together.
 void GraphBuilder::visitInstruction(Instruction &Inst) {
+  DEBUG(errs() << "[local] visiting instruction: " << Inst << "\n");
   DSNodeHandle CurNode;
   if (isa<PointerType>(Inst.getType()))
     CurNode = getValueDest(&Inst);
