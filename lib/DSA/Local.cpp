@@ -87,8 +87,8 @@ namespace {
     /// createNode - Create a new DSNode, ensuring that it is properly added to
     /// the graph.
     ///
-    DSNode *createNode() 
-    {   
+    DSNode *createNode()
+    {
       DSNode* ret = new DSNode(&G);
       assert(ret->getParentGraph() && "No parent?");
       return ret;
@@ -216,15 +216,15 @@ namespace {
     void mergeFunction(Function* F) { getValueDest(F); }
   };
 
-  /// Traverse the whole DSGraph, and propagate the unknown flags through all 
+  /// Traverse the whole DSGraph, and propagate the unknown flags through all
   /// out edges.
   static void propagateUnknownFlag(DSGraph * G) {
     std::vector<DSNode *> workList;
     DenseSet<DSNode *> visited;
     for (DSGraph::node_iterator I = G->node_begin(), E = G->node_end(); I != E; ++I)
-      if (I->isUnknownNode()) 
+      if (I->isUnknownNode())
         workList.push_back(&*I);
-  
+
     while (!workList.empty()) {
       DSNode * N = workList.back();
       workList.pop_back();
@@ -247,7 +247,7 @@ namespace {
 /// getValueDest - Return the DSNode that the actual value points to.
 ///
 DSNodeHandle GraphBuilder::getValueDest(Value* V) {
-  if (isa<Constant>(V) && cast<Constant>(V)->isNullValue()) 
+  if (isa<Constant>(V) && cast<Constant>(V)->isNullValue())
     return 0;  // Null doesn't point to anything, don't add to ScalarMap!
 
   DSNodeHandle &NH = G.getNodeForValue(V);
@@ -536,7 +536,7 @@ void GraphBuilder::visitVAArgInst(VAArgInst &I) {
 
     if (isa<PointerType>(I.getType()))
       Dest.mergeWith(Ptr);
-    return; 
+    return;
   }
 
   default: {
@@ -569,7 +569,7 @@ void GraphBuilder::visitIntToPtrInst(IntToPtrInst &I) {
   }
   N->setIntToPtrMarker();
   N->setUnknownMarker();
-  setDestTo(I, N); 
+  setDestTo(I, N);
 }
 
 void GraphBuilder::visitPtrToIntInst(PtrToIntInst& I) {
@@ -690,9 +690,9 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
     NodeH = createNode();
 
   //
-  // There are a few quick and easy cases to handle.  If  the DSNode of the 
-  // indexed pointer is already folded, then we know that the result of the 
-  // GEP will have the same offset into the same DSNode 
+  // There are a few quick and easy cases to handle.  If  the DSNode of the
+  // indexed pointer is already folded, then we know that the result of the
+  // GEP will have the same offset into the same DSNode
   // as the indexed pointer.
   //
 
@@ -796,6 +796,16 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
       if((NodeH.getOffset() || Offset != 0)
          || (!isa<ArrayType>(CurTy)
              && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+        DEBUG(
+          errs() << "[local] FOLDING" << "\n";
+          errs() << "[local] type:    " << *CurTy << "\n";
+          errs() << "[local] offset:  " << Offset
+                 << " (" << NodeH.getOffset() << ")\n";
+          errs() << "[local] size:    " << TD.getTypeAllocSize(CurTy)
+                 << " (" << NodeH.getNode()->getSize() << ")\n";
+          errs() << "[local] value: " << GEP << "\n";
+          errs() << "[local] index: " << *I.getOperand() << "\n";
+        );
         NodeH.getNode()->foldNodeCompletely();
         NodeH.getNode();
         Offset = 0;
@@ -1037,7 +1047,7 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
   case Intrinsic::vaend:
     // TODO: What to do here?
     return true;
-  case Intrinsic::memcpy: 
+  case Intrinsic::memcpy:
   case Intrinsic::memmove: {
     // Merge the first & second arguments, and mark the memory read and
     // modified.
@@ -1092,7 +1102,7 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
     return true;
 
     //
-    // The return address/frame address aliases with the stack, 
+    // The return address/frame address aliases with the stack,
     // is type-unknown, and should
     // have the unknown flag set since we don't know where it goes.
     //
@@ -1520,4 +1530,3 @@ bool LocalDataStructures::runOnModule(Module &M) {
 
   return false;
 }
-
