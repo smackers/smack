@@ -309,7 +309,11 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   vector<const Expr*> args;
-  unsigned length = dyn_cast<ConstantInt>(mci.getLength())->getZExtValue();
+  unsigned length;
+  if (auto CI = dyn_cast<ConstantInt>(mci.getLength()))
+    length = CI->getZExtValue();
+  else
+    length = std::numeric_limits<unsigned>::max();
   unsigned r1 = regions.idx(mci.getOperand(0),length);
   unsigned r2 = regions.idx(mci.getOperand(1),length);
   for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
@@ -319,7 +323,11 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   vector<const Expr*> args;
-  unsigned length = dyn_cast<ConstantInt>(msi.getLength())->getZExtValue();
+  unsigned length;
+  if (auto CI = dyn_cast<ConstantInt>(msi.getLength()))
+    length = CI->getZExtValue();
+  else
+    length = std::numeric_limits<unsigned>::max();
   unsigned r = regions.idx(msi.getOperand(0),length);
   for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
     args.push_back(expr(msi.getOperand(i)));
@@ -662,7 +670,11 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *len = T->getParamType(2),
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
-      unsigned length = dyn_cast<ConstantInt>(MCI->getLength())->getZExtValue();
+      unsigned length;
+      if (auto CI = dyn_cast<ConstantInt>(MCI->getLength()))
+        length = CI->getZExtValue();
+      else
+        length = std::numeric_limits<unsigned>::max();
       unsigned r1 = regions.idx(MCI->getOperand(0),length);
       unsigned r2 = regions.idx(MCI->getOperand(1),length);
 
@@ -693,7 +705,11 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
         *len = T->getParamType(2),
         *align = T->getParamType(3),
         *vol  = T->getParamType(4);
-      unsigned length = dyn_cast<ConstantInt>(MSI->getLength())->getZExtValue();
+      unsigned length;
+      if (auto CI = dyn_cast<ConstantInt>(MSI->getLength()))
+        length = CI->getZExtValue();
+      else
+        length = std::numeric_limits<unsigned>::max();
       unsigned r = regions.idx(MSI->getOperand(0),length);
 
       decls.push_back(Decl::procedure(program, indexedName(name,{r}), {

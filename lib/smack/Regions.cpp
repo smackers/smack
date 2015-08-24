@@ -120,6 +120,7 @@ bool Region::isSingleton() const {
       if ((++(I->second->begin())) != I->second->end()) break;
       Type* T = *I->second->begin();
       while (T->isPointerTy()) T = T->getPointerElementType();
+      if (!T->isSized()) break;
       if (DL->getTypeAllocSize(T) != length) break;
       if (!T->isSingleValueType()) break;
       return true;
