@@ -294,7 +294,13 @@ void Regions::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void Regions::visitMemIntrinsic(MemIntrinsic &I) {
-  unsigned length = dyn_cast<ConstantInt>(I.getLength())->getZExtValue();
+  unsigned length;
+
+  if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
+    length = CI->getZExtValue();
+  else
+    length = std::numeric_limits<unsigned>::max();
+
   idx(I.getDest(),length);
 }
 
