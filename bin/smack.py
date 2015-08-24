@@ -185,6 +185,7 @@ def timeout_killer(proc, timed_out):
 def try_command(cmd, cwd=None, display=False, timeout=None):
   if args.verbose or args.debug:
     display = True
+  output_file = temporary_file(cmd[0], '.log', args)
   stdout = None if display else subprocess.PIPE
   proc = None
   timer = None
@@ -192,15 +193,16 @@ def try_command(cmd, cwd=None, display=False, timeout=None):
     if args.verbose or args.debug:
       print "Running %s" % " ".join(cmd)
 
-    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid, stdout=stdout,
-      stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
+      stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    tee = subprocess.Popen(['tee', output_file], stdin=proc.stdout, stdout=stdout)
 
     if timeout:
       timed_out = [False]
       timer = Timer(timeout, timeout_killer, [proc, timed_out])
       timer.start()
 
-    output = proc.communicate()[0]
+    proc.wait()
 
     if timeout:
       timer.cancel()
@@ -208,15 +210,14 @@ def try_command(cmd, cwd=None, display=False, timeout=None):
     rc = proc.returncode
     proc = None
     if timeout and timed_out[0]:
-      return (output if output else "") + ("\n%s timed out." % cmd[0])
+      return open(output_file).read() + ("\n%s timed out." % cmd[0])
     elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
     else:
-      return output
+      return open(output_file).read()
 
   except (RuntimeError, OSError) as err:
-    if output:
-      print >> sys.stderr, output
+    print >> sys.stderr, open(output_file).read()
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
   finally:
