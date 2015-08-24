@@ -70,7 +70,7 @@ def arguments():
 
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('input_file', metavar='input-file',
+  parser.add_argument('input_files', metavar='input-files', nargs='+',
     type = lambda x: (lambda r: x if r is None else parser.error(r))(validate_input_file(x)),
     help = 'source file to be translated/verified')
 
@@ -173,7 +173,8 @@ def arguments():
 def temporary_file(prefix, extension, args):
   f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
   os.close(f)
-  temporary_files.append(name)
+  if not args.debug:
+    temporary_files.append(name)
   return name
 
 def timeout_killer(proc, timed_out):
@@ -181,33 +182,33 @@ def timeout_killer(proc, timed_out):
     timed_out[0] = True
     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
-def try_command(cmd, cwd=None):
-  output = ""
+def try_command(cmd, cwd=None, display=False, timeout=None):
+  if args.verbose or args.debug:
+    display = True
+  stdout = None if display else subprocess.PIPE
   proc = None
   timer = None
   try:
-    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    timed_out = [False]
-    timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
-    timer.start()
-
     if args.verbose or args.debug:
-      output = ""
       print "Running %s" % " ".join(cmd)
-      while proc.poll() is None:
-        line = proc.stdout.readline()
-        if line:
-          sys.stdout.write(line)
-          output += line
-        else:
-          break
 
-    output += proc.communicate()[0]
-    timer.cancel()
+    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid, stdout=stdout,
+      stderr=subprocess.STDOUT)
+
+    if timeout:
+      timed_out = [False]
+      timer = Timer(timeout, timeout_killer, [proc, timed_out])
+      timer.start()
+
+    output = proc.communicate()[0]
+
+    if timeout:
+      timer.cancel()
+
     rc = proc.returncode
     proc = None
-    if timed_out[0]:
-      return output + ("\n%s timed out." % cmd[0])
+    if timeout and timed_out[0]:
+      return (output if output else "") + ("\n%s timed out." % cmd[0])
     elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
     else:
@@ -219,17 +220,23 @@ def try_command(cmd, cwd=None):
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
   finally:
-    if timer: timer.cancel()
+    if timeout and timer: timer.cancel()
     if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
-  lang = args.language if args.language else os.path.splitext(args.input_file)[1][1:]
+  if args.language:
+    lang = args.language
+  else:
+    extensions = map(lambda f: os.path.splitext(f)[1][1:], args.input_files)
+    if any(map(lambda ext: ext != extensions[0], extensions)):
+      raise RuntimeError("All input files must have the same file type (extension).")
+    lang = extensions[0]
   return frontends()[lang](args)
 
 def empty_frontend(args):
-  """Generate the LLVM bitcode file by copying the input file."""
-  shutil.copy(args.input_file, args.bc_file)
+  """Generate the LLVM bitcode file by copying the input file(s)."""
+  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
 
 def smack_root():
   return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -250,14 +257,22 @@ def default_clang_compile_command(args):
 def clang_frontend(args):
   """Generate an LLVM bitcode file from C-language source(s)."""
 
+  bitcodes = []
   compile_command = default_clang_compile_command(args)
   smack_bc = temporary_file('smack', '.bc', args)
   try_command(compile_command + [smack_lib(), '-o', smack_bc])
-  try_command(compile_command + [args.input_file, '-o', args.bc_file])
-  try_command(['llvm-link', args.bc_file, smack_bc, '-o', args.bc_file])
+  bitcodes.append(smack_bc)
+  for c in args.input_files:
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(compile_command + ['-o', bc, c], display=True)
+    bitcodes.append(bc)
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
 
 def json_compilation_database_frontend(args):
   """Generate an LLVM bitcode file from a JSON compilation database."""
+
+  if len(args.input_files) > 1:
+    raise RuntimeError("Expected a single JSON compilation database.")
 
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
@@ -265,7 +280,7 @@ def json_compilation_database_frontend(args):
 
   try_command(default_clang_compile_command(args) + [smack_lib(), '-o', smack_bc])
 
-  with open(args.input_file) as f:
+  with open(args.input_files[0]) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
@@ -278,16 +293,19 @@ def json_compilation_database_frontend(args):
         command = output_flags.sub(r"-o \1.bc", command)
         command = optimization_flags.sub("-O0", command)
         command = command + " -emit-llvm"
-        try_command(command.split(),cc['directory'])
+        try_command(command.split(),cc['directory'], display=True)
 
 def svcomp_frontend(args):
   """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
 
-  name = os.path.splitext(os.path.basename(args.input_file))[0]
+  if len(args.input_files) > 1:
+    raise RuntimeError("Expected a single SVCOMP input file.")
+
+  name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
 
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
 
-  if os.path.splitext(args.input_file)[1] == ".i":
+  if os.path.splitext(args.input_files[0])[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
@@ -295,7 +313,7 @@ def svcomp_frontend(args):
     clean = temporary_file(name, '.clean.c', args)
     tokenized = temporary_file(name, '.tokenized.c', args)
 
-    with open(args.input_file, "r") as f:
+    with open(args.input_files[0], "r") as f:
       cleanup = f.read()
     cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
     cleanup = beforeTokenReplace(cleanup)
@@ -306,7 +324,7 @@ def svcomp_frontend(args):
     with open(tokenized, 'w') as f:
       f.write(afterTokenReplace(output))
 
-    args.input_file = tokenized
+    args.input_files[0] = tokenized
 
   clang_frontend(args)
 
@@ -393,7 +411,7 @@ def verify_bpl(args):
   if args.verifier_options:
     command += args.verifier_options.split()
 
-  verifier_output = try_command(command)
+  verifier_output = try_command(command, timeout=args.time_limit)
   result = verification_result(verifier_output)
 
   if args.smackd:
