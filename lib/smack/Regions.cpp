@@ -40,14 +40,67 @@ void Region::init(Module& M, Pass& P) {
   DSA = &P.getAnalysis<DSAAliasAnalysis>();
 }
 
+bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
+  if (N->isGlobalNode()
+      && !N->isAllocaNode()
+      && !N->isHeapNode()
+      && !N->isExternalNode()
+      && !N->isUnknownNode()
+      && N->numGlobals() == 1) {
+
+    // TODO can we do something for non-global nodes?
+
+    // TODO don’t need to know if there are other members of this class, right?
+    // assert(NEQS && "Missing DS node equivalence information.");
+    // auto &Cs = NEQS->getEquivalenceClasses();
+    // auto C = Cs.findValue(representative);
+    // assert(C != Cs.end() && "No equivalence class found.");
+    // assert(Cs.member_begin(C) != Cs.member_end() && "Found empty class.");
+    // if (++(Cs.member_begin(C)) != Cs.member_end()) return false;
+
+    assert(DL && "Missing data layout information.");
+
+    for (auto I = N->type_begin(), E = N->type_end(); I != E; ++I) {
+      if (I->first < offset) continue;
+      if (I->first > offset) break;
+      if (I->second->begin() == I->second->end()) break;
+      if ((++(I->second->begin())) != I->second->end()) break;
+      Type* T = *I->second->begin();
+      while (T->isPointerTy()) T = T->getPointerElementType();
+      if (!T->isSized()) break;
+      if (DL->getTypeAllocSize(T) != length) break;
+      if (!T->isSingleValueType()) break;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Region::isAllocated(const DSNode* N) {
+  return N->isHeapNode()
+      || N->isAllocaNode();
+}
+
+bool Region::isComplicated(const DSNode* N) {
+  return N->isIntToPtrNode()
+      || N->isIntToPtrNode()
+      || N->isExternalNode()
+      || N->isUnknownNode();
+}
+
 void Region::init(const Value* V, unsigned offset, unsigned length) {
   Type* T = V->getType();
   while (T->isPointerTy()) T = T->getPointerElementType();
   representative = DSA ? DSA->getNode(V) : nullptr;
   this->offset = offset;
   this->length = length;
+  singleton = representative && isSingleton(representative, offset, length);
+  allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset));
+  incomplete = !representative || representative->isIncompleteNode();
+  complicated = !representative || isComplicated(representative);
+  collapsed = !representative || representative->isCollapsedNode();
 }
 
 Region::Region(const Value* V) {
@@ -66,67 +119,9 @@ Region::Region(const Value* V, unsigned offset, unsigned length) {
   init(V, offset, length);
 }
 
-bool Region::isIncomplete() {
-  return !representative
-      || representative->isIncompleteNode();
-}
-
-bool Region::isComplicated() {
-  return !representative
-      || representative->isIntToPtrNode()
-      || representative->isIntToPtrNode()
-      || representative->isExternalNode()
-      || representative->isUnknownNode();
-}
-
 bool Region::isDisjoint(unsigned offset, unsigned length) {
   return this->offset + this->length <= offset
       || offset + length <= this->offset;
-}
-
-bool Region::isAllocated() const {
-  return !representative
-      || representative->isHeapNode()
-      || representative->isAllocaNode();
-}
-
-bool Region::isSingleton() const {
-  if (representative
-      && representative->isGlobalNode()
-      && !representative->isAllocaNode()
-      && !representative->isHeapNode()
-      && !representative->isExternalNode()
-      && !representative->isUnknownNode()
-      && representative->numGlobals() == 1) {
-
-    // TODO can we do something for non-global nodes?
-
-    // TODO don’t need to know if there are other members of this class, right?
-    // assert(NEQS && "Missing DS node equivalence information.");
-    // auto &Cs = NEQS->getEquivalenceClasses();
-    // auto C = Cs.findValue(representative);
-    // assert(C != Cs.end() && "No equivalence class found.");
-    // assert(Cs.member_begin(C) != Cs.member_end() && "Found empty class.");
-    // if (++(Cs.member_begin(C)) != Cs.member_end()) return false;
-
-    assert(DL && "Missing data layout information.");
-
-    for (auto I = representative->type_begin(),
-              E = representative->type_end();
-              I != E; ++I) {
-      if (I->first < offset) continue;
-      if (I->first > offset) break;
-      if (I->second->begin() == I->second->end()) break;
-      if ((++(I->second->begin())) != I->second->end()) break;
-      Type* T = *I->second->begin();
-      while (T->isPointerTy()) T = T->getPointerElementType();
-      if (!T->isSized()) break;
-      if (DL->getTypeAllocSize(T) != length) break;
-      if (!T->isSingleValueType()) break;
-      return true;
-    }
-  }
-  return false;
 }
 
 void Region::merge(Region& R) {
@@ -134,15 +129,19 @@ void Region::merge(Region& R) {
   unsigned long high = std::max(offset + length, R.offset + R.length);
   offset = low;
   length = high - low;
+  singleton = singleton && R.singleton;
+  allocated = allocated || R.allocated;
   bytewise = bytewise || R.bytewise;
+  incomplete = incomplete || R.incomplete;
+  complicated = complicated || R.complicated;
+  collapsed = collapsed || R.collapsed;
 }
 
 bool Region::overlaps(Region& R) {
-  return (isIncomplete() && R.isIncomplete())
-      || (isComplicated() && R.isComplicated())
+  return (incomplete && R.incomplete)
+      || (complicated && R.complicated)
       || (representative == R.representative
-          && (representative->isCollapsedNode()
-              || !isDisjoint(R.offset, R.length)));
+          && (collapsed || !isDisjoint(R.offset, R.length)));
 }
 
 void Region::print(raw_ostream& O) {
