@@ -1,5 +1,3 @@
-[![Build Status](http://kepler.cs.utah.edu:8080/buildStatus/icon?job=smack)](http://kepler.cs.utah.edu:8080/job/smack/)
-
 SMACK is a *bounded software verifier*, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
 SMACK can verify C programs, such as the following:
