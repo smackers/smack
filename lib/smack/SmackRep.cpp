@@ -872,7 +872,7 @@ string SmackRep::getPrelude() {
   for (int i=0; i<15; i++)
     s << "const $" << i << ".ref: ref;" << endl;
 
-  for (unsigned i = 0; i < 8; ++i) {
+  for (unsigned i = 0; i < 15; ++i) {
     stringstream t;
     t << "$" << i << ".ref";
     s << Decl::axiom(Expr::eq(Expr::id(t.str()),pointerLit((unsigned long) i))) << endl;
