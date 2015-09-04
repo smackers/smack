@@ -65,12 +65,12 @@
   </sourcefiles>
 
   <!-- All svcomp benchmarks should be run with smack's svcomp mode turned on -->
-  <option name="--svcomp"></option>
+  <option name="-x">svcomp</option>
 
   <!-- Stuff below sets up witness, bc and bpl file download links in table...  -->
   <option name="--bc">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bc</option>
   <option name="--bpl">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option>
-  <option name="--error-witness">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.witness.graphml</option>
+  <option name="-w">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.witness.graphml</option>
 
   <columns>
     <column title="Output Files">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
