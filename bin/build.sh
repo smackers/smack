@@ -158,7 +158,7 @@ linux-opensuse*)
   ;;
 
 linux-ubuntu-14*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923684&FileTime=130586905368570000&Build=20983"
+  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923684&FileTime=130586905368570000&Build=21031"
   DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
   ;;
 
@@ -310,72 +310,78 @@ fi
 if [ ${BUILD_Z3} -eq 1 ]
 then
   puts "Installing Z3"
-
-  ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
-  unzip -o z3-downloaded.zip -d z3-extracted
-  mv z3-extracted/z3-* ${Z3_DIR}
-  rm -rf z3-downloaded.zip z3-extracted
-
-  puts "Installed Z3"
+  if [ ! ${Z3_DIR}/bin/z3 ]; then
+    ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
+    unzip -o z3-downloaded.zip -d z3-extracted
+    mv z3-extracted/z3-* ${Z3_DIR}
+    rm -rf z3-downloaded.zip z3-extracted
+    puts "Installed Z3"
+  else
+    puts "Z3 already installed"
+  fi
 fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
-
-  git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
-  cd ${BOOGIE_DIR}
-  git checkout ${BOOGIE_COMMIT}
-  cd ${BOOGIE_DIR}/Source
-  mozroots --import --sync
-  ${WGET} https://nuget.org/nuget.exe
-  mono ./nuget.exe restore Boogie.sln
-  xbuild Boogie.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
-
-  puts "Built Boogie"
+  if [ ! ${BOOGIE_DIR}/Binaries/Boogie.exe ]; then
+    git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+    cd ${BOOGIE_DIR}
+    git checkout -f ${BOOGIE_COMMIT}
+    cd ${BOOGIE_DIR}/Source
+    mozroots --import --sync
+    ${WGET} https://nuget.org/nuget.exe
+    mono ./nuget.exe restore Boogie.sln
+    xbuild Boogie.sln /p:Configuration=Release
+    ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+    puts "Built Boogie"
+  else
+    puts "Boogie already installed"
+  fi
 fi
 
 
 if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Building Corral"
+  if  [ ! ${CORRAL_DIR}/bin/Release/corral.exe ]; then
+    cd ${ROOT}
+    ${WGET} ${CORRAL_DOWNLOAD_LINK} -O corral-downloaded.zip
+    unzip -o corral-downloaded.zip -d ${CORRAL_DIR}
+    rm -f corral-downloaded.zip
+    cd ${CORRAL_DIR}
+    cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
+    xbuild cba.sln /p:Configuration=Release
+    ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
-  cd ${ROOT}
-  ${WGET} ${CORRAL_DOWNLOAD_LINK} -O corral-downloaded.zip
-  unzip -o corral-downloaded.zip -d ${CORRAL_DIR}
-  rm -f corral-downloaded.zip
-  cd ${CORRAL_DIR}
-#  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
-#  cd ${CORRAL_DIR}
-#  git checkout ${CORRAL_COMMIT}
-  cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
-  xbuild cba.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
-
-  puts "Built Corral"
+    puts "Built Corral"
+  else
+    puts "Corral already installed"
+  fi
 fi
 
 
 if [ ${BUILD_SMACK} -eq 1 ]
 then
   puts "Building SMACK"
+  if [ ! $(which smack) ]; then
+    mkdir -p ${SMACK_DIR}/build
+    cd ${SMACK_DIR}/build
+    cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
+    make
+    sudo make install
+    puts "Configuring shell environment"
+    echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
+    echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
+    source ${SMACKENV}
+    puts "The required environment variables have been set in ${SMACKENV}"
+    puts "You should source ${SMACKENV} in your .bashrc"
 
-  mkdir -p ${SMACK_DIR}/build
-  cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
-  make
-  sudo make install
-
-  puts "Configuring shell environment"
-  echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
-  echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
-  source ${SMACKENV}
-  puts "The required environment variables have been set in ${SMACKENV}"
-  puts "You should source ${SMACKENV} in your .bashrc"
-
-  puts "Built SMACK"
+    puts "Built SMACK"
+  else
+    puts "SMACK already installed"
+  fi
 fi
 
 
