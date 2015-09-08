@@ -307,6 +307,27 @@ void Regions::visitMemIntrinsic(MemIntrinsic &I) {
 void Regions::visitCallInst(CallInst& I) {
   if (I.getType()->isPointerTy())
     idx(&I);
+
+  if (I.getName().str().find("__SMACK_object") != string::npos) {
+    assert(I.getNumArgOperands() == 2 && "Expected two operands.");
+    const Value* P = I.getArgOperand(0);
+    const Value* N = I.getArgOperand(1);
+
+    while (isa<const BitCastInst>(P))
+      P = dyn_cast<const BitCastInst>(P)->getOperand(0);
+    const PointerType* T = dyn_cast<PointerType>(P->getType());
+    assert(T && "Expected pointer argument.");
+
+    if (auto I = dyn_cast<ConstantInt>(N)) {
+      const unsigned bound = I->getZExtValue();
+      const unsigned size = T->getElementType()->getIntegerBitWidth() / 8;
+      const unsigned length = bound * size;
+      idx(P,length);
+
+    } else {
+      llvm_unreachable("Non-constant size expression not yet handled.");
+    }
+  }
 }
 
 } // namespace smack

@@ -334,6 +334,99 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
 }
 
+const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
+  assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
+  const Value* V = CI.getArgOperand(0);
+  while (isa<const BitCastInst>(V))
+    V = dyn_cast<const BitCastInst>(V)->getOperand(0);
+  const PointerType* T = dyn_cast<PointerType>(V->getType());
+  assert(T && "Expected pointer argument.");
+  return Stmt::call("__SMACK_value",
+    vector<const Expr*>({ expr(V) }),
+    vector<string>({ naming.get(CI) }));
+}
+
+const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
+  assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
+  return Stmt::call("__SMACK_value",
+    vector<const Expr*>({ Expr::id(Naming::RET_VAR) }),
+    vector<string>({ naming.get(CI) }));
+}
+
+const Stmt* SmackRep::objectAnnotation(const CallInst& CI) {
+  assert(CI.getNumArgOperands() == 2 && "Expected two operands.");
+  const Value* P = CI.getArgOperand(0);
+  const Value* N = CI.getArgOperand(1);
+  while (isa<const BitCastInst>(P))
+    P = dyn_cast<const BitCastInst>(P)->getOperand(0);
+  const PointerType* T = dyn_cast<PointerType>(P->getType());
+  assert(T && "Expected pointer argument.");
+
+  if (auto I = dyn_cast<ConstantInt>(N)) {
+    const unsigned bound = I->getZExtValue();
+    const unsigned bits = T->getElementType()->getIntegerBitWidth();
+    const unsigned bytes = bits / 8;
+    const unsigned length = bound * bytes;
+    const unsigned R = regions.idx(P,length);
+    bool bytewise = regions.get(R).bytewiseAccess();
+    string L = string("$load.") + (bytewise ? "bytes." : "") + intType(bits);
+    return Stmt::call("__SMACK_object",
+      vector<const Expr*>({
+        expr(P),
+        Expr::lit(bound)
+      }),
+      vector<string>({ naming.get(CI) }),
+      vector<const Attr*>({
+        Attr::attr(L, vector<const Expr*>({
+          Expr::id(memPath(R, bytewise ? 8 : bits)),
+          Expr::lit(bytes),
+          Expr::lit(length)
+        }))
+      }));
+
+  } else {
+    llvm_unreachable("Non-constant size expression not yet handled.");
+  }
+
+}
+
+const Stmt* SmackRep::returnObjectAnnotation(const CallInst& CI) {
+  assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
+  const Value* V = nullptr; // FIXME GET A VALUE HERE
+  assert(V && "Unknown return value.");
+  const Value* N = CI.getArgOperand(0);
+  const PointerType* T =
+    dyn_cast<PointerType>(CI.getParent()->getParent()->getReturnType());
+  assert(T && "Expected pointer return type.");
+
+  if (auto I = dyn_cast<ConstantInt>(N)) {
+    const unsigned bound = I->getZExtValue();
+    const unsigned bits = T->getElementType()->getIntegerBitWidth();
+    const unsigned bytes = bits / 8;
+    const unsigned length = bound * bytes;
+    const unsigned R = regions.idx(V, length);
+    bool bytewise = regions.get(R).bytewiseAccess();
+    string L = string("$load.") + (bytewise ? "bytes." : "") + intType(bits);
+    return Stmt::call("__SMACK_object",
+      vector<const Expr*>({
+        Expr::id(Naming::RET_VAR),
+        Expr::lit(bound)
+      }),
+      vector<string>({ naming.get(CI) }),
+      vector<const Attr*>({
+        Attr::attr(L, vector<const Expr*>({
+          Expr::id(memPath(R, bytewise ? 8 : bits)),
+          Expr::lit(bytes),
+          Expr::lit(length)
+        }))
+      }));
+    
+  } else {
+    llvm_unreachable("Non-constant size expression not yet handled.");
+  }
+
+}
+
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");

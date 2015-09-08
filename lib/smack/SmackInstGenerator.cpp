@@ -458,6 +458,18 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
+  } else if (name.find("__SMACK_value") != string::npos) {
+    emit(rep.valueAnnotation(ci));
+
+  } else if (name.find("__SMACK_return_value") != string::npos) {
+    emit(rep.returnValueAnnotation(ci));
+
+  } else if (name.find("__SMACK_object") != string::npos) {
+    emit(rep.objectAnnotation(ci));
+
+  } else if (name.find("__SMACK_return_object") != string::npos) {
+    emit(rep.returnObjectAnnotation(ci));
+
   } else if (name.find("__SMACK_mod") != string::npos) {
     addMod(rep.code(ci));
 
