@@ -16,6 +16,7 @@
 
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
+#include "dsa/DSMonitor.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/DenseSet.h"
@@ -78,6 +79,7 @@ namespace {
     LocalDataStructures* DS;
     const DataLayout& TD;
     DSNode *VAArray;
+    DSMonitor *M;
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper functions used to implement the visitation functions...
@@ -146,7 +148,8 @@ namespace {
 
   public:
     GraphBuilder(Function &f, DSGraph &g, LocalDataStructures& DSi)
-      : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0) {
+      : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0),
+        M(new DSMonitor(&DSi)) {
 
       DEBUG(errs() << "[local] Building graph for function: "
                    << f.getName() << "\n");
@@ -815,6 +818,11 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
       if((NodeH.getOffset() || Offset != 0)
          || (!isa<ArrayType>(CurTy)
              && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+
+        M->witness(NodeH, {&GEP, I.getOperand()},
+          "node does not belong to array"
+        );
+
         DEBUG(
           errs() << "[local] FOLDING FOR ARRAY ACCESS" << "\n";
           errs() << "[local] type:    " << *CurTy << "\n";
@@ -909,6 +917,11 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
         if (NodeH.getOffset() || Offset != 0 ||
             (!isa<ArrayType>(CurTy) &&
              (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+
+          M->witness(NodeH, {&GEP, I.getOperand()},
+            "type-incompatible access into node"
+          );
+
           DEBUG(
             errs() << "[local] FOLDING FOR POINTER ACCESS" << "\n";
             errs() << "[local] type:    " << *CurTy << "\n";
@@ -1200,8 +1213,14 @@ void GraphBuilder::visitCallSite(CallSite CS) {
     for (CallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end(); I != E; ++I)
       if (isa<PointerType > ((*I)->getType()))
         RetVal.mergeWith(getValueDest(*I));
-    if (!RetVal.isNull())
+    if (!RetVal.isNull()) {
+
+      M->witness(RetVal, {I},
+        "inline asm call"
+      );
+
       RetVal.getNode()->foldNodeCompletely();
+    }
     return;
   }
 
@@ -1383,6 +1402,11 @@ GraphBuilder::MergeConstantInitIntoNode(DSNodeHandle &NH,
         // array, just fold the DSNode now and get it over with.
         //
         DEBUG(errs() << "Zero size element at end of struct\n" );
+
+        M->witness(NHN, {CS},
+          "zero size element at end of struct"
+        );
+
         NHN->foldNodeCompletely();
       } else {
         assert(0 && "type was smaller than offsets of struct layout indicate");
@@ -1527,9 +1551,9 @@ bool LocalDataStructures::runOnModule(Module &M) {
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
     if (!I->isDeclaration()) {
       DSGraph* G = new DSGraph(GlobalECs, getDataLayout(), *TypeSS, GlobalsGraph);
-      GraphBuilder GGB(*I, *G, *this);
       G->getAuxFunctionCalls() = G->getFunctionCalls();
       setDSGraph(*I, G);
+      GraphBuilder GGB(*I, *G, *this);
       propagateUnknownFlag(G);
       callgraph.insureEntry(I);
       G->buildCallGraph(callgraph, GlobalFunctionList, true);
