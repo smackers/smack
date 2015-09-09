@@ -27,6 +27,15 @@ void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
+typedef struct smack_object { void* dummy; }* smack_object_t;
+smack_object_t __SMACK_object(void*, unsigned);
+smack_object_t __SMACK_return_object(unsigned);
+
+typedef struct smack_value { void* dummy; }* smack_value_t;
+smack_value_t __SMACK_value(void*);
+#define __SMACK_value(v) __SMACK_value((void*) v)
+smack_value_t __SMACK_return_value();
+
 // Sugar for __SMACK_init_func_XXX()
 #define __SMACK_INIT(x) void __SMACK_init_func_##x()
 

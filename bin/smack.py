@@ -341,7 +341,7 @@ def llvm_to_bpl(args):
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
-  try_command(cmd)
+  try_command(cmd, display=True)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:

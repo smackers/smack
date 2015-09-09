@@ -118,6 +118,7 @@ add_library(dsa STATIC
   include/dsa/DataStructure.h
   include/dsa/TypeSafety.h
   include/dsa/super_set.h
+  include/dsa/DSMonitor.h
   lib/DSA/AddressTakenAnalysis.cpp
   lib/DSA/CallTargets.cpp
   lib/DSA/DSTest.cpp
@@ -136,6 +137,7 @@ add_library(dsa STATIC
   lib/DSA/BottomUpClosure.cpp
   lib/DSA/DSGraph.cpp
   lib/DSA/EntryPointAnalysis.cpp
+  lib/DSA/DSMonitor.cpp
   lib/DSA/Local.cpp
   lib/DSA/SanityCheck.cpp
 )

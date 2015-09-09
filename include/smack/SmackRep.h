@@ -161,6 +161,11 @@ public:
   const Stmt* store(const Value* P, const Value* V);
   const Stmt* store(const Value* P, const Expr* V);
 
+  const Stmt* valueAnnotation(const CallInst& CI);
+  const Stmt* returnValueAnnotation(const CallInst& CI);
+  const Stmt* objectAnnotation(const CallInst& CI);
+  const Stmt* returnObjectAnnotation(const CallInst& CI);
+
   vector<Decl*> decl(llvm::Function* F);
   Decl* decl(llvm::Function* F, llvm::CallInst* C);
   vector<ProcDecl*> proc(llvm::Function* F);
