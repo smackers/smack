@@ -69,6 +69,7 @@ add_library(assistDS STATIC
   include/assistDS/DSNodeEquivs.h
   include/assistDS/FuncSpec.h
   include/assistDS/SimplifyGEP.h
+  include/assistDS/RemoveDeadDefs.h
   include/assistDS/TypeChecks.h
   include/assistDS/DataStructureCallGraph.h
   include/assistDS/GEPExprArgs.h
@@ -89,6 +90,7 @@ add_library(assistDS STATIC
   lib/AssistDS/DynCount.cpp
   lib/AssistDS/IndCloner.cpp
   lib/AssistDS/SimplifyGEP.cpp
+  lib/AssistDS/RemoveDeadDefs.cpp
   lib/AssistDS/TypeChecks.cpp
   lib/AssistDS/DSNodeEquivs.cpp
   lib/AssistDS/FuncSimplify.cpp

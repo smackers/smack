@@ -1,7 +1,7 @@
-// 
+//
 // Copyright (c) 2013 Pantazis Deligiannis (p.deligiannis@imperial.ac.uk)
 // This file is distributed under the MIT License. See LICENSE for details.
-// 
+//
 
 #include "llvm/LinkAllPasses.h"
 #include "llvm/PassManager.h"
@@ -24,6 +24,7 @@
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"
 #include "assistDS/SimplifyInsertValue.h"
+#include "assistDS/RemoveDeadDefs.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -42,8 +43,8 @@ std::string getFileName(const std::string &str) {
   std::string filename = str;
   size_t lastdot = str.find_last_of(".");
   if (lastdot != std::string::npos)
-    filename = str.substr(0, lastdot);  
-  return filename; 
+    filename = str.substr(0, lastdot);
+  return filename;
 }
 
 int main(int argc, char **argv) {
@@ -58,13 +59,13 @@ int main(int argc, char **argv) {
 //    OutputFilename = getFileName(InputFilename) + ".bpl";
     OutputFilename = "a.bpl";
   }
- 
+
   std::string error_msg;
   llvm::SMDiagnostic err;
-  llvm::LLVMContext &context = llvm::getGlobalContext();  
+  llvm::LLVMContext &context = llvm::getGlobalContext();
   std::unique_ptr<llvm::Module> module;
   std::unique_ptr<llvm::tool_output_file> output;
- 
+
   module.reset(llvm::ParseIRFile(InputFilename, err, context));
   if (module.get() == 0) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
@@ -72,7 +73,7 @@ int main(int argc, char **argv) {
     if (llvm::errs().has_colors()) llvm::errs().resetColor();
     return 1;
   }
- 
+
   output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::sys::fs::F_None));
   if (!error_msg.empty()) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
     if (llvm::errs().has_colors()) llvm::errs().resetColor();
     return 1;
   }
- 
+
   ///////////////////////////////
   // initialise and run passes //
   ///////////////////////////////
@@ -88,7 +89,7 @@ int main(int argc, char **argv) {
   llvm::PassManager pass_manager;
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
- 
+
   // add an appropriate DataLayout instance for the module
   const llvm::DataLayout *dl = 0;
   const std::string &moduleDataLayout = module.get()->getDataLayoutStr();
@@ -105,6 +106,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
+  pass_manager.add(new llvm::RemoveDeadDefs());
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());
@@ -113,4 +115,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
