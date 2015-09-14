@@ -69,7 +69,6 @@ add_library(assistDS STATIC
   include/assistDS/DSNodeEquivs.h
   include/assistDS/FuncSpec.h
   include/assistDS/SimplifyGEP.h
-  include/assistDS/RemoveDeadDefs.h
   include/assistDS/TypeChecks.h
   include/assistDS/DataStructureCallGraph.h
   include/assistDS/GEPExprArgs.h
@@ -90,7 +89,6 @@ add_library(assistDS STATIC
   lib/AssistDS/DynCount.cpp
   lib/AssistDS/IndCloner.cpp
   lib/AssistDS/SimplifyGEP.cpp
-  lib/AssistDS/RemoveDeadDefs.cpp
   lib/AssistDS/TypeChecks.cpp
   lib/AssistDS/DSNodeEquivs.cpp
   lib/AssistDS/FuncSimplify.cpp
@@ -156,6 +154,7 @@ add_library(smackTranslator STATIC
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
+  include/smack/RemoveDeadDefs.h
   include/smack/SmackRep.h
   include/smack/SmackRepFlatMem.h
   lib/smack/BoogieAst.cpp
@@ -169,6 +168,7 @@ add_library(smackTranslator STATIC
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
+  lib/smack/RemoveDeadDefs.cpp
   lib/smack/SmackRep.cpp
   lib/smack/SmackRepFlatMem.cpp
 )

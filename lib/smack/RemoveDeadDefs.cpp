@@ -4,11 +4,14 @@
 
 #define DEBUG_TYPE "remove-dead-defs"
 
-#include "assistDS/RemoveDeadDefs.h"
+#include "smack/SmackOptions.h"
+#include "smack/RemoveDeadDefs.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
 
 #include <vector>
+
+namespace smack {
 
 using namespace llvm;
 
@@ -19,14 +22,21 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
   for (Module::iterator F = M.begin(); F != M.end(); ++F) {
     std::string name = F->getName();
 
-    if (F->isDefTriviallyDead()
-        && name.find("__SMACK_") == std::string::npos
-        && name.find("main") == std::string::npos) {
-      // TODO better way to know whether this is a top-level function.
+    if (!F->isDefTriviallyDead())
+      continue;
 
-      DEBUG(errs() << "removing dead definition: " << name << "\n");
-      dead.push_back(F);
-    }
+    if (name.find("__SMACK_") != std::string::npos)
+      continue;
+
+    for (auto entryPoint : SmackOptions::EntryPoints)
+      if (name == entryPoint)
+        goto CONTINUE;
+
+    DEBUG(errs() << "removing dead definition: " << name << "\n");
+    dead.push_back(F);
+
+CONTINUE:
+    ;
   }
 
   for (auto F : dead)
@@ -41,3 +51,5 @@ char RemoveDeadDefs::ID = 0;
 // Register the pass
 static RegisterPass<RemoveDeadDefs>
 X("remove-dead-defs", "Remove Dead Definitions");
+
+}

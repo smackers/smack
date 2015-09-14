@@ -24,7 +24,7 @@
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"
 #include "assistDS/SimplifyInsertValue.h"
-#include "assistDS/RemoveDeadDefs.h"
+#include "smack/RemoveDeadDefs.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
-  pass_manager.add(new llvm::RemoveDeadDefs());
+  pass_manager.add(new smack::RemoveDeadDefs());
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());

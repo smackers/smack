@@ -127,7 +127,7 @@ def arguments():
     help='disable bit-precision-related optimizations with DSA')
 
   translate_group.add_argument('--entry-points', metavar='PROC', nargs='+',
-    default='main', help='specify top-level procedures [default: %(default)s]')
+    default=['main'], help='specify top-level procedures [default: %(default)s]')
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -335,6 +335,8 @@ def llvm_to_bpl(args):
   cmd = ['smack', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-source-loc-syms']
   cmd += ['-enable-type-inference-opts']
+  for ep in args.entry_points:
+    cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.bit_precise: cmd += ['-bit-precise']

@@ -7,6 +7,13 @@
 
 namespace smack {
 
+const llvm::cl::list<std::string> SmackOptions::EntryPoints(
+  "entry-points",
+  llvm::cl::ZeroOrMore,
+  llvm::cl::desc("Entry point procedure names"),
+  llvm::cl::value_desc("PROCS")
+);
+
 const llvm::cl::opt<bool> SmackOptions::MemoryModelDebug(
   "mem-mod-dbg", llvm::cl::desc("Enable memory model debugging.")
 );
