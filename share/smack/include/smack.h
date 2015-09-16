@@ -34,7 +34,7 @@ smack_object_t __SMACK_return_object(unsigned);
 typedef struct smack_value { void* dummy; }* smack_value_t;
 smack_value_t __SMACK_value(void*);
 #define __SMACK_value(v) __SMACK_value((void*) v)
-smack_value_t __SMACK_return_value();
+smack_value_t __SMACK_return_value(void);
 
 // Sugar for __SMACK_init_func_XXX()
 #define __SMACK_INIT(x) void __SMACK_init_func_##x()
