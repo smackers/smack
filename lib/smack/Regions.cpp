@@ -91,7 +91,9 @@ bool Region::isComplicated(const DSNode* N) {
 void Region::init(const Value* V, unsigned offset, unsigned length) {
   Type* T = V->getType();
   while (T->isPointerTy()) T = T->getPointerElementType();
+  context = &V->getContext();
   representative = DSA ? DSA->getNode(V) : nullptr;
+  this->type = T;
   this->offset = offset;
   this->length = length;
   singleton = representative && isSingleton(representative, offset, length);
@@ -127,6 +129,8 @@ bool Region::isDisjoint(unsigned offset, unsigned length) {
 void Region::merge(Region& R) {
   unsigned long low = std::min(offset, R.offset);
   unsigned long high = std::max(offset + length, R.offset + R.length);
+  if (type != R.type)
+    type = Type::getInt8Ty(*context);
   offset = low;
   length = high - low;
   singleton = singleton && R.singleton;

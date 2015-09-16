@@ -107,8 +107,6 @@ private:
   string procName(const llvm::User& U);
   string procName(const llvm::User& U, llvm::Function* F);
 
-  vector<unsigned> memoryAccessSizes();
-
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
   unsigned getSize(llvm::Type* t);
@@ -118,8 +116,10 @@ private:
 
   unsigned numElements(const llvm::Constant* v);
 
-  Decl* memcpyProc(unsigned dstReg, unsigned srcReg);
-  Decl* memsetProc(unsigned dstReg);
+  Decl* memcpyProc(string type,
+    unsigned length = std::numeric_limits<unsigned>::max());
+  Decl* memsetProc(string type,
+    unsigned length = std::numeric_limits<unsigned>::max());
 
 public:
   const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
@@ -174,8 +174,8 @@ public:
   unsigned getElementSize(const llvm::Value* v);
 
   string memReg(unsigned i);
-  string memType(unsigned region, unsigned size);
-  string memPath(unsigned region, unsigned size);
+  string memType(unsigned region);
+  string memPath(unsigned region);
 
   // used in SmackInstGenerator
   string getString(const llvm::Value* v);

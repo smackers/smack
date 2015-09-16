@@ -577,6 +577,13 @@ void __SMACK_decls() {
     "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.bytes.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
 
+  D("function {:inline} $load.ref(M: [ref] ref, p: ref) returns (ref) { M[p] }");
+  D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
+
+  D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
+  D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
+
+
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");

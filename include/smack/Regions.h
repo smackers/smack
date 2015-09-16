@@ -11,7 +11,9 @@ namespace smack {
 
 class Region {
 private:
+  LLVMContext* context;
   const DSNode* representative;
+  const Type* type;
   unsigned offset;
   unsigned length;
 
@@ -47,6 +49,7 @@ public:
   bool isSingleton() const { return singleton; };
   bool isAllocated() const { return allocated; };
   bool bytewiseAccess() const { return bytewise; }
+  const Type* getType() const { return type; }
 
   void print(raw_ostream&);
 

@@ -7,6 +7,8 @@
 
 namespace smack {
 
+const unsigned MEMORY_INTRINSIC_THRESHOLD = 10;
+
 const string SmackRep::BOOL_TYPE = "bool";
 const string SmackRep::FLOAT_TYPE = "float";
 const string SmackRep::PTR_TYPE = "ref";
@@ -267,29 +269,17 @@ string SmackRep::memReg(unsigned idx) {
   return indexedName("$M",{idx});
 }
 
-vector<unsigned> SmackRep::memoryAccessSizes() {
-  if (!SmackOptions::BitPrecise)
-    return {std::numeric_limits<unsigned>::max()};
-  else if (SmackOptions::NoByteAccessInference)
-    return {8};
-  else
-    return {8, 16, 32, 64, 96, 128};
-}
-
-string SmackRep::memType(unsigned region, unsigned size) {
+string SmackRep::memType(unsigned region) {
   stringstream s;
   if (!regions.get(region).isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << PTR_TYPE << "] ";
-  s << intType(size);
+  s << type(regions.get(region).getType());
   return s.str();
 }
 
-string SmackRep::memPath(unsigned region, unsigned size) {
-  if (SmackOptions::BitPrecise)
-    return (memReg(region) + "." + intType(size));
-  else
-    return memReg(region);
+string SmackRep::memPath(unsigned region) {
+  return memReg(region);
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {
@@ -308,30 +298,63 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
-  vector<const Expr*> args;
   unsigned length;
   if (auto CI = dyn_cast<ConstantInt>(mci.getLength()))
     length = CI->getZExtValue();
   else
     length = std::numeric_limits<unsigned>::max();
+
   unsigned r1 = regions.idx(mci.getOperand(0),length);
   unsigned r2 = regions.idx(mci.getOperand(1),length);
-  for (unsigned i = 0; i < mci.getNumArgOperands(); i++)
-    args.push_back(expr(mci.getOperand(i)));
-  return Stmt::call(indexedName(naming.get(*mci.getCalledFunction()), {r1,r2}), args);
+
+  Decl* P = memcpyProc(type(regions.get(r1).getType()), length);
+  program.addDecl(P);
+
+  const Value
+    *dst = mci.getArgOperand(0),
+    *src = mci.getArgOperand(1),
+    *len = mci.getArgOperand(2),
+    *aln = mci.getArgOperand(3),
+    *vol = mci.getArgOperand(4);
+
+  return Stmt::call(P->getName(), {
+    Expr::id(memReg(r1)),
+    Expr::id(memReg(r2)),
+    expr(dst),
+    expr(src),
+    integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
+    integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
+    Expr::eq(expr(vol), integerLit(1UL,1))
+  }, {memReg(r1)});
 }
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
-  vector<const Expr*> args;
   unsigned length;
   if (auto CI = dyn_cast<ConstantInt>(msi.getLength()))
     length = CI->getZExtValue();
   else
     length = std::numeric_limits<unsigned>::max();
+
   unsigned r = regions.idx(msi.getOperand(0),length);
-  for (unsigned i = 0; i < msi.getNumArgOperands(); i++)
-    args.push_back(expr(msi.getOperand(i)));
-  return Stmt::call(indexedName(naming.get(*msi.getCalledFunction()), {r}), args);
+
+  Decl* P = memsetProc(type(regions.get(r).getType()), length);
+  program.addDecl(P);
+
+  const Value
+    *dst = msi.getArgOperand(0),
+    *val = msi.getArgOperand(1),
+    *len = msi.getArgOperand(2),
+    *aln = msi.getArgOperand(3),
+    *vol = msi.getArgOperand(4);
+
+  return Stmt::call(P->getName(), {
+    Expr::id(memReg(r)),
+    expr(dst),
+    expr(val),
+    integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
+    integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
+    Expr::eq(expr(vol), integerLit(1UL,1))
+  }, {memReg(r)});
 }
 
 const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
@@ -378,7 +401,7 @@ const Stmt* SmackRep::objectAnnotation(const CallInst& CI) {
       vector<string>({ naming.get(CI) }),
       vector<const Attr*>({
         Attr::attr(L, vector<const Expr*>({
-          Expr::id(memPath(R, bytewise ? 8 : bits)),
+          Expr::id(memPath(R)),
           Expr::lit(bytes),
           Expr::lit(length)
         }))
@@ -415,12 +438,12 @@ const Stmt* SmackRep::returnObjectAnnotation(const CallInst& CI) {
       vector<string>({ naming.get(CI) }),
       vector<const Attr*>({
         Attr::attr(L, vector<const Expr*>({
-          Expr::id(memPath(R, bytewise ? 8 : bits)),
+          Expr::id(memPath(R)),
           Expr::lit(bytes),
           Expr::lit(length)
         }))
       }));
-    
+
   } else {
     llvm_unreachable("Non-constant size expression not yet handled.");
   }
@@ -434,15 +457,12 @@ const Expr* SmackRep::load(const llvm::Value* P) {
   const unsigned size = getElementSize(P);
   bool bytewise = regions.get(R).bytewiseAccess();
   bool singleton = regions.get(R).isSingleton();
-  const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
-  string N = string("$load.") + (bytewise ? "bytes." : "") + intType(size);
+  const Expr* M = Expr::id(memPath(R));
+  string N = string("$load.") + (bytewise ? "bytes." : "") +
+    type(T->getElementType());
   const Expr* expr = singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 
-  if (T->getElementType()->isFloatingPointTy())
-    expr = Expr::fn(opName("$si2fp",
-      {IntegerType::get(P->getContext(),size), T->getElementType()}), expr);
-
-  else if (T->getElementType()->isPointerTy())
+  if (T->getElementType()->isPointerTy())
     expr = integerToPointer(expr, size);
 
   return expr;
@@ -472,12 +492,10 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
   unsigned size = targetData->getTypeStoreSizeInBits((Type*) T);
   bool bytewise = regions.get(R).bytewiseAccess();
   bool singleton = regions.get(R).isSingleton();
-  string N = string("$store.") + (bytewise ? "bytes." : "") + intType(size);
-  const Expr* M = Expr::id(memPath(R, bytewise ? 8 : size));
-  if (T->isFloatingPointTy())
-    V = Expr::fn(opName("$fp2si",
-      {T, llvm::IntegerType::get(T->getContext(),size)}), V);
-  else if (T->isPointerTy())
+
+  string N = string("$store.") + (bytewise ? "bytes." : "") + type(T);
+  const Expr* M = Expr::id(memPath(R));
+  if (T->isPointerTy())
     V = pointerToInteger(V, size);
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
@@ -755,76 +773,7 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
   string name = naming.get(*F);
   for (auto U : F->users()) {
 
-    if (MemCpyInst* MCI = dyn_cast<MemCpyInst>(U)) {
-      llvm::FunctionType* T = F->getFunctionType();
-      llvm::Type
-        *dst = T->getParamType(0),
-        *src = T->getParamType(1),
-        *len = T->getParamType(2),
-        *align = T->getParamType(3),
-        *vol  = T->getParamType(4);
-      unsigned length;
-      if (auto CI = dyn_cast<ConstantInt>(MCI->getLength()))
-        length = CI->getZExtValue();
-      else
-        length = std::numeric_limits<unsigned>::max();
-      unsigned r1 = regions.idx(MCI->getOperand(0),length);
-      unsigned r2 = regions.idx(MCI->getOperand(1),length);
-
-      decls.push_back(Decl::procedure(program, indexedName(name,{r1,r2}), {
-        {"dst", type(dst)},
-        {"src", type(src)},
-        {"len", type(len)},
-        {"align", type(align)},
-        {"volatile", type(vol)},
-      }, {}, {
-        Block::block("", {
-          Stmt::call(indexedName("$memcpy",{r1,r2}), {
-            Expr::id("dst"),
-            Expr::id("src"),
-            integerToPointer(Expr::id("len"), len->getIntegerBitWidth()),
-            integerToPointer(Expr::id("align"), align->getIntegerBitWidth()),
-            Expr::eq(Expr::id("volatile"), integerLit(1UL,1))
-          })
-        })
-      }));
-      decls.push_back(memcpyProc(r1,r2));
-
-    } else if (MemSetInst* MSI = dyn_cast<MemSetInst>(U)) {
-      llvm::FunctionType* T = F->getFunctionType();
-      llvm::Type
-        *dst = T->getParamType(0),
-        *val = T->getParamType(1),
-        *len = T->getParamType(2),
-        *align = T->getParamType(3),
-        *vol  = T->getParamType(4);
-      unsigned length;
-      if (auto CI = dyn_cast<ConstantInt>(MSI->getLength()))
-        length = CI->getZExtValue();
-      else
-        length = std::numeric_limits<unsigned>::max();
-      unsigned r = regions.idx(MSI->getOperand(0),length);
-
-      decls.push_back(Decl::procedure(program, indexedName(name,{r}), {
-        {"dst", type(dst)},
-        {"val", type(val)},
-        {"len", type(len)},
-        {"align", type(align)},
-        {"volatile", type(vol)},
-      }, {}, {
-        Block::block("", {
-          Stmt::call(indexedName("$memset",{r}), {
-            Expr::id("dst"),
-            Expr::id("val"),
-            integerToPointer(Expr::id("len"), len->getIntegerBitWidth()),
-            integerToPointer(Expr::id("align"), align->getIntegerBitWidth()),
-            Expr::eq(Expr::id("volatile"), integerLit(1UL,1))
-          })
-        })
-      }));
-      decls.push_back(memsetProc(r));
-
-    } else if (name == "malloc") {
+    if (name == "malloc") {
       llvm::Type* T = F->getFunctionType()->getParamType(0);
       assert (T->isIntegerTy() && "Expected integer argument.");
       unsigned width = T->getIntegerBitWidth();
@@ -973,12 +922,11 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Memory maps (" << regions.size() << " regions)" << endl;
-  for (unsigned i=0; i<regions.size(); ++i) {
-    for (unsigned size : memoryAccessSizes())
-      s << "var " << memPath(i, size)
-        << ": " << memType(i, size)
-        << ";" << endl;
-  }
+  for (unsigned i=0; i<regions.size(); ++i)
+    s << "var " << memPath(i)
+      << ": " << memType(i)
+      << ";" << endl;
+
   s << endl;
 
   s << "// Memory address bounds" << endl;
@@ -1045,10 +993,9 @@ vector<string> SmackRep::getModifies() {
   vector<string> mods;
   for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
     mods.push_back(*i);
-  for (unsigned i=0; i<regions.size(); ++i) {
-    for (unsigned size : memoryAccessSizes())
-      mods.push_back(memPath(i, size));
-  }
+  for (unsigned i=0; i<regions.size(); ++i)
+    mods.push_back(memPath(i));
+
   return mods;
 }
 
@@ -1176,87 +1123,124 @@ const Expr* SmackRep::declareIsExternal(const Expr* e) {
   return Expr::fn("$isExternal",e);
 }
 
-Decl* SmackRep::memcpyProc(unsigned dstReg, unsigned srcReg) {
+Decl* SmackRep::memcpyProc(string type, unsigned length) {
   stringstream s;
 
-  s << "procedure $memcpy." << dstReg << "." << srcReg;
-  s << "(dest: ref, src: ref, len: ref, align: ref, isvolatile: bool)";
-  s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
+  string name = "$memcpy." + type;
+  if (length < MEMORY_INTRINSIC_THRESHOLD)
+    name = name + "." + std::to_string(length);
+  else
+    errs() << "warning: memory intrinsic length exceeds threshold ("
+           << MEMORY_INTRINSIC_THRESHOLD << "); "
+           << "adding quantifiers.\n";
 
-  for (unsigned size : memoryAccessSizes())
-    s << "modifies " << memPath(dstReg, size) << ";" << endl;
+  s << "procedure " << name << "("
+    << "M.dst: [ref] " << type << ", "
+    << "M.src: [ref] " << type << ", "
+    << "dst: ref, "
+    << "src: ref, "
+    << "len: ref, "
+    << "align: ref, "
+    << "isvolatile: bool"
+    << ") returns ("
+    << "M.ret: [ref] " << type
+    << ")";
 
-  if (SmackOptions::MemoryModelImpls) {
-    s << "{" << endl;
-    for (unsigned size : memoryAccessSizes()) {
-      s << "  var $oldSrc" << ".i" << size << " : [" << PTR_TYPE << "] " << intType(size) << ";" << endl;
-      s << "  var $oldDst" << ".i" << size << " : [" << PTR_TYPE << "] " << intType(size) << ";" << endl;
-    }
-    for (unsigned size : memoryAccessSizes()) {
-      s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
-      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
-      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
-        << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
-        << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
-    }
-    s << "}" << endl;
+  if (length < MEMORY_INTRINSIC_THRESHOLD) {
+    s << "\n" << "{" << "\n";
+    s << "  M.ret := M.dst;" << "\n";
+    for (unsigned offset = 0; offset < length; ++offset)
+      s << "  M.ret[$add.ref(dst," << offset << ")] := "
+        << "M.src[$add.ref(src," << offset << ")];" << "\n";
+    s << "}" << "\n";
+
+  } else if (SmackOptions::MemoryModelImpls) {
+    s << "\n" << "{" << "\n";
+    s << "  assume (forall x: ref :: "
+      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
+      << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
+      << ");" << "\n";
+    s << "  assume (forall x: ref :: "
+      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
+      << ");" << "\n";
+    s << "  assume (forall x: ref :: "
+      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
+      << ");" << "\n";
+    s << "}" << "\n";
+
   } else {
-    for (unsigned size : memoryAccessSizes()) {
-      s << "ensures (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> "
-        << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);"
-        << endl;
-      s << "ensures (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> "
-        << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
-    }
+    s << ";" << "\n";
+    s << "ensures (forall x: ref :: "
+      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
+      << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
+      << ");" << "\n";
+    s << "ensures (forall x: ref :: "
+      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
+      << ");" << "\n";
+    s << "ensures (forall x: ref :: "
+      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
+      << ");" << "\n";
   }
-
-  return Decl::code(s.str());
+  return Decl::code(name, s.str());
 }
 
-Decl* SmackRep::memsetProc(unsigned dstReg) {
+Decl* SmackRep::memsetProc(string type, unsigned length) {
   stringstream s;
 
-  s << "procedure $memset." << dstReg;
-  s << "(dest: ref, val: " << intType(8) << ", len: ref, align: ref, isvolatile: bool)";
-  s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
+  string name = "$memset." + type;
+  if (length < MEMORY_INTRINSIC_THRESHOLD)
+    name = name + "." + std::to_string(length);
+  else
+    errs() << "warning: memory intrinsic length exceeds threshold ("
+           << MEMORY_INTRINSIC_THRESHOLD << "); "
+           << "adding quantifiers.\n";
 
-  for (unsigned size : memoryAccessSizes())
-    s << "modifies " << memPath(dstReg, size) << ";" << endl;
+  s << "procedure " << name << "("
+    << "M: [ref] " << type << ", "
+    << "dst: ref, "
+    << "val: " << intType(8) << ", "
+    << "len: ref, "
+    << "align: ref, "
+    << "isvolatile: bool"
+    << ") returns ("
+    << "M.ret: [ref] " << type
+    << ")";
 
-  if (SmackOptions::MemoryModelImpls) {
-    s << "{" << endl;
-    for (unsigned size : memoryAccessSizes())
-      s << "  var $oldDst" << ".i" << size << " : [" << PTR_TYPE << "] " << intType(size) << ";" << endl;
+  if (length < MEMORY_INTRINSIC_THRESHOLD) {
+    s << "\n" << "{" << "\n";
+    s << "M.ret := M;" << "\n";
+    for (unsigned offset = 0; offset < length; ++offset)
+      s << "  M.ret[$add.ref(dst," << offset << ")] := val;" << "\n";
+    s << "}" << "\n";
 
-    for (unsigned size : memoryAccessSizes()) {
-      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
-      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> ";
-      s << memPath(dstReg, size) << "[x] == val";
-      if (size != std::numeric_limits<unsigned>::max())
-        for (unsigned i = 8; i < size; i += 8)
-          s << " ++ val";
-      s << ");" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> ";
-      s << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
-    }
-    s << "}" << endl;
+  } else if (SmackOptions::MemoryModelImpls) {
+    s << "\n" << "{" << "\n";
+    s << "  assume (forall x: ref :: "
+      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
+      << "M.ret[x] == val"
+      << ");" << "\n";
+    s << "  assume (forall x: ref :: "
+      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
+      << ");" << "\n";
+    s << "  assume (forall x: ref :: "
+      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
+      << ");" << "\n";
+    s << "}" << "\n";
+
   } else {
-    for (unsigned size : memoryAccessSizes()) {
-      s << "ensures (forall x:ref :: $sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len)) ==> ";
-      s << memPath(dstReg, size) << "[x] == val";
-      if (size != std::numeric_limits<unsigned>::max())
-        for (unsigned i = 8; i < size; i += 8)
-          s << " ++ val";
-      s << ");" << endl;
-      s << "ensures (forall x:ref :: !($sle.ref.bool(dest, x) && $slt.ref.bool(x, $add.ref(dest, len))) ==> ";
-      s << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
-    }
+    s << ";" << "\n";
+    s << "ensures (forall x: ref :: "
+      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
+      << "M.ret[x] == val"
+      << ");" << "\n";
+    s << "ensures (forall x: ref :: "
+      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
+      << ");" << "\n";
+    s << "ensures (forall x: ref :: "
+      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
+      << ");" << "\n";
   }
-
-  return Decl::code(s.str());
+  return Decl::code(name, s.str());
 }
 
 } // namespace smack

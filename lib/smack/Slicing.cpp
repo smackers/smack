@@ -81,7 +81,7 @@ pair<string,string> getParameter(Value* V, Naming& naming, SmackRep& rep) {
     // XXX I need to be fixed FIXME
     unsigned r = 0; // rep.getRegion(G);
     assert(false && "This code is under contsruction.");
-    return make_pair(rep.memReg(r), rep.memType(r, rep.getElementSize(V)));
+    return make_pair(rep.memReg(r), rep.memType(r));
   }
 
   else if (ConstantDataSequential* S = dyn_cast<ConstantDataSequential>(V))

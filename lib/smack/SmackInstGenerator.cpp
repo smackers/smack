@@ -477,11 +477,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     emit(Stmt::code(rep.code(ci)));
 
   } else if (name.find("__SMACK_decl") != string::npos) {
-    addDecl(Decl::code(rep.code(ci)));
+    string code = rep.code(ci);
+    addDecl(Decl::code(code, code));
 
   } else if (name.find("__SMACK_top_decl") != string::npos) {
     string decl = rep.code(ci);
-    addTopDecl(Decl::code(decl));
+    addTopDecl(Decl::code(decl, decl));
     if (VAR_DECL.match(decl)) {
       string var = VAR_DECL.sub("\\1",decl);
       rep.addBplGlobal(var);
