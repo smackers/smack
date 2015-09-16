@@ -460,12 +460,7 @@ const Expr* SmackRep::load(const llvm::Value* P) {
   const Expr* M = Expr::id(memPath(R));
   string N = string("$load.") + (bytewise ? "bytes." : "") +
     type(T->getElementType());
-  const Expr* expr = singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
-
-  if (T->getElementType()->isPointerTy())
-    expr = integerToPointer(expr, size);
-
-  return expr;
+  return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
 const Stmt* SmackRep::store(const Value* P, const Value* V) {
@@ -495,8 +490,6 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
 
   string N = string("$store.") + (bytewise ? "bytes." : "") + type(T);
   const Expr* M = Expr::id(memPath(R));
-  if (T->isPointerTy())
-    V = pointerToInteger(V, size);
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
 
@@ -942,6 +935,17 @@ string SmackRep::getPrelude() {
   s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << endl;
   s << Decl::function(indexedName("$int2bv",{ptrSizeInBits}), {{"i",it}}, bt, NULL, {Attr::attr("builtin", "(_ int2bv " + b + ")")}) << endl;
   s << endl;
+
+  if (SmackOptions::BitPrecise) {
+    // XXX TODO don’t assume 64-bit pointers TODO XXX
+    s << "// Bytewise pointer storage" << "\n";
+    s << "function {:inline} $load.bytes.ref(M: [ref] bv8, p: ref) "
+      << "returns (ref) { $i2p.bv64.ref($load.bytes.bv64(M, p)) }"
+      << "\n";
+    s << "function {:inline} $store.bytes.ref(M: [ref] bv8, p: ref, v: ref)"
+      << "returns ([ref] bv8) { $store.bytes.bv64(M,p,$p2i.ref.bv64(v)) }"
+      << "\n";
+  }
 
   s << "// Pointer-number conversions" << endl;
   for (unsigned i = 8; i <= 64; i <<= 1) {

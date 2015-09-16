@@ -99,7 +99,8 @@ void Region::init(const Value* V, unsigned offset, unsigned length) {
   singleton = representative && isSingleton(representative, offset, length);
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
-    (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset));
+    (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
+    T->isIntegerTy(8));
   incomplete = !representative || representative->isIncompleteNode();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isCollapsedNode();
@@ -127,15 +128,16 @@ bool Region::isDisjoint(unsigned offset, unsigned length) {
 }
 
 void Region::merge(Region& R) {
+  bool collapse = type != R.type;
   unsigned long low = std::min(offset, R.offset);
   unsigned long high = std::max(offset + length, R.offset + R.length);
-  if (type != R.type)
+  if (collapse)
     type = Type::getInt8Ty(*context);
   offset = low;
   length = high - low;
   singleton = singleton && R.singleton;
   allocated = allocated || R.allocated;
-  bytewise = bytewise || R.bytewise;
+  bytewise = SmackOptions::BitPrecise && (bytewise || R.bytewise || collapse);
   incomplete = incomplete || R.incomplete;
   complicated = complicated || R.complicated;
   collapsed = collapsed || R.collapsed;
