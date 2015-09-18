@@ -19,11 +19,25 @@
 #In the future, number of threads and sv-comp benchmark set should be 
 #parameterized.
 
+USAGE="
+Usage:
+    ./runSMACKBench.sh cancel               -Kills all SMACKBench instances
+ or ./runSMACKBench.sh clean                -Deletes all SMACKBench results
+ or ./runSMACKBench.sh SET THREADS [debug]  -Executes SMACKBench
+
+Parameters:
+    SET        The svcomp category set to benchmark
+    THREADS    The number of concurrent tests to run
+
+
+Options:
+    debug      Runs BenchExec with the debug option"
+
 #Gets rid of existing results
 if [[ $1 == "clean" ]]
     then
     rm data/exec* -rf
-    rm data/*.bc data/*.bpl -f
+    rm data/*.bc data/*.bpl data/*.c data/*.log -f
     rm data/nohup.out -f
     exit
 fi
@@ -48,6 +62,22 @@ INPUTXMLFILE=smack.xml
 INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 
 ################################
+# Validate input args
+################################
+if [[ -z $1 ]]
+then
+    echo "You must specify an svcomp set to benchmark!"
+    echo "$USAGE"
+    exit
+fi
+if [[ -z $2 ]]
+then
+    echo "You must specify the number of concurrent tests to run!"
+    echo "$USAGE"
+    exit
+fi
+
+################################
 # Generate folder for this run
 ################################
 OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
@@ -59,8 +89,9 @@ mkdir -p ${OUTFOLDER}
 # while replacing {SETNAME} to
 # be the target set name
 ################################
-SETNAME=Simple
-THREADCOUNT=4
+
+SETNAME=$1
+THREADCOUNT=$2
 sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 
 
@@ -68,7 +99,7 @@ sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 # Use nohup, so job doesn't terminate if SSH session dies
 #  First, remove any existing nohup.out
 rm nohup.out -f
-if [[ $1 == "debug" ]]
+if [[ $3 == "debug" ]]
 then
     nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
 else

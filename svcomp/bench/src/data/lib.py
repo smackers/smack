@@ -70,7 +70,8 @@ def getAllRunSets(searchRoot, folderPrefix):
     that allows users to select all run sets, or only those that have been
     witness checked?)
     """
-    allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*witchecked.*.xml")
+    #allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*witchecked.*.xml")
+    allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*.xml")
     runSets = []
     for outFile in allOutXml:
         inputFilename = ET.parse(outFile).getroot().get("benchmarkname") + ".xml"
