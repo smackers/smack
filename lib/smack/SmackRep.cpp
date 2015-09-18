@@ -360,10 +360,8 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
   const Value* V = CI.getArgOperand(0);
-  while (isa<const BitCastInst>(V))
-    V = dyn_cast<const BitCastInst>(V)->getOperand(0);
-  const PointerType* T = dyn_cast<PointerType>(V->getType());
-  assert(T && "Expected pointer argument.");
+  while (isa<const CastInst>(V))
+    V = dyn_cast<const CastInst>(V)->getOperand(0);
   return Stmt::call("__SMACK_value",
     vector<const Expr*>({ expr(V) }),
     vector<string>({ naming.get(CI) }));
@@ -380,8 +378,8 @@ const Stmt* SmackRep::objectAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 2 && "Expected two operands.");
   const Value* P = CI.getArgOperand(0);
   const Value* N = CI.getArgOperand(1);
-  while (isa<const BitCastInst>(P))
-    P = dyn_cast<const BitCastInst>(P)->getOperand(0);
+  while (isa<const CastInst>(P))
+    P = dyn_cast<const CastInst>(P)->getOperand(0);
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer argument.");
 
