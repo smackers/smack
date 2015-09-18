@@ -37,7 +37,7 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 32, 64, 96, 128};
+const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 64, 96, 128};
 
 const map<unsigned,string> SmackRep::INSTRUCTION_TABLE {
   {Instruction::Trunc, "$trunc"},
