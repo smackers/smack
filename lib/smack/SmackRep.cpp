@@ -362,14 +362,17 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   const Value* V = CI.getArgOperand(0);
   while (isa<const CastInst>(V))
     V = dyn_cast<const CastInst>(V)->getOperand(0);
-  return Stmt::call("__SMACK_value",
+  return Stmt::call(
+    indexedName("__SMACK_value", {type(V->getType())}),
     vector<const Expr*>({ expr(V) }),
     vector<string>({ naming.get(CI) }));
 }
 
 const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
-  return Stmt::call("__SMACK_value",
+  Type* T = CI.getParent()->getParent()->getReturnType();
+  return Stmt::call(
+    indexedName("__SMACK_value", {type(T)}),
     vector<const Expr*>({ Expr::id(Naming::RET_VAR) }),
     vector<string>({ naming.get(CI) }));
 }
