@@ -21,7 +21,9 @@ using namespace llvm;
 const std::string CodifyStaticInits::STATIC_INIT_FUNCTION =
   "__SMACK_static_init";
 
-Regex _STRING_CONSTANT("^\\.str[0-9]*$");
+namespace{
+  Regex STRING_CONSTANT("^\\.str[0-9]*$");
+}
 
 bool CodifyStaticInits::runOnModule(Module& M) {
   TD = &getAnalysis<DataLayoutPass>().getDataLayout();
@@ -37,7 +39,7 @@ bool CodifyStaticInits::runOnModule(Module& M) {
 
   for (auto &G : M.globals())
     if (G.hasInitializer())
-      if (!G.hasName() || !_STRING_CONSTANT.match(G.getName().str()))
+      if (!G.hasName() || !STRING_CONSTANT.match(G.getName().str()))
         worklist.push_back(std::make_tuple(
           G.getInitializer(), &G, std::vector<Value*>()));
 
