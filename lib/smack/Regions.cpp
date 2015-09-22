@@ -3,6 +3,8 @@
 //
 #include "smack/Regions.h"
 #include "smack/SmackOptions.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
+
 #define DEBUG_TYPE "smack-region"
 
 namespace smack {
@@ -33,6 +35,37 @@ namespace {
     else
       return DSA->isFieldDisjoint(V, getFunction(V));
   }
+
+  unsigned getRealOffset(const DataLayout* DL, const Value* V) {
+    auto CE = dyn_cast<ConstantExpr>(V);
+    if (!CE || CE->getOpcode() != Instruction::GetElementPtr)
+      return 0;
+
+    unsigned offset = 0;
+    gep_type_iterator TI = gep_type_begin(CE);
+
+    for (unsigned i=1; i < CE->getNumOperands(); ++i, ++TI) {
+      const Value* A = CE->getOperand(i);
+      Type* T = *TI;
+      if (auto ST = dyn_cast<StructType>(T)) {
+        auto CI = dyn_cast<ConstantInt>(A);
+        assert(CI && "Expected constant struct index.");
+        offset += DL->getStructLayout(ST)->getElementOffset(CI->getZExtValue());
+      }
+
+      else if (auto ST = dyn_cast<SequentialType>(T)) {
+        if (auto CI = dyn_cast<ConstantInt>(A))
+          offset += DL->getTypeStoreSize(ST->getElementType())
+            * CI->getZExtValue();
+        else
+          return std::numeric_limits<unsigned>::max();
+
+      } else
+        llvm_unreachable("Unexpected offset type.");
+    }
+
+    return offset;
+  }
 }
 
 void Region::init(Module& M, Pass& P) {
@@ -42,11 +75,11 @@ void Region::init(Module& M, Pass& P) {
 
 bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
   if (N->isGlobalNode()
+      && N->numGlobals() == 1
       && !N->isAllocaNode()
       && !N->isHeapNode()
       && !N->isExternalNode()
-      && !N->isUnknownNode()
-      && N->numGlobals() == 1) {
+      && !N->isUnknownNode()) {
 
     // TODO can we do something for non-global nodes?
 
@@ -88,15 +121,22 @@ bool Region::isComplicated(const DSNode* N) {
       || N->isUnknownNode();
 }
 
-void Region::init(const Value* V, unsigned offset, unsigned length) {
+void Region::init(const Value* V, unsigned length) {
   Type* T = V->getType();
   while (T->isPointerTy()) T = T->getPointerElementType();
   context = &V->getContext();
   representative = DSA ? DSA->getNode(V) : nullptr;
   this->type = T;
-  this->offset = offset;
+  this->offset = DSA ? DSA->getOffset(V) : 0;
   this->length = length;
-  singleton = representative && isSingleton(representative, offset, length);
+
+  singleton = DL && representative
+
+    // NOTE this prevents us from considering array accesses as singletons
+    && this->offset == getRealOffset(DL,V)
+
+    && isSingleton(representative, offset, length);
+
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
@@ -107,15 +147,13 @@ void Region::init(const Value* V, unsigned offset, unsigned length) {
 }
 
 Region::Region(const Value* V) {
-  unsigned offset = DSA ? DSA->getOffset(V) : 0;
   unsigned length = DSA ? DSA->getPointedTypeSize(V) :
     std::numeric_limits<unsigned>::max();
-  init(V, offset, length);
+  init(V, length);
 }
 
 Region::Region(const Value* V, unsigned length) {
-  unsigned offset = DSA ? DSA->getOffset(V) : 0;
-  init(V, offset, length);
+  init(V, length);
 }
 
 bool Region::isDisjoint(unsigned offset, unsigned length) {
@@ -186,7 +224,6 @@ bool Regions::runOnModule(Module& M) {
       local.print(errs(), &M);
       BU.print(errs(), &M);
       TD.print(errs(), &M);
-      EQ.print(errs(), &M);
     );
 
     visit(M);

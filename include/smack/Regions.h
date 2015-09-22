@@ -33,7 +33,7 @@ private:
   static bool bytewiseAccess(const DSNode* N);
   static bool isComplicated(const DSNode* N);
 
-  void init(const Value* V, unsigned offset, unsigned length);
+  void init(const Value* V, unsigned length);
   bool isDisjoint(unsigned offset, unsigned length);
 
 public:
