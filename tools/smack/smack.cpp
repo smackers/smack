@@ -24,6 +24,7 @@
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"
 #include "assistDS/SimplifyInsertValue.h"
+#include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
 
 static llvm::cl::opt<std::string>
@@ -106,6 +107,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
+  pass_manager.add(new smack::CodifyStaticInits());
   pass_manager.add(new smack::RemoveDeadDefs());
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));

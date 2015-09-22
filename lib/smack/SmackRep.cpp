@@ -4,6 +4,7 @@
 #define DEBUG_TYPE "smack-rep"
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
+#include "smack/CodifyStaticInits.h"
 
 namespace smack {
 
@@ -28,7 +29,6 @@ const string SmackRep::MEM_OP = "$mop";
 const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
 const string SmackRep::MEM_OP_VAL = "$MOP";
 
-const string SmackRep::STATIC_INIT = "$static_init";
 const string SmackRep::INIT_FUNCS = "$init_funcs";
 
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
@@ -157,6 +157,14 @@ bool isCodeString(const llvm::Value* V) {
     }
   }
   return false;
+}
+
+SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
+    : targetData(L), naming(N), program(P), regions(R),
+      globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
+      ptrSizeInBits(targetData->getPointerSizeInBits())
+{
+    initFuncs.push_back(CodifyStaticInits::STATIC_INIT_FUNCTION);
 }
 
 string SmackRep::getString(const llvm::Value* v) {
@@ -472,15 +480,6 @@ const Stmt* SmackRep::store(const Value* P, const Expr* V) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   return store(regions.idx(P), T->getElementType(), expr(P), V);
-}
-
-const Stmt* SmackRep::store(const GlobalValue* G, unsigned offset,
-    const Value* V) {
-  return store(
-    regions.idx(G, offset, targetData->getTypeStoreSize(V->getType())),
-    V->getType(),
-    pa(expr(G), 1, offset),
-    expr(V));
 }
 
 const Stmt* SmackRep::store(unsigned R, const Type* T,
@@ -1012,58 +1011,19 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
     return 1;
 }
 
-void SmackRep::addInit(const llvm::GlobalValue* G, const llvm::Constant* C) {
-  addInit(G, 0, C);
-}
-
-void SmackRep::addInit(const llvm::GlobalValue* G, unsigned offset,
-    const llvm::Constant* C) {
-
-  if (C->getType()->isIntegerTy() ||
-      C->getType()->isPointerTy() ||
-      C->getType()->isFloatingPointTy()) {
-    staticInits.push_back(store(G, offset, C));
-
-  } else if (ArrayType* at = dyn_cast<ArrayType>(C->getType()))
-    for (unsigned i = 0; i < at->getNumElements(); i++)
-      addInit(G, offset + SmackRep::offset(at,i), C->getAggregateElement(i));
-
-  else if (StructType* st = dyn_cast<StructType>(C->getType()))
-    for (unsigned i = 0; i < st->getNumElements(); i++)
-      addInit(G, offset + SmackRep::offset(st,i), C->getAggregateElement(i));
-
-  else if (C->getType()->isX86_FP80Ty()) {
-    staticInits.push_back(Stmt::code("// ignored X86 FP80 initializer"));
-
-  } else {
-    assert (false && "Unexpected static initializer.");
-  }
-}
-
 void SmackRep::addInitFunc(const llvm::Function* f) {
-  assert(f->getReturnType()->isVoidTy() && "Init functions cannot return a value");
-  assert(f->getArgumentList().empty() && "Init functions cannot take parameters");
-  initFuncs.push_back(Stmt::call(naming.get(*f)));
-}
-
-Decl* SmackRep::getStaticInit() {
-  ProcDecl* proc = (ProcDecl*) Decl::procedure(program, STATIC_INIT);
-  Block* b = Block::block();
-
-  b->addStmt(Stmt::assign(Expr::id("$CurrAddr"), pointerLit(1024UL)));
-  for (unsigned i=0; i<staticInits.size(); i++)
-    b->addStmt(staticInits[i]);
-  b->addStmt(Stmt::return_());
-  proc->addBlock(b);
-  return proc;
+  assert(f->getReturnType()->isVoidTy()
+    && "Init functions cannot return a value");
+  assert(f->getArgumentList().empty()
+    && "Init functions cannot take parameters");
+  initFuncs.push_back(naming.get(*f));
 }
 
 Decl* SmackRep::getInitFuncs() {
   ProcDecl* proc = (ProcDecl*) Decl::procedure(program, INIT_FUNCS);
   Block* b = Block::block();
-
-  for (unsigned i=0; i<initFuncs.size(); i++)
-    b->addStmt(initFuncs[i]);
+  for (auto name : initFuncs)
+    b->addStmt(Stmt::call(name));
   b->addStmt(Stmt::return_());
   proc->addBlock(b);
   return proc;
@@ -1103,8 +1063,6 @@ vector<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
         if (numElems > 1)
           ax.push_back(Attr::attr("count",numElems));
-
-        addInit(g, init);
       }
 
     } else {

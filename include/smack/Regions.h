@@ -39,7 +39,6 @@ private:
 public:
   Region(const Value* V);
   Region(const Value* V, unsigned length);
-  Region(const Value* V, unsigned offset, unsigned length);
 
   static void init(Module& M, Pass& P);
 
@@ -68,8 +67,7 @@ public:
 
   unsigned size() const;
   unsigned idx(const llvm::Value* v);
-  unsigned idx(const llvm::Value* v, unsigned offset);
-  unsigned idx(const llvm::Value* v, unsigned offset, unsigned length);
+  unsigned idx(const llvm::Value* v, unsigned length);
   Region& get(unsigned R);
 
   // void visitModule(Module& M) {

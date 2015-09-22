@@ -20,6 +20,8 @@ public:
   static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
   static const llvm::cl::opt<bool> NoByteAccessInference;
+
+  static bool isEntryPoint(std::string);
 };
 }
 

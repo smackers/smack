@@ -28,15 +28,11 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
     if (name.find("__SMACK_") != std::string::npos)
       continue;
 
-    for (auto entryPoint : SmackOptions::EntryPoints)
-      if (name == entryPoint)
-        goto CONTINUE;
+    if (SmackOptions::isEntryPoint(name))
+      continue;
 
     DEBUG(errs() << "removing dead definition: " << name << "\n");
     dead.push_back(F);
-
-CONTINUE:
-    ;
   }
 
   for (auto F : dead)

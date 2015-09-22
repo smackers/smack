@@ -22,8 +22,6 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
        x = m.global_begin(), e = m.global_end(); x != e; ++x)
     program.addDecls(rep.globalDecl(x));
 
-  program.addDecl(rep.getStaticInit());
-
   DEBUG(errs() << "Analyzing functions...\n");
 
   for (llvm::Module::iterator func = m.begin(), e = m.end();
@@ -69,9 +67,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
         DEBUG(errs() << "\n");
 
         // First execute static initializers, in the main procedure.
-        if (naming.get(*func) == "main") {
+        if (func->hasName() && SmackOptions::isEntryPoint(func->getName())) {
           (*proc)->insert(Stmt::call(SmackRep::INIT_FUNCS));
-          (*proc)->insert(Stmt::call(SmackRep::STATIC_INIT));
+
         } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_")
           rep.addInitFunc(func);
       }

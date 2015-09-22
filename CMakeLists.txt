@@ -154,6 +154,7 @@ add_library(smackTranslator STATIC
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
+  include/smack/CodifyStaticInits.h
   include/smack/RemoveDeadDefs.h
   include/smack/SmackRep.h
   include/smack/SmackRepFlatMem.h
@@ -168,6 +169,7 @@ add_library(smackTranslator STATIC
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
+  lib/smack/CodifyStaticInits.cpp
   lib/smack/RemoveDeadDefs.cpp
   lib/smack/SmackRep.cpp
   lib/smack/SmackRepFlatMem.cpp

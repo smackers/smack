@@ -41,4 +41,12 @@ const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
   "no-byte-access-inference", llvm::cl::desc("Optimize bit-precision with DSA.")
 );
+
+bool SmackOptions::isEntryPoint(std::string name) {
+  for (auto EP : EntryPoints)
+    if (name == EP)
+      return true;
+  return false;
+}
+
 }

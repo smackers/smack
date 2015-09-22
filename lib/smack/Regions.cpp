@@ -118,10 +118,6 @@ Region::Region(const Value* V, unsigned length) {
   init(V, offset, length);
 }
 
-Region::Region(const Value* V, unsigned offset, unsigned length) {
-  init(V, offset, length);
-}
-
 bool Region::isDisjoint(unsigned offset, unsigned length) {
   return this->offset + this->length <= offset
       || offset + length <= this->offset;
@@ -217,13 +213,6 @@ unsigned Regions::idx(const Value* V, unsigned length) {
   DEBUG(errs() << "[regions] getting index for: " << *V
                << " with length " << length << "\n");
   Region R(V,length);
-  return idx(R);
-}
-
-unsigned Regions::idx(const Value* V, unsigned offset, unsigned length) {
-  DEBUG(errs() << "[regions] getting index for: " << *V
-               << " with offset " << offset << ", length " << length << "\n");
-  Region R(V,offset,length);
   return idx(R);
 }
 

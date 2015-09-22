@@ -45,7 +45,6 @@ public:
   static const string REC_MEM_OP;
   static const string MEM_OP_VAL;
 
-  static const string STATIC_INIT;
   static const string INIT_FUNCS;
 
   static const map<unsigned,string> INSTRUCTION_TABLE;
@@ -62,23 +61,15 @@ protected:
 
   long globalsBottom;
   long externsBottom;
-  vector<const Stmt*> staticInits;
-  vector<const Stmt*> initFuncs;
+  vector<std::string> initFuncs;
 
   unsigned uniqueFpNum;
 
 public:
-  SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
-    : targetData(L), naming(N), program(P), regions(R),
-      globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
-      ptrSizeInBits(targetData->getPointerSizeInBits())
-  { }
+  SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R);
   Program& getProgram() { return program; }
 
 private:
-  void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
-  void addInit(const llvm::GlobalValue* G, unsigned offset,
-    const llvm::Constant* C);
 
   unsigned storageSize(llvm::Type* T);
   unsigned offset(llvm::ArrayType* T, unsigned idx);
@@ -97,7 +88,6 @@ private:
   string opName(const string& operation, initializer_list<const llvm::Type*> types);
   string opName(const string& operation, initializer_list<unsigned> types);
 
-  const Stmt* store(const GlobalValue* P, unsigned offset, const Value* val);
   const Stmt* store(unsigned R, const Type* T, const Expr* P, const Expr* V);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
@@ -187,7 +177,6 @@ public:
   vector<string> getModifies();
   void addInitFunc(const llvm::Function* f);
   Decl* getInitFuncs();
-  Decl* getStaticInit();
   string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
 };
