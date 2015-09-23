@@ -16,6 +16,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "dsa/DSNode.h"
 
+namespace {
+static const std::string BRANCH_CONDITION = "branchcond";
+}
+
 namespace smack {
 
 using llvm::errs;
@@ -193,6 +197,9 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
     targets.push_back(make_pair(Expr::not_(e),bi.getSuccessor(1)));
   }
   generatePhiAssigns(bi);
+  if (bi.getNumSuccessors() > 1)
+    emit(Stmt::annot(Attr::attr(BRANCH_CONDITION,
+      {rep.expr(bi.getCondition())})));
   generateGotoStmts(bi, targets);
 }
 
@@ -219,6 +226,8 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
   targets.push_back(make_pair(n,si.getDefaultDest()));
 
   generatePhiAssigns(si);
+  emit(Stmt::annot(Attr::attr(BRANCH_CONDITION,
+    {rep.expr(si.getCondition())})));
   generateGotoStmts(si, targets);
 }
 
@@ -238,6 +247,7 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
   targets.push_back(make_pair(
     Expr::id(Naming::EXN_VAR),
     ii.getUnwindDest()));
+  emit(Stmt::annot(Attr::attr(BRANCH_CONDITION, {Expr::id(Naming::EXN_VAR)})));
   generateGotoStmts(ii, targets);
 }
 
