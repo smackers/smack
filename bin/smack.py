@@ -384,7 +384,7 @@ def verify_bpl(args):
   if args.verifier == 'boogie':
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/nologo"]
+    command += ["/nologo", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
     command += ["/loopUnroll:%d" % args.unroll]
