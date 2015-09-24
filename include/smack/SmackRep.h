@@ -149,7 +149,6 @@ public:
 
   // used in SmackModuleGenerator
   vector<Decl*> globalDecl(const llvm::GlobalValue* g);
-  vector<string> getModifies();
   void addInitFunc(const llvm::Function* f);
   Decl* getInitFuncs();
   string getPrelude();

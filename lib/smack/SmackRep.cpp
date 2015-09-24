@@ -897,16 +897,6 @@ void SmackRep::addBplGlobal(string name) {
   bplGlobals.push_back(name);
 }
 
-vector<string> SmackRep::getModifies() {
-  vector<string> mods;
-  for (vector<string>::iterator i = bplGlobals.begin(); i != bplGlobals.end(); ++i)
-    mods.push_back(*i);
-  for (unsigned i=0; i<regions.size(); ++i)
-    mods.push_back(memPath(i));
-
-  return mods;
-}
-
 unsigned SmackRep::numElements(const llvm::Constant* v) {
   using namespace llvm;
   if (const ArrayType* at = dyn_cast<const ArrayType>(v->getType()))
