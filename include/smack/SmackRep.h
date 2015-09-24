@@ -26,31 +26,6 @@ using llvm::StringRef;
 using namespace std;
 
 class SmackRep {
-public:
-  static const string BOOL_TYPE;
-  static const string FLOAT_TYPE;
-  static const string PTR_TYPE;
-
-  static const string NULL_VAL;
-  static const string GLOBALS_BOTTOM;
-  static const string EXTERNS_BOTTOM;
-  static const string MALLOC_TOP;
-
-  static const string ALLOCA;
-  static const string MALLOC;
-  static const string FREE;
-  static const string MEMCPY;
-
-  static const string MEM_OP;
-  static const string REC_MEM_OP;
-  static const string MEM_OP_VAL;
-
-  static const string INIT_FUNCS;
-
-  static const map<unsigned,string> INSTRUCTION_TABLE;
-  static const map<unsigned,string> CMPINST_TABLE;
-  static const map<unsigned,string> ATOMICRMWINST_TABLE;
-
 protected:
   Regions& regions;
   Naming& naming;

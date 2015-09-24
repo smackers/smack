@@ -14,7 +14,6 @@ private:
   const llvm::DataLayout * TD;
 public:
   static char ID;
-  static const std::string STATIC_INIT_FUNCTION;
 
   CodifyStaticInits() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& M);

@@ -44,7 +44,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
     vector<ProcDecl*> procs = rep.proc(func);
     assert(procs.size() > 0);
-    if (procs[0]->getName() != "__SMACK_decls")
+    if (procs[0]->getName() != Naming::DECLARATIONS_PROC)
       program.addDecls(procs);
 
     if (!func->empty() && !func->getEntryBlock().empty()) {
@@ -68,9 +68,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
         // First execute static initializers, in the main procedure.
         if (func->hasName() && SmackOptions::isEntryPoint(func->getName())) {
-          (*proc)->insert(Stmt::call(SmackRep::INIT_FUNCS));
+          (*proc)->insert(Stmt::call(Naming::INITIALIZE_PROC));
 
-        } else if (naming.get(*func).substr(0, 18)  == "__SMACK_init_func_")
+        } else if (naming.get(*func).find(Naming::INIT_FUNC_PREFIX) == 0)
           rep.addInitFunc(func);
       }
       DEBUG(errs() << "Finished analyzing function: " << naming.get(*func) << "\n\n");

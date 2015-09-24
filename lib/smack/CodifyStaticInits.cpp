@@ -4,6 +4,7 @@
 
 #define DEBUG_TYPE "codify-static-inits"
 
+#include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
 #include "llvm/IR/IRBuilder.h"
@@ -18,9 +19,6 @@ namespace smack {
 
 using namespace llvm;
 
-const std::string CodifyStaticInits::STATIC_INIT_FUNCTION =
-  "__SMACK_static_init";
-
 namespace{
   Regex STRING_CONSTANT("^\\.str[0-9]*$");
 }
@@ -30,7 +28,8 @@ bool CodifyStaticInits::runOnModule(Module& M) {
   LLVMContext& C = M.getContext();
 
   Function* F = dyn_cast<Function>(
-    M.getOrInsertFunction(STATIC_INIT_FUNCTION, Type::getVoidTy(C), NULL));
+    M.getOrInsertFunction(Naming::STATIC_INIT_PROC,
+      Type::getVoidTy(C), NULL));
 
   BasicBlock* B = BasicBlock::Create(C, "entry", F);
   IRBuilder<> IRB(B);

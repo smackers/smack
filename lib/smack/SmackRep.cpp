@@ -10,27 +10,6 @@ namespace smack {
 
 const unsigned MEMORY_INTRINSIC_THRESHOLD = 10;
 
-const string SmackRep::BOOL_TYPE = "bool";
-const string SmackRep::FLOAT_TYPE = "float";
-const string SmackRep::PTR_TYPE = "ref";
-
-const string SmackRep::NULL_VAL = "$0.ref";
-const string SmackRep::GLOBALS_BOTTOM = "$GLOBALS_BOTTOM";
-const string SmackRep::EXTERNS_BOTTOM = "$EXTERNS_BOTTOM";
-const string SmackRep::MALLOC_TOP = "$MALLOC_TOP";
-
-const string SmackRep::ALLOCA = "$alloca";
-const string SmackRep::MALLOC = "$malloc";
-const string SmackRep::FREE = "$free";
-const string SmackRep::MEMCPY = "$memcpy";
-
-// used for memory model debugging
-const string SmackRep::MEM_OP = "$mop";
-const string SmackRep::REC_MEM_OP = "boogie_si_record_mop";
-const string SmackRep::MEM_OP_VAL = "$MOP";
-
-const string SmackRep::INIT_FUNCS = "$init_funcs";
-
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
   "llvm\\.memcpy\\..*|llvm\\.memset\\..*|llvm\\.dbg\\..*|"
@@ -38,81 +17,6 @@ Regex PROC_IGNORE("^("
 ")$");
 
 const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 64, 96, 128};
-
-const map<unsigned,string> SmackRep::INSTRUCTION_TABLE {
-  {Instruction::Trunc, "$trunc"},
-  {Instruction::ZExt, "$zext"},
-  {Instruction::SExt, "$sext"},
-  {Instruction::FPTrunc, "$fptrunc"},
-  {Instruction::FPExt, "$fpext"},
-  {Instruction::BitCast, "$bitcast"},
-  {Instruction::FPToUI, "$fp2ui"},
-  {Instruction::FPToSI, "$fp2si"},
-  {Instruction::UIToFP, "$ui2fp"},
-  {Instruction::SIToFP, "$si2fp"},
-  {Instruction::PtrToInt, "$p2i"},
-  {Instruction::IntToPtr, "$i2p"},
-  {Instruction::Add, "$add"},
-  {Instruction::Sub, "$sub"},
-  {Instruction::Mul, "$mul"},
-  {Instruction::SDiv, "$sdiv"},
-  {Instruction::UDiv, "$udiv"},
-  {Instruction::SRem, "$srem"},
-  {Instruction::URem, "$urem"},
-  {Instruction::And, "$and"},
-  {Instruction::Or, "$or"},
-  {Instruction::Xor, "$xor"},
-  {Instruction::LShr, "$lshr"},
-  {Instruction::AShr, "$ashr"},
-  {Instruction::Shl, "$shl"},
-  {Instruction::FAdd, "$fadd"},
-  {Instruction::FSub, "$fsub"},
-  {Instruction::FMul, "$fmul"},
-  {Instruction::FDiv, "$fdiv"},
-  {Instruction::FRem, "$frem"}
-};
-
-const map<unsigned,string> SmackRep::CMPINST_TABLE {
-  {CmpInst::ICMP_EQ, "$eq"},
-  {CmpInst::ICMP_NE, "$ne"},
-  {CmpInst::ICMP_SGE, "$sge"},
-  {CmpInst::ICMP_UGE, "$uge"},
-  {CmpInst::ICMP_SLE, "$sle"},
-  {CmpInst::ICMP_ULE, "$ule"},
-  {CmpInst::ICMP_SLT, "$slt"},
-  {CmpInst::ICMP_ULT, "$ult"},
-  {CmpInst::ICMP_SGT, "$sgt"},
-  {CmpInst::ICMP_UGT, "$ugt"},
-  {CmpInst::FCMP_FALSE, "$ffalse"},
-  {CmpInst::FCMP_OEQ, "$foeq"},
-  {CmpInst::FCMP_OGE, "$foge"},
-  {CmpInst::FCMP_OGT, "$fogt"},
-  {CmpInst::FCMP_OLE, "$fole"},
-  {CmpInst::FCMP_OLT, "$folt"},
-  {CmpInst::FCMP_ONE, "$fone"},
-  {CmpInst::FCMP_ORD, "$ford"},
-  {CmpInst::FCMP_TRUE, "$ftrue"},
-  {CmpInst::FCMP_UEQ, "$fueq"},
-  {CmpInst::FCMP_UGE, "$fuge"},
-  {CmpInst::FCMP_UGT, "$fugt"},
-  {CmpInst::FCMP_ULE, "$fule"},
-  {CmpInst::FCMP_ULT, "$fult"},
-  {CmpInst::FCMP_UNE, "$fune"},
-  {CmpInst::FCMP_UNO, "$funo"}
-};
-
-const map<unsigned,string> SmackRep::ATOMICRMWINST_TABLE {
-  {AtomicRMWInst::Add, "$add"},
-  {AtomicRMWInst::Sub, "$sub"},
-  {AtomicRMWInst::And, "$and"},
-  {AtomicRMWInst::Nand, "$nand"},
-  {AtomicRMWInst::Or, "$or"},
-  {AtomicRMWInst::Xor, "$xor"},
-  {AtomicRMWInst::Max, "$smax"},
-  {AtomicRMWInst::Min, "$smin"},
-  {AtomicRMWInst::UMax, "$umax"},
-  {AtomicRMWInst::UMin, "$umin"}
-};
 
 string indexedName(string name, initializer_list<string> idxs) {
   stringstream idxd;
@@ -147,9 +51,9 @@ bool isCodeString(const llvm::Value* V) {
         if (const CallInst* CI = dyn_cast<const CallInst>(*U2)) {
           llvm::Function* F = CI->getCalledFunction();
           string name = F && F->hasName() ? F->getName().str() : "";
-          if (name.find("__SMACK_code") != string::npos ||
-              name.find("__SMACK_top_decl") != string::npos ||
-              name.find("__SMACK_decl") != string::npos) {
+          if (name.find(Naming::CODE_PROC) != string::npos ||
+              name.find(Naming::TOP_DECL_PROC) != string::npos ||
+              name.find(Naming::DECL_PROC) != string::npos) {
             return true;
           }
         }
@@ -164,7 +68,7 @@ SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
       globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
 {
-    initFuncs.push_back(CodifyStaticInits::STATIC_INIT_FUNCTION);
+    initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
 string SmackRep::getString(const llvm::Value* v) {
@@ -244,17 +148,17 @@ string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
 string SmackRep::type(const llvm::Type* t) {
 
   if (t->isFloatingPointTy())
-    return FLOAT_TYPE;
+    return Naming::FLOAT_TYPE;
 
   else if (t->isIntegerTy())
     return intType(t->getIntegerBitWidth());
 
   else if (t->isPointerTy())
-    return PTR_TYPE;
+    return Naming::PTR_TYPE;
 
   else
     // assert(0 && "unsupported type");
-    return PTR_TYPE;
+    return Naming::PTR_TYPE;
 }
 
 string SmackRep::type(const llvm::Value* v) {
@@ -274,14 +178,14 @@ unsigned SmackRep::offset(llvm::StructType* T, unsigned idx) {
 }
 
 string SmackRep::memReg(unsigned idx) {
-  return indexedName("$M",{idx});
+  return indexedName(Naming::MEMORY,{idx});
 }
 
 string SmackRep::memType(unsigned region) {
   stringstream s;
   if (!regions.get(region).isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
-    s << "[" << PTR_TYPE << "] ";
+    s << "[" << Naming::PTR_TYPE << "] ";
   s << type(regions.get(region).getType());
   return s.str();
 }
@@ -302,7 +206,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
       pointerLit((unsigned long) llvm::cast<llvm::ConstantInt>(i.getArraySize())->getZExtValue()));
 
   // TODO this should not be a pointer type.
-  return Stmt::call("$alloc",{size},{naming.get(i)});
+  return Stmt::call(Naming::ALLOC,{size},{naming.get(i)});
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
@@ -371,7 +275,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   while (isa<const CastInst>(V))
     V = dyn_cast<const CastInst>(V)->getOperand(0);
   return Stmt::call(
-    indexedName("__SMACK_value", {type(V->getType())}),
+    indexedName(Naming::VALUE_PROC, {type(V->getType())}),
     vector<const Expr*>({ expr(V) }),
     vector<string>({ naming.get(CI) }));
 }
@@ -380,7 +284,7 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
   Type* T = CI.getParent()->getParent()->getReturnType();
   return Stmt::call(
-    indexedName("__SMACK_value", {type(T)}),
+    indexedName(Naming::VALUE_PROC, {type(T)}),
     vector<const Expr*>({ Expr::id(Naming::RET_VAR) }),
     vector<string>({ naming.get(CI) }));
 }
@@ -401,8 +305,8 @@ const Stmt* SmackRep::objectAnnotation(const CallInst& CI) {
     const unsigned length = bound * bytes;
     const unsigned R = regions.idx(P,length);
     bool bytewise = regions.get(R).bytewiseAccess();
-    string L = string("$load.") + (bytewise ? "bytes." : "") + intType(bits);
-    return Stmt::call("__SMACK_object",
+    string L = Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits);
+    return Stmt::call(Naming::OBJECT_PROC,
       vector<const Expr*>({
         expr(P),
         Expr::lit(bound)
@@ -438,8 +342,8 @@ const Stmt* SmackRep::returnObjectAnnotation(const CallInst& CI) {
     const unsigned length = bound * bytes;
     const unsigned R = regions.idx(V, length);
     bool bytewise = regions.get(R).bytewiseAccess();
-    string L = string("$load.") + (bytewise ? "bytes." : "") + intType(bits);
-    return Stmt::call("__SMACK_object",
+    string L = Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits);
+    return Stmt::call(Naming::OBJECT_PROC,
       vector<const Expr*>({
         Expr::id(Naming::RET_VAR),
         Expr::lit(bound)
@@ -467,7 +371,7 @@ const Expr* SmackRep::load(const llvm::Value* P) {
   bool bytewise = regions.get(R).bytewiseAccess();
   bool singleton = regions.get(R).isSingleton();
   const Expr* M = Expr::id(memPath(R));
-  string N = string("$load.") + (bytewise ? "bytes." : "") +
+  string N = Naming::LOAD + "." + (bytewise ? "bytes." : "") +
     type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
@@ -488,7 +392,7 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
   bool bytewise = regions.get(R).bytewiseAccess();
   bool singleton = regions.get(R).isSingleton();
 
-  string N = string("$store.") + (bytewise ? "bytes." : "") + type(T);
+  string N = Naming::STORE + "." + (bytewise ? "bytes." : "") + type(T);
   const Expr* M = Expr::id(memPath(R));
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
@@ -598,7 +502,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       Expr::lit(exponentPart));
 
   } else if (llvm::isa<ConstantPointerNull>(v))
-    return Expr::id(NULL_VAL);
+    return Expr::id(Naming::NULL_VAL);
 
   else
     assert( false && "literal type not supported" );
@@ -691,7 +595,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return lit(cf);
 
     } else if (constant->isNullValue())
-      return Expr::id(NULL_VAL);
+      return Expr::id(Naming::NULL_VAL);
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -713,7 +617,7 @@ const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
-  return Expr::fn(opName(INSTRUCTION_TABLE.at(opcode), {v->getType(), t}), expr(v));
+  return Expr::fn(opName(Naming::INSTRUCTION_TABLE.at(opcode), {v->getType(), t}), expr(v));
 }
 
 const Expr* SmackRep::bop(const llvm::ConstantExpr* CE) {
@@ -725,7 +629,7 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 }
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
-  string fn = INSTRUCTION_TABLE.at(opcode);
+  string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
@@ -738,7 +642,7 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
-  string fn = CMPINST_TABLE.at(predicate);
+  string fn = Naming::CMPINST_TABLE.at(predicate);
   return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
 }
 
@@ -770,13 +674,13 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
       llvm::Type* T = F->getFunctionType()->getParamType(0);
       assert (T->isIntegerTy() && "Expected integer argument.");
       unsigned width = T->getIntegerBitWidth();
-      decls.push_back(Decl::procedure(program, name, {{"n", type(T)}}, {{"r", PTR_TYPE}}, {
-        Block::block("", { Stmt::call("$alloc", {integerToPointer(Expr::id("n"),width)}, {"r"}) })
+      decls.push_back(Decl::procedure(program, name, {{"n", type(T)}}, {{"r", Naming::PTR_TYPE}}, {
+        Block::block("", { Stmt::call(Naming::ALLOC, {integerToPointer(Expr::id("n"),width)}, {"r"}) })
       }));
 
     } else if (name == "free_") {
-      decls.push_back(Decl::procedure(program, name, {{"n", PTR_TYPE}}, {}, {
-        Block::block("", { Stmt::call("$free", {Expr::id("n")}) })
+      decls.push_back(Decl::procedure(program, name, {{"n", Naming::PTR_TYPE}}, {}, {
+        Block::block("", { Stmt::call(Naming::FREE, {Expr::id("n")}) })
       }));
 
     } else if (auto C = dyn_cast<CallInst>(U)) {
@@ -876,13 +780,13 @@ string SmackRep::code(llvm::CallInst& ci) {
   assert(f && "Inline code embedded in unresolved function.");
 
   string fmt = getString(ci.getOperand(0));
-  assert(!fmt.empty() && "__SMACK_code: missing format string.");
+  assert(!fmt.empty() && "inline code: missing format string.");
 
   string s = fmt;
   for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
     const Expr* a = arg(f, i, ci.getOperand(i));
     string::size_type idx = s.find('@');
-    assert(idx != string::npos && "__SMACK_code: too many arguments.");
+    assert(idx != string::npos && "inline code: too many arguments.");
 
     ostringstream ss;
     a->print(ss);
@@ -897,7 +801,7 @@ string SmackRep::getPrelude() {
   s << "// Basic types" << endl;
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << endl;
-  s << Decl::typee(PTR_TYPE, pointerType()) << endl;
+  s << Decl::typee(Naming::PTR_TYPE, pointerType()) << endl;
   s << endl;
 
   s << "// Basic constants" << endl;
@@ -923,9 +827,9 @@ string SmackRep::getPrelude() {
   s << endl;
 
   s << "// Memory address bounds" << endl;
-  s << Decl::axiom(Expr::eq(Expr::id(GLOBALS_BOTTOM),pointerLit(globalsBottom))) << endl;
-  s << Decl::axiom(Expr::eq(Expr::id(EXTERNS_BOTTOM),pointerLit(externsBottom))) << endl;
-  s << Decl::axiom(Expr::eq(Expr::id(MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << endl;
+  s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM),pointerLit(globalsBottom))) << endl;
+  s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM),pointerLit(externsBottom))) << endl;
+  s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << endl;
   s << endl;
 
   s << "// Bitvector-integer conversions" << endl;
@@ -949,8 +853,8 @@ string SmackRep::getPrelude() {
 
   s << "// Pointer-number conversions" << endl;
   for (unsigned i = 8; i <= 64; i <<= 1) {
-    s << Decl::function(indexedName("$p2i", {PTR_TYPE,intType(i)}), {{"p",PTR_TYPE}}, intType(i), pointerToInteger(Expr::id("p"),i), {Attr::attr("inline")}) << endl;
-    s << Decl::function(indexedName("$i2p", {intType(i),PTR_TYPE}), {{"i",intType(i)}}, PTR_TYPE, integerToPointer(Expr::id("i"),i), {Attr::attr("inline")}) << endl;
+    s << Decl::function(indexedName("$p2i", {Naming::PTR_TYPE,intType(i)}), {{"p",Naming::PTR_TYPE}}, intType(i), pointerToInteger(Expr::id("p"),i), {Attr::attr("inline")}) << endl;
+    s << Decl::function(indexedName("$i2p", {intType(i),Naming::PTR_TYPE}), {{"i",intType(i)}}, Naming::PTR_TYPE, integerToPointer(Expr::id("i"),i), {Attr::attr("inline")}) << endl;
   }
   s << endl;
 
@@ -959,17 +863,17 @@ string SmackRep::getPrelude() {
     "$eq", "$ne", "$ugt", "$uge", "$ult", "$ule", "$sgt", "$sge", "$slt", "$sle"
   };
   for (auto pred : predicates) {
-    s << Decl::function(indexedName(pred,{PTR_TYPE}),
-      {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, intType(1),
+    s << Decl::function(indexedName(pred,{Naming::PTR_TYPE}),
+      {{"p1",Naming::PTR_TYPE}, {"p2",Naming::PTR_TYPE}}, intType(1),
       Expr::cond(
-        Expr::fn(indexedName(pred,{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
+        Expr::fn(indexedName(pred,{pointerType(),Naming::BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
         integerLit(1L,1),
         integerLit(0L,1)),
       {Attr::attr("inline")} )
       << endl;
-    s << Decl::function(indexedName(pred,{PTR_TYPE,BOOL_TYPE}),
-      {{"p1",PTR_TYPE}, {"p2",PTR_TYPE}}, BOOL_TYPE,
-      Expr::fn(indexedName(pred,{pointerType(),BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
+    s << Decl::function(indexedName(pred,{Naming::PTR_TYPE,Naming::BOOL_TYPE}),
+      {{"p1",Naming::PTR_TYPE}, {"p2",Naming::PTR_TYPE}}, Naming::BOOL_TYPE,
+      Expr::fn(indexedName(pred,{pointerType(),Naming::BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
       {Attr::attr("inline")} )
       << endl;
   }
@@ -978,8 +882,8 @@ string SmackRep::getPrelude() {
   s << "// Pointer operations" << endl;
   const vector<string> operations = {"$add", "$sub", "$mul"};
   for (auto op : operations) {
-    s << Decl::function(indexedName(op,{PTR_TYPE}),
-      {{"p1",PTR_TYPE},{"p2",PTR_TYPE}}, PTR_TYPE,
+    s << Decl::function(indexedName(op,{Naming::PTR_TYPE}),
+      {{"p1",Naming::PTR_TYPE},{"p2",Naming::PTR_TYPE}}, Naming::PTR_TYPE,
       Expr::fn(indexedName(op,{pointerType()}), {Expr::id("p1"), Expr::id("p2")}),
       {Attr::attr("inline")})
       << endl;
@@ -1020,7 +924,8 @@ void SmackRep::addInitFunc(const llvm::Function* f) {
 }
 
 Decl* SmackRep::getInitFuncs() {
-  ProcDecl* proc = (ProcDecl*) Decl::procedure(program, INIT_FUNCS);
+  ProcDecl* proc = (ProcDecl*) Decl::procedure(program,
+    Naming::INITIALIZE_PROC);
   Block* b = Block::block();
   for (auto name : initFuncs)
     b->addStmt(Stmt::call(name));
@@ -1070,7 +975,7 @@ vector<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
     }
   }
 
-  decls.push_back(Decl::constant(name, PTR_TYPE, ax, false));
+  decls.push_back(Decl::constant(name, Naming::PTR_TYPE, ax, false));
 
   if (!size)
     size = targetData->getPrefTypeAlignment(v->getType());
@@ -1083,13 +988,13 @@ vector<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
 }
 
 const Expr* SmackRep::declareIsExternal(const Expr* e) {
-  return Expr::fn("$isExternal",e);
+  return Expr::fn(Naming::EXTERNAL_ADDR,e);
 }
 
 Decl* SmackRep::memcpyProc(string type, unsigned length) {
   stringstream s;
 
-  string name = "$memcpy." + type;
+  string name = Naming::MEMCPY + "." + type;
   if (length < MEMORY_INTRINSIC_THRESHOLD)
     name = name + "." + std::to_string(length);
   else
@@ -1150,7 +1055,7 @@ Decl* SmackRep::memcpyProc(string type, unsigned length) {
 Decl* SmackRep::memsetProc(string type, unsigned length) {
   stringstream s;
 
-  string name = "$memset." + type;
+  string name = Naming::MEMSET + "." + type;
   if (length < MEMORY_INTRINSIC_THRESHOLD)
     name = name + "." + std::to_string(length);
   else
