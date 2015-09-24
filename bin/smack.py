@@ -30,8 +30,9 @@ def frontends():
     'cpp': clang_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
-    'bc': empty_frontend,
-    'll': empty_frontend,
+    'bc': llvm_frontend,
+    'll': llvm_frontend,
+    'bpl': boogie_frontend,
   }
 
 def results():
@@ -235,10 +236,6 @@ def frontend(args):
     lang = extensions[0]
   return frontends()[lang](args)
 
-def empty_frontend(args):
-  """Generate the LLVM bitcode file by copying the input file(s)."""
-  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
-
 def smack_root():
   return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 
@@ -255,8 +252,20 @@ def default_clang_compile_command(args):
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   return cmd
 
+def boogie_frontend(args):
+  """Generate Boogie code by concatenating the input file(s)."""
+  with open(args.bpl_file, 'w') as out:
+    for src in args.input_files:
+      with open(src) as f:
+        out.write(f.read())
+
+def llvm_frontend(args):
+  """Generate Boogie code from LLVM bitcodes."""
+  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+  llvm_to_bpl(args)
+
 def clang_frontend(args):
-  """Generate an LLVM bitcode file from C-language source(s)."""
+  """Generate Boogie code from C-language source(s)."""
 
   bitcodes = []
   compile_command = default_clang_compile_command(args)
@@ -268,9 +277,10 @@ def clang_frontend(args):
     try_command(compile_command + ['-o', bc, c], display=True)
     bitcodes.append(bc)
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  llvm_to_bpl(args)
 
 def json_compilation_database_frontend(args):
-  """Generate an LLVM bitcode file from a JSON compilation database."""
+  """Generate Boogie code from a JSON compilation database."""
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single JSON compilation database.")
@@ -296,8 +306,10 @@ def json_compilation_database_frontend(args):
         command = command + " -emit-llvm"
         try_command(command.split(),cc['directory'], display=True)
 
+  llvm_to_bpl(args)
+
 def svcomp_frontend(args):
-  """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
+  """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
@@ -344,6 +356,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   try_command(cmd, display=True)
+  annotate_bpl(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -516,6 +529,7 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   return json_string
 
+
 if __name__ == '__main__':
   try:
     args = arguments()
@@ -524,8 +538,6 @@ if __name__ == '__main__':
       print "SMACK program verifier version %s" % VERSION
 
     frontend(args)
-    llvm_to_bpl(args)
-    annotate_bpl(args)
 
     if args.no_verify:
       if not args.quiet:
