@@ -427,7 +427,7 @@ def verify_bpl(args):
   if args.verifier_options:
     command += args.verifier_options.split()
 
-  verifier_output = try_command(command, timeout=args.time_limit)
+  verifier_output = try_command(command, timeout=args.time_limit, display=True)
   result = verification_result(verifier_output)
 
   if args.smackd:
