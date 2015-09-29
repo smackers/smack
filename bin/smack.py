@@ -247,8 +247,8 @@ def smack_lib():
 
 def default_clang_compile_command(args):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
+  cmd += ['-I' + smack_headers()]
   cmd += args.clang_options.split()
-  cmd += ['-I' + smack_headers(), '-include' + 'smack.h']
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   return cmd
 
@@ -317,6 +317,7 @@ def svcomp_frontend(args):
   name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
 
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
+  args.clang_options += " -include smack.h"
 
   if os.path.splitext(args.input_files[0])[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
@@ -344,7 +345,7 @@ def svcomp_frontend(args):
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
-  cmd = ['smack', args.bc_file, '-bpl', args.bpl_file]
+  cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-source-loc-syms']
   cmd += ['-enable-type-inference-opts']
   for ep in args.entry_points:
@@ -427,7 +428,7 @@ def verify_bpl(args):
   if args.verifier_options:
     command += args.verifier_options.split()
 
-  verifier_output = try_command(command, timeout=args.time_limit)
+  verifier_output = try_command(command, timeout=args.time_limit, display=True)
   result = verification_result(verifier_output)
 
   if args.smackd:

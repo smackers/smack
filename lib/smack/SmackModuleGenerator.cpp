@@ -56,13 +56,11 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
         ContractsExtractor ce(rep, **proc, naming, slices);
         SmackInstGenerator igen(rep, **proc, naming, slices);
 
-        DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << " from ");
-        DEBUG(errs() << *func << "\n");
+        DEBUG(errs() << "Extracting contracts for " << naming.get(*func) << "\n");
         ce.visit(func);
         DEBUG(errs() << "\n");
 
-        DEBUG(errs() << "Generating body for " << naming.get(*func) << " from ");
-        DEBUG(errs() << *func << "\n");
+        DEBUG(errs() << "Generating body for " << naming.get(*func) << "\n");
         igen.visit(func);
         DEBUG(errs() << "\n");
 

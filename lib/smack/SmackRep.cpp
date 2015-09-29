@@ -283,6 +283,11 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
 const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
   Type* T = CI.getParent()->getParent()->getReturnType();
+  program.addDecl(
+    Decl::procedure(program,
+      indexedName(Naming::VALUE_PROC, {type(T)}),
+      vector< pair<string,string> >({{"p", type(T)}}),
+      vector< pair<string,string> >({{Naming::RET_VAR, Naming::PTR_TYPE}})));
   return Stmt::call(
     indexedName(Naming::VALUE_PROC, {type(T)}),
     vector<const Expr*>({ Expr::id(Naming::RET_VAR) }),
