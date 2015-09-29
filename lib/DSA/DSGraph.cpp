@@ -1353,10 +1353,10 @@ void DSGraph::computeNodeMapping(const DSNodeHandle &NH1,
       const DSNodeHandle &N2NH = N2->getLink(offset);
 
       //
-      // Make sure not to recurse into node offsets you already explored;
+      // Make sure not to recurse into the same node;
       // that can cause recursion that does not terminate.
       //
-      if ((N1NH.getNode() == N1 && N1NH.getOffset() < i) && !N2NH.isNull()) {
+      if (N1NH.getNode() == N1 && !N2NH.isNull()) {
        DSNode *N1L = N1NH.getNode(), *N2L = N2NH.getNode();
 
         DSNodeHandle &Entry = NodeMap[N1L];
