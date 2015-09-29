@@ -17,6 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/FormattedStream.h"
 
 #include "smack/BplFilePrinter.h"
 #include "smack/DSAAliasAnalysis.h"
@@ -40,14 +41,11 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
-// removes extension from filename if there is one
-std::string getFileName(const std::string &str) {
-  std::string filename = str;
-  size_t lastdot = str.find_last_of(".");
-  if (lastdot != std::string::npos)
-    filename = str.substr(0, lastdot);
-  return filename;
+std::string filenamePrefix(const std::string &str) {
+  return str.substr(0, str.find_last_of("."));
 }
+
+#define DEBUG_TYPE "smack-top"
 
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
@@ -111,6 +109,16 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::CodifyStaticInits());
   pass_manager.add(new smack::RemoveDeadDefs());
   pass_manager.add(new llvm::MergeArrayGEP());
+
+  std::string filename(filenamePrefix(InputFilename) + "-final.ll");
+  std::string EC;
+  tool_output_file F(filename.c_str(), EC, sys::fs::F_None);
+
+  if (DebugFlag) {
+    F.keep();
+    pass_manager.add(llvm::createPrintModulePass(F.os()));
+  }
+
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.run(*module.get());
