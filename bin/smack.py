@@ -345,7 +345,7 @@ def svcomp_frontend(args):
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
-  cmd = ['smack', args.bc_file, '-bpl', args.bpl_file]
+  cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-source-loc-syms']
   cmd += ['-enable-type-inference-opts']
   for ep in args.entry_points:

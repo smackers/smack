@@ -175,17 +175,17 @@ add_library(smackTranslator STATIC
   lib/smack/SmackRepFlatMem.cpp
 )
 
-add_executable(smack
-  tools/smack/smack.cpp
+add_executable(llvm2bpl
+  tools/llvm2bpl/llvm2bpl.cpp
 )
 
-set_target_properties(smack smackTranslator assistDS dsa
+set_target_properties(llvm2bpl smackTranslator assistDS dsa
     PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(smack smackTranslator assistDS dsa)
+target_link_libraries(llvm2bpl smackTranslator assistDS dsa)
 
-INSTALL(TARGETS smack
+INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
 )
 

@@ -45,11 +45,11 @@ std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
 }
 
-#define DEBUG_TYPE "smack-top"
+#define DEBUG_TYPE "llvm2bpl"
 
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
-  llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
+  llvm::cl::ParseCommandLineOptions(argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
 
   llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
