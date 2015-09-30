@@ -114,10 +114,10 @@ int main(int argc, char **argv) {
   std::string EC;
   tool_output_file F(filename.c_str(), EC, sys::fs::F_None);
 
-  if (DebugFlag) {
+  DEBUG(
     F.keep();
-    pass_manager.add(llvm::createPrintModulePass(F.os()));
-  }
+    pass_manager.add(llvm::createPrintModulePass(F.os()))
+  );
 
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));
