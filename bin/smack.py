@@ -183,27 +183,35 @@ def timeout_killer(proc, timed_out):
     timed_out[0] = True
     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
-def try_command(cmd, cwd=None, display=False, timeout=None):
-  if args.verbose or args.debug:
-    display = True
-  output_file = temporary_file(cmd[0], '.log', args)
-  stdout = None if display else subprocess.PIPE
+def try_command(cmd, cwd=None, console=False, timeout=None):
+  console = (console or args.verbose or args.debug) and not args.quiet
+  filelog = args.debug
+  output = ''
   proc = None
   timer = None
   try:
-    if args.verbose or args.debug:
+    if args.debug:
       print "Running %s" % " ".join(cmd)
 
     proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    tee = subprocess.Popen(['tee', output_file], stdin=proc.stdout, stdout=stdout)
 
     if timeout:
       timed_out = [False]
       timer = Timer(timeout, timeout_killer, [proc, timed_out])
       timer.start()
 
-    proc.wait()
+    if console:
+      while True:
+        line = proc.stdout.readline()
+        if line:
+          output += line
+          print line,
+        elif proc.poll() is not None:
+          break
+      proc.wait
+    else:
+      output = proc.communicate()[0]
 
     if timeout:
       timer.cancel()
@@ -211,19 +219,22 @@ def try_command(cmd, cwd=None, display=False, timeout=None):
     rc = proc.returncode
     proc = None
     if timeout and timed_out[0]:
-      return open(output_file).read() + ("\n%s timed out." % cmd[0])
+      return output + ("\n%s timed out." % cmd[0])
     elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
     else:
-      return open(output_file).read()
+      return output
 
   except (RuntimeError, OSError) as err:
-    print >> sys.stderr, open(output_file).read()
+    print >> sys.stderr, output
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
   finally:
     if timeout and timer: timer.cancel()
     if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    if filelog:
+      with open(temporary_file(cmd[0], '.log', args), 'w') as f:
+        f.write(output)
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
@@ -274,7 +285,7 @@ def clang_frontend(args):
   bitcodes.append(smack_bc)
   for c in args.input_files:
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], display=True)
+    try_command(compile_command + ['-o', bc, c], console=True)
     bitcodes.append(bc)
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
@@ -304,7 +315,7 @@ def json_compilation_database_frontend(args):
         command = output_flags.sub(r"-o \1.bc", command)
         command = optimization_flags.sub("-O0", command)
         command = command + " -emit-llvm"
-        try_command(command.split(),cc['directory'], display=True)
+        try_command(command.split(),cc['directory'], console=True)
 
   llvm_to_bpl(args)
 
@@ -356,7 +367,7 @@ def llvm_to_bpl(args):
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
-  try_command(cmd, display=True)
+  try_command(cmd, console=True)
   annotate_bpl(args)
 
 def procedure_annotation(name, args):
@@ -428,7 +439,7 @@ def verify_bpl(args):
   if args.verifier_options:
     command += args.verifier_options.split()
 
-  verifier_output = try_command(command, timeout=args.time_limit, display=True)
+  verifier_output = try_command(command, timeout=args.time_limit)
   result = verification_result(verifier_output)
 
   if args.smackd:
