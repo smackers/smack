@@ -214,8 +214,8 @@ namespace {
     }
 
     // GraphBuilder ctor for working on the globals graph
-    explicit GraphBuilder(DSGraph& g)
-      :G(g), FB(0), TD(g.getDataLayout()), VAArray(0)
+    explicit GraphBuilder(DSGraph& g, LocalDataStructures& DSi)
+      :G(g), FB(0), TD(g.getDataLayout()), VAArray(0), M(new DSMonitor(&DSi))
     {}
 
     void mergeInGlobalInitializer(GlobalVariable *GV);
@@ -1515,7 +1515,7 @@ bool LocalDataStructures::runOnModule(Module &M) {
 
   // First step, build the globals graph.
   {
-    GraphBuilder GGB(*GlobalsGraph);
+    GraphBuilder GGB(*GlobalsGraph, *this);
 
     // Add initializers for all of the globals to the globals graph.
     for (Module::global_iterator I = M.global_begin(), E = M.global_end();
