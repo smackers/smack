@@ -326,7 +326,7 @@ then
 
   git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}
-  git checkout ${BOOGIE_COMMIT}
+  git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
@@ -350,7 +350,7 @@ then
   cd ${CORRAL_DIR}
 #  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 #  cd ${CORRAL_DIR}
-#  git checkout ${CORRAL_COMMIT}
+#  git reset --hard ${CORRAL_COMMIT}
   cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
