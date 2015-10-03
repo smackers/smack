@@ -78,13 +78,6 @@ then
 fi
 
 ################################
-# Generate folder for this run
-################################
-OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
-OUTFOLDER=exec_${OUTFOLDER}
-mkdir -p ${OUTFOLDER}
-
-################################
 # Copy over input xml file,
 # while replacing {SETNAME} to
 # be the target set name
@@ -92,6 +85,14 @@ mkdir -p ${OUTFOLDER}
 
 SETNAME=$1
 THREADCOUNT=$2
+
+################################
+# Generate folder for this run
+################################
+OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
+OUTFOLDER=exec_${OUTFOLDER}_${SETNAME}
+mkdir -p ${OUTFOLDER}
+
 sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 
 
@@ -101,9 +102,9 @@ sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 rm nohup.out -f
 if [[ $3 == "debug" ]]
 then
-    nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
+    nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} > nohup_${OUTFOLDER}.out 2>&1&
 else
-    nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
+    nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} > nohup_${OUTFOLDER}.out 2>&1&
 fi
 ../checkWitnesses.py ${OUTFOLDER}
 cd ..

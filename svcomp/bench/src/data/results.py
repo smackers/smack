@@ -121,4 +121,5 @@ if __name__ == '__main__':
         printError("No category parameter passed")
     runSets = filterResultsByCategory(runSets, form)
     runSets = filterResultsByOptions(runSets, form, allOptions)
+    runSets.sort(key=lambda x: x.inXml)
     generateTable(runSets)

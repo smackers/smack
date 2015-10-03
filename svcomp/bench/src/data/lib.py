@@ -33,7 +33,15 @@ class RunSet:
         """
         self.inXml = inputXml
         self.outXml = outputXml
-        self.name = ET.parse(self.outXml).getroot().get("name")
+        #self.name = ET.parse(self.outXml).getroot().get("name")
+        #   Avoid parsing all output xml files
+        reg = re.compile(r'<result\s.*\sname="(.*?)"\s.*>')
+        with open(self.outXml) as f:
+            for line in f:
+                a = reg.match(line)
+                if a:
+                    self.name = a.group(1)
+                    break
         self.options = self.getOptions()
         self.fileSet = self.getSetName()
 
@@ -74,7 +82,9 @@ def getAllRunSets(searchRoot, folderPrefix):
     allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*.xml")
     runSets = []
     for outFile in allOutXml:
-        inputFilename = ET.parse(outFile).getroot().get("benchmarkname") + ".xml"
+        #inputFilename = ET.parse(outFile).getroot().get("benchmarkname") + ".xml"
+        #   Avoid parsing all output XML files
+        inputFilename = "smack.xml"  
         #Get rid of outFile name and results folder
         inputPath = path.split(path.split(outFile)[0])[0]
         inFile = path.join(inputPath,inputFilename)
