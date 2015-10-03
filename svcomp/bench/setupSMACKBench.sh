@@ -122,7 +122,9 @@ mkdir -p ${INSTALLDIR}
 #svn export https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/data/sv-benchmarks
 #Use our copy of benchmarks, instead
 git clone https://github.com/smackers/sv-benchmarks.git ${INSTALLDIR}/data/sv-benchmarks
+cd ${INSTALLDIR}/data/sv-benchmarks
 git filter-branch --subdirectory-filter c
+cd ${SRCDIR}
 
 
 ##########################

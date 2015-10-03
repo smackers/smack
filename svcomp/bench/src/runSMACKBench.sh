@@ -23,12 +23,13 @@ USAGE="
 Usage:
     ./runSMACKBench.sh cancel                     -Kills all SMACKBench instances
  or ./runSMACKBench.sh clean                      -Deletes all SMACKBench results
- or ./runSMACKBench.sh SET XMLIN THREADS [debug]  -Executes SMACKBench
+ or ./runSMACKBench.sh SET XMLIN THREADS THREADMEM [debug]  -Executes SMACKBench
 
 Parameters:
     SET        The svcomp category set to benchmark
     XMLIN      The input xml file specifying the parameters to run with
     THREADS    The number of concurrent tests to run
+    THREADMEM  The amount of memory to allocate to each thread
 
 
 Options:
@@ -65,7 +66,7 @@ then
 fi
 if [[ -z $2 ]]
 then
-    echo "You must specify an svcomp set to benchmark!"
+    echo "You must specify an parameter set (input xml file)!"
     echo "$USAGE"
     exit
 fi
@@ -75,15 +76,24 @@ then
     echo "$USAGE"
     exit
 fi
+if [[ -z $4 ]]
+then
+    echo "You must specify the number of concurrent tests to run!"
+    echo "$USAGE"
+    exit
+fi
 
 cd data
 
+SETNAME=$1
+INPUTXMLFILE=$2
+THREADCOUNT=$3
+MEMLIMIT=$4
+CORELIMIT=2
+
+
 BENCHEXECPATH=../benchexec/bin
 INPUTXMLPATH=../inputXMLFiles
-
-SETNAME=$1
-THREADCOUNT=$2
-INPUTXMLFILE=$3
 INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 
 ################################
@@ -99,8 +109,10 @@ mkdir -p ${OUTFOLDER}
 # be the target set name
 ################################
 sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
+sed -i "s/{MEMLIMIT}/${MEMLIMIT}/" ${OUTFOLDER}/${INPUTXMLFILE}
+sed -i "s/{CORELIMIT}/${CORELIMIT}/" ${OUTFOLDER}/${INPUTXMLFILE}
 
-if [[ $3 == "debug" ]]
+if [[ $5 == "debug" ]]
 then
     ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 else
