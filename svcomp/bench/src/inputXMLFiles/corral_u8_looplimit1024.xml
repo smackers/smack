@@ -5,9 +5,9 @@
   <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
 
   <rundefinition name="corral_u8_looplimit1024">
-    <option name="- -verifier">corral</option>
-    <option name="- -unroll">2</option>
-    <option name="- -loop-limit">1024</option>
+    <option name="--verifier">corral</option>
+    <option name="--unroll">2</option>
+    <option name="--loop-limit">1024</option>
   </rundefinition>
 
   <sourcefiles name="{SETNAME}">
