@@ -119,7 +119,10 @@ mkdir -p ${INSTALLDIR}
 ##########################
 #Download svcomp benchmarks
 #Using export instead of clone so it isn't 6GB of DL (still 3.2GB - is it worth the extra 3 to do checkout?)
-svn export https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/data/sv-benchmarks
+#svn export https://svn.sosy-lab.org/software/sv-benchmarks/trunk/c/ ${INSTALLDIR}/data/sv-benchmarks
+#Use our copy of benchmarks, instead
+git clone https://github.com/smackers/sv-benchmarks.git ${INSTALLDIR}/data/sv-benchmarks
+git filter-branch --subdirectory-filter c
 
 
 ##########################
