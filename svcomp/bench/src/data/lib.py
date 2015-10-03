@@ -82,12 +82,15 @@ def getAllRunSets(searchRoot, folderPrefix):
     allOutXml = glob.glob(searchRoot + "/" + folderPrefix + "*/results/*.xml")
     runSets = []
     for outFile in allOutXml:
-        #inputFilename = ET.parse(outFile).getroot().get("benchmarkname") + ".xml"
-        #   Avoid parsing all output XML files
-        inputFilename = "smack.xml"  
+
+
         #Get rid of outFile name and results folder
         inputPath = path.split(path.split(outFile)[0])[0]
-        inFile = path.join(inputPath,inputFilename)
+        #inputFilename = ET.parse(outFile).getroot().get("benchmarkname") + ".xml"
+        #   Avoid parsing all output XML files
+        #inputFilename = glob.glob(inputPath + '/*.xml')[0]
+        #inFile = path.join(inputPath,inputFilename)
+        inFile = glob.glob(inputPath + '/*.xml')[0]
         runSets.append(RunSet(outFile,inFile))
         
     #For each set, if an option isn't used, set it to false.

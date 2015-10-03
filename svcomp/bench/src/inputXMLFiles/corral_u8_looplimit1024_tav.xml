@@ -4,10 +4,11 @@
 
   <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
 
-  <rundefinition name="corral_u8_looplimit1024">
+  <rundefinition name="corral_u8_looplimit1024_tav">
     <option name="--verifier">corral</option>
     <option name="--unroll">8</option>
     <option name="--loop-limit">1024</option>
+    <option name="--verifier-options=/trackAllVars"/>
   </rundefinition>
 
   <sourcefiles name="{SETNAME}">

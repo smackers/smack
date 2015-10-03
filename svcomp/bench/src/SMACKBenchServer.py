@@ -64,7 +64,7 @@ def run_server():
         cur = dequeue(args.queue_file, lock_folder)
         if cur:
             cur = cur.split()
-            cmd =  ['./runSMACKBench.sh', cur[0], cur[1]]
+            cmd =  ['nohup', './runSMACKBench.sh', cur[0], cur[1]]
             cmd += [args.thread_count, args.memory_limit]
             print(cmd)
             #cmd = ['ls']
