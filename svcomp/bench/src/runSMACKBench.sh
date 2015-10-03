@@ -21,12 +21,13 @@
 
 USAGE="
 Usage:
-    ./runSMACKBench.sh cancel               -Kills all SMACKBench instances
- or ./runSMACKBench.sh clean                -Deletes all SMACKBench results
- or ./runSMACKBench.sh SET THREADS [debug]  -Executes SMACKBench
+    ./runSMACKBench.sh cancel                     -Kills all SMACKBench instances
+ or ./runSMACKBench.sh clean                      -Deletes all SMACKBench results
+ or ./runSMACKBench.sh SET XMLIN THREADS [debug]  -Executes SMACKBench
 
 Parameters:
     SET        The svcomp category set to benchmark
+    XMLIN      The input xml file specifying the parameters to run with
     THREADS    The number of concurrent tests to run
 
 
@@ -38,7 +39,7 @@ if [[ $1 == "clean" ]]
     then
     rm data/exec* -rf
     rm data/*.bc data/*.bpl data/*.c data/*.log -f
-    rm data/nohup.out -f
+    rm data/nohup*.out -f
     exit
 fi
 
@@ -53,14 +54,6 @@ then
     exit
 fi
 
-cd data
-
-BENCHEXECPATH=../benchexec/bin
-
-INPUTXMLPATH=../inputXMLFiles
-INPUTXMLFILE=smack.xml
-INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
-
 ################################
 # Validate input args
 ################################
@@ -72,19 +65,26 @@ then
 fi
 if [[ -z $2 ]]
 then
+    echo "You must specify an svcomp set to benchmark!"
+    echo "$USAGE"
+    exit
+fi
+if [[ -z $3 ]]
+then
     echo "You must specify the number of concurrent tests to run!"
     echo "$USAGE"
     exit
 fi
 
-################################
-# Copy over input xml file,
-# while replacing {SETNAME} to
-# be the target set name
-################################
+cd data
+
+BENCHEXECPATH=../benchexec/bin
+INPUTXMLPATH=../inputXMLFiles
 
 SETNAME=$1
 THREADCOUNT=$2
+INPUTXMLFILE=$3
+INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 
 ################################
 # Generate folder for this run
@@ -93,18 +93,18 @@ OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
 OUTFOLDER=exec_${OUTFOLDER}_${SETNAME}
 mkdir -p ${OUTFOLDER}
 
+################################
+# Copy over input xml file,
+# while replacing {SETNAME} to
+# be the target set name
+################################
 sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
 
-
-
-# Use nohup, so job doesn't terminate if SSH session dies
-#  First, remove any existing nohup.out
-rm nohup.out -f
 if [[ $3 == "debug" ]]
 then
-    nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} > nohup_${OUTFOLDER}.out 2>&1&
+    ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 else
-    nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} > nohup_${OUTFOLDER}.out 2>&1&
+    ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 fi
 ../checkWitnesses.py ${OUTFOLDER}
 cd ..
