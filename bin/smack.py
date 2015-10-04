@@ -445,8 +445,10 @@ def verify_bpl(args):
   if args.smackd:
     print smackdOutput(verifier_output)
 
-  else:
+  elif result == 'verified':
     print results()[result]
+
+  else:
     if result == 'error':
       if args.language == 'svcomp':
         error = smackJsonToXmlGraph(smackdOutput(verifier_output))
@@ -459,6 +461,8 @@ def verify_bpl(args):
 
       if not args.quiet:
         print error
+
+    sys.exit(results()[result])
 
 def error_step(step):
   FILENAME = '[\w#$~%.\/-]*'
@@ -558,8 +562,7 @@ if __name__ == '__main__':
       verify_bpl(args)
 
   except KeyboardInterrupt:
-    if not args.quiet:
-      print >> sys.stderr, "SMACK aborted by keyboard interrupt."
+    sys.exit("SMACK aborted by keyboard interrupt.")
 
   finally:
     for f in temporary_files:
