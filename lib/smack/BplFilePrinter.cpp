@@ -19,8 +19,7 @@ bool BplFilePrinter::runOnModule(llvm::Module& m) {
   ostringstream s;
   program.print(s);
   out << s.str();
-  DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
+  // DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
   return false;
 }
 }
-

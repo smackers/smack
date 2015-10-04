@@ -19,10 +19,21 @@ extern "C" {
 #define __builtin_va_start __builtinx_va_start
 #define __builtin_object_size __builtinx_object_size
 
+// For handling of va_start macro
+void __builtinx_va_start(char*,char*);
+
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
+
+typedef struct smack_object { void* dummy; }* smack_object_t;
+smack_object_t __SMACK_object(void*, unsigned);
+smack_object_t __SMACK_return_object(unsigned);
+
+typedef struct smack_value { void* dummy; }* smack_value_t;
+smack_value_t __SMACK_value();
+smack_value_t __SMACK_return_value(void);
 
 // Sugar for __SMACK_init_func_XXX()
 #define __SMACK_INIT(x) void __SMACK_init_func_##x()

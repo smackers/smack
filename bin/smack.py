@@ -28,9 +28,11 @@ def frontends():
     'i': clang_frontend,
     'cc': clang_frontend,
     'cpp': clang_frontend,
+    'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
-    'bc': empty_frontend,
-    'll': empty_frontend,
+    'bc': llvm_frontend,
+    'll': llvm_frontend,
+    'bpl': boogie_frontend,
   }
 
 def results():
@@ -69,7 +71,7 @@ def arguments():
 
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('input_file', metavar='input-file',
+  parser.add_argument('input_files', metavar='input-files', nargs='+',
     type = lambda x: (lambda r: x if r is None else parser.error(r))(validate_input_file(x)),
     help = 'source file to be translated/verified')
 
@@ -110,6 +112,9 @@ def arguments():
   translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
     type=str, help='save (intermediate) Boogie code to FILE')
 
+  translate_group.add_argument('--no-memory-splitting', action="store_true", default=False,
+    help='disable region-based memory splitting')
+
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
 
@@ -123,7 +128,7 @@ def arguments():
     help='disable bit-precision-related optimizations with DSA')
 
   translate_group.add_argument('--entry-points', metavar='PROC', nargs='+',
-    default='main', help='specify top-level procedures [default: %(default)s]')
+    default=['main'], help='specify top-level procedures [default: %(default)s]')
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -169,7 +174,8 @@ def arguments():
 def temporary_file(prefix, extension, args):
   f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
   os.close(f)
-  temporary_files.append(name)
+  if not args.debug:
+    temporary_files.append(name)
   return name
 
 def timeout_killer(proc, timed_out):
@@ -177,32 +183,42 @@ def timeout_killer(proc, timed_out):
     timed_out[0] = True
     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
-def try_command(cmd):
-  output = ""
+def try_command(cmd, cwd=None, console=False, timeout=None):
+  console = (console or args.verbose or args.debug) and not args.quiet
+  filelog = args.debug
+  output = ''
   proc = None
   timer = None
   try:
-    proc = subprocess.Popen(cmd, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    timed_out = [False]
-    timer = Timer(args.time_limit, timeout_killer, [proc, timed_out])
-    timer.start()
-
-    if args.verbose or args.debug:
-      output = ""
+    if args.debug:
       print "Running %s" % " ".join(cmd)
-      while proc.poll() is None:
+
+    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
+      stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    if timeout:
+      timed_out = [False]
+      timer = Timer(timeout, timeout_killer, [proc, timed_out])
+      timer.start()
+
+    if console:
+      while True:
         line = proc.stdout.readline()
         if line:
-          sys.stdout.write(line)
           output += line
-        else:
+          print line,
+        elif proc.poll() is not None:
           break
+      proc.wait
+    else:
+      output = proc.communicate()[0]
 
-    output += proc.communicate()[0]
-    timer.cancel()
+    if timeout:
+      timer.cancel()
+
     rc = proc.returncode
     proc = None
-    if timed_out[0]:
+    if timeout and timed_out[0]:
       return output + ("\n%s timed out." % cmd[0])
     elif rc:
       raise RuntimeError("%s returned non-zero." % cmd[0])
@@ -210,49 +226,111 @@ def try_command(cmd):
       return output
 
   except (RuntimeError, OSError) as err:
-    if output:
-      print >> sys.stderr, output
+    print >> sys.stderr, output
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
   finally:
-    if timer: timer.cancel()
+    if timeout and timer: timer.cancel()
     if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    if filelog:
+      with open(temporary_file(cmd[0], '.log', args), 'w') as f:
+        f.write(output)
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
-  lang = args.language if args.language else os.path.splitext(args.input_file)[1][1:]
+  if args.language:
+    lang = args.language
+  else:
+    extensions = map(lambda f: os.path.splitext(f)[1][1:], args.input_files)
+    if any(map(lambda ext: ext != extensions[0], extensions)):
+      raise RuntimeError("All input files must have the same file type (extension).")
+    lang = extensions[0]
   return frontends()[lang](args)
 
-def empty_frontend(args):
-  """Generate the LLVM bitcode file by copying the input file."""
-  shutil.copy(args.input_file, args.bc_file)
+def smack_root():
+  return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+def smack_headers():
+  return os.path.join(smack_root(), 'share', 'smack', 'include')
+
+def smack_lib():
+  return os.path.join(smack_root(), 'share', 'smack', 'lib', 'smack.c')
+
+def default_clang_compile_command(args):
+  cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
+  cmd += ['-I' + smack_headers()]
+  cmd += args.clang_options.split()
+  cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
+  return cmd
+
+def boogie_frontend(args):
+  """Generate Boogie code by concatenating the input file(s)."""
+  with open(args.bpl_file, 'w') as out:
+    for src in args.input_files:
+      with open(src) as f:
+        out.write(f.read())
+
+def llvm_frontend(args):
+  """Generate Boogie code from LLVM bitcodes."""
+  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+  llvm_to_bpl(args)
 
 def clang_frontend(args):
-  """Generate an LLVM bitcode file from C-language source(s)."""
+  """Generate Boogie code from C-language source(s)."""
 
-  smack_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-  smack_headers = os.path.join(smack_root, 'share', 'smack', 'include')
-  smack_lib = os.path.join(smack_root, 'share', 'smack', 'lib', 'smack.c')
+  bitcodes = []
+  compile_command = default_clang_compile_command(args)
+  smack_bc = temporary_file('smack', '.bc', args)
+  try_command(compile_command + [smack_lib(), '-o', smack_bc])
+  bitcodes.append(smack_bc)
+  for c in args.input_files:
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(compile_command + ['-o', bc, c], console=True)
+    bitcodes.append(bc)
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  llvm_to_bpl(args)
+
+def json_compilation_database_frontend(args):
+  """Generate Boogie code from a JSON compilation database."""
+
+  if len(args.input_files) > 1:
+    raise RuntimeError("Expected a single JSON compilation database.")
+
+  output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
+  optimization_flags = re.compile(r"-O[1-9]\b")
   smack_bc = temporary_file('smack', '.bc', args)
 
-  compile_command = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
-  compile_command += args.clang_options.split()
-  compile_command += ['-I' + smack_headers, '-include' + 'smack.h']
-  compile_command += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
-  link_command = ['llvm-link']
+  try_command(default_clang_compile_command(args) + [smack_lib(), '-o', smack_bc])
 
-  try_command(compile_command + [smack_lib, '-o', smack_bc])
-  try_command(compile_command + [args.input_file, '-o', args.bc_file])
-  try_command(link_command + [args.bc_file, smack_bc, '-o', args.bc_file])
+  with open(args.input_files[0]) as f:
+    for cc in json.load(f):
+      if 'objects' in cc:
+        # TODO what to do when there are multiple linkings?
+        bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + [smack_bc])
+
+      else:
+        out_file = output_flags.findall(cc['command'])[0] + '.bc'
+        command = cc['command']
+        command = output_flags.sub(r"-o \1.bc", command)
+        command = optimization_flags.sub("-O0", command)
+        command = command + " -emit-llvm"
+        try_command(command.split(),cc['directory'], console=True)
+
+  llvm_to_bpl(args)
 
 def svcomp_frontend(args):
-  """Generate an LLVM bitcode file from SVCOMP-style C-language source(s)."""
+  """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
-  name = os.path.splitext(os.path.basename(args.input_file))[0]
+  if len(args.input_files) > 1:
+    raise RuntimeError("Expected a single SVCOMP input file.")
+
+  name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
 
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
+  args.clang_options += " -include smack.h"
 
-  if os.path.splitext(args.input_file)[1] == ".i":
+  if os.path.splitext(args.input_files[0])[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
@@ -260,7 +338,7 @@ def svcomp_frontend(args):
     clean = temporary_file(name, '.clean.c', args)
     tokenized = temporary_file(name, '.tokenized.c', args)
 
-    with open(args.input_file, "r") as f:
+    with open(args.input_files[0], "r") as f:
       cleanup = f.read()
     cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
     cleanup = beforeTokenReplace(cleanup)
@@ -271,21 +349,26 @@ def svcomp_frontend(args):
     with open(tokenized, 'w') as f:
       f.write(afterTokenReplace(output))
 
-    args.input_file = tokenized
+    args.input_files[0] = tokenized
 
   clang_frontend(args)
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
-  cmd = ['smack', args.bc_file, '-bpl', args.bpl_file]
+  cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-source-loc-syms']
+  cmd += ['-enable-type-inference-opts']
+  for ep in args.entry_points:
+    cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.bit_precise: cmd += ['-bit-precise']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
-  try_command(cmd)
+  if args.no_memory_splitting: cmd += ['-no-memory-splitting']
+  try_command(cmd, console=True)
+  annotate_bpl(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -326,7 +409,7 @@ def verify_bpl(args):
   if args.verifier == 'boogie':
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/nologo"]
+    command += ["/nologo", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
     command += ["/loopUnroll:%d" % args.unroll]
@@ -356,7 +439,7 @@ def verify_bpl(args):
   if args.verifier_options:
     command += args.verifier_options.split()
 
-  verifier_output = try_command(command)
+  verifier_output = try_command(command, timeout=args.time_limit)
   result = verification_result(verifier_output)
 
   if args.smackd:
@@ -368,7 +451,7 @@ def verify_bpl(args):
       if args.language == 'svcomp':
         error = smackJsonToXmlGraph(smackdOutput(verifier_output))
       else:
-        error = error_trace(verifier_ouptut, args)
+        error = error_trace(verifier_output, args)
 
       if args.error_file:
         with open(args.error_file, 'w') as f:
@@ -458,6 +541,7 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   return json_string
 
+
 if __name__ == '__main__':
   try:
     args = arguments()
@@ -466,8 +550,6 @@ if __name__ == '__main__':
       print "SMACK program verifier version %s" % VERSION
 
     frontend(args)
-    llvm_to_bpl(args)
-    annotate_bpl(args)
 
     if args.no_verify:
       if not args.quiet:

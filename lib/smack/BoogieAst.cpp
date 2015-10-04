@@ -244,13 +244,13 @@ Decl* Decl::constant(string name, string type, vector<const Attr*> ax, bool uniq
 Decl* Decl::variable(string name, string type) {
   return new VarDecl(name, type);
 }
-Decl* Decl::procedure(Program& p, string name, 
+Decl* Decl::procedure(Program& p, string name,
     vector< pair<string,string> > args, vector< pair<string,string> > rets,
     vector<Block*> blocks) {
   return new ProcDecl(p,name,args,rets,blocks);
 }
-Decl* Decl::code(string s) {
-  return new CodeDecl(s);
+Decl* Decl::code(string name, string s) {
+  return new CodeDecl(name, s);
 }
 
 ostream& operator<<(ostream& os, const Expr& e) {
@@ -519,7 +519,7 @@ void HavocStmt::print(ostream& os) const {
 void ReturnStmt::print(ostream& os) const {
   os << "return";
   if (expr)
-    os << " " << expr;  
+    os << " " << expr;
   os << ";";
 }
 
@@ -615,7 +615,7 @@ void ProcDecl::print(ostream& os) const {
 }
 
 void CodeDecl::print(ostream& os) const {
-  os << name;
+  os << code;
 }
 
 void Block::print(ostream& os) const {
@@ -630,4 +630,3 @@ void Program::print(ostream& os) const {
   os << endl;
 }
 }
-

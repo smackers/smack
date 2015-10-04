@@ -5,7 +5,7 @@
 #
 LEVEL=../..
 
-TOOLNAME=smack
+TOOLNAME=llvm2bpl
 LINK_COMPONENTS = all
 # LLVMLIBS = LLVMTransformUtils.a LLVMipa.a LLVMAnalysis.a LLVMTarget.a LLVMMC.a LLVMObject.a LLVMBitReader.a LLVMCore.a LLVMSupport.a
 USEDLIBS = smack.a LLVMDataStructure.a AssistDS.a
@@ -14,4 +14,3 @@ USEDLIBS = smack.a LLVMDataStructure.a AssistDS.a
 # Include Makefile.common so we know what to do.
 #
 include $(LEVEL)/Makefile.common
-

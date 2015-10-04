@@ -16,6 +16,7 @@
 
 #include "dsa/DataStructure.h"
 #include "dsa/DSGraph.h"
+#include "dsa/DSMonitor.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/DenseSet.h"
@@ -78,6 +79,7 @@ namespace {
     LocalDataStructures* DS;
     const DataLayout& TD;
     DSNode *VAArray;
+    DSMonitor *M;
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper functions used to implement the visitation functions...
@@ -87,8 +89,8 @@ namespace {
     /// createNode - Create a new DSNode, ensuring that it is properly added to
     /// the graph.
     ///
-    DSNode *createNode() 
-    {   
+    DSNode *createNode()
+    {
       DSNode* ret = new DSNode(&G);
       assert(ret->getParentGraph() && "No parent?");
       return ret;
@@ -146,7 +148,12 @@ namespace {
 
   public:
     GraphBuilder(Function &f, DSGraph &g, LocalDataStructures& DSi)
-      : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0) {
+      : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0),
+        M(new DSMonitor(&DSi)) {
+
+      DEBUG(errs() << "[local] Building graph for function: "
+                   << f.getName() << "\n");
+
       // Create scalar nodes for all pointer arguments...
       for (Function::arg_iterator I = f.arg_begin(), E = f.arg_end();
            I != E; ++I) {
@@ -207,8 +214,8 @@ namespace {
     }
 
     // GraphBuilder ctor for working on the globals graph
-    explicit GraphBuilder(DSGraph& g)
-      :G(g), FB(0), TD(g.getDataLayout()), VAArray(0)
+    explicit GraphBuilder(DSGraph& g, LocalDataStructures& DSi)
+      :G(g), FB(0), TD(g.getDataLayout()), VAArray(0), M(new DSMonitor(&DSi))
     {}
 
     void mergeInGlobalInitializer(GlobalVariable *GV);
@@ -216,15 +223,15 @@ namespace {
     void mergeFunction(Function* F) { getValueDest(F); }
   };
 
-  /// Traverse the whole DSGraph, and propagate the unknown flags through all 
+  /// Traverse the whole DSGraph, and propagate the unknown flags through all
   /// out edges.
   static void propagateUnknownFlag(DSGraph * G) {
     std::vector<DSNode *> workList;
     DenseSet<DSNode *> visited;
     for (DSGraph::node_iterator I = G->node_begin(), E = G->node_end(); I != E; ++I)
-      if (I->isUnknownNode()) 
+      if (I->isUnknownNode())
         workList.push_back(&*I);
-  
+
     while (!workList.empty()) {
       DSNode * N = workList.back();
       workList.pop_back();
@@ -247,7 +254,7 @@ namespace {
 /// getValueDest - Return the DSNode that the actual value points to.
 ///
 DSNodeHandle GraphBuilder::getValueDest(Value* V) {
-  if (isa<Constant>(V) && cast<Constant>(V)->isNullValue()) 
+  if (isa<Constant>(V) && cast<Constant>(V)->isNullValue())
     return 0;  // Null doesn't point to anything, don't add to ScalarMap!
 
   DSNodeHandle &NH = G.getNodeForValue(V);
@@ -363,6 +370,8 @@ void GraphBuilder::setDestTo(Value &V, const DSNodeHandle &NH) {
 // incoming values point to... which effectively causes them to be merged.
 //
 void GraphBuilder::visitPHINode(PHINode &PN) {
+  DEBUG(errs() << "[local] visiting phi node: " << PN.getName() << "\n");
+
   if (!isa<PointerType>(PN.getType())) return; // Only pointer PHIs
 
   DSNodeHandle &PNDest = G.getNodeForValue(&PN);
@@ -382,6 +391,7 @@ void GraphBuilder::visitSelectInst(SelectInst &SI) {
 }
 
 void GraphBuilder::visitLoadInst(LoadInst &LI) {
+  DEBUG(errs() << "[local] visiting load: " << LI << "\n");
   //
   // Create a DSNode for the pointer dereferenced by the load.  If the DSNode
   // is NULL, do nothing more (this can occur if the load is loading from a
@@ -411,6 +421,7 @@ void GraphBuilder::visitLoadInst(LoadInst &LI) {
 }
 
 void GraphBuilder::visitStoreInst(StoreInst &SI) {
+  DEBUG(errs() << "[local] visiting store: " << SI << "\n");
   Type *StoredTy = SI.getOperand(0)->getType();
   DSNodeHandle Dest = getValueDest(SI.getOperand(1));
   if (Dest.isNull()) return;
@@ -435,6 +446,7 @@ void GraphBuilder::visitStoreInst(StoreInst &SI) {
 }
 
 void GraphBuilder::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  DEBUG(errs() << "[local] visiting atomic cmpxchg: " << I << "\n");
   if (isa<PointerType>(I.getType())) {
     visitInstruction (I);
     return;
@@ -486,6 +498,7 @@ void GraphBuilder::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 }
 
 void GraphBuilder::visitAtomicRMWInst(AtomicRMWInst &I) {
+  DEBUG(errs() << "[local] visiting atomic RMW: " << I << "\n");
   //
   // Create a DSNode for the dereferenced pointer .  If the DSNode is NULL, do
   // nothing more (this can occur if the pointer is a NULL constant; bugpoint
@@ -510,11 +523,13 @@ void GraphBuilder::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void GraphBuilder::visitReturnInst(ReturnInst &RI) {
+  DEBUG(errs() << "[local] visiting return: " << RI << "\n");
   if (RI.getNumOperands() && isa<PointerType>(RI.getOperand(0)->getType()))
     G.getOrCreateReturnNodeFor(*FB).mergeWith(getValueDest(RI.getOperand(0)));
 }
 
 void GraphBuilder::visitVAArgInst(VAArgInst &I) {
+  DEBUG(errs() << "[local] visiting vaarg: " << I << "\n");
   Module *M = FB->getParent();
   Triple TargetTriple(M->getTargetTriple());
   Triple::ArchType Arch = TargetTriple.getArch();
@@ -536,7 +551,7 @@ void GraphBuilder::visitVAArgInst(VAArgInst &I) {
 
     if (isa<PointerType>(I.getType()))
       Dest.mergeWith(Ptr);
-    return; 
+    return;
   }
 
   default: {
@@ -560,6 +575,7 @@ void GraphBuilder::visitVAArgInst(VAArgInst &I) {
 }
 
 void GraphBuilder::visitIntToPtrInst(IntToPtrInst &I) {
+  DEBUG(errs() << "[local] visiting inttoptr: " << I << "\n");
   DSNode *N = createNode();
   if(I.hasOneUse()) {
     if(isa<ICmpInst>(*(I.use_begin()))) {
@@ -569,10 +585,11 @@ void GraphBuilder::visitIntToPtrInst(IntToPtrInst &I) {
   }
   N->setIntToPtrMarker();
   N->setUnknownMarker();
-  setDestTo(I, N); 
+  setDestTo(I, N);
 }
 
 void GraphBuilder::visitPtrToIntInst(PtrToIntInst& I) {
+  DEBUG(errs() << "[local] visiting ptrtoint: " << I << "\n");
   DSNode* N = getValueDest(I.getOperand(0)).getNode();
   if(I.hasOneUse()) {
     if(isa<ICmpInst>(*(I.use_begin()))) {
@@ -604,6 +621,7 @@ void GraphBuilder::visitPtrToIntInst(PtrToIntInst& I) {
 
 
 void GraphBuilder::visitBitCastInst(BitCastInst &I) {
+  DEBUG(errs() << "[local] visiting bitcast: " << I << "\n");
   if (!isa<PointerType>(I.getType())) return; // Only pointers
   DSNodeHandle Ptr = getValueDest(I.getOperand(0));
   if (Ptr.isNull()) return;
@@ -611,6 +629,7 @@ void GraphBuilder::visitBitCastInst(BitCastInst &I) {
 }
 
 void GraphBuilder::visitCmpInst(CmpInst &I) {
+  DEBUG(errs() << "[local] visiting compare: " << I << "\n");
   //Address can escape through cmps
 }
 
@@ -645,6 +664,7 @@ unsigned getValueOffset(Type *Ty, ArrayRef<unsigned> Idxs,
 }
 
 void GraphBuilder::visitInsertValueInst(InsertValueInst& I) {
+  DEBUG(errs() << "[local] visiting insertvalue: " << I << "\n");
   setDestTo(I, createNode()->setAllocaMarker());
 
   Type *StoredTy = I.getInsertedValueOperand()->getType();
@@ -666,6 +686,7 @@ void GraphBuilder::visitInsertValueInst(InsertValueInst& I) {
 }
 
 void GraphBuilder::visitExtractValueInst(ExtractValueInst& I) {
+  DEBUG(errs() << "[local] visiting extractvalue: " << I << "\n");
   DSNodeHandle Ptr = getValueDest(I.getAggregateOperand());
 
   // Make that the node is read from...
@@ -682,6 +703,7 @@ void GraphBuilder::visitExtractValueInst(ExtractValueInst& I) {
 }
 
 void GraphBuilder::visitGetElementPtrInst(User &GEP) {
+  DEBUG(errs() << "[local] visiting GEP: " << GEP << "\n");
   //
   // Ensure that the indexed pointer has a DSNode.
   //
@@ -690,9 +712,9 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
     NodeH = createNode();
 
   //
-  // There are a few quick and easy cases to handle.  If  the DSNode of the 
-  // indexed pointer is already folded, then we know that the result of the 
-  // GEP will have the same offset into the same DSNode 
+  // There are a few quick and easy cases to handle.  If  the DSNode of the
+  // indexed pointer is already folded, then we know that the result of the
+  // GEP will have the same offset into the same DSNode
   // as the indexed pointer.
   //
 
@@ -796,6 +818,21 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
       if((NodeH.getOffset() || Offset != 0)
          || (!isa<ArrayType>(CurTy)
              && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+
+        M->witness(NodeH, {&GEP, I.getOperand()},
+          "node does not belong to array"
+        );
+
+        DEBUG(
+          errs() << "[local] FOLDING FOR ARRAY ACCESS" << "\n";
+          errs() << "[local] type:    " << *CurTy << "\n";
+          errs() << "[local] offset:  " << Offset
+                 << " (" << NodeH.getOffset() << ")\n";
+          errs() << "[local] size:    " << TD.getTypeAllocSize(CurTy)
+                 << " (" << NodeH.getNode()->getSize() << ")\n";
+          errs() << "[local] value: " << GEP << "\n";
+          errs() << "[local] index: " << *I.getOperand() << "\n";
+        );
         NodeH.getNode()->foldNodeCompletely();
         NodeH.getNode();
         Offset = 0;
@@ -880,6 +917,21 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
         if (NodeH.getOffset() || Offset != 0 ||
             (!isa<ArrayType>(CurTy) &&
              (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+
+          M->witness(NodeH, {&GEP, I.getOperand()},
+            "type-incompatible access into node"
+          );
+
+          DEBUG(
+            errs() << "[local] FOLDING FOR POINTER ACCESS" << "\n";
+            errs() << "[local] type:    " << *CurTy << "\n";
+            errs() << "[local] offset:  " << Offset
+                   << " (" << NodeH.getOffset() << ")\n";
+            errs() << "[local] size:    " << TD.getTypeAllocSize(CurTy)
+                   << " (" << NodeH.getNode()->getSize() << ")\n";
+            errs() << "[local] value: " << GEP << "\n";
+            errs() << "[local] index: " << *I.getOperand() << "\n";
+          );
           NodeH.getNode()->foldNodeCompletely();
           NodeH.getNode();
           Offset = 0;
@@ -901,14 +953,19 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
 
 
 void GraphBuilder::visitCallInst(CallInst &CI) {
+  DEBUG(errs() << "[local] visiting call: " << CI << "\n");
   visitCallSite(&CI);
 }
 
 void GraphBuilder::visitInvokeInst(InvokeInst &II) {
+  DEBUG(errs() << "[local] visiting invoke: " << II << "\n");
   visitCallSite(&II);
 }
 
 void GraphBuilder::visitVAStart(CallSite CS) {
+  DEBUG(errs() << "[local] visiting VA start: "
+               << CS.getCalledValue()->getName() << "\n");
+
   // Build out DSNodes for the va_list depending on the target arch
   // And assosiate the right node with the VANode for this function
   // so it can be merged with the right arguments from callsites
@@ -997,6 +1054,8 @@ void GraphBuilder::visitVAStartNode(DSNode* N) {
 ///   false - This intrinsic is not recognized by DSA.
 ///
 bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
+  DEBUG(errs() << "[local] visiting intrinsic: " << F->getName() << "\n");
+
   ++NumIntrinsicCall;
 
   //
@@ -1037,7 +1096,7 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
   case Intrinsic::vaend:
     // TODO: What to do here?
     return true;
-  case Intrinsic::memcpy: 
+  case Intrinsic::memcpy:
   case Intrinsic::memmove: {
     // Merge the first & second arguments, and mark the memory read and
     // modified.
@@ -1092,7 +1151,7 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
     return true;
 
     //
-    // The return address/frame address aliases with the stack, 
+    // The return address/frame address aliases with the stack,
     // is type-unknown, and should
     // have the unknown flag set since we don't know where it goes.
     //
@@ -1154,8 +1213,14 @@ void GraphBuilder::visitCallSite(CallSite CS) {
     for (CallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end(); I != E; ++I)
       if (isa<PointerType > ((*I)->getType()))
         RetVal.mergeWith(getValueDest(*I));
-    if (!RetVal.isNull())
+    if (!RetVal.isNull()) {
+
+      M->witness(RetVal, {I},
+        "inline asm call"
+      );
+
       RetVal.getNode()->foldNodeCompletely();
+    }
     return;
   }
 
@@ -1226,6 +1291,7 @@ void GraphBuilder::visitCallSite(CallSite CS) {
 // that are of pointer type, make them have unknown composition bits, and merge
 // the nodes together.
 void GraphBuilder::visitInstruction(Instruction &Inst) {
+  DEBUG(errs() << "[local] visiting instruction: " << Inst << "\n");
   DSNodeHandle CurNode;
   if (isa<PointerType>(Inst.getType()))
     CurNode = getValueDest(&Inst);
@@ -1336,6 +1402,11 @@ GraphBuilder::MergeConstantInitIntoNode(DSNodeHandle &NH,
         // array, just fold the DSNode now and get it over with.
         //
         DEBUG(errs() << "Zero size element at end of struct\n" );
+
+        M->witness(NHN, {CS},
+          "zero size element at end of struct"
+        );
+
         NHN->foldNodeCompletely();
       } else {
         assert(0 && "type was smaller than offsets of struct layout indicate");
@@ -1444,7 +1515,7 @@ bool LocalDataStructures::runOnModule(Module &M) {
 
   // First step, build the globals graph.
   {
-    GraphBuilder GGB(*GlobalsGraph);
+    GraphBuilder GGB(*GlobalsGraph, *this);
 
     // Add initializers for all of the globals to the globals graph.
     for (Module::global_iterator I = M.global_begin(), E = M.global_end();
@@ -1480,9 +1551,9 @@ bool LocalDataStructures::runOnModule(Module &M) {
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
     if (!I->isDeclaration()) {
       DSGraph* G = new DSGraph(GlobalECs, getDataLayout(), *TypeSS, GlobalsGraph);
-      GraphBuilder GGB(*I, *G, *this);
       G->getAuxFunctionCalls() = G->getFunctionCalls();
       setDSGraph(*I, G);
+      GraphBuilder GGB(*I, *G, *this);
       propagateUnknownFlag(G);
       callgraph.insureEntry(I);
       G->buildCallGraph(callgraph, GlobalFunctionList, true);
@@ -1520,4 +1591,3 @@ bool LocalDataStructures::runOnModule(Module &M) {
 
   return false;
 }
-

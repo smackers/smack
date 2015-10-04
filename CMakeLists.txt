@@ -118,6 +118,7 @@ add_library(dsa STATIC
   include/dsa/DataStructure.h
   include/dsa/TypeSafety.h
   include/dsa/super_set.h
+  include/dsa/DSMonitor.h
   lib/DSA/AddressTakenAnalysis.cpp
   lib/DSA/CallTargets.cpp
   lib/DSA/DSTest.cpp
@@ -136,6 +137,7 @@ add_library(dsa STATIC
   lib/DSA/BottomUpClosure.cpp
   lib/DSA/DSGraph.cpp
   lib/DSA/EntryPointAnalysis.cpp
+  lib/DSA/DSMonitor.cpp
   lib/DSA/Local.cpp
   lib/DSA/SanityCheck.cpp
 )
@@ -147,10 +149,13 @@ add_library(smackTranslator STATIC
   include/smack/Contracts.h
   include/smack/DSAAliasAnalysis.h
   include/smack/Naming.h
+  include/smack/Regions.h
   include/smack/Slicing.h
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
+  include/smack/CodifyStaticInits.h
+  include/smack/RemoveDeadDefs.h
   include/smack/SmackRep.h
   include/smack/SmackRepFlatMem.h
   lib/smack/BoogieAst.cpp
@@ -159,31 +164,35 @@ add_library(smackTranslator STATIC
   lib/smack/Contracts.cpp
   lib/smack/DSAAliasAnalysis.cpp
   lib/smack/Naming.cpp
+  lib/smack/Regions.cpp
   lib/smack/Slicing.cpp
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
+  lib/smack/CodifyStaticInits.cpp
+  lib/smack/RemoveDeadDefs.cpp
   lib/smack/SmackRep.cpp
   lib/smack/SmackRepFlatMem.cpp
 )
 
-add_executable(smack
-  tools/smack/smack.cpp
+add_executable(llvm2bpl
+  tools/llvm2bpl/llvm2bpl.cpp
 )
 
-set_target_properties(smack smackTranslator assistDS dsa
+set_target_properties(llvm2bpl smackTranslator assistDS dsa
     PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(smack smackTranslator assistDS dsa)
+target_link_libraries(llvm2bpl smackTranslator assistDS dsa)
 
-INSTALL(TARGETS smack
+INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
 )
 
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor.py
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/tokenizer
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/token_replace.py
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/toSVCOMPformat.py

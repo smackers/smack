@@ -33,14 +33,14 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<llvm::DataLayoutPass>();
-    AU.addRequired<DSAAliasAnalysis>();
+    AU.addRequired<Regions>();
   }
 
   virtual bool runOnModule(llvm::Module& m) {
     generateProgram(m);
     return false;
   }
-  
+
   void generateProgram(llvm::Module& m);
 
   Program& getProgram() {
@@ -50,4 +50,3 @@ public:
 }
 
 #endif // SMACKMODULEGENERATOR_H
-

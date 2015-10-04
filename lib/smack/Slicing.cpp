@@ -76,10 +76,12 @@ Slice* getSubslice(Instruction* I, Slices& slices) {
 }
 
 pair<string,string> getParameter(Value* V, Naming& naming, SmackRep& rep) {
-  
+
   if (GlobalVariable* G = dyn_cast<GlobalVariable>(V)) {
-    unsigned r = rep.getRegion(G);
-    return make_pair(rep.memReg(r), rep.memType(r, rep.getElementSize(V)));
+    // XXX I need to be fixed FIXME
+    unsigned r = 0; // rep.getRegion(G);
+    assert(false && "This code is under contsruction.");
+    return make_pair(rep.memReg(r), rep.memType(r));
   }
 
   else if (ConstantDataSequential* S = dyn_cast<ConstantDataSequential>(V))
@@ -242,21 +244,19 @@ const Expr* Slice::getCode(Naming& naming, SmackRep& rep) {
 const Decl* Slice::getBoogieDecl(Naming& naming, SmackRep& rep) {
   if (name == "")
     return 0;
-  naming.enter();
+  Naming localNaming(naming);
   vector< pair<string,string> > params;
   for (unordered_set<Value*>::iterator V = inputs.begin(), E = inputs.end(); V != E; ++V)
-    params.push_back(getParameter(*V,naming,rep));
-  Decl* D = Decl::function(getName(),params,"bool",getCode(naming,rep));
+    params.push_back(getParameter(*V,localNaming,rep));
+  Decl* D = Decl::function(getName(),params,"bool",getCode(localNaming,rep));
   D->addAttr(Attr::attr("inline"));
-  naming.leave();
   return D;
 }
 
 const Expr* Slice::getBoogieExpression(Naming& naming, SmackRep& rep) {
   if (name == "") {
-    naming.enter();
-    const Expr* code = getCode(naming,rep);
-    naming.leave();
+    Naming localNaming(naming);
+    const Expr* code = getCode(localNaming,rep);
     return code;
   }
 

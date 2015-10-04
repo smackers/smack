@@ -37,7 +37,11 @@ def afterTokenReplace(token):
   return token
 
 if not 2 == len(sys.argv) or not os.path.isdir(sys.argv[1]):
-    print('You suck')
+    print
+    print("Usage:\t" + sys.argv[0] + " EXECRESULTDIR")
+    print
+    print("EXECRESULTDIR\tA path to a directory containing a SMACKBench")
+    print("\t\texecution result set, on which to check witnesses")
     exit()
 
 execDir = os.getcwd()

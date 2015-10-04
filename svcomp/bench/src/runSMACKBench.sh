@@ -19,12 +19,28 @@
 #In the future, number of threads and sv-comp benchmark set should be 
 #parameterized.
 
+USAGE="
+Usage:
+    ./runSMACKBench.sh cancel                     -Kills all SMACKBench instances
+ or ./runSMACKBench.sh clean                      -Deletes all SMACKBench results
+ or ./runSMACKBench.sh SET XMLIN THREADS THREADMEM [debug]  -Executes SMACKBench
+
+Parameters:
+    SET        The svcomp category set to benchmark
+    XMLIN      The input xml file specifying the parameters to run with
+    THREADS    The number of concurrent tests to run
+    THREADMEM  The amount of memory to allocate to each thread
+
+
+Options:
+    debug      Runs BenchExec with the debug option"
+
 #Gets rid of existing results
 if [[ $1 == "clean" ]]
     then
     rm data/exec* -rf
-    rm data/*.bc data/*.bpl -f
-    rm data/nohup.out -f
+    rm data/*.bc data/*.bpl data/*.c data/*.log -f
+    rm data/nohup*.out -f
     exit
 fi
 
@@ -39,19 +55,52 @@ then
     exit
 fi
 
+################################
+# Validate input args
+################################
+if [[ -z $1 ]]
+then
+    echo "You must specify an svcomp set to benchmark!"
+    echo "$USAGE"
+    exit
+fi
+if [[ -z $2 ]]
+then
+    echo "You must specify an parameter set (input xml file)!"
+    echo "$USAGE"
+    exit
+fi
+if [[ -z $3 ]]
+then
+    echo "You must specify the number of concurrent tests to run!"
+    echo "$USAGE"
+    exit
+fi
+if [[ -z $4 ]]
+then
+    echo "You must specify the number of concurrent tests to run!"
+    echo "$USAGE"
+    exit
+fi
+
 cd data
 
-BENCHEXECPATH=../benchexec/bin
+SETNAME=$1
+INPUTXMLFILE=$2
+THREADCOUNT=$3
+MEMLIMIT=$4
+CORELIMIT=2
 
+
+BENCHEXECPATH=../benchexec/bin
 INPUTXMLPATH=../inputXMLFiles
-INPUTXMLFILE=smack.xml
 INPUTXML=${INPUTXMLPATH}/${INPUTXMLFILE}
 
 ################################
 # Generate folder for this run
 ################################
 OUTFOLDER=`date +%Y.%m.%d_%H.%M.%S.%N`
-OUTFOLDER=exec_${OUTFOLDER}
+OUTFOLDER=exec_${OUTFOLDER}_${SETNAME}
 mkdir -p ${OUTFOLDER}
 
 ################################
@@ -59,20 +108,15 @@ mkdir -p ${OUTFOLDER}
 # while replacing {SETNAME} to
 # be the target set name
 ################################
-SETNAME=Simple
-THREADCOUNT=4
 sed "s/{SETNAME}/${SETNAME}/" ${INPUTXML} > ${OUTFOLDER}/${INPUTXMLFILE}
+sed -i "s/{MEMLIMIT}/${MEMLIMIT}/" ${OUTFOLDER}/${INPUTXMLFILE}
+sed -i "s/{CORELIMIT}/${CORELIMIT}/" ${OUTFOLDER}/${INPUTXMLFILE}
 
-
-
-# Use nohup, so job doesn't terminate if SSH session dies
-#  First, remove any existing nohup.out
-rm nohup.out -f
-if [[ $1 == "debug" ]]
+if [[ $5 == "debug" ]]
 then
-    nohup ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
+    ${BENCHEXECPATH}/benchexec -d ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 else
-    nohup ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT} &
+    ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 fi
 ../checkWitnesses.py ${OUTFOLDER}
 cd ..

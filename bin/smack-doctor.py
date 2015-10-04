@@ -12,7 +12,7 @@ import platform
 
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
-  
+
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
@@ -50,15 +50,18 @@ def check_verifier(cmd):
   var = cmd.upper()
 
   if exe is not None:
-    check("%s is a batch script" % cmd, '#!/bin/bash' in open(exe).read())
-    check("%s redirects to %s" % (cmd, var), ("$%s $@" % var) in open(exe).read())
+    check("%s is a bash script" % cmd, '#!/bin/bash' in open(exe).read())
+    check("%s redirects to %s" % (cmd, var), ("$%s \"$@\"" % var) in open(exe).read())
 
   check("%s environment variable is set" % var, var in os.environ)
   if var in os.environ:
     check("%s invokes mono" % var, re.match(r'\Amono', os.environ[var]))
-    target = os.environ[var].split()[1]
-    check("%s target exists" % var, os.path.isfile(target))
-    check("%s target is executable" % var, os.access(target, os.X_OK))
+    verifier_exe = os.environ[var].split()[1]
+    check("%s verifier executable exists" % var, os.path.isfile(verifier_exe))
+    check("%s verifier is executable" % var, os.access(verifier_exe, os.X_OK))
+    solver_exe = os.path.join(os.path.dirname(verifier_exe), "z3.exe")
+    check("%s solver executable exists" % var, os.path.isfile(solver_exe))
+    check("%s solver is executable" % var, os.access(solver_exe, os.X_OK))
 
   check_command(cmd)
 
@@ -98,10 +101,8 @@ if __name__ == '__main__':
 
   if not args.quiet:
     print "Checking SMACK itself..."
-  check_command("smack")
-  check_command("llvm2bpl.py")
-  check_command("smackgen.py")
-  check_command("smackverify.py")
+  check_command("llvm2bpl")
+  check_command("smack.py")
 
   if args.prefix is not '':
     check_headers(args.prefix)

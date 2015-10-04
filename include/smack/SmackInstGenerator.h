@@ -75,7 +75,7 @@ public:
   void visitInvokeInst(llvm::InvokeInst& i);
   void visitResumeInst(llvm::ResumeInst& i);
   void visitUnreachableInst(llvm::UnreachableInst& i);
-  
+
   void visitBinaryOperator(llvm::BinaryOperator& I);
 
   // TODO implement extractelement
@@ -84,7 +84,7 @@ public:
 
   void visitExtractValueInst(llvm::ExtractValueInst& i);
   void visitInsertValueInst(llvm::InsertValueInst& i);
-  
+
   void visitAllocaInst(llvm::AllocaInst& i);
   void visitLoadInst(llvm::LoadInst& i);
   void visitStoreInst(llvm::StoreInst& i);
@@ -101,7 +101,7 @@ public:
   void visitCallInst(llvm::CallInst& i);
   // TODO implement va_arg
   void visitLandingPadInst(llvm::LandingPadInst& i);
-  
+
   void visitMemCpyInst(llvm::MemCpyInst& i);
   void visitMemSetInst(llvm::MemSetInst& i);
 };

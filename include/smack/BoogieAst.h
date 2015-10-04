@@ -323,7 +323,7 @@ public:
   string getName() const { return name; }
   virtual kind getKind() const = 0;
   void addAttr(const Attr* a) { attrs.push_back(a); }
-  
+
   static Decl* typee(string name, string type);
   static Decl* axiom(const Expr* e);
   static Decl* function(
@@ -340,12 +340,12 @@ public:
     vector< pair<string,string> > params = vector< pair<string,string> >(),
     vector< pair<string,string> > rets = vector< pair<string,string> >(),
     vector<Block*> blocks = vector<Block*>());
-  static Decl* code(string s);
+  static Decl* code(string name, string s);
 };
 
 struct DeclCompare {
   bool operator()(Decl* a, Decl* b) {
-    assert(a && b);    
+    assert(a && b);
     if (a->getKind() == b->getKind() && a->getKind() != Decl::UNNAMED)
       return a->getName() < b->getName();
     else if (a->getKind() == b->getKind())
@@ -489,8 +489,9 @@ public:
 };
 
 class CodeDecl : public Decl {
+  string code;
 public:
-  CodeDecl(string s) : Decl(s) {}
+  CodeDecl(string name, string s) : Decl(name), code(s) {}
   kind getKind() const { return CODE; }
   void print(ostream& os) const;
 };
@@ -507,9 +508,9 @@ public:
   void addDecl(Decl* d) {
     decls.insert(d);
   }
-  void addDecl(string s) {
+  void addDecl(string name, string s) {
     // TODO Why does this break to put the prelude string inside of a CodeDecl?
-    decls.insert( Decl::code(s) );
+    decls.insert( Decl::code(name, s) );
   }
   void appendPrelude(string s) {
     prelude += s;
@@ -518,9 +519,13 @@ public:
     for (unsigned i = 0; i < ds.size(); i++)
       addDecl(ds[i]);
   }
+  void addDecls(vector<ProcDecl*> ds) {
+    for (unsigned i = 0; i < ds.size(); i++)
+      addDecl(ds[i]);
+  }
   void addDecls(vector<string> ds) {
     for (unsigned i=0; i < ds.size(); i++)
-      addDecl(ds[i]);
+      addDecl("", ds[i]);
   }
   vector<ProcDecl*> getProcs() {
     vector<ProcDecl*> procs;
@@ -540,4 +545,3 @@ ostream& operator<<(ostream& os, Decl* e);
 }
 
 #endif // BOOGIEAST_H
-

@@ -84,22 +84,22 @@ protected:
   DSCallGraph callgraph;
   // List of all address taken functions.
   // This is used as target, of indirect calls for any indirect call site with  // incomplete callee node.
-  std::vector<const Function*> GlobalFunctionList; 
+  std::vector<const Function*> GlobalFunctionList;
 
   void init(DataStructures* D, bool clone, bool useAuxCalls, bool copyGlobalAuxCalls, bool resetAux);
   void init(const DataLayout* T);
 
   void formGlobalECs();
-  
+
   void cloneIntoGlobals(DSGraph* G, unsigned cloneFlags);
   void cloneGlobalsInto(DSGraph* G, unsigned cloneFlags);
 
   void restoreCorrectCallGraph();
-  
+
   void formGlobalFunctionList();
 
-  DataStructures(char & id, const char* name) 
-    : ModulePass(id), TD(0), GraphSource(0), printname(name), GlobalsGraph(0) {  
+  DataStructures(char & id, const char* name)
+    : ModulePass(id), TD(0), GraphSource(0), printname(name), GlobalsGraph(0) {
     // For now, the graphs are owned by this pass
     DSGraphsStolen = false;
   }
@@ -144,7 +144,7 @@ public:
   const DSCallGraph& getCallGraph() const { return callgraph; }
 
   SuperSet<Type*>& getTypeSS() const { return *TypeSS; }
-  
+
   /// deleteValue/copyValue - Interfaces to update the DSGraphs in the program.
   /// These correspond to the interfaces defined in the AliasAnalysis class.
   void deleteValue(Value *V);
@@ -284,8 +284,8 @@ protected:
   void buildIndirectFunctionSets (void);
 public:
   static char ID;
-  CompleteBUDataStructures(char & CID = ID, 
-                           const char* name = "dsa-cbu", 
+  CompleteBUDataStructures(char & CID = ID,
+                           const char* name = "dsa-cbu",
                            const char* printname = "cbu.")
     : BUDataStructures(CID, name, printname, false) {}
   ~CompleteBUDataStructures() { releaseMemory(); }

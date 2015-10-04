@@ -4,26 +4,6 @@
 
   <propertyfile>${sourcefile_path}/ALL.prp</propertyfile>
 
-  <rundefinition name="corral_u8_looplimit1024_bv_m32">
-    <option name="--verifier">corral</option>
-    <option name="--unroll">8</option>
-    <option name="--loop-limit">1024</option>
-    <option name="--bit-precise"/>
-    <option name="--clang-options=-m32"/>
-  </rundefinition>
-  <rundefinition name="corral_u8_looplimit1024_bv">
-    <option name="--verifier">corral</option>
-    <option name="--unroll">8</option>
-    <option name="--loop-limit">1024</option>
-    <option name="--bit-precise"/>
-  </rundefinition>
-  <rundefinition name="corral_u8_looplimit1024_bv_tav">
-    <option name="--verifier">corral</option>
-    <option name="--unroll">8</option>
-    <option name="--loop-limit">1024</option>
-    <option name="--bit-precise"/>
-    <option name="--verifier-options=/trackAllVars"/>
-  </rundefinition>
   <rundefinition name="corral_u8_looplimit1024_bv_tav_si">
     <option name="--verifier">corral</option>
     <option name="--unroll">8</option>
@@ -31,20 +11,6 @@
     <option name="--bit-precise"/>
     <option name="--verifier-options=/trackAllVars /staticInlining"/>
   </rundefinition>
-  <!-- <rundefinition name="corral_u2_looplimit1024">
-    <option name="- -verifier">corral</option>
-    <option name="- -unroll">2</option>
-    <option name="- -loop-limit">1024</option>
-  </rundefinition>
-  <rundefinition name="corral_u8_looplimit1024">
-    <option name="- -verifier">corral</option>
-    <option name="- -unroll">8</option>
-    <option name="- -loop-limit">1024</option>
-  </rundefinition>
-  <rundefinition name="boogie_u8">
-    <option name="- -verifier">boogie</option>
-    <option name="- -unroll">8</option>
-  </rundefinition> -->
 
   <sourcefiles name="{SETNAME}">
     <includesfile>../sv-benchmarks/{SETNAME}.set</includesfile>
