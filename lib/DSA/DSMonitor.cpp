@@ -120,26 +120,23 @@ void DSMonitor::unwatch() {
 void DSMonitor::watch(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
   if (N.getNode()->isCollapsedNode()) {
     unwatch();
+    return;
+  }
 
-  } else if (!VS.empty()) {
+  this->N = N;
+  this->VS = VS;
+  this->message = M;
+  DSGraph *G = N.getNode()->getParentGraph();
+  caption = getCaption(N.getNode(), G);
+
+  if (!VS.empty()) {
     Instruction *I = getInstruction(VS[0]);
-    this->N = N;
-    this->VS = VS;
-    this->message = M;
     if (I) {
       if (MDNode* M = I->getMetadata("dbg")) {
         DILocation L(M);
         location = L.getFilename().str() + ":"
           + std::to_string(L.getLineNumber()) + ":"
           + std::to_string(L.getColumnNumber());
-      }
-    }
-    if (DS && I) {
-      if (Function *F = I->getParent()->getParent()) {
-        if (DS->hasDSGraph(*F)) {
-          DSGraph *G = DS->getDSGraph(*F);
-          caption = getCaption(N.getNode(), G);
-        }
       }
     }
   }
@@ -158,16 +155,16 @@ void DSMonitor::warn() {
     errs() << "(unknown value)" << "\n";
 
   } else {
-    Instruction *I = getInstruction(VS[0]);
-
-    if (BasicBlock *B = I->getParent()) {
-      if (Function *F = B->getParent()) {
-        if (F->hasName())
-          errs() << "in function:\n  " << F->getName() << "\n";
+    if (Instruction *I = getInstruction(VS[0])) {
+      if (BasicBlock *B = I->getParent()) {
+        if (Function *F = B->getParent()) {
+          if (F->hasName())
+            errs() << "in function:\n  " << F->getName() << "\n";
+        }
+        if (B->hasName())
+          errs() << "in block:\n  " << I->getParent()->getName() << "\n";
       }
-
-      if (B->hasName())
-        errs() << "in block:\n  " << I->getParent()->getName() << "\n";
+      errs() << "at instruction:\n" << *I << "\n";
     }
 
     for (auto V : VS)
@@ -189,6 +186,7 @@ void DSMonitor::witness(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
 }
 
 void DSMonitor::check() {
+  assert(N.getNode() && "Expected watched node.");
   if (N.getNode()->isCollapsedNode())
     warn();
   unwatch();
