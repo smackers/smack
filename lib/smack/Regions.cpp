@@ -165,8 +165,6 @@ void Region::merge(Region& R) {
   bool collapse = type != R.type;
   unsigned long low = std::min(offset, R.offset);
   unsigned long high = std::max(offset + length, R.offset + R.length);
-  if (collapse)
-    type = NULL;
   offset = low;
   length = high - low;
   singleton = singleton && R.singleton;
@@ -175,6 +173,7 @@ void Region::merge(Region& R) {
   incomplete = incomplete || R.incomplete;
   complicated = complicated || R.complicated;
   collapsed = collapsed || R.collapsed;
+  type = (bytewise || collapse) ? NULL : type;
 }
 
 bool Region::overlaps(Region& R) {
