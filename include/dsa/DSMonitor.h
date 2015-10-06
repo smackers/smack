@@ -8,7 +8,6 @@
 namespace llvm {
 
 class DSMonitor {
-  DataStructures *DS;
   DSNodeHandle N;
   std::string caption;
   std::vector<Value*> VS;
@@ -18,7 +17,7 @@ class DSMonitor {
   void unwatch();
 
 public:
-  DSMonitor(DataStructures *DS) : DS(DS) { }
+  DSMonitor() { }
   void watch(DSNodeHandle N, std::vector<Value*> VS, std::string M = "");
   void warn();
   void witness(DSNodeHandle N, std::vector<Value*> VS, std::string M = "");

@@ -79,7 +79,7 @@ namespace {
     LocalDataStructures* DS;
     const DataLayout& TD;
     DSNode *VAArray;
-    DSMonitor *M;
+    DSMonitor M;
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper functions used to implement the visitation functions...
@@ -148,8 +148,7 @@ namespace {
 
   public:
     GraphBuilder(Function &f, DSGraph &g, LocalDataStructures& DSi)
-      : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0),
-        M(new DSMonitor(&DSi)) {
+      : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0) {
 
       DEBUG(errs() << "[local] Building graph for function: "
                    << f.getName() << "\n");
@@ -215,7 +214,7 @@ namespace {
 
     // GraphBuilder ctor for working on the globals graph
     explicit GraphBuilder(DSGraph& g, LocalDataStructures& DSi)
-      :G(g), FB(0), TD(g.getDataLayout()), VAArray(0), M(new DSMonitor(&DSi))
+      :G(g), FB(0), TD(g.getDataLayout()), VAArray(0)
     {}
 
     void mergeInGlobalInitializer(GlobalVariable *GV);
@@ -819,7 +818,7 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
          || (!isa<ArrayType>(CurTy)
              && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
 
-        M->witness(NodeH, {&GEP, I.getOperand()},
+        M.witness(NodeH, {&GEP, I.getOperand()},
           "node does not belong to array"
         );
 
@@ -918,7 +917,7 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
             (!isa<ArrayType>(CurTy) &&
              (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
 
-          M->witness(NodeH, {&GEP, I.getOperand()},
+          M.witness(NodeH, {&GEP, I.getOperand()},
             "type-incompatible access into node"
           );
 
@@ -1215,7 +1214,7 @@ void GraphBuilder::visitCallSite(CallSite CS) {
         RetVal.mergeWith(getValueDest(*I));
     if (!RetVal.isNull()) {
 
-      M->witness(RetVal, {I},
+      M.witness(RetVal, {I},
         "inline asm call"
       );
 
@@ -1403,7 +1402,7 @@ GraphBuilder::MergeConstantInitIntoNode(DSNodeHandle &NH,
         //
         DEBUG(errs() << "Zero size element at end of struct\n" );
 
-        M->witness(NHN, {CS},
+        M.witness(NHN, {CS},
           "zero size element at end of struct"
         );
 

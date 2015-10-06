@@ -17,6 +17,7 @@
 #include "dsa/DSGraph.h"
 #include "dsa/DSSupport.h"
 #include "dsa/DSNode.h"
+#include "dsa/DSMonitor.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -373,9 +374,9 @@ void DSNode::markIntPtrFlags() {
       continue;
     }
 
-    // If only either integer or pointer was found, we must see if it 
+    // If only either integer or pointer was found, we must see if it
     // overlaps with any other pointer or integer type at an offset that
-    // comes later. 
+    // comes later.
     unsigned maxOffset = offset + (pointerTy ? ptrSize:intSize);
     unsigned offset2 = offset;
     while(offset2 < maxOffset && offset2 < getSize()) {
@@ -403,9 +404,9 @@ void DSNode::markIntPtrFlags() {
   }
 }
 
-/// growSizeForType - This method increases the size of the node 
+/// growSizeForType - This method increases the size of the node
 /// to accomodate NewTy at the given offset. This is useful for
-/// updating the size of a DSNode, without actually inferring a 
+/// updating the size of a DSNode, without actually inferring a
 /// Type.
 void DSNode::growSizeForType(Type *NewTy, unsigned Offset) {
 
@@ -436,10 +437,10 @@ void DSNode::mergeTypeInfo(Type *NewTy, unsigned Offset) {
   growSizeForType(NewTy, Offset);
 
   // Clang generates loads and stores of struct types.
-  // %tmp12 = load %struct.demand* %retval, align 1 
+  // %tmp12 = load %struct.demand* %retval, align 1
 
   // In such cases, merge type information for each struct field
-  // individually(at the appropriate offset), instead of the 
+  // individually(at the appropriate offset), instead of the
   // struct type.
   if(NewTy->isStructTy()) {
     const DataLayout &TD = getParentGraph()->getDataLayout();
@@ -567,9 +568,9 @@ void DSNode::MergeNodes(DSNodeHandle& CurNodeH, DSNodeHandle& NH) {
 
   // FIXME:Add comments.
   if(NH.getNode()->isArrayNode() && !CurNodeH.getNode()->isArrayNode()) {
-    if(NH.getNode()->getSize() != 0 && CurNodeH.getNode()->getSize() != 0) { 
+    if(NH.getNode()->getSize() != 0 && CurNodeH.getNode()->getSize() != 0) {
       if((NH.getNode()->getSize() != CurNodeH.getNode()->getSize() &&
-          (NH.getOffset() != 0 || CurNodeH.getOffset() != 0) 
+          (NH.getOffset() != 0 || CurNodeH.getOffset() != 0)
           && NH.getNode()->getSize() < CurNodeH.getNode()->getSize())) {
         CurNodeH.getNode()->foldNodeCompletely();
         NH.getNode()->foldNodeCompletely();
@@ -579,9 +580,9 @@ void DSNode::MergeNodes(DSNodeHandle& CurNodeH, DSNodeHandle& NH) {
     }
   }
   if(!NH.getNode()->isArrayNode() && CurNodeH.getNode()->isArrayNode()) {
-    if(NH.getNode()->getSize() != 0 && CurNodeH.getNode()->getSize() != 0) { 
+    if(NH.getNode()->getSize() != 0 && CurNodeH.getNode()->getSize() != 0) {
       if((NH.getNode()->getSize() != CurNodeH.getNode()->getSize() &&
-          (NH.getOffset() != 0 || CurNodeH.getOffset() != 0) 
+          (NH.getOffset() != 0 || CurNodeH.getOffset() != 0)
           && NH.getNode()->getSize() > CurNodeH.getNode()->getSize())) {
         CurNodeH.getNode()->foldNodeCompletely();
         NH.getNode()->foldNodeCompletely();
@@ -891,9 +892,9 @@ void ReachabilityCloner::merge(const DSNodeHandle &NH,
 
       // FIXME:Add comments.
       if(!DN->isArrayNode() && SN->isArrayNode()) {
-        if(DN->getSize() != 0 && SN->getSize() != 0) { 
+        if(DN->getSize() != 0 && SN->getSize() != 0) {
           if((DN->getSize() != SN->getSize() &&
-              (NH.getOffset() != 0 || SrcNH.getOffset() != 0) 
+              (NH.getOffset() != 0 || SrcNH.getOffset() != 0)
               && DN->getSize() > SN->getSize())) {
             DN->foldNodeCompletely();
             DN = NH.getNode();
@@ -901,18 +902,18 @@ void ReachabilityCloner::merge(const DSNodeHandle &NH,
         }
       }
       if(!SN->isArrayNode() && DN->isArrayNode()) {
-        if(DN->getSize() != 0 && SN->getSize() != 0) { 
+        if(DN->getSize() != 0 && SN->getSize() != 0) {
           if((DN->getSize() != SN->getSize() &&
-              (NH.getOffset() != 0 || SrcNH.getOffset() != 0) 
+              (NH.getOffset() != 0 || SrcNH.getOffset() != 0)
               && DN->getSize() < SN->getSize())) {
             DN->foldNodeCompletely();
             DN = NH.getNode();
           }
         }
-      } 
+      }
 
       if (SN->isArrayNode() && DN->isArrayNode()) {
-        if((SN->getSize() != DN->getSize()) && (SN->getSize() != 0) 
+        if((SN->getSize() != DN->getSize()) && (SN->getSize() != 0)
            && DN->getSize() != 0) {
           DN->foldNodeCompletely();
           DN = NH.getNode();
@@ -1040,8 +1041,26 @@ void ReachabilityCloner::mergeCallSite(DSCallSite &DestCS,
   unsigned MinArgs = DestCS.getNumPtrArgs();
   if (SrcCS.getNumPtrArgs() < MinArgs) MinArgs = SrcCS.getNumPtrArgs();
 
-  for (unsigned a = 0; a != MinArgs; ++a)
+  for (unsigned a = 0; a != MinArgs; ++a) {
+    DSMonitor M;
+    CallSite CS = SrcCS.getCallSite();
+    Function* F = CS.getCalledFunction();
+    std::string name = F ? F->getName() : "(unknown)";
+    unsigned b = 0;
+    for (unsigned i=0, j=0; i<CS.arg_size(); ++i)
+      if (dyn_cast<PointerType>(CS.getArgument(i)->getType()))
+        if (j++ == a) {
+          b = i;
+          break;
+        }
+
+    M.watch(DestCS.getPtrArg(a), {SrcCS.getCallSite().getArgument(b)},
+      "unable to merge call-site arguments with parameters to function "
+      + name
+    );
     merge(DestCS.getPtrArg(a), SrcCS.getPtrArg(a));
+    M.check();
+  }
 
   for (unsigned a = MinArgs, e = SrcCS.getNumPtrArgs(); a != e; ++a) {
     // If a call site passes more params, ignore the extra params.
@@ -1361,13 +1380,13 @@ void DataStructures::formGlobalECs() {
 void DataStructures::buildGlobalECs(svset<const GlobalValue*> &ECGlobals) {
   DSScalarMap &SM = GlobalsGraph->getScalarMap();
   EquivalenceClasses<const GlobalValue*> &GlobalECs = SM.getGlobalECs();
-  for (DSGraph::node_iterator I = GlobalsGraph->node_begin(), 
+  for (DSGraph::node_iterator I = GlobalsGraph->node_begin(),
        E = GlobalsGraph->node_end();
        I != E; ++I) {
     if (I->numGlobals() <= 1) continue;
 
     // First, build up the equivalence set for this block of globals.
-    DSNode::globals_iterator i = I->globals_begin(); 
+    DSNode::globals_iterator i = I->globals_begin();
     const GlobalValue *First = *i;
     if (GlobalECs.findValue(*i) != GlobalECs.end())
       First = GlobalECs.getLeaderValue(*i);
@@ -1474,7 +1493,7 @@ void DataStructures::cloneIntoGlobals(DSGraph* Graph, unsigned cloneFlags) {
 }
 
 
-void DataStructures::init(DataStructures* D, bool clone, bool useAuxCalls, 
+void DataStructures::init(DataStructures* D, bool clone, bool useAuxCalls,
                           bool copyGlobalAuxCalls, bool resetAux) {
   assert (!GraphSource && "Already init");
   GraphSource = D;
@@ -1505,7 +1524,7 @@ void DataStructures::init(const DataLayout* T) {
   GlobalsGraph = new DSGraph(GlobalECs, *T, *TypeSS);
 }
 
-// CBU has the correct call graph. All the passes that follow it 
+// CBU has the correct call graph. All the passes that follow it
 // must resotre the call graph, at the end, so that it it correct.
 // This is simpler than keeping all the CBU data structures around.
 // EQBU and subsequent passes must call this.
