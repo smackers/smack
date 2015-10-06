@@ -17,6 +17,10 @@ Regex PROC_IGNORE("^("
 ")$");
 
 const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 64, 96, 128};
+const vector<unsigned> REF_CONSTANTS = {
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+  1024
+};
 
 string indexedName(string name, initializer_list<string> idxs) {
   stringstream idxd;
@@ -816,11 +820,9 @@ string SmackRep::getPrelude() {
   s << Decl::constant("$0",intType(32)) << endl;
   s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << endl;
 
-  for (int i=0; i<15; i++)
-    s << "const $" << i << ".ref: ref;" << endl;
-
-  for (unsigned i = 0; i < 15; ++i) {
+  for (unsigned i : REF_CONSTANTS) {
     stringstream t;
+    s << "const $" << i << ".ref: ref;" << endl;
     t << "$" << i << ".ref";
     s << Decl::axiom(Expr::eq(Expr::id(t.str()),pointerLit((unsigned long) i))) << endl;
   }

@@ -747,5 +747,5 @@ void __SMACK_decls() {
 }
 
 void __SMACK_init_func_memory_model(void) {
-  __SMACK_code("$CurrAddr := 1024;");
+  __SMACK_code("$CurrAddr := $1024.ref;");
 }
