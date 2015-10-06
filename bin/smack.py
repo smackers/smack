@@ -412,26 +412,24 @@ def verify_bpl_svcomp(args):
   corral_command += ["/useProverEvaluate", "/newStratifiedInlining", "/cex:1"]
 
   if args.bit_precise:
-    command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true" % x]
-#    command += ["/bopt:z3opt:smt.relevancy=0" % x]
-    command += ["/bopt:z3opt:smt.bv.enable_int2bv=true" % x]
-    command += ["/bopt:boolControlVC" % x]
+    corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true" % x]
+#    corral_command += ["/bopt:z3opt:smt.relevancy=0" % x]
+    corral_command += ["/bopt:z3opt:smt.bv.enable_int2bv=true" % x]
+    corral_command += ["/bopt:boolControlVC" % x]
 
-  # First run: timeout=50, unroll=4, trackAllVars, staticInlining
-  command = corral_command
-  command += ["/timeLimit:50"]
+  # First run: timeout=50, unroll=4, trackAllVars, staticInlining.
+  time_limit = 50
+  command = list(corral_command)
+  command += ["/timeLimit:%s" % time_limit]
   command += ["/maxStaticLoopBound:1024"]
   command += ["/recursionBound:4"]
   command += ["/trackAllVars", "/staticInlining"]
 
-  verifier_output = try_command(command, timeout=50)
+  verifier_output = try_command(command, timeout=time_limit)
   result = verification_result(verifier_output)
 
-  if result == 'unknown':
-    sys.exit(results()[result])
-
-  elif result == 'error':
-    # Generate error trace and exit
+  if result == 'error':
+    # Generate error trace and exit.
     if args.language == 'svcomp':
       error = smackJsonToXmlGraph(smackdOutput(verifier_output))
     else:
@@ -447,34 +445,49 @@ def verify_bpl_svcomp(args):
     sys.exit(results()[result])
 
   elif result == 'verified':
-    # Indication that these options are working well, so run again
-    # with longer timeout
-    command = corral_command
-    command += ["/timeLimit:800"]
+    # Indication that these options are working well.
+    # Hence, run again with longer timeout.
+    time_limit = 800
+    command = list(corral_command)
+    command += ["/timeLimit:%s" % time_limit]
+    command += ["/v:1"]
     command += ["/maxStaticLoopBound:1024"]
-    command += ["/recursionBound:128"]
+    command += ["/recursionBound:32"]
     command += ["/trackAllVars", "/staticInlining"]
 
-    verifier_output = try_command(command, timeout=800)
+    verifier_output = try_command(command, timeout=time_limit)
     result = verification_result(verifier_output)
+
+    if result == 'error':
+      # Generate error trace and exit.
+      if args.language == 'svcomp':
+        error = smackJsonToXmlGraph(smackdOutput(verifier_output))
+      else:
+        error = error_trace(verifier_output, args)
+
+      if args.error_file:
+        with open(args.error_file, 'w') as f:
+          f.write(error)
+
+      if not args.quiet:
+        print error
+
     sys.exit(results()[result])
 
-  # Previous run timed out
+  # Previous run timed out or returned unknown
   # Run with different options
-  command = corral_command
-  command += ["/timeLimit:800"]
+  time_limit = 800
+  command = list(corral_command)
+  command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
   command += ["/maxStaticLoopBound:1024"]
   command += ["/recursionBound:128"]
   command += ["/trackAllVars"]
 
-  verifier_output = try_command(command, timeout=800)
+  verifier_output = try_command(command, timeout=time_limit)
   result = verification_result(verifier_output)
 
-  if result == 'unknown':
-    sys.exit(results()[result])
-
-  elif result == 'error':
+  if result == 'error':
     # Generate error trace and exit
     if args.language == 'svcomp':
       error = smackJsonToXmlGraph(smackdOutput(verifier_output))
@@ -488,15 +501,12 @@ def verify_bpl_svcomp(args):
     if not args.quiet:
       print error
 
-    sys.exit(results()[result])
-
-  elif result == 'verified':
-    # If we managed to unroll more than 8 times, then return verified, else unknown
+  elif result == 'timeout':
+    # If we managed to unroll more than 8 times, then return verified
     it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
     for match in it:
       if int(match.group(1)) >= 8:
-        sys.exit(results()[result])
-    sys.exit('SMACK result is unknown.')
+        sys.exit(results()['verified'])
 
   sys.exit(results()[result])
 
