@@ -112,13 +112,14 @@ Instruction * getInstruction(Value *V) {
 }
 
 void DSMonitor::unwatch() {
-  N.setTo(nullptr, 0);
+  if (!N.isNull())
+    N.setTo(nullptr, 0);
   caption = "";
   location = "";
 }
 
 void DSMonitor::watch(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
-  if (N.getNode()->isCollapsedNode()) {
+  if (N.isNull() || N.getNode()->isCollapsedNode()) {
     unwatch();
     return;
   }
@@ -177,17 +178,15 @@ void DSMonitor::warn() {
 }
 
 void DSMonitor::witness(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
-  if (N.getNode()->isCollapsedNode())
+  if (N.isNull() || N.getNode()->isCollapsedNode())
     return;
 
   watch(N,VS,M);
-  warn();
-  unwatch();
+  check();
 }
 
 void DSMonitor::check() {
-  assert(N.getNode() && "Expected watched node.");
-  if (N.getNode()->isCollapsedNode())
+  if (!N.isNull() && N.getNode()->isCollapsedNode())
     warn();
   unwatch();
 }
