@@ -187,7 +187,7 @@ string SmackRep::memType(unsigned region) {
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << Naming::PTR_TYPE << "] ";
   const Type* T = regions.get(region).getType();
-  s << (T ? type(T) : "i8");
+  s << (T ? type(T) : intType(8));
   return s.str();
 }
 
@@ -220,7 +220,8 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   unsigned r1 = regions.idx(mci.getOperand(0),length);
   unsigned r2 = regions.idx(mci.getOperand(1),length);
 
-  Decl* P = memcpyProc(type(regions.get(r1).getType()), length);
+  const Type* T = regions.get(r1).getType();
+  Decl* P = memcpyProc(T ? type(T) : intType(8), length);
   program.addDecl(P);
 
   const Value
@@ -250,7 +251,8 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 
   unsigned r = regions.idx(msi.getOperand(0),length);
 
-  Decl* P = memsetProc(type(regions.get(r).getType()), length);
+  const Type* T = regions.get(r).getType();
+  Decl* P = memsetProc(T ? type(T) : intType(8), length);
   program.addDecl(P);
 
   const Value
