@@ -133,7 +133,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality'], default='corral',
+    choices=['boogie', 'corral', 'duality', 'svcomp'], default='corral',
     help='back-end verification engine [default: %(default)s]')
 
   verifier_group.add_argument('--unroll', metavar='N', default='2', type=int,
@@ -403,6 +403,103 @@ def verification_result(verifier_output):
   else:
     return 'unknown'
 
+def verify_bpl_svcomp(args):
+  """Verify the Boogie source file using SVCOMP-tuned heuristics."""
+
+  corral_command = ["corral"]
+  corral_command += [args.bpl_file]
+  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
+  corral_command += ["/useProverEvaluate", "/newStratifiedInlining", "/cex:1"]
+
+  if args.bit_precise:
+    command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true" % x]
+#    command += ["/bopt:z3opt:smt.relevancy=0" % x]
+    command += ["/bopt:z3opt:smt.bv.enable_int2bv=true" % x]
+    command += ["/bopt:boolControlVC" % x]
+
+  # First run: timeout=50, unroll=4, trackAllVars, staticInlining
+  command = corral_command
+  command += ["/timeLimit:50"]
+  command += ["/maxStaticLoopBound:1024"]
+  command += ["/recursionBound:4"]
+  command += ["/trackAllVars", "/staticInlining"]
+
+  verifier_output = try_command(command, timeout=50)
+  result = verification_result(verifier_output)
+
+  if result == 'unknown':
+    sys.exit(results()[result])
+
+  elif result == 'error':
+    # Generate error trace and exit
+    if args.language == 'svcomp':
+      error = smackJsonToXmlGraph(smackdOutput(verifier_output))
+    else:
+      error = error_trace(verifier_output, args)
+
+    if args.error_file:
+      with open(args.error_file, 'w') as f:
+        f.write(error)
+
+    if not args.quiet:
+      print error
+
+    sys.exit(results()[result])
+
+  elif result == 'verified':
+    # Indication that these options are working well, so run again
+    # with longer timeout
+    command = corral_command
+    command += ["/timeLimit:800"]
+    command += ["/maxStaticLoopBound:1024"]
+    command += ["/recursionBound:128"]
+    command += ["/trackAllVars", "/staticInlining"]
+
+    verifier_output = try_command(command, timeout=800)
+    result = verification_result(verifier_output)
+    sys.exit(results()[result])
+
+  # Previous run timed out
+  # Run with different options
+  command = corral_command
+  command += ["/timeLimit:800"]
+  command += ["/v:1"]
+  command += ["/maxStaticLoopBound:1024"]
+  command += ["/recursionBound:128"]
+  command += ["/trackAllVars"]
+
+  verifier_output = try_command(command, timeout=800)
+  result = verification_result(verifier_output)
+
+  if result == 'unknown':
+    sys.exit(results()[result])
+
+  elif result == 'error':
+    # Generate error trace and exit
+    if args.language == 'svcomp':
+      error = smackJsonToXmlGraph(smackdOutput(verifier_output))
+    else:
+      error = error_trace(verifier_output, args)
+
+    if args.error_file:
+      with open(args.error_file, 'w') as f:
+        f.write(error)
+
+    if not args.quiet:
+      print error
+
+    sys.exit(results()[result])
+
+  elif result == 'verified':
+    # If we managed to unroll more than 8 times, then return verified, else unknown
+    it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
+    for match in it:
+      if int(match.group(1)) >= 8:
+        sys.exit(results()[result])
+    sys.exit('SMACK result is unknown.')
+
+  sys.exit(results()[result])
+
 def verify_bpl(args):
   """Verify the Boogie source file with a back-end verifier."""
 
@@ -558,6 +655,8 @@ if __name__ == '__main__':
     if args.no_verify:
       if not args.quiet:
         print "SMACK generated %s" % args.bpl_file
+    elif args.verifier == 'svcomp':
+      verify_bpl_svcomp(args)
     else:
       verify_bpl(args)
 
