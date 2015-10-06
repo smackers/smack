@@ -186,7 +186,8 @@ string SmackRep::memType(unsigned region) {
   if (!regions.get(region).isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << Naming::PTR_TYPE << "] ";
-  s << type(regions.get(region).getType());
+  const Type* T = regions.get(region).getType();
+  s << (T ? type(T) : "i8");
   return s.str();
 }
 

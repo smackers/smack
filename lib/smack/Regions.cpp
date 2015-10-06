@@ -166,7 +166,7 @@ void Region::merge(Region& R) {
   unsigned long low = std::min(offset, R.offset);
   unsigned long high = std::max(offset + length, R.offset + R.length);
   if (collapse)
-    type = Type::getInt8Ty(*context);
+    type = NULL;
   offset = low;
   length = high - low;
   singleton = singleton && R.singleton;
