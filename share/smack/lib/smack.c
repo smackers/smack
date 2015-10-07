@@ -528,6 +528,7 @@ void __SMACK_decls() {
   D("function $si2fp.bv8.float(i:bv8) returns (float);");
   D("function $ui2fp.bv8.float(i:bv8) returns (float);");
 
+#ifndef NO_FORALL
   D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
 
   D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
@@ -558,6 +559,7 @@ void __SMACK_decls() {
   D("axiom (forall f: float :: $ui2fp.i8.float($fp2ui.float.i8(f)) == f);");
   D("axiom (forall i: i8 :: $fp2si.float.i8($si2fp.i8.float(i)) == i);");
   D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
+#endif
 
   // Memory Model
   D("const $GLOBALS_BOTTOM: ref;");

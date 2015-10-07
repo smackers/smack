@@ -328,6 +328,7 @@ def svcomp_frontend(args):
   name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
 
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
+  args.clang_options += " -DNO_FORALL"
   args.clang_options += " -include smack.h"
 
   if os.path.splitext(args.input_files[0])[1] == ".i":
@@ -411,11 +412,15 @@ def verify_bpl_svcomp(args):
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
   corral_command += ["/useProverEvaluate", "/newStratifiedInlining", "/cex:1"]
 
+  # If there are no quantifiers, set relevancy to 0
+  with open(args.bpl_file, "r") as f:
+    bpl = f.read()
+  if not "forall" in bpl:
+    corral_command += ["/bopt:z3opt:smt.relevancy=0"]
+
   if args.bit_precise:
-    corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true" % x]
-#    corral_command += ["/bopt:z3opt:smt.relevancy=0" % x]
-    corral_command += ["/bopt:z3opt:smt.bv.enable_int2bv=true" % x]
-    corral_command += ["/bopt:boolControlVC" % x]
+    corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
+    corral_command += ["/bopt:boolControlVC"]
 
   # First run: timeout=50, unroll=4, trackAllVars, staticInlining.
   time_limit = 50
