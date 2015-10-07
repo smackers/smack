@@ -411,7 +411,7 @@ def verify_bpl_svcomp(args):
   corral_command = ["corral"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
-  corral_command += ["/useProverEvaluate", "/newStratifiedInlining", "/cex:1"]
+  corral_command += ["/useProverEvaluate", "/cex:1"]
 
   # If there are no quantifiers, set relevancy to 0
   with open(args.bpl_file, "r") as f:
@@ -531,7 +531,7 @@ def verify_bpl(args):
     command = ["corral"]
     command += [args.bpl_file]
     command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
-    command += ["/useProverEvaluate", "/newStratifiedInlining"]
+    command += ["/useProverEvaluate"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
@@ -540,7 +540,8 @@ def verify_bpl(args):
   else:
     # Duality!
     command = ["corral", args.bpl_file]
-    command += ["/tryCTrace", "/useDuality", "/recursionBound:1073741824", "/k:1"]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/useDuality", "/oldStratifiedInlining"]
+    command += ["/recursionBound:1073741824", "/k:1"]
 
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
