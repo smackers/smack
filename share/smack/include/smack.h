@@ -43,7 +43,9 @@ smack_value_t __SMACK_return_value(void);
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
 void __VERIFIER_assume(int);
+#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int);
+#endif
 void __VERIFIER_error(void);
 void exit(int);
 
