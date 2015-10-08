@@ -154,6 +154,9 @@ def arguments():
   verifier_group.add_argument('--smackd', action="store_true", default=False,
     help='generate JSON-format output for SMACKd')
 
+  verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
+    type=str, help='load SVCOMP property to check from FILE')
+
   args = parser.parse_args()
 
   if not args.bc_file:
@@ -407,6 +410,13 @@ def verification_result(verifier_output):
 
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
+
+  # Check if property is vanilla reachability, and return unknown otherwise
+  if args.svcomp_property:
+    with open(args.svcomp_property, "r") as f:
+      prop = f.read()
+    if not "__VERIFIER_error" in prop:
+      sys.exit(results()['unknown'])
 
   corral_command = ["corral"]
   corral_command += [args.bpl_file]
