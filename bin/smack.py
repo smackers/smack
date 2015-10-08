@@ -418,7 +418,7 @@ def verify_bpl_svcomp(args):
     if not "__VERIFIER_error" in prop:
       sys.exit(results()['unknown'])
 
-  corral_command = ["corral"]
+  corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
