@@ -632,6 +632,11 @@ def smackdOutput(corralOutput):
 
   else:
     traces = []
+    filename = ''
+    lineno = 0
+    colno = 0
+    threadid = 0
+    desc = ''
     for traceLine in corralOutput.splitlines(True):
       traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
       traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\W*\w+\W*=\W*\w+\W*)\))$', traceLine)
@@ -657,7 +662,8 @@ def smackdOutput(corralOutput):
         lineno = int(errorMatch.group(2))
         colno = int(errorMatch.group(3))
         desc = str(errorMatch.group(4))
-        failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
+
+    failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
 
     json_data = {
       'verifier': 'corral',
