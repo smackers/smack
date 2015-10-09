@@ -657,7 +657,8 @@ def smackdOutput(corralOutput):
         lineno = int(errorMatch.group(2))
         colno = int(errorMatch.group(3))
         desc = str(errorMatch.group(4))
-        failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
+
+    failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
 
     json_data = {
       'verifier': 'corral',
