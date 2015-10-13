@@ -340,6 +340,10 @@ def svcomp_frontend(args):
     args.clang_options += " -x c"
 
   if args.error_file:
+    # Need to check to make sure output directory exists for error trace file
+    err_dir = os.path.dirname(args.error_file)
+    if not os.path.exists(err_dir):
+      os.makedirs(err_dir)
     clean = temporary_file(name, '.clean.c', args)
     tokenized = temporary_file(name, '.tokenized.c', args)
 
