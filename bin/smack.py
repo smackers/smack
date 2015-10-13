@@ -344,21 +344,23 @@ def svcomp_frontend(args):
     err_dir = os.path.dirname(args.error_file)
     if not os.path.exists(err_dir):
       os.makedirs(err_dir)
-    clean = temporary_file(name, '.clean.c', args)
-    tokenized = temporary_file(name, '.tokenized.c', args)
+    # SVCOMP no longer uses tokenization, so we're trying it without
 
-    with open(args.input_files[0], "r") as f:
-      cleanup = f.read()
-    cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
-    cleanup = beforeTokenReplace(cleanup)
-    with open(clean, 'w') as f:
-      f.write(cleanup)
-
-    output = try_command(['tokenizer', clean])
-    with open(tokenized, 'w') as f:
-      f.write(afterTokenReplace(output))
-
-    args.input_files[0] = tokenized
+    #clean = temporary_file(name, '.clean.c', args)
+    #tokenized = temporary_file(name, '.tokenized.c', args)
+    #
+    #with open(args.input_files[0], "r") as f:
+    #  cleanup = f.read()
+    #cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
+    #cleanup = beforeTokenReplace(cleanup)
+    #with open(clean, 'w') as f:
+    #  f.write(cleanup)
+    #
+    #output = try_command(['tokenizer', clean])
+    #with open(tokenized, 'w') as f:
+    #  f.write(afterTokenReplace(output))
+    #
+    #args.input_files[0] = tokenized
 
   clang_frontend(args)
 
