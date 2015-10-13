@@ -61,7 +61,17 @@ def run_server():
     args = get_args()
     lock_folder = 'lck'
     while(True):
+        # Clean old .bc, .bpl, and .ll
+        #Deletes bpl, bc, and ll files that were last modified more than 2 hours ago
+        cmd = ['find', './data/', '-name', '"*.bpl"', '-mmin', '+120', '-delete', '-maxdepth', '1']
+        subprocess.call(cmd);
+        cmd = ['find', './data/', '-name', '"*.bc"', '-mmin', '+120', '-delete', '-maxdepth', '1']
+        subprocess.call(cmd);
+        cmd = ['find', './data/', '-name', '"*.ll"', '-mmin', '+120', '-delete', '-maxdepth', '1']
+        subprocess.call(cmd);
+        # Pop a job
         cur = dequeue(args.queue_file, lock_folder)
+        # And run it if it exists
         if cur:
             cur = cur.split()
             cmd =  ['nohup', './runSMACKBench.sh', cur[0], cur[1]]
