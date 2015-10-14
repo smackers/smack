@@ -23,6 +23,7 @@
   <!--<option name="- -bc">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bc</option>
   <option name="- -bpl">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.bpl</option> -->
   <!-- <option name="-w">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}.witness.graphml</option> -->
+  <option name="--svcomp-property">${sourcefile_path}/ALL.prp</option>
 
   <columns>
     <column title="Output Files">${logfile_path}/${rundefinition_name}/${sourcefile_path}/${sourcefile_name}</column>
