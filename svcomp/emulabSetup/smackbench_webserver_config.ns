@@ -1,0 +1,11 @@
+set ns [new Simulator]
+source tb_compat.tcl
+
+#Nodes
+set node0 [$ns node]
+tb-set-node-os $node0 UBUNTU14-64-STD
+tb-set-hardware $node0 pc3000
+tb-set-node-startcmd $node0 "/proj/SMACK/scripts/smackbench_webserver_buildscript.sh >& /tmp/smackbench_webserver_build.out"
+
+$ns rtproto Static
+$ns run
