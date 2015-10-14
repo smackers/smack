@@ -118,5 +118,6 @@ then
 else
     ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 fi
-../checkWitnesses.py ${OUTFOLDER}
 cd ..
+./checkWitnesses.py data/${OUTFOLDER}
+
