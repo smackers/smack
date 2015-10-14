@@ -3,7 +3,17 @@
 #Install htop
 sudo apt-get update
 sudo apt-get install htop -y
-sudo apt-get install openjdk-7-jre
+#Java is needed for running cpachecker
+sudo apt-get install openjdk-7-jdk -y
+sudo update-alternatives --config java
+sudo update-alternatives --config javac
+#Ant is needed for installing cpachecker
+#(SMACKBench install should be run from compute node,
+# since no sudo access on users.emulab.net.  However,
+# SMACKBench install is not needed on every compute
+# node swapin, so this install isn't scripted here.)
+sudo apt-get install ant -y
+
 
 #Set permissions on local ephemeral storage,
 #so sudo is not needed
