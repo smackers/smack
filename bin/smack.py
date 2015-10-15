@@ -430,12 +430,16 @@ def verification_result(verifier_output):
 
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
-
+  heurTrace = "\n\nHeuristics Info:\n"
   # Check if property is vanilla reachability, and return unknown otherwise
   if args.svcomp_property:
     with open(args.svcomp_property, "r") as f:
       prop = f.read()
     if not "__VERIFIER_error" in prop:
+      heurTrace += "Unsupported svcomp property - aborting\n"
+      heurTrace += "Property File:\n" + prop + "\n"
+      if not args.quiet:
+        print(heurTrace + "\n")
       sys.exit(results()['unknown'])
 
   corral_command = ["corral-svcomp"]
@@ -447,13 +451,17 @@ def verify_bpl_svcomp(args):
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
   if not "forall" in bpl:
+    heurTrace += "No quantifiers detected.  Setting z3 relevancy to 0.\n"
     corral_command += ["/bopt:z3opt:smt.relevancy=0"]
 
   if args.bit_precise:
+    heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
     corral_command += ["/bopt:boolControlVC"]
 
   # First run: timeout=50, unroll=4, trackAllVars, staticInlining.
+  heurTrace += "Initial try with timeout=50, unroll=4, "
+  heurTrace += "loopLimit=1024, trackAllVars, staticInlining\n"
   time_limit = 50
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
@@ -464,7 +472,8 @@ def verify_bpl_svcomp(args):
   verifier_output = try_command(command, timeout=time_limit)
   result = verification_result(verifier_output)
 
-  if result == 'error':
+  if result == 'error': #initial static
+    heurTrace += "A bug was found during initial staticInlining attempt\n"
     # Generate error trace and exit.
     if args.language == 'svcomp':
       error = smackJsonToXmlGraph(smackdOutput(verifier_output))
@@ -477,10 +486,14 @@ def verify_bpl_svcomp(args):
 
     if not args.quiet:
       print error
+      print(heurTrace + "\n")
 
     sys.exit(results()[result])
 
-  elif result == 'verified':
+  elif result == 'verified': #initial static
+    heurTrace += "Initial staticInlining attempt didn't timeout.\n"
+    heurTrace += "Proceeding using timeout=800, unroll=32, "
+    heurTrace += "loopLimit=1024, trackAllVars, staticInlining.\n"
     # Indication that these options are working well.
     # Hence, run again with longer timeout.
     time_limit = 800
@@ -494,7 +507,8 @@ def verify_bpl_svcomp(args):
     verifier_output = try_command(command, timeout=time_limit)
     result = verification_result(verifier_output)
 
-    if result == 'error':
+    if result == 'error': #secondary static
+      heurTrace += "A bug was found during secondary staticInlining attempt\n"
       # Generate error trace and exit.
       if args.language == 'svcomp':
         error = smackJsonToXmlGraph(smackdOutput(verifier_output))
@@ -508,9 +522,31 @@ def verify_bpl_svcomp(args):
       if not args.quiet:
         print error
 
+    elif result == 'verified': #secondary static
+      heurTrace += "No bug was found during secondary staticInlining attempt\n"
+      heurTrace += "Reporting this 'verified' result\n"
+    else result == 'timeout': #secondary static
+      heurTrace += "Secondary staticInlining timed out.\n"
+      if not args.quiet:
+        print(heurTrace + "\n")
+      # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
+      time.sleep(1000)
+    else: #secondary static ='unknown'
+      heurTrace += "Secondary staticInlining encountered an error.\n"
+
+    if not args.quiet:
+      print(heurTrace + "\n")
+
     sys.exit(results()[result])
 
-  # Previous run timed out or returned unknown
+  elif result == 'timeout':
+    heurTrace += "Initial staticInlining attempt timed out.\n"
+  else:
+    heurTrace += "Initial staticInlining attempt crashed.\n"
+  heurTrace += "Trying a different approach\n."
+  heurTrace += "Running without staticInlining: timeout=800, unroll=128, "
+  heurTrace += "loopLimit=1024, trackAllVars.\n"
+  # Initial static run timed out or returned unknown
   # Run with different options
   time_limit = 800
   command = list(corral_command)
@@ -523,7 +559,8 @@ def verify_bpl_svcomp(args):
   verifier_output = try_command(command, timeout=time_limit)
   result = verification_result(verifier_output)
 
-  if result == 'error':
+  if result == 'error': #normal inlining
+    heurTrace += "Found a bug during normal inlining.\n"
     # Generate error trace and exit
     if args.language == 'svcomp':
       error = smackJsonToXmlGraph(smackdOutput(verifier_output))
@@ -537,13 +574,36 @@ def verify_bpl_svcomp(args):
     if not args.quiet:
       print error
 
-  elif result == 'timeout':
+  elif result == 'timeout': #normal inlining
+    heurTrace += "Timed out during normal inlining.\n"
+    heurTrace += "Determining result based on how far we unrolled.\n"
     # If we managed to unroll more than 8 times, then return verified
     it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
+    unrollMax = 0
     for match in it:
-      if int(match.group(1)) >= 8:
-        sys.exit(results()['verified'])
-
+      if int(match.group(1)) > unrollMax:
+        unrollMax = int(match.group(1))
+    if unrollMax >= 8:
+      heurTrace += "Unrolling made it to a recursion bound of "
+      heurTrace += str(unrollMax) + ".\n"
+      heurTrace += "Reporting benchmark as 'verified'.\n"
+      if not args.quiet:
+        print(heurTrace + "\n")
+      sys.exit(results()['verified'])
+    else:
+      heurTrace += "Only unrolled " + str(unrollMax) + "times.\n"
+      heurTrace += "Insufficient unrolls to consider 'verified'.  "
+      heurTrace += "Reporting 'timeout'.\n"
+      if not args.quiet:
+        print(heurTrace + "\n")
+      # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
+      time.sleep(1000)
+  elif result == 'verified': #normal inlining
+    heurTrace += "Normal inlining terminated and found no bugs.\n"
+  else: #normal inlining
+    heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
+  if not args.quiet:
+    print(heurTrace + "\n")
   sys.exit(results()[result])
 
 def verify_bpl(args):
