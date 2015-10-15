@@ -17,6 +17,7 @@ import tempfile
 from threading import Timer
 from toSVCOMPformat import *
 from token_replace import *
+from svcomp_filters import *
 
 VERSION = '1.5.1'
 temporary_files = []
@@ -327,6 +328,10 @@ def svcomp_frontend(args):
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
+
+  # test float benchmarks
+  if float_filter(args.input_files[0]):
+    sys.exit(results()['unknown'])
 
   name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
 
