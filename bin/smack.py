@@ -4,6 +4,7 @@
 #
 
 import argparse
+import errno
 import io
 import json
 import os
@@ -348,7 +349,15 @@ def svcomp_frontend(args):
     # Need to check to make sure output directory exists for error trace file
     err_dir = os.path.dirname(args.error_file)
     if not os.path.exists(err_dir):
-      os.makedirs(err_dir)
+      try:
+        os.makedirs(err_dir)
+      except OSError as e:
+        # This eliminates race condition when multiple calls to SMACK
+        # try to create the same folder
+        if e.errno == errno.EEXIST and os.path.isdir(err_dir):
+          pass
+        else:
+          raise
     # SVCOMP no longer uses tokenization, so we're trying it without
 
     #clean = temporary_file(name, '.clean.c', args)
