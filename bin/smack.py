@@ -17,7 +17,7 @@ import tempfile
 from threading import Timer
 from toSVCOMPformat import *
 from token_replace import *
-from float_test import *
+from svcomp_filters import *
 
 VERSION = '1.5.1'
 temporary_files = []
