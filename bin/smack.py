@@ -525,7 +525,7 @@ def verify_bpl_svcomp(args):
     elif result == 'verified': #secondary static
       heurTrace += "No bug was found during secondary staticInlining attempt\n"
       heurTrace += "Reporting this 'verified' result\n"
-    else result == 'timeout': #secondary static
+    elif result == 'timeout': #secondary static
       heurTrace += "Secondary staticInlining timed out.\n"
       if not args.quiet:
         print(heurTrace + "\n")
