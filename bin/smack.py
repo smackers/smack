@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 from threading import Timer
+import time
 from toSVCOMPformat import *
 from token_replace import *
 from svcomp_filters import *
