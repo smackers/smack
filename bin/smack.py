@@ -330,10 +330,10 @@ def svcomp_frontend(args):
     raise RuntimeError("Expected a single SVCOMP input file.")
 
   # test float\bv benchmarks
-  filter_status = svcomp_filter(args.input_files[0])
-  if filter_status == 1:
+  file_type = svcomp_filter(args.input_files[0])
+  if file_type == 'bitvector': 
     args.bit_precise = True
-  if filter_status == 2:
+  if file_type == 'float':
     sys.exit(results()['unknown'])
 
   name = os.path.splitext(os.path.basename(args.input_files[0]))[0]

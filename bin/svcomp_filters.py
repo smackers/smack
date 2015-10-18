@@ -35,12 +35,12 @@ def svcomp_filter(f):
   raw_lines = len(lines.split('\n'))
 
   if bv_filter(lines, raw_lines, pruned_lines):
-    return 1
+    return 'bitvector' 
 
   if float_filter(lines, raw_lines, pruned_lines):
-    return 2 
+    return 'float' 
 
-  return 0
+  return 'normal' 
     
 def bv_filter(lines, raw_line_count, pruned_line_count):
 
