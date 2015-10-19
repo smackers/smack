@@ -25,20 +25,60 @@ def raw_file_line_count(s):
       count += 1
 
   return count
-  
-    
-def float_filter(b):
+
+def svcomp_filter(f):
   lines = None
-  with open(b, 'r') as inputfile:
+  with open(f, 'r') as inputfile:
     lines = inputfile.read()
+  
+  pruned_lines = raw_file_line_count(lines)
+  raw_lines = len(lines.split('\n'))
+
+  if bv_filter(lines, raw_lines, pruned_lines):
+    return 'bitvector' 
+
+  if float_filter(lines, raw_lines, pruned_lines):
+    return 'float' 
+
+  return 'normal' 
+    
+def bv_filter(lines, raw_line_count, pruned_line_count):
+
+  if raw_line_count > 1500:
+    return 0
+  
+  #line_count = raw_file_line_count(lines)
+  if pruned_line_count > 650:
+    return 0
+  
+  #cast patterns
+  if pruned_line_count <= 210:
+    casts = re.compile(r'''4294967295|plus_one|minus_one|\(x % 2\) == \(y % 2\)''')
+    if casts.search(lines):
+      return 1
+  #bwops = re.compile(r'''[^\&]\&[^\&]|[^\|]\|[^\|]|\^|>>|<<''')
+  bwops = re.compile(r'''[=|\(][^,]*[^\&|\(|{]\&\s|[^\|]\|\s|\^|>>|<<''')
+  #bwops = re.compile(r'''\s\&\s|\s\|\s|\^|>>|<<''')
+  #dv = re.compile(r'''1\s+<<\s+[1|5]|cil''')
+  dv = re.compile(r'''1.*<<.*\"|cil|found''')
+  
+  for line in lines.split('\n'):
+    if bwops.search(line):
+      if dv.search(line) is None: 
+        print line
+        return 1
+  #print raw_file_line_count(lines)
+  return 0
+    
+def float_filter(lines, raw_line_count, pruned_line_count):
   fliteral = 0 
   ddecl = 0
 
   #heuristic #-1: don't do test on too large programs
-  if len(lines.split('\n')) >= 2000: 
+  if raw_line_count >= 2000: 
     return 0
   #heuristic #0: more than Float.set maximum LOC ==> not 
-  if raw_file_line_count(lines) > 140: #(138 = maximum) 
+  if pruned_line_count > 140: #(138 = maximum) 
     return 0
   #heuristic #1: __VERIFIER_nondet ==> float category
   result = re.search(r"""(__VERIFIER_nondet_(float|double)|ieee754_float)""", lines)  
