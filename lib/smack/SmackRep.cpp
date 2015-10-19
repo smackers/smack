@@ -16,7 +16,7 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 64, 96, 128};
+const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 48, 64, 96, 128};
 const vector<unsigned> REF_CONSTANTS = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
   1024
