@@ -35,6 +35,16 @@ def printError(msg):
     print "<p>" + msg + "</p>"
     exit()
 
+def filterResultsByRunsetFolder(runSets, form):
+    """
+    Filters out results that don't have the specified runsetFolder name
+    """
+    ret = []
+    for runset in runSets:
+        if runset.runsetFolder == form['runset'].value:
+            ret.append(runset)
+    return ret
+
 def filterResultsByCategory(runSets, form):
     """
     Filters out result sets that don't match the svcomp category (set) given in
@@ -117,9 +127,13 @@ if __name__ == '__main__':
     runSets = getAllRunSets(runRoot, runFolderPrefix)
     allOptions = getAllOptionsUsed(runSets)
 
-    if not "category" in form:
-        printError("No category parameter passed")
-    runSets = filterResultsByCategory(runSets, form)
-    runSets = filterResultsByOptions(runSets, form, allOptions)
-    runSets.sort(key=lambda x: x.inXml)
+    if "runset" in form:
+        runSets = filterResultsByRunsetFolder(runSets, form)
+    else:
+
+        if not "category" in form:
+            printError("No category parameter passed")
+        runSets = filterResultsByCategory(runSets, form)
+        runSets = filterResultsByOptions(runSets, form, allOptions)
+        runSets.sort(key=lambda x: x.inXml)
     generateTable(runSets)
