@@ -595,7 +595,7 @@ def verify_bpl_svcomp(args):
         print(heurTrace + "\n")
       sys.exit(results()['verified'])
     else:
-      heurTrace += "Only unrolled " + str(unrollMax) + "times.\n"
+      heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
       heurTrace += "Reporting 'timeout'.\n"
       if not args.quiet:
@@ -672,6 +672,9 @@ def verify_bpl_svcomp1(args):
     heurTrace += "Timed out during normal inlining.\n"
     heurTrace += "Determining result based on how far we unrolled.\n"
     # If we managed to unroll more than 8 times, then return verified
+    # First remove exhausted loop bounds generated during max static loop bound computation
+    verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
+      'Verifying program while tracking', verifier_output)
     it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
     unrollMax = 0
     for match in it:
@@ -685,7 +688,7 @@ def verify_bpl_svcomp1(args):
         print(heurTrace + "\n")
       sys.exit(results()['verified'])
     else:
-      heurTrace += "Only unrolled " + str(unrollMax) + "times.\n"
+      heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
       heurTrace += "Reporting 'timeout'.\n"
       if not args.quiet:
