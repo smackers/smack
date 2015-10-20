@@ -28,6 +28,10 @@ if __name__ == '__main__':
     runSets = getAllRunSets(runRoot, runFolderPrefix)
     options = getAllOptionsUsed(runSets)
     optionKeys = sorted(options.keys())
+    for runset in runSets:
+        if 'witcheck' in runset.outXml:
+            runSets.remove(runset)
+    runSets.sort(key=lambda x: x.inXml, reverse=True)
     print '''
 <h1>SMACK+CORRAL Benchmark Results</h1><hr/>
 <p>Select a set, and select the command line options to include</p>

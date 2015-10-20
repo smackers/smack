@@ -102,6 +102,8 @@ def getAllRunSets(searchRoot, folderPrefix):
             if opt not in runset.options:
                 runset.options[opt] = "False"
 
+    
+
     return runSets
 
 def getSourcefileSetsUsed(runSets):
