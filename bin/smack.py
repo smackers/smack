@@ -645,8 +645,8 @@ def verify_bpl_svcomp1(args):
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
-  command += ["/maxStaticLoopBound:1024"]
-  command += ["/recursionBound:128"]
+  command += ["/maxStaticLoopBound:64"]
+  command += ["/recursionBound:1073741824"]
   command += ["/trackAllVars"]
   command += ["/di"]
 
