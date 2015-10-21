@@ -326,22 +326,13 @@ def json_compilation_database_frontend(args):
   llvm_to_bpl(args)
 
 def svcomp_process_file(args, name, ext):
-  # create a temp file (TODO: current dir or example dir)
-  tmp_file = temporary_file(name, ext, args)
   # replace exit definition with exit_
-  with open(args.input_files[0], 'r') as fi:
-    s = fi.read()
-  s = re.sub(r'''void\s+exit\s*\(int s\)''',
-        r'''void exit_(int s)''',
-        s)
   # replace all occurrences of 100000 with 10
-  s = re.sub(r'''100000''',
-        r'''10''',
-        s)
-  with open(tmp_file, 'w') as fo:
-    fo.write(s)
+  with open(args.input_files[0], 'r') as fi:
+    args.input_files[0] = temporary_file(name, ext, args)
+    with open(args.input_files[0], 'w') as fo:
+      fo.write(re.sub(r'100000', r'10', re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', fi.read())))
 
-  args.input_files[0] = tmp_file
 
 def svcomp_frontend(args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
