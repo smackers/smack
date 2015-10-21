@@ -86,7 +86,7 @@ def float_filter(lines, raw_line_count, pruned_line_count):
     return 1
 
   #heuristic #2: check float literal # 
-  valid_lines = linecount(r"""(0x)?\d+\.\d*(f|p|e)?""", r"""#|line|June|CIL|0\.000000|\"\d+""", lines)
+  valid_lines = linecount(r"""(0x)?\d+\.\d*(f|p|e)?""", r"""#|line|June|CIL|0\.000000|\"\d+|Created""", lines)
   count = len(valid_lines)
   if count > 60:
     return 0
