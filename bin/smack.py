@@ -325,6 +325,20 @@ def json_compilation_database_frontend(args):
 
   llvm_to_bpl(args)
 
+def svcomp_process_file(args, name, ext):
+  # create a temp file (TODO: current dir or example dir)
+  tmp_file = temporary_file(name, ext, args)
+  # replace exit definition with exit_
+  with open(args.input_files[0], 'r') as fi:
+    s = fi.read()
+  s = re.sub(r'''void\s+exit\s*\(int s\)''',
+        r'''void exit_(int s)''',
+        s)
+  with open(tmp_file, 'w') as fo:
+    fo.write(s)
+
+  args.input_files[0] = tmp_file
+
 def svcomp_frontend(args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
@@ -338,7 +352,8 @@ def svcomp_frontend(args):
   if file_type == 'float':
     sys.exit(results()['unknown'])
 
-  name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
+  name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
+  svcomp_process_file(args, name, ext)
 
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
