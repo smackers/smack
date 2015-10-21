@@ -334,6 +334,10 @@ def svcomp_process_file(args, name, ext):
   s = re.sub(r'''void\s+exit\s*\(int s\)''',
         r'''void exit_(int s)''',
         s)
+  # replace all occurrences of 100000 with 10
+  s = re.sub(r'''100000''',
+        r'''10''',
+        s)
   with open(tmp_file, 'w') as fo:
     fo.write(s)
 
