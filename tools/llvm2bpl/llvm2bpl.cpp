@@ -113,9 +113,6 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopRotatePass());
     pass_manager.add(llvm::createIndVarSimplifyPass());
     pass_manager.add(llvm::createLoopUnrollPass(INT_MAX));
-    pass_manager.add(llvm::createCFGSimplificationPass());
-    pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
-    pass_manager.add(new smack::RemoveDeadDefs());
   }
 
   pass_manager.add(new llvm::StructRet());

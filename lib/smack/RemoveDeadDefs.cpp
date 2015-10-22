@@ -19,24 +19,27 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
   TD = &getAnalysis<DataLayoutPass>().getDataLayout();
   std::vector<Function*> dead;
 
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    std::string name = F->getName();
+  while (!dead.empty()) {
+    dead.clear();
+    for (Module::iterator F = M.begin(); F != M.end(); ++F) {
+      std::string name = F->getName();
 
-    if (!F->isDefTriviallyDead())
-      continue;
+      if (!F->isDefTriviallyDead())
+        continue;
 
-    if (name.find("__SMACK_") != std::string::npos)
-      continue;
+      if (name.find("__SMACK_") != std::string::npos)
+        continue;
 
-    if (SmackOptions::isEntryPoint(name))
-      continue;
+      if (SmackOptions::isEntryPoint(name))
+        continue;
 
-    DEBUG(errs() << "removing dead definition: " << name << "\n");
-    dead.push_back(F);
+      DEBUG(errs() << "removing dead definition: " << name << "\n");
+      dead.push_back(F);
+    }
+
+    for (auto F : dead)
+      F->eraseFromParent();
   }
-
-  for (auto F : dead)
-    F->eraseFromParent();
 
   return true;
 }
