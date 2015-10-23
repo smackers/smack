@@ -329,12 +329,17 @@ def json_compilation_database_frontend(args):
   llvm_to_bpl(args)
 
 def svcomp_process_file(args, name, ext):
-  # replace exit definition with exit_
-  # replace all occurrences of 100000 with 10
   with open(args.input_files[0], 'r') as fi:
+    s = fi.read()
     args.input_files[0] = temporary_file(name, ext, args)
+    # replace exit definition with exit_
+    s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
+    if len(s.split('\n')) < 60:
+      # replace all occurrences of 100000 with 10
+      # Only target at small examples
+      s = re.sub(r'100000', r'10', s)
     with open(args.input_files[0], 'w') as fo:
-      fo.write(re.sub(r'100000', r'10', re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', fi.read())))
+      fo.write(s)
 
 
 def svcomp_frontend(args):
