@@ -1,4 +1,5 @@
 #include "spinlock.h"
+#include "smack.h"
 
 void spin_lock(spinlock_t *__lock) {
   int ctid = __VERIFIER_nondet_int();

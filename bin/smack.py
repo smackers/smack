@@ -144,8 +144,8 @@ def arguments():
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
     help='upper bound on minimum loop iterations [default: %(default)s]')
 
-  verifier_group.add_argument('--context-switches', metavar='k', default='1', type=int,
-    help='switch thread contexts in Corral (only) up to k number of times')
+  verifier_group.add_argument('--context-bound', metavar='k', default='1', type=int,
+    help='bound thread contexts in Corral to a maximum of k contexts')
 
   verifier_group.add_argument('--verifier-options', metavar='OPTIONS', default='',
     help='additional verifier arguments (e.g., --verifier-options="/trackAllVars /staticInlining")')
@@ -396,7 +396,7 @@ def verify_bpl(args):
     command = ["corral"]
     command += [args.bpl_file]
     command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
-    command += ["/k:%d" % args.context_switches]
+    command += ["/k:%d" % args.context_bound]
     command += ["/useProverEvaluate", "/newStratifiedInlining"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]

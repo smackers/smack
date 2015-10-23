@@ -175,7 +175,7 @@ if __name__ == '__main__':
         elif sys.argv[i] == '--time-limit':
             del sysArgv[i]
             del sysArgv[i]
-        elif sys.argv[i] == '--context-switches':
+        elif sys.argv[i] == '--context-bound':
             del sysArgv[i]
             del sysArgv[i]
 

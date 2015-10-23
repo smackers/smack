@@ -6,7 +6,7 @@
  * Verifies false with u6,s2,tav,si in 45s
  *
  * Fails with SIZE == 10, u11,c2,tav,si:
- *   mcarter@ubuntu:~/projects/smack-project/smack/src/examples/pthreads/svcomp2015$ smackverify.py --verifier corral --verifier-options="/trackAllVars /staticInlining" --unroll 11 --context-switches 2 queue_false-unreach-call.c
+ *   mcarter@ubuntu:~/projects/smack-project/smack/src/examples/pthreads/svcomp2015$ smackverify.py --verifier corral --verifier-options="/trackAllVars /staticInlining" --unroll 11 --context-bound 2 queue_false-unreach-call.c
  *   Verifying program while tracking: {$CurrAddr, $M.3, $M.0, $M.4, $M.5, $M.6, $M.7, $pthreadStatus, $M.10}
  *   /home/mcarter/projects/smack-project/smack/install/bin/corral: line 2: 27572 Killed                  $CORRAL $@
  *   

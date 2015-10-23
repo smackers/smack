@@ -6,7 +6,6 @@
 #ifndef SPINLOCK_H
 #define SPINLOCK_H
 
-#include "smack.h"
 
 // Begin:: A bunch of stuff to support multiple methods to init locks:
 typedef unsigned int spinlock_t;

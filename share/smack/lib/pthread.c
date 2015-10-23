@@ -1,4 +1,5 @@
 #include "pthread.h"
+#include "smack.h"
 
 __SMACK_INIT(corral_primitives) {
   //Declare these, so bpl parsing doesn't complain

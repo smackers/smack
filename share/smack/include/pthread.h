@@ -8,7 +8,6 @@
 
 // Include pthreadtypes.h
 #include "pthreadtypes.h"
-#include "smack.h"
 
 //model mutex:
 //  0 = unlocked,
@@ -22,10 +21,10 @@
 #define PTHREAD_MUTEX_INITIALIZER {UNLOCKED, INITIALIZED}
 
 //Declare corral primitive procedures
-__SMACK_INIT(corral_primitives);
+//__SMACK_INIT(corral_primitives);
 
 // Initialize thread status tracking variables (OS level behavior)
-__SMACK_INIT(thread);
+//__SMACK_INIT(thread);
 
 pthread_t pthread_self(void);
 

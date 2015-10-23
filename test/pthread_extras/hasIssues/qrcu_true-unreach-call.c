@@ -6,7 +6,7 @@
  * Uses unsupported __VERIFIER_atomic_*() functions
  *
  * Verifies in 190 s using new SMACK default call to corral, with 
- * context-switches set to 2.
+ * context-bound set to 2.
  */
 
 // @expect verified
