@@ -838,7 +838,7 @@ def smackdOutput(corralOutput):
     desc = ''
     for traceLine in corralOutput.splitlines(True):
       traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
-      traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\W*\w+\W*=\W*\w+\W*)\))$', traceLine)
+      traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\s*\w+\s*=\s*\w+\s*)\))$', traceLine)
       errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
       if traceMatch:
         filename = str(traceMatch.group(1))
@@ -849,6 +849,8 @@ def smackdOutput(corralOutput):
         assm = ''
         if traceAssumeMatch:
           assm = str(traceAssumeMatch.group(6))
+          #Remove bitvector indicator from trace assumption
+          assm = re.sub(r'=(\s*\d+)bv\d+', r'=\1', assm)
         trace = { 'threadid': threadid,
                   'file': filename,
                   'line': lineno,
