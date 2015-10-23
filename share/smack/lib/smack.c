@@ -75,6 +75,12 @@ void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
 }
 
+void* calloc (long num, long size) {
+  void* ret = malloc(num * size);
+  memset(ret, 0, num * size);
+  return ret;
+}
+
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
