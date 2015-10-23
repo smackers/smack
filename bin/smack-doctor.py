@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
   if not args.quiet:
     print "Checking SMACK itself..."
-  check_command("smack")
+  check_command("llvm2bpl")
   check_command("smack.py")
 
   if args.prefix is not '':

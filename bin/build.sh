@@ -152,18 +152,18 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.0/z3-4.4.0-x64-debian-7.8.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-debian-8.2.zip"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-ubuntu-14*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.0/z3-4.4.0-x64-ubuntu-14.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.0/z3-4.4.0-x64-ubuntu-14.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -326,7 +326,7 @@ then
 
   git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}
-  git checkout ${BOOGIE_COMMIT}
+  git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
@@ -350,7 +350,7 @@ then
   cd ${CORRAL_DIR}
 #  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 #  cd ${CORRAL_DIR}
-#  git checkout ${CORRAL_COMMIT}
+#  git reset --hard ${CORRAL_COMMIT}
   cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe

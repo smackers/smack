@@ -36,18 +36,18 @@ class MemcpyCollector : public llvm::InstVisitor<MemcpyCollector> {
 private:
   llvm::DSNodeEquivs *nodeEqs;
   vector<const llvm::DSNode*> memcpys;
-  
+
 public:
   MemcpyCollector(llvm::DSNodeEquivs *neqs) : nodeEqs(neqs) { }
 
   void visitMemCpyInst(llvm::MemCpyInst& mci) {
-    const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
+    const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
       = nodeEqs->getEquivalenceClasses();
     const llvm::DSNode *n1 = eqs.getLeaderValue(
       nodeEqs->getMemberForValue(mci.getOperand(0)) );
     const llvm::DSNode *n2 = eqs.getLeaderValue(
       nodeEqs->getMemberForValue(mci.getOperand(1)) );
-    
+
     bool f1 = false, f2 = false;
     for (unsigned i=0; i<memcpys.size() && (!f1 || !f2); i++) {
       f1 = f1 || memcpys[i] == n1;
@@ -62,26 +62,31 @@ public:
     return memcpys;
   }
 };
-  
+
 class DSAAliasAnalysis : public llvm::ModulePass, public llvm::AliasAnalysis {
 private:
+  llvm::Module *module;
   llvm::TDDataStructures *TD;
   llvm::BUDataStructures *BU;
   llvm::DSNodeEquivs *nodeEqs;
-  dsa::TypeSafety<llvm::TDDataStructures> *TS; 
+  dsa::TypeSafety<llvm::TDDataStructures> *TS;
   vector<const llvm::DSNode*> staticInits;
   vector<const llvm::DSNode*> memcpys;
   unordered_set<const llvm::DSNode*> intConversions;
+  const DataLayout* dataLayout;
 
 public:
   static char ID;
   DSAAliasAnalysis() : ModulePass(ID) {}
 
+  void printDSAGraphs(const char* Filename);
+
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     llvm::AliasAnalysis::getAnalysisUsage(AU);
     AU.setPreservesAll();
-    AU.addRequiredTransitive<llvm::TDDataStructures>();
+    AU.addRequired<llvm::DataLayoutPass>();
     AU.addRequiredTransitive<llvm::BUDataStructures>();
+    AU.addRequiredTransitive<llvm::TDDataStructures>();
     AU.addRequiredTransitive<llvm::DSNodeEquivs>();
     AU.addRequired<dsa::TypeSafety<llvm::TDDataStructures> >();
   }
@@ -95,23 +100,26 @@ public:
     TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures> >();
     memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
     staticInits = collectStaticInits(M);
-
+    dataLayout = M.getDataLayout();
+    module = &M;
     return false;
   }
 
-  llvm::DSNode *getNode(const llvm::Value* v);
+  const llvm::DSNode *getNode(const llvm::Value* v);
   bool isAlloced(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
   bool isSingletonGlobal(const llvm::Value *V);
   bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
   bool isFieldDisjoint(const GlobalValue* V, unsigned offset);
+  bool isMemcpyd(const llvm::DSNode* n);
+  bool isStaticInitd(const llvm::DSNode* n);
+  unsigned getPointedTypeSize(const Value* v);
+  unsigned getOffset(const Value* v);
 
   virtual AliasResult alias(const Location &LocA, const Location &LocB);
 
 private:
   bool isComplicatedNode(const llvm::DSNode* n);
-  bool isMemcpyd(const llvm::DSNode* n);
-  bool isStaticInitd(const llvm::DSNode* n);
   vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
   vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);

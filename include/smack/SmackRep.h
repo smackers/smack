@@ -4,10 +4,11 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
-#include "smack/Naming.h"
 #include "smack/BoogieAst.h"
-#include "smack/SmackOptions.h"
 #include "smack/DSAAliasAnalysis.h"
+#include "smack/Naming.h"
+#include "smack/Regions.h"
+#include "smack/SmackOptions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
@@ -16,7 +17,6 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>
-#include <set>
 
 namespace smack {
 
@@ -26,76 +26,25 @@ using llvm::StringRef;
 using namespace std;
 
 class SmackRep {
-public:
-  static const string BOOL_TYPE;
-  static const string FLOAT_TYPE;
-  static const string PTR_TYPE;
-
-  static const string NULL_VAL;
-  static const string GLOBALS_BOTTOM;
-  static const string EXTERNS_BOTTOM;
-  static const string MALLOC_TOP;
-
-  static const string ALLOCA;
-  static const string MALLOC;
-  static const string FREE;
-  static const string MEMCPY;
-
-  static const string MEM_OP;
-  static const string REC_MEM_OP;
-  static const string MEM_OP_VAL;
-
-  static const string STATIC_INIT;
-  static const string INIT_FUNCS;
-
-  static const map<unsigned,string> INSTRUCTION_TABLE;
-  static const map<unsigned,string> CMPINST_TABLE;
-  static const map<unsigned,string> ATOMICRMWINST_TABLE;
-
 protected:
-  DSAAliasAnalysis* aliasAnalysis;
+  Regions& regions;
   Naming& naming;
   Program& program;
   vector<string> bplGlobals;
-
-  struct Region {
-    set<const llvm::Value*> representatives;
-    bool isAllocated;
-    bool isSingletonGlobal;
-    Region(const llvm::Value* r, bool a, bool s) :
-      isAllocated(a), isSingletonGlobal(s) {
-      representatives.insert(r);
-    }
-    void unifyWith(Region r) {
-      representatives.insert(r.representatives.begin(), r.representatives.end());
-      isAllocated = isAllocated || r.isAllocated;
-      assert(isSingletonGlobal == r.isSingletonGlobal);
-    }
-  };
-
-  vector<Region> memoryRegions;
   const llvm::DataLayout* targetData;
   unsigned ptrSizeInBits;
 
   long globalsBottom;
   long externsBottom;
-  vector<const Stmt*> staticInits;
-  vector<const Stmt*> initFuncs;
+  vector<std::string> initFuncs;
 
   unsigned uniqueFpNum;
 
 public:
-  SmackRep(const DataLayout* L, DSAAliasAnalysis* aa, Naming& N, Program& P)
-    : targetData(L), aliasAnalysis(aa), naming(N), program(P),
-      globalsBottom(0), externsBottom(-32768) {
-    uniqueFpNum = 0;
-    ptrSizeInBits = targetData->getPointerSizeInBits();
-  }
+  SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R);
   Program& getProgram() { return program; }
 
 private:
-  void addInit(const llvm::GlobalValue* G, const llvm::Constant* C);
-  void addInit(const llvm::GlobalValue* G, const Expr* addr, const llvm::Constant* C, bool bytewise);
 
   unsigned storageSize(llvm::Type* T);
   unsigned offset(llvm::ArrayType* T, unsigned idx);
@@ -114,8 +63,7 @@ private:
   string opName(const string& operation, initializer_list<const llvm::Type*> types);
   string opName(const string& operation, initializer_list<unsigned> types);
 
-  const Expr* mem(unsigned region, const Expr* addr, unsigned size);
-  const Stmt* store(unsigned region, unsigned size, const Expr* addr, const llvm::Value* val, bool bytewise = false);
+  const Stmt* store(unsigned R, const Type* T, const Expr* P, const Expr* V);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
@@ -123,10 +71,6 @@ private:
 
   string procName(const llvm::User& U);
   string procName(const llvm::User& U, llvm::Function* F);
-
-  bool uniformMemoryAccesses();
-  bool bytewiseAccess(const llvm::Value* V, const llvm::Function* F);
-  bool bytewiseAccess(const llvm::GlobalValue* V, unsigned offset);
 
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
@@ -137,8 +81,10 @@ private:
 
   unsigned numElements(const llvm::Constant* v);
 
-  Decl* memcpyProc(unsigned dstReg, unsigned srcReg);
-  Decl* memsetProc(unsigned dstReg);
+  Decl* memcpyProc(string type,
+    unsigned length = std::numeric_limits<unsigned>::max());
+  Decl* memsetProc(string type,
+    unsigned length = std::numeric_limits<unsigned>::max());
 
 public:
   const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
@@ -150,8 +96,6 @@ public:
 
   string type(const llvm::Type* t);
   string type(const llvm::Value* v);
-
-  const Expr* mem(const llvm::Value* v);
 
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(const llvm::Value* v, unsigned flag);
@@ -178,8 +122,14 @@ public:
   const Stmt* alloca(llvm::AllocaInst& i);
   const Stmt* memcpy(const llvm::MemCpyInst& msi);
   const Stmt* memset(const llvm::MemSetInst& msi);
-  const Stmt* load(const llvm::LoadInst& LI);
-  const Stmt* store(const llvm::StoreInst& SI);
+  const Expr* load(const llvm::Value* P);
+  const Stmt* store(const Value* P, const Value* V);
+  const Stmt* store(const Value* P, const Expr* V);
+
+  const Stmt* valueAnnotation(const CallInst& CI);
+  const Stmt* returnValueAnnotation(const CallInst& CI);
+  const Stmt* objectAnnotation(const CallInst& CI);
+  const Stmt* returnObjectAnnotation(const CallInst& CI);
 
   vector<Decl*> decl(llvm::Function* F);
   Decl* decl(llvm::Function* F, llvm::CallInst* C);
@@ -187,10 +137,10 @@ public:
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
-  unsigned getRegion(const llvm::Value* v);
+
   string memReg(unsigned i);
-  string memType(unsigned region, unsigned size);
-  string memPath(unsigned region, unsigned size);
+  string memType(unsigned region);
+  string memPath(unsigned region);
 
   // used in SmackInstGenerator
   string getString(const llvm::Value* v);
@@ -198,47 +148,11 @@ public:
   void addBplGlobal(string name);
 
   // used in SmackModuleGenerator
-  void collectRegions(llvm::Module &M);
   vector<Decl*> globalDecl(const llvm::GlobalValue* g);
-  vector<string> getModifies();
   void addInitFunc(const llvm::Function* f);
   Decl* getInitFuncs();
-  Decl* getStaticInit();
   string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
-
-};
-
-class RegionCollector : public llvm::InstVisitor<RegionCollector> {
-private:
-  SmackRep& rep;
-
-public:
-  RegionCollector(SmackRep& r) : rep(r) {}
-  void visitModule(llvm::Module& M) {
-    for (llvm::Module::const_global_iterator
-         G = M.global_begin(), E = M.global_end(); G != E; ++G)
-      rep.getRegion(G);
-  }
-  void visitAllocaInst(llvm::AllocaInst& I) {
-    rep.getRegion(&I);
-  }
-  void visitLoadInst(llvm::LoadInst& I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitStoreInst(llvm::StoreInst& I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitAtomicRMWInst(llvm::AtomicRMWInst &I) {
-    rep.getRegion(I.getPointerOperand());
-  }
-  void visitCallInst(llvm::CallInst& I) {
-    if (I.getType()->isPointerTy())
-      rep.getRegion(&I);
-  }
 };
 
 }

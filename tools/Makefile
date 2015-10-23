@@ -8,6 +8,6 @@ LEVEL=..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS=smack
+DIRS=llvm2bpl
 
 include $(LEVEL)/Makefile.common

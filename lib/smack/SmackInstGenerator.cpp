@@ -5,6 +5,7 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
 #include "smack/Slicing.h"
+#include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
@@ -193,6 +194,9 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
     targets.push_back(make_pair(Expr::not_(e),bi.getSuccessor(1)));
   }
   generatePhiAssigns(bi);
+  if (bi.getNumSuccessors() > 1)
+    emit(Stmt::annot(Attr::attr(Naming::BRANCH_CONDITION_ANNOTATION,
+      {rep.expr(bi.getCondition())})));
   generateGotoStmts(bi, targets);
 }
 
@@ -219,6 +223,8 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst& si) {
   targets.push_back(make_pair(n,si.getDefaultDest()));
 
   generatePhiAssigns(si);
+  emit(Stmt::annot(Attr::attr(Naming::BRANCH_CONDITION_ANNOTATION,
+    {rep.expr(si.getCondition())})));
   generateGotoStmts(si, targets);
 }
 
@@ -238,6 +244,8 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
   targets.push_back(make_pair(
     Expr::id(Naming::EXN_VAR),
     ii.getUnwindDest()));
+  emit(Stmt::annot(Attr::attr(Naming::BRANCH_CONDITION_ANNOTATION,
+    {Expr::id(Naming::EXN_VAR)})));
   generateGotoStmts(ii, targets);
 }
 
@@ -277,7 +285,7 @@ void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
   processInstruction(evi);
   const Expr* e = rep.expr(evi.getAggregateOperand());
   for (unsigned i = 0; i < evi.getNumIndices(); i++)
-    e = Expr::fn("$extractvalue", e, Expr::lit((unsigned long) evi.getIndices()[i]));
+    e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long) evi.getIndices()[i]));
   emit(Stmt::assign(rep.expr(&evi),e));
 }
 
@@ -304,13 +312,13 @@ void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
     for (unsigned j = 0; j < num_elements; j++) {
       if (j != idx) {
         emit(Stmt::assume(Expr::eq(
-          Expr::fn("$extractvalue", res, Expr::lit(j)),
-          Expr::fn("$extractvalue", old, Expr::lit(j))
+          Expr::fn(Naming::EXTRACT_VALUE, res, Expr::lit(j)),
+          Expr::fn(Naming::EXTRACT_VALUE, old, Expr::lit(j))
         )));
       }
     }
-    res = Expr::fn("$extractvalue", res, Expr::lit(idx));
-    old = Expr::fn("$extractvalue", old, Expr::lit(idx));
+    res = Expr::fn(Naming::EXTRACT_VALUE, res, Expr::lit(idx));
+    old = Expr::fn(Naming::EXTRACT_VALUE, old, Expr::lit(idx));
   }
   emit(Stmt::assume(Expr::eq(res,rep.expr(ivi.getInsertedValueOperand()))));
 }
@@ -330,10 +338,10 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   // TODO what happens with aggregate types?
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
-  emit(rep.load(li));
+  emit(Stmt::assign(rep.expr(&li), rep.load(li.getPointerOperand())));
 
   if (SmackOptions::MemoryModelDebug) {
-    emit(Stmt::call(SmackRep::REC_MEM_OP, {Expr::id(SmackRep::MEM_OP_VAL)}));
+    emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
     emit(Stmt::call("boogie_si_record_int", {Expr::lit(0L)}));
     emit(Stmt::call("boogie_si_record_int", {rep.expr(li.getPointerOperand())}));
     emit(Stmt::call("boogie_si_record_int", {rep.expr(&li)}));
@@ -346,7 +354,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   const llvm::Value* V = si.getOperand(0);
   assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
-  emit(rep.store(si));
+  emit(rep.store(P,V));
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
@@ -356,7 +364,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   }
 
   if (SmackOptions::MemoryModelDebug) {
-    emit(Stmt::call(SmackRep::REC_MEM_OP, {Expr::id(SmackRep::MEM_OP_VAL)}));
+    emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
     emit(Stmt::call("boogie_si_record_int", {Expr::lit(1L)}));
     emit(Stmt::call("boogie_si_record_int", {rep.expr(P)}));
     emit(Stmt::call("boogie_si_record_int", {rep.expr(V)}));
@@ -366,24 +374,24 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst& i) {
   processInstruction(i);
   const Expr* res = rep.expr(&i);
-  const Expr* ptr = rep.mem(i.getOperand(0));
+  const Expr* mem = rep.load(i.getOperand(0));
   const Expr* cmp = rep.expr(i.getOperand(1));
   const Expr* swp = rep.expr(i.getOperand(2));
-  emit(Stmt::assign(res,ptr));
-  emit(Stmt::assign(ptr,Expr::cond(Expr::eq(ptr,cmp),swp,ptr)));
+  emit(Stmt::assign(res,mem));
+  emit(rep.store(i.getOperand(0), Expr::cond(Expr::eq(mem, cmp), swp, mem)));
 }
 
 void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
   using llvm::AtomicRMWInst;
   processInstruction(i);
   const Expr* res = rep.expr(&i);
-  const Expr* mem = rep.mem(i.getPointerOperand());
+  const Expr* mem = rep.load(i.getPointerOperand());
   const Expr* val = rep.expr(i.getValOperand());
   emit(Stmt::assign(res,mem));
-  emit(Stmt::assign(mem,
+  emit(rep.store(i.getPointerOperand(),
     i.getOperation() == AtomicRMWInst::Xchg
       ? val
-      : Expr::fn(SmackRep::ATOMICRMWINST_TABLE.at(i.getOperation()),mem,val) ));
+      : Expr::fn(Naming::ATOMICRMWINST_TABLE.at(i.getOperation()),mem,val) ));
   }
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& I) {
@@ -458,18 +466,31 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
-  } else if (name.find("__SMACK_mod") != string::npos) {
+  } else if (name.find(Naming::VALUE_PROC) != string::npos) {
+    emit(rep.valueAnnotation(ci));
+
+  } else if (name.find(Naming::RETURN_VALUE_PROC) != string::npos) {
+    emit(rep.returnValueAnnotation(ci));
+
+  } else if (name.find(Naming::OBJECT_PROC) != string::npos) {
+    emit(rep.objectAnnotation(ci));
+
+  } else if (name.find(Naming::RETURN_OBJECT_PROC) != string::npos) {
+    emit(rep.returnObjectAnnotation(ci));
+
+  } else if (name.find(Naming::MOD_PROC) != string::npos) {
     addMod(rep.code(ci));
 
-  } else if (name.find("__SMACK_code") != string::npos) {
+  } else if (name.find(Naming::CODE_PROC) != string::npos) {
     emit(Stmt::code(rep.code(ci)));
 
-  } else if (name.find("__SMACK_decl") != string::npos) {
-    addDecl(Decl::code(rep.code(ci)));
+  } else if (name.find(Naming::DECL_PROC) != string::npos) {
+    string code = rep.code(ci);
+    addDecl(Decl::code(code, code));
 
-  } else if (name.find("__SMACK_top_decl") != string::npos) {
+  } else if (name.find(Naming::TOP_DECL_PROC) != string::npos) {
     string decl = rep.code(ci);
-    addTopDecl(Decl::code(decl));
+    addTopDecl(Decl::code(decl, decl));
     if (VAR_DECL.match(decl)) {
       string var = VAR_DECL.sub("\\1",decl);
       rep.addBplGlobal(var);
@@ -488,7 +509,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     llvm::LoadInst* LI = llvm::dyn_cast<llvm::LoadInst>(ci.getArgOperand(0));
     assert(LI && "Expected value from Load.");
     emit(Stmt::assign(rep.expr(&ci),
-      Expr::fn("old",rep.mem(LI->getPointerOperand())) ));
+      Expr::fn("old",rep.load(LI->getPointerOperand())) ));
 
   } else if (name == "forall") {
     assert(ci.getNumArgOperands() == 2 && "Unexpected operands to forall.");
@@ -529,7 +550,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
         if (llvm::Function* castFunc = llvm::dyn_cast<llvm::Function>(castValue)) {
           emit(rep.call(castFunc, ci));
           if (castFunc->isDeclaration() && rep.isExternal(&ci))
-            emit(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
+            emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
           return;
         }
       }
@@ -581,7 +602,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   }
 
   if (f && f->isDeclaration() && rep.isExternal(&ci))
-    emit(Stmt::assume(Expr::fn("$isExternal",rep.expr(&ci))));
+    emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
 }
 
 void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {

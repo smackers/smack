@@ -10,6 +10,8 @@
 namespace smack {
 class SmackOptions {
 public:
+  static const llvm::cl::list<std::string> EntryPoints;
+
   static const llvm::cl::opt<bool> MemoryModelDebug;
   static const llvm::cl::opt<bool> MemoryModelImpls;
 
@@ -18,6 +20,8 @@ public:
   static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
   static const llvm::cl::opt<bool> NoByteAccessInference;
+
+  static bool isEntryPoint(std::string);
 };
 }
 
