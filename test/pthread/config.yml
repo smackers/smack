@@ -1,0 +1,3 @@
+flags: ['--pthread','--context-bound=2']
+time-limit: 300
+verifiers: [corral]

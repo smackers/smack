@@ -77,12 +77,12 @@ def UpdateWithClangInfo(clangOuptut, sourceInfo):
                 }
             sourceInfo.append(newSource)
 
-def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd, clangOutput):
+def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, smackd, clangOutput):
     sourceInfo = GetSourceLineInfo(bplFileName)
 
     for sourceLine in sourceInfo:
         if(not sourceLine['isReachable']):
-            reachRes = TestReachability(verifier, bplFileName, timeLimit, unroll, debug, sourceLine)
+            reachRes = TestReachability(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, sourceLine)
 
             #TODO - how does python handle changing lists in for loop?
             UpdateSourceInfo(reachRes, sourceInfo, verifier)
@@ -112,7 +112,7 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, debug, smackd, cla
         print "Unreachable code:"
         pprint.pprint(result, width=100)
 
-def TestReachability(verifier, bplFileName, timeLimit, unroll, debug, lineInfo):
+def TestReachability(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, lineInfo):
     boogieText = "assert false;"
 
     bplfileBase = path.splitext(bplFileName)[0]
@@ -121,7 +121,7 @@ def TestReachability(verifier, bplFileName, timeLimit, unroll, debug, lineInfo):
     CopyFileWhileInserting(bplFileName, bplNew, lineInfo['bplLineNo'] + 1, boogieText)
 
     #do not pass smackd flag as true.  Breaks parsing
-    corralOutput = verify(verifier, bplNew, timeLimit, unroll, debug, False)
+    corralOutput = verify(verifier, bplNew, timeLimit, unroll, contextSwitches, debug, False)
     
     return corralOutput
 
@@ -175,6 +175,9 @@ if __name__ == '__main__':
         elif sys.argv[i] == '--time-limit':
             del sysArgv[i]
             del sysArgv[i]
+        elif sys.argv[i] == '--context-bound':
+            del sysArgv[i]
+            del sysArgv[i]
 
 
     #Add clang's -Wunreachable-code flag
@@ -187,4 +190,4 @@ if __name__ == '__main__':
     args.outfile.close()
     #!!!!!!END COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
 
-    GetCodeCoverage(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.debug, args.smackd, clangOutput)
+    GetCodeCoverage(args.verifier, args.outfile.name, args.timeLimit, args.unroll, args.contextSwitches, args.debug, args.smackd, clangOutput)
