@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
   if (Unroll) {
     pass_manager.add(llvm::createLoopSimplifyPass());
     pass_manager.add(llvm::createLoopRotatePass());
-    pass_manager.add(llvm::createIndVarSimplifyPass());
+    //pass_manager.add(llvm::createIndVarSimplifyPass());
     pass_manager.add(llvm::createLoopUnrollPass(INT_MAX));
   }
 
