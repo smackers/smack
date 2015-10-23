@@ -124,6 +124,9 @@ def arguments():
   translate_group.add_argument('--llvm-unroll', action="store_true", default=False,
     help='enable LLVM loop unrolling pass as a preprocessing step')
 
+  translate_group.add_argument('--pthread', action='store_true', default=False,
+    help='enable support for pthread programs')
+
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='enable bit precision for non-pointer values')
 
@@ -147,6 +150,9 @@ def arguments():
 
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
     help='upper bound on minimum loop iterations [default: %(default)s]')
+
+  verifier_group.add_argument('--context-bound', metavar='k', default='1', type=int,
+    help='bound thread contexts in Corral to a maximum of k contexts')
 
   verifier_group.add_argument('--verifier-options', metavar='OPTIONS', default='',
     help='additional verifier arguments (e.g., --verifier-options="/trackAllVars /staticInlining")')
@@ -296,6 +302,15 @@ def clang_frontend(args):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
     try_command(compile_command + ['-o', bc, c], console=True)
     bitcodes.append(bc)
+  if args.pthread:
+    pthread_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'pthread.c')
+    pthread_bc = temporary_file('pthread', '.bc', args)
+    spinlock_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'spinlock.c')
+    spinlock_bc = temporary_file('spinlock', '.bc', args)
+    try_command(compile_command + [pthread_lib, '-o', pthread_bc])
+    try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
+    bitcodes.append(pthread_bc)
+    bitcodes.append(spinlock_bc)
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
 
@@ -739,7 +754,8 @@ def verify_bpl(args):
   elif args.verifier == 'corral':
     command = ["corral"]
     command += [args.bpl_file]
-    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/k:%d" % args.context_bound]
     command += ["/useProverEvaluate"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
