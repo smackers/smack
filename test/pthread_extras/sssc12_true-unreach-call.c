@@ -14,6 +14,7 @@
 // Self-Reflection", SAS 2012
 
 #include <pthread.h>
+#include <smack.h>
 #include "assert.h"
 
 void __VERIFIER_assert(int expression) { if (!expression) { ERROR: __VERIFIER_error();}; return; }

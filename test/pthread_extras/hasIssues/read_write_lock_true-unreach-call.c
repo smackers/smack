@@ -21,6 +21,7 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 */
 
 #include <pthread.h>
+#include <smack.h>
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 
 int w=0, r=0, x=0, y=0;

@@ -5,6 +5,7 @@
 // @expect verified
 
 #include <pthread.h>
+#include <smack.h>
 #include <stdlib.h>
 
 int x = 1;

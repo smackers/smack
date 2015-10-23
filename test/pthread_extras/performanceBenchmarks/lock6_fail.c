@@ -3,6 +3,7 @@
 // @expect error
 
 #include <pthread.h>
+#include <smack.h>
 
 pthread_mutex_t lock1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lock2 = PTHREAD_MUTEX_INITIALIZER;

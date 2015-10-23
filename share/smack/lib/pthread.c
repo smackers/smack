@@ -1,7 +1,7 @@
 #include "pthread.h"
 #include "smack.h"
 
-__SMACK_INIT(corral_primitives) {
+void __SMACK_init_func_corral_primitives() {
   //Declare these, so bpl parsing doesn't complain
   __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
   __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
@@ -9,7 +9,7 @@ __SMACK_INIT(corral_primitives) {
   __SMACK_top_decl("procedure corral_atomic_end();");
 }
 
-__SMACK_INIT(thread) {
+void __SMACK_init_func_thread() {
   //Array and possible statuses for tracking pthreads
   __SMACK_top_decl("//dim0=tid, dim1= idx 0 gets status, 1 gets return value");
   __SMACK_top_decl("var $pthreadStatus: [int][int]int;");

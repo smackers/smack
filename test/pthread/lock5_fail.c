@@ -3,6 +3,7 @@
 // @expect error
 
 #include <pthread.h>
+#include <smack.h>
 
 int main() {
   pthread_mutex_t lock;

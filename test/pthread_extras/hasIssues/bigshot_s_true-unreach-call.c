@@ -8,6 +8,7 @@
 #define __VERIFIER_error() assert(0)
 
 #include <pthread.h>
+#include <smack.h>
 #include <stdlib.h>
 #include <string.h>
 

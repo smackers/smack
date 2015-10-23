@@ -14,6 +14,7 @@
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #include <pthread.h>
+#include <smack.h>
 #include <stdio.h> 
 
 int  num;

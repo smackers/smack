@@ -2,6 +2,7 @@
 // @expect verified
 
 #include <pthread.h>
+#include <smack.h>
 
 int x = 1;
 

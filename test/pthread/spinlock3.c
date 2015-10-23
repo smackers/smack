@@ -3,6 +3,7 @@
 // @expect verified
 
 #include <pthread.h>
+#include <smack.h>
 #include <spinlock.h>
 
 spinlock_t lock = SPIN_LOCK_UNLOCKED;

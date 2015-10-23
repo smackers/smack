@@ -2,6 +2,7 @@
 // @skip
 
 #include <pthread.h>
+#include <smack.h>
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 

@@ -17,6 +17,7 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 */
 
 #include <pthread.h>
+#include <smack.h>
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 
 int flag1 = 0, flag2 = 0; // boolean flags

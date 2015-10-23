@@ -12,6 +12,7 @@
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #include <pthread.h>
+#include <smack.h>
 //#include <assert.h>
 
 pthread_mutex_t  mutex;

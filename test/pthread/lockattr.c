@@ -4,6 +4,7 @@
 // @expect verified
 
 #include <pthread.h>
+#include <smack.h>
 
 pthread_mutex_t lock;
 pthread_mutexattr_t lockattr;

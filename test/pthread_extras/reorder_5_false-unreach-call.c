@@ -14,6 +14,7 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #include <stdio.h>
 #include <pthread.h>
+#include <smack.h>
 #include <stdlib.h>
 
 #define USAGE "./reorder <param1> <param2>\n"

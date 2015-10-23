@@ -13,6 +13,7 @@ extern int __VERIFIER_nondet_int();
 */
 
 #include <pthread.h>
+#include <smack.h>
 #include "scull_safe.h"
 #define assert(e) if (!(e)) ERROR: __VERIFIER_error();
 

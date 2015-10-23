@@ -4,6 +4,7 @@
 // @expect error
 
 #include <pthread.h>
+#include <smack.h>
 
 pthread_cond_t cond;
 pthread_mutex_t lock;

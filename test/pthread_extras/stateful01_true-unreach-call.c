@@ -13,6 +13,7 @@
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #include <pthread.h>
+#include <smack.h>
 
 pthread_mutex_t  ma, mb;
 int data1, data2;
