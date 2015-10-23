@@ -279,23 +279,13 @@ def json_compilation_database_frontend(args):
   smack_bc = temporary_file('smack', '.bc', args)
 
   try_command(default_clang_compile_command(args) + [smack_lib(), '-o', smack_bc])
-  smack_lib_bcs = [smack_bc]
-
-  if args.pthread:
-    pthread_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'pthread.c')
-    pthread_bc = temporary_file('pthread', '.bc', args)
-    spinlock_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'spinlock.c')
-    spinlock_bc = temporary_file('spinlock', '.bc', args)
-    try_command(default_clang_compile_command(args) + [pthread_lib, '-o', pthread_bc])
-    try_command(default_clang_compile_command(args) + [spinlock_lib, '-o', spinlock_bc])
-    smack_lib_bcs += [pthread_bc, spinlock_bc]
 
   with open(args.input_file) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
         bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
-        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + smack_lib_bcs)
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + [smack_bc])
 
       else:
         out_file = output_flags.findall(cc['command'])[0] + '.bc'
