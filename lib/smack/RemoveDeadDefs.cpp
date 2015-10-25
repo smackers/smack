@@ -19,7 +19,7 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
   TD = &getAnalysis<DataLayoutPass>().getDataLayout();
   std::vector<Function*> dead;
 
-  while (!dead.empty()) {
+  do {
     dead.clear();
     for (Module::iterator F = M.begin(); F != M.end(); ++F) {
       std::string name = F->getName();
@@ -39,7 +39,7 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
 
     for (auto F : dead)
       F->eraseFromParent();
-  }
+  } while (!dead.empty());
 
   return true;
 }
