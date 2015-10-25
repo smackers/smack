@@ -24,7 +24,7 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
     for (Module::iterator F = M.begin(); F != M.end(); ++F) {
       std::string name = F->getName();
 
-      if (!F->isDefTriviallyDead())
+      if (!(F->isDefTriviallyDead() || F->getNumUses() == 0))
         continue;
 
       if (name.find("__SMACK_") != std::string::npos)
