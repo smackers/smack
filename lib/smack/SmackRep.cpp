@@ -8,7 +8,7 @@
 
 namespace smack {
 
-const unsigned MEMORY_INTRINSIC_THRESHOLD = 10;
+const unsigned MEMORY_INTRINSIC_THRESHOLD = 0;
 
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
