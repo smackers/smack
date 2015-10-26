@@ -131,9 +131,10 @@ public:
   const Stmt* objectAnnotation(const CallInst& CI);
   const Stmt* returnObjectAnnotation(const CallInst& CI);
 
-  vector<Decl*> decl(llvm::Function* F);
-  Decl* decl(llvm::Function* F, llvm::CallInst* C);
-  vector<ProcDecl*> proc(llvm::Function* F);
+  vector<Decl*> decl(Function* F);
+  Decl* decl(Function* F, CallInst* C);
+  vector<ProcDecl*> proc(Function* F);
+  ProcDecl* proc(Function* F, CallInst* C);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);

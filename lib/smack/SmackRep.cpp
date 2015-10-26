@@ -5,6 +5,7 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
+#include <queue>
 
 namespace smack {
 
@@ -719,39 +720,59 @@ vector<Decl*> SmackRep::decl(llvm::Function* F) {
   return decls;
 }
 
-vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
-  vector<ProcDecl*> procs;
-  vector< pair<string,string> > params, rets;
-
+ProcDecl* SmackRep::proc(Function* F, CallInst* CI) {
   FunctionType* T = F->getFunctionType();
+  vector< pair<string,string> > params, rets;
+  string name;
 
-  for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A) {
-    params.push_back({naming.get(*A), type(A->getType())});
-  }
+  for (auto &A : F->getArgumentList())
+    params.push_back({naming.get(A), type(A.getType())});
 
   if (!F->getReturnType()->isVoidTy())
-    rets.push_back({Naming::RET_VAR,type(F->getReturnType())});
+    rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
-  if (!F->isVarArg() || F->use_empty()) {
-    procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, naming.get(*F), params, rets)));
+  if (CI) {
+    name = procName(*CI, F);
+    for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
+      params.push_back({
+        indexedName("p",{i}),
+        type(CI->getOperand(i)->getType())
+      });
+    }
 
   } else {
-    // in case this is a vararg function
-    for (auto U : F->users()) {
-      CallInst* C = dyn_cast<CallInst>(U);
-
-      if (!C || C->getCalledFunction() != F)
-        continue;
-
-      vector< pair<string,string> > varArgParams(params);
-      for (unsigned i = T->getNumParams(); i < C->getNumArgOperands(); i++) {
-        const llvm::Value* V = U->getOperand(i);
-        varArgParams.push_back({indexedName("p",{i}),type(V->getType())});
-      }
-
-      procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, procName(*U,F), varArgParams, rets)));
-    }
+    name = naming.get(*F);
   }
+
+  return static_cast<ProcDecl*>(Decl::procedure(program, name, params, rets));
+}
+
+vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
+  std::queue<User*> users;
+  vector<CallInst*> callers;
+  vector<ProcDecl*> procs;
+
+  users.push(F);
+
+  while (!users.empty()) {
+    auto U = users.front();
+    users.pop();
+
+    if (CallInst* CI = dyn_cast<CallInst>(U))
+      callers.push_back(CI);
+
+    else
+      for (auto V : U->users())
+        users.push(V);
+  }
+
+  if (callers.empty() || !F->isVarArg())
+    procs.push_back(proc(F, NULL));
+
+  else
+    for (auto CI : callers)
+      procs.push_back(proc(F, CI));
+
   return procs;
 }
 
