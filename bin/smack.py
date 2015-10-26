@@ -666,13 +666,6 @@ def verify_bpl_svcomp1(args):
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
-  # If there are no quantifiers, set relevancy to 0
-  with open(args.bpl_file, "r") as f:
-    bpl = f.read()
-  if not "forall" in bpl:
-    heurTrace += "No quantifiers detected.  Setting z3 relevancy to 0.\n"
-    corral_command += ["/bopt:z3opt:smt.relevancy=0"]
-
   if args.bit_precise:
     heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
