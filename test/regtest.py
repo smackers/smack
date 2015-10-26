@@ -187,7 +187,7 @@ def main():
 
     # start processing the tests.
     results = []
-    for test in glob.glob("./**/*.c"):
+    for test in sorted(glob.glob("./**/*.c")):
       # get the meta data for this test
       meta = metadata(test)
 
@@ -246,4 +246,3 @@ def main():
 
 if __name__=="__main__":
   main()
-
