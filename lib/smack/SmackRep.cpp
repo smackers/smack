@@ -5,6 +5,7 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
+#include <queue>
 
 namespace smack {
 
@@ -658,100 +659,80 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
 }
 
-Decl* SmackRep::decl(Function* F, CallInst *C) {
+ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
+  assert(F && "Unknown function call.");
+  string name = naming.get(*F);
   vector< pair<string,string> > params, rets;
+  vector<Block*> blocks;
 
-  assert (F && "Unknown function call.");
-
-  if (C)
-    for (const Value* V : C->arg_operands())
-      params.push_back({naming.freshVarName(*V),type(V->getType())});
-
-  else
-    for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A)
-      params.push_back({naming.get(*A), type(A->getType())});
+  for (auto &A : F->getArgumentList())
+    params.push_back({naming.get(A), type(A.getType())});
 
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
-  return Decl::procedure(program, procName(*C,F), params, rets);
-}
+  if (name == "malloc") {
+    Type* W = F->getFunctionType()->getParamType(0);
+    assert(W->isIntegerTy() && "Expected integer argument.");
+    unsigned width = W->getIntegerBitWidth();
+    blocks.push_back(
+      Block::block("", {
+        Stmt::call(Naming::ALLOC,
+          { integerToPointer(Expr::id(params.front().first), width) },
+          { Naming::RET_VAR }
+        )
+      })
+    );
 
-vector<Decl*> SmackRep::decl(llvm::Function* F) {
-  vector<Decl*> decls;
-  string name = naming.get(*F);
-  for (auto U : F->users()) {
+  } else if (name == "free_") {
+    blocks.push_back(
+      Block::block("", {
+        Stmt::call(Naming::FREE, {Expr::id(params.front().first)})
+      })
+    );
 
-    if (name == "malloc") {
-      llvm::Type* T = F->getFunctionType()->getParamType(0);
-      assert (T->isIntegerTy() && "Expected integer argument.");
-      unsigned width = T->getIntegerBitWidth();
-      decls.push_back(Decl::procedure(program, name, {{"n", type(T)}}, {{"r", Naming::PTR_TYPE}}, {
-        Block::block("", { Stmt::call(Naming::ALLOC, {integerToPointer(Expr::id("n"),width)}, {"r"}) })
-      }));
-
-    } else if (name == "free_") {
-      decls.push_back(Decl::procedure(program, name, {{"n", Naming::PTR_TYPE}}, {}, {
-        Block::block("", { Stmt::call(Naming::FREE, {Expr::id("n")}) })
-      }));
-
-    } else if (auto C = dyn_cast<CallInst>(U)) {
-
-      // NOTE: it could be that F is used by a call to another function.
-      if (C->getCalledFunction() == F)
-        decls.push_back(decl(F,C));
-      else
-        decls.push_back(decl(F,NULL));
-
-    } else if (auto CE = dyn_cast<ConstantExpr>(U)) {
-      assert (CE->isCast() && "Expected bitcast.");
-      for (auto C : CE->users()) {
-        decls.push_back(decl(F,dyn_cast<CallInst>(C)));
-
-        // NOTE: each use ought to have the same type anyways
-        break;
-      }
-
-    } else {
-      decls.push_back(decl(F,NULL));
+  } else if (CI) {
+    FunctionType* T = F->getFunctionType();
+    name = procName(*CI, F);
+    for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
+      params.push_back({
+        indexedName("p",{i}),
+        type(CI->getOperand(i)->getType())
+      });
     }
   }
-  return decls;
+
+  return static_cast<ProcDecl*>(
+    Decl::procedure(program, name, params, rets, blocks)
+  );
 }
 
-vector<ProcDecl*> SmackRep::proc(llvm::Function* F) {
+vector<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
+  std::queue<User*> users;
+  vector<CallInst*> callers;
   vector<ProcDecl*> procs;
-  vector< pair<string,string> > params, rets;
 
-  FunctionType* T = F->getFunctionType();
+  users.push(F);
 
-  for (Function::arg_iterator A = F->arg_begin(); A != F->arg_end(); ++A) {
-    params.push_back({naming.get(*A), type(A->getType())});
+  while (!users.empty()) {
+    auto U = users.front();
+    users.pop();
+
+    if (CallInst* CI = dyn_cast<CallInst>(U))
+      callers.push_back(CI);
+
+    else
+      for (auto V : U->users())
+        users.push(V);
   }
 
-  if (!F->getReturnType()->isVoidTy())
-    rets.push_back({Naming::RET_VAR,type(F->getReturnType())});
+  if (callers.empty() || !F->isVarArg())
+    procs.push_back(procedure(F, NULL));
 
-  if (!F->isVarArg() || F->use_empty()) {
-    procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, naming.get(*F), params, rets)));
+  else
+    for (auto CI : callers)
+      procs.push_back(procedure(F, CI));
 
-  } else {
-    // in case this is a vararg function
-    for (auto U : F->users()) {
-      CallInst* C = dyn_cast<CallInst>(U);
-
-      if (!C || C->getCalledFunction() != F)
-        continue;
-
-      vector< pair<string,string> > varArgParams(params);
-      for (unsigned i = T->getNumParams(); i < C->getNumArgOperands(); i++) {
-        const llvm::Value* V = U->getOperand(i);
-        varArgParams.push_back({indexedName("p",{i}),type(V->getType())});
-      }
-
-      procs.push_back(static_cast<ProcDecl*>(Decl::procedure(program, procName(*U,F), varArgParams, rets)));
-    }
-  }
   return procs;
 }
 

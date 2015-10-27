@@ -1550,9 +1550,9 @@ bool LocalDataStructures::runOnModule(Module &M) {
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
     if (!I->isDeclaration()) {
       DSGraph* G = new DSGraph(GlobalECs, getDataLayout(), *TypeSS, GlobalsGraph);
-      G->getAuxFunctionCalls() = G->getFunctionCalls();
       setDSGraph(*I, G);
       GraphBuilder GGB(*I, *G, *this);
+      G->getAuxFunctionCalls() = G->getFunctionCalls();
       propagateUnknownFlag(G);
       callgraph.insureEntry(I);
       G->buildCallGraph(callgraph, GlobalFunctionList, true);
