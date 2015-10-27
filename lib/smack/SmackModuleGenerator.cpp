@@ -32,20 +32,16 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 
     DEBUG(errs() << "Analyzing function: " << naming.get(*func) << "\n");
 
-    // TODO: Implement function pointers of vararg functions properly
-    // if (!func->isVarArg())
     program.addDecls(rep.globalDecl(func));
 
-    // TODO this will cover the cases of malloc, memcpy, memset, …
-    if (func->isDeclaration()) {
-      program.addDecls(rep.decl(func));
-      continue;
-    }
-
-    vector<ProcDecl*> procs = rep.proc(func);
+    vector<ProcDecl*> procs = rep.procedure(func);
     assert(procs.size() > 0);
-    if (procs[0]->getName() != Naming::DECLARATIONS_PROC)
+
+    if (naming.get(*func) != Naming::DECLARATIONS_PROC)
       program.addDecls(procs);
+
+    if (func->isDeclaration())
+      continue;
 
     if (!func->empty() && !func->getEntryBlock().empty()) {
 
