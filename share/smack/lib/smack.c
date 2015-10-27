@@ -75,9 +75,14 @@ void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
 }
 
-void* calloc (long num, long size) {
-  void* ret = malloc(num * size);
-  memset(ret, 0, num * size);
+void* calloc(unsigned long num, unsigned long size) {
+  void* ret;
+  if (__VERIFIER_nondet_int()) {
+    ret = 0;
+  } else {
+    ret = malloc(num * size);
+    memset(ret, 0, num * size);
+  }
   return ret;
 }
 
