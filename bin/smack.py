@@ -356,6 +356,9 @@ def svcomp_process_file(args, name, ext):
     #Remove any preprocessed declarations of pthread types
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = scrub_pthreads(s)
+    if args.pthread:
+      s = "#include <pthread.h>\n" + s
+    print(s)
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 

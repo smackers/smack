@@ -112,18 +112,46 @@ def scrub_pthreads(s):
   if 'pthread' not in s:
     return s, False
   #These are strings that will conflict with our pthread header files
+  #To generate additional strings, copy paste the text.  
+  #Escape all characters that need to be escaped for regex (at least *[]() 
+  # Then replace all newlines and spaces with \s+. Lastly, replace all 
+  # \s+\s+ to \s+.  Do this last step until string doesn't change anymore.
   fltrs = list()
-  fltrs[0] = r'typedef unsigned long int pthread_t;'
-  fltrs[1] = r'typedef union\n{\n  char __size[56];\n  long int __align;\n} pthread_attr_t;'
-  fltrs[2] = r'typedef union\n{\n  char __size[4];\n  int __align;\n} pthread_mutexattr_t;'
-  fltrs[3] = r'typedef union\n{\n  struct __pthread_mutex_s\n  {\n    int __lock;\n    unsigned int __count;\n    int __owner;\n    unsigned int __nusers;\n    int __kind;\n    int __spins;\n    __pthread_list_t __list;\n  } __data;\n  char __size[40];\n  long int __align;\n} pthread_mutex_t;'
-  fltrs[4] = r'typedef union\n{\n  struct\n  {\n    int __lock;\n    unsigned int __futex;\n    __extension__ unsigned long long int __total_seq;\n    __extension__ unsigned long long int __wakeup_seq;\n    __extension__ unsigned long long int __woken_seq;\n    void *__mutex;\n    unsigned int __nwaiters;\n    unsigned int __broadcast_seq;\n  } __data;\n  char __size[48];\n  __extension__ long long int __align;\n} pthread_cond_t;'
-  fltrs[5] = r'typedef union\n{\n  char __size[4];\n  int __align;\n} pthread_condattr_t;'
-  fltrs[6] = r'enum\n{\n  PTHREAD_MUTEX_TIMED_NP,\n  PTHREAD_MUTEX_RECURSIVE_NP,\n  PTHREAD_MUTEX_ERRORCHECK_NP,\n  PTHREAD_MUTEX_ADAPTIVE_NP\n  ,\n  PTHREAD_MUTEX_NORMAL = PTHREAD_MUTEX_TIMED_NP,\n  PTHREAD_MUTEX_RECURSIVE = PTHREAD_MUTEX_RECURSIVE_NP,\n  PTHREAD_MUTEX_ERRORCHECK = PTHREAD_MUTEX_ERRORCHECK_NP,\n  PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL\n};'
+  fltrs.append(r'typedef\s+unsigned\s+long\s+int\s+pthread_t;')
+  #pthread_attr_t
+  fltrs.append(r'typedef\s+union\s+{\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_attr_t;')
+  fltrs.append(r'union\s+pthread_attr_t\s+{\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+};\s+typedef\s+union\s+pthread_attr_t\s+pthread_attr_t;')
+  #pthread_mutexattr_t
+  fltrs.append(r'typedef\s+union\s+{\s+char\s+__size\[\d+\];\s+int\s+__align;\s+}\s+pthread_mutexattr_t;')
+  fltrs.append(r'typedef\s+union\s+{\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutexattr_t;')
+  #pthread_mutex_t
+  fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+unsigned\s+int\s+__nusers;\s+int\s+__kind;\s+int\s+__spins;\s+__pthread_list_t\s+__list;\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
+  fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+int\s+__kind;\s+unsigned\s+int\s+__nusers;\s+__extension__\s+union\s+{\s+int\s+__spins;\s+__pthread_slist_t\s+__list;\s+};\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
+  fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+unsigned\s+int\s+__nusers;\s+int\s+__kind;\s+short\s+__spins;\s+short\s+__elision;\s+__pthread_list_t\s+__list;\s+# 124 "/usr/include/x86_64-linux-gnu/bits/pthreadtypes\.h" 3 4\s+}\s+__data;\s+\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+} pthread_mutex_t;')
+  fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+int\s+__kind;\s+unsigned\s+int\s+__nusers;\s+__extension__\s+union\s+{\s+struct\s+{\s+short\s+__espins;\s+short\s+__elision;\s+}\s+d;\s+__pthread_slist_t\s+__list;\s+};\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
+  #pthread_cond_t
+  fltrs.append(r'typedef\s+union\s+{\s+struct\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__futex;\s+__extension__\s+unsigned\s+long\s+long\s+int\s+__total_seq;\s+__extension__\s+unsigned\s+long\s+long\s+int\s+__wakeup_seq;\s+__extension__\s+unsigned\s+long\s+long\s+int\s+__woken_seq;\s+void\s+\*__mutex;\s+unsigned\s+int\s+__nwaiters;\s+unsigned\s+int\s+__broadcast_seq;\s+}\s+__data;\s+char\s+__size\[\d+\];\s+__extension__\s+long\s+long\s+int\s+__align;\s+}\s+pthread_cond_t;')
+  #pthread_condattr_t
+  fltrs.append(r'typedef\s+union\s+{\s+char\s+__size\[\d+\];\s+int\s+__align;\s+}\s+pthread_condattr_t;')
+  fltrs.append(r'typedef\s+union\s+{\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_condattr_t;')
+  #enums
+  fltrs.append(r'enum\s+{\s+PTHREAD_MUTEX_TIMED_NP,\s+PTHREAD_MUTEX_RECURSIVE_NP,\s+PTHREAD_MUTEX_ERRORCHECK_NP,\s+PTHREAD_MUTEX_ADAPTIVE_NP\s+,\s+PTHREAD_MUTEX_NORMAL\s+=\s+PTHREAD_MUTEX_TIMED_NP,\s+PTHREAD_MUTEX_RECURSIVE\s+=\s+PTHREAD_MUTEX_RECURSIVE_NP,\s+PTHREAD_MUTEX_ERRORCHECK\s+=\s+PTHREAD_MUTEX_ERRORCHECK_NP,\s+PTHREAD_MUTEX_DEFAULT\s+=\s+PTHREAD_MUTEX_NORMAL\s+};')
+  fltrs.append(r'enum\s+{\s+PTHREAD_MUTEX_TIMED_NP,\s+PTHREAD_MUTEX_RECURSIVE_NP,\s+PTHREAD_MUTEX_ERRORCHECK_NP,\s+PTHREAD_MUTEX_ADAPTIVE_NP\s+};')
+  #pthread_cond_init decl
+  fltrs.append(r'extern\s+int\s+pthread_cond_init\s+\(pthread_cond_t\s+\*__restrict\s+__cond,\s+__const\s+pthread_condattr_t\s+\*__restrict\s+__cond_attr\)\s+__attribute__\s+\(\(__nothrow__\s+,\s+__leaf__\)\)\s+__attribute__\s+\(\(__nonnull__\s+\(\d+\)\)\);')
+  fltrs.append(r'extern\s+int\s+pthread_cond_init\s*\(pthread_cond_t\s+\*__restrict\s+__cond,\s+const\s+pthread_condattr_t\s+\*__restrict\s+__cond_attr\)\s+__attribute__\s*\(\(__nothrow__\s+,\s+__leaf__\)\)\s+__attribute__\s+\(\(__nonnull__\s+\(1\)\)\);')
+  fltrs.append(r'extern\s+int\s+pthread_cond_init\s*\(pthread_cond_t\s+\*__restrict\s+__cond,\s+__const\s+pthread_condattr_t\s+\*__restrict\s+__cond_attr\)\s+__attribute__\s+\(\(__nothrow__\)\)\s+__attribute__\s+\(\(__nonnull__\s+\(1\)\)\);')
 
-  #Remove each occurrence, but keep newlines so line numbers match
-  for fltr in f:
-    s = re.sub(fltr, '\n'*fltr.count('\n'), s)
+
+  #Remove each occurrence
+  for fltr in fltrs:
+    sold = s
+    pat = re.compile(fltr, re.MULTILINE);
+    s = pat.sub('', s)
+    if sold == s:
+      print("Didn't match - " + fltr)
+    else:
+      print("DID match - " + fltr)
 
   return s, True
 
@@ -131,3 +159,6 @@ def scrub_pthreads(s):
 if __name__ == '__main__':
     
   print float_filter(sys.argv[1])
+
+
+
