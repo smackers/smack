@@ -343,6 +343,7 @@ def json_compilation_database_frontend(args):
 
   llvm_to_bpl(args)
 
+
 def svcomp_process_file(args, name, ext):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
@@ -367,11 +368,14 @@ def svcomp_frontend(args):
     raise RuntimeError("Expected a single SVCOMP input file.")
 
   # test float\bv benchmarks
-  file_type = svcomp_filter(args.input_files[0])
+  file_type = svcomp_filter(args.input_files[0])[0]
   if file_type == 'bitvector': 
     args.bit_precise = True
   if file_type == 'float':
     sys.exit(results()['unknown'])
+  args.execute = False
+  if svcomp_filter(args.input_files[0])[1] == 'executable':
+    args.execute = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -671,7 +675,7 @@ def verify_bpl_svcomp1(args):
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
     corral_command += ["/bopt:boolControlVC"]
 
-  time_limit = 880
+  time_limit = 880 
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
@@ -714,6 +718,15 @@ def verify_bpl_svcomp1(args):
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
+      if args.execute:
+        heurTrace += "Hold on, let's see the execution result.\n"
+        execution_result = run_binary(args)
+        heurTrace += "Excecution result is " + execution_result + '\n'
+        if execution_result == 'false':
+          heurTrace += "Oops, execution result says no.\n"
+        if not args.quiet:
+          print(heurTrace + "\n")
+          sys.exit(results()['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
       sys.exit(results()['verified'])
@@ -733,6 +746,52 @@ def verify_bpl_svcomp1(args):
     print(heurTrace + "\n")
   sys.exit(results()[result])
 
+def run_binary(args):
+  #process the file to make it runnable
+  with open(args.input_files[0], 'r') as fi:
+    s = fi.read()
+
+  s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
+  s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
+  s = '#include<assert.h>\n' + s
+ 
+  name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
+  tmp1 = temporary_file(name, '.c', args)
+  with open(tmp1, 'w') as fo:
+    fo.write(s)
+
+  tmp2 = temporary_file(name, '.bin', args)
+  tmp2 = tmp2.split('/')[-1]
+  #compile and run 
+  cmd = ['clang', tmp1, '-o', tmp2]
+  #cmd += args.clang_options.split()
+  if '-m32' in args.clang_options.split():
+    cmd += ['-m32']
+  
+
+  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+  out, err = proc.communicate()
+  rc = proc.returncode
+
+  if rc:
+    print 'Compiling error' 
+    print err
+    return 'unknown'
+  else:
+    cmd = [r'./' + tmp2]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    rc = proc.returncode
+    if rc:
+      if re.search(r'Assertion.*failed', err):
+        return 'false'
+      else:
+        print 'execution error' 
+        return 'unknown'
+    else:
+      return 'true'
+    
 def verify_bpl(args):
   """Verify the Boogie source file with a back-end verifier."""
 
