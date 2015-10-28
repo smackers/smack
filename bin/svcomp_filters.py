@@ -106,6 +106,27 @@ def float_filter(lines, raw_line_count, pruned_line_count):
       if regex_special.search(valid_line) is not None and count <= 4:
         return 0 
     return 1 
+
+
+def scrub_pthreads(s):
+  if 'pthread' not in s:
+    return s, False
+  #These are strings that will conflict with our pthread header files
+  fltrs = list()
+  fltrs[0] = r'typedef unsigned long int pthread_t;'
+  fltrs[1] = r'typedef union\n{\n  char __size[56];\n  long int __align;\n} pthread_attr_t;'
+  fltrs[2] = r'typedef union\n{\n  char __size[4];\n  int __align;\n} pthread_mutexattr_t;'
+  fltrs[3] = r'typedef union\n{\n  struct __pthread_mutex_s\n  {\n    int __lock;\n    unsigned int __count;\n    int __owner;\n    unsigned int __nusers;\n    int __kind;\n    int __spins;\n    __pthread_list_t __list;\n  } __data;\n  char __size[40];\n  long int __align;\n} pthread_mutex_t;'
+  fltrs[4] = r'typedef union\n{\n  struct\n  {\n    int __lock;\n    unsigned int __futex;\n    __extension__ unsigned long long int __total_seq;\n    __extension__ unsigned long long int __wakeup_seq;\n    __extension__ unsigned long long int __woken_seq;\n    void *__mutex;\n    unsigned int __nwaiters;\n    unsigned int __broadcast_seq;\n  } __data;\n  char __size[48];\n  __extension__ long long int __align;\n} pthread_cond_t;'
+  fltrs[5] = r'typedef union\n{\n  char __size[4];\n  int __align;\n} pthread_condattr_t;'
+  fltrs[6] = r'enum\n{\n  PTHREAD_MUTEX_TIMED_NP,\n  PTHREAD_MUTEX_RECURSIVE_NP,\n  PTHREAD_MUTEX_ERRORCHECK_NP,\n  PTHREAD_MUTEX_ADAPTIVE_NP\n  ,\n  PTHREAD_MUTEX_NORMAL = PTHREAD_MUTEX_TIMED_NP,\n  PTHREAD_MUTEX_RECURSIVE = PTHREAD_MUTEX_RECURSIVE_NP,\n  PTHREAD_MUTEX_ERRORCHECK = PTHREAD_MUTEX_ERRORCHECK_NP,\n  PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL\n};'
+
+  #Remove each occurrence, but keep newlines so line numbers match
+  for fltr in f:
+    s = re.sub(fltr, '\n'*fltr.count('\n'), s)
+
+  return s, True
+
     
 if __name__ == '__main__':
     

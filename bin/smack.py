@@ -353,6 +353,9 @@ def svcomp_process_file(args, name, ext):
       # replace all occurrences of 100000 with 10
       # Only target at small examples
       s = re.sub(r'100000', r'10', s)
+    #Remove any preprocessed declarations of pthread types
+    #Also, if file contains 'pthread', set pthread mode
+    s,args.pthread = scrub_pthreads(s)
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
