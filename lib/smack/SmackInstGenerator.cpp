@@ -565,18 +565,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
     llvm::Module* m = ci.getParent()->getParent()->getParent();
     for (llvm::Module::iterator f = m->begin(), e = m->end(); f != e; ++f)
-      if (f->hasAddressTaken() && f->getFunctionType()->getNumParams() == ci.getNumArgOperands() &&
-          ((f->getReturnType()->isPointerTy() && ci.getType()->isPointerTy()) || f->getReturnType() == ci.getType())) {
-        unsigned i;
-        for (i = 0; i < ci.getNumArgOperands(); ++i) {
-          llvm::Type* arg1 = f->getFunctionType()->getParamType(i);
-          llvm::Type* arg2 = ci.getArgOperand(i)->getType();
-          if ((!arg1->isPointerTy() || !arg2->isPointerTy()) && arg1 != arg2)
-            break;
-        }
-        if (i == ci.getNumArgOperands())
-          fs.push_back(f);
-      }
+      if (f->getFunctionType() == t && f->hasAddressTaken())
+        fs.push_back(f);
 
     if (fs.size() == 1) {
       // Q: is this case really possible?
