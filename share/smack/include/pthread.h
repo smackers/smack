@@ -26,6 +26,10 @@
 // Initialize thread status tracking variables (OS level behavior)
 //__SMACK_INIT(thread);
 
+void __VERIFIER_atomic_begin();
+
+void __VERIFIER_atomic_end();
+
 pthread_t pthread_self(void);
 
 int pthread_join(pthread_t __th, void **__thread_return);
