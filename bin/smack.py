@@ -357,9 +357,10 @@ def svcomp_process_file(args, name, ext):
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = scrub_pthreads(s)
     if args.pthread:
+      print("Pthread detected - setting context bound to 2")
       args.context_bound=2
       s = "#include <pthread.h>\n" + s
-    print(s)
+    #print(s)
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
@@ -670,7 +671,8 @@ def verify_bpl_svcomp1(args):
 
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
-  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
+  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+  corral_command += ["/k:%d" % args.context_bound]
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
   if args.bit_precise:

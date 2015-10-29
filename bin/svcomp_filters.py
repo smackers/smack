@@ -147,13 +147,13 @@ def scrub_pthreads(s):
 
   #Remove each occurrence
   for fltr in fltrs:
-    sold = s
+    #sold = s
     pat = re.compile(fltr, re.MULTILINE);
     s = pat.sub('', s)
-    if sold == s:
-      print("Didn't match - " + fltr)
-    else:
-      print("DID match - " + fltr)
+    #if sold == s:
+    #  print("Didn't match - " + fltr)
+    #else:
+    #  print("DID match - " + fltr)
 
   return s, True
 
