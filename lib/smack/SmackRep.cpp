@@ -795,6 +795,7 @@ string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << endl;
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << endl;
+  s << Decl::typee(Naming::FLOAT_TYPE, intType(32)) << endl;
   s << endl;
 
   s << "// Basic constants" << endl;

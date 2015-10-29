@@ -520,7 +520,6 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i64,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
 
-  D("type float;");
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("function $fadd.float(f1:float, f2:float) returns (float);");
   D("function $fsub.float(f1:float, f2:float) returns (float);");
