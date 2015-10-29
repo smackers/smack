@@ -675,7 +675,7 @@ def verify_bpl_svcomp1(args):
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
     corral_command += ["/bopt:boolControlVC"]
 
-  time_limit = 880 
+  time_limit = 880
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
@@ -724,8 +724,8 @@ def verify_bpl_svcomp1(args):
         heurTrace += "Excecution result is " + execution_result + '\n'
         if execution_result == 'false':
           heurTrace += "Oops, execution result says no.\n"
-        if not args.quiet:
-          print(heurTrace + "\n")
+          if not args.quiet:
+            print(heurTrace + "\n")
           sys.exit(results()['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
