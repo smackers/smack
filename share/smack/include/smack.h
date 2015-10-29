@@ -101,6 +101,7 @@ NONDET_DECL(double);
 NONDET_DECL(long,double);
 
 // Apparently used in SVCOMP benchmarks
+_Bool __VERIFIER_nondet_bool(void);
 unsigned char __VERIFIER_nondet_uchar(void);
 unsigned short __VERIFIER_nondet_ushort(void);
 unsigned __VERIFIER_nondet_uint(void);

@@ -57,6 +57,11 @@ void* __VERIFIER_nondet(void) {
 }
 
 // Apparently used in SVCCOMP benchmarks
+_Bool __VERIFIER_nondet_bool(void) {
+  _Bool x = (_Bool)__VERIFIER_nondet_int();
+  return x;
+}
+
 unsigned char __VERIFIER_nondet_uchar(void) {
   unsigned char x = __VERIFIER_nondet_unsigned_char();
   __VERIFIER_assume(x >= 0);
