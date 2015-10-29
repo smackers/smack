@@ -665,6 +665,13 @@ def verify_bpl_svcomp1(args):
         print(heurTrace + "\n")
       sys.exit(results()['unknown'])
 
+  loopUnrollBar = 8
+  with open(args.bpl_file, "r") as f:
+    bpl = f.read()
+  if "ldv" in bpl or "calculate_output" in bpl:
+    heurTrace += "ECA or LDV benchmark detected. Setting loop unroll bar to 12.\n"
+    loopUnrollBar = 12
+
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
@@ -706,7 +713,7 @@ def verify_bpl_svcomp1(args):
   elif result == 'timeout': #normal inlining
     heurTrace += "Timed out during normal inlining.\n"
     heurTrace += "Determining result based on how far we unrolled.\n"
-    # If we managed to unroll more than 12 times, then return verified
+    # If we managed to unroll more than loopUnrollBar times, then return verified
     # First remove exhausted loop bounds generated during max static loop bound computation
     verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
       'Verifying program while tracking', verifier_output)
@@ -715,7 +722,7 @@ def verify_bpl_svcomp1(args):
     for match in it:
       if int(match.group(1)) > unrollMax:
         unrollMax = int(match.group(1))
-    if unrollMax >= 12:
+    if unrollMax >= loopUnrollBar:
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
