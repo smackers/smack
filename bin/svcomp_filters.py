@@ -34,13 +34,17 @@ def svcomp_filter(f):
   pruned_lines = raw_file_line_count(lines)
   raw_lines = len(lines.split('\n'))
 
+  executable = ''
+  if len(linecount(r'__VERIFIER_nondet', r'void|extern', lines)) == 0:
+    executable = 'executable' 
+
   if bv_filter(lines, raw_lines, pruned_lines):
-    return 'bitvector' 
+    return 'bitvector', executable 
 
   if float_filter(lines, raw_lines, pruned_lines):
-    return 'float' 
+    return 'float', executable 
 
-  return 'normal' 
+  return 'normal', executable 
     
 def bv_filter(lines, raw_line_count, pruned_line_count):
 
@@ -108,5 +112,5 @@ def float_filter(lines, raw_line_count, pruned_line_count):
     return 1 
     
 if __name__ == '__main__':
-    
-  print float_filter(sys.argv[1])
+  print "What?"
+  print svcomp_filter(sys.argv[1])
