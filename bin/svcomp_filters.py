@@ -141,6 +141,8 @@ def scrub_pthreads(s):
   fltrs.append(r'extern\s+int\s+pthread_cond_init\s+\(pthread_cond_t\s+\*__restrict\s+__cond,\s+__const\s+pthread_condattr_t\s+\*__restrict\s+__cond_attr\)\s+__attribute__\s+\(\(__nothrow__\s+,\s+__leaf__\)\)\s+__attribute__\s+\(\(__nonnull__\s+\(\d+\)\)\);')
   fltrs.append(r'extern\s+int\s+pthread_cond_init\s*\(pthread_cond_t\s+\*__restrict\s+__cond,\s+const\s+pthread_condattr_t\s+\*__restrict\s+__cond_attr\)\s+__attribute__\s*\(\(__nothrow__\s+,\s+__leaf__\)\)\s+__attribute__\s+\(\(__nonnull__\s+\(1\)\)\);')
   fltrs.append(r'extern\s+int\s+pthread_cond_init\s*\(pthread_cond_t\s+\*__restrict\s+__cond,\s+__const\s+pthread_condattr_t\s+\*__restrict\s+__cond_attr\)\s+__attribute__\s+\(\(__nothrow__\)\)\s+__attribute__\s+\(\(__nonnull__\s+\(1\)\)\);')
+  #__VERIFIER_atomic_begin definition removal
+  fltrs.append(r'int\s+__global_lock;\s+void\s+__VERIFIER_atomic_begin\(\)\s+{\s+__VERIFIER_assume\(__global_lock==0\);\s+__global_lock=1;\s+return;\s+}\s+void\s+__VERIFIER_atomic_end\(\)\s+{\s+__VERIFIER_assume\(__global_lock==1\);\s+__global_lock=0;\s+return;\s+}')
 
 
   #Remove each occurrence

@@ -357,6 +357,7 @@ def svcomp_process_file(args, name, ext):
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = scrub_pthreads(s)
     if args.pthread:
+      args.context_bound=2
       s = "#include <pthread.h>\n" + s
     print(s)
     with open(args.input_files[0], 'w') as fo:
