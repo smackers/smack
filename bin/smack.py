@@ -773,8 +773,8 @@ def run_binary(args):
   #compile and run 
   cmd = ['clang', tmp1, '-o', tmp2]
   #cmd += args.clang_options.split()
-  if '-m32' in args.clang_options.split():
-    cmd += ['-m32']
+  #if '-m32' in args.clang_options.split():
+    #cmd += ['-m32']
   
 
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
