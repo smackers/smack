@@ -34,9 +34,9 @@ rm test.* cde.options
 cp ../../LICENSE .
 
 # Create wrapper script
-echo \#\!/bin/sh                                                                            >  smack.sh
-echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"                               >> smack.sh
-echo \$HERE/cde-package/cde-exec \'smack.py\' \'-x=svcomp\' \'--verifier=svcomp\' \"\$\@\"  >> smack.sh
+echo \#\!/bin/sh                                                                                   >  smack.sh
+echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"                                      >> smack.sh
+echo \$HERE/cde-package/cde-exec \'smack.py\' \'-x=svcomp\' \'--verifier=svcomp\' \'-q\' \"\$\@\"  >> smack.sh
 chmod u+x smack.sh
 
 # Package it up
