@@ -665,17 +665,20 @@ def verify_bpl_svcomp1(args):
         print(heurTrace + "\n")
       sys.exit(results()['unknown'])
 
+  corral_command = ["corral-svcomp"]
+  corral_command += [args.bpl_file]
+  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
+  corral_command += ["/useProverEvaluate", "/cex:1"]
+
   loopUnrollBar = 8
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
   if "ldv" in bpl or "calculate_output" in bpl:
     heurTrace += "ECA or LDV benchmark detected. Setting loop unroll bar to 12.\n"
     loopUnrollBar = 12
-
-  corral_command = ["corral-svcomp"]
-  corral_command += [args.bpl_file]
-  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
-  corral_command += ["/useProverEvaluate", "/cex:1"]
+  if not "forall" in bpl:
+    heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
+    corral_command += ["/bopt:z3opt:smt.relevancy=0"]
 
   if args.bit_precise:
     heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
