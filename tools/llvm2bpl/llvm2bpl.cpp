@@ -26,6 +26,7 @@
 #include "assistDS/SimplifyExtractValue.h"
 #include "assistDS/SimplifyInsertValue.h"
 #include "assistDS/MergeGEP.h"
+#include "assistDS/Devirt.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
 
@@ -121,6 +122,9 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::CodifyStaticInits());
   pass_manager.add(new smack::RemoveDeadDefs());
   pass_manager.add(new llvm::MergeArrayGEP());
+
+  // TODO devirtualization as a pre-pass?
+  // pass_manager.add(new llvm::Devirtualize());
 
   std::string filename(filenamePrefix(InputFilename) + "-final.ll");
   std::string EC;

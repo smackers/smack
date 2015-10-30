@@ -536,6 +536,18 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     emit(rep.call(f, ci));
 
   } else {
+    // Apparently we have no idea what function may have been called.
+
+    // TODO should we treat this as an error?
+    // llvm_unreachable("Expected function devirtualization.");
+
+    // TODO or should we treat this as a warning?
+    // WARN("unsoundly ignoring indeterminate call: " + i2s(ci));
+    // emit(Stmt::skip());
+
+    // TODO REMOVE THE CODE BELOW
+    // THE FOLLOWING CODE IS OBSOLETED BY A DEVIRTUALIZATION PASS
+
     // function pointer call...
     vector<llvm::Function*> fs;
 
@@ -599,6 +611,10 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       WARN("unsoundly ignoring indeterminate call: " + i2s(ci));
       emit(Stmt::skip());
     }
+
+    // TODO REMOVE THE CODE ABOVE
+    // THE PRECEDING CODE IS OBSOLETED BY A DEVIRTUALIZATION PASS
+
   }
 
   if (f && f->isDeclaration() && rep.isExternal(&ci))
