@@ -22,8 +22,10 @@ echo   return 0\;                                   >> test.c
 echo \}                                             >> test.c
 
 # Run SMACK with CDE
-../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral
-../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral --clang-options=-m32
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral --clang-options=-m64
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp --clang-options=-m32
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp --clang-options=-m64
 
 # Clean up temporary files
 rm test.* cde.options
