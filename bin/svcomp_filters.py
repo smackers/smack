@@ -57,7 +57,7 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   
   #cast patterns
   if pruned_line_count <= 210:
-    casts = re.compile(r'''4294967295|plus_one|minus_one|\(x % 2\) == \(y % 2\)|linear_search|while \(\('0' <= c\) && \(c <= '9'\)\)|if \(m < 100 \|\| n < 100 \|\| result >= 200\)''')
+    casts = re.compile(r'''4294967295|plus_one|minus_one|\(x % 2\) == \(y % 2\)|linear_search|while \(\('0' <= c\) && \(c <= '9'\)\)''')
     if casts.search(lines):
       return 1
   #bwops = re.compile(r'''[^\&]\&[^\&]|[^\|]\|[^\|]|\^|>>|<<''')
