@@ -11,6 +11,7 @@
 
 #include "assistDS/Devirt.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
 
@@ -169,16 +170,11 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
                                   M);
 
   //
-  // Set the names of the arguments.  Also, record the arguments in a vector
-  // for subsequence access.
+  // Set the names of the arguments.
   //
   F->arg_begin()->setName("funcPtr");
-  std::vector<Value*> fargs;
-  for(Function::arg_iterator ai = F->arg_begin(), ae = F->arg_end(); ai != ae; ++ai)
-    if (ai != F->arg_begin()) {
-      fargs.push_back(ai);
-      ai->setName("arg");
-    }
+  for (auto A = ++F->arg_begin(), E = F->arg_end(); A != E; ++A)
+    A->setName("arg");
 
   //
   // Create an entry basic block for the function.  All it should do is perform
@@ -193,6 +189,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   std::map<const Function*, BasicBlock*> targets;
   for (unsigned index = 0; index < Targets.size(); ++index) {
     const Function* FL = Targets[index];
+    const FunctionType* FT = FL->getFunctionType();
 
     // Create the basic block for doing the direct call
     BasicBlock* BL = BasicBlock::Create (M->getContext(), FL->getName(), F);
@@ -200,11 +197,12 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
     // Create the direct function call
 
     std::vector<Value*> Args;
-    unsigned ti = 0;
-    for (auto a : fargs)
-      Args.push_back(
-        castTo(a, FL->getFunctionType()->getParamType(ti++), "", BL)
-      );
+    Function::arg_iterator P, PE;
+    FunctionType::param_iterator T, TE;
+    for (P = ++F->arg_begin(), PE = F->arg_end(),
+         T = FT->param_begin(), TE = FT->param_end();
+         P != PE && T != TE; ++P, ++T)
+      Args.push_back(castTo(P, *T, "", BL));
 
     Value* directCall = CallInst::Create (const_cast<Function*>(FL),
                                           Args,
@@ -278,9 +276,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   //
   // Make the entry basic block branch to the first comparison basic block.
   //
-  //InsertPt->setUnconditionalDest (tailBB);
   InsertPt->setSuccessor(0, tailBB);
-  // InsertPt->setSuccessor(1, tailBB);
   //
   // Return the newly created bounce function.
   //
