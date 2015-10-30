@@ -709,10 +709,12 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
 
 vector<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
   std::queue<User*> users;
-  vector<CallInst*> callers;
-  vector<ProcDecl*> procs;
+  std::vector<CallInst*> callers;
+  std::vector<ProcDecl*> procs;
+  std::set<User*> covered;
 
   users.push(F);
+  covered.insert(F);
 
   while (!users.empty()) {
     auto U = users.front();
@@ -723,7 +725,10 @@ vector<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
 
     else
       for (auto V : U->users())
-        users.push(V);
+        if (!covered.count(V)) {
+          users.push(V);
+          covered.insert(V);
+        }
   }
 
   if (callers.empty() || !F->isVarArg())
