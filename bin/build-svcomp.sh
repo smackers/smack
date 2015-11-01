@@ -24,26 +24,19 @@ BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
 BUILD_SMACK=1
-TEST_SMACK=0
 
 # PATHS
-SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
+ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SMACK_DIR="${ROOT}/smack"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
-MONO_DIR="${ROOT}/mono"
-LLVM_DIR="${ROOT}/llvm"
 
-source ${SMACK_DIR}/bin/versions
+BOOGIE_COMMIT=437bde8d02
+CORRAL_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=corral&changeSetId=0afb111179633047e14223115a5b16fe05d0ab5a"
 
 SMACKENV=${ROOT}/smack.environment
 WGET="wget --no-verbose --method=GET"
-
-# Install prefix -- system default is used if left unspecified
-INSTALL_PREFIX=
-CONFIGURE_INSTALL_PREFIX=
-CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependnecies; the rest are added depending on the platform
 DEPENDENCIES="git cmake python-yaml unzip wget"
@@ -58,67 +51,19 @@ set -e
 Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
 DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
 
-# Parse command line options
-while [[ $# > 0 ]]
-do
-  case "$1" in
-  --prefix)
-    puts "Using install prefix $2"
-    INSTALL_PREFIX="${2%/}"
-    CONFIGURE_INSTALL_PREFIX="--prefix=$2"
-    CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=${INSTALL_PREFIX}/bin:$PATH >> ${SMACKENV}
-    shift
-    shift
-    ;;
-
-  *)
-    puts "Unknown option: $1"
-    exit 1
-    ;;
-  esac
-done
-
 
 if [ ${INSTALL_DEPENDENCIES} -eq 1 ]
 then
   puts "Installing required packages"
 
-  case "$distro" in
-  linux-opensuse*)
-    sudo zypper --non-interactive install ${DEPENDENCIES}
-    ;;
-
-  linux-ubuntu-14*)
-    sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
-    ${WGET} -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
-    sudo apt-get update
-    sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
-    ;;
-
-  linux-ubuntu-12*)
-    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-    sudo add-apt-repository -y ppa:andykimpe/cmake
-    sudo apt-get update
-    sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
-    sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
-    sudo update-alternatives --config gcc
-    sudo update-alternatives --config g++
-    ;;
-
-  linux-cygwin*)
-    ;;
-
-  *)
-    puts "Distribution ${distro} not supported. Dependencies must be installed manually."
-    exit 1
-    ;;
-  esac
+  sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
+  ${WGET} -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+  sudo apt-get update
+  sudo apt-get install -y ${DEPENDENCIES}
+  sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
+  sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
+  sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
+  sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
 
   puts "Installed required packages"
 fi
@@ -177,33 +122,23 @@ if [ ${BUILD_SMACK} -eq 1 ]
 then
   puts "Building SMACK"
 
+  git clone https://github.com/smackers/smack.git ${SMACK_DIR}/src
+  cd ${SMACK_DIR}/src
+  git checkout svcomp2016
   mkdir -p ${SMACK_DIR}/build
+  mkdir -p ${SMACK_DIR}/install
   cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
+  cmake -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
   make
   make install
 
   puts "Configuring shell environment"
+  echo export PATH=${SMACK_DIR}/install/bin:$PATH >> ${SMACKENV}
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
-  source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"
 
   puts "Built SMACK"
 fi
-
-
-if [ ${TEST_SMACK} -eq 1 ]
-then
-  puts "Running SMACK regression tests"
-
-  cd ${SMACK_DIR}/test
-  ./regtest.py
-  res=$?
-
-  puts "Regression tests complete"
-fi
-
-exit $res
 
