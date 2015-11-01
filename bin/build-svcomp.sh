@@ -128,7 +128,7 @@ then
   mkdir -p ${SMACK_DIR}/build
   mkdir -p ${SMACK_DIR}/install
   cd ${SMACK_DIR}/build
-  cmake -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
+  cmake -DCMAKE_INSTALL_PREFIX=${SMACK_DIR}/install -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ../src
   make
   make install
 
