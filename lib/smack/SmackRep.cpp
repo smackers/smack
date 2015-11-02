@@ -209,7 +209,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
   const Expr* size =
     Expr::fn("$mul.ref",
       pointerLit(storageSize(i.getAllocatedType())),
-      expr(i.getArraySize()));
+      integerToPointer(expr(i.getArraySize()), getIntSize(i.getArraySize())));
 
   // TODO this should not be a pointer type.
   return Stmt::call(Naming::ALLOC,{size},{naming.get(i)});
