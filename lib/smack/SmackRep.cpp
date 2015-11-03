@@ -336,11 +336,23 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       T = GEP->getType()->getElementType();
       addr = ptrArith(GEP);
 
+    } else if (auto LI = dyn_cast<const LoadInst>(V)) {
+      auto GEP = dyn_cast<const GetElementPtrInst>(LI->getPointerOperand());
+      assert(GEP && "Expected GEP argument to load instruction.");
+      A = dyn_cast<const Argument>(GEP->getPointerOperand());
+      assert(A && "Expected function argument to GEP instruction.");
+      assert(A->hasName() && "Expected named argument.");
+      auto PT = dyn_cast<PointerType>(V->getType());
+      assert(PT && "Expected pointer type result of load instruction.");
+      T = PT->getElementType();
+      addr = ptrArith(GEP);
+
     } else {
       llvm_unreachable("Unexpected argument type.");
     }
 
     assert(A->hasName() && "Expected named argument.");
+    assert(T && "Unkown access type.");
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
     assert(I && "expected constant size expression.");
     const unsigned count = I->getZExtValue();
