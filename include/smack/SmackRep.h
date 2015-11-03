@@ -128,8 +128,6 @@ public:
 
   const Stmt* valueAnnotation(const CallInst& CI);
   const Stmt* returnValueAnnotation(const CallInst& CI);
-  const Stmt* objectAnnotation(const CallInst& CI);
-  const Stmt* returnObjectAnnotation(const CallInst& CI);
 
   vector<ProcDecl*> procedure(Function* F);
   ProcDecl* procedure(Function* F, CallInst* C);

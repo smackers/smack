@@ -37,9 +37,7 @@ public:
   static const std::string DECL_PROC;
   static const std::string TOP_DECL_PROC;
   static const std::string VALUE_PROC;
-  static const std::string OBJECT_PROC;
   static const std::string RETURN_VALUE_PROC;
-  static const std::string RETURN_OBJECT_PROC;
   static const std::string INITIALIZE_PROC;
   static const std::string STATIC_INIT_PROC;
 

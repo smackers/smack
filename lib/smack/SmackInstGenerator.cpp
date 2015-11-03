@@ -441,8 +441,19 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
-  llvm::Function* f = ci.getCalledFunction();
-  string name = f && f->hasName() ? f->getName().str() : "";
+  Function* f = ci.getCalledFunction();
+
+  if (!f) {
+    if (auto CE = dyn_cast<const ConstantExpr>(ci.getCalledValue())) {
+      if (CE->isCast()) {
+        if (auto CV = dyn_cast<Function>(CE->getOperand(0))) {
+          f = CV;
+        }
+      }
+    }
+  }
+
+  string name = f && f->hasName() ? f->getName() : "";
 
   if (ci.isInlineAsm()) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
@@ -471,12 +482,6 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   } else if (name.find(Naming::RETURN_VALUE_PROC) != string::npos) {
     emit(rep.returnValueAnnotation(ci));
-
-  } else if (name.find(Naming::OBJECT_PROC) != string::npos) {
-    emit(rep.objectAnnotation(ci));
-
-  } else if (name.find(Naming::RETURN_OBJECT_PROC) != string::npos) {
-    emit(rep.returnObjectAnnotation(ci));
 
   } else if (name.find(Naming::MOD_PROC) != string::npos) {
     addMod(rep.code(ci));

@@ -76,7 +76,7 @@ const Expr* Expr::lit(bool b) {
 }
 
 const Expr* Expr::lit(string v) {
-  return new IntLit(v);
+  return new StringLit(v);
 }
 
 const Expr* Expr::lit(unsigned long v) {
@@ -88,7 +88,7 @@ const Expr* Expr::lit(long v) {
 }
 
 const Expr* Expr::lit(string v, unsigned w) {
-  return new BvLit(v,w);
+  return w ? (const Expr*) new BvLit(v,w) : (const Expr*) new IntLit(v);
 }
 
 const Expr* Expr::lit(unsigned long v, unsigned w) {
@@ -111,38 +111,28 @@ const Expr* Expr::sel(string b, string i) {
   return new SelExpr(id(b), id(i));
 }
 
-const Attr* Attr::attr(string s, vector<const Expr*> vs) {
-  vector<const AttrVal*> vals;
-  for (unsigned i=0; i<vs.size(); i++)
-    vals.push_back(new ExprVal(vs[i]));
-  return new Attr(s,vals);
+const Attr* Attr::attr(string s, initializer_list<const Expr*> vs) {
+  return new Attr(s,vs);
 }
 
 const Attr* Attr::attr(string s) {
-  return attr(s, vector<const Expr*>());
+  return attr(s, {});
 }
 
 const Attr* Attr::attr(string s, string v) {
-  return new Attr(s, vector<const AttrVal*>(1, new StrVal(v)));
+  return new Attr(s, {Expr::lit(v)});
 }
 
 const Attr* Attr::attr(string s, int v) {
-  return attr(s, vector<const Expr*>(1, Expr::lit((long) v)));
+  return attr(s, {Expr::lit((long) v)});
 }
 
 const Attr* Attr::attr(string s, string v, int i) {
-  vector<const AttrVal*> vals;
-  vals.push_back(new StrVal(v));
-  vals.push_back(new ExprVal(Expr::lit((long) i)));
-  return new Attr(s, vals);
+  return attr(s, {Expr::lit(v), Expr::lit((long) i)});
 }
 
 const Attr* Attr::attr(string s, string v, int i, int j) {
-  vector<const AttrVal*> vals;
-  vals.push_back(new StrVal(v));
-  vals.push_back(new ExprVal(Expr::lit((long) i)));
-  vals.push_back(new ExprVal(Expr::lit((long) j)));
-  return new Attr(s, vals);
+  return attr(s, {Expr::lit(v), Expr::lit((long) i), Expr::lit((long) j)});
 }
 
 const Stmt* Stmt::annot(vector<const Attr*> attrs) {
@@ -259,10 +249,6 @@ ostream& operator<<(ostream& os, const Expr& e) {
 }
 ostream& operator<<(ostream& os, const Expr* e) {
   e->print(os);
-  return os;
-}
-ostream& operator<<(ostream& os, const AttrVal* v) {
-  v->print(os);
   return os;
 }
 ostream& operator<<(ostream& os, const Attr* a) {
@@ -456,18 +442,14 @@ void CodeExpr::print(ostream& os) const {
   os << endl << "}|";
 }
 
-void StrVal::print(ostream& os) const {
+void StringLit::print(ostream& os) const {
   os << "\"" << val << "\"";
-}
-
-void ExprVal::print(ostream& os) const {
-  os << val;
 }
 
 void Attr::print(ostream& os) const {
   os << "{:" << name;
   if (vals.size() > 0)
-    print_seq<const AttrVal*>(os, vals, " ", ", ", "");
+    print_seq<const Expr*>(os, vals, " ", ", ", "");
   os << "}";
 }
 

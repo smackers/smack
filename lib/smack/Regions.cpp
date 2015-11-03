@@ -342,7 +342,7 @@ void Regions::visitCallInst(CallInst& I) {
   if (I.getType()->isPointerTy())
     idx(&I);
 
-  if (name.find("__SMACK_object") != string::npos) {
+  if (name.find("__SMACK_values") != string::npos) {
     assert(I.getNumArgOperands() == 2 && "Expected two operands.");
     const Value* P = I.getArgOperand(0);
     const Value* N = I.getArgOperand(1);

@@ -113,6 +113,13 @@ public:
   void print(ostream& os) const;
 };
 
+class StringLit : public Expr {
+  string val;
+public:
+  StringLit(string v) : val(v) {}
+  void print(ostream& os) const;
+};
+
 class NegExpr : public Expr {
   const Expr* expr;
 public:
@@ -168,31 +175,12 @@ public:
   void print(ostream& os) const;
 };
 
-class AttrVal {
-public:
-  virtual void print(ostream& os) const = 0;
-};
-
-class StrVal : public AttrVal {
-  string val;
-public:
-  StrVal(string s) : val(s) {}
-  void print(ostream& os) const;
-};
-
-class ExprVal : public AttrVal {
-  const Expr* val;
-public:
-  ExprVal(const Expr* e) : val(e) {}
-  void print(ostream& os) const;
-};
-
 class Attr {
 protected:
   string name;
-  vector<const AttrVal*> vals;
+  vector<const Expr*> vals;
 public:
-  Attr(string n, vector<const AttrVal*> vs) : name(n), vals(vs) {}
+  Attr(string n, initializer_list<const Expr*> vs) : name(n), vals(vs) {}
   void print(ostream& os) const;
 
   static const Attr* attr(string s);
@@ -200,7 +188,7 @@ public:
   static const Attr* attr(string s, int v);
   static const Attr* attr(string s, string v, int i);
   static const Attr* attr(string s, string v, int i, int j);
-  static const Attr* attr(string s, vector<const Expr*> vs);
+  static const Attr* attr(string s, initializer_list<const Expr*> vs);
 };
 
 class Stmt {

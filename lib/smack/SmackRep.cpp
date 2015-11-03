@@ -278,14 +278,94 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 }
 
 const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
-  assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
+  string name;
+  vector<const Expr*> args({ expr(CI.getArgOperand(0)) });
+  vector<string> rets({ naming.get(CI) });
+  vector<const Attr*> attrs;
+
+  assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
+  assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
   const Value* V = CI.getArgOperand(0);
   while (isa<const CastInst>(V))
     V = dyn_cast<const CastInst>(V)->getOperand(0);
+
+  if (CI.getNumArgOperands() == 1) {
+    name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
+    if (dyn_cast<const Argument>(V)) {
+      assert(V->hasName() && "Expected named argument.");
+      attrs.push_back(Attr::attr("name", V->getName()));
+
+    } else if (auto LI = dyn_cast<const LoadInst>(V)) {
+      auto GEP = dyn_cast<const GetElementPtrInst>(LI->getPointerOperand());
+      assert(GEP && "Expected GEP argument to load instruction.");
+      auto A = dyn_cast<const Argument>(GEP->getPointerOperand());
+      assert(A && "Expected function argument to GEP instruction.");
+      assert(A->hasName() && "Expected named argument.");
+      auto T = GEP->getType()->getElementType();
+      const unsigned bits = T->getIntegerBitWidth();
+      const unsigned bytes = bits / 8;
+      const unsigned R = regions.idx(GEP);
+      bool bytewise = regions.get(R).bytewiseAccess();
+      attrs.push_back(Attr::attr("name", A->getName()));
+      attrs.push_back(Attr::attr("field", {
+        Expr::lit(Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits)),
+        Expr::id(memPath(R)),
+        ptrArith(GEP),
+        Expr::lit(bytes),
+      }));
+
+    } else {
+      llvm_unreachable("Unexpected argument type.");
+    }
+
+  } else {
+    name = Naming::VALUE_PROC + "s";
+    const Argument* A;
+    const Type* T;
+    const Expr* addr;
+
+    if ((A = dyn_cast<const Argument>(V))) {
+      auto PT = dyn_cast<const PointerType>(A->getType());
+      assert(PT && "Expected pointer argument.");
+      T = PT->getElementType();
+      addr = expr(A);
+
+    } else if (auto GEP = dyn_cast<const GetElementPtrInst>(V)) {
+      A = dyn_cast<const Argument>(GEP->getPointerOperand());
+      assert(A && "Expected function argument to GEP instruction.");
+      T = GEP->getType()->getElementType();
+      addr = ptrArith(GEP);
+
+    } else {
+      llvm_unreachable("Unexpected argument type.");
+    }
+
+    assert(A->hasName() && "Expected named argument.");
+    auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
+    assert(I && "expected constant size expression.");
+    const unsigned count = I->getZExtValue();
+    const unsigned offset = 0; // FIXME
+    const unsigned bits = T->getIntegerBitWidth();
+    const unsigned bytes = bits / 8;
+    const unsigned length = count * bytes;
+    const unsigned R = regions.idx(V, length);
+    bool bytewise = regions.get(R).bytewiseAccess();
+    args.push_back(expr(CI.getArgOperand(1)));
+    attrs.push_back(Attr::attr("name", A->getName()));      attrs.push_back(Attr::attr("array", {
+      Expr::lit(Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits)),
+      Expr::id(memPath(R)),
+      addr,
+      Expr::lit(bytes),
+      Expr::lit(length)
+    }));
+  }
+
   return Stmt::call(
-    indexedName(Naming::VALUE_PROC, {type(V->getType())}),
-    vector<const Expr*>({ expr(V) }),
-    vector<string>({ naming.get(CI) }));
+    name,
+    args,
+    rets,
+    attrs
+  );
 }
 
 const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
@@ -302,79 +382,43 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
     vector<string>({ naming.get(CI) }));
 }
 
-const Stmt* SmackRep::objectAnnotation(const CallInst& CI) {
-  assert(CI.getNumArgOperands() == 2 && "Expected two operands.");
-  const Value* P = CI.getArgOperand(0);
-  const Value* N = CI.getArgOperand(1);
-  while (isa<const CastInst>(P))
-    P = dyn_cast<const CastInst>(P)->getOperand(0);
-  const PointerType* T = dyn_cast<PointerType>(P->getType());
-  assert(T && "Expected pointer argument.");
-
-  if (auto I = dyn_cast<ConstantInt>(N)) {
-    const unsigned bound = I->getZExtValue();
-    const unsigned bits = T->getElementType()->getIntegerBitWidth();
-    const unsigned bytes = bits / 8;
-    const unsigned length = bound * bytes;
-    const unsigned R = regions.idx(P,length);
-    bool bytewise = regions.get(R).bytewiseAccess();
-    string L = Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits);
-    return Stmt::call(Naming::OBJECT_PROC,
-      vector<const Expr*>({
-        expr(P),
-        Expr::lit(bound)
-      }),
-      vector<string>({ naming.get(CI) }),
-      vector<const Attr*>({
-        Attr::attr(L, vector<const Expr*>({
-          Expr::id(memPath(R)),
-          Expr::lit(bytes),
-          Expr::lit(length)
-        }))
-      }));
-
-  } else {
-    llvm_unreachable("Non-constant size expression not yet handled.");
-  }
-
-}
-
-const Stmt* SmackRep::returnObjectAnnotation(const CallInst& CI) {
-  assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
-  const Value* V = nullptr; // FIXME GET A VALUE HERE
-  assert(V && "Unknown return value.");
-  const Value* N = CI.getArgOperand(0);
-  const PointerType* T =
-    dyn_cast<PointerType>(CI.getParent()->getParent()->getReturnType());
-  assert(T && "Expected pointer return type.");
-
-  if (auto I = dyn_cast<ConstantInt>(N)) {
-    const unsigned bound = I->getZExtValue();
-    const unsigned bits = T->getElementType()->getIntegerBitWidth();
-    const unsigned bytes = bits / 8;
-    const unsigned length = bound * bytes;
-    const unsigned R = regions.idx(V, length);
-    bool bytewise = regions.get(R).bytewiseAccess();
-    string L = Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits);
-    return Stmt::call(Naming::OBJECT_PROC,
-      vector<const Expr*>({
-        Expr::id(Naming::RET_VAR),
-        Expr::lit(bound)
-      }),
-      vector<string>({ naming.get(CI) }),
-      vector<const Attr*>({
-        Attr::attr(L, vector<const Expr*>({
-          Expr::id(memPath(R)),
-          Expr::lit(bytes),
-          Expr::lit(length)
-        }))
-      }));
-
-  } else {
-    llvm_unreachable("Non-constant size expression not yet handled.");
-  }
-
-}
+// TODO work the following into SmackRep::returnValueAnnotation
+// const Stmt* SmackRep::returnObjectAnnotation(const CallInst& CI) {
+//   assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
+//   const Value* V = nullptr; // FIXME GET A VALUE HERE
+//   assert(V && "Unknown return value.");
+//   const Value* N = CI.getArgOperand(0);
+//   const PointerType* T =
+//     dyn_cast<PointerType>(CI.getParent()->getParent()->getReturnType());
+//   assert(T && "Expected pointer return type.");
+//
+//   if (auto I = dyn_cast<ConstantInt>(N)) {
+//     const unsigned bound = I->getZExtValue();
+//     const unsigned bits = T->getElementType()->getIntegerBitWidth();
+//     const unsigned bytes = bits / 8;
+//     const unsigned length = bound * bytes;
+//     const unsigned R = regions.idx(V, length);
+//     bool bytewise = regions.get(R).bytewiseAccess();
+//     string L = Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits);
+//     return Stmt::call(Naming::OBJECT_PROC,
+//       vector<const Expr*>({
+//         Expr::id(Naming::RET_VAR),
+//         Expr::lit(bound)
+//       }),
+//       vector<string>({ naming.get(CI) }),
+//       vector<const Attr*>({
+//         Attr::attr(L, {
+//           Expr::id(memPath(R)),
+//           Expr::lit(bytes),
+//           Expr::lit(length)
+//         })
+//       }));
+//
+//   } else {
+//     llvm_unreachable("Non-constant size expression not yet handled.");
+//   }
+//
+// }
 
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
@@ -489,7 +533,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     unsigned width = ci->getBitWidth();
     bool neg = width > 1 && ci->isNegative();
     string str = (neg ? API.abs() : API).toString(10,false);
-    const Expr* e = SmackOptions::BitPrecise ? Expr::lit(str,width) : Expr::lit(str);
+    const Expr* e = SmackOptions::BitPrecise ? Expr::lit(str,width) : Expr::lit(str,0);
     stringstream op;
     op << "$sub." << (SmackOptions::BitPrecise ? "bv" : "i") << width;
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
