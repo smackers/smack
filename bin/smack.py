@@ -510,6 +510,9 @@ def verify_bpl_svcomp(args):
   corral_command += ["/k:%d" % args.context_bound]
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
+  if args.pthread:
+    corral_command += ["/cooperative"]
+
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
   with open(args.bpl_file, "r") as f:
