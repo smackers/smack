@@ -500,7 +500,9 @@ def verify_bpl_svcomp(args):
     lockpwn_command = ["lockpwn"]
     lockpwn_command += [args.bpl_file]
     lockpwn_command += ["/corral"]
-    lockpwn_output = try_command(lockpwn_command, timeout=time_limit);
+    args.bpl_file = temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
+    lockpwn_command += ["/o:%s" % args.bpl_file]
+    lockpwn_output = try_command(lockpwn_command);
     
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
