@@ -11,6 +11,7 @@
 
 #include "assistDS/Devirt.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
 
@@ -29,7 +30,7 @@ STATISTIC(CSConvert, "Number of call sites converted");
 
 // Pass registration
 RegisterPass<Devirtualize>
-X ("devirt", "Devirtualize indirect function calls");
+Z ("devirt", "Devirtualize indirect function calls");
 
 //
 // Function: getVoidPtrType()
@@ -53,7 +54,7 @@ PointerType * getVoidPtrType (LLVMContext & C) {
 //  Given an LLVM value, insert a cast instruction to make it a given type.
 //
 static inline Value *
-castTo (Value * V, Type * Ty, std::string Name, Instruction * InsertPt) {
+castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
   //
   // Don't bother creating a cast if it's already the correct type.
   //
@@ -71,7 +72,13 @@ castTo (Value * V, Type * Ty, std::string Name, Instruction * InsertPt) {
   //
   // Otherwise, insert a cast instruction.
   //
-  return CastInst::CreateZExtOrBitCast (V, Ty, Name, InsertPt);
+  if (auto I = dyn_cast<Instruction>(InsertPt))
+    return CastInst::CreateZExtOrBitCast (V, Ty, Name, I);
+  else if (auto B = dyn_cast<BasicBlock>(InsertPt))
+    return CastInst::CreateZExtOrBitCast (V, Ty, Name, B);
+  else
+    llvm_unreachable("Unexpected insertion point.");
+
 }
 
 //
@@ -163,16 +170,11 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
                                   M);
 
   //
-  // Set the names of the arguments.  Also, record the arguments in a vector
-  // for subsequence access.
+  // Set the names of the arguments.
   //
   F->arg_begin()->setName("funcPtr");
-  std::vector<Value*> fargs;
-  for(Function::arg_iterator ai = F->arg_begin(), ae = F->arg_end(); ai != ae; ++ai)
-    if (ai != F->arg_begin()) {
-      fargs.push_back(ai);
-      ai->setName("arg");
-    }
+  for (auto A = ++F->arg_begin(), E = F->arg_end(); A != E; ++A)
+    A->setName("arg");
 
   //
   // Create an entry basic block for the function.  All it should do is perform
@@ -187,13 +189,23 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   std::map<const Function*, BasicBlock*> targets;
   for (unsigned index = 0; index < Targets.size(); ++index) {
     const Function* FL = Targets[index];
+    const FunctionType* FT = FL->getFunctionType();
 
     // Create the basic block for doing the direct call
     BasicBlock* BL = BasicBlock::Create (M->getContext(), FL->getName(), F);
     targets[FL] = BL;
     // Create the direct function call
+
+    std::vector<Value*> Args;
+    Function::arg_iterator P, PE;
+    FunctionType::param_iterator T, TE;
+    for (P = ++F->arg_begin(), PE = F->arg_end(),
+         T = FT->param_begin(), TE = FT->param_end();
+         P != PE && T != TE; ++P, ++T)
+      Args.push_back(castTo(P, *T, "", BL));
+
     Value* directCall = CallInst::Create (const_cast<Function*>(FL),
-                                          fargs,
+                                          Args,
                                           "",
                                           BL);
 
@@ -264,9 +276,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   //
   // Make the entry basic block branch to the first comparison basic block.
   //
-  //InsertPt->setUnconditionalDest (tailBB);
   InsertPt->setSuccessor(0, tailBB);
-  InsertPt->setSuccessor(1, tailBB);
   //
   // Return the newly created bounce function.
   //
@@ -320,7 +330,14 @@ Devirtualize::makeDirectCall (CallSite & CS) {
     // Replace the original call with a call to the bounce function.
     //
     if (CallInst* CI = dyn_cast<CallInst>(CS.getInstruction())) {
-      std::vector<Value*> Params (CI->op_begin(), CI->op_end());
+      std::vector<Value*> Params;
+      Params.push_back(CI->getCalledValue());
+      for (unsigned i=0; i<CI->getNumArgOperands(); i++) {
+        Params.push_back(
+          castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+        );
+      }
+
       std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
       CallInst* CN = CallInst::Create (const_cast<Function*>(NF),
                                        Params,
@@ -329,7 +346,12 @@ Devirtualize::makeDirectCall (CallSite & CS) {
       CI->replaceAllUsesWith(CN);
       CI->eraseFromParent();
     } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS.getInstruction())) {
-      std::vector<Value*> Params (CI->op_begin(), CI->op_end());
+      std::vector<Value*> Params;
+      Params.push_back(CI->getCalledValue());
+      for (unsigned i=0; i<CI->getNumArgOperands(); i++)
+        Params.push_back(
+          castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+        );
       std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
       InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
                                           CI->getNormalDest(),
@@ -421,4 +443,3 @@ Devirtualize::runOnModule (Module & M) {
   //
   return true;
 }
-

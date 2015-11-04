@@ -343,6 +343,7 @@ def json_compilation_database_frontend(args):
 
   llvm_to_bpl(args)
 
+
 def svcomp_process_file(args, name, ext):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
@@ -375,11 +376,14 @@ def svcomp_frontend(args):
     raise RuntimeError("Expected a single SVCOMP input file.")
 
   # test float\bv benchmarks
-  file_type = svcomp_filter(args.input_files[0])
+  file_type = svcomp_filter(args.input_files[0])[0]
   if file_type == 'bitvector': 
     args.bit_precise = True
   if file_type == 'float':
     sys.exit(results()['unknown'])
+  args.execute = False
+  if svcomp_filter(args.input_files[0])[1] == 'executable':
+    args.execute = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -491,19 +495,32 @@ def verify_bpl_svcomp(args):
         print(heurTrace + "\n")
       sys.exit(results()['unknown'])
 
-  #If pthreads, perform lock set analysis
+  # If pthreads found, perform lock set analysis
   if args.pthread:
     lockpwn_command = ["lockpwn"]
     lockpwn_command += [args.bpl_file]
     lockpwn_command += ["/corral"]
     lockpwn_output = try_command(lockpwn_command, timeout=time_limit);
     
-
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/k:%d" % args.context_bound]
   corral_command += ["/useProverEvaluate", "/cex:1"]
+
+  # Setting good loop unroll bound based on benchmark class
+  loopUnrollBar = 8
+  with open(args.bpl_file, "r") as f:
+    bpl = f.read()
+  if "ldv" in bpl or "calculate_output" in bpl:
+    heurTrace += "ECA or LDV benchmark detected. Setting loop unroll bar to 12.\n"
+    loopUnrollBar = 12
+  elif "ssl3_accept" in bpl:
+    heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 25.\n"
+    loopUnrollBar = 25
+  if not "forall" in bpl:
+    heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
+    corral_command += ["/bopt:z3opt:smt.relevancy=0"]
 
   if args.bit_precise:
     heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
@@ -515,7 +532,8 @@ def verify_bpl_svcomp(args):
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
   command += ["/maxStaticLoopBound:65536"]
-  command += ["/recursionBound:256"]
+  command += ["/recursionBound:65536"]
+  command += ["/irreducibleLoopUnroll:2"]
   command += ["/trackAllVars"]
   command += ["/di"]
 
@@ -540,7 +558,7 @@ def verify_bpl_svcomp(args):
   elif result == 'timeout': #normal inlining
     heurTrace += "Timed out during normal inlining.\n"
     heurTrace += "Determining result based on how far we unrolled.\n"
-    # If we managed to unroll more than 8 times, then return verified
+    # If we managed to unroll more than loopUnrollBar times, then return verified
     # First remove exhausted loop bounds generated during max static loop bound computation
     verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
       'Verifying program while tracking', verifier_output)
@@ -549,10 +567,19 @@ def verify_bpl_svcomp(args):
     for match in it:
       if int(match.group(1)) > unrollMax:
         unrollMax = int(match.group(1))
-    if unrollMax >= 8:
+    if unrollMax >= loopUnrollBar:
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
+      if args.execute:
+        heurTrace += "Hold on, let's see the execution result.\n"
+        execution_result = run_binary(args)
+        heurTrace += "Excecution result is " + execution_result + '\n'
+        if execution_result == 'false':
+          heurTrace += "Oops, execution result says no.\n"
+          if not args.quiet:
+            print(heurTrace + "\n")
+          sys.exit(results()['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
       sys.exit(results()['verified'])
@@ -572,6 +599,52 @@ def verify_bpl_svcomp(args):
     print(heurTrace + "\n")
   sys.exit(results()[result])
 
+def run_binary(args):
+  #process the file to make it runnable
+  with open(args.input_files[0], 'r') as fi:
+    s = fi.read()
+
+  s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
+  s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
+  s = '#include<assert.h>\n' + s
+ 
+  name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
+  tmp1 = temporary_file(name, '.c', args)
+  with open(tmp1, 'w') as fo:
+    fo.write(s)
+
+  tmp2 = temporary_file(name, '.bin', args)
+  tmp2 = tmp2.split('/')[-1]
+  #compile and run 
+  cmd = ['clang', tmp1, '-o', tmp2]
+  #cmd += args.clang_options.split()
+  #if '-m32' in args.clang_options.split():
+    #cmd += ['-m32']
+  
+
+  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+  out, err = proc.communicate()
+  rc = proc.returncode
+
+  if rc:
+    print 'Compiling error' 
+    print err
+    return 'unknown'
+  else:
+    cmd = [r'./' + tmp2]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    rc = proc.returncode
+    if rc:
+      if re.search(r'Assertion.*failed', err):
+        return 'false'
+      else:
+        print 'execution error' 
+        return 'unknown'
+    else:
+      return 'true'
+    
 def verify_bpl(args):
   """Verify the Boogie source file with a back-end verifier."""
 

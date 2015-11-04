@@ -17,7 +17,7 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 48, 64, 96, 128};
+const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 40, 48, 56, 64, 96, 128};
 const vector<unsigned> REF_CONSTANTS = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
   1024
@@ -209,7 +209,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
   const Expr* size =
     Expr::fn("$mul.ref",
       pointerLit(storageSize(i.getAllocatedType())),
-      pointerLit((unsigned long) llvm::cast<llvm::ConstantInt>(i.getArraySize())->getZExtValue()));
+      integerToPointer(expr(i.getArraySize()), getIntSize(i.getArraySize())));
 
   // TODO this should not be a pointer type.
   return Stmt::call(Naming::ALLOC,{size},{naming.get(i)});
@@ -709,10 +709,12 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
 
 vector<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
   std::queue<User*> users;
-  vector<CallInst*> callers;
-  vector<ProcDecl*> procs;
+  std::vector<CallInst*> callers;
+  std::vector<ProcDecl*> procs;
+  std::set<User*> covered;
 
   users.push(F);
+  covered.insert(F);
 
   while (!users.empty()) {
     auto U = users.front();
@@ -723,7 +725,10 @@ vector<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
 
     else
       for (auto V : U->users())
-        users.push(V);
+        if (!covered.count(V)) {
+          users.push(V);
+          covered.insert(V);
+        }
   }
 
   if (callers.empty() || !F->isVarArg())
@@ -795,6 +800,7 @@ string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << endl;
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << endl;
+  s << Decl::typee(Naming::FLOAT_TYPE, intType(32)) << endl;
   s << endl;
 
   s << "// Basic constants" << endl;

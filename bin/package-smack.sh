@@ -6,7 +6,7 @@
 # Note: this script requires CDE to be downloaded from
 # http://www.pgbovine.net/cde.html
 
-VERSION=1.5.1
+VERSION=1.5.2
 PACKAGE=smack-$VERSION-64
 
 # Create folder to export
@@ -22,8 +22,10 @@ echo   return 0\;                                   >> test.c
 echo \}                                             >> test.c
 
 # Run SMACK with CDE
-../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral
-../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral --clang-options=-m32
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral --clang-options=-m64
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp --clang-options=-m32
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp --clang-options=-m64
 
 # Clean up temporary files
 rm test.* cde.options
@@ -32,9 +34,9 @@ rm test.* cde.options
 cp ../../LICENSE .
 
 # Create wrapper script
-echo \#\!/bin/sh                                                                            >  smack.sh
-echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"                               >> smack.sh
-echo \$HERE/cde-package/cde-exec \'smack.py\' \'-x=svcomp\' \'--verifier=svcomp\' \"\$\@\"  >> smack.sh
+echo \#\!/bin/sh                                                                                   >  smack.sh
+echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"                                      >> smack.sh
+echo \$HERE/cde-package/cde-exec \'smack.py\' \'-x=svcomp\' \'--verifier=svcomp\' \'-q\' \"\$\@\"  >> smack.sh
 chmod u+x smack.sh
 
 # Package it up
