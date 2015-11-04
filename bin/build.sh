@@ -15,6 +15,7 @@
 # - Z3
 # - Boogie
 # - Corral
+# - lockpwn
 #
 ################################################################################
 
@@ -23,6 +24,7 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
+BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
@@ -34,6 +36,7 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
+LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
 
@@ -358,6 +361,18 @@ then
   puts "Built Corral"
 fi
 
+if [ ${BUILD_LOCKPWN} -eq 1 ]
+then
+  puts "Building lockpwn"
+
+  cd ${ROOT}
+  git clone https://github.com/pdeligia/lockpwn.git
+  cd ${LOCKPWN_DIR}
+  xbuild lockpwn.sln /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
+
+  puts "Built lockpwn"
+fi
 
 if [ ${BUILD_SMACK} -eq 1 ]
 then
@@ -372,6 +387,7 @@ then
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
+  echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"

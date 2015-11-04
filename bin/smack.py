@@ -669,6 +669,14 @@ def verify_bpl_svcomp1(args):
         print(heurTrace + "\n")
       sys.exit(results()['unknown'])
 
+  #If pthreads, perform lock set analysis
+  if args.pthread:
+    lockpwn_command = ["lockpwn"]
+    lockpwn_command += [args.bpl_file]
+    lockpwn_command += ["/corral"]
+    lockpwn_output = try_command(lockpwn_command, timeout=time_limit);
+    
+
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
