@@ -113,8 +113,17 @@ def float_filter(lines, raw_line_count, pruned_line_count):
 
 
 def scrub_pthreads(s):
-  if 'pthread' not in s:
+  if 'pthread_create' not in s:
     return s, False
+
+  # special case for sequentialized benchmarks
+  if '__CS_pthread_create' in s:
+    return s, False
+
+  # special case for machzwd benchmarks
+  if 'assert_context_process' in s:
+    return s, False
+
   #These are strings that will conflict with our pthread header files
   #To generate additional strings, copy paste the text.  
   #Escape all characters that need to be escaped for regex (at least *[]() 
