@@ -358,8 +358,7 @@ def svcomp_process_file(args, name, ext):
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = scrub_pthreads(s)
     if args.pthread:
-      print("Pthread detected - setting context bound to 2")
-      args.context_bound=2
+      print("Pthread detected")
       s = "#include <pthread.h>\n" + s
     #print(s)
     with open(args.input_files[0], 'w') as fo:
@@ -507,11 +506,13 @@ def verify_bpl_svcomp(args):
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
-  corral_command += ["/k:%d" % args.context_bound]
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
   if args.pthread:
+    corral_command += ["/k:2"]
     corral_command += ["/cooperative"]
+  else:
+    corral_command += ["/k:1"]
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
