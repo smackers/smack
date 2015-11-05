@@ -21,7 +21,7 @@ from toSVCOMPformat import *
 from token_replace import *
 from svcomp_filters import *
 
-VERSION = '1.5.1'
+VERSION = '1.5.2'
 temporary_files = []
 
 def frontends():
