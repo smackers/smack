@@ -518,12 +518,16 @@ def verify_bpl_svcomp(args):
   loopUnrollBar = 8
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
-  if "ldv" in bpl or "calculate_output" in bpl:
-    heurTrace += "ECA or LDV benchmark detected. Setting loop unroll bar to 12.\n"
-    loopUnrollBar = 12
-  elif "ssl3_accept" in bpl:
+  if "ssl3_accept" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 25.\n"
     loopUnrollBar = 25
+  elif "calculate_output" in bpl:
+    heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
+    loopUnrollBar = 15
+  elif "ldv" in bpl:
+    heurTrace += "LDV benchmark detected. Setting loop unroll bar to 12.\n"
+    loopUnrollBar = 12
+
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
     corral_command += ["/bopt:z3opt:smt.relevancy=0"]

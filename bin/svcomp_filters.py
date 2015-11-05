@@ -54,7 +54,11 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   #line_count = raw_file_line_count(lines)
   if pruned_line_count > 650:
     return 0
-  
+
+  #special case for Sequentialized benchmarks
+  if "__VERIFIER_nondet__Bool" in lines:
+    return 0
+
   #cast patterns
   if pruned_line_count <= 210:
     casts = re.compile(r'''4294967295|plus_one|minus_one|\(x % 2\) == \(y % 2\)|linear_search|while \(\('0' <= c\) && \(c <= '9'\)\)''')

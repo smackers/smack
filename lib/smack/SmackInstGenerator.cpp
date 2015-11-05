@@ -561,7 +561,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
         llvm::Value* castValue = ce->getOperand(0);
         if (llvm::Function* castFunc = llvm::dyn_cast<llvm::Function>(castValue)) {
           emit(rep.call(castFunc, ci));
-          if (castFunc->isDeclaration() && rep.isExternal(&ci))
+          string name = naming.get(*castFunc);
+          if (castFunc->isDeclaration() && rep.isExternal(&ci) && name != "malloc")
             emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
           return;
         }
@@ -617,8 +618,11 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   }
 
-  if (f && f->isDeclaration() && rep.isExternal(&ci))
-    emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  if (f && f->isDeclaration() && rep.isExternal(&ci)) {
+    string name = naming.get(*f);
+    if (name != "malloc")
+      emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
 }
 
 void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
