@@ -513,6 +513,7 @@ def verify_bpl_svcomp(args):
     corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
+    corral_command += ["/di"]
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
@@ -545,7 +546,6 @@ def verify_bpl_svcomp(args):
   command += ["/recursionBound:65536"]
   command += ["/irreducibleLoopUnroll:2"]
   command += ["/trackAllVars"]
-  command += ["/di"]
 
   verifier_output = try_command(command, timeout=time_limit)
   result = verification_result(verifier_output)
