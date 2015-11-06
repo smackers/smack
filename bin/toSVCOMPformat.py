@@ -96,6 +96,7 @@ def buildEmptyXmlGraph():
     addKeyDefs(root)
     graph = ET.SubElement(root, "graph", attrib={"edgedefault" : "directed"})
     addKey(graph, "sourcecodelang", "C")
+    addKey(graph, "specification", r'CHECK( init(main()), LTL(G ! call(__VERIFIER_error())) )')
     return tree
 
 def smackJsonToXmlGraph(strJsonOutput):
