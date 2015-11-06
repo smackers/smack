@@ -124,7 +124,7 @@ int pthread_mutex_lock(pthread_mutex_t *__mutex) {
   }
   __SMACK_code("call corral_atomic_begin();");
   // Wait for lock to become free
-  assume(__mutex->lock == UNLOCKED);
+  __VERIFIER_assume(__mutex->lock == UNLOCKED);
   __mutex->lock = tid;
   __SMACK_code("call corral_atomic_end();");
   return 0;
@@ -229,7 +229,7 @@ void __call_wrapper(pthread_t *__restrict __newthread,
 
   pthread_t ctid = pthread_self();
   // Wait for parent to set child's thread ID in original pthread_t struct
-  assume(ctid == *__newthread);
+  __VERIFIER_assume(ctid == *__newthread);
 
   // Cycle through thread statuses properly, as thread is started, run,
   // and stopped.
@@ -249,7 +249,7 @@ int pthread_create(pthread_t *__restrict __newthread,
   // Add unreachable C-level call to __call_wrapper, so llvm sees
   // the call to __call_wrapper and performs DSA on it.
   int x = __VERIFIER_nondet_int();
-  assume(x == 0);
+  __VERIFIER_assume(x == 0);
   if(x) __call_wrapper(__newthread, __start_routine, __arg);
 
   __SMACK_code("async call @(@, @, @);",
