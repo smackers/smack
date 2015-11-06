@@ -354,6 +354,13 @@ def svcomp_process_file(args, name, ext):
       # replace all occurrences of 100000 with 10
       # Only target at small examples
       s = re.sub(r'100000', r'10', s)
+    #Remove any preprocessed declarations of pthread types
+    #Also, if file contains 'pthread', set pthread mode
+    s,args.pthread = scrub_pthreads(s)
+    if args.pthread:
+      print("Pthread detected")
+      s = "#include <pthread.h>\n" + s
+    #print(s)
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
@@ -487,11 +494,27 @@ def verify_bpl_svcomp(args):
         print(heurTrace + "\n")
       sys.exit(results()['unknown'])
 
+  # If pthreads found, perform lock set analysis
+  if args.pthread:
+    lockpwn_command = ["lockpwn"]
+    lockpwn_command += [args.bpl_file]
+    lockpwn_command += ["/corral"]
+    args.bpl_file = temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
+    lockpwn_command += ["/o:%s" % args.bpl_file]
+    lockpwn_output = try_command(lockpwn_command);
+    
   corral_command = ["corral-svcomp"]
   corral_command += [args.bpl_file]
-  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1", "/k:1"]
+  corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
+  if args.pthread:
+    corral_command += ["/k:2"]
+    corral_command += ["/cooperative"]
+  else:
+    corral_command += ["/k:1"]
+
+  # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
   with open(args.bpl_file, "r") as f:
     bpl = f.read()

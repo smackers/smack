@@ -22,6 +22,14 @@ void __SMACK_init_func_thread() {
   __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
 }
 
+void __VERIFIER_atomic_begin() {
+  __SMACK_code("call corral_atomic_begin();");
+}
+
+void __VERIFIER_atomic_end() {
+  __SMACK_code("call corral_atomic_end();");  
+}
+
 pthread_t pthread_self(void) {
   int tmp_tid = __VERIFIER_nondet_int();
   __SMACK_code("call @ := corral_getThreadID();", tmp_tid);
