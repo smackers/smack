@@ -23,11 +23,13 @@ void __SMACK_init_func_thread() {
 }
 
 void __VERIFIER_atomic_begin() {
+  __SMACK_code("yield;");
   __SMACK_code("call corral_atomic_begin();");
 }
 
 void __VERIFIER_atomic_end() {
   __SMACK_code("call corral_atomic_end();");  
+  __SMACK_code("yield;");
 }
 
 pthread_t pthread_self(void) {
