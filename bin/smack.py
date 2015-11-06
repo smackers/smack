@@ -518,7 +518,7 @@ def verify_bpl_svcomp(args):
   loopUnrollBar = 8
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
-  if "ssl3_accept" in bpl:
+  if not args.bit_precise and "ssl3_accept" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 25.\n"
     loopUnrollBar = 25
   elif "calculate_output" in bpl:
