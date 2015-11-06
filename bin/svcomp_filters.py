@@ -172,6 +172,10 @@ def scrub_pthreads(s):
     #else:
     #  print("DID match - " + fltr)
 
+  s = re.sub(r'(__VERIFIER_atomic_((?!begin|end).)*?\(.*?\);)',
+             r'__VERIFIER_atomic_begin(); \1 __VERIFIER_atomic_end();',
+             s)
+
   return s, True
 
     

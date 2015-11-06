@@ -360,7 +360,7 @@ def svcomp_process_file(args, name, ext):
     if args.pthread:
       print("Pthread detected")
       s = "#include <pthread.h>\n" + s
-    #print(s)
+      print(s)
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
