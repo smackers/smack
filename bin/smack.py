@@ -526,6 +526,7 @@ def verify_bpl_svcomp(args):
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
+  staticLoopBound = 65536
   if not args.bit_precise and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
     loopUnrollBar = 23
@@ -534,7 +535,8 @@ def verify_bpl_svcomp(args):
     loopUnrollBar = 15
   elif "ldv" in bpl:
     heurTrace += "LDV benchmark detected. Setting loop unroll bar to 12.\n"
-    loopUnrollBar = 12
+    loopUnrollBar = 13
+    staticLoopBound = 64
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
@@ -549,7 +551,7 @@ def verify_bpl_svcomp(args):
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
-  command += ["/maxStaticLoopBound:65536"]
+  command += ["/maxStaticLoopBound:%d" % staticLoopBound]
   command += ["/recursionBound:65536"]
   command += ["/irreducibleLoopUnroll:2"]
   command += ["/trackAllVars"]
