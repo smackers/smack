@@ -514,10 +514,18 @@ def verify_bpl_svcomp(args):
     corral_command += ["/k:1"]
     corral_command += ["/di"]
 
-  # Setting good loop unroll bound based on benchmark class
-  loopUnrollBar = 8
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
+
+  # we are not modeling strcpy
+  if args.pthread and "strcpy" in bpl:
+    heurTrace += "We are not modeling strcpy - aborting\n"
+    if not args.quiet:
+      print(heurTrace + "\n")
+    sys.exit(results()['unknown'])
+
+  # Setting good loop unroll bound based on benchmark class
+  loopUnrollBar = 8
   if not args.bit_precise and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
     loopUnrollBar = 23
