@@ -507,15 +507,16 @@ def verify_bpl_svcomp(args):
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
+  with open(args.bpl_file, "r") as f:
+    bpl = f.read()
+
   if args.pthread:
     corral_command += ["/k:3"]
-    corral_command += ["/cooperative"]
+    if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl:
+      corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
     corral_command += ["/di"]
-
-  with open(args.bpl_file, "r") as f:
-    bpl = f.read()
 
   # we are not modeling strcpy
   if args.pthread and "strcpy" in bpl:
