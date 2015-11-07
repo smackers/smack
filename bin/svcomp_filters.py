@@ -55,8 +55,8 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   if pruned_line_count > 650:
     return 0
 
-  #special case for Sequentialized and Concurrent benchmarks
-  if "__VERIFIER_nondet__Bool" in lines or "pthread_create" in lines:
+  #special case for Concurrent benchmarks
+  if "pthread_create" in lines:
     return 0
 
   #cast patterns
