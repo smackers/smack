@@ -508,7 +508,7 @@ def verify_bpl_svcomp(args):
   corral_command += ["/useProverEvaluate", "/cex:1"]
 
   if args.pthread:
-    corral_command += ["/k:2"]
+    corral_command += ["/k:3"]
     corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
