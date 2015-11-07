@@ -31,7 +31,8 @@ def addKeyDefs(root):
     keys.append(["tokenSet",           "string",  "edge",  "tokens",         False])
     keys.append(["originTokenSet",     "string",  "edge",  "origintokens",   False])
     keys.append(["negativeCase",       "string",  "edge",  "negated",        True, "false"])
-    keys.append(["lineNumberInOrigin", "int",     "edge",  "originline",     False])
+    #keys.append(["lineNumberInOrigin", "int",     "edge",  "originline",     False])
+    keys.append(["startline", "int",     "edge",  "startline",     False])
     keys.append(["originFileName",     "string",  "edge",  "originfile",     False]) # example has default
     keys.append(["nodeType",           "string",  "node",  "nodetype",       True, "path"])
     keys.append(["isFrontierNode",     "boolean", "node",  "frontier",       True, "false"])
@@ -72,6 +73,7 @@ def addGraphNode(tree, data={}):
         addKey(newNode, datum, data[datum])
     #Returing ID so caller can save ID for reference in edge
     return ID
+    #return newNode
 
 def addGraphEdge(tree, source, target, data={}):
     """Adds an <edge> element to the main <graph> element.  The 'source' and 'target'
@@ -96,12 +98,24 @@ def buildEmptyXmlGraph():
     addKeyDefs(root)
     graph = ET.SubElement(root, "graph", attrib={"edgedefault" : "directed"})
     addKey(graph, "sourcecodelang", "C")
-    addKey(graph, "specification", r'CHECK( init(main()), LTL(G ! call(__VERIFIER_error())) )')
+    addKey(graph, "specification", "CHECK( init(main()), LTL(G ! call(__VERIFIER_error())) )")
     return tree
 
-def smackJsonToXmlGraph(strJsonOutput):
+def formatAssign(assignStmt):
+    if not assignStmt:
+      return assignStmt
+    m = re.match(r'(.*)=(.*)', assignStmt)
+    if m:
+      return re.sub(r'=(\s*\d+)bv\d+', r'=\1', m.group(1) + "==" + m.group(2))
+    else:
+      return ""
+
+def smackJsonToXmlGraph(strJsonOutput, input_file):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
+    # open input file so that we can check "}"
+    with open(input_file, 'r') as f:
+      lines = f.read().split('\n')
     # Convert json string to json object
     smackJson = json.loads(strJsonOutput)
     # Get the failure node, and the list of trace entries to get there
@@ -114,7 +128,7 @@ def smackJsonToXmlGraph(strJsonOutput):
     start = addGraphNode(tree, {"entry":"true"})
     lastNode = start
     lastEdge = None 
-    pat = re.compile(".*smack.*\.h$")
+    pat = re.compile(".*smack.*\.[c|h]$")
     prevLineNo = -1
     prevColNo = -1
     # Loop through each trace
@@ -124,7 +138,8 @@ def smackJsonToXmlGraph(strJsonOutput):
             # If current trace has same line & column number as previous trace,
             #   don't create new edge/node - just append assumption
             if prevLineNo == jsonTrace["line"] and prevColNo == jsonTrace["column"]:
-                if not jsonTrace["assumption"] == "":
+                #if not jsonTrace["assumption"] == "":
+                if formatAssign(jsonTrace["description"]):
                     assumpNode = None
                     # Loop through the children to find the assumption node
                     for dataNode in list(lastEdge.iter()):
@@ -132,15 +147,36 @@ def smackJsonToXmlGraph(strJsonOutput):
                             assumpNode = dataNode
                             break
                     if assumpNode == None:
-                        addKey(lastEdge, "assumption", str(jsonTrace["assumption"]) + ";")
+                        #addKey(lastEdge, "assumption",formatAssign(str(jsonTrace["assumption"])) + ";")
+                        addKey(lastEdge, "assumption",formatAssign(str(jsonTrace["description"])) + ";")
                     else:
-                        assumpNode.text = assumpNode.text + " " + str(jsonTrace["assumption"]) + ";"
-            else:
+                        #assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["assumption"])) + ";"
+                        assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["description"])) + ";"
+                if "CALL" in jsonTrace["description"]:
+                  addKey(lastEdge, "enterFunction", str(jsonTrace["description"][len("CALL"):]))
+                  #addKey(lastNode, "violation", "true")
+                  if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
+                    vNodes =tree.find("graph").findall("node")
+                    for vNode in vNodes:
+                      if vNode.attrib["id"] == lastNode:
+                        addKey(vNode, "violation", "true")
+                if "RETURN from" in jsonTrace["description"]:
+                    attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
+            elif "}" not in lines[jsonTrace["line"] - 1].strip():
                 # Create new node and edge
                 newNode = addGraphNode(tree)
-                attribs = {"originline":str(jsonTrace["line"])}
-                if not jsonTrace["assumption"] == "":
-                    attribs["assumption"] = str(jsonTrace["assumption"]) + ";"
+                #print type(newNode)
+                #attribs = {"originline":str(jsonTrace["line"])}
+                attribs = {"startline":str(jsonTrace["line"])}
+                if formatAssign(jsonTrace["description"]):
+                  #if not jsonTrace["assumption"] == "":
+                  attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
+                if "CALL" in jsonTrace["description"]:
+                    attribs["enterFunction"] = str(jsonTrace["description"][len("CALL"):]) 
+                    #if ("__VERIFIER_error" in jsonTrace["description"][len("CALL")]):
+                    #  attribs["violation"] = "true"
+                if "RETURN from" in jsonTrace["description"]:
+                    attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
                 newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
                 prevLineNo = jsonTrace["line"]
                 prevColNo = jsonTrace["column"]
