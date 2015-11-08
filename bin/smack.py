@@ -564,7 +564,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "Found a bug during normal inlining.\n"
     # Generate error trace and exit
     if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(smackdOutput(verifier_output), args.input_files[0])
+      error = smackJsonToXmlGraph(smackdOutput(verifier_output))
     else:
       error = error_trace(verifier_output, args)
 
@@ -715,7 +715,7 @@ def verify_bpl(args):
   else:
     if result == 'error':
       if args.language == 'svcomp':
-        error = smackJsonToXmlGraph(smackdOutput(verifier_output), args.input_files[0])
+        error = smackJsonToXmlGraph(smackdOutput(verifier_output))
       else:
         error = error_trace(verifier_output, args)
 

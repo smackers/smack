@@ -110,12 +110,9 @@ def formatAssign(assignStmt):
     else:
       return ""
 
-def smackJsonToXmlGraph(strJsonOutput, input_file):
+def smackJsonToXmlGraph(strJsonOutput):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
-    # open input file so that we can check "}"
-    with open(input_file, 'r') as f:
-      lines = f.read().split('\n')
     # Convert json string to json object
     smackJson = json.loads(strJsonOutput)
     # Get the failure node, and the list of trace entries to get there
@@ -162,7 +159,7 @@ def smackJsonToXmlGraph(strJsonOutput, input_file):
                         addKey(vNode, "violation", "true")
                 if "RETURN from" in jsonTrace["description"]:
                     attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
-            elif "}" not in lines[jsonTrace["line"] - 1].strip():
+            else:
                 # Create new node and edge
                 newNode = addGraphNode(tree)
                 #print type(newNode)
