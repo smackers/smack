@@ -73,7 +73,7 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   for line in lines.split('\n'):
     if bwops.search(line):
       if dv.search(line) is None: 
-        print line
+        #print line
         return 1
   #print raw_file_line_count(lines)
   return 0
