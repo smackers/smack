@@ -139,7 +139,7 @@ def arguments():
     choices=['boogie', 'corral', 'duality'], default='corral',
     help='back-end verification engine [default: %(default)s]')
 
-  verifier_group.add_argument('--unroll', metavar='N', default='2', type=int,
+  verifier_group.add_argument('--unroll', metavar='N', type=int,
     help='loop/recursion unroll bound [default: %(default)s]')
 
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
@@ -413,7 +413,7 @@ def verification_result(verifier_output):
     return 'timeout'
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
     return 'verified'
-  elif re.search(r'0 verified, [1-9]\d* errors?|can fail', verifier_output):
+  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
     return 'error'
   else:
     return 'unknown'
@@ -427,7 +427,8 @@ def verify_bpl(args):
     command += ["/nologo", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
-    command += ["/loopUnroll:%d" % args.unroll]
+    if args.unroll:
+      command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -438,7 +439,8 @@ def verify_bpl(args):
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
-    command += ["/recursionBound:%d" % args.unroll]
+    if args.unroll:
+      command += ["/recursionBound:%d" % args.unroll]
 
   else:
     # Duality!
