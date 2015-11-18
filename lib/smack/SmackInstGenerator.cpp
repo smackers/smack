@@ -605,6 +605,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       }
 
       // Jump to the dispatch blocks.
+      emit(Stmt::annot(
+        Attr::attr(Naming::BRANCH_CONDITION_ANNOTATION, {rep.expr(c)})));
       emit(Stmt::goto_(targets));
 
       // Update the current block for subsequent visits.
