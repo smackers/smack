@@ -293,7 +293,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
     if (dyn_cast<const Argument>(V)) {
       assert(V->hasName() && "Expected named argument.");
-      attrs.push_back(Attr::attr("name", {Expr::id(V->getName())}));
+      attrs.push_back(Attr::attr("name", {Expr::id(naming.get(*V))}));
 
     } else if (auto LI = dyn_cast<const LoadInst>(V)) {
       auto GEP = dyn_cast<const GetElementPtrInst>(LI->getPointerOperand());
@@ -306,7 +306,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       const unsigned bytes = bits / 8;
       const unsigned R = regions.idx(GEP);
       bool bytewise = regions.get(R).bytewiseAccess();
-      attrs.push_back(Attr::attr("name", {Expr::id(A->getName())}));
+      attrs.push_back(Attr::attr("name", {Expr::id(naming.get(*A))}));
       attrs.push_back(Attr::attr("field", {
         Expr::lit(Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits)),
         Expr::id(memPath(R)),
@@ -363,7 +363,8 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     const unsigned R = regions.idx(V, length);
     bool bytewise = regions.get(R).bytewiseAccess();
     args.push_back(expr(CI.getArgOperand(1)));
-    attrs.push_back(Attr::attr("name", {Expr::id(A->getName())}));      attrs.push_back(Attr::attr("array", {
+    attrs.push_back(Attr::attr("name", {Expr::id(naming.get(*A))}));
+    attrs.push_back(Attr::attr("array", {
       Expr::lit(Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits)),
       Expr::id(memPath(R)),
       addr,
