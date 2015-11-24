@@ -121,8 +121,8 @@ def arguments():
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
 
-  translate_group.add_argument('--llvm-unroll', action="store_true", default=False,
-    help='enable LLVM loop unrolling pass as a preprocessing step')
+  translate_group.add_argument('--static-unroll', metavar='N', type=int,
+    help='enable static LLVM loop unrolling pass as a preprocessing step')
 
   translate_group.add_argument('--pthread', action='store_true', default=False,
     help='enable support for pthread programs')
@@ -366,8 +366,8 @@ def svcomp_process_file(args, name, ext):
 def svcomp_frontend(args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
-  # enable LLVM unroll pass
-  args.llvm_unroll = True
+  # enable static LLVM unroll pass and set its unroll limit to INT_MAX
+  args.static_unroll = 32767
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
@@ -437,7 +437,7 @@ def llvm_to_bpl(args):
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
-  if args.llvm_unroll: cmd += ['-llvm-unroll']
+  if args.static_unroll: cmd += ['-static-unroll=%s' % args.static_unroll]
   if args.bit_precise: cmd += ['-bit-precise']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
