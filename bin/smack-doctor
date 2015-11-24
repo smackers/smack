@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
+
+import os
+import sys
+
+sys.dont_write_bytecode = True # prevent creation of .pyc files
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../share'))
+
+import smack.doctor
+smack.doctor.main()

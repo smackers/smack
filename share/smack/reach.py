@@ -15,7 +15,7 @@ VERSION = '1.5.2'
 
 def reachParser():
     parser = argparse.ArgumentParser(add_help=False, parents=[verifyParser()])
-    
+
     return parser
 
 # File line numbers are 0-based idx
@@ -57,7 +57,7 @@ def GetSourceLineInfo(bplFile):
                     }
                 sourceInfo.append(newSource)
             bplCount += 1
-    
+
     return sorted(sourceInfo, key=lambda e:e['sourceLineNo'], reverse=True)
 
 def UpdateWithClangInfo(clangOuptut, sourceInfo):
@@ -89,7 +89,7 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, contextSwitches, d
 
     #Add lines caught by clang's -Wunreachable-code
     UpdateWithClangInfo(clangOutput, sourceInfo)
-            
+
     # Extract info
     result = {}
     for sourceLine in sourceInfo:
@@ -98,7 +98,7 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, contextSwitches, d
                 result[sourceLine["filename"]] = set()
             resItem = sourceLine["sourceLineNo"], sourceLine["sourceColNo"]
             result[sourceLine["filename"]].add(resItem)
-    
+
     for curfile in result:
         #secondary sort by column
         result[curfile] = sorted(result[curfile], key=lambda e:e[1], reverse=False)
@@ -122,7 +122,7 @@ def TestReachability(verifier, bplFileName, timeLimit, unroll, contextSwitches, 
 
     #do not pass smackd flag as true.  Breaks parsing
     corralOutput = verify(verifier, bplNew, timeLimit, unroll, contextSwitches, debug, False)
-    
+
     return corralOutput
 
 def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
@@ -154,13 +154,13 @@ def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
             #run through each sourceInfo, if matches, set as reachable
             for sourceLine in sourceInfo:
                 if     ((not sourceLine['isReachable']) and
-                        reachedLine['filename'] == sourceLine['filename'] and 
-                        reachedLine['sourceLineNo'] == sourceLine['sourceLineNo'] and 
+                        reachedLine['filename'] == sourceLine['filename'] and
+                        reachedLine['sourceLineNo'] == sourceLine['sourceLineNo'] and
                         reachedLine['sourceColNo'] == sourceLine['sourceColNo']):
                     sourceLine['isReachable'] = True
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Checks the input LLVM file for code reachability.', parents=[reachParser()])
     parser.parse_args() # just check if arguments are looking good
 
