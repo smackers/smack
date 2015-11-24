@@ -40,7 +40,9 @@ smack_value_t __SMACK_return_value(void);
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
 void __VERIFIER_assume(int);
+#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int);
+#endif
 void __VERIFIER_error(void);
 void exit(int);
 
@@ -96,6 +98,7 @@ NONDET_DECL(double);
 NONDET_DECL(long,double);
 
 // Apparently used in SVCOMP benchmarks
+_Bool __VERIFIER_nondet_bool(void);
 unsigned char __VERIFIER_nondet_uchar(void);
 unsigned short __VERIFIER_nondet_ushort(void);
 unsigned __VERIFIER_nondet_uint(void);

@@ -91,7 +91,9 @@ def getAllRunSets(searchRoot, folderPrefix):
         #inputFilename = glob.glob(inputPath + '/*.xml')[0]
         #inFile = path.join(inputPath,inputFilename)
         inFile = glob.glob(inputPath + '/*.xml')[0]
-        runSets.append(RunSet(outFile,inFile))
+        curRunSet = RunSet(outFile,inFile)
+        curRunSet.runsetFolder = inputPath[2:]
+        runSets.append(curRunSet)
         
     #For each set, if an option isn't used, set it to false.
     allOpts = getAllOptionsUsed(runSets)
@@ -99,6 +101,8 @@ def getAllRunSets(searchRoot, folderPrefix):
         for opt in allOpts:
             if opt not in runset.options:
                 runset.options[opt] = "False"
+
+    
 
     return runSets
 

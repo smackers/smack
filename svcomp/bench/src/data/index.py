@@ -28,6 +28,10 @@ if __name__ == '__main__':
     runSets = getAllRunSets(runRoot, runFolderPrefix)
     options = getAllOptionsUsed(runSets)
     optionKeys = sorted(options.keys())
+    for runset in runSets:
+        if 'witcheck' in runset.outXml:
+            runSets.remove(runset)
+    runSets.sort(key=lambda x: x.inXml, reverse=True)
     print '''
 <h1>SMACK+CORRAL Benchmark Results</h1><hr/>
 <p>Select a set, and select the command line options to include</p>
@@ -63,4 +67,17 @@ if __name__ == '__main__':
             <input type="submit" value="Clear" name="Clear">
           </form>
     </td></tr>
-    </table>'''
+    </table>
+    <hr/>
+    Or select a specific set to view (ignores filters above):<br/><br/>
+    <form method="get" action="results.py">
+    RunSet:<select name="runset">'''
+
+    for runset in runSets:
+        print '''
+        <option value="{0}">{0}</option>'''.format(runset.runsetFolder)
+    print '''
+    </select>      
+      <br/><input type="submit" value="Submit" name=Submit">
+    </form>
+    '''

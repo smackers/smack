@@ -66,9 +66,11 @@ for outXml in outXmls:
         propfile = os.path.join(os.path.join('data', os.path.split(sourcefile)[0]), 'ALL.prp')
         # Now set sourcefile to where it WOULD be in output folders, 
         # given the folder structure of the actual input folder
+        tokenizedInputFile = os.path.join('data', sourcefile)
+        print(tokenizedInputFile)
         sourcefile = os.path.join(fileRoot,sourcefile)
         basefile = os.path.splitext(sourcefile)[0]
-        tokenizedInputFile = basefile + '.tokenized.c'
+
         witnessfile = sourcefile + '.witness.graphml'
         witnesscheckOutput = sourcefile + '.witnessCheckOutput'
         categoryCol = run.find('./column[@title="category"]')

@@ -22,6 +22,14 @@ void __SMACK_init_func_thread() {
   __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == $pthread_uninitialized);"); 
 }
 
+void __VERIFIER_atomic_begin() {
+  __SMACK_code("call corral_atomic_begin();");
+}
+
+void __VERIFIER_atomic_end() {
+  __SMACK_code("call corral_atomic_end();");  
+}
+
 pthread_t pthread_self(void) {
   int tmp_tid = __VERIFIER_nondet_int();
   __SMACK_code("call @ := corral_getThreadID();", tmp_tid);
@@ -66,7 +74,7 @@ void pthread_exit(void *retval) {
   pthread_t tid = pthread_self();
 
   // Ensure exit hasn't already been called
-  __SMACK_code("assert $pthreadStatus[@][0] == $pthread_running;", tid);
+//  __SMACK_code("assert $pthreadStatus[@][0] == $pthread_running;", tid);
   __SMACK_code("$pthreadStatus[@][1] := @;", tid, retval);
 
   // Set return pointer value for display in SMACK traces
@@ -103,8 +111,8 @@ int pthread_mutex_lock(pthread_mutex_t *__mutex) {
   int tid = (int)pthread_self();
   // Ensure mutex is initialized & hasn't already been locked by caller
   if(__mutex->attr.type==PTHREAD_MUTEX_NORMAL) {
-    assert(__mutex->init == INITIALIZED);
-    assert(__mutex->lock != tid);
+//    assert(__mutex->init == INITIALIZED);
+//    assert(__mutex->lock != tid);
   } else if(__mutex->attr.type==PTHREAD_MUTEX_ERRORCHECK) {
     if(__mutex->init != INITIALIZED)
       return 22;    // This is EINVAL
@@ -112,11 +120,11 @@ int pthread_mutex_lock(pthread_mutex_t *__mutex) {
       return 35;    // This is EDEADLK
   } else {
     // Other types not currently implemented
-    assert(0);
+//    assert(0);
   }
   __SMACK_code("call corral_atomic_begin();");
   // Wait for lock to become free
-  assume(__mutex->lock == UNLOCKED);
+  __VERIFIER_assume(__mutex->lock == UNLOCKED);
   __mutex->lock = tid;
   __SMACK_code("call corral_atomic_end();");
   return 0;
@@ -126,8 +134,8 @@ int pthread_mutex_unlock(pthread_mutex_t *__mutex) {
   int tid = (int)pthread_self();
   // Ensure mutex is initialized & caller is current owner
   if(__mutex->attr.type==PTHREAD_MUTEX_NORMAL) {
-    assert(__mutex->init == INITIALIZED);
-    assert(__mutex->lock == tid);
+//    assert(__mutex->init == INITIALIZED);
+//    assert(__mutex->lock == tid);
   } else if(__mutex->attr.type==PTHREAD_MUTEX_ERRORCHECK) {
     if(__mutex->init != INITIALIZED)
       return 22;    // This is EINVAL
@@ -135,7 +143,7 @@ int pthread_mutex_unlock(pthread_mutex_t *__mutex) {
       return 1;     // This is EPERM
   } else {
     // Other types not currently implemented
-    assert(0);
+//    assert(0);
   }
   __SMACK_code("call corral_atomic_begin();");
   __mutex->lock = UNLOCKED;
@@ -145,8 +153,8 @@ int pthread_mutex_unlock(pthread_mutex_t *__mutex) {
 
 int pthread_mutex_destroy(pthread_mutex_t *__mutex) {
   // Make sure the lock is initialized, and unlocked
-  assert(__mutex->init == INITIALIZED);
-  assert(__mutex->lock == UNLOCKED);
+//  assert(__mutex->init == INITIALIZED);
+//  assert(__mutex->lock == UNLOCKED);
   __SMACK_code("call corral_atomic_begin();");
   __mutex->init = UNINITIALIZED;
   __SMACK_code("call corral_atomic_end();");
@@ -161,15 +169,15 @@ int pthread_cond_init(pthread_cond_t *__cond, pthread_condattr_t *__condattr) {
     // Unimplemented
     // NOTE: if implemented, attr should be a copy of __condattr passed in
     //       (spec says changes to condattr doesn't affect initialized conds
-    assert(0);
+//    assert(0);
   }
   return 0;  
 }
 
 int pthread_cond_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex) {
   // Ensure conditional var is initialized, and mutex is locked properly
-  assert(__cond->init == INITIALIZED);
-  assert((int)pthread_self() == __mutex->lock);
+//  assert(__cond->init == INITIALIZED);
+//  assert((int)pthread_self() == __mutex->lock);
   pthread_mutex_unlock(__mutex);
   // Wait to be woken up
   // No need to check for signal on __cond, since OS can do spurious wakeup
@@ -210,7 +218,7 @@ int pthread_cond_broadcast(pthread_cond_t *__cond) {
 
 int pthread_cond_destroy(pthread_cond_t *__cond) {
   // Make sure the cond is initialized
-  assert(__cond->init == INITIALIZED);
+//  assert(__cond->init == INITIALIZED);
   __cond->init = UNINITIALIZED;
   return 0;
 }
@@ -221,7 +229,7 @@ void __call_wrapper(pthread_t *__restrict __newthread,
 
   pthread_t ctid = pthread_self();
   // Wait for parent to set child's thread ID in original pthread_t struct
-  assume(ctid == *__newthread);
+  __VERIFIER_assume(ctid == *__newthread);
 
   // Cycle through thread statuses properly, as thread is started, run,
   // and stopped.
@@ -241,7 +249,7 @@ int pthread_create(pthread_t *__restrict __newthread,
   // Add unreachable C-level call to __call_wrapper, so llvm sees
   // the call to __call_wrapper and performs DSA on it.
   int x = __VERIFIER_nondet_int();
-  assume(x == 0);
+  __VERIFIER_assume(x == 0);
   if(x) __call_wrapper(__newthread, __start_routine, __arg);
 
   __SMACK_code("async call @(@, @, @);",

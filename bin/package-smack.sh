@@ -6,7 +6,7 @@
 # Note: this script requires CDE to be downloaded from
 # http://www.pgbovine.net/cde.html
 
-VERSION=1.5.1
+VERSION=1.5.2
 PACKAGE=smack-$VERSION-64
 
 # Create folder to export
@@ -14,30 +14,30 @@ mkdir $PACKAGE
 cd $PACKAGE
 
 # Create file to verify
-echo \#include \"smack.h\"        >  test.c
-echo int main\(void\) \{          >> test.c
-echo   int a\;                    >> test.c
-echo   a = 2\;                    >> test.c
-echo   assert\(a == 3\)\;         >> test.c
-echo   return 0\;                 >> test.c
-echo \}                           >> test.c
+echo int main\(void\) \{                            >> test.c
+echo   int a\;                                      >> test.c
+echo   a = 2\;                                      >> test.c
+echo   if \(a != 3\) __VERIFIER_error\(\)\;         >> test.c
+echo   return 0\;                                   >> test.c
+echo \}                                             >> test.c
 
 # Run SMACK with CDE
-../cde_2011-08-15_64bit smackverify.py test.c --verifier boogie
-../cde_2011-08-15_64bit smackverify.py test.c --verifier corral
-../cde_2011-08-15_64bit smackverify.py test.c --verifier duality
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral --clang-options=-m32
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier corral --clang-options=-m64
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp --clang-options=-m32
+../cde_2011-08-15_64bit smack.py test.c -x svcomp --verifier svcomp --clang-options=-m64
 
 # Clean up temporary files
-rm corral* a.bpl test.* cde.options
+rm test.* cde.options
 
 # Copy license file
 cp ../../LICENSE .
 
 # Create wrapper script
-echo \#\!/bin/sh                                                >  smackverify.sh
-echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"   >> smackverify.sh
-echo \$HERE/cde-package/cde-exec \'smackverify.py\' \"\$\@\"    >> smackverify.sh
-chmod u+x smackverify.sh
+echo \#\!/bin/sh                                                                                   >  smack.sh
+echo HERE=\"\$\(dirname \"\$\(readlink -f \"\$\{0\}\"\)\"\)\"                                      >> smack.sh
+echo \$HERE/cde-package/cde-exec \'smack.py\' \'-x=svcomp\' \'--verifier=svcomp\' \'-q\' \"\$\@\"  >> smack.sh
+chmod u+x smack.sh
 
 # Package it up
 cd ..

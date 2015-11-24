@@ -38,6 +38,10 @@ static llvm::cl::opt<std::string>
 OutputFilename("bpl", llvm::cl::desc("Output Boogie filename"),
   llvm::cl::init(""), llvm::cl::value_desc("filename"));
 
+static llvm::cl::opt<bool>
+Unroll("llvm-unroll", llvm::cl::desc("Use LLVM to unroll loops when possible"),
+  llvm::cl::init(false));
+
 static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
@@ -104,6 +108,14 @@ int main(int argc, char **argv) {
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
+
+  if (Unroll) {
+    pass_manager.add(llvm::createLoopSimplifyPass());
+    pass_manager.add(llvm::createLoopRotatePass());
+    //pass_manager.add(llvm::createIndVarSimplifyPass());
+    pass_manager.add(llvm::createLoopUnrollPass(INT_MAX));
+  }
+
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
@@ -131,3 +143,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+

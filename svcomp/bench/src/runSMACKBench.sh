@@ -89,7 +89,7 @@ SETNAME=$1
 INPUTXMLFILE=$2
 THREADCOUNT=$3
 MEMLIMIT=$4
-CORELIMIT=2
+CORELIMIT=1
 
 
 BENCHEXECPATH=../benchexec/bin
@@ -118,5 +118,6 @@ then
 else
     ${BENCHEXECPATH}/benchexec ${OUTFOLDER}/${INPUTXMLFILE} -o ${OUTFOLDER}/results/ -N ${THREADCOUNT}
 fi
-../checkWitnesses.py ${OUTFOLDER}
 cd ..
+./checkWitnesses.py data/${OUTFOLDER}
+

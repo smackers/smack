@@ -9,7 +9,7 @@
 
 namespace smack {
 
-const unsigned MEMORY_INTRINSIC_THRESHOLD = 10;
+const unsigned MEMORY_INTRINSIC_THRESHOLD = 0;
 
 Regex PROC_MALLOC_FREE("^(malloc|free_)$");
 Regex PROC_IGNORE("^("
@@ -17,7 +17,7 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 48, 64, 96, 128};
+const vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 40, 48, 56, 64, 96, 128};
 const vector<unsigned> REF_CONSTANTS = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
   1024

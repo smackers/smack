@@ -61,14 +61,26 @@ def run_server():
     args = get_args()
     lock_folder = 'lck'
     while(True):
+        # Pop a job
         cur = dequeue(args.queue_file, lock_folder)
+        # And run it if it exists
         if cur:
+            # First, clean old .bc, .bpl, and .ll
+            # Deletes bpl, bc, and ll files that were
+            # last modified more than 2 hours ago
+            cmdPre = ['find', './data/', '-name']
+            cmdPost = ['-mmin', '+120', '-delete', '-maxdepth', '1']
+            for ext in [ ['"*.bpl"'], ['"*.bc"'], ['"*.ll"'] ]:
+                subprocess.call(cmdPre + ext + cmdPost);
+
             cur = cur.split()
             cmd =  ['nohup', './runSMACKBench.sh', cur[0], cur[1]]
             cmd += [args.thread_count, args.memory_limit]
             print(cmd)
             #cmd = ['ls']
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(cmd, 
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
             while p.poll() is None:
                 print(p.stdout.readline())
             print(p.stdout.read())
@@ -77,4 +89,3 @@ def run_server():
             
 
 run_server()
-#fcntl.lockf()

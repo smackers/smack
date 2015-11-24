@@ -17,7 +17,11 @@ enum
 };
 
 typedef int pthread_t;
+
+#ifndef _PTHREAD_ATTR_T
+#define _PTHREAD_ATTR_T
 typedef int pthread_attr_t;
+#endif
 
 typedef struct{
   int prioceil, proto, pshared, type;
