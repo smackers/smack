@@ -501,7 +501,7 @@ def verify_bpl_svcomp(args):
     lockpwn_command += ["/o:%s" % args.bpl_file]
     lockpwn_output = try_command(lockpwn_command);
     
-  corral_command = ["corral-svcomp"]
+  corral_command = ["corral"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]

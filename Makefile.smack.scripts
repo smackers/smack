@@ -17,7 +17,6 @@ install-local::
 	       -o -name '*.rb' \
          -o -name 'boogie' \
          -o -name 'corral' \
-         -o -name 'corral-svcomp' \
 	      ')' -print | grep -v CVS | \
 	      grep -v .svn` ; do \
 	    instdir=`dirname "$(DESTDIR)$(PROJ_bindir)/$$scr"` ; \

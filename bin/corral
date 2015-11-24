@@ -1,3 +1,4 @@
 #!/bin/bash
+export MONO_GC_PARAMS=max-heap-size=9g
 $CORRAL "$@"
 
