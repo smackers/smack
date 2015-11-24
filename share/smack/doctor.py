@@ -77,8 +77,8 @@ def check_headers(prefix):
     if os.path.isfile(file):
       check("%s contains %s" % (file, content), content in open(file).read())
 
-if __name__ == '__main__':
-
+def main():
+  global args
   parser = argparse.ArgumentParser(description='Diagnose SMACK configuration issues.')
   parser.add_argument('-q', '--quiet', dest='quiet', action="store_true", default=False,
                       help='only show failed diagnostics')
@@ -102,7 +102,7 @@ if __name__ == '__main__':
   if not args.quiet:
     print "Checking SMACK itself..."
   check_command("llvm2bpl")
-  check_command("smack.py")
+  check_command("smack")
 
   if args.prefix is not '':
     check_headers(args.prefix)

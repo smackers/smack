@@ -198,7 +198,7 @@ def main():
         continue
 
       # build up the subprocess command
-      cmd = ['smack.py', test]
+      cmd = ['smack', test]
       cmd += ['--time-limit', str(meta['time-limit'])]
       cmd += meta['flags']
 
