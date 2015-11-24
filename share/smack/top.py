@@ -266,7 +266,7 @@ def smack_headers():
   return os.path.join(smack_root(), 'share', 'smack', 'include')
 
 def smack_lib():
-  return os.path.join(smack_root(), 'share', 'smack', 'lib', 'smack.c')
+  return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
 def default_clang_compile_command(args):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
@@ -291,23 +291,17 @@ def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
   bitcodes = []
+  libs = ['smack.c']
   compile_command = default_clang_compile_command(args)
-  smack_bc = temporary_file('smack', '.bc', args)
-  try_command(compile_command + [smack_lib(), '-o', smack_bc])
-  bitcodes.append(smack_bc)
-  for c in args.input_files:
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], console=True)
-    bitcodes.append(bc)
+
   if args.pthread:
-    pthread_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'pthread.c')
-    pthread_bc = temporary_file('pthread', '.bc', args)
-    spinlock_lib = os.path.join(smack_root(), 'share', 'smack', 'lib', 'spinlock.c')
-    spinlock_bc = temporary_file('spinlock', '.bc', args)
-    try_command(compile_command + [pthread_lib, '-o', pthread_bc])
-    try_command(compile_command + [spinlock_lib, '-o', spinlock_bc])
-    bitcodes.append(pthread_bc)
-    bitcodes.append(spinlock_bc)
+    libs += ['pthread.c', 'spinlock.c']
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs) + args.input_files:
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(compile_command + ['-o', bc, c], console=(c in args.input_files))
+    bitcodes.append(bc)
+
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
 
@@ -319,16 +313,20 @@ def json_compilation_database_frontend(args):
 
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
-  smack_bc = temporary_file('smack', '.bc', args)
 
-  try_command(default_clang_compile_command(args) + [smack_lib(), '-o', smack_bc])
+  libs = ['smack.c']
+  lib_bitcodes = []
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(default_clang_compile_command(args) + ['-o', bc, c])
+    lib_bitcodes.append(bc)
 
   with open(args.input_files[0]) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
         bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
-        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + [smack_bc])
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + lib_bitcodes)
 
       else:
         out_file = output_flags.findall(cc['command'])[0] + '.bc'
