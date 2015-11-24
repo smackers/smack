@@ -8,8 +8,8 @@ from toSVCOMPformat import smackJsonToXmlGraph
 def svcomp_frontend(args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
-  # enable LLVM unroll pass
-  args.llvm_unroll = True
+  # enable static LLVM unroll pass and set its unroll limit to INT_MAX
+  args.static_unroll = 32767
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
