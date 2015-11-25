@@ -175,6 +175,7 @@ def scrub_pthreads(s):
   s = re.sub(r'(__VERIFIER_atomic_((?!begin|end).)*?\(.*?\);)',
              r'__VERIFIER_atomic_begin(); \1 __VERIFIER_atomic_end();',
              s)
+  s = re.sub(r'\ninline ', r'\n', s)
 
   return s, True
 
