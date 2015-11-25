@@ -46,16 +46,6 @@ void exit(int x) {
   while(1);
 }
 
-// introduced this hack to make this work
-void* __VERIFIER_nondet_dummy() {
-  return 0;
-}
-void* __VERIFIER_nondet(void) {
-  void* x = __VERIFIER_nondet_dummy();
-  __SMACK_code("havoc @;", x);
-  return x;
-}
-
 // Apparently used in SVCCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();

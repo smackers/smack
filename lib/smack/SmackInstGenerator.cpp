@@ -32,6 +32,9 @@ const bool SHOW_ORIG = false;
 
 Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$#'`~^\\?]*):.*;");
 
+// Procedures whose return value should not be marked as external
+Regex EXTERNAL_PROC_IGNORE("^(malloc|__VERIFIER_nondet)$");
+
 string i2s(llvm::Instruction& i) {
   string s;
   llvm::raw_string_ostream ss(s);
@@ -546,7 +549,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   if (f && f->isDeclaration() && rep.isExternal(&ci)) {
     string name = naming.get(*f);
-    if (name != "malloc")
+    if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
   }
 }
