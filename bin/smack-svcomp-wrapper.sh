@@ -12,5 +12,4 @@ export PATH=${LLVM_BIN}:$SMACK_BIN:$PATH
 export CORRAL="mono ${CORRAL_BIN}/corral.exe"
 export LOCKPWN="mono ${LOCKPWN_BIN}/lockpwn.exe"
 
-smack.py -x=svcomp --verifier=svcomp -q $@
-
+smack -x=svcomp --verifier=svcomp -q $@

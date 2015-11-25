@@ -25,10 +25,10 @@ class Tool(benchexec.tools.template.BaseTool):
 
     def executable(self):
         """
-        Tells BenchExec to search for 'smack.py' as the main executable to be
+        Tells BenchExec to search for 'smack' as the main executable to be
         called when running SMACK.
         """
-        return util.find_executable('smack.py')
+        return util.find_executable('smack')
 
     def version(self, executable):
         """
@@ -69,7 +69,7 @@ class Tool(benchexec.tools.template.BaseTool):
         except:
             #If it doesn't contain --bc, nothing to do...
             pass
-            
+
         return [executable] + options + tasks
 
     def determine_result(self, returncode, returnsignal, output, isTimeout):
@@ -94,7 +94,7 @@ class Tool(benchexec.tools.template.BaseTool):
 
         We are using this to generate HTML links for output files, rather than
         parsing output and providing additional statistical data about the run.
-        
+
         This currently generates a drop-down menu item for the .bc, .bpl,
         generated witness file, and the output from the witness checking tool.
 

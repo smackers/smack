@@ -22,7 +22,7 @@ SMACK can verify C programs, such as the following:
 
 The command
 
-    smack.py simple.c
+    smack simple.c
 
 reports that the assertion `a == b + 1` cannot be violated. Besides the
 features of this very simple example, SMACK handles every complicated feature

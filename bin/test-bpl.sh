@@ -64,9 +64,9 @@ do
 	filename=`basename $j $suffix`
 	bplfile=$dir"/"$filename".bpl"
 	#Execute smack with --no-verify option
-	OUT=$(smack.py --no-verify --svcomp $j --bpl $bplfile | grep "SMACK generated invalid Boogie file")
+	OUT=$(smack --no-verify --svcomp $j --bpl $bplfile | grep "SMACK generated invalid Boogie file")
 	#Build a text list of valid and invalid files (${GOOD}, ${BAD})
-	if [[ -z $OUT ]] 
+	if [[ -z $OUT ]]
 	then
 	    GOOD="$j\n${GOOD}"
 	else
@@ -81,11 +81,11 @@ do
 	echo -ne "Completed: ${CURCOUNT} of ${TOTALCOUNT} (Valid: ${GOODCOUNT}, Invalid: ${BADCOUNT})\r"
     done
 done
-#Display summary showing valid count and valid file list, 
+#Display summary showing valid count and valid file list,
 #then invalid count and invalid file list
 echo
 
-echo 
+echo
 echo "============================================================================================="
 echo Valid bpl files: ${GOODCOUNT}
 echo "============================================================================================="
