@@ -1187,7 +1187,7 @@ void DSNode::markReachableNodes(DenseSet<const DSNode*> &ReachableNodes) const {
   // warning: 'this' pointer cannot be null in well-defined C++ code;
   // comparison may be assumed to always evaluate to false
   // [-Wtautological-undefined-compare]
-  // if (this == 0) return;
+  if (this == 0) return;
   assert(!isForwarding() && "Cannot mark a forwarded node!");
   if (ReachableNodes.insert(this).second) // Is newly reachable?
     for (DSNode::const_edge_iterator I = edge_begin(), E = edge_end();
