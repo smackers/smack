@@ -1040,7 +1040,9 @@ Decl* SmackRep::memcpyProc(string type, unsigned length) {
   stringstream s;
 
   string name = Naming::MEMCPY + "." + type;
-  if (length < MEMORY_INTRINSIC_THRESHOLD)
+  bool no_quantifiers = length <= MEMORY_INTRINSIC_THRESHOLD;
+
+  if (no_quantifiers)
     name = name + "." + std::to_string(length);
   else
     errs() << "warning: memory intrinsic length exceeds threshold ("
@@ -1059,7 +1061,7 @@ Decl* SmackRep::memcpyProc(string type, unsigned length) {
     << "M.ret: [ref] " << type
     << ")";
 
-  if (length < MEMORY_INTRINSIC_THRESHOLD) {
+  if (no_quantifiers) {
     s << "\n" << "{" << "\n";
     s << "  M.ret := M.dst;" << "\n";
     for (unsigned offset = 0; offset < length; ++offset)
@@ -1101,7 +1103,9 @@ Decl* SmackRep::memsetProc(string type, unsigned length) {
   stringstream s;
 
   string name = Naming::MEMSET + "." + type;
-  if (length < MEMORY_INTRINSIC_THRESHOLD)
+  bool no_quantifiers = length <= MEMORY_INTRINSIC_THRESHOLD;
+
+  if (no_quantifiers)
     name = name + "." + std::to_string(length);
   else
     errs() << "warning: memory intrinsic length exceeds threshold ("
@@ -1119,7 +1123,7 @@ Decl* SmackRep::memsetProc(string type, unsigned length) {
     << "M.ret: [ref] " << type
     << ")";
 
-  if (length < MEMORY_INTRINSIC_THRESHOLD) {
+  if (no_quantifiers) {
     s << "\n" << "{" << "\n";
     s << "M.ret := M;" << "\n";
     for (unsigned offset = 0; offset < length; ++offset)
