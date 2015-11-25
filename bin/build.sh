@@ -366,7 +366,7 @@ then
   puts "Building lockpwn"
 
   cd ${ROOT}
-  git clone https://github.com/pdeligia/lockpwn.git
+  git clone https://github.com/smackers/lockpwn.git
   cd ${LOCKPWN_DIR}
   xbuild lockpwn.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
