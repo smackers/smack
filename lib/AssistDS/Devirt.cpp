@@ -32,6 +32,8 @@ STATISTIC(CSConvert, "Number of call sites converted");
 RegisterPass<Devirtualize>
 Z ("devirt", "Devirtualize indirect function calls");
 
+const bool SKIP_INCOMPLETE_NODES = false;
+
 //
 // Function: getVoidPtrType()
 //
@@ -79,6 +81,38 @@ castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
   else
     llvm_unreachable("Unexpected insertion point.");
 
+}
+
+static inline bool isZExtOrBitCastable(Value* V, Type* T) {
+  switch(CastInst::getCastOpcode(V, false, T, false)) {
+    case Instruction::ZExt:
+    case Instruction::BitCast:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static inline bool match(CallSite &CS, Function &F) {
+  auto V = CS.getCalledValue();
+  auto N = CS.arg_size();
+  auto T = F.getFunctionType();
+  auto M = T->getNumParams();
+
+  if (!CastInst::isBitCastable(T->getReturnType(), CS.getInstruction()->getType()))
+    return false;
+
+  if (N < M)
+    return false;
+
+  if (N > M && !F.isVarArg())
+    return false;
+
+  for (unsigned i=0; i<M; i++)
+    if (!isZExtOrBitCastable(CS.getArgument(i), T->getParamType(i)))
+      return false;
+
+  return true;
 }
 
 //
@@ -223,7 +257,12 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   BasicBlock * failBB = BasicBlock::Create (M->getContext(),
                                             "fail",
                                             F);
-  new UnreachableInst (M->getContext(), failBB);
+
+  // TODO what to do when there are no potential targets?
+  if (Targets.size())
+    new UnreachableInst (M->getContext(), failBB);
+  else
+    ReturnInst::Create(M->getContext(), failBB);
 
   //
   // Setup the entry basic block.  For now, just have it call the failure
@@ -303,71 +342,74 @@ Devirtualize::makeDirectCall (CallSite & CS) {
   // Find the targets of the indirect function call.
   //
 
-  //
-  // Convert the call site if there were any function call targets found.
-  //
-  if (CTF->size(CS)) {
-    std::vector<const Function*> Targets;
-    Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
-    //
-    // Determine if an existing bounce function can be used for this call site.
-    //
-    std::set<const Function *> targetSet (Targets.begin(), Targets.end());
-    const Function * NF = findInCache (CS, targetSet);
+  std::vector<const Function*> Targets;
 
-    //
-    // If no cached bounce function was found, build a function which will
-    // implement a switch statement.  The switch statement will determine which
-    // function target to call and call it.
-    //
-    if (!NF) {
-      // Build the bounce function and add it to the cache
-      NF = buildBounce (CS, Targets);
-      bounceCache[NF] = targetSet;
+  if (CTF->size(CS) && CTF->isComplete(CS))
+    Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
+
+  else
+    for (auto &F : *CS.getInstruction()->getParent()->getParent()->getParent())
+      if (F.hasAddressTaken() && match(CS, F))
+        Targets.push_back(&F);
+
+  //
+  // Determine if an existing bounce function can be used for this call site.
+  //
+  std::set<const Function *> targetSet (Targets.begin(), Targets.end());
+  const Function * NF = findInCache (CS, targetSet);
+
+  //
+  // If no cached bounce function was found, build a function which will
+  // implement a switch statement.  The switch statement will determine which
+  // function target to call and call it.
+  //
+  if (!NF) {
+    // Build the bounce function and add it to the cache
+    NF = buildBounce (CS, Targets);
+    bounceCache[NF] = targetSet;
+  }
+
+  //
+  // Replace the original call with a call to the bounce function.
+  //
+  if (CallInst* CI = dyn_cast<CallInst>(CS.getInstruction())) {
+    std::vector<Value*> Params;
+    Params.push_back(CI->getCalledValue());
+    for (unsigned i=0; i<CI->getNumArgOperands(); i++) {
+      Params.push_back(
+        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+      );
     }
 
-    //
-    // Replace the original call with a call to the bounce function.
-    //
-    if (CallInst* CI = dyn_cast<CallInst>(CS.getInstruction())) {
-      std::vector<Value*> Params;
-      Params.push_back(CI->getCalledValue());
-      for (unsigned i=0; i<CI->getNumArgOperands(); i++) {
-        Params.push_back(
-          castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
-        );
-      }
-
-      std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
-      CallInst* CN = CallInst::Create (const_cast<Function*>(NF),
+    std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
+    CallInst* CN = CallInst::Create (const_cast<Function*>(NF),
                                        Params,
                                        name,
                                        CI);
-      CI->replaceAllUsesWith(CN);
-      CI->eraseFromParent();
-    } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS.getInstruction())) {
-      std::vector<Value*> Params;
-      Params.push_back(CI->getCalledValue());
-      for (unsigned i=0; i<CI->getNumArgOperands(); i++)
-        Params.push_back(
-          castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
-        );
-      std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
-      InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
-                                          CI->getNormalDest(),
-                                          CI->getUnwindDest(),
-                                          Params,
-                                          name,
-                                          CI);
-      CI->replaceAllUsesWith(CN);
-      CI->eraseFromParent();
-    }
-
-    //
-    // Update the statistics on the number of transformed call sites.
-    //
-    ++CSConvert;
+    CI->replaceAllUsesWith(CN);
+    CI->eraseFromParent();
+  } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS.getInstruction())) {
+    std::vector<Value*> Params;
+    Params.push_back(CI->getCalledValue());
+    for (unsigned i=0; i<CI->getNumArgOperands(); i++)
+      Params.push_back(
+        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+      );
+    std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
+    InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
+                                        CI->getNormalDest(),
+                                        CI->getUnwindDest(),
+                                        Params,
+                                        name,
+                                        CI);
+    CI->replaceAllUsesWith(CN);
+    CI->eraseFromParent();
   }
+
+  //
+  // Update the statistics on the number of transformed call sites.
+  //
+  ++CSConvert;
 
   return;
 }
@@ -392,7 +434,7 @@ Devirtualize::visitCallSite (CallSite &CS) {
   // Second, we will only transform those call sites which are complete (i.e.,
   // for which we know all of the call targets).
   //
-  if (!(CTF->isComplete(CS)))
+  if (SKIP_INCOMPLETE_NODES && !CTF->isComplete(CS))
     return;
 
   //
