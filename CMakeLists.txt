@@ -146,11 +146,9 @@ add_library(smackTranslator STATIC
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
-  include/smack/Contracts.h
   include/smack/DSAAliasAnalysis.h
   include/smack/Naming.h
   include/smack/Regions.h
-  include/smack/Slicing.h
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
@@ -162,11 +160,9 @@ add_library(smackTranslator STATIC
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
-  lib/smack/Contracts.cpp
   lib/smack/DSAAliasAnalysis.cpp
   lib/smack/Naming.cpp
   lib/smack/Regions.cpp
-  lib/smack/Slicing.cpp
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp

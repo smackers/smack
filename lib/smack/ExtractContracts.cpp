@@ -5,6 +5,7 @@
 #define DEBUG_TYPE "extract-contracts"
 
 #include "smack/SmackOptions.h"
+#include "smack/Naming.h"
 #include "smack/ExtractContracts.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
@@ -26,12 +27,15 @@ bool ExtractContracts::runOnModule(Module& M) {
 
 void ExtractContracts::visitCallInst(CallInst &I) {
   Function* F = I.getCalledFunction();
-  if (F->getName() == "requires" || F->getName() == "ensures") {
-    assert(I.getNumArgOperands() == 1 && "Unexpected operands to requires.");
-    Function* EF;
-    std::vector<Value*> Args;
-    tie(EF, Args) = extractExpression(I.getArgOperand(0));
-    I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
+  if (F) {
+    if (F->getName() == Naming::CONTRACT_REQUIRES ||
+        F->getName() == Naming::CONTRACT_ENSURES) {
+      assert(I.getNumArgOperands() == 1 && "Unexpected operands to requires.");
+      Function* EF;
+      std::vector<Value*> Args;
+      tie(EF, Args) = extractExpression(I.getArgOperand(0));
+      I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
+    }
   }
 }
 
@@ -57,7 +61,10 @@ ExtractContracts::extractExpression(Value* V) {
     Value* V = value_stack.top();
     if (clones.count(V)) {
       value_stack.pop();
-      if (auto I = dyn_cast<Instruction>(V)) {
+      if (isa<StoreInst>(V)) {
+        llvm_unreachable("Unexpected store instruction!");
+
+      } else if (auto I = dyn_cast<Instruction>(V)) {
         auto II = I->clone();
         B->getInstList().push_back(II);
         for (auto& O : II->operands()) {
@@ -65,11 +72,18 @@ ExtractContracts::extractExpression(Value* V) {
           O.set(clones[O.get()]);
         }
         clones[I] = II;
+
       } else if (auto A = dyn_cast<Argument>(V)) {
         if (clones[A] == A) {
           clones[A] = new Argument(A->getType(), A->getName());
           parameters.push_back(A->getType());
           arguments.push_back(A);
+        }
+      } else if (auto G = dyn_cast<GlobalValue>(V)) {
+        if (clones[G] == G) {
+          clones[G] = new Argument(G->getType(), G->getName());
+          parameters.push_back(G->getType());
+          arguments.push_back(G);
         }
       }
 

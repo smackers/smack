@@ -11,7 +11,6 @@ namespace smack {
 using llvm::Regex;
 using llvm::SmallVector;
 using llvm::StringRef;
-using namespace std;
 
 class SmackRepFlatMem : public SmackRep {
 
@@ -23,4 +22,3 @@ public:
 }
 
 #endif // SMACKREPFLATMEM_H
-

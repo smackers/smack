@@ -56,7 +56,7 @@ public:
 
 class Regions : public ModulePass, public InstVisitor<Regions> {
 
-  vector<Region> regions;
+  std::vector<Region> regions;
   unsigned idx(Region& R);
 
 public:

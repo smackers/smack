@@ -23,20 +23,21 @@ namespace smack {
 using llvm::Regex;
 using llvm::SmallVector;
 using llvm::StringRef;
-using namespace std;
 
 class SmackRep {
 protected:
   Regions& regions;
   Naming& naming;
   Program& program;
-  vector<string> bplGlobals;
+  std::vector<std::string> bplGlobals;
   const llvm::DataLayout* targetData;
   unsigned ptrSizeInBits;
 
   long globalsBottom;
   long externsBottom;
-  vector<std::string> initFuncs;
+  std::vector<std::string> initFuncs;
+
+  std::map<std::string, Decl*> auxDecls;
 
   unsigned uniqueFpNum;
 
@@ -60,8 +61,8 @@ private:
   const Expr* pointerToInteger(const Expr* e, unsigned width);
   const Expr* integerToPointer(const Expr* e, unsigned width);
 
-  string opName(const string& operation, initializer_list<const llvm::Type*> types);
-  string opName(const string& operation, initializer_list<unsigned> types);
+  std::string opName(const std::string& operation, std::initializer_list<const llvm::Type*> types);
+  std::string opName(const std::string& operation, std::initializer_list<unsigned> types);
 
   const Stmt* store(unsigned R, const Type* T, const Expr* P, const Expr* V);
 
@@ -69,21 +70,21 @@ private:
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
   const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
 
-  string procName(const llvm::User& U);
-  string procName(const llvm::User& U, llvm::Function* F);
+  std::string procName(const llvm::User& U);
+  std::string procName(const llvm::User& U, llvm::Function* F);
 
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
   unsigned getSize(llvm::Type* t);
 
-  string pointerType();
-  string intType(unsigned width);
+  std::string pointerType();
+  std::string intType(unsigned width);
 
   unsigned numElements(const llvm::Constant* v);
 
-  Decl* memcpyProc(string type,
+  Decl* memcpyProc(std::string type,
     unsigned length = std::numeric_limits<unsigned>::max());
-  Decl* memsetProc(string type,
+  Decl* memsetProc(std::string type,
     unsigned length = std::numeric_limits<unsigned>::max());
 
 public:
@@ -94,15 +95,15 @@ public:
   const Expr* integerLit(unsigned long v, unsigned width);
   const Expr* integerLit(long v, unsigned width);
 
-  string type(const llvm::Type* t);
-  string type(const llvm::Value* v);
+  std::string type(const llvm::Type* t);
+  std::string type(const llvm::Value* v);
 
   const Expr* lit(const llvm::Value* v);
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
   const Expr* ptrArith(const llvm::GetElementPtrInst* I);
   const Expr* ptrArith(const llvm::ConstantExpr* CE);
-  const Expr* ptrArith(const llvm::Value* p, vector< pair<llvm::Value*,llvm::Type*> > args);
+  const Expr* ptrArith(const llvm::Value* p, std::vector< std::pair<llvm::Value*,llvm::Type*> > args);
 
   const Expr* expr(const llvm::Value* v);
 
@@ -117,7 +118,7 @@ public:
 
   const Expr* arg(llvm::Function* f, unsigned pos, llvm::Value* v);
   const Stmt* call(llvm::Function* f, const llvm::User& u);
-  string code(llvm::CallInst& ci);
+  std::string code(llvm::CallInst& ci);
 
   const Stmt* alloca(llvm::AllocaInst& i);
   const Stmt* memcpy(const llvm::MemCpyInst& msi);
@@ -129,27 +130,34 @@ public:
   const Stmt* valueAnnotation(const CallInst& CI);
   const Stmt* returnValueAnnotation(const CallInst& CI);
 
-  vector<ProcDecl*> procedure(Function* F);
+  std::list<ProcDecl*> procedure(Function* F);
   ProcDecl* procedure(Function* F, CallInst* C);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
 
-  string memReg(unsigned i);
-  string memType(unsigned region);
-  string memPath(unsigned region);
+  std::string memReg(unsigned i);
+  std::string memType(unsigned region);
+  std::string memPath(unsigned region);
 
   // used in SmackInstGenerator
-  string getString(const llvm::Value* v);
+  std::string getString(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
-  void addBplGlobal(string name);
+  void addBplGlobal(std::string name);
 
   // used in SmackModuleGenerator
-  vector<Decl*> globalDecl(const llvm::GlobalValue* g);
+  std::list<Decl*> globalDecl(const llvm::GlobalValue* g);
   void addInitFunc(const llvm::Function* f);
   Decl* getInitFuncs();
-  string getPrelude();
+  std::string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
+
+  std::list<Decl*> auxiliaryDeclarations() {
+    std::list<Decl*> ds;
+    for (auto D : auxDecls)
+      ds.push_back(D.second);
+    return ds;
+  }
 };
 
 }

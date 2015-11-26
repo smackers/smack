@@ -16,7 +16,6 @@
 #include <sstream>
 #include <stack>
 
-using namespace std;
 using llvm::errs;
 
 namespace smack {

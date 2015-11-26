@@ -12,7 +12,6 @@
 #include <queue>
 #include <set>
 
-using namespace std;
 using namespace llvm;
 
 namespace smack {

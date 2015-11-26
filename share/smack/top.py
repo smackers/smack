@@ -99,7 +99,10 @@ def arguments():
     help='Treat input files as having type LANG.')
 
   frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
-    type=str, help='save (intermediate) bitcode to FILE')
+    type=str, help='save initial LLVM bitcode to FILE')
+
+  frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None,
+    type=str, help='save final LLVM IR to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
     help='additional compiler arguments (e.g., --clang-options="-w -g")')
@@ -347,6 +350,7 @@ def llvm_to_bpl(args):
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
+  if args.ll_file: cmd += ['-ll', args.ll_file]
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.static_unroll: cmd += ['-static-unroll=%s' % args.static_unroll]
   if args.bit_precise: cmd += ['-bit-precise']

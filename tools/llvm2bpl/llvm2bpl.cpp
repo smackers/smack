@@ -39,6 +39,10 @@ static llvm::cl::opt<std::string>
 OutputFilename("bpl", llvm::cl::desc("Output Boogie filename"),
   llvm::cl::init(""), llvm::cl::value_desc("filename"));
 
+static llvm::cl::opt<std::string>
+FinalIrFilename("ll", llvm::cl::desc("Output the finally-used LLVM IR"),
+  llvm::cl::init(""), llvm::cl::value_desc("filename"));
+
 static llvm::cl::opt<int>
 StaticUnroll("static-unroll", llvm::cl::desc("Use LLVM to statically unroll loops when possible"),
   llvm::cl::init(0));
@@ -105,7 +109,6 @@ int main(int argc, char **argv) {
     dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
 
-  // pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
@@ -121,19 +124,19 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
+  pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(new smack::CodifyStaticInits());
   pass_manager.add(new smack::RemoveDeadDefs());
   pass_manager.add(new llvm::MergeArrayGEP());
   pass_manager.add(new llvm::Devirtualize());
 
-  std::string filename(filenamePrefix(InputFilename) + "-final.ll");
   std::string EC;
-  tool_output_file F(filename.c_str(), EC, sys::fs::F_None);
+  tool_output_file F(FinalIrFilename.c_str(), EC, sys::fs::F_None);
 
-  DEBUG(
+  if (!FinalIrFilename.empty()) {
     F.keep();
-    pass_manager.add(llvm::createPrintModulePass(F.os()))
-  );
+    pass_manager.add(llvm::createPrintModulePass(F.os()));
+  }
 
   pass_manager.add(new smack::SmackModuleGenerator());
   pass_manager.add(new smack::BplFilePrinter(output->os()));

@@ -9,7 +9,6 @@
 namespace smack {
 
 using llvm::errs;
-using namespace std;
 
 llvm::RegisterPass<BplPrinter> Y("bpl_print", "BoogiePL printer pass");
 char BplPrinter::ID = 0;
@@ -17,10 +16,9 @@ char BplPrinter::ID = 0;
 bool BplPrinter::runOnModule(llvm::Module& m) {
   SmackModuleGenerator& smackGenerator = getAnalysis<SmackModuleGenerator>();
   Program& program = smackGenerator.getProgram();
-  ostringstream s;
+  std::ostringstream s;
   program.print(s);
   DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
   return false;
 }
 }
-

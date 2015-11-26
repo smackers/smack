@@ -12,7 +12,6 @@
 #include "smack/SmackRep.h"
 #include <unordered_set>
 
-using namespace std;
 using namespace llvm;
 
 namespace smack {

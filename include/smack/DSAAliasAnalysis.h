@@ -30,12 +30,10 @@
 
 namespace smack {
 
-using namespace std;
-
 class MemcpyCollector : public llvm::InstVisitor<MemcpyCollector> {
 private:
   llvm::DSNodeEquivs *nodeEqs;
-  vector<const llvm::DSNode*> memcpys;
+  std::vector<const llvm::DSNode*> memcpys;
 
 public:
   MemcpyCollector(llvm::DSNodeEquivs *neqs) : nodeEqs(neqs) { }
@@ -58,7 +56,7 @@ public:
     if (!f2) memcpys.push_back(eqs.getLeaderValue(n2));
   }
 
-  vector<const llvm::DSNode*> getMemcpys() {
+  std::vector<const llvm::DSNode*> getMemcpys() {
     return memcpys;
   }
 };
@@ -70,9 +68,9 @@ private:
   llvm::BUDataStructures *BU;
   llvm::DSNodeEquivs *nodeEqs;
   dsa::TypeSafety<llvm::TDDataStructures> *TS;
-  vector<const llvm::DSNode*> staticInits;
-  vector<const llvm::DSNode*> memcpys;
-  unordered_set<const llvm::DSNode*> intConversions;
+  std::vector<const llvm::DSNode*> staticInits;
+  std::vector<const llvm::DSNode*> memcpys;
+  std::unordered_set<const llvm::DSNode*> intConversions;
   const DataLayout* dataLayout;
 
 public:
@@ -120,8 +118,8 @@ public:
 
 private:
   bool isComplicatedNode(const llvm::DSNode* n);
-  vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
-  vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
+  std::vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
+  std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);
   bool equivNodes(const llvm::DSNode* n1, const llvm::DSNode* n2);
   unsigned getOffset(const Location* l);

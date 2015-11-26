@@ -19,6 +19,10 @@ const std::string Naming::NULL_VAL = "$0.ref";
 const std::string Naming::INIT_FUNC_PREFIX = "__SMACK_init_func";
 const std::string Naming::DECLARATIONS_PROC = "__SMACK_decls";
 
+const std::string Naming::CONTRACT_REQUIRES = "__CONTRACT_requires";
+const std::string Naming::CONTRACT_ENSURES = "__CONTRACT_ensures";
+const std::string Naming::CONTRACT_INVARIANT = "__CONTRACT_invariant";
+
 const std::string Naming::MOD_PROC = "__SMACK_mod";
 const std::string Naming::CODE_PROC = "__SMACK_code";
 const std::string Naming::DECL_PROC = "__SMACK_decl";

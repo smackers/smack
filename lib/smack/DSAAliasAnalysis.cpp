@@ -31,7 +31,7 @@ void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
   TS->print(F, module);
 }
 
-vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
+std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
     llvm::Module &M, MemcpyCollector *mcc) {
 
   for (llvm::Module::iterator func = M.begin(), e = M.end();
@@ -47,8 +47,8 @@ vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
 }
 
 
-vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M) {
-  vector<const llvm::DSNode*> sis;
+std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M) {
+  std::vector<const llvm::DSNode*> sis;
 
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();

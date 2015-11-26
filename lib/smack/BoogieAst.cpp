@@ -2,25 +2,24 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/BoogieAst.h"
+#include "smack/Naming.h"
 #include "llvm/IR/Constants.h"
 #include <sstream>
 #include <iostream>
 
 namespace smack {
 
-using namespace std;
-
 unsigned Decl::uniqueId = 0;
 
-const Expr* Expr::exists(string v, string t, const Expr* e) {
-  vector< pair<string,string> > vars;
-  vars.push_back(make_pair(v,t));
+const Expr* Expr::exists(std::string v, std::string t, const Expr* e) {
+  std::list< std::pair<std::string,std::string> > vars;
+  vars.push_back({v,t});
   return new QuantExpr(QuantExpr::Exists, vars, e);
 }
 
-const Expr* Expr::forall(string v, string t, const Expr* e) {
-  vector< pair<string,string> > vars;
-  vars.push_back(make_pair(v,t));
+const Expr* Expr::forall(std::string v, std::string t, const Expr* e) {
+  std::list< std::pair<std::string,std::string> > vars;
+  vars.push_back({v,t});
   return new QuantExpr(QuantExpr::Forall, vars, e);
 }
 
@@ -40,30 +39,30 @@ const Expr* Expr::lt(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Lt, l, r);
 }
 
-const Expr* Expr::fn(string f, vector<const Expr*> args) {
+const Expr* Expr::fn(std::string f, std::list<const Expr*> args) {
   return new FunExpr(f, args);
 }
 
-const Expr* Expr::fn(string f, const Expr* x) {
-  return new FunExpr(f, vector<const Expr*>(1, x));
+const Expr* Expr::fn(std::string f, const Expr* x) {
+  return new FunExpr(f, std::list<const Expr*>(1, x));
 }
 
-const Expr* Expr::fn(string f, const Expr* x, const Expr* y) {
-  vector<const Expr*> ps;
+const Expr* Expr::fn(std::string f, const Expr* x, const Expr* y) {
+  std::list<const Expr*> ps;
   ps.push_back(x);
   ps.push_back(y);
   return new FunExpr(f, ps);
 }
 
-const Expr* Expr::fn(string f, const Expr* x, const Expr* y, const Expr* z) {
-  vector<const Expr*> ps;
+const Expr* Expr::fn(std::string f, const Expr* x, const Expr* y, const Expr* z) {
+  std::list<const Expr*> ps;
   ps.push_back(x);
   ps.push_back(y);
   ps.push_back(z);
   return new FunExpr(f, ps);
 }
 
-const Expr* Expr::id(string s) {
+const Expr* Expr::id(std::string s) {
   return new VarExpr(s);
 }
 
@@ -75,7 +74,7 @@ const Expr* Expr::lit(bool b) {
   return new BoolLit(b);
 }
 
-const Expr* Expr::lit(string v) {
+const Expr* Expr::lit(std::string v) {
   return new StringLit(v);
 }
 
@@ -87,7 +86,7 @@ const Expr* Expr::lit(long v) {
   return new IntLit(v);
 }
 
-const Expr* Expr::lit(string v, unsigned w) {
+const Expr* Expr::lit(std::string v, unsigned w) {
   return w ? (const Expr*) new BvLit(v,w) : (const Expr*) new IntLit(v);
 }
 
@@ -107,43 +106,43 @@ const Expr* Expr::sel(const Expr* b, const Expr* i) {
   return new SelExpr(b, i);
 }
 
-const Expr* Expr::sel(string b, string i) {
+const Expr* Expr::sel(std::string b, std::string i) {
   return new SelExpr(id(b), id(i));
 }
 
-const Attr* Attr::attr(string s, initializer_list<const Expr*> vs) {
+const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
   return new Attr(s,vs);
 }
 
-const Attr* Attr::attr(string s) {
+const Attr* Attr::attr(std::string s) {
   return attr(s, {});
 }
 
-const Attr* Attr::attr(string s, string v) {
+const Attr* Attr::attr(std::string s, std::string v) {
   return new Attr(s, {Expr::lit(v)});
 }
 
-const Attr* Attr::attr(string s, int v) {
+const Attr* Attr::attr(std::string s, int v) {
   return attr(s, {Expr::lit((long) v)});
 }
 
-const Attr* Attr::attr(string s, string v, int i) {
+const Attr* Attr::attr(std::string s, std::string v, int i) {
   return attr(s, {Expr::lit(v), Expr::lit((long) i)});
 }
 
-const Attr* Attr::attr(string s, string v, int i, int j) {
+const Attr* Attr::attr(std::string s, std::string v, int i, int j) {
   return attr(s, {Expr::lit(v), Expr::lit((long) i), Expr::lit((long) j)});
 }
 
-const Stmt* Stmt::annot(vector<const Attr*> attrs) {
+const Stmt* Stmt::annot(std::list<const Attr*> attrs) {
   AssumeStmt* s = new AssumeStmt(Expr::lit(true));
-  for (unsigned i = 0; i < attrs.size(); i++)
-    s->add(attrs[i]);
+  for (auto A : attrs)
+    s->add(A);
   return s;
 }
 
 const Stmt* Stmt::annot(const Attr* a) {
-  return Stmt::annot(vector<const Attr*>(1, a));
+  return Stmt::annot(std::list<const Attr*>(1, a));
 }
 
 const Stmt* Stmt::assert_(const Expr* e) {
@@ -151,10 +150,10 @@ const Stmt* Stmt::assert_(const Expr* e) {
 }
 
 const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
-  return new AssignStmt(vector<const Expr*>(1, e), vector<const Expr*>(1, f));
+  return new AssignStmt(std::list<const Expr*>(1, e), std::list<const Expr*>(1, f));
 }
 
-const Stmt* Stmt::assign(vector<const Expr*> lhs, vector<const Expr*> rhs) {
+const Stmt* Stmt::assign(std::list<const Expr*> lhs, std::list<const Expr*> rhs) {
   return new AssignStmt(lhs, rhs);
 }
 
@@ -168,32 +167,21 @@ const Stmt* Stmt::assume(const Expr* e, const Attr* a) {
   return (const AssumeStmt*) s;
 }
 
-const Stmt* Stmt::call(string p, vector<const Expr*> args, vector<string> rets,
-    vector<const Attr*> attrs) {
+const Stmt* Stmt::call(std::string p, std::list<const Expr*> args, std::list<std::string> rets,
+    std::list<const Attr*> attrs) {
   return new CallStmt(p, attrs, args, rets);
 }
 
-const Stmt* Stmt::comment(string s) {
+const Stmt* Stmt::comment(std::string s) {
   return new Comment(s);
 }
 
-const Stmt* Stmt::goto_(string t) {
-  return goto_(vector<string>(1, t));
-}
-
-const Stmt* Stmt::goto_(string t, string u) {
-  vector<string> ts(2, "");
-  ts[0] = t;
-  ts[1] = u;
-  return goto_(ts);
-}
-
-const Stmt* Stmt::goto_(vector<string> ts) {
+const Stmt* Stmt::goto_(std::list<std::string> ts) {
   return new GotoStmt(ts);
 }
 
-const Stmt* Stmt::havoc(string x) {
-  return new HavocStmt(vector<string>(1, x));
+const Stmt* Stmt::havoc(std::string x) {
+  return new HavocStmt(std::list<std::string>(1, x));
 }
 
 const Stmt* Stmt::return_(const Expr* e) {
@@ -208,70 +196,99 @@ const Stmt* Stmt::skip() {
   return new AssumeStmt(Expr::lit(true));
 }
 
-const Stmt* Stmt::code(string s) {
+const Stmt* Stmt::code(std::string s) {
   return new CodeStmt(s);
 }
 
-Decl* Decl::typee(string name, string type) {
+Decl* Decl::typee(std::string name, std::string type) {
   return new TypeDecl(name,type);
 }
 Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
 }
-Decl* Decl::function(string name, vector< pair<string,string> > args,
-    string type, const Expr* e, vector<const Attr*> attrs) {
+FuncDecl* Decl::function(std::string name, std::list< std::pair<std::string,std::string> > args,
+    std::string type, const Expr* e, std::list<const Attr*> attrs) {
   return new FuncDecl(name,attrs,args,type,e);
 }
-Decl* Decl::constant(string name, string type) {
-  return Decl::constant(name, type, vector<const Attr*>(), false);
+Decl* Decl::constant(std::string name, std::string type) {
+  return Decl::constant(name, type, std::list<const Attr*>(), false);
 }
-Decl* Decl::constant(string name, string type, bool unique) {
-  return Decl::constant(name, type, vector<const Attr*>(), unique);
+Decl* Decl::constant(std::string name, std::string type, bool unique) {
+  return Decl::constant(name, type, std::list<const Attr*>(), unique);
 }
-Decl* Decl::constant(string name, string type, vector<const Attr*> ax, bool unique) {
+Decl* Decl::constant(std::string name, std::string type, std::list<const Attr*> ax, bool unique) {
   return new ConstDecl(name, type, ax, unique);
 }
-Decl* Decl::variable(string name, string type) {
+Decl* Decl::variable(std::string name, std::string type) {
   return new VarDecl(name, type);
 }
-Decl* Decl::procedure(Program& p, string name,
-    vector< pair<string,string> > args, vector< pair<string,string> > rets,
-    vector<Block*> blocks) {
-  return new ProcDecl(p,name,args,rets,blocks);
+ProcDecl* Decl::procedure(std::string name,
+    std::list< std::pair<std::string,std::string> > args, std::list< std::pair<std::string,std::string> > rets,
+    std::list<Decl*> decls, std::list<Block*> blocks) {
+  return new ProcDecl(name, args, rets, decls, blocks);
 }
-Decl* Decl::code(string name, string s) {
+Decl* Decl::code(std::string name, std::string s) {
   return new CodeDecl(name, s);
 }
 
-ostream& operator<<(ostream& os, const Expr& e) {
+FuncDecl* Decl::code(ProcDecl* P) {
+  std::list<Decl*> decls;
+  std::list<Block*> blocks;
+  for (auto B : *P) {
+    blocks.push_back(Block::block(B->getName()));
+    for (auto S : *B) {
+      const Stmt* SS;
+      if (auto R = llvm::dyn_cast<ReturnStmt>(S))
+        SS = Stmt::return_(Expr::id(P->getReturns().front().first));
+      else
+        SS = S;
+      blocks.back()->getStatements().push_back(SS);
+    }
+  }
+  for (auto D : P->getDeclarations())
+    decls.push_back(D);
+
+  // HACK to avoid spurious global-var modification
+  decls.push_back(Decl::variable(Naming::EXN_VAR, "bool"));
+
+  for (auto R : P->getReturns())
+    decls.push_back(Decl::variable(R.first, R.second));
+
+  return Decl::function(
+    P->getName(), P->getParameters(), "bool", new CodeExpr(decls, blocks),
+    {Attr::attr("inline")}
+  );
+}
+
+std::ostream& operator<<(std::ostream& os, const Expr& e) {
   e.print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Expr* e) {
+std::ostream& operator<<(std::ostream& os, const Expr* e) {
   e->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Attr* a) {
+std::ostream& operator<<(std::ostream& os, const Attr* a) {
   a->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Stmt* s) {
+std::ostream& operator<<(std::ostream& os, const Stmt* s) {
   s->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, const Block* b) {
+std::ostream& operator<<(std::ostream& os, const Block* b) {
   b->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, Decl& d) {
+std::ostream& operator<<(std::ostream& os, Decl& d) {
   d.print(os);
   return os;
 }
-ostream& operator<<(ostream& os, Decl* d) {
+std::ostream& operator<<(std::ostream& os, Decl* d) {
   d->print(os);
   return os;
 }
-ostream& operator<<(ostream& os, Program* p) {
+std::ostream& operator<<(std::ostream& os, Program* p) {
   if (p == 0) {
     os << "<null> Program!\n";
   } else {
@@ -279,46 +296,46 @@ ostream& operator<<(ostream& os, Program* p) {
   }
   return os;
 }
-ostream& operator<<(ostream& os, Program& p) {
+std::ostream& operator<<(std::ostream& os, Program& p) {
   p.print(os);
   return os;
 }
 
-template<class T,class U> ostream& operator<<(ostream& os, pair<T,U> p) {
+template<class T,class U> std::ostream& operator<<(std::ostream& os, std::pair<T,U> p) {
   os << p.first << ": " << p.second;
   return os;
 }
 
-template<class T> void print_seq(ostream& os, vector<T> ts,
-                                 string init, string sep, string term) {
+template<class T> void print_seq(std::ostream& os, std::list<T> ts,
+                                 std::string init, std::string sep, std::string term) {
 
   os << init;
-  for (typename vector<T>::iterator i = ts.begin(); i != ts.end(); ++i)
+  for (typename std::list<T>::iterator i = ts.begin(); i != ts.end(); ++i)
     os << (i == ts.begin() ? "" : sep) << *i;
   os << term;
 }
-template<class T> void print_seq(ostream& os, vector<T> ts, string sep) {
+template<class T> void print_seq(std::ostream& os, std::list<T> ts, std::string sep) {
   print_seq<T>(os, ts, "", sep, "");
 }
-template<class T> void print_seq(ostream& os, vector<T> ts) {
+template<class T> void print_seq(std::ostream& os, std::list<T> ts) {
   print_seq<T>(os, ts, "", "", "");
 }
-template<class T, class C> void print_set(ostream& os, set<T,C> ts,
-                                 string init, string sep, string term) {
+template<class T, class C> void print_set(std::ostream& os, std::set<T,C> ts,
+                                 std::string init, std::string sep, std::string term) {
 
   os << init;
-  for (typename set<T,C>::iterator i = ts.begin(); i != ts.end(); ++i)
+  for (typename std::set<T,C>::iterator i = ts.begin(); i != ts.end(); ++i)
     os << (i == ts.begin() ? "" : sep) << *i;
   os << term;
 }
-template<class T, class C> void print_set(ostream& os, set<T,C> ts, string sep) {
+template<class T, class C> void print_set(std::ostream& os, std::set<T,C> ts, std::string sep) {
   print_set<T,C>(os, ts, "", sep, "");
 }
-template<class T, class C> void print_set(ostream& os, set<T,C> ts) {
+template<class T, class C> void print_set(std::ostream& os, std::set<T,C> ts) {
   print_set<T,C>(os, ts, "", "", "");
 }
 
-void BinExpr::print(ostream& os) const {
+void BinExpr::print(std::ostream& os) const {
   os << "(" << lhs << " ";
   switch (op) {
   case Iff:
@@ -376,36 +393,36 @@ void BinExpr::print(ostream& os) const {
   os << " " << rhs << ")";
 }
 
-void CondExpr::print(ostream& os) const {
+void CondExpr::print(std::ostream& os) const {
   os << "if " << cond << " then " << then << " else " << else_;
 }
 
-void FunExpr::print(ostream& os) const {
+void FunExpr::print(std::ostream& os) const {
   os << fun;
   print_seq<const Expr*>(os, args, "(", ", ", ")");
 }
 
-void BoolLit::print(ostream& os) const {
+void BoolLit::print(std::ostream& os) const {
   os << (val ? "true" : "false");
 }
 
-void IntLit::print(ostream& os) const {
+void IntLit::print(std::ostream& os) const {
   os << val;
 }
 
-void BvLit::print(ostream& os) const {
+void BvLit::print(std::ostream& os) const {
   os << val << "bv" << width;
 }
 
-void NegExpr::print(ostream& os) const {
+void NegExpr::print(std::ostream& os) const {
   os << "-(" << expr << ")";
 }
 
-void NotExpr::print(ostream& os) const {
+void NotExpr::print(std::ostream& os) const {
   os << "!(" << expr << ")";
 }
 
-void QuantExpr::print(ostream& os) const {
+void QuantExpr::print(std::ostream& os) const {
   os << "(";
   switch (quant) {
   case Forall:
@@ -415,101 +432,101 @@ void QuantExpr::print(ostream& os) const {
     os << "exists ";
     break;
   }
-  print_seq< pair<string,string> >(os, vars, ",");
+  print_seq< std::pair<std::string,std::string> >(os, vars, ",");
   os << " :: " << expr << ")";
 }
 
-void SelExpr::print(ostream& os) const {
+void SelExpr::print(std::ostream& os) const {
   os << base;
   print_seq<const Expr*>(os, idxs, "[", ", ", "]");
 }
 
-void UpdExpr::print(ostream& os) const {
+void UpdExpr::print(std::ostream& os) const {
   os << base << "[";
   print_seq<const Expr*>(os, idxs, ", ");
   os << " := " << val << "]";
 }
 
-void VarExpr::print(ostream& os) const {
+void VarExpr::print(std::ostream& os) const {
   os << var;
 }
 
-void CodeExpr::print(ostream& os) const {
-  os << "|{" << endl;
+void CodeExpr::print(std::ostream& os) const {
+  os << "|{" << "\n";
   if (decls.size() > 0)
-    print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
+    print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");
   print_seq<Block*>(os, blocks, "\n");
-  os << endl << "}|";
+  os << "\n" << "}|";
 }
 
-void StringLit::print(ostream& os) const {
+void StringLit::print(std::ostream& os) const {
   os << "\"" << val << "\"";
 }
 
-void Attr::print(ostream& os) const {
+void Attr::print(std::ostream& os) const {
   os << "{:" << name;
   if (vals.size() > 0)
     print_seq<const Expr*>(os, vals, " ", ", ", "");
   os << "}";
 }
 
-void AssertStmt::print(ostream& os) const {
+void AssertStmt::print(std::ostream& os) const {
   os << "assert " << expr << ";";
 }
 
-void AssignStmt::print(ostream& os) const {
+void AssignStmt::print(std::ostream& os) const {
   print_seq<const Expr*>(os, lhs, ", ");
   os << " := ";
   print_seq<const Expr*>(os, rhs, ", ");
   os << ";";
 }
 
-void AssumeStmt::print(ostream& os) const {
+void AssumeStmt::print(std::ostream& os) const {
   os << "assume ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << expr << ";";
 }
 
-void CallStmt::print(ostream& os) const {
+void CallStmt::print(std::ostream& os) const {
   os << "call ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   if (returns.size() > 0)
-    print_seq<string>(os, returns, "", ", ", " := ");
+    print_seq<std::string>(os, returns, "", ", ", " := ");
   os << proc;
   print_seq<const Expr*>(os, params, "(", ", ", ")");
   os << ";";
 }
 
-void Comment::print(ostream& os) const {
+void Comment::print(std::ostream& os) const {
   os << "// " << str;
 }
 
-void GotoStmt::print(ostream& os) const {
+void GotoStmt::print(std::ostream& os) const {
   os << "goto ";
-  print_seq<string>(os, targets, ", ");
+  print_seq<std::string>(os, targets, ", ");
   os << ";";
 }
 
-void HavocStmt::print(ostream& os) const {
+void HavocStmt::print(std::ostream& os) const {
   os << "havoc ";
-  print_seq<string>(os, vars, ", ");
+  print_seq<std::string>(os, vars, ", ");
   os << ";";
 }
 
-void ReturnStmt::print(ostream& os) const {
+void ReturnStmt::print(std::ostream& os) const {
   os << "return";
   if (expr)
     os << " " << expr;
   os << ";";
 }
 
-void CodeStmt::print(ostream& os) const {
+void CodeStmt::print(std::ostream& os) const {
   os << code;
 }
 
-void TypeDecl::print(ostream& os) const {
+void TypeDecl::print(std::ostream& os) const {
   os << "type ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
@@ -519,28 +536,27 @@ void TypeDecl::print(ostream& os) const {
   os << ";";
 }
 
-void AxiomDecl::print(ostream& os) const {
+void AxiomDecl::print(std::ostream& os) const {
   os << "axiom ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << expr << ";";
 }
 
-void ConstDecl::print(ostream& os) const {
+void ConstDecl::print(std::ostream& os) const {
   os << "const ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << (unique ? "unique " : "") << name << ": " << type << ";";
 }
 
-void FuncDecl::print(ostream& os) const {
+void FuncDecl::print(std::ostream& os) const {
   os << "function ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << name << "(";
-  for (unsigned i = 0; i < params.size(); i++)
-    os << params[i].first << ": " << params[i].second
-       << (i < params.size() - 1 ? ", " : "");
+  for (auto P = params.begin(), E = params.end(); P != E; ++P)
+    os << (P == params.begin() ? "" : ", ") << P->first << ": " << P->second;
   os << ") returns (" << type << ")";
   if (body)
     os << " { " << body << " }";
@@ -548,67 +564,65 @@ void FuncDecl::print(ostream& os) const {
     os << ";";
 }
 
-void VarDecl::print(ostream& os) const {
+void VarDecl::print(std::ostream& os) const {
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << "var " << name << ": " << type << ";";
 }
 
-void ProcDecl::print(ostream& os) const {
+void ProcDecl::print(std::ostream& os) const {
   os << "procedure ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << name << "(";
-  for (unsigned i = 0; i < params.size(); i++)
-    os << params[i].first << ": " << params[i].second
-       << (i < params.size() - 1 ? ", " : "");
+  for (auto P = params.begin(), E = params.end(); P != E; ++P)
+    os << (P == params.begin() ? "" : ", ") << P->first << ": " << P->second;
   os << ")";
   if (rets.size() > 0) {
-    os << endl;
+    os << "\n";
     os << "  returns (";
-    for (unsigned i = 0; i < rets.size(); i++)
-      os << rets[i].first << ": " << rets[i].second
-         << (i < rets.size() - 1 ? ", " : "");
+    for (auto R = rets.begin(), E = rets.end(); R != E; ++R)
+      os << (R == rets.begin() ? "" : ", ") << R->first << ": " << R->second;
     os << ")";
   }
   if (blocks.size() == 0)
     os << ";";
 
   if (mods.size() > 0) {
-    os << endl;
-    print_seq<string>(os, mods, "  modifies ", ", ", ";");
+    os << "\n";
+    print_seq<std::string>(os, mods, "  modifies ", ", ", ";");
   }
   if (requires.size() > 0) {
-    os << endl;
+    os << "\n";
     print_seq<const Expr*>(os, requires, "  requires ", ";\n  requires ", ";");
   }
   if (ensures.size() > 0) {
-    os << endl;
+    os << "\n";
     print_seq<const Expr*>(os, ensures, "  ensures ", ";\n  ensures ", ";");
   }
   if (blocks.size() > 0) {
-    os << endl;
-    os << "{" << endl;
+    os << "\n";
+    os << "{" << "\n";
     if (decls.size() > 0)
-      print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
+      print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");
     print_seq<Block*>(os, blocks, "\n");
-    os << endl << "}";
+    os << "\n" << "}";
   }
 }
 
-void CodeDecl::print(ostream& os) const {
+void CodeDecl::print(std::ostream& os) const {
   os << code;
 }
 
-void Block::print(ostream& os) const {
+void Block::print(std::ostream& os) const {
   if (name != "")
-    os << name << ":" << endl;
+    os << name << ":" << "\n";
   print_seq<const Stmt*>(os, stmts, "  ", "\n  ", "");
 }
 
-void Program::print(ostream& os) const {
+void Program::print(std::ostream& os) const {
   os << prelude;
-  print_set<Decl*>(os, decls, "\n");
-  os << endl;
+  print_seq<Decl*>(os, decls, "\n");
+  os << "\n";
 }
 }

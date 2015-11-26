@@ -6,9 +6,13 @@
 
 #include <stdbool.h>
 
-void requires(bool expr);
-void ensures(bool expr);
-void invariant(bool expr);
+void __CONTRACT_requires(bool expr);
+void __CONTRACT_ensures(bool expr);
+void __CONTRACT_invariant(bool expr);
+
+#define requires(X) __CONTRACT_requires(X)
+#define ensures(X) __CONTRACT_ensures(X)
+#define invariant(X) __CONTRACT_invariant(X)
 
 bool forall(const char *var, bool expr);
 bool exists(const char *var, bool expr);
