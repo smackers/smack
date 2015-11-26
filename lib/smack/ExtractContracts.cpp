@@ -100,7 +100,7 @@ ExtractContracts::extractExpression(Value* V) {
   ReturnInst::Create(C, clones[V], B);
   Function* F = Function::Create(
     FunctionType::get(V->getType(), parameters, false),
-    GlobalValue::InternalLinkage, "expression", M);
+    GlobalValue::InternalLinkage, Naming::CONTRACT_EXPR, M);
   F->getArgumentList().clear();
   for (auto A : arguments)
     F->getArgumentList().push_back((Argument*) clones[A]);

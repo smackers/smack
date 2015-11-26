@@ -74,6 +74,7 @@ public:
   static const std::string INT_VAR;
   static const std::string PTR_VAR;
   static const std::string UNDEF_SYM;
+  static const std::string CONTRACT_EXPR;
 
   static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
   static const std::map<unsigned,std::string> CMPINST_TABLE;

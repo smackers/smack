@@ -61,6 +61,7 @@ const std::string Naming::FLOAT_VAR = "$f";
 const std::string Naming::INT_VAR = "$i";
 const std::string Naming::PTR_VAR = "$p";
 const std::string Naming::UNDEF_SYM = "$u";
+const std::string Naming::CONTRACT_EXPR = "$expr";
 
 using namespace llvm;
 

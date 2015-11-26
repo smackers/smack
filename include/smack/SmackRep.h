@@ -140,6 +140,13 @@ public:
   std::string memType(unsigned region);
   std::string memPath(unsigned region);
 
+  std::list< std::pair< std::string, std::string > > memoryMaps() {
+    std::list< std::pair< std::string, std::string > > mms;
+    for (unsigned i=0; i<regions.size(); i++)
+      mms.push_back({memReg(i), memType(i)});
+    return mms;
+  }
+
   // used in SmackInstGenerator
   std::string getString(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);

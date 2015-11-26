@@ -750,6 +750,10 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
       })
     );
 
+  } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
+    for (auto m : memoryMaps())
+      params.push_back(m);
+
   } else if (CI) {
     FunctionType* T = F->getFunctionType();
     name = procName(*CI, F);
@@ -881,10 +885,8 @@ std::string SmackRep::getPrelude() {
   s << "\n";
 
   s << "// Memory maps (" << regions.size() << " regions)" << "\n";
-  for (unsigned i=0; i<regions.size(); ++i)
-    s << "var " << memPath(i)
-      << ": " << memType(i)
-      << ";" << "\n";
+  for (auto M : memoryMaps())
+    s << "var " << M.first << ": " << M.second << ";" << "\n";
 
   s << "\n";
 

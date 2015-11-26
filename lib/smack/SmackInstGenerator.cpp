@@ -496,7 +496,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       rep.addBplGlobal(var);
     }
 
-  } else if (name.find("expression") != std::string::npos) {
+  } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
 
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
@@ -506,10 +506,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     assert(E && "Expected ..");
     auto F = E->getCalledFunction();
     assert(F && "Expected ..");
-    assert(F->getName().find("expression") != std::string::npos && "Expected ..");
+    assert(F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos && "Expected ..");
     std::list<const Expr*> args;
     for (auto& V : E->arg_operands())
       args.push_back(rep.expr(V));
+    for (auto m : rep.memoryMaps())
+      args.push_back(Expr::id(m.first));
     if (name == Naming::CONTRACT_REQUIRES)
       proc.getRequires().push_back(Expr::fn(F->getName(), args));
     else

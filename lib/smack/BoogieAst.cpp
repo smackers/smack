@@ -239,7 +239,7 @@ FuncDecl* Decl::code(ProcDecl* P) {
     for (auto S : *B) {
       const Stmt* SS;
       if (auto R = llvm::dyn_cast<ReturnStmt>(S))
-        SS = Stmt::return_(Expr::id(P->getReturns().front().first));
+        SS = Stmt::return_(Expr::neq(Expr::id(P->getReturns().front().first),Expr::lit(0U)));
       else
         SS = S;
       blocks.back()->getStatements().push_back(SS);
