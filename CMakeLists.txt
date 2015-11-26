@@ -156,6 +156,7 @@ add_library(smackTranslator STATIC
   include/smack/SmackOptions.h
   include/smack/CodifyStaticInits.h
   include/smack/RemoveDeadDefs.h
+  include/smack/ExtractContracts.h
   include/smack/SmackRep.h
   include/smack/SmackRepFlatMem.h
   lib/smack/BoogieAst.cpp
@@ -171,6 +172,7 @@ add_library(smackTranslator STATIC
   lib/smack/SmackOptions.cpp
   lib/smack/CodifyStaticInits.cpp
   lib/smack/RemoveDeadDefs.cpp
+  lib/smack/ExtractContracts.cpp
   lib/smack/SmackRep.cpp
   lib/smack/SmackRepFlatMem.cpp
 )
