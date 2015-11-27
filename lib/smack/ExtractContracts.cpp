@@ -20,9 +20,9 @@ namespace smack {
 using namespace llvm;
 
 bool ExtractContracts::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  modified = false;
   visit(M);
-  return true;
+  return modified;
 }
 
 void ExtractContracts::visitCallInst(CallInst &I) {
@@ -30,12 +30,12 @@ void ExtractContracts::visitCallInst(CallInst &I) {
     if (F->getName() == Naming::CONTRACT_REQUIRES ||
         F->getName() == Naming::CONTRACT_ENSURES ||
         F->getName() == Naming::CONTRACT_INVARIANT) {
-      assert(I.getNumArgOperands() == 1 && "Unexpected operands to requires.");
+      assert(I.getNumArgOperands() == 1 && "Unexpected operands.");
       Function* EF;
       std::vector<Value*> Args;
       tie(EF, Args) = extractExpression(I.getArgOperand(0));
       I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
-
+      modified = true;
     }
   }
 }
@@ -104,6 +104,10 @@ ExtractContracts::extractExpression(Value* V) {
         llvm_unreachable("Unexpected store instruction!");
 
       } else if (auto I = dyn_cast<Instruction>(V)) {
+        auto B = I->getParent();
+        assert(clones.count(B) && "Forgot to visit parent block.");
+        assert(clones[B] != B && "Forgot to clone parent block.");
+
         auto II = I->clone();
         clones[I] = II;
         for (auto& O : II->operands()) {
@@ -118,10 +122,6 @@ ExtractContracts::extractExpression(Value* V) {
             PHI->setIncomingBlock(i, dyn_cast<BasicBlock>(clones[B]));
           }
         }
-        auto B = I->getParent();
-        assert(clones.count(B) && "Forgot to visit parent block.");
-        assert(clones[B] != B && "Forgot to clone parent block.");
-        dyn_cast<BasicBlock>(clones[B])->getInstList().push_back(II);
       }
 
     }
@@ -129,20 +129,29 @@ ExtractContracts::extractExpression(Value* V) {
     value_stack.pop();
   }
 
-  ReturnInst::Create(C, clones[V],
-    dyn_cast<BasicBlock>(clones[R->getParent()]));
-
   auto FF = Function::Create(
     FunctionType::get(V->getType(), parameters, false),
     GlobalValue::InternalLinkage, Naming::CONTRACT_EXPR, M);
 
   FF->getArgumentList().clear();
   for (auto A : arguments)
-    FF->getArgumentList().push_back((Argument*) clones[A]);
+    FF->getArgumentList().push_back(dyn_cast<Argument>(clones[A]));
 
-  for (auto& B : *F)
-    if (clones.count(&B))
-      FF->getBasicBlockList().push_back(dyn_cast<BasicBlock>(clones[&B]));
+  for (auto& B : *F) {
+    if (clones.count(&B)) {
+      auto BB = dyn_cast<BasicBlock>(clones[&B]);
+      FF->getBasicBlockList().push_back(BB);
+      for (auto& I : B) {
+        if (clones.count(&I)) {
+          auto II = dyn_cast<Instruction>(clones[&I]);
+          BB->getInstList().push_back(II);
+        }
+      }
+    }
+  }
+
+  auto B = dyn_cast<BasicBlock>(clones[R->getParent()]);
+  ReturnInst::Create(C, clones[V], B);
 
   return std::make_tuple(FF, arguments);
 }

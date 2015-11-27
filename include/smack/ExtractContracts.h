@@ -2,7 +2,6 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstVisitor.h"
@@ -15,7 +14,7 @@ using namespace llvm;
 
 class ExtractContracts : public ModulePass, public InstVisitor<ExtractContracts> {
 private:
-  const DataLayout* TD;
+  bool modified;
   bool hasDominatedIncomingValue(Value* V);
   std::tuple< Function*, std::vector<Value*> > extractExpression(Value* V);
 
@@ -24,7 +23,6 @@ public:
   ExtractContracts() : ModulePass(ID) {}
   virtual bool runOnModule(Module& M);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayoutPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
   }
   void visitCallInst(CallInst&);
