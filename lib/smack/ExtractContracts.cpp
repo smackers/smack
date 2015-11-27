@@ -107,7 +107,7 @@ ExtractContracts::extractExpression(Value* V) {
     F->getArgumentList().push_back((Argument*) clones[A]);
   for (auto B : blocks)
     F->getBasicBlockList().push_back(B);
-  return {F, arguments};
+  return std::make_tuple(F, arguments);
 }
 
 // Pass ID variable
