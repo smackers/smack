@@ -26,15 +26,16 @@ bool ExtractContracts::runOnModule(Module& M) {
 }
 
 void ExtractContracts::visitCallInst(CallInst &I) {
-  Function* F = I.getCalledFunction();
-  if (F) {
+  if (auto F = I.getCalledFunction()) {
     if (F->getName() == Naming::CONTRACT_REQUIRES ||
-        F->getName() == Naming::CONTRACT_ENSURES) {
+        F->getName() == Naming::CONTRACT_ENSURES ||
+        F->getName() == Naming::CONTRACT_INVARIANT) {
       assert(I.getNumArgOperands() == 1 && "Unexpected operands to requires.");
       Function* EF;
       std::vector<Value*> Args;
       tie(EF, Args) = extractExpression(I.getArgOperand(0));
       I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
+
     }
   }
 }

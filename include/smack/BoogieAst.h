@@ -205,7 +205,8 @@ public:
  public:
   static const Stmt* annot(std::list<const Attr*> attrs);
   static const Stmt* annot(const Attr* a);
-  static const Stmt* assert_(const Expr* e);
+  static const Stmt* assert_(const Expr* e,
+    std::list<const Attr*> attrs = std::list<const Attr*>());
   static const Stmt* assign(const Expr* e, const Expr* f);
   static const Stmt* assign(std::list<const Expr*> lhs, std::list<const Expr*> rhs);
   static const Stmt* assume(const Expr* e);
@@ -227,8 +228,10 @@ public:
 
 class AssertStmt : public Stmt {
   const Expr* expr;
+  std::list<const Attr*> attrs;
 public:
-  AssertStmt(const Expr* e) : Stmt(ASSERT), expr(e) {}
+  AssertStmt(const Expr* e, std::list<const Attr*> ax)
+    : Stmt(ASSERT), expr(e), attrs(ax) {}
   void print(std::ostream& os) const;
   static bool classof(const Stmt* S) { return S->getKind() == ASSERT; }
 };

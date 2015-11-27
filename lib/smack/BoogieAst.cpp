@@ -145,8 +145,8 @@ const Stmt* Stmt::annot(const Attr* a) {
   return Stmt::annot(std::list<const Attr*>(1, a));
 }
 
-const Stmt* Stmt::assert_(const Expr* e) {
-  return new AssertStmt(e);
+const Stmt* Stmt::assert_(const Expr* e, std::list<const Attr*> attrs) {
+  return new AssertStmt(e, attrs);
 }
 
 const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
@@ -471,7 +471,10 @@ void Attr::print(std::ostream& os) const {
 }
 
 void AssertStmt::print(std::ostream& os) const {
-  os << "assert " << expr << ";";
+  os << "assert ";
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << expr << ";";
 }
 
 void AssignStmt::print(std::ostream& os) const {

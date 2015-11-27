@@ -500,22 +500,32 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
-             name == Naming::CONTRACT_ENSURES) {
+             name == Naming::CONTRACT_ENSURES ||
+             name == Naming::CONTRACT_INVARIANT) {
     assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
-    auto E = dyn_cast<CallInst>(ci.getArgOperand(0));
-    assert(E && "Expected ..");
-    auto F = E->getCalledFunction();
+    auto cj = dyn_cast<CallInst>(ci.getArgOperand(0));
+    assert(cj && "Expected ..");
+    auto F = cj->getCalledFunction();
     assert(F && "Expected ..");
     assert(F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos && "Expected ..");
     std::list<const Expr*> args;
-    for (auto& V : E->arg_operands())
+    for (auto& V : cj->arg_operands())
       args.push_back(rep.expr(V));
     for (auto m : rep.memoryMaps())
       args.push_back(Expr::id(m.first));
+    auto E = Expr::fn(F->getName(), args);
     if (name == Naming::CONTRACT_REQUIRES)
-      proc.getRequires().push_back(Expr::fn(F->getName(), args));
-    else
-      proc.getEnsures().push_back(Expr::fn(F->getName(), args));
+      proc.getRequires().push_back(E);
+    else if (name == Naming::CONTRACT_ENSURES)
+      proc.getEnsures().push_back(E);
+    else {
+      auto body = ci.getParent();
+      auto head = body->getSinglePredecessor();
+      assert(head && "Expected single head predecessor to loop body.");
+      auto B = blockMap[head];
+      auto& stmts = B->getStatements();
+      stmts.insert(stmts.begin(), Stmt::assert_(E, {Attr::attr("loopinvariant")}));
+    }
 
   // } else if (name == "result") {
   //   assert(ci.getNumArgOperands() == 0 && "Unexpected operands to result.");
