@@ -3,6 +3,7 @@
 //
 
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Module.h"
@@ -14,16 +15,18 @@ using namespace llvm;
 
 class ExtractContracts : public ModulePass, public InstVisitor<ExtractContracts> {
 private:
-  const llvm::DataLayout * TD;
+  const DataLayout* TD;
+  bool hasDominatedIncomingValue(Value* V);
+  std::tuple< Function*, std::vector<Value*> > extractExpression(Value* V);
+
 public:
   static char ID;
   ExtractContracts() : ModulePass(ID) {}
   virtual bool runOnModule(Module& M);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<DataLayoutPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
   }
   void visitCallInst(CallInst&);
-
-  std::tuple< Function*, std::vector<Value*> > extractExpression(Value* V);
 };
 }
