@@ -10,6 +10,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include <sstream>
 
 #include <iostream>
@@ -497,17 +498,20 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     }
 
   } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
-
+    // NOTE do not generate code for contract expressions
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
              name == Naming::CONTRACT_ENSURES ||
              name == Naming::CONTRACT_INVARIANT) {
-    assert(ci.getNumArgOperands() == 1 && "Unexpected operands to requires.");
-    auto cj = dyn_cast<CallInst>(ci.getArgOperand(0));
-    assert(cj && "Expected ..");
-    auto F = cj->getCalledFunction();
-    assert(F && "Expected ..");
-    assert(F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos && "Expected ..");
+
+    CallInst* cj;
+    Function* F;
+    assert(ci.getNumArgOperands() == 1
+        && (cj = dyn_cast<CallInst>(ci.getArgOperand(0)))
+        && (F = cj->getCalledFunction())
+        && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+        && "Expected contract expression argument to contract function.");
+
     std::list<const Expr*> args;
     for (auto& V : cj->arg_operands())
       args.push_back(rep.expr(V));
@@ -519,12 +523,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     else if (name == Naming::CONTRACT_ENSURES)
       proc.getEnsures().push_back(E);
     else {
-      auto body = ci.getParent();
-      auto head = body->getSinglePredecessor();
-      assert(head && "Expected single head predecessor to loop body.");
-      auto B = blockMap[head];
-      auto& stmts = B->getStatements();
-      stmts.insert(stmts.begin(), Stmt::assert_(E, {Attr::attr("loopinvariant")}));
+      auto L = loops[ci.getParent()];
+      assert(L);
+      auto H = L->getHeader();
+      assert(H && blockMap.count(H));
+      blockMap[H]->getStatements().push_front(
+        Stmt::assert_(E, {Attr::attr(Naming::LOOP_INVARIANT_ANNOTATION)}));
     }
 
   // } else if (name == "result") {

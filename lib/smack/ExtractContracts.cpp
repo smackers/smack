@@ -9,6 +9,8 @@
 #include "smack/ExtractContracts.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Analysis/LoopInfo.h"
 
 #include <vector>
 #include <stack>
@@ -19,6 +21,11 @@ namespace smack {
 
 using namespace llvm;
 
+void ExtractContracts::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<LoopInfo>();
+  AU.addRequired<DominatorTreeWrapperPass>();
+}
+
 bool ExtractContracts::runOnModule(Module& M) {
   modified = false;
   visit(M);
@@ -27,15 +34,38 @@ bool ExtractContracts::runOnModule(Module& M) {
 
 void ExtractContracts::visitCallInst(CallInst &I) {
   if (auto F = I.getCalledFunction()) {
-    if (F->getName() == Naming::CONTRACT_REQUIRES ||
-        F->getName() == Naming::CONTRACT_ENSURES ||
-        F->getName() == Naming::CONTRACT_INVARIANT) {
-      assert(I.getNumArgOperands() == 1 && "Unexpected operands.");
+    auto name = F->getName();
+    if (name == Naming::CONTRACT_REQUIRES ||
+        name == Naming::CONTRACT_ENSURES ||
+        name == Naming::CONTRACT_INVARIANT) {
+      validateAnnotation(I);
       Function* EF;
       std::vector<Value*> Args;
       tie(EF, Args) = extractExpression(I.getArgOperand(0));
       I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
       modified = true;
+    }
+  }
+}
+
+void ExtractContracts::validateAnnotation(CallInst &I) {
+  assert(I.getCalledFunction() && "Unexpected virtual function.");
+  assert(I.getNumArgOperands() == 1 && "Unexpected operands.");
+  auto B = I.getParent();
+  auto F = B->getParent();
+  auto& DT = getAnalysis<DominatorTreeWrapperPass>(*F).getDomTree();
+  auto& LI = getAnalysis<LoopInfo>(*F);
+  if (I.getCalledFunction()->getName() == Naming::CONTRACT_INVARIANT) {
+    auto L = LI[B];
+    if (!L) {
+      llvm_unreachable("Loop invariants must occur inside loops.");
+    }
+  } else {
+    for (auto L : LI) {
+      auto& J = L->getHeader()->getInstList().front();
+      if (DT.dominates(&J, &I)) {
+        llvm_unreachable("Procedure specifications must occur before loops.");
+      }
     }
   }
 }

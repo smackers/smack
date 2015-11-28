@@ -47,6 +47,7 @@ const std::string Naming::EXTERNS_BOTTOM = "$EXTERNS_BOTTOM";
 const std::string Naming::MALLOC_TOP = "$MALLOC_TOP";
 
 const std::string Naming::BRANCH_CONDITION_ANNOTATION = "branchcond";
+const std::string Naming::LOOP_INVARIANT_ANNOTATION = "loopinvariant";
 
 const std::string Naming::MEM_OP = "$mop";
 const std::string Naming::REC_MEM_OP = "boogie_si_record_mop";

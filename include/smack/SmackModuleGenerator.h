@@ -8,6 +8,7 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/Support/CommandLine.h"
@@ -31,7 +32,8 @@ public:
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
-    AU.addRequired<llvm::DataLayoutPass>();
+    AU.addRequired<DataLayoutPass>();
+    AU.addRequired<LoopInfo>();
     AU.addRequired<Regions>();
   }
 

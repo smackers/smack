@@ -8,6 +8,7 @@
 #include "smack/SmackRep.h"
 #include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include <unordered_set>
 #include <set>
 
@@ -16,6 +17,7 @@ namespace smack {
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
+  LoopInfo& loops;
   SmackRep& rep;
   ProcDecl& proc;
   Naming& naming;
@@ -43,8 +45,8 @@ public:
   }
 
 public:
-  SmackInstGenerator(SmackRep& R, ProcDecl& P, Naming& N)
-    : rep(R), proc(P), naming(N) {}
+  SmackInstGenerator(LoopInfo& LI, SmackRep& R, ProcDecl& P, Naming& N)
+    : loops(LI), rep(R), proc(P), naming(N) {}
 
 
   void visitBasicBlock(llvm::BasicBlock& bb);

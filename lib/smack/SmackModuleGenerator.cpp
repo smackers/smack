@@ -48,7 +48,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
       DEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
       for (auto P : procs) {
-        SmackInstGenerator igen(rep, *P, naming);
+        SmackInstGenerator igen(getAnalysis<LoopInfo>(F), rep, *P, naming);
         DEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
         igen.visit(F);
         DEBUG(errs() << "\n");

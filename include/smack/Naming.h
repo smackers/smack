@@ -60,6 +60,7 @@ public:
   static const std::string MALLOC_TOP;
 
   static const std::string BRANCH_CONDITION_ANNOTATION;
+  static const std::string LOOP_INVARIANT_ANNOTATION;
 
   static const std::string MEM_OP;
   static const std::string REC_MEM_OP;
