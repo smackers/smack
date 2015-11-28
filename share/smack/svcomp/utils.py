@@ -30,6 +30,7 @@ def svcomp_frontend(args):
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DNO_FORALL"
+  args.clang_options += " -DDISABLE_PTHREAD_ASSERTS"
   args.clang_options += " -include smack.h"
 
   if os.path.splitext(args.input_files[0])[1] == ".i":
