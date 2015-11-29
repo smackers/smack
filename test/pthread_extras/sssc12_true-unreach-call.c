@@ -1,23 +1,11 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies false with u11,s2,tav,si in 54s
- */
-
-// @expect verified
-// @flag -x=svcomp
-
 // Source: Alejandro Sanchez, Sriram Sankaranarayanan, Cesar Sanchez, Bor-Yuh
 // Evan Chang: "Invariant Generation for Paramterized Systems using
 // Self-Reflection", SAS 2012
 
-#include <pthread.h>
-#include <smack.h>
-#include "assert.h"
+#include "pthread.h"
+#include "smack.h"
 
-void __VERIFIER_assert(int expression) { if (!expression) { ERROR: __VERIFIER_error();}; return; }
+// @expect verified
 
 int *data;
 volatile int len;
@@ -36,7 +24,7 @@ void* thr(void* arg) {
     }
     pthread_mutex_unlock(&lock);
     while (c < end) {
-	__VERIFIER_assert(0 <= c && c < len);
+	assert(0 <= c && c < len);
 	data[c] = 0;
 	c = c + 1;
     }
@@ -52,3 +40,4 @@ void main() {
 	pthread_create(&t, 0, thr, 0);
     }
 }
+

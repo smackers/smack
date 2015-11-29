@@ -1,16 +1,3 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * verifies with u2,c2,tav,si in 22s
- */
-
-// @expect verified
-// @flag -x=svcomp
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
 /* Testcase from Threader's distribution. For details see:
    http://www.model.in.tum.de/~popeea/research/threader
 
@@ -19,9 +6,10 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
    by Cormac Flanagan, Stephen Freund, Shaz Qadeer.
 */
 
-#include <pthread.h>
-#include <smack.h>
-#define assert(e) if (!(e)) ERROR: __VERIFIER_error();
+#include "pthread.h"
+#include "smack.h"
+
+// @expect verified
 
 int block;
 int busy; // boolean flag indicating whether the block has been allocated to an inode
@@ -66,3 +54,4 @@ int main() {
   pthread_mutex_destroy(&m_busy);
   return 0;
 }
+

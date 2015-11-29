@@ -1,23 +1,10 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * verifies false with u3,c2,tav,si in 19s
- */
-
-// @expect error
-// @flag -x=svcomp
-// @flag --unroll=3
-
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
+#include "pthread.h"
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-//#include <assert.h>
+
+// @expect error
+// @flag --unroll=3
 
 #define USAGE "./twostage <param1> <param2>\n"
 
@@ -59,11 +46,7 @@ void *funcB(void *param) {
     t2 = data2Value;
     pthread_mutex_unlock(data2Lock);
 
-    if (t2 != (t1 + 1)) {
-        fprintf(stderr, "Bug found!\n");
-	ERROR: __VERIFIER_error();
-          ;
-    }
+    assert(t2 == (t1 + 1));
 
     return NULL;
 }

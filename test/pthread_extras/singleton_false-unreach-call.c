@@ -1,22 +1,9 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies false with u2,cs2,tav,si in 75s
- */
-
-// @expect error
-// @flag -x=svcomp
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
+#include "pthread.h"
+#include "smack.h"
 #include <stdlib.h>
 #include <string.h>
 
-void __VERIFIER_assert(int expression) { if (!expression) { ERROR: __VERIFIER_error();}; return; }
+// @expect error
 
 char *v;
 
@@ -63,7 +50,7 @@ int main(void)
   pthread_create(&t, 0, thread0, 0);
   pthread_join(t, 0);
 
-  __VERIFIER_assert(v[0] == 'X'); // <-- wrong, the only thread that writes 'Y' can be the last to write
+  assert(v[0] == 'X'); // <-- wrong, the only thread that writes 'Y' can be the last to write
 
   return 0;
 }

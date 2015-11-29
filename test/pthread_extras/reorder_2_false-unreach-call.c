@@ -1,21 +1,10 @@
-/*
- * From svcomp2015
- */
-
-/* Useful? (there's a lot of extra stuff, but seems to crash in right place)
- * Verifies false with u3,cs2,tav,si in 4s
- */
+#include "pthread.h"
+#include "smack.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 // @expect error
-// @flag -x=svcomp
 // @flag --unroll=3
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <stdio.h>
-#include <pthread.h>
-#include <smack.h>
-#include <stdlib.h>
 
 #define USAGE "./reorder <param1> <param2>\n"
 
@@ -88,12 +77,7 @@ void *setThread(void *param) {
 }
 
 void *checkThread(void *param) {
-    if (! ((a == 0 && b == 0) || (a == 1 && b == -1))) {
-        fprintf(stderr, "Bug found!\n");
-    	ERROR: __VERIFIER_error();
-    	goto ERROR;
-    }
-
+    assert((a == 0 && b == 0) || (a == 1 && b == -1));
     return NULL;
 }
 

@@ -1,23 +1,10 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies true with u2,c2,tav,si in 202s
- */
-
-// @expect verified
-// @flag -x=svcomp
-// @flag --verifier-options=/trackAllVars
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
+#include "pthread.h"
+#include "smack.h"
 #include <stdlib.h>
 #include <string.h>
 
-void __VERIFIER_assert(int expression) { if (!expression) { ERROR: __VERIFIER_error();}; return; }
+// @expect verified
+// @flag --verifier-options=/trackAllVars
 
 char *v;
 
@@ -64,7 +51,7 @@ int main(void)
   pthread_create(&t, 0, thread0, 0);
   pthread_join(t, 0);
 
-  __VERIFIER_assert(v[0] == 'X' || v[0] == 'Y');
+  assert(v[0] == 'X' || v[0] == 'Y');
 
   return 0;
 }

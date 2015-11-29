@@ -1,24 +1,12 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * verifies true with u4,c3,tav,si in 1.9s
- */ 
-
-// @expect verified
-// @flag -x=svcomp
-// @flag --unroll=4
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
 /* Testcase from Threader's distribution. For details see:
    http://www.model.in.tum.de/~popeea/research/threader
 */
 
-#include <pthread.h>
-#include <smack.h>
-#define assert(e) if (!(e)) ERROR: __VERIFIER_error();
+#include "pthread.h"
+#include "smack.h"
+
+// @expect verified
+// @flag --unroll=4
 
 int flag1 = 0, flag2 = 0; // boolean flags
 int turn; // integer variable to hold the ID of the thread whose turn is it
@@ -67,3 +55,4 @@ int main() {
   pthread_join(t2, 0);
   return 0;
 }
+

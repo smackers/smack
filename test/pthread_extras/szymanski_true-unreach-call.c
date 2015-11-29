@@ -1,24 +1,11 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * verifies true wth u2,c2,tav,si in 1.3s
- */
-
-// @expect verified
-// @flag -x=svcomp
-
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
 /* Testcase from Threader's distribution. For details see:
    http://www.model.in.tum.de/~popeea/research/threader
 */
 
-#include <pthread.h>
-#include <smack.h>
-#define assert(e) if (!(e)) ERROR: __VERIFIER_error();
+#include "pthread.h"
+#include "smack.h"
+
+// @expect verified
 
 int flag1 = 0, flag2 = 0; // integer flags 
 int x; // boolean variable to test mutual exclusion
@@ -67,3 +54,4 @@ int main() {
   pthread_join(t2, 0);
   return 0;
 }
+

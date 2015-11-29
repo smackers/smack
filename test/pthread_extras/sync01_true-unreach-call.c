@@ -1,21 +1,9 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies true with unroll 3, cs 2, trackallvars, staticinlining in 27s
- * z3 out of resources with unroll 3, cs 3, trackallvars, staticinlining
- */
+#include "pthread.h"
+#include "smack.h"
+#include <stdio.h> 
 
 // @expect verified
-// @flag -x=svcomp
 // @flag --unroll=3
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
-#include <stdio.h> 
 
 int  num;
 
@@ -67,12 +55,8 @@ int main()
   pthread_join(t1, 0);
   pthread_join(t2, 0);
 
-  if (num!=1)
-  {
-    ERROR: __VERIFIER_error();
-    ;
-  }
+  assert(num==1);
 
   return 0;
-  
 }
+

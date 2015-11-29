@@ -1,26 +1,16 @@
-/*
- * From svcomp2015
- */
-
 /* USEFUL - great example.  Looks like locked, but it isn't,
  *          since the array_index++ call in main can all happen
  *          at once, and THEN thread procedures run, so all
  *          get last array_index. (array_index==2)
- * Verifies false with u6,cs2,tav,si in 1133s
  */
 
-// @expect error
-// @flag -x=svcomp
-// @flag --unroll=6
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
+#include "pthread.h"
+#include "smack.h"
 #include <stdlib.h>
 #include <string.h>
 
-void __VERIFIER_assert(int expression) { if (!expression) { ERROR: __VERIFIER_error();}; return; }
+// @expect error
+// @flag --unroll=6
 
 const int SIGMA = 5;
 
@@ -68,7 +58,7 @@ int main()
 		sum += array[tid];
 	}
 
-	__VERIFIER_assert(sum == SIGMA);  // <-- wrong, different threads might use the same array offset when writing
+	assert(sum == SIGMA);  // <-- wrong, different threads might use the same array offset when writing
 
 	return 0;
 }

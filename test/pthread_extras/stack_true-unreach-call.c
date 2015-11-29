@@ -1,19 +1,9 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies true with u4, cs2, tav, si in 76s (SIZE=3)
- */
+#include "pthread.h"
+#include "smack.h"
+#include <stdio.h>
 
 // @expect verified
 // @flag -x=svcomp
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
-#include <stdio.h>
 
 #define TRUE	  (1)
 #define FALSE	  (0) 
@@ -21,17 +11,10 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 #define OVERFLOW  (-1)
 #define UNDERFLOW (-2)
 
-//unsigned int __VERIFIER_nondet_uint();
 static int top=0;
 static unsigned int arr[SIZE];
 pthread_mutex_t m;
 _Bool flag=FALSE;
-
-void error(void) 
-{ 
-  ERROR: __VERIFIER_error();
-  return;
-}
 
 void inc_top(void)
 {
@@ -97,8 +80,7 @@ void *t1(void *arg)
       tmp *= -1;
     }
     assume(0 <= tmp < SIZE);
-    if ((push(arr,tmp)==OVERFLOW))
-      error();
+    assert(push(arr,tmp)!=OVERFLOW);
     pthread_mutex_unlock(&m);
   }
 }
@@ -112,8 +94,7 @@ void *t2(void *arg)
     pthread_mutex_lock(&m);
     if (top>0)
     {    
-      if ((pop(arr)==UNDERFLOW))
-        error();
+      assert(pop(arr)!=UNDERFLOW);
     }    
     pthread_mutex_unlock(&m);
   }

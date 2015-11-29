@@ -1,19 +1,7 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies false with u1,cs2,tav,si in 5s
- */
+#include "pthread.h"
+#include "smack.h"
 
 // @expect error
-// @flag -x=svcomp
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
-//#include <assert.h>
 
 pthread_mutex_t  mutex;
 int data = 0;
@@ -37,10 +25,7 @@ void *thread2(void *arg)
 void *thread3(void *arg)
 {
   pthread_mutex_lock(&mutex);
-  if (data >= 3){
-    ERROR: __VERIFIER_error();
-    ;
-  }
+  assert(data < 3);
   pthread_mutex_unlock(&mutex);    
 }
 
@@ -61,3 +46,4 @@ int main()
   
   return 0;
 }
+

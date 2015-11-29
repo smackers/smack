@@ -1,33 +1,9 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * Verifies false with u6,s2,tav,si in 45s
- *
- * Fails with SIZE == 10, u11,c2,tav,si:
- *   mcarter@ubuntu:~/projects/smack-project/smack/src/examples/pthreads/svcomp2015$ smackverify.py --verifier corral --verifier-options="/trackAllVars /staticInlining" --unroll 11 --context-bound 2 queue_false-unreach-call.c
- *   Verifying program while tracking: {$CurrAddr, $M.3, $M.0, $M.4, $M.5, $M.6, $M.7, $pthreadStatus, $M.10}
- *   /home/mcarter/projects/smack-project/smack/install/bin/corral: line 2: 27572 Killed                  $CORRAL $@
- *   
- *   SMACK encountered an error when invoking corral. Exiting...
- * 
- * I solved this failure issue - it was due to not enough system memory
- * This benchmark requires over 6GB memory when SIZE==10, u11,c2,tav,si
- * Now, using these setting, verifies false in 180s
- *
- */
+#include "pthread.h"
+#include "smack.h"
+#include <stdio.h>
 
 // @expect error
-// @flag -x=svcomp
 // @flag --unroll=6
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
-#include <stdio.h>
-//#include <assert.h>
 
 #define SIZE	(10)
 #define EMPTY	(-1)
@@ -142,7 +118,7 @@ void *t1(void *arg)
 
   return NULL;
 
-  ERROR: __VERIFIER_error();
+  ERROR: assert(0 != 0);
 }
 
 void *t2(void *arg) 
@@ -154,9 +130,7 @@ void *t2(void *arg)
     pthread_mutex_lock(&m);
     if (dequeue_flag)
     {
-      if (!dequeue(&queue)==stored_elements[i]) {
-        ERROR: __VERIFIER_error();
-      }
+      assert(dequeue(&queue)==stored_elements[i]);
       dequeue_flag=FALSE;
       enqueue_flag=TRUE;
     }
@@ -175,10 +149,7 @@ int main(void)
 
   init(&queue);
 
-  if (!empty(&queue)==EMPTY) {
-    ERROR: __VERIFIER_error();
-  }
-
+  assert(empty(&queue)==EMPTY);
 
   pthread_mutex_init(&m, 0);
 

@@ -1,18 +1,7 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * verifies false with u2,c2,tav,si in 4.5s
- */
+#include "pthread.h"
+#include "smack.h"
 
 // @expect error
-// @flag -x=svcomp
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
 
 pthread_mutex_t  ma, mb;
 int data1, data2;
@@ -57,12 +46,7 @@ int main()
   pthread_join(t1, 0);
   pthread_join(t2, 0);
 
-  if (data1==16 && data2==5)
-  {
-    ERROR: __VERIFIER_error();
-      ;    
-  }
-
+  assert(!(data1==16 && data2==5));
   return 0;
 }
 

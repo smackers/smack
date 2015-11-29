@@ -1,22 +1,9 @@
-/*
- * From svcomp2015
- */
-
-/* Useful
- * verifies true with u6,cs2,tav,si in 45s
- * Also verifies true with SIZE==10, u11,cs2,tav,si in 295s
- */
+#include "pthread.h"
+#include "smack.h"
+#include <stdio.h>
 
 // @expect verified
-// @flag -x=svcomp
 // @flag --unroll=6
-
-extern void __VERIFIER_error() __attribute__ ((__noreturn__));
-
-#include <pthread.h>
-#include <smack.h>
-#include <stdio.h>
-//#include <assert.h>
 
 #define SIZE	(5)
 #define EMPTY	(-1)
@@ -129,9 +116,7 @@ void *t2(void *arg)
     for(i=0; i<SIZE; i++)  
     {
       if (empty(&queue)!=EMPTY)
-        if (!dequeue(&queue)==stored_elements[i]) {
-          ERROR: __VERIFIER_error();
-        }
+        assert(dequeue(&queue)==stored_elements[i]);
     }
     dequeue_flag=FALSE;
     enqueue_flag=TRUE;
@@ -150,9 +135,7 @@ int main(void)
 
   init(&queue);
 
-  if (!empty(&queue)==EMPTY) {
-    ERROR: __VERIFIER_error();
-  }
+  assert(empty(&queue)==EMPTY);
 
   pthread_mutex_init(&m, 0);
 
