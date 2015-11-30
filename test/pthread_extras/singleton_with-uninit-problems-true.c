@@ -4,7 +4,6 @@
 #include <string.h>
 
 // @expect verified
-// @flag --verifier-options=/trackAllVars
 
 char *v;
 
