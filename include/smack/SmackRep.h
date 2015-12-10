@@ -26,20 +26,19 @@ using llvm::StringRef;
 
 class SmackRep {
 protected:
-  Regions& regions;
+  const llvm::DataLayout* targetData;
   Naming& naming;
   Program& program;
+  Regions& regions;
   std::vector<std::string> bplGlobals;
-  const llvm::DataLayout* targetData;
-  unsigned ptrSizeInBits;
 
   long globalsBottom;
   long externsBottom;
-  std::vector<std::string> initFuncs;
-
-  std::map<std::string, Decl*> auxDecls;
-
   unsigned uniqueFpNum;
+  unsigned ptrSizeInBits;
+
+  std::vector<std::string> initFuncs;
+  std::map<std::string, Decl*> auxDecls;
 
 public:
   SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R);
