@@ -32,10 +32,10 @@ def frontends():
     'bpl': boogie_frontend,
   }
 
-def results(unroll=0):
+def results(args):
   """A dictionary of the result output messages."""
   return {
-    'verified': 'SMACK found no errors.' if unroll is 0 else 'SMACK found no errors.\nUnroll bound set to ' + str(unroll) + '.',
+    'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
@@ -444,7 +444,7 @@ def verify_bpl(args):
     print smackdOutput(verifier_output)
 
   elif result == 'verified':
-    print results(args.unroll)[result]
+    print results(args)[result]
 
   else:
     if result == 'error':
@@ -457,7 +457,7 @@ def verify_bpl(args):
       if not args.quiet:
         print error
 
-    sys.exit(results()[result])
+    sys.exit(results(args)[result])
 
 def error_step(step):
   FILENAME = '[\w#$~%.\/-]*'
