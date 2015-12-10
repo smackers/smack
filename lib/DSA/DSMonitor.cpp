@@ -2,6 +2,7 @@
 #include "dsa/DSMonitor.h"
 #include "dsa/DSGraph.h"
 #include "llvm/IR/DebugInfo.h"
+#include "smack/SmackOptions.h"
 
 namespace llvm {
 
@@ -144,6 +145,9 @@ void DSMonitor::watch(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
 }
 
 void DSMonitor::warn() {
+  if (!smack::SmackOptions::Warnings)
+    return;
+
   if (location != "")
     errs() << location << ": ";
 

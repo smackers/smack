@@ -1053,7 +1053,7 @@ Decl* SmackRep::memcpyProc(std::string type, unsigned length) {
 
   if (no_quantifiers)
     name = name + "." + std::to_string(length);
-  else
+  else if (SmackOptions::Warnings)
     errs() << "warning: memory intrinsic length exceeds threshold ("
            << MEMORY_INTRINSIC_THRESHOLD << "); "
            << "adding quantifiers.\n";
@@ -1116,7 +1116,7 @@ Decl* SmackRep::memsetProc(std::string type, unsigned length) {
 
   if (no_quantifiers)
     name = name + "." + std::to_string(length);
-  else
+  else if (SmackOptions::Warnings)
     errs() << "warning: memory intrinsic length exceeds threshold ("
            << MEMORY_INTRINSIC_THRESHOLD << "); "
            << "adding quantifiers.\n";

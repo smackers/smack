@@ -346,6 +346,7 @@ def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
   cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
+  cmd += ['-warnings']
   cmd += ['-source-loc-syms']
   cmd += ['-enable-type-inference-opts']
   for ep in args.entry_points:

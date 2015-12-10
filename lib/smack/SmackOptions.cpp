@@ -14,6 +14,10 @@ const llvm::cl::list<std::string> SmackOptions::EntryPoints(
   llvm::cl::value_desc("PROCS")
 );
 
+const llvm::cl::opt<bool> SmackOptions::Warnings(
+  "warnings", llvm::cl::desc("Enable warnings.")
+);
+
 const llvm::cl::opt<bool> SmackOptions::MemoryModelDebug(
   "mem-mod-dbg", llvm::cl::desc("Enable memory model debugging.")
 );
