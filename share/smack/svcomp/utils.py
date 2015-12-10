@@ -19,7 +19,7 @@ def svcomp_frontend(args):
   if file_type == 'bitvector':
     args.bit_precise = True
   if file_type == 'float':
-    sys.exit(smack.top.results()['unknown'])
+    sys.exit(smack.top.results(args)['unknown'])
   args.execute = False
   if filters.svcomp_filter(args.input_files[0])[1] == 'executable':
     args.execute = True
@@ -100,7 +100,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "Property File:\n" + prop + "\n"
       if not args.quiet:
         print(heurTrace + "\n")
-      sys.exit(smack.top.results()['unknown'])
+      sys.exit(smack.top.results(args)['unknown'])
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
@@ -132,7 +132,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "We are not modeling strcpy - aborting\n"
     if not args.quiet:
       print(heurTrace + "\n")
-    sys.exit(smack.top.results()['unknown'])
+    sys.exit(smack.top.results(args)['unknown'])
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
@@ -211,10 +211,10 @@ def verify_bpl_svcomp(args):
           heurTrace += "Oops, execution result says no.\n"
           if not args.quiet:
             print(heurTrace + "\n")
-          sys.exit(smack.top.results()['unknown'])
+          sys.exit(smack.top.results(args)['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
-      sys.exit(smack.top.results()['verified'])
+      sys.exit(smack.top.results(args)['verified'])
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
@@ -229,7 +229,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print(heurTrace + "\n")
-  sys.exit(smack.top.results()[result])
+  sys.exit(smack.top.results(args)[result])
 
 def run_binary(args):
   #process the file to make it runnable
