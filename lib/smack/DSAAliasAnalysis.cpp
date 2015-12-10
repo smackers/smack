@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "smack/DSAAliasAnalysis.h"
+#include "llvm/Support/FileSystem.h"
 #define DEBUG_TYPE "dsa-aa"
 
 namespace smack {
@@ -24,8 +25,7 @@ char DSAAliasAnalysis::ID = 0;
 
 void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
   std::string EC;
-  sys::fs::OpenFlags Flags;
-  llvm::raw_fd_ostream F(Filename, EC, Flags);
+  llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
   TD->print(F, module);
   BU->print(F, module);
   TS->print(F, module);
