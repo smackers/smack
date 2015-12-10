@@ -17,6 +17,7 @@ namespace smack {
 
 class Expr {
 public:
+  virtual ~Expr() {}
   virtual void print(std::ostream& os) const = 0;
   static const Expr* exists(std::string v, std::string t, const Expr* e);
   static const Expr* forall(std::string v, std::string t, const Expr* e);
@@ -203,6 +204,7 @@ public:
   Kind getKind() const { return kind; }
 
  public:
+  virtual ~Stmt() {}
   static const Stmt* annot(std::list<const Attr*> attrs);
   static const Stmt* annot(const Attr* a);
   static const Stmt* assert_(const Expr* e,
@@ -336,6 +338,7 @@ protected:
   Decl(Kind k, std::string n, std::list<const Attr*> ax)
     : kind(k), id(uniqueId++), name(n), attrs(ax) { }
 public:
+  virtual ~Decl() {}
   virtual void print(std::ostream& os) const = 0;
   unsigned getId() const { return id; }
   std::string getName() const { return name; }
