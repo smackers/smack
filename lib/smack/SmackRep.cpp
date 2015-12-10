@@ -356,7 +356,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
     assert(I && "expected constant size expression.");
     const unsigned count = I->getZExtValue();
-    const unsigned offset = 0; // FIXME
     const unsigned bits = T->getIntegerBitWidth();
     const unsigned bytes = bits / 8;
     const unsigned length = count * bytes;
@@ -438,7 +437,6 @@ const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   const unsigned R = regions.idx(P);
-  const unsigned size = getElementSize(P);
   bool bytewise = regions.get(R).bytewiseAccess();
   bool singleton = regions.get(R).isSingleton();
   const Expr* M = Expr::id(memPath(R));
@@ -459,7 +457,6 @@ const Stmt* SmackRep::store(const Value* P, const Expr* V) {
 
 const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
-  unsigned size = targetData->getTypeStoreSizeInBits((Type*) T);
   bool bytewise = regions.get(R).bytewiseAccess();
   bool singleton = regions.get(R).isSingleton();
 

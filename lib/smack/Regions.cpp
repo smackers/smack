@@ -216,8 +216,6 @@ bool Regions::runOnModule(Module& M) {
       &local = getAnalysis<LocalDataStructures>(),
       &BU = getAnalysis<BUDataStructures>(),
       &TD = getAnalysis<TDDataStructures>();
-    DSNodeEquivs
-      &EQ = getAnalysis<DSNodeEquivs>();
 
     DEBUG(
       local.print(errs(), &M);

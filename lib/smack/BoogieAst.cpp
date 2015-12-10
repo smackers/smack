@@ -238,7 +238,7 @@ FuncDecl* Decl::code(ProcDecl* P) {
     blocks.push_back(Block::block(B->getName()));
     for (auto S : *B) {
       const Stmt* SS;
-      if (auto R = llvm::dyn_cast<ReturnStmt>(S))
+      if (llvm::isa<ReturnStmt>(S))
         SS = Stmt::return_(Expr::neq(Expr::id(P->getReturns().front().first),Expr::lit(0U)));
       else
         SS = S;

@@ -94,7 +94,6 @@ static inline bool isZExtOrBitCastable(Value* V, Type* T) {
 }
 
 static inline bool match(CallSite &CS, Function &F) {
-  auto V = CS.getCalledValue();
   auto N = CS.arg_size();
   auto T = F.getFunctionType();
   auto M = T->getNumParams();
