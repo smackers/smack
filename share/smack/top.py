@@ -32,10 +32,10 @@ def frontends():
     'bpl': boogie_frontend,
   }
 
-def results():
+def results(unroll=0):
   """A dictionary of the result output messages."""
   return {
-    'verified': 'SMACK found no errors.',
+    'verified': 'SMACK found no errors.' if unroll is 0 else 'SMACK found no errors.\nUnroll bound set to ' + str(unroll) + '.',
     'error': 'SMACK found an error.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
@@ -142,7 +142,8 @@ def arguments():
     choices=['boogie', 'corral', 'duality', 'svcomp'],
     help='back-end verification engine')
 
-  verifier_group.add_argument('--unroll', metavar='N', type=int,
+  verifier_group.add_argument('--unroll', metavar='N', default='1',
+    type = lambda x: int(x) if int(x) > 0 else parser.error('Unroll bound has to be positive.'),
     help='loop/recursion unroll bound [default: %(default)s]')
 
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
@@ -365,7 +366,7 @@ def procedure_annotation(name, args):
     return "{:entrypoint}"
   elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-  elif args.verifier == 'boogie' and args.unroll:
+  elif args.verifier == 'boogie':
     return ("{:inline %s}" % args.unroll)
   else:
     return ""
@@ -406,8 +407,7 @@ def verify_bpl(args):
     command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
-    if args.unroll:
-      command += ["/loopUnroll:%d" % args.unroll]
+    command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -418,8 +418,7 @@ def verify_bpl(args):
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
-    if args.unroll:
-      command += ["/recursionBound:%d" % args.unroll]
+    command += ["/recursionBound:%d" % args.unroll]
 
   else:
     # Duality!
@@ -444,7 +443,7 @@ def verify_bpl(args):
     print smackdOutput(verifier_output)
 
   elif result == 'verified':
-    print results()[result]
+    print results(args.unroll)[result]
 
   else:
     if result == 'error':
