@@ -172,7 +172,7 @@ DSNode *DSGraph::addObjectToGraph(Value *Ptr, bool UseDeclaredType) {
   } else if (isa<AllocaInst>(Ptr)) {
     N->setAllocaMarker();
   } else {
-    assert(0 && "Illegal memory object input!");
+    llvm_unreachable("Illegal memory object input!");
   }
   return N;
 }

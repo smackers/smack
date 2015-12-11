@@ -137,7 +137,7 @@ std::string SmackRep::procName(const llvm::User& U) {
   if (const llvm::CallInst* CI = llvm::dyn_cast<const llvm::CallInst>(&U))
     return procName(U, CI->getCalledFunction());
   else
-    assert(false && "Unexpected user expression.");
+    llvm_unreachable("Unexpected user expression.");
 }
 
 std::string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
@@ -162,7 +162,7 @@ std::string SmackRep::type(const llvm::Type* t) {
     return Naming::PTR_TYPE;
 
   else
-    // assert(0 && "unsupported type");
+    // llvm_unreachable("Unsupported type.");
     return Naming::PTR_TYPE;
 }
 
@@ -573,7 +573,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return Expr::id(Naming::NULL_VAL);
 
   else
-    assert( false && "literal type not supported" );
+    llvm_unreachable("Literal type not supported");
 }
 
 const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
@@ -653,7 +653,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
       else {
         DEBUG(errs() << "VALUE : " << *v << "\n");
-        assert(false && "constant expression of this type not supported");
+        llvm_unreachable("Constant expression of this type not supported.");
       }
 
     } else if (const ConstantInt* ci = dyn_cast<const ConstantInt>(constant)) {
@@ -667,12 +667,12 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
 
     else {
       DEBUG(errs() << "VALUE : " << *v << "\n");
-      assert(false && "this type of constant not supported");
+      llvm_unreachable("This type of constant not supported.");
     }
 
   } else {
     DEBUG(errs() << "VALUE : " << *v << "\n");
-    assert(false && "value of this type not supported");
+    llvm_unreachable("Value of this type not supported.");
   }
 }
 

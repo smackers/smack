@@ -234,7 +234,7 @@ void DSNode::removeGlobal(const GlobalValue *GV) {
 void DSNode::foldNodeCompletely() {
   if (isNodeCompletelyFolded()) return;  // If this node is already folded...
 
-  //  assert(0 && "Folding is happening");
+  //  llvm_unreachable("Folding is happening");
 
   ++NumFolds;
 
@@ -1132,7 +1132,7 @@ const FunctionType *DSCallSite::FunctionTypeOfCallSite(const CallSite & Site) {
 
   const PointerType *CalleeType = dyn_cast<PointerType>(Callee->getType());
   if (!CalleeType) {
-    assert(0 && "Call through a non-pointer type?");
+    llvm_unreachable("Call through a non-pointer type?");
   } else {
     CalleeFuncType = dyn_cast<FunctionType>(CalleeType->getElementType());
     assert(CalleeFuncType &&
@@ -1255,7 +1255,7 @@ void DataStructures::deleteValue(Value *V) {
 
   assert(!isa<GlobalVariable>(V) && "Do not know how to delete GV's yet!");
 
-  assert(0 && "Unrecognized value!");
+  llvm_unreachable("Unrecognized value!");
   abort();
 }
 
@@ -1307,7 +1307,7 @@ void DataStructures::copyValue(Value *From, Value *To) {
 
   errs() << *From;
   errs() << *To;
-  assert(0 && "Do not know how to copy this yet!");
+  llvm_unreachable("Do not know how to copy this yet!");
   abort();
 }
 

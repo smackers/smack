@@ -96,7 +96,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
   DEBUG(errs() << "Instruction not handled: " << inst << "\n");
-  assert(false && "Instruction not handled");
+  llvm_unreachable("Instruction not handled.");
 }
 
 void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst& ti) {
@@ -230,7 +230,7 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
   if (f) {
     emit(rep.call(f, ii));
   } else {
-    // assert(false && "unexpected invoke instruction.");
+    // llvm_unreachable("Unexpected invoke instruction.");
     WARN("unsoundly ignoring invoke instruction... ");
   }
   std::vector<std::pair<const Expr*, llvm::BasicBlock*> > targets;

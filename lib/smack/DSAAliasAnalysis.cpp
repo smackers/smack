@@ -191,7 +191,7 @@ unsigned DSAAliasAnalysis::getPointedTypeSize(const Value* v) {
     else
       return UINT_MAX;
   } else
-    assert(false && "Type should be pointer.");
+    llvm_unreachable("Type should be pointer.");
 }
 
 unsigned DSAAliasAnalysis::getOffset(const Value* v) {

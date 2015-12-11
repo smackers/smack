@@ -322,7 +322,7 @@ DSNodeHandle GraphBuilder::getValueDest(Value* V) {
       MergeConstantInitIntoNode(NH, C->getType(), C);
     } else {
       errs() << "Unknown constant: " << *C << "\n";
-      assert(0 && "Unknown constant type!");
+      llvm_unreachable("Unknown constant type!");
     }
     N = createNode(); // just create a shadow node
   } else {
@@ -554,7 +554,7 @@ void GraphBuilder::visitVAArgInst(VAArgInst &I) {
   }
 
   default: {
-    assert(0 && "What frontend generates this?");
+    llvm_unreachable("What frontend generates this?");
     DSNodeHandle Ptr = getValueDest(I.getOperand(0));
 
     //FIXME: also updates the argument
@@ -1026,7 +1026,7 @@ void GraphBuilder::visitVAStartNode(DSNode* N) {
     // Either add support for other architectures, or at least mark the
     // nodes unknown/incomplete or whichever results in the correct
     // conservative behavior in the general case
-    assert(0 && "VAstart not supported on this architecture!");
+    llvm_unreachable("VAstart not supported on this architecture!");
     //XXX: This might be good enough in those cases that we don't know
     //what the arch does
     N->setIncompleteMarker()->setUnknownMarker()->foldNodeCompletely();
@@ -1183,7 +1183,7 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
     }
 
     DEBUG(errs() << "[dsa:local] Unhandled intrinsic: " << F->getName() << "\n");
-    assert(0 && "Unhandled intrinsic");
+    llvm_unreachable("Unhandled intrinsic");
     return false;
   }
   }
@@ -1408,7 +1408,7 @@ GraphBuilder::MergeConstantInitIntoNode(DSNodeHandle &NH,
 
         NHN->foldNodeCompletely();
       } else {
-        assert(0 && "type was smaller than offsets of struct layout indicate");
+        llvm_unreachable("type was smaller than offsets of struct layout indicate");
       }
     }
   } else if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C)) {
@@ -1421,7 +1421,7 @@ GraphBuilder::MergeConstantInitIntoNode(DSNodeHandle &NH,
     // have no DSNodes.  Nothing to do here.
     //
   } else {
-    assert(0 && "Unknown constant type!");
+    llvm_unreachable("Unknown constant type!");
   }
 }
 

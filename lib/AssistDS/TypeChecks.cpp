@@ -179,7 +179,7 @@ bool TypeChecks::runOnModule(Module &M) {
   // Only works for whole program analysis
   Function *MainF = M.getFunction("main");
   if (MainF == 0 || MainF->isDeclaration()) {
-    assert(0 && "No main function found");
+    llvm_unreachable("No main function found");
     return false;
   }
 
