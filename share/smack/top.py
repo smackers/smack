@@ -118,7 +118,7 @@ def arguments():
   translate_group.add_argument('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
     help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
 
-  translate_group.add_argument('--static-unroll', metavar='N', type=int,
+  translate_group.add_argument('--static-unroll', action="store_true", default=False,
     help='enable static LLVM loop unrolling pass as a preprocessing step')
 
   translate_group.add_argument('--pthread', action='store_true', default=False,
@@ -354,7 +354,7 @@ def llvm_to_bpl(args):
   if args.debug: cmd += ['-debug']
   if args.ll_file: cmd += ['-ll', args.ll_file]
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
-  if args.static_unroll: cmd += ['-static-unroll=%s' % args.static_unroll]
+  if args.static_unroll: cmd += ['-static-unroll']
   if args.bit_precise: cmd += ['-bit-precise']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
