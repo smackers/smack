@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 import smack.top
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph

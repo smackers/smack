@@ -11,7 +11,6 @@ import subprocess
 import sys
 import tempfile
 from threading import Timer
-import time
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 
