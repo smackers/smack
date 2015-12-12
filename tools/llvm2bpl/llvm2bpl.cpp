@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopSimplifyPass());
     pass_manager.add(llvm::createLoopRotatePass());
     //pass_manager.add(llvm::createIndVarSimplifyPass());
-    pass_manager.add(llvm::createSimpleLoopUnrollPass());
+    pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
   pass_manager.add(new llvm::StructRet());
