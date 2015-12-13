@@ -93,12 +93,14 @@ static inline bool isZExtOrBitCastable(Value* V, Type* T) {
   }
 }
 
-static inline bool match(CallSite &CS, Function &F) {
+static inline bool match(CallSite &CS, const Function &F) {
   auto N = CS.arg_size();
   auto T = F.getFunctionType();
   auto M = T->getNumParams();
+  auto RT = T->getReturnType();
+  auto IT = CS.getInstruction()->getType();
 
-  if (!CastInst::isBitCastable(T->getReturnType(), CS.getInstruction()->getType()))
+  if (RT != IT && !CastInst::isBitCastable(RT, IT))
     return false;
 
   if (N < M)
@@ -107,9 +109,12 @@ static inline bool match(CallSite &CS, Function &F) {
   if (N > M && !F.isVarArg())
     return false;
 
-  for (unsigned i=0; i<M; i++)
-    if (!isZExtOrBitCastable(CS.getArgument(i), T->getParamType(i)))
+  for (unsigned i=0; i<M; i++) {
+    auto A = CS.getArgument(i);
+    auto PT = T->getParamType(i);
+    if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
       return false;
+  }
 
   return true;
 }
@@ -343,13 +348,21 @@ Devirtualize::makeDirectCall (CallSite & CS) {
 
   std::vector<const Function*> Targets;
 
-  if (CTF->size(CS) && CTF->isComplete(CS))
-    Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
+  if (CTF->size(CS) && CTF->isComplete(CS)) {
+    // TODO should we allow non-matching targets?
+    // TODO non-matching targets leads to crashes in bounce creation
+    // TODO formerly, all call-target-finder tarets were included:
+    //   Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
+    // TODO presently we filter out unmatching targets:
+    for (auto F = CTF->begin(CS); F != CTF->end(CS); ++F)
+      if (match(CS, **F))
+        Targets.push_back(*F);
 
-  else
+  } else {
     for (auto &F : *CS.getInstruction()->getParent()->getParent()->getParent())
       if (F.hasAddressTaken() && match(CS, F))
         Targets.push_back(&F);
+  }
 
   //
   // Determine if an existing bounce function can be used for this call site.
