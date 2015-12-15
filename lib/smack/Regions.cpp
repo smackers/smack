@@ -217,12 +217,6 @@ bool Regions::runOnModule(Module& M) {
       &BU = getAnalysis<BUDataStructures>(),
       &TD = getAnalysis<TDDataStructures>();
 
-    DEBUG(
-      local.print(errs(), &M);
-      BU.print(errs(), &M);
-      TD.print(errs(), &M);
-    );
-
     visit(M);
   }
 
@@ -238,14 +232,33 @@ Region& Regions::get(unsigned R) {
 }
 
 unsigned Regions::idx(const Value* V) {
-  DEBUG(errs() << "[regions] getting index for: " << *V << "\n");
+  DEBUG(
+    errs() << "[regions] for: " << *V << "\n";
+    auto U = V;
+    while (U && !isa<Instruction>(U) && !U->use_empty()) U = U->user_back();
+    if (auto I = dyn_cast<Instruction>(U)) {
+      auto F = I->getParent()->getParent();
+      if (I != V)
+        errs() << "  at instruction: " << *I << "\n";
+      errs() << "  in function: " << F->getName() << "\n";
+    }
+  );
   Region R(V);
   return idx(R);
 }
 
 unsigned Regions::idx(const Value* V, unsigned length) {
-  DEBUG(errs() << "[regions] getting index for: " << *V
-               << " with length " << length << "\n");
+  DEBUG(
+    errs() << "[regions] for: " << *V << " with length " << length << "\n";
+    auto U = V;
+    while (U && !isa<Instruction>(U) && !U->use_empty()) U = U->user_back();
+    if (auto I = dyn_cast<Instruction>(U)) {
+      auto F = I->getParent()->getParent();
+      if (I != V)
+        errs() << "  at instruction: " << *I << "\n";
+      errs() << "  in function: " << F->getName() << "\n";
+    }
+  );
   Region R(V,length);
   return idx(R);
 }
@@ -301,7 +314,7 @@ unsigned Regions::idx(Region& R) {
     }
   }
 
-  DEBUG(errs() << "[regions]   returning index: " << r << "\n");
+  DEBUG(errs() << "[regions]   returning index: " << r << "\n\n");
 
   return r;
 }

@@ -1588,5 +1588,6 @@ bool LocalDataStructures::runOnModule(Module &M) {
                                  |DSGraph::IgnoreGlobals);
     }
 
+  DEBUG(print(errs(), &M));
   return false;
 }
