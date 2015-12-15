@@ -20,4 +20,8 @@ int qvar(const char *var);
 int old(int term);
 int result(void);
 
+#undef bool
+#undef true
+#undef false
+
 #endif
