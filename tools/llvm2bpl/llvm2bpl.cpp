@@ -57,6 +57,21 @@ std::string filenamePrefix(const std::string &str) {
 
 #define DEBUG_TYPE "llvm2bpl"
 
+
+
+namespace {
+  static void check(std::string E) {
+    if (!E.empty()) {
+      if (errs().has_colors())
+        errs().changeColor(raw_ostream::RED);
+      errs () << E << "\n";
+      if (errs().has_colors())
+        errs().resetColor();
+      exit(1);
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   llvm::cl::ParseCommandLineOptions(argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
@@ -65,50 +80,25 @@ int main(int argc, char **argv) {
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;
 
-  if (OutputFilename.empty()) {
-//    OutputFilename = getFileName(InputFilename) + ".bpl";
-    OutputFilename = "a.bpl";
-  }
-
-  std::string error_msg;
   llvm::SMDiagnostic err;
-  llvm::LLVMContext &context = llvm::getGlobalContext();
   std::unique_ptr<llvm::Module> module;
-  std::unique_ptr<llvm::tool_output_file> output;
+  module.reset(llvm::ParseIRFile(InputFilename, err, llvm::getGlobalContext()));
+  if (!err.getMessage().empty())
+    check("Problem reading input bitcode/IR: " + err.getMessage().str());
 
-  module.reset(llvm::ParseIRFile(InputFilename, err, context));
-  if (module.get() == 0) {
-    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
-    llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
-    if (llvm::errs().has_colors()) llvm::errs().resetColor();
-    return 1;
-  }
-
-  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::sys::fs::F_None));
-  if (!error_msg.empty()) {
-    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
-    llvm::errs() << "error: " << error_msg << "\n";
-    if (llvm::errs().has_colors()) llvm::errs().resetColor();
-    return 1;
-  }
+  auto &L = module.get()->getDataLayoutStr();
+  DataLayout DL(L.empty() ? DefaultDataLayout : L);
 
   ///////////////////////////////
   // initialise and run passes //
   ///////////////////////////////
 
-  llvm::PassManager pass_manager;
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
 
-  // add an appropriate DataLayout instance for the module
-  const llvm::DataLayout *dl = 0;
-  const std::string &moduleDataLayout = module.get()->getDataLayoutStr();
-  if (!moduleDataLayout.empty())
-    dl = new llvm::DataLayout(moduleDataLayout);
-  else if (!DefaultDataLayout.empty())
-    dl = new llvm::DataLayout(moduleDataLayout);
-  if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
+  llvm::PassManager pass_manager;
 
+  pass_manager.add(new DataLayoutPass(DL));
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
@@ -131,19 +121,31 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   pass_manager.add(new llvm::Devirtualize());
 
-  std::string EC;
-  tool_output_file F(FinalIrFilename.c_str(), EC, sys::fs::F_None);
+  std::vector<tool_output_file*> files;
 
   if (!FinalIrFilename.empty()) {
-    F.keep();
-    pass_manager.add(llvm::createPrintModulePass(F.os()));
+    std::string EC;
+    auto F = new tool_output_file(FinalIrFilename.c_str(), EC, sys::fs::F_None);
+    check(EC);
+    F->keep();
+    files.push_back(F);
+    pass_manager.add(llvm::createPrintModulePass(F->os()));
   }
 
-  pass_manager.add(new smack::SmackModuleGenerator());
-  pass_manager.add(new smack::BplFilePrinter(output->os()));
+  if (!OutputFilename.empty()) {
+    std::string EC;
+    auto F = new tool_output_file(OutputFilename.c_str(), EC, sys::fs::F_None);
+    check(EC);
+    F->keep();
+    files.push_back(F);
+    pass_manager.add(new smack::SmackModuleGenerator());
+    pass_manager.add(new smack::BplFilePrinter(F->os()));
+  }
+
   pass_manager.run(*module.get());
 
-  output->keep();
+  for (auto F : files)
+    delete F;
 
   return 0;
 }
