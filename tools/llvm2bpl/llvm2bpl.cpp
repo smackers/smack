@@ -30,6 +30,7 @@
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/ExtractContracts.h"
+#include "smack/SimplifyLibCalls.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::CodifyStaticInits());
   pass_manager.add(new smack::RemoveDeadDefs());
   pass_manager.add(new llvm::MergeArrayGEP());
+  // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
 
   std::vector<tool_output_file*> files;

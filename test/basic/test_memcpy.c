@@ -10,4 +10,3 @@ int main(void) {
   assert(a == b);
   return 0;
 }
-
