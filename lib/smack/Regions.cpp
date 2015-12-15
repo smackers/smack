@@ -73,9 +73,35 @@ void Region::init(Module& M, Pass& P) {
   DSA = &P.getAnalysis<DSAAliasAnalysis>();
 }
 
+namespace {
+  unsigned numGlobals(const DSNode* N) {
+    unsigned count = 0;
+
+    // shamelessly ripped from getCaption(..) in lib/DSA/Printer.cpp
+    EquivalenceClasses<const GlobalValue*> *GlobalECs = 0;
+    const DSGraph *G = N->getParentGraph();
+    if (G) GlobalECs = &G->getGlobalECs();
+
+    for (auto i = N->globals_begin(), e = N->globals_end(); i != e; ++i) {
+      count += 1;
+
+      if (GlobalECs) {
+        // Figure out how many globals are equivalent to this one.
+        auto I = GlobalECs->findValue(*i);
+        if (I != GlobalECs->end()) {
+          count += std::distance(
+            GlobalECs->member_begin(I), GlobalECs->member_end()) - 1;
+        }
+      }
+    }
+
+    return count;
+  }
+}
+
 bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
   if (N->isGlobalNode()
-      && N->numGlobals() == 1
+      && numGlobals(N) == 1
       && !N->isAllocaNode()
       && !N->isHeapNode()
       && !N->isExternalNode()
