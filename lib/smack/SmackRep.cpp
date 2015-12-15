@@ -670,6 +670,10 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       llvm_unreachable("This type of constant not supported.");
     }
 
+  } else if (isa<InlineAsm>(v)) {
+    errs() << "warning: ignoring inline asm passed as argument.\n";
+    return pointerLit(0UL);
+
   } else {
     DEBUG(errs() << "VALUE : " << *v << "\n");
     llvm_unreachable("Value of this type not supported.");
