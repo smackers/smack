@@ -36,36 +36,6 @@ namespace {
       return DSA->isFieldDisjoint(V, getFunction(V));
   }
 
-  unsigned getRealOffset(const DataLayout* DL, const Value* V) {
-    auto CE = dyn_cast<ConstantExpr>(V);
-    if (!CE || CE->getOpcode() != Instruction::GetElementPtr)
-      return 0;
-
-    unsigned offset = 0;
-    gep_type_iterator TI = gep_type_begin(CE);
-
-    for (unsigned i=1; i < CE->getNumOperands(); ++i, ++TI) {
-      const Value* A = CE->getOperand(i);
-      Type* T = *TI;
-      if (auto ST = dyn_cast<StructType>(T)) {
-        auto CI = dyn_cast<ConstantInt>(A);
-        assert(CI && "Expected constant struct index.");
-        offset += DL->getStructLayout(ST)->getElementOffset(CI->getZExtValue());
-      }
-
-      else if (auto ST = dyn_cast<SequentialType>(T)) {
-        if (auto CI = dyn_cast<ConstantInt>(A))
-          offset += DL->getTypeStoreSize(ST->getElementType())
-            * CI->getZExtValue();
-        else
-          return std::numeric_limits<unsigned>::max();
-
-      } else
-        llvm_unreachable("Unexpected offset type.");
-    }
-
-    return offset;
-  }
 }
 
 void Region::init(Module& M, Pass& P) {
@@ -102,6 +72,7 @@ namespace {
 bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
   if (N->isGlobalNode()
       && numGlobals(N) == 1
+      && !N->isArrayNode()
       && !N->isAllocaNode()
       && !N->isHeapNode()
       && !N->isExternalNode()
@@ -157,10 +128,6 @@ void Region::init(const Value* V, unsigned length) {
   this->length = length;
 
   singleton = DL && representative
-
-    // NOTE this prevents us from considering array accesses as singletons
-    && this->offset == getRealOffset(DL,V)
-
     && isSingleton(representative, offset, length);
 
   allocated = !representative || isAllocated(representative);
