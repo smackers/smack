@@ -16,7 +16,8 @@ private:
   bool modified;
   void validateAnnotation(CallInst &I);
   bool hasDominatedIncomingValue(Value* V);
-  std::tuple< Function*, std::vector<Value*> > extractExpression(Value* V);
+  std::tuple< Function*, std::vector<Value*> > extractExpression(
+    Value* V, BasicBlock* E);
 
 public:
   static char ID;

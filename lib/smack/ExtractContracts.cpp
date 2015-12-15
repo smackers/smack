@@ -41,7 +41,7 @@ void ExtractContracts::visitCallInst(CallInst &I) {
       validateAnnotation(I);
       Function* EF;
       std::vector<Value*> Args;
-      tie(EF, Args) = extractExpression(I.getArgOperand(0));
+      tie(EF, Args) = extractExpression(I.getArgOperand(0), I.getParent());
       I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
       modified = true;
     }
@@ -85,10 +85,14 @@ bool ExtractContracts::hasDominatedIncomingValue(Value* V) {
 }
 
 std::tuple< Function*, std::vector<Value*> >
-ExtractContracts::extractExpression(Value* V) {
-  auto R = dyn_cast<Instruction>(V);
+ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
+  DEBUG(errs() << "[contracts]"
+    << " extracting " << *V
+    << " from " << E->getParent()->getName()
+    << ":" << E->getName() << "\n");
+
   auto &C = V->getContext();
-  auto F = R->getParent()->getParent();
+  auto F = E->getParent();
   auto M = (Module*) F->getParent();
 
   std::stack<Value*> value_stack;
@@ -180,7 +184,7 @@ ExtractContracts::extractExpression(Value* V) {
     }
   }
 
-  auto B = dyn_cast<BasicBlock>(clones[R->getParent()]);
+  auto B = dyn_cast<BasicBlock>(clones[E]);
   ReturnInst::Create(C, clones[V], B);
 
   return std::make_tuple(FF, arguments);
