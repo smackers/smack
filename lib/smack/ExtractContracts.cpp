@@ -101,6 +101,7 @@ ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
   std::vector<Type*> parameters;
 
   value_stack.push(V);
+  value_stack.push(E);
 
   while (!value_stack.empty()) {
     Value* V = value_stack.top();
