@@ -2,7 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
-#define DEBUG_TYPE "extract-contracts"
+#define DEBUG_TYPE "contracts"
 
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"

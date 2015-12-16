@@ -5,7 +5,7 @@
 #include "smack/SmackOptions.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 
-#define DEBUG_TYPE "smack-region"
+#define DEBUG_TYPE "regions"
 
 namespace smack {
 
