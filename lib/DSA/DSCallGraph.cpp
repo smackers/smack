@@ -186,16 +186,16 @@ void printNameOrPtr(T& Out, const llvm::Function* F) {
     Out << F;
 }
 
-void DSCallGraph::dump() {
+void DSCallGraph::dump() const {
   //function map
 
   //CallGraph map
-  for (SimpleCalleesTy::iterator ii = SimpleCallees.begin(),
+  for (SimpleCalleesTy::const_iterator ii = SimpleCallees.begin(),
        ee = SimpleCallees.end(); ii != ee; ++ii) {
     llvm::errs() << "CallGraph[";
     printNameOrPtr(llvm::errs(), ii->first);
     llvm::errs() << "]";
-    for (FuncSet::iterator i = ii->second.begin(),
+    for (FuncSet::const_iterator i = ii->second.begin(),
          e = ii->second.end(); i != e; ++i) {
       llvm::errs() << " ";
       printNameOrPtr(llvm::errs(), *i);
@@ -205,7 +205,7 @@ void DSCallGraph::dump() {
 
   //Functions we know about that aren't called
   llvm::errs() << "Roots:";
-  for (FuncSet::iterator ii = knownRoots.begin(), ee = knownRoots.end();
+  for (FuncSet::const_iterator ii = knownRoots.begin(), ee = knownRoots.end();
        ii != ee; ++ii) {
     llvm::errs() << " ";
     printNameOrPtr(llvm::errs(), *ii);
