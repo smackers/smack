@@ -39,8 +39,8 @@ bool SimplifyLibCalls::runOnModule(Module& M) {
 }
 
 void SimplifyLibCalls::visitCallInst(CallInst &I) {
-  if (auto F = I.getCalledFunction())
-    if (auto V = simplifier->optimizeCall(&I))
+  if (I.getCalledFunction())
+    if (simplifier->optimizeCall(&I))
       I.eraseFromParent();
 }
 
