@@ -1,6 +1,6 @@
 #include "smack.h"
 
-// @expect error
+// @expect verified
 
 void (*fptrs[2])();
 int g;
@@ -21,6 +21,6 @@ int main(void) {
   fptrs[0] = func1;
   fptrs[0]();
   fptrs[1]();
-  assert (g == 0);
+  assert (g == 1);
   return 0;
 }
