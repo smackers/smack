@@ -39,37 +39,6 @@ def svcomp_frontend(args):
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
-  if args.error_file:
-    # Need to check to make sure output directory exists for error trace file
-    err_dir = os.path.dirname(args.error_file)
-    if not os.path.exists(err_dir):
-      try:
-        os.makedirs(err_dir)
-      except OSError as e:
-        # This eliminates race condition when multiple calls to SMACK
-        # try to create the same folder
-        if e.errno == errno.EEXIST and os.path.isdir(err_dir):
-          pass
-        else:
-          raise
-    # SVCOMP no longer uses tokenization, so we're trying it without
-
-    #clean = temporary_file(name, '.clean.c', args)
-    #tokenized = temporary_file(name, '.tokenized.c', args)
-    #
-    #with open(args.input_files[0], "r") as f:
-    #  cleanup = f.read()
-    #cleanup = re.sub(r'#line .*|# \d+.*|#pragma .*', '', cleanup)
-    #cleanup = beforeTokenReplace(cleanup)
-    #with open(clean, 'w') as f:
-    #  f.write(cleanup)
-    #
-    #output = try_command(['tokenizer', clean])
-    #with open(tokenized, 'w') as f:
-    #  f.write(afterTokenReplace(output))
-    #
-    #args.input_files[0] = tokenized
-
   smack.top.clang_frontend(args)
 
 def svcomp_process_file(args, name, ext):
