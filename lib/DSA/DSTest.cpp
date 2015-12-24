@@ -204,7 +204,7 @@ class NodeValue {
       assert(V && "Unable to find value in specified function!");
 
     } else {
-      assert(0 && "Too many colons, offsets not stripped?");
+      llvm_unreachable("Too many colons, offsets not stripped?");
     }
 
     assert(V && "Parsing value failed!");
@@ -521,7 +521,7 @@ static bool checkTypes(llvm::raw_ostream &O, const Module *M,
           typeRef  << "\n";
         errs() << "       But found this type :\t" <<
           test->str() << "\n";
-        assert(0 && "Type verification failed!");
+        llvm_unreachable("Type verification failed!");
       }
     }
     return true;
@@ -548,7 +548,7 @@ static bool verifyFlags(llvm::raw_ostream &O, const Module *M,
       std::string::size_type FlagPos = NodeFlagOption.find_first_of("+-");
       if (FlagPos == std::string::npos) {
         errs() << "No flags given for option \"" << NodeFlagOption << "\"!\n";
-        assert(0 && "Invalid input!");
+        llvm_unreachable("Invalid input!");
       }
 
       // Grab the part before the flag specifiers and parse that as a node
@@ -579,7 +579,7 @@ static bool verifyFlags(llvm::raw_ostream &O, const Module *M,
               NodeFlagOption  << "\n";
             errs() << "       But found these flags: \t" <<
               ActualFlags << "\n";
-            assert(0 && "Flag verification failed!");
+            llvm_unreachable("Flag verification failed!");
           }
         }
 
@@ -634,7 +634,7 @@ static bool checkNotCallees(llvm::raw_ostream &O, const Module *M,
     printCallees(notCallees, errs()); errs() << "\n";
     errs() << "                      *** Overlap: \t";
     printCallees(invalid, errs()); errs() << "\n";
-    assert(0 && "Analysis contained the specified callees!");
+    llvm_unreachable("Analysis contained the specified callees!");
   }
 
   return true;
@@ -683,7 +683,7 @@ static bool checkCallees(llvm::raw_ostream &O, const Module *M,
     printCallees(expectedCallees, errs()); errs() << "\n";
     errs() << "                      *** Missing: \t";
     printCallees(missing, errs()); errs() << "\n";
-    assert(0 && "Analysis didn't contain the specified callees!");
+    llvm_unreachable("Analysis didn't contain the specified callees!");
   }
 
   return true;

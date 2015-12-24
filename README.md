@@ -1,4 +1,4 @@
-[![Build Status](http://kepler.cs.utah.edu:8080/buildStatus/icon?job=smack)](http://kepler.cs.utah.edu:8080/job/smack/)
+[![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/)
 
 SMACK is a *bounded software verifier*, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
@@ -22,7 +22,7 @@ SMACK can verify C programs, such as the following:
 
 The command
 
-    smackverify.py simple.c
+    smack simple.c
 
 reports that the assertion `a == b + 1` cannot be violated. Besides the
 features of this very simple example, SMACK handles every complicated feature

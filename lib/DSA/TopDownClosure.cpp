@@ -180,6 +180,7 @@ bool TDDataStructures::runOnModule(Module &M) {
   // CBU contains the correct call graph.
   // Restore it, so that subsequent passes and clients can get it.
   restoreCorrectCallGraph();
+  DEBUG(print(errs(), &M));
   return false;
 }
 

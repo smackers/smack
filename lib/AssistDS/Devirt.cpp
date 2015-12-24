@@ -11,6 +11,7 @@
 
 #include "assistDS/Devirt.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
 
@@ -29,7 +30,9 @@ STATISTIC(CSConvert, "Number of call sites converted");
 
 // Pass registration
 RegisterPass<Devirtualize>
-X ("devirt", "Devirtualize indirect function calls");
+Z ("devirt", "Devirtualize indirect function calls");
+
+const bool SKIP_INCOMPLETE_NODES = false;
 
 //
 // Function: getVoidPtrType()
@@ -53,7 +56,7 @@ PointerType * getVoidPtrType (LLVMContext & C) {
 //  Given an LLVM value, insert a cast instruction to make it a given type.
 //
 static inline Value *
-castTo (Value * V, Type * Ty, std::string Name, Instruction * InsertPt) {
+castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
   //
   // Don't bother creating a cast if it's already the correct type.
   //
@@ -71,7 +74,49 @@ castTo (Value * V, Type * Ty, std::string Name, Instruction * InsertPt) {
   //
   // Otherwise, insert a cast instruction.
   //
-  return CastInst::CreateZExtOrBitCast (V, Ty, Name, InsertPt);
+  if (auto I = dyn_cast<Instruction>(InsertPt))
+    return CastInst::CreateZExtOrBitCast (V, Ty, Name, I);
+  else if (auto B = dyn_cast<BasicBlock>(InsertPt))
+    return CastInst::CreateZExtOrBitCast (V, Ty, Name, B);
+  else
+    llvm_unreachable("Unexpected insertion point.");
+
+}
+
+static inline bool isZExtOrBitCastable(Value* V, Type* T) {
+  switch(CastInst::getCastOpcode(V, false, T, false)) {
+    case Instruction::ZExt:
+    case Instruction::BitCast:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static inline bool match(CallSite &CS, const Function &F) {
+  auto N = CS.arg_size();
+  auto T = F.getFunctionType();
+  auto M = T->getNumParams();
+  auto RT = T->getReturnType();
+  auto IT = CS.getInstruction()->getType();
+
+  if (RT != IT && !CastInst::isBitCastable(RT, IT))
+    return false;
+
+  if (N < M)
+    return false;
+
+  if (N > M && !F.isVarArg())
+    return false;
+
+  for (unsigned i=0; i<M; i++) {
+    auto A = CS.getArgument(i);
+    auto PT = T->getParamType(i);
+    if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
+      return false;
+  }
+
+  return true;
 }
 
 //
@@ -163,16 +208,11 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
                                   M);
 
   //
-  // Set the names of the arguments.  Also, record the arguments in a vector
-  // for subsequence access.
+  // Set the names of the arguments.
   //
   F->arg_begin()->setName("funcPtr");
-  std::vector<Value*> fargs;
-  for(Function::arg_iterator ai = F->arg_begin(), ae = F->arg_end(); ai != ae; ++ai)
-    if (ai != F->arg_begin()) {
-      fargs.push_back(ai);
-      ai->setName("arg");
-    }
+  for (auto A = ++F->arg_begin(), E = F->arg_end(); A != E; ++A)
+    A->setName("arg");
 
   //
   // Create an entry basic block for the function.  All it should do is perform
@@ -187,13 +227,23 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   std::map<const Function*, BasicBlock*> targets;
   for (unsigned index = 0; index < Targets.size(); ++index) {
     const Function* FL = Targets[index];
+    const FunctionType* FT = FL->getFunctionType();
 
     // Create the basic block for doing the direct call
     BasicBlock* BL = BasicBlock::Create (M->getContext(), FL->getName(), F);
     targets[FL] = BL;
     // Create the direct function call
+
+    std::vector<Value*> Args;
+    Function::arg_iterator P, PE;
+    FunctionType::param_iterator T, TE;
+    for (P = ++F->arg_begin(), PE = F->arg_end(),
+         T = FT->param_begin(), TE = FT->param_end();
+         P != PE && T != TE; ++P, ++T)
+      Args.push_back(castTo(P, *T, "", BL));
+
     Value* directCall = CallInst::Create (const_cast<Function*>(FL),
-                                          fargs,
+                                          Args,
                                           "",
                                           BL);
 
@@ -211,7 +261,12 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   BasicBlock * failBB = BasicBlock::Create (M->getContext(),
                                             "fail",
                                             F);
-  new UnreachableInst (M->getContext(), failBB);
+
+  // TODO what to do when there are no potential targets?
+  if (Targets.size())
+    new UnreachableInst (M->getContext(), failBB);
+  else
+    ReturnInst::Create(M->getContext(), failBB);
 
   //
   // Setup the entry basic block.  For now, just have it call the failure
@@ -264,9 +319,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   //
   // Make the entry basic block branch to the first comparison basic block.
   //
-  //InsertPt->setUnconditionalDest (tailBB);
   InsertPt->setSuccessor(0, tailBB);
-  InsertPt->setSuccessor(1, tailBB);
   //
   // Return the newly created bounce function.
   //
@@ -293,59 +346,82 @@ Devirtualize::makeDirectCall (CallSite & CS) {
   // Find the targets of the indirect function call.
   //
 
-  //
-  // Convert the call site if there were any function call targets found.
-  //
-  if (CTF->size(CS)) {
-    std::vector<const Function*> Targets;
-    Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
-    //
-    // Determine if an existing bounce function can be used for this call site.
-    //
-    std::set<const Function *> targetSet (Targets.begin(), Targets.end());
-    const Function * NF = findInCache (CS, targetSet);
+  std::vector<const Function*> Targets;
 
-    //
-    // If no cached bounce function was found, build a function which will
-    // implement a switch statement.  The switch statement will determine which
-    // function target to call and call it.
-    //
-    if (!NF) {
-      // Build the bounce function and add it to the cache
-      NF = buildBounce (CS, Targets);
-      bounceCache[NF] = targetSet;
+  if (CTF->size(CS) && CTF->isComplete(CS)) {
+    // TODO should we allow non-matching targets?
+    // TODO non-matching targets leads to crashes in bounce creation
+    // TODO formerly, all call-target-finder tarets were included:
+    //   Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
+    // TODO presently we filter out unmatching targets:
+    for (auto F = CTF->begin(CS); F != CTF->end(CS); ++F)
+      if (match(CS, **F))
+        Targets.push_back(*F);
+
+  } else {
+    for (auto &F : *CS.getInstruction()->getParent()->getParent()->getParent())
+      if (F.hasAddressTaken() && match(CS, F))
+        Targets.push_back(&F);
+  }
+
+  //
+  // Determine if an existing bounce function can be used for this call site.
+  //
+  std::set<const Function *> targetSet (Targets.begin(), Targets.end());
+  const Function * NF = findInCache (CS, targetSet);
+
+  //
+  // If no cached bounce function was found, build a function which will
+  // implement a switch statement.  The switch statement will determine which
+  // function target to call and call it.
+  //
+  if (!NF) {
+    // Build the bounce function and add it to the cache
+    NF = buildBounce (CS, Targets);
+    bounceCache[NF] = targetSet;
+  }
+
+  //
+  // Replace the original call with a call to the bounce function.
+  //
+  if (CallInst* CI = dyn_cast<CallInst>(CS.getInstruction())) {
+    std::vector<Value*> Params;
+    Params.push_back(CI->getCalledValue());
+    for (unsigned i=0; i<CI->getNumArgOperands(); i++) {
+      Params.push_back(
+        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+      );
     }
 
-    //
-    // Replace the original call with a call to the bounce function.
-    //
-    if (CallInst* CI = dyn_cast<CallInst>(CS.getInstruction())) {
-      std::vector<Value*> Params (CI->op_begin(), CI->op_end());
-      std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
-      CallInst* CN = CallInst::Create (const_cast<Function*>(NF),
+    std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
+    CallInst* CN = CallInst::Create (const_cast<Function*>(NF),
                                        Params,
                                        name,
                                        CI);
-      CI->replaceAllUsesWith(CN);
-      CI->eraseFromParent();
-    } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS.getInstruction())) {
-      std::vector<Value*> Params (CI->op_begin(), CI->op_end());
-      std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
-      InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
-                                          CI->getNormalDest(),
-                                          CI->getUnwindDest(),
-                                          Params,
-                                          name,
-                                          CI);
-      CI->replaceAllUsesWith(CN);
-      CI->eraseFromParent();
-    }
-
-    //
-    // Update the statistics on the number of transformed call sites.
-    //
-    ++CSConvert;
+    CI->replaceAllUsesWith(CN);
+    CI->eraseFromParent();
+  } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS.getInstruction())) {
+    std::vector<Value*> Params;
+    Params.push_back(CI->getCalledValue());
+    for (unsigned i=0; i<CI->getNumArgOperands(); i++)
+      Params.push_back(
+        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+      );
+    std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
+    InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
+                                        CI->getNormalDest(),
+                                        CI->getUnwindDest(),
+                                        Params,
+                                        name,
+                                        CI);
+    CI->replaceAllUsesWith(CN);
+    CI->eraseFromParent();
   }
+
+  //
+  // Update the statistics on the number of transformed call sites.
+  //
+  ++CSConvert;
 
   return;
 }
@@ -370,7 +446,7 @@ Devirtualize::visitCallSite (CallSite &CS) {
   // Second, we will only transform those call sites which are complete (i.e.,
   // for which we know all of the call targets).
   //
-  if (!(CTF->isComplete(CS)))
+  if (SKIP_INCOMPLETE_NODES && !CTF->isComplete(CS))
     return;
 
   //
@@ -421,4 +497,3 @@ Devirtualize::runOnModule (Module & M) {
   //
   return true;
 }
-

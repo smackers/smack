@@ -118,6 +118,7 @@ add_library(dsa STATIC
   include/dsa/DataStructure.h
   include/dsa/TypeSafety.h
   include/dsa/super_set.h
+  include/dsa/DSMonitor.h
   lib/DSA/AddressTakenAnalysis.cpp
   lib/DSA/CallTargets.cpp
   lib/DSA/DSTest.cpp
@@ -136,6 +137,7 @@ add_library(dsa STATIC
   lib/DSA/BottomUpClosure.cpp
   lib/DSA/DSGraph.cpp
   lib/DSA/EntryPointAnalysis.cpp
+  lib/DSA/DSMonitor.cpp
   lib/DSA/Local.cpp
   lib/DSA/SanityCheck.cpp
 )
@@ -144,66 +146,63 @@ add_library(smackTranslator STATIC
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
-  include/smack/Contracts.h
   include/smack/DSAAliasAnalysis.h
   include/smack/Naming.h
-  include/smack/Slicing.h
+  include/smack/Regions.h
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
+  include/smack/CodifyStaticInits.h
+  include/smack/RemoveDeadDefs.h
+  include/smack/ExtractContracts.h
+  include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
   include/smack/SmackRepFlatMem.h
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
-  lib/smack/Contracts.cpp
   lib/smack/DSAAliasAnalysis.cpp
   lib/smack/Naming.cpp
-  lib/smack/Slicing.cpp
+  lib/smack/Regions.cpp
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
+  lib/smack/CodifyStaticInits.cpp
+  lib/smack/RemoveDeadDefs.cpp
+  lib/smack/ExtractContracts.cpp
+  lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
   lib/smack/SmackRepFlatMem.cpp
 )
 
-add_executable(smack
-  tools/smack/smack.cpp
+add_executable(llvm2bpl
+  tools/llvm2bpl/llvm2bpl.cpp
 )
 
-set_target_properties(smack smackTranslator assistDS dsa
+set_target_properties(llvm2bpl smackTranslator assistDS dsa
     PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(smack smackTranslator assistDS dsa)
+target_link_libraries(llvm2bpl smackTranslator assistDS dsa)
 
-INSTALL(TARGETS smack
+INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
 )
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/llvm2bpl.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smackgen.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smackverify.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/lockpwn
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-svcomp-wrapper.sh
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
   GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
   DESTINATION bin
 )
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-contracts.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack-svcomp.h
-  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-  GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
-  DESTINATION share/smack/include
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
+  DESTINATION share
+  USE_SOURCE_PERMISSIONS
+  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile"
 )
-
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/Makefile
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack-svcomp.c
-  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-  GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
-  DESTINATION share/smack/lib
-)
-

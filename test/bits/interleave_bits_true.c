@@ -2,6 +2,7 @@
 #include "smack.h"
 
 // @flag --loop-limit=33
+// @flag --unroll=33
 // @expect verified
 
 int main()

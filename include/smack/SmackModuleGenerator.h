@@ -8,6 +8,7 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/DSAAliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/Support/CommandLine.h"
@@ -16,7 +17,6 @@
 #include <sstream>
 #include <stack>
 
-using namespace std;
 using llvm::errs;
 
 namespace smack {
@@ -32,15 +32,16 @@ public:
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
-    AU.addRequired<llvm::DataLayoutPass>();
-    AU.addRequired<DSAAliasAnalysis>();
+    AU.addRequired<DataLayoutPass>();
+    AU.addRequired<LoopInfo>();
+    AU.addRequired<Regions>();
   }
 
   virtual bool runOnModule(llvm::Module& m) {
     generateProgram(m);
     return false;
   }
-  
+
   void generateProgram(llvm::Module& m);
 
   Program& getProgram() {
@@ -50,4 +51,3 @@ public:
 }
 
 #endif // SMACKMODULEGENERATOR_H
-

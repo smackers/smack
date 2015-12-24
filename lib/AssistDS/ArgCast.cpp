@@ -187,7 +187,7 @@ bool ArgCast::runOnModule(Module& M) {
           RetCast = new IntToPtrInst(CINew, CI->getType(), "", CI);
         else {
           // TODO: I'm not sure what right behavior is here, but this case should be handled.
-          assert(0 && "Unexpected type conversion in call!");
+          llvm_unreachable("Unexpected type conversion in call!");
           abort();
         }
         CI->replaceAllUsesWith(RetCast);

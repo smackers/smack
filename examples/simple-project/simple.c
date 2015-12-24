@@ -11,7 +11,7 @@ void test(int a) {
 }
 
 int main(void) {
-  int a = __VERIFIER_nondet();
+  int a = __VERIFIER_nondet_int();
   assume(a < 10000); // prevents overflow when bit-precise
   test(a);
   return 0;

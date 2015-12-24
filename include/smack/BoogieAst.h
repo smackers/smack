@@ -4,43 +4,44 @@
 #ifndef BOOGIEAST_H
 #define BOOGIEAST_H
 
+#include "llvm/Support/Casting.h"
+
 #include <cassert>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <list>
 #include <set>
 
 namespace smack {
 
-using namespace std;
-
-class Program;
-
 class Expr {
 public:
-  virtual void print(ostream& os) const = 0;
-  static const Expr* exists(string v, string t, const Expr* e);
-  static const Expr* forall(string v, string t, const Expr* e);
+  virtual ~Expr() {}
+  virtual void print(std::ostream& os) const = 0;
+  static const Expr* exists(std::string v, std::string t, const Expr* e);
+  static const Expr* forall(std::string v, std::string t, const Expr* e);
   static const Expr* and_(const Expr* l, const Expr* r);
   static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
   static const Expr* lt(const Expr* l, const Expr* r);
-  static const Expr* fn(string f, const Expr* x);
-  static const Expr* fn(string f, const Expr* x, const Expr* y);
-  static const Expr* fn(string f, const Expr* x, const Expr* y, const Expr* z);
-  static const Expr* fn(string f, vector<const Expr*> args);
-  static const Expr* id(string x);
+  static const Expr* fn(std::string f, const Expr* x);
+  static const Expr* fn(std::string f, const Expr* x, const Expr* y);
+  static const Expr* fn(std::string f, const Expr* x, const Expr* y, const Expr* z);
+  static const Expr* fn(std::string f, std::list<const Expr*> args);
+  static const Expr* id(std::string x);
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(bool b);
-  static const Expr* lit(string v);
+  static const Expr* lit(std::string v);
+  static const Expr* lit(unsigned v) { return lit((unsigned long) v); }
   static const Expr* lit(unsigned long v);
   static const Expr* lit(long v);
-  static const Expr* lit(string v, unsigned w);
+  static const Expr* lit(std::string v, unsigned w);
   static const Expr* lit(unsigned long v, unsigned w);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
-  static const Expr* sel(string b, string i);
+  static const Expr* sel(std::string b, std::string i);
 };
 
 class BinExpr : public Expr {
@@ -54,7 +55,7 @@ private:
   const Expr* rhs;
 public:
   BinExpr(const Binary b, const Expr* l, const Expr* r) : op(b), lhs(l), rhs(r) {}
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
 };
 
 class CondExpr : public Expr {
@@ -64,66 +65,73 @@ class CondExpr : public Expr {
 public:
   CondExpr(const Expr* c, const Expr* t, const Expr* e)
     : cond(c), then(t), else_(e) {}
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
 };
 
 class FunExpr : public Expr {
-  string fun;
-  vector<const Expr*> args;
+  std::string fun;
+  std::list<const Expr*> args;
 public:
-  FunExpr(string f, vector<const Expr*> xs) : fun(f), args(xs) {}
-  void print(ostream& os) const;
+  FunExpr(std::string f, std::list<const Expr*> xs) : fun(f), args(xs) {}
+  void print(std::ostream& os) const;
 };
 
 class BoolLit : public Expr {
   bool val;
 public:
   BoolLit(bool b) : val(b) {}
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
 };
 
 class IntLit : public Expr {
-  string val;
+  std::string val;
 public:
-  IntLit(string v) : val(v) {}
+  IntLit(std::string v) : val(v) {}
   IntLit(unsigned long v) {
-    stringstream s;
+    std::stringstream s;
     s << v;
     val = s.str();
   }
   IntLit(long v) {
-    stringstream s;
+    std::stringstream s;
     s << v;
     val = s.str();
   }
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
 };
 
 class BvLit : public Expr {
-  string val;
+  std::string val;
   unsigned width;
 public:
-  BvLit(string v, unsigned w) : val(v), width(w) {}
+  BvLit(std::string v, unsigned w) : val(v), width(w) {}
   BvLit(unsigned long v, unsigned w) : width(w) {
-    stringstream s;
+    std::stringstream s;
     s << v;
     val = s.str();
   }
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
+};
+
+class StringLit : public Expr {
+  std::string val;
+public:
+  StringLit(std::string v) : val(v) {}
+  void print(std::ostream& os) const;
 };
 
 class NegExpr : public Expr {
   const Expr* expr;
 public:
   NegExpr(const Expr* e) : expr(e) {}
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
 };
 
 class NotExpr : public Expr {
   const Expr* expr;
 public:
   NotExpr(const Expr* e) : expr(e) {}
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
 };
 
 class QuantExpr : public Expr {
@@ -131,396 +139,408 @@ public:
   enum Quantifier { Exists, Forall };
 private:
   Quantifier quant;
-  vector< pair<string,string> > vars;
+  std::list< std::pair<std::string,std::string> > vars;
   const Expr* expr;
 public:
-  QuantExpr(Quantifier q, vector< pair<string,string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
-  void print(ostream& os) const;
+  QuantExpr(Quantifier q, std::list< std::pair<std::string,std::string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
+  void print(std::ostream& os) const;
 };
 
 class SelExpr : public Expr {
   const Expr* base;
-  vector<const Expr*> idxs;
+  std::list<const Expr*> idxs;
 public:
-  SelExpr(const Expr* a, vector<const Expr*> i) : base(a), idxs(i) {}
-  SelExpr(const Expr* a, const Expr* i) : base(a), idxs(vector<const Expr*>(1, i)) {}
-  void print(ostream& os) const;
+  SelExpr(const Expr* a, std::list<const Expr*> i) : base(a), idxs(i) {}
+  SelExpr(const Expr* a, const Expr* i) : base(a), idxs(std::list<const Expr*>(1, i)) {}
+  void print(std::ostream& os) const;
 };
 
 class UpdExpr : public Expr {
   const Expr* base;
-  vector<const Expr*> idxs;
+  std::list<const Expr*> idxs;
   const Expr* val;
 public:
-  UpdExpr(const Expr* a, vector<const Expr*> i, const Expr* v)
+  UpdExpr(const Expr* a, std::list<const Expr*> i, const Expr* v)
     : base(a), idxs(i), val(v) {}
   UpdExpr(const Expr* a, const Expr* i, const Expr* v)
-    : base(a), idxs(vector<const Expr*>(1, i)), val(v) {}
-  void print(ostream& os) const;
+    : base(a), idxs(std::list<const Expr*>(1, i)), val(v) {}
+  void print(std::ostream& os) const;
 };
 
 class VarExpr : public Expr {
-  string var;
+  std::string var;
 public:
-  VarExpr(string v) : var(v) {}
-  string name() const { return var; }
-  void print(ostream& os) const;
-};
-
-class AttrVal {
-public:
-  virtual void print(ostream& os) const = 0;
-};
-
-class StrVal : public AttrVal {
-  string val;
-public:
-  StrVal(string s) : val(s) {}
-  void print(ostream& os) const;
-};
-
-class ExprVal : public AttrVal {
-  const Expr* val;
-public:
-  ExprVal(const Expr* e) : val(e) {}
-  void print(ostream& os) const;
+  VarExpr(std::string v) : var(v) {}
+  std::string name() const { return var; }
+  void print(std::ostream& os) const;
 };
 
 class Attr {
 protected:
-  string name;
-  vector<const AttrVal*> vals;
+  std::string name;
+  std::list<const Expr*> vals;
 public:
-  Attr(string n, vector<const AttrVal*> vs) : name(n), vals(vs) {}
-  void print(ostream& os) const;
+  Attr(std::string n, std::initializer_list<const Expr*> vs) : name(n), vals(vs) {}
+  void print(std::ostream& os) const;
 
-  static const Attr* attr(string s);
-  static const Attr* attr(string s, string v);
-  static const Attr* attr(string s, int v);
-  static const Attr* attr(string s, string v, int i);
-  static const Attr* attr(string s, string v, int i, int j);
-  static const Attr* attr(string s, vector<const Expr*> vs);
+  static const Attr* attr(std::string s);
+  static const Attr* attr(std::string s, std::string v);
+  static const Attr* attr(std::string s, int v);
+  static const Attr* attr(std::string s, std::string v, int i);
+  static const Attr* attr(std::string s, std::string v, int i, int j);
+  static const Attr* attr(std::string s, std::initializer_list<const Expr*> vs);
 };
 
 class Stmt {
 public:
-  static const Stmt* annot(vector<const Attr*> attrs);
+  enum Kind {
+    ASSERT, ASSUME, ASSIGN, HAVOC, GOTO, CALL, RETURN, CODE, COMMENT
+  };
+private:
+  const Kind kind;
+protected:
+  Stmt(Kind k) : kind(k) {}
+public:
+  Kind getKind() const { return kind; }
+
+ public:
+  virtual ~Stmt() {}
+  static const Stmt* annot(std::list<const Attr*> attrs);
   static const Stmt* annot(const Attr* a);
-  static const Stmt* assert_(const Expr* e);
+  static const Stmt* assert_(const Expr* e,
+    std::list<const Attr*> attrs = std::list<const Attr*>());
   static const Stmt* assign(const Expr* e, const Expr* f);
-  static const Stmt* assign(vector<const Expr*> lhs, vector<const Expr*> rhs);
+  static const Stmt* assign(std::list<const Expr*> lhs, std::list<const Expr*> rhs);
   static const Stmt* assume(const Expr* e);
   static const Stmt* assume(const Expr* e, const Attr* attr);
-  static const Stmt* call(string p);
-  static const Stmt* call(string p, const Expr* x);
-  static const Stmt* call(string p, const Expr* x, const Attr* attr);
-  static const Stmt* call(string p, const Expr* x, string r);
-  static const Stmt* call(string p, const Expr* x, const Expr* y, string r);
-  static const Stmt* call(string p, vector<const Expr*> ps);
-  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs);
-  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs, const Attr* attr);
-  static const Stmt* call(string p, vector<const Expr*> ps, vector<string> rs, vector<const Attr*> ax);
-  static const Stmt* comment(string c);
-  static const Stmt* goto_(string t);
-  static const Stmt* goto_(string t, string u);
-  static const Stmt* goto_(vector<string> ts);
-  static const Stmt* havoc(string x);
+  static const Stmt* call(
+    std::string p,
+    std::list<const Expr*> args = std::list<const Expr*>(),
+    std::list<std::string> rets = std::list<std::string>(),
+    std::list<const Attr*> attrs = std::list<const Attr*>());
+  static const Stmt* comment(std::string c);
+  static const Stmt* goto_(std::list<std::string> ts);
+  static const Stmt* havoc(std::string x);
   static const Stmt* return_();
   static const Stmt* return_(const Expr* e);
   static const Stmt* skip();
-  static const Stmt* code(string s);
-  virtual void print(ostream& os) const = 0;
+  static const Stmt* code(std::string s);
+  virtual void print(std::ostream& os) const = 0;
 };
 
 class AssertStmt : public Stmt {
   const Expr* expr;
+  std::list<const Attr*> attrs;
 public:
-  AssertStmt(const Expr* e) : expr(e) {}
-  void print(ostream& os) const;
+  AssertStmt(const Expr* e, std::list<const Attr*> ax)
+    : Stmt(ASSERT), expr(e), attrs(ax) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == ASSERT; }
 };
 
 class AssignStmt : public Stmt {
-  vector<const Expr*> lhs;
-  vector<const Expr*> rhs;
+  std::list<const Expr*> lhs;
+  std::list<const Expr*> rhs;
 public:
-  AssignStmt(vector<const Expr*> lhs, vector<const Expr*> rhs) : lhs(lhs), rhs(rhs) {}
-  void print(ostream& os) const;
+  AssignStmt(std::list<const Expr*> lhs, std::list<const Expr*> rhs)
+    : Stmt(ASSIGN), lhs(lhs), rhs(rhs) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == ASSIGN; }
 };
 
 class AssumeStmt : public Stmt {
   const Expr* expr;
-  vector<const Attr*> attrs;
+  std::list<const Attr*> attrs;
 public:
-  AssumeStmt(const Expr* e) : expr(e) {}
+  AssumeStmt(const Expr* e) : Stmt(ASSUME), expr(e) {}
   void add(const Attr* a) {
     attrs.push_back(a);
   }
-  void print(ostream& os) const;
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == ASSUME; }
 };
 
 class CallStmt : public Stmt {
-  string proc;
-  vector<const Expr*> params;
-  vector<string> returns;
-  vector<const Attr*> attrs;
+  std::string proc;
+  std::list<const Attr*> attrs;
+  std::list<const Expr*> params;
+  std::list<std::string> returns;
 public:
-  CallStmt(string p, vector<const Expr*> ps, vector<string> rs, 
-    vector<const Attr*> ax)
-    : proc(p), params(ps), returns(rs), attrs(ax) {}
-  void print(ostream& os) const;
+  CallStmt(std::string p,
+    std::list<const Attr*> attrs,
+    std::list<const Expr*> args,
+    std::list<std::string> rets)
+    : Stmt(CALL), proc(p), attrs(attrs), params(args), returns(rets) {}
+
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == CALL; }
 };
 
 class Comment : public Stmt {
-  string str;
+  std::string str;
 public:
-  Comment(string s) : str(s) {}
-  void print(ostream& os) const;
+  Comment(std::string s) : Stmt(COMMENT), str(s) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == COMMENT; }
 };
 
 class GotoStmt : public Stmt {
-  vector<string> targets;
+  std::list<std::string> targets;
 public:
-  GotoStmt(vector<string> ts) : targets(ts) {}
-  void print(ostream& os) const;
+  GotoStmt(std::list<std::string> ts) : Stmt(GOTO), targets(ts) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == GOTO; }
 };
 
 class HavocStmt : public Stmt {
-  vector<string> vars;
+  std::list<std::string> vars;
 public:
-  HavocStmt(vector<string> vs) : vars(vs) {}
-  void print(ostream& os) const;
+  HavocStmt(std::list<std::string> vs) : Stmt(HAVOC), vars(vs) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == HAVOC; }
 };
 
 class ReturnStmt : public Stmt {
   const Expr* expr;
 public:
-  ReturnStmt(const Expr* e = nullptr) : expr(e) {}
-  void print(ostream& os) const;
+  ReturnStmt(const Expr* e = nullptr) : Stmt(RETURN), expr(e) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == RETURN; }
 };
 
 class CodeStmt : public Stmt {
-  string code;
+  std::string code;
 public:
-  CodeStmt(string s) : code(s) {}
-  void print(ostream& os) const;
+  CodeStmt(std::string s) : Stmt(CODE), code(s) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Stmt* S) { return S->getKind() == CODE; }
 };
+
+class Block;
+class ProcDecl;
+class FuncDecl;
 
 class Decl {
-  static unsigned uniqueId;
 public:
-  enum kind { STOR, PROC, FUNC, TYPE, UNNAMED, CODE };
+  enum Kind {
+    CONSTANT, VARIABLE, PROCEDURE, FUNCTION, TYPE, AXIOM, CODE
+  };
+private:
+  const Kind kind;
+public:
+  Kind getKind() const { return kind; }
+private:
+  static unsigned uniqueId;
 protected:
   unsigned id;
-  string name;
-  vector<const Attr*> attrs;
-  Decl(string n, vector<const Attr*> ax) : id(uniqueId++), name(n), attrs(ax) { }
-  Decl(string n) : id(uniqueId++), name(n), attrs(vector<const Attr*>()) { }
+  std::string name;
+  std::list<const Attr*> attrs;
+  Decl(Kind k, std::string n, std::list<const Attr*> ax)
+    : kind(k), id(uniqueId++), name(n), attrs(ax) { }
 public:
-  virtual void print(ostream& os) const = 0;
+  virtual ~Decl() {}
+  virtual void print(std::ostream& os) const = 0;
   unsigned getId() const { return id; }
-  string getName() const { return name; }
-  virtual kind getKind() const = 0;
+  std::string getName() const { return name; }
   void addAttr(const Attr* a) { attrs.push_back(a); }
-  
-  static Decl* typee(string name, string type);
-  static Decl* axiom(const Expr* e);
-  static Decl* function(string name, vector< pair<string,string> > args, string type, const Expr* e);
-  static Decl* constant(string name, string type);
-  static Decl* constant(string name, string type, bool unique);
-  static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
-  static Decl* variable(string name, string type);
-  static Decl* procedure(Program& p, string name);
-  static Decl* procedure(Program& p, string name,
-    vector< pair<string,string> > args, vector< pair<string,string> > rets);
-  static Decl* code(string s);
-};
 
-struct DeclCompare {
-  bool operator()(Decl* a, Decl* b) {
-    assert(a && b);    
-    if (a->getKind() == b->getKind() && a->getKind() != Decl::UNNAMED)
-      return a->getName() < b->getName();
-    else if (a->getKind() == b->getKind())
-      return a->getId() < b->getId();
-    else
-      return a->getKind() < b->getKind();
-  }
+  static Decl* typee(std::string name, std::string type);
+  static Decl* axiom(const Expr* e);
+  static FuncDecl* function(
+    std::string name,
+    std::list< std::pair<std::string,std::string> > args,
+    std::string type,
+    const Expr* e = NULL,
+    std::list<const Attr*> attrs = std::list<const Attr*>());
+  static Decl* constant(std::string name, std::string type);
+  static Decl* constant(std::string name, std::string type, bool unique);
+  static Decl* constant(std::string name, std::string type, std::list<const Attr*> ax, bool unique);
+  static Decl* variable(std::string name, std::string type);
+  static ProcDecl* procedure(std::string name,
+    std::list< std::pair<std::string,std::string> > params = std::list< std::pair<std::string,std::string> >(),
+    std::list< std::pair<std::string,std::string> > rets = std::list< std::pair<std::string,std::string> >(),
+    std::list<Decl*> decls = std::list<Decl*>(),
+    std::list<Block*> blocks = std::list<Block*>());
+  static Decl* code(std::string name, std::string s);
+  static FuncDecl* code(ProcDecl* P);
 };
 
 class TypeDecl : public Decl {
-  string alias;
+  std::string alias;
 public:
-  TypeDecl(string n, string t) : Decl(n), alias(t) {}
-  kind getKind() const { return TYPE; }
-  void print(ostream& os) const;
+  TypeDecl(std::string n, std::string t) : Decl(TYPE, n, {}), alias(t) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == TYPE; }
 };
 
 class AxiomDecl : public Decl {
   const Expr* expr;
   static int uniqueId;
 public:
-  AxiomDecl(const Expr* e) : Decl(""), expr(e) {}
-  kind getKind() const { return UNNAMED; }
-  void print(ostream& os) const;
+  AxiomDecl(const Expr* e) : Decl(AXIOM, "", {}), expr(e) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == AXIOM; }
 };
 
 class ConstDecl : public Decl {
-  string type;
+  std::string type;
   bool unique;
 public:
-  ConstDecl(string n, string t, vector<const Attr*> ax, bool u) : Decl(n,ax), type(t), unique(u) {}
-  kind getKind() const { return STOR; }
-  void print(ostream& os) const;
+  ConstDecl(std::string n, std::string t, std::list<const Attr*> ax, bool u)
+    : Decl(CONSTANT, n, ax), type(t), unique(u) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == CONSTANT; }
 };
 
 class FuncDecl : public Decl {
-  vector< pair<string, string> > params;
-  string type;
+  std::list< std::pair<std::string, std::string> > params;
+  std::string type;
   const Expr* body;
 public:
-  FuncDecl(string n, vector<const Attr*> ax, vector< pair<string, string> > ps,
-    string t, const Expr* b)
-    : Decl(n,ax), params(ps), type(t), body(b) {}
-  kind getKind() const { return FUNC; }
-  void print(ostream& os) const;
+  FuncDecl(std::string n, std::list<const Attr*> ax, std::list< std::pair<std::string, std::string> > ps,
+    std::string t, const Expr* b)
+    : Decl(FUNCTION, n, ax), params(ps), type(t), body(b) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == FUNCTION; }
 };
 
 class VarDecl : public Decl {
-  string type;
+  std::string type;
 public:
-  VarDecl(string n, string t) : Decl(n), type(t) {}
-  kind getKind() const { return STOR; }
-  void print(ostream& os) const;
+  VarDecl(std::string n, std::string t) : Decl(VARIABLE, n, {}), type(t) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == VARIABLE; }
 };
 
 class Block {
-  string name;
-  vector<const Stmt*> stmts;
+  std::string name;
+  typedef std::list<const Stmt*> StatementList;
+  StatementList stmts;
 public:
-  Block() : name("") {}
-  Block(string n) : name(n) {}
-  void print(ostream& os) const;
+  static Block* block(std::string n = "", std::list<const Stmt*> stmts = std::list<const Stmt*>()) {
+    return new Block(n,stmts);
+  }
+  Block(std::string n, std::list<const Stmt*> stmts) : name(n), stmts(stmts) {}
+  void print(std::ostream& os) const;
+  typedef StatementList::iterator iterator;
+  iterator begin() { return stmts.begin(); }
+  iterator end() { return stmts.end(); }
+  StatementList &getStatements() { return stmts; }
   void insert(const Stmt* s) {
     stmts.insert(stmts.begin(), s);
   }
   void addStmt(const Stmt* s) {
     stmts.push_back(s);
   }
-  string getName() {
+  std::string getName() {
     return name;
   }
 };
 
 class CodeContainer {
 protected:
-  Program& prog;
-  set<Decl*,DeclCompare> decls;
-  vector<Block*> blocks;
-  vector<string> mods;
-  CodeContainer(Program& p) : prog(p) {}
+  typedef std::list<Decl*> DeclarationList;
+  typedef std::list<Block*> BlockList;
+  typedef std::list<std::string> ModifiesList;
+  DeclarationList decls;
+  BlockList blocks;
+  ModifiesList mods;
+  CodeContainer(DeclarationList ds, BlockList bs) : decls(ds), blocks(bs) {}
 public:
-  Program& getProg() const {
-    return prog;
-  }
-  void addDecl(Decl* d) {
-    decls.insert(d);
-  }
+  typedef DeclarationList::iterator decl_iterator;
+  decl_iterator decl_begin() { return decls.begin(); }
+  decl_iterator decl_end() { return decls.end(); }
+  DeclarationList& getDeclarations() { return decls; }
+
+  typedef BlockList::iterator iterator;
+  iterator begin() { return blocks.begin(); }
+  iterator end() { return blocks.end(); }
+  BlockList& getBlocks() { return blocks; }
+
+  typedef ModifiesList::iterator mod_iterator;
+  mod_iterator mod_begin() { return mods.begin(); }
+  mod_iterator mod_end() { return mods.end(); }
+  ModifiesList& getModifies() { return mods; }
+
   void insert(const Stmt* s) {
     blocks.front()->insert(s);
   }
-  void addBlock(Block* b) {
-    blocks.push_back(b);
-  }
-  bool hasBody() {
-    return decls.size() > 0 || blocks.size() > 0;
-  }
-  void addMod(string m) {
-    mods.push_back(m);
-  }
-  void addMods(vector<string> ms) {
-    for (unsigned i = 0; i < ms.size(); i++)
-      addMod(ms[i]);
-  }
-  virtual bool isProc() { return false; }
 };
 
 class CodeExpr : public Expr, public CodeContainer {
 public:
-  CodeExpr(Program& p) : CodeContainer(p) {}
-  void print(ostream& os) const;
+  CodeExpr(DeclarationList ds, BlockList bs) : CodeContainer(ds, bs) {}
+  void print(std::ostream& os) const;
 };
 
 class ProcDecl : public Decl, public CodeContainer {
-  vector< pair<string,string> > params;
-  vector< pair<string,string> > rets;
-  vector<const Expr*> requires;
-  vector<const Expr*> ensures;
+  typedef std::pair<std::string,std::string> Parameter;
+  typedef std::list<Parameter> ParameterList;
+  typedef std::list<const Expr*> SpecificationList;
+
+  ParameterList params;
+  ParameterList rets;
+  SpecificationList requires;
+  SpecificationList ensures;
 public:
-  ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
-    : Decl(n), CodeContainer(p), params(ps), rets(rs) {}
-  kind getKind() const { return PROC; }
-  void addParam(string x, string t) {
-    params.push_back(make_pair(x, t));
-  }
-  void addRet(string x, string t) {
-    rets.push_back(make_pair(x, t));
-  }
-  vector< pair<string,string> > getRets() {
-    return rets;
-  }
-  void addRequires(const Expr* e) {
-    requires.push_back(e);
-  }
-  void addEnsures(const Expr* e) {
-    ensures.push_back(e);
-  }
-  bool isProc() { return true; }
-  void print(ostream& os) const;
+  ProcDecl(std::string n, ParameterList ps, ParameterList rs,
+    DeclarationList ds, BlockList bs)
+    : Decl(PROCEDURE, n, {}), CodeContainer(ds, bs), params(ps), rets(rs) {}
+  typedef ParameterList::iterator param_iterator;
+  param_iterator param_begin() { return params.begin(); }
+  param_iterator param_end() { return params.end(); }
+  ParameterList &getParameters() { return params; }
+
+  param_iterator returns_begin() { return rets.begin(); }
+  param_iterator returns_end() { return rets.end(); }
+  ParameterList &getReturns() { return rets; }
+
+  typedef SpecificationList::iterator spec_iterator;
+  spec_iterator requires_begin() { return requires.begin(); }
+  spec_iterator requires_end() { return requires.end(); }
+  SpecificationList &getRequires() { return requires; }
+
+  spec_iterator ensures_begin() { return ensures.begin(); }
+  spec_iterator ensures_end() { return ensures.end(); }
+  SpecificationList &getEnsures() { return ensures; }
+
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == PROCEDURE; }
 };
 
 class CodeDecl : public Decl {
+  std::string code;
 public:
-  CodeDecl(string s) : Decl(s) {}
-  kind getKind() const { return CODE; }
-  void print(ostream& os) const;
+  CodeDecl(std::string name, std::string s) : Decl(CODE, name, {}), code(s) {}
+  void print(std::ostream& os) const;
+  static bool classof(const Decl* D) { return D->getKind() == CODE; }
 };
 
 class Program {
   // TODO While I would prefer that a program is just a set or sequence of
   // declarations, putting the Prelude in a CodeDeclaration does not work,
   // and I do not yet understand why; see below. --mje
-  string prelude;
-  set<Decl*,DeclCompare> decls;
+  std::string prelude;
+  typedef std::list<Decl*> DeclarationList;
+  DeclarationList decls;
 public:
   Program() {}
-  void print(ostream& os) const;
-  void addDecl(Decl* d) {
-    decls.insert(d);
-  }
-  void addDecl(string s) {
-    // TODO Why does this break to put the prelude string inside of a CodeDecl?
-    decls.insert( Decl::code(s) );
-  }
-  void appendPrelude(string s) {
-    prelude += s;
-  }
-  void addDecls(vector<Decl*> ds) {
-    for (unsigned i = 0; i < ds.size(); i++)
-      addDecl(ds[i]);
-  }
-  void addDecls(vector<string> ds) {
-    for (unsigned i=0; i < ds.size(); i++)
-      addDecl(ds[i]);
-  }
-  vector<ProcDecl*> getProcs() {
-    vector<ProcDecl*> procs;
-    for (set<Decl*>::iterator i = decls.begin(); i != decls.end(); ++i)
-      if ((*i)->getKind() == Decl::PROC)
-        procs.push_back((ProcDecl*) (*i));
-    return procs;
-  }
+  void print(std::ostream& os) const;
+  typedef DeclarationList::iterator iterator;
+  iterator begin() { return decls.begin(); }
+  iterator end() { return decls.end(); }
+  unsigned size() { return decls.size(); }
+  bool empty() { return decls.empty(); }
+  DeclarationList& getDeclarations() { return decls; }
+  void appendPrelude(std::string s) { prelude += s; }
 };
+
+std::ostream& operator<<(std::ostream& os, const Expr& e);
+std::ostream& operator<<(std::ostream& os, const Expr* e);
+
+std::ostream& operator<<(std::ostream& os, Decl& e);
+std::ostream& operator<<(std::ostream& os, Decl* e);
+
 }
 
 #endif // BOOGIEAST_H
-

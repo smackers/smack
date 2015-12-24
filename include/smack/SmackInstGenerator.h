@@ -7,41 +7,34 @@
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
 #include "smack/Naming.h"
-#include "smack/Slicing.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include <unordered_set>
 #include <set>
 
 namespace smack {
 
-typedef vector<Slice*> Slices;
-
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
+  LoopInfo& loops;
   SmackRep& rep;
-  CodeContainer& proc;
+  ProcDecl& proc;
   Naming& naming;
-  Slices& slices;
 
   Block* currBlock;
-  map<const llvm::BasicBlock*, Block*> blockMap;
-  map<const llvm::Value*, string> sourceNames;
+  std::map<const llvm::BasicBlock*, Block*> blockMap;
+  std::map<const llvm::Value*, std::string> sourceNames;
 
   Block* createBlock();
   Block* getBlock(llvm::BasicBlock* bb);
 
   void generatePhiAssigns(llvm::TerminatorInst& i);
   void generateGotoStmts(llvm::Instruction& i,
-                         vector<pair<const Expr*, llvm::BasicBlock*> > target);
+                         std::vector<std::pair<const Expr*, llvm::BasicBlock*> > target);
   void processInstruction(llvm::Instruction& i);
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
-
-  void addDecl(Decl* d) { proc.addDecl(d); }
-  void addMod(string x) { proc.addMod(x); }
-  void addTopDecl(Decl* d) { proc.getProg().addDecl(d); }
-  void addBlock(Block* b) { proc.addBlock(b); }
 
 public:
   void emit(const Stmt* s) {
@@ -52,18 +45,9 @@ public:
   }
 
 public:
-  SmackInstGenerator(SmackRep& R, CodeContainer& P, Naming& N, Slices& S)
-    : rep(R), proc(P), naming(N), slices(S) {}
+  SmackInstGenerator(LoopInfo& LI, SmackRep& R, ProcDecl& P, Naming& N)
+    : loops(LI), rep(R), proc(P), naming(N) {}
 
-  Slice* getSlice(llvm::Value* V) {
-    using namespace llvm;
-    if (ConstantInt* CI = dyn_cast<ConstantInt>(V)) {
-      uint64_t i = CI->getLimitedValue();
-      assert(slices.size() > i && "Did not find expression.");
-      return slices[i];
-    }
-    assert(false && "Unexpected value.");
-  }
 
   void visitBasicBlock(llvm::BasicBlock& bb);
   void visitInstruction(llvm::Instruction& i);
@@ -75,16 +59,16 @@ public:
   void visitInvokeInst(llvm::InvokeInst& i);
   void visitResumeInst(llvm::ResumeInst& i);
   void visitUnreachableInst(llvm::UnreachableInst& i);
-  
+
   void visitBinaryOperator(llvm::BinaryOperator& I);
 
   // TODO implement extractelement
   // TODO implement insertelement
-  // TODO implement shufflevector
+  // TODO implement shufflestd::vector
 
   void visitExtractValueInst(llvm::ExtractValueInst& i);
   void visitInsertValueInst(llvm::InsertValueInst& i);
-  
+
   void visitAllocaInst(llvm::AllocaInst& i);
   void visitLoadInst(llvm::LoadInst& i);
   void visitStoreInst(llvm::StoreInst& i);
@@ -101,7 +85,7 @@ public:
   void visitCallInst(llvm::CallInst& i);
   // TODO implement va_arg
   void visitLandingPadInst(llvm::LandingPadInst& i);
-  
+
   void visitMemCpyInst(llvm::MemCpyInst& i);
   void visitMemSetInst(llvm::MemSetInst& i);
 };

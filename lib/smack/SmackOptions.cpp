@@ -7,6 +7,17 @@
 
 namespace smack {
 
+const llvm::cl::list<std::string> SmackOptions::EntryPoints(
+  "entry-points",
+  llvm::cl::ZeroOrMore,
+  llvm::cl::desc("Entry point procedure names"),
+  llvm::cl::value_desc("PROCS")
+);
+
+const llvm::cl::opt<bool> SmackOptions::Warnings(
+  "warnings", llvm::cl::desc("Enable warnings.")
+);
+
 const llvm::cl::opt<bool> SmackOptions::MemoryModelDebug(
   "mem-mod-dbg", llvm::cl::desc("Enable memory model debugging.")
 );
@@ -20,10 +31,26 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
 );
 
 const llvm::cl::opt<bool> SmackOptions::BitPrecise(
-  "bit-precise", llvm::cl::desc("Model bits and bit operations precisely.")
+  "bit-precise", llvm::cl::desc("Model non-pointer values as bit vectors.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
+  "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
+);
+
+const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
+  "no-memory-splitting", llvm::cl::desc("Disable splitting memory into regions.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
   "no-byte-access-inference", llvm::cl::desc("Optimize bit-precision with DSA.")
 );
+
+bool SmackOptions::isEntryPoint(std::string name) {
+  for (auto EP : EntryPoints)
+    if (name == EP)
+      return true;
+  return false;
+}
+
 }

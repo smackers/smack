@@ -135,7 +135,7 @@ void DSNodeEquivs::equivNodesThroughCallsite(CallInst *CI) {
     // We can't merge through graphs that don't exist.
     if (!TDDS.hasDSGraph(Callee))
       continue;
-    
+
     DSGraph &CalleeGraph = *TDDS.getDSGraph(Callee);
     DSGraph::NodeMapTy NodeMap;
 
@@ -246,10 +246,8 @@ const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
     std::deque<const User *> WL;
     SmallSet<const User *, 8> Visited;
 
-    // FIXME FIXME FIXME for some reason the first attempt segfaults
-    // WL.insert(WL.end(), V->user_begin(), V->user_end());
-    for (llvm::Value::const_user_iterator i = V->user_begin(), e = V->user_end(); i != e; ++i)
-      WL.push_back(*i);
+    for (auto U : V->users())
+      WL.push_back(U);
 
     do {
       const User *TheUser = WL.front();
@@ -276,7 +274,8 @@ const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
         //
         // If this use is of some other nature, look at the users of this use.
         //
-        WL.insert(WL.end(), TheUser->user_begin(), TheUser->user_end());
+        for (auto U : TheUser->users())
+          WL.push_back(U);
       }
     } while (!WL.empty());
   }

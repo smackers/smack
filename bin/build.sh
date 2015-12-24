@@ -15,6 +15,7 @@
 # - Z3
 # - Boogie
 # - Corral
+# - lockpwn
 #
 ################################################################################
 
@@ -23,6 +24,7 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
+BUILD_LOCKPWN=0
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
@@ -34,13 +36,14 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
+LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
 
 source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
-WGET="wget --no-verbose"
+WGET="wget --no-verbose --method=GET"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -152,18 +155,18 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923681&FileTime=130586905110730000&Build=20983"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-debian-8.2.zip"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-ubuntu-14*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923684&FileTime=130586905368570000&Build=20983"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=z3&DownloadId=923684&FileTime=130586905368570000&Build=20983"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -193,10 +196,10 @@ do
   case "$1" in
   --prefix)
     puts "Using install prefix $2"
-    INSTALL_PREFIX="$2"
+    INSTALL_PREFIX="${2%/}"
     CONFIGURE_INSTALL_PREFIX="--prefix=$2"
     CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=$PATH:${INSTALL_PREFIX}/bin >> ${SMACKENV}
+    echo export PATH=${INSTALL_PREFIX}/bin:$PATH >> ${SMACKENV}
     shift
     shift
     ;;
@@ -326,11 +329,12 @@ then
 
   git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}
-  git checkout ${BOOGIE_COMMIT}
+  git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
   mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
+  rm -rf /tmp/nuget/
   xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
@@ -349,7 +353,7 @@ then
   cd ${CORRAL_DIR}
 #  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
 #  cd ${CORRAL_DIR}
-#  git checkout ${CORRAL_COMMIT}
+#  git reset --hard ${CORRAL_COMMIT}
   cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
@@ -357,6 +361,18 @@ then
   puts "Built Corral"
 fi
 
+if [ ${BUILD_LOCKPWN} -eq 1 ]
+then
+  puts "Building lockpwn"
+
+  cd ${ROOT}
+  git clone https://github.com/smackers/lockpwn.git
+  cd ${LOCKPWN_DIR}
+  xbuild lockpwn.sln /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
+
+  puts "Built lockpwn"
+fi
 
 if [ ${BUILD_SMACK} -eq 1 ]
 then
@@ -371,6 +387,7 @@ then
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
+  echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"
@@ -385,6 +402,9 @@ then
 
   cd ${SMACK_DIR}/test
   ./regtest.py
+  res=$?
 
   puts "Regression tests complete"
 fi
+
+exit $res

@@ -172,7 +172,7 @@ DSNode *DSGraph::addObjectToGraph(Value *Ptr, bool UseDeclaredType) {
   } else if (isa<AllocaInst>(Ptr)) {
     N->setAllocaMarker();
   } else {
-    assert(0 && "Illegal memory object input!");
+    llvm_unreachable("Illegal memory object input!");
   }
   return N;
 }
@@ -1350,7 +1350,32 @@ void DSGraph::computeNodeMapping(const DSNodeHandle &NH1,
       //
       // Compute the node mapping for the link.
       //
-      computeNodeMapping (N1NH, N2->getLink(offset), NodeMap, StrictChecking);
+      const DSNodeHandle &N2NH = N2->getLink(offset);
+
+      //
+      // Make sure not to recurse into the same node;
+      // that can cause recursion that does not terminate.
+      //
+      if (N1NH.getNode() == N1 && !N2NH.isNull()) {
+       DSNode *N1L = N1NH.getNode(), *N2L = N2NH.getNode();
+
+        DSNodeHandle &Entry = NodeMap[N1L];
+        if (Entry.isNull()) {
+          //
+          // Modify the entry in the node map so that the DSNode from the first
+          // DSNodeHandle is mapped to the second DSNodeHandle.
+          //
+          // FIXME: AA:I am not sure what the right mapping for the
+          // following case is. I believe we do not need to create any 
+          // new mapping.
+          //assert(((signed int)(N2NH.getOffset()-N1NH.getOffset())>=0) && " Underflow error ");
+          if(N2NH.getOffset() >= N1NH.getOffset()) {
+            Entry.setTo(N2L, N2NH.getOffset()-N1NH.getOffset());
+          }
+        }
+      } else {
+        computeNodeMapping (N1NH, N2NH, NodeMap, StrictChecking);
+      }
     }
   }
 }

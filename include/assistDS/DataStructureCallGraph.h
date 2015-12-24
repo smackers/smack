@@ -73,7 +73,7 @@ public:
   // override this to adjust the this pointer as needed for the specified pass
   // info.
   virtual void *getAdjustedAnalysisPointer(AnalysisID PI) {
-    if (PI == &CallGraphAnalysis::ID)
+    if (PI == CallGraphAnalysis::ID())
       return (CallGraph*)this;
     return this;
   }

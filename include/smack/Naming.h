@@ -7,12 +7,10 @@
 
 #include "llvm/Support/Regex.h"
 #include "llvm/IR/Value.h"
-#include <stack>
 #include <map>
 
 namespace smack {
 
-using namespace std;
 using llvm::Regex;
 using llvm::Value;
 
@@ -20,32 +18,83 @@ class Naming {
   static Regex BPL_KW;
   static Regex SMACK_NAME;
 
-  typedef map<const Value*, string> NameMap;
-  stack<NameMap> nameStack;
+  std::map<const Value*, std::string> names;
   unsigned blockNum;
   unsigned varNum;
+  unsigned undefNum;
 
 public:
-  static const string BLOCK_LBL;
-  static const string RET_VAR;
-  static const string EXN_VAR;
-  static const string EXN_VAL_VAR;
-  static const string BOOL_VAR;
-  static const string FLOAT_VAR;
-  static const string PTR_VAR;
-  static const string UNDEF_SYM;
+  static const std::string BOOL_TYPE;
+  static const std::string FLOAT_TYPE;
+  static const std::string PTR_TYPE;
+  static const std::string NULL_VAL;
 
-  Naming() : blockNum(0), varNum(0) { }
-  void enter();
-  void leave();
-  string get(const Value& V);
-  string freshBlockName();
-  string freshVarName(const Value& V);
+  static const std::string INIT_FUNC_PREFIX;
+  static const std::string DECLARATIONS_PROC;
 
-  static bool isBplKeyword(string s);
-  static bool isSmackName(string s);
-  static bool isSmackGeneratedName(string s);
-  static string escape(string s);
+  static const std::string CONTRACT_REQUIRES;
+  static const std::string CONTRACT_ENSURES;
+  static const std::string CONTRACT_INVARIANT;
+
+  static const std::string MOD_PROC;
+  static const std::string CODE_PROC;
+  static const std::string DECL_PROC;
+  static const std::string TOP_DECL_PROC;
+  static const std::string VALUE_PROC;
+  static const std::string RETURN_VALUE_PROC;
+  static const std::string INITIALIZE_PROC;
+  static const std::string STATIC_INIT_PROC;
+
+  static const std::string MEMORY;
+  static const std::string ALLOC;
+  static const std::string FREE;
+  static const std::string LOAD;
+  static const std::string STORE;
+  static const std::string MEMCPY;
+  static const std::string MEMSET;
+  static const std::string EXTRACT_VALUE;
+
+  static const std::string EXTERNAL_ADDR;
+  static const std::string GLOBALS_BOTTOM;
+  static const std::string EXTERNS_BOTTOM;
+  static const std::string MALLOC_TOP;
+
+  static const std::string BRANCH_CONDITION_ANNOTATION;
+  static const std::string LOOP_INVARIANT_ANNOTATION;
+
+  static const std::string MEM_OP;
+  static const std::string REC_MEM_OP;
+  static const std::string MEM_OP_VAL;
+
+  static const std::string BLOCK_LBL;
+  static const std::string RET_VAR;
+  static const std::string EXN_VAR;
+  static const std::string EXN_VAL_VAR;
+  static const std::string BOOL_VAR;
+  static const std::string FLOAT_VAR;
+  static const std::string INT_VAR;
+  static const std::string PTR_VAR;
+  static const std::string UNDEF_SYM;
+  static const std::string CONTRACT_EXPR;
+
+  static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
+  static const std::map<unsigned,std::string> CMPINST_TABLE;
+  static const std::map<unsigned,std::string> ATOMICRMWINST_TABLE;
+
+  Naming() : blockNum(0), varNum(0), undefNum(0) { }
+  Naming(Naming& n) : blockNum(n.blockNum), varNum(n.varNum) { }
+
+  void reset();
+  std::string get(const Value& V);
+
+  std::string freshBlockName();
+  std::string freshUndefName();
+  std::string freshVarName(const Value& V);
+
+  static bool isBplKeyword(std::string s);
+  static bool isSmackName(std::string s);
+  static bool isSmackGeneratedName(std::string s);
+  static std::string escape(std::string s);
 };
 
 }
