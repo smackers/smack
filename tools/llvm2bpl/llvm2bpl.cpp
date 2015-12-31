@@ -82,13 +82,13 @@ int main(int argc, char **argv) {
   llvm::EnableDebugBuffering = true;
 
   llvm::SMDiagnostic err;
-  std::unique_ptr<llvm::Module> module;
-  module.reset(llvm::ParseIRFile(InputFilename, err, llvm::getGlobalContext()));
+  std::unique_ptr<llvm::Module> module = llvm::parseIRFile(InputFilename, err, llvm::getGlobalContext());
   if (!err.getMessage().empty())
     check("Problem reading input bitcode/IR: " + err.getMessage().str());
 
   auto &L = module.get()->getDataLayoutStr();
-  DataLayout DL(L.empty() ? DefaultDataLayout : L);
+  if (L.empty())
+    module.get()->setDataLayout(DefaultDataLayout);
 
   ///////////////////////////////
   // initialise and run passes //
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
 
   llvm::PassManager pass_manager;
 
-  pass_manager.add(new DataLayoutPass(DL));
+  pass_manager.add(new DataLayoutPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
@@ -126,18 +126,18 @@ int main(int argc, char **argv) {
   std::vector<tool_output_file*> files;
 
   if (!FinalIrFilename.empty()) {
-    std::string EC;
+    std::error_code EC;
     auto F = new tool_output_file(FinalIrFilename.c_str(), EC, sys::fs::F_None);
-    check(EC);
+    if (EC) check(EC.message());
     F->keep();
     files.push_back(F);
     pass_manager.add(llvm::createPrintModulePass(F->os()));
   }
 
   if (!OutputFilename.empty()) {
-    std::string EC;
+    std::error_code EC;
     auto F = new tool_output_file(OutputFilename.c_str(), EC, sys::fs::F_None);
-    check(EC);
+    if (EC) check(EC.message());
     F->keep();
     files.push_back(F);
     pass_manager.add(new smack::SmackModuleGenerator());
