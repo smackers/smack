@@ -455,14 +455,6 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     emit(Stmt::skip());
 
-  } else if (auto dvi = dyn_cast<DbgValueInst>(&ci)) {
-    if (SmackOptions::SourceLocSymbols) {
-      Value* V = dvi->getValue();
-      const llvm::DIVariable var(dvi->getVariable());
-      std::stringstream recordProc;
-      recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var.getName().str())}));
-    }
   } else if (name.find("llvm.dbg.") != std::string::npos) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
@@ -572,6 +564,20 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
+}
+
+void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
+  processInstruction(dvi);
+
+  if (SmackOptions::SourceLocSymbols) {
+    const Value* V = dvi.getValue();
+    const llvm::DIVariable var(dvi.getVariable());
+    if (V) {
+      std::stringstream recordProc;
+      recordProc << "boogie_si_record_" << rep.type(V);
+      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var.getName().str())}));
+    }
   }
 }
 
