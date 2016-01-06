@@ -204,12 +204,6 @@ void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 bool Regions::runOnModule(Module& M) {
   if (!SmackOptions::NoMemoryRegionSplitting) {
     Region::init(M,*this);
-
-    DataStructures
-      &local = getAnalysis<LocalDataStructures>(),
-      &BU = getAnalysis<BUDataStructures>(),
-      &TD = getAnalysis<TDDataStructures>();
-
     visit(M);
   }
 

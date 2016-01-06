@@ -83,7 +83,12 @@ bool EquivBUDataStructures::runOnModule(Module &M) {
   
   // CBU contains the correct call graph.
   // Restore it, so that subsequent passes and clients can get it.
-  restoreCorrectCallGraph();
+  // TODO (Zvonimir): There is strong indication that EquivBUDataStructures
+  // in fact produces a (more) correct call graph than CBU. So restoring
+  // call graph here produces wrong results on a class of SVCOMP benchmarks.
+  // It also appears that not restoring call graph here does not introduce
+  // any new issues.
+  // restoreCorrectCallGraph();
   return result;
 }
 
