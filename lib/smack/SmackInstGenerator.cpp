@@ -455,20 +455,6 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     emit(Stmt::skip());
 
-  } else if (name == "llvm.dbg.value" && SmackOptions::SourceLocSymbols) {
-    const llvm::MDNode* m1 = dyn_cast<const llvm::MDNode>(ci.getArgOperand(0));
-    const llvm::MDNode* m2 = dyn_cast<const llvm::MDNode>(ci.getArgOperand(2));
-    assert(m1 && "Expected metadata node in first argument to llvm.dbg.value.");
-    assert(m2 && "Expected metadata node in third argument to llvm.dbg.value.");
-    const llvm::MDString* m3 = dyn_cast<const llvm::MDString>(m2->getOperand(2));
-    assert(m3 && "Expected metadata string in the third argument to metadata node.");
-
-    if (const llvm::Value* V = m1->getOperand(0)) {
-      std::stringstream recordProc;
-      recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", m3->getString().str())}));
-    }
-
   } else if (name.find("llvm.dbg.") != std::string::npos) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
@@ -578,6 +564,20 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
+}
+
+void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
+  processInstruction(dvi);
+
+  if (SmackOptions::SourceLocSymbols) {
+    const Value* V = dvi.getValue();
+    const llvm::DIVariable var(dvi.getVariable());
+    if (V) {
+      std::stringstream recordProc;
+      recordProc << "boogie_si_record_" << rep.type(V);
+      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var.getName().str())}));
+    }
   }
 }
 

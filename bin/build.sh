@@ -162,7 +162,7 @@ linux-opensuse*)
 
 linux-ubuntu-14*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-3.6 llvm-3.6 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
@@ -222,14 +222,14 @@ then
     ;;
 
   linux-ubuntu-14*)
-    sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
+    sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.6 main"
     ${WGET} -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.6 20
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.6 20
+    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.6 20
+    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.6 20
     ;;
 
   linux-ubuntu-12*)
@@ -293,13 +293,13 @@ then
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
-  ${WGET} http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.6.2/llvm-3.6.2.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.6.2/cfe-3.6.2.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.6.2/compiler-rt-3.6.2.src.tar.xz
 
-  tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-3.6.2.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.6.2.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.6.2.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
