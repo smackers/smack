@@ -35,6 +35,8 @@ public:
   static const std::string CONTRACT_REQUIRES;
   static const std::string CONTRACT_ENSURES;
   static const std::string CONTRACT_INVARIANT;
+  static const std::string CONTRACT_FORALL;
+  static const std::string CONTRACT_EXISTS;
 
   static const std::string MOD_PROC;
   static const std::string CODE_PROC;
