@@ -150,7 +150,8 @@ def smackJsonToXmlGraph(strJsonOutput):
                         #assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["assumption"])) + ";"
                         assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["description"])) + ";"
                 if "CALL" in jsonTrace["description"]:
-                  if not "__VERIFIER_nondet_" in jsonTrace["description"] and not "__VERIFIER_assume" in jsonTrace["description"]:
+                  if not "__VERIFIER_nondet_" in jsonTrace["description"] and not "__VERIFIER_assume" in jsonTrace["description"] and \
+                     not "$memset" in jsonTrace["description"] and not "$memcpy" in jsonTrace["description"]:
                     addKey(lastEdge, "enterFunction", str(jsonTrace["description"][len("CALL"):]))
                     #addKey(lastNode, "violation", "true")
                     if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
