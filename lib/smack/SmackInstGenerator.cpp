@@ -459,6 +459,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
+  } else if (name.find("_ZN2rt10lang_start") != std::string::npos) {
+    auto castExpr = ci.getArgOperand(0);
+    if (auto CE = dyn_cast<const Constant>(castExpr)) {
+      auto mainFunc = CE->getOperand(0);
+      emit(Stmt::call(mainFunc->getName(), {},{}));
+    }
+
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep.valueAnnotation(ci));
 
