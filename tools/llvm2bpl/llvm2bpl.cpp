@@ -116,6 +116,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
+  pass_manager.add(new smack::MemoryAllocationChecker());
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
@@ -142,7 +143,7 @@ int main(int argc, char **argv) {
     F->keep();
     files.push_back(F);
     pass_manager.add(new smack::SmackModuleGenerator());
-    pass_manager.add(new smack::MemoryAllocationChecker());
+    //pass_manager.add(new smack::MemoryAllocationChecker());
     pass_manager.add(new smack::BplFilePrinter(F->os()));
   }
 

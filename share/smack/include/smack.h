@@ -21,7 +21,6 @@ extern "C" {
 
 // For handling of va_start macro
 void __builtinx_va_start(char*,char*);
-
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
@@ -34,6 +33,8 @@ smack_value_t __SMACK_return_value(void);
 
 // Sugar for __SMACK_init_func_XXX()
 #define __SMACK_INIT(x) void __SMACK_init_func_##x()
+
+void __SMACK_check_memory_access(void*,long int);
 
 // We need this to enforce that assert/assume are function calls
 // with an integer argument (DSA gets confused otherwise)
@@ -119,7 +120,6 @@ void* __VERIFIER_nondet_pointer(void);
 #undef NONDET_DECL
 
 void __SMACK_decls();
-
 #ifdef __cplusplus
 }
 #endif

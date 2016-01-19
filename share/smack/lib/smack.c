@@ -95,6 +95,9 @@ void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
 
+void __SMACK_check_memory_access(void* pointer, long int size) {
+}
+
 #define LIMIT_1 2
 #define LIMIT_7 128
 #define LIMIT_8 256
@@ -235,7 +238,7 @@ void __SMACK_decls() {
 
   DECLARE(INLINE_CONVERSION,bv128,bv96,$trunc,{i[96:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv64,$trunc,{i[64:0]});
-  DECLARE(INLINE_CONVERSION,bv128,bv56,$trunc,{i[56:0]});
+
   DECLARE(INLINE_CONVERSION,bv128,bv48,$trunc,{i[48:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv40,$trunc,{i[40:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv32,$trunc,{i[32:0]});
