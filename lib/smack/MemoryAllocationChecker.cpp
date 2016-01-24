@@ -26,10 +26,10 @@ namespace smack {
     }
     for (auto& F : m) {
       if(!Naming::isSmackName(F.getName())) {
-        F.print(errs());
+        //F.print(errs());
         for (auto& B : F) {
           for (auto& I : B) {
-            printf("\n");
+            //printf("\n");
             if(LoadInst* li = dyn_cast<LoadInst>(&I)) {
               //printf("got load instruction\n");
               Value* pointer = li->getPointerOperand();
