@@ -95,9 +95,6 @@ void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
 
-void __SMACK_check_memory_access(void* pointer, long int size) {
-}
-
 #define LIMIT_1 2
 #define LIMIT_7 128
 #define LIMIT_8 256
@@ -985,6 +982,7 @@ void __SMACK_decls() {
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
+  D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;");
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
@@ -993,6 +991,7 @@ void __SMACK_decls() {
     "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
     "ensures $Alloc[p];\n"
+    "ensures $Size(p) == n;\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
 
@@ -1007,6 +1006,12 @@ void __SMACK_decls() {
   D("function $extractvalue(p: int, i: int) returns (int);");
 
 #undef D
+}
+
+void __SMACK_check_memory_access(void* pointer, long int size) {
+  __SMACK_code("assert $Alloc[$base(@)] == true;", pointer);
+  __SMACK_code("assert $base(@) <= @;", pointer, pointer);
+  __SMACK_code("assert @+@ <= $base(@) + $Size($base(@));", pointer, (size+7)/8, pointer, pointer);  
 }
 
 void __SMACK_init_func_memory_model(void) {
