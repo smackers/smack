@@ -32,8 +32,9 @@ namespace smack {
             //printf("\n");
             if(LoadInst* li = dyn_cast<LoadInst>(&I)) {
               //printf("got load instruction\n");
+              //errs() << "type: " << isa<PointerType>(li->getPointerOperand()->getType()) << "\n";
               Value* pointer = li->getPointerOperand();
-              Value* size = ConstantInt::get(IntegerType::get(F.getContext(), 64), dataLayout->getTypeSizeInBits(li->getPointerOperand()->getType()), false);
+              Value* size = ConstantInt::get(IntegerType::get(F.getContext(), 64), dataLayout->getTypeSizeInBits(dyn_cast<PointerType>(li->getPointerOperand()->getType())->getPointerElementType()), false);
               Type *PtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
               CastInst* castPointer = CastInst::Create(Instruction::BitCast, pointer, PtrTy, "", &I);
               Value* args[] = {castPointer, size};
