@@ -992,6 +992,7 @@ void __SMACK_decls() {
     "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size(p) == n;\n"
+    //"ensures (forall q: ref :: {$Size(q)} q != p ==> $Size(q) == old($Size(q)));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
 
@@ -1011,7 +1012,11 @@ void __SMACK_decls() {
 void __SMACK_check_memory_access(void* pointer, long int size) {
   __SMACK_code("assert $Alloc[$base(@)] == true;", pointer);
   __SMACK_code("assert $base(@) <= @;", pointer, pointer);
-  __SMACK_code("assert @+@ <= $base(@) + $Size($base(@));", pointer, (size+7)/8, pointer, pointer);  
+  #if MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+    __SMACK_code("assert @+@ <= $base(@) + $Size[$base(@)];", pointer, (size+7)/8, pointer, pointer);
+  #else
+    __SMACK_code("assert @+@ <= $base(@) + $Size($base(@));", pointer, (size+7)/8, pointer, pointer);
+  #endif
 }
 
 void __SMACK_init_func_memory_model(void) {
