@@ -1010,12 +1010,15 @@ void __SMACK_decls() {
 }
 
 void __SMACK_check_memory_access(void* pointer, long int size) {
-  __SMACK_code("assert $Alloc[$base(@)] == true;", pointer);
-  __SMACK_code("assert $base(@) <= @;", pointer, pointer);
-  #if MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
-    __SMACK_code("assert @+@ <= $base(@) + $Size[$base(@)];", pointer, (size+7)/8, pointer, pointer);
+  #if MEMORY_MODEL_NO_REUSE_IMPLS
+  #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+    __SMACK_code("assert $slt.ref.bool(@,$0.ref) || $Alloc[$base(@)] == true;", pointer, pointer);
+    __SMACK_code("assert $slt.ref.bool(@,$0.ref) || $base(@) <= @;", pointer, pointer, pointer);
+    __SMACK_code("assert $slt.ref.bool(@,$0.ref) || @+@ <= $base(@) + $Size[$base(@)];", pointer, pointer, (size+7)/8, pointer, pointer);
   #else
-    __SMACK_code("assert @+@ <= $base(@) + $Size($base(@));", pointer, (size+7)/8, pointer, pointer);
+    __SMACK_code("assert $slt.ref.bool(@,$0.ref) || $Alloc[$base(@)] == true;", pointer, pointer);
+    __SMACK_code("assert $slt.ref.bool(@,$0.ref) || $base(@) <= @;", pointer, pointer, pointer);
+    __SMACK_code("assert $slt.ref.bool(@,$0.ref) || @+@ <= $base(@) + $Size($base(@));", pointer, pointer, (size+7)/8, pointer, pointer);
   #endif
 }
 
