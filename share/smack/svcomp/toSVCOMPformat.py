@@ -125,7 +125,7 @@ def smackJsonToXmlGraph(strJsonOutput):
     start = addGraphNode(tree, {"entry":"true"})
     lastNode = start
     lastEdge = None 
-    pat = re.compile(".*smack.*\.[c|h]$")
+    pat = re.compile(".*smack\.[c|h]$")
     prevLineNo = -1
     prevColNo = -1
     # Loop through each trace
@@ -150,13 +150,15 @@ def smackJsonToXmlGraph(strJsonOutput):
                         #assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["assumption"])) + ";"
                         assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["description"])) + ";"
                 if "CALL" in jsonTrace["description"]:
-                  addKey(lastEdge, "enterFunction", str(jsonTrace["description"][len("CALL"):]))
-                  #addKey(lastNode, "violation", "true")
-                  if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
-                    vNodes =tree.find("graph").findall("node")
-                    for vNode in vNodes:
-                      if vNode.attrib["id"] == lastNode:
-                        addKey(vNode, "violation", "true")
+                  if not "__VERIFIER_nondet_" in jsonTrace["description"] and not "__VERIFIER_assume" in jsonTrace["description"] and \
+                     not "$memset" in jsonTrace["description"] and not "$memcpy" in jsonTrace["description"]:
+                    addKey(lastEdge, "enterFunction", str(jsonTrace["description"][len("CALL"):]))
+                    #addKey(lastNode, "violation", "true")
+                    if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
+                      vNodes =tree.find("graph").findall("node")
+                      for vNode in vNodes:
+                        if vNode.attrib["id"] == lastNode:
+                          addKey(vNode, "violation", "true")
                 if "RETURN from" in jsonTrace["description"]:
                     attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
             else:
