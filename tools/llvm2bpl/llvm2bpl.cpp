@@ -143,7 +143,6 @@ int main(int argc, char **argv) {
     F->keep();
     files.push_back(F);
     pass_manager.add(new smack::SmackModuleGenerator());
-    //pass_manager.add(new smack::MemoryAllocationChecker());
     pass_manager.add(new smack::BplFilePrinter(F->os()));
   }
 

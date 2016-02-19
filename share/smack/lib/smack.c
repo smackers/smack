@@ -235,7 +235,7 @@ void __SMACK_decls() {
 
   DECLARE(INLINE_CONVERSION,bv128,bv96,$trunc,{i[96:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv64,$trunc,{i[64:0]});
-
+  DECLARE(INLINE_CONVERSION,bv128,bv56,$trunc,{i[56:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv48,$trunc,{i[48:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv40,$trunc,{i[40:0]});
   DECLARE(INLINE_CONVERSION,bv128,bv32,$trunc,{i[32:0]});
@@ -992,7 +992,6 @@ void __SMACK_decls() {
     "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size(p) == n;\n"
-    //"ensures (forall q: ref :: {$Size(q)} q != p ==> $Size(q) == old($Size(q)));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
 

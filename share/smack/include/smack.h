@@ -21,6 +21,7 @@ extern "C" {
 
 // For handling of va_start macro
 void __builtinx_va_start(char*,char*);
+
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
@@ -120,6 +121,7 @@ void* __VERIFIER_nondet_pointer(void);
 #undef NONDET_DECL
 
 void __SMACK_decls();
+
 #ifdef __cplusplus
 }
 #endif
