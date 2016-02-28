@@ -1,8 +1,11 @@
 [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/)
 
-SMACK is a *bounded software verifier*, verifying the assertions in its
-input programs up to a given bound on loop iterations and recursion depth.
-SMACK can verify C programs, such as the following:
+SMACK is both a *modular software verification toolchain* and a
+*self-contained software verifier*. It can be used to verify the assertions
+in its input programs. In its default mode, assertions are verified up to a
+given bound on loop iterations and recursion depth; it contains experimental
+support for unbounded verification as well. For example, SMACK can verify C
+programs as the following:
 
     // examples/simple/simple.c
     #include "smack.h"
