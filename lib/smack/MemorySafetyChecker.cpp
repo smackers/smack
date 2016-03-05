@@ -1,7 +1,7 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "smack/MemoryAllocationChecker.h"
+#include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 
 #include "llvm/IR/Module.h"
@@ -12,17 +12,9 @@
 namespace smack {
   using namespace llvm;
 
-  const char* VERIFIER_FUNCTION = "__SMACK_check_memory_access";
-
-  bool MemoryAllocationChecker::runOnModule(Module& m) {
+  bool MemorySafetyChecker::runOnModule(Module& m) {
     DataLayout* dataLayout = new DataLayout(&m);
-    Function* verifierFunction;
-    for(auto& f:m) {
-      if(f.getName() == VERIFIER_FUNCTION) {
-        verifierFunction = &f;
-        break;
-      }
-    }
+    Function* verifierFunction = m.getFunction(Naming::VERIFIER_FUNCTION);
     for (auto& F : m) {
       if(!Naming::isSmackName(F.getName())) {
         for (auto& B : F) {
@@ -50,5 +42,5 @@ namespace smack {
   }
 
   // Pass ID variable
-  char MemoryAllocationChecker::ID = 0;
+  char MemorySafetyChecker::ID = 0;
 }

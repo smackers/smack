@@ -31,7 +31,7 @@
 #include "smack/RemoveDeadDefs.h"
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
-#include "smack/MemoryAllocationChecker.h"
+#include "smack/MemorySafetyChecker.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-  pass_manager.add(new smack::MemoryAllocationChecker());
+  pass_manager.add(new smack::MemorySafetyChecker());
 
   std::vector<tool_output_file*> files;
 

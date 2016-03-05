@@ -65,6 +65,7 @@ const std::string Naming::INT_VAR = "$i";
 const std::string Naming::PTR_VAR = "$p";
 const std::string Naming::UNDEF_SYM = "$u";
 const std::string Naming::CONTRACT_EXPR = "expr";
+const std::string Naming::VERIFIER_FUNCTION = "__SMACK_check_memory_access";
 
 using namespace llvm;
 
