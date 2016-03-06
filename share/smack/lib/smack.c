@@ -1008,6 +1008,12 @@ void __SMACK_decls() {
 #undef D
 }
 
+//The size parameter represents number of bits that are being accessed.
+//Whereas when memory is allocated, malloc function in boogie is passed 
+//number of bites. In order to make it a multiple of 8, I am adding 7 
+//and then dividing it by 8. For ex. suppose size = 61. In this case
+//number of bytes would be (61+7) / 8 = 8 which is correct. Now suppose
+//size = 64. In this case also (64+7)/8 = 8. 
 void __SMACK_check_memory_access(void* pointer, long int size) {
   #if MEMORY_MODEL_NO_REUSE_IMPLS
   #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
