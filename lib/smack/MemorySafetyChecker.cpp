@@ -16,6 +16,7 @@ namespace smack {
   bool MemorySafetyChecker::runOnModule(Module& m) {
     DataLayout* dataLayout = new DataLayout(&m);
     Function* verifierFunction = m.getFunction(Naming::VERIFIER_FUNCTION);
+    assert(verifierFunction != NULL && "Couldn't find memory safety function");
     for (auto& F : m) {
       if(!Naming::isSmackName(F.getName())) {
         for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
