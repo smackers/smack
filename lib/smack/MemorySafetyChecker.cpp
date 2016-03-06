@@ -30,7 +30,7 @@ namespace smack {
             Value* pointer = si->getPointerOperand();
             Value* size = ConstantInt::get(IntegerType::get(F.getContext(), 64), dataLayout->getTypeSizeInBits(si->getValueOperand()->getType()), false);
             Type *ptrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
-            CastInst* castPointer = CastInst::Create(Instruction::BitCast, pointer, PtrTy, "", &*I);
+            CastInst* castPointer = CastInst::Create(Instruction::BitCast, pointer, ptrTy, "", &*I);
             Value* args[] = {castPointer, size};
             CallInst::Create(verifierFunction, ArrayRef<Value*>(args, 2), "", &*I);
           }
