@@ -29,7 +29,7 @@ namespace smack {
           } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
             Value* pointer = si->getPointerOperand();
             Value* size = ConstantInt::get(IntegerType::get(F.getContext(), 64), dataLayout->getTypeSizeInBits(si->getValueOperand()->getType()), false);
-            Type *PtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
+            Type *ptrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
             CastInst* castPointer = CastInst::Create(Instruction::BitCast, pointer, PtrTy, "", &*I);
             Value* args[] = {castPointer, size};
             CallInst::Create(verifierFunction, ArrayRef<Value*>(args, 2), "", &*I);
