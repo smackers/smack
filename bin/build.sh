@@ -370,8 +370,10 @@ then
   cd ${ROOT}
   git clone https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR} 
   cd ${SYMBOOGLIX_DIR}/src
+  git submodule init
+  git submodule update
   ${WGET} https://dist.nuget.org/win-x86-commandline/v2.8.6/nuget.exe
-  mono nuget.exe restore symbooglix.sln
+  mono ./nuget.exe restore Symbooglix.sln
   xbuild /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
   ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
