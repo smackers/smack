@@ -24,6 +24,7 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
+BUILD_SYMBOOGLIX=1 
 BUILD_LOCKPWN=0
 BUILD_SMACK=1
 TEST_SMACK=1
@@ -36,6 +37,7 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
+SYMBOOGLIX_DIR="${ROOT}/symbooglix"
 LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
@@ -359,6 +361,22 @@ then
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
   puts "Built Corral"
+fi
+
+if [ ${BUILD_SYMBOOGLIX} -eq 1 ]
+then
+  puts "Building Symbooglix"
+
+  cd ${ROOT}
+  git clone https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR} 
+  cd ${SYMBOOGLIX_DIR}/src
+  ${WGET} https://dist.nuget.org/win-x86-commandline/v2.8.6/nuget.exe
+  mono nuget.exe restore symbooglix.sln
+  xbuild /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
+  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+
+  puts "Built Symbooglix"
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ]
