@@ -138,7 +138,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp'],
+    choices=['boogie', 'corral', 'duality', 'svcomp', 'symbooglix'],
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -419,6 +419,13 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
+
+  elif args.verifier == 'symbooglix':
+    command = ['symbooglix']
+    command += [args.bpl_file]
+    command += ["--file-logging", "0"]
+    command += ["--entry-points", ",".join(args.entry_points)]
+    command += ["--max-depth", str(args.unroll)]
 
   else:
     # Duality!
