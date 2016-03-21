@@ -433,7 +433,7 @@ def verify_bpl(args):
     command += ["/tryCTrace", "/noTraceOnDisk", "/useDuality", "/oldStratifiedInlining"]
     command += ["/recursionBound:1073741824", "/k:1"]
 
-  if args.bit_precise:
+  if args.bit_precise and args.verifier != "symbooglix":
     x = "bopt:" if args.verifier != 'boogie' else ""
     command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
     command += ["/%sz3opt:smt.relevancy=0" % x]
