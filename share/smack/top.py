@@ -235,7 +235,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
     proc = None
     if timeout and timed_out[0]:
       return output + ("\n%s timed out." % cmd[0])
-    elif rc:
+    elif rc and args.verifier != "symbooglix":
       raise RuntimeError("%s returned non-zero." % cmd[0])
     else:
       return output
@@ -385,11 +385,11 @@ def annotate_bpl(args):
     f.write(bpl)
 
 def verification_result(verifier_output):
-  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT', verifier_output):
     return 'timeout'
-  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT$', verifier_output):
     return 'verified'
-  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
+  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT$', verifier_output):
     return 'error'
   else:
     return 'unknown'
