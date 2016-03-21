@@ -423,9 +423,10 @@ def verify_bpl(args):
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
     command += [args.bpl_file]
-    command += ["--file-logging", "0"]
-    command += ["--entry-points", ",".join(args.entry_points)]
-    command += ["--max-depth", str(args.unroll)]
+    command += ["--file-logging=0"]
+    command += ["--entry-points=%s" % ",".join(args.entry_points)]
+    command += ["--timeout=%d" % args.time_limit]
+    command += ["--max-depth=%d" % args.unroll]
 
   else:
     # Duality!
