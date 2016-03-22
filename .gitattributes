@@ -5,4 +5,6 @@
 *       text=auto
 
 # Declare files that will always have LF line endings on checkout.
-*.sh    text eol=lf
+*.sh         text eol=lf
+*.py         text eol=lf
+bin/*        text eol=lf

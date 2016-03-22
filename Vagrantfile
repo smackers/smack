@@ -11,6 +11,13 @@ Vagrant.configure(2) do |config|
     ubuntu_config.vm.box = "ubuntu/trusty64"
   end
 
+  #This provision, 'fix-no-tty', gets rid of an error during build
+  #which says "==> default: stdin: is not a tty"
+  config.vm.provision "fix-no-tty", type: "shell" do |s|
+    s.privileged = false
+    s.inline = "sudo sed -i '/tty/!s/mesg n/tty -s \\&\\& mesg n/' /root/.profile"
+  end
+
   # TODO ability to choose between the two?
   # config.vm.define :opensuse do |opensuse_config|
   #   opensuse_config.vm.box = "chef/opensuse-13.1"
