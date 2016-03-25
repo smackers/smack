@@ -280,7 +280,7 @@ def default_clang_compile_command(args):
   return cmd
 
 def default_rust_compile_command(args):
-  cmd = ['rustc', '--emit', 'llvm-ir']
+  cmd = ['rustc', '--emit', 'llvm-bc']
   return cmd
 
 def boogie_frontend(args):
@@ -327,9 +327,9 @@ def rust_frontend(args):
     bitcodes.append(bc)
 
   for rs in args.input_files:
-    ll = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.ll', args)
-    try_command(rust_compile_command + [rs], console=True)
-    bitcodes.append(ll)
+    bc = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
+    try_command(rust_compile_command + [rs, '-o', bc], console=True)
+    bitcodes.append(bc)
     
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
