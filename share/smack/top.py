@@ -26,6 +26,7 @@ def frontends():
     'cpp': clang_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
+    'rs': rust_frontend,
     'bc': llvm_frontend,
     'll': llvm_frontend,
     'bpl': boogie_frontend,
@@ -278,6 +279,10 @@ def default_clang_compile_command(args):
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   return cmd
 
+def default_rust_compile_command(args):
+  cmd = ['rustc', '--emit', 'llvm-ir']
+  return cmd
+
 def boogie_frontend(args):
   """Generate Boogie code by concatenating the input file(s)."""
   with open(args.bpl_file, 'w') as out:
@@ -304,6 +309,28 @@ def clang_frontend(args):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
     try_command(compile_command + ['-o', bc, c], console=(c in args.input_files))
     bitcodes.append(bc)
+
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  llvm_to_bpl(args)
+
+def rust_frontend(args):
+  """Generate Boogie code from Rust-language source(s)."""
+
+  bitcodes = []
+  libs = ['smack.c']
+  smack_compile_command = default_clang_compile_command(args)
+  rust_compile_command = default_rust_compile_command(args)
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(smack_compile_command + ['-o', bc, c], console=False)
+    bitcodes.append(bc)
+
+  for rs in args.input_files:
+    ll = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.ll', args)
+    try_command(rust_compile_command + [rs], console=True)
+    bitcodes.append(ll)
+    
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
