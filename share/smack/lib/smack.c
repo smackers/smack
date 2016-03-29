@@ -799,6 +799,7 @@ void __SMACK_decls() {
   D("function {:inline} $load.i24(M: [ref] i24, p: ref) returns (i24) { M[p] }");
   D("function {:inline} $load.i16(M: [ref] i16, p: ref) returns (i16) { M[p] }");
   D("function {:inline} $load.i8(M: [ref] i8, p: ref) returns (i8) { M[p] }");
+  D("function {:inline} $load.i1(M: [ref] i1, p: ref) returns (i1) { M[p] }");
 
   D("function {:inline} $load.bv128(M: [ref] bv128, p: ref) returns (bv128) { M[p] }");
   D("function {:inline} $load.bv96(M: [ref] bv96, p: ref) returns (bv96) { M[p] }");
@@ -841,6 +842,7 @@ void __SMACK_decls() {
   D("function {:inline} $store.i24(M: [ref] i24, p: ref, v: i24) returns ([ref] i24) { M[p := v] }");
   D("function {:inline} $store.i16(M: [ref] i16, p: ref, v: i16) returns ([ref] i16) { M[p := v] }");
   D("function {:inline} $store.i8(M: [ref] i8, p: ref, v: i8) returns ([ref] i8) { M[p := v] }");
+  D("function {:inline} $store.i1(M: [ref] i1, p: ref, v: i1) returns ([ref] i1) { M[p := v] }");
 
   D("function {:inline} $store.bv128(M: [ref] bv128, p: ref, v: bv128) returns ([ref] bv128) { M[p := v] }");
   D("function {:inline} $store.bv96(M: [ref] bv96, p: ref, v: bv96) returns ([ref] bv96) { M[p := v] }");
