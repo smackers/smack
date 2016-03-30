@@ -22,12 +22,12 @@ namespace smack {
 using llvm::errs;
 
 const bool CODE_WARN = true;
-const bool SHOW_ORIG = false;
+const bool SHOW_ORIG = true;
 
 #define WARN(str) \
     if (CODE_WARN) emit(Stmt::comment(std::string("WARNING: ") + str))
 #define ORIG(ins) \
-    if (SHOW_ORIG) emit(Stmt::comment(i2s(ins)))
+    if (SHOW_ORIG) emit(Stmt::comment(i2s(ins), true))
 
 Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$#'`~^\\?]*):.*;");
 
