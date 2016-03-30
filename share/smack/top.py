@@ -278,6 +278,21 @@ def default_clang_compile_command(args):
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   return cmd
 
+def build_libs(args):
+  """Generate LLVM bitcodes for SMACK libraries."""
+  bitcodes = []
+  libs = ['smack.c']
+
+  if args.pthread:
+    libs += ['pthread.c', 'spinlock.c']
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(default_clang_compile_command(args) + ['-o', bc, c])
+    bitcodes.append(bc)
+
+  return bitcodes
+
 def boogie_frontend(args):
   """Generate Boogie code by concatenating the input file(s)."""
   with open(args.bpl_file, 'w') as out:
@@ -287,22 +302,20 @@ def boogie_frontend(args):
 
 def llvm_frontend(args):
   """Generate Boogie code from LLVM bitcodes."""
-  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+
+  bitcodes = build_libs(args) + args.input_files
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
 
 def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
-  bitcodes = []
-  libs = ['smack.c']
+  bitcodes = build_libs(args)
   compile_command = default_clang_compile_command(args)
 
-  if args.pthread:
-    libs += ['pthread.c', 'spinlock.c']
-
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs) + args.input_files:
+  for c in args.input_files:
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], console=(c in args.input_files))
+    try_command(compile_command + ['-o', bc, c], console=True)
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
@@ -317,12 +330,7 @@ def json_compilation_database_frontend(args):
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
 
-  libs = ['smack.c']
-  lib_bitcodes = []
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(default_clang_compile_command(args) + ['-o', bc, c])
-    lib_bitcodes.append(bc)
+  lib_bitcodes = build_libs(args)
 
   with open(args.input_files[0]) as f:
     for cc in json.load(f):
