@@ -251,6 +251,24 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
       with open(temporary_file(cmd[0], '.log', args), 'w') as f:
         f.write(output)
 
+def target_selection(args):
+  """Determine the target architecture based on flags and source files."""
+  # TODO more possible clang flags that determine the target?
+  if not re.search('-target', args.clang_options):
+    src = args.input_files[0]
+    if os.path.splitext(src)[1] == '.bc':
+      ll = temporary_file(os.path.splitext(os.path.basename(src))[0], '.ll', args)
+      try_command(['llvm-dis', '-o', ll, src])
+      src = ll
+    if os.path.splitext(src)[1] == '.ll':
+      with open(src, 'r') as f:
+        for line in f:
+          triple = re.findall('^target triple = "(.*)"', line)
+          if len(triple) > 0:
+            print "setting target: %s" % triple[0]
+            args.clang_options += (" -target %s" % triple[0])
+            break
+
 def frontend(args):
   """Generate the LLVM bitcode file."""
   if args.language:
@@ -559,6 +577,8 @@ def main():
   try:
     global args
     args = arguments()
+
+    target_selection(args)
 
     if not args.quiet:
       print "SMACK program verifier version %s" % VERSION
