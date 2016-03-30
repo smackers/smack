@@ -280,7 +280,7 @@ def default_clang_compile_command(args):
   return cmd
 
 def default_rust_compile_command(args):
-  cmd = ['rustc', '--emit', 'llvm-bc']
+  cmd = ['rustc', '-g', '--emit', 'llvm-bc']
   return cmd
 
 def boogie_frontend(args):
