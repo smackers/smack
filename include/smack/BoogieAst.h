@@ -408,7 +408,11 @@ public:
 class VarDecl : public Decl {
   std::string type;
 public:
-  VarDecl(std::string n, std::string t) : Decl(VARIABLE, n, {}), type(t) {}
+  VarDecl(std::string n, std::string t) : Decl(VARIABLE, n, {}), type(t)
+  {
+    if (type != "ref")
+      attrs.push_back(Attr::attr("scalar"));
+  }
   void print(std::ostream& os) const;
   static bool classof(const Decl* D) { return D->getKind() == VARIABLE; }
 };

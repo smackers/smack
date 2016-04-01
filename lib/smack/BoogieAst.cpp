@@ -571,9 +571,10 @@ void FuncDecl::print(std::ostream& os) const {
 }
 
 void VarDecl::print(std::ostream& os) const {
+  os << "var ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
-  os << "var " << name << ": " << type << ";";
+  os << " " << name << ": " << type << ";";
 }
 
 void ProcDecl::print(std::ostream& os) const {
@@ -582,13 +583,13 @@ void ProcDecl::print(std::ostream& os) const {
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << name << "(";
   for (auto P = params.begin(), E = params.end(); P != E; ++P)
-    os << (P == params.begin() ? "" : ", ") << P->first << ": " << P->second;
+    os << (P == params.begin() ? "" : ", ") << (P->second != "ref" ? "{:scalar} " : "") << P->first << ": " << P->second;
   os << ")";
   if (rets.size() > 0) {
     os << "\n";
     os << "  returns (";
     for (auto R = rets.begin(), E = rets.end(); R != E; ++R)
-      os << (R == rets.begin() ? "" : ", ") << R->first << ": " << R->second;
+      os << (R == rets.begin() ? "" : ", ") << (R->second != "ref" ? "{:scalar} " : "") << R->first << ": " << R->second;
     os << ")";
   }
   if (blocks.size() == 0)
