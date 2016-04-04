@@ -29,7 +29,8 @@ public:
   static const Expr* fn(std::string f, const Expr* x, const Expr* y);
   static const Expr* fn(std::string f, const Expr* x, const Expr* y, const Expr* z);
   static const Expr* fn(std::string f, std::list<const Expr*> args);
-  static const Expr* id(std::string x);
+  //static const Expr* id(std::string x);
+  static const Expr* id(std::string x, std::list<std::string> attrs = std::list<std::string>());
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(bool b);
   static const Expr* lit(std::string v);
@@ -167,14 +168,6 @@ public:
   void print(std::ostream& os) const;
 };
 
-class VarExpr : public Expr {
-  std::string var;
-public:
-  VarExpr(std::string v) : var(v) {}
-  std::string name() const { return var; }
-  void print(std::ostream& os) const;
-};
-
 class Attr {
 protected:
   std::string name;
@@ -189,6 +182,16 @@ public:
   static const Attr* attr(std::string s, std::string v, int i);
   static const Attr* attr(std::string s, std::string v, int i, int j);
   static const Attr* attr(std::string s, std::initializer_list<const Expr*> vs);
+};
+
+class VarExpr : public Expr {
+  std::string var;
+  std::list<const Attr*> attrs;
+public:
+  //VarExpr(std::string v) : var(v) {}
+  VarExpr(std::string v, std::list<const Attr*> attrs) : var(v), attrs(attrs) {}
+  std::string name() const { return var; }
+  void print(std::ostream& os) const;
 };
 
 class Stmt {
@@ -358,6 +361,11 @@ public:
   static Decl* constant(std::string name, std::string type, std::list<const Attr*> ax, bool unique);
   static Decl* variable(std::string name, std::string type);
   static ProcDecl* procedure(std::string name,
+    std::list< std::pair<const Expr*,std::string> > params,
+    std::list< std::pair<std::string,std::string> > rets = std::list< std::pair<std::string,std::string> >(),
+    std::list<Decl*> decls = std::list<Decl*>(),
+    std::list<Block*> blocks = std::list<Block*>());
+  static ProcDecl* procedure(std::string name,
     std::list< std::pair<std::string,std::string> > params = std::list< std::pair<std::string,std::string> >(),
     std::list< std::pair<std::string,std::string> > rets = std::list< std::pair<std::string,std::string> >(),
     std::list<Decl*> decls = std::list<Decl*>(),
@@ -483,32 +491,43 @@ class ProcDecl : public Decl, public CodeContainer {
   typedef std::list<Parameter> ParameterList;
   typedef std::list<const Expr*> SpecificationList;
 
-  ParameterList params;
+  typedef std::pair<const Expr*, std::string> ParameterExpr;
+  typedef std::list<ParameterExpr> ParameterExprList;
+
+  //ParameterList params;
+  ParameterExprList params;
   ParameterList rets;
   SpecificationList requires;
   SpecificationList ensures;
 public:
-  ProcDecl(std::string n, ParameterList ps, ParameterList rs,
+  ProcDecl(std::string n, ParameterExprList ps, ParameterList rs,
     DeclarationList ds, BlockList bs)
     : Decl(PROCEDURE, n, {}), CodeContainer(ds, bs), params(ps), rets(rs) {}
+  /*
   typedef ParameterList::iterator param_iterator;
   param_iterator param_begin() { return params.begin(); }
   param_iterator param_end() { return params.end(); }
-  ParameterList &getParameters() { return params; }
 
   param_iterator returns_begin() { return rets.begin(); }
   param_iterator returns_end() { return rets.end(); }
-  ParameterList &getReturns() { return rets; }
 
   typedef SpecificationList::iterator spec_iterator;
   spec_iterator requires_begin() { return requires.begin(); }
   spec_iterator requires_end() { return requires.end(); }
-  SpecificationList &getRequires() { return requires; }
 
   spec_iterator ensures_begin() { return ensures.begin(); }
   spec_iterator ensures_end() { return ensures.end(); }
+  */
+  //ParameterList &getParameters() { return params; }
+  ParameterList getParameters() {
+    ParameterList ret; 
+    for (auto param: params)
+      ret.push_back(std::make_pair(static_cast<const VarExpr*>(param.first)->name(), param.second));
+    return ret;
+  }
+  ParameterList &getReturns() { return rets; }
+  SpecificationList &getRequires() { return requires; }
   SpecificationList &getEnsures() { return ensures; }
-
   void print(std::ostream& os) const;
   static bool classof(const Decl* D) { return D->getKind() == PROCEDURE; }
 };

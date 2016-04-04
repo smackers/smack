@@ -131,6 +131,7 @@ public:
 
   std::list<ProcDecl*> procedure(Function* F);
   ProcDecl* procedure(Function* F, CallInst* C);
+  const Expr* annotateArgs(const llvm::Value& arg);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);

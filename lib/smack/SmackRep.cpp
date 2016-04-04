@@ -718,15 +718,26 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
 }
 
+const Expr* SmackRep::annotateArgs(const llvm::Value& arg)
+{
+  if(const PointerType* t = dyn_cast<const PointerType>(arg.getType())) {
+    if (t->getElementType()->isPointerTy())
+      return Expr::id(naming.get(arg), {memPath(regions.idx(&arg))});
+  }
+    return Expr::id(naming.get(arg));
+}
+
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   assert(F && "Unknown function call.");
   std::string name = naming.get(*F);
-  std::list< std::pair<std::string,std::string> > params, rets;
+  std::list< std::pair<const Expr*,std::string> > params;
+  std::list< std::pair<std::string, std::string> > rets;
   std::list<Decl*> decls;
   std::list<Block*> blocks;
 
-  for (auto &A : F->getArgumentList())
-    params.push_back({naming.get(A), type(A.getType())});
+  for (auto &A : F->getArgumentList()) {
+    params.push_back(std::make_pair(annotateArgs(A), type(A.getType())));
+  }
 
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
@@ -738,7 +749,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
     blocks.push_back(
       Block::block("", {
         Stmt::call(Naming::ALLOC,
-          { integerToPointer(Expr::id(params.front().first), width) },
+          { integerToPointer(Expr::id(static_cast<const VarExpr*>(params.front().first)->name()), width) },
           { Naming::RET_VAR }
         )
       })
@@ -747,22 +758,22 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   } else if (name == "free_") {
     blocks.push_back(
       Block::block("", {
-        Stmt::call(Naming::FREE, {Expr::id(params.front().first)})
+        Stmt::call(Naming::FREE, {Expr::id(static_cast<const VarExpr*>(params.front().first)->name())})
       })
     );
 
   } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
     for (auto m : memoryMaps())
-      params.push_back(m);
+      params.push_back(std::make_pair(Expr::id(m.first), m.second));
 
   } else if (CI) {
     FunctionType* T = F->getFunctionType();
     name = procName(*CI, F);
     for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
-      params.push_back({
-        indexedName("p",{i}),
+      params.push_back(make_pair(
+        Expr::id(indexedName("p",{i})),
         type(CI->getOperand(i)->getType())
-      });
+      ));
     }
   }
 

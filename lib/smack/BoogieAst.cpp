@@ -62,8 +62,15 @@ const Expr* Expr::fn(std::string f, const Expr* x, const Expr* y, const Expr* z)
   return new FunExpr(f, ps);
 }
 
-const Expr* Expr::id(std::string s) {
-  return new VarExpr(s);
+//const Expr* Expr::id(std::string s) {
+//  return new VarExpr(s);
+//}
+
+const Expr* Expr::id(std::string s, std::list<std::string> attrs) {
+  std::list<const Attr*> as;
+  for(std::list<std::string>::const_iterator i = attrs.begin(); i != attrs.end(); ++i)
+    as.push_back(Attr::attr(*i));
+  return new VarExpr(s, as);
 }
 
 const Expr* Expr::impl(const Expr* l, const Expr* r) {
@@ -225,11 +232,21 @@ Decl* Decl::variable(std::string name, std::string type) {
 ProcDecl* Decl::procedure(std::string name,
     std::list< std::pair<std::string,std::string> > args, std::list< std::pair<std::string,std::string> > rets,
     std::list<Decl*> decls, std::list<Block*> blocks) {
+  std::list<std::pair<const Expr*, std::string> > arg_exprs;
+  for(auto arg: args)
+    arg_exprs.push_back({Expr::id(arg.first), arg.second});
+  return new ProcDecl(name, arg_exprs, rets, decls, blocks);
+}
+ProcDecl* Decl::procedure(std::string name,
+    std::list<std::pair<const Expr*, std::string> > args, std::list< std::pair<std::string,std::string> > rets,
+    std::list<Decl*> decls, std::list<Block*> blocks) {
   return new ProcDecl(name, args, rets, decls, blocks);
 }
+
 Decl* Decl::code(std::string name, std::string s) {
   return new CodeDecl(name, s);
 }
+
 
 FuncDecl* Decl::code(ProcDecl* P) {
   std::list<Decl*> decls;
@@ -448,6 +465,8 @@ void UpdExpr::print(std::ostream& os) const {
 }
 
 void VarExpr::print(std::ostream& os) const {
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << var;
 }
 
@@ -582,8 +601,11 @@ void ProcDecl::print(std::ostream& os) const {
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
   os << name << "(";
-  for (auto P = params.begin(), E = params.end(); P != E; ++P)
-    os << (P == params.begin() ? "" : ", ") << (P->second != "ref" ? "{:scalar} " : "") << P->first << ": " << P->second;
+  for (auto P = params.begin(), E = params.end(); P != E; ++P) {
+    os << (P == params.begin() ? "" : ", ") << (P->second != "ref" ? "{:scalar} " : "");
+    P->first->print(os);
+    os << ": " << P->second;
+  }
   os << ")";
   if (rets.size() > 0) {
     os << "\n";
