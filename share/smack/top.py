@@ -265,7 +265,6 @@ def target_selection(args):
         for line in f:
           triple = re.findall('^target triple = "(.*)"', line)
           if len(triple) > 0:
-            print "setting target: %s" % triple[0]
             args.clang_options += (" -target %s" % triple[0])
             break
 
