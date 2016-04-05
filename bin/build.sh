@@ -230,6 +230,7 @@ then
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.6 20
     sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.6 20
     sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.6 20
+    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.6 20
     ;;
 
   linux-ubuntu-12*)
