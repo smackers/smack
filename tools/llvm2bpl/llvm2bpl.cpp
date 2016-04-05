@@ -29,6 +29,7 @@
 #include "assistDS/Devirt.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/RenameIntrinsics.h"
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
 
@@ -111,7 +112,8 @@ int main(int argc, char **argv) {
     //pass_manager.add(llvm::createIndVarSimplifyPass());
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
-
+  
+  pass_manager.add(new smack::RenameIntrinsics());
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
