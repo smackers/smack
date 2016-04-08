@@ -330,7 +330,8 @@ def rust_frontend(args):
     bc = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
     try_command(rust_compile_command + [rs, '-o', bc], console=True)
     bitcodes.append(bc)
-    
+
+  bitcodes.append(os.path.join(smack_lib(), "foo.ll"))
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
