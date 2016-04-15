@@ -41,6 +41,10 @@ model checking, and abstract interpretation. Currently, SMACK leverages the
 [Boogie](http://boogie.codeplex.com) and [Corral](http://corral.codeplex.com)
 verifiers.
 
+This is a class project for CS 6110 at the University of Utah. We are
+currently adding missing features to smack to enable the verification of Rust
+programs.
+
 Consult [the Wiki](https://github.com/smackers/smack/wiki) for system
 requirements, installation, usage, and everything else.
 
