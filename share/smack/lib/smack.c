@@ -80,6 +80,24 @@ void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
 }
 
+void* realloc(void* ptr, unsigned long size) {
+  void* ret;
+  if (ptr == 0 && size != 0) {
+    ret = malloc(size);
+  } else if (ptr != 0 && size == 0) {
+    //    free(ptr);
+    ret = ptr;
+  } else if (ptr == 0 && size == 0) {
+    ret = malloc(size); // Implementation defined
+  }
+  else {
+    // Overapproximate the behavior of realloc
+    ret = malloc(size);
+    memcpy(ret, ptr, size);
+  }
+  return ret;
+}
+
 void* calloc(unsigned long num, unsigned long size) {
   void* ret;
   if (__VERIFIER_nondet_int()) {
