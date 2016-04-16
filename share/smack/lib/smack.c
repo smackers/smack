@@ -2,6 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 
 #include <smack.h>
+#include <stdlib.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -85,7 +86,7 @@ void* realloc(void* ptr, unsigned long size) {
   if (ptr == 0 && size != 0) {
     ret = malloc(size);
   } else if (ptr != 0 && size == 0) {
-    //    free(ptr);
+    free(ptr);
     ret = ptr;
   } else if (ptr == 0 && size == 0) {
     ret = malloc(size); // Implementation defined
