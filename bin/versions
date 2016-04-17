@@ -1,4 +1,3 @@
 MONO_VERSION=3.8.0
-BOOGIE_COMMIT=437bde8d02
-#CORRAL_COMMIT=4d980290c055
-CORRAL_DOWNLOAD_LINK="http://download-codeplex.sec.s-msft.com/Download/SourceControlFileDownload.ashx?ProjectName=corral&changeSetId=938d549405e3843b80b929837a455365c1e7696d"
+BOOGIE_COMMIT=ae29deff82
+CORRAL_COMMIT=76195fecca
