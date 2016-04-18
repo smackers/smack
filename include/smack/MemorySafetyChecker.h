@@ -18,3 +18,4 @@ public:
 }
 
 #endif //MEMORYSAFETYCHECKER_H
+

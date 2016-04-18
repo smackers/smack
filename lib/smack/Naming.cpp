@@ -66,7 +66,6 @@ const std::string Naming::PTR_VAR = "$p";
 const std::string Naming::UNDEF_SYM = "$u";
 const std::string Naming::CONTRACT_EXPR = "expr";
 const std::string Naming::MEMORY_SAFETY_FUNCTION = "__SMACK_check_memory_safety";
-const std::string Naming::MEMORY_SAFETY_FUNCTION_PARAMETER_SIZE = "size";
 
 using namespace llvm;
 
