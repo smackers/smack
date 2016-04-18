@@ -135,6 +135,9 @@ def arguments():
   translate_group.add_argument('--entry-points', metavar='PROC', nargs='+',
     default=['main'], help='specify top-level procedures [default: %(default)s]')
 
+  translate_group.add_argument('--memory-safety', action='store_true', default=False,
+    help='enable memory safety checks')
+
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
@@ -383,6 +386,7 @@ def llvm_to_bpl(args):
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
+  if args.memory_safety: cmd += ['-memory-safety']
   try_command(cmd, console=True)
   annotate_bpl(args)
 

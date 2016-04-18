@@ -937,6 +937,7 @@ void __SMACK_decls() {
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
+  D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;");
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
@@ -950,6 +951,8 @@ void __SMACK_decls() {
     "    $CurrAddr := $add.ref($CurrAddr, $1.ref);\n"
     "  }\n"
     "  $Alloc[p] := true;\n"
+    "  assume $Size(p) == n;\n"
+    "  assume $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
     "}");
 
   D("procedure $free(p: ref)\n"
@@ -982,6 +985,7 @@ void __SMACK_decls() {
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
+  D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;");
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
@@ -990,6 +994,7 @@ void __SMACK_decls() {
     "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
     "ensures $Alloc[p];\n"
+    "ensures $Size(p) == n;\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
 
@@ -1004,6 +1009,19 @@ void __SMACK_decls() {
   D("function $extractvalue(p: int, i: int) returns (int);");
 
 #undef D
+}
+
+// The size parameter represents number of bytes that are being accessed.
+void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
+    __SMACK_code("assert $slt.ref.bool(@, $0.ref) || $Alloc[$base(@)] == true;", pointer, pointer);
+    __SMACK_code("assert $slt.ref.bool(@, $0.ref) || $sle.ref.bool($base(@), @);", pointer, pointer, pointer);
+  #if MEMORY_MODEL_NO_REUSE_IMPLS
+    __SMACK_code("assert $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, size, pointer, pointer);
+  #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+    __SMACK_code("assert $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", pointer, pointer, size, pointer, pointer);
+  #else
+    __SMACK_code("assert $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, size, pointer, pointer);
+  #endif
 }
 
 void __SMACK_init_func_memory_model(void) {
