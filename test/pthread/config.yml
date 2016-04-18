@@ -1,4 +1,4 @@
 verifiers: [corral]
 memory: [no-reuse-impls]
 time-limit: 300
-flags: ['--pthread', '--context-bound=2']
+flags: [--pthread, --context-bound=2]
