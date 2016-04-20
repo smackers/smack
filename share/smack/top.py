@@ -336,7 +336,7 @@ def rust_frontend(args):
     #not using try_command here since it does not support IO redirection
     #TODO: Maybe a default param could be added to try_command to fix this
     with open(temp_rs, 'w') as output_file:
-        subprocess.Popen('cat '+ rust_macros + ' ' + rs, stdout=output_file, shell=True)
+        subprocess.Popen('cat '+ rs + ' ' + rust_macros, stdout=output_file, shell=True)
     try_command(rust_compile_command + [temp_rs, '-o', bc], console=True)
     bitcodes.append(bc)
   bitcodes.append(os.path.join(smack_lib(), "foo.ll"))
