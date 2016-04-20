@@ -318,6 +318,7 @@ def rust_frontend(args):
 
   bitcodes = []
   libs = ['smack.c']
+  rust_files = args.input_files
   smack_compile_command = default_clang_compile_command(args)
   rust_compile_command = default_rust_compile_command(args)
 
@@ -326,11 +327,18 @@ def rust_frontend(args):
     try_command(smack_compile_command + ['-o', bc, c], console=False)
     bitcodes.append(bc)
 
-  for rs in args.input_files:
-    bc = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
-    try_command(rust_compile_command + [rs, '-o', bc], console=True)
-    bitcodes.append(bc)
+  rust_macros = os.path.join(smack_lib(), 'smack.rs')
 
+  for rs in args.input_files:
+    bc      = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
+    temp_rs = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.rs', args)
+
+    #not using try_command here since it does not support IO redirection
+    #TODO: Maybe a default param could be added to try_command to fix this
+    with open(temp_rs, 'w') as output_file:
+        subprocess.Popen('cat '+ rust_macros + ' ' + rs, stdout=output_file, shell=True)
+    try_command(rust_compile_command + [temp_rs, '-o', bc], console=True)
+    bitcodes.append(bc)
   bitcodes.append(os.path.join(smack_lib(), "foo.ll"))
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)

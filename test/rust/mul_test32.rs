@@ -1,16 +1,9 @@
-extern {fn __VERIFIER_assert(x: i32);}
-
-macro_rules! assert {
-    ( $cond:expr ) => (
-        unsafe { __VERIFIER_assert($cond as i32); }
-    );
-}
 
 fn main() {
     {    
         let x: i32 = 3;
         let y: i32 = 4;
-        assert!(x*y == 12);
+        assert_eq!(x*y, 12);
     }
     {    
         let x: i32 = 3;
