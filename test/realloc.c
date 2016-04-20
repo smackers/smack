@@ -2,18 +2,6 @@
 #include <string.h>
 #include "smack.h"
 
-/* void *realloc2(void *src, unsigned long long new_size) {
-  if (src == NULL && new_size != 0) {
-    return malloc(new_size);
-  }
-  if (src != NULL && new_size == 0) {
-    return src;
-  }
-  void *result = malloc(new_size);
-  memcpy(result, src, new_size);
-  return result;
-  } */
-
 int main() {
   {
     // Tests that epanding an allocated memory region properly copies

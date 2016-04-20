@@ -19,39 +19,29 @@ namespace smack {
 
 using namespace llvm;
 
-  bool RenameIntrinsics::runOnModule(Module& M) {
-    StringRef arithStrRef("llvm\\.(s|u)(mul|add)\\.with\\.overflow\\.i(32|64)");
-    Regex arithRegex(arithStrRef);
+bool RenameIntrinsics::runOnModule(Module& M) {
+  StringRef arithStrRef("llvm\\.(s|u)(mul|add)\\.with\\.overflow\\.i(32|64)");
+  Regex arithRegex(arithStrRef);
 
-      for (Module::iterator func = M.begin(); func != M.end(); ++func) {
-
-        for (auto I = inst_begin(func); I != inst_end(func); ++I) {
-
-          if(CallInst* callinst = dyn_cast<CallInst>(&*I)) {
-
-            StringRef functionName( callinst->getCalledFunction()->getName() );
-            SmallVector<StringRef,1> matches;
-
-            if( arithRegex.match(functionName, &matches) && matches.size() > 0 ) {
-
-                StringRef replacementFuncName("smackreplacement." + ((std::string)matches[0]));
-                auto replacementFunc = M.getNamedValue(replacementFuncName);
-
-                if( replacementFunc )
-                {
-                    callinst->setCalledFunction(replacementFunc);
-                }
-                else
-                {
-                    return false;
-                }
-            }
-          }
-        }
+  for (auto& func : M) {
+    for (auto I = inst_begin(func); I != inst_end(func); ++I) {
+      if (CallInst* callinst = dyn_cast<CallInst>(&*I)) {
+	StringRef functionName(callinst->getCalledFunction()->getName());
+	SmallVector<StringRef, 1> matches;
+	if (arithRegex.match(functionName, &matches) && matches.size() > 0) {
+	  StringRef replacementFuncName("smackreplacement." + std::string(matches[0]));
+	  auto replacementFunc = M.getNamedValue(replacementFuncName);
+	  if (replacementFunc) {
+	      callinst->setCalledFunction(replacementFunc);
+	  } else {
+	    return false;
+	  }
+	}
       }
-
-    return true;
+    }
   }
+  return true;
+}
 
 // Pass ID variable
 char RenameIntrinsics::ID = 0;
@@ -59,5 +49,4 @@ char RenameIntrinsics::ID = 0;
 // Register the pass
 static RegisterPass<RenameIntrinsics>
 X("rename-intrinsics", "Rename LLVM Intrinsics");
-
 }
