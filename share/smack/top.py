@@ -325,9 +325,9 @@ def insert_rust_macros(victim_filename, macros_filename, write_to=None):
     rust_comment    = '//'
     rust_feature    = '#'
     line = line.strip()
-    return (len(line) > 0 and 
-             (line.startswith(rust_comment) 
-             or line.startswith(rust_feature)))
+    return (len(line) == 0 or
+             line.startswith(rust_comment) 
+             or line.startswith(rust_feature))
   
   macro_file_lines = []
   with open(macros_filename, 'r') as m_file:
