@@ -42,7 +42,7 @@ pthread_t pthread_self(void) {
 
 int pthread_equal(pthread_t t1, pthread_t t2) {
   // Return non-zero if threads are equal.  0 otherwise.
-  return !((int)t1 - (int)t2);
+  return (int)t1 == (int)t2;
 }
 
 int pthread_join(pthread_t __th, void **__thread_return) {
