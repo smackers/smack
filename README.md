@@ -7,12 +7,13 @@
 * Verification of safety properties for *unsafe* blocks, *e.g.*, Rust pointer aliasing rules are not violated, memory is not leaked and null pointers are never exposed
 * Detection of out-of-bounds memory accesses
 * Context bounded verification of concurrent programs
-* Pre and post condition reasoning for FFI, *e.g.*, C function calls
+* Pre and post condition reasoning for FFI functions, *e.g.*, C function calls
 * This can be coupled with verification of called C functions for end-to-end verification
 
 ## Current requirements
 * LLVM 3.6
 * [Rust 1.2](http://static.rust-lang.org/dist/2015-06-01/rust-nightly-x86_64-unknown-linux-gnu.tar.gz) *This is the most recent, working vintage Rust compiler for SMACK*
+* [Rust 1.2 source](http://static.rust-lang.org/dist/2015-06-01/rustc-nightly-src.tar.gz) *For use with Angelic verification and SDV backtrace viewing*
 
 ## Related work
 * Compiler/cargo plugins to ease user experience
