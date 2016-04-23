@@ -4,8 +4,8 @@
 
 ## The current goals of this project are:
 * An assertion verifier (throught the `assert!` and `assert_eq!` macros) for Rust programs
-* Verification of safety properties for *unsafe* blocks, *e.g.*, Rust aliasing rules are not violated, memory is not leaked and null pointers are never exposed
-* Detection of out of bounds memory accesses
+* Verification of safety properties for *unsafe* blocks, *e.g.*, Rust pointer aliasing rules are not violated, memory is not leaked and null pointers are never exposed
+* Detection of out-of-bounds memory accesses
 * Context bounded verification of concurrent programs
 * Pre and post condition reasoning for FFI, *e.g.*, C function calls
 * This can be coupled with verification of called C functions for end-to-end verification
@@ -20,6 +20,7 @@
 * Upgrades to SMACK infrastructure to more recent versions of Rust
 * Sound implementation of missing LLVM features used by Rust but not Clang
 
+# Information pertaining to the core SMACK tool
 
 SMACK is a *bounded software verifier*, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
