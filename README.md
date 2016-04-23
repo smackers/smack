@@ -1,5 +1,18 @@
 <!-- [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/) -->
 
+# This is a fork of SMACK to verify Rust language programs
+
+## The current goals of this project are:
+* An assertion verifier (throught the `assert!` and `assert_eq!` macros) for Rust programs
+* Verification of safety properties for *unsafe* blocks, *e.g.*, Rust aliasing rules are not violated, memory leaks and 
+* Bounded verification of concurrent programs
+* Pre and post condition reasoning for FFI, *e.g.*, C function calls
+
+## Current requirements
+LLVM 3.6
+[Rust 1.2](http://static.rust-lang.org/dist/2015-06-01/rust-nightly-x86_64-unknown-linux-gnu.tar.gz) *This is the most recent, working vintage for SMACK*
+
+
 SMACK is a *bounded software verifier*, verifying the assertions in its
 input programs up to a given bound on loop iterations and recursion depth.
 SMACK can verify C programs, such as the following:
