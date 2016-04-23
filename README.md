@@ -21,7 +21,7 @@
 * Upgrades to SMACK infrastructure to more recent versions of Rust
 * Sound implementation of missing LLVM features used by Rust but not Clang
 
-## Contact me for ideas, bugs and other use cases
+## I am interested in your ideas, bugs reports and other use cases
 [Mark S. Baranowski](mailto:baranows@cs.utah.edu)
 
 # Information pertaining to the core SMACK tool
