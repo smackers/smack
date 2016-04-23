@@ -16,7 +16,7 @@
 * [Rust 1.2 source](http://static.rust-lang.org/dist/2015-06-01/rustc-nightly-src.tar.gz) *For use with Angelic verification and SDV backtrace viewing*
 
 ## Related work
-* Compiler/cargo plugins to ease user experience
+* Rustc and Cargo plugins to ease user experience
 * SMACK friendly implementations of common Rust libraries
 * Upgrades to SMACK infrastructure to more recent versions of Rust
 * Sound implementation of missing LLVM features used by Rust but not Clang
