@@ -8,7 +8,7 @@
 * Detection of out of bounds memory accesses
 * Bounded verification of concurrent programs
 * Pre and post condition reasoning for FFI, *e.g.*, C function calls
-.* This can be coupled with verification of called C functions for end-to-end verification
+** This can be coupled with verification of called C functions for end-to-end verification
 
 ## Current requirements
 * LLVM 3.6
