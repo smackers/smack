@@ -1,6 +1,6 @@
 <!-- [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/) -->
 
-# This is a fork of SMACK to verify Rust language programs
+# This is a fork of [SMACK](https://github.com/smackers/smack) to verify Rust language programs
 
 ## The current goals of this project are:
 * An assertion verifier (throught the `assert!` and `assert_eq!` macros) for Rust programs
@@ -20,6 +20,9 @@
 * SMACK friendly implementations of common Rust libraries
 * Upgrades to SMACK infrastructure to more recent versions of Rust
 * Sound implementation of missing LLVM features used by Rust but not Clang
+
+## Contact me for ideas, bugs and other use cases
+[Mark S. Baranowski](mailto:baranows@cs.utah.edu)
 
 # Information pertaining to the core SMACK tool
 
