@@ -104,34 +104,34 @@ fn main() {
     assert!(arr.get(0) == 0);
     while ind < len {
         println!("{}", arr.get(ind));
-//        assert!(arr.get(ind) == ind as i32);
+        assert!(arr.get(ind) == ind as i32);
         ind += 1
     }
 
-    /*    // The array seems to work!!!
+    // The array seems to work!!!
     for ind in 0..len {
-    assert!(arr.get(ind) == ind as i32);
-}
+        assert!(arr.get(ind) == ind as i32);
+    }
 
     for ind in 0..len {
-    assert!(arr.get(ind) != (ind + 1) as i32);
-}
+        assert!(arr.get(ind) != (ind + 1) as i32);
+    }
 
     // Mutate the array
 
     for ind in 0..len {
-    arr.set((len-ind-1) as usize, (len-ind-1) as i32);
-}
+        arr.set((len-ind-1) as usize, (len-ind-1) as i32);
+    }
     
     // Check again...
 
     for ind in 0..len {
-    assert!(arr.get(len-ind-1) == (len-ind-1) as i32);
-}
+        assert!(arr.get(len-ind-1) == (len-ind-1) as i32);
+    }
 
     for ind in 0..len {
-    assert!(arr.get(len-ind-1) != ((len-ind)+3) as i32);
-}*/
+        assert!(arr.get(len-ind-1) != ((len-ind)+3) as i32);
+    }
 
 
 }
