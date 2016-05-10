@@ -39,7 +39,7 @@ impl Arr {
         if self.len >= self.sz {
             // Double the length of the array
             println!("Reallocating");
-            self.data = unsafe{reallocate(self.data as *mut u8, self.sz, 2*self.sz, 4)} as *mut i32;
+            self.data = unsafe{reallocate(self.data as *mut u8, 4*self.sz, 4*2*self.sz, 4)} as *mut i32;
             if self.data as usize == 0 {panic!{"Failed to reallocate"}};
             self.sz *= 2;
         }
