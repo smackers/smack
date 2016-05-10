@@ -3,9 +3,18 @@
 
 //test
 
-
-
 #![feature(alloc)]
+
+
+extern {
+    fn realloc(ptr: *mut u8, size: usize) -> *mut u8;
+}
+
+fn myrealloc(ptr: *mut u8, old_size: usize, size: usize, align: usize) -> *mut u8 {
+    unsafe{realloc(ptr, size)}
+}
+
+
 extern crate alloc;
 use alloc::heap::{allocate,deallocate,reallocate};
 
@@ -39,7 +48,7 @@ impl Arr {
         if self.len >= self.sz {
             // Double the length of the array
             println!("Reallocating");
-            self.data = unsafe{reallocate(self.data as *mut u8, 4*self.sz, 4*2*self.sz, 4)} as *mut i32;
+            self.data = unsafe{myrealloc(self.data as *mut u8, 4*self.sz, 4*2*self.sz, 4)} as *mut i32;
             if self.data as usize == 0 {panic!{"Failed to reallocate"}};
             self.sz *= 2;
         }
@@ -51,7 +60,7 @@ impl Arr {
 impl Drop for Arr {
     fn drop(&mut self) {
         // Check null pointer
-//        assert!((self.data as isize) != 0);
+        //        assert!((self.data as isize) != 0);
         println!("Dropping");
         if (self.data as isize) == 0 {
             panic!("Null pointer while dropping array!");
@@ -64,50 +73,65 @@ impl Drop for Arr {
 fn main() {
     let mut len = 2;
     let mut arr = Arr::new(len);
+    let mut ind = 0;
 
-    for ind in 0..len {
+    while ind < len {
         arr.push(ind as i32);
+        ind += 1;
     }
-    for ind in 0..len {
+
+    ind = 0;
+    while ind < len {
+        println!("{}", arr.len);
+        assert!(arr.len == 2);
         assert!(arr.get(ind) == ind as i32);
         println!("{}", arr.get(ind));
+        ind += 1;
     }
 
     // Test reallocation
-    
-    for ind in 0..len {
+    ind = 0;
+    while ind < len {
+        println!("{}", arr.len);
         arr.push((ind + 2) as i32);
+        ind += 1;
     }
+    println!("{}", arr.len);
+    assert!(arr.len == 4);
     len *= 2;
-    for ind in 0..len {
+    assert!(len == 4);
+    ind = 0;
+    assert!(arr.get(0) == 0);
+    while ind < len {
         println!("{}", arr.get(ind));
-        assert!(arr.get(ind) == ind as i32);
+//        assert!(arr.get(ind) == ind as i32);
+        ind += 1
     }
 
-    // The array seems to work!!!
+    /*    // The array seems to work!!!
     for ind in 0..len {
-        assert!(arr.get(ind) == ind as i32);
-    }
+    assert!(arr.get(ind) == ind as i32);
+}
 
     for ind in 0..len {
-        assert!(arr.get(ind) != (ind + 1) as i32);
-    }
+    assert!(arr.get(ind) != (ind + 1) as i32);
+}
 
     // Mutate the array
 
     for ind in 0..len {
-        arr.set((len-ind-1) as usize, (len-ind-1) as i32);
-    }
+    arr.set((len-ind-1) as usize, (len-ind-1) as i32);
+}
     
     // Check again...
 
     for ind in 0..len {
-        assert!(arr.get(len-ind-1) == (len-ind-1) as i32);
-    }
+    assert!(arr.get(len-ind-1) == (len-ind-1) as i32);
+}
 
     for ind in 0..len {
-        assert!(arr.get(len-ind-1) != ((len-ind)+3) as i32);
-    }
+    assert!(arr.get(len-ind-1) != ((len-ind)+3) as i32);
+}*/
 
 
 }
