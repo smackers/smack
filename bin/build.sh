@@ -51,7 +51,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependnecies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml unzip wget"
+DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
 
 ################################################################################
 #

@@ -1,3 +1,4 @@
+skip: ok
 verifiers: [corral]
 memory: [no-reuse-impls]
 time-limit: 300
