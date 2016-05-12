@@ -1,5 +1,6 @@
 verifiers: [boogie, corral]
 memory: [no-reuse-impls, no-reuse, reuse]
 time-limit: 120
+memory-limit: 450
 flags: [--unroll=2]
 skip: false
