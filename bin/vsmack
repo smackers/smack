@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+
+import argparse
+import os.path
+import subprocess
+import sys
+
+VAGRANTFILE = """
+Vagrant.configure("2") do |config|
+    config.vm.box = "smackers/smack"
+    config.vm.synced_folder ".", "/home/vagrant/scratch"
+end
+"""
+
+if __name__ == '__main__':
+    print 'Virtualized SMACK'
+    print '--'
+    print 'This deployment has several inherent sources of overhead'
+    print '* downloading a pre-provisioned virtual machine (once)'
+    print '* bringing up and tearing down this machine on each invocation'
+    print '  (use the --no-destroy flag to avoid repeating this overhead)'
+    print '* running smack inside of the virtual machine'
+    print ''
+    print 'All of this overhead can be avoided by building Smack natively:'
+    print '  https://github.com/smackers/smack'
+    print '--'
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--no-destroy',
+        action = 'store_true',
+        help = 'do not destroy the created vagrant box')
+    args, smack_args = parser.parse_known_args()
+
+    if os.path.isfile('Vagrantfile'):
+        sys.exit('error: existing Vagrantfile in working directory; please move it aside')
+
+    if subprocess.call(['which', 'vagrant'], stdout=subprocess.PIPE):
+        sys.exit('error: cannot find `vagrant`; it must be installed https://www.vagrantup.com')
+
+    try:
+        with open('Vagrantfile', 'w') as f:
+            f.write(VAGRANTFILE)
+
+        if subprocess.call(['vagrant', 'up']):
+            raise Exception('failed to bring up the box')
+
+        subprocess.call(['vagrant', 'ssh', '-c',
+            '&&'.join([
+                    "source smack.environment",
+                    "cd scratch",
+                    "smack {0}".format(' '.join(smack_args))
+            ])
+        ])
+
+        if not args.no_destroy:
+            if subprocess.call(['vagrant', 'destroy', '-f']):
+                raise Exception('failed to destroy the box')
+
+    except Exception as e:
+        print 'error:', e
+
+    finally:
+        os.remove('Vagrantfile')
