@@ -133,7 +133,7 @@ void Region::init(const Value* V, unsigned length) {
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
-    T->isIntegerTy(8));
+    DSA->isMemcpyd(representative) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncompleteNode();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isCollapsedNode();
