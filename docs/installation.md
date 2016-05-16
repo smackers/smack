@@ -5,11 +5,21 @@ In principle SMACK can be run on any platform on which [LLVM][] and [Boogie][]
 can run. In practice we have run SMACK on standard Ubuntu and openSUSE Linux
 distributions, OS X, and Windows via Cygwin. Below we outline system
 requirements and installation instructions for typical system configurations.
-The quickest way to get started without worrying about system requirements and
+A quick way to get started without worrying about system requirements and
 installation, however, is to launch our reproducible and portable development
-environment using [Vagrant][].
+environment using [Vagrant][]. An even quicker way to get started is to use
+our prepackaged Vagrant box.
 
-### Quick Setup . Vagrant & VirtualBox
+### Super-Quick Setup: Virtual Smack
+
+Just download [vsmack](bin/vsmack) and put it in your executable path, ensure
+[Vagrant][] and [VirtualBox][] are installed, and run `vsmack` directly on
+your source files. For example,
+````Shell
+vsmack a.c
+````
+
+### Quick Setup: Vagrant Development Environment
 
 SMACK can be run in a preconfigured virtual environment using [Vagrant][] and
 [VirtualBox][]. Both are available for a wide range of systems, with great
@@ -163,4 +173,3 @@ shell in the `test` directory by executing
 [Xcode]: https://developer.apple.com/xcode/
 [Homebrew]: http://brew.sh/
 [Homebrew Cask]: http://caskroom.io
-
