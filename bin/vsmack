@@ -5,59 +5,85 @@ import os.path
 import subprocess
 import sys
 
+WORKING_PATH = os.getcwd()
+MACHINE_PATH = os.path.join(os.path.expanduser("~"), ".vsmack")
+VIRTUAL_PATH = '/home/vagrant/scratch'
+
+DESCRIPTION = """
+Virtualized SMACK
+
+NOTE: this deployment has several inherent sources of overhead,
+* downloading a pre-provisioned virtual machine (VM) image (once)
+* creating the VM (once, until destroyed)
+* starting the VM (once, until halted)
+* running smack inside of the VM (always)
+All of this overhead can be avoided by building Smack natively,
+  https://github.com/smackers/smack
+
+NOTE: this command leaves a VM running at the following path,
+  %(MACHINE_PATH)s
+The following flags alter this default behvaior,
+* the `--halt` flag halts the VM after invoking smack
+* the `--destroy` flag destroys the VM after invoking smack
+
+NOTE: this command gives the VM recursive access to the working directory only.
+Files outside of the current working director will not be accessible.
+""" % globals()
+
 VAGRANTFILE = """
 Vagrant.configure("2") do |config|
     config.vm.box = "smackers/smack"
-    config.vm.synced_folder ".", "/home/vagrant/scratch"
+    config.vm.synced_folder "%(WORKING_PATH)s", "%(VIRTUAL_PATH)s"
 end
-"""
+""" % globals()
 
 if __name__ == '__main__':
-    print 'Virtualized SMACK'
-    print '--'
-    print 'This deployment has several inherent sources of overhead'
-    print '* downloading a pre-provisioned virtual machine (once)'
-    print '* bringing up and tearing down this machine on each invocation'
-    print '  (use the --no-destroy flag to avoid repeating this overhead)'
-    print '* running smack inside of the virtual machine'
-    print ''
-    print 'All of this overhead can be avoided by building Smack natively:'
-    print '  https://github.com/smackers/smack'
-    print '--'
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--no-destroy',
+    parser = argparse.ArgumentParser(
+        description = DESCRIPTION,
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('--halt',
         action = 'store_true',
-        help = 'do not destroy the created vagrant box')
+        help = 'halt the created vagrant box after running smack')
+
+    parser.add_argument('--destroy',
+        action = 'store_true',
+        help = 'destroy the created vagrant box after running smack')
+
     args, smack_args = parser.parse_known_args()
 
-    if os.path.isfile('Vagrantfile'):
-        sys.exit('error: existing Vagrantfile in working directory; please move it aside')
-
-    if subprocess.call(['which', 'vagrant'], stdout=subprocess.PIPE):
+    if subprocess.call(['which', 'vagrant'], stdout = subprocess.PIPE):
         sys.exit('error: cannot find `vagrant`; it must be installed https://www.vagrantup.com')
 
     try:
-        with open('Vagrantfile', 'w') as f:
+        if not os.path.exists(MACHINE_PATH):
+            os.makedirs(MACHINE_PATH)
+
+        with open(os.path.join(MACHINE_PATH, 'Vagrantfile'), 'w') as f:
             f.write(VAGRANTFILE)
 
-        if subprocess.call(['vagrant', 'up']):
+        if subprocess.call(['vagrant', 'up'], cwd = MACHINE_PATH):
             raise Exception('failed to bring up the box')
 
         subprocess.call(['vagrant', 'ssh', '-c',
             '&&'.join([
                     "source smack.environment",
-                    "cd scratch",
+                    "cd %(VIRTUAL_PATH)s" % globals(),
                     "smack {0}".format(' '.join(smack_args))
             ])
-        ])
+        ], cwd = MACHINE_PATH)
 
-        if not args.no_destroy:
-            if subprocess.call(['vagrant', 'destroy', '-f']):
+        if args.destroy:
+            if subprocess.call(['vagrant', 'destroy', '-f'], cwd = MACHINE_PATH):
                 raise Exception('failed to destroy the box')
+
+        elif args.halt:
+            if subprocess.call(['vagrant', 'halt'], cwd = MACHINE_PATH):
+                raise Exception('failed to halt the box')
 
     except Exception as e:
         print 'error:', e
 
     finally:
-        os.remove('Vagrantfile')
+        pass
