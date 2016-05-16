@@ -13,5 +13,6 @@
 * [Pantazis Deligiannis](http://www.doc.ic.ac.uk/~pd1113/index.html) (Imperial College London)
 * [Arvind Haran](http://www.cs.utah.edu/~haran) ([SOAR Lab](http://soarlab.org/), University of Utah)
 * Shaobo He ([SOAR Lab](http://soarlab.org/), University of Utah)
+* Jiten Thakkar ([SOAR Lab](http://soarlab.org/), University of Utah)
 * [Jonathan Whitaker](https://www.linkedin.com/in/jonathan-whitaker-5a8b2484) ([SOAR Lab](http://soarlab.org/), University of Utah)
 
