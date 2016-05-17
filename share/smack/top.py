@@ -151,8 +151,8 @@ def arguments():
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
     help='upper bound on minimum loop iterations [default: %(default)s]')
 
-  verifier_group.add_argument('--context-bound', metavar='k', default='1', type=int,
-    help='bound thread contexts in Corral to a maximum of k contexts')
+  verifier_group.add_argument('--context-bound', metavar='K', default='1', type=int,
+    help='bound on the number of thread contexts in Corral [default: %(default)s]')
 
   verifier_group.add_argument('--verifier-options', metavar='OPTIONS', default='',
     help='additional verifier arguments (e.g., --verifier-options="/trackAllVars /staticInlining")')
