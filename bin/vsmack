@@ -5,7 +5,7 @@ import os.path
 import subprocess
 import sys
 
-WORKING_PATH = os.getcwd()
+WORKING_PATH = os.getcwd().replace('\\', r'\\')
 MACHINE_PATH = os.path.join(os.path.expanduser("~"), ".vsmack")
 VIRTUAL_PATH = '/home/vagrant/scratch'
 VAGRANT_BOX = 'smackers/smack'
