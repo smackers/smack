@@ -16,7 +16,15 @@ Just download [vsmack](bin/vsmack) and put it in your executable path, ensure
 [Vagrant][] and [VirtualBox][] are installed, and run `vsmack` directly on
 your source files. For example,
 ````Shell
-vsmack a.c
+# fetch vsmack and set executable permission
+wget -O ~/bin/vsmack https://raw.githubusercontent.com/smackers/smack/develop/bin/vsmack
+chmod u+x ~/bin/vsmack
+
+# fetch a source file
+wget https://raw.githubusercontent.com/smackers/smack/develop/test/basic/simple.c
+
+# run vsmack
+vsmack simple.c
 ````
 
 ### Quick Setup: Vagrant Development Environment
