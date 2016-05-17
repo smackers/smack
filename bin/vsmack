@@ -8,6 +8,7 @@ import sys
 WORKING_PATH = os.getcwd()
 MACHINE_PATH = os.path.join(os.path.expanduser("~"), ".vsmack")
 VIRTUAL_PATH = '/home/vagrant/scratch'
+VAGRANT_BOX = 'smackers/smack'
 
 DESCRIPTION = """
 Virtualized SMACK
@@ -22,7 +23,7 @@ All of this overhead can be avoided by building Smack natively,
 
 NOTE: this command leaves a VM running at the following path,
   %(MACHINE_PATH)s
-The following flags alter this default behvaior,
+The following flags alter this default behavior,
 * the `--halt` flag halts the VM after invoking smack
 * the `--destroy` flag destroys the VM after invoking smack
 
@@ -32,7 +33,7 @@ Files outside of the current working director will not be accessible.
 
 VAGRANTFILE = """
 Vagrant.configure("2") do |config|
-    config.vm.box = "smackers/smack"
+    config.vm.box = "%(VAGRANT_BOX)s"
     config.vm.synced_folder "%(WORKING_PATH)s", "%(VIRTUAL_PATH)s"
 end
 """ % globals()
