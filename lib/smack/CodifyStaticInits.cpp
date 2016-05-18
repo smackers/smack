@@ -15,6 +15,7 @@
 
 #include <deque>
 #include <queue>
+#include <set>
 #include <vector>
 
 namespace smack {
@@ -29,11 +30,14 @@ namespace{
   }
 
   bool isBoogieCode(Value& V) {
-    std::queue<Value*> uses;
-    uses.push(&V);
-    while (uses.size()) {
-      Value* U = uses.front();
-      uses.pop();
+    std::queue<Value*> worklist;
+    std::set<Value*> covered;
+    worklist.push(&V);
+    covered.insert(&V);
+    while (worklist.size()) {
+      Value* U = worklist.front();
+      worklist.pop();
+
       if (CallInst* CI = dyn_cast<CallInst>(U))
         if (Function* F = CI->getCalledFunction())
           if (F->hasName())
@@ -44,7 +48,10 @@ namespace{
             return true;
 
       for (auto W : U->users())
-        uses.push(W);
+        if (!covered.count(W)) {
+          worklist.push(W);
+          covered.insert(W);
+        }
     }
     return false;
   }
