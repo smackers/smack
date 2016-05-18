@@ -3,7 +3,7 @@
 
 ### Coordinators
 
-* [Michael Emmi](http://software.imdea.org/people/michael.emmi/index.html) (IMDEA Software Institute)
+* [Michael Emmi](http://michael-emmi.github.io)
 * [Zvonimir Rakamaric](http://www.zvonimir.info/) ([SOAR Lab](http://soarlab.org/), University of Utah)
 
 
