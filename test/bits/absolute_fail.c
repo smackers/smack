@@ -8,7 +8,7 @@ int main(void) {
   unsigned int r;                  // the result goes here 
   int mask;
   assume(v < 0);
-  mask = v >> sizeof(int) * CHAR_BIT - 1;
+  mask = v >> (sizeof(int) * CHAR_BIT - 1);
 
   r = (v + mask) ^ mask;
   assert(r == v);
