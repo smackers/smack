@@ -84,6 +84,9 @@ castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
 }
 
 static inline bool isZExtOrBitCastable(Value* V, Type* T) {
+  if (!CastInst::isCastable(V->getType(), T))
+    return false;
+
   switch(CastInst::getCastOpcode(V, false, T, false)) {
     case Instruction::ZExt:
     case Instruction::BitCast:
