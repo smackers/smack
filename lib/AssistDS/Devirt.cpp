@@ -122,6 +122,23 @@ static inline bool match(CallSite &CS, const Function &F) {
   return true;
 }
 
+static inline bool checkArgs(const CallSite &CS, const Function *F) {
+  auto N = CS.arg_size();
+  auto T = F->getFunctionType();
+  auto M = T->getNumParams();
+
+  if (N + 1 != M)
+    return false;
+
+  for (unsigned i=0; i<N; i++) {
+    auto A = CS.getArgument(i);
+    auto PT = T->getParamType(i+1);
+    if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
+      return false;
+  }
+  return true;
+}
+
 //
 // Method: findInCache()
 //
@@ -153,9 +170,15 @@ Devirtualize::findInCache (const CallSite & CS,
     if (CS.getType() != bounceFunc->getReturnType())
       continue;
 
-    // Check the type of the function pointer and the arguments
-    if (CS.getCalledValue()->stripPointerCasts()->getType() !=
-        bounceFunc->arg_begin()->getType())
+    // Check the type of the function pointer and the argumentsa
+    PointerType* PT = dyn_cast<PointerType>(bounceFunc->arg_begin()->getType());
+    assert(PT);
+    if (CS.getCalledValue()->stripPointerCasts()->getType() != PT)
+      continue;
+
+    FunctionType* FT = dyn_cast<FunctionType>(PT->getElementType());
+    assert(FT);
+    if (FT->isVarArg() && !checkArgs(CS, bounceFunc))
       continue;
 
     //
