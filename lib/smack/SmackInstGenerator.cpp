@@ -111,8 +111,8 @@ void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst& ti) {
          s != e && llvm::isa<llvm::PHINode>(s); ++s) {
 
       llvm::PHINode* phi = llvm::cast<llvm::PHINode>(s);
-      if (llvm::Value* v =
-            phi->getIncomingValueForBlock(block)) {
+      if (llvm::Value* v = phi->getIncomingValueForBlock(block)) {
+        v = v->stripPointerCasts();
         lhs.push_back(rep.expr(phi));
         rhs.push_back(rep.expr(v));
       }
@@ -347,7 +347,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
-  const llvm::Value* V = si.getOperand(0);
+  const llvm::Value* V = si.getOperand(0)->stripPointerCasts();
   assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
   emit(rep.store(P,V));
@@ -438,18 +438,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   Function* f = ci.getCalledFunction();
-
   if (!f) {
-    if (auto CE = dyn_cast<const ConstantExpr>(ci.getCalledValue())) {
-      if (CE->isCast()) {
-        if (auto CV = dyn_cast<Function>(CE->getOperand(0))) {
-          f = CV;
-        }
-      }
-    }
+    assert(ci.getCalledValue() && "Called value is null");
+    f = cast<Function>(ci.getCalledValue()->stripPointerCasts());
   }
 
-  std::string name = f && f->hasName() ? f->getName() : "";
+  std::string name = f->hasName() ? f->getName() : "";
 
   if (ci.isInlineAsm()) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
@@ -585,14 +579,11 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   //   Slice* S = getSlice(ci.getArgOperand(0));
   //   emit(Stmt::assert_(S->getBoogieExpression(naming,rep)));
 
-  } else if (f) {
-    emit(rep.call(f, ci));
-
   } else {
-    llvm_unreachable("Expected function devirtualization.");
+    emit(rep.call(f, ci));
   }
 
-  if (f && f->isDeclaration() && rep.isExternal(&ci)) {
+  if (f->isDeclaration() && rep.isExternal(&ci)) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
@@ -606,6 +597,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
     const Value* V = dvi.getValue();
     const llvm::DIVariable var(dvi.getVariable());
     if (V) {
+      V = V->stripPointerCasts();
       std::stringstream recordProc;
       recordProc << "boogie_si_record_" << rep.type(V);
       emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var.getName().str())}));
