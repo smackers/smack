@@ -623,6 +623,10 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
 const Expr* SmackRep::expr(const llvm::Value* v) {
   using namespace llvm;
 
+  if (isa<const Constant>(v)) {
+    v = v->stripPointerCasts();
+  }
+
   if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
     assert(g->hasName());
     return Expr::id(naming.get(*v));
@@ -632,10 +636,10 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
     auxDecls[name] = Decl::constant(name,type(v));
     return Expr::id(name);
 
-  } else if (naming.get(*v) != "")
+  } else if (naming.get(*v) != "") {
     return Expr::id(naming.get(*v));
 
-  else if (const Constant* constant = dyn_cast<const Constant>(v)) {
+  } else if (const Constant* constant = dyn_cast<const Constant>(v)) {
 
     if (const ConstantExpr* CE = dyn_cast<const ConstantExpr>(constant)) {
 
@@ -652,7 +656,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return cmp(CE);
 
       else {
-        DEBUG(errs() << "VALUE : " << *v << "\n");
+        DEBUG(errs() << "VALUE : " << *constant << "\n");
         llvm_unreachable("Constant expression of this type not supported.");
       }
 
@@ -666,7 +670,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return Expr::id(Naming::NULL_VAL);
 
     else {
-      DEBUG(errs() << "VALUE : " << *v << "\n");
+      DEBUG(errs() << "VALUE : " << *constant << "\n");
       llvm_unreachable("This type of constant not supported.");
     }
 
