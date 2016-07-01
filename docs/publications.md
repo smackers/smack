@@ -3,7 +3,7 @@
 
 ### Main Reference
 
-Please use the following publication when citing SMACK in your papers:
+Please use the following publication when citing SMACK in your papers:  
 [SMACK: Decoupling Source Language Details from Verifier Implementations](http://soarlab.org/2014/05/smack-decoupling-source-language-details-from-verifier-implementations/),
 Zvonimir Rakamaric, Michael Emmi,
 26th International Conference on Computer Aided Verification (CAV 2014)
@@ -13,6 +13,11 @@ Zvonimir Rakamaric, Michael Emmi,
 
 This is an incomplete list of publications that use, leverage, or extend SMACK.
 If you have a publication for this list, please email [Zvonimir](mailto:zvonimir@cs.utah.edu).
+
+1. [Statistical Similarity of Binaries](http://dl.acm.org/citation.cfm?id=2908126),
+Yaniv David, Nimrod Partush, Eran Yahav,
+37th ACM SIGPLAN Conference on Programming Language Design and Implementation
+(PLDI 2016)
 
 1. [SMACK Software Verification Toolchain](http://soarlab.org/2016/02/icse2016-chwre/),
 Montgomery Carter, Shaobo He, Jonathan Whitaker, Zvonimir Rakamaric, Michael Emmi,
