@@ -4,36 +4,12 @@ SMACK is both a *modular software verification toolchain* and a
 *self-contained software verifier*. It can be used to verify the assertions
 in its input programs. In its default mode, assertions are verified up to a
 given bound on loop iterations and recursion depth; it contains experimental
-support for unbounded verification as well. For example, SMACK can verify C
-programs as the following:
-
-    // examples/simple/simple.c
-    #include "smack.h"
-
-    int incr(int x) {
-      return x + 1;
-    }
-
-    int main(void) {
-      int a, b;
-
-      a = b = __VERIFIER_nondet_int();
-      a = incr(a);
-      assert(a == b + 1);
-      return 0;
-    }
-
-The command
-
-    smack simple.c
-
-reports that the assertion `a == b + 1` cannot be violated. Besides the
-features of this very simple example, SMACK handles every complicated feature
+support for unbounded verification as well. SMACK handles complicated feature
 of the C language, including dynamic memory allocation, pointer arithmetic, and
 bitwise operations.
 
 Under the hood, SMACK is a translator from the [LLVM](http://www.llvm.org)
-compiler’s popular intermediate representation (IR) into the
+compiler's popular intermediate representation (IR) into the
 [Boogie](http://boogie.codeplex.com) intermediate verification language (IVL).
 Sourcing LLVM IR exploits an increasing number of compiler front-ends,
 optimizations, and analyses. Currently SMACK only supports the C language via
