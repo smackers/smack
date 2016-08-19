@@ -354,7 +354,8 @@ then
   git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
   cd ${CORRAL_DIR}
   git reset --hard ${CORRAL_COMMIT}
-  cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
+  git submodule init
+  git submodule update
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
