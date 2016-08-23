@@ -51,7 +51,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependnecies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml unzip wget"
+DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
 
 ################################################################################
 #
@@ -162,7 +162,7 @@ linux-opensuse*)
 
 linux-ubuntu-14*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-3.5 llvm-3.5 mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-3.6 llvm-3.6 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
@@ -222,14 +222,20 @@ then
     ;;
 
   linux-ubuntu-14*)
-    sudo add-apt-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.5 main"
-    ${WGET} -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    # Adding LLVM repository
+    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.6 main"
+    ${WGET} -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    # Adding MONO repository
+    sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+#    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.5 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.5 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.5 20
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.6 20
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.6 20
+    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.6 20
+    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.6 20
+    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.6 20
     ;;
 
   linux-ubuntu-12*)
@@ -293,13 +299,13 @@ then
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
-  ${WGET} http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.5.0/cfe-3.5.0.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.6.2/llvm-3.6.2.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.6.2/cfe-3.6.2.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.6.2/compiler-rt-3.6.2.src.tar.xz
 
-  tar -C ${LLVM_DIR}/src -xvf llvm-3.5.0.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.5.0.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.5.0.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-3.6.2.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.6.2.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.6.2.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
@@ -331,7 +337,6 @@ then
   cd ${BOOGIE_DIR}
   git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
-  mozroots --import --sync
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
@@ -346,15 +351,11 @@ if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Building Corral"
 
-  cd ${ROOT}
-  ${WGET} ${CORRAL_DOWNLOAD_LINK} -O corral-downloaded.zip
-  unzip -o corral-downloaded.zip -d ${CORRAL_DIR}
-  rm -f corral-downloaded.zip
+  git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
   cd ${CORRAL_DIR}
-#  git clone https://git01.codeplex.com/corral ${CORRAL_DIR}
-#  cd ${CORRAL_DIR}
-#  git reset --hard ${CORRAL_COMMIT}
-  cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
+  git reset --hard ${CORRAL_COMMIT}
+  git submodule init
+  git submodule update
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 

@@ -35,6 +35,10 @@ smack_value_t __SMACK_return_value(void);
 // Sugar for __SMACK_init_func_XXX()
 #define __SMACK_INIT(x) void __SMACK_init_func_##x()
 
+// Inserts memory access checks in form of assert to check null pointer access
+// and buffer overflow errors
+void __SMACK_check_memory_safety(void*, unsigned long);
+
 // We need this to enforce that assert/assume are function calls
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);

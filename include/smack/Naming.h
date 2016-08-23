@@ -35,6 +35,8 @@ public:
   static const std::string CONTRACT_REQUIRES;
   static const std::string CONTRACT_ENSURES;
   static const std::string CONTRACT_INVARIANT;
+  static const std::string CONTRACT_FORALL;
+  static const std::string CONTRACT_EXISTS;
 
   static const std::string MOD_PROC;
   static const std::string CODE_PROC;
@@ -76,6 +78,7 @@ public:
   static const std::string PTR_VAR;
   static const std::string UNDEF_SYM;
   static const std::string CONTRACT_EXPR;
+  static const std::string MEMORY_SAFETY_FUNCTION;
 
   static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
   static const std::map<unsigned,std::string> CMPINST_TABLE;

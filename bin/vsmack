@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+import argparse
+import os.path
+import subprocess
+import sys
+
+WORKING_PATH = os.getcwd().replace('\\', r'\\')
+MACHINE_PATH = os.path.join(os.path.expanduser("~"), ".vsmack")
+VIRTUAL_PATH = '/home/vagrant/scratch'
+VAGRANT_BOX = 'smackers/smack'
+
+DESCRIPTION = """
+Virtualized SMACK
+
+NOTE: this deployment has several inherent sources of overhead,
+* downloading a pre-provisioned virtual machine (VM) image (once)
+* creating the VM (once, until destroyed)
+* starting the VM (once, until halted)
+* running smack inside of the VM (always)
+All of this overhead can be avoided by building Smack natively,
+  https://github.com/smackers/smack
+
+NOTE: this command leaves a VM running at the following path,
+  %(MACHINE_PATH)s
+The following flags alter this default behavior,
+* the `--halt` flag halts the VM after invoking smack
+* the `--destroy` flag destroys the VM after invoking smack
+
+NOTE: this command gives the VM recursive access to the working directory only.
+Files outside of the current working director will not be accessible.
+""" % globals()
+
+VAGRANTFILE = """
+Vagrant.configure("2") do |config|
+    config.vm.box = "%(VAGRANT_BOX)s"
+    config.vm.synced_folder "%(WORKING_PATH)s", "%(VIRTUAL_PATH)s"
+end
+""" % globals()
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description = DESCRIPTION,
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('--halt',
+        action = 'store_true',
+        help = 'halt the created vagrant box after running smack')
+
+    parser.add_argument('--destroy',
+        action = 'store_true',
+        help = 'destroy the created vagrant box after running smack')
+
+    args, smack_args = parser.parse_known_args()
+
+    if subprocess.call(['which', 'vagrant'], stdout = subprocess.PIPE):
+        sys.exit('error: cannot find `vagrant`; it must be installed https://www.vagrantup.com')
+
+    try:
+        if not os.path.exists(MACHINE_PATH):
+            os.makedirs(MACHINE_PATH)
+
+        with open(os.path.join(MACHINE_PATH, 'Vagrantfile'), 'w') as f:
+            f.write(VAGRANTFILE)
+
+        if subprocess.call(['vagrant', 'up'], cwd = MACHINE_PATH):
+            raise Exception('failed to bring up the box')
+
+        subprocess.call(['vagrant', 'ssh', '-c',
+            '&&'.join([
+                    "source smack.environment",
+                    "cd %(VIRTUAL_PATH)s" % globals(),
+                    "smack {0}".format(' '.join(smack_args))
+            ])
+        ], cwd = MACHINE_PATH)
+
+        if args.destroy:
+            if subprocess.call(['vagrant', 'destroy', '-f'], cwd = MACHINE_PATH):
+                raise Exception('failed to destroy the box')
+
+        elif args.halt:
+            if subprocess.call(['vagrant', 'halt'], cwd = MACHINE_PATH):
+                raise Exception('failed to halt the box')
+
+    except Exception as e:
+        print 'error:', e
+
+    finally:
+        pass

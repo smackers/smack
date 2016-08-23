@@ -21,6 +21,115 @@ namespace smack {
 
 using namespace llvm;
 
+namespace {
+  std::string getString(const llvm::Value* v) {
+    if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
+      if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
+        if (const llvm::GlobalValue* cc = llvm::dyn_cast<const llvm::GlobalValue>(constantExpr->getOperand(0)))
+          if (const llvm::ConstantDataSequential* cds = llvm::dyn_cast<const llvm::ConstantDataSequential>(cc->getOperand(0)))
+            return cds ->getAsCString();
+    return "";
+  }
+
+  Value* getVariable(Value* V) {
+    if (auto I = dyn_cast<CallInst>(V)) {
+      if (auto F = I->getCalledFunction()) {
+        if (F->getName().find("__CONTRACT_int_variable") != std::string::npos) {
+          assert(I->getNumArgOperands() == 1 && "Unexpected operands.");
+          return I->getArgOperand(0);
+        }
+      }
+    }
+    return nullptr;
+  }
+
+  std::string getBinding(Value* V) {
+    if (auto I = dyn_cast<CallInst>(V)) {
+      if (auto F = I->getCalledFunction()) {
+        auto name = F->getName();
+        if (name == Naming::CONTRACT_FORALL ||
+            name == Naming::CONTRACT_EXISTS) {
+          return getString(I->getArgOperand(0));
+        }
+      }
+    }
+    return "";
+  }
+
+  Function* projection(Function* F, Type* T,
+    std::vector<Value*>& arguments, std::map<Value*, Value*>& clones) {
+
+    std::vector<Type*> parameters;
+    for (auto A : arguments)
+      parameters.push_back(A->getType());
+
+    auto FF = Function::Create(
+      FunctionType::get(T, parameters, false),
+      GlobalValue::InternalLinkage, Naming::CONTRACT_EXPR, F->getParent());
+
+    FF->setDoesNotAccessMemory();
+
+    FF->getArgumentList().clear();
+    for (auto A : arguments) {
+      auto P = dyn_cast<Argument>(clones[A]);
+      FF->getArgumentList().push_back(P);
+      if (auto S = getVariable(A)) {
+        AttributeSet Ax;
+        P->addAttr(Ax.addAttribute(A->getContext(), 1, "contract-var", getString(S)));
+      }
+    }
+
+    for (auto& B : *F) {
+      if (clones.count(&B)) {
+        auto BB = dyn_cast<BasicBlock>(clones[&B]);
+        for (auto& I : B) {
+          if (clones.count(&I) && clones[&I]) {
+            if (auto II = dyn_cast<Instruction>(clones[&I])) {
+              if (!II->getParent()) {
+
+                // Add the block if it’s not already
+                if (!BB->size())
+                  FF->getBasicBlockList().push_back(BB);
+
+                BB->getInstList().push_back(II);
+              }
+            }
+          } else if (auto T = dyn_cast<TerminatorInst>(&I)) {
+            if (!clones.count(T)) {
+
+              // TODO filter out targets not in the projection, i.e., to avoid
+              // failing the assertion below.
+
+              auto TT = T->clone();
+              for (auto& O : TT->operands()) {
+                assert(clones.count(O.get()) && "Unvisited block.");
+                O.set(clones[O.get()]);
+              }
+
+              // Add the block if it’s not already
+              if (!BB->size())
+                FF->getBasicBlockList().push_back(BB);
+
+              BB->getInstList().push_back(TT);
+            }
+          }
+        }
+      }
+    }
+    return FF;
+  }
+
+  Function* extractedFunction(Value* V, BasicBlock* B,
+    std::vector<Value*>& arguments, std::map<Value*, Value*>& clones) {
+
+    auto &C = V->getContext();
+    auto R = ReturnInst::Create(C, clones[V], dyn_cast<BasicBlock>(clones[B]));
+    R->removeFromParent();
+    clones[B->getTerminator()] = R;
+    return projection(B->getParent(), V->getType(), arguments, clones);
+  }
+}
+
 void ExtractContracts::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfo>();
   AU.addRequired<DominatorTreeWrapperPass>();
@@ -38,11 +147,35 @@ void ExtractContracts::visitCallInst(CallInst &I) {
     if (name == Naming::CONTRACT_REQUIRES ||
         name == Naming::CONTRACT_ENSURES ||
         name == Naming::CONTRACT_INVARIANT) {
+
       validateAnnotation(I);
+
+      if (auto J = dyn_cast<CallInst>(I.getArgOperand(0)))
+        if (auto G = J->getCalledFunction())
+          if (G->getName().find(Naming::CONTRACT_EXPR) != std::string::npos)
+            return;
+
       Function* EF;
       std::vector<Value*> Args;
       tie(EF, Args) = extractExpression(I.getArgOperand(0), I.getParent());
       I.setArgOperand(0, CallInst::Create(EF, Args, "", &I));
+      modified = true;
+
+      // TODO can we somehow force LLVM to consider calls to the obsoleted
+      // forall, exists, etc., to be dead code?
+
+    } else if (name == Naming::CONTRACT_FORALL ||
+               name == Naming::CONTRACT_EXISTS) {
+
+      if (auto J = dyn_cast<CallInst>(I.getArgOperand(1)))
+        if (auto G = J->getCalledFunction())
+          if (G->getName().find(Naming::CONTRACT_EXPR) != std::string::npos)
+            return;
+
+      Function* EF;
+      std::vector<Value*> Args;
+      tie(EF, Args) = extractExpression(I.getArgOperand(1), I.getParent());
+      I.setArgOperand(1, CallInst::Create(EF, Args, "", &I));
       modified = true;
     }
   }
@@ -86,27 +219,37 @@ bool ExtractContracts::hasDominatedIncomingValue(Value* V) {
 
 std::tuple< Function*, std::vector<Value*> >
 ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
+
+  std::vector<std::string> captures;
+  auto var = getBinding(V);
+  if (var != "")
+    captures.push_back(var);
+
   DEBUG(errs() << "[contracts]"
     << " extracting " << *V
     << " from " << E->getParent()->getName()
     << ":" << E->getName() << "\n");
 
   auto &C = V->getContext();
-  auto F = E->getParent();
-  auto M = (Module*) F->getParent();
 
   std::stack<Value*> value_stack;
   std::map<Value*, Value*> clones;
+  std::map<Value*, Value*> variables;
   std::vector<Value*> arguments;
-  std::vector<Type*> parameters;
 
   value_stack.push(V);
   value_stack.push(E);
+  clones[E->getTerminator()] = nullptr;
 
   while (!value_stack.empty()) {
     Value* V = value_stack.top();
 
     if (!clones.count(V)) {
+
+      DEBUG(errs() << "[contracts]"
+        << " (" << value_stack.size() << ")"
+        << " entering " << *V << "\n");
+
       clones[V] = V;
 
       if (hasDominatedIncomingValue(V))
@@ -127,12 +270,30 @@ ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
 
     } else if (clones[V] == V) {
 
+      DEBUG(errs() << "[contracts]"
+        << " (" << value_stack.size() << ")"
+        << " leaving " << *V << "\n");
+
       if (auto B = dyn_cast<BasicBlock>(V)) {
         clones[B] = BasicBlock::Create(C, B->getName());
 
-      } else if (hasDominatedIncomingValue(V) || isa<Argument>(V) || isa<GlobalValue>(V)) {
+      } else if (auto X = getVariable(V)) {
+        if (!variables.count(X)) {
+          if (std::find(captures.begin(), captures.end(), getString(X)) != captures.end()) {
+            auto I = dyn_cast<Instruction>(V);
+            assert(I && "Expected instruction.");
+            variables[X] = I->clone();
+          } else {
+            variables[X] = new Argument(V->getType(), getString(X));
+            arguments.push_back(V);
+          }
+        }
+        clones[V] = variables[X];
+
+      } else if (hasDominatedIncomingValue(V) ||
+                 isa<Argument>(V) ||
+                 (isa<GlobalValue>(V) && !isa<Function>(V))) {
         clones[V] = new Argument(V->getType(), V->getName());
-        parameters.push_back(V->getType());
         arguments.push_back(V);
 
       } else if (isa<StoreInst>(V)) {
@@ -164,31 +325,9 @@ ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
     value_stack.pop();
   }
 
-  auto FF = Function::Create(
-    FunctionType::get(V->getType(), parameters, false),
-    GlobalValue::InternalLinkage, Naming::CONTRACT_EXPR, M);
-
-  FF->getArgumentList().clear();
-  for (auto A : arguments)
-    FF->getArgumentList().push_back(dyn_cast<Argument>(clones[A]));
-
-  for (auto& B : *F) {
-    if (clones.count(&B)) {
-      auto BB = dyn_cast<BasicBlock>(clones[&B]);
-      FF->getBasicBlockList().push_back(BB);
-      for (auto& I : B) {
-        if (clones.count(&I)) {
-          auto II = dyn_cast<Instruction>(clones[&I]);
-          BB->getInstList().push_back(II);
-        }
-      }
-    }
-  }
-
-  auto B = dyn_cast<BasicBlock>(clones[E]);
-  ReturnInst::Create(C, clones[V], B);
-
-  return std::make_tuple(FF, arguments);
+  return std::make_tuple(
+    extractedFunction(V, E, arguments, clones),
+    arguments);
 }
 
 // Pass ID variable

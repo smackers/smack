@@ -7,16 +7,13 @@ INC = $(INSTALL_SHARE)/smack/include
 CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
 
 SOURCES = incr.c simple.c
-OBJS = $(subst .c,.bc,$(SOURCES)) smack.bc
+OBJS = $(subst .c,.bc,$(SOURCES))
 
 all: $(OBJS)
 	$(LD) -o simple-project.bc $(OBJS)
 
 simple.bc: simple.c simple.h
 incr.bc: incr.c incr.h
-
-smack.bc: $(INSTALL_SHARE)/smack/lib/smack.c $(INC)/smack.h
-	$(CC) $(CFLAGS) $< -o smack.bc
 
 %.bc: %.c
 	$(CC) $(CFLAGS) $< -o $@

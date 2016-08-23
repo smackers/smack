@@ -96,7 +96,6 @@ bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
       if (I->second->begin() == I->second->end()) break;
       if ((++(I->second->begin())) != I->second->end()) break;
       Type* T = *I->second->begin();
-      while (T->isPointerTy()) T = T->getPointerElementType();
       if (!T->isSized()) break;
       if (DL->getTypeAllocSize(T) != length) break;
       if (!T->isSingleValueType()) break;
@@ -120,7 +119,8 @@ bool Region::isComplicated(const DSNode* N) {
 
 void Region::init(const Value* V, unsigned length) {
   Type* T = V->getType();
-  while (T->isPointerTy()) T = T->getPointerElementType();
+  assert (T->isPointerTy() && "Expected pointer argument.");
+  T = T->getPointerElementType();
   context = &V->getContext();
   representative = DSA ? DSA->getNode(V) : nullptr;
   this->type = T;
@@ -133,7 +133,7 @@ void Region::init(const Value* V, unsigned length) {
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
-    T->isIntegerTy(8));
+    DSA->isMemcpyd(representative) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncompleteNode();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isCollapsedNode();

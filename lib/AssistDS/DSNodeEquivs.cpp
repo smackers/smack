@@ -253,7 +253,7 @@ const DSNode *DSNodeEquivs::getMemberForValue(const Value *V) {
       const User *TheUser = WL.front();
       WL.pop_front();
 
-      if (!Visited.insert(TheUser))
+      if (!Visited.insert(TheUser).second)
         continue;
 
       //

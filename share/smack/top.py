@@ -135,6 +135,9 @@ def arguments():
   translate_group.add_argument('--entry-points', metavar='PROC', nargs='+',
     default=['main'], help='specify top-level procedures [default: %(default)s]')
 
+  translate_group.add_argument('--memory-safety', action='store_true', default=False,
+    help='enable memory safety checks')
+
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
@@ -148,8 +151,8 @@ def arguments():
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
     help='upper bound on minimum loop iterations [default: %(default)s]')
 
-  verifier_group.add_argument('--context-bound', metavar='k', default='1', type=int,
-    help='bound thread contexts in Corral to a maximum of k contexts')
+  verifier_group.add_argument('--context-bound', metavar='K', default='1', type=int,
+    help='bound on the number of thread contexts in Corral [default: %(default)s]')
 
   verifier_group.add_argument('--verifier-options', metavar='OPTIONS', default='',
     help='additional verifier arguments (e.g., --verifier-options="/trackAllVars /staticInlining")')
@@ -251,6 +254,23 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
       with open(temporary_file(cmd[0], '.log', args), 'w') as f:
         f.write(output)
 
+def target_selection(args):
+  """Determine the target architecture based on flags and source files."""
+  # TODO more possible clang flags that determine the target?
+  if not re.search('-target', args.clang_options):
+    src = args.input_files[0]
+    if os.path.splitext(src)[1] == '.bc':
+      ll = temporary_file(os.path.splitext(os.path.basename(src))[0], '.ll', args)
+      try_command(['llvm-dis', '-o', ll, src])
+      src = ll
+    if os.path.splitext(src)[1] == '.ll':
+      with open(src, 'r') as f:
+        for line in f:
+          triple = re.findall('^target triple = "(.*)"', line)
+          if len(triple) > 0:
+            args.clang_options += (" -target %s" % triple[0])
+            break
+
 def frontend(args):
   """Generate the LLVM bitcode file."""
   if args.language:
@@ -278,6 +298,21 @@ def default_clang_compile_command(args):
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   return cmd
 
+def build_libs(args):
+  """Generate LLVM bitcodes for SMACK libraries."""
+  bitcodes = []
+  libs = ['smack.c']
+
+  if args.pthread:
+    libs += ['pthread.c', 'spinlock.c']
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(default_clang_compile_command(args) + ['-o', bc, c])
+    bitcodes.append(bc)
+
+  return bitcodes
+
 def boogie_frontend(args):
   """Generate Boogie code by concatenating the input file(s)."""
   with open(args.bpl_file, 'w') as out:
@@ -287,22 +322,20 @@ def boogie_frontend(args):
 
 def llvm_frontend(args):
   """Generate Boogie code from LLVM bitcodes."""
-  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+
+  bitcodes = build_libs(args) + args.input_files
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
 
 def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
-  bitcodes = []
-  libs = ['smack.c']
+  bitcodes = build_libs(args)
   compile_command = default_clang_compile_command(args)
 
-  if args.pthread:
-    libs += ['pthread.c', 'spinlock.c']
-
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs) + args.input_files:
+  for c in args.input_files:
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], console=(c in args.input_files))
+    try_command(compile_command + ['-o', bc, c], console=True)
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
@@ -317,12 +350,7 @@ def json_compilation_database_frontend(args):
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
 
-  libs = ['smack.c']
-  lib_bitcodes = []
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(default_clang_compile_command(args) + ['-o', bc, c])
-    lib_bitcodes.append(bc)
+  lib_bitcodes = build_libs(args)
 
   with open(args.input_files[0]) as f:
     for cc in json.load(f):
@@ -347,7 +375,6 @@ def llvm_to_bpl(args):
   cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-warnings']
   cmd += ['-source-loc-syms']
-  cmd += ['-enable-type-inference-opts']
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
@@ -358,6 +385,7 @@ def llvm_to_bpl(args):
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
+  if args.memory_safety: cmd += ['-memory-safety']
   try_command(cmd, console=True)
   annotate_bpl(args)
 
@@ -551,6 +579,8 @@ def main():
   try:
     global args
     args = arguments()
+
+    target_selection(args)
 
     if not args.quiet:
       print "SMACK program verifier version %s" % VERSION

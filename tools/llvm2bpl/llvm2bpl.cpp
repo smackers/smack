@@ -31,6 +31,7 @@
 #include "smack/RemoveDeadDefs.h"
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
+#include "smack/MemorySafetyChecker.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -51,6 +52,10 @@ StaticUnroll("static-unroll", llvm::cl::desc("Use LLVM to statically unroll loop
 static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
+
+static llvm::cl::opt<bool>
+MemorySafety("memory-safety", llvm::cl::desc("Enable memory safety checks"),
+  llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
@@ -82,13 +87,13 @@ int main(int argc, char **argv) {
   llvm::EnableDebugBuffering = true;
 
   llvm::SMDiagnostic err;
-  std::unique_ptr<llvm::Module> module;
-  module.reset(llvm::ParseIRFile(InputFilename, err, llvm::getGlobalContext()));
+  std::unique_ptr<llvm::Module> module = llvm::parseIRFile(InputFilename, err, llvm::getGlobalContext());
   if (!err.getMessage().empty())
     check("Problem reading input bitcode/IR: " + err.getMessage().str());
 
   auto &L = module.get()->getDataLayoutStr();
-  DataLayout DL(L.empty() ? DefaultDataLayout : L);
+  if (L.empty())
+    module.get()->setDataLayout(DefaultDataLayout);
 
   ///////////////////////////////
   // initialise and run passes //
@@ -99,7 +104,7 @@ int main(int argc, char **argv) {
 
   llvm::PassManager pass_manager;
 
-  pass_manager.add(new DataLayoutPass(DL));
+  pass_manager.add(new DataLayoutPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
@@ -122,22 +127,26 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
+   
+  if (MemorySafety) {
+    pass_manager.add(new smack::MemorySafetyChecker());
+  }
 
   std::vector<tool_output_file*> files;
 
   if (!FinalIrFilename.empty()) {
-    std::string EC;
+    std::error_code EC;
     auto F = new tool_output_file(FinalIrFilename.c_str(), EC, sys::fs::F_None);
-    check(EC);
+    if (EC) check(EC.message());
     F->keep();
     files.push_back(F);
     pass_manager.add(llvm::createPrintModulePass(F->os()));
   }
 
   if (!OutputFilename.empty()) {
-    std::string EC;
+    std::error_code EC;
     auto F = new tool_output_file(OutputFilename.c_str(), EC, sys::fs::F_None);
-    check(EC);
+    if (EC) check(EC.message());
     F->keep();
     files.push_back(F);
     pass_manager.add(new smack::SmackModuleGenerator());

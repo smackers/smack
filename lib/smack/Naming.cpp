@@ -22,6 +22,8 @@ const std::string Naming::DECLARATIONS_PROC = "__SMACK_decls";
 const std::string Naming::CONTRACT_REQUIRES = "__CONTRACT_requires";
 const std::string Naming::CONTRACT_ENSURES = "__CONTRACT_ensures";
 const std::string Naming::CONTRACT_INVARIANT = "__CONTRACT_invariant";
+const std::string Naming::CONTRACT_FORALL = "__CONTRACT_forall";
+const std::string Naming::CONTRACT_EXISTS = "__CONTRACT_exists";
 
 const std::string Naming::MOD_PROC = "__SMACK_mod";
 const std::string Naming::CODE_PROC = "__SMACK_code";
@@ -63,6 +65,7 @@ const std::string Naming::INT_VAR = "$i";
 const std::string Naming::PTR_VAR = "$p";
 const std::string Naming::UNDEF_SYM = "$u";
 const std::string Naming::CONTRACT_EXPR = "$expr";
+const std::string Naming::MEMORY_SAFETY_FUNCTION = "__SMACK_check_memory_safety";
 
 using namespace llvm;
 
