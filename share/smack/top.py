@@ -296,6 +296,7 @@ def default_clang_compile_command(args):
   cmd += ['-I' + smack_headers()]
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
+  if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   return cmd
 
 def build_libs(args):
