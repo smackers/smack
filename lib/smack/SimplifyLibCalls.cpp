@@ -30,8 +30,7 @@ bool SimplifyLibCalls::runOnModule(Module& M) {
   modified = false;
   simplifier = new LibCallSimplifier(
     &getAnalysis<DataLayoutPass>().getDataLayout(),
-    &getAnalysis<TargetLibraryInfo>(),
-    false
+    &getAnalysis<TargetLibraryInfo>()
   );
   if (simplifier)
     visit(M);

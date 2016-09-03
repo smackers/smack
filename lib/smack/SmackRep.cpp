@@ -17,7 +17,7 @@ Regex PROC_IGNORE("^("
   "__SMACK_code|__SMACK_decl|__SMACK_top_decl"
 ")$");
 
-const std::vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 40, 48, 56, 64, 96, 128};
+const std::vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 40, 48, 56, 64, 88, 96, 128};
 const std::vector<unsigned> REF_CONSTANTS = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
   1024
@@ -465,8 +465,13 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
 
-const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
-  return pa(base, idx * size);
+const Expr* SmackRep::pa(const Expr* base, long long idx, unsigned long size) {
+  if (idx >= 0) {
+    return pa(base, idx * size);
+  } else {
+    return pa(base, Expr::fn("$sub.ref", pointerLit(0UL),
+      pointerLit((unsigned long) std::abs(idx))), pointerLit(size));
+  }
 }
 
 const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned long size) {
@@ -609,9 +614,10 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
     } else {
       Type* et = dyn_cast<SequentialType>(a.second)->getElementType();
       assert(a.first->getType()->isIntegerTy() && "Illegal index");
-      if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first))
-        e = pa(e, (unsigned long) ci->getZExtValue(), storageSize(et));
-      else
+      if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first)) {
+        assert(ci->getBitWidth() <= 64 && "Unsupported index bitwidth");
+        e = pa(e, (long long) ci->getSExtValue(), storageSize(et));
+      } else
         e = pa(e, integerToPointer(expr(a.first), a.first->getType()->getIntegerBitWidth()),
           storageSize(et));
     }
@@ -623,6 +629,10 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
 const Expr* SmackRep::expr(const llvm::Value* v) {
   using namespace llvm;
 
+  if (isa<const Constant>(v)) {
+    v = v->stripPointerCasts();
+  }
+
   if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
     assert(g->hasName());
     return Expr::id(naming.get(*v));
@@ -632,10 +642,10 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
     auxDecls[name] = Decl::constant(name,type(v));
     return Expr::id(name);
 
-  } else if (naming.get(*v) != "")
+  } else if (naming.get(*v) != "") {
     return Expr::id(naming.get(*v));
 
-  else if (const Constant* constant = dyn_cast<const Constant>(v)) {
+  } else if (const Constant* constant = dyn_cast<const Constant>(v)) {
 
     if (const ConstantExpr* CE = dyn_cast<const ConstantExpr>(constant)) {
 
@@ -652,7 +662,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
         return cmp(CE);
 
       else {
-        DEBUG(errs() << "VALUE : " << *v << "\n");
+        DEBUG(errs() << "VALUE : " << *constant << "\n");
         llvm_unreachable("Constant expression of this type not supported.");
       }
 
@@ -666,7 +676,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       return Expr::id(Naming::NULL_VAL);
 
     else {
-      DEBUG(errs() << "VALUE : " << *v << "\n");
+      DEBUG(errs() << "VALUE : " << *constant << "\n");
       llvm_unreachable("This type of constant not supported.");
     }
 

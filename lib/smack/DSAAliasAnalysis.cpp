@@ -24,7 +24,7 @@ RegisterAnalysisGroup<AliasAnalysis> B(A);
 char DSAAliasAnalysis::ID = 0;
 
 void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
-  std::string EC;
+  std::error_code EC;
   llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
   TD->print(F, module);
   BU->print(F, module);
@@ -122,7 +122,7 @@ bool DSAAliasAnalysis::equivNodes(const DSNode* n1, const DSNode* n2) {
 
 unsigned DSAAliasAnalysis::getOffset(const Location* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
-  DSGraph::ScalarMapTy::const_iterator I = S.find((Value*)l->Ptr);
+  DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
   return (I == S.end()) ? 0 : (I->second.getOffset());
 }
 

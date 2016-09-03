@@ -50,7 +50,7 @@ private:
   unsigned offset(llvm::ArrayType* T, unsigned idx);
   unsigned offset(llvm::StructType* T, unsigned idx);
 
-  const Expr* pa(const Expr* base, unsigned long index, unsigned long size);
+  const Expr* pa(const Expr* base, long long index, unsigned long size);
   const Expr* pa(const Expr* base, const Expr* index, unsigned long size);
   const Expr* pa(const Expr* base, unsigned long offset);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size);

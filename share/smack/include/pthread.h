@@ -32,6 +32,8 @@ void __VERIFIER_atomic_end();
 
 pthread_t pthread_self(void);
 
+int pthread_equal(pthread_t t1, pthread_t t2);
+
 int pthread_join(pthread_t __th, void **__thread_return);
 
 void pthread_exit(void *retval);

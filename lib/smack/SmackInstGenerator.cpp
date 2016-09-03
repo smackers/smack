@@ -111,8 +111,8 @@ void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst& ti) {
          s != e && llvm::isa<llvm::PHINode>(s); ++s) {
 
       llvm::PHINode* phi = llvm::cast<llvm::PHINode>(s);
-      if (llvm::Value* v =
-            phi->getIncomingValueForBlock(block)) {
+      if (llvm::Value* v = phi->getIncomingValueForBlock(block)) {
+        v = v->stripPointerCasts();
         lhs.push_back(rep.expr(phi));
         rhs.push_back(rep.expr(v));
       }
@@ -347,7 +347,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
-  const llvm::Value* V = si.getOperand(0);
+  const llvm::Value* V = si.getOperand(0)->stripPointerCasts();
   assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
   emit(rep.store(P,V));
@@ -438,36 +438,16 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   Function* f = ci.getCalledFunction();
-
   if (!f) {
-    if (auto CE = dyn_cast<const ConstantExpr>(ci.getCalledValue())) {
-      if (CE->isCast()) {
-        if (auto CV = dyn_cast<Function>(CE->getOperand(0))) {
-          f = CV;
-        }
-      }
-    }
+    assert(ci.getCalledValue() && "Called value is null");
+    f = cast<Function>(ci.getCalledValue()->stripPointerCasts());
   }
 
-  std::string name = f && f->hasName() ? f->getName() : "";
+  std::string name = f->hasName() ? f->getName() : "";
 
   if (ci.isInlineAsm()) {
     WARN("unsoundly ignoring inline asm call: " + i2s(ci));
     emit(Stmt::skip());
-
-  } else if (name == "llvm.dbg.value" && SmackOptions::SourceLocSymbols) {
-    const llvm::MDNode* m1 = dyn_cast<const llvm::MDNode>(ci.getArgOperand(0));
-    const llvm::MDNode* m2 = dyn_cast<const llvm::MDNode>(ci.getArgOperand(2));
-    assert(m1 && "Expected metadata node in first argument to llvm.dbg.value.");
-    assert(m2 && "Expected metadata node in third argument to llvm.dbg.value.");
-    const llvm::MDString* m3 = dyn_cast<const llvm::MDString>(m2->getOperand(2));
-    assert(m3 && "Expected metadata string in the third argument to metadata node.");
-
-    if (const llvm::Value* V = m1->getOperand(0)) {
-      std::stringstream recordProc;
-      recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", m3->getString().str())}));
-    }
 
   } else if (name.find("llvm.dbg.") != std::string::npos) {
     WARN("ignoring llvm.debug call.");
@@ -499,6 +479,38 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
     // NOTE do not generate code for contract expressions
+
+  } else if (name == "__CONTRACT_int_variable") {
+
+    // TODO assume that all variables are within an expression scope (?)
+    // emit(Stmt::assign(rep.expr(&ci), Expr::id(rep.getString(ci.getArgOperand(0)))));
+
+  } else if (name == Naming::CONTRACT_FORALL) {
+    CallInst* cj;
+    Function* F;
+    assert(ci.getNumArgOperands() == 2
+        && (cj = dyn_cast<CallInst>(ci.getArgOperand(1)))
+        && (F = cj->getCalledFunction())
+        && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+        && "Expected contract expression argument to contract function.");
+
+    auto binding = rep.getString(ci.getArgOperand(0));
+    std::list<const Expr*> args;
+
+    auto AX = F->getAttributes();
+    for (unsigned i = 0; i < cj->getNumArgOperands(); i++) {
+      std::string var = "";
+      if (AX.hasAttribute(i+1, "contract-var"))
+        var = AX.getAttribute(i+1, "contract-var").getValueAsString();
+      args.push_back(
+        var == binding ? Expr::id(binding) : rep.expr(cj->getArgOperand(i)));
+    }
+    for (auto m : rep.memoryMaps())
+      args.push_back(Expr::id(m.first));
+    auto E = Expr::fn(F->getName(), args);
+    emit(Stmt::assign(rep.expr(&ci),
+      Expr::cond(Expr::forall(binding, "int", E),
+        rep.integerLit(1U,1), rep.integerLit(0U,1))));
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
              name == Naming::CONTRACT_ENSURES ||
@@ -567,17 +579,29 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   //   Slice* S = getSlice(ci.getArgOperand(0));
   //   emit(Stmt::assert_(S->getBoogieExpression(naming,rep)));
 
-  } else if (f) {
-    emit(rep.call(f, ci));
-
   } else {
-    llvm_unreachable("Expected function devirtualization.");
+    emit(rep.call(f, ci));
   }
 
-  if (f && f->isDeclaration() && rep.isExternal(&ci)) {
+  if (f->isDeclaration() && rep.isExternal(&ci)) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
+}
+
+void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
+  processInstruction(dvi);
+
+  if (SmackOptions::SourceLocSymbols) {
+    const Value* V = dvi.getValue();
+    const llvm::DIVariable var(dvi.getVariable());
+    if (V) {
+      V = V->stripPointerCasts();
+      std::stringstream recordProc;
+      recordProc << "boogie_si_record_" << rep.type(V);
+      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var.getName().str())}));
+    }
   }
 }
 

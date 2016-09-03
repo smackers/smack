@@ -53,6 +53,8 @@ bool StructRet::runOnModule(Module& M) {
   std::vector<Function*> worklist;
   for (Module::iterator I = M.begin(); I != M.end(); ++I)
     if (!I->mayBeOverridden()) {
+      if(I->isDeclaration())
+        continue;
       if(I->hasAddressTaken())
         continue;
       if(I->getReturnType()->isStructTy()) {
@@ -76,7 +78,7 @@ bool StructRet::runOnModule(Module& M) {
     FunctionType *NFTy = FunctionType::get(F->getReturnType(), TP, F->isVarArg());
 
     // Create the new function body and insert it into the module.
-    Function *NF = Function::Create(NFTy, 
+    Function *NF = Function::Create(NFTy,
                                     F->getLinkage(),
                                     F->getName(), &M);
     ValueToValueMapTy ValueMap;
@@ -95,7 +97,7 @@ bool StructRet::runOnModule(Module& M) {
     if (!F->isDeclaration())
       CloneFunctionInto(NF, F, ValueMap, false, Returns);
     std::vector<Value*> fargs;
-    for(Function::arg_iterator ai = NF->arg_begin(), 
+    for(Function::arg_iterator ai = NF->arg_begin(),
         ae= NF->arg_end(); ai != ae; ++ai) {
       fargs.push_back(ai);
     }
@@ -103,8 +105,8 @@ bool StructRet::runOnModule(Module& M) {
         M.getContext(), 0, F->getAttributes().getRetAttributes()));
     NF->setAttributes(NF->getAttributes().addAttributes(
         M.getContext(), ~0, F->getAttributes().getFnAttributes()));
-    
-    for (Function::iterator B = NF->begin(), FE = NF->end(); B != FE; ++B) {      
+
+    for (Function::iterator B = NF->begin(), FE = NF->end(); B != FE; ++B) {
       for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {
         ReturnInst * RI = dyn_cast<ReturnInst>(I++);
         if(!RI)
@@ -133,12 +135,12 @@ bool StructRet::runOnModule(Module& M) {
 
       //this should probably be done in a different manner
       AttributeSet NewCallPAL=AttributeSet();
-      
+
       // Get the initial attributes of the call
       AttributeSet CallPAL = CI->getAttributes();
       AttributeSet RAttrs = CallPAL.getRetAttributes();
       AttributeSet FnAttrs = CallPAL.getFnAttributes();
-      
+
       if (!RAttrs.isEmpty())
         NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
 
