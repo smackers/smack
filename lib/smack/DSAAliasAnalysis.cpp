@@ -120,13 +120,13 @@ bool DSAAliasAnalysis::equivNodes(const DSNode* n1, const DSNode* n2) {
   return eqs.getLeaderValue(n1) == eqs.getLeaderValue(n2);
 }
 
-unsigned DSAAliasAnalysis::getOffset(const Location* l) {
+unsigned DSAAliasAnalysis::getOffset(const MemoryLocation* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
   DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
   return (I == S.end()) ? 0 : (I->second.getOffset());
 }
 
-bool DSAAliasAnalysis::disjoint(const Location* l1, const Location* l2) {
+bool DSAAliasAnalysis::disjoint(const MemoryLocation* l1, const MemoryLocation* l2) {
   unsigned o1 = getOffset(l1);
   unsigned o2 = getOffset(l2);
   return
@@ -195,10 +195,10 @@ unsigned DSAAliasAnalysis::getPointedTypeSize(const Value* v) {
 }
 
 unsigned DSAAliasAnalysis::getOffset(const Value* v) {
-  return getOffset(new Location(v));
+  return getOffset(new MemoryLocation(v));
 }
 
-AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {
+AliasResult DSAAliasAnalysis::alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
 
   if (LocA.Ptr == LocB.Ptr)
     return MustAlias;

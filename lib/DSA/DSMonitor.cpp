@@ -133,13 +133,12 @@ void DSMonitor::watch(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
 
   if (!VS.empty()) {
     Instruction *I = getInstruction(VS[0]);
-    if (I) {
-      if (MDNode* M = I->getMetadata("dbg")) {
-        DILocation L(M);
-        location = L.getFilename().str() + ":"
-          + std::to_string(L.getLineNumber()) + ":"
-          + std::to_string(L.getColumnNumber());
-      }
+    if (I && I->getMetadata("dbg")) {
+      const DebugLoc DL = I->getDebugLoc();
+      auto *scope = cast<DIScope>(DL.getScope());
+      location = scope->getFilename().str() + ":"
+        + std::to_string(DL.getLine()) + ":"
+        + std::to_string(DL.getCol());
     }
   }
 }

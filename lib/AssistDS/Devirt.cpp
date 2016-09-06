@@ -501,7 +501,7 @@ Devirtualize::runOnModule (Module & M) {
   // Get information on the target system.
   //
   //
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
 
   // Visit all of the call instructions in this function and record those that
   // are indirect function calls.

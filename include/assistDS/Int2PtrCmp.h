@@ -31,10 +31,6 @@ namespace llvm {
     static char ID;
     Int2PtrCmp() : ModulePass(ID) {}
     virtual bool runOnModule(Module& M);
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<DataLayoutPass>();
-    }
-
   };
 }
 

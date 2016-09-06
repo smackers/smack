@@ -152,7 +152,7 @@ bool TypeChecks::runOnModule(Module &M) {
   bool modified = false; // Flags whether we modified the module.
   bool transformIndirectCalls = true;
 
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   addrAnalysis = &getAnalysis<AddressTakenAnalysis>();
 
   // Create the necessary prototypes
@@ -357,10 +357,10 @@ bool TypeChecks::runOnModule(Module &M) {
           // replace the use specified in ReplaceWorklist.
           //
           if(isa<ConstantArray>(C)) {
-              C->replaceUsesOfWithOnConstant(F, CNew, ReplaceWorklist[0]);
+              C->handleOperandChange(F, CNew, ReplaceWorklist[0]);
           } else {
             for (unsigned index = 0; index < ReplaceWorklist.size(); ++index) {
-              C->replaceUsesOfWithOnConstant(F, CNew, ReplaceWorklist[index]);
+              C->handleOperandChange(F, CNew, ReplaceWorklist[index]);
             }
           }
           continue;
@@ -551,7 +551,7 @@ void TypeChecks::optimizeChecks(Module &M) {
     if(F.isDeclaration())
       continue;
     DominatorTree & DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-    LoopInfo & LI = getAnalysis<LoopInfo>(F);
+    LoopInfo & LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
     std::deque<DomTreeNode *> Worklist;
     Worklist.push_back (DT.getRootNode());
     while(Worklist.size()) {
@@ -609,7 +609,7 @@ void TypeChecks::addTypeMap(Module &M) {
                                           CA,
                                           "");
   GV->setInitializer(CA);
-  Constant *C = ConstantExpr::getGetElementPtr(GV,Indices);
+  Constant *C = ConstantExpr::getGetElementPtr(nullptr,GV,Indices);
   Values[0] = C;
 
   // For each used type, create a new entry. 
@@ -631,7 +631,7 @@ void TypeChecks::addTypeMap(Module &M) {
                                             CA,
                                             "");
     GV->setInitializer(CA);
-    Constant *C = ConstantExpr::getGetElementPtr(GV, Indices);
+    Constant *C = ConstantExpr::getGetElementPtr(nullptr,GV, Indices);
     Values[TI->second]= C;
   }
 

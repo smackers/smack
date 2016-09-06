@@ -16,7 +16,7 @@ namespace smack {
 using namespace llvm;
 
 bool RemoveDeadDefs::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   std::vector<Function*> dead;
 
   do {
