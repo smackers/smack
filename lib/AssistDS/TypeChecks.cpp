@@ -1513,22 +1513,23 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
   if (Function *F = dyn_cast<Function>(Callee)) {
     if (F->isIntrinsic()) {
       switch(F->getIntrinsicID()) {
-      case Intrinsic::memcpy: 
-      case Intrinsic::memmove: 
-        {
-          Value *BCI_Src = castTo(CS.getArgument(1), VoidPtrTy, "", I);
-          Value *BCI_Dest = castTo(CS.getArgument(0), VoidPtrTy, "", I);
-          std::vector<Value *> Args;
-          Args.push_back(BCI_Dest);
-          Args.push_back(BCI_Src);
-          CastInst *Size = CastInst::CreateIntegerCast(CS.getArgument(2), Int64Ty, false, "", I);
-          Args.push_back(Size);
-          Args.push_back(getTagCounter());
-          CallInst::Create(copyTypeInfo, Args, "", I);
-          return true;
-        }
+      case Intrinsic::memcpy:
+      case Intrinsic::memmove:
+      {
+        Value *BCI_Src = castTo(CS.getArgument(1), VoidPtrTy, "", I);
+        Value *BCI_Dest = castTo(CS.getArgument(0), VoidPtrTy, "", I);
+        std::vector<Value *> Args;
+        Args.push_back(BCI_Dest);
+        Args.push_back(BCI_Src);
+        CastInst *Size = CastInst::CreateIntegerCast(CS.getArgument(2), Int64Ty, false, "", I);
+        Args.push_back(Size);
+        Args.push_back(getTagCounter());
+        CallInst::Create(copyTypeInfo, Args, "", I);
+        return true;
+      }
 
       case Intrinsic::memset:
+      {
         Value *BCI = castTo(CS.getArgument(0), VoidPtrTy, "", I);
         std::vector<Value *> Args;
         Args.push_back(BCI);
@@ -1537,6 +1538,9 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
         Args.push_back(getTagCounter());
         CallInst::Create(trackInitInst, Args, "", I);
         return true;
+      }
+
+      default: break;
       }
     } else if (F->getName().str() == std::string("_ZNKSs5c_strEv")) { //c_str
       std::vector<Value *>Args;
