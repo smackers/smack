@@ -82,7 +82,6 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     llvm::AliasAnalysis::getAnalysisUsage(AU);
     AU.setPreservesAll();
-    AU.addRequired<llvm::DataLayoutPass>();
     AU.addRequiredTransitive<llvm::BUDataStructures>();
     AU.addRequiredTransitive<llvm::TDDataStructures>();
     AU.addRequiredTransitive<llvm::DSNodeEquivs>();
@@ -90,15 +89,14 @@ public:
   }
 
   virtual bool runOnModule(llvm::Module &M) {
-
-    InitializeAliasAnalysis(this);
+    dataLayout = &M.getDataLayout();
+    InitializeAliasAnalysis(this, dataLayout);
     TD = &getAnalysis<llvm::TDDataStructures>();
     BU = &getAnalysis<llvm::BUDataStructures>();
     nodeEqs = &getAnalysis<llvm::DSNodeEquivs>();
     TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures> >();
     memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
     staticInits = collectStaticInits(M);
-    dataLayout = M.getDataLayout();
     module = &M;
     return false;
   }
@@ -114,7 +112,7 @@ public:
   unsigned getPointedTypeSize(const Value* v);
   unsigned getOffset(const Value* v);
 
-  virtual AliasResult alias(const Location &LocA, const Location &LocB);
+  virtual AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
 
 private:
   bool isComplicatedNode(const llvm::DSNode* n);
@@ -122,8 +120,8 @@ private:
   std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);
   bool equivNodes(const llvm::DSNode* n1, const llvm::DSNode* n2);
-  unsigned getOffset(const Location* l);
-  bool disjoint(const Location* l1, const Location* l2);
+  unsigned getOffset(const MemoryLocation* l);
+  bool disjoint(const MemoryLocation* l1, const MemoryLocation* l2);
 };
 }
 

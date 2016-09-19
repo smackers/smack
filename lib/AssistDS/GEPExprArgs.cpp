@@ -142,7 +142,8 @@ bool GEPExprArgs::runOnModule(Module& M) {
           NI = NewF->arg_begin();
           SmallVector<Value*, 8> Indices;
           Indices.append(GEP->op_begin()+1, GEP->op_end());
-          GetElementPtrInst *GEP_new = GetElementPtrInst::Create(cast<Value>(NI),
+          GetElementPtrInst *GEP_new = GetElementPtrInst::Create(nullptr,
+                                                                 cast<Value>(NI),
                                                                  Indices, 
                                                                  "", InsertPoint);
           fargs.at(argNum)->replaceAllUsesWith(GEP_new);
