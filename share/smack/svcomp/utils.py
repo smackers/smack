@@ -42,6 +42,15 @@ def svcomp_frontend(args):
   smack.top.clang_frontend(args)
 
 def svcomp_process_file(args, name, ext):
+  # Check if property is vanilla reachability, and return unknown otherwise
+  if args.svcomp_property:
+    with open(args.svcomp_property, "r") as f:
+      prop = f.read()
+    if "valid-deref" in prop:
+      args.memory_safety = True
+    elif not "__VERIFIER_error" in prop:
+      sys.exit(smack.top.results(args)['unknown'])
+
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
@@ -62,16 +71,6 @@ def svcomp_process_file(args, name, ext):
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
-  # Check if property is vanilla reachability, and return unknown otherwise
-  if args.svcomp_property:
-    with open(args.svcomp_property, "r") as f:
-      prop = f.read()
-    if not "__VERIFIER_error" in prop:
-      heurTrace += "Unsupported svcomp property - aborting\n"
-      heurTrace += "Property File:\n" + prop + "\n"
-      if not args.quiet:
-        print(heurTrace + "\n")
-      sys.exit(smack.top.results(args)['unknown'])
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
