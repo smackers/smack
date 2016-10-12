@@ -1,6 +1,6 @@
 [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/)
 
-<img src="docs/smack-logo.png" width=300 alt="SMACK Logo" align="right">
+<img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 
 SMACK is both a *modular software verification toolchain* and a
 *self-contained software verifier*. It can be used to verify the assertions
