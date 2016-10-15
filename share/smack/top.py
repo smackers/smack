@@ -305,7 +305,7 @@ def build_libs(args):
   libs = ['smack.c']
 
   if args.pthread:
-    libs += ['pthread.c', 'spinlock.c']
+    libs += ['pthread.c']
 
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
