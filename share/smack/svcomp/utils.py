@@ -16,18 +16,20 @@ def svcomp_frontend(args):
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
 
-  # test float\bv benchmarks
+  # test bv and executable benchmarks
   file_type = filters.svcomp_filter(args.input_files[0])[0]
   if file_type == 'bitvector':
     args.bit_precise = True
-  if file_type == 'float':
-    sys.exit(smack.top.results(args)['unknown'])
   args.execute = False
   if filters.svcomp_filter(args.input_files[0])[1] == 'executable':
     args.execute = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
+
+  # fix: disable float filter for memory safety benchmarks
+  if file_type == 'float' and not args.memory_safety:
+    sys.exit(smack.top.results(args)['unknown'])
 
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
