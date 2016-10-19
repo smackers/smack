@@ -26,8 +26,10 @@ def addKeyDefs(root):
     keys = []
     #keys are [attr.name, attr.type, for, id, hasDefault, defaultVal]
     keys.append(["assumption",         "string",  "edge",  "assumption",     False])
+    keys.append(["assumption.scope",         "string",  "edge",  "assumption.scope",     False])
     keys.append(["sourcecode",         "string",  "edge",  "sourcecode",     False])
     keys.append(["sourcecodeLanguage", "string",  "graph", "sourcecodelang", False])
+    keys.append(["specification", "string",  "graph", "specification", False])
     keys.append(["tokenSet",           "string",  "edge",  "tokens",         False])
     keys.append(["originTokenSet",     "string",  "edge",  "origintokens",   False])
     keys.append(["negativeCase",       "string",  "edge",  "negated",        True, "false"])
@@ -128,59 +130,38 @@ def smackJsonToXmlGraph(strJsonOutput):
     pat = re.compile(".*smack\.[c|h]$")
     prevLineNo = -1
     prevColNo = -1
+    callStack = ['main']
     # Loop through each trace
     for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
-            # If current trace has same line & column number as previous trace,
-            #   don't create new edge/node - just append assumption
-            if prevLineNo == jsonTrace["line"] and prevColNo == jsonTrace["column"]:
-                #if not jsonTrace["assumption"] == "":
-                if formatAssign(jsonTrace["description"]):
-                    assumpNode = None
-                    # Loop through the children to find the assumption node
-                    for dataNode in list(lastEdge.iter()):
-                        if dataNode.tag == "data" and dataNode.attrib["key"] == "assumption":
-                            assumpNode = dataNode
-                            break
-                    if assumpNode == None:
-                        #addKey(lastEdge, "assumption",formatAssign(str(jsonTrace["assumption"])) + ";")
-                        addKey(lastEdge, "assumption",formatAssign(str(jsonTrace["description"])) + ";")
-                    else:
-                        #assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["assumption"])) + ";"
-                        assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["description"])) + ";"
-                if "CALL" in jsonTrace["description"]:
-                  if not "__VERIFIER_nondet_" in jsonTrace["description"] and not "__VERIFIER_assume" in jsonTrace["description"] and \
-                     not "$memset" in jsonTrace["description"] and not "$memcpy" in jsonTrace["description"]:
-                    addKey(lastEdge, "enterFunction", str(jsonTrace["description"][len("CALL"):]))
-                    #addKey(lastNode, "violation", "true")
-                    if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
-                      vNodes =tree.find("graph").findall("node")
-                      for vNode in vNodes:
-                        if vNode.attrib["id"] == lastNode:
-                          addKey(vNode, "violation", "true")
-                if "RETURN from" in jsonTrace["description"]:
-                    attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
-            else:
-                # Create new node and edge
-                newNode = addGraphNode(tree)
-                #print type(newNode)
-                #attribs = {"originline":str(jsonTrace["line"])}
-                attribs = {"startline":str(jsonTrace["line"])}
-                if formatAssign(jsonTrace["description"]):
-                  #if not jsonTrace["assumption"] == "":
-                  attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
-                if "CALL" in jsonTrace["description"]:
-                    attribs["enterFunction"] = str(jsonTrace["description"][len("CALL"):]) 
-                    #if ("__VERIFIER_error" in jsonTrace["description"][len("CALL")]):
-                    #  attribs["violation"] = "true"
-                if "RETURN from" in jsonTrace["description"]:
-                    attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
-                newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
-                prevLineNo = jsonTrace["line"]
-                prevColNo = jsonTrace["column"]
-                lastNode = newNode
-                lastEdge = newEdge
+          if formatAssign(jsonTrace["description"]):
+          # Create new node and edge
+            newNode = addGraphNode(tree)
+            attribs = {"startline":str(jsonTrace["line"])}
+            attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
+            attribs["assumption.scope"] = callStack[-1]
+            newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
+            prevLineNo = jsonTrace["line"]
+            prevColNo = jsonTrace["column"]
+            lastNode = newNode
+            lastEdge = newEdge
+          if "CALL" in jsonTrace["description"]:
+            # Add function to call stack
+            callStack.append(str(jsonTrace["description"][len("CALL "):]))
+            if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
+              newNode = addGraphNode(tree)
+              # addGraphNode returns a string, so we had to search the graph to get the node that we want
+              vNodes =tree.find("graph").findall("node")
+              for vNode in vNodes:
+                if vNode.attrib["id"] == newNode:
+                  addKey(vNode, "violation", "true")
+              attribs = {"startline":str(jsonTrace["line"])}
+              attribs["enterFunction"] = callStack[-1]
+              addGraphEdge(tree, lastNode, newNode, attribs)
+              break
+          if "RETURN from" in jsonTrace["description"]:
+            callStack.pop()
 
     return prettify(tree.getroot())
 

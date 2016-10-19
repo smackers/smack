@@ -353,8 +353,12 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
-      assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+      if (const llvm::PointerType* t = llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
+        if (!t->getElementType()->isPointerTy()) {
+          assert(G->hasName() && "Expected named global variable.");
+          emit(Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+        }
+      }
     }
   }
 
@@ -595,7 +599,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
   if (SmackOptions::SourceLocSymbols) {
     const Value* V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
-    if (V) {
+    if (V && !V->getType()->isPointerTy()) {
       V = V->stripPointerCasts();
       std::stringstream recordProc;
       recordProc << "boogie_si_record_" << rep.type(V);
