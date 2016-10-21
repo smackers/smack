@@ -3,6 +3,7 @@
 //
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
+#include "smack/SmackOptions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
@@ -14,12 +15,24 @@ namespace smack {
 
 using namespace llvm;
 
+void insertMemoryLeakStatement(Function& F, Module& m) {
+  Function* memoryLeakCheckFunction = m.getFunction(Naming::MEMORY_LEAK_CHECK_FUNCTION);
+  for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+    if(isa<ReturnInst>(&*I)) {
+      CallInst::Create(memoryLeakCheckFunction, "", &*I);
+    }
+  }
+}
+
 bool MemorySafetyChecker::runOnModule(Module& m) {
   DataLayout* dataLayout = new DataLayout(&m);
   Function* memorySafetyFunction = m.getFunction(Naming::MEMORY_SAFETY_FUNCTION);
   assert(memorySafetyFunction != NULL && "Couldn't find memory safety function");
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
+      if (SmackOptions::isEntryPoint(F.getName())) {
+        insertMemoryLeakStatement(F, m);
+      }
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
         Value* pointer = NULL;
         if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {

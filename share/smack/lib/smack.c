@@ -42,6 +42,7 @@ void __VERIFIER_error(void) {
 }
 
 void exit(int x) {
+  __SMACK_code("assert $eq.ref.bool($memoryCounter, 0);");
   __SMACK_code("assume false;");
   while(1);
 }
@@ -1032,6 +1033,17 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, ref);
   DECLARE(RECORD_PROC, float);
 
+  #if MEMORY_SAFETY
+  D("var $memoryCounter: int;");
+  #endif
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "{\n"
+    #if MEMORY_SAFETY
+    "  $memoryCounter := $memoryCounter + 1;\n"
+    #endif
+    "  call p := $alloc(n);\n"
+    "}");
+  
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
@@ -1055,6 +1067,12 @@ void __SMACK_decls() {
   D("procedure $free(p: ref)\n"
     "modifies $Alloc;\n"
     "{\n"
+    #if MEMORY_SAFETY
+    "  if ($ne.ref.bool(p, $0.ref)) {\n"
+    "    assert $eq.ref.bool($base(p), p);\n"
+    "    $memoryCounter := $memoryCounter - 1;\n"
+    "  }\n"
+    #endif
     "  $Alloc[p] := false;\n"
     "}");
 
@@ -1077,8 +1095,11 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
+    "requires $ne.ref.bool(p, $0.ref);\n"
+    "requires $eq.ref.bool($base(p), p);\n"
     "ensures !$Alloc[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
+    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+    "ensures $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
@@ -1097,8 +1118,11 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
+    "requires $ne.ref.bool(p, $0.ref);\n"
+    "requires $eq.ref.bool($base(p), p);\n"
     "ensures !$Alloc[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
+    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+    "ensures $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);");
 #endif
 
   D("var $exn: bool;");
@@ -1122,7 +1146,16 @@ void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
   #endif
 }
 
+void __SMACK_check_memory_leak() {
+  #if MEMORY_SAFETY
+  __SMACK_code("assert $eq.ref.bool($memoryCounter, 0);");
+  #endif
+}
+
 void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$CurrAddr := $1024.ref;");
+  #if MEMORY_SAFETY
+  __SMACK_code("$memoryCounter := 0;");
+  #endif
 }
 

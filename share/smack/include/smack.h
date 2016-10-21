@@ -39,6 +39,8 @@ smack_value_t __SMACK_return_value(void);
 // and buffer overflow errors
 void __SMACK_check_memory_safety(void*, unsigned long);
 
+void __SMACK_check_memory_leak();
+
 // We need this to enforce that assert/assume are function calls
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
