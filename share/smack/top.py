@@ -14,7 +14,7 @@ from threading import Timer
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 
-VERSION = '1.5.2'
+VERSION = '1.6.0'
 temporary_files = []
 
 def frontends():
@@ -36,6 +36,7 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
+    'invalid-deref': 'SMACK found an invalid pointer dereference.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -296,8 +297,7 @@ def default_clang_compile_command(args):
   cmd += ['-I' + smack_headers()]
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
-  if args.memory_safety:
-    cmd += ['-DMEMORY_SAFETY']
+  if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   return cmd
 
 def build_libs(args):
@@ -377,7 +377,6 @@ def llvm_to_bpl(args):
   cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-warnings']
   cmd += ['-source-loc-syms']
-  cmd += ['-enable-type-inference-opts']
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
@@ -421,7 +420,10 @@ def verification_result(verifier_output):
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
     return 'verified'
   elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
-    return 'error'
+    if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
+      return 'invalid-deref'
+    else:
+      return 'error'
   else:
     return 'unknown'
 
@@ -477,7 +479,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error':
+    if result == 'error' or result == 'invalid-deref':
       error = error_trace(verifier_output, args)
 
       if args.error_file:

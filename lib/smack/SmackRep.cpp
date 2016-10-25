@@ -465,8 +465,13 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
 
-const Expr* SmackRep::pa(const Expr* base, unsigned long idx, unsigned long size) {
-  return pa(base, idx * size);
+const Expr* SmackRep::pa(const Expr* base, long long idx, unsigned long size) {
+  if (idx >= 0) {
+    return pa(base, idx * size);
+  } else {
+    return pa(base, Expr::fn("$sub.ref", pointerLit(0UL),
+      pointerLit((unsigned long) std::abs(idx))), pointerLit(size));
+  }
 }
 
 const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned long size) {
@@ -609,9 +614,10 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
     } else {
       Type* et = dyn_cast<SequentialType>(a.second)->getElementType();
       assert(a.first->getType()->isIntegerTy() && "Illegal index");
-      if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first))
-        e = pa(e, (unsigned long) ci->getZExtValue(), storageSize(et));
-      else
+      if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first)) {
+        assert(ci->getBitWidth() <= 64 && "Unsupported index bitwidth");
+        e = pa(e, (long long) ci->getSExtValue(), storageSize(et));
+      } else
         e = pa(e, integerToPointer(expr(a.first), a.first->getType()->getIntegerBitWidth()),
           storageSize(et));
     }

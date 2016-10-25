@@ -16,18 +16,20 @@ def svcomp_frontend(args):
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
 
-  # test float\bv benchmarks
+  # test bv and executable benchmarks
   file_type = filters.svcomp_filter(args.input_files[0])[0]
   if file_type == 'bitvector':
     args.bit_precise = True
-  if file_type == 'float':
-    sys.exit(smack.top.results(args)['unknown'])
   args.execute = False
   if filters.svcomp_filter(args.input_files[0])[1] == 'executable':
     args.execute = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
+
+  # fix: disable float filter for memory safety benchmarks
+  if file_type == 'float' and not args.memory_safety:
+    sys.exit(smack.top.results(args)['unknown'])
 
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
@@ -42,6 +44,15 @@ def svcomp_frontend(args):
   smack.top.clang_frontend(args)
 
 def svcomp_process_file(args, name, ext):
+  # Check if property is vanilla reachability, and return unknown otherwise
+  if args.svcomp_property:
+    with open(args.svcomp_property, "r") as f:
+      prop = f.read()
+    if "valid-deref" in prop:
+      args.memory_safety = True
+    elif not "__VERIFIER_error" in prop:
+      sys.exit(smack.top.results(args)['unknown'])
+
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
@@ -62,16 +73,6 @@ def svcomp_process_file(args, name, ext):
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
-  # Check if property is vanilla reachability, and return unknown otherwise
-  if args.svcomp_property:
-    with open(args.svcomp_property, "r") as f:
-      prop = f.read()
-    if not "__VERIFIER_error" in prop:
-      heurTrace += "Unsupported svcomp property - aborting\n"
-      heurTrace += "Property File:\n" + prop + "\n"
-      if not args.quiet:
-        print(heurTrace + "\n")
-      sys.exit(smack.top.results(args)['unknown'])
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
@@ -143,7 +144,7 @@ def verify_bpl_svcomp(args):
   verifier_output = smack.top.try_command(command, timeout=time_limit)
   result = smack.top.verification_result(verifier_output)
 
-  if result == 'error': #normal inlining
+  if result == 'error' or result == 'invalid-deref': #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
     # Generate error trace and exit
     if args.language == 'svcomp':

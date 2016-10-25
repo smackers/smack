@@ -162,7 +162,7 @@ linux-opensuse*)
 
 linux-ubuntu-14*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-3.6 llvm-3.6 mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-3.7 llvm-3.7 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
@@ -223,7 +223,7 @@ then
 
   linux-ubuntu-14*)
     # Adding LLVM repository
-    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.6 main"
+    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
     ${WGET} -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
     # Adding MONO repository
     sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
@@ -231,11 +231,11 @@ then
 #    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.6 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.6 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.6 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.6 20
-    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.6 20
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.7 20
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.7 20
+    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.7 20
+    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.7 20
+    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.7 20
     ;;
 
   linux-ubuntu-12*)
@@ -299,13 +299,13 @@ then
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
-  ${WGET} http://llvm.org/releases/3.6.2/llvm-3.6.2.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.6.2/cfe-3.6.2.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.6.2/compiler-rt-3.6.2.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.7.1/llvm-3.7.1.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.7.1/cfe-3.7.1.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.7.1/compiler-rt-3.7.1.src.tar.xz
 
-  tar -C ${LLVM_DIR}/src -xvf llvm-3.6.2.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.6.2.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.6.2.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-3.7.1.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.7.1.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.7.1.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
@@ -354,7 +354,8 @@ then
   git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
   cd ${CORRAL_DIR}
   git reset --hard ${CORRAL_COMMIT}
-  cp ${BOOGIE_DIR}/Binaries/*.{dll,exe} references
+  git submodule init
+  git submodule update
   xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 

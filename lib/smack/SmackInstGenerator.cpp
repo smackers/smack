@@ -74,12 +74,11 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
     }
   }
 
-  if (llvm::MDNode* M = I.getMetadata("dbg")) {
-    llvm::DILocation L(M);
-
-    if (SmackOptions::SourceLocSymbols)
-      B->addStmt(Stmt::annot(Attr::attr("sourceloc", L.getFilename().str(),
-        L.getLineNumber(), L.getColumnNumber())));
+  if (SmackOptions::SourceLocSymbols && I.getMetadata("dbg")) {
+    const DebugLoc DL = I.getDebugLoc();
+    auto *scope = cast<DIScope>(DL.getScope());
+    B->addStmt(Stmt::annot(Attr::attr("sourceloc", scope->getFilename().str(),
+      DL.getLine(), DL.getCol())));
   }
 }
 
@@ -595,12 +594,12 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
 
   if (SmackOptions::SourceLocSymbols) {
     const Value* V = dvi.getValue();
-    const llvm::DIVariable var(dvi.getVariable());
+    const llvm::DILocalVariable *var = dvi.getVariable();
     if (V) {
       V = V->stripPointerCasts();
       std::stringstream recordProc;
       recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var.getName().str())}));
+      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
     }
   }
 }

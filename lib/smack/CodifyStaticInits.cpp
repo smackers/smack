@@ -9,6 +9,7 @@
 #include "smack/CodifyStaticInits.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/IR/DataLayout.h"
 
@@ -20,11 +21,11 @@ namespace smack {
 using namespace llvm;
 
 namespace{
-  Regex STRING_CONSTANT("^\\.str[0-9]*$");
+  Regex STRING_CONSTANT("^\\.str[.0-9]*$");
 }
 
 bool CodifyStaticInits::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   LLVMContext& C = M.getContext();
 
   Function* F = dyn_cast<Function>(
