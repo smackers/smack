@@ -122,7 +122,8 @@ void Region::init(const Value* V, unsigned length) {
   assert (T->isPointerTy() && "Expected pointer argument.");
   T = T->getPointerElementType();
   context = &V->getContext();
-  representative = DSA ? DSA->getNode(V) : nullptr;
+  representative = (DSA && !dyn_cast<ConstantPointerNull>(V))
+    ? DSA->getNode(V) : nullptr;
   this->type = T;
   this->offset = DSA ? DSA->getOffset(V) : 0;
   this->length = length;
