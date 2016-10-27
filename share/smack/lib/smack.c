@@ -161,12 +161,28 @@ void __SMACK_dummy(int v) {
 
 #define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
   function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
+  
+#define FPBUILTIN_UNARY_OP(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type(f: type) returns (type);
+
+#define FPBUILTIN_BINARY_OP(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (type);
+
+#define FPBUILTIN_BINARY_PRED(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (i1);
+  
+#define INLINE_FPBUILTIN_BINARY_PRED(type,name,prim) \
+  function {:bvbuiltin xstr(prim)} name.type.bool(f1: type, f2: type) returns (bool); \
+  function {:inline} name.type(f1: type, f2: type) returns (bv1) {if name.type.bool(f1,f2) then 1bv1 else 0bv1}
+
+#define INLINE_FPBUILTIN_BINARY_SELECT(type,name,pred) \
+  function {:inline} name.type(f1: type, f2: type) returns (type) {if pred.type.bool(f1,f2) then i1 else i2}
 
 #define D(d) __SMACK_top_decl(d)
 
 #define DECLARE(M,args...) \
   D(xstr(M(args)))
-
+  
 #define DECLARE_EACH_INT_TYPE(M,args...) \
   D(xstr(M(i128,args))); \
   D(xstr(M(i96,args))); \
@@ -194,6 +210,9 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bv16,args))); \
   D(xstr(M(bv8,args))); \
   D(xstr(M(bv1,args)));
+  
+#define DECLARE_EACH_FLOAT_TYPE(M,args...) \
+  D(xstr(M(float,args))); \
 
 void __SMACK_decls() {
 
@@ -698,15 +717,21 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i88,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
 
-  D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
-  D("function $fadd.float(f1:float, f2:float) returns (float);");
-  D("function $fsub.float(f1:float, f2:float) returns (float);");
-  D("function $fmul.float(f1:float, f2:float) returns (float);");
-  D("function $fdiv.float(f1:float, f2:float) returns (float);");
-  D("function $frem.float(f1:float, f2:float) returns (float);");
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fsub, {i1 - i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fmul, {i1 * i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fdiv, {i1 / i2})
+  DECLARE_EACH_FLOAT_TYPE(FPBUILTIN_BINARY_OP, $frem, fp.rem)
   D("function $ffalse.float(f1:float, f2:float) returns (i1);");
   D("function $ftrue.float(f1:float, f2:float) returns (i1);");
-  D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
+  
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $foeq, i1 == i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fne, i1 != i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fle, i1 <= i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $flt, i1 < i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fge, i1 >= i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fgt, i1 > i2)
+  /*D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
   D("function $foeq.bool(f1:float, f2:float) returns (bool);");
   D("function $foge.float(f1:float, f2:float) returns (i1);");
   D("function $fogt.float(f1:float, f2:float) returns (i1);");
@@ -720,7 +745,7 @@ void __SMACK_decls() {
   D("function $fule.float(f1:float, f2:float) returns (i1);");
   D("function $fult.float(f1:float, f2:float) returns (i1);");
   D("function $fune.float(f1:float, f2:float) returns (i1);");
-  D("function $funo.float(f1:float, f2:float) returns (i1);");
+  D("function $funo.float(f1:float, f2:float) returns (i1);");*/
 
   D("function $fp2si.float.i128(f:float) returns (i128);");
   D("function $fp2ui.float.i128(f:float) returns (i128);");
@@ -768,8 +793,8 @@ void __SMACK_decls() {
   D("function $si2fp.i8.float(i:i8) returns (float);");
   D("function $ui2fp.i8.float(i:i8) returns (float);");
 
-  D("function $fptrunc.float.float(f:float) returns (float);");
-  D("function $fpext.float.float(f:float) returns (float);");
+  DECLARE(INLINE_CONVERSION,float,float,$fptrunc,{i});
+  DECLARE(INLINE_CONVERSION,float,float,$fpext,{i});
   D("function $fp2si.float.bv128(f:float) returns (bv128);");
   D("function $fp2ui.float.bv128(f:float) returns (bv128);");
   D("function $si2fp.bv128.float(i:bv128) returns (float);");
@@ -816,7 +841,7 @@ void __SMACK_decls() {
   D("function $ui2fp.bv8.float(i:bv8) returns (float);");
 
 #ifndef NO_FORALL
-  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.float.bool(f1,f2));");
 
   D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
   D("axiom (forall f: float :: $ui2fp.i128.float($fp2ui.float.i128(f)) == f);");

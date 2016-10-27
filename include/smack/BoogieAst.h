@@ -38,6 +38,7 @@ public:
   static const Expr* lit(long v);
   static const Expr* lit(std::string v, unsigned w);
   static const Expr* lit(unsigned long v, unsigned w);
+  static const Expr* lit(bool n, std::string s, std::string e, unsigned ss, unsigned es);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
@@ -111,6 +112,17 @@ public:
     val = s.str();
   }
   void print(std::ostream& os) const;
+};
+
+class FpLit : public Expr {
+	bool neg;
+	std::string sig;
+	std::string expo;
+	unsigned sigSize;
+	unsigned expSize;
+public:
+	FpLit(bool n, std::string s, std::string e, unsigned ss, unsigned es) : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
+	void print(std::ostream& os) const;
 };
 
 class StringLit : public Expr {

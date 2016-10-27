@@ -501,7 +501,7 @@ const Expr* SmackRep::pointerToInteger(const Expr* e, unsigned width) {
 
 const Expr* SmackRep::integerToPointer(const Expr* e, unsigned width) {
   if (width < ptrSizeInBits)
-    e = Expr::fn(opName("$zext", {width, ptrSizeInBits}), e);
+    e = (opName("$zext", {width, ptrSizeInBits}), e);
   else if (width > ptrSizeInBits)
     e = Expr::fn(opName("$trunc", {width, ptrSizeInBits}), e);
   e = bitConversion(e, SmackOptions::BitPrecise, SmackOptions::BitPrecisePointers);
@@ -556,23 +556,27 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     const APFloat APF = CFP->getValueAPF();
+	const APInt API = APF.bitcastToAPInt();
     std::string str;
     raw_string_ostream ss(str);
     ss << *CFP;
     std::istringstream iss(str);
     std::string float_type;
-    long integerPart, fractionalPart, exponentPart;
-    char point, sign, exponent;
     iss >> float_type;
-    iss >> integerPart;
-    iss >> point;
-    iss >> fractionalPart;
-    iss >> sign;
-    iss >> exponent;
-    iss >> exponentPart;
-
-    return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
-      Expr::lit(exponentPart));
+	unsigned expSize, sigSize;
+	if (float_type=="float") {
+		expSize = 8;
+		sigSize = 24;
+	}
+	if (float_type=="double") {
+		expSize = 11;
+		sigSize = 53;
+	}
+	const APInt n_sign = API.trunc(expSize+sigSize-1);
+	bool neg = n_sign != API;
+	const APInt sig = n_sign.trunc(sigSize-1);
+	const APInt exp = n_sign.lshr(sigSize-1);
+    return Expr::lit(neg, sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
 
   } else if (llvm::isa<ConstantPointerNull>(v))
     return Expr::id(Naming::NULL_VAL);
@@ -880,7 +884,8 @@ std::string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
-  s << Decl::typee(Naming::FLOAT_TYPE, intType(32)) << "\n";
+  s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
+  s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";

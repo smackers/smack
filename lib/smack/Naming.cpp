@@ -13,6 +13,7 @@ namespace smack {
 
 const std::string Naming::BOOL_TYPE = "bool";
 const std::string Naming::FLOAT_TYPE = "float";
+const std::string Naming::DOUBLE_TYPE = "double";
 const std::string Naming::PTR_TYPE = "ref";
 const std::string Naming::NULL_VAL = "$0.ref";
 
