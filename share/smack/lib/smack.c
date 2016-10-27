@@ -1075,7 +1075,7 @@ void __SMACK_decls() {
     "{\n"
     #if MEMORY_SAFETY
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
-    "    assert $eq.ref.bool($base(p), p);\n"
+    "    assert {:valid-free} $eq.ref.bool($base(p), p);\n"
     "    $memoryCounter := $memoryCounter - 1;\n"
     "  }\n"
     #endif
@@ -1204,7 +1204,7 @@ void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
 
 void __SMACK_check_memory_leak() {
   #if MEMORY_SAFETY
-  __SMACK_code("assert $eq.ref.bool($memoryCounter, 0);");
+  __SMACK_code("assert {:valid_memtrack} $eq.ref.bool($memoryCounter, 0);");
   #endif
 }
 
