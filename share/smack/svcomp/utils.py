@@ -144,7 +144,7 @@ def verify_bpl_svcomp(args):
   verifier_output = smack.top.try_command(command, timeout=time_limit)
   result = smack.top.verification_result(verifier_output)
 
-  if result == 'error' or result == 'invalid-deref': #normal inlining
+  if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack': #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
     # Generate error trace and exit
     if args.language == 'svcomp':

@@ -1075,7 +1075,7 @@ void __SMACK_decls() {
     "{\n"
     #if MEMORY_SAFETY
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
-    "    assert {:valid-free} $eq.ref.bool($base(p), p);\n"
+    "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
     "    $memoryCounter := $memoryCounter - 1;\n"
     "  }\n"
     #endif
