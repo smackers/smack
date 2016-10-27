@@ -427,7 +427,7 @@ def verification_result(verifier_output):
     elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
       return 'invalid-free'
     elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
-      return 'invalid-free'
+      return 'invalid-memtrack'
     else:
       return 'error'
   else:
