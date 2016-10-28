@@ -1072,14 +1072,14 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref)\n"
     "modifies $Alloc;\n"
+    "modifies $memoryCounter;\n"
     "{\n"
-    #if MEMORY_SAFETY
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
-    "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
+    "    assert {:valid_free_} $eq.ref.bool($base(p), p);\n"
+    "    assert {:valid_free_} $Alloc[p] == true;\n"
     "    $memoryCounter := $memoryCounter - 1;\n"
-    "  }\n"
-    #endif
-    "  $Alloc[p] := false;\n"
+    "    $Alloc[p] := false;\n"
+    "  }\n" 
     "}");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
