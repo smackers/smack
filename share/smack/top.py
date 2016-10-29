@@ -429,7 +429,11 @@ def verification_result(verifier_output):
     elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
       return 'invalid-memtrack'
     else:
-      return 'error'
+      listCall = re.findall(r'\(CALL .+\)', verifier_output)
+      if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
+        return 'invalid-free'
+      else:
+        return 'error'
   else:
     return 'unknown'
 
