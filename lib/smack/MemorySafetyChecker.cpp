@@ -39,7 +39,28 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
           pointer = li->getPointerOperand();
         } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
           pointer = si->getPointerOperand();
-        }
+        } else if (CallInst* ci = dyn_cast<CallInst>(&*I)) {
+          Function* calledF = ci->getCalledFunction();
+          if(calledF && calledF->getName().find("memset") != std::string::npos) {
+	    Value* dest = ci->getArgOperand(0);
+	    Value* size = ci->getArgOperand(2);
+	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
+	    CastInst* castPtr = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
+	    Value* args[] = {castPtr, size};
+	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
+	  } else if(calledF && calledF->getName().find("memcpy") != std::string::npos) {
+	    Value* dest = ci->getArgOperand(0);
+	    Value* src = ci->getArgOperand(1);
+	    Value* size = ci->getArgOperand(2);
+	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
+	    CastInst* castPtrDest = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
+	    CastInst* castPtrSrc = CastInst::Create(Instruction::BitCast, src, voidPtrTy, "", &*I);
+	    Value* argsDest[] = {castPtrDest, size};
+	    Value* argsSrc[] = {castPtrSrc, size};
+	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(argsDest, 2), "", &*I);  
+	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(argsSrc, 2), "", &*I);  
+	  }
+	}
 
         if (pointer) {
           // Finding the exact type of the second argument to our memory safety function
