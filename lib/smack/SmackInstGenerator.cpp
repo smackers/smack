@@ -599,7 +599,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
   if (SmackOptions::SourceLocSymbols) {
     const Value* V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
-    if (V && !V->getType()->isPointerTy()) {
+    if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
       V = V->stripPointerCasts();
       std::stringstream recordProc;
       recordProc << "boogie_si_record_" << rep.type(V);
