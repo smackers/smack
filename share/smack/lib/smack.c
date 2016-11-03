@@ -488,6 +488,7 @@ void __SMACK_decls() {
   D("axiom $xor.i1(0,1) == 1;");
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
+  D("axiom($and.i32(32, 16) == 0);");
 
   DECLARE(INLINE_CONVERSION,i128,i96,$trunc,{i});
   DECLARE(INLINE_CONVERSION,i128,i88,$trunc,{i});
