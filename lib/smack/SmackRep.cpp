@@ -152,8 +152,11 @@ std::string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
 
 std::string SmackRep::type(const llvm::Type* t) {
 
-  if (t->isFloatingPointTy())
-    return Naming::FLOAT_TYPE;
+  if (t->isFloatingPointTy()) {
+	if (t->isFloatTy())
+		return Naming::FLOAT_TYPE;
+	return Naming::DOUBLE_TYPE;
+  }
 
   else if (t->isIntegerTy())
     return intType(t->getIntegerBitWidth());

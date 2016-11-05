@@ -213,6 +213,7 @@ void __SMACK_dummy(int v) {
   
 #define DECLARE_EACH_FLOAT_TYPE(M,args...) \
   D(xstr(M(float,args))); \
+  D(xstr(M(double,args)));
 
 void __SMACK_decls() {
 
@@ -793,8 +794,10 @@ void __SMACK_decls() {
   D("function $si2fp.i8.float(i:i8) returns (float);");
   D("function $ui2fp.i8.float(i:i8) returns (float);");
 
-  DECLARE(INLINE_CONVERSION,float,float,$fptrunc,{i});
-  DECLARE(INLINE_CONVERSION,float,float,$fpext,{i});
+  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(float) returns (double);");
+  D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(double) returns (float);");
+  DECLARE(INLINE_CONVERSION,double,float,$fptrunc,{dtf(i)});
+  DECLARE(INLINE_CONVERSION,float,double,$fpext,{ftd(i)});
   D("function $fp2si.float.bv128(f:float) returns (bv128);");
   D("function $fp2ui.float.bv128(f:float) returns (bv128);");
   D("function $si2fp.bv128.float(i:bv128) returns (float);");
@@ -1056,6 +1059,7 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, bv128);
   DECLARE(RECORD_PROC, ref);
   DECLARE(RECORD_PROC, float);
+  DECLARE(RECORD_PROC, double);
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
