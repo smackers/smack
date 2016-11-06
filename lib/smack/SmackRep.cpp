@@ -504,7 +504,7 @@ const Expr* SmackRep::pointerToInteger(const Expr* e, unsigned width) {
 
 const Expr* SmackRep::integerToPointer(const Expr* e, unsigned width) {
   if (width < ptrSizeInBits)
-    e = (opName("$zext", {width, ptrSizeInBits}), e);
+    e = Expr::fn(opName("$zext", {width, ptrSizeInBits}), e);
   else if (width > ptrSizeInBits)
     e = Expr::fn(opName("$trunc", {width, ptrSizeInBits}), e);
   e = bitConversion(e, SmackOptions::BitPrecise, SmackOptions::BitPrecisePointers);
