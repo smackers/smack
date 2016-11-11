@@ -182,6 +182,7 @@ protected:
 public:
   Attr(std::string n, std::initializer_list<const Expr*> vs) : name(n), vals(vs) {}
   void print(std::ostream& os) const;
+  std::string getName() const { return name; }
 
   static const Attr* attr(std::string s);
   static const Attr* attr(std::string s, std::string v);
@@ -255,6 +256,13 @@ public:
   AssumeStmt(const Expr* e) : Stmt(ASSUME), expr(e) {}
   void add(const Attr* a) {
     attrs.push_back(a);
+  }
+  bool hasAttr(std::string name) const {
+    for (auto a = attrs.begin(); a != attrs.end(); ++a) {
+      if ((*a)->getName() == name)
+        return true;
+    }
+    return false;
   }
   void print(std::ostream& os) const;
   static bool classof(const Stmt* S) { return S->getKind() == ASSUME; }

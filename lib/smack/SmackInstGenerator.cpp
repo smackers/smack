@@ -593,17 +593,28 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   }
 }
 
+bool isSourceLoc(const Stmt* stmt) {
+  return (stmt->getKind() == Stmt::ASSUME
+          && (llvm::cast<const AssumeStmt>(stmt))->hasAttr("sourceloc"))
+         || (stmt->getKind() == Stmt::CALL);
+}
+
 void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
   processInstruction(dvi);
 
   if (SmackOptions::SourceLocSymbols) {
     const Value* V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
-    if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
-      V = V->stripPointerCasts();
-      std::stringstream recordProc;
-      recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+    //if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
+    if (V && !V->getType()->isPointerTy()) {
+      if (currBlock->begin() != currBlock->end()
+          //&& currBlock->getStatements().back()->getKind() == Stmt::ASSUME) {
+          && isSourceLoc(currBlock->getStatements().back())) {
+        V = V->stripPointerCasts();
+        std::stringstream recordProc;
+        recordProc << "boogie_si_record_" << rep.type(V);
+        emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+      }
     }
   }
 }
