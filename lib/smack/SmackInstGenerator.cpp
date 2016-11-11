@@ -34,7 +34,7 @@ Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$
 // Procedures whose return value should not be marked as external
 Regex EXTERNAL_PROC_IGNORE("^(malloc|__VERIFIER_nondet)$");
 
-std::string i2s(llvm::Instruction& i) {
+std::string i2s(const llvm::Instruction& i) {
   std::string s;
   llvm::raw_string_ostream ss(s);
   ss << i;
@@ -87,9 +87,11 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
   annotate(inst, currBlock);
   ORIG(inst);
   nameInstruction(inst);
+  nextInst++;
 }
 
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
+  nextInst = bb.begin();
   currBlock = getBlock(&bb);
 }
 
@@ -607,13 +609,20 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
     const llvm::DILocalVariable *var = dvi.getVariable();
     //if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
     if (V && !V->getType()->isPointerTy()) {
-      if (currBlock->begin() != currBlock->end()
+      //if (currBlock->begin() != currBlock->end()
           //&& currBlock->getStatements().back()->getKind() == Stmt::ASSUME) {
-          && isSourceLoc(currBlock->getStatements().back())) {
+      //    && isSourceLoc(currBlock->getStatements().back())) {
+      //assert(&*currInst == &dvi && "Current Instruction mismatch!");
+      auto currInst = std::prev(nextInst);
+      if (currInst != dvi.getParent()->begin()) {
+        const Instruction& pi = *std::prev(currInst);
         V = V->stripPointerCasts();
-        std::stringstream recordProc;
-        recordProc << "boogie_si_record_" << rep.type(V);
-        emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+        WARN(i2s(pi));
+        if (!llvm::isa<const PHINode>(&pi) && V == llvm::dyn_cast<const Value>(&pi)) {
+          std::stringstream recordProc;
+          recordProc << "boogie_si_record_" << rep.type(V);
+          emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+        }
       }
     }
   }
