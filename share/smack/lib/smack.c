@@ -717,6 +717,179 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i88,i96,$sext,{i});
   DECLARE(INLINE_CONVERSION,i88,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
+  
+  //Non Bit-precise Float Modeling
+  
+  D("function $fp(ipart:int, fpart:int, epart:int) returns (ifloat);");
+  D("function $fadd.ifloat(f1:ifloat, f2:ifloat) returns (ifloat);");
+  D("function $fsub.ifloat(f1:ifloat, f2:ifloat) returns (ifloat);");
+  D("function $fmul.ifloat(f1:ifloat, f2:ifloat) returns (ifloat);");
+  D("function $fdiv.ifloat(f1:ifloat, f2:ifloat) returns (ifloat);");
+  D("function $frem.ifloat(f1:ifloat, f2:ifloat) returns (ifloat);");
+  D("function {:inline} $foeq.ifloat(f1:ifloat, f2:ifloat) returns (i1) { if $foeq.ifloat.bool(f1,f2) then 1 else 0 }");
+  D("function $foeq.ifloat.bool(f1:ifloat, f2:ifloat) returns (bool);");
+  D("function $foge.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fogt.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fole.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $folt.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fone.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $ford.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fueq.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fuge.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fugt.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fule.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fult.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $fune.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+  D("function $funo.ifloat(f1:ifloat, f2:ifloat) returns (i1);");
+
+  D("function $fp2si.ifloat.i128(f:ifloat) returns (i128);");
+  D("function $fp2ui.ifloat.i128(f:ifloat) returns (i128);");
+  D("function $si2fp.i128.ifloat(i:i128) returns (ifloat);");
+  D("function $ui2fp.i128.ifloat(i:i128) returns (ifloat);");
+  D("function $fp2si.ifloat.i96(f:ifloat) returns (i96);");
+  D("function $fp2ui.ifloat.i96(f:ifloat) returns (i96);");
+  D("function $si2fp.i96.ifloat(i:i96) returns (ifloat);");
+  D("function $ui2fp.i96.ifloat(i:i96) returns (ifloat);");
+  D("function $fp2si.ifloat.i88(f:ifloat) returns (i88);");
+  D("function $fp2ui.ifloat.i88(f:ifloat) returns (i88);");
+  D("function $si2fp.i88.ifloat(i:i88) returns (ifloat);");
+  D("function $ui2fp.i88.ifloat(i:i88) returns (ifloat);");
+  D("function $fp2si.ifloat.i64(f:ifloat) returns (i64);");
+  D("function $fp2ui.ifloat.i64(f:ifloat) returns (i64);");
+  D("function $si2fp.i64.ifloat(i:i64) returns (ifloat);");
+  D("function $ui2fp.i64.ifloat(i:i64) returns (ifloat);");
+  D("function $fp2si.ifloat.i56(f:ifloat) returns (i56);");
+  D("function $fp2ui.ifloat.i56(f:ifloat) returns (i56);");
+  D("function $si2fp.i56.ifloat(i:i56) returns (ifloat);");
+  D("function $ui2fp.i56.ifloat(i:i56) returns (ifloat);");
+  D("function $fp2si.ifloat.i48(f:ifloat) returns (i48);");
+  D("function $fp2ui.ifloat.i48(f:ifloat) returns (i48);");
+  D("function $si2fp.i48.ifloat(i:i48) returns (ifloat);");
+  D("function $ui2fp.i48.ifloat(i:i48) returns (ifloat);");
+  D("function $fp2si.ifloat.i40(f:ifloat) returns (i40);");
+  D("function $fp2ui.ifloat.i40(f:ifloat) returns (i40);");
+  D("function $si2fp.i40.ifloat(i:i40) returns (ifloat);");
+  D("function $ui2fp.i40.ifloat(i:i40) returns (ifloat);");
+
+  D("function $fp2si.ifloat.i32(f:ifloat) returns (i32);");
+  D("function $fp2ui.ifloat.i32(f:ifloat) returns (i32);");
+  D("function $si2fp.i32.ifloat(i:i32) returns (ifloat);");
+  D("function $ui2fp.i32.ifloat(i:i32) returns (ifloat);");
+  D("function $fp2si.ifloat.i24(f:ifloat) returns (i24);");
+  D("function $fp2ui.ifloat.i24(f:ifloat) returns (i24);");
+  D("function $si2fp.i24.ifloat(i:i24) returns (ifloat);");
+  D("function $ui2fp.i24.ifloat(i:i24) returns (ifloat);");
+  D("function $fp2si.ifloat.i16(f:ifloat) returns (i16);");
+  D("function $fp2ui.ifloat.i16(f:ifloat) returns (i16);");
+  D("function $si2fp.i16.ifloat(i:i16) returns (ifloat);");
+  D("function $ui2fp.i16.ifloat(i:i16) returns (ifloat);");
+  D("function $fp2si.ifloat.i8(f:ifloat) returns (i8);");
+  D("function $fp2ui.ifloat.i8(f:ifloat) returns (i8);");
+  D("function $si2fp.i8.ifloat(i:i8) returns (ifloat);");
+  D("function $ui2fp.i8.ifloat(i:i8) returns (ifloat);");
+
+  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(float) returns (double);");
+  D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(double) returns (float);");
+  DECLARE(INLINE_CONVERSION,double,float,$fptrunc,{dtf(i)});
+  DECLARE(INLINE_CONVERSION,float,double,$fpext,{ftd(i)});
+  
+  D("function $fptrunc.ifloat.ifloat(f:ifloat) returns (ifloat);");
+  D("function $fpext.ifloat.ifloat(f:ifloat) returns (ifloat);");
+  D("function $fp2si.ifloat.bv128(f:ifloat) returns (bv128);");
+  D("function $fp2ui.ifloat.bv128(f:ifloat) returns (bv128);");
+  D("function $si2fp.bv128.ifloat(i:bv128) returns (ifloat);");
+  D("function $ui2fp.bv128.ifloat(i:bv128) returns (ifloat);");
+  D("function $fp2si.ifloat.bv96(f:ifloat) returns (bv96);");
+  D("function $fp2ui.ifloat.bv96(f:ifloat) returns (bv96);");
+  D("function $si2fp.bv96.ifloat(i:bv96) returns (ifloat);");
+  D("function $ui2fp.bv96.ifloat(i:bv96) returns (ifloat);");
+  D("function $fp2si.ifloat.bv88(f:ifloat) returns (bv88);");
+  D("function $fp2ui.ifloat.bv88(f:ifloat) returns (bv88);");
+  D("function $si2fp.bv88.ifloat(i:bv88) returns (ifloat);");
+  D("function $ui2fp.bv88.ifloat(i:bv88) returns (ifloat);");
+  D("function $fp2si.ifloat.bv64(f:ifloat) returns (bv64);");
+  D("function $fp2ui.ifloat.bv64(f:ifloat) returns (bv64);");
+  D("function $si2fp.bv64.ifloat(i:bv64) returns (ifloat);");
+  D("function $ui2fp.bv64.ifloat(i:bv64) returns (ifloat);");
+  D("function $fp2si.ifloat.bv56(f:ifloat) returns (bv56);");
+  D("function $fp2ui.ifloat.bv56(f:ifloat) returns (bv56);");
+  D("function $si2fp.bv56.ifloat(i:bv56) returns (ifloat);");
+  D("function $ui2fp.bv56.ifloat(i:bv56) returns (ifloat);");
+  D("function $fp2si.ifloat.bv48(f:ifloat) returns (bv48);");
+  D("function $fp2ui.ifloat.bv48(f:ifloat) returns (bv48);");
+  D("function $si2fp.bv48.ifloat(i:bv48) returns (ifloat);");
+  D("function $ui2fp.bv48.ifloat(i:bv48) returns (ifloat);");
+  D("function $fp2si.ifloat.bv40(f:ifloat) returns (bv40);");
+  D("function $fp2ui.ifloat.bv40(f:ifloat) returns (bv40);");
+  D("function $si2fp.bv40.ifloat(i:bv40) returns (ifloat);");
+  D("function $ui2fp.bv40.ifloat(i:bv40) returns (ifloat);");
+  D("function $fp2si.ifloat.bv32(f:ifloat) returns (bv32);");
+  D("function $fp2ui.ifloat.bv32(f:ifloat) returns (bv32);");
+  D("function $si2fp.bv32.ifloat(i:bv32) returns (ifloat);");
+  D("function $ui2fp.bv32.ifloat(i:bv32) returns (ifloat);");
+  D("function $fp2si.ifloat.bv24(f:ifloat) returns (bv24);");
+  D("function $fp2ui.ifloat.bv24(f:ifloat) returns (bv24);");
+  D("function $si2fp.bv24.ifloat(i:bv24) returns (ifloat);");
+  D("function $ui2fp.bv24.ifloat(i:bv24) returns (ifloat);");
+  D("function $fp2si.ifloat.bv16(f:ifloat) returns (bv16);");
+  D("function $fp2ui.ifloat.bv16(f:ifloat) returns (bv16);");
+  D("function $si2fp.bv16.ifloat(i:bv16) returns (ifloat);");
+  D("function $ui2fp.bv16.ifloat(i:bv16) returns (ifloat);");
+  D("function $fp2si.ifloat.bv8(f:ifloat) returns (bv8);");
+  D("function $fp2ui.ifloat.bv8(f:ifloat) returns (bv8);");
+  D("function $si2fp.bv8.ifloat(i:bv8) returns (ifloat);");
+  D("function $ui2fp.bv8.ifloat(i:bv8) returns (ifloat);");
+
+#ifndef NO_FORALL
+  //D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: ifloat :: f1 != f2 || $foeq.ifloat.bool(f1,f2));");
+  D("axiom (forall i: i128 :: $fp2ui.ifloat.i128($ui2fp.i128.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i128.ifloat($fp2ui.ifloat.i128(f)) == f);");
+  D("axiom (forall i: i128 :: $fp2si.ifloat.i128($si2fp.i128.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i128.ifloat($fp2si.ifloat.i128(f)) == f);");
+  D("axiom (forall i: i96 :: $fp2ui.ifloat.i96($ui2fp.i96.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i96.ifloat($fp2ui.ifloat.i96(f)) == f);");
+  D("axiom (forall i: i96 :: $fp2si.ifloat.i96($si2fp.i96.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i96.ifloat($fp2si.ifloat.i96(f)) == f);");
+  D("axiom (forall i: i88 :: $fp2ui.ifloat.i88($ui2fp.i88.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i88.ifloat($fp2ui.ifloat.i88(f)) == f);");
+  D("axiom (forall i: i88 :: $fp2si.ifloat.i88($si2fp.i88.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i88.ifloat($fp2si.ifloat.i88(f)) == f);");
+  D("axiom (forall i: i64 :: $fp2ui.ifloat.i64($ui2fp.i64.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i64.ifloat($fp2ui.ifloat.i64(f)) == f);");
+  D("axiom (forall i: i64 :: $fp2si.ifloat.i64($si2fp.i64.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i64.ifloat($fp2si.ifloat.i64(f)) == f);");
+  D("axiom (forall i: i56 :: $fp2ui.ifloat.i56($ui2fp.i56.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i56.ifloat($fp2ui.ifloat.i56(f)) == f);");
+  D("axiom (forall i: i56 :: $fp2si.ifloat.i56($si2fp.i56.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i56.ifloat($fp2si.ifloat.i56(f)) == f);");
+  D("axiom (forall i: i48 :: $fp2ui.ifloat.i48($ui2fp.i48.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i48.ifloat($fp2ui.ifloat.i48(f)) == f);");
+  D("axiom (forall i: i48 :: $fp2si.ifloat.i48($si2fp.i48.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i48.ifloat($fp2si.ifloat.i48(f)) == f);");
+  D("axiom (forall i: i40 :: $fp2ui.ifloat.i40($ui2fp.i40.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i40.ifloat($fp2ui.ifloat.i40(f)) == f);");
+  D("axiom (forall i: i40 :: $fp2si.ifloat.i40($si2fp.i40.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i40.ifloat($fp2si.ifloat.i40(f)) == f);");
+  D("axiom (forall i: i32 :: $fp2ui.ifloat.i32($ui2fp.i32.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i32.ifloat($fp2ui.ifloat.i32(f)) == f);");
+  D("axiom (forall i: i32 :: $fp2si.ifloat.i32($si2fp.i32.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i32.ifloat($fp2si.ifloat.i32(f)) == f);");
+  D("axiom (forall i: i24 :: $fp2ui.ifloat.i24($ui2fp.i24.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i24.ifloat($fp2ui.ifloat.i24(f)) == f);");
+  D("axiom (forall i: i24 :: $fp2si.ifloat.i24($si2fp.i24.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i24.ifloat($fp2si.ifloat.i24(f)) == f);");
+  D("axiom (forall i: i16 :: $fp2ui.ifloat.i16($ui2fp.i16.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i16.ifloat($fp2ui.ifloat.i16(f)) == f);");
+  D("axiom (forall i: i16 :: $fp2si.ifloat.i16($si2fp.i16.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i16.ifloat($fp2si.ifloat.i16(f)) == f);");
+  D("axiom (forall i: i8 :: $fp2ui.ifloat.i8($ui2fp.i8.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $ui2fp.i8.ifloat($fp2ui.ifloat.i8(f)) == f);");
+  D("axiom (forall i: i8 :: $fp2si.ifloat.i8($si2fp.i8.ifloat(i)) == i);");
+  D("axiom (forall f: ifloat :: $si2fp.i8.ifloat($fp2si.ifloat.i8(f)) == f);");
+#endif
+
+  // Bit-precise Float Modeling
 
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fsub, {i1 - i2})
@@ -726,171 +899,12 @@ void __SMACK_decls() {
   D("function $ffalse.float(f1:float, f2:float) returns (i1);");
   D("function $ftrue.float(f1:float, f2:float) returns (i1);");
   
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $foeq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fne, i1 != i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fle, i1 <= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $flt, i1 < i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fge, i1 >= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_PRED, $fgt, i1 > i2)
-  /*D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
-  D("function $foeq.bool(f1:float, f2:float) returns (bool);");
-  D("function $foge.float(f1:float, f2:float) returns (i1);");
-  D("function $fogt.float(f1:float, f2:float) returns (i1);");
-  D("function $fole.float(f1:float, f2:float) returns (i1);");
-  D("function $folt.float(f1:float, f2:float) returns (i1);");
-  D("function $fone.float(f1:float, f2:float) returns (i1);");
-  D("function $ford.float(f1:float, f2:float) returns (i1);");
-  D("function $fueq.float(f1:float, f2:float) returns (i1);");
-  D("function $fuge.float(f1:float, f2:float) returns (i1);");
-  D("function $fugt.float(f1:float, f2:float) returns (i1);");
-  D("function $fule.float(f1:float, f2:float) returns (i1);");
-  D("function $fult.float(f1:float, f2:float) returns (i1);");
-  D("function $fune.float(f1:float, f2:float) returns (i1);");
-  D("function $funo.float(f1:float, f2:float) returns (i1);");*/
-
-  D("function $fp2si.float.i128(f:float) returns (i128);");
-  D("function $fp2ui.float.i128(f:float) returns (i128);");
-  D("function $si2fp.i128.float(i:i128) returns (float);");
-  D("function $ui2fp.i128.float(i:i128) returns (float);");
-  D("function $fp2si.float.i96(f:float) returns (i96);");
-  D("function $fp2ui.float.i96(f:float) returns (i96);");
-  D("function $si2fp.i96.float(i:i96) returns (float);");
-  D("function $ui2fp.i96.float(i:i96) returns (float);");
-  D("function $fp2si.float.i88(f:float) returns (i88);");
-  D("function $fp2ui.float.i88(f:float) returns (i88);");
-  D("function $si2fp.i88.float(i:i88) returns (float);");
-  D("function $ui2fp.i88.float(i:i88) returns (float);");
-  D("function $fp2si.float.i64(f:float) returns (i64);");
-  D("function $fp2ui.float.i64(f:float) returns (i64);");
-  D("function $si2fp.i64.float(i:i64) returns (float);");
-  D("function $ui2fp.i64.float(i:i64) returns (float);");
-  D("function $fp2si.float.i56(f:float) returns (i56);");
-  D("function $fp2ui.float.i56(f:float) returns (i56);");
-  D("function $si2fp.i56.float(i:i56) returns (float);");
-  D("function $ui2fp.i56.float(i:i56) returns (float);");
-  D("function $fp2si.float.i48(f:float) returns (i48);");
-  D("function $fp2ui.float.i48(f:float) returns (i48);");
-  D("function $si2fp.i48.float(i:i48) returns (float);");
-  D("function $ui2fp.i48.float(i:i48) returns (float);");
-  D("function $fp2si.float.i40(f:float) returns (i40);");
-  D("function $fp2ui.float.i40(f:float) returns (i40);");
-  D("function $si2fp.i40.float(i:i40) returns (float);");
-  D("function $ui2fp.i40.float(i:i40) returns (float);");
-
-  D("function $fp2si.float.i32(f:float) returns (i32);");
-  D("function $fp2ui.float.i32(f:float) returns (i32);");
-  D("function $si2fp.i32.float(i:i32) returns (float);");
-  D("function $ui2fp.i32.float(i:i32) returns (float);");
-  D("function $fp2si.float.i24(f:float) returns (i24);");
-  D("function $fp2ui.float.i24(f:float) returns (i24);");
-  D("function $si2fp.i24.float(i:i24) returns (float);");
-  D("function $ui2fp.i24.float(i:i24) returns (float);");
-  D("function $fp2si.float.i16(f:float) returns (i16);");
-  D("function $fp2ui.float.i16(f:float) returns (i16);");
-  D("function $si2fp.i16.float(i:i16) returns (float);");
-  D("function $ui2fp.i16.float(i:i16) returns (float);");
-  D("function $fp2si.float.i8(f:float) returns (i8);");
-  D("function $fp2ui.float.i8(f:float) returns (i8);");
-  D("function $si2fp.i8.float(i:i8) returns (float);");
-  D("function $ui2fp.i8.float(i:i8) returns (float);");
-
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(float) returns (double);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(double) returns (float);");
-  DECLARE(INLINE_CONVERSION,double,float,$fptrunc,{dtf(i)});
-  DECLARE(INLINE_CONVERSION,float,double,$fpext,{ftd(i)});
-  D("function $fp2si.float.bv128(f:float) returns (bv128);");
-  D("function $fp2ui.float.bv128(f:float) returns (bv128);");
-  D("function $si2fp.bv128.float(i:bv128) returns (float);");
-  D("function $ui2fp.bv128.float(i:bv128) returns (float);");
-  D("function $fp2si.float.bv96(f:float) returns (bv96);");
-  D("function $fp2ui.float.bv96(f:float) returns (bv96);");
-  D("function $si2fp.bv96.float(i:bv96) returns (float);");
-  D("function $ui2fp.bv96.float(i:bv96) returns (float);");
-  D("function $fp2si.float.bv88(f:float) returns (bv88);");
-  D("function $fp2ui.float.bv88(f:float) returns (bv88);");
-  D("function $si2fp.bv88.float(i:bv88) returns (float);");
-  D("function $ui2fp.bv88.float(i:bv88) returns (float);");
-  D("function $fp2si.float.bv64(f:float) returns (bv64);");
-  D("function $fp2ui.float.bv64(f:float) returns (bv64);");
-  D("function $si2fp.bv64.float(i:bv64) returns (float);");
-  D("function $ui2fp.bv64.float(i:bv64) returns (float);");
-  D("function $fp2si.float.bv56(f:float) returns (bv56);");
-  D("function $fp2ui.float.bv56(f:float) returns (bv56);");
-  D("function $si2fp.bv56.float(i:bv56) returns (float);");
-  D("function $ui2fp.bv56.float(i:bv56) returns (float);");
-  D("function $fp2si.float.bv48(f:float) returns (bv48);");
-  D("function $fp2ui.float.bv48(f:float) returns (bv48);");
-  D("function $si2fp.bv48.float(i:bv48) returns (float);");
-  D("function $ui2fp.bv48.float(i:bv48) returns (float);");
-  D("function $fp2si.float.bv40(f:float) returns (bv40);");
-  D("function $fp2ui.float.bv40(f:float) returns (bv40);");
-  D("function $si2fp.bv40.float(i:bv40) returns (float);");
-  D("function $ui2fp.bv40.float(i:bv40) returns (float);");
-  D("function $fp2si.float.bv32(f:float) returns (bv32);");
-  D("function $fp2ui.float.bv32(f:float) returns (bv32);");
-  D("function $si2fp.bv32.float(i:bv32) returns (float);");
-  D("function $ui2fp.bv32.float(i:bv32) returns (float);");
-  D("function $fp2si.float.bv24(f:float) returns (bv24);");
-  D("function $fp2ui.float.bv24(f:float) returns (bv24);");
-  D("function $si2fp.bv24.float(i:bv24) returns (float);");
-  D("function $ui2fp.bv24.float(i:bv24) returns (float);");
-  D("function $fp2si.float.bv16(f:float) returns (bv16);");
-  D("function $fp2ui.float.bv16(f:float) returns (bv16);");
-  D("function $si2fp.bv16.float(i:bv16) returns (float);");
-  D("function $ui2fp.bv16.float(i:bv16) returns (float);");
-  D("function $fp2si.float.bv8(f:float) returns (bv8);");
-  D("function $fp2ui.float.bv8(f:float) returns (bv8);");
-  D("function $si2fp.bv8.float(i:bv8) returns (float);");
-  D("function $ui2fp.bv8.float(i:bv8) returns (float);");
-
-#ifndef NO_FORALL
-  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.float.bool(f1,f2));");
-
-  D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i128.float($fp2ui.float.i128(f)) == f);");
-  D("axiom (forall i: i128 :: $fp2si.float.i128($si2fp.i128.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i128.float($fp2si.float.i128(f)) == f);");
-  D("axiom (forall i: i96 :: $fp2ui.float.i96($ui2fp.i96.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i96.float($fp2ui.float.i96(f)) == f);");
-  D("axiom (forall i: i96 :: $fp2si.float.i96($si2fp.i96.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i96.float($fp2si.float.i96(f)) == f);");
-  D("axiom (forall i: i88 :: $fp2ui.float.i88($ui2fp.i88.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i88.float($fp2ui.float.i88(f)) == f);");
-  D("axiom (forall i: i88 :: $fp2si.float.i88($si2fp.i88.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i88.float($fp2si.float.i88(f)) == f);");
-  D("axiom (forall i: i64 :: $fp2ui.float.i64($ui2fp.i64.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i64.float($fp2ui.float.i64(f)) == f);");
-  D("axiom (forall i: i64 :: $fp2si.float.i64($si2fp.i64.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i64.float($fp2si.float.i64(f)) == f);");
-  D("axiom (forall i: i56 :: $fp2ui.float.i56($ui2fp.i56.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i56.float($fp2ui.float.i56(f)) == f);");
-  D("axiom (forall i: i56 :: $fp2si.float.i56($si2fp.i56.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i56.float($fp2si.float.i56(f)) == f);");
-  D("axiom (forall i: i48 :: $fp2ui.float.i48($ui2fp.i48.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i48.float($fp2ui.float.i48(f)) == f);");
-  D("axiom (forall i: i48 :: $fp2si.float.i48($si2fp.i48.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i48.float($fp2si.float.i48(f)) == f);");
-  D("axiom (forall i: i40 :: $fp2ui.float.i40($ui2fp.i40.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i40.float($fp2ui.float.i40(f)) == f);");
-  D("axiom (forall i: i40 :: $fp2si.float.i40($si2fp.i40.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i40.float($fp2si.float.i40(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2ui.float.i32($ui2fp.i32.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i32.float($fp2ui.float.i32(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2si.float.i32($si2fp.i32.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i32.float($fp2si.float.i32(f)) == f);");
-  D("axiom (forall i: i24 :: $fp2ui.float.i24($ui2fp.i24.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i24.float($fp2ui.float.i24(f)) == f);");
-  D("axiom (forall i: i24 :: $fp2si.float.i24($si2fp.i24.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i24.float($fp2si.float.i24(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2ui.float.i16($ui2fp.i16.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i16.float($fp2ui.float.i16(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2si.float.i16($si2fp.i16.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i16.float($fp2si.float.i16(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2ui.float.i8($ui2fp.i8.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i8.float($fp2ui.float.i8(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2si.float.i8($si2fp.i8.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
-#endif
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fne, i1 != i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fle, i1 <= i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $flt, i1 < i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fge, i1 >= i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fgt, i1 > i2)
 
   // Memory Model
   D("const $GLOBALS_BOTTOM: ref;");
@@ -1023,8 +1037,8 @@ void __SMACK_decls() {
   D("function {:inline} $load.ref(M: [ref] ref, p: ref) returns (ref) { M[p] }");
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
 
-  D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
-  D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
+  D("function {:inline} $load.ifloat(M: [ref] ifloat, p: ref) returns (ifloat) { M[p] }");
+  D("function {:inline} $store.ifloat(M: [ref] ifloat, p: ref, v: ifloat) returns ([ref] ifloat) { M[p := v] }");
 
 
   // Memory debugging symbols
@@ -1058,6 +1072,7 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, bv96);
   DECLARE(RECORD_PROC, bv128);
   DECLARE(RECORD_PROC, ref);
+  DECLARE(RECORD_PROC, ifloat);
   DECLARE(RECORD_PROC, float);
   DECLARE(RECORD_PROC, double);
 
