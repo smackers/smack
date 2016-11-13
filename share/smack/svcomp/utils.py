@@ -147,16 +147,16 @@ def verify_bpl_svcomp(args):
   if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack': #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
     # Generate error trace and exit
-    if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output))
-    else:
-      error = smack.top.error_trace(verifier_output, args)
-
     if args.error_file:
+      if args.language == 'svcomp':
+        error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output))
+      else:
+        error = smack.top.error_trace(verifier_output, args)
       with open(args.error_file, 'w') as f:
         f.write(error)
 
     if not args.quiet:
+      error = smack.top.error_trace(verifier_output, args)
       print error
 
   elif result == 'timeout': #normal inlining
