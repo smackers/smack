@@ -12,9 +12,9 @@
 namespace smack {
 
 const std::string Naming::BOOL_TYPE = "bool";
-const std::string Naming::INTEGER_FLOAT_TYPE = "ifloat";
-const std::string Naming::FLOAT_TYPE = "float";
-const std::string Naming::DOUBLE_TYPE = "double";
+const std::string Naming::INTEGER_FLOAT_TYPE = "float";
+const std::string Naming::FLOAT_TYPE = "bvfloat";
+const std::string Naming::DOUBLE_TYPE = "bvdouble";
 const std::string Naming::PTR_TYPE = "ref";
 const std::string Naming::NULL_VAL = "$0.ref";
 
