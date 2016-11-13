@@ -41,14 +41,14 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
           pointer = si->getPointerOperand();
         } else if (CallInst* ci = dyn_cast<CallInst>(&*I)) {
           Function* calledF = ci->getCalledFunction();
-          if(calledF && calledF->getName().find("memset") != std::string::npos) {
+          if(calledF && calledF->getName().find(Naming::INTRINSIC_MEMSET) != std::string::npos) {
 	    Value* dest = ci->getArgOperand(0);
 	    Value* size = ci->getArgOperand(2);
 	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
 	    CastInst* castPtr = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
 	    Value* args[] = {castPtr, size};
 	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
-	  } else if(calledF && calledF->getName().find("memcpy") != std::string::npos) {
+	  } else if(calledF && calledF->getName().find(Naming::INTRINSIC_MEMSET) != std::string::npos) {
 	    Value* dest = ci->getArgOperand(0);
 	    Value* src = ci->getArgOperand(1);
 	    Value* size = ci->getArgOperand(2);
