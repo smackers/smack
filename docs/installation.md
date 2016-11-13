@@ -173,7 +173,7 @@ shell in the `test` directory by executing
 [Clang-3.7.1]: http://llvm.org/releases/download.html#3.7.1
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://corral.codeplex.com/
-[Z3]: http://z3.codeplex.com/
+[Z3]: https://github.com/Z3Prover/z3/
 [Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com
 [.NET]: https://msdn.microsoft.com/en-us/vstudio/aa496123.aspx
