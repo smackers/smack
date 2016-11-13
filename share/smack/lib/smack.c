@@ -1080,7 +1080,7 @@ void __SMACK_decls() {
     "    $memoryCounter := $memoryCounter - 1;\n"
     "    $Alloc[p] := false;\n"
     "  }\n" 
-    "}");
+    "}\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
@@ -1097,15 +1097,15 @@ void __SMACK_decls() {
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
+    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
-    "requires $ne.ref.bool(p, $0.ref);\n"
-    "requires $eq.ref.bool($base(p), p);\n"
-    "ensures !$Alloc[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);");
+    "requires $eq.ref.bool(p, $0.ref) || $eq.ref.bool($base(p), p);\n"
+    "requires $eq.ref.bool(p, $0.ref) || $Alloc[p];\n"
+    "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
+    "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+    "ensures $ne.ref.bool(p, $0.ref) ==> $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);\n");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
@@ -1120,15 +1120,15 @@ void __SMACK_decls() {
     "ensures $Alloc[p];\n"
     "ensures $Size(p) == n;\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);");
+    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
-    "requires $ne.ref.bool(p, $0.ref);\n"
-    "requires $eq.ref.bool($base(p), p);\n"
-    "ensures !$Alloc[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);");
+    "requires $eq.ref.bool(p, $0.ref) || $eq.ref.bool($base(p), p);\n"
+    "requires $eq.ref.bool(p, $0.ref) || $Alloc[p];\n"
+    "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
+    "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
+    "ensures $ne.ref.bool(p, $0.ref) ==> $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);\n");
 #endif
 
 #else
@@ -1145,7 +1145,7 @@ void __SMACK_decls() {
     "  } else {\n"
     "    $CurrAddr := $add.ref($CurrAddr, $1.ref);\n"
     "  }\n"
-    "}");
+    "}\n");
 
   D("procedure $free(p: ref);");
 
@@ -1157,7 +1157,6 @@ void __SMACK_decls() {
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
-    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures !old($Alloc[p]);\n"
     "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $sgt.ref.bool(p, $add.ref(q, $Size[q]))));\n"
     "ensures $Alloc[p];\n"
