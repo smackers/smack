@@ -135,23 +135,17 @@ def smackJsonToXmlGraph(strJsonOutput):
     for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
-          assign = formatAssign(jsonTrace["description"])
-          if assign:
-            m = re.match(r'(.+)==(.+)', assign)
-            val = None
-            if (m):
-              val = int(m.group(2).strip())
-            if (val is not None and val >= -2**31 and val <= (2**31 - 1) and int(jsonTrace["line"]) != prevLineNo):
-              # Create new node and edge
-              newNode = addGraphNode(tree)
-              attribs = {"startline":str(jsonTrace["line"])}
-              attribs["assumption"] = assign + ";"
-              attribs["assumption.scope"] = callStack[-1]
-              newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
-              prevLineNo = jsonTrace["line"]
-              prevColNo = jsonTrace["column"]
-              lastNode = newNode
-              lastEdge = newEdge
+          if formatAssign(jsonTrace["description"]):
+          # Create new node and edge
+            newNode = addGraphNode(tree)
+            attribs = {"startline":str(jsonTrace["line"])}
+            attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
+            attribs["assumption.scope"] = callStack[-1]
+            newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
+            prevLineNo = jsonTrace["line"]
+            prevColNo = jsonTrace["column"]
+            lastNode = newNode
+            lastEdge = newEdge
           if "CALL" in jsonTrace["description"]:
             # Add function to call stack
             callStack.append(str(jsonTrace["description"][len("CALL "):]))
