@@ -53,7 +53,9 @@ public:
   static const std::string LOAD;
   static const std::string STORE;
   static const std::string MEMCPY;
+  static const std::string INTRINSIC_MEMCPY;
   static const std::string MEMSET;
+  static const std::string INTRINSIC_MEMSET;
   static const std::string EXTRACT_VALUE;
   static const std::string MALLOC;
 
