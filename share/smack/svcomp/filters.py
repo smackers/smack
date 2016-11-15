@@ -113,6 +113,11 @@ def float_filter(lines, raw_line_count, pruned_line_count):
     for valid_line in valid_lines:
       if regex_special.search(valid_line) is not None and count <= 4:
         return 0 
+      if valid_line == '1.' or valid_line == '2.':
+        if 'double' not in lines:
+          return 0
+        else:
+          return 1
     return 1 
 
 
