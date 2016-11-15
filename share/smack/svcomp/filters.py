@@ -68,7 +68,7 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   bwops = re.compile(r'''[=|\(][^,]*[^\&|\(|{]\&\s|[^\|]\|\s|\^|>>|<<''')
   #bwops = re.compile(r'''\s\&\s|\s\|\s|\^|>>|<<''')
   #dv = re.compile(r'''1\s+<<\s+[1|5]|cil''')
-  dv = re.compile(r'''1.*<<.*\"|cil|found''')
+  dv = re.compile(r'''1.*<<.*\"|cil|found|node''')
   
   for line in lines.split('\n'):
     if bwops.search(line):
