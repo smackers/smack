@@ -108,7 +108,8 @@ def formatAssign(assignStmt):
       return assignStmt
     m = re.match(r'(.*)=(.*)', assignStmt)
     if m:
-      return re.sub(r'=(\s*\d+)bv\d+', r'=\1', m.group(1) + "==" + m.group(2))
+      repl = lambda x: '='+ x.group(1) + 'U' if x.group(2) is not None else ''
+      return re.sub(r'=(\s*\d+)(bv\d+)', repl, m.group(1) + "==" + m.group(2))
     else:
       return ""
 
