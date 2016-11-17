@@ -5,6 +5,8 @@
 #define SIGNEDINTEGEROVERFLOWCHECKER_H
 
 #include "llvm/Pass.h"
+#include "llvm/IR/Module.h"
+#include <map>
 
 namespace smack {
   
@@ -13,6 +15,9 @@ public:
   static char ID; // Pass identification, replacement for typeid
   SignedIntegerOverflowChecker() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& m);
+private:
+  static std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
+  void replaceValue(llvm::Value* ee, llvm::Value* er);
 };
 
 }
