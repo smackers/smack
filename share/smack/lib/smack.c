@@ -45,8 +45,8 @@ void __SMACK_overflow_false(void) {
   __SMACK_code("assert {:overflow} false;");
 }
 
-_Bool __SMACK_check_overflow(int x) {
-  return x > 2147483647 || x < -2147483648;
+void __SMACK_check_overflow(int flag) {
+  __SMACK_dummy(flag); __SMACK_code("assert {:overflow} @ == $0;", flag);
 }
 
 void exit(int x) {
