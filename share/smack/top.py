@@ -36,6 +36,7 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
+    'overflow': 'SMACK found a signed integer overflow',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -424,7 +425,10 @@ def verification_result(verifier_output):
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
     return 'verified'
   elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
-    return 'error'
+    if re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
+      return 'overflow'
+    else:
+      return 'error'
   else:
     return 'unknown'
 
@@ -480,7 +484,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error':
+    if result == 'error' or result == 'overflow':
       error = error_trace(verifier_output, args)
 
       if args.error_file:
