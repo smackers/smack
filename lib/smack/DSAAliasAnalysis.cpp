@@ -141,6 +141,11 @@ const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
   return eqs.getLeaderValue(nodeEqs->getMemberForValue(v));
 }
 
+bool DSAAliasAnalysis::isRead(const Value* V) {
+  const DSNode *N = getNode(V);
+  return N && (N->isReadNode());
+}
+
 bool DSAAliasAnalysis::isAlloced(const Value* v) {
   const DSNode *N = getNode(v);
   return N && (N->isHeapNode() || N->isAllocaNode());

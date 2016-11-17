@@ -60,6 +60,7 @@ namespace{
 bool CodifyStaticInits::runOnModule(Module& M) {
   TD = &M.getDataLayout();
   LLVMContext& C = M.getContext();
+  DSAAliasAnalysis* DSA = &getAnalysis<DSAAliasAnalysis>();
 
   Function* F = dyn_cast<Function>(
     M.getOrInsertFunction(Naming::STATIC_INIT_PROC,
@@ -71,11 +72,7 @@ bool CodifyStaticInits::runOnModule(Module& M) {
   std::deque< std::tuple< Constant*, Constant*, std::vector<Value*> > > worklist;
 
   for (auto &G : M.globals())
-    if (G.hasInitializer())
-
-      // XXX formerly omitting all strings; now just omitting Boogie code strings
-      if (!G.hasName() || !isBoogieCode(G))
-
+    if (G.hasInitializer() && DSA->isRead(&G))
         worklist.push_back(std::make_tuple(
           G.getInitializer(), &G, std::vector<Value*>()));
 
@@ -121,6 +118,11 @@ bool CodifyStaticInits::runOnModule(Module& M) {
   IRB.CreateRetVoid();
 
   return true;
+}
+
+void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<DSAAliasAnalysis>();
 }
 
 // Pass ID variable
