@@ -79,6 +79,7 @@ public:
   static const std::string UNDEF_SYM;
   static const std::string CONTRACT_EXPR;
   static const std::string MEMORY_SAFETY_FUNCTION;
+  static const std::string FUNCTION_PTR_DISPATCH_PROC;
 
   static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
   static const std::map<unsigned,std::string> CMPINST_TABLE;

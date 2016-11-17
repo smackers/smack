@@ -138,6 +138,9 @@ def arguments():
   translate_group.add_argument('--memory-safety', action='store_true', default=False,
     help='enable memory safety checks')
 
+  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
+    help='enable signed integer overflow')
+
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
@@ -297,6 +300,7 @@ def default_clang_compile_command(args):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
+  if args.signed_integer_overflow: cmd += ['-ftrapv']
   return cmd
 
 def build_libs(args):
@@ -387,6 +391,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
+  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   try_command(cmd, console=True)
   annotate_bpl(args)
 

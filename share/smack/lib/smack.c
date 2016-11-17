@@ -41,6 +41,14 @@ void __VERIFIER_error(void) {
   __SMACK_code("assert false;");
 }
 
+void __SMACK_overflow_false(void) {
+  __SMACK_code("assert {:overflow} false;");
+}
+
+_Bool __SMACK_check_overflow(int x) {
+  return x > 2147483647 || x < -2147483648;
+}
+
 void exit(int x) {
   __SMACK_code("assume false;");
   while(1);
