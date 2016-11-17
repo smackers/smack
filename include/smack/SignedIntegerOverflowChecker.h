@@ -17,6 +17,8 @@ public:
   virtual bool runOnModule(llvm::Module& m);
 private:
   static std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
+  static std::map<int, std::string> INT_MAX_TABLE;
+  static std::map<int, std::string> INT_MIN_TABLE;
   void replaceValue(llvm::Value* ee, llvm::Value* er);
 };
 

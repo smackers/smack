@@ -11,17 +11,28 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Regex.h"
+#include <string>
 
 namespace smack {
 
 using namespace llvm;
 
-Regex OVERFLOW_INTRINSICS("^llvm.s(add|sub|mul).with.overflow.i32$");
+Regex OVERFLOW_INTRINSICS("^llvm.s(add|sub|mul).with.overflow.i(32|64)$");
 
 std::map<std::string, Instruction::BinaryOps> SignedIntegerOverflowChecker::INSTRUCTION_TABLE {
   {"add", Instruction::Add},
   {"sub", Instruction::Sub},
   {"mul", Instruction::Mul}
+};
+
+std::map<int, std::string> SignedIntegerOverflowChecker::INT_MAX_TABLE {
+  {32, "2147483647"},
+  {64, "9223372036854775807"}
+};
+
+std::map<int, std::string> SignedIntegerOverflowChecker::INT_MIN_TABLE {
+  {32, "-2147483648"},
+  {64, "-9223372036854775808"}
 };
 
 void SignedIntegerOverflowChecker::replaceValue(Value* ee, Value* er) {
@@ -54,10 +65,11 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
         if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
           if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
             Function* f = ci->getCalledFunction();
-            SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 2>;
+            SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
             if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-              std::string op = ar->back().str();
-              unsigned int bits = 32;
+              std::string op = ar->begin()[1].str();
+              std::string len = ar->begin()[2].str();
+              int bits = std::stoi(len);
               if (ei->getIndices()[0] == 0) {
                 Value* o1 = ci->getArgOperand(0);
                 Value* o2 = ci->getArgOperand(1);
@@ -70,8 +82,8 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
               }
               if (ei->getIndices()[0] == 1) {
                 auto ai = std::prev(std::prev(std::prev(I)));
-                ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), "2147483647", 10);
-                ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), "-2147483648", 10);
+                ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MAX_TABLE.at(bits), 10);
+                ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MIN_TABLE.at(bits), 10);
                 ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, &*ai, max, "");
                 ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, &*ai, min, "");
                 BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
