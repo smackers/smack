@@ -384,10 +384,10 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
   Type* T = CI.getParent()->getParent()->getReturnType();
   std::string name = indexedName(Naming::VALUE_PROC, {type(T)});
-  auxDecls[name] = Decl::procedure(
-    name,
-    std::list< std::pair<std::string,std::string> >({{"p", type(T)}}),
-    std::list< std::pair<std::string,std::string> >({{Naming::RET_VAR, Naming::PTR_TYPE}}));
+  // auxDecls[name] = Decl::procedure(
+  //   name,
+  //   std::list< std::pair<std::string,std::string> >({{"p", type(T)}}),
+  //   std::list< std::pair<std::string,std::string> >({{Naming::RET_VAR, Naming::PTR_TYPE}}));
   return Stmt::call(
     name,
     std::list<const Expr*>({ Expr::id(Naming::RET_VAR) }),
