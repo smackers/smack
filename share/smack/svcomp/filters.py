@@ -68,7 +68,7 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   bwops = re.compile(r'''[=|\(][^,]*[^\&|\(|{]\&\s|[^\|]\|\s|\^|>>|<<''')
   #bwops = re.compile(r'''\s\&\s|\s\|\s|\^|>>|<<''')
   #dv = re.compile(r'''1\s+<<\s+[1|5]|cil''')
-  dv = re.compile(r'''1.*<<.*\"|cil|found''')
+  dv = re.compile(r'''1.*<<.*\"|cil|found|node''')
   
   for line in lines.split('\n'):
     if bwops.search(line):
@@ -113,6 +113,11 @@ def float_filter(lines, raw_line_count, pruned_line_count):
     for valid_line in valid_lines:
       if regex_special.search(valid_line) is not None and count <= 4:
         return 0 
+      if valid_line == '1.' or valid_line == '2.':
+        if 'double' not in lines:
+          return 0
+        else:
+          return 1
     return 1 
 
 
@@ -173,9 +178,6 @@ def scrub_pthreads(s):
     #else:
     #  print("DID match - " + fltr)
 
-  s = re.sub(r'(__VERIFIER_atomic_((?!begin|end).)*?\(.*?\);)',
-             r'__VERIFIER_atomic_begin(); \1 __VERIFIER_atomic_end();',
-             s)
   s = re.sub(r'\ninline ', r'\n', s)
 
   return s, True

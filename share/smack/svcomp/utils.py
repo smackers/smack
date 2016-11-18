@@ -42,6 +42,7 @@ def svcomp_frontend(args):
   smack.top.clang_frontend(args)
 
 def svcomp_process_file(args, name, ext):
+  args.orig_files = list(args.input_files)
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
@@ -148,7 +149,7 @@ def verify_bpl_svcomp(args):
     # Generate error trace and exit
     if args.error_file:
       if args.language == 'svcomp':
-        error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output))
+        error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args)
       else:
         error = smack.top.error_trace(verifier_output, args)
       with open(args.error_file, 'w') as f:
