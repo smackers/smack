@@ -1077,8 +1077,8 @@ void __SMACK_decls() {
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free_} $eq.ref.bool($base(p), p);\n"
     "    assert {:valid_free_} $Alloc[p] == true;\n"
-    "    $memoryCounter := $memoryCounter - 1;\n"
     "    $Alloc[p] := false;\n"
+    "    $memoryCounter := $memoryCounter - 1;\n"
     "  }\n" 
     "}\n");
 

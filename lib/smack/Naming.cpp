@@ -40,9 +40,7 @@ const std::string Naming::FREE = "$free";
 const std::string Naming::LOAD = "$load";
 const std::string Naming::STORE = "$store";
 const std::string Naming::MEMCPY = "$memcpy";
-const std::string Naming::INTRINSIC_MEMCPY = "llvm.memcpy";
 const std::string Naming::MEMSET = "$memset";
-const std::string Naming::INTRINSIC_MEMSET = "llvm.memset";
 const std::string Naming::EXTRACT_VALUE = "$extractvalue";
 const std::string Naming::MALLOC = "$malloc";
 

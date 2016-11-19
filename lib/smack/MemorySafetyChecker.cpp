@@ -10,6 +10,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace smack {
 
@@ -39,19 +40,17 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
           pointer = li->getPointerOperand();
         } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
           pointer = si->getPointerOperand();
-        } else if (CallInst* ci = dyn_cast<CallInst>(&*I)) {
-          Function* calledF = ci->getCalledFunction();
-          if(calledF && calledF->getName().find(Naming::INTRINSIC_MEMSET) != std::string::npos) {
-	    Value* dest = ci->getArgOperand(0);
-	    Value* size = ci->getArgOperand(2);
+        } else if (MemSetInst* memseti = dyn_cast<MemSetInst>(&*I)) {
+	    Value* dest = memseti->getArgOperand(0);
+	    Value* size = memseti->getArgOperand(2);
 	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
 	    CastInst* castPtr = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
 	    Value* args[] = {castPtr, size};
 	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
-	  } else if(calledF && calledF->getName().find(Naming::INTRINSIC_MEMSET) != std::string::npos) {
-	    Value* dest = ci->getArgOperand(0);
-	    Value* src = ci->getArgOperand(1);
-	    Value* size = ci->getArgOperand(2);
+        } else if (MemCpyInst* memcpyi = dyn_cast<MemCpyInst>(&*I)) {
+	    Value* dest = memcpyi->getArgOperand(0);
+	    Value* src = memcpyi->getArgOperand(1);
+	    Value* size = memcpyi->getArgOperand(2);
 	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
 	    CastInst* castPtrDest = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
 	    CastInst* castPtrSrc = CastInst::Create(Instruction::BitCast, src, voidPtrTy, "", &*I);
@@ -59,8 +58,8 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
 	    Value* argsSrc[] = {castPtrSrc, size};
 	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(argsDest, 2), "", &*I);  
 	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(argsSrc, 2), "", &*I);  
-	  }
 	}
+	
 
         if (pointer) {
           // Finding the exact type of the second argument to our memory safety function
