@@ -2,6 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 
 #include <smack.h>
+#include <limits.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -46,33 +47,150 @@ void exit(int x) {
   while(1);
 }
 
+char __VERIFIER_nondet_char() {
+  char x = __SMACK_nondet_char();
+  __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
+}
+
+signed char __VERIFIER_nondet_signed_char() {
+  signed char x = __SMACK_nondet_signed_char();
+  __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
+}
+
+unsigned char __VERIFIER_nondet_unsigned_char() {
+  unsigned char x = __SMACK_nondet_unsigned_char();
+  __VERIFIER_assume(x >= 0 && x <= UCHAR_MAX);
+}
+
+short __VERIFIER_nondet_short() {
+  short x = __SMACK_nondet_short();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+}
+
+signed short __VERIFIER_nondet_signed_short() {
+  signed short x = __SMACK_nondet_signed_short();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+}
+
+signed short int __VERIFIER_nondet_signed_short_int() {
+  signed short int x = __SMACK_nondet_signed_short_int();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+}
+
+unsigned short __VERIFIER_nondet_unsigned_short() {
+  unsigned short x = __SMACK_nondet_unsigned_short();
+  __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
+}
+
+unsigned short int __VERIFIER_nondet_unsigned_short_int() {
+  unsigned short int x = __SMACK_nondet_unsigned_short_int();
+  __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
+}
+
+int __VERIFIER_nondet_int() {
+  int x = __SMACK_nondet_int();
+  __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
+}
+
+signed int __VERIFIER_nondet_signed_int() {
+  signed int x = __SMACK_nondet_signed_int();
+  __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
+}
+
+unsigned __VERIFIER_nondet_unsigned() {
+  unsigned x = __SMACK_nondet_unsigned();
+  __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
+}
+
+unsigned int __VERIFIER_nondet_unsigned_int() {
+  unsigned int x = __SMACK_nondet_unsigned_int();
+  __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
+}
+
+long __VERIFIER_nondet_long() {
+  long x = __SMACK_nondet_long();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+}
+
+long int __VERIFIER_nondet_long_int() {
+  long int x = __SMACK_nondet_long_int();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+}
+
+signed long __VERIFIER_nondet_signed_long() {
+  signed long x = __SMACK_nondet_signed_long();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+}
+
+signed long int __VERIFIER_nondet_signed_long_int() {
+  signed long int x = __SMACK_nondet_signed_long_int();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+}
+
+unsigned long __VERIFIER_nondet_unsigned_long() {
+  unsigned long x = __SMACK_nondet_unsigned_long();
+  __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
+}
+
+unsigned long int __VERIFIER_nondet_unsigned_long_int() {
+  unsigned long int x = __SMACK_nondet_unsigned_long_int();
+  __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
+}
+
+long long __VERIFIER_nondet_long_long() {
+  long long x = __SMACK_nondet_long_long();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+}
+
+long long int __VERIFIER_nondet_long_long_int() {
+  long long int x = __SMACK_nondet_long_long_int();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+}
+
+signed long long __VERIFIER_nondet_signed_long_long() {
+  signed long long x = __SMACK_nondet_signed_long_long();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+}
+
+signed long long int __VERIFIER_nondet_signed_long_long_int() {
+  signed long long int x = __SMACK_nondet_signed_long_long_int();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+}
+
+unsigned long long __VERIFIER_nondet_unsigned_long_long() {
+  unsigned long long x = __SMACK_nondet_unsigned_long_long();
+  __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
+}
+
+unsigned long long int __VERIFIER_nondet_unsigned_long_long_int() {
+  unsigned long long int x = __SMACK_nondet_unsigned_long_long_int();
+  __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
+}
+
 // Apparently used in SVCCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();
+  __VERIFIER_assume(x == 0 || x == 1);
   return x;
 }
 
 unsigned char __VERIFIER_nondet_uchar(void) {
   unsigned char x = __VERIFIER_nondet_unsigned_char();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
 unsigned short __VERIFIER_nondet_ushort(void) {
   unsigned short x = __VERIFIER_nondet_unsigned_short();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
 unsigned int __VERIFIER_nondet_uint(void) {
   unsigned int x = __VERIFIER_nondet_unsigned_int();
-  __VERIFIER_assume(x >= 0);
   return x;
  }
 
 unsigned long __VERIFIER_nondet_ulong(void) {
   unsigned long x = __VERIFIER_nondet_unsigned_long();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
