@@ -55,7 +55,9 @@ std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Modu
   for (llvm::Module::const_global_iterator
        g = M.global_begin(), e = M.global_end(); g != e; ++g) {
     if (g->hasInitializer()) {
-      sis.push_back(eqs.getLeaderValue(nodeEqs->getMemberForValue(g)));
+      if (auto *N = getNode(g)) {
+        sis.push_back(N);
+      }
     }
   }
   return sis;
@@ -138,7 +140,8 @@ bool DSAAliasAnalysis::disjoint(const MemoryLocation* l1, const MemoryLocation* 
 const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
-  return eqs.getLeaderValue(nodeEqs->getMemberForValue(v));
+  auto *N = nodeEqs->getMemberForValue(v);
+  return N ? eqs.getLeaderValue(N) : nullptr;
 }
 
 bool DSAAliasAnalysis::isRead(const Value* V) {
