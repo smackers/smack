@@ -67,7 +67,7 @@ private:
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
-  const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs);
+  const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned);
 
   std::string procName(const llvm::User& U);
   std::string procName(const llvm::User& U, llvm::Function* F);
@@ -97,14 +97,14 @@ public:
   std::string type(const llvm::Type* t);
   std::string type(const llvm::Value* v);
 
-  const Expr* lit(const llvm::Value* v);
+  const Expr* lit(const llvm::Value* v, bool isUnsigned=false);
   const Expr* lit(const llvm::Value* v, unsigned flag);
 
   const Expr* ptrArith(const llvm::GetElementPtrInst* I);
   const Expr* ptrArith(const llvm::ConstantExpr* CE);
   const Expr* ptrArith(const llvm::Value* p, std::vector< std::pair<llvm::Value*,llvm::Type*> > args);
 
-  const Expr* expr(const llvm::Value* v);
+  const Expr* expr(const llvm::Value* v, bool isConstIntUnsigned=false);
 
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
