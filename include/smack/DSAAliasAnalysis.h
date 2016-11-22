@@ -107,6 +107,7 @@ public:
   bool isSingletonGlobal(const llvm::Value *V);
   bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
   bool isFieldDisjoint(const GlobalValue* V, unsigned offset);
+  bool isRead(const llvm::Value* V);
   bool isMemcpyd(const llvm::DSNode* n);
   bool isStaticInitd(const llvm::DSNode* n);
   unsigned getPointedTypeSize(const Value* v);
