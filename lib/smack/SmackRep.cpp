@@ -384,10 +384,10 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
   Type* T = CI.getParent()->getParent()->getReturnType();
   std::string name = indexedName(Naming::VALUE_PROC, {type(T)});
-  auxDecls[name] = Decl::procedure(
-    name,
-    std::list< std::pair<std::string,std::string> >({{"p", type(T)}}),
-    std::list< std::pair<std::string,std::string> >({{Naming::RET_VAR, Naming::PTR_TYPE}}));
+  // auxDecls[name] = Decl::procedure(
+  //   name,
+  //   std::list< std::pair<std::string,std::string> >({{"p", type(T)}}),
+  //   std::list< std::pair<std::string,std::string> >({{Naming::RET_VAR, Naming::PTR_TYPE}}));
   return Stmt::call(
     name,
     std::list<const Expr*>({ Expr::id(Naming::RET_VAR) }),
@@ -541,13 +541,13 @@ const Expr* SmackRep::integerLit(long v, unsigned width) {
   }
 }
 
-const Expr* SmackRep::lit(const llvm::Value* v) {
+const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
   using namespace llvm;
 
   if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v)) {
     const APInt& API = ci->getValue();
     unsigned width = ci->getBitWidth();
-    bool neg = width > 1 && ci->isNegative();
+    bool neg = isUnsigned? false : width > 1 && ci->isNegative();
     std::string str = (neg ? API.abs() : API).toString(10,false);
     const Expr* e = SmackOptions::BitPrecise ? Expr::lit(str,width) : Expr::lit(str,0);
     std::stringstream op;
@@ -626,7 +626,7 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
   return e;
 }
 
-const Expr* SmackRep::expr(const llvm::Value* v) {
+const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
@@ -667,7 +667,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       }
 
     } else if (const ConstantInt* ci = dyn_cast<const ConstantInt>(constant)) {
-      return lit(ci);
+      return lit(ci, isConstIntUnsigned);
 
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -716,16 +716,17 @@ const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::V
 }
 
 const Expr* SmackRep::cmp(const llvm::CmpInst* I) {
-  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1));
+  bool isUnsigned = I->isUnsigned();
+  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1), isUnsigned);
 }
 
 const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
-  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1));
+  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1), false);
 }
 
-const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
+const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned) {
   std::string fn = Naming::CMPINST_TABLE.at(predicate);
-  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
+  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs, isUnsigned), expr(rhs, isUnsigned));
 }
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
