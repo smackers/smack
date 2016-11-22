@@ -141,7 +141,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp'],
+    choices=['boogie', 'corral', 'duality', 'svcomp'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -170,9 +170,6 @@ def arguments():
     type=str, help='load SVCOMP property to check from FILE')
 
   args = parser.parse_args()
-
-  if not args.verifier:
-    args.verifier = 'svcomp' if args.language == 'svcomp' else 'corral'
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
