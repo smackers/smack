@@ -98,7 +98,7 @@ def addGraphEdge(tree, source, target, data={}):
     return newEdge
         
 
-def buildEmptyXmlGraph(args):
+def buildEmptyXmlGraph(args, hasBug):
     """Builds an empty witness xml file, with all the keys we will be using 
        already defined."""
     root = ET.Element('graphml')
@@ -108,7 +108,7 @@ def buildEmptyXmlGraph(args):
     addKeyDefs(root)
     graph = ET.SubElement(root, "graph", attrib={"edgedefault" : "directed"})
 
-    addKey(graph, "witness-type", "violation_witness")
+    addKey(graph, "witness-type", "violation_witness" if hasBug else "correctness_witness")
     addKey(graph, "sourcecodelang", "C")
     from smack.top import VERSION
     addKey(graph, "producer", "SMACK " + VERSION)
@@ -133,27 +133,28 @@ def formatAssign(assignStmt):
     else:
       return ""
 
-def smackJsonToXmlGraph(strJsonOutput, args):
+def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
-    # Convert json string to json object
-    smackJson = json.loads(strJsonOutput)
-    # Get the failure node, and the list of trace entries to get there
-    jsonViolation = smackJson["failsAt"]
-    jsonTraces = smackJson["traces"]
-    
     # Build tree & start node
-    tree = buildEmptyXmlGraph(args)
+    tree = buildEmptyXmlGraph(args, hasBug)
     # Add the start node, which gets marked as being the entry node
     start = addGraphNode(tree, {"entry":"true"})
-    lastNode = start
-    lastEdge = None 
-    pat = re.compile(".*smack\.[c|h]$")
-    prevLineNo = -1
-    prevColNo = -1
-    callStack = ['main']
-    # Loop through each trace
-    for jsonTrace in jsonTraces:
+    if hasBug:
+      # Convert json string to json object
+      smackJson = json.loads(strJsonOutput)
+      # Get the failure node, and the list of trace entries to get there
+      jsonViolation = smackJson["failsAt"]
+      jsonTraces = smackJson["traces"]
+
+      lastNode = start
+      lastEdge = None
+      pat = re.compile(".*smack\.[c|h]$")
+      prevLineNo = -1
+      prevColNo = -1
+      callStack = ['main']
+      # Loop through each trace
+      for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
           if formatAssign(jsonTrace["description"]):

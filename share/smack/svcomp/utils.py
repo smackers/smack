@@ -146,14 +146,6 @@ def verify_bpl_svcomp(args):
 
   if result == 'error': #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
-    # Generate error trace and exit
-    if args.error_file:
-      if args.language == 'svcomp':
-        error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args)
-      else:
-        error = smack.top.error_trace(verifier_output, args)
-      with open(args.error_file, 'w') as f:
-        f.write(error)
 
     if not args.quiet:
       error = smack.top.error_trace(verifier_output, args)
@@ -186,6 +178,7 @@ def verify_bpl_svcomp(args):
           sys.exit(smack.top.results(args)['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
+      write_error_file(args, 'verified', verifier_output)
       sys.exit(smack.top.results(args)['verified'])
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
@@ -201,7 +194,20 @@ def verify_bpl_svcomp(args):
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print(heurTrace + "\n")
+  write_error_file(args, result, verifier_output)
   sys.exit(smack.top.results(args)[result])
+
+def write_error_file(args, status, verifier_output):
+  hasBug = (status != 'verified' and status != 'timeout' and status != 'unknown')
+  if args.error_file:
+    error = None
+    if args.language == 'svcomp':
+      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args, hasBug)
+    elif hasBug:
+      error = smack.top.error_trace(verifier_output, args)
+    if error is not None:
+      with open(args.error_file, 'w') as f:
+        f.write(error)
 
 def run_binary(args):
   #process the file to make it runnable
