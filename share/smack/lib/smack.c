@@ -42,7 +42,7 @@ void __VERIFIER_error(void) {
 }
 
 void exit(int x) {
-  __SMACK_code("assert $eq.ref.bool($memoryCounter, 0);");
+  __SMACK_code("assert $eq.ref.bool($allocatedCounter, 0);");
   __SMACK_code("assume false;");
   while(1);
 }
@@ -1033,12 +1033,12 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, float);
 
   #if MEMORY_SAFETY
-  D("var $memoryCounter: int;");
+  D("var $allocatedCounter: int;");
   #endif
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "{\n"
     #if MEMORY_SAFETY
-    "  $memoryCounter := $memoryCounter + 1;\n"
+    "  $allocatedCounter := $allocatedCounter + 1;\n"
     #endif
     "  call p := $alloc(n);\n"
     "}");
@@ -1072,13 +1072,13 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref)\n"
     "modifies $Alloc;\n"
-    "modifies $memoryCounter;\n"
+    "modifies $allocatedCounter;\n"
     "{\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
-    "    assert {:valid_free_} $eq.ref.bool($base(p), p);\n"
-    "    assert {:valid_free_} $Alloc[p] == true;\n"
+    "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
+    "    assert {:valid_free} $Alloc[p] == true;\n"
     "    $Alloc[p] := false;\n"
-    "    $memoryCounter := $memoryCounter - 1;\n"
+    "    $allocatedCounter := $allocatedCounter - 1;\n"
     "  }\n" 
     "}\n");
 
@@ -1105,7 +1105,7 @@ void __SMACK_decls() {
     "requires $eq.ref.bool(p, $0.ref) || $Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $ne.ref.bool(p, $0.ref) ==> $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);\n");
+    "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
@@ -1128,7 +1128,7 @@ void __SMACK_decls() {
     "requires $eq.ref.bool(p, $0.ref) || $Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $ne.ref.bool(p, $0.ref) ==> $eq.ref.bool($memoryCounter,  old($memoryCounter) - 1);\n");
+    "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
 #endif
 
 #else
@@ -1199,18 +1199,16 @@ void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
     __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
   #endif
 }
-#endif
 
 void __SMACK_check_memory_leak() {
-  #if MEMORY_SAFETY
-  __SMACK_code("assert {:valid_memtrack} $eq.ref.bool($memoryCounter, 0);");
-  #endif
+  __SMACK_code("assert {:valid_memtrack} $eq.ref.bool($allocatedCounter, 0);");
 }
+#endif
 
 void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$CurrAddr := $1024.ref;");
   #if MEMORY_SAFETY
-  __SMACK_code("$memoryCounter := 0;");
+  __SMACK_code("$allocatedCounter := 0;");
   #endif
 }
 
