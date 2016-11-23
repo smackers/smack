@@ -16,10 +16,11 @@ namespace smack {
 
 using namespace llvm;
 
-void insertMemoryLeakStatement(Function& F, Module& m) {
-  Function* memoryLeakCheckFunction = m.getFunction(Naming::MEMORY_LEAK_CHECK_FUNCTION);
-  for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    if(isa<ReturnInst>(&*I)) {
+void insertMemoryLeakCheck(Function& F, Module& m) {
+  Function* memoryLeakCheckFunction = m.getFunction(Naming::MEMORY_LEAK_FUNCTION);
+  assert (memoryLeakCheckFunction != NULL && "Memory leak check function must be present");
+  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+    if (isa<ReturnInst>(&*I)) {
       CallInst::Create(memoryLeakCheckFunction, "", &*I);
     }
   }
@@ -32,7 +33,7 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       if (SmackOptions::isEntryPoint(F.getName())) {
-        insertMemoryLeakStatement(F, m);
+        insertMemoryLeakCheck(F, m);
       }
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
         Value* pointer = NULL;
@@ -41,23 +42,21 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
         } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
           pointer = si->getPointerOperand();
         } else if (MemSetInst* memseti = dyn_cast<MemSetInst>(&*I)) {
-	    Value* dest = memseti->getArgOperand(0);
-	    Value* size = memseti->getArgOperand(2);
+	    Value* dest = memseti->getDest();
+	    Value* size = memseti->getLength();
 	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
 	    CastInst* castPtr = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
-	    Value* args[] = {castPtr, size};
-	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
-        } else if (MemCpyInst* memcpyi = dyn_cast<MemCpyInst>(&*I)) {
-	    Value* dest = memcpyi->getArgOperand(0);
-	    Value* src = memcpyi->getArgOperand(1);
-	    Value* size = memcpyi->getArgOperand(2);
+	    CallInst::Create(memorySafetyFunction, {castPtr, size}, "", &*I);
+        } else if (MemTransferInst* memtrni = dyn_cast<MemTransferInst>(&*I)) {
+            //MemTransferInst is abstract class for both MemCpyInst and MemTransferInst
+	    Value* dest = memtrni->getDest();
+	    Value* src = memtrni->getSource();
+	    Value* size = memtrni->getLength();
 	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
 	    CastInst* castPtrDest = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
 	    CastInst* castPtrSrc = CastInst::Create(Instruction::BitCast, src, voidPtrTy, "", &*I);
-	    Value* argsDest[] = {castPtrDest, size};
-	    Value* argsSrc[] = {castPtrSrc, size};
-	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(argsDest, 2), "", &*I);  
-	    CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(argsSrc, 2), "", &*I);  
+	    CallInst::Create(memorySafetyFunction, {castPtrDest, size}, "", &*I);  
+	    CallInst::Create(memorySafetyFunction, {castPtrSrc, size}, "", &*I);  
 	}
 	
 
