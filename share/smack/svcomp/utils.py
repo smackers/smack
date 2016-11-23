@@ -199,6 +199,8 @@ def verify_bpl_svcomp(args):
 
 def write_error_file(args, status, verifier_output):
   hasBug = (status != 'verified' and status != 'timeout' and status != 'unknown')
+  if not hasBug:
+    return
   if args.error_file:
     error = None
     if args.language == 'svcomp':
