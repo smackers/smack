@@ -16,6 +16,9 @@ def svcomp_frontend(args):
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
 
+  # check svcomp properties and set flags accordingly
+  svcomp_check_property(args)
+
   # fix: disable float filter for memory safety benchmarks
   if not args.memory_safety:
     # test bv and executable benchmarks
@@ -42,7 +45,7 @@ def svcomp_frontend(args):
 
   smack.top.clang_frontend(args)
 
-def svcomp_process_file(args, name, ext):
+def svcomp_check_property(args):
   # Check if property is vanilla reachability, and return unknown otherwise
   if args.svcomp_property:
     with open(args.svcomp_property, "r") as f:
@@ -52,6 +55,7 @@ def svcomp_process_file(args, name, ext):
     elif not "__VERIFIER_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
+def svcomp_process_file(args, name, ext):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
