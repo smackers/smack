@@ -14,6 +14,7 @@ int main(void) {
   strct* s = malloc(sizeof(strct));
   float f = s->a[11];
   printf("%f\n", f);
+  free(s);
   return 0;
 }
 
