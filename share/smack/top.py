@@ -36,6 +36,9 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
+    'invalid-deref': 'SMACK found an invalid pointer dereference.',
+    'invalid-free': 'SMACK found an invalid memory deallocation',
+    'invalid-memtrack': 'SMACK found a memory leak',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -416,7 +419,18 @@ def verification_result(verifier_output):
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
     return 'verified'
   elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
-    return 'error'
+    if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
+      return 'invalid-deref'
+    elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
+      return 'invalid-free'
+    elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
+      return 'invalid-memtrack'
+    else:
+      listCall = re.findall(r'\(CALL .+\)', verifier_output)
+      if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
+        return 'invalid-free'
+      else:
+        return 'error'
   else:
     return 'unknown'
 
@@ -472,7 +486,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error':
+    if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack':
       error = error_trace(verifier_output, args)
 
       if args.error_file:

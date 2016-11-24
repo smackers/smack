@@ -39,6 +39,7 @@ smack_value_t __SMACK_return_value(void);
 // Inserts memory access checks in form of assert to check null pointer access
 // and buffer overflow errors
 void __SMACK_check_memory_safety(void*, unsigned long);
+void __SMACK_check_memory_leak();
 #endif
 
 // We need this to enforce that assert/assume are function calls
