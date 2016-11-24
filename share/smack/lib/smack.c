@@ -1156,6 +1156,7 @@ void __SMACK_decls() {
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
+    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures !old($Alloc[p]);\n"
     "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $sgt.ref.bool(p, $add.ref(q, $Size[q]))));\n"
     "ensures $Alloc[p];\n"
