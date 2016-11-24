@@ -42,7 +42,7 @@ void __VERIFIER_error(void) {
 }
 
 void exit(int x) {
-  __SMACK_code("assert $eq.ref.bool($allocatedCounter, 0);");
+  __SMACK_code("assert $allocatedCounter == 0;");
   __SMACK_code("assume false;");
   while(1);
 }
@@ -1101,8 +1101,7 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
-    "requires $eq.ref.bool(p, $0.ref) || $eq.ref.bool($base(p), p);\n"
-    "requires $eq.ref.bool(p, $0.ref) || $Alloc[p];\n"
+    "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
@@ -1114,6 +1113,7 @@ void __SMACK_decls() {
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
+    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
@@ -1124,8 +1124,7 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
-    "requires $eq.ref.bool(p, $0.ref) || $eq.ref.bool($base(p), p);\n"
-    "requires $eq.ref.bool(p, $0.ref) || $Alloc[p];\n"
+    "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
@@ -1201,7 +1200,7 @@ void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
 }
 
 void __SMACK_check_memory_leak() {
-  __SMACK_code("assert {:valid_memtrack} $eq.ref.bool($allocatedCounter, 0);");
+  __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
 }
 #endif
 

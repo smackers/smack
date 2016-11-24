@@ -26,6 +26,18 @@ void insertMemoryLeakCheck(Function& F, Module& m) {
   }
 }
 
+void inserMemoryAccessCheck(Value* memoryPointer, Instruction* I, DataLayout* dataLayout, Function* memorySafetyFunction, Function* F) {
+  // Finding the exact type of the second argument to our memory safety function
+  Type* sizeType = memorySafetyFunction->getFunctionType()->getParamType(1);
+  PointerType* pointerType = cast<PointerType>(memoryPointer->getType());
+  uint64_t storeSize = dataLayout->getTypeStoreSize(pointerType->getPointerElementType());
+  Value* size = ConstantInt::get(sizeType, storeSize);
+  Type *voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F->getContext()));
+  CastInst* castPointer = CastInst::Create(Instruction::BitCast, memoryPointer, voidPtrTy, "", &*I);
+  Value* args[] = {castPointer, size};
+  CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
+}
+
 bool MemorySafetyChecker::runOnModule(Module& m) {
   DataLayout* dataLayout = new DataLayout(&m);
   Function* memorySafetyFunction = m.getFunction(Naming::MEMORY_SAFETY_FUNCTION);
@@ -38,9 +50,9 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
         Value* pointer = NULL;
         if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {
-          pointer = li->getPointerOperand();
+          inserMemoryAccessCheck(li->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
         } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
-          pointer = si->getPointerOperand();
+          inserMemoryAccessCheck(si->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
         } else if (MemSetInst* memseti = dyn_cast<MemSetInst>(&*I)) {
 	    Value* dest = memseti->getDest();
 	    Value* size = memseti->getLength();
@@ -58,19 +70,6 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
 	    CallInst::Create(memorySafetyFunction, {castPtrDest, size}, "", &*I);  
 	    CallInst::Create(memorySafetyFunction, {castPtrSrc, size}, "", &*I);  
 	}
-	
-
-        if (pointer) {
-          // Finding the exact type of the second argument to our memory safety function
-          Type* sizeType = memorySafetyFunction->getFunctionType()->getParamType(1);
-          PointerType* pointerType = cast<PointerType>(pointer->getType());
-          uint64_t storeSize = dataLayout->getTypeStoreSize(pointerType->getPointerElementType());
-          Value* size = ConstantInt::get(sizeType, storeSize);
-          Type *voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
-          CastInst* castPointer = CastInst::Create(Instruction::BitCast, pointer, voidPtrTy, "", &*I);
-          Value* args[] = {castPointer, size};
-          CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
-        }
       }
     }
   }
