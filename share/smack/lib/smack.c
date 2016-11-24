@@ -1113,7 +1113,6 @@ void __SMACK_decls() {
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr, $Alloc;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
-    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
     "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
