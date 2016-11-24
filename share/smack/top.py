@@ -36,9 +36,9 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
-    'invalid-deref': 'SMACK found an invalid pointer dereference.',
-    'invalid-free': 'SMACK found an invalid memory deallocation',
-    'invalid-memtrack': 'SMACK found a memory leak',
+    'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
+    'invalid-free': 'SMACK found an error: invalid memory deallocation.',
+    'invalid-memtrack': 'SMACK found an error: memory leak.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
