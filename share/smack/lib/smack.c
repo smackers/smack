@@ -42,7 +42,9 @@ void __VERIFIER_error(void) {
 }
 
 void exit(int x) {
+  #if MEMORY_SAFETY
   __SMACK_code("assert $allocatedCounter == 0;");
+  #endif
   __SMACK_code("assume false;");
   while(1);
 }
