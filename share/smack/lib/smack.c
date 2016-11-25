@@ -42,9 +42,9 @@ void __VERIFIER_error(void) {
 }
 
 void exit(int x) {
-  #if MEMORY_SAFETY
+#if MEMORY_SAFETY
   __SMACK_code("assert $allocatedCounter == 0;");
-  #endif
+#endif
   __SMACK_code("assume false;");
   while(1);
 }
@@ -1034,23 +1034,20 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, ref);
   DECLARE(RECORD_PROC, float);
 
-  #if MEMORY_SAFETY
-  D("var $allocatedCounter: int;");
-  #endif
-  D("procedure $malloc(n: ref) returns (p: ref)\n"
-    "{\n"
-    #if MEMORY_SAFETY
-    "  $allocatedCounter := $allocatedCounter + 1;\n"
-    #endif
-    "  call p := $alloc(n);\n"
-    "}");
-  
   D("var $exn: bool;");
   D("var $exnv: int;");
   D("function $extractvalue(p: int, i: int) returns (int);");
 
 #if MEMORY_SAFETY
   D("function $base(ref) returns (ref);");
+  D("var $allocatedCounter: int;");
+
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "modifies $allocatedCounter;\n"
+    "{\n"
+    "  $allocatedCounter := $allocatedCounter + 1;\n"
+    "  call p := $alloc(n);\n"
+    "}");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
@@ -1058,7 +1055,7 @@ void __SMACK_decls() {
   D("var $CurrAddr:ref;");
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
-    "modifies $CurrAddr, $Alloc;\n"
+    "modifies $Alloc, $CurrAddr;\n"
     "{\n"
     "  assume $sgt.ref.bool($CurrAddr, $0.ref);\n"
     "  p := $CurrAddr;\n"
@@ -1073,8 +1070,7 @@ void __SMACK_decls() {
     "}");
 
   D("procedure $free(p: ref)\n"
-    "modifies $Alloc;\n"
-    "modifies $allocatedCounter;\n"
+    "modifies $Alloc, $allocatedCounter;\n"
     "{\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
@@ -1087,7 +1083,6 @@ void __SMACK_decls() {
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;");
-  D("var $CurrAddr:ref;");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
@@ -1102,7 +1097,7 @@ void __SMACK_decls() {
     "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
   D("procedure $free(p: ref);\n"
-    "modifies $Alloc;\n"
+    "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
@@ -1112,8 +1107,9 @@ void __SMACK_decls() {
   D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;");
+
   D("procedure $alloc(n: ref) returns (p: ref);\n"
-    "modifies $CurrAddr, $Alloc;\n"
+    "modifies $Alloc, $CurrAddr;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
@@ -1124,7 +1120,7 @@ void __SMACK_decls() {
     "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
   D("procedure $free(p: ref);\n"
-    "modifies $Alloc;\n"
+    "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
@@ -1132,6 +1128,11 @@ void __SMACK_decls() {
 #endif
 
 #else
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "{\n"
+    "  call p := $alloc(n);\n"
+    "}");
+
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $CurrAddr:ref;");
 
@@ -1152,7 +1153,6 @@ void __SMACK_decls() {
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;");
-  D("var $CurrAddr:ref;");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
@@ -1172,6 +1172,7 @@ void __SMACK_decls() {
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $CurrAddr:ref;");
+
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
@@ -1187,18 +1188,18 @@ void __SMACK_decls() {
 }
 
 #if MEMORY_SAFETY
-// The size parameter represents number of bytes that are being accessed.
+// The size parameter represents number of bytes that are being accessed
 void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
   void* sizeRef = (void*)size;
   __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $Alloc[$base(@)] == true;", pointer, pointer);
   __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($base(@), @);", pointer, pointer, pointer);
-  #if MEMORY_MODEL_NO_REUSE_IMPLS
-    __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
-  #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
-    __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", pointer, pointer, sizeRef, pointer, pointer);
-  #else
-    __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
-  #endif
+#if MEMORY_MODEL_NO_REUSE_IMPLS
+  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
+#elif MEMORY_MODEL_REUSE
+  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", pointer, pointer, sizeRef, pointer, pointer);
+#else
+  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
+#endif
 }
 
 void __SMACK_check_memory_leak() {
@@ -1207,9 +1208,11 @@ void __SMACK_check_memory_leak() {
 #endif
 
 void __SMACK_init_func_memory_model(void) {
+#if MEMORY_MODEL_NO_REUSE || MEMORY_MODEL_NO_REUSE_IMPLS
   __SMACK_code("$CurrAddr := $1024.ref;");
-  #if MEMORY_SAFETY
+#endif
+#if MEMORY_SAFETY
   __SMACK_code("$allocatedCounter := 0;");
-  #endif
+#endif
 }
 
