@@ -60,6 +60,10 @@ def svcomp_process_file(args, name, ext):
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
     # replace exit definition with exit_
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
+
+    if args.memory_safety:
+      s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
+
     if len(s.split('\n')) < 60:
       # replace all occurrences of 100000 with 10
       # Only target at small examples
