@@ -1,11 +1,10 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --loop-limit=11
-// @flag --unroll=11
+// @flag --unroll=6
 // @expect verified
 
-#define MAXSIZE 10
+#define MAXSIZE 5
 
 typedef struct _DATA DATA, *PDATA;
 
