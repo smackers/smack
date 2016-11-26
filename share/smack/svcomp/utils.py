@@ -20,8 +20,8 @@ def svcomp_frontend(args):
   file_type = filters.svcomp_filter(args.input_files[0])[0]
   if file_type == 'bitvector':
     args.bit_precise = True
-  if file_type == 'float':
-    sys.exit(smack.top.results(args)['unknown'])
+  #if file_type == 'float':
+  #  sys.exit(smack.top.results(args)['unknown'])
   args.execute = False
   if filters.svcomp_filter(args.input_files[0])[1] == 'executable':
     args.execute = True
