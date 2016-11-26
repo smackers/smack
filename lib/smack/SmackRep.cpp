@@ -748,7 +748,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
     unsigned width = W->getIntegerBitWidth();
     blocks.push_back(
       Block::block("", {
-        Stmt::call(Naming::ALLOC,
+        Stmt::call(Naming::MALLOC,
           { integerToPointer(Expr::id(params.front().first), width) },
           { Naming::RET_VAR }
         )

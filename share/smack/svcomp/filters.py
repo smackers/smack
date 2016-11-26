@@ -34,9 +34,9 @@ def svcomp_filter(f):
   pruned_lines = raw_file_line_count(lines)
   raw_lines = len(lines.split('\n'))
 
-  executable = ''
+  executable = False
   if len(linecount(r'__VERIFIER_nondet', r'void|extern', lines)) == 0:
-    executable = 'executable' 
+    executable = True
 
   if bv_filter(lines, raw_lines, pruned_lines):
     return 'bitvector', executable 

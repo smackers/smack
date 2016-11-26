@@ -1,8 +1,7 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include "smack.h"
 
-// @expect verified
+// @expect error
 
 #define MAXSIZE 10
 #define RESET 0
