@@ -16,15 +16,19 @@ def svcomp_frontend(args):
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
 
-  # test float\bv benchmarks
-  file_type = filters.svcomp_filter(args.input_files[0])[0]
-  if file_type == 'bitvector':
-    args.bit_precise = True
-  #if file_type == 'float':
-  #  sys.exit(smack.top.results(args)['unknown'])
-  args.execute = False
-  if filters.svcomp_filter(args.input_files[0])[1] == 'executable':
-    args.execute = True
+  # check svcomp properties and set flags accordingly
+  svcomp_check_property(args)
+
+  # fix: disable float filter for memory safety benchmarks
+  if not args.memory_safety:
+    # test bv and executable benchmarks
+    file_type, executable = filters.svcomp_filter(args.input_files[0])
+    if file_type == 'bitvector':
+      args.bit_precise = True
+	#Should be safe to comment out
+    #if file_type == 'float':
+      #sys.exit(smack.top.results(args)['unknown'])
+    args.execute = executable
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -41,12 +45,26 @@ def svcomp_frontend(args):
 
   smack.top.clang_frontend(args)
 
+def svcomp_check_property(args):
+  # Check if property is vanilla reachability, and return unknown otherwise
+  if args.svcomp_property:
+    with open(args.svcomp_property, "r") as f:
+      prop = f.read()
+    if "valid-deref" in prop:
+      args.memory_safety = True
+    elif not "__VERIFIER_error" in prop:
+      sys.exit(smack.top.results(args)['unknown'])
+
 def svcomp_process_file(args, name, ext):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
     # replace exit definition with exit_
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
+
+    if args.memory_safety:
+      s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
+
     if len(s.split('\n')) < 60:
       # replace all occurrences of 100000 with 10
       # Only target at small examples
@@ -62,16 +80,6 @@ def svcomp_process_file(args, name, ext):
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
-  # Check if property is vanilla reachability, and return unknown otherwise
-  if args.svcomp_property:
-    with open(args.svcomp_property, "r") as f:
-      prop = f.read()
-    if not "__VERIFIER_error" in prop:
-      heurTrace += "Unsupported svcomp property - aborting\n"
-      heurTrace += "Property File:\n" + prop + "\n"
-      if not args.quiet:
-        print(heurTrace + "\n")
-      sys.exit(smack.top.results(args)['unknown'])
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
@@ -143,19 +151,19 @@ def verify_bpl_svcomp(args):
   verifier_output = smack.top.try_command(command, timeout=time_limit)
   result = smack.top.verification_result(verifier_output)
 
-  if result == 'error': #normal inlining
+  if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack': #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
     # Generate error trace and exit
-    if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output))
-    else:
-      error = smack.top.error_trace(verifier_output, args)
-
     if args.error_file:
+      if args.language == 'svcomp':
+        error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output))
+      else:
+        error = smack.top.error_trace(verifier_output, args)
       with open(args.error_file, 'w') as f:
         f.write(error)
 
     if not args.quiet:
+      error = smack.top.error_trace(verifier_output, args)
       print error
 
   elif result == 'timeout': #normal inlining

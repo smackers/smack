@@ -13,7 +13,7 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& M) {
 
   Naming naming;
-  SmackRep rep(M.getDataLayout(), naming, program, getAnalysis<Regions>());
+  SmackRep rep(&M.getDataLayout(), naming, program, getAnalysis<Regions>());
   std::list<Decl*>& decls = program.getDeclarations();
 
   DEBUG(errs() << "Analyzing globals...\n");
@@ -48,7 +48,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
       DEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
       for (auto P : procs) {
-        SmackInstGenerator igen(getAnalysis<LoopInfo>(F), rep, *P, naming);
+        SmackInstGenerator igen(getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), rep, *P, naming);
         DEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
         igen.visit(F);
         DEBUG(errs() << "\n");

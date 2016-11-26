@@ -39,7 +39,7 @@ namespace {
 }
 
 void Region::init(Module& M, Pass& P) {
-  DL = M.getDataLayout();
+  DL = &M.getDataLayout();
   DSA = &P.getAnalysis<DSAAliasAnalysis>();
 }
 
@@ -122,7 +122,8 @@ void Region::init(const Value* V, unsigned length) {
   assert (T->isPointerTy() && "Expected pointer argument.");
   T = T->getPointerElementType();
   context = &V->getContext();
-  representative = DSA ? DSA->getNode(V) : nullptr;
+  representative = (DSA && !dyn_cast<ConstantPointerNull>(V))
+    ? DSA->getNode(V) : nullptr;
   this->type = T;
   this->offset = DSA ? DSA->getOffset(V) : 0;
   this->length = length;
@@ -191,7 +192,6 @@ RegisterPass<Regions> RegionsPass("smack-regions", "SMACK Memory Regions Pass");
 void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   if (!SmackOptions::NoMemoryRegionSplitting) {
-    AU.addRequired<DataLayoutPass>();
     AU.addRequiredTransitive<LocalDataStructures>();
     AU.addRequiredTransitive<BUDataStructures>();
     AU.addRequiredTransitive<TDDataStructures>();

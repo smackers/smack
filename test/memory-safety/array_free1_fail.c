@@ -1,11 +1,10 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --loop-limit=11
-// @flag --unroll=11
+// @flag --unroll=6
 // @expect error
 
-#define MAXSIZE 10
+#define MAXSIZE 5
 
 typedef struct _DATA DATA, *PDATA;
 
@@ -25,8 +24,6 @@ void free_array() {
   }
 
   for (i = 0; i < MAXSIZE; i++) {
-    assert(*(a[i].f) == 1);
-    assert(a[i].x == 2);
     if (a[i].f != 0) {
       free(a[i].f);
       a[i].f = 0;

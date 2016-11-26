@@ -7,6 +7,7 @@
 #include "smack/SmackOptions.h"
 #include "smack/RemoveDeadDefs.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/DataLayout.h"
 
 #include <vector>
@@ -16,7 +17,7 @@ namespace smack {
 using namespace llvm;
 
 bool RemoveDeadDefs::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   std::vector<Function*> dead;
 
   do {
