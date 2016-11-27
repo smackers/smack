@@ -66,9 +66,10 @@ def svcomp_process_file(args, name, ext):
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
 
     if len(s.split('\n')) < 60:
-      # replace all occurrences of 100000 with 10
+      # replace all occurrences of 100000 with 10 and 15000 with 5
       # Only target at small examples
       s = re.sub(r'100000', r'10', s)
+      s = re.sub(r'15000', r'5', s)
     #Remove any preprocessed declarations of pthread types
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = filters.scrub_pthreads(s)
