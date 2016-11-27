@@ -806,14 +806,13 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
       params.push_back(m);
 
   } else if (CI) {
+    auto CF = CI->getCalledFunction();
 
-    // Add the parameter for `return_value` calls
-    if (auto CF = CI->getCalledFunction()) {
-      if (CF->getName().equals(Naming::RETURN_VALUE_PROC)) {
-        auto T = CI->getParent()->getParent()->getReturnType();
-        name = procName(F, {T});
-        params.push_back({indexedName("p", {0}), type(T)});
-      }
+    // Add the parameter from `return_value` calls
+    if (CF && CF->getName().equals(Naming::RETURN_VALUE_PROC)) {
+      auto T = CI->getParent()->getParent()->getReturnType();
+      name = procName(F, {T});
+      params.push_back({indexedName("p", {0}), type(T)});
 
     } else {
       FunctionType* T = F->getFunctionType();
