@@ -193,6 +193,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "Reporting 'timeout'.\n"
       if not args.quiet:
         print(heurTrace + "\n")
+        sys.stdout.flush()
       # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
       time.sleep(1000)
   elif result == 'verified': #normal inlining
