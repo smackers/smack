@@ -8,6 +8,8 @@ import json
 import re
 import sys
 import pprint
+import os
+import hashlib
 
 nextNum = 0
 
@@ -28,8 +30,14 @@ def addKeyDefs(root):
     keys.append(["assumption",         "string",  "edge",  "assumption",     False])
     keys.append(["assumption.scope",         "string",  "edge",  "assumption.scope",     False])
     keys.append(["sourcecode",         "string",  "edge",  "sourcecode",     False])
+    keys.append(["witness-type", "string",  "graph", "witness-type", False])
     keys.append(["sourcecodeLanguage", "string",  "graph", "sourcecodelang", False])
+    keys.append(["producer", "string",  "graph", "producer", False])
     keys.append(["specification", "string",  "graph", "specification", False])
+    keys.append(["programfile", "string",  "graph", "programfile", False])
+    keys.append(["programhash", "string",  "graph", "programhash", False])
+    keys.append(["MemoryModel", "string",  "graph", "memorymodel", False])
+    keys.append(["architecture", "string",  "graph", "architecture", False])
     keys.append(["tokenSet",           "string",  "edge",  "tokens",         False])
     keys.append(["originTokenSet",     "string",  "edge",  "origintokens",   False])
     keys.append(["negativeCase",       "string",  "edge",  "negated",        True, "false"])
@@ -90,7 +98,7 @@ def addGraphEdge(tree, source, target, data={}):
     return newEdge
         
 
-def buildEmptyXmlGraph():
+def buildEmptyXmlGraph(args, hasBug):
     """Builds an empty witness xml file, with all the keys we will be using 
        already defined."""
     root = ET.Element('graphml')
@@ -99,8 +107,20 @@ def buildEmptyXmlGraph():
     tree = ElementTree(root)
     addKeyDefs(root)
     graph = ET.SubElement(root, "graph", attrib={"edgedefault" : "directed"})
+
+    addKey(graph, "witness-type", "violation_witness" if hasBug else "correctness_witness")
     addKey(graph, "sourcecodelang", "C")
-    addKey(graph, "specification", "CHECK( init(main()), LTL(G ! call(__VERIFIER_error())) )")
+    from smack.top import VERSION
+    addKey(graph, "producer", "SMACK " + VERSION)
+    with open(args.svcomp_property, 'r') as ppf:
+      addKey(graph, "specification", ppf.read().strip())
+    programfile = os.path.abspath(args.orig_files[0])
+    addKey(graph, "programfile", programfile)
+    with open(programfile, 'r') as pgf:
+      addKey(graph, "programhash", hashlib.sha1(pgf.read()).hexdigest())
+    addKey(graph, "memorymodel", "precise")
+    addKey(graph, "architecture",
+            re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
     return tree
 
 def formatAssign(assignStmt):
@@ -113,27 +133,28 @@ def formatAssign(assignStmt):
     else:
       return ""
 
-def smackJsonToXmlGraph(strJsonOutput):
+def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
-    # Convert json string to json object
-    smackJson = json.loads(strJsonOutput)
-    # Get the failure node, and the list of trace entries to get there
-    jsonViolation = smackJson["failsAt"]
-    jsonTraces = smackJson["traces"]
-    
     # Build tree & start node
-    tree = buildEmptyXmlGraph()
+    tree = buildEmptyXmlGraph(args, hasBug)
     # Add the start node, which gets marked as being the entry node
     start = addGraphNode(tree, {"entry":"true"})
-    lastNode = start
-    lastEdge = None 
-    pat = re.compile(".*smack\.[c|h]$")
-    prevLineNo = -1
-    prevColNo = -1
-    callStack = ['main']
-    # Loop through each trace
-    for jsonTrace in jsonTraces:
+    if hasBug:
+      # Convert json string to json object
+      smackJson = json.loads(strJsonOutput)
+      # Get the failure node, and the list of trace entries to get there
+      jsonViolation = smackJson["failsAt"]
+      jsonTraces = smackJson["traces"]
+
+      lastNode = start
+      lastEdge = None
+      pat = re.compile(".*smack\.[c|h]$")
+      prevLineNo = -1
+      prevColNo = -1
+      callStack = ['main']
+      # Loop through each trace
+      for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
           if formatAssign(jsonTrace["description"]):

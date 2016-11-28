@@ -36,7 +36,10 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
-    'overflow': 'SMACK found a signed integer overflow',
+    'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
+    'invalid-free': 'SMACK found an error: invalid memory deallocation.',
+    'invalid-memtrack': 'SMACK found an error: memory leak.',
+    'overflow': 'SMACK found an error: signed integer overflow',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -145,7 +148,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp'],
+    choices=['boogie', 'corral', 'duality', 'svcomp'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -174,9 +177,6 @@ def arguments():
     type=str, help='load SVCOMP property to check from FILE')
 
   args = parser.parse_args()
-
-  if not args.verifier:
-    args.verifier = 'svcomp' if args.language == 'svcomp' else 'corral'
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
@@ -425,10 +425,20 @@ def verification_result(verifier_output):
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
     return 'verified'
   elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
-    if re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
+    if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
+      return 'invalid-deref'
+    elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
+      return 'invalid-free'
+    elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
+      return 'invalid-memtrack'
+    elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
       return 'overflow'
     else:
-      return 'error'
+      listCall = re.findall(r'\(CALL .+\)', verifier_output)
+      if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
+        return 'invalid-free'
+      else:
+        return 'error'
   else:
     return 'unknown'
 
@@ -484,7 +494,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error' or result == 'overflow':
+    if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow':
       error = error_trace(verifier_output, args)
 
       if args.error_file:

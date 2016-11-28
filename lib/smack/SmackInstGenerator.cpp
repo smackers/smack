@@ -458,10 +458,6 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
-  } else if (name.find(Naming::FUNCTION_PTR_DISPATCH_PROC) != std::string::npos) {
-    WARN("ignoring function pointer dispatch");
-    emit(f->getReturnType()->isVoidTy()? Stmt::skip() : Stmt::havoc(naming.get(ci)));
-
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep.valueAnnotation(ci));
 

@@ -14,6 +14,8 @@
 #include "llvm/IR/DataLayout.h"
 
 #include <deque>
+#include <queue>
+#include <set>
 #include <vector>
 
 namespace smack {
@@ -22,11 +24,43 @@ using namespace llvm;
 
 namespace{
   Regex STRING_CONSTANT("^\\.str[.0-9]*$");
+
+  bool isStringConstant(Value& V) {
+    return STRING_CONSTANT.match(V.getName().str());
+  }
+
+  bool isBoogieCode(Value& V) {
+    std::queue<Value*> worklist;
+    std::set<Value*> covered;
+    worklist.push(&V);
+    covered.insert(&V);
+    while (worklist.size()) {
+      Value* U = worklist.front();
+      worklist.pop();
+
+      if (CallInst* CI = dyn_cast<CallInst>(U))
+        if (Function* F = CI->getCalledFunction())
+          if (F->hasName())
+            if (F->getName().find(Naming::MOD_PROC) != std::string::npos
+                || F->getName().find(Naming::CODE_PROC) != std::string::npos
+                || F->getName().find(Naming::DECL_PROC) != std::string::npos
+                || F->getName().find(Naming::TOP_DECL_PROC) != std::string::npos)
+            return true;
+
+      for (auto W : U->users())
+        if (!covered.count(W)) {
+          worklist.push(W);
+          covered.insert(W);
+        }
+    }
+    return false;
+  }
 }
 
 bool CodifyStaticInits::runOnModule(Module& M) {
   TD = &M.getDataLayout();
   LLVMContext& C = M.getContext();
+  DSAAliasAnalysis* DSA = &getAnalysis<DSAAliasAnalysis>();
 
   Function* F = dyn_cast<Function>(
     M.getOrInsertFunction(Naming::STATIC_INIT_PROC,
@@ -38,8 +72,7 @@ bool CodifyStaticInits::runOnModule(Module& M) {
   std::deque< std::tuple< Constant*, Constant*, std::vector<Value*> > > worklist;
 
   for (auto &G : M.globals())
-    if (G.hasInitializer())
-      if (!G.hasName() || !STRING_CONSTANT.match(G.getName().str()))
+    if (G.hasInitializer() && DSA->isRead(&G))
         worklist.push_back(std::make_tuple(
           G.getInitializer(), &G, std::vector<Value*>()));
 
@@ -85,6 +118,11 @@ bool CodifyStaticInits::runOnModule(Module& M) {
   IRB.CreateRetVoid();
 
   return true;
+}
+
+void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<DSAAliasAnalysis>();
 }
 
 // Pass ID variable
