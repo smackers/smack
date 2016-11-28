@@ -1036,38 +1036,39 @@ void __SMACK_decls() {
 
   D("var $exn: bool;");
   D("var $exnv: int;");
-  D("function $extractvalue(p: int, i: int) returns (int);");
+  D("function $extractvalue(p: int, i: int) returns (int);\n");
 
 #if MEMORY_SAFETY
   D("function $base(ref) returns (ref);");
-  D("var $allocatedCounter: int;");
+  D("var $allocatedCounter: int;\n");
 
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $allocatedCounter;\n"
     "{\n"
     "  $allocatedCounter := $allocatedCounter + 1;\n"
     "  call p := $alloc(n);\n"
-    "}");
+    "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
-  D("var $CurrAddr:ref;");
+  D("var $CurrAddr:ref;\n");
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "modifies $Alloc, $CurrAddr;\n"
     "{\n"
-    "  assume $sgt.ref.bool($CurrAddr, $0.ref);\n"
     "  p := $CurrAddr;\n"
     "  if ($sgt.ref.bool(n, $0.ref)) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
+    "    assume $Size(p) == n;\n"
+    "    assume (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
     "  } else {\n"
     "    $CurrAddr := $add.ref($CurrAddr, $1.ref);\n"
+    "    assume $Size(p) == $1.ref;\n"
+    "    assume $eq.ref.bool($base(p), p);\n"
     "  }\n"
     "  $Alloc[p] := true;\n"
-    "  assume $Size(p) == n;\n"
-    "  assume $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
-    "}");
+    "}\n");
 
   D("procedure $free(p: ref)\n"
     "modifies $Alloc, $allocatedCounter;\n"
@@ -1082,7 +1083,7 @@ void __SMACK_decls() {
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
-  D("var $Size: [ref] ref;");
+  D("var $Size: [ref] ref;\n");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
@@ -1106,18 +1107,19 @@ void __SMACK_decls() {
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
-  D("var $CurrAddr:ref;");
+  D("var $CurrAddr:ref;\n");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $CurrAddr;\n"
-    "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));\n"
+    "ensures $sgt.ref.bool(n, $0.ref) ==> $CurrAddr == $add.ref(old($CurrAddr), n);\n"
+    "ensures $sgt.ref.bool(n, $0.ref) ==> $Size(p) == n;\n"
+    "ensures $sgt.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
+    "ensures !$sgt.ref.bool(n, $0.ref) ==> $CurrAddr == $add.ref(old($CurrAddr), $1.ref);\n"
+    "ensures !$sgt.ref.bool(n, $0.ref) ==> $Size(p) == $1.ref;\n"
+    "ensures !$sgt.ref.bool(n, $0.ref) ==> $eq.ref.bool($base(p), p);\n"
     "ensures $Alloc[p];\n"
-    "ensures $Size(p) == n;\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
+    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
@@ -1131,15 +1133,14 @@ void __SMACK_decls() {
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "{\n"
     "  call p := $alloc(n);\n"
-    "}");
+    "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
-  D("var $CurrAddr:ref;");
+  D("var $CurrAddr:ref;\n");
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr;\n"
     "{\n"
-    "  assume $sgt.ref.bool($CurrAddr, $0.ref);\n"
     "  p := $CurrAddr;\n"
     "  if ($sgt.ref.bool(n, $0.ref)) {\n"
     "    $CurrAddr := $add.ref($CurrAddr, n);\n"
@@ -1148,11 +1149,11 @@ void __SMACK_decls() {
     "  }\n"
     "}\n");
 
-  D("procedure $free(p: ref);");
+  D("procedure $free(p: ref);\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
-  D("var $Size: [ref] ref;");
+  D("var $Size: [ref] ref;\n");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
@@ -1163,24 +1164,23 @@ void __SMACK_decls() {
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
+    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc;\n"
     "ensures !$Alloc[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));");
+    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
-  D("var $CurrAddr:ref;");
+  D("var $CurrAddr:ref;\n");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr;\n"
-    "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
-    "ensures $sgt.ref.bool($CurrAddr, old($CurrAddr));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> $sge.ref.bool($CurrAddr, $add.ref(old($CurrAddr), n));");
+    "ensures $sgt.ref.bool(n, $0.ref) ==> $CurrAddr == $add.ref(old($CurrAddr), n);\n"
+    "ensures !$sgt.ref.bool(n, $0.ref) ==> $CurrAddr == $add.ref(old($CurrAddr), $1.ref);\n");
 
-  D("procedure $free(p: ref);");
+  D("procedure $free(p: ref);\n");
 #endif
 #endif
 
