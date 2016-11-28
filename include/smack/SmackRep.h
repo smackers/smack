@@ -70,7 +70,8 @@ private:
   const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned);
 
   std::string procName(const llvm::User& U);
-  std::string procName(const llvm::User& U, llvm::Function* F);
+  std::string procName(llvm::Function* F, const llvm::User& U);
+  std::string procName(llvm::Function* F,  std::list<const llvm::Type*> types);
 
   unsigned getIntSize(const llvm::Value* v);
   unsigned getIntSize(const llvm::Type* t);
