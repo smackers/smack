@@ -124,7 +124,7 @@ def verify_bpl_svcomp(args):
     loopUnrollBar = 23
   elif args.bit_precise and "__VERIFIER_nondet__Bool" in bpl:
     heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 10.\n"
-    loopUnrollBar = 10
+    loopUnrollBar = 128
   elif "calculate_output" in bpl:
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
