@@ -31,6 +31,11 @@ def svcomp_frontend(args):
     if file_type == 'float':
       sys.exit(smack.top.results(args)['unknown'])
     args.execute = executable
+  else:
+    with open(args.input_files[0], "r") as sf:
+      sc = sf.read()
+    if 'unsigned char b:2' in sc:
+      args.bit_precise = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
