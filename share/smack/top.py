@@ -39,7 +39,7 @@ def results(args):
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
     'invalid-memtrack': 'SMACK found an error: memory leak.',
-    'overflow': 'SMACK found an error: signed integer overflow',
+    'overflow': 'SMACK found an error: signed integer overflow.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
