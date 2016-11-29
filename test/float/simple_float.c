@@ -12,4 +12,3 @@ int main() {
   assert(a == 1.5f);
   return 0;
 }
-

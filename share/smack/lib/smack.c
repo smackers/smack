@@ -185,7 +185,7 @@ void __SMACK_dummy(int v) {
 
 #define DECLARE(M,args...) \
   D(xstr(M(args)))
-  
+
 #define DECLARE_EACH_INT_TYPE(M,args...) \
   D(xstr(M(i128,args))); \
   D(xstr(M(i96,args))); \
@@ -721,7 +721,7 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i88,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
   
-  //Non Bit-precise Float Modeling
+  //Non bit-precise modeling of floating-points
   
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("function $fadd.float(f1:float, f2:float) returns (float);");
@@ -789,7 +789,7 @@ void __SMACK_decls() {
   D("function $fp2ui.float.i8(f:float) returns (i8);");
   D("function $si2fp.i8.float(i:i8) returns (float);");
   D("function $ui2fp.i8.float(i:i8) returns (float);");
-  
+
   D("function $fptrunc.float.float(f:float) returns (float);");
   D("function $fpext.float.float(f:float) returns (float);");
   D("function $fp2si.float.bv128(f:float) returns (bv128);");
@@ -885,7 +885,7 @@ void __SMACK_decls() {
   D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
 #endif
 
-  // Bit-precise Float Modeling
+  // Bit-precise modeling of floating-points
 
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fsub, {i1 - i2})

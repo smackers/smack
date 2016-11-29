@@ -114,15 +114,15 @@ public:
   void print(std::ostream& os) const;
 };
 
-class FpLit : public Expr {
-	bool neg;
-	std::string sig;
-	std::string expo;
-	unsigned sigSize;
-	unsigned expSize;
+class FPLit : public Expr {
+  bool neg;
+  std::string sig;
+  std::string expo;
+  unsigned sigSize;
+  unsigned expSize;
 public:
-	FpLit(bool n, std::string s, std::string e, unsigned ss, unsigned es) : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
-	void print(std::ostream& os) const;
+  FPLit(bool n, std::string s, std::string e, unsigned ss, unsigned es) : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
+  void print(std::ostream& os) const;
 };
 
 class StringLit : public Expr {

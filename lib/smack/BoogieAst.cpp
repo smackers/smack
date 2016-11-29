@@ -95,7 +95,7 @@ const Expr* Expr::lit(unsigned long v, unsigned w) {
 }
 
 const Expr* Expr::lit(bool n, std::string s, std::string e, unsigned ss, unsigned es) {
-  return new FpLit(n, s, e, ss, es);
+  return new FPLit(n, s, e, ss, es);
 }
 
 const Expr* Expr::neq(const Expr* l, const Expr* r) {
@@ -418,7 +418,7 @@ void BvLit::print(std::ostream& os) const {
   os << val << "bv" << width;
 }
 
-void FpLit::print(std::ostream& os) const {
+void FPLit::print(std::ostream& os) const {
   os << (neg ? "-" : "") << sig << "e" << expo << "f" << sigSize << "e" << expSize;
 }
 
