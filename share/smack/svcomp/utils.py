@@ -6,6 +6,7 @@ import time
 import smack.top
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph
+from random_testing import random_test
 
 def svcomp_frontend(args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
@@ -186,6 +187,11 @@ def verify_bpl_svcomp(args):
           if not args.quiet:
             print(heurTrace + "\n")
           sys.exit(smack.top.results(args)['unknown'])
+      if random_test(args, result) == "false":
+        heurTrace += "Oops, random testing says no.\n"
+        if not args.quiet:
+          print(heurTrace + "\n")
+        sys.exit(smack.top.results(args)['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
       write_error_file(args, 'verified', verifier_output)
