@@ -28,6 +28,7 @@ def svcomp_frontend(args):
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.bit_precise = True
+      args.bit_precise_pointers = True
     if file_type == 'float':
       sys.exit(smack.top.results(args)['unknown'])
     args.execute = executable
@@ -36,6 +37,7 @@ def svcomp_frontend(args):
       sc = sf.read()
     if 'unsigned char b:2' in sc:
       args.bit_precise = True
+      args.bit_precise_pointers = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
