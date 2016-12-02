@@ -9,7 +9,7 @@ LOCKPWN_BIN="${ROOT}/lockpwn"
 LLVM_BIN="${ROOT}/llvm/bin"
 
 # Setting mono heap size to 9GB
-export MONO_GC_PARAMS=max-heap-size=9g
+export MONO_GC_PARAMS=max-heap-size=13g
 
 export PATH=${LLVM_BIN}:$SMACK_BIN:$PATH
 export CORRAL="mono ${CORRAL_BIN}/corral.exe"
