@@ -174,13 +174,16 @@ def verify_bpl_svcomp(args):
     heurTrace += "Determining result based on how far we unrolled.\n"
     # If we managed to unroll more than loopUnrollBar times, then return verified
     # First remove exhausted loop bounds generated during max static loop bound computation
-    verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
-      'Verifying program while tracking', verifier_output)
-    it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
     unrollMax = 0
-    for match in it:
-      if int(match.group(1)) > unrollMax:
-        unrollMax = int(match.group(1))
+    if 'Verifying program while tracking' in verifier_output:
+      verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
+        'Verifying program while tracking', verifier_output)
+      it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
+      for match in it:
+        if int(match.group(1)) > unrollMax:
+          unrollMax = int(match.group(1))
+    else:
+      heurTrace += "Corral didn't even start verification.\n"
     if unrollMax >= loopUnrollBar:
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
