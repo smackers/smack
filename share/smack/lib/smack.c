@@ -729,7 +729,9 @@ void __SMACK_decls() {
   D("function $fmul.float(f1:float, f2:float) returns (float);");
   D("function $fdiv.float(f1:float, f2:float) returns (float);");
   D("function $frem.float(f1:float, f2:float) returns (float);");
-  D("function $foeq.float.bool(f1:float, f2:float) returns (bool);");
+  D("function {:inline} $foeq.float.bool(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
+  D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
+  D("function $foeq.bool(f1:float, f2:float) returns (bool);");
   D("function $foge.float(f1:float, f2:float) returns (i1);");
   D("function $fogt.float(f1:float, f2:float) returns (i1);");
   D("function $fole.float(f1:float, f2:float) returns (i1);");
@@ -838,7 +840,7 @@ void __SMACK_decls() {
   D("function $ui2fp.bv8.float(i:bv8) returns (float);");
 
 #ifndef NO_FORALL
-  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
   D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
   D("axiom (forall f: float :: $ui2fp.i128.float($fp2ui.float.i128(f)) == f);");
   D("axiom (forall i: i128 :: $fp2si.float.i128($si2fp.i128.float(i)) == i);");
@@ -885,6 +887,7 @@ void __SMACK_decls() {
   D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
 #endif
 
+#if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
 
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
@@ -1198,6 +1201,8 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2ui, {dtubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $si2fp, {sbv8td(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $ui2fp, {ubv8td(i)});
+  
+#endif
 
   // Memory Model
   D("const $GLOBALS_BOTTOM: ref;");
@@ -1332,6 +1337,7 @@ void __SMACK_decls() {
   D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
   D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
 
+  #if FLOAT_ENABLED
   D("function {:inline} $load.bvfloat(M: [ref] bvfloat, p: ref) returns (bvfloat) { M[p] }");
   D("function {:inline} $store.bvfloat(M: [ref] bvfloat, p: ref, v: bvfloat) returns ([ref] bvfloat) { M[p := v] }");
   
@@ -1347,7 +1353,8 @@ void __SMACK_decls() {
     "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");	
   D("function {:inline} $load.bytes.bvdouble(M: [ref] bv8, p: ref) returns (bvdouble) {"
     "$ui2fp.bv64.bvdouble($load.bytes.bv64(M, p))}");
-
+  #endif
+	
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
@@ -1380,8 +1387,10 @@ void __SMACK_decls() {
   DECLARE(RECORD_PROC, bv128);
   DECLARE(RECORD_PROC, ref);
   DECLARE(RECORD_PROC, float);
+  #if FLOAT_ENABLED
   DECLARE(RECORD_PROC, bvfloat);
   DECLARE(RECORD_PROC, bvdouble);
+  #endif
 
   D("var $exn: bool;");
   D("var $exnv: int;");

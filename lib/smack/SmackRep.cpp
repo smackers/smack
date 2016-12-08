@@ -153,6 +153,8 @@ std::string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
 std::string SmackRep::type(const llvm::Type* t) {
 
   if (t->isFloatingPointTy()) {
+	if (!SmackOptions::BitPrecise)
+	  return Naming::UNINTERPRETED_FLOAT_TYPE;
     if (t->isFloatTy())
       return Naming::FLOAT_TYPE;
     else if (t->isDoubleTy())
@@ -912,8 +914,10 @@ std::string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
-  s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
-  s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
+  if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
+    s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
+  }
   s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
   s << "\n";
 

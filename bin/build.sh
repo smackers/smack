@@ -333,7 +333,7 @@ if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
 
-  git clone https://github.com/boogie-org/boogie ${BOOGIE_DIR}
+  git clone https://github.com/Checkmate50/boogie ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}
   git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
