@@ -49,7 +49,10 @@ def svcomp_filter(f):
 def bv_filter(lines, raw_line_count, pruned_line_count):
 
   if raw_line_count > 1500:
-    return 0
+    if 'ldv_usb_gadget' in lines:
+      return 1
+    else:
+      return 0
   
   #line_count = raw_file_line_count(lines)
   if pruned_line_count > 650:
