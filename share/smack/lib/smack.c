@@ -1017,52 +1017,6 @@ void __SMACK_decls() {
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
   D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
-
-  D("function $fp2si.bvdouble.i128(f:bvdouble) returns (i128);");
-  D("function $fp2ui.bvdouble.i128(f:bvdouble) returns (i128);");
-  D("function $si2fp.i128.bvdouble(i:i128) returns (bvdouble);");
-  D("function $ui2fp.i128.bvdouble(i:i128) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i96(f:bvdouble) returns (i96);");
-  D("function $fp2ui.bvdouble.i96(f:bvdouble) returns (i96);");
-  D("function $si2fp.i96.bvdouble(i:i96) returns (bvdouble);");
-  D("function $ui2fp.i96.bvdouble(i:i96) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i88(f:bvdouble) returns (i88);");
-  D("function $fp2ui.bvdouble.i88(f:bvdouble) returns (i88);");
-  D("function $si2fp.i88.bvdouble(i:i88) returns (bvdouble);");
-  D("function $ui2fp.i88.bvdouble(i:i88) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i64(f:bvdouble) returns (i64);");
-  D("function $fp2ui.bvdouble.i64(f:bvdouble) returns (i64);");
-  D("function $si2fp.i64.bvdouble(i:i64) returns (bvdouble);");
-  D("function $ui2fp.i64.bvdouble(i:i64) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i56(f:bvdouble) returns (i56);");
-  D("function $fp2ui.bvdouble.i56(f:bvdouble) returns (i56);");
-  D("function $si2fp.i56.bvdouble(i:i56) returns (bvdouble);");
-  D("function $ui2fp.i56.bvdouble(i:i56) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i48(f:bvdouble) returns (i48);");
-  D("function $fp2ui.bvdouble.i48(f:bvdouble) returns (i48);");
-  D("function $si2fp.i48.bvdouble(i:i48) returns (bvdouble);");
-  D("function $ui2fp.i48.bvdouble(i:i48) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i40(f:bvdouble) returns (i40);");
-  D("function $fp2ui.bvdouble.i40(f:bvdouble) returns (i40);");
-  D("function $si2fp.i40.bvdouble(i:i40) returns (bvdouble);");
-  D("function $ui2fp.i40.bvdouble(i:i40) returns (bvdouble);");
-
-  D("function $fp2si.bvdouble.i32(f:bvdouble) returns (i32);");
-  D("function $fp2ui.bvdouble.i32(f:bvdouble) returns (i32);");
-  D("function $si2fp.i32.bvdouble(i:i32) returns (bvdouble);");
-  D("function $ui2fp.i32.bvdouble(i:i32) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i24(f:bvdouble) returns (i24);");
-  D("function $fp2ui.bvdouble.i24(f:bvdouble) returns (i24);");
-  D("function $si2fp.i24.bvdouble(i:i24) returns (bvdouble);");
-  D("function $ui2fp.i24.bvdouble(i:i24) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i16(f:bvdouble) returns (i16);");
-  D("function $fp2ui.bvdouble.i16(f:bvdouble) returns (i16);");
-  D("function $si2fp.i16.bvdouble(i:i16) returns (bvdouble);");
-  D("function $ui2fp.i16.bvdouble(i:i16) returns (bvdouble);");
-  D("function $fp2si.bvdouble.i8(f:bvdouble) returns (i8);");
-  D("function $fp2ui.bvdouble.i8(f:bvdouble) returns (i8);");
-  D("function $si2fp.i8.bvdouble(i:i8) returns (bvdouble);");
-  D("function $ui2fp.i8.bvdouble(i:i8) returns (bvdouble);");
   
   D("function $fptrunc.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
   D("function $fpext.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
