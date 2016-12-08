@@ -622,8 +622,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       const APInt sig = n_sign.trunc(sigSize-1);
       const APInt exp = n_sign.lshr(sigSize-1);
       return Expr::lit(neg, sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
-    }
-    else {
+    } else {
       const APFloat APF = CFP->getValueAPF();
       std::string str;
       raw_string_ostream ss(str);
