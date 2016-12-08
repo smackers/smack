@@ -1,1 +1,1 @@
-skip: false
+flags: [--bit-precise, --float]

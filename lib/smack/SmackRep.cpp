@@ -192,8 +192,16 @@ std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> t
 
 std::string SmackRep::type(const llvm::Type* t) {
 
-  if (t->isFloatingPointTy())
-    return Naming::FLOAT_TYPE;
+  if (t->isFloatingPointTy()) {
+    if (!SmackOptions::BitPrecise)
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
+    if (t->isFloatTy())
+      return Naming::FLOAT_TYPE;
+    else if (t->isDoubleTy())
+      return Naming::DOUBLE_TYPE;
+    else
+      llvm_unreachable("Unsupported floating-point type.");
+  }
 
   else if (t->isIntegerTy())
     return intType(t->getIntegerBitWidth());
@@ -591,24 +599,49 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
-    const APFloat APF = CFP->getValueAPF();
-    std::string str;
-    raw_string_ostream ss(str);
-    ss << *CFP;
-    std::istringstream iss(str);
-    std::string float_type;
-    long integerPart, fractionalPart, exponentPart;
-    char point, sign, exponent;
-    iss >> float_type;
-    iss >> integerPart;
-    iss >> point;
-    iss >> fractionalPart;
-    iss >> sign;
-    iss >> exponent;
-    iss >> exponentPart;
+    if (SmackOptions::BitPrecise) {
+      const APFloat APF = CFP->getValueAPF();
+      const APInt API = APF.bitcastToAPInt();
+      std::string str;
+      raw_string_ostream ss(str);
+      ss << *CFP;
+      std::istringstream iss(str);
+      std::string float_type;
+      iss >> float_type;
+      unsigned expSize, sigSize;
+      if (float_type=="float") {
+        expSize = 8;
+        sigSize = 24;
+      }
+      else if (float_type=="double") {
+        expSize = 11;
+        sigSize = 53;
+      }
+      const APInt n_sign = API.trunc(expSize+sigSize-1);
+      bool neg = n_sign != API;
+      const APInt sig = n_sign.trunc(sigSize-1);
+      const APInt exp = n_sign.lshr(sigSize-1);
+      return Expr::lit(neg, sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
+    } else {
+      const APFloat APF = CFP->getValueAPF();
+      std::string str;
+      raw_string_ostream ss(str);
+      ss << *CFP;
+      std::istringstream iss(str);
+      std::string float_type;
+      long integerPart, fractionalPart, exponentPart;
+      char point, sign, exponent;
+      iss >> float_type;
+      iss >> integerPart;
+      iss >> point;
+      iss >> fractionalPart;
+      iss >> sign;
+      iss >> exponent;
+      iss >> exponentPart;
 
-    return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
-      Expr::lit(exponentPart));
+      return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
+        Expr::lit(exponentPart));
+    }
 
   } else if (llvm::isa<ConstantPointerNull>(v))
     return Expr::id(Naming::NULL_VAL);
@@ -912,7 +945,11 @@ std::string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
-  s << Decl::typee(Naming::FLOAT_TYPE, intType(32)) << "\n";
+  if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
+    s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
+  }
+  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";
