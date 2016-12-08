@@ -7,6 +7,40 @@
 #include "smack/CodifyStaticInits.h"
 #include <queue>
 
+namespace {
+  using namespace llvm;
+  using namespace std;
+
+  list<CallInst*> findCallers(Function* F) {
+    list<CallInst*> callers;
+
+    if (F) {
+      queue<User*> users;
+      set<User*> covered;
+
+      users.push(F);
+      covered.insert(F);
+
+      while (!users.empty()) {
+        auto U = users.front();
+        users.pop();
+
+        if (CallInst* CI = dyn_cast<CallInst>(U))
+          callers.push_back(CI);
+
+        else
+          for (auto V : U->users())
+            if (!covered.count(V)) {
+              users.push(V);
+              covered.insert(V);
+            }
+      }
+    }
+
+    return callers;
+  }
+}
+
 namespace smack {
 
 const unsigned MEMORY_INTRINSIC_THRESHOLD = 0;
@@ -135,18 +169,24 @@ std::string SmackRep::opName(const std::string& operation, std::initializer_list
 
 std::string SmackRep::procName(const llvm::User& U) {
   if (const llvm::CallInst* CI = llvm::dyn_cast<const llvm::CallInst>(&U))
-    return procName(U, CI->getCalledFunction());
+    return procName(CI->getCalledFunction(), U);
   else
     llvm_unreachable("Unexpected user expression.");
 }
 
-std::string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
+std::string SmackRep::procName(llvm::Function* F, const llvm::User& U) {
+  std::list<const llvm::Type*> types;
+  for (unsigned i = 0; i < U.getNumOperands()-1; i++)
+    types.push_back(U.getOperand(i)->getType());
+  return procName(F, types);
+}
+
+std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> types) {
   std::stringstream name;
   name << naming.get(*F);
-  if (F->isVarArg()) {
-    for (unsigned i = 0; i < U.getNumOperands()-1; i++)
-      name << "." << type(U.getOperand(i)->getType());
-  }
+  if (F->isVarArg())
+    for (auto* T : types)
+      name << "." << type(T);
   return name.str();
 }
 
@@ -392,10 +432,6 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
   Type* T = CI.getParent()->getParent()->getReturnType();
   std::string name = indexedName(Naming::VALUE_PROC, {type(T)});
-  // auxDecls[name] = Decl::procedure(
-  //   name,
-  //   std::list< std::pair<std::string,std::string> >({{"p", type(T)}}),
-  //   std::list< std::pair<std::string,std::string> >({{Naming::RET_VAR, Naming::PTR_TYPE}}));
   return Stmt::call(
     name,
     std::list<const Expr*>({ Expr::id(Naming::RET_VAR) }),
@@ -800,13 +836,23 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
       params.push_back(m);
 
   } else if (CI) {
-    FunctionType* T = F->getFunctionType();
-    name = procName(*CI, F);
-    for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
-      params.push_back({
-        indexedName("p",{i}),
-        type(CI->getOperand(i)->getType())
-      });
+    auto CF = CI->getCalledFunction();
+
+    // Add the parameter from `return_value` calls
+    if (CF && CF->getName().equals(Naming::RETURN_VALUE_PROC)) {
+      auto T = CI->getParent()->getParent()->getReturnType();
+      name = procName(F, {T});
+      params.push_back({indexedName("p", {0}), type(T)});
+
+    } else {
+      FunctionType* T = F->getFunctionType();
+      name = procName(F, *CI);
+      for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
+        params.push_back({
+          indexedName("p",{i}),
+          type(CI->getOperand(i)->getType())
+        });
+      }
     }
   }
 
@@ -816,28 +862,14 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
 }
 
 std::list<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
-  std::queue<User*> users;
-  std::vector<CallInst*> callers;
   std::list<ProcDecl*> procs;
-  std::set<User*> covered;
   std::set<std::string> names;
+  std::list<CallInst*> callers = findCallers(F);
 
-  users.push(F);
-  covered.insert(F);
-
-  while (!users.empty()) {
-    auto U = users.front();
-    users.pop();
-
-    if (CallInst* CI = dyn_cast<CallInst>(U))
-      callers.push_back(CI);
-
-    else
-      for (auto V : U->users())
-        if (!covered.count(V)) {
-          users.push(V);
-          covered.insert(V);
-        }
+  // Consider `return_value` calls as normal `value` calls
+  if (F->hasName() && F->getName().equals(Naming::VALUE_PROC)) {
+    auto more = findCallers(F->getParent()->getFunction(Naming::RETURN_VALUE_PROC));
+    callers.insert(callers.end(), more.begin(), more.end());
   }
 
   if (callers.empty() || !F->isVarArg())
@@ -883,7 +915,7 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming.get(ci));
 
-  return Stmt::call(procName(ci, f), args, rets);
+  return Stmt::call(procName(f, ci), args, rets);
 }
 
 std::string SmackRep::code(llvm::CallInst& ci) {
