@@ -729,7 +729,8 @@ void __SMACK_decls() {
   D("function $fmul.float(f1:float, f2:float) returns (float);");
   D("function $fdiv.float(f1:float, f2:float) returns (float);");
   D("function $frem.float(f1:float, f2:float) returns (float);");
-  D("function {:inline} $foeq.float.bool(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
+  D("function $ffalse.float(f1:float, f2:float) returns (i1);");
+  D("function $ftrue.float(f1:float, f2:float) returns (i1);");
   D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
   D("function $foeq.bool(f1:float, f2:float) returns (bool);");
   D("function $foge.float(f1:float, f2:float) returns (i1);");
