@@ -193,8 +193,8 @@ std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> t
 std::string SmackRep::type(const llvm::Type* t) {
 
   if (t->isFloatingPointTy()) {
-	if (!SmackOptions::BitPrecise)
-	  return Naming::UNINTERPRETED_FLOAT_TYPE;
+    if (!SmackOptions::BitPrecise)
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
     if (t->isFloatTy())
       return Naming::FLOAT_TYPE;
     else if (t->isDoubleTy())
