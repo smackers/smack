@@ -243,6 +243,9 @@ def run_binary(args):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
 
+  if 'while(1)' in s:
+    return 'unknown'
+
   s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
   s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
   s = '#include<assert.h>\n' + s
