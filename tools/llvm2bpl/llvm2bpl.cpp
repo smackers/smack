@@ -59,7 +59,7 @@ MemorySafety("memory-safety", llvm::cl::desc("Enable memory safety checks"),
   llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
-SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed-integer-overflow checks"),
+SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {

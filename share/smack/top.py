@@ -143,7 +143,7 @@ def arguments():
     help='enable memory safety checks')
 
   translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
-    help='enable signed integer overflow')
+    help='enable signed integer overflow checks')
 
   verifier_group = parser.add_argument_group('verifier options')
 
