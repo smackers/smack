@@ -175,6 +175,9 @@ def arguments():
 
   verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
     type=str, help='load SVCOMP property to check from FILE')
+	
+  translate_group.add_argument('--float', action="store_true", default=False,
+    help='enable bit-precise floating-point functions')
 
   args = parser.parse_args()
 
@@ -302,6 +305,7 @@ def default_clang_compile_command(args):
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   if args.signed_integer_overflow: cmd += ['-ftrapv']
+  if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 
 def build_libs(args):
@@ -393,6 +397,7 @@ def llvm_to_bpl(args):
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
   if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
+  if args.float: cmd += ['-float']
   try_command(cmd, console=True)
   annotate_bpl(args)
 

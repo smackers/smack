@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
   llvm::legacy::PassManager pass_manager;
 
   pass_manager.add(llvm::createLowerSwitchPass());
-  pass_manager.add(llvm::createCFGSimplificationPass());
+  //pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 

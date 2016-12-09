@@ -28,9 +28,21 @@ def svcomp_frontend(args):
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.bit_precise = True
+      args.bit_precise_pointers = True
     if file_type == 'float':
-      sys.exit(smack.top.results(args)['unknown'])
+      #sys.exit(smack.top.results(args)['unknown'])
+      args.float = True
+      args.bit_precise = True
+      args.bit_precise_pointers = True
+      args.verifier = 'boogie'
+      args.time_limit = 880
     args.execute = executable
+  else:
+    with open(args.input_files[0], "r") as sf:
+      sc = sf.read()
+    if 'unsigned char b:2' in sc:
+      args.bit_precise = True
+      args.bit_precise_pointers = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -125,7 +137,7 @@ def verify_bpl_svcomp(args):
   if not args.bit_precise and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
     loopUnrollBar = 23
-  elif args.bit_precise and "__VERIFIER_nondet__Bool" in bpl:
+  elif " node3" in bpl:
     heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 100.\n"
     loopUnrollBar = 100
   elif "calculate_output" in bpl:
@@ -169,13 +181,16 @@ def verify_bpl_svcomp(args):
     heurTrace += "Determining result based on how far we unrolled.\n"
     # If we managed to unroll more than loopUnrollBar times, then return verified
     # First remove exhausted loop bounds generated during max static loop bound computation
-    verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
-      'Verifying program while tracking', verifier_output)
-    it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
     unrollMax = 0
-    for match in it:
-      if int(match.group(1)) > unrollMax:
-        unrollMax = int(match.group(1))
+    if 'Verifying program while tracking' in verifier_output:
+      verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
+        'Verifying program while tracking', verifier_output)
+      it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
+      for match in it:
+        if int(match.group(1)) > unrollMax:
+          unrollMax = int(match.group(1))
+    else:
+      heurTrace += "Corral didn't even start verification.\n"
     if unrollMax >= loopUnrollBar:
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
@@ -234,6 +249,9 @@ def run_binary(args):
   #process the file to make it runnable
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
+
+  if 'while(1)' in s:
+    return 'unknown'
 
   s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
   s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)

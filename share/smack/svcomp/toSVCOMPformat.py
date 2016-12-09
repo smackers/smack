@@ -140,7 +140,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
     tree = buildEmptyXmlGraph(args, hasBug)
     # Add the start node, which gets marked as being the entry node
     start = addGraphNode(tree, {"entry":"true"})
-    if hasBug:
+    if hasBug and not args.pthread:
       # Convert json string to json object
       smackJson = json.loads(strJsonOutput)
       # Get the failure node, and the list of trace entries to get there
@@ -170,7 +170,11 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
             lastEdge = newEdge
           if "CALL" in jsonTrace["description"]:
             # Add function to call stack
-            callStack.append(str(jsonTrace["description"][len("CALL "):]))
+            calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
+            if calledFunc.startswith("devirtbounce"):
+              print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              continue
+            callStack.append(calledFunc)
             if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
               newNode = addGraphNode(tree)
               # addGraphNode returns a string, so we had to search the graph to get the node that we want
@@ -183,8 +187,15 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
               addGraphEdge(tree, lastNode, newNode, attribs)
               break
           if "RETURN from" in jsonTrace["description"]:
+            returnedFunc = str(jsonTrace["description"][len("RETURN from "):]).strip()
+            if returnedFunc.startswith("devirtbounce"):
+              print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              continue
+            if returnedFunc != callStack[-1]:
+              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1], returnedFunc))
             callStack.pop()
-
+    print
+    print
     return prettify(tree.getroot())
 
 
