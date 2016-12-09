@@ -32,6 +32,10 @@ def svcomp_frontend(args):
     if file_type == 'float':
       #sys.exit(smack.top.results(args)['unknown'])
       args.float = True
+      args.bit_precise = True
+      args.bit_precise_pointers = True
+      args.verifier = 'boogie'
+      args.time_limit = 880
     args.execute = executable
   else:
     with open(args.input_files[0], "r") as sf:

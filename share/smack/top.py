@@ -443,12 +443,7 @@ def verify_bpl(args):
   """Verify the Boogie source file with a back-end verifier."""
 
   if args.verifier == 'svcomp':
-    if args.float:
-      args.verifier = 'boogie'
-      args.time_limit = 880
-      verify_bpl(args)
-    else:
-      verify_bpl_svcomp(args)
+    verify_bpl_svcomp(args)
     return
 
   elif args.verifier == 'boogie':
