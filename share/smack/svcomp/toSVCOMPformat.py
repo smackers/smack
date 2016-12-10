@@ -175,7 +175,9 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
               print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
               continue
             callStack.append(calledFunc)
-            if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
+            if (("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]) or
+                ("__SMACK_overflow_false" in jsonTrace["description"][len("CALL"):]) or
+                 ("__SMACK_check_overflow" in jsonTrace["description"][len("CALL"):])):
               newNode = addGraphNode(tree)
               # addGraphNode returns a string, so we had to search the graph to get the node that we want
               vNodes =tree.find("graph").findall("node")
@@ -183,7 +185,8 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
                 if vNode.attrib["id"] == newNode:
                   addKey(vNode, "violation", "true")
               attribs = {"startline":str(jsonTrace["line"])}
-              attribs["enterFunction"] = callStack[-1]
+              if not args.signed_integer_overflow:
+                attribs["enterFunction"] = callStack[-1]
               addGraphEdge(tree, lastNode, newNode, attribs)
               break
           if "RETURN from" in jsonTrace["description"]:
