@@ -13,7 +13,7 @@ char SmackModuleGenerator::ID = 0;
 void SmackModuleGenerator::generateProgram(llvm::Module& M) {
 
   Naming naming;
-  SmackRep rep(&M.getDataLayout(), naming, program, getAnalysis<Regions>());
+  SmackRep rep(&getAnalysis<DSAAliasAnalysis>(), &M.getDataLayout(), naming, program, getAnalysis<Regions>());
   std::list<Decl*>& decls = program.getDeclarations();
 
   DEBUG(errs() << "Analyzing globals...\n");

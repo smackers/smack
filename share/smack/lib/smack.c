@@ -1114,7 +1114,6 @@ void __SMACK_decls() {
 #endif
 
   // Memory Model
-  D("const $GLOBALS_BOTTOM: ref;");
   D("const $EXTERNS_BOTTOM: ref;");
   D("const $MALLOC_TOP: ref;");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
@@ -1346,7 +1345,7 @@ void __SMACK_decls() {
     "    assert {:valid_free} $Alloc[p] == true;\n"
     "    $Alloc[p] := false;\n"
     "    $allocatedCounter := $allocatedCounter - 1;\n"
-    "  }\n" 
+    "  }\n"
     "}\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
@@ -1484,4 +1483,3 @@ void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$allocatedCounter := 0;");
 #endif
 }
-

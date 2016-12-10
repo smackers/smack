@@ -47,6 +47,7 @@ public:
   static const std::string VALUE_PROC;
   static const std::string RETURN_VALUE_PROC;
   static const std::string INITIALIZE_PROC;
+  static const std::string GLOBAL_ALLOCS_PROC;
   static const std::string STATIC_INIT_PROC;
 
   static const std::string MEMORY;

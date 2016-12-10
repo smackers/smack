@@ -33,6 +33,7 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<DSAAliasAnalysis>();
     AU.addRequired<Regions>();
   }
 
