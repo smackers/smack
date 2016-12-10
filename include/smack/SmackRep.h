@@ -26,13 +26,14 @@ using llvm::StringRef;
 
 class SmackRep {
 protected:
+  DSAAliasAnalysis* DSA;
   const llvm::DataLayout* targetData;
   Naming& naming;
   Program& program;
   Regions& regions;
   std::vector<std::string> bplGlobals;
+  std::map<const llvm::Value*, unsigned> globalAllocations;
 
-  long globalsBottom;
   long externsBottom;
   unsigned uniqueFpNum;
   unsigned ptrSizeInBits;
@@ -41,7 +42,7 @@ protected:
   std::map<std::string, Decl*> auxDecls;
 
 public:
-  SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R);
+  SmackRep(DSAAliasAnalysis* DSA, const DataLayout* L, Naming& N, Program& P, Regions& R);
   Program& getProgram() { return program; }
 
 private:
@@ -86,6 +87,8 @@ private:
     unsigned length = std::numeric_limits<unsigned>::max());
   Decl* memsetProc(std::string type,
     unsigned length = std::numeric_limits<unsigned>::max());
+
+  Decl* globalAllocator();
 
 public:
   const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }

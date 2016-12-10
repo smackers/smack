@@ -117,6 +117,10 @@ bool Region::isComplicated(const DSNode* N) {
       || N->isUnknownNode();
 }
 
+bool Region::isRead(const DSNode* N) {
+  return N->isReadNode();
+}
+
 void Region::init(const Value* V, unsigned length) {
   Type* T = V->getType();
   assert (T->isPointerTy() && "Expected pointer argument.");
@@ -138,6 +142,7 @@ void Region::init(const Value* V, unsigned length) {
   incomplete = !representative || representative->isIncompleteNode();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isCollapsedNode();
+  read = !representative || representative->isReadNode();
 }
 
 Region::Region(const Value* V) {
@@ -167,6 +172,7 @@ void Region::merge(Region& R) {
   incomplete = incomplete || R.incomplete;
   complicated = complicated || R.complicated;
   collapsed = collapsed || R.collapsed;
+  read = read || R.read;
   type = (bytewise || collapse) ? NULL : type;
 }
 

@@ -102,11 +102,22 @@ bool isCodeString(const llvm::Value* V) {
   return false;
 }
 
-SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
-    : targetData(L), naming(N), program(P), regions(R),
-      globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
+Decl* SmackRep::globalAllocator() {
+  std::list<const Stmt*> stmts;
+
+  for (auto E : globalAllocations) {
+    stmts.push_back(Stmt::call(Naming::ALLOC, {pointerLit(E.second)}, {Naming::PTR_VAR}));
+    stmts.push_back(Stmt::assume(Expr::eq(expr(E.first), Expr::id(Naming::PTR_VAR))));
+  }
+  return Decl::procedure(Naming::GLOBAL_ALLOCS_PROC, {}, {}, {Decl::variable(Naming::PTR_VAR, Naming::PTR_TYPE)}, {Block::block("", stmts)});
+}
+
+SmackRep::SmackRep(DSAAliasAnalysis* dsa, const DataLayout* L, Naming& N, Program& P, Regions& R)
+    : DSA(dsa), targetData(L), naming(N), program(P), regions(R),
+      externsBottom(0), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
 {
+    initFuncs.push_back(Naming::GLOBAL_ALLOCS_PROC);
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
@@ -933,8 +944,12 @@ std::string SmackRep::getPrelude() {
 
   s << "\n";
 
+  s << "// Global allocations" << "\n";
+  s << globalAllocator() << "\n";
+
+  s << "\n";
+
   s << "// Memory address bounds" << "\n";
-  s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM),pointerLit(globalsBottom))) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM),pointerLit(externsBottom))) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << "\n";
   s << "\n";
@@ -1031,6 +1046,7 @@ Decl* SmackRep::getInitFuncs() {
   return proc;
 }
 
+
 std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   using namespace llvm;
   std::list<Decl*> decls;
@@ -1040,46 +1056,31 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   if (isCodeString(v))
     return decls;
 
-  unsigned size = 0;
-  bool external = false;
+  const PointerType* PT = dyn_cast<const PointerType>(v->getType());
+  assert(PT && "expected pointer type");
+  auto T = PT->getElementType();
+  auto size = T->isSized() ? storageSize(T) : 1024;
 
-  if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
-    if (g->hasInitializer()) {
-      const Constant* init = g->getInitializer();
-      unsigned numElems = numElements(init);
+  if ((DSA && DSA->isRead(v)) || !v->hasUnnamedAddr())
+    globalAllocations[v] = size;
 
-      // NOTE: all global variables have pointer type in LLVM
-      if (const PointerType* t = dyn_cast<const PointerType>(g->getType())) {
-
-        // in case we can determine the size of the element type ...
-        if (t->getElementType()->isSized())
-          size = storageSize(t->getElementType());
-
-        // otherwise (e.g. for function declarations), use a default size
-        else
-          size = 1024;
-
-      } else
-        size = storageSize(g->getType());
-
-      if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
-        if (numElems > 1)
-          ax.push_back(Attr::attr("count",numElems));
-      }
-
-    } else {
-      external = true;
-    }
-  }
+  // if (const GlobalVariable* g = dyn_cast<const GlobalVariable>(v)) {
+  //   if (g->hasInitializer()) {
+  //
+  //     // TODO this {:count ...} attribute seems depricated
+  //     const Constant* init = g->getInitializer();
+  //     unsigned numElems = numElements(init);
+  //     if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str()))
+  //       if (numElems > 1)
+  //         ax.push_back(Attr::attr("count",numElems));
+  //
+  //   } else {
+  //     decls.push_back(
+  //       Decl::axiom(Expr::eq(Expr::id(name), pointerLit(externsBottom -= size))));
+  //   }
+  // }
 
   decls.push_back(Decl::constant(name, Naming::PTR_TYPE, ax, false));
-
-  if (!size)
-    size = targetData->getPrefTypeAlignment(v->getType());
-
-  decls.push_back(Decl::axiom(Expr::eq(
-    Expr::id(name),
-    pointerLit(external ? externsBottom -= size : globalsBottom -= size) )));
 
   return decls;
 }

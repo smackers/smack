@@ -23,6 +23,7 @@ private:
   bool incomplete;
   bool complicated;
   bool collapsed;
+  bool read;
 
   static const DataLayout* DL;
   static DSAAliasAnalysis* DSA;
@@ -32,6 +33,7 @@ private:
   static bool isAllocated(const DSNode* N);
   static bool bytewiseAccess(const DSNode* N);
   static bool isComplicated(const DSNode* N);
+  static bool isRead(const DSNode* N);
 
   void init(const Value* V, unsigned length);
   bool isDisjoint(unsigned offset, unsigned length);
@@ -48,6 +50,7 @@ public:
   bool isSingleton() const { return singleton; };
   bool isAllocated() const { return allocated; };
   bool bytewiseAccess() const { return bytewise; }
+  bool isRead() const { return read; }
   const Type* getType() const { return type; }
 
   void print(raw_ostream&);
