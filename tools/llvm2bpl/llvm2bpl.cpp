@@ -32,6 +32,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
+#include "smack/SignedIntegerOverflowChecker.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -55,6 +56,10 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
 
 static llvm::cl::opt<bool>
 MemorySafety("memory-safety", llvm::cl::desc("Enable memory safety checks"),
+  llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -130,6 +135,9 @@ int main(int argc, char **argv) {
   if (MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
+
+  if (SignedIntegerOverflow)
+    pass_manager.add(new smack::SignedIntegerOverflowChecker());
 
   std::vector<tool_output_file*> files;
 
