@@ -64,6 +64,10 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
 
   #cast patterns
   if pruned_line_count <= 210:
+
+    if pruned_line_count < 25 and 'while(1)' in lines:
+      return 1
+
     casts = re.compile(r'''4294967295|plus_one|minus_one|\(x % 2\) == \(y % 2\)|linear_search|while \(\('0' <= c\) && \(c <= '9'\)\)''')
     if casts.search(lines):
       return 1
