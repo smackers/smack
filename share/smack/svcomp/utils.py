@@ -87,6 +87,8 @@ def svcomp_process_file(args, name, ext):
       # Only target at small examples
       s = re.sub(r'100000', r'10', s)
       s = re.sub(r'15000', r'5', s)
+      s = re.sub(r'i<=10000', r'i<=1', s)
+
     #Remove any preprocessed declarations of pthread types
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = filters.scrub_pthreads(s)
