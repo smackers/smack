@@ -94,6 +94,39 @@ void* calloc(unsigned long num, unsigned long size) {
   return ret;
 }
 
+double fabs(double x) {
+  if (x < 0)
+    x = -x;
+  return(x);
+}
+
+double fdim(double x, double y) {
+  if(x>y)
+    return x-y;
+  else
+    return 0;
+}
+
+double fmax(double x, double y) {
+  if(x>y)
+    return x;
+  else
+    return y;
+}
+
+double fmin(double x, double y) {
+  if(x<y)
+    return x;
+  else
+    return y;
+}
+
+int __isnan(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.nan(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
@@ -899,6 +932,22 @@ void __SMACK_decls() {
   D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
   D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
   
+  D("function {:builtin \"fp.isNormal\"} $float.normal(bvfloat) returns (bool);");
+  D("function {:builtin \"fp.isSubnormal\"} $float.subnormal(bvfloat) returns (bool);");
+  D("function {:builtin \"fp.isZero\"} $float.zero(bvfloat) returns (bool);");
+  D("function {:builtin \"fp.isInfinite\"} $float.infinite(bvfloat) returns (bool);");
+  D("function {:builtin \"fp.isNaN\"} $float.nan(bvfloat) returns (bool);");
+  D("function {:builtin \"fp.isNegative\"} $float.negative(bvfloat) returns (bool);");
+  D("function {:builtin \"fp.isPositive\"} $float.positive(bvfloat) returns (bool);");
+  
+  D("function {:builtin \"fp.isNormal\"} $double.normal(bvdouble) returns (bool);");
+  D("function {:builtin \"fp.isSubnormal\"} $double.subnormal(bvdouble) returns (bool);");
+  D("function {:builtin \"fp.isZero\"} $double.zero(bvdouble) returns (bool);");
+  D("function {:builtin \"fp.isInfinite\"} $double.infinite(bvdouble) returns (bool);");
+  D("function {:builtin \"fp.isNaN\"} $double.nan(bvdouble) returns (bool);");
+  D("function {:builtin \"fp.isNegative\"} $double.negative(bvdouble) returns (bool);");
+  D("function {:builtin \"fp.isPositive\"} $double.positive(bvdouble) returns (bool);");
+  
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, i1 != i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fole, i1 <= i2)
@@ -912,8 +961,8 @@ void __SMACK_decls() {
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fuge, i1 >= i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fugt, i1 > i2)
   
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
+  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
   DECLARE(INLINE_CONVERSION,bvdouble,bvfloat,$fptrunc,{dtf(i)});
   DECLARE(INLINE_CONVERSION,bvfloat,bvdouble,$fpext,{ftd(i)});
   
