@@ -94,6 +94,7 @@ void* calloc(unsigned long num, unsigned long size) {
   return ret;
 }
 
+#if FLOAT_ENABLED
 double fabs(double x) {
   if (x < 0)
     x = -x;
@@ -126,6 +127,7 @@ int __isnan(double x) {
   __SMACK_code("@ := if $double.nan(@) then 1bv32 else 0bv32;", ret, x);
   return ret;
 }
+#endif
 
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
