@@ -51,6 +51,7 @@ public:
   static const std::string STATIC_INIT_PROC;
 
   static const std::string MEMORY;
+  static const std::string GALLOC;
   static const std::string ALLOC;
   static const std::string FREE;
   static const std::string LOAD;

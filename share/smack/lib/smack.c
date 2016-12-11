@@ -164,7 +164,7 @@ void __SMACK_dummy(int v) {
 
 #define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
   function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
-  
+
 #define FPBUILTIN_UNARY_OP(type,name,prim) \
   function {:bvbuiltin xstr(prim)} name.type(f: type) returns (type);
 
@@ -173,7 +173,7 @@ void __SMACK_dummy(int v) {
 
 #define FPBUILTIN_BINARY_PRED(type,name,prim) \
   function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (i1);
-  
+
 #define INLINE_FPBUILTIN_BINARY_PRED(type,name,prim) \
   function {:bvbuiltin xstr(prim)} name.type.bool(f1: type, f2: type) returns (bool); \
   function {:inline} name.type(f1: type, f2: type) returns (bv1) {if name.type.bool(f1,f2) then 1bv1 else 0bv1}
@@ -213,7 +213,7 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bv16,args))); \
   D(xstr(M(bv8,args))); \
   D(xstr(M(bv1,args)));
-  
+
 #define DECLARE_EACH_FLOAT_TYPE(M,args...) \
   D(xstr(M(bvfloat,args))); \
   D(xstr(M(bvdouble,args)));
@@ -720,9 +720,9 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i88,i96,$sext,{i});
   DECLARE(INLINE_CONVERSION,i88,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
-  
+
   //Non bit-precise modeling of floating-points
-  
+
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("function $fadd.float(f1:float, f2:float) returns (float);");
   D("function $fsub.float(f1:float, f2:float) returns (float);");
@@ -898,7 +898,7 @@ void __SMACK_decls() {
   DECLARE_EACH_FLOAT_TYPE(FPBUILTIN_BINARY_OP, $frem, fp.rem)
   D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
   D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
-  
+
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, i1 != i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fole, i1 <= i2)
@@ -911,19 +911,19 @@ void __SMACK_decls() {
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fult, i1 < i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fuge, i1 >= i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fugt, i1 > i2)
-  
+
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
   DECLARE(INLINE_CONVERSION,bvdouble,bvfloat,$fptrunc,{dtf(i)});
   DECLARE(INLINE_CONVERSION,bvfloat,bvdouble,$fpext,{ftd(i)});
-  
+
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
   D("function {:inline} $funo.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
-  
+
   D("function $fptrunc.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
   D("function $fpext.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
-  
+
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv128tf(bv128) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv96tf(bv96) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv88tf(bv88) returns (bvfloat);");
@@ -968,7 +968,7 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_ubv 24) RNE\"} ftubv24(bvfloat) returns (bv24);");
   D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} ftubv16(bvfloat) returns (bv16);");
   D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} ftubv8(bvfloat) returns (bv8);");
-  
+
   DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2si, {ftsbv128(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2ui, {ftubv128(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvfloat, $si2fp, {sbv128tf(i)});
@@ -1013,14 +1013,14 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2ui, {ftubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvfloat, $si2fp, {sbv8tf(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvfloat, $ui2fp, {ubv8tf(i)});
-  
+
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
   D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
-  
+
   D("function $fptrunc.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
   D("function $fpext.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
-  
+
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv128td(bv128) returns (bvdouble);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv96td(bv96) returns (bvdouble);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv88td(bv88) returns (bvdouble);");
@@ -1065,7 +1065,7 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_ubv 24) RNE\"} dtubv24(bvdouble) returns (bv24);");
   D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} dtubv16(bvdouble) returns (bv16);");
   D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} dtubv8(bvdouble) returns (bv8);");
-  
+
   DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2si, {dtsbv128(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2ui, {dtubv128(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvdouble, $si2fp, {sbv128td(i)});
@@ -1110,7 +1110,7 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2ui, {dtubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $si2fp, {sbv8td(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $ui2fp, {ubv8td(i)});
-  
+
 #endif
 
   // Memory Model
@@ -1248,21 +1248,21 @@ void __SMACK_decls() {
   #if FLOAT_ENABLED
   D("function {:inline} $load.bvfloat(M: [ref] bvfloat, p: ref) returns (bvfloat) { M[p] }");
   D("function {:inline} $store.bvfloat(M: [ref] bvfloat, p: ref, v: bvfloat) returns ([ref] bvfloat) { M[p := v] }");
-  
+
   D("function {:inline} $load.bvdouble(M: [ref] bvdouble, p: ref) returns (bvdouble) { M[p] }");
   D("function {:inline} $store.bvdouble(M: [ref] bvdouble, p: ref, v: bvdouble) returns ([ref] bvdouble) { M[p := v] }");
-  
+
   D("function {:inline} $store.bytes.bvfloat(M:[ref]bv8, p:ref, v:bvfloat) returns ([ref]bv8) {"
     "$store.bytes.bv32(M, p, $fp2ui.bvfloat.bv32(v))}");
   D("function {:inline} $store.bytes.bvdouble(M:[ref]bv8, p:ref, v:bvdouble) returns ([ref]bv8) {"
     "$store.bytes.bv64(M, p, $fp2ui.bvdouble.bv64(v))}");
-	
+
   D("function {:inline} $load.bytes.bvfloat(M: [ref] bv8, p: ref) returns (bvfloat) {"
-    "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");	
+    "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");
   D("function {:inline} $load.bytes.bvdouble(M: [ref] bv8, p: ref) returns (bvdouble) {"
     "$ui2fp.bv64.bvdouble($load.bytes.bv64(M, p))}");
   #endif
-	
+
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
@@ -1307,6 +1307,13 @@ void __SMACK_decls() {
 #if MEMORY_SAFETY
   D("function $base(ref) returns (ref);");
   D("var $allocatedCounter: int;\n");
+
+  D("procedure $galloc(addr: ref, size: ref)\n"
+    "{\n"
+    "  var p: ref;\n"
+    "  call p := $alloc(size);\n"
+    "  assume p == addr;\n"
+    "}\n");
 
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $allocatedCounter;\n"
@@ -1396,7 +1403,15 @@ void __SMACK_decls() {
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
 #endif
 
-#else
+#else // not MEMORY_SAFETY
+
+  D("procedure $galloc(addr: ref, size: ref)\n"
+    "{\n"
+    "  var p: ref;\n"
+    "  call p := $alloc(size);\n"
+    "  assume p == addr;\n"
+    "}\n");
+
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "{\n"
     "  call p := $alloc(n);\n"
@@ -1450,7 +1465,7 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n");
 #endif
-#endif
+#endif // MEMORY_SAFETY
 
 #undef D
 }

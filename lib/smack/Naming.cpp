@@ -38,6 +38,7 @@ const std::string Naming::GLOBAL_ALLOCS_PROC = "__SMACK_global_allocations";
 const std::string Naming::STATIC_INIT_PROC = "__SMACK_static_init";
 
 const std::string Naming::MEMORY = "$M";
+const std::string Naming::GALLOC = "$galloc";
 const std::string Naming::ALLOC = "$alloc";
 const std::string Naming::FREE = "$free";
 const std::string Naming::LOAD = "$load";

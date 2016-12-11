@@ -105,11 +105,10 @@ bool isCodeString(const llvm::Value* V) {
 Decl* SmackRep::globalAllocator() {
   std::list<const Stmt*> stmts;
 
-  for (auto E : globalAllocations) {
-    stmts.push_back(Stmt::call(Naming::ALLOC, {pointerLit(E.second)}, {Naming::PTR_VAR}));
-    stmts.push_back(Stmt::assume(Expr::eq(expr(E.first), Expr::id(Naming::PTR_VAR))));
-  }
-  return Decl::procedure(Naming::GLOBAL_ALLOCS_PROC, {}, {}, {Decl::variable(Naming::PTR_VAR, Naming::PTR_TYPE)}, {Block::block("", stmts)});
+  for (auto E : globalAllocations)
+    stmts.push_back(Stmt::call(Naming::GALLOC, {expr(E.first), pointerLit(E.second)}));
+  // stmts.push_back(Stmt::assume(Expr::eq(Expr::id(_), Expr::id(_))));
+  return Decl::procedure(Naming::GLOBAL_ALLOCS_PROC, {}, {}, {}, {Block::block("", stmts)});
 }
 
 SmackRep::SmackRep(DSAAliasAnalysis* dsa, const DataLayout* L, Naming& N, Program& P, Regions& R)
