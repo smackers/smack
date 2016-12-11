@@ -35,7 +35,7 @@ def svcomp_filter(f):
   raw_lines = len(lines.split('\n'))
 
   executable = False
-  if len(linecount(r'__VERIFIER_nondet|fopen', r'void\s+|extern', lines)) == 0 and not ('while(1)' in lines):
+  if raw_lines < 50 and len(linecount(r'__VERIFIER_nondet|fopen', r'void\s+|extern', lines)) == 0 and not ('while(1)' in lines):
       executable = True
 
   if bv_filter(lines, raw_lines, pruned_lines):

@@ -197,7 +197,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
-      if args.execute && not args.pthread:
+      if args.execute and not args.pthread:
         heurTrace += "Hold on, let's see the execution result.\n"
         execution_result = run_binary(args)
         heurTrace += "Excecution result is " + execution_result + '\n'
