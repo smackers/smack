@@ -105,9 +105,10 @@ bool isCodeString(const llvm::Value* V) {
 Decl* SmackRep::globalAllocator() {
   std::list<const Stmt*> stmts;
 
+  stmts.push_back(Stmt::call("$globals.begin"));
   for (auto E : globalAllocations)
     stmts.push_back(Stmt::call(Naming::GALLOC, {expr(E.first), pointerLit(E.second)}));
-  // stmts.push_back(Stmt::assume(Expr::eq(Expr::id(_), Expr::id(_))));
+  stmts.push_back(Stmt::call("$globals.end"));
   return Decl::procedure(Naming::GLOBAL_ALLOCS_PROC, {}, {}, {}, {Block::block("", stmts)});
 }
 
