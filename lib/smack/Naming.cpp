@@ -49,6 +49,7 @@ const std::string Naming::EXTRACT_VALUE = "$extractvalue";
 const std::string Naming::MALLOC = "$malloc";
 
 const std::string Naming::EXTERNAL_ADDR = "$isExternal";
+const std::string Naming::HEAP_BOTTOM = "$HEAP_BOTTOM";
 const std::string Naming::GLOBALS_BOTTOM = "$GLOBALS_BOTTOM";
 const std::string Naming::EXTERNS_BOTTOM = "$EXTERNS_BOTTOM";
 const std::string Naming::MALLOC_TOP = "$MALLOC_TOP";

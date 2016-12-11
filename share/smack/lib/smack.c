@@ -1114,6 +1114,7 @@ void __SMACK_decls() {
 #endif
 
   // Memory Model
+  D("const $HEAP_BOTTOM: ref;");
   D("const $EXTERNS_BOTTOM: ref;");
   D("const $MALLOC_TOP: ref;");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
@@ -1348,6 +1349,7 @@ void __SMACK_decls() {
     "modifies $Alloc, $allocatedCounter;\n"
     "{\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
+    "    assert {:valid_free} $sge.ref.bool(p, $HEAP_BOTTOM);\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
     "    assert {:valid_free} $Alloc[p] == true;\n"
     "    $Alloc[p] := false;\n"
@@ -1373,6 +1375,7 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
+    "requires $eq.ref.bool(p, $0.ref) || $sge.ref.bool($p, $HEAP_BOTTOM)\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
@@ -1397,6 +1400,7 @@ void __SMACK_decls() {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
+    "requires $eq.ref.bool(p, $0.ref) || $sge.ref.bool($p, $HEAP_BOTTOM)\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"

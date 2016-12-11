@@ -62,6 +62,7 @@ public:
   static const std::string MALLOC;
 
   static const std::string EXTERNAL_ADDR;
+  static const std::string HEAP_BOTTOM;
   static const std::string GLOBALS_BOTTOM;
   static const std::string EXTERNS_BOTTOM;
   static const std::string MALLOC_TOP;
