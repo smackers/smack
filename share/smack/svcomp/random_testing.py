@@ -13,12 +13,13 @@ def random_test(args, result):
 
   l = s.split('\n')
   if not (len(l) < 20 and len(filter(lambda x: re.search(r'=\s*__VERIFIER_nondet_uint', x), l)) == 1):
-    return result
+    return 'abort'
 
   UMAX_INT = 2**32 - 1
   for i in [8, 4, 2]:
-    if compile_and_run(f, s, UMAX_INT/i, args) == 'false':
-      return 'false'
+    status = compile_and_run(f, s, UMAX_INT/i, args)
+    if  status != 'true':
+      return status
 
   return result
 
@@ -58,7 +59,8 @@ def compile_and_run(f, s, n, args):
       if re.search(r'Assertion.*failed', err):
         return 'false'
       else:
-        print 'execution error'
+        print 'Execution error'
+        print err
         return 'unknown'
     else:
       return 'true'

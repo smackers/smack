@@ -197,17 +197,18 @@ def verify_bpl_svcomp(args):
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
-      if args.execute:
+      if args.execute && not args.pthread:
         heurTrace += "Hold on, let's see the execution result.\n"
         execution_result = run_binary(args)
         heurTrace += "Excecution result is " + execution_result + '\n'
-        if execution_result == 'false':
-          heurTrace += "Oops, execution result says no.\n"
+        if execution_result != 'true':
+          heurTrace += "Oops, execution result says {0}.\n".format(execution_result)
           if not args.quiet:
             print(heurTrace + "\n")
           sys.exit(smack.top.results(args)['unknown'])
-      if random_test(args, result) == "false":
-        heurTrace += "Oops, random testing says no.\n"
+      random_test_result = random_test(args, result)
+      if random_test_result == 'false' or random_test_result == 'unknown':
+        heurTrace += "Oops, random testing says {0}.\n".format(random_test_result)
         if not args.quiet:
           print(heurTrace + "\n")
         sys.exit(smack.top.results(args)['unknown'])
@@ -252,9 +253,6 @@ def run_binary(args):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
 
-  if 'while(1)' in s:
-    return 'unknown'
-
   s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
   s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
   s = '#include<assert.h>\n' + s
@@ -291,7 +289,8 @@ def run_binary(args):
       if re.search(r'Assertion.*failed', err):
         return 'false'
       else:
-        print 'execution error'
+        print 'Execution error'
+        print err
         return 'unknown'
     else:
       return 'true'
