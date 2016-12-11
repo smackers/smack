@@ -210,7 +210,6 @@ std::string SmackRep::type(const llvm::Type* t) {
     return Naming::PTR_TYPE;
 
   else
-    // llvm_unreachable("Unsupported type.");
     return Naming::PTR_TYPE;
 }
 
@@ -601,7 +600,6 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     if (SmackOptions::BitPrecise) {
       const APFloat APF = CFP->getValueAPF();
-      const APInt API = APF.bitcastToAPInt();
       std::string str;
       raw_string_ostream ss(str);
       ss << *CFP;
@@ -612,16 +610,17 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
       if (float_type=="float") {
         expSize = 8;
         sigSize = 24;
-      }
-      else if (float_type=="double") {
+      } else if (float_type=="double") {
         expSize = 11;
         sigSize = 53;
+      } else {
+        llvm_unreachable("Unsupported floating-point type.");
       }
+      const APInt API = APF.bitcastToAPInt();
       const APInt n_sign = API.trunc(expSize+sigSize-1);
-      bool neg = n_sign != API;
       const APInt sig = n_sign.trunc(sigSize-1);
       const APInt exp = n_sign.lshr(sigSize-1);
-      return Expr::lit(neg, sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
+      return Expr::lit(APF.isNegative(), sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
     } else {
       const APFloat APF = CFP->getValueAPF();
       std::string str;
@@ -647,7 +646,7 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return Expr::id(Naming::NULL_VAL);
 
   else
-    llvm_unreachable("Literal type not supported");
+    llvm_unreachable("Literal type not supported.");
 }
 
 const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
