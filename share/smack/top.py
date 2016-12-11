@@ -36,6 +36,9 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
+    'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
+    'invalid-free': 'SMACK found an error: invalid memory deallocation.',
+    'invalid-memtrack': 'SMACK found an error: memory leak.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -141,7 +144,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp'],
+    choices=['boogie', 'corral', 'duality', 'svcomp'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -168,11 +171,11 @@ def arguments():
 
   verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
     type=str, help='load SVCOMP property to check from FILE')
+	
+  translate_group.add_argument('--float', action="store_true", default=False,
+    help='enable bit-precise floating-point functions')
 
   args = parser.parse_args()
-
-  if not args.verifier:
-    args.verifier = 'svcomp' if args.language == 'svcomp' else 'corral'
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
@@ -297,6 +300,7 @@ def default_clang_compile_command(args):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
+  if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 
 def build_libs(args):
@@ -387,6 +391,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
+  if args.float: cmd += ['-float']
   try_command(cmd, console=True)
   annotate_bpl(args)
 
@@ -419,7 +424,18 @@ def verification_result(verifier_output):
   elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
     return 'verified'
   elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
-    return 'error'
+    if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
+      return 'invalid-deref'
+    elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
+      return 'invalid-free'
+    elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
+      return 'invalid-memtrack'
+    else:
+      listCall = re.findall(r'\(CALL .+\)', verifier_output)
+      if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
+        return 'invalid-free'
+      else:
+        return 'error'
   else:
     return 'unknown'
 
@@ -475,7 +491,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error':
+    if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack':
       error = error_trace(verifier_output, args)
 
       if args.error_file:

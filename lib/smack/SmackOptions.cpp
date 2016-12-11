@@ -46,6 +46,10 @@ const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
   "no-byte-access-inference", llvm::cl::desc("Optimize bit-precision with DSA.")
 );
 
+const llvm::cl::opt<bool> SmackOptions::FloatEnabled(
+  "float", llvm::cl::desc("Enable interpreted floating-point type")
+);
+
 bool SmackOptions::isEntryPoint(std::string name) {
   for (auto EP : EntryPoints)
     if (name == EP)

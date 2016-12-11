@@ -12,7 +12,9 @@
 namespace smack {
 
 const std::string Naming::BOOL_TYPE = "bool";
-const std::string Naming::FLOAT_TYPE = "float";
+const std::string Naming::UNINTERPRETED_FLOAT_TYPE = "float";
+const std::string Naming::FLOAT_TYPE = "bvfloat";
+const std::string Naming::DOUBLE_TYPE = "bvdouble";
 const std::string Naming::PTR_TYPE = "ref";
 const std::string Naming::NULL_VAL = "$0.ref";
 
@@ -42,6 +44,7 @@ const std::string Naming::STORE = "$store";
 const std::string Naming::MEMCPY = "$memcpy";
 const std::string Naming::MEMSET = "$memset";
 const std::string Naming::EXTRACT_VALUE = "$extractvalue";
+const std::string Naming::MALLOC = "$malloc";
 
 const std::string Naming::EXTERNAL_ADDR = "$isExternal";
 const std::string Naming::GLOBALS_BOTTOM = "$GLOBALS_BOTTOM";
@@ -66,6 +69,7 @@ const std::string Naming::PTR_VAR = "$p";
 const std::string Naming::UNDEF_SYM = "$u";
 const std::string Naming::CONTRACT_EXPR = "$expr";
 const std::string Naming::MEMORY_SAFETY_FUNCTION = "__SMACK_check_memory_safety";
+const std::string Naming::MEMORY_LEAK_FUNCTION = "__SMACK_check_memory_leak";
 
 using namespace llvm;
 

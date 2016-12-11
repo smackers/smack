@@ -4,6 +4,8 @@
 #include "llvm/IR/DebugInfo.h"
 #include "smack/SmackOptions.h"
 
+#include <deque>
+
 namespace llvm {
 
 // XXX duplicated from DSA/Printer.cpp XXX
@@ -101,12 +103,22 @@ static std::string getCaption(const DSNode *N, const DSGraph *G) {
 }
 
 Instruction * getInstruction(Value *V) {
-  if (auto I = dyn_cast<Instruction>(V))
-    return I;
+  std::set<Value*> covered{ V };
+  std::deque<Value*> workList{ V };
 
-  for (auto U : V->users()) {
-    if (auto I = getInstruction(U))
+  while (!workList.empty()) {
+    V = workList.front();
+    workList.pop_front();
+    if (auto I = dyn_cast<Instruction>(V)) {
       return I;
+    } else {
+      for (auto U : V->users()) {
+        if (covered.count(U) == 0) {
+          workList.push_back(U);
+          covered.insert(U);
+        }
+      }
+    }
   }
 
   return nullptr;
@@ -133,13 +145,12 @@ void DSMonitor::watch(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
 
   if (!VS.empty()) {
     Instruction *I = getInstruction(VS[0]);
-    if (I) {
-      if (MDNode* M = I->getMetadata("dbg")) {
-        DILocation L(M);
-        location = L.getFilename().str() + ":"
-          + std::to_string(L.getLineNumber()) + ":"
-          + std::to_string(L.getColumnNumber());
-      }
+    if (I && I->getMetadata("dbg")) {
+      const DebugLoc DL = I->getDebugLoc();
+      auto *scope = cast<DIScope>(DL.getScope());
+      location = scope->getFilename().str() + ":"
+        + std::to_string(DL.getLine()) + ":"
+        + std::to_string(DL.getCol());
     }
   }
 }

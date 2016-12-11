@@ -6,6 +6,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "smack/DSAAliasAnalysis.h"
 
 namespace smack {
 
@@ -17,8 +18,6 @@ public:
 
   CodifyStaticInits() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& M);
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-    AU.addRequired<llvm::DataLayoutPass>();
-  }
+  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
 };
 }
