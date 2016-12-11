@@ -102,7 +102,7 @@ NONDET_DECL(unsigned,long,long);
 NONDET_DECL(unsigned,long,long,int);
 NONDET_DECL(float);
 NONDET_DECL(double);
-NONDET_DECL(long, double);
+NONDET_DECL(long,double);
 
 // Apparently used in SVCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void);
@@ -112,12 +112,15 @@ unsigned __VERIFIER_nondet_uint(void);
 unsigned long __VERIFIER_nondet_ulong(void);
 void* __VERIFIER_nondet_pointer(void);
 
+#if FLOAT_ENABLED
 //floats
 double fabs(double x);
 double fdim(double x, double y);
 double fmax(double x, double y);
 double fmin(double x, double y);
 int __isnan(double x);
+int __isnanf(float x);
+#endif
 
 #undef S1
 #undef S2
