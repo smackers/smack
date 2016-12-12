@@ -116,9 +116,24 @@ void* __VERIFIER_nondet_pointer(void);
 //floats
 double fabs(double x);
 double fdim(double x, double y);
-double fmax(double x, double y);
+double round(double x);
+double floor(double x);
+double ceil(double x);
+double trunc(double x);
+double sqrt(double x);
+double fmod(double x, double y);
 double fmin(double x, double y);
+double fmax(double x, double y);
+double copysign(double x, double y);
+int __isnormal(double x);
+int __isSubnormal(double x);
+int __iszero(double x);
+int __isinf(double x);
 int __isnan(double x);
+int __isnegative(double x);
+int __ispositive(double x);
+int __signbit(double x);
+int __finite(double x);
 #endif
 
 #undef S1
