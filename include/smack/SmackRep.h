@@ -31,6 +31,7 @@ protected:
   Program& program;
   Regions& regions;
   std::vector<std::string> bplGlobals;
+  std::map<const llvm::Value*, unsigned> globalAllocations;
 
   long globalsBottom;
   long externsBottom;
