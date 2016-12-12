@@ -42,7 +42,7 @@ def svcomp_frontend(args):
       sc = sf.read()
     if 'unsigned char b:2' in sc:
       args.bit_precise = True
-      args.bit_precise_pointers = True
+      #args.bit_precise_pointers = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -127,7 +127,8 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    corral_command += ["/di"]
+    if not args.memory_safety or not args.bit_precise:
+      corral_command += ["/di"]
 
   # we are not modeling strcpy
   if args.pthread and "strcpy" in bpl:
