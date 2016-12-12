@@ -18,7 +18,7 @@ using namespace llvm;
 
 void insertMemoryLeakCheck(Function& F, Module& m) {
   Function* memoryLeakCheckFunction = m.getFunction(Naming::MEMORY_LEAK_FUNCTION);
-  assert (memoryLeakCheckFunction != NULL && "Memory leak check function must be present");
+  assert (memoryLeakCheckFunction != NULL && "Memory leak check function must be present.");
   for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
     if (isa<ReturnInst>(&*I)) {
       CallInst::Create(memoryLeakCheckFunction, "", &*I);
@@ -41,14 +41,13 @@ void inserMemoryAccessCheck(Value* memoryPointer, Instruction* I, DataLayout* da
 bool MemorySafetyChecker::runOnModule(Module& m) {
   DataLayout* dataLayout = new DataLayout(&m);
   Function* memorySafetyFunction = m.getFunction(Naming::MEMORY_SAFETY_FUNCTION);
-  assert(memorySafetyFunction != NULL && "Couldn't find memory safety function");
+  assert(memorySafetyFunction != NULL && "Memory safety function must be present.");
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       if (SmackOptions::isEntryPoint(F.getName())) {
         insertMemoryLeakCheck(F, m);
       }
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-        Value* pointer = NULL;
         if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {
           inserMemoryAccessCheck(li->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
         } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
@@ -60,7 +59,7 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
 	    CastInst* castPtr = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
 	    CallInst::Create(memorySafetyFunction, {castPtr, size}, "", &*I);
         } else if (MemTransferInst* memtrni = dyn_cast<MemTransferInst>(&*I)) {
-            //MemTransferInst is abstract class for both MemCpyInst and MemTransferInst
+            // MemTransferInst is abstract class for both MemCpyInst and MemMoveInst
 	    Value* dest = memtrni->getDest();
 	    Value* src = memtrni->getSource();
 	    Value* size = memtrni->getLength();

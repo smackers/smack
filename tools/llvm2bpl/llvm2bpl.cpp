@@ -55,10 +55,6 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
 static llvm::cl::opt<bool>
-MemorySafety("memory-safety", llvm::cl::desc("Enable memory safety checks"),
-  llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
 SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
   llvm::cl::init(false));
 
@@ -131,8 +127,8 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-   
-  if (MemorySafety) {
+
+  if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 

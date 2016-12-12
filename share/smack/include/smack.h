@@ -130,6 +130,16 @@ NONDET_DECL(__VERIFIER_nondet,float);
 NONDET_DECL(__VERIFIER_nondet,double);
 NONDET_DECL(__VERIFIER_nondet,long,double);
 
+#if FLOAT_ENABLED
+//floats
+double fabs(double x);
+double fdim(double x, double y);
+double fmax(double x, double y);
+double fmin(double x, double y);
+int __isnan(double x);
+int __isnanf(float x);
+#endif
+
 #undef S1
 #undef S2
 #undef S3
