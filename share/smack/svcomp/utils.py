@@ -153,6 +153,7 @@ def verify_bpl_svcomp(args):
     loopUnrollBar = 13
     staticLoopBound = 64
   elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl:
+    heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
     loopUnrollBar = 129
   elif args.memory_safety and "__main(argc:" in bpl:
     heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 128.\n"
