@@ -114,6 +114,31 @@ void* __VERIFIER_nondet_pointer(void);
 
 #if FLOAT_ENABLED
 //floats
+float fabsf(float x);
+float fdimf(float x, float y);
+float roundf(float x);
+float floorf(float x);
+float ceilf(float x);
+float truncf(float x);
+float sqrtf(float x);
+float remainderf(float x, float y);
+float fminf(float x, float y);
+float fmaxf(float x, float y);
+float fmodf(float x, float y);
+float copysignf(float x, float y);
+int __isnormalf(float x);
+int __isSubnormalf(float x);
+int __iszerof(float x);
+int __isinff(float x);
+int __isnanf(float x);
+int __isnegativef(float x);
+int __ispositivef(float x);
+int __signbitf(float x);
+int signbitf(float x);
+int __finitef(float x);
+//float nan(float x);
+
+//doubles
 double fabs(double x);
 double fdim(double x, double y);
 double round(double x);
@@ -121,9 +146,10 @@ double floor(double x);
 double ceil(double x);
 double trunc(double x);
 double sqrt(double x);
-double fmod(double x, double y);
+double remainder(double x, double y);
 double fmin(double x, double y);
 double fmax(double x, double y);
+double fmod(double x, double y);
 double copysign(double x, double y);
 int __isnormal(double x);
 int __isSubnormal(double x);
@@ -133,6 +159,7 @@ int __isnan(double x);
 int __isnegative(double x);
 int __ispositive(double x);
 int __signbit(double x);
+int signbit(double x);
 int __finite(double x);
 #endif
 

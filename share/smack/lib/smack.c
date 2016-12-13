@@ -95,10 +95,141 @@ void* calloc(unsigned long num, unsigned long size) {
 }
 
 #if FLOAT_ENABLED
+float fabsf(float x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := $float.abs(@);", ret, x);
+  return ret;
+}
+
+float fdimf(float x, float y) {
+  if(x>y)
+    return x-y;
+  else
+    return 0;
+}
+
+float roundf(float x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := sbv64td($float.round(dtf(@)));", ret, x);
+  return ret;
+}
+
+float floorf(float x) {
+  if (__isnan(x) || __isinf(x) || __iszero(x))
+    return x;
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := sbv64td($float.floor(dtf(@)));", ret, x);
+  return ret;
+}
+
+float ceilf(float x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := sbv64td($float.ceil(dtf(@)));", ret, x);
+  return ret;
+}
+
+float truncf(float x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := sbv64td($float.trunc(dtf(@)));", ret, x);
+  return ret;
+}
+
+float sqrtf(float x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := $float.sqrt(dtf(@));", ret, x);
+  return ret;
+}
+
+float remainderf(float x, float y) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := $float.rem(dtf(@), dtf(@));", ret, x, y);
+  return ret;
+}
+
+float fminf(float x, float y) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := $float.min(dtf(@), dtf(@));", ret, x, y);
+  return ret;
+}
+
+float fmaxf(float x, float y) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := $float.max(dtf(@), dtf(@));", ret, x, y);
+  return ret;
+}
+
+float fmodf(float x, float y) {
+  float result = remainderf(fabsf(x), fabsf(y));
+  if (signbitf(result)) 
+    result += fabsf(y);
+  return copysignf(result, x);
+}
+
+float copysignf(float x, float y) {
+  float ret = __VERIFIER_nondet_float();
+  if (__isnegativef(x)^__isnegativef(y))
+    __SMACK_code("@ := $fmul.bvfloat(dtf(@), -0e127f24e8);", ret, x);
+  else
+    ret = x;
+  return ret;
+}
+
+int __isnormalf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.normal(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __isSubnormalf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.subnormal(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __iszerof(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.zero(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+  
 int __isinff(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $double.infinite(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $float.infinite(dtf(@)) then 1bv32 else 0bv32;", ret, x);
   return ret;
+}
+  
+int __isnanf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.nan(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __isnegativef(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.negative(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __ispositivef(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.positive(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int signbitf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __signbitf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __finitef(float x) {
+  return !__isinf(x);
 }
 
 double fabs(double x) {
@@ -146,7 +277,7 @@ double sqrt(double x) {
   return ret;
 }
 
-double fmod(double x, double y) {
+double remainder(double x, double y) {
   double ret = __VERIFIER_nondet_double();
   __SMACK_code("@ := $double.rem(@, @);", ret, x, y);
   return ret;
@@ -162,6 +293,13 @@ double fmax(double x, double y) {
   double ret = __VERIFIER_nondet_double();
   __SMACK_code("@ := $double.max(@, @);", ret, x, y);
   return ret;
+}
+
+double fmod(double x, double y) {
+  double result = remainder(fabs(x), fabs(y));
+  if (signbit(result))
+    result += fabs(y);
+  return copysign(result, x);
 }
 
 double copysign(double x, double y) {
@@ -215,8 +353,16 @@ int __ispositive(double x) {
   return ret;
 }
 
+int signbit(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if (@ <= 0e0f53e11) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
 int __signbit(double x) {
-  return __isnegative(x);
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if (@ <= 0e0f53e11) then 1bv32 else 0bv32;", ret, x);
+  return ret;
 }
 
 int __finite(double x) {
