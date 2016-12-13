@@ -77,7 +77,8 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
                 CastInst* so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
                 BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), so1, so2, "", &*I);
                 CastInst* tr = CastInst::CreateTruncOrBitCast(ai, IntegerType::get(F.getContext(), bits), "", &*I);
-                replaceValue(&*I, tr);
+                //replaceValue(&*I, tr);
+                (*I).replaceAllUsesWith(tr);
                 //I->eraseFromParent();
               }
               if (ei->getIndices()[0] == 1) {
@@ -87,7 +88,8 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
                 ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, &*ai, max, "");
                 ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, &*ai, min, "");
                 BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
-                replaceValue(&*I, flag);
+                //replaceValue(&*I, flag);
+                (*I).replaceAllUsesWith(flag);
               }
             }
           }
@@ -108,7 +110,8 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
             CallInst* ci = CallInst::Create(co, {tf}, "", &*I);
             CastInst* tv = CastInst::CreateTruncOrBitCast(lsdi, sdi->getType(), "", &*I);
-            replaceValue(&*I, tv);
+            //replaceValue(&*I, tv);
+            (*I).replaceAllUsesWith(tv);
           }
         }
       }
