@@ -122,7 +122,11 @@ def verify_bpl_svcomp(args):
     bpl = f.read()
 
   if args.pthread:
-    corral_command += ["/k:3"]
+    if ", 144)" in bpl or ", 377)" in bpl or ", 46368)" in bpl:
+      heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
+      corral_command += ["/k:30"]
+    else:
+      corral_command += ["/k:3"]
     if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl:
       corral_command += ["/cooperative"]
   else:
