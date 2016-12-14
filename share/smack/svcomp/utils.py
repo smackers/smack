@@ -82,6 +82,10 @@ def svcomp_process_file(args, name, ext):
     if args.memory_safety:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
 
+    if args.float:
+      if re.search("fesetround|fegetround",s):
+        sys.exit(smack.top.results(args)['unknown'])
+
     length = len(s.split('\n'))
     if length < 60:
       # replace all occurrences of 100000 with 10 and 15000 with 5
