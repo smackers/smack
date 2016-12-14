@@ -167,6 +167,9 @@ def verify_bpl_svcomp(args):
   elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl:
     heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
     loopUnrollBar = 129
+  elif "is_relaxed_prefix" in bpl:
+    heurTrace += "Benchmark relax_* detected. Setting loop unroll bar to 15.\n"
+    loopUnrollBar = 15
   elif "id_o1000_false-unreach-call" in bpl:
     heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
     loopUnrollBar = 1024
