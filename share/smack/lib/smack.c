@@ -95,10 +95,203 @@ void* calloc(unsigned long num, unsigned long size) {
 }
 
 #if FLOAT_ENABLED
+
+  //Check the length of pointers
+  //#if ( __WORDSIZE == 64 )
+  #if defined(__LP64__) || defined(_LP64)
+  #define BUILD_64   1
+  #endif
+
+float fabsf(float x) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $float.abs(@);", ret, x);
+  return ret;
+}
+
+float fdimf(float x, float y) {
+  if(x>y)
+    return x-y;
+  else
+    return 0;
+}
+
+float roundf(float x) {
+  if (__isnan(x) || __isinf(x) || __iszero(x))
+    return x;
+  double rete = __VERIFIER_nondet_double();
+  double reta = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv32td($float.round.rne(@));", rete, x);
+  __SMACK_code("@ := sbv32td($float.round.rna(@));", reta, x);
+  if (x > 0)
+	  return fmax(rete, reta);
+  return fmin(rete, reta);
+}
+
+long lroundf(float x) {
+  long ret = __VERIFIER_nondet_long();
+  __SMACK_code("@ := $float.lround(dtf(@));", ret, x);
+  return ret;
+}
+
+float rintf(float x) {
+  return roundf(x);
+}
+
+float nearbyintf(float x) {
+  return roundf(x);
+}
+
+long lrintf(float x) {
+  long ret = __VERIFIER_nondet_long();
+  __SMACK_code("@ := $float.lround(dtf(@));", ret, x);
+  return ret;
+}
+
+float floorf(float x) {
+  if (__isnanf(x) || __isinff(x) || __iszerof(x))
+    return x;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv32td($float.floor(dtf(@)));", ret, x);
+  return ret;
+}
+
+float ceilf(float x) {
+  if (__isnanf(x) || __isinff(x) || __iszerof(x))
+    return x;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv32td($float.ceil(dtf(@)));", ret, x);
+  return ret;
+}
+
+float truncf(float x) {
+  if (__isnanf(x) || __isinff(x) || __iszerof(x))
+    return x;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv32td($float.trunc(dtf(@)));", ret, x);
+  return ret;
+}
+
+float sqrtf(float x) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $float.sqrt(dtf(@));", ret, x);
+  return ret;
+}
+
+float remainderf(float x, float y) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $float.rem(dtf(@), dtf(@));", ret, x, y);
+  return ret;
+}
+
+float fminf(float x, float y) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $float.min(dtf(@), dtf(@));", ret, x, y);
+  return ret;
+}
+
+float fmaxf(float x, float y) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $float.max(dtf(@), dtf(@));", ret, x, y);
+  return ret;
+}
+
+float fmodf(float x, float y) {
+  float result = remainderf(fabsf(x), fabsf(y));
+  if (signbitf(result)) 
+    result += fabsf(y);
+  return copysignf(result, x);
+}
+
+float modff(float x, float* y) {
+  *y = floorf(x);
+  return x -*y;
+}
+
+float copysignf(float x, float y) {
+  double ret = __VERIFIER_nondet_double();
+  if (__isnegativef(x)^__isnegativef(y))
+    __SMACK_code("@ := $fmul.bvfloat(dtf(@), -0e127f24e8);", ret, x);
+  else
+    ret = x;
+  return ret;
+}
+
+int __isnormalf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.normal(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __isSubnormalf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.subnormal(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __iszerof(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.zero(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+  
+int __isinff(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.infinite(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+  
+int __isnanf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.nan(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __isnegativef(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.negative(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __ispositivef(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $float.positive(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __signbitf(float x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int signbitf(float x) {
+  return __signbitf(x);
+}
+
+int __fpclassifyf(float x) {
+  if (__isnanf(x))
+    return 0;
+  if (__isinff(x))
+    return 1;
+  if (__iszerof(x))
+    return 2;
+  if (__isSubnormalf(x))
+    return 3;
+  return 4;
+}
+
+int fpclassifyf(float x) {
+  return __fpclassifyf(x);
+}
+
+int __finitef(float x) {
+  return !__isinf(x);
+}
+
 double fabs(double x) {
-  if (x < 0)
-    x = -x;
-  return(x);
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $double.abs(@);", ret, x);
+  return ret;
 }
 
 double fdim(double x, double y) {
@@ -108,24 +301,179 @@ double fdim(double x, double y) {
     return 0;
 }
 
-double fmax(double x, double y) {
-  if(x>y)
+double round(double x) {
+  if (__isnan(x) || __isinf(x) || __iszero(x))
     return x;
-  else
-    return y;
+  double rete = __VERIFIER_nondet_double();
+  double reta = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv64td($double.round.rne(@));", rete, x);
+  __SMACK_code("@ := sbv64td($double.round.rna(@));", reta, x);
+  if (x > 0)
+	  return fmax(rete, reta);
+  return fmin(rete, reta);
+}
+
+long lround(double x) {
+  long ret = __VERIFIER_nondet_long();
+  __SMACK_code("@ := $double.lround(@);", ret, x);
+  return ret;
+}
+
+double rint(double x) {
+  return round(x);
+}
+
+double nearbyint(double x) {
+  return round(x);
+}
+
+long lrint(double x) {
+  return lround(x);
+}
+
+double floor(double x) {
+  if (__isnan(x) || __isinf(x) || __iszero(x))
+    return x;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv64td($double.floor(@));", ret, x);
+  return ret;
+}
+
+double ceil(double x) {
+  if (__isnan(x) || __isinf(x) || __iszero(x))
+    return x;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv64td($double.ceil(@));", ret, x);
+  return ret;
+}
+
+double trunc(double x) {
+  if (__isnan(x) || __isinf(x) || __iszero(x))
+    return x;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := sbv64td($double.trunc(@));", ret, x);
+  return ret;
+}
+
+double sqrt(double x) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $double.sqrt(@);", ret, x);
+  return ret;
+}
+
+double remainder(double x, double y) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $double.rem(@, @);", ret, x, y);
+  return ret;
 }
 
 double fmin(double x, double y) {
-  if(x<y)
-    return x;
-  else
-    return y;
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $double.min(@, @);", ret, x, y);
+  return ret;
 }
 
+double fmax(double x, double y) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $double.max(@, @);", ret, x, y);
+  return ret;
+}
+
+double fmod(double x, double y) {
+  double result = remainder(fabs(x), fabs(y));
+  if (signbit(result))
+    result += fabs(y);
+  return copysign(result, x);
+}
+
+double modf(double x, double* y) {
+  *y = floor(x);
+  return x - *y;
+}
+
+double copysign(double x, double y) {
+  double ret = __VERIFIER_nondet_double();
+  if (__isnegative(x)^__isnegative(y))
+    __SMACK_code("@ := $fmul.bvdouble(@, -0e1023f53e11);", ret, x);
+  else
+    ret = x;
+  return ret;
+}
+
+double nan(const char* x) {
+  return 0.0/0.0;
+}
+
+int __isnormal(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.normal(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __isSubnormal(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.subnormal(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __iszero(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.zero(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+  
+int __isinf(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.infinite(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+  
 int __isnan(double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $double.nan(@) then 1bv32 else 0bv32;", ret, x);
   return ret;
+}
+
+int __isnegative(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.negative(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __ispositive(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $double.positive(@) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int __signbit(double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if (@ <= 0e0f53e11) then 1bv32 else 0bv32;", ret, x);
+  return ret;
+}
+
+int signbit(double x) {
+  return __signbit(x);
+}
+
+int __fpclassify(double x) {
+  if (__isnan(x))
+    return 0;
+  if (__isinf(x))
+    return 1;
+  if (__iszero(x))
+    return 2;
+  if (__isSubnormal(x))
+    return 3;
+  return 4;
+}
+
+int fpclassify(double x) {
+  return __fpclassify(x);
+}
+
+int __finite(double x) {
+  return !__isinf(x);
 }
 #endif
 
@@ -934,6 +1282,20 @@ void __SMACK_decls() {
   D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
   D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
   
+  D("function {:builtin \"fp.abs\"} $float.abs(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.fma\"} $float.fma(bvfloat, bvfloat, bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.sqrt\"} $float.sqrt(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.rem\"} $float.rem(bvfloat, bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.min\"} $float.min(bvfloat, bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.max\"} $float.max(bvfloat, bvfloat) returns (bvfloat);");
+  
+  D("function {:builtin \"fp.abs\"} $double.abs(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.fma\"} $double.fma(bvdouble, bvdouble, bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.sqrt\"} $double.sqrt(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.rem\"} $double.rem(bvdouble, bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.min\"} $double.min(bvdouble, bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.max\"} $double.max(bvdouble, bvdouble) returns (bvdouble);");
+  
   D("function {:builtin \"fp.isNormal\"} $float.normal(bvfloat) returns (bool);");
   D("function {:builtin \"fp.isSubnormal\"} $float.subnormal(bvfloat) returns (bool);");
   D("function {:builtin \"fp.isZero\"} $float.zero(bvfloat) returns (bool);");
@@ -1020,50 +1382,76 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} ftubv16(bvfloat) returns (bv16);");
   D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} ftubv8(bvfloat) returns (bv8);");
   
-  DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2si, {ftsbv128(i)});
+  // Add truncation for default casts to int
+  D("function {:builtin \"(_ fp.to_sbv 128) RTZ\"} ftsi128(bvfloat) returns (bv128);");
+  D("function {:builtin \"(_ fp.to_sbv 96) RTZ\"} ftsi96(bvfloat) returns (bv96);");
+  D("function {:builtin \"(_ fp.to_sbv 88) RTZ\"} ftsi88(bvfloat) returns (bv88);");
+  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} ftsi64(bvfloat) returns (bv64);");
+  D("function {:builtin \"(_ fp.to_sbv 56) RTZ\"} ftsi56(bvfloat) returns (bv56);");
+  D("function {:builtin \"(_ fp.to_sbv 48) RTZ\"} ftsi48(bvfloat) returns (bv48);");
+  D("function {:builtin \"(_ fp.to_sbv 40) RTZ\"} ftsi40(bvfloat) returns (bv40);");
+  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} ftsi32(bvfloat) returns (bv32);");
+  D("function {:builtin \"(_ fp.to_sbv 24) RTZ\"} ftsi24(bvfloat) returns (bv24);");
+  D("function {:builtin \"(_ fp.to_sbv 16) RTZ\"} ftsi16(bvfloat) returns (bv16);");
+  D("function {:builtin \"(_ fp.to_sbv 8) RTZ\"} ftsi8(bvfloat) returns (bv8);");
+  
+  DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2si, {ftsi128(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2ui, {ftubv128(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvfloat, $si2fp, {sbv128tf(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvfloat, $ui2fp, {ubv128tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv96, $fp2si, {ftsbv96(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv96, $fp2si, {ftsi96(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv96, $fp2ui, {ftubv96(i)});
   DECLARE(INLINE_CONVERSION, bv96, bvfloat, $si2fp, {sbv96tf(i)});
   DECLARE(INLINE_CONVERSION, bv96, bvfloat, $ui2fp, {ubv96tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv88, $fp2si, {ftsbv88(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv88, $fp2si, {ftsi88(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv88, $fp2ui, {ftubv88(i)});
   DECLARE(INLINE_CONVERSION, bv88, bvfloat, $si2fp, {sbv88tf(i)});
   DECLARE(INLINE_CONVERSION, bv88, bvfloat, $ui2fp, {ubv88tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv64, $fp2si, {ftsbv64(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv64, $fp2si, {ftsi64(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv64, $fp2ui, {ftubv64(i)});
   DECLARE(INLINE_CONVERSION, bv64, bvfloat, $si2fp, {sbv64tf(i)});
   DECLARE(INLINE_CONVERSION, bv64, bvfloat, $ui2fp, {ubv64tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv56, $fp2si, {ftsbv56(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv56, $fp2si, {ftsi56(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv56, $fp2ui, {ftubv56(i)});
   DECLARE(INLINE_CONVERSION, bv56, bvfloat, $si2fp, {sbv56tf(i)});
   DECLARE(INLINE_CONVERSION, bv56, bvfloat, $ui2fp, {ubv56tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv48, $fp2si, {ftsbv48(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv48, $fp2si, {ftsi48(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv48, $fp2ui, {ftubv48(i)});
   DECLARE(INLINE_CONVERSION, bv48, bvfloat, $si2fp, {sbv48tf(i)});
   DECLARE(INLINE_CONVERSION, bv48, bvfloat, $ui2fp, {ubv48tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv40, $fp2si, {ftsbv40(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv40, $fp2si, {ftsi40(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv40, $fp2ui, {ftubv40(i)});
   DECLARE(INLINE_CONVERSION, bv40, bvfloat, $si2fp, {sbv40tf(i)});
   DECLARE(INLINE_CONVERSION, bv40, bvfloat, $ui2fp, {ubv40tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv32, $fp2si, {ftsbv32(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv32, $fp2si, {ftsi32(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv32, $fp2ui, {ftubv32(i)});
   DECLARE(INLINE_CONVERSION, bv32, bvfloat, $si2fp, {sbv32tf(i)});
   DECLARE(INLINE_CONVERSION, bv32, bvfloat, $ui2fp, {ubv32tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv24, $fp2si, {ftsbv24(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv24, $fp2si, {ftsi24(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv24, $fp2ui, {ftubv24(i)});
   DECLARE(INLINE_CONVERSION, bv24, bvfloat, $si2fp, {sbv24tf(i)});
   DECLARE(INLINE_CONVERSION, bv24, bvfloat, $ui2fp, {ubv24tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv16, $fp2si, {ftsbv16(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv16, $fp2si, {ftsi16(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv16, $fp2ui, {ftubv16(i)});
   DECLARE(INLINE_CONVERSION, bv16, bvfloat, $si2fp, {sbv16tf(i)});
   DECLARE(INLINE_CONVERSION, bv16, bvfloat, $ui2fp, {ubv16tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2si, {ftsbv8(i)});
+  DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2si, {ftsi8(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2ui, {ftubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvfloat, $si2fp, {sbv8tf(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvfloat, $ui2fp, {ubv8tf(i)});
+  
+  D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $float.round(bvfloat) returns (bv32);");
+  D("function {:builtin \"(_ fp.to_sbv 32) RTN\"} $float.floor(bvfloat) returns (bv32);");
+  D("function {:builtin \"(_ fp.to_sbv 32) RTP\"} $float.ceil(bvfloat) returns (bv32);");
+  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} $float.trunc(bvfloat) returns (bv32);");
+  
+  #if BUILD_64
+    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $float.lround(bvfloat) returns (bv64);");
+	
+  #else
+    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $float.lround(bvfloat) returns (bv32);");
+
+  #endif
   
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
@@ -1117,50 +1505,77 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} dtubv16(bvdouble) returns (bv16);");
   D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} dtubv8(bvdouble) returns (bv8);");
   
-  DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2si, {dtsbv128(i)});
+  // Add truncation for default casts to int
+  D("function {:builtin \"(_ fp.to_sbv 128) RTZ\"} dtsi128(bvdouble) returns (bv128);");
+  D("function {:builtin \"(_ fp.to_sbv 96) RTZ\"} dtsi96(bvdouble) returns (bv96);");
+  D("function {:builtin \"(_ fp.to_sbv 88) RTZ\"} dtsi88(bvdouble) returns (bv88);");
+  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} dtsi64(bvdouble) returns (bv64);");
+  D("function {:builtin \"(_ fp.to_sbv 56) RTZ\"} dtsi56(bvdouble) returns (bv56);");
+  D("function {:builtin \"(_ fp.to_sbv 48) RTZ\"} dtsi48(bvdouble) returns (bv48);");
+  D("function {:builtin \"(_ fp.to_sbv 40) RTZ\"} dtsi40(bvdouble) returns (bv40);");
+  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} dtsi32(bvdouble) returns (bv32);");
+  D("function {:builtin \"(_ fp.to_sbv 24) RTZ\"} dtsi24(bvdouble) returns (bv24);");
+  D("function {:builtin \"(_ fp.to_sbv 16) RTZ\"} dtsi16(bvdouble) returns (bv16);");
+  D("function {:builtin \"(_ fp.to_sbv 8) RTZ\"} dtsi8(bvdouble) returns (bv8);");
+  
+  DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2si, {dtsi128(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2ui, {dtubv128(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvdouble, $si2fp, {sbv128td(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvdouble, $ui2fp, {ubv128td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv96, $fp2si, {dtsbv96(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv96, $fp2si, {dtsi96(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv96, $fp2ui, {dtubv96(i)});
   DECLARE(INLINE_CONVERSION, bv96, bvdouble, $si2fp, {sbv96td(i)});
   DECLARE(INLINE_CONVERSION, bv96, bvdouble, $ui2fp, {ubv96td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv88, $fp2si, {dtsbv88(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv88, $fp2si, {dtsi88(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv88, $fp2ui, {dtubv88(i)});
   DECLARE(INLINE_CONVERSION, bv88, bvdouble, $si2fp, {sbv88td(i)});
   DECLARE(INLINE_CONVERSION, bv88, bvdouble, $ui2fp, {ubv88td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv64, $fp2si, {dtsbv64(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv64, $fp2si, {dtsi64(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv64, $fp2ui, {dtubv64(i)});
   DECLARE(INLINE_CONVERSION, bv64, bvdouble, $si2fp, {sbv64td(i)});
   DECLARE(INLINE_CONVERSION, bv64, bvdouble, $ui2fp, {ubv64td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv56, $fp2si, {dtsbv56(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv56, $fp2si, {dtsi56(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv56, $fp2ui, {dtubv56(i)});
   DECLARE(INLINE_CONVERSION, bv56, bvdouble, $si2fp, {sbv56td(i)});
   DECLARE(INLINE_CONVERSION, bv56, bvdouble, $ui2fp, {ubv56td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv48, $fp2si, {dtsbv48(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv48, $fp2si, {dtsi48(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv48, $fp2ui, {dtubv48(i)});
   DECLARE(INLINE_CONVERSION, bv48, bvdouble, $si2fp, {sbv48td(i)});
   DECLARE(INLINE_CONVERSION, bv48, bvdouble, $ui2fp, {ubv48td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv40, $fp2si, {dtsbv40(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv40, $fp2si, {dtsi40(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv40, $fp2ui, {dtubv40(i)});
   DECLARE(INLINE_CONVERSION, bv40, bvdouble, $si2fp, {sbv40td(i)});
   DECLARE(INLINE_CONVERSION, bv40, bvdouble, $ui2fp, {ubv40td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv32, $fp2si, {dtsbv32(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv32, $fp2si, {dtsi32(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv32, $fp2ui, {dtubv32(i)});
   DECLARE(INLINE_CONVERSION, bv32, bvdouble, $si2fp, {sbv32td(i)});
   DECLARE(INLINE_CONVERSION, bv32, bvdouble, $ui2fp, {ubv32td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv24, $fp2si, {dtsbv24(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv24, $fp2si, {dtsi24(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv24, $fp2ui, {dtubv24(i)});
   DECLARE(INLINE_CONVERSION, bv24, bvdouble, $si2fp, {sbv24td(i)});
   DECLARE(INLINE_CONVERSION, bv24, bvdouble, $ui2fp, {ubv24td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv16, $fp2si, {dtsbv16(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv16, $fp2si, {dtsi16(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv16, $fp2ui, {dtubv16(i)});
   DECLARE(INLINE_CONVERSION, bv16, bvdouble, $si2fp, {sbv16td(i)});
   DECLARE(INLINE_CONVERSION, bv16, bvdouble, $ui2fp, {ubv16td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2si, {dtsbv8(i)});
+  DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2si, {dtsi8(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2ui, {dtubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $si2fp, {sbv8td(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $ui2fp, {ubv8td(i)});
+  
+  D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} $double.round.rne(bvdouble) returns (bv64);");
+  D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $double.round.rna(bvdouble) returns (bv64);");
+  D("function {:builtin \"(_ fp.to_sbv 64) RTN\"} $double.floor(bvdouble) returns (bv64);");
+  D("function {:builtin \"(_ fp.to_sbv 64) RTP\"} $double.ceil(bvdouble) returns (bv64);");
+  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} $double.trunc(bvdouble) returns (bv64);");
+  
+  #if BUILD_64
+    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $double.lround.rne(bvdouble) returns (bv64);");
+	
+  #else
+    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $double.lround.rna(bvdouble) returns (bv32);");
+
+  #endif
   
 #endif
 
