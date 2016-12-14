@@ -1125,9 +1125,11 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   if (!size)
     size = targetData->getPrefTypeAlignment(v->getType());
 
+  // Add padding between globals to be able to check memory overflows/underflows
+  const unsigned globalsPadding = 1024;
   decls.push_back(Decl::axiom(Expr::eq(
     Expr::id(name),
-    pointerLit(external ? externsBottom -= size : globalsBottom -= size) )));
+    pointerLit(external ? externsBottom -= size : globalsBottom -= (size + globalsPadding)) )));
 
   globalAllocations[v] = size;
 
