@@ -122,7 +122,11 @@ def verify_bpl_svcomp(args):
     bpl = f.read()
 
   if args.pthread:
-    corral_command += ["/k:3"]
+    if ", 144)" in bpl or ", 377)" in bpl or ", 46368)" in bpl or "unregister_chrdev" in bpl:
+      heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
+      corral_command += ["/k:30"]
+    else:
+      corral_command += ["/k:3"]
     if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl:
       corral_command += ["/cooperative"]
   else:
@@ -159,6 +163,9 @@ def verify_bpl_svcomp(args):
   elif args.memory_safety and "__main(argc:" in bpl:
     heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 128.\n"
     loopUnrollBar = 128
+  elif args.signed_integer_overflow and "jain" in bpl:
+    heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"

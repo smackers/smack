@@ -280,10 +280,14 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
 
 void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
   processInstruction(evi);
-  const Expr* e = rep.expr(evi.getAggregateOperand());
-  for (unsigned i = 0; i < evi.getNumIndices(); i++)
-    e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long) evi.getIndices()[i]));
-  emit(Stmt::assign(rep.expr(&evi),e));
+  if (!SmackOptions::BitPrecise) {
+    const Expr* e = rep.expr(evi.getAggregateOperand());
+    for (unsigned i = 0; i < evi.getNumIndices(); i++)
+      e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long) evi.getIndices()[i]));
+    emit(Stmt::assign(rep.expr(&evi),e));
+  } else {
+    WARN("Ignoring extract instruction under bit vector mode.");
+  }
 }
 
 void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
