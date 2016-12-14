@@ -25,17 +25,14 @@ def svcomp_frontend(args):
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.bit_precise = True
-    #if file_type == 'float' and args.req_rounding:
+	#Should be safe to comment out
+    #if file_type == 'float':
       #sys.exit(smack.top.results(args)['unknown'])
     args.execute = executable
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
-  
-  #args.req_rounding = bool(re.search("fesetround|fegetround",...))
-  if args.req_rounding:  #Should only be called in case of float program
-    sys.exit(smack.top.results(args)['unknown'])
-	
+
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DNO_FORALL"
@@ -72,8 +69,6 @@ def svcomp_process_file(args, name, ext):
       # replace all occurrences of 100000 with 10
       # Only target at small examples
       s = re.sub(r'100000', r'10', s)
-    #Check for rounding for floats
-    args.req_rounding = bool(re.search("fesetround|fegetround",s))
     #Remove any preprocessed declarations of pthread types
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = filters.scrub_pthreads(s)
