@@ -162,6 +162,9 @@ def verify_bpl_svcomp(args):
   elif args.memory_safety and "__main(argc:" in bpl:
     heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 128.\n"
     loopUnrollBar = 128
+  elif args.signed_integer_overflow and "jain" in bpl:
+    heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
