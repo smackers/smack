@@ -266,9 +266,11 @@ def verify_bpl_svcomp(args):
   sys.exit(smack.top.results(args)[result])
 
 def write_error_file(args, status, verifier_output):
-  hasBug = (status != 'verified' and status != 'timeout' and status != 'unknown')
-  if not hasBug:
+  if args.memory_safety or status == 'timeout' or status == 'unknown':
     return
+  hasBug = (status != 'verified')
+  #if not hasBug:
+  #  return
   if args.error_file:
     error = None
     if args.language == 'svcomp':
