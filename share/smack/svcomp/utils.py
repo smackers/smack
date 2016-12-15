@@ -131,7 +131,7 @@ def verify_bpl_svcomp(args):
       corral_command += ["/k:30"]
     else:
       corral_command += ["/k:3"]
-    if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl:
+    if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl and not "fib_bench" in bpl:
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
