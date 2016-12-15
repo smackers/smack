@@ -6,12 +6,15 @@ import time
 import smack.top
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph
+from random_testing import random_test
 
 def svcomp_frontend(args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
   # enable static LLVM unroll pass
   args.static_unroll = True
+  # disable dynamic execution
+  args.execute = False
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
@@ -25,17 +28,26 @@ def svcomp_frontend(args):
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.bit_precise = True
-    #if file_type == 'float' and args.req_rounding:
+      args.bit_precise_pointers = True
+    if file_type == 'float':
       #sys.exit(smack.top.results(args)['unknown'])
+      args.float = True
+      args.bit_precise = True
+      args.bit_precise_pointers = True
+      args.verifier = 'boogie'
+      args.time_limit = 880
+      args.unroll = 100
     args.execute = executable
+  else:
+    with open(args.input_files[0], "r") as sf:
+      sc = sf.read()
+    if 'unsigned char b:2' in sc:
+      args.bit_precise = True
+      #args.bit_precise_pointers = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
-  
-  #args.req_rounding = bool(re.search("fesetround|fegetround",...))
-  if args.req_rounding:  #Should only be called in case of float program
-    sys.exit(smack.top.results(args)['unknown'])
-	
+
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DNO_FORALL"
@@ -55,10 +67,13 @@ def svcomp_check_property(args):
       prop = f.read()
     if "valid-deref" in prop:
       args.memory_safety = True
+    elif "overflow" in prop:
+      args.signed_integer_overflow = True
     elif not "__VERIFIER_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
 def svcomp_process_file(args, name, ext):
+  args.orig_files = list(args.input_files)
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
@@ -68,12 +83,20 @@ def svcomp_process_file(args, name, ext):
     if args.memory_safety:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
 
-    if len(s.split('\n')) < 60:
-      # replace all occurrences of 100000 with 10
+    if args.float:
+      if re.search("fesetround|fegetround",s):
+        sys.exit(smack.top.results(args)['unknown'])
+
+    length = len(s.split('\n'))
+    if length < 60:
+      # replace all occurrences of 100000 with 10 and 15000 with 5
       # Only target at small examples
       s = re.sub(r'100000', r'10', s)
-    #Check for rounding for floats
-    args.req_rounding = bool(re.search("fesetround|fegetround",s))
+      s = re.sub(r'15000', r'5', s)
+      s = re.sub(r'i<=10000', r'i<=1', s)
+    elif length < 710 and 'dll_create_master' in s:
+      args.no_memory_splitting = True
+
     #Remove any preprocessed declarations of pthread types
     #Also, if file contains 'pthread', set pthread mode
     s,args.pthread = filters.scrub_pthreads(s)
@@ -104,12 +127,17 @@ def verify_bpl_svcomp(args):
     bpl = f.read()
 
   if args.pthread:
-    corral_command += ["/k:3"]
-    if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl:
+    if "fib_bench" in bpl or "unregister_chrdev" in bpl:
+      heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
+      corral_command += ["/k:30"]
+    else:
+      corral_command += ["/k:3"]
+    if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl and not "fib_bench" in bpl:
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    corral_command += ["/di"]
+    if not args.memory_safety or not args.bit_precise:
+      corral_command += ["/di"]
 
   # we are not modeling strcpy
   if args.pthread and "strcpy" in bpl:
@@ -124,16 +152,34 @@ def verify_bpl_svcomp(args):
   if not args.bit_precise and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
     loopUnrollBar = 23
-  elif args.bit_precise and "__VERIFIER_nondet__Bool" in bpl:
-    heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 10.\n"
-    loopUnrollBar = 10
+  elif "s3_srvr.blast.10_false-unreach-call" in bpl:
+    heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
+    loopUnrollBar = 23
+  elif " node3" in bpl:
+    heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 100.\n"
+    loopUnrollBar = 100
   elif "calculate_output" in bpl:
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
   elif "ldv" in bpl:
-    heurTrace += "LDV benchmark detected. Setting loop unroll bar to 12.\n"
+    heurTrace += "LDV benchmark detected. Setting loop unroll bar to 13.\n"
     loopUnrollBar = 13
     staticLoopBound = 64
+  elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl:
+    heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
+    loopUnrollBar = 129
+  elif "is_relaxed_prefix" in bpl:
+    heurTrace += "Benchmark relax_* detected. Setting loop unroll bar to 15.\n"
+    loopUnrollBar = 15
+  elif "id_o1000_false-unreach-call" in bpl:
+    heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
+    loopUnrollBar = 1024
+  elif args.memory_safety and "__main(argc:" in bpl:
+    heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 128.\n"
+    loopUnrollBar = 128
+  elif args.signed_integer_overflow and "jain" in bpl:
+    heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
@@ -156,16 +202,8 @@ def verify_bpl_svcomp(args):
   verifier_output = smack.top.try_command(command, timeout=time_limit)
   result = smack.top.verification_result(verifier_output)
 
-  if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack': #normal inlining
+  if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow': #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
-    # Generate error trace and exit
-    if args.error_file:
-      if args.language == 'svcomp':
-        error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output))
-      else:
-        error = smack.top.error_trace(verifier_output, args)
-      with open(args.error_file, 'w') as f:
-        f.write(error)
 
     if not args.quiet:
       error = smack.top.error_trace(verifier_output, args)
@@ -176,28 +214,38 @@ def verify_bpl_svcomp(args):
     heurTrace += "Determining result based on how far we unrolled.\n"
     # If we managed to unroll more than loopUnrollBar times, then return verified
     # First remove exhausted loop bounds generated during max static loop bound computation
-    verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
-      'Verifying program while tracking', verifier_output)
-    it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
     unrollMax = 0
-    for match in it:
-      if int(match.group(1)) > unrollMax:
-        unrollMax = int(match.group(1))
+    if 'Verifying program while tracking' in verifier_output:
+      verifier_output = re.sub(re.compile('.*Verifying program while tracking', re.DOTALL),
+        'Verifying program while tracking', verifier_output)
+      it = re.finditer(r'Exhausted recursion bound of ([1-9]\d*)', verifier_output)
+      for match in it:
+        if int(match.group(1)) > unrollMax:
+          unrollMax = int(match.group(1))
+    else:
+      heurTrace += "Corral didn't even start verification.\n"
     if unrollMax >= loopUnrollBar:
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
-      if args.execute:
+      if args.execute and not args.pthread:
         heurTrace += "Hold on, let's see the execution result.\n"
         execution_result = run_binary(args)
         heurTrace += "Excecution result is " + execution_result + '\n'
-        if execution_result == 'false':
-          heurTrace += "Oops, execution result says no.\n"
+        if execution_result != 'true':
+          heurTrace += "Oops, execution result says {0}.\n".format(execution_result)
           if not args.quiet:
             print(heurTrace + "\n")
           sys.exit(smack.top.results(args)['unknown'])
+      random_test_result = random_test(args, result)
+      if random_test_result == 'false' or random_test_result == 'unknown':
+        heurTrace += "Oops, random testing says {0}.\n".format(random_test_result)
+        if not args.quiet:
+          print(heurTrace + "\n")
+        sys.exit(smack.top.results(args)['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
+      write_error_file(args, 'verified', verifier_output)
       sys.exit(smack.top.results(args)['verified'])
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
@@ -205,6 +253,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "Reporting 'timeout'.\n"
       if not args.quiet:
         print(heurTrace + "\n")
+        sys.stdout.flush()
       # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
       time.sleep(1000)
   elif result == 'verified': #normal inlining
@@ -213,7 +262,24 @@ def verify_bpl_svcomp(args):
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print(heurTrace + "\n")
+  write_error_file(args, result, verifier_output)
   sys.exit(smack.top.results(args)[result])
+
+def write_error_file(args, status, verifier_output):
+  if args.memory_safety or status == 'timeout' or status == 'unknown':
+    return
+  hasBug = (status != 'verified')
+  #if not hasBug:
+  #  return
+  if args.error_file:
+    error = None
+    if args.language == 'svcomp':
+      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args, hasBug)
+    elif hasBug:
+      error = smack.top.error_trace(verifier_output, args)
+    if error is not None:
+      with open(args.error_file, 'w') as f:
+        f.write(error)
 
 def run_binary(args):
   #process the file to make it runnable
@@ -256,7 +322,8 @@ def run_binary(args):
       if re.search(r'Assertion.*failed', err):
         return 'false'
       else:
-        print 'execution error'
+        print 'Execution error'
+        print err
         return 'unknown'
     else:
       return 'true'

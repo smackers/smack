@@ -39,6 +39,7 @@ def results(args):
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
     'invalid-memtrack': 'SMACK found an error: memory leak.',
+    'overflow': 'SMACK found an error: signed integer overflow.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -140,6 +141,9 @@ def arguments():
 
   translate_group.add_argument('--memory-safety', action='store_true', default=False,
     help='enable memory safety checks')
+
+  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
+    help='enable signed integer overflow checks')
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -294,12 +298,13 @@ def smack_headers():
 def smack_lib():
   return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
-def default_clang_compile_command(args):
+def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   cmd += ['-I' + smack_headers()]
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
+  if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 
@@ -309,11 +314,11 @@ def build_libs(args):
   libs = ['smack.c']
 
   if args.pthread:
-    libs += ['pthread.c', 'spinlock.c']
+    libs += ['pthread.c']
 
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(default_clang_compile_command(args) + ['-o', bc, c])
+    try_command(default_clang_compile_command(args, True) + ['-o', bc, c])
     bitcodes.append(bc)
 
   return bitcodes
@@ -391,6 +396,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
+  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
   try_command(cmd, console=True)
   annotate_bpl(args)
@@ -430,6 +436,8 @@ def verification_result(verifier_output):
       return 'invalid-free'
     elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
       return 'invalid-memtrack'
+    elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
+      return 'overflow'
     else:
       listCall = re.findall(r'\(CALL .+\)', verifier_output)
       if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
@@ -491,7 +499,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack':
+    if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow':
       error = error_trace(verifier_output, args)
 
       if args.error_file:

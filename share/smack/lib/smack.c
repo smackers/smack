@@ -2,6 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 
 #include <smack.h>
+#include <limits.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -33,13 +34,27 @@ void __VERIFIER_assume(int x) {
 
 #ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
+#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_dummy(x); __SMACK_code("assert @ != $0;", x);
+#endif
 }
 #endif
 
 void __VERIFIER_error(void) {
+#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_code("assert false;");
+#endif
 }
+
+#if SIGNED_INTEGER_OVERFLOW_CHECK
+void __SMACK_overflow_false(void) {
+  __SMACK_code("assert {:overflow} false;");
+}
+
+void __SMACK_check_overflow(int flag) {
+  __SMACK_dummy(flag); __SMACK_code("assert {:overflow} @ == $0;", flag);
+}
+#endif
 
 void exit(int x) {
 #if MEMORY_SAFETY
@@ -49,33 +64,174 @@ void exit(int x) {
   while(1);
 }
 
+char __VERIFIER_nondet_char() {
+  char x = __SMACK_nondet_char();
+  __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
+  return x;
+}
+
+signed char __VERIFIER_nondet_signed_char() {
+  signed char x = __SMACK_nondet_signed_char();
+  __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
+  return x;
+}
+
+unsigned char __VERIFIER_nondet_unsigned_char() {
+  unsigned char x = __SMACK_nondet_unsigned_char();
+  __VERIFIER_assume(x >= 0 && x <= UCHAR_MAX);
+  return x;
+}
+
+short __VERIFIER_nondet_short() {
+  short x = __SMACK_nondet_short();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+  return x;
+}
+
+signed short __VERIFIER_nondet_signed_short() {
+  signed short x = __SMACK_nondet_signed_short();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+  return x;
+}
+
+signed short int __VERIFIER_nondet_signed_short_int() {
+  signed short int x = __SMACK_nondet_signed_short_int();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+  return x;
+}
+
+unsigned short __VERIFIER_nondet_unsigned_short() {
+  unsigned short x = __SMACK_nondet_unsigned_short();
+  __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
+  return x;
+}
+
+unsigned short int __VERIFIER_nondet_unsigned_short_int() {
+  unsigned short int x = __SMACK_nondet_unsigned_short_int();
+  __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
+  return x;
+}
+
+int __VERIFIER_nondet_int() {
+  int x = __SMACK_nondet_int();
+  __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
+  return x;
+}
+
+signed int __VERIFIER_nondet_signed_int() {
+  signed int x = __SMACK_nondet_signed_int();
+  __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
+  return x;
+}
+
+unsigned __VERIFIER_nondet_unsigned() {
+  unsigned x = __SMACK_nondet_unsigned();
+  __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
+  return x;
+}
+
+unsigned int __VERIFIER_nondet_unsigned_int() {
+  unsigned int x = __SMACK_nondet_unsigned_int();
+  __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
+  return x;
+}
+
+long __VERIFIER_nondet_long() {
+  long x = __SMACK_nondet_long();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+long int __VERIFIER_nondet_long_int() {
+  long int x = __SMACK_nondet_long_int();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+signed long __VERIFIER_nondet_signed_long() {
+  signed long x = __SMACK_nondet_signed_long();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+signed long int __VERIFIER_nondet_signed_long_int() {
+  signed long int x = __SMACK_nondet_signed_long_int();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+unsigned long __VERIFIER_nondet_unsigned_long() {
+  unsigned long x = __SMACK_nondet_unsigned_long();
+  __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
+  return x;
+}
+
+unsigned long int __VERIFIER_nondet_unsigned_long_int() {
+  unsigned long int x = __SMACK_nondet_unsigned_long_int();
+  __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
+  return x;
+}
+
+long long __VERIFIER_nondet_long_long() {
+  long long x = __SMACK_nondet_long_long();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+long long int __VERIFIER_nondet_long_long_int() {
+  long long int x = __SMACK_nondet_long_long_int();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+signed long long __VERIFIER_nondet_signed_long_long() {
+  signed long long x = __SMACK_nondet_signed_long_long();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+signed long long int __VERIFIER_nondet_signed_long_long_int() {
+  signed long long int x = __SMACK_nondet_signed_long_long_int();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+unsigned long long __VERIFIER_nondet_unsigned_long_long() {
+  unsigned long long x = __SMACK_nondet_unsigned_long_long();
+  __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
+  return x;
+}
+
+unsigned long long int __VERIFIER_nondet_unsigned_long_long_int() {
+  unsigned long long int x = __SMACK_nondet_unsigned_long_long_int();
+  __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
+  return x;
+}
+
 // Apparently used in SVCCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();
+  __VERIFIER_assume(x == 0 || x == 1);
   return x;
 }
 
 unsigned char __VERIFIER_nondet_uchar(void) {
   unsigned char x = __VERIFIER_nondet_unsigned_char();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
 unsigned short __VERIFIER_nondet_ushort(void) {
   unsigned short x = __VERIFIER_nondet_unsigned_short();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
 unsigned int __VERIFIER_nondet_uint(void) {
   unsigned int x = __VERIFIER_nondet_unsigned_int();
-  __VERIFIER_assume(x >= 0);
   return x;
  }
 
 unsigned long __VERIFIER_nondet_ulong(void) {
   unsigned long x = __VERIFIER_nondet_unsigned_long();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
@@ -547,7 +703,7 @@ void __SMACK_dummy(int v) {
 
 #define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
   function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
-  
+
 #define FPBUILTIN_UNARY_OP(type,name,prim) \
   function {:bvbuiltin xstr(prim)} name.type(f: type) returns (type);
 
@@ -556,7 +712,7 @@ void __SMACK_dummy(int v) {
 
 #define FPBUILTIN_BINARY_PRED(type,name,prim) \
   function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (i1);
-  
+
 #define INLINE_FPBUILTIN_BINARY_PRED(type,name,prim) \
   function {:bvbuiltin xstr(prim)} name.type.bool(f1: type, f2: type) returns (bool); \
   function {:inline} name.type(f1: type, f2: type) returns (bv1) {if name.type.bool(f1,f2) then 1bv1 else 0bv1}
@@ -596,7 +752,7 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bv16,args))); \
   D(xstr(M(bv8,args))); \
   D(xstr(M(bv1,args)));
-  
+
 #define DECLARE_EACH_FLOAT_TYPE(M,args...) \
   D(xstr(M(bvfloat,args))); \
   D(xstr(M(bvdouble,args)));
@@ -894,6 +1050,7 @@ void __SMACK_decls() {
   D("axiom $xor.i1(0,1) == 1;");
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
+  D("axiom($and.i32(32, 16) == 0);");
 
   DECLARE(INLINE_CONVERSION,i128,i96,$trunc,{i});
   DECLARE(INLINE_CONVERSION,i128,i88,$trunc,{i});
@@ -1103,9 +1260,9 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION,i88,i96,$sext,{i});
   DECLARE(INLINE_CONVERSION,i88,i128,$sext,{i});
   DECLARE(INLINE_CONVERSION,i96,i128,$sext,{i});
-  
+
   //Non bit-precise modeling of floating-points
-  
+
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
   D("function $fadd.float(f1:float, f2:float) returns (float);");
   D("function $fsub.float(f1:float, f2:float) returns (float);");
@@ -1303,7 +1460,7 @@ void __SMACK_decls() {
   D("function {:builtin \"fp.isNaN\"} $float.nan(bvfloat) returns (bool);");
   D("function {:builtin \"fp.isNegative\"} $float.negative(bvfloat) returns (bool);");
   D("function {:builtin \"fp.isPositive\"} $float.positive(bvfloat) returns (bool);");
-  
+
   D("function {:builtin \"fp.isNormal\"} $double.normal(bvdouble) returns (bool);");
   D("function {:builtin \"fp.isSubnormal\"} $double.subnormal(bvdouble) returns (bool);");
   D("function {:builtin \"fp.isZero\"} $double.zero(bvdouble) returns (bool);");
@@ -1311,7 +1468,7 @@ void __SMACK_decls() {
   D("function {:builtin \"fp.isNaN\"} $double.nan(bvdouble) returns (bool);");
   D("function {:builtin \"fp.isNegative\"} $double.negative(bvdouble) returns (bool);");
   D("function {:builtin \"fp.isPositive\"} $double.positive(bvdouble) returns (bool);");
-  
+
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, i1 != i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fole, i1 <= i2)
@@ -1324,19 +1481,19 @@ void __SMACK_decls() {
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fult, i1 < i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fuge, i1 >= i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fugt, i1 > i2)
-  
+
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
   DECLARE(INLINE_CONVERSION,bvdouble,bvfloat,$fptrunc,{dtf(i)});
   DECLARE(INLINE_CONVERSION,bvfloat,bvdouble,$fpext,{ftd(i)});
-  
+
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
   D("function {:inline} $funo.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
-  
+
   D("function $fptrunc.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
   D("function $fpext.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
-  
+
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv128tf(bv128) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv96tf(bv96) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv88tf(bv88) returns (bvfloat);");
@@ -1456,10 +1613,10 @@ void __SMACK_decls() {
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
   D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
-  
+
   D("function $fptrunc.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
   D("function $fpext.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
-  
+
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv128td(bv128) returns (bvdouble);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv96td(bv96) returns (bvdouble);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv88td(bv88) returns (bvdouble);");
@@ -1715,21 +1872,21 @@ void __SMACK_decls() {
   #if FLOAT_ENABLED
   D("function {:inline} $load.bvfloat(M: [ref] bvfloat, p: ref) returns (bvfloat) { M[p] }");
   D("function {:inline} $store.bvfloat(M: [ref] bvfloat, p: ref, v: bvfloat) returns ([ref] bvfloat) { M[p := v] }");
-  
+
   D("function {:inline} $load.bvdouble(M: [ref] bvdouble, p: ref) returns (bvdouble) { M[p] }");
   D("function {:inline} $store.bvdouble(M: [ref] bvdouble, p: ref, v: bvdouble) returns ([ref] bvdouble) { M[p := v] }");
-  
+
   D("function {:inline} $store.bytes.bvfloat(M:[ref]bv8, p:ref, v:bvfloat) returns ([ref]bv8) {"
     "$store.bytes.bv32(M, p, $fp2ui.bvfloat.bv32(v))}");
   D("function {:inline} $store.bytes.bvdouble(M:[ref]bv8, p:ref, v:bvdouble) returns ([ref]bv8) {"
     "$store.bytes.bv64(M, p, $fp2ui.bvdouble.bv64(v))}");
-	
+
   D("function {:inline} $load.bytes.bvfloat(M: [ref] bv8, p: ref) returns (bvfloat) {"
-    "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");	
+    "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");
   D("function {:inline} $load.bytes.bvdouble(M: [ref] bv8, p: ref) returns (bvdouble) {"
     "$ui2fp.bv64.bvdouble($load.bytes.bv64(M, p))}");
   #endif
-	
+
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
@@ -1787,6 +1944,13 @@ void __SMACK_decls() {
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
+  D("procedure $galloc(base_addr: ref, size: ref)\n"
+    "{\n"
+    "  assume $Size(base_addr) == size;\n"
+    "  assume (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) && $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == base_addr);\n"
+    "  $Alloc[base_addr] := true;\n"
+    "}\n");
+
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "modifies $Alloc, $CurrAddr;\n"
     "{\n"
@@ -1810,14 +1974,23 @@ void __SMACK_decls() {
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
     "    assert {:valid_free} $Alloc[p] == true;\n"
+    "    assert {:valid_free} $sgt.ref.bool(p, $0.ref);\n"
     "    $Alloc[p] := false;\n"
     "    $allocatedCounter := $allocatedCounter - 1;\n"
-    "  }\n" 
+    "  }\n"
     "}\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
+
+  D("procedure $galloc(base_addr: ref, size: ref);\n"
+    "modifies $Alloc, $Size;"
+    "ensures $Size[base_addr] == size;\n"
+    "ensures (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) && $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == base_addr);\n"
+    "ensures $Alloc[base_addr];\n"
+    "ensures (forall q: ref :: {$Size[q]} q != base_addr ==> $Size[q] == old($Size[q]));\n"
+    "ensures (forall q: ref :: {$Alloc[q]} q != base_addr ==> $Alloc[q] == old($Alloc[q]));\n");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
@@ -1834,6 +2007,7 @@ void __SMACK_decls() {
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
+    "requires $sgt.ref.bool(p, $0.ref);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
@@ -1842,6 +2016,13 @@ void __SMACK_decls() {
   D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
+
+  D("procedure $galloc(base_addr: ref, size: ref);\n"
+    "modifies $Alloc;"
+    "ensures $Size(base_addr) == size;\n"
+    "ensures (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) && $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == base_addr);\n"
+    "ensures $Alloc[base_addr];\n"
+    "ensures (forall q: ref :: {$Alloc[q]} q != base_addr ==> $Alloc[q] == old($Alloc[q]));\n");
 
   D("procedure $alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $CurrAddr;\n"
@@ -1858,6 +2039,7 @@ void __SMACK_decls() {
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
+    "requires $sgt.ref.bool(p, $0.ref);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
@@ -1926,14 +2108,14 @@ void __SMACK_decls() {
 // The size parameter represents number of bytes that are being accessed
 void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
   void* sizeRef = (void*)size;
-  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $Alloc[$base(@)] == true;", pointer, pointer);
-  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($base(@), @);", pointer, pointer, pointer);
+  __SMACK_code("assert {:valid_deref} $Alloc[$base(@)] == true;", pointer);
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($base(@), @);", pointer, pointer);
 #if MEMORY_MODEL_NO_REUSE_IMPLS
-  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, sizeRef, pointer, pointer);
 #elif MEMORY_MODEL_REUSE
-  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", pointer, pointer, sizeRef, pointer, pointer);
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", pointer, sizeRef, pointer, pointer);
 #else
-  __SMACK_code("assert {:valid_deref} $slt.ref.bool(@, $0.ref) || $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, pointer, sizeRef, pointer, pointer);
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, sizeRef, pointer, pointer);
 #endif
 }
 
@@ -1950,4 +2132,3 @@ void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$allocatedCounter := 0;");
 #endif
 }
-

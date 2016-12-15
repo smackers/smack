@@ -23,6 +23,7 @@ public:
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
   static const llvm::cl::opt<bool> NoByteAccessInference;
   static const llvm::cl::opt<bool> FloatEnabled;
+  static const llvm::cl::opt<bool> MemorySafety;
 
   static bool isEntryPoint(std::string);
 };

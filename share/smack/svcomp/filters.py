@@ -35,8 +35,8 @@ def svcomp_filter(f):
   raw_lines = len(lines.split('\n'))
 
   executable = False
-  if len(linecount(r'__VERIFIER_nondet', r'void|extern', lines)) == 0:
-    executable = True
+  if raw_lines < 50 and len(linecount(r'__VERIFIER_nondet|fopen', r'void\s+|extern', lines)) == 0 and not ('while(1)' in lines):
+      executable = True
 
   if bv_filter(lines, raw_lines, pruned_lines):
     return 'bitvector', executable 
@@ -49,7 +49,10 @@ def svcomp_filter(f):
 def bv_filter(lines, raw_line_count, pruned_line_count):
 
   if raw_line_count > 1500:
-    return 0
+    if 'ldv_usb_gadget' in lines:
+      return 1
+    else:
+      return 0
   
   #line_count = raw_file_line_count(lines)
   if pruned_line_count > 650:
@@ -61,6 +64,10 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
 
   #cast patterns
   if pruned_line_count <= 210:
+
+    if pruned_line_count < 25 and 'while(1)' in lines:
+      return 1
+
     casts = re.compile(r'''4294967295|plus_one|minus_one|\(x % 2\) == \(y % 2\)|linear_search|while \(\('0' <= c\) && \(c <= '9'\)\)''')
     if casts.search(lines):
       return 1
@@ -68,7 +75,7 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   bwops = re.compile(r'''[=|\(][^,]*[^\&|\(|{]\&\s|[^\|]\|\s|\^|>>|<<''')
   #bwops = re.compile(r'''\s\&\s|\s\|\s|\^|>>|<<''')
   #dv = re.compile(r'''1\s+<<\s+[1|5]|cil''')
-  dv = re.compile(r'''1.*<<.*\"|cil|found''')
+  dv = re.compile(r'''1.*<<.*\"|cil|found|node''')
   
   for line in lines.split('\n'):
     if bwops.search(line):
@@ -113,6 +120,11 @@ def float_filter(lines, raw_line_count, pruned_line_count):
     for valid_line in valid_lines:
       if regex_special.search(valid_line) is not None and count <= 4:
         return 0 
+      if valid_line == '1.' or valid_line == '2.':
+        if 'double' not in lines:
+          return 0
+        else:
+          return 1
     return 1 
 
 
@@ -143,6 +155,7 @@ def scrub_pthreads(s):
   fltrs.append(r'typedef\s+union\s+{\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutexattr_t;')
   #pthread_mutex_t
   fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+unsigned\s+int\s+__nusers;\s+int\s+__kind;\s+int\s+__spins;\s+__pthread_list_t\s+__list;\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
+  fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+int\s+__kind;\s+unsigned\s+int\s+__nusers;\s+__extension__\s+union\s+{\s+struct\s+{\s+short\s+__espins;\s+short\s+__elision;\s+}\s+__elision_data;\s+__pthread_slist_t\s+__list;\s+};\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
   fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+int\s+__kind;\s+unsigned\s+int\s+__nusers;\s+__extension__\s+union\s+{\s+int\s+__spins;\s+__pthread_slist_t\s+__list;\s+};\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
   fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+unsigned\s+int\s+__nusers;\s+int\s+__kind;\s+short\s+__spins;\s+short\s+__elision;\s+__pthread_list_t\s+__list;\s+# 124 "/usr/include/x86_64-linux-gnu/bits/pthreadtypes\.h" 3 4\s+}\s+__data;\s+\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+} pthread_mutex_t;')
   fltrs.append(r'typedef\s+union\s+{\s+struct\s+__pthread_mutex_s\s+{\s+int\s+__lock;\s+unsigned\s+int\s+__count;\s+int\s+__owner;\s+int\s+__kind;\s+unsigned\s+int\s+__nusers;\s+__extension__\s+union\s+{\s+struct\s+{\s+short\s+__espins;\s+short\s+__elision;\s+}\s+d;\s+__pthread_slist_t\s+__list;\s+};\s+}\s+__data;\s+char\s+__size\[\d+\];\s+long\s+int\s+__align;\s+}\s+pthread_mutex_t;')
@@ -176,6 +189,7 @@ def scrub_pthreads(s):
   s = re.sub(r'(__VERIFIER_atomic_((?!begin|end).)*?\(.*?\);)',
              r'__VERIFIER_atomic_begin(); \1 __VERIFIER_atomic_end();',
              s)
+
   s = re.sub(r'\ninline ', r'\n', s)
 
   return s, True

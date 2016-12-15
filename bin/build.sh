@@ -24,7 +24,7 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
-BUILD_LOCKPWN=0
+BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
@@ -333,7 +333,7 @@ if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
 
-  git clone https://github.com/boogie-org/boogie ${BOOGIE_DIR}
+  git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
   cd ${BOOGIE_DIR}
   git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
