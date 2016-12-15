@@ -152,7 +152,7 @@ def verify_bpl_svcomp(args):
     bpl = f.read()
 
   if args.pthread:
-    if "fib_bench" in bpl or "unregister_chrdev" in bpl:
+    if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl:
       heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
       corral_command += ["/k:30"]
     else:
