@@ -49,7 +49,7 @@ def svcomp_filter(f):
 def bv_filter(lines, raw_line_count, pruned_line_count):
 
   if raw_line_count > 1500:
-    if 'ldv_usb_gadget' in lines:
+    if 'ldv_usb_gadget' in lines or "SyncPush" in lines:
       return 1
     else:
       return 0
