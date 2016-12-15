@@ -406,7 +406,7 @@ def procedure_annotation(name, args):
     return "{:entrypoint}"
   elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-  elif args.verifier == 'boogie':
+  elif args.verifier == 'boogie' or args.float:
     return ("{:inline %s}" % args.unroll)
   else:
     return ""

@@ -34,8 +34,8 @@ def svcomp_frontend(args):
       args.float = True
       args.bit_precise = True
       args.bit_precise_pointers = True
-      args.verifier = 'boogie'
-      args.time_limit = 880
+      #args.verifier = 'boogie'
+      args.time_limit = 890
       args.unroll = 100
     args.execute = executable
   else:
@@ -108,6 +108,31 @@ def svcomp_process_file(args, name, ext):
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
+
+  # invoke boogie for floats
+  # I have to copy/paste part of verify_bpl
+  if args.float:
+    args.verifier = 'boogie'
+    boogie_command = ["boogie"]
+    boogie_command += [args.bpl_file]
+    boogie_command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
+    boogie_command += ["/timeLimit:%s" % args.time_limit]
+    boogie_command += ["/errorLimit:%s" % args.max_violations]
+    boogie_command += ["/loopUnroll:%d" % args.unroll]
+    if args.bit_precise:
+      x = "bopt:" if args.verifier != 'boogie' else ""
+      boogie_command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
+      boogie_command += ["/%sz3opt:smt.relevancy=0" % x]
+      boogie_command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
+      boogie_command += ["/%sboolControlVC" % x]
+
+    if args.verifier_options:
+      boogie_command += args.verifier_options.split()
+
+    boogie_output = smack.top.try_command(boogie_command, timeout=args.time_limit)
+    boogie_result = smack.top.verification_result(boogie_output)
+    write_error_file(args, boogie_result, boogie_output)
+    sys.exit(smack.top.results(args)[boogie_result])
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
