@@ -279,7 +279,7 @@ float roundf(float x) {
   __SMACK_code("@ := sbv32td($float.round.rne(@));", rete, x);
   __SMACK_code("@ := sbv32td($float.round.rna(@));", reta, x);
   if (x > 0)
-	  return fmax(rete, reta);
+    return fmax(rete, reta);
   return fmin(rete, reta);
 }
 
@@ -465,7 +465,7 @@ double round(double x) {
   __SMACK_code("@ := sbv64td($double.round.rne(@));", rete, x);
   __SMACK_code("@ := sbv64td($double.round.rna(@));", reta, x);
   if (x > 0)
-	  return fmax(rete, reta);
+    return fmax(rete, reta);
   return fmin(rete, reta);
 }
 
@@ -1604,7 +1604,7 @@ void __SMACK_decls() {
   
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $float.lround(bvfloat) returns (bv64);");
-	
+  
   #else
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $float.lround(bvfloat) returns (bv32);");
 
@@ -1728,7 +1728,7 @@ void __SMACK_decls() {
   
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $double.lround.rne(bvdouble) returns (bv64);");
-	
+  
   #else
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $double.lround.rna(bvdouble) returns (bv32);");
 
