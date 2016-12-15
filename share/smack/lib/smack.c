@@ -285,7 +285,7 @@ float roundf(float x) {
 
 long lroundf(float x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $float.lround(dtf(@));", ret, x);
+  __SMACK_code("@ := $float.lround.rne(dtf(@));", ret, x);
   return ret;
 }
 
@@ -335,7 +335,7 @@ float sqrtf(float x) {
 
 float remainderf(float x, float y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $float.rem(dtf(@), dtf(@));", ret, x, y);
+  __SMACK_code("@ := ftd($float.rem(dtf(@), dtf(@)));", ret, x, y);
   return ret;
 }
 
@@ -471,7 +471,7 @@ double round(double x) {
 
 long lround(double x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $double.lround(@);", ret, x);
+  __SMACK_code("@ := $double.lround.rne(@);", ret, x);
   return ret;
 }
 
