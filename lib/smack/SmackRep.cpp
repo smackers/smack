@@ -7,6 +7,40 @@
 #include "smack/CodifyStaticInits.h"
 #include <queue>
 
+namespace {
+  using namespace llvm;
+  using namespace std;
+
+  list<CallInst*> findCallers(Function* F) {
+    list<CallInst*> callers;
+
+    if (F) {
+      queue<User*> users;
+      set<User*> covered;
+
+      users.push(F);
+      covered.insert(F);
+
+      while (!users.empty()) {
+        auto U = users.front();
+        users.pop();
+
+        if (CallInst* CI = dyn_cast<CallInst>(U))
+          callers.push_back(CI);
+
+        else
+          for (auto V : U->users())
+            if (!covered.count(V)) {
+              users.push(V);
+              covered.insert(V);
+            }
+      }
+    }
+
+    return callers;
+  }
+}
+
 namespace smack {
 
 const unsigned MEMORY_INTRINSIC_THRESHOLD = 0;
@@ -73,6 +107,8 @@ SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
       globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
 {
+    if (SmackOptions::MemorySafety)
+      initFuncs.push_back("$global_allocations");
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
@@ -135,25 +171,39 @@ std::string SmackRep::opName(const std::string& operation, std::initializer_list
 
 std::string SmackRep::procName(const llvm::User& U) {
   if (const llvm::CallInst* CI = llvm::dyn_cast<const llvm::CallInst>(&U))
-    return procName(U, CI->getCalledFunction());
+    return procName(CI->getCalledFunction(), U);
   else
     llvm_unreachable("Unexpected user expression.");
 }
 
-std::string SmackRep::procName(const llvm::User& U, llvm::Function* F) {
+std::string SmackRep::procName(llvm::Function* F, const llvm::User& U) {
+  std::list<const llvm::Type*> types;
+  for (unsigned i = 0; i < U.getNumOperands()-1; i++)
+    types.push_back(U.getOperand(i)->getType());
+  return procName(F, types);
+}
+
+std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> types) {
   std::stringstream name;
   name << naming.get(*F);
-  if (F->isVarArg()) {
-    for (unsigned i = 0; i < U.getNumOperands()-1; i++)
-      name << "." << type(U.getOperand(i)->getType());
-  }
+  if (F->isVarArg())
+    for (auto* T : types)
+      name << "." << type(T);
   return name.str();
 }
 
 std::string SmackRep::type(const llvm::Type* t) {
 
-  if (t->isFloatingPointTy())
-    return Naming::FLOAT_TYPE;
+  if (t->isFloatingPointTy()) {
+    if (!SmackOptions::BitPrecise)
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
+    if (t->isFloatTy())
+      return Naming::FLOAT_TYPE;
+    else if (t->isDoubleTy())
+      return Naming::DOUBLE_TYPE;
+    else
+      llvm_unreachable("Unsupported floating-point type.");
+  }
 
   else if (t->isIntegerTy())
     return intType(t->getIntegerBitWidth());
@@ -162,7 +212,6 @@ std::string SmackRep::type(const llvm::Type* t) {
     return Naming::PTR_TYPE;
 
   else
-    // llvm_unreachable("Unsupported type.");
     return Naming::PTR_TYPE;
 }
 
@@ -384,10 +433,6 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
   Type* T = CI.getParent()->getParent()->getReturnType();
   std::string name = indexedName(Naming::VALUE_PROC, {type(T)});
-  auxDecls[name] = Decl::procedure(
-    name,
-    std::list< std::pair<std::string,std::string> >({{"p", type(T)}}),
-    std::list< std::pair<std::string,std::string> >({{Naming::RET_VAR, Naming::PTR_TYPE}}));
   return Stmt::call(
     name,
     std::list<const Expr*>({ Expr::id(Naming::RET_VAR) }),
@@ -555,30 +600,55 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
-    const APFloat APF = CFP->getValueAPF();
-    std::string str;
-    raw_string_ostream ss(str);
-    ss << *CFP;
-    std::istringstream iss(str);
-    std::string float_type;
-    long integerPart, fractionalPart, exponentPart;
-    char point, sign, exponent;
-    iss >> float_type;
-    iss >> integerPart;
-    iss >> point;
-    iss >> fractionalPart;
-    iss >> sign;
-    iss >> exponent;
-    iss >> exponentPart;
+    if (SmackOptions::BitPrecise) {
+      const APFloat APF = CFP->getValueAPF();
+      std::string str;
+      raw_string_ostream ss(str);
+      ss << *CFP;
+      std::istringstream iss(str);
+      std::string float_type;
+      iss >> float_type;
+      unsigned expSize, sigSize;
+      if (float_type=="float") {
+        expSize = 8;
+        sigSize = 24;
+      } else if (float_type=="double") {
+        expSize = 11;
+        sigSize = 53;
+      } else {
+        llvm_unreachable("Unsupported floating-point type.");
+      }
+      const APInt API = APF.bitcastToAPInt();
+      const APInt n_sign = API.trunc(expSize+sigSize-1);
+      const APInt sig = n_sign.trunc(sigSize-1);
+      const APInt exp = n_sign.lshr(sigSize-1);
+      return Expr::lit(APF.isNegative(), sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
+    } else {
+      const APFloat APF = CFP->getValueAPF();
+      std::string str;
+      raw_string_ostream ss(str);
+      ss << *CFP;
+      std::istringstream iss(str);
+      std::string float_type;
+      long integerPart, fractionalPart, exponentPart;
+      char point, sign, exponent;
+      iss >> float_type;
+      iss >> integerPart;
+      iss >> point;
+      iss >> fractionalPart;
+      iss >> sign;
+      iss >> exponent;
+      iss >> exponentPart;
 
-    return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
-      Expr::lit(exponentPart));
+      return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
+        Expr::lit(exponentPart));
+    }
 
   } else if (llvm::isa<ConstantPointerNull>(v))
     return Expr::id(Naming::NULL_VAL);
 
   else
-    llvm_unreachable("Literal type not supported");
+    llvm_unreachable("Literal type not supported.");
 }
 
 const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
@@ -747,7 +817,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
     unsigned width = W->getIntegerBitWidth();
     blocks.push_back(
       Block::block("", {
-        Stmt::call(Naming::ALLOC,
+        Stmt::call(Naming::MALLOC,
           { integerToPointer(Expr::id(params.front().first), width) },
           { Naming::RET_VAR }
         )
@@ -766,13 +836,23 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
       params.push_back(m);
 
   } else if (CI) {
-    FunctionType* T = F->getFunctionType();
-    name = procName(*CI, F);
-    for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
-      params.push_back({
-        indexedName("p",{i}),
-        type(CI->getOperand(i)->getType())
-      });
+    auto CF = CI->getCalledFunction();
+
+    // Add the parameter from `return_value` calls
+    if (CF && CF->getName().equals(Naming::RETURN_VALUE_PROC)) {
+      auto T = CI->getParent()->getParent()->getReturnType();
+      name = procName(F, {T});
+      params.push_back({indexedName("p", {0}), type(T)});
+
+    } else {
+      FunctionType* T = F->getFunctionType();
+      name = procName(F, *CI);
+      for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
+        params.push_back({
+          indexedName("p",{i}),
+          type(CI->getOperand(i)->getType())
+        });
+      }
     }
   }
 
@@ -782,28 +862,14 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
 }
 
 std::list<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
-  std::queue<User*> users;
-  std::vector<CallInst*> callers;
   std::list<ProcDecl*> procs;
-  std::set<User*> covered;
   std::set<std::string> names;
+  std::list<CallInst*> callers = findCallers(F);
 
-  users.push(F);
-  covered.insert(F);
-
-  while (!users.empty()) {
-    auto U = users.front();
-    users.pop();
-
-    if (CallInst* CI = dyn_cast<CallInst>(U))
-      callers.push_back(CI);
-
-    else
-      for (auto V : U->users())
-        if (!covered.count(V)) {
-          users.push(V);
-          covered.insert(V);
-        }
+  // Consider `return_value` calls as normal `value` calls
+  if (F->hasName() && F->getName().equals(Naming::VALUE_PROC)) {
+    auto more = findCallers(F->getParent()->getFunction(Naming::RETURN_VALUE_PROC));
+    callers.insert(callers.end(), more.begin(), more.end());
   }
 
   if (callers.empty() || !F->isVarArg())
@@ -849,7 +915,7 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming.get(ci));
 
-  return Stmt::call(procName(ci, f), args, rets);
+  return Stmt::call(procName(f, ci), args, rets);
 }
 
 std::string SmackRep::code(llvm::CallInst& ci) {
@@ -880,7 +946,11 @@ std::string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
-  s << Decl::typee(Naming::FLOAT_TYPE, intType(32)) << "\n";
+  if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
+    s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
+  }
+  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";
@@ -906,6 +976,15 @@ std::string SmackRep::getPrelude() {
   s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM),pointerLit(externsBottom))) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << "\n";
   s << "\n";
+
+  if (SmackOptions::MemorySafety) {
+    s << "// Global allocations" << "\n";
+    std::list<const Stmt*> stmts;
+    for (auto E : globalAllocations)
+      stmts.push_back(Stmt::call("$galloc", {expr(E.first), Expr::lit(E.second)}));
+    s << Decl::procedure("$global_allocations", {}, {}, {}, {Block::block("",stmts)}) << "\n";
+    s << "\n";
+  }
 
   s << "// Bitstd::vector-integer conversions" << "\n";
   std::string b = std::to_string(ptrSizeInBits);
@@ -1045,9 +1124,13 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   if (!size)
     size = targetData->getPrefTypeAlignment(v->getType());
 
+  // Add padding between globals to be able to check memory overflows/underflows
+  const unsigned globalsPadding = 1024;
   decls.push_back(Decl::axiom(Expr::eq(
     Expr::id(name),
-    pointerLit(external ? externsBottom -= size : globalsBottom -= size) )));
+    pointerLit(external ? externsBottom -= size : globalsBottom -= (size + globalsPadding)) )));
+
+  globalAllocations[v] = size;
 
   return decls;
 }

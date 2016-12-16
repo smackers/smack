@@ -4,14 +4,11 @@
 
 // @expect verified
 
-#define MAXSIZE 10
-#define RESET 0
-
 int main() {
-  int *a = (int*)malloc(MAXSIZE * sizeof(int));
+  double a;
 
-  free(a);
-  free(a);
+  a = 3.0;
+  a = 1.5;
+  assert(a == 1.5);
   return 0;
 }
-

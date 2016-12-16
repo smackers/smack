@@ -9,10 +9,13 @@
 #include "smack/CodifyStaticInits.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/IR/DataLayout.h"
 
 #include <deque>
+#include <queue>
+#include <set>
 #include <vector>
 
 namespace smack {
@@ -20,12 +23,44 @@ namespace smack {
 using namespace llvm;
 
 namespace{
-  Regex STRING_CONSTANT("^\\.str[0-9]*$");
+  Regex STRING_CONSTANT("^\\.str[.0-9]*$");
+
+  bool isStringConstant(Value& V) {
+    return STRING_CONSTANT.match(V.getName().str());
+  }
+
+  bool isBoogieCode(Value& V) {
+    std::queue<Value*> worklist;
+    std::set<Value*> covered;
+    worklist.push(&V);
+    covered.insert(&V);
+    while (worklist.size()) {
+      Value* U = worklist.front();
+      worklist.pop();
+
+      if (CallInst* CI = dyn_cast<CallInst>(U))
+        if (Function* F = CI->getCalledFunction())
+          if (F->hasName())
+            if (F->getName().find(Naming::MOD_PROC) != std::string::npos
+                || F->getName().find(Naming::CODE_PROC) != std::string::npos
+                || F->getName().find(Naming::DECL_PROC) != std::string::npos
+                || F->getName().find(Naming::TOP_DECL_PROC) != std::string::npos)
+            return true;
+
+      for (auto W : U->users())
+        if (!covered.count(W)) {
+          worklist.push(W);
+          covered.insert(W);
+        }
+    }
+    return false;
+  }
 }
 
 bool CodifyStaticInits::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   LLVMContext& C = M.getContext();
+  DSAAliasAnalysis* DSA = &getAnalysis<DSAAliasAnalysis>();
 
   Function* F = dyn_cast<Function>(
     M.getOrInsertFunction(Naming::STATIC_INIT_PROC,
@@ -38,7 +73,15 @@ bool CodifyStaticInits::runOnModule(Module& M) {
 
   for (auto &G : M.globals())
     if (G.hasInitializer())
-      if (!G.hasName() || !STRING_CONSTANT.match(G.getName().str()))
+
+      // HACK: Normally only isRead should be necessary here. However, there
+      // seems to be a bug in the DSA code which fails to mark some globals that
+      // are read as read. Currently this has only been observed with globals
+      // that have named addresses, e.g., excluding string constants. Thus the
+      // second predicate here is a messy hack that has little to do with the
+      // intended property of being read.
+      if (DSA->isRead(&G) || !G.hasUnnamedAddr())
+
         worklist.push_back(std::make_tuple(
           G.getInitializer(), &G, std::vector<Value*>()));
 
@@ -84,6 +127,11 @@ bool CodifyStaticInits::runOnModule(Module& M) {
   IRB.CreateRetVoid();
 
   return true;
+}
+
+void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<DSAAliasAnalysis>();
 }
 
 // Pass ID variable

@@ -4,7 +4,7 @@
 //
 
 #include "llvm/LinkAllPasses.h"
-#include "llvm/PassManager.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
@@ -53,10 +53,6 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
-static llvm::cl::opt<bool>
-MemorySafety("memory-safety", llvm::cl::desc("Enable memory safety checks"),
-  llvm::cl::init(false));
-
 std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
 }
@@ -102,9 +98,8 @@ int main(int argc, char **argv) {
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
 
-  llvm::PassManager pass_manager;
+  llvm::legacy::PassManager pass_manager;
 
-  pass_manager.add(new DataLayoutPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
@@ -127,8 +122,8 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-   
-  if (MemorySafety) {
+
+  if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 

@@ -131,7 +131,7 @@ namespace {
 }
 
 void ExtractContracts::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfo>();
+  AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
 }
 
@@ -187,7 +187,7 @@ void ExtractContracts::validateAnnotation(CallInst &I) {
   auto B = I.getParent();
   auto F = B->getParent();
   auto& DT = getAnalysis<DominatorTreeWrapperPass>(*F).getDomTree();
-  auto& LI = getAnalysis<LoopInfo>(*F);
+  auto& LI = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
   if (I.getCalledFunction()->getName() == Naming::CONTRACT_INVARIANT) {
     auto L = LI[B];
     if (!L) {

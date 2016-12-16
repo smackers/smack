@@ -25,7 +25,9 @@ class Naming {
 
 public:
   static const std::string BOOL_TYPE;
+  static const std::string UNINTERPRETED_FLOAT_TYPE;
   static const std::string FLOAT_TYPE;
+  static const std::string DOUBLE_TYPE;
   static const std::string PTR_TYPE;
   static const std::string NULL_VAL;
 
@@ -55,6 +57,7 @@ public:
   static const std::string MEMCPY;
   static const std::string MEMSET;
   static const std::string EXTRACT_VALUE;
+  static const std::string MALLOC;
 
   static const std::string EXTERNAL_ADDR;
   static const std::string GLOBALS_BOTTOM;
@@ -79,6 +82,7 @@ public:
   static const std::string UNDEF_SYM;
   static const std::string CONTRACT_EXPR;
   static const std::string MEMORY_SAFETY_FUNCTION;
+  static const std::string MEMORY_LEAK_FUNCTION;
 
   static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
   static const std::map<unsigned,std::string> CMPINST_TABLE;
