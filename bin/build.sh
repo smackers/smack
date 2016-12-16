@@ -369,6 +369,7 @@ then
   cd ${ROOT}
   git clone https://github.com/smackers/lockpwn.git
   cd ${LOCKPWN_DIR}
+  git reset --hard ${LOCKPWN_COMMIT}
   xbuild lockpwn.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
