@@ -34,7 +34,7 @@ Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$
 // Procedures whose return value should not be marked as external
 Regex EXTERNAL_PROC_IGNORE("^(malloc|__VERIFIER_nondet)$");
 
-std::string i2s(llvm::Instruction& i) {
+std::string i2s(const llvm::Instruction& i) {
   std::string s;
   llvm::raw_string_ostream ss(s);
   ss << i;
@@ -87,9 +87,11 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
   annotate(inst, currBlock);
   ORIG(inst);
   nameInstruction(inst);
+  nextInst++;
 }
 
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
+  nextInst = bb.begin();
   currBlock = getBlock(&bb);
 }
 
@@ -278,10 +280,14 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
 
 void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
   processInstruction(evi);
-  const Expr* e = rep.expr(evi.getAggregateOperand());
-  for (unsigned i = 0; i < evi.getNumIndices(); i++)
-    e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long) evi.getIndices()[i]));
-  emit(Stmt::assign(rep.expr(&evi),e));
+  if (!SmackOptions::BitPrecise) {
+    const Expr* e = rep.expr(evi.getAggregateOperand());
+    for (unsigned i = 0; i < evi.getNumIndices(); i++)
+      e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long) evi.getIndices()[i]));
+    emit(Stmt::assign(rep.expr(&evi),e));
+  } else {
+    WARN("Ignoring extract instruction under bit vector mode.");
+  }
 }
 
 void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
@@ -353,8 +359,12 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
-      assert(G->hasName() && "Expected named global variable.");
-      emit(Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+      if (const llvm::PointerType* t = llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
+        if (!t->getElementType()->isPointerTy()) {
+          assert(G->hasName() && "Expected named global variable.");
+          emit(Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+        }
+      }
     }
   }
 
@@ -589,17 +599,35 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   }
 }
 
+bool isSourceLoc(const Stmt* stmt) {
+  return (stmt->getKind() == Stmt::ASSUME
+          && (llvm::cast<const AssumeStmt>(stmt))->hasAttr("sourceloc"))
+         || (stmt->getKind() == Stmt::CALL);
+}
+
 void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
   processInstruction(dvi);
 
   if (SmackOptions::SourceLocSymbols) {
     const Value* V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
-    if (V) {
-      V = V->stripPointerCasts();
-      std::stringstream recordProc;
-      recordProc << "boogie_si_record_" << rep.type(V);
-      emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+    //if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
+    if (V && !V->getType()->isPointerTy()) {
+      //if (currBlock->begin() != currBlock->end()
+          //&& currBlock->getStatements().back()->getKind() == Stmt::ASSUME) {
+      //    && isSourceLoc(currBlock->getStatements().back())) {
+      //assert(&*currInst == &dvi && "Current Instruction mismatch!");
+      auto currInst = std::prev(nextInst);
+      if (currInst != dvi.getParent()->begin()) {
+        const Instruction& pi = *std::prev(currInst);
+        V = V->stripPointerCasts();
+        WARN(i2s(pi));
+        if (!llvm::isa<const PHINode>(&pi) && V == llvm::dyn_cast<const Value>(&pi)) {
+          std::stringstream recordProc;
+          recordProc << "boogie_si_record_" << rep.type(V);
+          emit(Stmt::call(recordProc.str(), {rep.expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+        }
+      }
     }
   }
 }

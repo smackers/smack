@@ -24,7 +24,7 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
-BUILD_LOCKPWN=0
+BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
@@ -369,6 +369,7 @@ then
   cd ${ROOT}
   git clone https://github.com/smackers/lockpwn.git
   cd ${LOCKPWN_DIR}
+  git reset --hard ${LOCKPWN_COMMIT}
   xbuild lockpwn.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
