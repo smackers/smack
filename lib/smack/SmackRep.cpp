@@ -107,6 +107,8 @@ SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
       globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
 {
+    if (SmackOptions::MemorySafety)
+      initFuncs.push_back("$global_allocations");
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
@@ -975,6 +977,15 @@ std::string SmackRep::getPrelude() {
   s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << "\n";
   s << "\n";
 
+  if (SmackOptions::MemorySafety) {
+    s << "// Global allocations" << "\n";
+    std::list<const Stmt*> stmts;
+    for (auto E : globalAllocations)
+      stmts.push_back(Stmt::call("$galloc", {expr(E.first), Expr::lit(E.second)}));
+    s << Decl::procedure("$global_allocations", {}, {}, {}, {Block::block("",stmts)}) << "\n";
+    s << "\n";
+  }
+
   s << "// Bitstd::vector-integer conversions" << "\n";
   std::string b = std::to_string(ptrSizeInBits);
   std::string bt = "bv" + b;
@@ -1113,9 +1124,13 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   if (!size)
     size = targetData->getPrefTypeAlignment(v->getType());
 
+  // Add padding between globals to be able to check memory overflows/underflows
+  const unsigned globalsPadding = 1024;
   decls.push_back(Decl::axiom(Expr::eq(
     Expr::id(name),
-    pointerLit(external ? externsBottom -= size : globalsBottom -= size) )));
+    pointerLit(external ? externsBottom -= size : globalsBottom -= (size + globalsPadding)) )));
+
+  globalAllocations[v] = size;
 
   return decls;
 }
