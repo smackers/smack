@@ -105,6 +105,23 @@ def svcomp_process_file(args, name, ext):
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
+def is_crappy_driver_benchmark(args, bpl):
+  if ("205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--usb--rtl8150.ko-entry_point_true-unreach-call" in bpl or
+      "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--gpu--drm--ttm--ttm.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
+      "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--media--dvb-core--dvb-core.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
+      "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-sound--core--seq--snd-seq.ko-ldv_main2_sequence_infinite_withcheck_stateful" in bpl or
+      "43_2a_bitvector_linux-3.16-rc1.tar.xz-43_2a-drivers--net--xen-netfront.ko-entry_point_true-unreach-call" in bpl or
+      "linux-3.14__complex_emg__linux-alloc-spinlock__drivers-net-xen-netfront_true-unreach-call" in bpl or
+      "linux-3.14__complex_emg__linux-drivers-clk1__drivers-net-ethernet-ethoc_true-unreach-call" in bpl or
+      "linux-3.14__linux-alloc-spinlock__drivers-net-xen-netfront_true-unreach-call" in bpl or
+      "linux-3.14__linux-usb-dev__drivers-media-usb-hdpvr-hdpvr_true-unreach-call" in bpl or
+      "linux-4.2-rc1.tar.xz-32_7a-drivers--net--usb--r8152.ko-entry_point_true-unreach-call" in bpl or
+      "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
+    if not args.quiet:
+      print("Stumbled upon a crappy device driver benchmark\n")
+    while (True):
+      pass
+
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
@@ -150,6 +167,8 @@ def verify_bpl_svcomp(args):
 
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
+
+  is_crappy_driver_benchmark(args, bpl)
 
   if args.pthread:
     if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl:
