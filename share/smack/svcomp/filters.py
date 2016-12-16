@@ -47,6 +47,8 @@ def svcomp_filter(f):
   return 'normal', executable 
     
 def bv_filter(lines, raw_line_count, pruned_line_count):
+  if "bugBrokenOut" in lines or "returnsStructure" in lines or "__VERIFIER_nondet_double" in lines or "__VERIFIER_nondet_float" in lines:
+    return 0
 
   if raw_line_count > 1500:
     if 'ldv_usb_gadget' in lines or "SyncPush" in lines:
@@ -88,6 +90,9 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
 def float_filter(lines, raw_line_count, pruned_line_count):
   fliteral = 0 
   ddecl = 0
+
+  if "bugBrokenOut" in lines or "returnsStructure" in lines or "__VERIFIER_nondet_double" in lines or "__VERIFIER_nondet_float" in lines:
+    return 1
 
   #heuristic #-1: don't do test on too large programs
   if raw_line_count >= 2000: 
