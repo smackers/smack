@@ -116,6 +116,8 @@ def is_crappy_driver_benchmark(args, bpl):
       "linux-3.14__linux-alloc-spinlock__drivers-net-xen-netfront_true-unreach-call" in bpl or
       "linux-3.14__linux-usb-dev__drivers-media-usb-hdpvr-hdpvr_true-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-32_7a-drivers--net--usb--r8152.ko-entry_point_true-unreach-call" in bpl or
+      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-ethernet-smsc-smsc911x_true-unreach-call" in bpl or
+      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-wan-lmc-lmc_true-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
     if not args.quiet:
       print("Stumbled upon a crappy device driver benchmark\n")
@@ -206,8 +208,13 @@ def verify_bpl_svcomp(args):
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
   elif "ldv" in bpl:
-    heurTrace += "LDV benchmark detected. Setting loop unroll bar to 13.\n"
-    loopUnrollBar = 13
+    if ("linux-4.2-rc1.tar.xz-08_1a-drivers--staging--lustre--lustre--llite--llite_lloop.ko-entry_point_false-unreach-call" in bpl or
+        "linux-4.0-rc1---drivers--net--usb--kaweth.ko_false-unreach-call" in bpl):
+      heurTrace += "Special LDV benchmark detected. Setting loop unroll bar to 32.\n"
+      loopUnrollBar = 32
+    else:
+      heurTrace += "LDV benchmark detected. Setting loop unroll bar to 13.\n"
+      loopUnrollBar = 13
     staticLoopBound = 64
   elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl:
     heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
