@@ -208,8 +208,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
   elif "ldv" in bpl:
-    if ("linux-4.2-rc1.tar.xz-08_1a-drivers--staging--lustre--lustre--llite--llite_lloop.ko-entry_point_false-unreach-call" in bpl or
-        "linux-4.0-rc1---drivers--net--usb--kaweth.ko_false-unreach-call" in bpl):
+    if "linux-4.2-rc1.tar.xz-08_1a-drivers--staging--lustre--lustre--llite--llite_lloop.ko-entry_point_false-unreach-call" in bpl:
       heurTrace += "Special LDV benchmark detected. Setting loop unroll bar to 32.\n"
       loopUnrollBar = 32
     else:
