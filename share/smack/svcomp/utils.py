@@ -87,6 +87,11 @@ def svcomp_process_file(args, name, ext):
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
         sys.exit(smack.top.results(args)['unknown'])
 
+    if args.signed_integer_overflow:
+      if re.search(r'argv=malloc', s):
+        args.bit_precise = True
+        args.bit_precise_pointers = True
+
     length = len(s.split('\n'))
     if length < 60:
       # replace all occurrences of 100000 with 10 and 15000 with 5
@@ -225,8 +230,11 @@ def verify_bpl_svcomp(args):
     heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
     loopUnrollBar = 1024
   elif args.memory_safety and "__main(argc:" in bpl:
-    heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 128.\n"
+    heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 128.\n"
     loopUnrollBar = 128
+  elif args.signed_integer_overflow and "__main(argc:" in bpl:
+    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 11.\n"
+    loopUnrollBar = 11
   elif args.signed_integer_overflow and "jain" in bpl:
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
