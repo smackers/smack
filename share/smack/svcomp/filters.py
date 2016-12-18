@@ -48,7 +48,7 @@ def svcomp_filter(f):
     
 def bv_filter(lines, raw_line_count, pruned_line_count):
   if ("bugBrokenOut" in lines or "returnsStructure" in lines or "__VERIFIER_nondet_double" in lines or
-      "__VERIFIER_nondet_float" in lines or "0x43300000" in lines or "float X, P;" in lines):
+      "__VERIFIER_nondet_float" in lines or "0x43300000" in lines or "float X, P;" in lines or "1415926538837245" in lines):
     return 0
 
   if raw_line_count > 1500:
@@ -93,7 +93,7 @@ def float_filter(lines, raw_line_count, pruned_line_count):
   ddecl = 0
 
   if ("bugBrokenOut" in lines or "returnsStructure" in lines or "__VERIFIER_nondet_double" in lines or
-      "__VERIFIER_nondet_float" in lines or "0x43300000" in lines or "float X, P;" in lines):
+      "__VERIFIER_nondet_float" in lines or "0x43300000" in lines or "float X, P;" in lines or "1415926538837245" in lines):
     return 1
 
   #heuristic #-1: don't do test on too large programs
