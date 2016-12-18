@@ -23,6 +23,7 @@ private:
   Naming& naming;
 
   Block* currBlock;
+  llvm::BasicBlock::const_iterator nextInst;
   std::map<const llvm::BasicBlock*, Block*> blockMap;
   std::map<const llvm::Value*, std::string> sourceNames;
 

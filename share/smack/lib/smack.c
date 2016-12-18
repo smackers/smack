@@ -2,6 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 
 #include <smack.h>
+#include <limits.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -33,13 +34,29 @@ void __VERIFIER_assume(int x) {
 
 #ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
+#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_dummy(x); __SMACK_code("assert @ != $0;", x);
+#endif
 }
 #endif
 
 void __VERIFIER_error(void) {
+#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_code("assert false;");
+#else
+  __SMACK_code("assume false;");
+#endif
 }
+
+#if SIGNED_INTEGER_OVERFLOW_CHECK
+void __SMACK_overflow_false(void) {
+  __SMACK_code("assert {:overflow} false;");
+}
+
+void __SMACK_check_overflow(int flag) {
+  __SMACK_dummy(flag); __SMACK_code("assert {:overflow} @ == $0;", flag);
+}
+#endif
 
 void exit(int x) {
 #if MEMORY_SAFETY
@@ -49,33 +66,174 @@ void exit(int x) {
   while(1);
 }
 
+char __VERIFIER_nondet_char() {
+  char x = __SMACK_nondet_char();
+  __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
+  return x;
+}
+
+signed char __VERIFIER_nondet_signed_char() {
+  signed char x = __SMACK_nondet_signed_char();
+  __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
+  return x;
+}
+
+unsigned char __VERIFIER_nondet_unsigned_char() {
+  unsigned char x = __SMACK_nondet_unsigned_char();
+  __VERIFIER_assume(x >= 0 && x <= UCHAR_MAX);
+  return x;
+}
+
+short __VERIFIER_nondet_short() {
+  short x = __SMACK_nondet_short();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+  return x;
+}
+
+signed short __VERIFIER_nondet_signed_short() {
+  signed short x = __SMACK_nondet_signed_short();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+  return x;
+}
+
+signed short int __VERIFIER_nondet_signed_short_int() {
+  signed short int x = __SMACK_nondet_signed_short_int();
+  __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
+  return x;
+}
+
+unsigned short __VERIFIER_nondet_unsigned_short() {
+  unsigned short x = __SMACK_nondet_unsigned_short();
+  __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
+  return x;
+}
+
+unsigned short int __VERIFIER_nondet_unsigned_short_int() {
+  unsigned short int x = __SMACK_nondet_unsigned_short_int();
+  __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
+  return x;
+}
+
+int __VERIFIER_nondet_int() {
+  int x = __SMACK_nondet_int();
+  __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
+  return x;
+}
+
+signed int __VERIFIER_nondet_signed_int() {
+  signed int x = __SMACK_nondet_signed_int();
+  __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
+  return x;
+}
+
+unsigned __VERIFIER_nondet_unsigned() {
+  unsigned x = __SMACK_nondet_unsigned();
+  __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
+  return x;
+}
+
+unsigned int __VERIFIER_nondet_unsigned_int() {
+  unsigned int x = __SMACK_nondet_unsigned_int();
+  __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
+  return x;
+}
+
+long __VERIFIER_nondet_long() {
+  long x = __SMACK_nondet_long();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+long int __VERIFIER_nondet_long_int() {
+  long int x = __SMACK_nondet_long_int();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+signed long __VERIFIER_nondet_signed_long() {
+  signed long x = __SMACK_nondet_signed_long();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+signed long int __VERIFIER_nondet_signed_long_int() {
+  signed long int x = __SMACK_nondet_signed_long_int();
+  __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
+  return x;
+}
+
+unsigned long __VERIFIER_nondet_unsigned_long() {
+  unsigned long x = __SMACK_nondet_unsigned_long();
+  __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
+  return x;
+}
+
+unsigned long int __VERIFIER_nondet_unsigned_long_int() {
+  unsigned long int x = __SMACK_nondet_unsigned_long_int();
+  __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
+  return x;
+}
+
+long long __VERIFIER_nondet_long_long() {
+  long long x = __SMACK_nondet_long_long();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+long long int __VERIFIER_nondet_long_long_int() {
+  long long int x = __SMACK_nondet_long_long_int();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+signed long long __VERIFIER_nondet_signed_long_long() {
+  signed long long x = __SMACK_nondet_signed_long_long();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+signed long long int __VERIFIER_nondet_signed_long_long_int() {
+  signed long long int x = __SMACK_nondet_signed_long_long_int();
+  __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
+  return x;
+}
+
+unsigned long long __VERIFIER_nondet_unsigned_long_long() {
+  unsigned long long x = __SMACK_nondet_unsigned_long_long();
+  __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
+  return x;
+}
+
+unsigned long long int __VERIFIER_nondet_unsigned_long_long_int() {
+  unsigned long long int x = __SMACK_nondet_unsigned_long_long_int();
+  __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
+  return x;
+}
+
 // Apparently used in SVCCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();
+  __VERIFIER_assume(x == 0 || x == 1);
   return x;
 }
 
 unsigned char __VERIFIER_nondet_uchar(void) {
   unsigned char x = __VERIFIER_nondet_unsigned_char();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
 unsigned short __VERIFIER_nondet_ushort(void) {
   unsigned short x = __VERIFIER_nondet_unsigned_short();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
 unsigned int __VERIFIER_nondet_uint(void) {
   unsigned int x = __VERIFIER_nondet_unsigned_int();
-  __VERIFIER_assume(x >= 0);
   return x;
  }
 
 unsigned long __VERIFIER_nondet_ulong(void) {
   unsigned long x = __VERIFIER_nondet_unsigned_long();
-  __VERIFIER_assume(x >= 0);
   return x;
 }
 
@@ -123,13 +281,13 @@ float roundf(float x) {
   __SMACK_code("@ := sbv32td($float.round.rne(@));", rete, x);
   __SMACK_code("@ := sbv32td($float.round.rna(@));", reta, x);
   if (x > 0)
-	  return fmax(rete, reta);
+    return fmax(rete, reta);
   return fmin(rete, reta);
 }
 
 long lroundf(float x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $float.lround(dtf(@));", ret, x);
+  __SMACK_code("@ := $float.lround.rne(dtf(@));", ret, x);
   return ret;
 }
 
@@ -179,7 +337,7 @@ float sqrtf(float x) {
 
 float remainderf(float x, float y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $float.rem(dtf(@), dtf(@));", ret, x, y);
+  __SMACK_code("@ := ftd($float.rem(dtf(@), dtf(@)));", ret, x, y);
   return ret;
 }
 
@@ -309,13 +467,13 @@ double round(double x) {
   __SMACK_code("@ := sbv64td($double.round.rne(@));", rete, x);
   __SMACK_code("@ := sbv64td($double.round.rna(@));", reta, x);
   if (x > 0)
-	  return fmax(rete, reta);
+    return fmax(rete, reta);
   return fmin(rete, reta);
 }
 
 long lround(double x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $double.lround(@);", ret, x);
+  __SMACK_code("@ := $double.lround.rne(@);", ret, x);
   return ret;
 }
 
@@ -894,6 +1052,7 @@ void __SMACK_decls() {
   D("axiom $xor.i1(0,1) == 1;");
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
+  D("axiom($and.i32(32, 16) == 0);");
 
   DECLARE(INLINE_CONVERSION,i128,i96,$trunc,{i});
   DECLARE(INLINE_CONVERSION,i128,i88,$trunc,{i});
@@ -1447,7 +1606,7 @@ void __SMACK_decls() {
   
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $float.lround(bvfloat) returns (bv64);");
-	
+  
   #else
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $float.lround(bvfloat) returns (bv32);");
 
@@ -1571,7 +1730,7 @@ void __SMACK_decls() {
   
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $double.lround.rne(bvdouble) returns (bv64);");
-	
+  
   #else
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $double.lround.rna(bvdouble) returns (bv32);");
 

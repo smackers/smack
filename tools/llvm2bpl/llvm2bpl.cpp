@@ -32,6 +32,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
+#include "smack/SignedIntegerOverflowChecker.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -52,6 +53,10 @@ StaticUnroll("static-unroll", llvm::cl::desc("Use LLVM to statically unroll loop
 static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
+
+static llvm::cl::opt<bool>
+SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
+  llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
@@ -101,7 +106,7 @@ int main(int argc, char **argv) {
   llvm::legacy::PassManager pass_manager;
 
   pass_manager.add(llvm::createLowerSwitchPass());
-  pass_manager.add(llvm::createCFGSimplificationPass());
+  //pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
@@ -126,6 +131,9 @@ int main(int argc, char **argv) {
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
+
+  if (SignedIntegerOverflow)
+    pass_manager.add(new smack::SignedIntegerOverflowChecker());
 
   std::vector<tool_output_file*> files;
 
