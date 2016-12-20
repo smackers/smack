@@ -1,7 +1,7 @@
 declare void @__VERIFIER_assert(i32)
 
 ;; i8
-define { i8, i1 } @smack.llvm.smul.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.smul.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone {
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, { i8, i1 }* %0, i32 0, i32 0
@@ -19,7 +19,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.umul.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.umul.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 0
@@ -37,7 +37,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.sadd.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.sadd.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, { i8, i1 }* %0, i32 0, i32 0
@@ -55,7 +55,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.usub.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.usub.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 0
@@ -73,7 +73,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.ssub.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.ssub.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 0
@@ -91,7 +91,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.udiv.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.udiv.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 0
@@ -109,7 +109,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.sdiv.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.sdiv.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 0
@@ -127,7 +127,7 @@ entry:
   ret { i8, i1 } %4
 }
 
-define { i8, i1 } @smack.llvm.uadd.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 {
+define { i8, i1 } @smack.llvm.uadd.with.overflow.i8(i8 %bar.coerce0, i8 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i8, i1 }
   %1 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 0
@@ -146,7 +146,7 @@ entry:
 }
 
 ;; i16
-define { i16, i1 } @smack.llvm.smul.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.smul.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, { i16, i1 }* %0, i32 0, i32 0
@@ -164,7 +164,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.umul.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.umul.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 0
@@ -182,7 +182,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.ssub.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.ssub.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, { i16, i1 }* %0, i32 0, i32 0
@@ -200,7 +200,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.usub.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.usub.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 0
@@ -218,7 +218,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.sdiv.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.sdiv.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, { i16, i1 }* %0, i32 0, i32 0
@@ -236,7 +236,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.udiv.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.udiv.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 0
@@ -254,7 +254,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.sadd.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.sadd.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 0
@@ -272,7 +272,7 @@ entry:
   ret { i16, i1 } %4
 }
 
-define { i16, i1 } @smack.llvm.uadd.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 {
+define { i16, i1 } @smack.llvm.uadd.with.overflow.i16(i16 %bar.coerce0, i16 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i16, i1 }
   %1 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 0
@@ -291,7 +291,7 @@ entry:
 }
 
 ;; i32
-define { i32, i1 } @smack.llvm.smul.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.smul.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, { i32, i1 }* %0, i32 0, i32 0
@@ -309,7 +309,7 @@ entry:
   ret { i32, i1 } %4
 }
 
-define { i32, i1 } @smack.llvm.umul.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.umul.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 0
@@ -327,7 +327,7 @@ entry:
   ret { i32, i1 } %4
 }
 
-define { i32, i1 } @smack.llvm.ssub.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.ssub.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, { i32, i1 }* %0, i32 0, i32 0
@@ -345,7 +345,7 @@ entry:
   ret { i32, i1 } %4
 }
 
-define { i32, i1 } @smack.llvm.usub.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.usub.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 0
@@ -363,7 +363,7 @@ entry:
   ret { i32, i1 } %4
 }
 
-define { i32, i1 } @smack.llvm.sdiv.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.sdiv.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, { i32, i1 }* %0, i32 0, i32 0
@@ -381,7 +381,7 @@ entry:
   ret { i32, i1 } %4
 }
 
-define { i32, i1 } @smack.llvm.udiv.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.udiv.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 0
@@ -400,7 +400,7 @@ entry:
 }
 
 
-define { i32, i1 } @smack.llvm.sadd.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.sadd.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 0
@@ -418,7 +418,7 @@ entry:
   ret { i32, i1 } %4
 }
 
-define { i32, i1 } @smack.llvm.uadd.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 {
+define { i32, i1 } @smack.llvm.uadd.with.overflow.i32(i32 %bar.coerce0, i32 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i32, i1 }
   %1 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 0
@@ -437,7 +437,7 @@ entry:
 }
 
 ;; i64
-define { i64, i1 } @smack.llvm.smul.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.smul.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -455,7 +455,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.umul.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.umul.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -473,7 +473,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.ssub.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.ssub.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -491,7 +491,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.usub.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.usub.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -509,7 +509,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.sdiv.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.sdiv.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -527,7 +527,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.udiv.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.udiv.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -545,7 +545,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.sadd.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.sadd.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
@@ -563,7 +563,7 @@ entry:
   ret { i64, i1 } %4
 }
 
-define { i64, i1 } @smack.llvm.uadd.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 {
+define { i64, i1 } @smack.llvm.uadd.with.overflow.i64(i64 %bar.coerce0, i64 %bar.coerce1) #0 noinline optnone{
 entry:
   %0 = alloca { i64, i1 }
   %1 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 0
