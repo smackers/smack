@@ -29,6 +29,7 @@
 #include "assistDS/Devirt.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/RenameIntrinsics.h"
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
@@ -104,6 +105,7 @@ int main(int argc, char **argv) {
 
   llvm::legacy::PassManager pass_manager;
 
+  pass_manager.add(new smack::RenameIntrinsics());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
