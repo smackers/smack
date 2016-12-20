@@ -1,4 +1,30 @@
-[![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/)
+<!-- [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/) -->
+
+# This is a fork of [SMACK](https://github.com/smackers/smack) to verify Rust language programs
+
+## The current goals of this project are:
+* An assertion verifier (through the `assert!` and `assert_eq!` macros) for Rust programs
+* Verification of safety properties for *unsafe* blocks, *e.g.*, Rust pointer aliasing rules are not violated, memory is not leaked and null pointers are never exposed
+* Detection of out-of-bounds memory accesses
+* Context bounded verification of concurrent programs
+* Pre and post condition reasoning for FFI functions, *e.g.*, C function calls
+ * This can be coupled with verification of called C functions for end-to-end verification
+
+## Current requirements
+* LLVM 3.6
+* [Rust 1.2](http://static.rust-lang.org/dist/2015-06-01/rust-nightly-x86_64-unknown-linux-gnu.tar.gz) *This is the most recent, working vintage Rust compiler for SMACK*
+* [Rust 1.2 source](http://static.rust-lang.org/dist/2015-06-01/rustc-nightly-src.tar.gz) *For use with Angelic verification and SDV backtrace viewing*
+
+## Related work
+* Rustc and Cargo plugins to ease the user's experience
+* SMACK friendly implementations of common Rust libraries
+* Upgrades to SMACK infrastructure to more recent versions of Rust
+* Sound implementation of missing LLVM features used by Rust but not Clang
+
+## I am interested in your ideas, bugs reports and other use cases
+[Mark S. Baranowski](mailto:baranows@cs.utah.edu)
+
+# Information pertaining to the core SMACK tool
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 
