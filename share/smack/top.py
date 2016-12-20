@@ -26,6 +26,7 @@ def frontends():
     'cpp': clang_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
+    'rs': rust_frontend,
     'bc': llvm_frontend,
     'll': llvm_frontend,
     'bpl': boogie_frontend,
@@ -299,6 +300,10 @@ def default_clang_compile_command(args):
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   return cmd
 
+def default_rust_compile_command(args):
+  cmd = ['rustc', '-g', '--emit', 'llvm-bc']
+  return cmd
+
 def build_libs(args):
   """Generate LLVM bitcodes for SMACK libraries."""
   bitcodes = []
@@ -341,6 +346,77 @@ def clang_frontend(args):
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
+
+def insert_rust_macros(victim_filename, macros_filename, write_to=None):
+  '''
+  Inserts the file 'macros_filename' into the Rust file 'victim_filename'.
+  if 'write_to' is not None, then it is used as the output filename
+  Note: This doesn't currently work if there are multiline comments
+  at the top of the file.
+  '''
+  def continue_check(line):
+    '''Returns true if execution should keep scrolling down file'''
+    rust_comment    = '//'
+    rust_feature    = '#'
+    line = line.strip()
+    return (len(line) == 0 or
+             line.startswith(rust_comment) 
+             or line.startswith(rust_feature))
+  
+  macro_file_lines = []
+  with open(macros_filename, 'r') as m_file:
+    macro_file_lines = m_file.readlines()
+
+  victim_file_lines = []
+  index             = 0
+  with open(victim_filename, 'r') as v_file:
+    victim_file_lines = v_file.readlines()   
+    for line in victim_file_lines:
+      if not continue_check(line):
+        break
+      else:
+        index += 1
+
+  victim_file_lines = (victim_file_lines[0:index] 
+                        + macro_file_lines 
+                        + victim_file_lines[index:len(victim_file_lines)])
+  victim_file_str = ''.join(victim_file_lines)
+
+  if write_to is None:
+    write_to = victim_filename
+  with open(write_to, 'w') as out_file:
+    out_file.write(victim_file_str)
+
+def rust_frontend(args):
+  """Generate Boogie code from Rust-language source(s)."""
+
+  bitcodes = []
+  libs = ['smack.c']
+  rust_files = args.input_files
+  smack_compile_command = default_clang_compile_command(args)
+  rust_compile_command = default_rust_compile_command(args)
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(smack_compile_command + ['-o', bc, c], console=False)
+    bitcodes.append(bc)
+
+  rust_macros = os.path.join(smack_lib(), 'smack.rs')
+
+  for rs in args.input_files:
+    bc      = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
+    temp_rs = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.rs', args)
+
+    insert_rust_macros(rs, rust_macros, write_to=temp_rs)
+
+    try_command(rust_compile_command + [temp_rs, '-o', bc], console=True)
+    bitcodes.append(bc)
+  bitcodes.append(os.path.join(smack_lib(), "foo.ll"))
+
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  llvm_to_bpl(args)
+
+
 
 def json_compilation_database_frontend(args):
   """Generate Boogie code from a JSON compilation database."""
