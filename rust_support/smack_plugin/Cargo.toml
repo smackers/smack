@@ -1,0 +1,8 @@
+[package]
+name = "extension"
+version = "0.1.0"
+authors = ["vagrant"]
+
+[lib]
+name = "extension"
+plugin = true
