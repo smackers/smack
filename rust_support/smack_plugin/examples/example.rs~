@@ -1,0 +1,10 @@
+#![feature(plugin, custom_attribute)]
+#![plugin(extension)]
+
+fn main() {
+   foo();
+}
+
+#[extension]
+fn foo() -> u32{
+}
