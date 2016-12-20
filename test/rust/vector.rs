@@ -2,7 +2,7 @@
 //test
 
 #![feature(alloc)]
-
+#![feature(heap_api)]
 
 extern {
     fn realloc(ptr: *mut u8, size: usize) -> *mut u8;
@@ -16,20 +16,20 @@ fn myrealloc(ptr: *mut u8, old_size: usize, size: usize, align: usize) -> *mut u
 extern crate alloc;
 use alloc::heap::{allocate,deallocate,reallocate};
 
-struct Arr {
+struct Vec {
     len: usize,
     sz: usize,
     data: *mut i32,
 }
 
-impl Arr {
-    fn new(sz: usize) -> Arr {
+impl Vec {
+    fn new(sz: usize) -> Vec {
         if sz == 0 {panic!("")};
         let dt = unsafe{allocate(sz*4,4)};
         for i in 0..sz {
             unsafe{(*(dt.offset(i as isize))) = 0};
         }
-        Arr{len: 0, sz: sz, data: dt as *mut i32}
+        Vec{len: 0, sz: sz, data: dt as *mut i32}
     }
 
     fn get(&self, ind: usize) -> i32 {
@@ -55,7 +55,7 @@ impl Arr {
     }
 }
 
-impl Drop for Arr {
+impl Drop for Vec {
     fn drop(&mut self) {
         // Check null pointer
         //        assert!((self.data as isize) != 0);
@@ -70,7 +70,7 @@ impl Drop for Arr {
 
 fn main() {
     let mut len = 2;
-    let mut arr = Arr::new(len);
+    let mut arr = Vec::new(len);
     let mut ind = 0;
 
     while ind < len {
