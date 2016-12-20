@@ -12,9 +12,9 @@
  * This can be coupled with verification of called C functions for end-to-end verification
 
 ## Current requirements
-* LLVM 3.6
-* [Rust 1.2](http://static.rust-lang.org/dist/2015-06-01/rust-nightly-x86_64-unknown-linux-gnu.tar.gz) *This is the most recent, working vintage Rust compiler for SMACK*
-* [Rust 1.2 source](http://static.rust-lang.org/dist/2015-06-01/rustc-nightly-src.tar.gz) *For use with Angelic verification and SDV backtrace viewing*
+* LLVM 3.7.1
+* [Rust 1.4.0](http://static.rust-lang.org/dist/2015-08-30/rust-nightly-x86_64-unknown-linux-gnu.tar.gz) *This is the most recent, working vintage Rust compiler for SMACK*
+* [Rust 1.4.0 source](http://static.rust-lang.org/dist/2015-08-30/rustc-nightly-src.tar.gz) *For use with Angelic verification and SDV backtrace viewing*
 
 ## Related work
 * Rustc and Cargo plugins to ease the user's experience
