@@ -40,8 +40,13 @@ void inserMemoryAccessCheck(Value* memoryPointer, Instruction* I, DataLayout* da
 
 bool MemorySafetyChecker::runOnModule(Module& m) {
   DataLayout* dataLayout = new DataLayout(&m);
-  Function* memorySafetyFunction = m.getFunction(Naming::MEMORY_SAFETY_FUNCTION);
+  LLVMContext& C = m.getContext();
+
+  Function* memorySafetyFunction = dyn_cast<Function>(m.getOrInsertFunction(Naming::MEMORY_SAFETY_FUNCTION, FunctionType::get(Type::getVoidTy(C), {PointerType::getUnqual(Type::getInt8Ty(C)), Type::getInt64Ty(C)}, false)));
   assert(memorySafetyFunction != NULL && "Memory safety function must be present.");
+  memorySafetyFunction->addFnAttr(Attribute::AttrKind::ReadNone);
+  memorySafetyFunction->addFnAttr(Attribute::AttrKind::NoUnwind);
+
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       if (SmackOptions::isEntryPoint(F.getName())) {
@@ -78,4 +83,3 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
 // Pass ID variable
 char MemorySafetyChecker::ID = 0;
 }
-

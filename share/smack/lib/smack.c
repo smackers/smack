@@ -1126,6 +1126,20 @@ void __SMACK_decls(void) {
     "}\n");
 
 #if MEMORY_SAFETY
+
+  D("implementation __SMACK_check_memory_safety(p: ref, size: i64)\n"
+    "{\n"
+    "  assert {:valid_deref} $Alloc[$base(p)] == true;\n"
+    "  assert {:valid_deref} $sle.ref.bool($base(p), p);\n"
+  #if MEMORY_MODEL_NO_REUSE_IMPLS
+    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
+  #elif MEMORY_MODEL_REUSE
+    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
+  #else
+    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
+  #endif
+    "}\n");
+
   D("function $base(ref) returns (ref);");
   D("var $allocatedCounter: int;\n");
 
