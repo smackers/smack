@@ -20,7 +20,7 @@ namespace smack {
   using namespace llvm;
 
   bool RenameIntrinsics::runOnModule(Module& M) {
-    StringRef arithStrRef("llvm\\.(s|u)(mul|add|sub)\\.with\\.overflow\\.i(8|16|32|64)");
+    StringRef arithStrRef("llvm\\.(s|u)(mul|add|sub|div)\\.with\\.overflow\\.i(8|16|32|64)");
     Regex arithRegex(arithStrRef);
 
     for (auto& func : M) {
@@ -29,7 +29,7 @@ namespace smack {
 	  StringRef functionName(callinst->getCalledFunction()->getName());
 	  SmallVector<StringRef, 1> matches;
 	  if (arithRegex.match(functionName, &matches) && matches.size() > 0) {
-	    StringRef replacementFuncName("smackreplacement." + std::string(matches[0]));
+	    StringRef replacementFuncName("smack." + std::string(matches[0]));
 	    auto replacementFunc = M.getNamedValue(replacementFuncName);
 	    if (replacementFunc) {
 	      callinst->setCalledFunction(replacementFunc);
