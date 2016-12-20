@@ -3,10 +3,11 @@
 # This is a fork of [SMACK](https://github.com/smackers/smack) to verify Rust language programs
 
 ## The current goals of this project are:
-* An assertion verifier (through the `assert!` and `assert_eq!` macros) for Rust programs
+* An assertion verifier (through the `assert!` and `assume!` macros) for Rust programs
 * Verification of safety properties for *unsafe* blocks, *e.g.*, Rust pointer aliasing rules are not violated, memory is not leaked and null pointers are never exposed
 * Detection of out-of-bounds memory accesses
 * Context bounded verification of concurrent programs
+* Automatic multi-language linking for verification of programs written across more than one file and language
 * Pre and post condition reasoning for FFI functions, *e.g.*, C function calls
  * This can be coupled with verification of called C functions for end-to-end verification
 
