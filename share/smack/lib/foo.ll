@@ -10,7 +10,7 @@ entry:
   %c1 = icmp sle i8 %2, 127
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i8 %2, -128
+  %c2 = icmp sge i8 %2, -128
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -28,7 +28,7 @@ entry:
   %c1 = icmp ule i8 %2, 255
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i8 %2, 0
+  %c2 = icmp uge i8 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -46,7 +46,7 @@ entry:
   %c1 = icmp sle i8 %2, 127
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i8 %2, -128
+  %c2 = icmp sge i8 %2, -128
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -64,7 +64,7 @@ entry:
   %c1 = icmp ule i8 %2, 255
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i8 %2, 0
+  %c2 = icmp uge i8 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -82,7 +82,7 @@ entry:
   %c1 = icmp sle i8 %2, 127
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i8 %2, -128
+  %c2 = icmp sge i8 %2, -128
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -100,7 +100,7 @@ entry:
   %c1 = icmp ule i8 %2, 255
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i8 %2, 0
+  %c2 = icmp uge i8 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -118,7 +118,7 @@ entry:
   %c1 = icmp sle i8 %2, 127
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i8 %2, -128
+  %c2 = icmp sge i8 %2, -128
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -136,7 +136,7 @@ entry:
   %c1 = icmp ule i8 %2, 255
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i8 %2, 0
+  %c2 = icmp uge i8 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i8, i1 }, {i8, i1}* %0, i32 0, i32 1
@@ -155,7 +155,7 @@ entry:
   %c1 = icmp sle i16 %2, 32767
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i16 %2, -32768
+  %c2 = icmp sge i16 %2, -32768
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -173,7 +173,7 @@ entry:
   %c1 = icmp ule i16 %2, 65535
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i16 %2, 0
+  %c2 = icmp uge i16 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -191,7 +191,7 @@ entry:
   %c1 = icmp sle i16 %2, 32767
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i16 %2, -32768
+  %c2 = icmp sge i16 %2, -32768
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -209,7 +209,7 @@ entry:
   %c1 = icmp ule i16 %2, 65535
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i16 %2, 0
+  %c2 = icmp uge i16 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -227,7 +227,7 @@ entry:
   %c1 = icmp sle i16 %2, 32767
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i16 %2, -32768
+  %c2 = icmp sge i16 %2, -32768
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -245,7 +245,7 @@ entry:
   %c1 = icmp ule i16 %2, 65535
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i16 %2, 0
+  %c2 = icmp uge i16 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -263,7 +263,7 @@ entry:
   %c1 = icmp sle i16 %2, 32767
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i16 %2, -32768
+  %c2 = icmp sge i16 %2, -32768
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -281,7 +281,7 @@ entry:
   %c1 = icmp ule i16 %2, 65535
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i16 %2, 0
+  %c2 = icmp uge i16 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i16, i1 }, {i16, i1}* %0, i32 0, i32 1
@@ -300,7 +300,7 @@ entry:
   %c1 = icmp sle i32 %2, 2147483647
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i32 %2, -2147483648
+  %c2 = icmp sge i32 %2, -2147483648
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -318,7 +318,7 @@ entry:
   %c1 = icmp ule i32 %2, 4294967295
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i32 %2, 0
+  %c2 = icmp uge i32 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -336,7 +336,7 @@ entry:
   %c1 = icmp sle i32 %2, 2147483647
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i32 %2, -2147483648
+  %c2 = icmp sge i32 %2, -2147483648
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -354,7 +354,7 @@ entry:
   %c1 = icmp ule i32 %2, 4294967295
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i32 %2, 0
+  %c2 = icmp uge i32 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -372,7 +372,7 @@ entry:
   %c1 = icmp sle i32 %2, 2147483647
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i32 %2, -2147483648
+  %c2 = icmp sge i32 %2, -2147483648
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -390,7 +390,7 @@ entry:
   %c1 = icmp ule i32 %2, 4294967295
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i32 %2, 0
+  %c2 = icmp uge i32 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -409,7 +409,7 @@ entry:
   %c1 = icmp sle i32 %2, 2147483647
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i32 %2, -2147483648
+  %c2 = icmp sge i32 %2, -2147483648
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -427,7 +427,7 @@ entry:
   %c1 = icmp ule i32 %2, 4294967295
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i32 %2, 0
+  %c2 = icmp uge i32 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i32, i1 }, {i32, i1}* %0, i32 0, i32 1
@@ -446,7 +446,7 @@ entry:
   %c1 = icmp sle i64 %2,  9223372036854775807
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i64 %2, -9223372036854775808
+  %c2 = icmp sge i64 %2, -9223372036854775808
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -464,7 +464,7 @@ entry:
   %c1 = icmp ule i64 %2,  18446744073709551615
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i64 %2, 0
+  %c2 = icmp uge i64 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -482,7 +482,7 @@ entry:
   %c1 = icmp sle i64 %2,  9223372036854775807
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i64 %2, -9223372036854775808
+  %c2 = icmp sge i64 %2, -9223372036854775808
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -500,7 +500,7 @@ entry:
   %c1 = icmp ule i64 %2,  18446744073709551615
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i64 %2, 0
+  %c2 = icmp uge i64 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -518,7 +518,7 @@ entry:
   %c1 = icmp sle i64 %2,  9223372036854775807
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i64 %2, -9223372036854775808
+  %c2 = icmp sge i64 %2, -9223372036854775808
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -536,7 +536,7 @@ entry:
   %c1 = icmp ule i64 %2,  18446744073709551615
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i64 %2, 0
+  %c2 = icmp uge i64 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -554,7 +554,7 @@ entry:
   %c1 = icmp sle i64 %2,  9223372036854775807
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp sgt i64 %2, -9223372036854775808
+  %c2 = icmp sge i64 %2, -9223372036854775808
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
@@ -572,7 +572,7 @@ entry:
   %c1 = icmp ule i64 %2,  18446744073709551615
   %c1c = zext i1 %c1 to i32
   call void @__VERIFIER_assert(i32 %c1c)
-  %c2 = icmp ugt i64 %2, 0
+  %c2 = icmp uge i64 %2, 0
   %c2c = zext i1 %c2 to i32
   call void @__VERIFIER_assert(i32 %c2c)
   %3 = getelementptr { i64, i1}, { i64, i1 }* %0, i32 0, i32 1
