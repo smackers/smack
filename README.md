@@ -59,7 +59,7 @@ SMACK.
 1. [Demos](docs/demos.md)
 1. [FAQ](docs/faq.md)
 1. [Inline Boogie Code](docs/boogie-code.md)
-1. [Contribution Guidelines](docs/contributions.md)
+1. [Contribution Guidelines](CONTRIBUTING.md)
 1. [Projects](docs/projects.md)
 1. [Publications](docs/publications.md)
 1. [People](docs/people.md)
