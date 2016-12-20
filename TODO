@@ -1,0 +1,3 @@
+Reimplement smack_plugin for new AST.
+Get tnt working again with new SMACK.
+Find best Rust nightly to work on.
