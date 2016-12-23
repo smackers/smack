@@ -30,7 +30,7 @@ def svcomp_filter(f):
   lines = None
   with open(f, 'r') as inputfile:
     lines = inputfile.read()
-  
+
   pruned_lines = raw_file_line_count(lines)
   raw_lines = len(lines.split('\n'))
 

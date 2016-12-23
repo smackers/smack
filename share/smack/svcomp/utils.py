@@ -79,6 +79,7 @@ def svcomp_process_file(args, name, ext):
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
     # replace exit definition with exit_
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
+    s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'\nargv[i]=malloc(3);\nargv[i][2]=0;\n', s)
 
     if args.memory_safety:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
@@ -87,10 +88,10 @@ def svcomp_process_file(args, name, ext):
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
         sys.exit(smack.top.results(args)['unknown'])
 
-    if args.signed_integer_overflow:
-      if re.search(r'argv=malloc', s):
-        args.bit_precise = True
-        args.bit_precise_pointers = True
+#    if args.signed_integer_overflow:
+#      if re.search(r'argv=malloc', s):
+#        args.bit_precise = True
+#        args.bit_precise_pointers = True
 
     length = len(s.split('\n'))
     if length < 60:

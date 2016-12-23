@@ -3,6 +3,7 @@
 
 #include <smack.h>
 #include <limits.h>
+#include <string.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -2134,3 +2135,19 @@ void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$allocatedCounter := 0;");
 #endif
 }
+
+
+#if MEMORY_SAFETY || SIGNED_INTEGER_OVERFLOW_CHECK
+char *strcpy(char *dest, const char *src) {
+  char *save = dest;
+  while (*dest++ = *src++);
+  return save;
+}
+
+size_t strlen(const char * str) {
+  size_t count = 0;
+  while (str[count] != 0) count++;
+  return count;
+}
+#endif
+
