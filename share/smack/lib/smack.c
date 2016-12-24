@@ -2144,10 +2144,22 @@ char *strcpy(char *dest, const char *src) {
   return save;
 }
 
-size_t strlen(const char * str) {
+size_t strlen(const char *str) {
   size_t count = 0;
   while (str[count] != 0) count++;
   return count;
+}
+
+char *strrchr(const char *src, int c) {
+  char *result = (char *)0;
+
+  while (*src != 0) {
+    if (*src == c) {
+      result = src;
+    }
+    src++;
+  }
+  return result;
 }
 #endif
 
