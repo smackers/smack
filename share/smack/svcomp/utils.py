@@ -29,7 +29,7 @@ def svcomp_frontend(args):
     if file_type == 'bitvector':
       args.bit_precise = True
       args.bit_precise_pointers = True
-    if file_type == 'float':
+    if file_type == 'float' and not args.signed_integer_overflow:
       #sys.exit(smack.top.results(args)['unknown'])
       args.float = True
       args.bit_precise = True
