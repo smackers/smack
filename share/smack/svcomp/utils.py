@@ -117,9 +117,7 @@ def is_crappy_driver_benchmark(args, bpl):
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--media--dvb-core--dvb-core.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-sound--core--seq--snd-seq.ko-ldv_main2_sequence_infinite_withcheck_stateful" in bpl or
       "43_2a_bitvector_linux-3.16-rc1.tar.xz-43_2a-drivers--net--xen-netfront.ko-entry_point_true-unreach-call" in bpl or
-      "linux-3.14__complex_emg__linux-alloc-spinlock__drivers-net-xen-netfront_true-unreach-call" in bpl or
       "linux-3.14__complex_emg__linux-drivers-clk1__drivers-net-ethernet-ethoc_true-unreach-call" in bpl or
-      "linux-3.14__linux-alloc-spinlock__drivers-net-xen-netfront_true-unreach-call" in bpl or
       "linux-3.14__linux-usb-dev__drivers-media-usb-hdpvr-hdpvr_true-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-32_7a-drivers--net--usb--r8152.ko-entry_point_true-unreach-call" in bpl or
       "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-ethernet-smsc-smsc911x_true-unreach-call" in bpl or
@@ -214,7 +212,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
   elif "ldv" in bpl:
-    if "linux-4.2-rc1.tar.xz-08_1a-drivers--staging--lustre--lustre--llite--llite_lloop.ko-entry_point_false-unreach-call" in bpl:
+    if "linux-4.2-rc1.tar.xz-08_1a-drivers--staging--lustre--lustre--llite--llite_lloop.ko-entry_point" in bpl or "linux-3.14__complex_emg__linux-usb-dev__drivers-media-usb-hdpvr-hdpvr" in bpl:
       heurTrace += "Special LDV benchmark detected. Setting loop unroll bar to 32.\n"
       loopUnrollBar = 32
     else:
