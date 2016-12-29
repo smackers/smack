@@ -81,17 +81,17 @@ def svcomp_process_file(args, name, ext):
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
     s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'\nargv[i]=malloc(3);\nargv[i][2]=0;\n', s)
 
-    if args.memory_safety:
+    if args.memory_safety and not 'argv=malloc' in s:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
 
     if args.float:
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
         sys.exit(smack.top.results(args)['unknown'])
 
-#    if args.signed_integer_overflow:
-#      if re.search(r'argv=malloc', s):
-#        args.bit_precise = True
-#        args.bit_precise_pointers = True
+    if 'argv=malloc'in s:
+      args.bit_precise = True
+      if args.signed_integer_overflow:
+        args.bit_precise_pointers = True
 
     length = len(s.split('\n'))
     if length < 60:
@@ -231,11 +231,11 @@ def verify_bpl_svcomp(args):
     heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
     loopUnrollBar = 1024
   elif args.memory_safety and "__main(argc:" in bpl:
-    heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 128.\n"
-    loopUnrollBar = 128
+    heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
+    loopUnrollBar = 4
   elif args.signed_integer_overflow and "__main(argc:" in bpl:
-    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 11.\n"
-    loopUnrollBar = 11
+    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 4.\n"
+    loopUnrollBar = 4
   elif args.signed_integer_overflow and "jain" in bpl:
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
@@ -247,6 +247,7 @@ def verify_bpl_svcomp(args):
   if args.bit_precise:
     heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
+    corral_command += ["/bopt:z3opt:smt.bv.enable_int2bv=true"]
     corral_command += ["/bopt:boolControlVC"]
 
   time_limit = 880
