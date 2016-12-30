@@ -88,10 +88,10 @@ def svcomp_process_file(args, name, ext):
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
         sys.exit(smack.top.results(args)['unknown'])
 
-    if 'argv=malloc'in s:
-      args.bit_precise = True
-      if args.signed_integer_overflow:
-        args.bit_precise_pointers = True
+#    if 'argv=malloc' in s:
+#      args.bit_precise = True
+#      if args.signed_integer_overflow:
+#        args.bit_precise_pointers = True
 
     length = len(s.split('\n'))
     if length < 60:
