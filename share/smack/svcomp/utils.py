@@ -67,6 +67,7 @@ def svcomp_check_property(args):
       prop = f.read()
     if "valid-deref" in prop:
       args.memory_safety = True
+      args.only_check_memleak = True
     elif "overflow" in prop:
       args.signed_integer_overflow = True
     elif not "__VERIFIER_error" in prop:
