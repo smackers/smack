@@ -3,6 +3,7 @@ import re
 import sys
 import subprocess
 import time
+from shutil import copyfile
 import smack.top
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph
@@ -67,7 +68,6 @@ def svcomp_check_property(args):
       prop = f.read()
     if "valid-deref" in prop:
       args.memory_safety = True
-      args.only_check_memleak = True
     elif "overflow" in prop:
       args.signed_integer_overflow = True
     elif not "__VERIFIER_error" in prop:
@@ -133,6 +133,31 @@ def is_crappy_driver_benchmark(args, bpl):
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
+
+  if args.memory_safety:
+    if not (args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak):
+      heurTrace = "engage valid deference checks.\n"
+      args.only_check_valid_deref = True
+      args.prop_to_check = 'valid-deref'
+      args.bpl_with_all_props = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
+      copyfile(args.bpl_file, args.bpl_with_all_props)
+      smack.top.property_selection(args)
+    elif args.only_check_valid_deref:
+      heurTrace = "engage valid free checks.\n"
+      args.only_check_valid_free = True
+      args.prop_to_check = 'valid-free'
+      args.only_check_valid_deref = False
+      args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
+      copyfile(args.bpl_with_all_props, args.bpl_file)
+      smack.top.property_selection(args)
+    elif args.only_check_valid_free:
+      heurTrace = "engage memleak checks.\n"
+      args.only_check_memleak = True
+      args.prop_to_check = 'memleak'
+      args.only_check_valid_free = False
+      args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
+      copyfile(args.bpl_with_all_props, args.bpl_file)
+      smack.top.property_selection(args)
 
   # invoke boogie for floats
   # I have to copy/paste part of verify_bpl
@@ -252,7 +277,16 @@ def verify_bpl_svcomp(args):
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
     corral_command += ["/bopt:boolControlVC"]
 
-  time_limit = 880
+  if args.memory_safety:
+    if args.prop_to_check == 'valid-deref':
+      time_limit = 780
+    elif args.prop_to_check == 'valid-free':
+      time_limit = 50
+    elif args.prop_to_check == 'memleak':
+      time_limit = 50
+  else:
+    time_limit = 880
+
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
@@ -307,8 +341,16 @@ def verify_bpl_svcomp(args):
         sys.exit(smack.top.results(args)['unknown'])
       if not args.quiet:
         print(heurTrace + "\n")
-      write_error_file(args, 'verified', verifier_output)
-      sys.exit(smack.top.results(args)['verified'])
+      if args.memory_safety:
+        heurTrace += (args.prop_to_check + "is verified\n")
+        if args.prop_to_check == 'valid-deref':
+          args.valid_deref_check_result = 'verified'
+        if args.prop_to_check == 'memleak':
+          sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+        verify_bpl_svcomp(args)
+      else:
+        write_error_file(args, 'verified', verifier_output)
+        sys.exit(smack.top.results(args)['verified'])
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
@@ -316,16 +358,32 @@ def verify_bpl_svcomp(args):
       if not args.quiet:
         print(heurTrace + "\n")
         sys.stdout.flush()
-      # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
-      time.sleep(1000)
+      if args.memory_safety:
+        heurTrace += (args.prop_to_check + " times out\n")
+        if args.prop_to_check == 'valid-deref':
+          args.valid_deref_check_result = 'timeout'
+        if args.prop_to_check == 'memleak':
+          sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+        verify_bpl_svcomp(args)
+      else:
+        # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
+        time.sleep(1000)
   elif result == 'verified': #normal inlining
     heurTrace += "Normal inlining terminated and found no bugs.\n"
   else: #normal inlining
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print(heurTrace + "\n")
-  write_error_file(args, result, verifier_output)
-  sys.exit(smack.top.results(args)[result])
+  if args.memory_safety and result == 'verified':
+    heurTrace += (args.prop_to_check + " is verified\n")
+    if args.prop_to_check == 'valid-deref':
+      args.valid_deref_check_result = 'verified'
+    if args.prop_to_check == 'memleak':
+      sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+    verify_bpl_svcomp(args)
+  else:
+    write_error_file(args, result, verifier_output)
+    sys.exit(smack.top.results(args)[result])
 
 def write_error_file(args, status, verifier_output):
   if args.memory_safety or status == 'timeout' or status == 'unknown':
