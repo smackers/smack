@@ -87,7 +87,7 @@ def svcomp_process_file(args, name, ext):
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
 
     if args.float:
-      if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
+      if re.search("fesetround|fegetround|InvSqrt",s):
         sys.exit(smack.top.results(args)['unknown'])
 
 #    if 'argv=malloc' in s:
