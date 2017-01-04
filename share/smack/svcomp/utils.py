@@ -280,9 +280,9 @@ def verify_bpl_svcomp(args):
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
-      time_limit = 780
+      time_limit = 760
     elif args.prop_to_check == 'valid-free':
-      time_limit = 50
+      time_limit = 70
     elif args.prop_to_check == 'memleak':
       time_limit = 50
   else:
