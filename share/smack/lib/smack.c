@@ -98,6 +98,7 @@ void* realloc(void* ptr, unsigned long size) {
     // Overapproximate the behavior of realloc
     ret = malloc(size);
     memcpy(ret, ptr, size);
+    free(ptr);
   }
   return ret;
 }
