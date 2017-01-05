@@ -2255,5 +2255,13 @@ char *strrchr(const char *src, int c) {
   }
   return result;
 }
+
+char *strerror(int errnum) {
+  char *str = (char *)malloc(3);
+  str[0] = __VERIFIER_nondet_char();
+  str[1] = __VERIFIER_nondet_char();
+  str[2] = 0;
+  return str;
+}
 #endif
 
