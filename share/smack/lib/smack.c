@@ -444,7 +444,7 @@ int fpclassifyf(float x) {
 }
 
 int __finitef(float x) {
-  return !__isinf(x);
+  return !__isinf(x) && !__isnanf(x);
 }
 
 double fabs(double x) {
@@ -632,7 +632,7 @@ int fpclassify(double x) {
 }
 
 int __finite(double x) {
-  return !__isinf(x);
+  return !__isinf(x) && !__isnan(x);
 }
 
 int __isnormall(long double x) {
@@ -704,7 +704,7 @@ int fpclassifyl(long double x) {
 }
 
 int __finitel(long double x) {
-  return !__isinfl(x);
+  return !__isinfl(x) && !__isnanl(x);
 }
 #endif
 
@@ -830,7 +830,8 @@ void __SMACK_dummy(int v) {
 
 #define DECLARE_EACH_FLOAT_TYPE(M,args...) \
   D(xstr(M(bvfloat,args))); \
-  D(xstr(M(bvdouble,args)));
+  D(xstr(M(bvdouble,args))); \
+  D(xstr(M(bvlongdouble,args)));
 
 void __SMACK_decls() {
 
@@ -1553,13 +1554,13 @@ void __SMACK_decls() {
   D("function {:builtin \"fp.isPositive\"} $ispositive.bvlongdouble(bvlongdouble) returns (bool);");
 
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, i1 != i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, !(i1 == i2))
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fole, i1 <= i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $folt, i1 < i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foge, i1 >= i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fogt, i1 > i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fueq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fune, i1 != i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fune, !(i1 == i2))
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fule, i1 <= i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fult, i1 < i2)
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fuge, i1 >= i2)
