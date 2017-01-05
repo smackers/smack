@@ -201,6 +201,8 @@ std::string SmackRep::type(const llvm::Type* t) {
       return Naming::FLOAT_TYPE;
     else if (t->isDoubleTy())
       return Naming::DOUBLE_TYPE;
+    else if (t->isX86_FP80Ty())
+      return Naming::LONG_DOUBLE_TYPE;
     else
       llvm_unreachable("Unsupported floating-point type.");
   }
@@ -950,6 +952,7 @@ std::string SmackRep::getPrelude() {
   if (SmackOptions::FloatEnabled) {
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
+    s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
   }
   s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
   s << "\n";
