@@ -2257,12 +2257,11 @@ char *strrchr(const char *src, int c) {
   return result;
 }
 
+char *error_str = "xx";
 char *strerror(int errnum) {
-  char *str = (char *)malloc(3);
-  str[0] = __VERIFIER_nondet_char();
-  str[1] = __VERIFIER_nondet_char();
-  str[2] = 0;
-  return str;
+  error_str[0] = __VERIFIER_nondet_char();
+  error_str[1] = __VERIFIER_nondet_char();
+  return error_str;
 }
 #endif
 

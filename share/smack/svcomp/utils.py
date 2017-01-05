@@ -85,6 +85,11 @@ def svcomp_process_file(args, name, ext):
 
     if args.memory_safety and not 'argv=malloc' in s:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
+    elif args.memory_safety and re.search(r'getopt32\([^,]+,[^,]+,[^).]+\);', s):
+      if not args.quiet:
+        print("Stumbled upon a benchmark that requires precise handling of vararg\n")
+      while (True):
+        pass
 
     if args.float:
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
