@@ -2263,5 +2263,10 @@ char *strerror(int errnum) {
   error_str[1] = __VERIFIER_nondet_char();
   return error_str;
 }
+
+void *realloc (void *__ptr, size_t __size) {
+  free(__ptr);
+  return malloc(__size);
+}
 #endif
 
