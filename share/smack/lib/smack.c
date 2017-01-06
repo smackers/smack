@@ -243,7 +243,7 @@ void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
 }
 
-void* calloc(unsigned long num, unsigned long size) {
+void* calloc(size_t num, size_t size) {
   void* ret;
   if (__VERIFIER_nondet_int()) {
     ret = 0;
