@@ -264,6 +264,9 @@ def verify_bpl_svcomp(args):
   elif "id_o1000_false-unreach-call" in bpl:
     heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
     loopUnrollBar = 1024
+  elif "n.c24" in bpl:
+    heurTrace += "Loops benchmark detected. Setting loop unroll bar to 1024.\n"
+    loopUnrollBar = 1024
   elif args.memory_safety and "__main(argc:" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
