@@ -219,7 +219,7 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    if not args.memory_safety or not args.bit_precise:
+    if not (args.memory_safety or args.bit_precise):
       corral_command += ["/di"]
 
   # we are not modeling strcpy
