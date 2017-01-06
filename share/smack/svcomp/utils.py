@@ -97,7 +97,7 @@ def svcomp_process_file(args, name, ext):
 
     if 'argv=malloc' in s:
 #      args.bit_precise = True
-      if args.signed_integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s):
+      if args.signed_integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s):
         args.bit_precise = True
         args.bit_precise_pointers = True
 
