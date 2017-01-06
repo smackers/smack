@@ -2235,11 +2235,6 @@ char *strcpy(char *dest, const char *src) {
   return save;
 }
 
-char *stpcpy(char *dest, const char *src) {
-  while (*dest++ = *src++);
-  return dest;
-}
-
 size_t strlen(const char *str) {
   size_t count = 0;
   while (str[count] != 0) count++;
