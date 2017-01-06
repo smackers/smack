@@ -198,7 +198,7 @@ int fpclassify(double x);
 int __finite(double x);
 
 //long doubles
-int __isnormall(long double x);
+/*int __isnormall(long double x);
 int __isSubnormall(long double x);
 int __iszerol(long double x);
 int __isinfl(long double x);
@@ -209,7 +209,7 @@ int __signbitl(long double x);
 int signbitl(long double x);
 int __fpclassifyl(long double x);
 int fpclassifyl(long double x);
-int __finitel(long double x);
+int __finitel(long double x);*/
 #endif
 
 #undef S1
