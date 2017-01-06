@@ -244,7 +244,7 @@ def verify_bpl_svcomp(args):
   elif " node3" in bpl:
     heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 100.\n"
     loopUnrollBar = 100
-  elif "calculate_output" in bpl:
+  elif "calculate_output" in bpl or "psyco" in bpl:
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
   elif "ldv" in bpl:
