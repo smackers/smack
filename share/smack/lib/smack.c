@@ -635,7 +635,7 @@ int __finite(double x) {
   return !__isinf(x) && !__isnan(x);
 }
 
-int __isnormall(long double x) {
+/*int __isnormall(long double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $isnormal.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
   return ret;
@@ -705,7 +705,7 @@ int fpclassifyl(long double x) {
 
 int __finitel(long double x) {
   return !__isinfl(x) && !__isnanl(x);
-}
+}*/
 #endif
 
 void __SMACK_dummy(int v) {
