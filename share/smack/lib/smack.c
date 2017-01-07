@@ -2263,6 +2263,21 @@ size_t strspn(const char *cs, const char *ct) {
   return n;
 }
 
+unsigned long int strtoul(const char *nptr, char **endptr, int base) {
+  if (__VERIFIER_nondet_int()) {
+    if (endptr != 0) {
+      *endptr = nptr;
+    }
+    return 0;
+  } else {
+    if (endptr != 0) {
+      size_t size = strlen(nptr);
+      *endptr = nptr + size;
+    }
+    return __VERIFIER_nondet_ulong();
+  }
+}
+
 double strtod(const char *nptr, char **endptr) {
   if (__VERIFIER_nondet_int()) {
     if (endptr != 0) {
