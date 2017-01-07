@@ -2274,7 +2274,7 @@ double strtod(const char *nptr, char **endptr) {
       size_t size = strlen(nptr);
       *endptr = nptr + size;
     }
-    return __VERIFIER_nondet_double();
+    return __VERIFIER_nondet_long();
   }
 }
 
