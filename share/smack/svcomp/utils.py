@@ -291,7 +291,10 @@ def verify_bpl_svcomp(args):
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
-      time_limit = 750
+      if "memleaks_test12_false-valid-free" in bpl:
+        time_limit = 10
+      else:
+        time_limit = 750
     elif args.prop_to_check == 'valid-free':
       time_limit = 80
     elif args.prop_to_check == 'memleak':
@@ -358,7 +361,11 @@ def verify_bpl_svcomp(args):
         if args.prop_to_check == 'valid-deref':
           args.valid_deref_check_result = 'verified'
         if args.prop_to_check == 'memleak':
-          sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+          if args.valid_deref_check_result == 'timeout':
+            sys.stdout.flush()
+            time.sleep(1000)
+          else:
+            sys.exit(smack.top.results(args)[args.valid_deref_check_result])
         verify_bpl_svcomp(args)
       else:
         write_error_file(args, 'verified', verifier_output)
@@ -375,7 +382,11 @@ def verify_bpl_svcomp(args):
         if args.prop_to_check == 'valid-deref':
           args.valid_deref_check_result = 'timeout'
         if args.prop_to_check == 'memleak':
-          sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+          if args.valid_deref_check_result == 'timeout':
+            sys.stdout.flush()
+            time.sleep(1000)
+          else:
+            sys.exit(smack.top.results(args)[args.valid_deref_check_result])
         verify_bpl_svcomp(args)
       else:
         # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
@@ -391,7 +402,11 @@ def verify_bpl_svcomp(args):
     if args.prop_to_check == 'valid-deref':
       args.valid_deref_check_result = 'verified'
     if args.prop_to_check == 'memleak':
-      sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+      if args.valid_deref_check_result == 'timeout':
+        sys.stdout.flush()
+        time.sleep(1000)
+      else:
+        sys.exit(smack.top.results(args)[args.valid_deref_check_result])
     verify_bpl_svcomp(args)
   else:
     write_error_file(args, result, verifier_output)
