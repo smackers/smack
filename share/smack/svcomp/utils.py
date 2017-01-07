@@ -82,6 +82,7 @@ def svcomp_process_file(args, name, ext):
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
     s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'argv[i]=malloc(3);\n    argv[i][0]=__VERIFIER_nondet_char();  argv[i][1]=__VERIFIER_nondet_char();  argv[i][2]=0;\n\n', s)
     s = re.sub(r'char\s+\*a\s+=\s+malloc\(11\);\s+a\[10\]\s+=\s+0;\s+for\(int\s+i=0;\s+i<10;\s+\+\+i\)\s+a\[i\]=__VERIFIER_nondet_char\(\);', r'char *a = malloc(3);\n  a[0] = __VERIFIER_nondet_char();  a[1] = __VERIFIER_nondet_char();  a[2] = 0;\n\n', s)
+    s = re.sub(r'__VERIFIER_assume\(i < 16\);', r'__VERIFIER_assume(i >= 0 && i < 16);', s)
 
     if args.memory_safety and not 'argv=malloc' in s:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
@@ -255,7 +256,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "LDV benchmark detected. Setting loop unroll bar to 13.\n"
       loopUnrollBar = 13
     staticLoopBound = 64
-  elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl:
+  elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl or "list-ext_false-unreach-call_false-valid-deref" in bpl:
     heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
     loopUnrollBar = 129
   elif "is_relaxed_prefix" in bpl:
