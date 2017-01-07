@@ -80,8 +80,9 @@ def svcomp_process_file(args, name, ext):
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
     # replace exit definition with exit_
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
-    s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'argv[i]=malloc(3);\n    argv[i][0]=__VERIFIER_nondet_char();  argv[i][1]=__VERIFIER_nondet_char();  argv[i][2]=0;\n\n', s)
-    s = re.sub(r'char\s+\*a\s+=\s+malloc\(11\);\s+a\[10\]\s+=\s+0;\s+for\(int\s+i=0;\s+i<10;\s+\+\+i\)\s+a\[i\]=__VERIFIER_nondet_char\(\);', r'char *a = malloc(3);\n  a[0] = __VERIFIER_nondet_char();  a[1] = __VERIFIER_nondet_char();  a[2] = 0;\n\n', s)
+    s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'argv[i] = malloc(3);\n    argv[i][0] = __VERIFIER_nondet_char();\n    argv[i][1] = __VERIFIER_nondet_char();\n    argv[i][2] = 0;', s)
+    s = re.sub(r'char\s+\*a\s+=\s+malloc\(11\);\s+a\[10\]\s+=\s+0;\s+for\(int\s+i=0;\s+i<10;\s+\+\+i\)\s+a\[i\]=__VERIFIER_nondet_char\(\);', r'char *a = malloc(3);\n  a[0] = __VERIFIER_nondet_char();\n  a[1] = __VERIFIER_nondet_char();\n  a[2] = 0;', s)
+    s = re.sub(r'static\s+char\s+dir\[42\];\s+for\(int\s+i=0;\s+i<42;\s+\+\+i\)\s+dir\[i\]\s+=\s+__VERIFIER_nondet_char\(\);\s+dir\[41\]\s+=\s+\'\\0\';', r'static char dir[3];\n  dir[0] = __VERIFIER_nondet_char();\n  dir[1] = __VERIFIER_nondet_char();\n  dir[2] = 0;', s)
     s = re.sub(r'__VERIFIER_assume\(i < 16\);', r'__VERIFIER_assume(i >= 0 && i < 16);', s)
 
     if args.memory_safety and not 'argv=malloc' in s:
