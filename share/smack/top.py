@@ -14,7 +14,7 @@ from threading import Timer
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 
-VERSION = '1.7.1'
+VERSION = '1.7.2'
 temporary_files = []
 
 def frontends():
@@ -142,6 +142,15 @@ def arguments():
   translate_group.add_argument('--memory-safety', action='store_true', default=False,
     help='enable memory safety checks')
 
+  translate_group.add_argument('--only-check-valid-deref', action='store_true', default=False,
+    help='only enable valid dereference checks')
+
+  translate_group.add_argument('--only-check-valid-free', action='store_true', default=False,
+    help='only enable valid free checks')
+
+  translate_group.add_argument('--only-check-memleak', action='store_true', default=False,
+    help='only enable memory leak checks')
+
   translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
     help='enable signed integer overflow checks')
 
@@ -186,6 +195,9 @@ def arguments():
 
   if not args.bpl_file:
     args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
+
+  if args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak:
+    args.memory_safety = True
 
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
@@ -400,6 +412,7 @@ def llvm_to_bpl(args):
   if args.float: cmd += ['-float']
   try_command(cmd, console=True)
   annotate_bpl(args)
+  property_selection(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -423,6 +436,35 @@ def annotate_bpl(args):
     f.seek(0)
     f.truncate()
     f.write(bpl)
+
+def property_selection(args):
+  selected_props = []
+  if args.only_check_valid_deref:
+    selected_props.append('valid_deref')
+  elif args.only_check_valid_free:
+    selected_props.append('valid_free')
+  elif args.only_check_memleak:
+    selected_props.append('valid_memtrack')
+
+  def replace_assertion(m):
+    if len(selected_props) > 0:
+      if m.group(2) and m.group(3) in selected_props:
+        attrib = m.group(2)
+        expr = m.group(4)
+      else:
+        attrib = ''
+        expr = 'true'
+      return m.group(1) + attrib + expr + ";"
+    else:
+      return m.group(0)
+
+  with open(args.bpl_file, 'r+') as f:
+    lines = f.readlines()
+    f.seek(0)
+    f.truncate()
+    for line in lines:
+      line = re.sub(r'^(\s*assert\s*)({:(.+)})?(.+);', replace_assertion, line)
+      f.write(line)
 
 def verification_result(verifier_output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):

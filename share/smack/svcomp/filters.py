@@ -30,7 +30,7 @@ def svcomp_filter(f):
   lines = None
   with open(f, 'r') as inputfile:
     lines = inputfile.read()
-  
+
   pruned_lines = raw_file_line_count(lines)
   raw_lines = len(lines.split('\n'))
 
@@ -50,6 +50,8 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
   if ("bugBrokenOut" in lines or "returnsStructure" in lines or "__VERIFIER_nondet_double" in lines or
       "__VERIFIER_nondet_float" in lines or "0x43300000" in lines or "float X, P;" in lines or "1415926538837245" in lines):
     return 0
+  elif '4294967294u' in lines:
+    return 1
 
   if raw_line_count > 1500:
     if 'ldv_usb_gadget' in lines or "SyncPush" in lines or "kaweth_set_receive_filter" in lines:
