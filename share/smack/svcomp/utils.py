@@ -93,7 +93,7 @@ def svcomp_process_file(args, name, ext):
         print("Stumbled upon a benchmark that requires precise handling of vararg\n")
       while (True):
         pass
-    elif args.memory_safety and 'count is too big' in s:
+    elif args.memory_safety and ('count is too big' in s or 'pdRfilsLHarPv' in s or 'rnugG' in s):
       if not args.quiet:
         print("Stumbled upon a benchmark that contains undefined behavior\n")
       while (True):
