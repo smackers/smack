@@ -14,7 +14,7 @@ from threading import Timer
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 
-VERSION = '1.7.1'
+VERSION = '1.7.2'
 temporary_files = []
 
 def frontends():
