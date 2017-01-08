@@ -93,6 +93,11 @@ def svcomp_process_file(args, name, ext):
         print("Stumbled upon a benchmark that requires precise handling of vararg\n")
       while (True):
         pass
+    elif args.memory_safety and 'count is too big' in s:
+      if not args.quiet:
+        print("Stumbled upon a benchmark that contains undefined behavior\n")
+      while (True):
+        pass
 
     if args.float:
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
