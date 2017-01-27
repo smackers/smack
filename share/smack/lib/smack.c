@@ -2300,6 +2300,17 @@ char *strerror(int errnum) {
   return error_str;
 }
 
+char *env_value_str = "xx";
+char *getenv(const char *name) {
+  if (__VERIFIER_nondet_int()) {
+    return 0;
+  } else {
+    env_value_str[0] = __VERIFIER_nondet_char();
+    env_value_str[1] = __VERIFIER_nondet_char();
+    return env_value_str;
+  }
+}
+
 void *realloc (void *__ptr, size_t __size) {
   free(__ptr);
   return malloc(__size);
