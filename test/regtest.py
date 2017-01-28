@@ -246,7 +246,7 @@ def main():
 
   # if there are any failed tests or tests that timed out, set the system
   # exit code to a failure status
-  if timeouts > 0 or failed > 0:
+  if timeouts > 0 or failed > 0 or unknowns > 0:
     sys.exit(1)
 
 if __name__=="__main__":
