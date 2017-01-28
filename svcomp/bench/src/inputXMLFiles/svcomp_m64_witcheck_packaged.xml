@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE benchmark SYSTEM "benchmark.dtd">
-<benchmark tool="smack_built" timelimit="900" hardtimelimit="930" memlimit="{MEMLIMIT}" cpuCores="{CORELIMIT}">
+<benchmark tool="smack_packaged" timelimit="900" hardtimelimit="930" memlimit="{MEMLIMIT}" cpuCores="{CORELIMIT}">
 
   <!-- propertyfile gets passed to smack executable in benchexec wrapper script -->
   <propertyfile>{PROPERTYDEFINITIONFILE}</propertyfile>
@@ -8,9 +8,9 @@
   <rundefinition name="{SETNAME}{DESCRIPTION}">
     <!-- Disabled because property file gets passed to -svcomp-property flag in benchexec wrapper
 	 <option name="- -svcomp-property">${sourcefile_path}/ALL.prp</option> -->
-    <!-- Enable svcomp mode -->
-    <option name="--verifier">svcomp</option>
-    <option name="-x">svcomp</option>
+    <!-- Disabled because svcomp mode gets enabled in smack.sh for packaged smack
+	 <option name="- -verifier">svcomp</option>
+	 <option name="-x">svcomp</option> -->
     <!-- Set clang to 64-bit -->
     <option name="--clang-options=-m64"></option>
   </rundefinition>
