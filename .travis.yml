@@ -27,5 +27,5 @@ script:
   - ./bin/build.sh
   - source /home/travis/build/smackers/smack.environment
   - cd test
-  - ./regtest.py --exhaustive
+  - ./regtest.py --all-examples
 
