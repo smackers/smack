@@ -1,4 +1,5 @@
 | **master** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=master)](https://travis-ci.org/smackers/smack) | **develop** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=develop)](https://travis-ci.org/smackers/smack) |
+| --- | --- | --- | --- |
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 
