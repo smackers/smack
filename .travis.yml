@@ -25,7 +25,4 @@ script:
   - clang --version
   - clang++ --version
   - ./bin/build.sh
-  - source /home/travis/build/smackers/smack.environment
-  - cd test
-  - ./regtest.py --all-examples
 
