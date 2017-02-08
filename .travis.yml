@@ -8,12 +8,12 @@ env:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
   matrix:
     - TRAVIS_ENV="--exhaustive --folder=basic"
+    - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
+    - TRAVIS_ENV="--exhaustive --folder=pthread_extras"
     - TRAVIS_ENV="--exhaustive --folder=bits"
     - TRAVIS_ENV="--exhaustive --folder=float"
     - TRAVIS_ENV="--exhaustive --folder=locks"
     - TRAVIS_ENV="--exhaustive --folder=memory-safety"
-    - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
-    - TRAVIS_ENV="--exhaustive --folder=pthread_extras"
     - TRAVIS_ENV="--exhaustive --folder=pthread"
 
 before_install:
