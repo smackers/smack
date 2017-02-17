@@ -181,6 +181,7 @@ def arguments():
   translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
     help='enable splitting of load/store instructions of LLVM aggregate types')
 
+  translate_group.add_argument('--strings', action='store_true', default=False, help='enable c string methods')
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -304,6 +305,7 @@ def default_clang_compile_command(args, lib = False):
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
+  if args.strings: cmd += ['-DSTRINGS_ENABLED']
   return cmd
 
 def build_libs(args):
