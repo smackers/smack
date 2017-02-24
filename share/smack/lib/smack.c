@@ -1792,7 +1792,8 @@ void __SMACK_init_func_memory_model(void) {
 #endif
 }
 
-#if STRINGS_ENABLED && (MEMORY_SAFETY || SIGNED_INTEGER_OVERFLOW_CHECK)
+
+#if STRINGS_ENABLED || (MEMORY_SAFETY || SIGNED_INTEGER_OVERFLOW_CHECK)
 char *strcpy(char *dest, const char *src) {
   char *save = dest;
   while (*dest++ = *src++);
