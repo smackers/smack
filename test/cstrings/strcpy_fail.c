@@ -1,16 +1,16 @@
 
-#include <strings.h>
+#include <string.h>
 #include "smack.h"
 
+// @flag --unroll=5
 // @expect verified
 
 int main() {
-  const char *sentence = "A longer string that will overflow";
-  char container[10];
+  const char *word = "made";
+  char container[5];
   
-  strcpy(container,sentence); // buffer overflow!
-  assert(strlen(container) == 34);
-  assert(strcmp(container,sentence) == 0);
+  strcpy(container,word);
+  assert(strcmp(container,"made") != 0);
   return 0;
 }
 

@@ -4,12 +4,13 @@
 #include <string.h>
 #include "smack.h"
 
+// @flag --unroll=5
 // @expect verified
 
 int main() {
-  char word[] = "Hello, world!";
+  char word[] = "Hi!!";
 
-  assert(strlen(word) == 13);
+  assert(strlen(word) == 4);
 
   return 0;  
 }

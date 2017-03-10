@@ -1,5 +1,4 @@
 
-#include <stdlib.h>
 #include <string.h>
 #include "smack.h"
 
@@ -7,9 +6,9 @@
 // @expect error
 
 int main() {
-  char word[] = "Hi";
+  char *str1 = "aaAA";
+  char *str2 = "aBBB";
 
-  assert(strlen(word) == 4);
-
+  assert(strncmp(str1,str2,2) == 0);
   return 0;
 }
