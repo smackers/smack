@@ -1800,10 +1800,86 @@ char *strcpy(char *dest, const char *src) {
   return save;
 }
 
+char *strncpy(char *dest, const char *src, size_t n) {
+  size_t i;
+
+  for (i = 0; i < n && src[i] != '\0'; i++)
+    dest[i] = src[i];
+  for ( ; i < n; i++;
+    dest[i] = '\0';
+
+  return dest;
+}
+
 size_t strlen(const char *str) {
   size_t count = 0;
-  while (str[count] != 0) count++;
+  while (str[count]) count++;
   return count;
+}
+
+// comparison
+
+int strcmp(const char *s1, const char *s2) {
+  size_t n;
+  for (n = 0; s1[n] == s2[n]; n++)
+    if (s1[n] == '\0')
+      return 0;
+  return s1[n] - s2[n];
+}
+
+int strncmp(const char *s1, const char *s2, size_t n) {
+ 
+// what do we do if n is bigger than s1 and s2? 
+  while (n--) {
+    if (*s1 != *s2)
+      return *s1 - *s2;
+    s1++; 
+    s2++;
+  }
+  
+  return 0;
+}
+
+// concatenation
+
+char *strcat(char *dest, const char *src) {
+
+  char *retDest = dest;
+
+  while (*dest)
+    dest++;
+  while (*dest++ = *src++) ;
+
+  return retDest;
+}
+
+char *strncat(char *dest, const char *src, size_t n) {
+  
+ // what happens when n is too big?
+
+  char *retDest = dest;
+
+  while (*dest)
+    dest++;
+  while (n--) 
+    *dest++ = *src++;
+  *dest = '\0'; 
+
+  return retDest;
+}
+
+// searching
+
+char *strchr(const char *src, int c) {
+  
+  while (*src != 0) {
+    if (*src == c) {
+      return src;
+    }
+    src++;
+  }
+
+  return (char *)0;
 }
 
 char *strrchr(const char *src, int c) {
