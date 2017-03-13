@@ -8,6 +8,6 @@
 int g[10];
 
 int main(void) {
-  ensures(forall("x", g[qvar("x")] == 0 || qvar("x") < 0 || qvar("x") > 9));
+  ensures(forall("x", g[qvar("x", int)] == 0 || qvar("x", int) < 0 || qvar("x", int) > 9));
   return 0;
 }
