@@ -266,7 +266,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
     for (P = ++F->arg_begin(), PE = F->arg_end(),
          T = FT->param_begin(), TE = FT->param_end();
          P != PE && T != TE; ++P, ++T)
-      Args.push_back(castTo(P, *T, "", BL));
+      Args.push_back(castTo(&*P, *T, "", BL));
 
     Value* directCall = CallInst::Create (const_cast<Function*>(FL),
                                           Args,
@@ -305,7 +305,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   // pointer and branch to the appropriate basic block to call the function.
   //
   Type * VoidPtrType = getVoidPtrType (M->getContext());
-  Value * FArg = castTo (F->arg_begin(), VoidPtrType, "", InsertPt);
+  Value * FArg = castTo (&*F->arg_begin(), VoidPtrType, "", InsertPt);
   BasicBlock * tailBB = failBB;
   for (unsigned index = 0; index < Targets.size(); ++index) {
     //

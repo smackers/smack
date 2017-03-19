@@ -109,14 +109,14 @@ bool GEPExprArgs::runOnModule(Module& M) {
                                   F->getName().str() + ".TEST",
                                   &M);
 
-          Function::arg_iterator NI = NewF->arg_begin();
+          auto NI = NewF->arg_begin();
           NI->setName("GEParg");
           ++NI;
 
           ValueToValueMapTy ValueMap;
 
-          for (Function::arg_iterator II = F->arg_begin(); NI != NewF->arg_end(); ++II, ++NI) {
-            ValueMap[II] = NI;
+          for (auto II = F->arg_begin(); NI != NewF->arg_end(); ++II, ++NI) {
+            ValueMap[&*II] = &*NI;
             NI->setName(II->getName());
             NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
           }
@@ -126,9 +126,8 @@ bool GEPExprArgs::runOnModule(Module& M) {
           SmallVector<ReturnInst*,100> Returns;
           CloneFunctionInto(NewF, F, ValueMap, false, Returns);
           std::vector<Value*> fargs;
-          for(Function::arg_iterator ai = NewF->arg_begin(), 
-              ae= NewF->arg_end(); ai != ae; ++ai) {
-            fargs.push_back(ai);
+          for (auto &Arg : NewF->args()) {
+            fargs.push_back(&Arg);
           }
 
           NewF->setAttributes(NewF->getAttributes().addAttributes(
@@ -136,7 +135,7 @@ bool GEPExprArgs::runOnModule(Module& M) {
           //Get the point to insert the GEP instr.
           SmallVector<Value*, 8> Ops(CI->op_begin()+1, CI->op_end());
           Instruction *InsertPoint;
-          for (BasicBlock::iterator insrt = NewF->front().begin(); 
+          for (Instruction *insrt = &*NewF->front().begin();
                isa<AllocaInst>(InsertPoint = insrt); ++insrt) {;}
 
           NI = NewF->arg_begin();

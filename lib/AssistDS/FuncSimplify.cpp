@@ -46,11 +46,11 @@ STATISTIC(numChanged,   "Number of aliases deleted");
 bool FuncSimplify::runOnModule(Module& M) {
 
   std::vector<GlobalAlias*> toDelete;
-  for (Module::alias_iterator I = M.alias_begin(); I != M.alias_end(); ++I) {
-    if(!I->hasInternalLinkage())
+  for (GlobalAlias &GA : M.aliases()) {
+    if(!GA.hasInternalLinkage())
       continue;
-    I->replaceAllUsesWith(I->getAliasee());
-    toDelete.push_back(I);
+    GA.replaceAllUsesWith(GA.getAliasee());
+    toDelete.push_back(&GA);
   }
   numChanged += toDelete.size();
 
