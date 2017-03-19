@@ -52,10 +52,9 @@ std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Modu
 
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
-  for (llvm::Module::const_global_iterator
-       g = M.global_begin(), e = M.global_end(); g != e; ++g) {
-    if (g->hasInitializer()) {
-      if (auto *N = getNode(g)) {
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.hasInitializer()) {
+      if (auto *N = getNode(&GV)) {
         sis.push_back(N);
       }
     }

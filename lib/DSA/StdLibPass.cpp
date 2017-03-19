@@ -563,28 +563,26 @@ StdLibDataStructures::runOnModule (Module &M) {
   // Erase direct calls to functions that don't return a pointer and are marked
   // with the readnone annotation.
   //
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) 
-    if (I->isDeclaration() && I->doesNotAccessMemory() &&
-        !isa<PointerType>(I->getReturnType()))
-      eraseCallsTo(I);
+  for (Function &F : M) 
+    if (F.isDeclaration() && F.doesNotAccessMemory() &&
+        !isa<PointerType>(F.getReturnType()))
+      eraseCallsTo(&F);
 
   //
   // Erase direct calls to external functions that are not varargs, do not
   // return a pointer, and do not take pointers.
   //
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) 
-    if (I->isDeclaration() && !I->isVarArg() &&
-        !isa<PointerType>(I->getReturnType())) {
+  for (Function &F : M)
+    if (F.isDeclaration() && !F.isVarArg() &&
+        !isa<PointerType>(F.getReturnType())) {
       bool hasPtr = false;
-      for (Function::arg_iterator ii = I->arg_begin(), ee = I->arg_end();
-           ii != ee;
-           ++ii)
-        if (isa<PointerType>(ii->getType())) {
+      for (auto &Arg : F.args())
+        if (isa<PointerType>(Arg.getType())) {
           hasPtr = true;
           break;
         }
       if (!hasPtr)
-        eraseCallsTo(I);
+        eraseCallsTo(&F);
     }
 
   if(!DisableStdLib) {
@@ -663,9 +661,9 @@ StdLibDataStructures::runOnModule (Module &M) {
                                     |DSGraph::IgnoreGlobals);
   GlobalsGraph->computeExternalFlags(DSGraph::ProcessCallSites);
   DEBUG(GlobalsGraph->AssertGraphOK());
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration()) {
-      DSGraph *Graph = getOrCreateGraph(I);
+  for (Function &F : M)
+    if (!F.isDeclaration()) {
+      DSGraph *Graph = getOrCreateGraph(&F);
       Graph->maskIncompleteMarkers();
       cloneGlobalsInto(Graph, DSGraph::DontCloneCallNodes |
                        DSGraph::DontCloneAuxCallNodes);

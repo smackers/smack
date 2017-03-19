@@ -201,7 +201,7 @@ void DSGraph::cloneInto( DSGraph* G, unsigned CloneFlags) {
            "Forward nodes shouldn't be in node list!");
     DSNode *New = new DSNode(*I, this);
     New->maskNodeTypes(~BitsToClear);
-    OldNodeMap[I] = New;
+    OldNodeMap[&*I] = New;
   }
 
   // Rewrite the links in the new nodes to point into the current graph now.
@@ -296,10 +296,9 @@ void DSGraph::getFunctionArgumentsForCall(const Function *F,
                                        std::vector<DSNodeHandle> &Args) const {
   Args.push_back(getReturnNodeFor(*F));
   Args.push_back(getVANodeFor(*F));
-  for (Function::const_arg_iterator AI = F->arg_begin(), E = F->arg_end();
-       AI != E; ++AI)
-    if (isa<PointerType>(AI->getType())) {
-      Args.push_back(getNodeForValue(AI));
+  for (const auto &Arg : F->args())
+    if (isa<PointerType>(Arg.getType())) {
+      Args.push_back(getNodeForValue(&Arg));
       assert(!Args.back().isNull() && "Pointer argument w/o scalarmap entry!?");
     }
 }
@@ -528,9 +527,9 @@ void DSGraph::mergeInGraph(const DSCallSite &CS, const Function &F,
 DSCallSite DSGraph::getCallSiteForArguments(const Function &F) const {
   std::vector<DSNodeHandle> Args;
 
-  for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I)
-    if (isa<PointerType>(I->getType()))
-      Args.push_back(getNodeForValue(I));
+  for (const auto &Arg : F.args())
+    if (isa<PointerType>(Arg.getType()))
+      Args.push_back(getNodeForValue(&Arg));
 
   return DSCallSite(CallSite(), getReturnNodeFor(F), getVANodeFor(F), &F, Args);
 }
@@ -630,10 +629,9 @@ void DSGraph::markIncompleteNodes(unsigned Flags) {
     for (ReturnNodesTy::iterator FI = ReturnNodes.begin(), E =ReturnNodes.end();
          FI != E; ++FI) {
       const Function &F = *FI->first;
-      for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end();
-           I != E; ++I)
-        if (isa<PointerType>(I->getType()))
-          markIncompleteNode(getNodeForValue(I).getNode());
+      for (const auto &Arg : F.args())
+        if (isa<PointerType>(Arg.getType()))
+          markIncompleteNode(getNodeForValue(&Arg).getNode());
       markIncompleteNode(FI->second.getNode());
     }
     // Mark all vanodes as incomplete (they are also arguments)
@@ -666,7 +664,7 @@ void DSGraph::markIncompleteNodes(unsigned Flags) {
   if (Flags & DSGraph::MarkVAStart) {
     for (node_iterator i=node_begin(); i != node_end(); ++i) {
       if (i->isVAStartNode())
-        markIncompleteNode(i);
+        markIncompleteNode(&*i);
     }
   }
 }
@@ -757,14 +755,13 @@ void DSGraph::computeExternalFlags(unsigned Flags) {
         FI != E; ++FI) {
       const Function &F = *FI->first;
       // Mark its arguments, return value (and vanode) as external.
-      for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end();
-          I != E; ++I){
+      for (const auto &Arg : F.args()) {
         if(TypeInferenceOptimize) {
-          if(I->getName().str() == "argv")
+          if(Arg.getName().str() == "argv")
             continue;
         }
-        if (isa<PointerType>(I->getType()))
-          markExternalNode(getNodeForValue(I).getNode(), processedNodes);
+        if (isa<PointerType>(Arg.getType()))
+          markExternalNode(getNodeForValue(&Arg).getNode(), processedNodes);
       }
       markExternalNode(FI->second.getNode(), processedNodes);
       markExternalNode(getVANodeFor(F).getNode(), processedNodes);
@@ -1169,15 +1166,14 @@ void DSGraph::removeDeadNodes(unsigned Flags) {
   //
   std::vector<DSNode*> DeadNodes;
   DeadNodes.reserve(Nodes.size());
-  for (NodeListTy::iterator NI = Nodes.begin(), E = Nodes.end(); NI != E;) {
-    DSNode *N = NI++;
-    assert(!N->isForwarding() && "Forwarded node in nodes list?");
+  for (DSNode &N : Nodes) {
+    assert(!N.isForwarding() && "Forwarded node in nodes list?");
 
-    if (!Alive.count(N)) {
-      Nodes.remove(N);
-      assert(!N->isForwarding() && "Cannot remove a forwarding node!");
-      DeadNodes.push_back(N);
-      N->dropAllReferences();
+    if (!Alive.count(&N)) {
+      Nodes.remove(&N);
+      assert(!N.isForwarding() && "Cannot remove a forwarding node!");
+      DeadNodes.push_back(&N);
+      N.dropAllReferences();
       ++NumDNE;
     }
   }
@@ -1250,9 +1246,9 @@ void DSGraph::AssertGraphOK() const {
          E = ReturnNodes.end();
        RI != E; ++RI) {
     const Function &F = *RI->first;
-    for (Function::const_arg_iterator AI = F.arg_begin(); AI != F.arg_end(); ++AI)
-      if (isa<PointerType>(AI->getType()))
-        assert(!getNodeForValue(AI).isNull() &&
+    for (const auto &Arg : F.args())
+      if (isa<PointerType>(Arg.getType()))
+        assert(!getNodeForValue(&Arg).isNull() &&
                "Pointer argument must be in the scalar map!");
     if (F.isVarArg())
       assert(VANodes.find(&F) != VANodes.end() &&

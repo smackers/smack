@@ -22,10 +22,10 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
 
   do {
     dead.clear();
-    for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-      std::string name = F->getName();
+    for (Function &F : M) {
+      std::string name = F.getName();
 
-      if (!(F->isDefTriviallyDead() || F->getNumUses() == 0))
+      if (!(F.isDefTriviallyDead() || F.getNumUses() == 0))
         continue;
 
       if (name.find("__SMACK_") != std::string::npos)
@@ -35,7 +35,7 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
         continue;
 
       DEBUG(errs() << "removing dead definition: " << name << "\n");
-      dead.push_back(F);
+      dead.push_back(&F);
     }
 
     for (auto F : dead)

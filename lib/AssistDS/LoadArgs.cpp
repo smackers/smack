@@ -144,17 +144,17 @@ bool LoadArgs::runOnModule(Module& M) {
                                     &M);
 
             fnCache[std::make_pair(F, NewFTy)] = NewF;
-            Function::arg_iterator NI = NewF->arg_begin();
+            auto NI = NewF->arg_begin();
 
             ValueToValueMapTy ValueMap;
 
             unsigned count = 0;
-            for (Function::arg_iterator II = F->arg_begin(); NI != NewF->arg_end(); ++count, ++NI) {
+            for (auto II = F->arg_begin(); NI != NewF->arg_end(); ++count, ++NI) {
               if(count == argNum) {
                 NI->setName("LDarg");
                 continue;
               }
-              ValueMap[II] = NI;
+              ValueMap[&*II] = &*NI;
               NI->setName(II->getName());
               NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
               ++II;
@@ -163,9 +163,8 @@ bool LoadArgs::runOnModule(Module& M) {
             SmallVector<ReturnInst*,100> Returns;
             CloneFunctionInto(NewF, F, ValueMap, false, Returns);
             std::vector<Value*> fargs;
-            for(Function::arg_iterator ai = NewF->arg_begin(), 
-                ae= NewF->arg_end(); ai != ae; ++ai) {
-              fargs.push_back(ai);
+            for (auto &Arg : NewF->args()) {
+              fargs.push_back(&Arg);
             }
 
             NewF->setAttributes(NewF->getAttributes().addAttributes(
@@ -174,7 +173,7 @@ bool LoadArgs::runOnModule(Module& M) {
                 F->getContext(), ~0, F->getAttributes().getFnAttributes()));
             //Get the point to insert the GEP instr.
             Instruction *InsertPoint;
-            for (BasicBlock::iterator insrt = NewF->front().begin(); isa<AllocaInst>(InsertPoint = insrt); ++insrt) {;}
+            for (auto insrt = NewF->front().begin(); isa<AllocaInst>(InsertPoint = &*insrt); ++insrt) {;}
             LoadInst *LI_new = new LoadInst(fargs.at(argNum), "", InsertPoint);
             fargs.at(argNum+1)->replaceAllUsesWith(LI_new);
           }
