@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.7 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -184,9 +184,12 @@ add_executable(llvm2bpl
 )
 
 set_target_properties(llvm2bpl smackTranslator assistDS dsa
-    PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
+    PROPERTIES
+      COMPILE_FLAGS "${LLVM_CXXFLAGS}"
+      LINK_FLAGS "${LLVM_LDFLAGS}"
+)
 
-target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
+target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS})
 target_link_libraries(llvm2bpl smackTranslator assistDS dsa)
 
 INSTALL(TARGETS llvm2bpl
