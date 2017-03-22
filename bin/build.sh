@@ -160,7 +160,7 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
-linux-ubuntu-14*)
+linux-ubuntu-1[46]*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" clang-3.8 llvm-3.8 mono-complete libz-dev libedit-dev"
   ;;
@@ -221,7 +221,7 @@ then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-ubuntu-14*)
+  linux-ubuntu-1[46]*)
     # Adding LLVM repository
     sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.8 main"
     ${WGET} -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
