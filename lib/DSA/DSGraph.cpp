@@ -1166,14 +1166,16 @@ void DSGraph::removeDeadNodes(unsigned Flags) {
   //
   std::vector<DSNode*> DeadNodes;
   DeadNodes.reserve(Nodes.size());
-  for (DSNode &N : Nodes) {
-    assert(!N.isForwarding() && "Forwarded node in nodes list?");
+  for (NodeListTy::iterator NI = Nodes.begin(), E = Nodes.end(); NI != E;) {
+    DSNode *N = &*NI;
+    ++NI;
+    assert(!N->isForwarding() && "Forwarded node in nodes list?");
 
-    if (!Alive.count(&N)) {
-      Nodes.remove(&N);
-      assert(!N.isForwarding() && "Cannot remove a forwarding node!");
-      DeadNodes.push_back(&N);
-      N.dropAllReferences();
+    if (!Alive.count(N)) {
+      Nodes.remove(N);
+      assert(!N->isForwarding() && "Cannot remove a forwarding node!");
+      DeadNodes.push_back(N);
+      N->dropAllReferences();
       ++NumDNE;
     }
   }
@@ -1522,7 +1524,7 @@ llvm::functionIsCallable (ImmutableCallSite CS, const Function* F) {
   //
   if (!noDSACallConv) {
     Function::const_arg_iterator farg = F->arg_begin(), fend = F->arg_end();
-    for (unsigned index = 1; index < (CS.arg_size() + 1) && farg != fend;
+    for (unsigned index = 0; index < CS.getNumArgOperands() && farg != fend;
         ++farg, ++index) {
       if (CS.isByValArgument(index) != farg->hasByValAttr()) {
         return false;

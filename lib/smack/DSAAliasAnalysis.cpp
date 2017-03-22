@@ -1,35 +1,18 @@
-//===- DataStructureAA.cpp - Data Structure Based Alias Analysis ----------===//
 //
-//                     The LLVM Compiler Infrastructure
+// This file is distributed under the MIT License. See LICENSE for details.
 //
-// This file was developed by the LLVM research group and is distributed under
-// the University of Illinois Open Source License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// This pass uses the top-down data structure graphs to implement a simple
-// context sensitive alias analysis.
-//
-//===----------------------------------------------------------------------===//
 #include "smack/DSAAliasAnalysis.h"
 #include "llvm/Support/FileSystem.h"
-#define DEBUG_TYPE "dsa-aa"
+
+#define DEBUG_TYPE "dsa-wrapper"
 
 namespace smack {
 
 using namespace llvm;
 
-RegisterPass<DSAAliasAnalysis> A("ds-aa", "Data Structure Graph Based Alias Analysis");
-RegisterAnalysisGroup<AliasAnalysis> B(A);
-char DSAAliasAnalysis::ID = 0;
-
-void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
-  std::error_code EC;
-  llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
-  TD->print(F, module);
-  BU->print(F, module);
-  TS->print(F, module);
-}
+char DSAAliasAnalysis::ID;
+RegisterPass<DSAAliasAnalysis> DSAAliasAnalysisPass("dsa-wrapper",
+  "SMACK Data Structure Graph Based Alias Analysis Wrapper");
 
 std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
     llvm::Module &M, MemcpyCollector *mcc) {
@@ -46,12 +29,8 @@ std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
   return mcc->getMemcpys();
 }
 
-
 std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M) {
   std::vector<const llvm::DSNode*> sis;
-
-  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
-    = nodeEqs->getEquivalenceClasses();
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer()) {
       if (auto *N = getNode(&GV)) {
@@ -62,10 +41,28 @@ std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Modu
   return sis;
 }
 
-bool DSAAliasAnalysis::isComplicatedNode(const llvm::DSNode* N) {
-  return
-    N->isIntToPtrNode() || N->isPtrToIntNode() ||
-    N->isExternalNode() || N->isUnknownNode();
+DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    return TD->getDSGraph(*I->getParent()->getParent());
+  else if (const Argument *A = dyn_cast<Argument>(V))
+    return TD->getDSGraph(*A->getParent());
+  else if (const BasicBlock *BB = dyn_cast<BasicBlock>(V))
+    return TD->getDSGraph(*BB->getParent());
+  else if (isa<GlobalValue>(V))
+    return TD->getGlobalsGraph();
+
+  // XXX I know this looks bad, but it works for now
+  for (auto U : V->users()) {
+    return getGraphForValue(U);
+  }
+
+  llvm_unreachable("Unexpected value.");
+}
+
+unsigned DSAAliasAnalysis::getOffset(const MemoryLocation* l) {
+  const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
+  DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
+  return (I == S.end()) ? 0 : (I->second.getOffset());
 }
 
 bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
@@ -94,53 +91,6 @@ bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* V, const llvm::Functio
 
 bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
   return TS->isFieldDisjoint(V, offset);
-}
-
-DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
-  if (const Instruction *I = dyn_cast<Instruction>(V))
-    return TD->getDSGraph(*I->getParent()->getParent());
-  else if (const Argument *A = dyn_cast<Argument>(V))
-    return TD->getDSGraph(*A->getParent());
-  else if (const BasicBlock *BB = dyn_cast<BasicBlock>(V))
-    return TD->getDSGraph(*BB->getParent());
-  else if (isa<GlobalValue>(V))
-    return TD->getGlobalsGraph();
-
-  // XXX I know this looks bad, but it works for now
-  for (auto U : V->users()) {
-    return getGraphForValue(U);
-  }
-
-  llvm_unreachable("Unexpected value.");
-}
-
-bool DSAAliasAnalysis::equivNodes(const DSNode* n1, const DSNode* n2) {
-  const EquivalenceClasses<const DSNode*> &eqs
-    = nodeEqs->getEquivalenceClasses();
-
-  return eqs.getLeaderValue(n1) == eqs.getLeaderValue(n2);
-}
-
-unsigned DSAAliasAnalysis::getOffset(const MemoryLocation* l) {
-  const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
-  DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
-  return (I == S.end()) ? 0 : (I->second.getOffset());
-}
-
-bool DSAAliasAnalysis::disjoint(const MemoryLocation* l1, const MemoryLocation* l2) {
-  unsigned o1 = getOffset(l1);
-  unsigned o2 = getOffset(l2);
-  return
-    (o1 < o2 && o1 + l1->Size <= o2)
-    || (o2 < o1 && o2 + l2->Size <= o1);
-}
-
-// TODO: Should this return the node or its leader?
-const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
-  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
-    = nodeEqs->getEquivalenceClasses();
-  auto *N = nodeEqs->getMemberForValue(v);
-  return N ? eqs.getLeaderValue(N) : nullptr;
 }
 
 bool DSAAliasAnalysis::isRead(const Value* V) {
@@ -205,39 +155,20 @@ unsigned DSAAliasAnalysis::getOffset(const Value* v) {
   return getOffset(new MemoryLocation(v));
 }
 
-AliasResult DSAAliasAnalysis::alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
-
-  if (LocA.Ptr == LocB.Ptr)
-    return MustAlias;
-
-  const DSNode *N1 = nodeEqs->getMemberForValue(LocA.Ptr);
-  const DSNode *N2 = nodeEqs->getMemberForValue(LocB.Ptr);
-
-  assert(N1 && "Expected non-null node.");
-  assert(N2 && "Expected non-null node.");
-
-  if (N1->isIncompleteNode() && N2->isIncompleteNode())
-    goto surrender;
-
-  if (isComplicatedNode(N1) && isComplicatedNode(N2))
-    goto surrender;
-
-  if (!equivNodes(N1,N2))
-    return NoAlias;
-
-  if (isMemcpyd(N1) || isMemcpyd(N2))
-    goto surrender;
-
-  if (isStaticInitd(N1) || isStaticInitd(N2))
-    goto surrender;
-
-  if (disjoint(&LocA,&LocB))
-    return NoAlias;
-
-  // FIXME: we could improve on this by checking the globals graph for aliased
-  // global queries...
-surrender:
-  return AliasAnalysis::alias(LocA, LocB);
+// TODO: Should this return the node or its leader?
+const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+    = nodeEqs->getEquivalenceClasses();
+  auto *N = nodeEqs->getMemberForValue(v);
+  return N ? eqs.getLeaderValue(N) : nullptr;
 }
 
+void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
+  std::error_code EC;
+  llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
+  TD->print(F, module);
+  BU->print(F, module);
+  TS->print(F, module);
 }
+
+} // namespace smack

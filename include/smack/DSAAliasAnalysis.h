@@ -1,19 +1,8 @@
-//===- DataStructureAA.cpp - Data Structure Based Alias Analysis ----------===//
 //
-//                     The LLVM Compiler Infrastructure
+// This file is distributed under the MIT License. See LICENSE for details.
 //
-// This file was developed by the LLVM research group and is distributed under
-// the University of Illinois Open Source License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// This pass uses the top-down data structure graphs to implement a simple
-// context sensitive alias analysis.
-//
-//===----------------------------------------------------------------------===//
-
-#ifndef LLVM_ANALYSIS_DATA_STRUCTURE_AA_H
-#define LLVM_ANALYSIS_DATA_STRUCTURE_AA_H
+#ifndef DSAALIASANALYSIS_H
+#define DSAALIASANALYSIS_H
 
 #include "assistDS/DSNodeEquivs.h"
 #include "dsa/DataStructure.h"
@@ -61,7 +50,7 @@ public:
   }
 };
 
-class DSAAliasAnalysis : public llvm::ModulePass, public llvm::AliasAnalysis {
+class DSAAliasAnalysis : public llvm::ModulePass {
 private:
   llvm::Module *module;
   llvm::TDDataStructures *TD;
@@ -73,14 +62,16 @@ private:
   std::unordered_set<const llvm::DSNode*> intConversions;
   const DataLayout* dataLayout;
 
+  std::vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
+  std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
+  llvm::DSGraph *getGraphForValue(const llvm::Value *V);
+  unsigned getOffset(const MemoryLocation* l);
+
 public:
   static char ID;
   DSAAliasAnalysis() : ModulePass(ID) {}
 
-  void printDSAGraphs(const char* Filename);
-
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-    llvm::AliasAnalysis::getAnalysisUsage(AU);
     AU.setPreservesAll();
     AU.addRequiredTransitive<llvm::BUDataStructures>();
     AU.addRequiredTransitive<llvm::TDDataStructures>();
@@ -90,7 +81,6 @@ public:
 
   virtual bool runOnModule(llvm::Module &M) {
     dataLayout = &M.getDataLayout();
-    InitializeAliasAnalysis(this, dataLayout);
     TD = &getAnalysis<llvm::TDDataStructures>();
     BU = &getAnalysis<llvm::BUDataStructures>();
     nodeEqs = &getAnalysis<llvm::DSNodeEquivs>();
@@ -101,29 +91,19 @@ public:
     return false;
   }
 
-  const llvm::DSNode *getNode(const llvm::Value* v);
-  bool isAlloced(const llvm::Value* v);
-  bool isExternal(const llvm::Value* v);
-  bool isSingletonGlobal(const llvm::Value *V);
+  bool isMemcpyd(const llvm::DSNode* n);
+  bool isStaticInitd(const llvm::DSNode* n);
   bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
   bool isFieldDisjoint(const GlobalValue* V, unsigned offset);
   bool isRead(const llvm::Value* V);
-  bool isMemcpyd(const llvm::DSNode* n);
-  bool isStaticInitd(const llvm::DSNode* n);
+  bool isAlloced(const llvm::Value* v);
+  bool isExternal(const llvm::Value* v);
+  bool isSingletonGlobal(const llvm::Value *V);
   unsigned getPointedTypeSize(const Value* v);
   unsigned getOffset(const Value* v);
-
-  virtual AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
-
-private:
-  bool isComplicatedNode(const llvm::DSNode* n);
-  std::vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
-  std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
-  llvm::DSGraph *getGraphForValue(const llvm::Value *V);
-  bool equivNodes(const llvm::DSNode* n1, const llvm::DSNode* n2);
-  unsigned getOffset(const MemoryLocation* l);
-  bool disjoint(const MemoryLocation* l1, const MemoryLocation* l2);
+  const llvm::DSNode *getNode(const llvm::Value* v);
+  void printDSAGraphs(const char* Filename);
 };
 }
 
-#endif
+#endif // DSAALIASANALYSIS_H
