@@ -307,7 +307,7 @@ void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
       num_elements = at->getNumElements();
       t = at->getElementType();
     } else {
-      assert (false && "Unexpected aggregate type");
+      llvm_unreachable("Unexpected aggregate type.");
     }
 
     for (unsigned j = 0; j < num_elements; j++) {
@@ -495,12 +495,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // emit(Stmt::assign(rep.expr(&ci), Expr::id(rep.getString(ci.getArgOperand(0)))));
 
   } else if (name == Naming::CONTRACT_FORALL) {
-    CallInst* cj;
-    Function* F;
     assert(ci.getNumArgOperands() == 2
-        && (cj = dyn_cast<CallInst>(ci.getArgOperand(1)))
-        && (F = cj->getCalledFunction())
-        && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+        && "Expected contract expression argument to contract function.");
+    CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(1));
+    assert(cj && "Expected contract expression argument to contract function.");
+    Function* F = cj->getCalledFunction();
+    assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
         && "Expected contract expression argument to contract function.");
 
     auto binding = rep.getString(ci.getArgOperand(0));
@@ -525,12 +525,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
              name == Naming::CONTRACT_ENSURES ||
              name == Naming::CONTRACT_INVARIANT) {
 
-    CallInst* cj;
-    Function* F;
     assert(ci.getNumArgOperands() == 1
-        && (cj = dyn_cast<CallInst>(ci.getArgOperand(0)))
-        && (F = cj->getCalledFunction())
-        && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+        && "Expected contract expression argument to contract function.");
+    CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(0));
+    assert(cj && "Expected contract expression argument to contract function.");
+    Function* F = cj->getCalledFunction();
+    assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
         && "Expected contract expression argument to contract function.");
 
     std::list<const Expr*> args;
