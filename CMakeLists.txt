@@ -165,7 +165,6 @@ add_library(smackTranslator STATIC
   include/smack/ExtractContracts.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
-  include/smack/SmackRepFlatMem.h
   include/smack/MemorySafetyChecker.h
   include/smack/SignedIntegerOverflowChecker.h
   lib/smack/BoogieAst.cpp
@@ -182,7 +181,6 @@ add_library(smackTranslator STATIC
   lib/smack/ExtractContracts.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
-  lib/smack/SmackRepFlatMem.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/SignedIntegerOverflowChecker.cpp
 )
