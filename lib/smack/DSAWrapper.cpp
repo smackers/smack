@@ -1,7 +1,7 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "smack/DSAAliasAnalysis.h"
+#include "smack/DSAWrapper.h"
 #include "llvm/Support/FileSystem.h"
 
 #define DEBUG_TYPE "dsa-wrapper"
@@ -10,11 +10,11 @@ namespace smack {
 
 using namespace llvm;
 
-char DSAAliasAnalysis::ID;
-RegisterPass<DSAAliasAnalysis> DSAAliasAnalysisPass("dsa-wrapper",
+char DSAWrapper::ID;
+RegisterPass<DSAWrapper> DSAWrapperPass("dsa-wrapper",
   "SMACK Data Structure Graph Based Alias Analysis Wrapper");
 
-std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
+std::vector<const llvm::DSNode*> DSAWrapper::collectMemcpys(
     llvm::Module &M, MemcpyCollector *mcc) {
 
   for (llvm::Module::iterator func = M.begin(), e = M.end();
@@ -29,7 +29,7 @@ std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectMemcpys(
   return mcc->getMemcpys();
 }
 
-std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M) {
+std::vector<const llvm::DSNode*> DSAWrapper::collectStaticInits(llvm::Module &M) {
   std::vector<const llvm::DSNode*> sis;
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer()) {
@@ -41,7 +41,7 @@ std::vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Modu
   return sis;
 }
 
-DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
+DSGraph *DSAWrapper::getGraphForValue(const Value *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return TD->getDSGraph(*I->getParent()->getParent());
   else if (const Argument *A = dyn_cast<Argument>(V))
@@ -59,13 +59,13 @@ DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
   llvm_unreachable("Unexpected value.");
 }
 
-unsigned DSAAliasAnalysis::getOffset(const MemoryLocation* l) {
+unsigned DSAWrapper::getOffset(const MemoryLocation* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
   DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
   return (I == S.end()) ? 0 : (I->second.getOffset());
 }
 
-bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
+bool DSAWrapper::isMemcpyd(const llvm::DSNode* n) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
   const llvm::DSNode* nn = eqs.getLeaderValue(n);
@@ -75,7 +75,7 @@ bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
   return false;
 }
 
-bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
+bool DSAWrapper::isStaticInitd(const llvm::DSNode* n) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
   const llvm::DSNode* nn = eqs.getLeaderValue(n);
@@ -85,30 +85,30 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
   return false;
 }
 
-bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* V, const llvm::Function* F) {
+bool DSAWrapper::isFieldDisjoint(const llvm::Value* V, const llvm::Function* F) {
   return TS->isFieldDisjoint(V, F);
 }
 
-bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
+bool DSAWrapper::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
   return TS->isFieldDisjoint(V, offset);
 }
 
-bool DSAAliasAnalysis::isRead(const Value* V) {
+bool DSAWrapper::isRead(const Value* V) {
   const DSNode *N = getNode(V);
   return N && (N->isReadNode());
 }
 
-bool DSAAliasAnalysis::isAlloced(const Value* v) {
+bool DSAWrapper::isAlloced(const Value* v) {
   const DSNode *N = getNode(v);
   return N && (N->isHeapNode() || N->isAllocaNode());
 }
 
-bool DSAAliasAnalysis::isExternal(const Value* v) {
+bool DSAWrapper::isExternal(const Value* v) {
   const DSNode *N = getNode(v);
   return N && N->isExternalNode();
 }
 
-bool DSAAliasAnalysis::isSingletonGlobal(const Value *V) {
+bool DSAWrapper::isSingletonGlobal(const Value *V) {
   const DSNode *N = getNode(V);
   if (!N || !N->isGlobalNode() || N->numGlobals() > 1)
     return false;
@@ -140,7 +140,7 @@ bool DSAAliasAnalysis::isSingletonGlobal(const Value *V) {
   return true;
 }
 
-unsigned DSAAliasAnalysis::getPointedTypeSize(const Value* v) {
+unsigned DSAWrapper::getPointedTypeSize(const Value* v) {
   if (llvm::PointerType* t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
     llvm::Type* pointedType = t->getTypeAtIndex(0u);
     if (pointedType->isSized())
@@ -151,19 +151,19 @@ unsigned DSAAliasAnalysis::getPointedTypeSize(const Value* v) {
     llvm_unreachable("Type should be pointer.");
 }
 
-unsigned DSAAliasAnalysis::getOffset(const Value* v) {
+unsigned DSAWrapper::getOffset(const Value* v) {
   return getOffset(new MemoryLocation(v));
 }
 
 // TODO: Should this return the node or its leader?
-const DSNode *DSAAliasAnalysis::getNode(const Value* v) {
+const DSNode *DSAWrapper::getNode(const Value* v) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
     = nodeEqs->getEquivalenceClasses();
   auto *N = nodeEqs->getMemberForValue(v);
   return N ? eqs.getLeaderValue(N) : nullptr;
 }
 
-void DSAAliasAnalysis::printDSAGraphs(const char* Filename) {
+void DSAWrapper::printDSAGraphs(const char* Filename) {
   std::error_code EC;
   llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
   TD->print(F, module);

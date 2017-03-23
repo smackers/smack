@@ -17,7 +17,7 @@ class SmackRepFlatMem : public SmackRep {
   int bottom;
 
 public:
-  SmackRepFlatMem(DSAAliasAnalysis* aa) : SmackRep(aa), bottom(0) {}
+  SmackRepFlatMem(DSAWrapper* aa) : SmackRep(aa), bottom(0) {}
 };
 }
 

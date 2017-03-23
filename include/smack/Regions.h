@@ -5,7 +5,7 @@
 #define REGIONS_H
 
 #include "dsa/DSGraph.h"
-#include "smack/DSAAliasAnalysis.h"
+#include "smack/DSAWrapper.h"
 
 namespace smack {
 
@@ -25,7 +25,7 @@ private:
   bool collapsed;
 
   static const DataLayout* DL;
-  static DSAAliasAnalysis* DSA;
+  static DSAWrapper* DSA;
   // static DSNodeEquivs* NEQS;
 
   static bool isSingleton(const DSNode* N, unsigned offset, unsigned length);

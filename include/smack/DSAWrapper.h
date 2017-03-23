@@ -1,8 +1,8 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef DSAALIASANALYSIS_H
-#define DSAALIASANALYSIS_H
+#ifndef DSAWRAPPER_H
+#define DSAWRAPPER_H
 
 #include "assistDS/DSNodeEquivs.h"
 #include "dsa/DataStructure.h"
@@ -50,7 +50,7 @@ public:
   }
 };
 
-class DSAAliasAnalysis : public llvm::ModulePass {
+class DSAWrapper : public llvm::ModulePass {
 private:
   llvm::Module *module;
   llvm::TDDataStructures *TD;
@@ -69,7 +69,7 @@ private:
 
 public:
   static char ID;
-  DSAAliasAnalysis() : ModulePass(ID) {}
+  DSAWrapper() : ModulePass(ID) {}
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     AU.setPreservesAll();
@@ -106,4 +106,4 @@ public:
 };
 }
 
-#endif // DSAALIASANALYSIS_H
+#endif // DSAWRAPPER_H
