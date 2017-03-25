@@ -1894,14 +1894,72 @@ char *strrchr(const char *src, int c) {
   return result;
 }
 
-size_t strspn(const char *cs, const char *ct) {
+size_t strspn(const char *s1, const char *s2) {
   size_t n;
   const char *p;
-  for (n = 0; *cs; cs++, n++) {
-    for (p = ct; *p && *p != *cs; p++);
+  for (n = 0; *s1; s1++, n++) {
+    for (p = s2; *p && *p != *s1; p++);
     if (!*p) break;
   }
   return n;
+}
+
+size_t strcspn(const char *s1, const char *s2) {
+  size_t n;
+  const char *p;
+  for (n = 0; *s1; s1++, n++) {
+    for (p = s2; *p && *p != *s1; p++);
+    if (*p) break;
+  }
+  return n;
+}
+
+char *strpbrk(const char *s1, const char *s2) {
+  for (char *c1 = s1; *c1; c1++)
+    for (char c2 = s2; *c2; c2++)
+      if (*c1 == *c2)
+        return c1;
+  return 0;
+}
+
+char *strstr(const char *haystack, const char *needle) {
+  if (!haystack || !needle)
+    return 0;
+
+  for (; *haystack; haystack++) {
+    const char *h, *n;
+    for (h = haystack, n = needle; *h && *n && (*h == *n); h++, n++);
+    if (*n == '\0')
+      return haystack;
+  }
+  return 0;
+}
+
+static char *olds;
+
+char *strtok(char *str, const char *delim) {
+  if (!str)
+    str = olds;
+
+  // if str and olds are empty, return 0
+  if (!str)
+    return 0;
+
+  // skip first delims
+  str += strspn(str,delim);
+  if (*str == '\0')
+    return 0;
+
+  char *tok = str;
+  // find end of token
+  str = strpbrk(str,delim);
+  if (!str) // this token finishes the string
+    olds = 0;
+  else {
+    *str = '\0';
+    olds = str + 1;
+  }
+  return token;
 }
 
 unsigned long int strtoul(const char *nptr, char **endptr, int base) {
