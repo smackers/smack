@@ -4,9 +4,10 @@
 
 #define DEBUG_TYPE "codify-static-inits"
 
+#include "smack/CodifyStaticInits.h"
+#include "smack/DSAWrapper.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
-#include "smack/CodifyStaticInits.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,7 +61,7 @@ namespace{
 bool CodifyStaticInits::runOnModule(Module& M) {
   TD = &M.getDataLayout();
   LLVMContext& C = M.getContext();
-  DSAAliasAnalysis* DSA = &getAnalysis<DSAAliasAnalysis>();
+  DSAWrapper* DSA = &getAnalysis<DSAWrapper>();
 
   Function* F = dyn_cast<Function>(
     M.getOrInsertFunction(Naming::STATIC_INIT_PROC,
@@ -131,7 +132,7 @@ bool CodifyStaticInits::runOnModule(Module& M) {
 
 void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DSAAliasAnalysis>();
+  AU.addRequired<DSAWrapper>();
 }
 
 // Pass ID variable

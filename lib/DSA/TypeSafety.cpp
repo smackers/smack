@@ -522,10 +522,10 @@ TypeSafety<dsa>::findTypeSafeDSNodes (const DSGraph * Graph) {
   DSGraph::node_const_iterator N = Graph->node_begin();
   DSGraph::node_const_iterator NE = Graph->node_end();
   for (; N != NE; ++N) {
-    if (isTypeSafe (N)) {
+    if (isTypeSafe (&*N)) {
       TypeSafeNodes.insert (&*N);
     }
-    fieldMapUpdate(N);
+    fieldMapUpdate(&*N);
   }
 }
 

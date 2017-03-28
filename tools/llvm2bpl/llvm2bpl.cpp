@@ -20,7 +20,6 @@
 #include "llvm/Support/FormattedStream.h"
 
 #include "smack/BplFilePrinter.h"
-#include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"

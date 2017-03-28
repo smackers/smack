@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.7 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.8 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -154,7 +154,7 @@ add_library(smackTranslator STATIC
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
-  include/smack/DSAAliasAnalysis.h
+  include/smack/DSAWrapper.h
   include/smack/Naming.h
   include/smack/Regions.h
   include/smack/SmackInstGenerator.h
@@ -165,13 +165,12 @@ add_library(smackTranslator STATIC
   include/smack/ExtractContracts.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
-  include/smack/SmackRepFlatMem.h
   include/smack/MemorySafetyChecker.h
   include/smack/SignedIntegerOverflowChecker.h
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
-  lib/smack/DSAAliasAnalysis.cpp
+  lib/smack/DSAWrapper.cpp
   lib/smack/Naming.cpp
   lib/smack/Regions.cpp
   lib/smack/SmackInstGenerator.cpp
@@ -182,7 +181,6 @@ add_library(smackTranslator STATIC
   lib/smack/ExtractContracts.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
-  lib/smack/SmackRepFlatMem.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/SignedIntegerOverflowChecker.cpp
 )

@@ -53,9 +53,9 @@ EntryPointAnalysis::~EntryPointAnalysis() {}
 
 void EntryPointAnalysis::findEntryPoints(const Module& M,
                                          std::vector<const Function*>& dest) const {
-  for (Module::const_iterator ii = M.begin(), ee = M.end(); ii != ee; ++ii)
-    if (isEntryPoint(ii))
-      dest.push_back(ii);
+  for (const Function &F : M)
+    if (isEntryPoint(&F))
+      dest.push_back(&F);
 }
 
 void EntryPointAnalysis::print(llvm::raw_ostream& O, const Module* M) const {

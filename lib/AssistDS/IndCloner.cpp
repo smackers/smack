@@ -62,7 +62,7 @@ IndClone::runOnModule(Module& M) {
   // by an indirect function call, add it to our worklist of functions to
   // clone.
   //
-  for (Module::iterator I = M.begin(); I != M.end(); ++I) {
+  for (Function &F : M) {
     // Flag whether the function should be cloned
     bool pleaseCloneTheFunction = false;
 
@@ -70,11 +70,10 @@ IndClone::runOnModule(Module& M) {
     // Only clone functions which are defined and cannot be replaced by another
     // function by the linker.
     //
-    if (!I->isDeclaration() && !I->mayBeOverridden()) {
-      for (Value::user_iterator ui = I->user_begin(), ue = I->user_end();
-          ui != ue; ++ui) {
-        if (!isa<CallInst>(*ui) && !isa<InvokeInst>(*ui)) {
-          if(!ui->use_empty())
+    if (!F.isDeclaration() && !F.mayBeOverridden()) {
+      for (User *U : F.users()) {
+        if (!isa<CallInst>(U) && !isa<InvokeInst>(U)) {
+          if(!U->use_empty())
           //
           // If this function is used for anything other than a direct function
           // call, then we want to clone it.
@@ -87,8 +86,8 @@ IndClone::runOnModule(Module& M) {
           // function.  That would make the function usable in an indirect
           // function call.
           //
-          for (unsigned index = 1; index < ui->getNumOperands(); ++index) {
-            if (ui->getOperand(index)->stripPointerCasts() == I) {
+          for (unsigned index = 1; index < U->getNumOperands(); ++index) {
+            if (U->getOperand(index)->stripPointerCasts() == &F) {
               pleaseCloneTheFunction = true;
               break;
             }
@@ -100,7 +99,7 @@ IndClone::runOnModule(Module& M) {
         // call site, schedule it for cloning.
         //
         if (pleaseCloneTheFunction) {
-          toClone.push_back(I);
+          toClone.push_back(&F);
           break;
         }
       }
