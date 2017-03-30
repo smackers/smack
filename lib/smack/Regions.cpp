@@ -39,7 +39,7 @@ namespace {
 }
 
 void Region::init(Module& M, Pass& P) {
-  DL = M.getDataLayout();
+  DL = &M.getDataLayout();
   DSA = &P.getAnalysis<DSAAliasAnalysis>();
 }
 
@@ -96,7 +96,6 @@ bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
       if (I->second->begin() == I->second->end()) break;
       if ((++(I->second->begin())) != I->second->end()) break;
       Type* T = *I->second->begin();
-      while (T->isPointerTy()) T = T->getPointerElementType();
       if (!T->isSized()) break;
       if (DL->getTypeAllocSize(T) != length) break;
       if (!T->isSingleValueType()) break;
@@ -120,9 +119,11 @@ bool Region::isComplicated(const DSNode* N) {
 
 void Region::init(const Value* V, unsigned length) {
   Type* T = V->getType();
-  while (T->isPointerTy()) T = T->getPointerElementType();
+  assert (T->isPointerTy() && "Expected pointer argument.");
+  T = T->getPointerElementType();
   context = &V->getContext();
-  representative = DSA ? DSA->getNode(V) : nullptr;
+  representative = (DSA && !dyn_cast<ConstantPointerNull>(V))
+    ? DSA->getNode(V) : nullptr;
   this->type = T;
   this->offset = DSA ? DSA->getOffset(V) : 0;
   this->length = length;
@@ -133,7 +134,7 @@ void Region::init(const Value* V, unsigned length) {
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
-    T->isIntegerTy(8));
+    DSA->isMemcpyd(representative) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncompleteNode();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isCollapsedNode();
@@ -191,7 +192,6 @@ RegisterPass<Regions> RegionsPass("smack-regions", "SMACK Memory Regions Pass");
 void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   if (!SmackOptions::NoMemoryRegionSplitting) {
-    AU.addRequired<DataLayoutPass>();
     AU.addRequiredTransitive<LocalDataStructures>();
     AU.addRequiredTransitive<BUDataStructures>();
     AU.addRequiredTransitive<TDDataStructures>();

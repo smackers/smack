@@ -7,6 +7,7 @@ import os
 import signal
 import logging
 import yaml
+import psutil
 import argparse
 from os import path
 import subprocess
@@ -15,7 +16,7 @@ import glob
 import time
 import sys
 
-OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
+OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags']
 
 def bold(text):
@@ -143,6 +144,7 @@ def main():
   """
   t0 = time.time()
   num_cpus = multiprocessing.cpu_count()
+  mem_total = psutil.virtual_memory().total / (1024 * 1024)
 
   # configure the CLI
   parser = argparse.ArgumentParser()
@@ -190,6 +192,9 @@ def main():
     for test in sorted(glob.glob("./**/*.c")):
       # get the meta data for this test
       meta = metadata(test)
+
+      if meta['memory-limit'] > mem_total:
+        continue
 
       if meta['skip'] == True:
         continue

@@ -1,0 +1,84 @@
+usage: smack [-h] [--version] [-q | -v | -d] [-t] [-w FILE] [-x LANG]
+             [-bc FILE] [-ll FILE] [--clang-options OPTIONS] [-bpl FILE]
+             [--no-memory-splitting]
+             [--mem-mod {no-reuse,no-reuse-impls,reuse}] [--static-unroll]
+             [--pthread] [--bit-precise] [--bit-precise-pointers]
+             [--no-byte-access-inference] [--entry-points PROC [PROC ...]]
+             [--memory-safety] [--only-check-valid-deref]
+             [--only-check-valid-free] [--only-check-memleak]
+             [--signed-integer-overflow]
+             [--verifier {boogie,corral,duality,svcomp,symbooglix}]
+             [--unroll N] [--loop-limit N] [--context-bound K]
+             [--verifier-options OPTIONS] [--time-limit N]
+             [--max-violations N] [--smackd] [--svcomp-property FILE]
+             [--float]
+             input-files [input-files ...]
+
+positional arguments:
+  input-files           source file to be translated/verified
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  -q, --quiet           enable quiet output
+  -v, --verbose         enable verbose output
+  -d, --debug           enable debugging output
+  -t, --no-verify       perform only translation, without verification.
+  -w FILE, --error-file FILE
+                        save error trace/witness to FILE
+
+front-end options:
+  -x LANG, --language LANG
+                        Treat input files as having type LANG.
+  -bc FILE, --bc-file FILE
+                        save initial LLVM bitcode to FILE
+  -ll FILE, --ll-file FILE
+                        save final LLVM IR to FILE
+  --clang-options OPTIONS
+                        additional compiler arguments (e.g., --clang-
+                        options="-w -g")
+
+translation options:
+  -bpl FILE, --bpl-file FILE
+                        save (intermediate) Boogie code to FILE
+  --no-memory-splitting
+                        disable region-based memory splitting
+  --mem-mod {no-reuse,no-reuse-impls,reuse}
+                        select memory model (no-reuse=never reallocate the
+                        same address, reuse=reallocate freed addresses)
+                        [default: no-reuse-impls]
+  --static-unroll       enable static LLVM loop unrolling pass as a
+                        preprocessing step
+  --pthread             enable support for pthread programs
+  --bit-precise         enable bit precision for non-pointer values
+  --bit-precise-pointers
+                        enable bit precision for pointer values
+  --no-byte-access-inference
+                        disable bit-precision-related optimizations with DSA
+  --entry-points PROC [PROC ...]
+                        specify top-level procedures [default: ['main']]
+  --memory-safety       enable memory safety checks
+  --only-check-valid-deref
+                        only enable valid dereference checks
+  --only-check-valid-free
+                        only enable valid free checks
+  --only-check-memleak  only enable memory leak checks
+  --signed-integer-overflow
+                        enable signed integer overflow checks
+  --float               enable bit-precise floating-point functions
+
+verifier options:
+  --verifier {boogie,corral,duality,svcomp,symbooglix}
+                        back-end verification engine
+  --unroll N            loop/recursion unroll bound [default: 1]
+  --loop-limit N        upper bound on minimum loop iterations [default: 1]
+  --context-bound K     bound on the number of thread contexts in Corral
+                        [default: 1]
+  --verifier-options OPTIONS
+                        additional verifier arguments (e.g., --verifier-
+                        options="/trackAllVars /staticInlining")
+  --time-limit N        verifier time limit, in seconds [default: 1200]
+  --max-violations N    maximum reported assertion violations [default: 1]
+  --smackd              generate JSON-format output for SMACKd
+  --svcomp-property FILE
+                        load SVCOMP property to check from FILE

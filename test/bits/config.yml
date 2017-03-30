@@ -1,1 +1,2 @@
-flags: ['--bit-precise']
+flags: [--bit-precise, --unroll=500]
+time-limit: 240

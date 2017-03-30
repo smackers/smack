@@ -1,5 +1,6 @@
-verifiers: [boogie, corral, symbooglix]
+verifiers: [corral, boogie, symbooglix]
 memory: [no-reuse-impls, no-reuse, reuse]
 time-limit: 120
-flags: [ --unroll=2 ]
+memory-limit: 450
+flags: [--unroll=500]
 skip: false

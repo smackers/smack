@@ -1,0 +1,342 @@
+Creating Pool with '1' Workers                                  
+Running regression tests...                                     
+     ./basic/array.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.41s]            
+    ./basic/array1.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.96s]            
+./basic/array1_fail.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+    ./basic/array2.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/array2_fail.c                                           
+      no-reuse-impls symbooglix    :FAILED   [2.06s]            
+    ./basic/array3.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/array3_fail.c                                           
+      no-reuse-impls symbooglix    :FAILED   [2.00s]            
+    ./basic/array4.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/array4_fail.c                                           
+      no-reuse-impls symbooglix    :FAILED   [2.02s]            
+./basic/array_free.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/array_free2.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/array_free2_fail.c                                      
+      no-reuse-impls symbooglix    :FAILED   [2.03s]            
+./basic/array_free_fail.c                                       
+      no-reuse-impls symbooglix    :FAILED   [2.05s]            
+./basic/ase_example.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.04s]            
+./basic/ase_example_fail.c                                      
+      no-reuse-impls symbooglix    :FAILED   [2.55s]            
+./basic/atomic_cas.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/atomic_cas_fail.c                                       
+      no-reuse-impls symbooglix    :FAILED   [1.98s]            
+./basic/big_numbers.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.97s]            
+./basic/big_numbers_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+ ./basic/big_types.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/extern_func.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/extern_func_ptr.c                                       
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/extern_func_ptr_fail.c                                  
+      no-reuse-impls symbooglix    :PASSED   [1.98s]            
+./basic/extern_mem.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/extern_mem_fail.c                                       
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/extern_struct.c                                         
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/free_as_func_ptr.c                                      
+      no-reuse-impls symbooglix    :PASSED   [1.98s]            
+  ./basic/func_ptr.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.97s]            
+ ./basic/func_ptr1.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/func_ptr1_fail.c                                        
+      no-reuse-impls symbooglix    :FAILED   [2.01s]            
+ ./basic/func_ptr2.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/func_ptr2_fail.c                                        
+      no-reuse-impls symbooglix    :FAILED   [2.01s]            
+./basic/func_ptr_alias.c                                        
+      no-reuse-impls symbooglix    :PASSED   [1.96s]            
+./basic/func_ptr_alias1.c                                       
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/func_ptr_alias1_fail.c                                  
+      no-reuse-impls symbooglix    :FAILED   [1.96s]            
+./basic/func_ptr_alias_fail.c                                   
+      no-reuse-impls symbooglix    :PASSED   [1.96s]            
+./basic/func_ptr_array.c                                        
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/func_ptr_array_fail.c                                   
+      no-reuse-impls symbooglix    :FAILED   [2.01s]            
+./basic/func_ptr_fail.c                                         
+      no-reuse-impls symbooglix    :FAILED   [2.00s]            
+./basic/func_ptr_vararg.c                                       
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/func_ptr_vararg_fail.c                                  
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+       ./basic/gcd.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/gcd_1_true.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/global_structs.c                                        
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/global_structs_fail.c                                   
+      no-reuse-impls symbooglix    :FAILED   [1.98s]            
+   ./basic/globals.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/globals_fail.c                                          
+      no-reuse-impls symbooglix    :FAILED   [1.99s]            
+./basic/globals_func_ptr.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/globals_func_ptr_fail.c                                 
+      no-reuse-impls symbooglix    :PASSED   [2.51s]            
+./basic/init_funcs_example.c                                    
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/init_funcs_example_fail.c                               
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/init_funcs_global.c                                     
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/init_funcs_global_fail.c                                
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/jain_1_true.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/jain_2_true.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.07s]            
+./basic/jain_4_true.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.96s]            
+./basic/jain_5_true.c                                           
+      no-reuse-impls symbooglix    :TIMEOUT  [120.55s]          
+      ./basic/list.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+ ./basic/list_fail.c                                            
+      no-reuse-impls symbooglix    :FAILED   [1.98s]            
+      ./basic/lock.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+ ./basic/lock_fail.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+      ./basic/loop.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+     ./basic/loop1.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/loop1_fail.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+ ./basic/loop_fail.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.05s]            
+./basic/negative_numbers.c                                      
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/negative_numbers_fail.c                                 
+      no-reuse-impls symbooglix    :PASSED   [2.44s]            
+./basic/nested_struct.c                                         
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/nested_struct1.c                                        
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/nested_struct1_fail.c                                   
+      no-reuse-impls symbooglix    :FAILED   [2.00s]            
+./basic/nested_struct2.c                                        
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/nested_struct2_fail.c                                   
+      no-reuse-impls symbooglix    :FAILED   [2.00s]            
+./basic/nested_struct_fail.c                                    
+      no-reuse-impls symbooglix    :FAILED   [1.99s]            
+    ./basic/nondet.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.96s]            
+./basic/nondet_pointer_fail.c                                   
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+  ./basic/pointers.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.50s]            
+ ./basic/pointers1.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/pointers1_fail.c                                        
+      no-reuse-impls symbooglix    :PASSED   [2.50s]            
+ ./basic/pointers2.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/pointers2_fail.c                                        
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+ ./basic/pointers3.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.98s]            
+./basic/pointers3_fail.c                                        
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+ ./basic/pointers4.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/pointers4_fail.c                                        
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+ ./basic/pointers8.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.09s]            
+./basic/pointers_fail.c                                         
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+   ./basic/printfs.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/return_label.c                                          
+      no-reuse-impls symbooglix    :PASSED   [1.96s]            
+    ./basic/simple.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/simple_fail.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/simple_pre.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.97s]            
+./basic/simple_pre1.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/simple_pre1_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [1.97s]            
+./basic/simple_pre2.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/simple_pre2_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/simple_pre3.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.96s]            
+./basic/simple_pre3_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.09s]            
+./basic/simple_pre4.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.95s]            
+./basic/simple_pre4_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/simple_pre_fail.c                                       
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/smack_code_call.c                                       
+      no-reuse-impls symbooglix    :PASSED   [2.05s]            
+./basic/smack_code_call_fail.c                                  
+      no-reuse-impls symbooglix    :FAILED   [2.01s]            
+   ./basic/strings.c                                            
+      no-reuse-impls symbooglix    :PASSED   [1.98s]            
+  ./basic/strings1.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/strings1_fail.c                                         
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/strings_fail.c                                          
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/struct_array.c                                          
+      no-reuse-impls symbooglix    :PASSED   [1.98s]            
+./basic/struct_array_fail.c                                     
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/struct_assign.c                                         
+      no-reuse-impls symbooglix    :PASSED   [3.00s]            
+./basic/struct_assign_fail.c                                    
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/struct_cast.c                                           
+      no-reuse-impls symbooglix    :PASSED   [1.99s]            
+./basic/struct_cast1.c                                          
+      no-reuse-impls symbooglix    :PASSED   [2.05s]            
+./basic/struct_cast1_fail.c                                     
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/struct_cast_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/struct_init.c                                           
+      no-reuse-impls symbooglix    :PASSED   [3.06s]            
+./basic/struct_init_fail.c                                      
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/struct_return.c                                         
+      no-reuse-impls symbooglix    :PASSED   [2.15s]            
+./basic/test_memcpy.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/test_memcpy_fail.c                                      
+      no-reuse-impls symbooglix    :FAILED   [2.14s]            
+./basic/two_arrays.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.15s]            
+./basic/two_arrays1.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.00s]            
+./basic/two_arrays1_fail.c                                      
+      no-reuse-impls symbooglix    :FAILED   [2.02s]            
+./basic/two_arrays2.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.01s]            
+./basic/two_arrays3.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.08s]            
+./basic/two_arrays4.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.07s]            
+./basic/two_arrays5.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.02s]            
+./basic/two_arrays6.c                                           
+      no-reuse-impls symbooglix    :PASSED   [2.03s]            
+./basic/two_arrays6_fail.c                                      
+      no-reuse-impls symbooglix    :FAILED   [2.01s]            
+./basic/two_arrays_fail.c                                       
+      no-reuse-impls symbooglix    :FAILED   [2.01s]            
+    ./basic/vararg.c                                            
+      no-reuse-impls symbooglix    :PASSED   [2.06s]            
+./basic/vararg_fail.c                                           
+      no-reuse-impls symbooglix    :FAILED   [2.00s]            
+   ./bits/absolute.c                                            
+      no-reuse-impls symbooglix    :UNKNOWN  [1.97s]            
+./bits/absolute_fail.c                                          
+      no-reuse-impls symbooglix    :UNKNOWN  [1.96s]            
+./bits/interleave_bits_fail.c                                   
+      no-reuse-impls symbooglix    :UNKNOWN  [2.46s]            
+./bits/interleave_bits_true.c                                   
+      no-reuse-impls symbooglix    :UNKNOWN  [1.96s]            
+         ./bits/mm.c                                            
+      no-reuse-impls symbooglix    :UNKNOWN  [1.99s]            
+    ./bits/mm_fail.c                                            
+      no-reuse-impls symbooglix    :UNKNOWN  [2.01s]            
+./bits/num_conversion_1_fail.c                                  
+      no-reuse-impls symbooglix    :UNKNOWN  [1.97s]            
+./bits/num_conversion_1_true.c                                  
+      no-reuse-impls symbooglix    :UNKNOWN  [1.96s]            
+./bits/num_conversion_2_fail.c                                  
+      no-reuse-impls symbooglix    :UNKNOWN  [1.96s]            
+./bits/num_conversion_2_true.c                                  
+      no-reuse-impls symbooglix    :UNKNOWN  [1.95s]            
+  ./bits/pointers4.c                                            
+      no-reuse-impls symbooglix    :UNKNOWN  [2.04s]            
+./bits/pointers4_fail.c                                         
+      no-reuse-impls symbooglix    :UNKNOWN  [1.99s]            
+  ./bits/pointers6.c                                            
+      no-reuse-impls symbooglix    :UNKNOWN  [2.00s]            
+  ./bits/pointers7.c                                            
+      no-reuse-impls symbooglix    :UNKNOWN  [1.99s]            
+./bits/pointers7_fail.c                                         
+      no-reuse-impls symbooglix    :UNKNOWN  [1.99s]            
+./bits/unaligned_struct.c                                       
+      no-reuse-impls symbooglix    :UNKNOWN  [2.05s]            
+./bits/unaligned_struct_fail.c                                  
+      no-reuse-impls symbooglix    :UNKNOWN  [2.01s]            
+./memory-safety/adjacent.c                                      
+      no-reuse-impls symbooglix    :PASSED   [18.53s]           
+./memory-safety/adjacent_fail.c                                 
+      no-reuse-impls symbooglix    :PASSED   [24.57s]           
+./memory-safety/adjacent_global.c                               
+      no-reuse-impls symbooglix    :PASSED   [15.53s]           
+./memory-safety/adjacent_global_fail.c                          
+      no-reuse-impls symbooglix    :PASSED   [20.56s]           
+./memory-safety/array1.c                                        
+      no-reuse-impls symbooglix    :PASSED   [18.04s]           
+./memory-safety/array1_fail.c                                   
+      no-reuse-impls symbooglix    :PASSED   [21.55s]           
+./memory-safety/array2_free_fail.c                              
+      no-reuse-impls symbooglix    :PASSED   [19.77s]           
+./memory-safety/array_free1.c                                   
+      no-reuse-impls symbooglix    :PASSED   [24.57s]           
+./memory-safety/array_free1_fail.c                              
+      no-reuse-impls symbooglix    :FAILED   [24.05s]           
+./memory-safety/array_free1_fail1.c                             
+      no-reuse-impls symbooglix    :FAILED   [24.58s]           
+./memory-safety/global_alloc.c                                  
+      no-reuse-impls symbooglix    :PASSED   [16.03s]           
+./memory-safety/global_alloc_fail_free.c                        
+      no-reuse-impls symbooglix    :PASSED   [17.04s]           
+./memory-safety/global_and_heap_alloc.c                         
+      no-reuse-impls symbooglix    :PASSED   [19.53s]           
+./memory-safety/global_and_heap_alloc_fail_free.c               
+      no-reuse-impls symbooglix    :FAILED   [19.10s]           
+./memory-safety/global_and_heap_alloc_fail_no_free.c            
+      no-reuse-impls symbooglix    :PASSED   [18.56s]           
+./memory-safety/null_dereference_fail.c                         
+      no-reuse-impls symbooglix    :PASSED   [18.08s]           
+./memory-safety/simple_double_free.c                            
+      no-reuse-impls symbooglix    :FAILED   [18.10s]           
+./memory-safety/structure1.c                                    
+      no-reuse-impls symbooglix    :PASSED   [17.09s]           
+./memory-safety/structure1_fail.c                               
+      no-reuse-impls symbooglix    :PASSED   [21.62s]           
+Quitting normally                                               
+ ELAPSED TIME [798.28s]                                         
+ PASSED count: 121                                              
+ FAILED count: 28                                               
+ TIMEOUT count: 1                                               
+ UNKNOWN count: 17                                              

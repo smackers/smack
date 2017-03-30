@@ -14,7 +14,7 @@ from threading import Timer
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 
-VERSION = '1.5.2'
+VERSION = '1.7.2'
 temporary_files = []
 
 def frontends():
@@ -36,6 +36,10 @@ def results(args):
   return {
     'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
+    'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
+    'invalid-free': 'SMACK found an error: invalid memory deallocation.',
+    'invalid-memtrack': 'SMACK found an error: memory leak.',
+    'overflow': 'SMACK found an error: signed integer overflow.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -135,10 +139,25 @@ def arguments():
   translate_group.add_argument('--entry-points', metavar='PROC', nargs='+',
     default=['main'], help='specify top-level procedures [default: %(default)s]')
 
+  translate_group.add_argument('--memory-safety', action='store_true', default=False,
+    help='enable memory safety checks')
+
+  translate_group.add_argument('--only-check-valid-deref', action='store_true', default=False,
+    help='only enable valid dereference checks')
+
+  translate_group.add_argument('--only-check-valid-free', action='store_true', default=False,
+    help='only enable valid free checks')
+
+  translate_group.add_argument('--only-check-memleak', action='store_true', default=False,
+    help='only enable memory leak checks')
+
+  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
+    help='enable signed integer overflow checks')
+
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp', 'symbooglix'],
+    choices=['boogie', 'corral', 'duality', 'svcomp', 'symbooglix'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -148,8 +167,8 @@ def arguments():
   verifier_group.add_argument('--loop-limit', metavar='N', default='1', type=int,
     help='upper bound on minimum loop iterations [default: %(default)s]')
 
-  verifier_group.add_argument('--context-bound', metavar='k', default='1', type=int,
-    help='bound thread contexts in Corral to a maximum of k contexts')
+  verifier_group.add_argument('--context-bound', metavar='K', default='1', type=int,
+    help='bound on the number of thread contexts in Corral [default: %(default)s]')
 
   verifier_group.add_argument('--verifier-options', metavar='OPTIONS', default='',
     help='additional verifier arguments (e.g., --verifier-options="/trackAllVars /staticInlining")')
@@ -165,17 +184,20 @@ def arguments():
 
   verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
     type=str, help='load SVCOMP property to check from FILE')
+	
+  translate_group.add_argument('--float', action="store_true", default=False,
+    help='enable bit-precise floating-point functions')
 
   args = parser.parse_args()
-
-  if not args.verifier:
-    args.verifier = 'svcomp' if args.language == 'svcomp' else 'corral'
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
 
   if not args.bpl_file:
     args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
+
+  if args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak:
+    args.memory_safety = True
 
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
@@ -251,6 +273,23 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
       with open(temporary_file(cmd[0], '.log', args), 'w') as f:
         f.write(output)
 
+def target_selection(args):
+  """Determine the target architecture based on flags and source files."""
+  # TODO more possible clang flags that determine the target?
+  if not re.search('-target', args.clang_options):
+    src = args.input_files[0]
+    if os.path.splitext(src)[1] == '.bc':
+      ll = temporary_file(os.path.splitext(os.path.basename(src))[0], '.ll', args)
+      try_command(['llvm-dis', '-o', ll, src])
+      src = ll
+    if os.path.splitext(src)[1] == '.ll':
+      with open(src, 'r') as f:
+        for line in f:
+          triple = re.findall('^target triple = "(.*)"', line)
+          if len(triple) > 0:
+            args.clang_options += (" -target %s" % triple[0])
+            break
+
 def frontend(args):
   """Generate the LLVM bitcode file."""
   if args.language:
@@ -271,12 +310,30 @@ def smack_headers():
 def smack_lib():
   return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
-def default_clang_compile_command(args):
+def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   cmd += ['-I' + smack_headers()]
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
+  if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
+  if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+  if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
+
+def build_libs(args):
+  """Generate LLVM bitcodes for SMACK libraries."""
+  bitcodes = []
+  libs = ['smack.c']
+
+  if args.pthread:
+    libs += ['pthread.c']
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
+    try_command(default_clang_compile_command(args, True) + ['-o', bc, c])
+    bitcodes.append(bc)
+
+  return bitcodes
 
 def boogie_frontend(args):
   """Generate Boogie code by concatenating the input file(s)."""
@@ -287,22 +344,20 @@ def boogie_frontend(args):
 
 def llvm_frontend(args):
   """Generate Boogie code from LLVM bitcodes."""
-  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+
+  bitcodes = build_libs(args) + args.input_files
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   llvm_to_bpl(args)
 
 def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
-  bitcodes = []
-  libs = ['smack.c']
+  bitcodes = build_libs(args)
   compile_command = default_clang_compile_command(args)
 
-  if args.pthread:
-    libs += ['pthread.c', 'spinlock.c']
-
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs) + args.input_files:
+  for c in args.input_files:
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], console=(c in args.input_files))
+    try_command(compile_command + ['-o', bc, c], console=True)
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
@@ -317,12 +372,7 @@ def json_compilation_database_frontend(args):
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
 
-  libs = ['smack.c']
-  lib_bitcodes = []
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(default_clang_compile_command(args) + ['-o', bc, c])
-    lib_bitcodes.append(bc)
+  lib_bitcodes = build_libs(args)
 
   with open(args.input_files[0]) as f:
     for cc in json.load(f):
@@ -347,7 +397,6 @@ def llvm_to_bpl(args):
   cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
   cmd += ['-warnings']
   cmd += ['-source-loc-syms']
-  cmd += ['-enable-type-inference-opts']
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
@@ -358,15 +407,19 @@ def llvm_to_bpl(args):
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
+  if args.memory_safety: cmd += ['-memory-safety']
+  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
+  if args.float: cmd += ['-float']
   try_command(cmd, console=True)
   annotate_bpl(args)
+  property_selection(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
     return "{:entrypoint}"
   elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-  elif args.verifier == 'boogie':
+  elif args.verifier == 'boogie' or args.float:
     return ("{:inline %s}" % args.unroll)
   else:
     return ""
@@ -384,13 +437,55 @@ def annotate_bpl(args):
     f.truncate()
     f.write(bpl)
 
+def property_selection(args):
+  selected_props = []
+  if args.only_check_valid_deref:
+    selected_props.append('valid_deref')
+  elif args.only_check_valid_free:
+    selected_props.append('valid_free')
+  elif args.only_check_memleak:
+    selected_props.append('valid_memtrack')
+
+  def replace_assertion(m):
+    if len(selected_props) > 0:
+      if m.group(2) and m.group(3) in selected_props:
+        attrib = m.group(2)
+        expr = m.group(4)
+      else:
+        attrib = ''
+        expr = 'true'
+      return m.group(1) + attrib + expr + ";"
+    else:
+      return m.group(0)
+
+  with open(args.bpl_file, 'r+') as f:
+    lines = f.readlines()
+    f.seek(0)
+    f.truncate()
+    for line in lines:
+      line = re.sub(r'^(\s*assert\s*)({:(.+)})?(.+);', replace_assertion, line)
+      f.write(line)
+
 def verification_result(verifier_output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT', verifier_output):
     return 'timeout'
-  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT$', verifier_output):
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT', verifier_output):
     return 'verified'
   elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT$', verifier_output):
-    return 'error'
+    if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
+      return 'invalid-deref'
+    elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
+      return 'invalid-free'
+    elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
+      return 'invalid-memtrack'
+    elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
+      return 'overflow'
+    else:
+      listCall = re.findall(r'\(CALL .+\)', verifier_output)
+      if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
+        return 'invalid-free'
+      else:
+        return 'error'
   else:
     return 'unknown'
 
@@ -411,6 +506,7 @@ def verify_bpl(args):
 
   elif args.verifier == 'corral':
     command = ["corral"]
+    print args.bpl_file
     command += [args.bpl_file]
     command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
     command += ["/k:%d" % args.context_bound]
@@ -421,12 +517,12 @@ def verify_bpl(args):
     command += ["/recursionBound:%d" % args.unroll]
 
   elif args.verifier == 'symbooglix':
-    command = ['symbooglix']
-    command += [args.bpl_file]
-    command += ["--file-logging=0"]
-    command += ["--entry-points=%s" % ",".join(args.entry_points)]
-    command += ["--timeout=%d" % args.time_limit]
-    command += ["--max-depth=%d" % args.unroll]
+    command = ["symbooglix"]
+    #command += [args.bpl_file]
+    #command += ["--file-logging=0"]
+    #command += ["--entry-points=%s" % ",".join(args.entry_points)]
+    #command += ["--timeout=%d" % args.time_limit]
+    #command += ["--max-depth=%d" % args.unroll]
 
   else:
     # Duality!
@@ -454,7 +550,7 @@ def verify_bpl(args):
     print results(args)[result]
 
   else:
-    if result == 'error':
+    if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow':
       error = error_trace(verifier_output, args)
 
       if args.error_file:
@@ -560,6 +656,8 @@ def main():
     global args
     args = arguments()
 
+    target_selection(args)
+
     if not args.quiet:
       print "SMACK program verifier version %s" % VERSION
 
@@ -578,3 +676,4 @@ def main():
     for f in temporary_files:
       if os.path.isfile(f):
         os.unlink(f)
+

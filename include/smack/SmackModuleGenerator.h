@@ -32,8 +32,7 @@ public:
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();
-    AU.addRequired<DataLayoutPass>();
-    AU.addRequired<LoopInfo>();
+    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<Regions>();
   }
 

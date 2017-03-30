@@ -42,7 +42,7 @@ bool AllocIdentify::flowsFrom(Value *Dest,Value *Src) {
   }
   if(PHINode *PN = dyn_cast<PHINode>(Dest)) {
     Function *F = PN->getParent()->getParent();
-    LoopInfo &LI = getAnalysis<LoopInfo>(*F);
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
     // If this is a loop phi, ignore.
     if(LI.isLoopHeader(PN->getParent()))
       return false;
@@ -189,7 +189,7 @@ bool AllocIdentify::runOnModule(Module& M) {
   return false;
 }
 void AllocIdentify::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfo>();
+  AU.addRequired<LoopInfoWrapperPass>();
   AU.setPreservesAll();
 }
 

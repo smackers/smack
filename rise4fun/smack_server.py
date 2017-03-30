@@ -179,7 +179,7 @@ metadata = {
 	"SupportEmail": "smack-dev@googlegroups.com",
 	"TermsOfUseUrl": "https://github.com/smackers/smack/",
 	"PrivacyUrl": "https://github.com/smackers/smack/",
-	"Institution": "University of Utah and IMDEA Software Institute",
+	"Institution": "University of Utah",
 	"InstitutionUrl": "https://github.com/smackers/smack/",
 	"InstitutionImageUrl": "https://dl.dropboxusercontent.com/u/93242277/smack-logo.png",
 	"MimeType": "text/x-c",

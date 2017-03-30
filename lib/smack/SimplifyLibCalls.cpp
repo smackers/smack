@@ -8,7 +8,7 @@
 #include "smack/Naming.h"
 #include "smack/SimplifyLibCalls.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Target/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include <vector>
@@ -22,15 +22,14 @@ using namespace llvm;
 
 void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage& AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DataLayoutPass>();
-  AU.addRequired<TargetLibraryInfo>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
 bool SimplifyLibCalls::runOnModule(Module& M) {
   modified = false;
   simplifier = new LibCallSimplifier(
-    &getAnalysis<DataLayoutPass>().getDataLayout(),
-    &getAnalysis<TargetLibraryInfo>()
+    M.getDataLayout(),
+    &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()
   );
   if (simplifier)
     visit(M);
