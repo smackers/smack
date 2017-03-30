@@ -34,7 +34,7 @@ def frontends():
 def results(args):
   """A dictionary of the result output messages."""
   return {
-    'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
+    'verified': 'SMACK found no errors.' if args.contracts else 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
@@ -50,7 +50,10 @@ def inlined_procedures():
     '$free',
     '$memset',
     '$memcpy',
-    '__VERIFIER_'
+    '__VERIFIER_',
+    '$initialize',
+    '__SMACK_static_init',
+    '__SMACK_init_func_memory_model'
   ]
 
 def validate_input_file(file):
@@ -95,6 +98,7 @@ def arguments():
   parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
     type=str, help='save error trace/witness to FILE')
 
+
   frontend_group = parser.add_argument_group('front-end options')
 
   frontend_group.add_argument('-x', '--language', metavar='LANG',
@@ -109,6 +113,7 @@ def arguments():
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
     help='additional compiler arguments (e.g., --clang-options="-w -g")')
+
 
   translate_group = parser.add_argument_group('translation options')
 
@@ -154,6 +159,10 @@ def arguments():
   translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
     help='enable signed integer overflow checks')
 
+  translate_group.add_argument('--float', action="store_true", default=False,
+    help='enable bit-precise floating-point functions')
+
+
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
@@ -184,9 +193,9 @@ def arguments():
 
   verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
     type=str, help='load SVCOMP property to check from FILE')
-	
-  translate_group.add_argument('--float', action="store_true", default=False,
-    help='enable bit-precise floating-point functions')
+
+  verifier_group.add_argument('--contracts', action="store_true", default=False,
+    help='enable contracts-based deductive verification (uses Boogie)')
 
   args = parser.parse_args()
 
@@ -410,6 +419,7 @@ def llvm_to_bpl(args):
   if args.memory_safety: cmd += ['-memory-safety']
   if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
+  if args.contracts: cmd += ['-contracts']
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
@@ -419,7 +429,7 @@ def procedure_annotation(name, args):
     return "{:entrypoint}"
   elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-  elif args.verifier == 'boogie' or args.float:
+  elif (not args.contracts) and (args.verifier == 'boogie' or args.float):
     return ("{:inline %s}" % args.unroll)
   else:
     return ""
@@ -496,13 +506,14 @@ def verify_bpl(args):
     verify_bpl_svcomp(args)
     return
 
-  elif args.verifier == 'boogie':
+  elif args.verifier == 'boogie' or args.contracts:
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
-    command += ["/loopUnroll:%d" % args.unroll]
+    if not args.contracts:
+      command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
     command = ["corral"]

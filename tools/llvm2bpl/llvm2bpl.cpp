@@ -57,6 +57,10 @@ static llvm::cl::opt<bool>
 SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
   llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+Contracts("contracts", llvm::cl::desc("Enable contracts-based deductive verification"),
+  llvm::cl::init(false));
+
 std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
 }
@@ -122,7 +126,9 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
-  pass_manager.add(new smack::RemoveDeadDefs());
+  if (!Contracts) {
+    pass_manager.add(new smack::RemoveDeadDefs());
+  }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());

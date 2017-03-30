@@ -1,3 +1,2 @@
 verifiers: [boogie]
-memory: [no-reuse]
-skip: true
+flags: [--contracts]
