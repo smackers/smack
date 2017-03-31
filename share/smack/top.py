@@ -34,7 +34,7 @@ def frontends():
 def results(args):
   """A dictionary of the result output messages."""
   return {
-    'verified': 'SMACK found no errors.' if args.contracts else 'SMACK found no errors with unroll bound %s.' % args.unroll,
+    'verified': 'SMACK found no errors.' if args.modular else 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
@@ -194,8 +194,8 @@ def arguments():
   verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
     type=str, help='load SVCOMP property to check from FILE')
 
-  verifier_group.add_argument('--contracts', action="store_true", default=False,
-    help='enable contracts-based deductive verification (uses Boogie)')
+  verifier_group.add_argument('--modular', action="store_true", default=False,
+    help='enable contracts-based modular deductive verification (uses Boogie)')
 
   args = parser.parse_args()
 
@@ -419,7 +419,7 @@ def llvm_to_bpl(args):
   if args.memory_safety: cmd += ['-memory-safety']
   if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
-  if args.contracts: cmd += ['-contracts']
+  if args.modular: cmd += ['-modular']
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
@@ -429,7 +429,7 @@ def procedure_annotation(name, args):
     return "{:entrypoint}"
   elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-  elif (not args.contracts) and (args.verifier == 'boogie' or args.float):
+  elif (not args.modular) and (args.verifier == 'boogie' or args.float):
     return ("{:inline %s}" % args.unroll)
   else:
     return ""
@@ -506,13 +506,13 @@ def verify_bpl(args):
     verify_bpl_svcomp(args)
     return
 
-  elif args.verifier == 'boogie' or args.contracts:
+  elif args.verifier == 'boogie' or args.modular:
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
-    if not args.contracts:
+    if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
