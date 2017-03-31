@@ -11,7 +11,7 @@ int main() {
 
   char *firstOccurrenceOfXY = strstr(large,small);
 
-  assert(firstOccurenceOfXY != 0);
+  assert(firstOccurrenceOfXY != 0);
 
   return 0;
 }

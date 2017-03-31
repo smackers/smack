@@ -8,7 +8,7 @@
 int main() {
   char *string = "ffef";
 
-  char *firstE = strcspn(string,"f");
+  size_t firstE = strcspn(string,"e");
 
   assert(firstE == 2);
 
