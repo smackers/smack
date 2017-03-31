@@ -4,6 +4,7 @@
 #include <smack-contracts.h>
 
 // @expect error
+// @flag --verifier-options=/z3opt:SMT.MBQI=true
 
 #define SIZE 10
 int g[SIZE];
