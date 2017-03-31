@@ -1805,7 +1805,7 @@ char *strncpy(char *dest, const char *src, size_t n) {
 
   for (i = 0; i < n && src[i] != '\0'; i++)
     dest[i] = src[i];
-  for ( ; i < n; i++;
+  for ( ; i < n; i++)
     dest[i] = '\0';
 
   return dest;
@@ -1916,7 +1916,7 @@ size_t strcspn(const char *s1, const char *s2) {
 
 char *strpbrk(const char *s1, const char *s2) {
   for (char *c1 = s1; *c1; c1++)
-    for (char c2 = s2; *c2; c2++)
+    for (char *c2 = s2; *c2; c2++)
       if (*c1 == *c2)
         return c1;
   return 0;
@@ -1959,7 +1959,7 @@ char *strtok(char *str, const char *delim) {
     *str = '\0';
     olds = str + 1;
   }
-  return token;
+  return tok;
 }
 
 unsigned long int strtoul(const char *nptr, char **endptr, int base) {
