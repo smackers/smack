@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
+#include <smack.h>
+#include <smack-contracts.h>
 
-// @expect 1 verified, 0 errors?
+// @expect verified
 
 void p() {
   requires(true);
