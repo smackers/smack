@@ -13,6 +13,7 @@ import tempfile
 from threading import Timer
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
+from replay import replay_error_trace
 
 VERSION = '1.7.2'
 temporary_files = []
@@ -196,6 +197,9 @@ def arguments():
 
   verifier_group.add_argument('--contracts', action="store_true", default=False,
     help='enable contracts-based deductive verification (uses Boogie)')
+
+  verifier_group.add_argument('--replay', action="store_true", default=False,
+    help='enable reply of error trace with test harness.')
 
   args = parser.parse_args()
 
@@ -561,6 +565,9 @@ def verify_bpl(args):
 
       if not args.quiet:
         print error
+
+      if args.replay:
+         replay_error_trace(verifier_output)
 
     sys.exit(results(args)[result])
 
