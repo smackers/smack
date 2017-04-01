@@ -8,6 +8,11 @@ STUBBABLE_FUNCTIONS = [
 ]
 
 def replay_error_trace(verifier_output, args):
+
+  if args.entry_points != ['main']:
+    print "Replay for entrypoints other than `main` current unsupported; skipping replay"
+    return
+
   read, write = os.pipe()
   os.write(write, verifier_output)
   os.close(write)
