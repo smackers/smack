@@ -51,14 +51,14 @@ bool StructRet::runOnModule(Module& M) {
   const llvm::DataLayout targetData(&M);
 
   std::vector<Function*> worklist;
-  for (Module::iterator I = M.begin(); I != M.end(); ++I)
-    if (!I->mayBeOverridden()) {
-      if(I->isDeclaration())
+  for (Function &F : M)
+    if (!F.mayBeOverridden()) {
+      if(F.isDeclaration())
         continue;
-      if(I->hasAddressTaken())
+      if(F.hasAddressTaken())
         continue;
-      if(I->getReturnType()->isStructTy()) {
-        worklist.push_back(I);
+      if(F.getReturnType()->isStructTy()) {
+        worklist.push_back(&F);
       }
     }
 
@@ -82,11 +82,11 @@ bool StructRet::runOnModule(Module& M) {
                                     F->getLinkage(),
                                     F->getName(), &M);
     ValueToValueMapTy ValueMap;
-    Function::arg_iterator NI = NF->arg_begin();
+    auto NI = NF->arg_begin();
     NI->setName("ret");
     ++NI;
-    for (Function::arg_iterator II = F->arg_begin(); II != F->arg_end(); ++II, ++NI) {
-      ValueMap[II] = NI;
+    for (auto II = F->arg_begin(); II != F->arg_end(); ++II, ++NI) {
+      ValueMap[&*II] = &*NI;
       NI->setName(II->getName());
       AttributeSet attrs = F->getAttributes().getParamAttributes(II->getArgNo() + 1);
       if (!attrs.isEmpty())
@@ -97,9 +97,8 @@ bool StructRet::runOnModule(Module& M) {
     if (!F->isDeclaration())
       CloneFunctionInto(NF, F, ValueMap, false, Returns);
     std::vector<Value*> fargs;
-    for(Function::arg_iterator ai = NF->arg_begin(),
-        ae= NF->arg_end(); ai != ae; ++ai) {
-      fargs.push_back(ai);
+    for (auto &Arg : NF->args()) {
+      fargs.push_back(&Arg);
     }
     NF->setAttributes(NF->getAttributes().addAttributes(
         M.getContext(), 0, F->getAttributes().getRetAttributes()));

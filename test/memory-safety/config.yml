@@ -1,1 +1,2 @@
 flags: [--memory-safety]
+time-limit: 180

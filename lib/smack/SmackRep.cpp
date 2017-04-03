@@ -107,6 +107,8 @@ SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
       globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
 {
+    if (SmackOptions::MemorySafety)
+      initFuncs.push_back("$global_allocations");
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
@@ -192,8 +194,18 @@ std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> t
 
 std::string SmackRep::type(const llvm::Type* t) {
 
-  if (t->isFloatingPointTy())
-    return Naming::FLOAT_TYPE;
+  if (t->isFloatingPointTy()) {
+    if (!SmackOptions::BitPrecise)
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
+    if (t->isFloatTy())
+      return Naming::FLOAT_TYPE;
+    else if (t->isDoubleTy())
+      return Naming::DOUBLE_TYPE;
+    else if (t->isX86_FP80Ty())
+      return Naming::LONG_DOUBLE_TYPE;
+    else
+      llvm_unreachable("Unsupported floating-point type.");
+  }
 
   else if (t->isIntegerTy())
     return intType(t->getIntegerBitWidth());
@@ -202,7 +214,6 @@ std::string SmackRep::type(const llvm::Type* t) {
     return Naming::PTR_TYPE;
 
   else
-    // llvm_unreachable("Unsupported type.");
     return Naming::PTR_TYPE;
 }
 
@@ -577,13 +588,13 @@ const Expr* SmackRep::integerLit(long v, unsigned width) {
   }
 }
 
-const Expr* SmackRep::lit(const llvm::Value* v) {
+const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
   using namespace llvm;
 
   if (const ConstantInt* ci = llvm::dyn_cast<const ConstantInt>(v)) {
     const APInt& API = ci->getValue();
     unsigned width = ci->getBitWidth();
-    bool neg = width > 1 && ci->isNegative();
+    bool neg = isUnsigned? false : width > 1 && ci->isNegative();
     std::string str = (neg ? API.abs() : API).toString(10,false);
     const Expr* e = SmackOptions::BitPrecise ? Expr::lit(str,width) : Expr::lit(str,0);
     std::stringstream op;
@@ -591,30 +602,55 @@ const Expr* SmackRep::lit(const llvm::Value* v) {
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
-    const APFloat APF = CFP->getValueAPF();
-    std::string str;
-    raw_string_ostream ss(str);
-    ss << *CFP;
-    std::istringstream iss(str);
-    std::string float_type;
-    long integerPart, fractionalPart, exponentPart;
-    char point, sign, exponent;
-    iss >> float_type;
-    iss >> integerPart;
-    iss >> point;
-    iss >> fractionalPart;
-    iss >> sign;
-    iss >> exponent;
-    iss >> exponentPart;
+    if (SmackOptions::BitPrecise) {
+      const APFloat APF = CFP->getValueAPF();
+      std::string str;
+      raw_string_ostream ss(str);
+      ss << *CFP;
+      std::istringstream iss(str);
+      std::string float_type;
+      iss >> float_type;
+      unsigned expSize, sigSize;
+      if (float_type=="float") {
+        expSize = 8;
+        sigSize = 24;
+      } else if (float_type=="double") {
+        expSize = 11;
+        sigSize = 53;
+      } else {
+        llvm_unreachable("Unsupported floating-point type.");
+      }
+      const APInt API = APF.bitcastToAPInt();
+      const APInt n_sign = API.trunc(expSize+sigSize-1);
+      const APInt sig = n_sign.trunc(sigSize-1);
+      const APInt exp = n_sign.lshr(sigSize-1);
+      return Expr::lit(APF.isNegative(), sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
+    } else {
+      const APFloat APF = CFP->getValueAPF();
+      std::string str;
+      raw_string_ostream ss(str);
+      ss << *CFP;
+      std::istringstream iss(str);
+      std::string float_type;
+      long integerPart, fractionalPart, exponentPart;
+      char point, sign, exponent;
+      iss >> float_type;
+      iss >> integerPart;
+      iss >> point;
+      iss >> fractionalPart;
+      iss >> sign;
+      iss >> exponent;
+      iss >> exponentPart;
 
-    return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
-      Expr::lit(exponentPart));
+      return Expr::fn("$fp", Expr::lit(integerPart), Expr::lit(fractionalPart),
+        Expr::lit(exponentPart));
+    }
 
   } else if (llvm::isa<ConstantPointerNull>(v))
     return Expr::id(Naming::NULL_VAL);
 
   else
-    llvm_unreachable("Literal type not supported");
+    llvm_unreachable("Literal type not supported.");
 }
 
 const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
@@ -662,15 +698,15 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
   return e;
 }
 
-const Expr* SmackRep::expr(const llvm::Value* v) {
+const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
     v = v->stripPointerCasts();
   }
 
-  if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
-    assert(g->hasName());
+  if (isa<GlobalValue>(v)) {
+    assert(v->hasName());
     return Expr::id(naming.get(*v));
 
   } else if (isa<UndefValue>(v)) {
@@ -703,7 +739,7 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
       }
 
     } else if (const ConstantInt* ci = dyn_cast<const ConstantInt>(constant)) {
-      return lit(ci);
+      return lit(ci, isConstIntUnsigned);
 
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -752,16 +788,17 @@ const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::V
 }
 
 const Expr* SmackRep::cmp(const llvm::CmpInst* I) {
-  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1));
+  bool isUnsigned = I->isUnsigned();
+  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1), isUnsigned);
 }
 
 const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
-  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1));
+  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1), false);
 }
 
-const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs) {
+const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned) {
   std::string fn = Naming::CMPINST_TABLE.at(predicate);
-  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs), expr(rhs));
+  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs, isUnsigned), expr(rhs, isUnsigned));
 }
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
@@ -912,7 +949,12 @@ std::string SmackRep::getPrelude() {
   for (unsigned size : INTEGER_SIZES)
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
-  s << Decl::typee(Naming::FLOAT_TYPE, intType(32)) << "\n";
+  if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
+    s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
+    s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
+  }
+  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";
@@ -938,6 +980,15 @@ std::string SmackRep::getPrelude() {
   s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM),pointerLit(externsBottom))) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << "\n";
   s << "\n";
+
+  if (SmackOptions::MemorySafety) {
+    s << "// Global allocations" << "\n";
+    std::list<const Stmt*> stmts;
+    for (auto E : globalAllocations)
+      stmts.push_back(Stmt::call("$galloc", {expr(E.first), Expr::lit(E.second)}));
+    s << Decl::procedure("$global_allocations", {}, {}, {}, {Block::block("",stmts)}) << "\n";
+    s << "\n";
+  }
 
   s << "// Bitstd::vector-integer conversions" << "\n";
   std::string b = std::to_string(ptrSizeInBits);
@@ -1077,9 +1128,13 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   if (!size)
     size = targetData->getPrefTypeAlignment(v->getType());
 
+  // Add padding between globals to be able to check memory overflows/underflows
+  const unsigned globalsPadding = 1024;
   decls.push_back(Decl::axiom(Expr::eq(
     Expr::id(name),
-    pointerLit(external ? externsBottom -= size : globalsBottom -= size) )));
+    pointerLit(external ? externsBottom -= size : globalsBottom -= (size + globalsPadding)) )));
+
+  globalAllocations[v] = size;
 
   return decls;
 }

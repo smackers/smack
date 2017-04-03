@@ -1,4 +1,4 @@
-verifiers: [boogie, corral]
+verifiers: [corral, boogie]
 memory: [no-reuse-impls, no-reuse, reuse]
 time-limit: 120
 memory-limit: 450

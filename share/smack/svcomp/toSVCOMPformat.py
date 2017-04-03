@@ -8,6 +8,8 @@ import json
 import re
 import sys
 import pprint
+import os
+import hashlib
 
 nextNum = 0
 
@@ -26,8 +28,16 @@ def addKeyDefs(root):
     keys = []
     #keys are [attr.name, attr.type, for, id, hasDefault, defaultVal]
     keys.append(["assumption",         "string",  "edge",  "assumption",     False])
+    keys.append(["assumption.scope",         "string",  "edge",  "assumption.scope",     False])
     keys.append(["sourcecode",         "string",  "edge",  "sourcecode",     False])
+    keys.append(["witness-type", "string",  "graph", "witness-type", False])
     keys.append(["sourcecodeLanguage", "string",  "graph", "sourcecodelang", False])
+    keys.append(["producer", "string",  "graph", "producer", False])
+    keys.append(["specification", "string",  "graph", "specification", False])
+    keys.append(["programfile", "string",  "graph", "programfile", False])
+    keys.append(["programhash", "string",  "graph", "programhash", False])
+    keys.append(["MemoryModel", "string",  "graph", "memorymodel", False])
+    keys.append(["architecture", "string",  "graph", "architecture", False])
     keys.append(["tokenSet",           "string",  "edge",  "tokens",         False])
     keys.append(["originTokenSet",     "string",  "edge",  "origintokens",   False])
     keys.append(["negativeCase",       "string",  "edge",  "negated",        True, "false"])
@@ -88,7 +98,7 @@ def addGraphEdge(tree, source, target, data={}):
     return newEdge
         
 
-def buildEmptyXmlGraph():
+def buildEmptyXmlGraph(args, hasBug):
     """Builds an empty witness xml file, with all the keys we will be using 
        already defined."""
     root = ET.Element('graphml')
@@ -97,8 +107,20 @@ def buildEmptyXmlGraph():
     tree = ElementTree(root)
     addKeyDefs(root)
     graph = ET.SubElement(root, "graph", attrib={"edgedefault" : "directed"})
+
+    addKey(graph, "witness-type", "violation_witness" if hasBug else "correctness_witness")
     addKey(graph, "sourcecodelang", "C")
-    addKey(graph, "specification", "CHECK( init(main()), LTL(G ! call(__VERIFIER_error())) )")
+    from smack.top import VERSION
+    addKey(graph, "producer", "SMACK " + VERSION)
+    with open(args.svcomp_property, 'r') as ppf:
+      addKey(graph, "specification", ppf.read().strip())
+    programfile = os.path.abspath(args.orig_files[0])
+    addKey(graph, "programfile", programfile)
+    with open(programfile, 'r') as pgf:
+      addKey(graph, "programhash", hashlib.sha1(pgf.read()).hexdigest())
+    addKey(graph, "memorymodel", "precise")
+    addKey(graph, "architecture",
+            re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
     return tree
 
 def formatAssign(assignStmt):
@@ -106,82 +128,77 @@ def formatAssign(assignStmt):
       return assignStmt
     m = re.match(r'(.*)=(.*)', assignStmt)
     if m:
-      return re.sub(r'=(\s*\d+)bv\d+', r'=\1', m.group(1) + "==" + m.group(2))
+      repl = lambda x: '='+ x.group(1) + 'U' if x.group(2) is not None else ''
+      return re.sub(r'=(\s*\d+)(bv\d+)', repl, m.group(1) + "==" + m.group(2))
     else:
       return ""
 
-def smackJsonToXmlGraph(strJsonOutput):
+def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
-    # Convert json string to json object
-    smackJson = json.loads(strJsonOutput)
-    # Get the failure node, and the list of trace entries to get there
-    jsonViolation = smackJson["failsAt"]
-    jsonTraces = smackJson["traces"]
-    
     # Build tree & start node
-    tree = buildEmptyXmlGraph()
+    tree = buildEmptyXmlGraph(args, hasBug)
     # Add the start node, which gets marked as being the entry node
     start = addGraphNode(tree, {"entry":"true"})
-    lastNode = start
-    lastEdge = None 
-    pat = re.compile(".*smack\.[c|h]$")
-    prevLineNo = -1
-    prevColNo = -1
-    # Loop through each trace
-    for jsonTrace in jsonTraces:
+    if hasBug and not args.pthread:
+      # Convert json string to json object
+      smackJson = json.loads(strJsonOutput)
+      # Get the failure node, and the list of trace entries to get there
+      jsonViolation = smackJson["failsAt"]
+      jsonTraces = smackJson["traces"]
+
+      lastNode = start
+      lastEdge = None
+      pat = re.compile(".*smack\.[c|h]$")
+      prevLineNo = -1
+      prevColNo = -1
+      callStack = ['main']
+      # Loop through each trace
+      for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
-            # If current trace has same line & column number as previous trace,
-            #   don't create new edge/node - just append assumption
-            if prevLineNo == jsonTrace["line"] and prevColNo == jsonTrace["column"]:
-                #if not jsonTrace["assumption"] == "":
-                if formatAssign(jsonTrace["description"]):
-                    assumpNode = None
-                    # Loop through the children to find the assumption node
-                    for dataNode in list(lastEdge.iter()):
-                        if dataNode.tag == "data" and dataNode.attrib["key"] == "assumption":
-                            assumpNode = dataNode
-                            break
-                    if assumpNode == None:
-                        #addKey(lastEdge, "assumption",formatAssign(str(jsonTrace["assumption"])) + ";")
-                        addKey(lastEdge, "assumption",formatAssign(str(jsonTrace["description"])) + ";")
-                    else:
-                        #assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["assumption"])) + ";"
-                        assumpNode.text = assumpNode.text + " " + formatAssign(str(jsonTrace["description"])) + ";"
-                if "CALL" in jsonTrace["description"]:
-                  if not "__VERIFIER_nondet_" in jsonTrace["description"] and not "__VERIFIER_assume" in jsonTrace["description"] and \
-                     not "$memset" in jsonTrace["description"] and not "$memcpy" in jsonTrace["description"]:
-                    addKey(lastEdge, "enterFunction", str(jsonTrace["description"][len("CALL"):]))
-                    #addKey(lastNode, "violation", "true")
-                    if ("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]):
-                      vNodes =tree.find("graph").findall("node")
-                      for vNode in vNodes:
-                        if vNode.attrib["id"] == lastNode:
-                          addKey(vNode, "violation", "true")
-                if "RETURN from" in jsonTrace["description"]:
-                    attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
-            else:
-                # Create new node and edge
-                newNode = addGraphNode(tree)
-                #print type(newNode)
-                #attribs = {"originline":str(jsonTrace["line"])}
-                attribs = {"startline":str(jsonTrace["line"])}
-                if formatAssign(jsonTrace["description"]):
-                  #if not jsonTrace["assumption"] == "":
-                  attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
-                if "CALL" in jsonTrace["description"]:
-                    attribs["enterFunction"] = str(jsonTrace["description"][len("CALL"):]) 
-                    #if ("__VERIFIER_error" in jsonTrace["description"][len("CALL")]):
-                    #  attribs["violation"] = "true"
-                if "RETURN from" in jsonTrace["description"]:
-                    attribs["returnFrom"] = str(jsonTrace["description"][len("RETURN from"):]) 
-                newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
-                prevLineNo = jsonTrace["line"]
-                prevColNo = jsonTrace["column"]
-                lastNode = newNode
-                lastEdge = newEdge
-
+          if formatAssign(jsonTrace["description"]):
+          # Create new node and edge
+            newNode = addGraphNode(tree)
+            attribs = {"startline":str(jsonTrace["line"])}
+            attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
+            attribs["assumption.scope"] = callStack[-1]
+            newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
+            prevLineNo = jsonTrace["line"]
+            prevColNo = jsonTrace["column"]
+            lastNode = newNode
+            lastEdge = newEdge
+          if "CALL" in jsonTrace["description"]:
+            # Add function to call stack
+            calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
+            if calledFunc.startswith("devirtbounce"):
+              print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              continue
+            callStack.append(calledFunc)
+            if (("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]) or
+                ("__SMACK_overflow_false" in jsonTrace["description"][len("CALL"):]) or
+                 ("__SMACK_check_overflow" in jsonTrace["description"][len("CALL"):])):
+              newNode = addGraphNode(tree)
+              # addGraphNode returns a string, so we had to search the graph to get the node that we want
+              vNodes =tree.find("graph").findall("node")
+              for vNode in vNodes:
+                if vNode.attrib["id"] == newNode:
+                  addKey(vNode, "violation", "true")
+              attribs = {"startline":str(jsonTrace["line"])}
+              if not args.signed_integer_overflow:
+                attribs["enterFunction"] = callStack[-1]
+              addGraphEdge(tree, lastNode, newNode, attribs)
+              break
+          if "RETURN from" in jsonTrace["description"]:
+            returnedFunc = str(jsonTrace["description"][len("RETURN from "):]).strip()
+            if returnedFunc.startswith("devirtbounce"):
+              print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              continue
+            if returnedFunc != callStack[-1]:
+              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1], returnedFunc))
+            callStack.pop()
+    print
+    print
     return prettify(tree.getroot())
 
 

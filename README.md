@@ -1,5 +1,5 @@
-<!-- [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/) -->
-
+| **master** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=master)](https://travis-ci.org/smackers/smack) | **develop** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=develop)](https://travis-ci.org/smackers/smack) |
+| --- | --- | --- | --- |
 # This is a fork of [SMACK](https://github.com/smackers/smack) to verify Rust language programs
 
 ## The current goals of this project are:
@@ -86,7 +86,7 @@ SMACK.
 1. [Demos](docs/demos.md)
 1. [FAQ](docs/faq.md)
 1. [Inline Boogie Code](docs/boogie-code.md)
-1. [Contribution Guidelines](docs/contributions.md)
+1. [Contribution Guidelines](CONTRIBUTING.md)
 1. [Projects](docs/projects.md)
 1. [Publications](docs/publications.md)
 1. [People](docs/people.md)

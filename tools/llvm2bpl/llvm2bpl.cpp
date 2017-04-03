@@ -20,7 +20,6 @@
 #include "llvm/Support/FormattedStream.h"
 
 #include "smack/BplFilePrinter.h"
-#include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"
@@ -33,6 +32,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
+#include "smack/SignedIntegerOverflowChecker.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -55,7 +55,11 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
 static llvm::cl::opt<bool>
-MemorySafety("memory-safety", llvm::cl::desc("Enable memory safety checks"),
+SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
+  llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+Contracts("contracts", llvm::cl::desc("Enable contracts-based deductive verification"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -107,7 +111,7 @@ int main(int argc, char **argv) {
 
   pass_manager.add(new smack::RenameIntrinsics());
   pass_manager.add(llvm::createLowerSwitchPass());
-  pass_manager.add(llvm::createCFGSimplificationPass());
+  //pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
@@ -124,14 +128,19 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
-  pass_manager.add(new smack::RemoveDeadDefs());
+  if (!Contracts) {
+    pass_manager.add(new smack::RemoveDeadDefs());
+  }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-   
-  if (MemorySafety) {
+
+  if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
+
+  if (SignedIntegerOverflow)
+    pass_manager.add(new smack::SignedIntegerOverflowChecker());
 
   std::vector<tool_output_file*> files;
 

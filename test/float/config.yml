@@ -1,1 +1,3 @@
-skip: false
+verifiers: [boogie]
+flags: [--bit-precise, --float]
+skip: ok
