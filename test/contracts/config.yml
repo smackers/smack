@@ -1,2 +1,2 @@
 verifiers: [boogie]
-flags: [--contracts]
+flags: [--modular]
