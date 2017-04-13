@@ -47,6 +47,7 @@ def results(args):
 
 def inlined_procedures():
   return [
+    '$galloc',
     '$alloc',
     '$free',
     '$memset',
@@ -431,7 +432,7 @@ def llvm_to_bpl(args):
 def procedure_annotation(name, args):
   if name in args.entry_points:
     return "{:entrypoint}"
-  elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
+  elif args.modular and re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
   elif (not args.modular) and (args.verifier == 'boogie' or args.float):
     return ("{:inline %s}" % args.unroll)
