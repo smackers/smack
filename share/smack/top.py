@@ -49,6 +49,7 @@ def inlined_procedures():
   return [
     '$galloc',
     '$alloc',
+    '$malloc',
     '$free',
     '$memset',
     '$memcpy',
