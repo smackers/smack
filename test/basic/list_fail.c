@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=4
+// @flag --unroll=100
 // @expect error
 
 typedef struct list {
