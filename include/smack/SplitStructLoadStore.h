@@ -9,6 +9,7 @@
 #include "llvm/IR/IRBuilder.h"
 
 #include <vector>
+#include <utility>
 
 namespace smack {
 
@@ -23,6 +24,6 @@ private:
   std::vector<llvm::Instruction*> toRemove;
 
   void splitStructStore(llvm::StoreInst* si, llvm::Value* ptr, llvm::Value* val);
-  void copyStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Constant* val, std::vector<llvm::Value*> idxs);
+  void copyStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Type* ct, llvm::Value* val, std::vector<std::pair<llvm::Value*, unsigned> > idxs);
 };
 }

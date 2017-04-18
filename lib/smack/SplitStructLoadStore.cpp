@@ -33,42 +33,52 @@ bool SplitStructLoadStore::runOnModule(Module& M)
 void SplitStructLoadStore::splitStructStore(StoreInst* si, Value* ptr, Value* val)
 {
   if (StructType* st = dyn_cast<StructType>(val->getType())) {
-    if (ConstantStruct* cs = dyn_cast<ConstantStruct>(val)) {
-      std::vector<Value*> idx;
-      IRBuilder<> irb(si);
-      copyStructs(&irb, ptr, cs, idx);
-      toRemove.push_back(si);
-    }
+    std::vector<std::pair<Value*, unsigned> > idx;
+    IRBuilder<> irb(si);
+    copyStructs(&irb, ptr, st, val, idx);
+    toRemove.push_back(si);
   }
   //assert(0 && "Store non-const values not supported.");
 }
 
-void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Constant* val, std::vector<Value*> idxs)
+void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val, std::vector<std::pair<Value*, unsigned> > idxs)
 {
   LLVMContext& C = ptr->getContext();
+  Constant* cv = dyn_cast<Constant>(val);
 
-  if (val->getType()->isIntegerTy() ||
-      val->getType()->isPointerTy() ||
-      val->getType()->isFloatingPointTy())
-    irb->CreateStore(val, irb->CreateGEP(ptr, ArrayRef<Value*>(idxs)));
-  else if (ArrayType* AT = dyn_cast<ArrayType>(val->getType())) {
-    for (unsigned i = AT->getNumElements(); i-- > 0; ) {
-      auto A = val->getAggregateElement(i);
-      std::vector<Value*> lidxs(idxs);
-      if (lidxs.empty())
-        lidxs.push_back(ConstantInt::get(Type::getInt32Ty(C),0));
-      lidxs.push_back(ConstantInt::get(Type::getInt64Ty(C),i));
-      copyStructs(irb, ptr, A, lidxs);
+  if (ct->isIntegerTy() || ct->isPointerTy() || ct->isFloatingPointTy()) {
+    std::vector<Value*> vidxs;
+    for (auto p = idxs.begin(); p != idxs.end(); ++p) {
+      vidxs.push_back(std::get<0>(*p));
+    }
+    if (cv)
+      irb->CreateStore(val, irb->CreateGEP(ptr, ArrayRef<Value*>(vidxs)));
+    else {
+      std::vector<unsigned> uidxs;
+      for (auto p = idxs.begin()+1; p != idxs.end(); ++p) {
+        uidxs.push_back(std::get<1>(*p));
+      }
+      irb->CreateStore(irb->CreateExtractValue(val, ArrayRef<unsigned>(uidxs)), irb->CreateGEP(ptr, ArrayRef<Value*>(vidxs)));
     }
   }
-  else if (StructType* ST = dyn_cast<StructType>(val->getType())) {
-    for (unsigned i = ST->getNumElements(); i-- > 0; ) {
-      auto A = val->getAggregateElement(i);
-      std::vector<Value*> lidxs(idxs);
+  else if (ArrayType* AT = dyn_cast<ArrayType>(ct)) {
+    for (unsigned i = AT->getNumElements(); i-- > 0; ) {
+      auto A = cv? cv->getAggregateElement(i) : val;
+      std::vector<std::pair<Value*, unsigned> > lidxs(idxs);
       if (lidxs.empty())
-        lidxs.push_back(ConstantInt::get(Type::getInt32Ty(C),0));
-      lidxs.push_back(ConstantInt::get(Type::getInt32Ty(C),i));
-      copyStructs(irb, ptr, A, lidxs);
+        lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
+      lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt64Ty(C),i), i));
+      copyStructs(irb, ptr, AT->getElementType(), A, lidxs);
+    }
+  }
+  else if (StructType* ST = dyn_cast<StructType>(ct)) {
+    for (unsigned i = ST->getNumElements(); i-- > 0; ) {
+      auto A = cv? cv->getAggregateElement(i) : val;
+      std::vector<std::pair<Value*, unsigned> > lidxs(idxs);
+      if (lidxs.empty())
+        lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
+      lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),i), i));
+      copyStructs(irb, ptr, ST->getElementType(i), A, lidxs);
     }
   }
 }
@@ -80,3 +90,4 @@ static RegisterPass<SplitStructLoadStore>
 X("split-struct-load-store", "Split Load/Store to Structures");
 
 }
+
