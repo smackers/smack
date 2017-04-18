@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=11
+// @flag --unroll=100
 // @expect verified
 
 typedef struct {
