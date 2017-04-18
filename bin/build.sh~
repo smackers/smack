@@ -38,7 +38,7 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
-SYMBOOGLIX_DIR="${ROOT}/symbooglix"
+SYMBOOGLIX_DIR="${ROOt}/symbooglix"
 LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
@@ -46,7 +46,7 @@ LLVM_DIR="${ROOT}/llvm"
 source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
-WGET="wget --no-verbose"
+WGET="wget --no-verbose --method=GET"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -343,7 +343,7 @@ then
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
-  msbuild Boogie.sln /p:Configuration=Release
+  xbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
   puts "Built Boogie"
@@ -359,7 +359,7 @@ then
   git reset --hard ${CORRAL_COMMIT}
   git submodule init
   git submodule update
-  msbuild cba.sln /p:Configuration=Release
+  xbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
   puts "Built Corral"
@@ -391,7 +391,7 @@ then
   git clone https://github.com/smackers/lockpwn.git
   cd ${LOCKPWN_DIR}
   git reset --hard ${LOCKPWN_COMMIT}
-  msbuild lockpwn.sln /p:Configuration=Release
+  xbuild lockpwn.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
   puts "Built lockpwn"
