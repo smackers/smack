@@ -33,6 +33,7 @@
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/SignedIntegerOverflowChecker.h"
+#include "smack/SplitStructLoadStore.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -59,7 +60,7 @@ SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed i
   llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
-Contracts("contracts", llvm::cl::desc("Enable contracts-based deductive verification"),
+Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -128,12 +129,13 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
-  if (!Contracts) {
+  if (!Modular) {
     pass_manager.add(new smack::RemoveDeadDefs());
   }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
+  pass_manager.add(new smack::SplitStructLoadStore());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
