@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "smack.h"
 
-// @flag --unroll=100
+// @flag --unroll=6
 // @expect error
 
 #define MAXSIZE 5
