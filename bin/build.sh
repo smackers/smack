@@ -430,7 +430,6 @@ then
 
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
-<<<<<<< f5250b981ed8209930e599a95388f2a4ee0fbd81
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
   echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
   echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
@@ -439,28 +438,18 @@ then
   puts "You should source ${SMACKENV} in your .bashrc"
 
   puts "Built SMACK"
-=======
-	echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
-	echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
-	echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
-	source ${SMACKENV}
-	puts "The required environment variables have been set in ${SMACKENV}"
-	puts "You should source ${SMACKENV} in your .bashrc"
-
-	puts "Built SMACK"
->>>>>>> Symbooglix now passes most of the regression tests.
 fi
 
 
 if [ ${TEST_SMACK} -eq 1 ]
 then
-	puts "Running SMACK regression tests"
+  puts "Running SMACK regression tests"
 
-	cd ${SMACK_DIR}/test
-	./regtest.py ${TRAVIS_ENV}
-	res=$?
+  cd ${SMACK_DIR}/test
+  ./regtest.py ${TRAVIS_ENV}
+  res=$?
 
-	puts "Regression tests complete"
+  puts "Regression tests complete"
 fi
 
 exit $res
