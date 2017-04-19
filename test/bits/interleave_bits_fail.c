@@ -2,7 +2,7 @@
 #include "smack.h"
 
 // @flag --loop-limit=33
-// @flag --unroll=100
+// @flag --unroll=33
 // @expect error
 
 int main()
