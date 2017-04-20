@@ -393,8 +393,8 @@ then
   cd ${ROOT}
   git clone https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR} 
   cd ${SYMBOOGLIX_DIR}/src
-	git submodule init
-	git submodule update
+  git submodule init
+  git submodule update
   ${WGET} https://dist.nuget.org/win-x86-commandline/v2.8.6/nuget.exe
   mono ./nuget.exe restore Symbooglix.sln
   xbuild /p:Configuration=Release
