@@ -52,6 +52,7 @@ void SplitStructLoadStore::splitStructLoad(LoadInst* li)
     std::vector<std::pair<Value*, unsigned> > idx;
     IRBuilder<> irb(li);
     li->replaceAllUsesWith(buildStructs(&irb, li->getPointerOperand(), st, nullptr, idx));
+    toRemove.push_back(li);
   }
 }
 
