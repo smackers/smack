@@ -9,3 +9,7 @@ int incr(int x) {
   return x + y;
 }
 
+char* retStr() {
+  char* s1 = "1string";
+  return s1;
+}

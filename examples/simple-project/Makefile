@@ -1,5 +1,5 @@
 # Set this variable to point to folder share of your SMACK installation
-INSTALL_SHARE = ../../../install/share
+INSTALL_SHARE = ../../share
 
 CC = clang
 LD = llvm-link
