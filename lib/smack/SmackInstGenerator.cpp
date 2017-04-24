@@ -103,7 +103,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
   auto name = naming.get(*F);
   if (SmackOptions::isEntryPoint(naming.get(*F)) && &bb == &F->getEntryBlock()) {
     for (auto& I : bb.getInstList()) {
-      if (!llvm::isa<llvm::DbgValueInst>(I)) {
+      if (!llvm::isa<llvm::DbgInfoIntrinsic>(I) && !llvm::isa<llvm::AllocaInst>(I)) {
         annotate(I, currBlock);
         break;
       }
