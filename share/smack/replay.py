@@ -37,7 +37,7 @@ def replay_error_trace(verifier_output, args):
   print "Generated replay executable:", args.replay_exe_file
 
   try:
-    if try_command(["./" + args.replay_exe_file]):
+    if 'error reached!' in try_command(["./" + args.replay_exe_file]):
       print "Error-trace replay successful."
       return True
 
@@ -112,9 +112,10 @@ def harness(arguments, return_values, missing_definitions):
 #include <stdio.h>
 
 void __VERIFIER_assert(int b) {
-  if (!b)
+  if (!b) {
     printf("error reached!\\n");
     exit(0);
+  }
 }
 
 void __VERIFIER_assume(int b) {
