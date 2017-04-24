@@ -59,26 +59,25 @@ def extract_values(stream):
 
 
 def aggregate_values(stream):
-  dict = {}
-  for line in stream:
-    fn, val = line.strip().split(",")
-    fn = fn.replace('SMACK_nondet', 'VERIFIER_nondet')
-    if not fn in dict:
-        dict[fn] = []
-    dict[fn].append(val)
-
   arguments = {}
   return_values = {}
 
-  for key, vals in dict.items():
-    if 'ext:' in key:
-      _, fn = key.split(':')
-      return_values[fn] = vals
-    elif 'arg:' in key:
+  for line in stream:
+    key, val = line.strip().split(",")
+    key = key.replace('SMACK_nondet', 'VERIFIER_nondet')
+
+    if 'arg:' in key:
       _, fn, arg = key.split(':')
       if not fn in arguments:
-        arguments[fn] = {}
-      arguments[fn][arg] = vals[0]
+        arguments[fn] = []
+      arguments[fn].append(val)
+
+    elif 'ext:' in key:
+      _, fn = key.split(':')
+      if not fn in return_values:
+        return_values[fn] = []
+      return_values[fn].append(val)
+
     else:
       print "warning: unexpected key %s" % key
 
@@ -139,6 +138,6 @@ int smack_replay_main() {
   %(fn)s(%(vals)s);
   return 0;
 }
-""" % {'fn': fn, 'vals': ", ".join(args.values())})
+""" % {'fn': fn, 'vals': ", ".join(args)})
 
   return "\n".join(code)
