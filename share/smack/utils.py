@@ -63,6 +63,8 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
     proc = None
     if timeout and timed_out[0]:
       return output + ("\n%s timed out." % cmd[0])
+    elif rc == -signal.SIGSEGV:
+      raise Exception("segmentation fault")
     elif rc:
       raise Exception(output)
     else:

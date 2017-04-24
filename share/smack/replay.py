@@ -33,11 +33,18 @@ def replay_error_trace(verifier_output, args):
   print "Generated replay harness:", args.replay_harness
   print "Generated replay executable:", args.replay_exe_file
 
-  if try_command(["./" + args.replay_exe_file]):
-    print "Error-trace replay successful."
+  try:
+    if try_command(["./" + args.replay_exe_file]):
+      print "Error-trace replay successful."
+      return True
 
-  else:
-    print "Error-trace replay failed."
+    else:
+      print "Error-trace replay failed."
+
+  except Exception as err:
+    print "Error-trace replay caught", err.message
+
+  return False
 
 
 def detect_missing_definitions(bc_file):
