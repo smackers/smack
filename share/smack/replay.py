@@ -70,7 +70,7 @@ def aggregate_values(stream):
       _, fn = key.split(':')
       arguments[fn] = []
 
-    if 'arg:' in key:
+    elif 'arg:' in key:
       _, fn, arg = key.split(':')
       if not fn in arguments:
         raise Exception("expected entry point key smack:entry:%s" % fn)
@@ -125,7 +125,12 @@ int %(fn)s() {
 """ % {'fn': fn, 'vals': ", ".join(return_values[fn])})
 
     else:
-      print "warning: cannot generate stub for %s" % fn
+      print "warning: unknown return value for %s" % fn
+      code.append("""// stub for function %(fn)s
+void %(fn)s() {
+  return;
+}
+""" % {'fn': fn})
 
   for fn in set(return_values) - set(missing_definitions):
     print "warning: using native implementation of function %s" % fn
