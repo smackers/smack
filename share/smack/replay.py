@@ -66,10 +66,14 @@ def aggregate_values(stream):
     key, val = line.strip().split(",")
     key = key.replace('SMACK_nondet', 'VERIFIER_nondet')
 
+    if 'entry:' in key:
+      _, fn = key.split(':')
+      arguments[fn] = []
+
     if 'arg:' in key:
       _, fn, arg = key.split(':')
       if not fn in arguments:
-        arguments[fn] = []
+        raise Exception("expected entry point key smack:entry:%s" % fn)
       arguments[fn].append(val)
 
     elif 'ext:' in key:

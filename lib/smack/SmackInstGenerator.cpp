@@ -108,6 +108,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
         break;
       }
     }
+    emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming.get(*F))}));
     for (auto& A : F->getArgumentList()) {
       emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming.get(*F) + ":" + naming.get(A))}));
     }
