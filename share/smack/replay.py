@@ -20,7 +20,7 @@ def replay_error_trace(verifier_output, args):
   try:
     try_command(['clang', '-o', args.replay_exe_file, args.bc_file])
   except Exception as err:
-    missing_definitions = detect_missing_definitions(err[1])
+    missing_definitions = detect_missing_definitions(err.message)
 
   read, write = os.pipe()
   os.write(write, verifier_output)

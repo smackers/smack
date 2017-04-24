@@ -64,7 +64,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
     if timeout and timed_out[0]:
       return output + ("\n%s timed out." % cmd[0])
     elif rc:
-      raise Exception("%s returned non-zero." % cmd[0], output)
+      raise Exception(output)
     else:
       return output
 
