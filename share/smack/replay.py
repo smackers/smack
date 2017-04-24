@@ -15,6 +15,8 @@ def replay_error_trace(verifier_output, args):
     print "Replay for verifiers other than 'corral' currently unsupported; skipping replay"
     return
 
+  print "Attempting to replay error trace."
+
   missing_definitions = detect_missing_definitions(args.bc_file)
 
   read, write = os.pipe()
