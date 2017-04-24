@@ -94,6 +94,7 @@ void __VERIFIER_assume(int b) {
 
   for fn, vals in dict.items():
     if not fn in missing_definitions:
+      print "warning: using native implementation of function %s" % fn
       continue
 
     code.append("""// stub for function: %(fn)s
