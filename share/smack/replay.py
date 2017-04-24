@@ -4,32 +4,27 @@ import subprocess
 import sys
 from utils import temporary_file, try_command
 
-SPECIAL_NAMES = ['__VERIFIER_assert', '__VERIFIER_assume', 'main']
+SPECIAL_NAMES = [
+  '__VERIFIER_assert',
+  '__VERIFIER_assume'
+]
 
 def replay_error_trace(verifier_output, args):
-
-  # if args.entry_points != ['main']:
-  #   print "Replay for entrypoints other than 'main' currently unsupported; skipping replay"
-  #   return
 
   if args.verifier != 'corral':
     print "Replay for verifiers other than 'corral' currently unsupported; skipping replay"
     return
 
-  stubs_bc = temporary_file('stubs', '.bc', args)
-  missing_definitions = []
-
-  try:
-    try_command(['clang', '-o', args.replay_exe_file, args.bc_file])
-  except Exception as err:
-    missing_definitions = detect_missing_definitions(err.message)
+  missing_definitions = detect_missing_definitions(args.bc_file)
 
   read, write = os.pipe()
   os.write(write, verifier_output)
   os.close(write)
   with open(args.replay_harness, 'w') as f:
-    f.write(stub_module(aggregate_values(collect_returns(read)), missing_definitions))
+    arguments, return_values = aggregate_values(extract_values(read))
+    f.write(harness(arguments, return_values, missing_definitions))
 
+  stubs_bc = temporary_file('stubs', '.bc', args)
   try_command(['clang', '-c', '-emit-llvm', '-o', stubs_bc, args.replay_harness])
   try_command(['clang', '-Wl,-e,_smack_replay_main', '-o', args.replay_exe_file, args.bc_file, stubs_bc])
 
@@ -43,20 +38,25 @@ def replay_error_trace(verifier_output, args):
     print "Error-trace replay failed."
 
 
-def collect_returns(stream):
+def detect_missing_definitions(bc_file):
+  missing = []
+  try:
+    try_command(['clang', bc_file])
+  except Exception as err:
+    for line in err.message.split("\n"):
+      m = re.search(r'\"_(.*)\", referenced from:', line)
+      if m:
+        missing.append(m.group(1))
+  return missing
+
+
+def extract_values(stream):
   return reduce(
   (lambda s, c: subprocess.Popen(c, stdin=s, stdout=subprocess.PIPE).stdout), [
     ["grep", "(smack:"],
     ["sed", "s/.*(smack:\(.*\) = \(.*\))/\\1,\\2/"]
   ], stream)
 
-def detect_missing_definitions(failed_clang_output):
-  missing = []
-  for line in failed_clang_output.split("\n"):
-    m = re.search(r'\"_(.*)\", referenced from:', line)
-    if m:
-      missing.append(m.group(1))
-  return missing
 
 def aggregate_values(stream):
   dict = {}
@@ -66,12 +66,10 @@ def aggregate_values(stream):
     if not fn in dict:
         dict[fn] = []
     dict[fn].append(val)
-  return dict
 
-
-def stub_module(dict, missing_definitions):
-  return_values = {}
   arguments = {}
+  return_values = {}
+
   for key, vals in dict.items():
     if 'ext:' in key:
       _, fn = key.split(':')
@@ -84,6 +82,10 @@ def stub_module(dict, missing_definitions):
     else:
       print "warning: unexpected key %s" % key
 
+  return arguments, return_values
+
+
+def harness(arguments, return_values, missing_definitions):
   code = []
   code.append("""//
 // This file was automatically generated from a Boogie error trace.
@@ -122,12 +124,12 @@ int %(fn)s() {
     else:
       print "warning: cannot generate stub for %s" % fn
 
-  for f in set(return_values) - set(missing_definitions):
+  for fn in set(return_values) - set(missing_definitions):
     print "warning: using native implementation of function %s" % fn
-
 
   if len(arguments) > 1:
     print "warning: multiple entrypoint argument annotations found"
+
   elif len(arguments) < 1:
     print "warning: no entrypoint argument annotations found"
 
