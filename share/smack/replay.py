@@ -19,6 +19,9 @@ def replay_error_trace(verifier_output, args):
 
   missing_definitions = detect_missing_definitions(args.bc_file)
 
+  if '__SMACK_code' in missing_definitions:
+    print "warning: inline Boogie code found; replay may fail"
+
   read, write = os.pipe()
   os.write(write, verifier_output)
   os.close(write)
