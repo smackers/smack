@@ -98,6 +98,20 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
   nextInst = bb.begin();
   currBlock = getBlock(&bb);
+
+  auto* F = bb.getParent();
+  auto name = naming.get(*F);
+  if (SmackOptions::isEntryPoint(naming.get(*F)) && &bb == &F->getEntryBlock()) {
+    for (auto& I : bb.getInstList()) {
+      if (!llvm::isa<llvm::DbgValueInst>(I)) {
+        annotate(I, currBlock);
+        break;
+      }
+    }
+    for (auto& A : F->getArgumentList()) {
+      emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming.get(*F) + ":" + naming.get(A))}));
+    }
+  }
 }
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
@@ -604,7 +618,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   }
 
   if (f->isDeclaration() && !f->getReturnType()->isVoidTy()) {
-    emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "ext:" + naming.get(*f))}));
+    emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "smack:ext:" + naming.get(*f))}));
   }
 }
 
