@@ -42,6 +42,11 @@ std::string i2s(const llvm::Instruction& i) {
   return s;
 }
 
+const Stmt* SmackInstGenerator::recordProcedureCall(
+    llvm::Value* V, std::list<const Attr*> attrs) {
+  return Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, attrs);
+}
+
 Block* SmackInstGenerator::createBlock() {
   Block* b = Block::block(naming.freshBlockName());
   proc.getBlocks().push_back(b);
@@ -596,6 +601,10 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
+
+  if (f->isDeclaration() && !f->getReturnType()->isVoidTy()) {
+    emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "ext:" + naming.get(*f))}));
   }
 }
 
