@@ -18,22 +18,18 @@ def replay_error_trace(verifier_output, args):
   print "Attempting to replay error trace."
 
   missing_definitions = detect_missing_definitions(args.bc_file)
-
   if '__SMACK_code' in missing_definitions:
     print "warning: inline Boogie code found; replay may fail"
 
-  read, write = os.pipe()
-  os.write(write, verifier_output)
-  os.close(write)
+  arguments, return_values = extract_values(verifier_output)
+
   with open(args.replay_harness, 'w') as f:
-    arguments, return_values = aggregate_values(extract_values(read))
     f.write(harness(arguments, return_values, missing_definitions))
+  print "Generated replay harness:", args.replay_harness
 
   stubs_bc = temporary_file('stubs', '.bc', args)
   try_command(['clang', '-c', '-emit-llvm', '-o', stubs_bc, args.replay_harness])
   try_command(['clang', '-Wl,-e,_smack_replay_main', '-o', args.replay_exe_file, args.bc_file, stubs_bc])
-
-  print "Generated replay harness:", args.replay_harness
   print "Generated replay executable:", args.replay_exe_file
 
   try:
@@ -62,34 +58,28 @@ def detect_missing_definitions(bc_file):
   return missing
 
 
-def extract_values(stream):
-  return reduce(
-  (lambda s, c: subprocess.Popen(c, stdin=s, stdout=subprocess.PIPE).stdout), [
-    ["grep", "(smack:"],
-    ["sed", "s/.*(smack:\(.*\) = \(.*\))/\\1,\\2/"]
-  ], stream)
+def extract(line):
+  match = re.search(r'.*\((smack:.*) = (.*)\).*', line)
+  return match and [match.group(1), match.group(2)]
 
 
-def aggregate_values(stream):
+def extract_values(trace):
   arguments = {}
   return_values = {}
 
-  for line in stream:
-    key, val = line.strip().split(",")
-    key = key.replace('SMACK_nondet', 'VERIFIER_nondet')
-
-    if 'entry:' in key:
-      _, fn = key.split(':')
+  for key, val in filter(lambda x: x, map(extract, trace.split('\n'))):
+    if 'smack:entry:' in key:
+      _, _, fn = key.split(':')
       arguments[fn] = []
 
-    elif 'arg:' in key:
-      _, fn, arg = key.split(':')
+    elif 'smack:arg:' in key:
+      _, _, fn, arg = key.split(':')
       if not fn in arguments:
         raise Exception("expected entry point key smack:entry:%s" % fn)
       arguments[fn].append(val)
 
-    elif 'ext:' in key:
-      _, fn = key.split(':')
+    elif 'smack:ext:' in key:
+      _, _, fn = key.split(':')
       if not fn in return_values:
         return_values[fn] = []
       return_values[fn].append(val)
