@@ -906,6 +906,14 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   std::list<const Expr*> args;
   std::list<std::string> rets;
 
+  if (const CallInst* cli = dyn_cast<CallInst>(&ci)) {
+    if (SmackOptions::isEntryPoint(cli->getFunction()->getName())
+        && cli->getNumArgOperands()) {
+      Value* a0 = cli->getArgOperand(0)->stripPointerCasts();
+      return Stmt::call(a0->getName(), args, rets);
+    }
+  }
+
   unsigned num_arg_operands = ci.getNumOperands();
   if (isa<CallInst>(ci))
     num_arg_operands -= 1;

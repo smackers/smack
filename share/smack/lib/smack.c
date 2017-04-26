@@ -1977,6 +1977,8 @@ void __SMACK_decls() {
   D("function {:inline} $store.bytes.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {"
     "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.bytes.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
+  D("function {:inline} $store.bytes.bv1(M:[ref]bv8, p:ref, v:bv1) returns ([ref]bv8) {M[p := $zext.bv1.bv8(v)]}");
+  D("function {:inline} $load.bytes.bv1(M: [ref] bv8, p: ref) returns (bv1) { $trunc.bv8.bv1(M[p]) }");
 
   D("function {:inline} $load.ref(M: [ref] ref, p: ref) returns (ref) { M[p] }");
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
