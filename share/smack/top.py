@@ -336,7 +336,7 @@ def default_clang_compile_command(args, lib = False):
   return cmd
 
 def default_rust_compile_command(args):
-  cmd = ['rustc', '-g', '--emit', 'llvm-bc']
+  cmd = ['rustc', '--cfg', 'verifier="smack"', '-g', '--emit', 'llvm-bc']
   return cmd
 
 def build_libs(args):
