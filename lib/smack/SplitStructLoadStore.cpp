@@ -28,8 +28,8 @@ bool SplitStructLoadStore::runOnModule(Module& M)
   for (auto& F : M) {
     for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
       if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {
-        if (li->getType()->isAggregateType()) {
-          //splitStructLoad(li);
+        if (li->getType()->isAggregateType() && !isa<ReturnInst>(li->user_back())) {
+          splitStructLoad(li);
         }
       } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
         Value* P = si->getPointerOperand();
