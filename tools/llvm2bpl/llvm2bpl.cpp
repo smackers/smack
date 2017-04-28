@@ -26,6 +26,7 @@
 #include "assistDS/SimplifyInsertValue.h"
 #include "assistDS/MergeGEP.h"
 #include "assistDS/Devirt.h"
+#include "smack/AddTiming.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/ExtractContracts.h"
@@ -140,6 +141,8 @@ int main(int argc, char **argv) {
   if (SignedIntegerOverflow)
     pass_manager.add(new smack::SignedIntegerOverflowChecker());
 
+  pass_manager.add(new smack::AddTiming());
+  
   std::vector<tool_output_file*> files;
 
   if (!FinalIrFilename.empty()) {
