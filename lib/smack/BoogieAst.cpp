@@ -118,6 +118,10 @@ const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
   return new Attr(s,vs);
 }
 
+const Attr* Attr::attr(std::string s, std::list<const Expr*> vs) {
+  return new Attr(s,vs);
+}
+
 const Attr* Attr::attr(std::string s) {
   return attr(s, {});
 }
