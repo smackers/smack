@@ -30,6 +30,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+
 using namespace llvm;
 
 #define CM_NAME "cost-model"
@@ -55,7 +56,15 @@ AddTiming::runOnFunction(Function &F) {
  this->F = &F;
  TTI = &(getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F));
 
- print(errs(), nullptr);
+  for (Function::iterator B = F.begin(), BE = F.end(); B != BE; ++B) {
+    for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
+      Instruction *Inst = it;
+      unsigned Cost = getInstructionCost(Inst);
+      if (Cost != (unsigned)NO_TIMING_INFO) {
+	addTimingMetadata(Inst, "smack.InstTimingCost.Int64", Cost);
+      } 
+    }
+  }
  
  return false;
 }
@@ -181,6 +190,19 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
   }
 }
 
+void AddTiming::addTimingMetadata(Instruction *Inst, const std::string &name, const std::string& value) const {
+  LLVMContext& C = Inst->getContext();
+  MDNode* N = MDNode::get(C, MDString::get(C, value));
+  Inst->setMetadata(name, N);
+}
+
+  
+void AddTiming::addTimingMetadata(Instruction *Inst, const std::string &name, unsigned cost) const {
+  LLVMContext& C = Inst->getContext();
+  MDNode* N = MDNode::get(C, ConstantAsMetadata::get(ConstantInt::get(C, llvm::APInt(64, cost, false))));
+  Inst->setMetadata(name, N);
+}
+  
 void AddTiming::print(raw_ostream &OS, const Module*) const {
   if (!F)
     return;
@@ -189,11 +211,11 @@ void AddTiming::print(raw_ostream &OS, const Module*) const {
     for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
       Instruction *Inst = it;
       unsigned Cost = getInstructionCost(Inst);
-      if (Cost != (unsigned)NO_TIMING_INFO)
+      if (Cost != (unsigned)NO_TIMING_INFO) {
         OS << "Cost Model: Found an estimated cost of " << Cost;
-      else
+      } else {
         OS << "Cost Model: Unknown cost";
-
+      }
       OS << " for instruction: "<< *Inst << "\n";
     }
   }

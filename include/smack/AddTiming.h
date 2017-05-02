@@ -7,7 +7,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-
+#include <string>
 
 namespace smack {
   using namespace llvm;
@@ -27,6 +27,9 @@ namespace smack {
     unsigned getInstructionCost(const Instruction *I) const;
 
   private:
+    void addTimingMetadata(Instruction *Inst, const std::string &name, const std::string& value) const;
+    void addTimingMetadata(Instruction *Inst, const std::string &name, unsigned cost) const;
+    void addTimingMetadata(Instruction *Inst, unsigned cost) const;
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnFunction(Function &F) override;
     void print(raw_ostream &OS, const Module*) const override;
