@@ -92,11 +92,13 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
   SmallVector<StringRef, 8> Names;
   I.getModule()->getMDKindNames(Names);
 
-  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
-    std::string name = Names[II->first];
+  //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
+  for (auto II : MDForInst){
+    std::string name = Names[II.first];
     if(name.find("smack.") != std::string::npos) {
       assert(II->second->getNumOperands() == 1 && "SMACK metadata should have exactly one argument");
-      if (auto *CI = mdconst::dyn_extract<ConstantInt>(II->second->getOperand(0))){
+      std::list<const Expr*> attrs;
+      if (auto *CI = mdconst::dyn_extract<ConstantInt>(II.second->getOperand(0))){
 	auto value = CI->getZExtValue();
 	outs() << "name is " << name << "\tvalue is " << value << "\n";
 	B->addStmt(Stmt::annot(Attr::attr(name, value)));
