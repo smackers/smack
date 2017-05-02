@@ -85,6 +85,24 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
     B->addStmt(Stmt::annot(Attr::attr("sourceloc", scope->getFilename().str(),
       DL.getLine(), DL.getCol())));
   }
+  
+  //https://stackoverflow.com/questions/22138947/reading-metadata-from-instruction
+  SmallVector<std::pair<unsigned, MDNode*>, 4> MDForInst;
+  I.getAllMetadata(MDForInst);
+  SmallVector<StringRef, 8> Names;
+  I.getModule()->getMDKindNames(Names);
+
+  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
+    std::string name = Names[II->first];
+    if(name.find("smack.") != std::string::npos) {
+      assert(II->second->getNumOperands() == 1 && "SMACK metadata should have exactly one argument");
+      if (auto *CI = mdconst::dyn_extract<ConstantInt>(II->second->getOperand(0))){
+	auto value = CI->getZExtValue();
+	outs() << "name is " << name << "\tvalue is " << value << "\n";
+	B->addStmt(Stmt::annot(Attr::attr(name, value)));
+      }
+    }
+  }
 }
 
 void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
