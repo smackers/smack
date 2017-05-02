@@ -96,16 +96,19 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
   for (auto II : MDForInst){
     std::string name = Names[II.first];
     if(name.find("smack.") != std::string::npos) {
-      assert(II->second->getNumOperands() == 1 && "SMACK metadata should have exactly one argument");
       std::list<const Expr*> attrs;
-      if (auto *CI = mdconst::dyn_extract<ConstantInt>(II.second->getOperand(0))){
-	auto value = CI->getZExtValue();
-	outs() << "name is " << name << "\tvalue is " << value << "\n";
-	B->addStmt(Stmt::annot(Attr::attr(name, value)));
+           for(auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE; ++AI){
+	if (auto *CI = mdconst::dyn_extract<ConstantInt>(II.second->getOperand(0))){
+	  auto value = CI->getZExtValue();
+	  attrs.push_back(Expr::lit((long) value));
+	  outs() << "name is " << name << "\tvalue is " << value << "\n";
+	  B->addStmt(Stmt::annot(Attr::attr(name, attrs)));
+	}
       }
     }
   }
 }
+
 
 void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
   DEBUG(errs() << "Inst: " << inst << "\n");
