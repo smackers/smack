@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include <iostream>
 #include "llvm/IR/Module.h"
@@ -439,6 +440,12 @@ const struct {
    open64/fopen64/lseek64
  */
 
+// SMACK functions that are excluded from DSA
+Regex SMACK_PROC_IGNORE("^("
+  "__SMACK_code|__SMACK_mod|__SMACK_decl|__SMACK_top_decl|"
+  "__SMACK_values|__SMACK_check_memory_safety"
+")$");
+
 //
 // Method: eraseCallsTo()
 //
@@ -566,6 +573,13 @@ StdLibDataStructures::runOnModule (Module &M) {
   for (Function &F : M) 
     if (F.isDeclaration() && F.doesNotAccessMemory() &&
         !isa<PointerType>(F.getReturnType()))
+      eraseCallsTo(&F);
+
+  //
+  // Erase direct calls to functions that are internal to SMACK
+  //
+  for (Function &F : M)
+    if (SMACK_PROC_IGNORE.match(F.getName()))
       eraseCallsTo(&F);
 
   //
