@@ -26,7 +26,7 @@ void insertMemoryLeakCheck(Function& F, Module& m) {
   }
 }
 
-void inserMemoryAccessCheck(Value* memoryPointer, Instruction* I, DataLayout* dataLayout, Function* memorySafetyFunction, Function* F) {
+void insertMemoryAccessCheck(Value* memoryPointer, Instruction* I, DataLayout* dataLayout, Function* memorySafetyFunction, Function* F) {
   // Finding the exact type of the second argument to our memory safety function
   Type* sizeType = memorySafetyFunction->getFunctionType()->getParamType(1);
   PointerType* pointerType = cast<PointerType>(memoryPointer->getType());
@@ -49,9 +49,9 @@ bool MemorySafetyChecker::runOnModule(Module& m) {
       }
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
         if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {
-          inserMemoryAccessCheck(li->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
+          insertMemoryAccessCheck(li->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
         } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
-          inserMemoryAccessCheck(si->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
+          insertMemoryAccessCheck(si->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
         } else if (MemSetInst* memseti = dyn_cast<MemSetInst>(&*I)) {
 	    Value* dest = memseti->getDest();
 	    Value* size = memseti->getLength();
