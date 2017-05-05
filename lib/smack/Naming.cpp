@@ -3,6 +3,7 @@
 //
 
 #include "smack/Naming.h"
+#include "smack/SmackOptions.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Constants.h"
@@ -251,5 +252,71 @@ std::string Naming::freshVarName(const Value& V) {
   s << varNum++;
   return s.str();
 }
+
+std::string Naming::noDollars(std::string in) {
+  assert(in[0] == '$' && "expected the first character to be a $");
+  in[0] = '.';
+  return in;
+}	 
+
+std::string Naming::nameIntType(unsigned width, bool cannonical) {
+  if (width == std::numeric_limits<unsigned>::max()) {
+    return "int";
+  } else if (cannonical) {
+    return "i" + std::to_string(width);
+  } else {
+    return (SmackOptions::BitPrecise ? "bv" : "i") + std::to_string(width);
+  }
+}
+
+  std::string Naming::nameLLVMType(const llvm::Type* t, bool cannonical) {
+  if (t->isFloatingPointTy()) {
+    if (t->isFloatTy())
+      return Naming::FLOAT_TYPE;
+    else if (t->isDoubleTy())
+      return Naming::DOUBLE_TYPE;
+    else if (t->isX86_FP80Ty())
+      return Naming::LONG_DOUBLE_TYPE;
+    else
+      llvm_unreachable("Unsupported floating-point type.");
+  }
+
+  else if (t->isIntegerTy())
+    return nameIntType(t->getIntegerBitWidth());
+
+  else if (t->isPointerTy())
+    return Naming::PTR_TYPE;
+
+  else
+    return Naming::PTR_TYPE;
+}
+
+  
+std::string Naming::nameLLVMInstruction(const Instruction* Inst)  {
+
+  std::stringstream ss;
+
+  ss << "llvm." << Inst->getOpcodeName();
+
+  //some instructions have different flavours.  
+  if (auto *CI = dyn_cast<CmpInst>(Inst)){
+    ss << noDollars(Naming::CMPINST_TABLE.at(CI->getPredicate()));
+  }	    
+  if (auto* CI = dyn_cast<BinaryOperator>(Inst)){
+    ss << noDollars(Naming::INSTRUCTION_TABLE.at(CI->getOpcode()));
+  }
+  if (auto* CI = dyn_cast<AtomicRMWInst>(Inst)){
+    ss << noDollars(Naming::ATOMICRMWINST_TABLE.at(CI->getOperation()));
+  }
+
+  ss << "." << nameLLVMType(Inst->getType(), true);
+  
+  for (auto OI = Inst->op_begin(), OE = Inst->op_end(); OI != OE; ++OI){
+    ss << "." << nameLLVMType(OI->get()->getType(), true);
+  }
+
+  return ss.str();
+}
+    
 
 }
