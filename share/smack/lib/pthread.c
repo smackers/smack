@@ -45,6 +45,10 @@ int pthread_equal(pthread_t t1, pthread_t t2) {
   return (int)t1 == (int)t2;
 }
 
+// This variable is a hack that forces DSA regions belonging to thread return values
+// from pthread_join and pthread_exit functions to be merged.
+void* forceDSANodeMerging;
+
 int pthread_join(pthread_t __th, void **__thread_return) {
   pthread_t calling_tid = pthread_self();
 
@@ -59,8 +63,9 @@ int pthread_join(pthread_t __th, void **__thread_return) {
   __SMACK_code("assume $pthreadStatus[@][0] == $pthread_stopped;", __th);
 
   // Get the thread's return value
-  void* tmp_thread_return_pointer = (void*)__VERIFIER_nondet_long();
+  void* tmp_thread_return_pointer = __VERIFIER_nondet_pointer();
   __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
+  *__thread_return = forceDSANodeMerging;
   *__thread_return = tmp_thread_return_pointer;
 
   // Print return pointer value to SMACK traces
@@ -83,6 +88,7 @@ void pthread_exit(void *retval) {
   __SMACK_code("assert $pthreadStatus[@][0] == $pthread_running;", tid);
 #endif
   __SMACK_code("$pthreadStatus[@][1] := @;", tid, retval);
+  forceDSANodeMerging = retval;
 
   // Set return pointer value for display in SMACK traces
   void* pthread_return_pointer = retval;
