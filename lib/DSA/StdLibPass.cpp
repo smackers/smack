@@ -442,7 +442,7 @@ const struct {
 
 // SMACK functions that are excluded from DSA
 Regex SMACK_PROC_IGNORE("^("
-  "__SMACK_code|__SMACK_mod|__SMACK_decl|__SMACK_top_decl|"
+  "__SMACK_mod|__SMACK_decl|__SMACK_top_decl|"
   "__SMACK_values|__SMACK_check_memory_safety"
 ")$");
 

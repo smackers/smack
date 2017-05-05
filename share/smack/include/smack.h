@@ -23,10 +23,10 @@ extern "C" {
 // For handling of va_start macro
 void __builtinx_va_start(char*,char*);
 
-void __SMACK_code(const char *fmt, ...);
-void __SMACK_mod(const char *fmt, ...);
-void __SMACK_decl(const char *fmt, ...);
-void __SMACK_top_decl(const char *fmt, ...);
+const void __SMACK_code(const char *fmt, ...);
+const void __SMACK_mod(const char *fmt, ...);
+const void __SMACK_decl(const char *fmt, ...);
+const void __SMACK_top_decl(const char *fmt, ...);
 
 typedef struct smack_value { void* dummy; }* smack_value_t;
 smack_value_t __SMACK_value();
