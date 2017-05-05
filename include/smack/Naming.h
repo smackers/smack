@@ -103,6 +103,11 @@ public:
   static bool isSmackName(std::string s);
   static bool isSmackGeneratedName(std::string s);
   static std::string escape(std::string s);
+
+  static std::string noDollars(std::string in);
+  static std::string nameLLVMInstruction(const llvm::Instruction* Inst);
+  static std::string nameLLVMType(const llvm::Type* t, bool cannonical = false);
+  static std::string nameIntType(unsigned width, bool cannonical = false);
 };
 
 }

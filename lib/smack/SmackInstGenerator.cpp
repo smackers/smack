@@ -78,12 +78,12 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
       return;
     }
   }
-
+  
   if (SmackOptions::SourceLocSymbols && I.getMetadata("dbg")) {
     const DebugLoc DL = I.getDebugLoc();
     auto *scope = cast<DIScope>(DL.getScope());
     B->addStmt(Stmt::annot(Attr::attr("sourceloc", scope->getFilename().str(),
-      DL.getLine(), DL.getCol())));
+				      DL.getLine(), DL.getCol())));
   }
   
   //https://stackoverflow.com/questions/22138947/reading-metadata-from-instruction
@@ -91,20 +91,24 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
   I.getAllMetadata(MDForInst);
   SmallVector<StringRef, 8> Names;
   I.getModule()->getMDKindNames(Names);
-
+  
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst){
     std::string name = Names[II.first];
     if(name.find("smack.") != std::string::npos) {
       std::list<const Expr*> attrs;
-           for(auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE; ++AI){
-	if (auto *CI = mdconst::dyn_extract<ConstantInt>(II.second->getOperand(0))){
+      for(auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE; ++AI){
+	if (auto *CI = mdconst::dyn_extract<ConstantInt>(*AI)){
 	  auto value = CI->getZExtValue();
 	  attrs.push_back(Expr::lit((long) value));
-	  outs() << "name is " << name << "\tvalue is " << value << "\n";
-	  B->addStmt(Stmt::annot(Attr::attr(name, attrs)));
+	} else if (auto *CI = dyn_cast<MDString>(*AI)){
+	  auto value = CI->getString();
+	  attrs.push_back(Expr::lit(value));
+	} else {
+	  llvm_unreachable("unexpected attribute type in smack metadata");
 	}
       }
+      B->addStmt(Stmt::annot(Attr::attr(name, attrs)));
     }
   }
 }

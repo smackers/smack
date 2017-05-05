@@ -30,6 +30,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <sstream>
 
 using namespace llvm;
 
@@ -62,6 +63,7 @@ AddTiming::runOnFunction(Function &F) {
       unsigned Cost = getInstructionCost(Inst);
       if (Cost != (unsigned)NO_TIMING_INFO) {
 	addTimingMetadata(Inst, "smack.InstTimingCost.Int64", Cost);
+	addTimingMetadata(Inst, "smack.LLVMInstructionName", Naming::nameLLVMInstruction(Inst));
       } 
     }
   }
@@ -189,7 +191,7 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
     return NO_TIMING_INFO;
   }
 }
-
+  
 void AddTiming::addTimingMetadata(Instruction *Inst, const std::string &name, const std::string& value) const {
   LLVMContext& C = Inst->getContext();
   MDNode* N = MDNode::get(C, MDString::get(C, value));

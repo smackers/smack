@@ -8,6 +8,8 @@
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include <string>
+#include "smack/Naming.h"
+
 
 namespace smack {
   using namespace llvm;
@@ -15,7 +17,7 @@ namespace smack {
   class AddTiming : public FunctionPass {
 
     enum Flags { NO_TIMING_INFO = -1};
-    
+    Naming naming;
   public:
     static char ID; // Class identification, replacement for typeinfo
     AddTiming() : FunctionPass(ID), F(nullptr), TTI(nullptr) {}
@@ -33,7 +35,8 @@ namespace smack {
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnFunction(Function &F) override;
     void print(raw_ostream &OS, const Module*) const override;
-
+    std::string nameInstruction(Instruction *Inst) const;
+    
     /// The function that we analyze.
     Function *F;
     /// Target information.
