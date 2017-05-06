@@ -146,6 +146,10 @@ void %(fn)s() {
 
   for fn, args in arguments.items():
     code.append("""// entry point wrapper
+int _smack_replay_main() {
+  %(fn)s(%(vals)s);
+  return 0;
+}
 int smack_replay_main() {
   %(fn)s(%(vals)s);
   return 0;
