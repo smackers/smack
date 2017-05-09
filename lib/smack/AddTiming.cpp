@@ -41,7 +41,6 @@ namespace smack {
 
 // Register this pass.
 char AddTiming::ID = 0;
-static const char cm_name[] = "Cost Model Analysis";
 static RegisterPass<AddTiming>
 X("add-timing-info", "Add Timing Info");
 
@@ -59,7 +58,7 @@ AddTiming::runOnFunction(Function &F) {
 
   for (Function::iterator B = F.begin(), BE = F.end(); B != BE; ++B) {
     for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
-      Instruction *Inst = it;
+      Instruction *Inst = &*it;
       unsigned Cost = getInstructionCost(Inst);
       if (Cost != (unsigned)NO_TIMING_INFO) {
 	addTimingMetadata(Inst, "smack.InstTimingCost.Int64", Cost);
@@ -211,7 +210,7 @@ void AddTiming::print(raw_ostream &OS, const Module*) const {
 
   for (Function::iterator B = F->begin(), BE = F->end(); B != BE; ++B) {
     for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
-      Instruction *Inst = it;
+      Instruction *Inst = &*it;
       unsigned Cost = getInstructionCost(Inst);
       if (Cost != (unsigned)NO_TIMING_INFO) {
         OS << "Cost Model: Found an estimated cost of " << Cost;
