@@ -135,9 +135,6 @@ void %(fn)s() {
 }
 """ % {'fn': fn})
 
-  for fn in set(return_values) - set(missing_definitions):
-    print "warning: using native implementation of function %s" % fn
-
   if len(arguments) > 1:
     print "warning: multiple entrypoint argument annotations found"
 

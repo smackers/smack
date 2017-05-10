@@ -619,9 +619,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
   }
 
-  if (f->isDeclaration()
-      && !f->getReturnType()->isVoidTy()
-      && naming.get(*f).find("CONTRACT") == std::string::npos) {
+  if ((naming.get(*f).find("__SMACK") == 0 || naming.get(*f).find("__VERIFIER") == 0)
+      && !f->getReturnType()->isVoidTy()) {
     emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "smack:ext:" + naming.get(*f))}));
   }
 }
