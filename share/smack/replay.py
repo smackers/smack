@@ -52,7 +52,7 @@ def detect_missing_definitions(bc_file):
     try_command(['clang', bc_file])
   except Exception as err:
     for line in err.message.split("\n"):
-      m = re.search(r'\"_(.*)\", referenced from:', line)
+      m = re.search(r'\"_(.*)\", referenced from:', line) or re.search(r'undefined reference to `(.*)\'', line)
       if m:
         missing.append(m.group(1))
   return missing
