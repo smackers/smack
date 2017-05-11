@@ -42,6 +42,11 @@ std::string i2s(const llvm::Instruction& i) {
   return s;
 }
 
+const Stmt* SmackInstGenerator::recordProcedureCall(
+    llvm::Value* V, std::list<const Attr*> attrs) {
+  return Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, attrs);
+}
+
 Block* SmackInstGenerator::createBlock() {
   Block* b = Block::block(naming.freshBlockName());
   proc.getBlocks().push_back(b);
@@ -93,6 +98,22 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
   nextInst = bb.begin();
   currBlock = getBlock(&bb);
+
+  auto* F = bb.getParent();
+  if (SmackOptions::isEntryPoint(naming.get(*F)) && &bb == &F->getEntryBlock()) {
+    for (auto& I : bb.getInstList()) {
+      if (llvm::isa<llvm::DbgInfoIntrinsic>(I))
+        continue;
+      if (I.getDebugLoc()) {
+        annotate(I, currBlock);
+        break;
+      }
+    }
+    emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming.get(*F))}));
+    for (auto& A : F->getArgumentList()) {
+      emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming.get(*F) + ":" + naming.get(A))}));
+    }
+  }
 }
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
@@ -596,6 +617,11 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
+
+  if ((naming.get(*f).find("__SMACK") == 0 || naming.get(*f).find("__VERIFIER") == 0)
+      && !f->getReturnType()->isVoidTy()) {
+    emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "smack:ext:" + naming.get(*f))}));
   }
 }
 
