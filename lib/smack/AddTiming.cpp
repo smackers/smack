@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -49,6 +50,7 @@ void
 AddTiming::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
 bool

@@ -71,29 +71,6 @@ std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
 }
 
-// Returns the TargetMachine instance or zero if no triple is provided.
-static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
-                                       StringRef FeaturesStr,
-                                       const TargetOptions &Options) {
-  std::string Error;
-
-  StringRef MArch;
-
-  const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
-                                                         Error);
-
-  assert(TheTarget && "If we don't have a target machine, can't do timing analysis");
-
-  return TheTarget->createTargetMachine(TheTriple.getTriple(),
-					CPUStr,
-                                        FeaturesStr,
-					Options,
-					Reloc::Static, /* was getRelocModel(),*/
-                                        CodeModel::Default, /* was CMModel,*/
-					CodeGenOpt::None /*GetCodeGenOptLevel())*/
-					);
-}
-
 #define DEBUG_TYPE "llvm2bpl"
 
 
@@ -109,32 +86,30 @@ namespace {
       exit(1);
     }
   }
+  
+  // Returns the TargetMachine instance or zero if no triple is provided.
+  static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
+					 StringRef FeaturesStr,
+					 const TargetOptions &Options) {
+    std::string Error;
 
-  static void setupTimingPassRequirements(llvm::legacy::PassManager& pass_manager, const std::string ModuleTripleString) {
+    StringRef MArch;
 
-    Triple ModuleTriple(ModuleTripleString);
-    std::string CPUStr, FeaturesStr;
-    TargetMachine *Machine = nullptr;
-    const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
-  
-    if (ModuleTriple.getArch()) {
-      CPUStr = ""; /*getCPUStr();*/
-      FeaturesStr = ""; /*getFeaturesStr();*/
-      Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
-    } else {
-      errs() << "Module has no defined architecture: timing analysis will be imprecise\n";
-    }
-  
-    std::unique_ptr<TargetMachine> TM(Machine);
-    assert(TM && "Module did not have a Target Machine: Cannot set up timing pass");
-    // Add an appropriate TargetLibraryInfo pass for the module's triple.
-    TargetLibraryInfoImpl TLII(ModuleTriple);
-    pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
-  
-    // Add internal analysis passes from the target machine.
-    pass_manager.add(createTargetTransformInfoWrapperPass
-		     (TM ? TM->getTargetIRAnalysis()
-		      : TargetIRAnalysis()));
+    const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
+							   Error);
+
+    assert(TheTarget && "If we don't have a target machine, can't do timing analysis");
+
+    return TheTarget->
+      createTargetMachine(TheTriple.getTriple(),
+			  CPUStr,
+			  FeaturesStr,
+			  Options,
+			  Reloc::Static, /* was getRelocModel(),*/
+			  CodeModel::Default, /* was CMModel,*/
+			  CodeGenOpt::None /*GetCodeGenOptLevel())*/
+			  );
+
   }
 }
 
@@ -206,33 +181,32 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::SignedIntegerOverflowChecker());
 
 
-  //setupTimingPassRequirements(pass_manager, module->getTargetTriple());
-
-  
+  ///////////////////////////////////////////////////////////////////////
+  // Setup Timing pass requirements
   Triple ModuleTriple(module->getTargetTriple());
-    std::string CPUStr, FeaturesStr;
-    TargetMachine *Machine = nullptr;
-    const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
+  std::string CPUStr, FeaturesStr;
+  TargetMachine *Machine = nullptr;
+  const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
   
-    if (ModuleTriple.getArch()) {
-      CPUStr = ""; /*getCPUStr();*/
-      FeaturesStr = ""; /*getFeaturesStr();*/
-      Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
-    } else {
-      errs() << "Module has no defined architecture: timing analysis will be imprecise\n";
-    }
+  if (ModuleTriple.getArch()) {
+    CPUStr = ""; /*getCPUStr();*/
+    FeaturesStr = ""; /*getFeaturesStr();*/
+    Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
+  } else {
+    errs() << "Module has no defined architecture: timing analysis will be imprecise\n";
+  }
   
-    std::unique_ptr<TargetMachine> TM(Machine);
-    assert(TM && "Module did not have a Target Machine: Cannot set up timing pass");
-    // Add an appropriate TargetLibraryInfo pass for the module's triple.
-    TargetLibraryInfoImpl TLII(ModuleTriple);
-    pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
+  std::unique_ptr<TargetMachine> TM(Machine);
+  assert(TM && "Module did not have a Target Machine: Cannot set up timing pass");
+  // Add an appropriate TargetLibraryInfo pass for the module's triple.
+  TargetLibraryInfoImpl TLII(ModuleTriple);
+  pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
   
-    // Add internal analysis passes from the target machine.
-    pass_manager.add(createTargetTransformInfoWrapperPass
-		     (TM ? TM->getTargetIRAnalysis()
-		      : TargetIRAnalysis()));
-  
+  // Add internal analysis passes from the target machine.
+  pass_manager.add(createTargetTransformInfoWrapperPass
+		   (TM ? TM->getTargetIRAnalysis()
+		    : TargetIRAnalysis()));
+  /////////////////////////////////////////////////////////////////////////
   
   pass_manager.add(new smack::AddTiming());
   
