@@ -340,7 +340,7 @@ then
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
-  xbuild Boogie.sln /p:Configuration=Release
+  msbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
   puts "Built Boogie"
@@ -356,7 +356,7 @@ then
   git reset --hard ${CORRAL_COMMIT}
   git submodule init
   git submodule update
-  xbuild cba.sln /p:Configuration=Release
+  msbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
   puts "Built Corral"
@@ -370,7 +370,7 @@ then
   git clone https://github.com/smackers/lockpwn.git
   cd ${LOCKPWN_DIR}
   git reset --hard ${LOCKPWN_COMMIT}
-  xbuild lockpwn.sln /p:Configuration=Release
+  msbuild lockpwn.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
   puts "Built lockpwn"
