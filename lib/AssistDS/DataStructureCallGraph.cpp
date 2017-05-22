@@ -41,8 +41,8 @@ bool DataStructureCallGraph::runOnModule(Module &M) {
   Root = 0;
 
   // Add every function to the call graph.
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    addToCallGraph(I);
+  for (Function &F : M)
+    addToCallGraph(&F);
 
   // If we didn't find a main function, use the external call graph node
   if (Root == 0) Root = ExternalCallingNode;

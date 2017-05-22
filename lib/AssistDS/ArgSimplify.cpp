@@ -86,10 +86,9 @@ namespace {
                                                             "argbounce",
                                                             M);
                           std::vector<Value*> fargs;
-                          for(Function::arg_iterator ai = NewF->arg_begin(), 
-                              ae= NewF->arg_end(); ai != ae; ++ai) {
-                            fargs.push_back(ai);
-                            ai->setName("arg");
+                          for (auto &Arg : NewF->args()) {
+                            fargs.push_back(&Arg);
+                            Arg.setName("arg");
                           }
                           Value *CastedVal;
                           BasicBlock* entryBB = BasicBlock::
@@ -105,12 +104,11 @@ namespace {
                           }
 
                           SmallVector<Value*, 8> Args;
-                          for(Function::arg_iterator ai = NewF->arg_begin(),
-                              ae= NewF->arg_end(); ai != ae; ++ai) {
-                            if(ai->getArgNo() == arg_count)
+                          for (auto &Arg : NewF->args()) {
+                            if(Arg.getArgNo() == arg_count)
                               Args.push_back(CastedVal);
                             else 
-                              Args.push_back(ai);
+                              Args.push_back(&Arg);
                           }
 
                           CallInst * CallI = CallInst::Create(F,Args, 
@@ -142,18 +140,16 @@ namespace {
 
     bool runOnModule(Module& M) {
 
-      for (Module::iterator I = M.begin(); I != M.end(); ++I) 
-        if (!I->isDeclaration() && !I->mayBeOverridden()) {
-          if(I->getName().str() == "main")
+      for (Function &F : M)
+        if (!F.isDeclaration() && !F.mayBeOverridden()) {
+          if(F.getName().str() == "main")
             continue;
           std::vector<unsigned> Args;
-          for (Function::arg_iterator ii = I->arg_begin(), ee = I->arg_end();
-               ii != ee; ++ii) {
+          for (auto &Arg : F.args()) {
             bool change = true;
-            for(Value::user_iterator ui = ii->user_begin(), ue = ii->user_end();
-                ui != ue; ++ui) {
+            for (User *U : Arg.users()) {
               // check if the argument is used exclusively in ICmp Instructions
-              if(!isa<ICmpInst>(*ui)){
+              if(!isa<ICmpInst>(U)) {
                 change = false;
                 break;
               }
@@ -161,7 +157,7 @@ namespace {
             // if this argument is only used in ICMP instructions, we can
             // replace it.
             if(change) {
-              simplify(I, ii->getArgNo(), ii->getType()); 
+              simplify(&F, Arg.getArgNo(), Arg.getType()); 
             }
           }
         }

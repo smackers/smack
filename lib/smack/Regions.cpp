@@ -10,7 +10,7 @@
 namespace smack {
 
 const DataLayout* Region::DL = nullptr;
-DSAAliasAnalysis* Region::DSA = nullptr;
+DSAWrapper* Region::DSA = nullptr;
 // DSNodeEquivs* Region::NEQS = nullptr;
 
 namespace {
@@ -29,7 +29,7 @@ namespace {
     llvm_unreachable("Unexpected value.");
   }
 
-  bool isFieldDisjoint(DSAAliasAnalysis* DSA, const Value* V, unsigned offset) {
+  bool isFieldDisjoint(DSAWrapper* DSA, const Value* V, unsigned offset) {
     if (const GlobalValue* G = dyn_cast<GlobalValue>(V))
       return DSA->isFieldDisjoint(G, offset);
     else
@@ -40,7 +40,7 @@ namespace {
 
 void Region::init(Module& M, Pass& P) {
   DL = &M.getDataLayout();
-  DSA = &P.getAnalysis<DSAAliasAnalysis>();
+  DSA = &P.getAnalysis<DSAWrapper>();
 }
 
 namespace {
@@ -197,7 +197,7 @@ void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
     AU.addRequiredTransitive<TDDataStructures>();
     AU.addRequiredTransitive<DSNodeEquivs>();
     AU.addRequiredTransitive<dsa::TypeSafety<TDDataStructures> >();
-    AU.addRequired<DSAAliasAnalysis>();
+    AU.addRequired<DSAWrapper>();
   }
 }
 

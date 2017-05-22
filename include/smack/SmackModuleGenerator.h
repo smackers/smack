@@ -6,8 +6,6 @@
 
 #include "smack/BoogieAst.h"
 #include "smack/SmackInstGenerator.h"
-#include "smack/DSAAliasAnalysis.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/CFG.h"

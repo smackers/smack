@@ -52,18 +52,18 @@ STATISTIC(numChanged,   "Number of Args bitcasted");
 bool ArgCast::runOnModule(Module& M) {
 
   std::vector<CallInst*> worklist;
-  for (Module::iterator I = M.begin(); I != M.end(); ++I) {
-    if (I->mayBeOverridden())
+  for (Function &F : M) {
+    if (F.mayBeOverridden())
       continue;
     // Find all uses of this function
-    for(Value::user_iterator ui = I->user_begin(), ue = I->user_end(); ui != ue; ) {
+    for (User *U : F.users()) {
       // check if is ever casted to a different function type
-      ConstantExpr *CE = dyn_cast<ConstantExpr>(*ui++);
+      ConstantExpr *CE = dyn_cast<ConstantExpr>(U++);
       if(!CE)
         continue;
       if (CE->getOpcode() != Instruction::BitCast)
         continue;
-      if(CE->getOperand(0) != I)
+      if(CE->getOperand(0) != &F)
         continue;
       const PointerType *PTy = dyn_cast<PointerType>(CE->getType());
       if (!PTy)
@@ -76,7 +76,7 @@ bool ArgCast::runOnModule(Module& M) {
       // or function with same number of arguments
       // possibly varying types of arguments
       
-      if(FTy->getNumParams() != I->arg_size() && !FTy->isVarArg())
+      if(FTy->getNumParams() != F.arg_size() && !FTy->isVarArg())
         continue;
       for(Value::user_iterator uii = CE->user_begin(),
           uee = CE->user_end(); uii != uee; ++uii) {
@@ -88,11 +88,11 @@ bool ArgCast::runOnModule(Module& M) {
             continue;
           // Check that the number of arguments passed, and expected
           // by the function are the same.
-          if(!I->isVarArg()) {
-            if(CI->getNumOperands() != I->arg_size() + 1)
+          if(!F.isVarArg()) {
+            if(CI->getNumOperands() != F.arg_size() + 1)
               continue;
           } else {
-            if(CI->getNumOperands() < I->arg_size() + 1)
+            if(CI->getNumOperands() < F.arg_size() + 1)
               continue;
           }
           // If so, add to worklist

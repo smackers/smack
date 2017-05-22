@@ -59,10 +59,10 @@ vagrant destroy
 
 SMACK depends on the following projects:
 
-* [LLVM][] version [3.7.1][LLVM-3.7.1]
-* [Clang][] version [3.7.1][Clang-3.7.1]
+* [LLVM][] version [3.8.1][LLVM-3.8.1]
+* [Clang][] version [3.8.1][Clang-3.8.1]
 * [Python][] version 2.7 or greater
-* [Mono][] version 3.8.0 or greater (except on Windows)
+* [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
 
@@ -168,9 +168,9 @@ shell in the `test` directory by executing
 [CMake]: http://www.cmake.org
 [Python]: http://www.python.org
 [LLVM]: http://llvm.org
-[LLVM-3.7.1]: http://llvm.org/releases/download.html#3.7.1
+[LLVM-3.8.1]: http://llvm.org/releases/download.html#3.8.1
 [Clang]: http://clang.llvm.org
-[Clang-3.7.1]: http://llvm.org/releases/download.html#3.7.1
+[Clang-3.8.1]: http://llvm.org/releases/download.html#3.8.1
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://corral.codeplex.com/
 [Z3]: https://github.com/Z3Prover/z3/

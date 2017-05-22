@@ -23,8 +23,4 @@ bool __CONTRACT_exists(const char *var, bool expr) __attribute__((const));
 int old(int term);
 int result(void);
 
-#undef bool
-#undef true
-#undef false
-
 #endif

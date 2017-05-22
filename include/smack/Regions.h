@@ -1,11 +1,11 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef REGION_H
-#define REGION_H
+#ifndef REGIONS_H
+#define REGIONS_H
 
 #include "dsa/DSGraph.h"
-#include "smack/DSAAliasAnalysis.h"
+#include "smack/DSAWrapper.h"
 
 namespace smack {
 
@@ -25,7 +25,7 @@ private:
   bool collapsed;
 
   static const DataLayout* DL;
-  static DSAAliasAnalysis* DSA;
+  static DSAWrapper* DSA;
   // static DSNodeEquivs* NEQS;
 
   static bool isSingleton(const DSNode* N, unsigned offset, unsigned length);
@@ -55,7 +55,7 @@ public:
 };
 
 class Regions : public ModulePass, public InstVisitor<Regions> {
-
+private:
   std::vector<Region> regions;
   unsigned idx(Region& R);
 
@@ -90,4 +90,4 @@ public:
 
 }
 
-#endif // REGION_H
+#endif // REGIONS_H

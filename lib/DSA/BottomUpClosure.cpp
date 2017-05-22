@@ -63,9 +63,9 @@ bool BUDataStructures::runOnModuleInternal(Module& M) {
   // While we may not need them in this DSA pass, a later DSA pass may ask us
   // for their DSGraphs, and we want to have them if asked.
   //
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())){
-      getOrCreateGraph(F);
+  for (Function &F : M) {
+    if (!(F.isDeclaration())){
+      getOrCreateGraph(&F);
     }
   }
 
@@ -99,9 +99,9 @@ bool BUDataStructures::runOnModuleInternal(Module& M) {
   // into the individual function's graph so that changes made to globals during
   // BU can be reflected. This is specifically needed for correct call graph
   //
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())){
-      DSGraph *Graph  = getOrCreateGraph(F);
+  for (Function &F : M) {
+    if (!(F.isDeclaration())){
+      DSGraph *Graph  = getOrCreateGraph(&F);
       cloneGlobalsInto(Graph, DSGraph::DontCloneCallNodes |
                         DSGraph::DontCloneAuxCallNodes);
       Graph->buildCallGraph(callgraph, GlobalFunctionList, filterCallees);
@@ -114,9 +114,9 @@ bool BUDataStructures::runOnModuleInternal(Module& M) {
   }
 
   // Once the correct flags have been calculated. Update the callgraph.
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())){
-      DSGraph *Graph = getOrCreateGraph(F);
+  for (Function &F : M) {
+    if (!(F.isDeclaration())){
+      DSGraph *Graph = getOrCreateGraph(&F);
       Graph->buildCompleteCallGraph(callgraph,
                                     GlobalFunctionList, filterCallees);
     }
@@ -307,19 +307,19 @@ BUDataStructures::postOrderInline (Module & M) {
   //
   // Calculate the graphs for any functions that are unreachable from main...
   //
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration() && !ValMap.count(I)) {
+  for (Function &F : M)
+    if (!F.isDeclaration() && !ValMap.count(&F)) {
       if (MainFunc)
         DEBUG(errs() << debugname << ": Function unreachable from main: "
-        << I->getName() << "\n");
-      calculateGraphs(I, Stack, NextID, ValMap);     // Calculate all graphs.
-      CloneAuxIntoGlobal(getDSGraph(*I));
+        << F.getName() << "\n");
+      calculateGraphs(&F, Stack, NextID, ValMap);     // Calculate all graphs.
+      CloneAuxIntoGlobal(getDSGraph(F));
 
       // Mark this graph as processed.  Do this by finding all functions
       // in the graph that map to it, and mark them visited.
       // Note that this really should be handled neatly by calculateGraphs
       // itself, not here.  However this catches the worst offenders.
-      DSGraph *G = getDSGraph(*I);
+      DSGraph *G = getDSGraph(F);
       for(DSGraph::retnodes_iterator RI = G->retnodes_begin(),
           RE = G->retnodes_end(); RI != RE; ++RI) {
         if (getDSGraph(*RI->first) == G) {

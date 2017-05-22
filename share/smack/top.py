@@ -6,16 +6,13 @@ import os
 import platform
 import re
 import shutil
-import signal
-import subprocess
 import sys
-import tempfile
-from threading import Timer
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
+from utils import temporary_file, try_command, remove_temp_files
+from replay import replay_error_trace
 
-VERSION = '1.7.2'
-temporary_files = []
+VERSION = '1.8.0'
 
 def frontends():
   """A dictionary of front-ends per file extension."""
@@ -34,7 +31,7 @@ def frontends():
 def results(args):
   """A dictionary of the result output messages."""
   return {
-    'verified': 'SMACK found no errors with unroll bound %s.' % args.unroll,
+    'verified': 'SMACK found no errors.' if args.modular else 'SMACK found no errors with unroll bound %s.' % args.unroll,
     'error': 'SMACK found an error.',
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
@@ -46,11 +43,16 @@ def results(args):
 
 def inlined_procedures():
   return [
+    '$galloc',
     '$alloc',
+    '$malloc',
     '$free',
     '$memset',
     '$memcpy',
-    '__VERIFIER_'
+    '__VERIFIER_',
+    '$initialize',
+    '__SMACK_static_init',
+    '__SMACK_init_func_memory_model'
   ]
 
 def validate_input_file(file):
@@ -95,6 +97,7 @@ def arguments():
   parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
     type=str, help='save error trace/witness to FILE')
 
+
   frontend_group = parser.add_argument_group('front-end options')
 
   frontend_group.add_argument('-x', '--language', metavar='LANG',
@@ -104,11 +107,21 @@ def arguments():
   frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
     type=str, help='save initial LLVM bitcode to FILE')
 
+  frontend_group.add_argument('--linked-bc-file', metavar='FILE', default=None,
+    type=str, help=argparse.SUPPRESS)
+
+  frontend_group.add_argument('--replay-harness', metavar='FILE', default='replay-harness.c',
+    type=str, help=argparse.SUPPRESS)
+
+  frontend_group.add_argument('--replay-exe-file', metavar='FILE', default='replay-exe',
+    type=str, help=argparse.SUPPRESS)
+
   frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None,
     type=str, help='save final LLVM IR to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
     help='additional compiler arguments (e.g., --clang-options="-w -g")')
+
 
   translate_group = parser.add_argument_group('translation options')
 
@@ -154,6 +167,10 @@ def arguments():
   translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
     help='enable signed integer overflow checks')
 
+  translate_group.add_argument('--float', action="store_true", default=False,
+    help='enable bit-precise floating-point functions')
+
+
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
@@ -184,14 +201,20 @@ def arguments():
 
   verifier_group.add_argument('--svcomp-property', metavar='FILE', default=None,
     type=str, help='load SVCOMP property to check from FILE')
-	
-  translate_group.add_argument('--float', action="store_true", default=False,
-    help='enable bit-precise floating-point functions')
+
+  verifier_group.add_argument('--modular', action="store_true", default=False,
+    help='enable contracts-based modular deductive verification (uses Boogie)')
+
+  verifier_group.add_argument('--replay', action="store_true", default=False,
+    help='enable reply of error trace with test harness.')
 
   args = parser.parse_args()
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
+
+  if not args.linked_bc_file:
+    args.linked_bc_file = temporary_file('b', '.bc', args)
 
   if not args.bpl_file:
     args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
@@ -207,71 +230,6 @@ def arguments():
   #       return args = parser.parse_args(m.group(1).split() + sys.argv[1:])
 
   return args
-
-def temporary_file(prefix, extension, args):
-  f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
-  os.close(f)
-  if not args.debug:
-    temporary_files.append(name)
-  return name
-
-def timeout_killer(proc, timed_out):
-  if not timed_out[0]:
-    timed_out[0] = True
-    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-
-def try_command(cmd, cwd=None, console=False, timeout=None):
-  console = (console or args.verbose or args.debug) and not args.quiet
-  filelog = args.debug
-  output = ''
-  proc = None
-  timer = None
-  try:
-    if args.debug:
-      print "Running %s" % " ".join(cmd)
-
-    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
-      stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    if timeout:
-      timed_out = [False]
-      timer = Timer(timeout, timeout_killer, [proc, timed_out])
-      timer.start()
-
-    if console:
-      while True:
-        line = proc.stdout.readline()
-        if line:
-          output += line
-          print line,
-        elif proc.poll() is not None:
-          break
-      proc.wait
-    else:
-      output = proc.communicate()[0]
-
-    if timeout:
-      timer.cancel()
-
-    rc = proc.returncode
-    proc = None
-    if timeout and timed_out[0]:
-      return output + ("\n%s timed out." % cmd[0])
-    elif rc:
-      raise RuntimeError("%s returned non-zero." % cmd[0])
-    else:
-      return output
-
-  except (RuntimeError, OSError) as err:
-    print >> sys.stderr, output
-    sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
-
-  finally:
-    if timeout and timer: timer.cancel()
-    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-    if filelog:
-      with open(temporary_file(cmd[0], '.log', args), 'w') as f:
-        f.write(output)
 
 def target_selection(args):
   """Determine the target architecture based on flags and source files."""
@@ -345,14 +303,14 @@ def boogie_frontend(args):
 def llvm_frontend(args):
   """Generate Boogie code from LLVM bitcodes."""
 
-  bitcodes = build_libs(args) + args.input_files
-  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
-  bitcodes = build_libs(args)
+  bitcodes = []
   compile_command = default_clang_compile_command(args)
 
   for c in args.input_files:
@@ -361,6 +319,7 @@ def clang_frontend(args):
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def json_compilation_database_frontend(args):
@@ -372,14 +331,13 @@ def json_compilation_database_frontend(args):
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
 
-  lib_bitcodes = build_libs(args)
-
   with open(args.input_files[0]) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
         bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
-        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + lib_bitcodes)
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
+        try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
 
       else:
         out_file = output_flags.findall(cc['command'])[0] + '.bc'
@@ -394,7 +352,7 @@ def json_compilation_database_frontend(args):
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
-  cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
+  cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
   cmd += ['-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:
@@ -410,6 +368,7 @@ def llvm_to_bpl(args):
   if args.memory_safety: cmd += ['-memory-safety']
   if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
+  if args.modular: cmd += ['-modular']
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
@@ -417,9 +376,9 @@ def llvm_to_bpl(args):
 def procedure_annotation(name, args):
   if name in args.entry_points:
     return "{:entrypoint}"
-  elif re.match("|".join(inlined_procedures()).replace("$","\$"), name):
+  elif args.modular and re.match("|".join(inlined_procedures()).replace("$","\$"), name):
     return "{:inline 1}"
-  elif args.verifier == 'boogie' or args.float:
+  elif (not args.modular) and (args.verifier == 'boogie' or args.float):
     return ("{:inline %s}" % args.unroll)
   else:
     return ""
@@ -496,13 +455,14 @@ def verify_bpl(args):
     verify_bpl_svcomp(args)
     return
 
-  elif args.verifier == 'boogie':
+  elif args.verifier == 'boogie' or args.modular:
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
-    command += ["/loopUnroll:%d" % args.unroll]
+    if not args.modular:
+      command += ["/loopUnroll:%d" % args.unroll]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -550,6 +510,9 @@ def verify_bpl(args):
 
       if not args.quiet:
         print error
+
+      if args.replay:
+         replay_error_trace(verifier_output, args)
 
     sys.exit(results(args)[result])
 
@@ -664,6 +627,4 @@ def main():
     sys.exit("SMACK aborted by keyboard interrupt.")
 
   finally:
-    for f in temporary_files:
-      if os.path.isfile(f):
-        os.unlink(f)
+    remove_temp_files()

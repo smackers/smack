@@ -20,7 +20,6 @@
 #include "llvm/Support/FormattedStream.h"
 
 #include "smack/BplFilePrinter.h"
-#include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"
@@ -56,6 +55,10 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
 
 static llvm::cl::opt<bool>
 SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
+  llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -123,7 +126,9 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
-  pass_manager.add(new smack::RemoveDeadDefs());
+  if (!Modular) {
+    pass_manager.add(new smack::RemoveDeadDefs());
+  }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
