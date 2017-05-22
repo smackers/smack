@@ -35,7 +35,7 @@ class Tool(benchexec.tools.template.BaseTool):
         Sets the version number for SMACK, which gets displayed in the "Tool" row
         in BenchExec table headers.
         """
-        return '1.7.2'
+        return '1.8.0'
 
     def name(self):
         """
