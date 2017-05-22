@@ -17,6 +17,9 @@ namespace smack {
   class AddTiming : public FunctionPass {
 
     enum Flags { NO_TIMING_INFO = -1};
+    static const std::string INT_TIMING_COST_METADATA;
+    static const std::string INSTRUCTION_NAME_METADATA;
+    
     Naming naming;
   public:
     static char ID; // Class identification, replacement for typeinfo
@@ -29,9 +32,11 @@ namespace smack {
     unsigned getInstructionCost(const Instruction *I) const;
 
   private:
-    void addTimingMetadata(Instruction *Inst, const std::string &name, const std::string& value) const;
-    void addTimingMetadata(Instruction *Inst, const std::string &name, unsigned cost) const;
-    void addTimingMetadata(Instruction *Inst, unsigned cost) const;
+    void addMetadata(Instruction *Inst, const std::string &name, const std::string& value) const;
+    void addMetadata(Instruction *Inst, const std::string &name, unsigned cost) const;
+    void addNamingMetadata(Instruction *Inst) const;
+    void addTimingMetadata(Instruction* Inst) const;
+    
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnFunction(Function &F) override;
     void print(raw_ostream &OS, const Module*) const override;
