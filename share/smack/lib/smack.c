@@ -1517,14 +1517,14 @@ void __SMACK_decls() {
   
   D("function {:builtin \"fp.abs\"} $abs.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.fma\"} $fma.bvfloat(bvfloat, bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.sqrt\"} $sqrt.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.sqrt RNE\"} $sqrt.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.rem\"} $rem.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.min\"} $min.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.max\"} $max.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
   
   D("function {:builtin \"fp.abs\"} $abs.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.fma\"} $fma.bvdouble(bvdouble, bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.sqrt\"} $sqrt.bvdouble(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.sqrt RNE\"} $sqrt.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.rem\"} $rem.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.min\"} $min.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.max\"} $max.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
