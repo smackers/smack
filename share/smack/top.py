@@ -145,6 +145,9 @@ def arguments():
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='enable bit precision for non-pointer values')
 
+  translate_group.add_argument('--timing-annotations', action="store_true", default=False,
+    help='enable timing annotations')
+  
   translate_group.add_argument('--bit-precise-pointers', action="store_true", default=False,
     help='enable bit precision for pointer values')
 
@@ -372,6 +375,7 @@ def llvm_to_bpl(args):
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.static_unroll: cmd += ['-static-unroll']
   if args.bit_precise: cmd += ['-bit-precise']
+  if args.timing_annotations: cmd += ['-timing-annotations']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']

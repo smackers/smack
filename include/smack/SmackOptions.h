@@ -24,6 +24,7 @@ public:
   static const llvm::cl::opt<bool> NoByteAccessInference;
   static const llvm::cl::opt<bool> FloatEnabled;
   static const llvm::cl::opt<bool> MemorySafety;
+  static const llvm::cl::opt<bool> AddTiming;
 
   static bool isEntryPoint(std::string);
 };
