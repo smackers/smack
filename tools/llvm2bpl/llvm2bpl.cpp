@@ -181,34 +181,24 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::SignedIntegerOverflowChecker());
 
 
-  ///////////////////////////////////////////////////////////////////////
-  // Setup Timing pass requirements
-  Triple ModuleTriple(module->getTargetTriple());
-  std::string CPUStr, FeaturesStr;
-  TargetMachine *Machine = nullptr;
-  const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
+  if(smack::SmackOptions::AddTiming){
+    Triple ModuleTriple(module->getTargetTriple());  
+    assert (ModuleTriple.getArch() && "Module has no defined architecture: unable to add timing annotations");
+
+    const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
+    std::string CPUStr = ""; /*getCPUStr();*/
+    std::string FeaturesStr = ""; /*getFeaturesStr();*/
+    TargetMachine *Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
   
-  if (ModuleTriple.getArch()) {
-    CPUStr = ""; /*getCPUStr();*/
-    FeaturesStr = ""; /*getFeaturesStr();*/
-    Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
-  } else {
-    errs() << "Module has no defined architecture: timing analysis will be imprecise\n";
+    assert(Machine && "Module did not have a Target Machine: Cannot set up timing pass");
+    // Add an appropriate TargetLibraryInfo pass for the module's triple.
+    TargetLibraryInfoImpl TLII(ModuleTriple);
+    pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
+  
+    // Add internal analysis passes from the target machine.
+    pass_manager.add(createTargetTransformInfoWrapperPass(Machine->getTargetIRAnalysis()));  
+    pass_manager.add(new smack::AddTiming());
   }
-  
-  std::unique_ptr<TargetMachine> TM(Machine);
-  assert(TM && "Module did not have a Target Machine: Cannot set up timing pass");
-  // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple);
-  pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
-  
-  // Add internal analysis passes from the target machine.
-  pass_manager.add(createTargetTransformInfoWrapperPass
-		   (TM ? TM->getTargetIRAnalysis()
-		    : TargetIRAnalysis()));
-  /////////////////////////////////////////////////////////////////////////
-  
-  pass_manager.add(new smack::AddTiming());
   
   std::vector<tool_output_file*> files;
 
