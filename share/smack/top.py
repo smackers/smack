@@ -535,7 +535,7 @@ def verify_bpl(args):
     command += ["--file-logging=0"]
     command += ["--entry-points=%s" % ",".join(args.entry_points)]
     command += ["--timeout=%d" % args.time_limit]
-    command += ["--max-depth=%d" % (args.unroll * 10)]
+    command += ["--max-loop-depth=%d" % args.unroll]
 
   else:
     # Duality!
