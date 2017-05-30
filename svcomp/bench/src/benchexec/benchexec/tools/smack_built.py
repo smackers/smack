@@ -18,14 +18,18 @@ set to the name of this file without extension, i.e. 'smack_benchexec_driver'.
 """
 
 class Tool(benchexec.tools.template.BaseTool):
-    """
-    This class subclasses BenchExec's BaseTool, and defines common functions used by
-    BenchExec to interface with SMACK.
-    """
+
+    REQUIRED_PATHS = [
+                  "corral",
+                  "llvm",
+                  "lockpwn",
+                  "smack"
+
+                  ]
 
     def executable(self):
         """
-        Tells BenchExec to search for 'smack' as the main executable to be
+        Tells BenchExec to search for 'smack.py' as the main executable to be
         called when running SMACK.
         """
         return util.find_executable('smack')
@@ -35,54 +39,49 @@ class Tool(benchexec.tools.template.BaseTool):
         Sets the version number for SMACK, which gets displayed in the "Tool" row
         in BenchExec table headers.
         """
-        return '1.8.0'
+        #return self._version_from_tool(executable).split(' ')[2]
+        return "1.5.2"
 
     def name(self):
         """
         Sets the name for SMACK, which gets displayed in the "Tool" row in
         BenchExec table headers.
         """
-        return 'SMACK'
+        return 'SMACK+Corral'
 
-    def cmdline(self, executable, options, tasks, propertyfile=None, rlimits={}):
+    def cmdline(self, executable, options, tasks, propertyfile=None, rlimits=
+{}):
         """
         Allows us to define special actions to be taken or command line argument
         modifications to make just before calling SMACK.
-
-        Currently, we ensure that any referenced output directories exist, and
-        create them if they do not.
         """
         assert len(tasks) == 1
-        try:
-            #If options contains --bpl, get next option element, and its dirname
-            targetDir = os.path.dirname(options[options.index("--bpl")+1])
-            if not os.path.exists(targetDir):
-                os.makedirs(targetDir)
-        except:
-            #If it doesn't contain --bpl, nothing to do...
-            pass
-        try:
-            #If options contains --bc, get next option element, and its dirname
-            targetDir = os.path.dirname(options[options.index("--bc")+1])
-            if not os.path.exists(targetDir):
-                os.makedirs(targetDir)
-        except:
-            #If it doesn't contain --bc, nothing to do...
-            pass
-
-        return [executable] + options + tasks
+        assert propertyfile is not None
+        prop = ['--svcomp-property', propertyfile]
+        return [executable] + options + prop + tasks
 
     def determine_result(self, returncode, returnsignal, output, isTimeout):
         """
         Returns a BenchExec result status based on the output of SMACK
         """
         splitout = "\n".join(output)
-        if re.search(r'SMACK found no errors.', splitout):
+        if 'SMACK found no errors' in splitout:
             return result.RESULT_TRUE_PROP
-        elif re.search(r'SMACK found an error.*', splitout):
+        errmsg = re.search(r'SMACK found an error(:\s+([^\.]+))?\.', splitout)
+        if errmsg:
+          errtype = errmsg.group(2)
+          if errtype:
+            if 'invalid pointer dereference' == errtype:
+              return result.RESULT_FALSE_DEREF
+            elif 'invalid memory deallocation' == errtype:
+              return result.RESULT_FALSE_FREE
+            elif 'memory leak' == errtype:
+              return result.RESULT_FALSE_MEMTRACK
+            elif 'signed integer overflow' == errtype:
+              return result.RESULT_FALSE_OVERFLOW
+          else:
             return result.RESULT_FALSE_REACH
-        else:
-            return result.RESULT_UNKNOWN
+        return result.RESULT_UNKNOWN
 
     def get_value_from_output(self, lines, identifier):
         """
@@ -114,8 +113,9 @@ class Tool(benchexec.tools.template.BaseTool):
         ret += '    <option value=""></option>\n'
         ret += '    <option value="' + identifier + '.bc">.bc</option>\n'
         ret += '    <option value="' + identifier + '.bpl">.bpl</option>\n'
-        ret += '    <option value="' + identifier + '.witness.graphml" hidden>Witness In</option>\n'
-        ret += '    <option value="' + identifier + '.witnessCheckOutput" hidden>Witness Out</option>\n'
+        ret += '    <option value="' + identifier + '.witness.graphml" hidden>Witness Graphml</option>\n'
+        ret += '    <option value="' + identifier + '.witnessCheckOutput" hidden>Checker Console</option>\n'
+        ret += '    <option value="' + identifier + 'output.log" hidden>Checker Log</option>\n'
         ret += '  </select>\n'
         ret += '</div>\n'
         return ret

@@ -42,6 +42,11 @@ std::string i2s(const llvm::Instruction& i) {
   return s;
 }
 
+const Stmt* SmackInstGenerator::recordProcedureCall(
+    llvm::Value* V, std::list<const Attr*> attrs) {
+  return Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, attrs);
+}
+
 Block* SmackInstGenerator::createBlock() {
   Block* b = Block::block(naming.freshBlockName());
   proc.getBlocks().push_back(b);
@@ -93,6 +98,22 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
   nextInst = bb.begin();
   currBlock = getBlock(&bb);
+
+  auto* F = bb.getParent();
+  if (SmackOptions::isEntryPoint(naming.get(*F)) && &bb == &F->getEntryBlock()) {
+    for (auto& I : bb.getInstList()) {
+      if (llvm::isa<llvm::DbgInfoIntrinsic>(I))
+        continue;
+      if (I.getDebugLoc()) {
+        annotate(I, currBlock);
+        break;
+      }
+    }
+    emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming.get(*F))}));
+    for (auto& A : F->getArgumentList()) {
+      emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming.get(*F) + ":" + naming.get(A))}));
+    }
+  }
 }
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
@@ -307,7 +328,7 @@ void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
       num_elements = at->getNumElements();
       t = at->getElementType();
     } else {
-      assert (false && "Unexpected aggregate type");
+      llvm_unreachable("Unexpected aggregate type.");
     }
 
     for (unsigned j = 0; j < num_elements; j++) {
@@ -495,12 +516,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // emit(Stmt::assign(rep.expr(&ci), Expr::id(rep.getString(ci.getArgOperand(0)))));
 
   } else if (name == Naming::CONTRACT_FORALL) {
-    CallInst* cj;
-    Function* F;
     assert(ci.getNumArgOperands() == 2
-        && (cj = dyn_cast<CallInst>(ci.getArgOperand(1)))
-        && (F = cj->getCalledFunction())
-        && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+        && "Expected contract expression argument to contract function.");
+    CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(1));
+    assert(cj && "Expected contract expression argument to contract function.");
+    Function* F = cj->getCalledFunction();
+    assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
         && "Expected contract expression argument to contract function.");
 
     auto binding = rep.getString(ci.getArgOperand(0));
@@ -525,12 +546,12 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
              name == Naming::CONTRACT_ENSURES ||
              name == Naming::CONTRACT_INVARIANT) {
 
-    CallInst* cj;
-    Function* F;
     assert(ci.getNumArgOperands() == 1
-        && (cj = dyn_cast<CallInst>(ci.getArgOperand(0)))
-        && (F = cj->getCalledFunction())
-        && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+        && "Expected contract expression argument to contract function.");
+    CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(0));
+    assert(cj && "Expected contract expression argument to contract function.");
+    Function* F = cj->getCalledFunction();
+    assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
         && "Expected contract expression argument to contract function.");
 
     std::list<const Expr*> args;
@@ -596,6 +617,11 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     std::string name = naming.get(*f);
     if (!EXTERNAL_PROC_IGNORE.match(name))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR,rep.expr(&ci))));
+  }
+
+  if ((naming.get(*f).find("__SMACK") == 0 || naming.get(*f).find("__VERIFIER") == 0)
+      && !f->getReturnType()->isVoidTy()) {
+    emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "smack:ext:" + naming.get(*f))}));
   }
 }
 

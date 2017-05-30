@@ -300,9 +300,8 @@ ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
         llvm_unreachable("Unexpected store instruction!");
 
       } else if (auto I = dyn_cast<Instruction>(V)) {
-        auto B = I->getParent();
-        assert(clones.count(B) && "Forgot to visit parent block.");
-        assert(clones[B] != B && "Forgot to clone parent block.");
+        assert(clones.count(I->getParent()) && "Forgot to visit parent block.");
+        assert(clones[I->getParent()] != I->getParent() && "Forgot to clone parent block.");
 
         auto II = I->clone();
         clones[I] = II;

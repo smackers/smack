@@ -149,7 +149,7 @@ void DSNodeEquivs::equivNodesThroughCallsite(CallInst *CI) {
       if (isa<Constant>(*ArgIt))
         continue;
 
-      DSNodeHandle &CalleeArgNH = CalleeGraph.getNodeForValue(FArgIt);
+      DSNodeHandle &CalleeArgNH = CalleeGraph.getNodeForValue(&*FArgIt);
       DSNodeHandle &CSArgNH = Graph.getNodeForValue(*ArgIt);
       DSGraph::computeNodeMapping(CalleeArgNH, CSArgNH, NodeMap, false);
     }

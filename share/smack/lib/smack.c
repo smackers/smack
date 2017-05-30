@@ -4,6 +4,7 @@
 #include <smack.h>
 #include <limits.h>
 #include <string.h>
+#include <stdlib.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -242,7 +243,7 @@ void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
 }
 
-void* calloc(unsigned long num, unsigned long size) {
+void* calloc(size_t num, size_t size) {
   void* ret;
   if (__VERIFIER_nondet_int()) {
     ret = 0;
@@ -2021,6 +2022,11 @@ void __SMACK_decls() {
   D("var $exnv: int;");
   D("function $extractvalue(p: int, i: int) returns (int);\n");
 
+  D("procedure $alloc(n: ref) returns (p: ref)\n"
+    "{\n"
+    "  call p := $$alloc(n);\n"
+    "}\n");
+
 #if MEMORY_SAFETY
   D("function $base(ref) returns (ref);");
   D("var $allocatedCounter: int;\n");
@@ -2029,7 +2035,7 @@ void __SMACK_decls() {
     "modifies $allocatedCounter;\n"
     "{\n"
     "  $allocatedCounter := $allocatedCounter + 1;\n"
-    "  call p := $alloc(n);\n"
+    "  call p := $$alloc(n);\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
@@ -2044,7 +2050,7 @@ void __SMACK_decls() {
     "  $Alloc[base_addr] := true;\n"
     "}\n");
 
-  D("procedure $alloc(n: ref) returns (p: ref)\n"
+  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $Alloc, $CurrAddr;\n"
     "{\n"
     "  p := $CurrAddr;\n"
@@ -2085,7 +2091,7 @@ void __SMACK_decls() {
     "ensures (forall q: ref :: {$Size[q]} q != base_addr ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != base_addr ==> $Alloc[q] == old($Alloc[q]));\n");
 
-  D("procedure $alloc(n: ref) returns (p: ref);\n"
+  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
@@ -2117,7 +2123,7 @@ void __SMACK_decls() {
     "ensures $Alloc[base_addr];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != base_addr ==> $Alloc[q] == old($Alloc[q]));\n");
 
-  D("procedure $alloc(n: ref) returns (p: ref);\n"
+  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $CurrAddr;\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), n), $CurrAddr);\n"
@@ -2141,13 +2147,13 @@ void __SMACK_decls() {
 #else
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "{\n"
-    "  call p := $alloc(n);\n"
+    "  call p := $$alloc(n);\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $CurrAddr:ref;\n");
 
-  D("procedure $alloc(n: ref) returns (p: ref)\n"
+  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr;\n"
     "{\n"
     "  p := $CurrAddr;\n"
@@ -2165,7 +2171,7 @@ void __SMACK_decls() {
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
 
-  D("procedure $alloc(n: ref) returns (p: ref);\n"
+  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
@@ -2184,7 +2190,7 @@ void __SMACK_decls() {
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $CurrAddr:ref;\n");
 
-  D("procedure $alloc(n: ref) returns (p: ref);\n"
+  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr;\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), n), $CurrAddr);\n"
@@ -2234,11 +2240,6 @@ char *strcpy(char *dest, const char *src) {
   return save;
 }
 
-char *stpcpy(char *dest, const char *src) {
-  while (*dest++ = *src++);
-  return dest;
-}
-
 size_t strlen(const char *str) {
   size_t count = 0;
   while (str[count] != 0) count++;
@@ -2255,6 +2256,69 @@ char *strrchr(const char *src, int c) {
     src++;
   }
   return result;
+}
+
+size_t strspn(const char *cs, const char *ct) {
+  size_t n;
+  const char *p;
+  for (n = 0; *cs; cs++, n++) {
+    for (p = ct; *p && *p != *cs; p++);
+    if (!*p) break;
+  }
+  return n;
+}
+
+unsigned long int strtoul(const char *nptr, char **endptr, int base) {
+  if (__VERIFIER_nondet_int()) {
+    if (endptr != 0) {
+      *endptr = nptr;
+    }
+    return 0;
+  } else {
+    if (endptr != 0) {
+      size_t size = strlen(nptr);
+      *endptr = nptr + size;
+    }
+    return __VERIFIER_nondet_ulong();
+  }
+}
+
+double strtod(const char *nptr, char **endptr) {
+  if (__VERIFIER_nondet_int()) {
+    if (endptr != 0) {
+      *endptr = nptr;
+    }
+    return 0.0;
+  } else {
+    if (endptr != 0) {
+      size_t size = strlen(nptr);
+      *endptr = nptr + size;
+    }
+    return __VERIFIER_nondet_long();
+  }
+}
+
+char *error_str = "xx";
+char *strerror(int errnum) {
+  error_str[0] = __VERIFIER_nondet_char();
+  error_str[1] = __VERIFIER_nondet_char();
+  return error_str;
+}
+
+char *env_value_str = "xx";
+char *getenv(const char *name) {
+  if (__VERIFIER_nondet_int()) {
+    return 0;
+  } else {
+    env_value_str[0] = __VERIFIER_nondet_char();
+    env_value_str[1] = __VERIFIER_nondet_char();
+    return env_value_str;
+  }
+}
+
+void *realloc (void *__ptr, size_t __size) {
+  free(__ptr);
+  return malloc(__size);
 }
 #endif
 

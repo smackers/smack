@@ -43,7 +43,7 @@ LLVM_DIR="${ROOT}/llvm"
 source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
-WGET="wget --no-verbose --method=GET"
+WGET="wget --no-verbose"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -160,9 +160,9 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
-linux-ubuntu-14*)
+linux-ubuntu-1[46]*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-3.7 llvm-3.7 mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-3.8 llvm-3.8 mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
@@ -221,9 +221,9 @@ then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-ubuntu-14*)
+  linux-ubuntu-1[46]*)
     # Adding LLVM repository
-    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
+    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.8 main"
     ${WGET} -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
     # Adding MONO repository
     sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
@@ -231,11 +231,11 @@ then
 #    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.7 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.7 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.7 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.7 20
-    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.7 20
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.8 20
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.8 20
+    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.8 20
+    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.8 20
+    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.8 20
     ;;
 
   linux-ubuntu-12*)
@@ -299,16 +299,16 @@ then
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
-  ${WGET} http://llvm.org/releases/3.7.1/llvm-3.7.1.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.7.1/cfe-3.7.1.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.7.1/compiler-rt-3.7.1.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.8.1/llvm-3.8.1.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.8.1/cfe-3.8.1.src.tar.xz
+  ${WGET} http://llvm.org/releases/3.8.1/compiler-rt-3.8.1.src.tar.xz
 
-  tar -C ${LLVM_DIR}/src -xvf llvm-3.7.1.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.7.1.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.7.1.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-3.8.1.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.8.1.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.8.1.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
+  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
   sudo make install
 
@@ -340,7 +340,7 @@ then
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
-  xbuild Boogie.sln /p:Configuration=Release
+  msbuild Boogie.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
   puts "Built Boogie"
@@ -356,7 +356,7 @@ then
   git reset --hard ${CORRAL_COMMIT}
   git submodule init
   git submodule update
-  xbuild cba.sln /p:Configuration=Release
+  msbuild cba.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
   puts "Built Corral"
@@ -370,7 +370,7 @@ then
   git clone https://github.com/smackers/lockpwn.git
   cd ${LOCKPWN_DIR}
   git reset --hard ${LOCKPWN_COMMIT}
-  xbuild lockpwn.sln /p:Configuration=Release
+  msbuild lockpwn.sln /p:Configuration=Release
   ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
   puts "Built lockpwn"
@@ -403,7 +403,7 @@ then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
-  ./regtest.py
+  ./regtest.py ${TRAVIS_ENV}
   res=$?
 
   puts "Regression tests complete"

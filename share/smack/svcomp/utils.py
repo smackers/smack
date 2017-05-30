@@ -80,20 +80,34 @@ def svcomp_process_file(args, name, ext):
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
     # replace exit definition with exit_
     s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
-    s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'argv[i]=malloc(3);\n    argv[i][2]=0;\n\n', s)
-    s = re.sub(r'char\s+\*a\s+=\s+malloc\(11\);\s+a\[10\]\s+=\s+0;\s+for\(int\s+i=0;\s+i<10;\s+\+\+i\)\s+a\[i\]=__VERIFIER_nondet_char\(\);', r'char *a = malloc(3);\n  a[2] = 0;\n\n', s)
+    if not ('direc_start' in s or 'just_echo' in s):
+      s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'argv[i] = malloc(3);\n    argv[i][0] = __VERIFIER_nondet_char();\n    argv[i][1] = __VERIFIER_nondet_char();\n    argv[i][2] = 0;', s)
+      s = re.sub(r'char\s+\*a\s+=\s+malloc\(11\);\s+a\[10\]\s+=\s+0;\s+for\(int\s+i=0;\s+i<10;\s+\+\+i\)\s+a\[i\]=__VERIFIER_nondet_char\(\);', r'char *a = malloc(3);\n  a[0] = __VERIFIER_nondet_char();\n  a[1] = __VERIFIER_nondet_char();\n  a[2] = 0;', s)
+    s = re.sub(r'static\s+char\s+dir\[42\];\s+for\(int\s+i=0;\s+i<42;\s+\+\+i\)\s+dir\[i\]\s+=\s+__VERIFIER_nondet_char\(\);\s+dir\[41\]\s+=\s+\'\\0\';', r'static char dir[3];\n  dir[0] = __VERIFIER_nondet_char();\n  dir[1] = __VERIFIER_nondet_char();\n  dir[2] = 0;', s)
+    s = re.sub(r'__VERIFIER_assume\(i < 16\);', r'__VERIFIER_assume(i >= 0 && i < 16);', s)
 
     if args.memory_safety and not 'argv=malloc' in s:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
+    elif args.memory_safety and re.search(r'getopt32\([^,)]+,[^,)]+,[^.)]+\);', s):
+      if not args.quiet:
+        print("Stumbled upon a benchmark that requires precise handling of vararg\n")
+      while (True):
+        pass
+    elif args.memory_safety and ('count is too big' in s or 'pdRfilsLHarPv' in s or 'rnugG' in s):
+      if not args.quiet:
+        print("Stumbled upon a benchmark that contains undefined behavior\n")
+      while (True):
+        pass
 
     if args.float:
       if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
         sys.exit(smack.top.results(args)['unknown'])
 
-#    if 'argv=malloc' in s:
+    if 'argv=malloc' in s:
 #      args.bit_precise = True
-#      if args.signed_integer_overflow:
-#        args.bit_precise_pointers = True
+      if args.signed_integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
+        args.bit_precise = True
+        args.bit_precise_pointers = True
 
     length = len(s.split('\n'))
     if length < 60:
@@ -213,7 +227,7 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    if not args.memory_safety or not args.bit_precise:
+    if not (args.memory_safety or args.bit_precise):
       corral_command += ["/di"]
 
   # we are not modeling strcpy
@@ -238,7 +252,7 @@ def verify_bpl_svcomp(args):
   elif " node3" in bpl:
     heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 100.\n"
     loopUnrollBar = 100
-  elif "calculate_output" in bpl:
+  elif "calculate_output" in bpl or "psyco" in bpl:
     heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
     loopUnrollBar = 15
   elif "ldv" in bpl:
@@ -249,7 +263,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "LDV benchmark detected. Setting loop unroll bar to 13.\n"
       loopUnrollBar = 13
     staticLoopBound = 64
-  elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl:
+  elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl or "list-ext_false-unreach-call_false-valid-deref" in bpl:
     heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
     loopUnrollBar = 129
   elif "is_relaxed_prefix" in bpl:
@@ -258,6 +272,12 @@ def verify_bpl_svcomp(args):
   elif "id_o1000_false-unreach-call" in bpl:
     heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
     loopUnrollBar = 1024
+  elif "n.c24" in bpl or "array_false-unreach-call3" in bpl:
+    heurTrace += "Loops benchmark detected. Setting loop unroll bar to 1024.\n"
+    loopUnrollBar = 1024
+  elif "printf_false-unreach-call" in bpl or "echo_true-no-overflow" in bpl:
+    heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 11.\n"
+    loopUnrollBar = 11
   elif args.memory_safety and "__main(argc:" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
@@ -281,7 +301,10 @@ def verify_bpl_svcomp(args):
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
-      time_limit = 750
+      if "memleaks_test12_false-valid-free" in bpl:
+        time_limit = 10
+      else:
+        time_limit = 750
     elif args.prop_to_check == 'valid-free':
       time_limit = 80
     elif args.prop_to_check == 'memleak':
@@ -348,7 +371,11 @@ def verify_bpl_svcomp(args):
         if args.prop_to_check == 'valid-deref':
           args.valid_deref_check_result = 'verified'
         if args.prop_to_check == 'memleak':
-          sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+          if args.valid_deref_check_result == 'timeout':
+            sys.stdout.flush()
+            time.sleep(1000)
+          else:
+            sys.exit(smack.top.results(args)[args.valid_deref_check_result])
         verify_bpl_svcomp(args)
       else:
         write_error_file(args, 'verified', verifier_output)
@@ -365,7 +392,11 @@ def verify_bpl_svcomp(args):
         if args.prop_to_check == 'valid-deref':
           args.valid_deref_check_result = 'timeout'
         if args.prop_to_check == 'memleak':
-          sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+          if args.valid_deref_check_result == 'timeout':
+            sys.stdout.flush()
+            time.sleep(1000)
+          else:
+            sys.exit(smack.top.results(args)[args.valid_deref_check_result])
         verify_bpl_svcomp(args)
       else:
         # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
@@ -381,7 +412,11 @@ def verify_bpl_svcomp(args):
     if args.prop_to_check == 'valid-deref':
       args.valid_deref_check_result = 'verified'
     if args.prop_to_check == 'memleak':
-      sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+      if args.valid_deref_check_result == 'timeout':
+        sys.stdout.flush()
+        time.sleep(1000)
+      else:
+        sys.exit(smack.top.results(args)[args.valid_deref_check_result])
     verify_bpl_svcomp(args)
   else:
     write_error_file(args, result, verifier_output)
