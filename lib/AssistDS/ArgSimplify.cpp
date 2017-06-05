@@ -141,7 +141,7 @@ namespace {
     bool runOnModule(Module& M) {
 
       for (Function &F : M)
-        if (!F.isDeclaration() && !F.mayBeOverridden()) {
+        if (!F.isDeclaration() && !F.isInterposable()) {
           if(F.getName().str() == "main")
             continue;
           std::vector<unsigned> Args;

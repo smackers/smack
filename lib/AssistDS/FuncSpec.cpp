@@ -51,7 +51,7 @@ bool FuncSpec::runOnModule(Module& M) {
   std::map<std::pair<Function*, std::vector<std::pair<unsigned, Constant*> > >, Function* > toClone;
 
   for (Function &F : M)
-    if (!F.isDeclaration() && !F.mayBeOverridden()) {
+    if (!F.isDeclaration() && !F.isInterposable()) {
       std::vector<unsigned> FPArgs;
       for (auto &Arg : F.args()) {
         // check if this function has a FunctionType(or a pointer to) argument 
@@ -95,7 +95,7 @@ bool FuncSpec::runOnModule(Module& M) {
   for (std::map<std::pair<Function*, std::vector<std::pair<unsigned, Constant*> > >, Function* >::iterator I = toClone.begin(), E = toClone.end(); I != E; ++I) {
     // Clone all the functions we need cloned
     ValueToValueMapTy VMap;
-    Function* DirectF = CloneFunction(I->first.first, VMap, false);
+    Function* DirectF = CloneFunction(I->first.first, VMap);
     DirectF->setName(I->first.first->getName().str() + "_SPEC");
     DirectF->setLinkage(GlobalValue::InternalLinkage);
     I->first.first->getParent()->getFunctionList().push_back(DirectF);

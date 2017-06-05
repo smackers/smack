@@ -349,19 +349,8 @@ bool TypeChecks::runOnModule(Module &M) {
             }
           }
 
-          //
-          // Do replacements in the worklist.
-          // Special case for ContantArray(triggered by 253.perl)
-          // ConstantArray::replaceUsesOfWithOnConstant, replace all uses
-          // in that constant, unlike the other versions, which  only
-          // replace the use specified in ReplaceWorklist.
-          //
-          if(isa<ConstantArray>(C)) {
-              C->handleOperandChange(F, CNew, ReplaceWorklist[0]);
-          } else {
-            for (unsigned index = 0; index < ReplaceWorklist.size(); ++index) {
-              C->handleOperandChange(F, CNew, ReplaceWorklist[index]);
-            }
+          if (ReplaceWorklist.size() > 0) {
+            C->handleOperandChange(F, CNew);
           }
           continue;
         }
@@ -786,7 +775,7 @@ bool TypeChecks::visitVarArgFunction(Module &M, Function &F) {
 
   // create internal clone
   ValueToValueMapTy VMap;
-  Function *F_clone = CloneFunction(&F, VMap, false);
+  Function *F_clone = CloneFunction(&F, VMap);
   F_clone->setName(F.getName().str() + "internal");
   F.setLinkage(GlobalValue::InternalLinkage);
   F.getParent()->getFunctionList().push_back(F_clone);
@@ -1019,7 +1008,7 @@ bool TypeChecks::visitByValFunction(Module &M, Function &F) {
   } else {
     // create internal clone
     ValueToValueMapTy VMap;
-    Function *F_clone = CloneFunction(&F, VMap, false);
+    Function *F_clone = CloneFunction(&F, VMap);
     F_clone->setName(F.getName().str() + "internal");
     F.setLinkage(GlobalValue::InternalLinkage);
     F.getParent()->getFunctionList().push_back(F_clone);
