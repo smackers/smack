@@ -73,20 +73,20 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
       return;
     }
   }
-  
+
   if (SmackOptions::SourceLocSymbols && I.getMetadata("dbg")) {
     const DebugLoc DL = I.getDebugLoc();
     auto *scope = cast<DIScope>(DL.getScope());
     B->addStmt(Stmt::annot(Attr::attr("sourceloc", scope->getFilename().str(),
-				      DL.getLine(), DL.getCol())));
+      DL.getLine(), DL.getCol())));
   }
-  
+
   //https://stackoverflow.com/questions/22138947/reading-metadata-from-instruction
   SmallVector<std::pair<unsigned, MDNode*>, 4> MDForInst;
   I.getAllMetadata(MDForInst);
   SmallVector<StringRef, 8> Names;
   I.getModule()->getMDKindNames(Names);
-  
+
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst){
     std::string name = Names[II.first];

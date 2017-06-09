@@ -86,7 +86,7 @@ namespace {
       exit(1);
     }
   }
-  
+
   // Returns the TargetMachine instance or zero if no triple is provided.
   static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 					 StringRef FeaturesStr,
@@ -114,12 +114,11 @@ namespace {
 }
 
 
-
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   llvm::cl::ParseCommandLineOptions(argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
 
-    llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;
 
@@ -137,7 +136,6 @@ int main(int argc, char **argv) {
   auto &L = module.get()->getDataLayoutStr();
   if (L.empty())
     module.get()->setDataLayout(DefaultDataLayout);
-
 
   ///////////////////////////////
   // initialise and run passes //
