@@ -172,12 +172,14 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
   case Instruction::Store: {
     const StoreInst *SI = cast<StoreInst>(I);
     Type *ValTy = SI->getValueOperand()->getType();
+    assert(!ValTy->isStructTy() && "Timing annotations do not currently work for struct sized stores");
     return TTI->getMemoryOpCost(I->getOpcode(), ValTy,
                                  SI->getAlignment(),
                                  SI->getPointerAddressSpace());
   }
   case Instruction::Load: {
     const LoadInst *LI = cast<LoadInst>(I);
+    assert(!I->getType()->isStructTy() && "Timing annotations do not currently work for struct sized loads");
     return TTI->getMemoryOpCost(I->getOpcode(), I->getType(),
                                  LI->getAlignment(),
                                  LI->getPointerAddressSpace());
