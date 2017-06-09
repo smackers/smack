@@ -8,8 +8,6 @@
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include <string>
-#include "smack/Naming.h"
-
 
 namespace smack {
   using namespace llvm;
@@ -20,7 +18,6 @@ namespace smack {
     static const std::string INT_TIMING_COST_METADATA;
     static const std::string INSTRUCTION_NAME_METADATA;
     
-    Naming naming;
   public:
     static char ID; // Class identification, replacement for typeinfo
     AddTiming() : FunctionPass(ID), F(nullptr), TTI(nullptr) {}
