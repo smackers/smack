@@ -2053,18 +2053,17 @@ void __SMACK_decls() {
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $Alloc, $CurrAddr;\n"
     "{\n"
-    "  p := $CurrAddr;\n"
-    "  havoc $CurrAddr;\n"
+    "  assume $sge.ref.bool(n, $0.ref);\n"
     "  if ($sgt.ref.bool(n, $0.ref)) {\n"
+    "    p := $CurrAddr;\n"
+    "    havoc $CurrAddr;\n"
     "    assume $sle.ref.bool($add.ref(p, n), $CurrAddr);\n"
     "    assume $Size(p) == n;\n"
     "    assume (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
+    "    $Alloc[p] := true;\n"
     "  } else {\n"
-    "    assume $sle.ref.bool($add.ref(p, $1.ref), $CurrAddr);\n"
-    "    assume $Size(p) == $1.ref;\n"
-    "    assume $eq.ref.bool($base(p), p);\n"
+    "    p := $0.ref;\n"
     "  }\n"
-    "  $Alloc[p] := true;\n"
     "}\n");
 
   D("procedure $free(p: ref)\n"
@@ -2093,6 +2092,7 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
+    "free requires $sge.ref.bool(n, $0.ref);\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures !old($Alloc[p]);\n"
@@ -2101,7 +2101,7 @@ void __SMACK_decls() {
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
+    "ensures (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
@@ -2125,13 +2125,14 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $CurrAddr;\n"
+    "free requires $sge.ref.bool(n, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), n), $CurrAddr);\n"
     "ensures $sgt.ref.bool(n, $0.ref) ==> $Size(p) == n;\n"
     "ensures $sgt.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), $1.ref), $CurrAddr);\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $Size(p) == $1.ref;\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $eq.ref.bool($base(p), p);\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), $1.ref), $CurrAddr);\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> $Size(p) == $1.ref;\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> $eq.ref.bool($base(p), p);\n"
     "ensures $Alloc[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n");
 
@@ -2156,12 +2157,13 @@ void __SMACK_decls() {
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr;\n"
     "{\n"
-    "  p := $CurrAddr;\n"
-    "  havoc $CurrAddr;\n"
+    "  assume $sge.ref.bool(n, $0.ref);\n"
     "  if ($sgt.ref.bool(n, $0.ref)) {\n"
+    "    p := $CurrAddr;\n"
+    "    havoc $CurrAddr;\n"
     "    assume $sle.ref.bool($add.ref(p, n), $CurrAddr);\n"
     "  } else {\n"
-    "    assume $sle.ref.bool($add.ref(p, $1.ref), $CurrAddr);\n"
+    "    p := $0.ref;\n"
     "  }\n"
     "}\n");
 
@@ -2173,6 +2175,7 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
+    "free requires $sge.ref.bool(n, $0.ref);\n"
     "ensures $sgt.ref.bool(p, $0.ref);\n"
     "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
     "ensures !old($Alloc[p]);\n"
@@ -2192,9 +2195,10 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr;\n"
+    "free requires $sge.ref.bool(n, $0.ref);\n"
     "ensures p == old($CurrAddr);\n"
     "ensures $sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), n), $CurrAddr);\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), $1.ref), $CurrAddr);\n");
+    "ensures $eq.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), $1.ref), $CurrAddr);\n");
 
   D("procedure $free(p: ref);\n");
 #endif
