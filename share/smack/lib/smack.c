@@ -2034,7 +2034,9 @@ void __SMACK_decls() {
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $allocatedCounter;\n"
     "{\n"
-    "  $allocatedCounter := $allocatedCounter + 1;\n"
+    "  if ($ne.ref.bool(n, $0.ref)) {\n"
+    "    $allocatedCounter := $allocatedCounter + 1;\n"
+    "  }\n"
     "  call p := $$alloc(n);\n"
     "}\n");
 
