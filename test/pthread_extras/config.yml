@@ -1,5 +1,5 @@
 verifiers: [corral]
 memory: [no-reuse-impls]
-time-limit: 1200
+time-limit: 2400
 flags: [--pthread, --context-bound=2]
 skip: ok
