@@ -4,7 +4,7 @@
 
 // @expect error
 // @checkbpl grep -v "call bar"
-// @checkout grep "CALL foo"
+// @checkout grep "checking-fail-bpl.c(11,1)"
 
 void foo(void) {
 
