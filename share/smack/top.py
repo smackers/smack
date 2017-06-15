@@ -7,6 +7,8 @@ import platform
 import re
 import shutil
 import sys
+import shlex
+import subprocess
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
@@ -208,6 +210,14 @@ def arguments():
   verifier_group.add_argument('--replay', action="store_true", default=False,
     help='enable reply of error trace with test harness.')
 
+  plugins_group = parser.add_argument_group('plugins')
+
+  plugins_group.add_argument('--transform-bpl', metavar='COMMAND', default=None,
+    type=str, help='transform generated Boogie code via COMMAND')
+
+  plugins_group.add_argument('--transform-out', metavar='COMMAND', default=None,
+    type=str, help='transform verifier output via COMMAND')
+
   args = parser.parse_args()
 
   if not args.bc_file:
@@ -372,6 +382,7 @@ def llvm_to_bpl(args):
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
+  transform_bpl(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -424,6 +435,22 @@ def property_selection(args):
     for line in lines:
       line = re.sub(r'^(\s*assert\s*)({:(.+)})?(.+);', replace_assertion, line)
       f.write(line)
+
+def transform_bpl(args):
+  if args.transform_bpl:
+    with open(args.bpl_file, 'r+') as bpl:
+      old = bpl.read()
+      bpl.seek(0)
+      bpl.truncate()
+      tx = subprocess.Popen(shlex.split(args.transform_bpl), stdin=subprocess.PIPE, stdout=bpl)
+      tx.communicate(input = old)
+
+def transform_out(args, old):
+  out = old
+  if args.transform_out:
+    tx = subprocess.Popen(shlex.split(args.transform_out), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = tx.communicate(input = old)
+  return out
 
 def verification_result(verifier_output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
@@ -492,6 +519,7 @@ def verify_bpl(args):
     command += args.verifier_options.split()
 
   verifier_output = try_command(command, timeout=args.time_limit)
+  verifier_output = transform_out(args, verifier_output)
   result = verification_result(verifier_output)
 
   if args.smackd:
