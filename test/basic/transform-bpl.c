@@ -3,7 +3,7 @@
 #include "smack.h"
 
 // @expect verified
-// @flag --transform-bpl "sed 's/\(call .*\)[[:<:]]bar[[:>:]]/\1foo/'"
+// @flag --transform-bpl "sed 's/\(call .*\) bar/\1 foo/'"
 
 int foo(void) {
   return 0;
