@@ -3,7 +3,7 @@
 #include "smack.h"
 
 // @expect verified
-// @flag --transform-out "sed 's/found an error/found no errors/'"
+// @flag --transform-out "sed -e 's/\d* verified, \d* errors?/1 verified, 0 errors/' -e 's/can fail/no bugs/'"
 
 int main(void) {
   assert (0);

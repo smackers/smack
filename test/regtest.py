@@ -15,6 +15,7 @@ import re
 import glob
 import time
 import sys
+import shlex
 
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags']
@@ -77,7 +78,7 @@ def metadata(file):
 
       match = re.search(r'@flag (.*)',line)
       if match:
-        m['flags'] += [match.group(1).strip()]
+        m['flags'] += shlex.split(match.group(1).strip())
 
       match = re.search(r'@expect (.*)',line)
       if match:
