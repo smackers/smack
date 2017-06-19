@@ -40,9 +40,12 @@ namespace {
 
   bool isMarked(Instruction& I) {
     auto *N = I.getMetadata("verifier.code");
+    assert(N && "expected metadata");
     assert(N->getNumOperands() == 1);
     auto *M = dyn_cast<ConstantAsMetadata>(N->getOperand(0).get());
+    assert(M && "expected constant-valued metadata");
     auto *C = dyn_cast<ConstantInt>(M->getValue());
+    assert(C && "expected constant-int-valued metadata");
     return C->isOne();
   }
 }
@@ -88,12 +91,16 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
 }
 
 void VerifierCodeMetadata::visitCallInst(CallInst &I) {
+  auto marked = false;
+
   if (auto F = I.getCalledFunction()) {
-    auto name = F->getName();
-    auto V = name.find("__VERIFIER_") == 0;
-    mark(I, V);
-    if (V) workList.push(&I);
+    if (auto V = F->getName().find("__VERIFIER_") == 0) {
+      marked = true;
+      workList.push(&I);
+    }
   }
+
+  mark(I, marked);
 }
 
 void VerifierCodeMetadata::visitInstruction(Instruction &I) {
