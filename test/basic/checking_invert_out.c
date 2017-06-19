@@ -3,8 +3,8 @@
 #include "smack.h"
 
 // @expect error
-// @checkbpl grep -v "call bar"
-// @checkout grep "checking-fail-bpl.c(11,1)"
+// @checkbpl grep "call foo"
+// @checkout grep -v "checking_invert_out.c(10,1)"
 
 void foo(void) {
 
