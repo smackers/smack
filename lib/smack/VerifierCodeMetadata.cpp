@@ -63,8 +63,11 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
         if (!isMarked(*J) && !dyn_cast<CallInst>(J)) {
           auto onlyVerifierUsers = true;
           std::queue<User*> users;
-          for (auto U : J->users())
+          std::set<User*> known;
+          for (auto U : J->users()) {
             users.push(U);
+            known.insert(U);
+          }
 
           while (!users.empty()) {
             if (auto K = dyn_cast<Instruction>(users.front())) {
@@ -73,8 +76,12 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
                 break;
               }
             } else {
-              for (auto UU : users.front()->users())
-                users.push(UU);
+              for (auto UU : users.front()->users()) {
+                if (known.count(UU) == 0) {
+                  users.push(UU);
+                  known.insert(UU);
+                }
+              }
             }
             users.pop();
           }
