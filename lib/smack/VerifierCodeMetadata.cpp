@@ -5,15 +5,10 @@
 #define DEBUG_TYPE "verifier-code-metadata"
 
 #include "smack/SmackOptions.h"
-#include "smack/Naming.h"
 #include "smack/VerifierCodeMetadata.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Dominators.h"
 
-#include <vector>
-#include <stack>
-#include <map>
 #include <set>
 
 namespace smack {
