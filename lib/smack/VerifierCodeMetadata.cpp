@@ -51,10 +51,10 @@ namespace {
       if (N.find("__VERIFIER_") == 0)
         return true;
 
-      if (N.find("__SMACK") == 0)
+      if (N.find("__SMACK_") == 0)
         return true;
 
-      if (N.find("__CONTRACT") == 0)
+      if (N.find("__CONTRACT_") == 0)
         return true;
     }
     return false;
