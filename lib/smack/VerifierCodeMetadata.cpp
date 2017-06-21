@@ -94,7 +94,6 @@ namespace {
 }
 
 void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<DominatorTreeWrapperPass>();
 }
 
 bool VerifierCodeMetadata::runOnModule(Module &M) {
