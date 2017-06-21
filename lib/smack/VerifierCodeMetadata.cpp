@@ -48,6 +48,22 @@ namespace {
     assert(C && "expected constant-int-valued metadata");
     return C->isOne();
   }
+
+  bool isVerifierFunctionCall(CallInst &I) {
+    if (auto F = I.getCalledFunction()) {
+      auto N = F->getName();
+
+      if (N.find("__VERIFIER_") == 0)
+        return true;
+
+      if (N.find("__SMACK") == 0)
+        return true;
+
+      if (N.find("__CONTRACT") == 0)
+        return true;
+    }
+    return false;
+  }
 }
 
 void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -100,11 +116,9 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
 void VerifierCodeMetadata::visitCallInst(CallInst &I) {
   auto marked = false;
 
-  if (auto F = I.getCalledFunction()) {
-    if (auto V = F->getName().find("__VERIFIER_") == 0) {
-      marked = true;
-      workList.push(&I);
-    }
+  if (isVerifierFunctionCall(I)) {
+    marked = true;
+    workList.push(&I);
   }
 
   mark(I, marked);
