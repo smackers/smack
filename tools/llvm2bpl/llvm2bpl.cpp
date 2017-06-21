@@ -29,6 +29,7 @@
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/ExtractContracts.h"
+#include "smack/VerifierCodeMetadata.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/SignedIntegerOverflowChecker.h"
@@ -124,6 +125,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::ExtractContracts());
+  pass_manager.add(new smack::VerifierCodeMetadata());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
   if (!Modular) {
