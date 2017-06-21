@@ -64,6 +64,33 @@ namespace {
     }
     return false;
   }
+
+  bool onlyVerifierUsers(Instruction &I) {
+    std::queue<User*> users;
+    std::set<User*> known;
+
+    for (auto U : I.users()) {
+      users.push(U);
+      known.insert(U);
+    }
+
+    while (!users.empty()) {
+      if (auto K = dyn_cast<Instruction>(users.front())) {
+        if (!isMarked(*K))
+          return false;
+
+      } else {
+        for (auto UU : users.front()->users()) {
+          if (known.count(UU) == 0) {
+            users.push(UU);
+            known.insert(UU);
+          }
+        }
+      }
+      users.pop();
+    }
+    return true;
+  }
 }
 
 void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -71,37 +98,17 @@ void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool VerifierCodeMetadata::runOnModule(Module &M) {
+
+  // first mark verifier function calls
   visit(M);
+
+  // then mark values which flow only into marked instructions
   while (!workList.empty()) {
     auto &I = *workList.front();
     for (auto V : I.operand_values()) {
       if (auto J = dyn_cast<Instruction>(V)) {
         if (!isMarked(*J) && !dyn_cast<CallInst>(J)) {
-          auto onlyVerifierUsers = true;
-          std::queue<User*> users;
-          std::set<User*> known;
-          for (auto U : J->users()) {
-            users.push(U);
-            known.insert(U);
-          }
-
-          while (!users.empty()) {
-            if (auto K = dyn_cast<Instruction>(users.front())) {
-              if (!isMarked(*K)) {
-                onlyVerifierUsers = false;
-                break;
-              }
-            } else {
-              for (auto UU : users.front()->users()) {
-                if (known.count(UU) == 0) {
-                  users.push(UU);
-                  known.insert(UU);
-                }
-              }
-            }
-            users.pop();
-          }
-          if (onlyVerifierUsers) {
+          if (onlyVerifierUsers(*J)) {
             mark(*J);
             workList.push(J);
           }
@@ -110,6 +117,7 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
     }
     workList.pop();
   }
+
   return true;
 }
 
