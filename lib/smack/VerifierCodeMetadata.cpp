@@ -2,7 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
-#define DEBUG_TYPE "contracts"
+#define DEBUG_TYPE "verifier-code-metadata"
 
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"
