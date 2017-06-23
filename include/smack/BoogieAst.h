@@ -193,6 +193,7 @@ protected:
   std::list<const Expr*> vals;
 public:
   Attr(std::string n, std::initializer_list<const Expr*> vs) : name(n), vals(vs) {}
+  Attr(std::string n, std::list<const Expr*> vs) : name(n), vals(vs) {}
   void print(std::ostream& os) const;
   std::string getName() const { return name; }
 
@@ -202,6 +203,7 @@ public:
   static const Attr* attr(std::string s, std::string v, int i);
   static const Attr* attr(std::string s, std::string v, int i, int j);
   static const Attr* attr(std::string s, std::initializer_list<const Expr*> vs);
+  static const Attr* attr(std::string s, std::list<const Expr*> vs);
 };
 
 class Stmt {
