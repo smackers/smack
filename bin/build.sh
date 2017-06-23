@@ -43,7 +43,7 @@ LLVM_DIR="${ROOT}/llvm"
 source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
-WGET="wget --no-verbose --method=GET"
+WGET="wget --no-verbose"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -333,15 +333,17 @@ if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
 
-  git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+  if [ ! -d "$BOOGIE_DIR" ] ; then
+    git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+  fi
   cd ${BOOGIE_DIR}
   git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
   ${WGET} https://nuget.org/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
-  xbuild Boogie.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+  msbuild Boogie.sln /p:Configuration=Release
+  ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
   puts "Built Boogie"
 fi
@@ -351,13 +353,15 @@ if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Building Corral"
 
-  git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+  if [ ! -d "$CORRAL_DIR" ] ; then
+    git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+  fi
   cd ${CORRAL_DIR}
   git reset --hard ${CORRAL_COMMIT}
   git submodule init
   git submodule update
-  xbuild cba.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+  msbuild cba.sln /p:Configuration=Release
+  ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
   puts "Built Corral"
 fi
@@ -367,11 +371,13 @@ then
   puts "Building lockpwn"
 
   cd ${ROOT}
-  git clone https://github.com/smackers/lockpwn.git
+  if [ ! -d "$LOCKPWN_DIR" ] ; then
+    git clone https://github.com/smackers/lockpwn.git
+  fi
   cd ${LOCKPWN_DIR}
   git reset --hard ${LOCKPWN_COMMIT}
-  xbuild lockpwn.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
+  msbuild lockpwn.sln /p:Configuration=Release
+  ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
   puts "Built lockpwn"
 fi

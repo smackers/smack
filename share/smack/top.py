@@ -6,17 +6,15 @@ import os
 import platform
 import re
 import shutil
-import signal
-import subprocess
 import sys
-import tempfile
-from threading import Timer
+import shlex
+import subprocess
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
+from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
 
-VERSION = '1.7.2'
-temporary_files = []
+VERSION = '1.8.0'
 
 def frontends():
   """A dictionary of front-ends per file extension."""
@@ -110,6 +108,15 @@ def arguments():
 
   frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
     type=str, help='save initial LLVM bitcode to FILE')
+
+  frontend_group.add_argument('--linked-bc-file', metavar='FILE', default=None,
+    type=str, help=argparse.SUPPRESS)
+
+  frontend_group.add_argument('--replay-harness', metavar='FILE', default='replay-harness.c',
+    type=str, help=argparse.SUPPRESS)
+
+  frontend_group.add_argument('--replay-exe-file', metavar='FILE', default='replay-exe',
+    type=str, help=argparse.SUPPRESS)
 
   frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None,
     type=str, help='save final LLVM IR to FILE')
@@ -206,10 +213,21 @@ def arguments():
   verifier_group.add_argument('--replay', action="store_true", default=False,
     help='enable reply of error trace with test harness.')
 
+  plugins_group = parser.add_argument_group('plugins')
+
+  plugins_group.add_argument('--transform-bpl', metavar='COMMAND', default=None,
+    type=str, help='transform generated Boogie code via COMMAND')
+
+  plugins_group.add_argument('--transform-out', metavar='COMMAND', default=None,
+    type=str, help='transform verifier output via COMMAND')
+
   args = parser.parse_args()
 
   if not args.bc_file:
     args.bc_file = temporary_file('a', '.bc', args)
+
+  if not args.linked_bc_file:
+    args.linked_bc_file = temporary_file('b', '.bc', args)
 
   if not args.bpl_file:
     args.bpl_file = 'a.bpl' if args.no_verify else temporary_file('a', '.bpl', args)
@@ -225,71 +243,6 @@ def arguments():
   #       return args = parser.parse_args(m.group(1).split() + sys.argv[1:])
 
   return args
-
-def temporary_file(prefix, extension, args):
-  f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
-  os.close(f)
-  if not args.debug:
-    temporary_files.append(name)
-  return name
-
-def timeout_killer(proc, timed_out):
-  if not timed_out[0]:
-    timed_out[0] = True
-    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-
-def try_command(cmd, cwd=None, console=False, timeout=None):
-  console = (console or args.verbose or args.debug) and not args.quiet
-  filelog = args.debug
-  output = ''
-  proc = None
-  timer = None
-  try:
-    if args.debug:
-      print "Running %s" % " ".join(cmd)
-
-    proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
-      stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    if timeout:
-      timed_out = [False]
-      timer = Timer(timeout, timeout_killer, [proc, timed_out])
-      timer.start()
-
-    if console:
-      while True:
-        line = proc.stdout.readline()
-        if line:
-          output += line
-          print line,
-        elif proc.poll() is not None:
-          break
-      proc.wait
-    else:
-      output = proc.communicate()[0]
-
-    if timeout:
-      timer.cancel()
-
-    rc = proc.returncode
-    proc = None
-    if timeout and timed_out[0]:
-      return output + ("\n%s timed out." % cmd[0])
-    elif rc:
-      raise RuntimeError("%s returned non-zero." % cmd[0])
-    else:
-      return output
-
-  except (RuntimeError, OSError) as err:
-    print >> sys.stderr, output
-    sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
-
-  finally:
-    if timeout and timer: timer.cancel()
-    if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-    if filelog:
-      with open(temporary_file(cmd[0], '.log', args), 'w') as f:
-        f.write(output)
 
 def target_selection(args):
   """Determine the target architecture based on flags and source files."""
@@ -363,14 +316,14 @@ def boogie_frontend(args):
 def llvm_frontend(args):
   """Generate Boogie code from LLVM bitcodes."""
 
-  bitcodes = build_libs(args) + args.input_files
-  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
-  bitcodes = build_libs(args)
+  bitcodes = []
   compile_command = default_clang_compile_command(args)
 
   for c in args.input_files:
@@ -379,6 +332,7 @@ def clang_frontend(args):
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def json_compilation_database_frontend(args):
@@ -390,14 +344,13 @@ def json_compilation_database_frontend(args):
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
 
-  lib_bitcodes = build_libs(args)
-
   with open(args.input_files[0]) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
         bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
-        try_command(['llvm-link', '-o', args.bc_file] + bit_codes + lib_bitcodes)
+        try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
+        try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
 
       else:
         out_file = output_flags.findall(cc['command'])[0] + '.bc'
@@ -412,7 +365,7 @@ def json_compilation_database_frontend(args):
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
-  cmd = ['llvm2bpl', args.bc_file, '-bpl', args.bpl_file]
+  cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
   cmd += ['-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:
@@ -433,6 +386,7 @@ def llvm_to_bpl(args):
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
+  transform_bpl(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -485,6 +439,22 @@ def property_selection(args):
     for line in lines:
       line = re.sub(r'^(\s*assert\s*)({:(.+)})?(.+);', replace_assertion, line)
       f.write(line)
+
+def transform_bpl(args):
+  if args.transform_bpl:
+    with open(args.bpl_file, 'r+') as bpl:
+      old = bpl.read()
+      bpl.seek(0)
+      bpl.truncate()
+      tx = subprocess.Popen(shlex.split(args.transform_bpl), stdin=subprocess.PIPE, stdout=bpl)
+      tx.communicate(input = old)
+
+def transform_out(args, old):
+  out = old
+  if args.transform_out:
+    tx = subprocess.Popen(shlex.split(args.transform_out), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = tx.communicate(input = old)
+  return out
 
 def verification_result(verifier_output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
@@ -553,6 +523,7 @@ def verify_bpl(args):
     command += args.verifier_options.split()
 
   verifier_output = try_command(command, timeout=args.time_limit)
+  verifier_output = transform_out(args, verifier_output)
   result = verification_result(verifier_output)
 
   if args.smackd:
@@ -573,7 +544,7 @@ def verify_bpl(args):
         print error
 
       if args.replay:
-         replay_error_trace(verifier_output)
+         replay_error_trace(verifier_output, args)
 
     sys.exit(results(args)[result])
 
@@ -688,6 +659,4 @@ def main():
     sys.exit("SMACK aborted by keyboard interrupt.")
 
   finally:
-    for f in temporary_files:
-      if os.path.isfile(f):
-        os.unlink(f)
+    remove_temp_files()
