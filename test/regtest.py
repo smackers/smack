@@ -92,9 +92,13 @@ def metadata(file):
       if match:
         m['checkout'].append(match.group(1).strip())
 
-  if not m['skip'] and not 'expect' in m:
-    print red("WARNING: @expect MISSING IN %s" % file, None)
-    m['expect'] = 'verified'
+  if not m['skip']:
+    if not 'expect' in m:
+      print red("WARNING: @expect MISSING IN %s" % file, None)
+      m['expect'] = 'verified'
+
+    if not m['expect'] in ['verified', 'error', 'timeout', 'unknown']:
+      print red("WARNING: unexpected @expect annotation '%s'" % m['expect'], None)
 
   return m
 
