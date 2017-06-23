@@ -151,6 +151,7 @@ add_library(dsa STATIC
 )
 
 add_library(smackTranslator STATIC
+  include/smack/AddTiming.h
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
@@ -168,6 +169,7 @@ add_library(smackTranslator STATIC
   include/smack/SmackRep.h
   include/smack/MemorySafetyChecker.h
   include/smack/SignedIntegerOverflowChecker.h
+  lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp

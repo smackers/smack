@@ -38,6 +38,8 @@ const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
   "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
 );
 
+const llvm::cl::opt<bool> SmackOptions::AddTiming("timing-annotations", llvm::cl::desc("Add timing annotations."));
+
 const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
   "no-memory-splitting", llvm::cl::desc("Disable splitting memory into regions.")
 );
