@@ -1,5 +1,5 @@
 verifiers: [corral]
 memory: [no-reuse-impls]
 time-limit: 800
-flags: [--pthread, --context-bound=2]
+flags: [--pthread, --context-bound=2, --verifier-options=/trackAllVars]
 skip: ok
