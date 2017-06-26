@@ -33,17 +33,6 @@ namespace {
       )));
   }
 
-  bool isMarked(Instruction& I) {
-    auto *N = I.getMetadata("verifier.code");
-    assert(N && "expected metadata");
-    assert(N->getNumOperands() == 1);
-    auto *M = dyn_cast<ConstantAsMetadata>(N->getOperand(0).get());
-    assert(M && "expected constant-valued metadata");
-    auto *C = dyn_cast<ConstantInt>(M->getValue());
-    assert(C && "expected constant-int-valued metadata");
-    return C->isOne();
-  }
-
   bool isVerifierFunctionCall(CallInst &I) {
     if (auto F = I.getCalledFunction()) {
       auto N = F->getName();
@@ -71,7 +60,7 @@ namespace {
 
     while (!users.empty()) {
       if (auto K = dyn_cast<Instruction>(users.front())) {
-        if (!isMarked(*K))
+        if (!VerifierCodeMetadata::isMarked(*K))
           return false;
 
       } else {
@@ -86,6 +75,17 @@ namespace {
     }
     return true;
   }
+}
+
+bool VerifierCodeMetadata::isMarked(const Instruction& I) {
+  auto *N = I.getMetadata("verifier.code");
+  assert(N && "expected metadata");
+  assert(N->getNumOperands() == 1);
+  auto *M = dyn_cast<ConstantAsMetadata>(N->getOperand(0).get());
+  assert(M && "expected constant-valued metadata");
+  auto *C = dyn_cast<ConstantInt>(M->getValue());
+  assert(C && "expected constant-int-valued metadata");
+  return C->isOne();
 }
 
 void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {
