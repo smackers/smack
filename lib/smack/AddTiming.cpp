@@ -31,6 +31,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "smack/VerifierCodeMetadata.h"
+
 #include <sstream>
 
 using namespace llvm;
@@ -65,6 +67,7 @@ AddTiming::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<VerifierCodeMetadata>();
 }
   
 bool
@@ -122,6 +125,17 @@ static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
 unsigned AddTiming::getInstructionCost(const Instruction *I) const {
   if (!TTI)
     return NO_TIMING_INFO;
+
+  // When an assume statement appears in the C code
+  // llvm turns it into a series of IR instructions
+  // e.g. __VERIFIER_assume(x > y) would create a icmp instruction
+  // which timing annotations would assign a cost to.  Since these instructions do not
+  // occur in the executed code, this leads to an inaccurate timing model.
+  // The VerifierCodeMetadata marks such nodes in the IR.  We can then just return 0
+
+  if(VerifierCodeMetadata::isMarked(*I)) {
+    return 0;
+  }
 
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr:{

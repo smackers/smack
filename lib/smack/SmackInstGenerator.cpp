@@ -95,7 +95,7 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst){
     std::string name = Names[II.first];
-    if(name.find("smack.") != std::string::npos) {
+    if(name.find("smack.") == 0 || name.find("verifier.") == 0) {
       std::list<const Expr*> attrs;
       for(auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE; ++AI){
 	if (auto *CI = mdconst::dyn_extract<ConstantInt>(*AI)){

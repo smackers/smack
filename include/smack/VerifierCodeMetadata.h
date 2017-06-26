@@ -23,5 +23,6 @@ public:
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
   void visitCallInst(CallInst&);
   void visitInstruction(Instruction&);
+  static bool isMarked(const Instruction& I);
 };
 }
