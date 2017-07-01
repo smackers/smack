@@ -9,7 +9,6 @@ env:
   matrix:
     - TRAVIS_ENV="--exhaustive --folder=basic"
     - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
-    - TRAVIS_ENV="--exhaustive --folder=pthread_extras"
     - TRAVIS_ENV="--exhaustive --folder=bits"
     - TRAVIS_ENV="--exhaustive --folder=float"
     - TRAVIS_ENV="--exhaustive --folder=locks"
