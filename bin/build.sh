@@ -339,7 +339,7 @@ then
   cd ${BOOGIE_DIR}
   git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
-  ${WGET} https://nuget.org/nuget.exe
+  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
   msbuild Boogie.sln /p:Configuration=Release
