@@ -375,7 +375,7 @@ then
 
   git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
   cd ${SYMBOOGLIX_DIR}/src
-  ${WGET} https://nuget.org/nuget.exe
+  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
   mono ./nuget.exe restore Symbooglix.sln
   rm -rf /tmp/nuget/
   xbuild Symbooglix.sln /p:Configuration=Release
