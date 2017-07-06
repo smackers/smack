@@ -81,7 +81,7 @@ bool CodifyStaticInits::runOnModule(Module& M) {
       // that have named addresses, e.g., excluding string constants. Thus the
       // second predicate here is a messy hack that has little to do with the
       // intended property of being read.
-      if (DSA->isRead(&G) || !G.hasUnnamedAddr())
+      if (DSA->isRead(&G) || !G.hasGlobalUnnamedAddr())
 
         worklist.push_back(std::make_tuple(
           G.getInitializer(), &G, std::vector<Value*>()));

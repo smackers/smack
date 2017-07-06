@@ -53,6 +53,8 @@ CMAKE_INSTALL_PREFIX=
 # Partial list of dependnecies; the rest are added depending on the platform
 DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
 
+shopt -s extglob
+
 ################################################################################
 #
 # A FEW HELPER FUNCTIONS
@@ -160,9 +162,9 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
-linux-ubuntu-1[46]*)
+linux-@(ubuntu|neon)-1[46]*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-3.8 llvm-3.8 mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION} mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
@@ -221,21 +223,36 @@ then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-ubuntu-1[46]*)
+  linux-@(ubuntu|neon)-1[46]*)
+    RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
+    UBUNTU_CODENAME="trusty"
+    case "$RELEASE_VERSION" in
+    14*)
+      UBUNTU_CODENAME="trusty"
+      ;;
+    16*)
+      UBUNTU_CODENAME="xenial"
+      ;;
+    *)
+      puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
+      exit 1
+      ;;
+    esac
+
     # Adding LLVM repository
-    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.8 main"
-    ${WGET} -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
+    ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     # Adding MONO repository
     sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
 #    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.8 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.8 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.8 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.8 20
-    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.8 20
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 30
     ;;
 
   linux-ubuntu-12*)
@@ -299,13 +316,13 @@ then
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
-  ${WGET} http://llvm.org/releases/3.8.1/llvm-3.8.1.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.8.1/cfe-3.8.1.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.8.1/compiler-rt-3.8.1.src.tar.xz
+  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/cfe-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz
 
-  tar -C ${LLVM_DIR}/src -xvf llvm-3.8.1.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.8.1.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.8.1.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
   cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
@@ -322,7 +339,7 @@ then
 
   ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
   unzip -o z3-downloaded.zip -d z3-extracted
-  mv z3-extracted/z3-* ${Z3_DIR}
+  mv -f --backup=numbered z3-extracted/z3-* ${Z3_DIR}
   rm -rf z3-downloaded.zip z3-extracted
 
   puts "Installed Z3"

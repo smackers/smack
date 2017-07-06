@@ -52,7 +52,7 @@ bool StructRet::runOnModule(Module& M) {
 
   std::vector<Function*> worklist;
   for (Function &F : M)
-    if (!F.mayBeOverridden()) {
+    if (!F.isInterposable()) {
       if(F.isDeclaration())
         continue;
       if(F.hasAddressTaken())

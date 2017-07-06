@@ -229,8 +229,12 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
       for (unsigned J = 0, JE = II->getNumArgOperands(); J != JE; ++J)
         Tys.push_back(II->getArgOperand(J)->getType());
 
+      FastMathFlags FMF;
+      if (auto *FPMO = dyn_cast<FPMathOperator>(II)) {
+        FMF = FPMO->getFastMathFlags();
+      }
       return TTI->getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Tys);
+                                        Tys, FMF);
     }
     
     return NO_TIMING_INFO;

@@ -118,18 +118,19 @@ int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   llvm::cl::ParseCommandLineOptions(argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
 
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;
 
   llvm::SMDiagnostic err;
+  llvm::LLVMContext Context;
 
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
-  
-  std::unique_ptr<llvm::Module> module = llvm::parseIRFile(InputFilename, err, llvm::getGlobalContext());
+
+  std::unique_ptr<llvm::Module> module = llvm::parseIRFile(InputFilename, err, Context);
   if (!err.getMessage().empty())
     check("Problem reading input bitcode/IR: " + err.getMessage().str());
 
@@ -181,24 +182,24 @@ int main(int argc, char **argv) {
 
 
   if(smack::SmackOptions::AddTiming){
-    Triple ModuleTriple(module->getTargetTriple());  
+    Triple ModuleTriple(module->getTargetTriple());
     assert (ModuleTriple.getArch() && "Module has no defined architecture: unable to add timing annotations");
 
     const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
     std::string CPUStr = ""; /*getCPUStr();*/
     std::string FeaturesStr = ""; /*getFeaturesStr();*/
     TargetMachine *Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
-  
+
     assert(Machine && "Module did not have a Target Machine: Cannot set up timing pass");
     // Add an appropriate TargetLibraryInfo pass for the module's triple.
     TargetLibraryInfoImpl TLII(ModuleTriple);
     pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
-  
+
     // Add internal analysis passes from the target machine.
-    pass_manager.add(createTargetTransformInfoWrapperPass(Machine->getTargetIRAnalysis()));  
+    pass_manager.add(createTargetTransformInfoWrapperPass(Machine->getTargetIRAnalysis()));
     pass_manager.add(new smack::AddTiming());
   }
-  
+
   std::vector<tool_output_file*> files;
 
   if (!FinalIrFilename.empty()) {
