@@ -36,7 +36,7 @@ def svcomp_frontend(args):
       args.bit_precise = True
       args.bit_precise_pointers = True
       #args.verifier = 'boogie'
-      args.time_limit = 890
+      args.time_limit = 1000
       args.unroll = 100
     args.execute = executable
   else:
