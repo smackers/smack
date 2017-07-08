@@ -35,19 +35,6 @@ std::map<int, std::string> SignedIntegerOverflowChecker::INT_MIN_TABLE {
   {64, "-9223372036854775808"}
 };
 
-void SignedIntegerOverflowChecker::replaceValue(Value* ee, Value* er) {
-  for (auto u : ee->users()) {
-    if (auto inst = dyn_cast<Instruction>(u)) {
-      if (inst != cast<Instruction>(ee)) {
-        for (unsigned i = 0; i < inst->getNumOperands(); ++i) {
-          if (inst->getOperand(i) == ee)
-            inst->setOperand(i, er);
-        }
-      }
-    }
-  }
-}
-
 bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
   DataLayout* dataLayout = new DataLayout(&m);
   Function* va = m.getFunction("__SMACK_overflow_false");
@@ -70,25 +57,27 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
               std::string op = ar->begin()[1].str();
               std::string len = ar->begin()[2].str();
               int bits = std::stoi(len);
-              if (ei->getIndices()[0] == 0) {
+              if (ei->getIndices()[0] == 1) {
+                Instruction* prev = &*std::prev(I);
                 Value* o1 = ci->getArgOperand(0);
                 Value* o2 = ci->getArgOperand(1);
                 CastInst* so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
                 CastInst* so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
                 BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), so1, so2, "", &*I);
-                CastInst* tr = CastInst::CreateTruncOrBitCast(ai, IntegerType::get(F.getContext(), bits), "", &*I);
-                //replaceValue(&*I, tr);
-                (*I).replaceAllUsesWith(tr);
-                //I->eraseFromParent();
-              }
-              if (ei->getIndices()[0] == 1) {
-                auto ai = std::prev(std::prev(std::prev(I)));
+                if (prev && isa<ExtractValueInst>(prev)) {
+                  ExtractValueInst* pei = cast<ExtractValueInst>(prev);
+                  if (auto pci = dyn_cast<CallInst>(pei->getAggregateOperand())) {
+                    if (pci == ci) {
+                      CastInst* tr = CastInst::CreateTruncOrBitCast(ai, IntegerType::get(F.getContext(), bits), "", &*I);
+                      prev->replaceAllUsesWith(tr);
+                    }
+                  }
+                }
                 ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MAX_TABLE.at(bits), 10);
                 ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MIN_TABLE.at(bits), 10);
-                ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, &*ai, max, "");
-                ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, &*ai, min, "");
+                ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, ai, max, "");
+                ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, ai, min, "");
                 BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
-                //replaceValue(&*I, flag);
                 (*I).replaceAllUsesWith(flag);
               }
             }
@@ -110,7 +99,6 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
             CallInst* ci = CallInst::Create(co, {tf}, "", &*I);
             CastInst* tv = CastInst::CreateTruncOrBitCast(lsdi, sdi->getType(), "", &*I);
-            //replaceValue(&*I, tv);
             (*I).replaceAllUsesWith(tv);
           }
         }
