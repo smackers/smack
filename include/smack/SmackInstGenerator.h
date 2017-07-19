@@ -37,7 +37,7 @@ private:
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
-  const Stmt* recordProcedureCall(llvm::Value* V, std::list<const Attr*> attrs);
+  std::list<const Stmt*> recording(llvm::Value* V, std::list<const Attr*> attrs);
 
 public:
   void emit(const Stmt* s) {

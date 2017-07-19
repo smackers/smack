@@ -42,9 +42,14 @@ std::string i2s(const llvm::Instruction& i) {
   return s;
 }
 
-const Stmt* SmackInstGenerator::recordProcedureCall(
+std::list<const Stmt*> SmackInstGenerator::recording(
     llvm::Value* V, std::list<const Attr*> attrs) {
-  return Stmt::call("boogie_si_record_" + rep.type(V), {rep.expr(V)}, {}, attrs);
+  std::list<const Stmt*> stmts;
+  auto type = rep.type(V);
+  stmts.push_back(Stmt::call("boogie_si_record_" + type, {rep.expr(V)}, {}, attrs));
+  if (type == Naming::PTR_TYPE)
+    stmts.push_back(Stmt::call("boogie_si_record_map", {Expr::id(rep.memReg(V))}, {}, attrs));
+  return stmts;
 }
 
 Block* SmackInstGenerator::createBlock() {
@@ -136,10 +141,11 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
         break;
       }
     }
-    emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming.get(*F))}));
-    for (auto& A : F->getArgumentList()) {
-      emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming.get(*F) + ":" + naming.get(A))}));
-    }
+    for (auto& S : recording(F, {Attr::attr("cexpr", "smack:entry:" + naming.get(*F))}))
+      emit(S);
+    for (auto& A : F->getArgumentList())
+      for (auto& S : recording(&A, {Attr::attr("cexpr", "smack:arg:" + naming.get(*F) + ":" + naming.get(A))}))
+        emit(S);
   }
 }
 
@@ -648,7 +654,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
 
   if ((naming.get(*f).find("__SMACK") == 0 || naming.get(*f).find("__VERIFIER") == 0)
       && !f->getReturnType()->isVoidTy()) {
-    emit(recordProcedureCall(&ci, {Attr::attr("cexpr", "smack:ext:" + naming.get(*f))}));
+    for (auto& S : recording(&ci, {Attr::attr("cexpr", "smack:ext:" + naming.get(*f))}))
+      emit(S);
   }
 }
 

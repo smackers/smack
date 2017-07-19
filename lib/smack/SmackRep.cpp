@@ -245,6 +245,10 @@ std::string SmackRep::memPath(unsigned region) {
   return memReg(region);
 }
 
+std::string SmackRep::memReg(const llvm::Value* v) {
+  return memReg(regions.idx(v));
+}
+
 bool SmackRep::isExternal(const llvm::Value* v) {
   return v->getType()->isPointerTy()
       && !regions.get(regions.idx(v)).isAllocated();

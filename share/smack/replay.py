@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import subprocess
@@ -63,11 +64,17 @@ def extract(line):
   return match and [match.group(1), match.group(2)]
 
 
+def parse_value(val):
+  return json.loads(re.sub(r"[() ]", "", val))
+
+
 def extract_values(trace):
   arguments = {}
   return_values = {}
 
   for key, val in filter(lambda x: x, map(extract, trace.split('\n'))):
+    val = parse_value(val)
+
     if 'smack:entry:' in key:
       _, _, fn = key.split(':')
       arguments[fn] = []
@@ -89,6 +96,45 @@ def extract_values(trace):
 
   return arguments, return_values
 
+def entrypoint_parameters(arguments):
+  declarations = []
+  parameters = []
+  count = 0
+  for arg in arguments:
+    if type(arg) is dict:
+      name = "ary%d" % count
+      base = int(parameters.pop())
+      if len(arg) > 1:
+        # NOTE this is an unreliable approximation of the array size taken from
+        # the biggest index mentioned in the error model. The generated program
+        # will happily segfault if any accesses outside of this approximate
+        # bound are made.
+        biggest = int(max(arg, key=arg.get))
+      else:
+        # NOTE this is an arbitrary default value
+        biggest = 999999
+      size = biggest - base + 1
+      default = int(arg['*'])
+      declarations.append("void* %s[%d];" % (name, size))
+      declarations.append("memset(%s,%d,%d);" % (name, default, size))
+      for idx, val in arg.items():
+        if idx == '*':
+          pass
+        else:
+          # NOTE this offset calculation assumes that the array is an array of
+          # 64-bit values, e.g., 64-bit pointers. While this is fine for the
+          # usual `char** argv` parameter to `main` on 64-bit architectures,
+          # this would not work for `argv` on 32-bit architectures, nor arrays
+          # of 8-bit, 16-bit, or 32-bit integers as parameters (on any
+          # architecture). Ultimately this type information ought to be passed
+          # down from the llvm-to-bpl translation.
+          offset = (int(idx) - base) / 8
+          declarations.append("%s[%d] = %d;" % (name, offset, int(val)))
+      parameters.append(name)
+      count += 1
+    else:
+      parameters.append(str(arg))
+  return declarations, parameters
 
 def harness(arguments, return_values, missing_definitions):
   code = []
@@ -142,15 +188,18 @@ void %(fn)s() {
     print "warning: no entrypoint argument annotations found"
 
   for fn, args in arguments.items():
+    declarations, parameters = entrypoint_parameters(args)
     code.append("""// entry point wrapper
 int _smack_replay_main() {
+  %(decls)s
   %(fn)s(%(vals)s);
   return 0;
 }
 int smack_replay_main() {
+  %(decls)s
   %(fn)s(%(vals)s);
   return 0;
 }
-""" % {'fn': fn, 'vals': ", ".join(args)})
+""" % {'decls': "\n  ".join(declarations), 'fn': fn, 'vals': ", ".join(parameters)})
 
   return "\n".join(code)

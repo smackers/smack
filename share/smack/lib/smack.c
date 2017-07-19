@@ -1986,6 +1986,8 @@ void __SMACK_decls() {
   D("procedure boogie_si_record_mop(m: $mop);");
   D("const $MOP: $mop;");
 
+  D("procedure boogie_si_record_map(m: [ref] ref);");
+
   DECLARE(RECORD_PROC, bool);
   DECLARE(RECORD_PROC, i1);
   DECLARE(RECORD_PROC, i8);
@@ -2324,4 +2326,3 @@ void *realloc (void *__ptr, size_t __size) {
   return malloc(__size);
 }
 #endif
-
