@@ -69,6 +69,10 @@ static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
   llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+SplitStructs("split-structs", llvm::cl::desc("Split load/store instructions of LLVM struct types"),
+  llvm::cl::init(false));
+
 std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
 }
@@ -173,7 +177,9 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-  pass_manager.add(new smack::SplitStructLoadStore());
+
+  if (SplitStructs)
+    pass_manager.add(new smack::SplitStructLoadStore());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
