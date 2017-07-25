@@ -1,8 +1,5 @@
 #include "smack.h"
 
-//There exists a load/store instruction of type {i64, i32}
-//in function main, respectively.
-
 // @flag --split-structs
 // @expect error 
 

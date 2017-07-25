@@ -1,7 +1,6 @@
 #include "smack.h"
 
-//There exists a load/store instruction of type {i64, i32}
-//in function main, respectively.
+// The assertion will fail without flag `--split-structs`.
 
 // @flag --split-structs
 // @expect verified
