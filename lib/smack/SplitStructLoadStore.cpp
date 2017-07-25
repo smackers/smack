@@ -5,30 +5,26 @@ namespace smack {
 
 using namespace llvm;
 
-std::vector<Value*> getFirsts(std::vector<std::pair<Value*, unsigned> > lst)
-{
+std::vector<Value*> getFirsts(std::vector<std::pair<Value*, unsigned>> lst) {
     std::vector<Value*> ret;
     for (auto p = lst.begin(); p != lst.end(); ++p)
       ret.push_back(std::get<0>(*p));
     return ret;
 }
 
-std::vector<unsigned> getSeconds(std::vector<std::pair<Value*, unsigned> > lst)
-{
+std::vector<unsigned> getSeconds(std::vector<std::pair<Value*, unsigned>> lst) {
     std::vector<unsigned> ret;
     for (auto p = lst.begin()+1; p != lst.end(); ++p)
       ret.push_back(std::get<1>(*p));
     return ret;
 }
 
-bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB)
-{
+bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB) {
   std::vector<Instruction*> toRemove;
   for(Instruction& I : BB) {
     if (LoadInst* li = dyn_cast<LoadInst>(&I)) {
       bool isReturnValue = false;
-      for (auto u = li->user_begin(); u != li->user_end(); ++u)
-      {
+      for (auto u = li->user_begin(); u != li->user_end(); ++u) {
         if (auto ri = dyn_cast<ReturnInst>(*u)) {
           isReturnValue = true;
           break;
@@ -53,17 +49,16 @@ bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB)
   return true;
 }
 
-void SplitStructLoadStore::splitStructLoad(LoadInst* li)
-{
+void SplitStructLoadStore::splitStructLoad(LoadInst* li) {
   if (StructType* st = dyn_cast<StructType>(li->getType())) {
-    std::vector<std::pair<Value*, unsigned> > idx;
+    std::vector<std::pair<Value*, unsigned>> idx;
     IRBuilder<> irb(li);
     li->replaceAllUsesWith(buildStructs(&irb, li->getPointerOperand(), st, nullptr, idx));
   }
 }
 
-Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val, std::vector<std::pair<Value*, unsigned> > idxs)
-{
+Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
+                                            std::vector<std::pair<Value*, unsigned> > idxs) {
   LLVMContext& C = ptr->getContext();
   Value* cv = val? val : UndefValue::get(ct);
 
@@ -79,8 +74,7 @@ Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt64Ty(C),i), i));
       cv = buildStructs(irb, ptr, AT->getElementType(), cv, lidxs);
     }
-  }
-  else if (StructType* ST = dyn_cast<StructType>(ct)) {
+  } else if (StructType* ST = dyn_cast<StructType>(ct)) {
     for (unsigned i = ST->getNumElements(); i-- > 0; ) {
       std::vector<std::pair<Value*, unsigned> > lidxs(idxs);
       if (lidxs.empty())
@@ -93,17 +87,16 @@ Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct
   return cv;
 }
 
-void SplitStructLoadStore::splitStructStore(StoreInst* si, Value* ptr, Value* val)
-{
+void SplitStructLoadStore::splitStructStore(StoreInst* si, Value* ptr, Value* val) {
   if (StructType* st = dyn_cast<StructType>(val->getType())) {
-    std::vector<std::pair<Value*, unsigned> > idx;
+    std::vector<std::pair<Value*, unsigned>> idx;
     IRBuilder<> irb(si);
     copyStructs(&irb, ptr, st, val, idx);
   }
 }
 
-void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val, std::vector<std::pair<Value*, unsigned> > idxs)
-{
+void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
+                                        std::vector<std::pair<Value*, unsigned> > idxs) {
   LLVMContext& C = ptr->getContext();
   Constant* cv = dyn_cast<Constant>(val);
 
@@ -112,11 +105,10 @@ void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, V
     if (cv)
       irb->CreateStore(val, irb->CreateGEP(ptr, ArrayRef<Value*>(vidxs)));
     else
-      irb->CreateStore(
-        irb->CreateExtractValue(val, ArrayRef<unsigned>(getSeconds(idxs))),
+      irb->CreateStore(irb->CreateExtractValue(
+        val, ArrayRef<unsigned>(getSeconds(idxs))),
           irb->CreateGEP(ptr, ArrayRef<Value*>(vidxs)));
-  }
-  else if (ArrayType* AT = dyn_cast<ArrayType>(ct)) {
+  } else if (ArrayType* AT = dyn_cast<ArrayType>(ct)) {
     for (unsigned i = AT->getNumElements(); i-- > 0; ) {
       auto A = cv? cv->getAggregateElement(i) : val;
       std::vector<std::pair<Value*, unsigned> > lidxs(idxs);
@@ -125,8 +117,7 @@ void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, V
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt64Ty(C),i), i));
       copyStructs(irb, ptr, AT->getElementType(), A, lidxs);
     }
-  }
-  else if (StructType* ST = dyn_cast<StructType>(ct)) {
+  } else if (StructType* ST = dyn_cast<StructType>(ct)) {
     for (unsigned i = ST->getNumElements(); i-- > 0; ) {
       auto A = cv? cv->getAggregateElement(i) : val;
       std::vector<std::pair<Value*, unsigned> > lidxs(idxs);

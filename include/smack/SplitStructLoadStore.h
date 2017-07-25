@@ -22,8 +22,9 @@ public:
 
 private:
   void splitStructLoad(llvm::LoadInst* li);
-  llvm::Value* buildStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Type* ct, llvm::Value* val, std::vector<std::pair<llvm::Value*, unsigned> > idxs);
+  llvm::Value* buildStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Type* ct,
+                              llvm::Value* val, std::vector<std::pair<llvm::Value*, unsigned>> idxs);
   void splitStructStore(llvm::StoreInst* si, llvm::Value* ptr, llvm::Value* val);
-  void copyStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Type* ct, llvm::Value* val, std::vector<std::pair<llvm::Value*, unsigned> > idxs);
+  void copyStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Type* ct, llvm::Value* val, std::vector<std::pair<llvm::Value*, unsigned>> idxs);
 };
 }
