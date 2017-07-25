@@ -50,11 +50,9 @@ bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB) {
 }
 
 void SplitStructLoadStore::splitStructLoad(LoadInst* li) {
-  if (StructType* st = dyn_cast<StructType>(li->getType())) {
-    std::vector<std::pair<Value*, unsigned>> idx;
-    IRBuilder<> irb(li);
-    li->replaceAllUsesWith(buildStructs(&irb, li->getPointerOperand(), st, nullptr, idx));
-  }
+  std::vector<std::pair<Value*, unsigned>> idx;
+  IRBuilder<> irb(li);
+  li->replaceAllUsesWith(buildStructs(&irb, li->getPointerOperand(), li->getType(), nullptr, idx));
 }
 
 Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
@@ -82,17 +80,16 @@ Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),i), i));
       cv = buildStructs(irb, ptr, ST->getElementType(i), cv, lidxs);
     }
-  }
+  } else
+    llvm_unreachable("Unsupported types");
 
   return cv;
 }
 
 void SplitStructLoadStore::splitStructStore(StoreInst* si, Value* ptr, Value* val) {
-  if (StructType* st = dyn_cast<StructType>(val->getType())) {
-    std::vector<std::pair<Value*, unsigned>> idx;
-    IRBuilder<> irb(si);
-    copyStructs(&irb, ptr, st, val, idx);
-  }
+  std::vector<std::pair<Value*, unsigned>> idx;
+  IRBuilder<> irb(si);
+  copyStructs(&irb, ptr, val->getType(), val, idx);
 }
 
 void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
@@ -126,7 +123,8 @@ void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, V
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),i), i));
       copyStructs(irb, ptr, ST->getElementType(i), A, lidxs);
     }
-  }
+  } else
+    llvm_unreachable("Unsupported types");
 }
 // Pass ID variable
 char SplitStructLoadStore::ID = 0;
