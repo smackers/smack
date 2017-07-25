@@ -21,30 +21,29 @@ std::vector<unsigned> getSeconds(std::vector<std::pair<Value*, unsigned> > lst)
     return ret;
 }
 
-bool SplitStructLoadStore::runOnModule(Module& M)
+bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB)
 {
-  DL = &M.getDataLayout();
-
-  for (auto& F : M) {
-    for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-      if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {
-        bool isReturnValue = false;
-        for (auto u = li->user_begin(); u != li->user_end(); ++u)
-        {
-          if (auto ri = dyn_cast<ReturnInst>(*u)) {
-            isReturnValue = true;
-            break;
-          }
+  std::vector<Instruction*> toRemove;
+  for(Instruction& I : BB) {
+    if (LoadInst* li = dyn_cast<LoadInst>(&I)) {
+      bool isReturnValue = false;
+      for (auto u = li->user_begin(); u != li->user_end(); ++u)
+      {
+        if (auto ri = dyn_cast<ReturnInst>(*u)) {
+          isReturnValue = true;
+          break;
         }
-        if (!isReturnValue && li->getType()->isAggregateType()) {
-          splitStructLoad(li);
-        }
-      } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
-        Value* P = si->getPointerOperand();
-        Value* V = si->getOperand(0)->stripPointerCasts();
-        if (V->getType()->isAggregateType()) {
-          splitStructStore(si, P, V);
-        }
+      }
+      if (!isReturnValue && li->getType()->isAggregateType()) {
+        splitStructLoad(li);
+        toRemove.push_back(li);
+      }
+    } else if (StoreInst* si = dyn_cast<StoreInst>(&I)) {
+      Value* P = si->getPointerOperand();
+      Value* V = si->getOperand(0)->stripPointerCasts();
+      if (V->getType()->isAggregateType()) {
+        splitStructStore(si, P, V);
+        toRemove.push_back(si);
       }
     }
   }
@@ -60,7 +59,6 @@ void SplitStructLoadStore::splitStructLoad(LoadInst* li)
     std::vector<std::pair<Value*, unsigned> > idx;
     IRBuilder<> irb(li);
     li->replaceAllUsesWith(buildStructs(&irb, li->getPointerOperand(), st, nullptr, idx));
-    toRemove.push_back(li);
   }
 }
 
@@ -101,7 +99,6 @@ void SplitStructLoadStore::splitStructStore(StoreInst* si, Value* ptr, Value* va
     std::vector<std::pair<Value*, unsigned> > idx;
     IRBuilder<> irb(si);
     copyStructs(&irb, ptr, st, val, idx);
-    toRemove.push_back(si);
   }
 }
 

@@ -13,16 +13,14 @@
 
 namespace smack {
 
-class SplitStructLoadStore : public llvm::ModulePass {
+class SplitStructLoadStore : public llvm::BasicBlockPass {
 public:
   static char ID;
 
-  SplitStructLoadStore() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& M);
-private:
-  const llvm::DataLayout* DL;
-  std::vector<llvm::Instruction*> toRemove;
+  SplitStructLoadStore() : llvm::BasicBlockPass(ID) {}
+  virtual bool runOnBasicBlock(llvm::BasicBlock& BB);
 
+private:
   void splitStructLoad(llvm::LoadInst* li);
   llvm::Value* buildStructs(llvm::IRBuilder<> *irb, llvm::Value* ptr, llvm::Type* ct, llvm::Value* val, std::vector<std::pair<llvm::Value*, unsigned> > idxs);
   void splitStructStore(llvm::StoreInst* si, llvm::Value* ptr, llvm::Value* val);
