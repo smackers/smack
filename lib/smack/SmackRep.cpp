@@ -246,7 +246,7 @@ std::string SmackRep::memPath(unsigned region) {
 }
 
 std::string SmackRep::memReg(const llvm::Value* v) {
-  return memReg(regions.idx(v));
+  return memReg(regions.idx(v, true));
 }
 
 bool SmackRep::isExternal(const llvm::Value* v) {

@@ -57,7 +57,7 @@ public:
 class Regions : public ModulePass, public InstVisitor<Regions> {
 private:
   std::vector<Region> regions;
-  unsigned idx(Region& R);
+  unsigned idx(Region& R, bool query);
 
 public:
   static char ID;
@@ -66,8 +66,8 @@ public:
   virtual bool runOnModule(llvm::Module& M);
 
   unsigned size() const;
-  unsigned idx(const llvm::Value* v);
-  unsigned idx(const llvm::Value* v, unsigned length);
+  unsigned idx(const llvm::Value* v, bool query = false);
+  unsigned idx(const llvm::Value* v, unsigned length, bool query = false);
   Region& get(unsigned R);
 
   // void visitModule(Module& M) {

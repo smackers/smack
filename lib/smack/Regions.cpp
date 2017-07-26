@@ -218,7 +218,7 @@ Region& Regions::get(unsigned R) {
   return regions[R];
 }
 
-unsigned Regions::idx(const Value* V) {
+unsigned Regions::idx(const Value* V, bool query) {
   DEBUG(
     errs() << "[regions] for: " << *V << "\n";
     auto U = V;
@@ -231,10 +231,10 @@ unsigned Regions::idx(const Value* V) {
     }
   );
   Region R(V);
-  return idx(R);
+  return idx(R, query);
 }
 
-unsigned Regions::idx(const Value* V, unsigned length) {
+unsigned Regions::idx(const Value* V, unsigned length, bool query) {
   DEBUG(
     errs() << "[regions] for: " << *V << " with length " << length << "\n";
     auto U = V;
@@ -247,10 +247,10 @@ unsigned Regions::idx(const Value* V, unsigned length) {
     }
   );
   Region R(V,length);
-  return idx(R);
+  return idx(R, query);
 }
 
-unsigned Regions::idx(Region& R) {
+unsigned Regions::idx(Region& R, bool query) {
   unsigned r;
 
   DEBUG(errs() << "[regions]   using region: ");
@@ -264,20 +264,23 @@ unsigned Regions::idx(Region& R) {
       DEBUG(regions[r].print(errs()));
       DEBUG(errs() << "\n");
 
-      regions[r].merge(R);
-
-      DEBUG(errs() << "[regions]   merged region: ");
-      DEBUG(regions[r].print(errs()));
-      DEBUG(errs() << "\n");
+      if (!query) {
+        regions[r].merge(R);
+        DEBUG(errs() << "[regions]   merged region: ");
+        DEBUG(regions[r].print(errs()));
+        DEBUG(errs() << "\n");
+      }
 
       break;
     }
   }
 
+  assert((r != regions.size() || !query) && "queried region not found");
+
   if (r == regions.size())
     regions.emplace_back(R);
 
-  else {
+  else if (!query) {
     // Here is the tricky part: in case R was merged with an existing region,
     // we must now also merge any other region which intersects with R.
     unsigned q = r+1;
