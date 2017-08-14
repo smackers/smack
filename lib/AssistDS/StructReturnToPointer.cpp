@@ -110,9 +110,26 @@ bool StructRet::runOnModule(Module& M) {
         ReturnInst * RI = dyn_cast<ReturnInst>(I++);
         if(!RI)
           continue;
-        LoadInst *LI = dyn_cast<LoadInst>(RI->getOperand(0));
-        assert(LI && "Return should be preceded by a load instruction");
         IRBuilder<> Builder(RI);
+        LoadInst *LI = dyn_cast<LoadInst>(RI->getOperand(0));
+        if (!LI) {
+          ConstantStruct* CS = dyn_cast<ConstantStruct>(RI->getReturnValue());
+          assert(CS && "Return should be preceded by a load instruction or is a constant");
+
+          StructType* ST = CS->getType();
+          AllocaInst* AI = Builder.CreateAlloca(ST);
+          // We could store the struct into the just allocated space
+          // and then load it once SMACK can handle store inst of structs.
+          for (unsigned i = 0; i < ST->getNumElements(); ++i) {
+            std::vector<Value*> idxs = {ConstantInt::get(Type::getInt32Ty(CS->getContext()),0),
+                ConstantInt::get(Type::getInt32Ty(CS->getContext()),i)};
+            Builder.CreateStore(CS->getAggregateElement(i),
+                Builder.CreateGEP(AI, ArrayRef<Value*>(idxs)));
+          }
+          LI = Builder.CreateLoad(ST, AI);
+          assert(RI->getNumOperand == 1 && "Return should only have one operand");
+          RI->setOperand(0, LI);
+        }
         Builder.CreateMemCpy(fargs.at(0),
             LI->getPointerOperand(),
             targetData.getTypeStoreSize(LI->getType()),
