@@ -39,7 +39,7 @@
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/SignedIntegerOverflowChecker.h"
-#include "smack/SplitStructLoadStore.h"
+#include "smack/SplitAggregateLoadStore.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -70,7 +70,7 @@ Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive veri
   llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
-SplitStructs("split-structs", llvm::cl::desc("Split load/store instructions of LLVM struct types"),
+SplitStructs("split-aggregate-values", llvm::cl::desc("Split load/store instructions of LLVM aggregate types"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::Devirtualize());
 
   if (SplitStructs)
-    pass_manager.add(new smack::SplitStructLoadStore());
+    pass_manager.add(new smack::SplitAggregateLoadStore());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());

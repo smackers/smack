@@ -1,4 +1,4 @@
-#include "smack/SplitStructLoadStore.h"
+#include "smack/SplitAggregateLoadStore.h"
 #include "llvm/IR/InstIterator.h"
 
 namespace smack {
@@ -19,8 +19,7 @@ std::vector<unsigned> getSeconds(std::vector<std::pair<Value*, unsigned>> lst) {
     return ret;
 }
 
-static bool isUsedByReturnInst(Value* v)
-{
+static bool isUsedByReturnInst(Value* v) {
   for (auto u = v->user_begin(); u != v->user_end(); ++u) {
     if (isa<ReturnInst>(*u)) {
       return true;
@@ -29,19 +28,19 @@ static bool isUsedByReturnInst(Value* v)
   return false;
 }
 
-bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB) {
+bool SplitAggregateLoadStore::runOnBasicBlock(BasicBlock& BB) {
   std::vector<Instruction*> toRemove;
   for(Instruction& I : BB) {
     if (LoadInst* li = dyn_cast<LoadInst>(&I)) {
       if (!isUsedByReturnInst(li) && li->getType()->isAggregateType()) {
-        splitStructLoad(li);
+        splitAggregateLoad(li);
         toRemove.push_back(li);
       }
     } else if (StoreInst* si = dyn_cast<StoreInst>(&I)) {
       Value* P = si->getPointerOperand();
       Value* V = si->getOperand(0)->stripPointerCasts();
       if (V->getType()->isAggregateType()) {
-        splitStructStore(si, P, V);
+        splitAggregateStore(si, P, V);
         toRemove.push_back(si);
       }
     }
@@ -52,13 +51,13 @@ bool SplitStructLoadStore::runOnBasicBlock(BasicBlock& BB) {
   return true;
 }
 
-void SplitStructLoadStore::splitStructLoad(LoadInst* li) {
+void SplitAggregateLoadStore::splitAggregateLoad(LoadInst* li) {
   std::vector<std::pair<Value*, unsigned>> idx;
   IRBuilder<> irb(li);
-  li->replaceAllUsesWith(buildStructs(&irb, li->getPointerOperand(), li->getType(), nullptr, idx));
+  li->replaceAllUsesWith(buildAggregateValues(&irb, li->getPointerOperand(), li->getType(), nullptr, idx));
 }
 
-Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
+Value* SplitAggregateLoadStore::buildAggregateValues(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
                                             std::vector<std::pair<Value*, unsigned> > idxs) {
   LLVMContext& C = ptr->getContext();
   Value* cv = val? val : UndefValue::get(ct);
@@ -73,7 +72,7 @@ Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct
       if (lidxs.empty())
         lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt64Ty(C),i), i));
-      cv = buildStructs(irb, ptr, AT->getElementType(), cv, lidxs);
+      cv = buildAggregateValues(irb, ptr, AT->getElementType(), cv, lidxs);
     }
   } else if (StructType* ST = dyn_cast<StructType>(ct)) {
     for (unsigned i = 0; i < ST->getNumElements(); ++i) {
@@ -81,7 +80,7 @@ Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct
       if (lidxs.empty())
         lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),i), i));
-      cv = buildStructs(irb, ptr, ST->getElementType(i), cv, lidxs);
+      cv = buildAggregateValues(irb, ptr, ST->getElementType(i), cv, lidxs);
     }
   } else
     llvm_unreachable("Unsupported type");
@@ -89,13 +88,13 @@ Value* SplitStructLoadStore::buildStructs(IRBuilder<> *irb, Value* ptr, Type* ct
   return cv;
 }
 
-void SplitStructLoadStore::splitStructStore(StoreInst* si, Value* ptr, Value* val) {
+void SplitAggregateLoadStore::splitAggregateStore(StoreInst* si, Value* ptr, Value* val) {
   std::vector<std::pair<Value*, unsigned>> idx;
   IRBuilder<> irb(si);
-  copyStructs(&irb, ptr, val->getType(), val, idx);
+  copyAggregateValues(&irb, ptr, val->getType(), val, idx);
 }
 
-void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
+void SplitAggregateLoadStore::copyAggregateValues(IRBuilder<> *irb, Value* ptr, Type* ct, Value* val,
                                         std::vector<std::pair<Value*, unsigned> > idxs) {
   LLVMContext& C = ptr->getContext();
   Constant* cv = dyn_cast<Constant>(val);
@@ -115,7 +114,7 @@ void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, V
       if (lidxs.empty())
         lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt64Ty(C),i), i));
-      copyStructs(irb, ptr, AT->getElementType(), A, lidxs);
+      copyAggregateValues(irb, ptr, AT->getElementType(), A, lidxs);
     }
   } else if (StructType* ST = dyn_cast<StructType>(ct)) {
     for (unsigned i = 0; i < ST->getNumElements(); ++i) {
@@ -124,17 +123,17 @@ void SplitStructLoadStore::copyStructs(IRBuilder<> *irb, Value* ptr, Type* ct, V
       if (lidxs.empty())
         lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
       lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),i), i));
-      copyStructs(irb, ptr, ST->getElementType(i), A, lidxs);
+      copyAggregateValues(irb, ptr, ST->getElementType(i), A, lidxs);
     }
   } else
     llvm_unreachable("Unsupported type");
 }
 // Pass ID variable
-char SplitStructLoadStore::ID = 0;
+char SplitAggregateLoadStore::ID = 0;
 
 // Register the pass
-static RegisterPass<SplitStructLoadStore>
-X("split-struct-load-store", "Split Load/Store to Structures");
+static RegisterPass<SplitAggregateLoadStore>
+X("split-aggregate-load-store", "Split Load/Store to Aggregate Types");
 
 }
 
