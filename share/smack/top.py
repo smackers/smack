@@ -176,7 +176,7 @@ def arguments():
     help='enable bit-precise floating-point functions')
 
   translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
-    help='enable split load/store instructions of LLVM struct types')
+    help='enable splitting of load/store instructions of LLVM aggregate types')
 
 
   verifier_group = parser.add_argument_group('verifier options')

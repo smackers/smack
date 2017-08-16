@@ -1,3 +1,6 @@
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #include "smack/SplitAggregateLoadStore.h"
 #include "llvm/IR/InstIterator.h"
 
@@ -6,17 +9,17 @@ namespace smack {
 using namespace llvm;
 
 std::vector<Value*> getFirsts(std::vector<std::pair<Value*, unsigned>> lst) {
-    std::vector<Value*> ret;
-    for (auto& p : lst)
-      ret.push_back(std::get<0>(p));
-    return ret;
+  std::vector<Value*> ret;
+  for (auto& p : lst)
+    ret.push_back(std::get<0>(p));
+  return ret;
 }
 
 std::vector<unsigned> getSeconds(std::vector<std::pair<Value*, unsigned>> lst) {
-    std::vector<unsigned> ret;
-    for (auto p = lst.begin()+1; p != lst.end(); ++p)
-      ret.push_back(std::get<1>(*p));
-    return ret;
+  std::vector<unsigned> ret;
+  for (auto p = lst.begin()+1; p != lst.end(); ++p)
+    ret.push_back(std::get<1>(*p));
+  return ret;
 }
 
 static bool isUsedByReturnInst(Value* v) {
@@ -128,6 +131,7 @@ void SplitAggregateLoadStore::copyAggregateValues(IRBuilder<> *irb, Value* ptr, 
   } else
     llvm_unreachable("Unsupported type");
 }
+
 // Pass ID variable
 char SplitAggregateLoadStore::ID = 0;
 
