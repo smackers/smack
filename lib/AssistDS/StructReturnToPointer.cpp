@@ -111,11 +111,12 @@ bool StructRet::runOnModule(Module& M) {
         if(!RI)
           continue;
         IRBuilder<> Builder(RI);
-        LoadInst *LI = dyn_cast<LoadInst>(RI->getOperand(0));
-        if (!LI) {
-          ConstantStruct* CS = dyn_cast<ConstantStruct>(RI->getReturnValue());
-          assert(CS && "Return should be preceded by a load instruction or is a constant");
-
+        if (auto LI = dyn_cast<LoadInst>(RI->getOperand(0))) {
+          Builder.CreateMemCpy(fargs.at(0),
+              LI->getPointerOperand(),
+              targetData.getTypeStoreSize(LI->getType()),
+              targetData.getPrefTypeAlignment(LI->getType()));
+        } else if (auto CS = dyn_cast<ConstantStruct>(RI->getReturnValue())) {
           StructType* ST = CS->getType();
           // We could store the struct into the allocated space pointed by the first
           // argument and then load it once SMACK can handle store inst of structs.
@@ -128,10 +129,7 @@ bool StructRet::runOnModule(Module& M) {
           assert(RI->getNumOperand == 1 && "Return should only have one operand");
           RI->setOperand(0, UndefValue::get(ST));
         } else
-          Builder.CreateMemCpy(fargs.at(0),
-              LI->getPointerOperand(),
-              targetData.getTypeStoreSize(LI->getType()),
-              targetData.getPrefTypeAlignment(LI->getType()));
+          llvm_unreachable("Unexpected struct-type return value.");
       }
     }
 
