@@ -175,6 +175,9 @@ def arguments():
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
 
+  translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
+    help='enable split load/store instructions of LLVM struct types')
+
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -383,6 +386,7 @@ def llvm_to_bpl(args):
   if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
+  if args.split_aggregate_values: cmd += ['-split-aggregate-values']
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
