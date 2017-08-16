@@ -117,23 +117,21 @@ bool StructRet::runOnModule(Module& M) {
           assert(CS && "Return should be preceded by a load instruction or is a constant");
 
           StructType* ST = CS->getType();
-          AllocaInst* AI = Builder.CreateAlloca(ST);
-          // We could store the struct into the just allocated space
-          // and then load it once SMACK can handle store inst of structs.
+          // We could store the struct into the allocated space pointed by the first
+          // argument and then load it once SMACK can handle store inst of structs.
           for (unsigned i = 0; i < ST->getNumElements(); ++i) {
             std::vector<Value*> idxs = {ConstantInt::get(Type::getInt32Ty(CS->getContext()),0),
                 ConstantInt::get(Type::getInt32Ty(CS->getContext()),i)};
             Builder.CreateStore(CS->getAggregateElement(i),
-                Builder.CreateGEP(AI, ArrayRef<Value*>(idxs)));
+                Builder.CreateGEP(fargs.at(0), ArrayRef<Value*>(idxs)));
           }
-          LI = Builder.CreateLoad(ST, AI);
           assert(RI->getNumOperand == 1 && "Return should only have one operand");
-          RI->setOperand(0, LI);
-        }
-        Builder.CreateMemCpy(fargs.at(0),
-            LI->getPointerOperand(),
-            targetData.getTypeStoreSize(LI->getType()),
-            targetData.getPrefTypeAlignment(LI->getType()));
+          RI->setOperand(0, UndefValue::get(ST));
+        } else
+          Builder.CreateMemCpy(fargs.at(0),
+              LI->getPointerOperand(),
+              targetData.getTypeStoreSize(LI->getType()),
+              targetData.getPrefTypeAlignment(LI->getType()));
       }
     }
 
