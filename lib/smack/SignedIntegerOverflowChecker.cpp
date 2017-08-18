@@ -36,7 +36,6 @@ std::map<int, std::string> SignedIntegerOverflowChecker::INT_MIN_TABLE {
 };
 
 bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
-  DataLayout* dataLayout = new DataLayout(&m);
   Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
 
@@ -97,7 +96,6 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, lsdi, min, "");
             BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
             CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
-            CallInst* ci = CallInst::Create(co, {tf}, "", &*I);
             CastInst* tv = CastInst::CreateTruncOrBitCast(lsdi, sdi->getType(), "", &*I);
             (*I).replaceAllUsesWith(tv);
           }
