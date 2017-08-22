@@ -1,0 +1,10 @@
+[package]
+name = "ifc"
+version = "0.1.0"
+authors = ["Leonid Ryzhyk <l.ryzhyk@samsung.com>"]
+
+[dependencies]
+
+[features]
+
+verify = []
