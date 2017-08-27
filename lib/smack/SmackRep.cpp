@@ -984,7 +984,7 @@ std::string SmackRep::getPrelude() {
   else if (ptrSizeInBits == 64)
     malloc_top = 9223372036854775807UL;
   else
-    llvm_unreachable("Unexpected point bit width.");
+    llvm_unreachable("Unexpected pointer bit width.");
   s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit(malloc_top))) << "\n";
   s << "\n";
 
@@ -1012,8 +1012,10 @@ std::string SmackRep::getPrelude() {
     else if (ptrSizeInBits == 64)
       offset = "18446744073709551616";
     else
-      llvm_unreachable("Unexpected point bit width.");
-    s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, Expr::cond(Expr::fn(indexedName("$slt", {bt, "bool"}), {arg, Expr::lit(0UL, ptrSizeInBits)}), Expr::fn(indexedName("$sub", {it}), {uint, Expr::lit(offset, 0U)}), uint), {Attr::attr("inline")});
+      llvm_unreachable("Unexpected pointer bit width.");
+    s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it,
+      Expr::cond(Expr::fn(indexedName("$slt", {bt, "bool"}), {arg, Expr::lit(0UL, ptrSizeInBits)}),
+        Expr::fn(indexedName("$sub", {it}), {uint, Expr::lit(offset, 0U)}), uint), {Attr::attr("inline")});
   } else
     s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << "\n";
   s << "\n";
