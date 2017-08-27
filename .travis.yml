@@ -20,7 +20,7 @@ before_install:
   - pip install pyyaml psutil
   - sudo rm -rf /usr/local/clang-3.5.0
   - sudo add-apt-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main"
-  - wget -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+  - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
   - sudo apt-get update
 
 install:
