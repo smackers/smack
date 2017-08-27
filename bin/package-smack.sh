@@ -6,7 +6,7 @@
 # Note: this script requires CDE to be downloaded from
 # http://www.pgbovine.net/cde.html
 
-VERSION=1.8.0
+VERSION=1.8.1
 PACKAGE=smack-$VERSION-64
 
 # Create folder to export
