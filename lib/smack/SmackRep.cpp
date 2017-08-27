@@ -978,7 +978,14 @@ std::string SmackRep::getPrelude() {
   s << "// Memory address bounds" << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM),pointerLit(globalsBottom))) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM),pointerLit(externsBottom))) << "\n";
-  s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit((unsigned long) INT_MAX - 10485760))) << "\n";
+  unsigned long malloc_top;
+  if (ptrSizeInBits == 32)
+    malloc_top = 2147483647UL;
+  else if (ptrSizeInBits == 64)
+    malloc_top = 9223372036854775807UL;
+  else
+    llvm_unreachable("Unexpected pointer bit width.");
+  s << Decl::axiom(Expr::eq(Expr::id(Naming::MALLOC_TOP),pointerLit(malloc_top))) << "\n";
   s << "\n";
 
   if (SmackOptions::MemorySafety) {
@@ -994,8 +1001,23 @@ std::string SmackRep::getPrelude() {
   std::string b = std::to_string(ptrSizeInBits);
   std::string bt = "bv" + b;
   std::string it = "i" + b;
-  s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << "\n";
   s << Decl::function(indexedName("$int2bv",{ptrSizeInBits}), {{"i",it}}, bt, NULL, {Attr::attr("builtin", "(_ int2bv " + b + ")")}) << "\n";
+  if (SmackOptions::BitPrecise) {
+    s << Decl::function(indexedName("$bv2uint",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << "\n";
+    const Expr* arg = Expr::id("i");
+    const Expr* uint = Expr::fn(indexedName("$bv2uint", {ptrSizeInBits}), arg);
+    std::string offset;
+    if (ptrSizeInBits == 32)
+      offset = "4294967296";
+    else if (ptrSizeInBits == 64)
+      offset = "18446744073709551616";
+    else
+      llvm_unreachable("Unexpected pointer bit width.");
+    s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it,
+      Expr::cond(Expr::fn(indexedName("$slt", {bt, "bool"}), {arg, Expr::lit(0UL, ptrSizeInBits)}),
+        Expr::fn(indexedName("$sub", {it}), {uint, Expr::lit(offset, 0U)}), uint), {Attr::attr("inline")});
+  } else
+    s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << "\n";
   s << "\n";
 
   if (SmackOptions::BitPrecise) {

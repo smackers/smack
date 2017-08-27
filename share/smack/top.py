@@ -12,7 +12,7 @@ from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
 
-VERSION = '1.8.0'
+VERSION = '1.8.1'
 
 def frontends():
   """A dictionary of front-ends per file extension."""
