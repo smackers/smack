@@ -7,7 +7,7 @@
 #include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Analysis/LoopInfo.h"

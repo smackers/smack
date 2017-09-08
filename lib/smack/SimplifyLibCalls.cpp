@@ -7,7 +7,7 @@
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"
 #include "smack/SimplifyLibCalls.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 

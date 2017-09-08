@@ -20,7 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 
 #include <set>
 #include <map>
@@ -126,7 +126,7 @@ bool StructRet::runOnModule(Module& M) {
             Builder.CreateStore(CS->getAggregateElement(i),
                 Builder.CreateGEP(fargs.at(0), ArrayRef<Value*>(idxs)));
           }
-          assert(RI->getNumOperand == 1 && "Return should only have one operand");
+          assert(RI->getNumOperands() == 1 && "Return should only have one operand");
           RI->setOperand(0, UndefValue::get(ST));
         } else
           llvm_unreachable("Unexpected struct-type return value.");

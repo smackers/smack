@@ -7,7 +7,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Regex.h"
