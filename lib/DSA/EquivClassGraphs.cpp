@@ -21,7 +21,7 @@
 #include "llvm/Pass.h"
 #include "dsa/DSGraph.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/EquivalenceClasses.h"

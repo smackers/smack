@@ -18,6 +18,7 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
+  string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
@@ -174,6 +175,7 @@ add_library(smackTranslator STATIC
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
+  lib/smack/Debug.cpp
   lib/smack/DSAWrapper.cpp
   lib/smack/Naming.cpp
   lib/smack/Regions.cpp

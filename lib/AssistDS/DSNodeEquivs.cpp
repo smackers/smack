@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/ADT/SmallSet.h"
+#include "smack/Debug.h"
 
 #include <deque>
 

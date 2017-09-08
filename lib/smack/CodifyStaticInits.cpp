@@ -9,7 +9,7 @@
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/IR/DataLayout.h"

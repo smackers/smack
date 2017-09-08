@@ -10,6 +10,7 @@
 #include "smack/SmackOptions.h"
 #include "smack/DSAWrapper.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "smack/Debug.h"
 
 #define DEBUG_TYPE "regions"
 

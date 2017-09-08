@@ -7,7 +7,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include <vector>
 #include <queue>
 #include <set>
