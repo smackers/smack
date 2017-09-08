@@ -65,7 +65,7 @@ DSGraph *DSAWrapper::getGraphForValue(const Value *V) {
 int DSAWrapper::getOffset(const MemoryLocation* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
   DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
-  return I == S.end() ? 0 : I->second.getNode()->isCollapsedNode() ? -1 : I->second.getOffset();
+  return I == S.end() ? 0 : I->second.getNode() && I->second.getNode()->isCollapsedNode() ? -1 : I->second.getOffset();
 }
 
 bool DSAWrapper::isMemcpyd(const llvm::DSNode* n) {
