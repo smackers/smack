@@ -9,6 +9,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/Naming.h"
 #include "smack/Regions.h"
+#include "smack/Debug.h"
 
 #include <list>
 #include <queue>
