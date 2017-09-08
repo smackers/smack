@@ -3,6 +3,11 @@
 //
 #define DEBUG_TYPE "smack-mod-gen"
 #include "smack/SmackModuleGenerator.h"
+#include "smack/SmackInstGenerator.h"
+#include "smack/BoogieAst.h"
+#include "smack/Naming.h"
+#include "smack/Regions.h"
+#include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 
 namespace smack {
@@ -10,11 +15,26 @@ namespace smack {
 llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
 char SmackModuleGenerator::ID = 0;
 
+SmackModuleGenerator::SmackModuleGenerator() : ModulePass(ID) {
+  program = new Program();
+}
+
+void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage& AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<llvm::LoopInfoWrapperPass>();
+  AU.addRequired<Regions>();
+}
+
+bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
+  generateProgram(m);
+  return false;
+}
+
 void SmackModuleGenerator::generateProgram(llvm::Module& M) {
 
   Naming naming;
-  SmackRep rep(&M.getDataLayout(), naming, program, getAnalysis<Regions>());
-  std::list<Decl*>& decls = program.getDeclarations();
+  SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>());
+  std::list<Decl*>& decls = program->getDeclarations();
 
   DEBUG(errs() << "Analyzing globals...\n");
 
@@ -48,7 +68,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
       DEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
       for (auto P : procs) {
-        SmackInstGenerator igen(getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), rep, *P, naming);
+        SmackInstGenerator igen(getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), &rep, P, &naming);
         DEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
         igen.visit(F);
         DEBUG(errs() << "\n");
@@ -73,10 +93,10 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
 
   // NOTE we must do this after instruction generation, since we would not
   // otherwise know how many regions to declare.
-  program.appendPrelude(rep.getPrelude());
+  program->appendPrelude(rep.getPrelude());
 
   std::list<Decl*> kill_list;
-  for (auto D : program) {
+  for (auto D : *program) {
     if (auto P = dyn_cast<ProcDecl>(D)) {
       if (D->getName().find(Naming::CONTRACT_EXPR) != std::string::npos) {
         decls.insert(decls.end(), Decl::code(P));

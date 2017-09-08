@@ -5,19 +5,21 @@
 #define ADDTIMING_H
 
 #include "llvm/Pass.h"
-#include "llvm/Analysis/Passes.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include <string>
+#include "llvm/IR/Instructions.h"
+
+namespace llvm {
+class TargetTransformInfo;
+}
 
 namespace smack {
   using namespace llvm;
-  
+
   class AddTiming : public FunctionPass {
 
     enum Flags { NO_TIMING_INFO = -1};
     static const std::string INT_TIMING_COST_METADATA;
     static const std::string INSTRUCTION_NAME_METADATA;
-    
+
   public:
     static char ID; // Class identification, replacement for typeinfo
     AddTiming() : FunctionPass(ID), F(nullptr), TTI(nullptr) {}
@@ -33,19 +35,18 @@ namespace smack {
     void addMetadata(Instruction *Inst, const std::string &name, unsigned cost) const;
     void addNamingMetadata(Instruction *Inst) const;
     void addTimingMetadata(Instruction* Inst) const;
-    
+
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnFunction(Function &F) override;
     void print(raw_ostream &OS, const Module*) const override;
     std::string nameInstruction(Instruction *Inst) const;
-    
+
     /// The function that we analyze.
     Function *F;
     /// Target information.
     const TargetTransformInfo *TTI;
   };
-  
+
 }//namespace smack
 
 #endif //ADDTIMING_H
-

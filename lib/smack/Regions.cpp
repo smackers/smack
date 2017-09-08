@@ -1,8 +1,14 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#include "dsa/DSNode.h"
+#include "dsa/DSGraph.h"
+#include "dsa/DataStructure.h"
+#include "dsa/TypeSafety.h"
+#include "assistDS/DSNodeEquivs.h"
 #include "smack/Regions.h"
 #include "smack/SmackOptions.h"
+#include "smack/DSAWrapper.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 
 #define DEBUG_TYPE "regions"
@@ -192,11 +198,11 @@ RegisterPass<Regions> RegionsPass("smack-regions", "SMACK Memory Regions Pass");
 void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   if (!SmackOptions::NoMemoryRegionSplitting) {
-    AU.addRequiredTransitive<LocalDataStructures>();
-    AU.addRequiredTransitive<BUDataStructures>();
-    AU.addRequiredTransitive<TDDataStructures>();
-    AU.addRequiredTransitive<DSNodeEquivs>();
-    AU.addRequiredTransitive<dsa::TypeSafety<TDDataStructures> >();
+    AU.addRequiredTransitive<llvm::LocalDataStructures>();
+    AU.addRequiredTransitive<llvm::BUDataStructures>();
+    AU.addRequiredTransitive<llvm::TDDataStructures>();
+    AU.addRequiredTransitive<llvm::DSNodeEquivs>();
+    AU.addRequiredTransitive<dsa::TypeSafety<llvm::TDDataStructures> >();
     AU.addRequired<DSAWrapper>();
   }
 }

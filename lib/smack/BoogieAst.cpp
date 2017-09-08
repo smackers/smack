@@ -6,6 +6,7 @@
 #include "llvm/IR/Constants.h"
 #include <sstream>
 #include <iostream>
+#include <set>
 
 namespace smack {
 

@@ -4,10 +4,6 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
-#include "smack/BoogieAst.h"
-#include "smack/Naming.h"
-#include "smack/Regions.h"
-#include "smack/SmackOptions.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
@@ -16,8 +12,17 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <sstream>
+#include <list>
 
 namespace smack {
+
+class Naming;
+class Program;
+class Decl;
+class ProcDecl;
+class Stmt;
+class Expr;
+class Regions;
 
 using llvm::Regex;
 using llvm::SmallVector;
@@ -26,9 +31,9 @@ using llvm::StringRef;
 class SmackRep {
 protected:
   const llvm::DataLayout* targetData;
-  Naming& naming;
-  Program& program;
-  Regions& regions;
+  Naming* naming;
+  Program* program;
+  Regions* regions;
   std::vector<std::string> bplGlobals;
   std::map<const llvm::Value*, unsigned> globalAllocations;
 
@@ -41,8 +46,8 @@ protected:
   std::map<std::string, Decl*> auxDecls;
 
 public:
-  SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R);
-  Program& getProgram() { return program; }
+  SmackRep(const llvm::DataLayout* L, Naming* N, Program* P, Regions* R);
+  Program* getProgram() { return program; }
 
 private:
 
@@ -63,7 +68,7 @@ private:
   std::string opName(const std::string& operation, std::initializer_list<const llvm::Type*> types);
   std::string opName(const std::string& operation, std::initializer_list<unsigned> types);
 
-  const Stmt* store(unsigned R, const Type* T, const Expr* P, const Expr* V);
+  const Stmt* store(unsigned R, const llvm::Type* T, const Expr* P, const Expr* V);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
@@ -124,14 +129,14 @@ public:
   const Stmt* memcpy(const llvm::MemCpyInst& msi);
   const Stmt* memset(const llvm::MemSetInst& msi);
   const Expr* load(const llvm::Value* P);
-  const Stmt* store(const Value* P, const Value* V);
-  const Stmt* store(const Value* P, const Expr* V);
+  const Stmt* store(const llvm::Value* P, const llvm::Value* V);
+  const Stmt* store(const llvm::Value* P, const Expr* V);
 
-  const Stmt* valueAnnotation(const CallInst& CI);
-  const Stmt* returnValueAnnotation(const CallInst& CI);
+  const Stmt* valueAnnotation(const llvm::CallInst& CI);
+  const Stmt* returnValueAnnotation(const llvm::CallInst& CI);
 
-  std::list<ProcDecl*> procedure(Function* F);
-  ProcDecl* procedure(Function* F, CallInst* C);
+  std::list<ProcDecl*> procedure(llvm::Function* F);
+  ProcDecl* procedure(llvm::Function* F, llvm::CallInst* C);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value* v);
@@ -140,12 +145,7 @@ public:
   std::string memType(unsigned region);
   std::string memPath(unsigned region);
 
-  std::list< std::pair< std::string, std::string > > memoryMaps() {
-    std::list< std::pair< std::string, std::string > > mms;
-    for (unsigned i=0; i<regions.size(); i++)
-      mms.push_back({memReg(i), memType(i)});
-    return mms;
-  }
+  std::list< std::pair< std::string, std::string > > memoryMaps();
 
   // used in SmackInstGenerator
   std::string getString(const llvm::Value* v);

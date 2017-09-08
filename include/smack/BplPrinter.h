@@ -4,7 +4,7 @@
 #ifndef BPLPRINTER_H
 #define BPLPRINTER_H
 
-#include "smack/SmackModuleGenerator.h"
+#include "llvm/Pass.h"
 
 namespace smack {
 
@@ -15,12 +15,8 @@ public:
 
   BplPrinter() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& m);
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<SmackModuleGenerator>();
-  }
+  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
 };
 }
 
 #endif // BPLPRINTER_H
-

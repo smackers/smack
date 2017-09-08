@@ -4,6 +4,7 @@
 //
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
@@ -23,7 +24,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetMachine.h"
 
-
+#include "smack/SmackOptions.h"
 #include "smack/BplFilePrinter.h"
 #include "smack/SmackModuleGenerator.h"
 #include "assistDS/StructReturnToPointer.h"
