@@ -2,7 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/BplFilePrinter.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 

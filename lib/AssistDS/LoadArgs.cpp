@@ -22,7 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include <vector>
 #include <set>
 #include <map>
