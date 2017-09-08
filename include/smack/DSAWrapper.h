@@ -68,7 +68,7 @@ private:
   std::vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
   std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);
-  unsigned getOffset(const MemoryLocation* l);
+  int getOffset(const MemoryLocation* l);
 
 public:
   static char ID;
@@ -103,7 +103,7 @@ public:
   bool isExternal(const llvm::Value* v);
   bool isSingletonGlobal(const llvm::Value *V);
   unsigned getPointedTypeSize(const Value* v);
-  unsigned getOffset(const Value* v);
+  int getOffset(const Value* v);
   const llvm::DSNode *getNode(const llvm::Value* v);
   void printDSAGraphs(const char* Filename);
 };
