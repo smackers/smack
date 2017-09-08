@@ -37,7 +37,7 @@ std::map<int, std::string> SignedIntegerOverflowChecker::INT_MIN_TABLE {
 
 bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
-  Function* co = m.getFunction("__SMACK_check_overflow");
+  // Function* co = m.getFunction("__SMACK_check_overflow");
 
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
@@ -90,12 +90,12 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             CastInst* so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
             CastInst* so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
             BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, so1, so2, "", &*I);
-            ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MAX_TABLE.at(bits), 10);
-            ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MIN_TABLE.at(bits), 10);
-            ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, lsdi, max, "");
-            ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, lsdi, min, "");
-            BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
-            CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
+            // ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MAX_TABLE.at(bits), 10);
+            // ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MIN_TABLE.at(bits), 10);
+            // ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, lsdi, max, "");
+            // ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, lsdi, min, "");
+            // BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
+            // CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
             CastInst* tv = CastInst::CreateTruncOrBitCast(lsdi, sdi->getType(), "", &*I);
             (*I).replaceAllUsesWith(tv);
           }

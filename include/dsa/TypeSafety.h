@@ -86,6 +86,8 @@ struct TypeSafety : public ModulePass {
     virtual bool isFieldDisjoint(const GlobalValue * V, unsigned offset);
 };
 
+template<typename dsa>
+char TypeSafety<dsa>::ID = 0;
+
 }
 #endif
-

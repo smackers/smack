@@ -16,15 +16,6 @@ namespace smack {
 using namespace llvm;
 
 namespace {
-  std::string getString(const llvm::Value* v) {
-    if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
-      if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
-        if (const llvm::GlobalValue* cc = llvm::dyn_cast<const llvm::GlobalValue>(constantExpr->getOperand(0)))
-          if (const llvm::ConstantDataSequential* cds = llvm::dyn_cast<const llvm::ConstantDataSequential>(cc->getOperand(0)))
-            return cds ->getAsCString();
-    return "";
-  }
-
   void mark(Instruction &I, bool V = true) {
     auto& C = I.getContext();
     I.setMetadata("verifier.code",
