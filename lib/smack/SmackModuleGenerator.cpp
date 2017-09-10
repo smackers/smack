@@ -9,6 +9,7 @@
 #include "smack/Regions.h"
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
+#include "smack/Debug.h"
 
 namespace smack {
 

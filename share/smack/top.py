@@ -150,7 +150,7 @@ def arguments():
 
   translate_group.add_argument('--timing-annotations', action="store_true", default=False,
     help='enable timing annotations')
-  
+
   translate_group.add_argument('--bit-precise-pointers', action="store_true", default=False,
     help='enable bit precision for pointer values')
 
@@ -281,15 +281,24 @@ def frontend(args):
 def smack_root():
   return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 
-def smack_headers():
+def smack_header_path():
   return os.path.join(smack_root(), 'share', 'smack', 'include')
+
+def smack_headers():
+  paths = []
+  paths.append(smack_header_path())
+  if args.memory_safety:
+    paths.append(os.path.join(smack_header_path(), 'string'))
+  if args.float:
+    paths.append(os.path.join(smack_header_path(), 'math'))
+  return paths
 
 def smack_lib():
   return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
 def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
-  cmd += ['-I' + smack_headers()]
+  cmd += map(lambda path: '-I' + path, smack_headers())
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
@@ -304,6 +313,12 @@ def build_libs(args):
 
   if args.pthread:
     libs += ['pthread.c']
+
+  if args.memory_safety:
+    libs += ['string.c']
+
+  if args.float:
+    libs += ['math.c']
 
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
