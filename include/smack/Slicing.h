@@ -7,14 +7,14 @@
 
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "smack/BoogieAst.h"
-#include "smack/Naming.h"
-#include "smack/SmackRep.h"
 #include <unordered_set>
 
 using namespace llvm;
 
 namespace smack {
+
+class Naming;
+class SmackRep;
 
 class Slice;
 typedef vector<Slice*> Slices;
@@ -36,9 +36,9 @@ public:
   void remove();
 
   string getName();
-  const Expr* getCode(Naming& naming, SmackRep& rep);
-  const Decl* getBoogieDecl(Naming& naming, SmackRep& rep);
-  const Expr* getBoogieExpression(Naming& naming, SmackRep& rep);
+  const Expr* getCode(Naming* naming, SmackRep* rep);
+  const Decl* getBoogieDecl(Naming* naming, SmackRep* rep);
+  const Expr* getBoogieExpression(Naming* naming, SmackRep* rep);
 };
 
 }

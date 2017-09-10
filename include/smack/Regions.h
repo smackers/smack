@@ -4,10 +4,17 @@
 #ifndef REGIONS_H
 #define REGIONS_H
 
-#include "dsa/DSGraph.h"
-#include "smack/DSAWrapper.h"
+#include "llvm/IR/InstVisitor.h"
+
+using namespace llvm;
+
+namespace llvm {
+  class DSNode;
+}
 
 namespace smack {
+
+class DSAWrapper;
 
 class Region {
 private:
