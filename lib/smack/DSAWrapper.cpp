@@ -70,7 +70,7 @@ int DSAWrapper::getOffset(const MemoryLocation* l) {
   if (I->second.getNode() && I->second.getNode()->isCollapsedNode())
     return -1;
   unsigned offset = I->second.getOffset();
-  assert(offset > INT_MAX && "Cannot handle large offsets");
+  assert(offset <= INT_MAX && "Cannot handle large offsets");
   return (int) offset;
 }
 
