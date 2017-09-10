@@ -43,6 +43,12 @@ namespace {
       return DSA->isFieldDisjoint(V, getFunction(V));
   }
 
+  void addRegionAnnotation(Instruction& I, unsigned N) {
+    LLVMContext& C = I.getContext();
+    I.setMetadata("smack.region",
+      MDNode::get(C, ValueAsMetadata::getConstant(
+        ConstantInt::get(Type::getInt32Ty(C), N))));
+  }
 }
 
 void Region::init(Module& M, Pass& P) {
@@ -314,19 +320,19 @@ unsigned Regions::idx(Region& R) {
 }
 
 void Regions::visitLoadInst(LoadInst& I) {
-  idx(I.getPointerOperand());
+  addRegionAnnotation(I, idx(I.getPointerOperand()));
 }
 
 void Regions::visitStoreInst(StoreInst& I) {
-  idx(I.getPointerOperand());
+  addRegionAnnotation(I, idx(I.getPointerOperand()));
 }
 
 void Regions::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
-  idx(I.getPointerOperand());
+  addRegionAnnotation(I, idx(I.getPointerOperand()));
 }
 
 void Regions::visitAtomicRMWInst(AtomicRMWInst &I) {
-  idx(I.getPointerOperand());
+  addRegionAnnotation(I, idx(I.getPointerOperand()));
 }
 
 void Regions::visitMemIntrinsic(MemIntrinsic &I) {
@@ -337,7 +343,7 @@ void Regions::visitMemIntrinsic(MemIntrinsic &I) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  idx(I.getDest(),length);
+  addRegionAnnotation(I, idx(I.getDest(), length));
 }
 
 void Regions::visitCallInst(CallInst& I) {
@@ -345,7 +351,7 @@ void Regions::visitCallInst(CallInst& I) {
   std::string name = F && F->hasName() ? F->getName().str() : "";
 
   if (I.getType()->isPointerTy())
-    idx(&I);
+    addRegionAnnotation(I, idx(&I));
 
   if (name.find("__SMACK_values") != std::string::npos) {
     assert(I.getNumArgOperands() == 2 && "Expected two operands.");
@@ -357,11 +363,11 @@ void Regions::visitCallInst(CallInst& I) {
     const PointerType* T = dyn_cast<PointerType>(P->getType());
     assert(T && "Expected pointer argument.");
 
-    if (auto I = dyn_cast<ConstantInt>(N)) {
-      const unsigned bound = I->getZExtValue();
+    if (auto CI = dyn_cast<ConstantInt>(N)) {
+      const unsigned bound = CI->getZExtValue();
       const unsigned size = T->getElementType()->getIntegerBitWidth() / 8;
       const unsigned length = bound * size;
-      idx(P,length);
+      addRegionAnnotation(I, idx(P, length));
 
     } else {
       llvm_unreachable("Non-constant size expression not yet handled.");
