@@ -10,8 +10,13 @@ int __decr(int x) {
   return --x;
 }
 
+#ifdef __MACH__
+int (*incr)(int) = __incr;
+int (*decr)(int) = __decr;
+#else
 int incr(int) __attribute__((alias ("__incr")));
 int decr(int) __attribute__((alias ("__decr")));
+#endif
 
 int main(void) {
   int (*fp)(int);
