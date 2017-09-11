@@ -7,10 +7,10 @@
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"
 #include "smack/ExtractContracts.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "smack/Debug.h"
 
 #include <vector>
 #include <stack>

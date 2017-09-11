@@ -4,14 +4,9 @@
 #ifndef BOOGIEAST_H
 #define BOOGIEAST_H
 
-#include "llvm/Support/Casting.h"
-
-#include <cassert>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <list>
-#include <set>
 
 namespace smack {
 

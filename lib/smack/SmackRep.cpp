@@ -5,7 +5,15 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
+
+#include "smack/BoogieAst.h"
+#include "smack/Naming.h"
+#include "smack/Regions.h"
+#include "smack/Debug.h"
+
+#include <list>
 #include <queue>
+#include <set>
 
 namespace {
   using namespace llvm;
@@ -96,7 +104,7 @@ bool isCodeString(const llvm::Value* V) {
   return false;
 }
 
-SmackRep::SmackRep(const DataLayout* L, Naming& N, Program& P, Regions& R)
+SmackRep::SmackRep(const DataLayout* L, Naming* N, Program* P, Regions* R)
     : targetData(L), naming(N), program(P), regions(R),
       globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
@@ -179,7 +187,7 @@ std::string SmackRep::procName(llvm::Function* F, const llvm::User& U) {
 
 std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> types) {
   std::stringstream name;
-  name << naming.get(*F);
+  name << naming->get(*F);
   if (F->isVarArg())
     for (auto* T : types)
       name << "." << type(T);
@@ -233,10 +241,10 @@ std::string SmackRep::memReg(unsigned idx) {
 
 std::string SmackRep::memType(unsigned region) {
   std::stringstream s;
-  if (!regions.get(region).isSingleton() ||
+  if (!regions->get(region).isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << Naming::PTR_TYPE << "] ";
-  const Type* T = regions.get(region).getType();
+  const Type* T = regions->get(region).getType();
   s << (T ? type(T) : intType(8));
   return s.str();
 }
@@ -245,9 +253,16 @@ std::string SmackRep::memPath(unsigned region) {
   return memReg(region);
 }
 
+std::list< std::pair< std::string, std::string > > SmackRep::memoryMaps() {
+  std::list< std::pair< std::string, std::string > > mms;
+  for (unsigned i=0; i<regions->size(); i++)
+    mms.push_back({memReg(i), memType(i)});
+  return mms;
+}
+
 bool SmackRep::isExternal(const llvm::Value* v) {
   return v->getType()->isPointerTy()
-      && !regions.get(regions.idx(v)).isAllocated();
+      && !regions->get(regions->idx(v)).isAllocated();
 }
 
 const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
@@ -257,7 +272,7 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
       integerToPointer(expr(i.getArraySize()), getIntSize(i.getArraySize())));
 
   // TODO this should not be a pointer type.
-  return Stmt::call(Naming::ALLOC,{size},{naming.get(i)});
+  return Stmt::call(Naming::ALLOC,{size},{naming->get(i)});
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
@@ -267,10 +282,10 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r1 = regions.idx(mci.getOperand(0),length);
-  unsigned r2 = regions.idx(mci.getOperand(1),length);
+  unsigned r1 = regions->idx(mci.getOperand(0),length);
+  unsigned r2 = regions->idx(mci.getOperand(1),length);
 
-  const Type* T = regions.get(r1).getType();
+  const Type* T = regions->get(r1).getType();
   Decl* P = memcpyProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
@@ -299,9 +314,9 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r = regions.idx(msi.getOperand(0),length);
+  unsigned r = regions->idx(msi.getOperand(0),length);
 
-  const Type* T = regions.get(r).getType();
+  const Type* T = regions->get(r).getType();
   Decl* P = memsetProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
@@ -325,7 +340,7 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
 const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   std::string name;
   std::list<const Expr*> args({ expr(CI.getArgOperand(0)) });
-  std::list<std::string> rets({ naming.get(CI) });
+  std::list<std::string> rets({ naming->get(CI) });
   std::list<const Attr*> attrs;
 
   assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
@@ -338,7 +353,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
     if (dyn_cast<const Argument>(V)) {
       assert(V->hasName() && "Expected named argument.");
-      attrs.push_back(Attr::attr("name", {Expr::id(naming.get(*V))}));
+      attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*V))}));
 
     } else if (auto LI = dyn_cast<const LoadInst>(V)) {
       auto GEP = dyn_cast<const GetElementPtrInst>(LI->getPointerOperand());
@@ -349,9 +364,9 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       auto T = GEP->getType()->getElementType();
       const unsigned bits = T->getIntegerBitWidth();
       const unsigned bytes = bits / 8;
-      const unsigned R = regions.idx(GEP);
-      bool bytewise = regions.get(R).bytewiseAccess();
-      attrs.push_back(Attr::attr("name", {Expr::id(naming.get(*A))}));
+      const unsigned R = regions->idx(GEP);
+      bool bytewise = regions->get(R).bytewiseAccess();
+      attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
       attrs.push_back(Attr::attr("field", {
         Expr::lit(Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits)),
         Expr::id(memPath(R)),
@@ -404,10 +419,10 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     const unsigned bits = T->getIntegerBitWidth();
     const unsigned bytes = bits / 8;
     const unsigned length = count * bytes;
-    const unsigned R = regions.idx(V, length);
-    bool bytewise = regions.get(R).bytewiseAccess();
+    const unsigned R = regions->idx(V, length);
+    bool bytewise = regions->get(R).bytewiseAccess();
     args.push_back(expr(CI.getArgOperand(1)));
-    attrs.push_back(Attr::attr("name", {Expr::id(naming.get(*A))}));
+    attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
     attrs.push_back(Attr::attr("array", {
       Expr::lit(Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits)),
       Expr::id(memPath(R)),
@@ -432,7 +447,7 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
   return Stmt::call(
     name,
     std::list<const Expr*>({ Expr::id(Naming::RET_VAR) }),
-    std::list<std::string>({ naming.get(CI) }),
+    std::list<std::string>({ naming->get(CI) }),
     {Attr::attr("name", {Expr::id(Naming::RET_VAR)})});
 }
 
@@ -451,15 +466,15 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 //     const unsigned bits = T->getElementType()->getIntegerBitWidth();
 //     const unsigned bytes = bits / 8;
 //     const unsigned length = bound * bytes;
-//     const unsigned R = regions.idx(V, length);
-//     bool bytewise = regions.get(R).bytewiseAccess();
+//     const unsigned R = regions->idx(V, length);
+//     bool bytewise = regions->get(R).bytewiseAccess();
 //     std::string L = Naming::LOAD + "." + (bytewise ? "bytes." : "") + intType(bits);
 //     return Stmt::call(Naming::OBJECT_PROC,
 //       std::vector<const Expr*>({
 //         Expr::id(Naming::RET_VAR),
 //         Expr::lit(bound)
 //       }),
-//       std::vector<std::string>({ naming.get(CI) }),
+//       std::vector<std::string>({ naming->get(CI) }),
 //       std::vector<const Attr*>({
 //         Attr::attr(L, {
 //           Expr::id(memPath(R)),
@@ -477,9 +492,9 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  const unsigned R = regions.idx(P);
-  bool bytewise = regions.get(R).bytewiseAccess();
-  bool singleton = regions.get(R).isSingleton();
+  const unsigned R = regions->idx(P);
+  bool bytewise = regions->get(R).bytewiseAccess();
+  bool singleton = regions->get(R).isSingleton();
   const Expr* M = Expr::id(memPath(R));
   std::string N = Naming::LOAD + "." + (bytewise ? "bytes." : "") +
     type(T->getElementType());
@@ -493,13 +508,13 @@ const Stmt* SmackRep::store(const Value* P, const Value* V) {
 const Stmt* SmackRep::store(const Value* P, const Expr* V) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  return store(regions.idx(P), T->getElementType(), expr(P), V);
+  return store(regions->idx(P), T->getElementType(), expr(P), V);
 }
 
 const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
-  bool bytewise = regions.get(R).bytewiseAccess();
-  bool singleton = regions.get(R).isSingleton();
+  bool bytewise = regions->get(R).bytewiseAccess();
+  bool singleton = regions->get(R).isSingleton();
 
   std::string N = Naming::STORE + "." + (bytewise ? "bytes." : "") + type(T);
   const Expr* M = Expr::id(memPath(R));
@@ -699,15 +714,15 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
 
   if (isa<GlobalValue>(v)) {
     assert(v->hasName());
-    return Expr::id(naming.get(*v));
+    return Expr::id(naming->get(*v));
 
   } else if (isa<UndefValue>(v)) {
-    std::string name = naming.get(*v);
+    std::string name = naming->get(*v);
     auxDecls[name] = Decl::constant(name,type(v));
     return Expr::id(name);
 
-  } else if (naming.get(*v) != "") {
-    return Expr::id(naming.get(*v));
+  } else if (naming->get(*v) != "") {
+    return Expr::id(naming->get(*v));
 
   } else if (const Constant* constant = dyn_cast<const Constant>(v)) {
 
@@ -795,13 +810,13 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   assert(F && "Unknown function call.");
-  std::string name = naming.get(*F);
+  std::string name = naming->get(*F);
   std::list< std::pair<std::string,std::string> > params, rets;
   std::list<Decl*> decls;
   std::list<Block*> blocks;
 
   for (auto &A : F->getArgumentList())
-    params.push_back({naming.get(A), type(A.getType())});
+    params.push_back({naming->get(A), type(A.getType())});
 
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
@@ -894,7 +909,7 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
 
   assert(f && "Call encountered unresolved function.");
 
-  std::string name = naming.get(*f);
+  std::string name = naming->get(*f);
   std::list<const Expr*> args;
   std::list<std::string> rets;
 
@@ -908,7 +923,7 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
     args.push_back(arg(f, i, ci.getOperand(i)));
 
   if (!ci.getType()->isVoidTy())
-    rets.push_back(naming.get(ci));
+    rets.push_back(naming->get(ci));
 
   return Stmt::call(procName(f, ci), args, rets);
 }
@@ -961,7 +976,7 @@ std::string SmackRep::getPrelude() {
   }
   s << "\n";
 
-  s << "// Memory maps (" << regions.size() << " regions)" << "\n";
+  s << "// Memory maps (" << regions->size() << " regions)" << "\n";
   for (auto M : memoryMaps())
     s << "var " << M.first << ": " << M.second << ";" << "\n";
 
@@ -1082,7 +1097,7 @@ void SmackRep::addInitFunc(const llvm::Function* f) {
     && "Init functions cannot return a value");
   assert(f->getArgumentList().empty()
     && "Init functions cannot take parameters");
-  initFuncs.push_back(naming.get(*f));
+  initFuncs.push_back(naming->get(*f));
 }
 
 Decl* SmackRep::getInitFuncs() {
@@ -1100,7 +1115,7 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   using namespace llvm;
   std::list<Decl*> decls;
   std::list<const Attr*> ax;
-  std::string name = naming.get(*v);
+  std::string name = naming->get(*v);
 
   if (isCodeString(v))
     return decls;

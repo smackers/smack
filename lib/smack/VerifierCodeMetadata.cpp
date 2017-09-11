@@ -6,8 +6,8 @@
 
 #include "smack/SmackOptions.h"
 #include "smack/VerifierCodeMetadata.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
+#include "smack/Debug.h"
 
 #include <set>
 

@@ -93,6 +93,9 @@ def arguments():
   noise_group.add_argument('-d', '--debug', action="store_true", default=False,
     help='enable debugging output')
 
+  noise_group.add_argument('--debug-only', metavar='MODULES', default=None,
+    type=str, help='limit debugging output to given MODULES')
+
   parser.add_argument('-t', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
@@ -374,6 +377,7 @@ def llvm_to_bpl(args):
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
+  if args.debug_only: cmd += ['-debug-only', args.debug_only]
   if args.ll_file: cmd += ['-ll', args.ll_file]
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.static_unroll: cmd += ['-static-unroll']

@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#ifdef SVCOMP
 // Apprently needed by SVCOMP benchmarks
 #define __inline
 #define __builtin_expect __builtinx_expect
@@ -22,6 +23,7 @@ extern "C" {
 
 // For handling of va_start macro
 void __builtinx_va_start(char*,char*);
+#endif
 
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
