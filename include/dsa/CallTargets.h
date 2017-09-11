@@ -69,8 +69,6 @@ namespace dsa{
     }
   };
   
-  template<typename dsa>
-  char CallTargetFinder<dsa>::ID = 0;
 }
 
 #endif

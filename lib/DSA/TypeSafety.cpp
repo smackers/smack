@@ -37,6 +37,9 @@ extern cl::opt<bool> TypeInferenceOptimize;
 
 namespace dsa {
 
+template<typename dsa>
+char TypeSafety<dsa>::ID = 0;
+
 // Method: getDSNodeHandle()
 //
 // Description:

@@ -42,6 +42,9 @@ namespace {
 
 namespace dsa {
 
+template<typename dsa>
+char CallTargetFinder<dsa>::ID = 0;
+
   template<class dsa>
 void CallTargetFinder<dsa>::findIndTargets(Module &M)
 {
