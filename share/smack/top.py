@@ -287,7 +287,7 @@ def smack_header_path():
 def smack_headers():
   paths = []
   paths.append(smack_header_path())
-  if args.memory_safety:
+  if args.memory_safety or args.signed_integer_overflow:
     paths.append(os.path.join(smack_header_path(), 'string'))
   if args.float:
     paths.append(os.path.join(smack_header_path(), 'math'))
@@ -314,7 +314,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.memory_safety:
+  if args.memory_safety or args.signed_integer_overflow:
     libs += ['string.c']
 
   if args.float:
