@@ -254,7 +254,7 @@ void AddTiming::addMetadata(Instruction *Inst, const std::string &name, const st
   
 void AddTiming::addMetadata(Instruction *Inst, const std::string &name, unsigned cost) const {
   LLVMContext& C = Inst->getContext();
-  MDNode* N = MDNode::get(C, ConstantAsMetadata::get(ConstantInt::get(C, llvm::APInt(64, cost, false))));
+  MDNode* N = MDNode::get(C, ConstantAsMetadata::get(ConstantInt::get(C, llvm::APInt(64, (uint64_t)cost, false))));
   Inst->setMetadata(name, N);
 }
   

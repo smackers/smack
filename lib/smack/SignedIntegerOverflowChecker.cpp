@@ -96,6 +96,7 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, lsdi, min, "");
             BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
             CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
+            CallInst::Create(co, {tf}, "", &*I);
             CastInst* tv = CastInst::CreateTruncOrBitCast(lsdi, sdi->getType(), "", &*I);
             (*I).replaceAllUsesWith(tv);
           }
