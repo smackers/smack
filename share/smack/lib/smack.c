@@ -4,6 +4,7 @@
 #include <smack.h>
 #include <limits.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 /**
  * The SMACK "prelude" definitions
