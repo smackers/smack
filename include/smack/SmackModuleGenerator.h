@@ -22,11 +22,14 @@ namespace smack {
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
   Program program;
+  std::set<std::string> bplGlobals;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
   SmackModuleGenerator() : ModulePass(ID) {}
+
+  std::set<std::string> getBplGlobals() { return bplGlobals; }
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
     AU.setPreservesAll();

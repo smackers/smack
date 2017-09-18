@@ -158,6 +158,7 @@ public:
   Decl* getInitFuncs();
   std::string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
+  std::vector<std::string> getBplGlobals() { return bplGlobals; }
 
   std::list<Decl*> auxiliaryDeclarations() {
     std::list<Decl*> ds;
