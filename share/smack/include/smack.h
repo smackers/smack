@@ -73,7 +73,7 @@ void exit(int);
 #define S(...) TY(__VA_ARGS__, S4, S3, S2, S1)(__VA_ARGS__)
 #define U(...) TY(__VA_ARGS__, U4, U3, U2, U1)(__VA_ARGS__)
 
-#define NONDET_DECL(P, ty...) S(ty) U(P,U(ty)) ()
+#define NONDET_DECL(P, ty...) S(ty) U(P,U(ty)) (void)
 
 void* __VERIFIER_nondet(void);
 NONDET_DECL(__SMACK_nondet,char);
