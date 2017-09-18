@@ -67,6 +67,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
     // ... to do below, after memory splitting is determined.
   }
 
+  std::vector<std::string> newBplGlobals = rep.getBplGlobals();
+  std::copy(newBplGlobals.begin(), newBplGlobals.end(), std::inserter(bplGlobals, bplGlobals.end()));
+
   auto ds = rep.auxiliaryDeclarations();
   decls.insert(decls.end(), ds.begin(), ds.end());
   decls.insert(decls.end(), rep.getInitFuncs());
