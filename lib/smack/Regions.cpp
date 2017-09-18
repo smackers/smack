@@ -132,8 +132,14 @@ void Region::init(const Value* V, unsigned length) {
   representative = (DSA && !dyn_cast<ConstantPointerNull>(V))
     ? DSA->getNode(V) : nullptr;
   this->type = T;
-  this->offset = DSA ? DSA->getOffset(V) : 0;
-  this->length = length;
+  int offset = DSA ? DSA->getOffset(V) : 0;
+  if (offset < 0) {
+    this->offset = 0;
+    this->length = -1U;
+  } else {
+    this->offset = offset;
+    this->length = length;
+  }
 
   singleton = DL && representative
     && isSingleton(representative, offset, length);

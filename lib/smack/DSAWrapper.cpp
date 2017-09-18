@@ -104,10 +104,16 @@ DSGraph *DSAWrapper::getGraphForValue(const Value *V) {
   llvm_unreachable("Unexpected value.");
 }
 
-unsigned DSAWrapper::getOffset(const MemoryLocation* l) {
+int DSAWrapper::getOffset(const MemoryLocation* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
   DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
-  return (I == S.end()) ? 0 : (I->second.getOffset());
+  if (I == S.end())
+    return 0;
+  if (I->second.getNode() && I->second.getNode()->isCollapsedNode())
+    return -1;
+  unsigned offset = I->second.getOffset();
+  assert(offset <= INT_MAX && "Cannot handle large offsets");
+  return (int) offset;
 }
 
 bool DSAWrapper::isMemcpyd(const llvm::DSNode* n) {
@@ -196,7 +202,7 @@ unsigned DSAWrapper::getPointedTypeSize(const Value* v) {
     llvm_unreachable("Type should be pointer.");
 }
 
-unsigned DSAWrapper::getOffset(const Value* v) {
+int DSAWrapper::getOffset(const Value* v) {
   return getOffset(new MemoryLocation(v));
 }
 
