@@ -41,6 +41,7 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/SignedIntegerOverflowChecker.h"
 #include "smack/SplitAggregateLoadStore.h"
+#include "smack/GenModifies.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -227,6 +228,7 @@ int main(int argc, char **argv) {
     F->keep();
     files.push_back(F);
     pass_manager.add(new smack::SmackModuleGenerator());
+    pass_manager.add(new smack::GenModifies());
     pass_manager.add(new smack::BplFilePrinter(F->os()));
   }
 
