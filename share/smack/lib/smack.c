@@ -212,7 +212,7 @@ unsigned long long int __VERIFIER_nondet_unsigned_long_long_int() {
   return x;
 }
 
-// Apparently used in SVCCOMP benchmarks
+// Used in SVCCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();
   __VERIFIER_assume(x == 0 || x == 1);
