@@ -68,145 +68,145 @@ void exit(int x) {
   while(1);
 }
 
-char __VERIFIER_nondet_char() {
+char __VERIFIER_nondet_char(void) {
   char x = __SMACK_nondet_char();
   __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
   return x;
 }
 
-signed char __VERIFIER_nondet_signed_char() {
+signed char __VERIFIER_nondet_signed_char(void) {
   signed char x = __SMACK_nondet_signed_char();
   __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
   return x;
 }
 
-unsigned char __VERIFIER_nondet_unsigned_char() {
+unsigned char __VERIFIER_nondet_unsigned_char(void) {
   unsigned char x = __SMACK_nondet_unsigned_char();
   __VERIFIER_assume(x >= 0 && x <= UCHAR_MAX);
   return x;
 }
 
-short __VERIFIER_nondet_short() {
+short __VERIFIER_nondet_short(void) {
   short x = __SMACK_nondet_short();
   __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
   return x;
 }
 
-signed short __VERIFIER_nondet_signed_short() {
+signed short __VERIFIER_nondet_signed_short(void) {
   signed short x = __SMACK_nondet_signed_short();
   __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
   return x;
 }
 
-signed short int __VERIFIER_nondet_signed_short_int() {
+signed short int __VERIFIER_nondet_signed_short_int(void) {
   signed short int x = __SMACK_nondet_signed_short_int();
   __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
   return x;
 }
 
-unsigned short __VERIFIER_nondet_unsigned_short() {
+unsigned short __VERIFIER_nondet_unsigned_short(void) {
   unsigned short x = __SMACK_nondet_unsigned_short();
   __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
   return x;
 }
 
-unsigned short int __VERIFIER_nondet_unsigned_short_int() {
+unsigned short int __VERIFIER_nondet_unsigned_short_int(void) {
   unsigned short int x = __SMACK_nondet_unsigned_short_int();
   __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
   return x;
 }
 
-int __VERIFIER_nondet_int() {
+int __VERIFIER_nondet_int(void) {
   int x = __SMACK_nondet_int();
   __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
   return x;
 }
 
-signed int __VERIFIER_nondet_signed_int() {
+signed int __VERIFIER_nondet_signed_int(void) {
   signed int x = __SMACK_nondet_signed_int();
   __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
   return x;
 }
 
-unsigned __VERIFIER_nondet_unsigned() {
+unsigned __VERIFIER_nondet_unsigned(void) {
   unsigned x = __SMACK_nondet_unsigned();
   __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
   return x;
 }
 
-unsigned int __VERIFIER_nondet_unsigned_int() {
+unsigned int __VERIFIER_nondet_unsigned_int(void) {
   unsigned int x = __SMACK_nondet_unsigned_int();
   __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
   return x;
 }
 
-long __VERIFIER_nondet_long() {
+long __VERIFIER_nondet_long(void) {
   long x = __SMACK_nondet_long();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-long int __VERIFIER_nondet_long_int() {
+long int __VERIFIER_nondet_long_int(void) {
   long int x = __SMACK_nondet_long_int();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-signed long __VERIFIER_nondet_signed_long() {
+signed long __VERIFIER_nondet_signed_long(void) {
   signed long x = __SMACK_nondet_signed_long();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-signed long int __VERIFIER_nondet_signed_long_int() {
+signed long int __VERIFIER_nondet_signed_long_int(void) {
   signed long int x = __SMACK_nondet_signed_long_int();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-unsigned long __VERIFIER_nondet_unsigned_long() {
+unsigned long __VERIFIER_nondet_unsigned_long(void) {
   unsigned long x = __SMACK_nondet_unsigned_long();
   __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
   return x;
 }
 
-unsigned long int __VERIFIER_nondet_unsigned_long_int() {
+unsigned long int __VERIFIER_nondet_unsigned_long_int(void) {
   unsigned long int x = __SMACK_nondet_unsigned_long_int();
   __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
   return x;
 }
 
-long long __VERIFIER_nondet_long_long() {
+long long __VERIFIER_nondet_long_long(void) {
   long long x = __SMACK_nondet_long_long();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-long long int __VERIFIER_nondet_long_long_int() {
+long long int __VERIFIER_nondet_long_long_int(void) {
   long long int x = __SMACK_nondet_long_long_int();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-signed long long __VERIFIER_nondet_signed_long_long() {
+signed long long __VERIFIER_nondet_signed_long_long(void) {
   signed long long x = __SMACK_nondet_signed_long_long();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-signed long long int __VERIFIER_nondet_signed_long_long_int() {
+signed long long int __VERIFIER_nondet_signed_long_long_int(void) {
   signed long long int x = __SMACK_nondet_signed_long_long_int();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-unsigned long long __VERIFIER_nondet_unsigned_long_long() {
+unsigned long long __VERIFIER_nondet_unsigned_long_long(void) {
   unsigned long long x = __SMACK_nondet_unsigned_long_long();
   __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
   return x;
 }
 
-unsigned long long int __VERIFIER_nondet_unsigned_long_long_int() {
+unsigned long long int __VERIFIER_nondet_unsigned_long_long_int(void) {
   unsigned long long int x = __SMACK_nondet_unsigned_long_long_int();
   __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
   return x;
@@ -381,7 +381,7 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bvdouble,args))); \
   D(xstr(M(bvlongdouble,args)));
 
-void __SMACK_decls() {
+void __SMACK_decls(void) {
 
   DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
@@ -1772,7 +1772,7 @@ void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
 #endif
 }
 
-void __SMACK_check_memory_leak() {
+void __SMACK_check_memory_leak(void) {
   __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
 }
 #endif
