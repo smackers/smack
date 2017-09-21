@@ -42,7 +42,7 @@ smack_value_t __SMACK_return_value(void);
 // Inserts memory access checks in form of assert to check null pointer access
 // and buffer overflow errors
 void __SMACK_check_memory_safety(void*, unsigned long);
-void __SMACK_check_memory_leak();
+void __SMACK_check_memory_leak(void);
 #endif
 
 // We need this to enforce that assert/assume are function calls
@@ -145,7 +145,7 @@ NONDET_DECL(__VERIFIER_nondet,long,double);
 #undef U
 #undef NONDET_DECL
 
-// Apparently used in SVCOMP benchmarks
+// Used in SVCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void);
 unsigned char __VERIFIER_nondet_uchar(void);
 unsigned short __VERIFIER_nondet_ushort(void);
@@ -154,7 +154,7 @@ unsigned long __VERIFIER_nondet_ulong(void);
 void* __VERIFIER_nondet_pointer(void);
 
 
-void __SMACK_decls();
+void __SMACK_decls(void);
 
 #ifdef __cplusplus
 }
