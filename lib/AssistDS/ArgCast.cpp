@@ -19,7 +19,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 
 #include <set>
 #include <map>
@@ -53,7 +53,7 @@ bool ArgCast::runOnModule(Module& M) {
 
   std::vector<CallInst*> worklist;
   for (Function &F : M) {
-    if (F.mayBeOverridden())
+    if (F.isInterposable())
       continue;
     // Find all uses of this function
     for (User *U : F.users()) {

@@ -21,7 +21,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include <vector>
 #include <map>
 
@@ -64,7 +64,7 @@ bool GEPExprArgs::runOnModule(Module& M) {
           // or might be changed, ignore this call site.
           Function *F = CI->getCalledFunction();
 
-          if (!F || (F->isDeclaration() || F->mayBeOverridden())) 
+          if (!F || (F->isDeclaration() || F->isInterposable()))
             continue;
           if(F->hasStructRetAttr())
             continue;

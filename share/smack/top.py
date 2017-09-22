@@ -7,12 +7,14 @@ import platform
 import re
 import shutil
 import sys
+import shlex
+import subprocess
 from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
 
-VERSION = '1.8.1'
+VERSION = '1.9.0'
 
 def frontends():
   """A dictionary of front-ends per file extension."""
@@ -91,6 +93,9 @@ def arguments():
   noise_group.add_argument('-d', '--debug', action="store_true", default=False,
     help='enable debugging output')
 
+  noise_group.add_argument('--debug-only', metavar='MODULES', default=None,
+    type=str, help='limit debugging output to given MODULES')
+
   parser.add_argument('-t', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
@@ -143,6 +148,9 @@ def arguments():
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='enable bit precision for non-pointer values')
 
+  translate_group.add_argument('--timing-annotations', action="store_true", default=False,
+    help='enable timing annotations')
+
   translate_group.add_argument('--bit-precise-pointers', action="store_true", default=False,
     help='enable bit precision for pointer values')
 
@@ -169,6 +177,9 @@ def arguments():
 
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
+
+  translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
+    help='enable splitting of load/store instructions of LLVM aggregate types')
 
 
   verifier_group = parser.add_argument_group('verifier options')
@@ -207,6 +218,14 @@ def arguments():
 
   verifier_group.add_argument('--replay', action="store_true", default=False,
     help='enable reply of error trace with test harness.')
+
+  plugins_group = parser.add_argument_group('plugins')
+
+  plugins_group.add_argument('--transform-bpl', metavar='COMMAND', default=None,
+    type=str, help='transform generated Boogie code via COMMAND')
+
+  plugins_group.add_argument('--transform-out', metavar='COMMAND', default=None,
+    type=str, help='transform verifier output via COMMAND')
 
   args = parser.parse_args()
 
@@ -262,15 +281,24 @@ def frontend(args):
 def smack_root():
   return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 
-def smack_headers():
+def smack_header_path():
   return os.path.join(smack_root(), 'share', 'smack', 'include')
+
+def smack_headers():
+  paths = []
+  paths.append(smack_header_path())
+  if args.memory_safety or args.signed_integer_overflow:
+    paths.append(os.path.join(smack_header_path(), 'string'))
+  if args.float:
+    paths.append(os.path.join(smack_header_path(), 'math'))
+  return paths
 
 def smack_lib():
   return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
 def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
-  cmd += ['-I' + smack_headers()]
+  cmd += map(lambda path: '-I' + path, smack_headers())
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
@@ -285,6 +313,12 @@ def build_libs(args):
 
   if args.pthread:
     libs += ['pthread.c']
+
+  if args.memory_safety or args.signed_integer_overflow:
+    libs += ['string.c']
+
+  if args.float:
+    libs += ['math.c']
 
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
@@ -358,10 +392,12 @@ def llvm_to_bpl(args):
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
   if args.debug: cmd += ['-debug']
+  if args.debug_only: cmd += ['-debug-only', args.debug_only]
   if args.ll_file: cmd += ['-ll', args.ll_file]
   if "impls" in args.mem_mod:cmd += ['-mem-mod-impls']
   if args.static_unroll: cmd += ['-static-unroll']
   if args.bit_precise: cmd += ['-bit-precise']
+  if args.timing_annotations: cmd += ['-timing-annotations']
   if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
@@ -369,9 +405,11 @@ def llvm_to_bpl(args):
   if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
+  if args.split_aggregate_values: cmd += ['-split-aggregate-values']
   try_command(cmd, console=True)
   annotate_bpl(args)
   property_selection(args)
+  transform_bpl(args)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -424,6 +462,22 @@ def property_selection(args):
     for line in lines:
       line = re.sub(r'^(\s*assert\s*)({:(.+)})?(.+);', replace_assertion, line)
       f.write(line)
+
+def transform_bpl(args):
+  if args.transform_bpl:
+    with open(args.bpl_file, 'r+') as bpl:
+      old = bpl.read()
+      bpl.seek(0)
+      bpl.truncate()
+      tx = subprocess.Popen(shlex.split(args.transform_bpl), stdin=subprocess.PIPE, stdout=bpl)
+      tx.communicate(input = old)
+
+def transform_out(args, old):
+  out = old
+  if args.transform_out:
+    tx = subprocess.Popen(shlex.split(args.transform_out), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = tx.communicate(input = old)
+  return out
 
 def verification_result(verifier_output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
@@ -492,6 +546,7 @@ def verify_bpl(args):
     command += args.verifier_options.split()
 
   verifier_output = try_command(command, timeout=args.time_limit)
+  verifier_output = transform_out(args, verifier_output)
   result = verification_result(verifier_output)
 
   if args.smackd:

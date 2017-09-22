@@ -19,7 +19,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
@@ -551,4 +551,3 @@ TypeSafety<dsa>::runOnModule(Module & M) {
 }
 
 }
-

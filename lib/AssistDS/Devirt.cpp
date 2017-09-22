@@ -11,7 +11,7 @@
 
 #include "assistDS/Devirt.h"
 
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
 

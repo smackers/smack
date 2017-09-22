@@ -17,7 +17,7 @@
 #include "assistDS/Int2PtrCmp.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/IR/PatternMatch.h"
 
 #include <set>

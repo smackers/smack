@@ -24,7 +24,7 @@
 #include "dsa/DSGraph.h"
 #include "dsa/CallTargets.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/IR/Constants.h"
 #include <ostream>
@@ -41,7 +41,8 @@ namespace {
 }
 
 namespace dsa {
-  template<typename dsa>
+
+template<typename dsa>
 char CallTargetFinder<dsa>::ID = 0;
 
   template<class dsa>

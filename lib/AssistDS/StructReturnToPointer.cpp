@@ -20,7 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 
 #include <set>
 #include <map>
@@ -52,7 +52,7 @@ bool StructRet::runOnModule(Module& M) {
 
   std::vector<Function*> worklist;
   for (Function &F : M)
-    if (!F.mayBeOverridden()) {
+    if (!F.isInterposable()) {
       if(F.isDeclaration())
         continue;
       if(F.hasAddressTaken())
@@ -110,13 +110,26 @@ bool StructRet::runOnModule(Module& M) {
         ReturnInst * RI = dyn_cast<ReturnInst>(I++);
         if(!RI)
           continue;
-        LoadInst *LI = dyn_cast<LoadInst>(RI->getOperand(0));
-        assert(LI && "Return should be preceded by a load instruction");
         IRBuilder<> Builder(RI);
-        Builder.CreateMemCpy(fargs.at(0),
-            LI->getPointerOperand(),
-            targetData.getTypeStoreSize(LI->getType()),
-            targetData.getPrefTypeAlignment(LI->getType()));
+        if (auto LI = dyn_cast<LoadInst>(RI->getOperand(0))) {
+          Builder.CreateMemCpy(fargs.at(0),
+              LI->getPointerOperand(),
+              targetData.getTypeStoreSize(LI->getType()),
+              targetData.getPrefTypeAlignment(LI->getType()));
+        } else if (auto CS = dyn_cast<ConstantStruct>(RI->getReturnValue())) {
+          StructType* ST = CS->getType();
+          // We could store the struct into the allocated space pointed by the first
+          // argument and then load it once SMACK can handle store inst of structs.
+          for (unsigned i = 0; i < ST->getNumElements(); ++i) {
+            std::vector<Value*> idxs = {ConstantInt::get(Type::getInt32Ty(CS->getContext()),0),
+                ConstantInt::get(Type::getInt32Ty(CS->getContext()),i)};
+            Builder.CreateStore(CS->getAggregateElement(i),
+                Builder.CreateGEP(fargs.at(0), ArrayRef<Value*>(idxs)));
+          }
+          assert(RI->getNumOperands() == 1 && "Return should only have one operand");
+          RI->setOperand(0, UndefValue::get(ST));
+        } else
+          llvm_unreachable("Unexpected struct-type return value.");
       }
     }
 

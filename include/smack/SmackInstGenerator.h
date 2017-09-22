@@ -4,9 +4,6 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
-#include "smack/BoogieAst.h"
-#include "smack/SmackRep.h"
-#include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include <unordered_set>
@@ -14,13 +11,22 @@
 
 namespace smack {
 
+class Naming;
+class Program;
+class ProcDecl;
+class Block;
+class Stmt;
+class Expr;
+class Attr;
+class SmackRep;
+
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
-  LoopInfo& loops;
-  SmackRep& rep;
-  ProcDecl& proc;
-  Naming& naming;
+  llvm::LoopInfo& loops;
+  SmackRep* rep;
+  ProcDecl* proc;
+  Naming* naming;
 
   Block* currBlock;
   llvm::BasicBlock::const_iterator nextInst;
@@ -40,15 +46,10 @@ private:
   const Stmt* recordProcedureCall(llvm::Value* V, std::list<const Attr*> attrs);
 
 public:
-  void emit(const Stmt* s) {
-    // stringstream str;
-    // s->print(str);
-    // DEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
-    currBlock->addStmt(s);
-  }
+  void emit(const Stmt* s);
 
 public:
-  SmackInstGenerator(LoopInfo& LI, SmackRep& R, ProcDecl& P, Naming& N)
+  SmackInstGenerator(llvm::LoopInfo& LI, SmackRep* R, ProcDecl* P, Naming* N)
     : loops(LI), rep(R), proc(P), naming(N) {}
 
 

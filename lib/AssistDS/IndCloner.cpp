@@ -70,7 +70,7 @@ IndClone::runOnModule(Module& M) {
     // Only clone functions which are defined and cannot be replaced by another
     // function by the linker.
     //
-    if (!F.isDeclaration() && !F.mayBeOverridden()) {
+    if (!F.isDeclaration() && !F.isInterposable()) {
       for (User *U : F.users()) {
         if (!isa<CallInst>(U) && !isa<InvokeInst>(U)) {
           if(!U->use_empty())
@@ -127,7 +127,7 @@ IndClone::runOnModule(Module& M) {
     //
     Function * Original = toClone[index];
     ValueToValueMapTy VMap;
-    Function* DirectF = CloneFunction(Original, VMap, false);
+    Function* DirectF = CloneFunction(Original, VMap);
     DirectF->setName(Original->getName() + "_DIRECT");
 
     //

@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.8 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.9 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -18,8 +18,13 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
+  string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-Wl," "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-gsplit-dwarf" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -Wno-undefined-var-template")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 
@@ -151,6 +156,7 @@ add_library(dsa STATIC
 )
 
 add_library(smackTranslator STATIC
+  include/smack/AddTiming.h
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
@@ -163,13 +169,17 @@ add_library(smackTranslator STATIC
   include/smack/CodifyStaticInits.h
   include/smack/RemoveDeadDefs.h
   include/smack/ExtractContracts.h
+  include/smack/VerifierCodeMetadata.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
   include/smack/MemorySafetyChecker.h
   include/smack/SignedIntegerOverflowChecker.h
+  include/smack/SplitAggregateLoadStore.h
+  lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
+  lib/smack/Debug.cpp
   lib/smack/DSAWrapper.cpp
   lib/smack/Naming.cpp
   lib/smack/Regions.cpp
@@ -179,10 +189,12 @@ add_library(smackTranslator STATIC
   lib/smack/CodifyStaticInits.cpp
   lib/smack/RemoveDeadDefs.cpp
   lib/smack/ExtractContracts.cpp
+  lib/smack/VerifierCodeMetadata.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/SignedIntegerOverflowChecker.cpp
+  lib/smack/SplitAggregateLoadStore.cpp
 )
 
 add_executable(llvm2bpl

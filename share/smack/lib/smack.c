@@ -3,7 +3,7 @@
 
 #include <smack.h>
 #include <limits.h>
-#include <string.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 /**
@@ -68,151 +68,151 @@ void exit(int x) {
   while(1);
 }
 
-char __VERIFIER_nondet_char() {
+char __VERIFIER_nondet_char(void) {
   char x = __SMACK_nondet_char();
   __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
   return x;
 }
 
-signed char __VERIFIER_nondet_signed_char() {
+signed char __VERIFIER_nondet_signed_char(void) {
   signed char x = __SMACK_nondet_signed_char();
   __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
   return x;
 }
 
-unsigned char __VERIFIER_nondet_unsigned_char() {
+unsigned char __VERIFIER_nondet_unsigned_char(void) {
   unsigned char x = __SMACK_nondet_unsigned_char();
   __VERIFIER_assume(x >= 0 && x <= UCHAR_MAX);
   return x;
 }
 
-short __VERIFIER_nondet_short() {
+short __VERIFIER_nondet_short(void) {
   short x = __SMACK_nondet_short();
   __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
   return x;
 }
 
-signed short __VERIFIER_nondet_signed_short() {
+signed short __VERIFIER_nondet_signed_short(void) {
   signed short x = __SMACK_nondet_signed_short();
   __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
   return x;
 }
 
-signed short int __VERIFIER_nondet_signed_short_int() {
+signed short int __VERIFIER_nondet_signed_short_int(void) {
   signed short int x = __SMACK_nondet_signed_short_int();
   __VERIFIER_assume(x >= SHRT_MIN && x <= SHRT_MAX);
   return x;
 }
 
-unsigned short __VERIFIER_nondet_unsigned_short() {
+unsigned short __VERIFIER_nondet_unsigned_short(void) {
   unsigned short x = __SMACK_nondet_unsigned_short();
   __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
   return x;
 }
 
-unsigned short int __VERIFIER_nondet_unsigned_short_int() {
+unsigned short int __VERIFIER_nondet_unsigned_short_int(void) {
   unsigned short int x = __SMACK_nondet_unsigned_short_int();
   __VERIFIER_assume(x >= 0 && x <= USHRT_MAX);
   return x;
 }
 
-int __VERIFIER_nondet_int() {
+int __VERIFIER_nondet_int(void) {
   int x = __SMACK_nondet_int();
   __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
   return x;
 }
 
-signed int __VERIFIER_nondet_signed_int() {
+signed int __VERIFIER_nondet_signed_int(void) {
   signed int x = __SMACK_nondet_signed_int();
   __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
   return x;
 }
 
-unsigned __VERIFIER_nondet_unsigned() {
+unsigned __VERIFIER_nondet_unsigned(void) {
   unsigned x = __SMACK_nondet_unsigned();
   __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
   return x;
 }
 
-unsigned int __VERIFIER_nondet_unsigned_int() {
+unsigned int __VERIFIER_nondet_unsigned_int(void) {
   unsigned int x = __SMACK_nondet_unsigned_int();
   __VERIFIER_assume(x >= 0 && x <= UINT_MAX);
   return x;
 }
 
-long __VERIFIER_nondet_long() {
+long __VERIFIER_nondet_long(void) {
   long x = __SMACK_nondet_long();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-long int __VERIFIER_nondet_long_int() {
+long int __VERIFIER_nondet_long_int(void) {
   long int x = __SMACK_nondet_long_int();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-signed long __VERIFIER_nondet_signed_long() {
+signed long __VERIFIER_nondet_signed_long(void) {
   signed long x = __SMACK_nondet_signed_long();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-signed long int __VERIFIER_nondet_signed_long_int() {
+signed long int __VERIFIER_nondet_signed_long_int(void) {
   signed long int x = __SMACK_nondet_signed_long_int();
   __VERIFIER_assume(x >= LONG_MIN && x <= LONG_MAX);
   return x;
 }
 
-unsigned long __VERIFIER_nondet_unsigned_long() {
+unsigned long __VERIFIER_nondet_unsigned_long(void) {
   unsigned long x = __SMACK_nondet_unsigned_long();
   __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
   return x;
 }
 
-unsigned long int __VERIFIER_nondet_unsigned_long_int() {
+unsigned long int __VERIFIER_nondet_unsigned_long_int(void) {
   unsigned long int x = __SMACK_nondet_unsigned_long_int();
   __VERIFIER_assume(x >= 0 && x <= ULONG_MAX);
   return x;
 }
 
-long long __VERIFIER_nondet_long_long() {
+long long __VERIFIER_nondet_long_long(void) {
   long long x = __SMACK_nondet_long_long();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-long long int __VERIFIER_nondet_long_long_int() {
+long long int __VERIFIER_nondet_long_long_int(void) {
   long long int x = __SMACK_nondet_long_long_int();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-signed long long __VERIFIER_nondet_signed_long_long() {
+signed long long __VERIFIER_nondet_signed_long_long(void) {
   signed long long x = __SMACK_nondet_signed_long_long();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-signed long long int __VERIFIER_nondet_signed_long_long_int() {
+signed long long int __VERIFIER_nondet_signed_long_long_int(void) {
   signed long long int x = __SMACK_nondet_signed_long_long_int();
   __VERIFIER_assume(x >= LLONG_MIN && x <= LLONG_MAX);
   return x;
 }
 
-unsigned long long __VERIFIER_nondet_unsigned_long_long() {
+unsigned long long __VERIFIER_nondet_unsigned_long_long(void) {
   unsigned long long x = __SMACK_nondet_unsigned_long_long();
   __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
   return x;
 }
 
-unsigned long long int __VERIFIER_nondet_unsigned_long_long_int() {
+unsigned long long int __VERIFIER_nondet_unsigned_long_long_int(void) {
   unsigned long long int x = __SMACK_nondet_unsigned_long_long_int();
   __VERIFIER_assume(x >= 0 && x <= ULLONG_MAX);
   return x;
 }
 
-// Apparently used in SVCCOMP benchmarks
+// Used in SVCCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();
   __VERIFIER_assume(x == 0 || x == 1);
@@ -254,460 +254,7 @@ void* calloc(size_t num, size_t size) {
   return ret;
 }
 
-#if FLOAT_ENABLED
 
-  //Check the length of pointers
-  //#if ( __WORDSIZE == 64 )
-  #if defined(__LP64__) || defined(_LP64)
-  #define BUILD_64   1
-  #endif
-
-float fabsf(float x) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $abs.bvfloat(@);", ret, x);
-  return ret;
-}
-
-float fdimf(float x, float y) {
-  if(x>y)
-    return x-y;
-  else
-    return 0;
-}
-
-float roundf(float x) {
-  if (__isnan(x) || __isinf(x) || __iszero(x))
-    return x;
-  double rete = __VERIFIER_nondet_double();
-  double reta = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($round.rne.bvfloat(@));", rete, x);
-  __SMACK_code("@ := sbv32td($round.rna.bvfloat(@));", reta, x);
-  if (x > 0)
-    return fmax(rete, reta);
-  return fmin(rete, reta);
-}
-
-long lroundf(float x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
-  return ret;
-}
-
-float rintf(float x) {
-  return roundf(x);
-}
-
-float nearbyintf(float x) {
-  return roundf(x);
-}
-
-long lrintf(float x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
-  return ret;
-}
-
-float floorf(float x) {
-  if (__isnanf(x) || __isinff(x) || __iszerof(x))
-    return x;
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($floor.bvfloat(dtf(@)));", ret, x);
-  return ret;
-}
-
-float ceilf(float x) {
-  if (__isnanf(x) || __isinff(x) || __iszerof(x))
-    return x;
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($ceil.bvfloat(dtf(@)));", ret, x);
-  return ret;
-}
-
-float truncf(float x) {
-  if (__isnanf(x) || __isinff(x) || __iszerof(x))
-    return x;
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($trunc.bvfloat(dtf(@)));", ret, x);
-  return ret;
-}
-
-float sqrtf(float x) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $sqrt.bvfloat(dtf(@));", ret, x);
-  return ret;
-}
-
-float remainderf(float x, float y) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($rem.bvfloat(dtf(@), dtf(@)));", ret, x, y);
-  return ret;
-}
-
-float fminf(float x, float y) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $min.bvfloat(dtf(@), dtf(@));", ret, x, y);
-  return ret;
-}
-
-float fmaxf(float x, float y) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $max.bvfloat(dtf(@), dtf(@));", ret, x, y);
-  return ret;
-}
-
-float fmodf(float x, float y) {
-  float result = remainderf(fabsf(x), fabsf(y));
-  if (signbitf(result)) 
-    result += fabsf(y);
-  return copysignf(result, x);
-}
-
-float modff(float x, float* y) {
-  *y = floorf(x);
-  return x -*y;
-}
-
-float copysignf(float x, float y) {
-  double ret = __VERIFIER_nondet_double();
-  if (__isnegativef(x)^__isnegativef(y))
-    __SMACK_code("@ := $fmul.bvfloat(dtf(@), -0e127f24e8);", ret, x);
-  else
-    ret = x;
-  return ret;
-}
-
-int __isnormalf(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __isSubnormalf(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __iszerof(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $iszero.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-  
-int __isinff(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-  
-int __isnanf(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __isnegativef(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __ispositivef(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $ispositive.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __signbitf(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int signbitf(float x) {
-  return __signbitf(x);
-}
-
-int __fpclassifyf(float x) {
-  if (__isnanf(x))
-    return 0;
-  if (__isinff(x))
-    return 1;
-  if (__iszerof(x))
-    return 2;
-  if (__isSubnormalf(x))
-    return 3;
-  return 4;
-}
-
-int fpclassifyf(float x) {
-  return __fpclassifyf(x);
-}
-
-int __finitef(float x) {
-  return !__isinf(x) && !__isnanf(x);
-}
-
-double fabs(double x) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $abs.bvdouble(@);", ret, x);
-  return ret;
-}
-
-double fdim(double x, double y) {
-  if(x>y)
-    return x-y;
-  else
-    return 0;
-}
-
-double round(double x) {
-  if (__isnan(x) || __isinf(x) || __iszero(x))
-    return x;
-  double rete = __VERIFIER_nondet_double();
-  double reta = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv64td($round.rne.bvdouble(@));", rete, x);
-  __SMACK_code("@ := sbv64td($round.rna.bvdouble(@));", reta, x);
-  if (x > 0)
-    return fmax(rete, reta);
-  return fmin(rete, reta);
-}
-
-long lround(double x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvdouble(@);", ret, x);
-  return ret;
-}
-
-double rint(double x) {
-  return round(x);
-}
-
-double nearbyint(double x) {
-  return round(x);
-}
-
-long lrint(double x) {
-  return lround(x);
-}
-
-double floor(double x) {
-  if (__isnan(x) || __isinf(x) || __iszero(x))
-    return x;
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv64td($floor.bvdouble(@));", ret, x);
-  return ret;
-}
-
-double ceil(double x) {
-  if (__isnan(x) || __isinf(x) || __iszero(x))
-    return x;
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv64td($ceil.bvdouble(@));", ret, x);
-  return ret;
-}
-
-double trunc(double x) {
-  if (__isnan(x) || __isinf(x) || __iszero(x))
-    return x;
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv64td($trunc.bvdouble(@));", ret, x);
-  return ret;
-}
-
-double sqrt(double x) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $sqrt.bvdouble(@);", ret, x);
-  return ret;
-}
-
-double remainder(double x, double y) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd(dtf($rem.bvdouble(ftd(dtf(@)), ftd(dtf(@)))));", ret, x, y);
-  return ret;
-}
-
-double fmin(double x, double y) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $min.bvdouble(@, @);", ret, x, y);
-  return ret;
-}
-
-double fmax(double x, double y) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $max.bvdouble(@, @);", ret, x, y);
-  return ret;
-}
-
-double fmod(double x, double y) {
-  double result = remainder(fabs(x), fabs(y));
-  if (signbit(result))
-    result += fabs(y);
-  return copysign(result, x);
-}
-
-double modf(double x, double* y) {
-  *y = floor(x);
-  return x - *y;
-}
-
-double copysign(double x, double y) {
-  double ret = __VERIFIER_nondet_double();
-  if (__isnegative(x)^__isnegative(y))
-    __SMACK_code("@ := $fmul.bvdouble(@, -0e1023f53e11);", ret, x);
-  else
-    ret = x;
-  return ret;
-}
-
-double nan(const char* x) {
-  return 0.0/0.0;
-}
-
-int __isnormal(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __isSubnormal(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __iszero(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $iszero.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-  
-int __isinf(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-  
-int __isnan(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __isnegative(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __ispositive(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $ispositive.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __signbit(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (@ <= 0e0f53e11) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int signbit(double x) {
-  return __signbit(x);
-}
-
-int __fpclassify(double x) {
-  if (__isnan(x))
-    return 0;
-  if (__isinf(x))
-    return 1;
-  if (__iszero(x))
-    return 2;
-  if (__isSubnormal(x))
-    return 3;
-  return 4;
-}
-
-int fpclassify(double x) {
-  return __fpclassify(x);
-}
-
-int __finite(double x) {
-  return !__isinf(x) && !__isnan(x);
-}
-
-/*int __isnormall(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __isSubnormall(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __iszerol(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $iszero.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-  
-int __isinfl(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-  
-int __isnanl(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __isnegativel(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __ispositivel(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $ispositive.bvlongdouble(@) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int __signbitl(long double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (@ <= 0e0f53e11) then 1bv32 else 0bv32;", ret, x);
-  return ret;
-}
-
-int signbitl(long double x) {
-  return __signbitl(x);
-}
-
-int __fpclassifyl(long double x) {
-  if (__isnanl(x))
-    return 0;
-  if (__isinfl(x))
-    return 1;
-  if (__iszerol(x))
-    return 2;
-  if (__isSubnormall(x))
-    return 3;
-  return 4;
-}
-
-int fpclassifyl(long double x) {
-  return __fpclassifyl(x);
-}
-
-int __finitel(long double x) {
-  return !__isinfl(x) && !__isnanl(x);
-}*/
-#endif
 
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
@@ -834,7 +381,7 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bvdouble,args))); \
   D(xstr(M(bvlongdouble,args)));
 
-void __SMACK_decls() {
+void __SMACK_decls(void) {
 
   DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
@@ -1515,21 +1062,21 @@ void __SMACK_decls() {
   DECLARE_EACH_FLOAT_TYPE(FPBUILTIN_BINARY_OP, $frem, fp.rem)
   D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
   D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
-  
+
   D("function {:builtin \"fp.abs\"} $abs.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.fma\"} $fma.bvfloat(bvfloat, bvfloat, bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.sqrt\"} $sqrt.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.rem\"} $rem.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.min\"} $min.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.max\"} $max.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
-  
+
   D("function {:builtin \"fp.abs\"} $abs.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.fma\"} $fma.bvdouble(bvdouble, bvdouble, bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.sqrt\"} $sqrt.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.rem\"} $rem.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.min\"} $min.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.max\"} $max.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
-  
+
   D("function {:builtin \"fp.isNormal\"} $isnormal.bvfloat(bvfloat) returns (bool);");
   D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvfloat(bvfloat) returns (bool);");
   D("function {:builtin \"fp.isZero\"} $iszero.bvfloat(bvfloat) returns (bool);");
@@ -1545,7 +1092,7 @@ void __SMACK_decls() {
   D("function {:builtin \"fp.isNaN\"} $isnan.bvdouble(bvdouble) returns (bool);");
   D("function {:builtin \"fp.isNegative\"} $isnegative.bvdouble(bvdouble) returns (bool);");
   D("function {:builtin \"fp.isPositive\"} $ispositive.bvdouble(bvdouble) returns (bool);");
-  
+
   D("function {:builtin \"fp.isNormal\"} $isnormal.bvlongdouble(bvlongdouble) returns (bool);");
   D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvlongdouble(bvlongdouble) returns (bool);");
   D("function {:builtin \"fp.isZero\"} $iszero.bvlongdouble(bvlongdouble) returns (bool);");
@@ -1631,7 +1178,7 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_ubv 24) RNE\"} ftubv24(bvfloat) returns (bv24);");
   D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} ftubv16(bvfloat) returns (bv16);");
   D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} ftubv8(bvfloat) returns (bv8);");
-  
+
   // Add truncation for default casts to int
   D("function {:builtin \"(_ fp.to_sbv 128) RTZ\"} ftsi128(bvfloat) returns (bv128);");
   D("function {:builtin \"(_ fp.to_sbv 96) RTZ\"} ftsi96(bvfloat) returns (bv96);");
@@ -1644,7 +1191,7 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_sbv 24) RTZ\"} ftsi24(bvfloat) returns (bv24);");
   D("function {:builtin \"(_ fp.to_sbv 16) RTZ\"} ftsi16(bvfloat) returns (bv16);");
   D("function {:builtin \"(_ fp.to_sbv 8) RTZ\"} ftsi8(bvfloat) returns (bv8);");
-  
+
   DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2si, {ftsi128(i)});
   DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2ui, {ftubv128(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvfloat, $si2fp, {sbv128tf(i)});
@@ -1689,21 +1236,21 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2ui, {ftubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvfloat, $si2fp, {sbv8tf(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvfloat, $ui2fp, {ubv8tf(i)});
-  
+
   D("function {:builtin \"(_ fp.to_sbv 32) RNE\"} $round.rne.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $round.rna.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RTN\"} $floor.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RTP\"} $ceil.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} $trunc.bvfloat(bvfloat) returns (bv32);");
-  
+
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
-  
+
   #else
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
 
   #endif
-  
+
   //This isn't the correct implementation, so change as needed
   D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
   D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
@@ -1755,7 +1302,7 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_ubv 24) RNE\"} dtubv24(bvdouble) returns (bv24);");
   D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} dtubv16(bvdouble) returns (bv16);");
   D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} dtubv8(bvdouble) returns (bv8);");
-  
+
   // Add truncation for default casts to int
   D("function {:builtin \"(_ fp.to_sbv 128) RTZ\"} dtsi128(bvdouble) returns (bv128);");
   D("function {:builtin \"(_ fp.to_sbv 96) RTZ\"} dtsi96(bvdouble) returns (bv96);");
@@ -1768,7 +1315,7 @@ void __SMACK_decls() {
   D("function {:builtin \"(_ fp.to_sbv 24) RTZ\"} dtsi24(bvdouble) returns (bv24);");
   D("function {:builtin \"(_ fp.to_sbv 16) RTZ\"} dtsi16(bvdouble) returns (bv16);");
   D("function {:builtin \"(_ fp.to_sbv 8) RTZ\"} dtsi8(bvdouble) returns (bv8);");
-  
+
   DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2si, {dtsi128(i)});
   DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2ui, {dtubv128(i)});
   DECLARE(INLINE_CONVERSION, bv128, bvdouble, $si2fp, {sbv128td(i)});
@@ -1813,21 +1360,21 @@ void __SMACK_decls() {
   DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2ui, {dtubv8(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $si2fp, {sbv8td(i)});
   DECLARE(INLINE_CONVERSION, bv8, bvdouble, $ui2fp, {ubv8td(i)});
-  
+
   D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} $round.rne.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $round.rna.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RTN\"} $floor.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RTP\"} $ceil.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} $trunc.bvdouble(bvdouble) returns (bv64);");
-  
+
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
-  
+
   #else
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvdouble(bvdouble) returns (bv32);");
 
   #endif
-  
+
 #endif
 
   // Memory Model
@@ -2034,7 +1581,9 @@ void __SMACK_decls() {
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $allocatedCounter;\n"
     "{\n"
-    "  $allocatedCounter := $allocatedCounter + 1;\n"
+    "  if ($ne.ref.bool(n, $0.ref)) {\n"
+    "    $allocatedCounter := $allocatedCounter + 1;\n"
+    "  }\n"
     "  call p := $$alloc(n);\n"
     "}\n");
 
@@ -2053,19 +1602,18 @@ void __SMACK_decls() {
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $Alloc, $CurrAddr;\n"
     "{\n"
-    "  p := $CurrAddr;\n"
-    "  havoc $CurrAddr;\n"
-    "  if ($sgt.ref.bool(n, $0.ref)) {\n"
+    "  assume $sle.ref.bool($0.ref, n);\n"
+    "  if ($slt.ref.bool($0.ref, n)) {\n"
+    "    p := $CurrAddr;\n"
+    "    havoc $CurrAddr;\n"
     "    assume $sge.ref.bool($sub.ref($CurrAddr, n), p);\n"
     "    assume $sgt.ref.bool($CurrAddr, $0.ref) && $slt.ref.bool($CurrAddr, $MALLOC_TOP);\n"
     "    assume $Size(p) == n;\n"
     "    assume (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
+    "    $Alloc[p] := true;\n"
     "  } else {\n"
-    "    assume $sle.ref.bool($add.ref(p, $1.ref), $CurrAddr);\n"
-    "    assume $Size(p) == $1.ref;\n"
-    "    assume $eq.ref.bool($base(p), p);\n"
+    "    p := $0.ref;\n"
     "  }\n"
-    "  $Alloc[p] := true;\n"
     "}\n");
 
   D("procedure $free(p: ref)\n"
@@ -2073,8 +1621,8 @@ void __SMACK_decls() {
     "{\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
-    "    assert {:valid_free} $Alloc[p] == true;\n"
-    "    assert {:valid_free} $sgt.ref.bool(p, $0.ref);\n"
+    "    assert {:valid_free} $Alloc[p];\n"
+    "    assert {:valid_free} $slt.ref.bool($0.ref, p);\n"
     "    $Alloc[p] := false;\n"
     "    $allocatedCounter := $allocatedCounter - 1;\n"
     "  }\n"
@@ -2085,7 +1633,7 @@ void __SMACK_decls() {
   D("var $Size: [ref] ref;\n");
 
   D("procedure $galloc(base_addr: ref, size: ref);\n"
-    "modifies $Alloc, $Size;"
+    "modifies $Alloc, $Size;\n"
     "ensures $Size[base_addr] == size;\n"
     "ensures (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) && $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == base_addr);\n"
     "ensures $Alloc[base_addr];\n"
@@ -2094,20 +1642,21 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $sgt.ref.bool(p, $0.ref);\n"
-    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
+    "ensures $sle.ref.bool($0.ref, n);\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> $slt.ref.bool($0.ref, p) && $slt.ref.bool(p, $sub.ref($MALLOC_TOP, n));\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> p == $0.ref;\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $sgt.ref.bool(p, $add.ref(q, $Size[q]))));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $slt.ref.bool($add.ref(q, $Size[q]), p)));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
-    "ensures $sge.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
+    "ensures (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
-    "requires $sgt.ref.bool(p, $0.ref);\n"
+    "requires $slt.ref.bool($0.ref, p);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
@@ -2118,7 +1667,7 @@ void __SMACK_decls() {
   D("var $CurrAddr:ref;\n");
 
   D("procedure $galloc(base_addr: ref, size: ref);\n"
-    "modifies $Alloc;"
+    "modifies $Alloc;\n"
     "ensures $Size(base_addr) == size;\n"
     "ensures (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) && $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == base_addr);\n"
     "ensures $Alloc[base_addr];\n"
@@ -2126,20 +1675,20 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $CurrAddr;\n"
-    "ensures p == old($CurrAddr);\n"
-    "ensures $sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), n), $CurrAddr);\n"
-    "ensures $sgt.ref.bool(n, $0.ref) ==> $Size(p) == n;\n"
-    "ensures $sgt.ref.bool(n, $0.ref) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), $1.ref), $CurrAddr);\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $Size(p) == $1.ref;\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $eq.ref.bool($base(p), p);\n"
-    "ensures $Alloc[p];\n"
+    "ensures $sle.ref.bool($0.ref, n);\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> $sge.ref.bool($sub.ref($CurrAddr, n), old($CurrAddr)) && p == old($CurrAddr);\n"
+    "ensures $sgt.ref.bool($CurrAddr, $0.ref) && $slt.ref.bool($CurrAddr, $MALLOC_TOP);\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> $Size(p) == n;\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> $Alloc[p];\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> old($CurrAddr) == $CurrAddr && p == $0.ref;\n"
+    "ensures $eq.ref.bool(n, $0.ref)==> $Alloc[p] == old($Alloc)[p];\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n");
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && $Alloc[p]);\n"
-    "requires $sgt.ref.bool(p, $0.ref);\n"
+    "requires $slt.ref.bool($0.ref, p);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == old($allocatedCounter) - 1;\n");
@@ -2157,13 +1706,14 @@ void __SMACK_decls() {
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr;\n"
     "{\n"
-    "  p := $CurrAddr;\n"
-    "  havoc $CurrAddr;\n"
+    "  assume $sge.ref.bool(n, $0.ref);\n"
     "  if ($sgt.ref.bool(n, $0.ref)) {\n"
+    "    p := $CurrAddr;\n"
+    "    havoc $CurrAddr;\n"
     "    assume $sge.ref.bool($sub.ref($CurrAddr, n), p);\n"
     "    assume $sgt.ref.bool($CurrAddr, $0.ref) && $slt.ref.bool($CurrAddr, $MALLOC_TOP);\n"
     "  } else {\n"
-    "    assume $sle.ref.bool($add.ref(p, $1.ref), $CurrAddr);\n"
+    "    p := $0.ref;\n"
     "  }\n"
     "}\n");
 
@@ -2175,10 +1725,11 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
-    "ensures $sgt.ref.bool(p, $0.ref);\n"
-    "ensures $slt.ref.bool(p, $MALLOC_TOP);\n"
+    "ensures $sle.ref.bool($0.ref, n);\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> $slt.ref.bool($0.ref, p) && $slt.ref.bool(p, $sub.ref($MALLOC_TOP, n));\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> p == $0.ref;\n"
     "ensures !old($Alloc[p]);\n"
-    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $sgt.ref.bool(p, $add.ref(q, $Size[q]))));\n"
+    "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, n), q) || $slt.ref.bool($add.ref(q, $Size[q]), p)));\n"
     "ensures $Alloc[p];\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
@@ -2194,9 +1745,10 @@ void __SMACK_decls() {
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr;\n"
-    "ensures p == old($CurrAddr);\n"
-    "ensures $sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), n), $CurrAddr);\n"
-    "ensures !$sgt.ref.bool(n, $0.ref) ==> $sle.ref.bool($add.ref(old($CurrAddr), $1.ref), $CurrAddr);\n");
+    "ensures $sle.ref.bool($0.ref, n);\n"
+    "ensures $slt.ref.bool($0.ref, n) ==> $sge.ref.bool($sub.ref($CurrAddr, n), old($CurrAddr)) && p == old($CurrAddr);\n"
+    "ensures $sgt.ref.bool($CurrAddr, $0.ref) && $slt.ref.bool($CurrAddr, $MALLOC_TOP);\n"
+    "ensures $eq.ref.bool(n, $0.ref) ==> old($CurrAddr) == $CurrAddr && p == $0.ref;\n");
 
   D("procedure $free(p: ref);\n");
 #endif
@@ -2209,7 +1761,7 @@ void __SMACK_decls() {
 // The size parameter represents number of bytes that are being accessed
 void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
   void* sizeRef = (void*)size;
-  __SMACK_code("assert {:valid_deref} $Alloc[$base(@)] == true;", pointer);
+  __SMACK_code("assert {:valid_deref} $Alloc[$base(@)];", pointer);
   __SMACK_code("assert {:valid_deref} $sle.ref.bool($base(@), @);", pointer, pointer);
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, sizeRef, pointer, pointer);
@@ -2220,7 +1772,7 @@ void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
 #endif
 }
 
-void __SMACK_check_memory_leak() {
+void __SMACK_check_memory_leak(void) {
   __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
 }
 #endif
@@ -2233,94 +1785,3 @@ void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$allocatedCounter := 0;");
 #endif
 }
-
-
-#if MEMORY_SAFETY || SIGNED_INTEGER_OVERFLOW_CHECK
-char *strcpy(char *dest, const char *src) {
-  char *save = dest;
-  while (*dest++ = *src++);
-  return save;
-}
-
-size_t strlen(const char *str) {
-  size_t count = 0;
-  while (str[count] != 0) count++;
-  return count;
-}
-
-char *strrchr(const char *src, int c) {
-  char *result = (char *)0;
-
-  while (*src != 0) {
-    if (*src == c) {
-      result = src;
-    }
-    src++;
-  }
-  return result;
-}
-
-size_t strspn(const char *cs, const char *ct) {
-  size_t n;
-  const char *p;
-  for (n = 0; *cs; cs++, n++) {
-    for (p = ct; *p && *p != *cs; p++);
-    if (!*p) break;
-  }
-  return n;
-}
-
-unsigned long int strtoul(const char *nptr, char **endptr, int base) {
-  if (__VERIFIER_nondet_int()) {
-    if (endptr != 0) {
-      *endptr = nptr;
-    }
-    return 0;
-  } else {
-    if (endptr != 0) {
-      size_t size = strlen(nptr);
-      *endptr = nptr + size;
-    }
-    return __VERIFIER_nondet_ulong();
-  }
-}
-
-double strtod(const char *nptr, char **endptr) {
-  if (__VERIFIER_nondet_int()) {
-    if (endptr != 0) {
-      *endptr = nptr;
-    }
-    return 0.0;
-  } else {
-    if (endptr != 0) {
-      size_t size = strlen(nptr);
-      *endptr = nptr + size;
-    }
-    return __VERIFIER_nondet_long();
-  }
-}
-
-char *error_str = "xx";
-char *strerror(int errnum) {
-  error_str[0] = __VERIFIER_nondet_char();
-  error_str[1] = __VERIFIER_nondet_char();
-  return error_str;
-}
-
-char *env_value_str = "xx";
-char *getenv(const char *name) {
-  if (__VERIFIER_nondet_int()) {
-    return 0;
-  } else {
-    env_value_str[0] = __VERIFIER_nondet_char();
-    env_value_str[1] = __VERIFIER_nondet_char();
-    return env_value_str;
-  }
-}
-
-void *realloc (void *__ptr, size_t __size) {
-  free(__ptr);
-  return malloc(__size);
-}
-#endif
-

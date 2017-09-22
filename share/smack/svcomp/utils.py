@@ -36,7 +36,7 @@ def svcomp_frontend(args):
       args.bit_precise = True
       args.bit_precise_pointers = True
       #args.verifier = 'boogie'
-      args.time_limit = 890
+      args.time_limit = 1000
       args.unroll = 100
     args.execute = executable
   else:
@@ -49,6 +49,7 @@ def svcomp_frontend(args):
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
 
+  args.clang_options += " -DSVCOMP"
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DNO_FORALL"
@@ -282,10 +283,10 @@ def verify_bpl_svcomp(args):
   elif "printf_false-unreach-call" in bpl or "echo_true-no-overflow" in bpl:
     heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 11.\n"
     loopUnrollBar = 11
-  elif args.memory_safety and "__main(argc:" in bpl:
+  elif args.memory_safety and "__main($i0" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
-  elif args.signed_integer_overflow and "__main(argc:" in bpl:
+  elif args.signed_integer_overflow and "__main($i0" in bpl:
     heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
   elif args.signed_integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):

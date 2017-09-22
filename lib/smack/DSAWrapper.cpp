@@ -5,6 +5,10 @@
 // the University of Illinois Open Source License. See LICENSE for details.
 //
 #include "smack/DSAWrapper.h"
+#include "dsa/DataStructure.h"
+#include "assistDS/DSNodeEquivs.h"
+#include "dsa/DSGraph.h"
+#include "dsa/TypeSafety.h"
 #include "llvm/Support/FileSystem.h"
 
 #define DEBUG_TYPE "dsa-wrapper"
@@ -16,6 +20,44 @@ using namespace llvm;
 char DSAWrapper::ID;
 RegisterPass<DSAWrapper> DSAWrapperPass("dsa-wrapper",
   "SMACK Data Structure Graph Based Alias Analysis Wrapper");
+
+void MemcpyCollector::visitMemCpyInst(llvm::MemCpyInst& mci) {
+  const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs
+    = nodeEqs->getEquivalenceClasses();
+  const llvm::DSNode *n1 = eqs.getLeaderValue(
+    nodeEqs->getMemberForValue(mci.getOperand(0)) );
+  const llvm::DSNode *n2 = eqs.getLeaderValue(
+    nodeEqs->getMemberForValue(mci.getOperand(1)) );
+
+  bool f1 = false, f2 = false;
+  for (unsigned i=0; i<memcpys.size() && (!f1 || !f2); i++) {
+    f1 = f1 || memcpys[i] == n1;
+    f2 = f2 || memcpys[i] == n2;
+  }
+
+  if (!f1) memcpys.push_back(eqs.getLeaderValue(n1));
+  if (!f2) memcpys.push_back(eqs.getLeaderValue(n2));
+}
+
+void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequiredTransitive<llvm::BUDataStructures>();
+  AU.addRequiredTransitive<llvm::TDDataStructures>();
+  AU.addRequiredTransitive<llvm::DSNodeEquivs>();
+  AU.addRequired<dsa::TypeSafety<llvm::TDDataStructures> >();
+}
+
+bool DSAWrapper::runOnModule(llvm::Module &M) {
+  dataLayout = &M.getDataLayout();
+  TD = &getAnalysis<llvm::TDDataStructures>();
+  BU = &getAnalysis<llvm::BUDataStructures>();
+  nodeEqs = &getAnalysis<llvm::DSNodeEquivs>();
+  TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures> >();
+  memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
+  staticInits = collectStaticInits(M);
+  module = &M;
+  return false;
+}
 
 std::vector<const llvm::DSNode*> DSAWrapper::collectMemcpys(
     llvm::Module &M, MemcpyCollector *mcc) {
@@ -62,10 +104,16 @@ DSGraph *DSAWrapper::getGraphForValue(const Value *V) {
   llvm_unreachable("Unexpected value.");
 }
 
-unsigned DSAWrapper::getOffset(const MemoryLocation* l) {
+int DSAWrapper::getOffset(const MemoryLocation* l) {
   const DSGraph::ScalarMapTy& S = getGraphForValue(l->Ptr)->getScalarMap();
   DSGraph::ScalarMapTy::const_iterator I = S.find((const Value*)l->Ptr);
-  return (I == S.end()) ? 0 : (I->second.getOffset());
+  if (I == S.end())
+    return 0;
+  if (I->second.getNode() && I->second.getNode()->isCollapsedNode())
+    return -1;
+  unsigned offset = I->second.getOffset();
+  assert(offset <= INT_MAX && "Cannot handle large offsets");
+  return (int) offset;
 }
 
 bool DSAWrapper::isMemcpyd(const llvm::DSNode* n) {
@@ -154,7 +202,7 @@ unsigned DSAWrapper::getPointedTypeSize(const Value* v) {
     llvm_unreachable("Type should be pointer.");
 }
 
-unsigned DSAWrapper::getOffset(const Value* v) {
+int DSAWrapper::getOffset(const Value* v) {
   return getOffset(new MemoryLocation(v));
 }
 

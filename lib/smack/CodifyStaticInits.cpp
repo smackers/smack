@@ -9,7 +9,7 @@
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/IR/DataLayout.h"
@@ -22,41 +22,6 @@
 namespace smack {
 
 using namespace llvm;
-
-namespace{
-  Regex STRING_CONSTANT("^\\.str[.0-9]*$");
-
-  bool isStringConstant(Value& V) {
-    return STRING_CONSTANT.match(V.getName().str());
-  }
-
-  bool isBoogieCode(Value& V) {
-    std::queue<Value*> worklist;
-    std::set<Value*> covered;
-    worklist.push(&V);
-    covered.insert(&V);
-    while (worklist.size()) {
-      Value* U = worklist.front();
-      worklist.pop();
-
-      if (CallInst* CI = dyn_cast<CallInst>(U))
-        if (Function* F = CI->getCalledFunction())
-          if (F->hasName())
-            if (F->getName().find(Naming::MOD_PROC) != std::string::npos
-                || F->getName().find(Naming::CODE_PROC) != std::string::npos
-                || F->getName().find(Naming::DECL_PROC) != std::string::npos
-                || F->getName().find(Naming::TOP_DECL_PROC) != std::string::npos)
-            return true;
-
-      for (auto W : U->users())
-        if (!covered.count(W)) {
-          worklist.push(W);
-          covered.insert(W);
-        }
-    }
-    return false;
-  }
-}
 
 bool CodifyStaticInits::runOnModule(Module& M) {
   TD = &M.getDataLayout();
@@ -81,7 +46,7 @@ bool CodifyStaticInits::runOnModule(Module& M) {
       // that have named addresses, e.g., excluding string constants. Thus the
       // second predicate here is a messy hack that has little to do with the
       // intended property of being read.
-      if (DSA->isRead(&G) || !G.hasUnnamedAddr())
+      if (DSA->isRead(&G) || !G.hasGlobalUnnamedAddr())
 
         worklist.push_back(std::make_tuple(
           G.getInitializer(), &G, std::vector<Value*>()));

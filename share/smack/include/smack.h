@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#ifdef SVCOMP
 // Apprently needed by SVCOMP benchmarks
 #define __inline
 #define __builtin_expect __builtinx_expect
@@ -22,6 +23,7 @@ extern "C" {
 
 // For handling of va_start macro
 void __builtinx_va_start(char*,char*);
+#endif
 
 void __SMACK_code(const char *fmt, ...);
 void __SMACK_mod(const char *fmt, ...);
@@ -40,7 +42,7 @@ smack_value_t __SMACK_return_value(void);
 // Inserts memory access checks in form of assert to check null pointer access
 // and buffer overflow errors
 void __SMACK_check_memory_safety(void*, unsigned long);
-void __SMACK_check_memory_leak();
+void __SMACK_check_memory_leak(void);
 #endif
 
 // We need this to enforce that assert/assume are function calls
@@ -73,7 +75,7 @@ void exit(int);
 #define S(...) TY(__VA_ARGS__, S4, S3, S2, S1)(__VA_ARGS__)
 #define U(...) TY(__VA_ARGS__, U4, U3, U2, U1)(__VA_ARGS__)
 
-#define NONDET_DECL(P, ty...) S(ty) U(P,U(ty)) ()
+#define NONDET_DECL(P, ty...) S(ty) U(P,U(ty)) (void)
 
 void* __VERIFIER_nondet(void);
 NONDET_DECL(__SMACK_nondet,char);
@@ -130,88 +132,6 @@ NONDET_DECL(__VERIFIER_nondet,float);
 NONDET_DECL(__VERIFIER_nondet,double);
 NONDET_DECL(__VERIFIER_nondet,long,double);
 
-#if FLOAT_ENABLED
-//floats
-float fabsf(float x);
-float fdimf(float x, float y);
-float roundf(float x);
-//The following 3 functions are incomplete pending rounding mode implementation
-float rintf(float x);
-float nearbyintf(float x);
-long lrintf(float x);
-long lroundf(float x);
-float floorf(float x);
-float ceilf(float x);
-float truncf(float x);
-float sqrtf(float x);
-float remainderf(float x, float y);
-float fminf(float x, float y);
-float fmaxf(float x, float y);
-float fmodf(float x, float y);
-float modff(float x, float* y);
-float copysignf(float x, float y);
-int __isnormalf(float x);
-int __isSubnormalf(float x);
-int __iszerof(float x);
-int __isinff(float x);
-int __isnanf(float x);
-int __isnegativef(float x);
-int __ispositivef(float x);
-int __signbitf(float x);
-int signbitf(float x);
-int __fpclassifyf(float x);
-int fpclassifyf(float x);
-int __finitef(float x);
-//float nan(float x);
-
-//doubles
-double fabs(double x);
-double fdim(double x, double y);
-double round(double x);
-long lround(double x);
-//The following 3 functions are incomplete pending rounding mode implementation
-double rint(double x);
-double nearbyint(double x);
-long lrint(double x);
-double floor(double x);
-double ceil(double x);
-double trunc(double x);
-double sqrt(double x);
-double remainder(double x, double y);
-double fmin(double x, double y);
-double fmax(double x, double y);
-double fmod(double x, double y);
-double modf(double x, double* y);
-double copysign(double x, double y);
-double nan(const char* x);
-int __isnormal(double x);
-int __isSubnormal(double x);
-int __iszero(double x);
-int __isinf(double x);
-int __isnan(double x);
-int __isnegative(double x);
-int __ispositive(double x);
-int __signbit(double x);
-int signbit(double x);
-int __fpclassify(double x);
-int fpclassify(double x);
-int __finite(double x);
-
-//long doubles
-/*int __isnormall(long double x);
-int __isSubnormall(long double x);
-int __iszerol(long double x);
-int __isinfl(long double x);
-int __isnanl(long double x);
-int __isnegativel(long double x);
-int __ispositivel(long double x);
-int __signbitl(long double x);
-int signbitl(long double x);
-int __fpclassifyl(long double x);
-int fpclassifyl(long double x);
-int __finitel(long double x);*/
-#endif
-
 #undef S1
 #undef S2
 #undef S3
@@ -225,7 +145,7 @@ int __finitel(long double x);*/
 #undef U
 #undef NONDET_DECL
 
-// Apparently used in SVCOMP benchmarks
+// Used in SVCOMP benchmarks
 _Bool __VERIFIER_nondet_bool(void);
 unsigned char __VERIFIER_nondet_uchar(void);
 unsigned short __VERIFIER_nondet_ushort(void);
@@ -234,7 +154,7 @@ unsigned long __VERIFIER_nondet_ulong(void);
 void* __VERIFIER_nondet_pointer(void);
 
 
-void __SMACK_decls();
+void __SMACK_decls(void);
 
 #ifdef __cplusplus
 }

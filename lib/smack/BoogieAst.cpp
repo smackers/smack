@@ -6,6 +6,7 @@
 #include "llvm/IR/Constants.h"
 #include <sstream>
 #include <iostream>
+#include <set>
 
 namespace smack {
 
@@ -115,6 +116,10 @@ const Expr* Expr::sel(std::string b, std::string i) {
 }
 
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
+  return new Attr(s,vs);
+}
+
+const Attr* Attr::attr(std::string s, std::list<const Expr*> vs) {
   return new Attr(s,vs);
 }
 

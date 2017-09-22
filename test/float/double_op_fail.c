@@ -4,7 +4,7 @@
 
 // @expect error
 
-int main() {
+int main(void) {
   double a;
   double b;
   double c;
