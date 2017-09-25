@@ -352,7 +352,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
     if (dyn_cast<const Argument>(V)) {
-      assert(V->hasName() && "Expected named argument.");
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*V))}));
 
     } else if (auto LI = dyn_cast<const LoadInst>(V)) {
@@ -360,7 +359,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       assert(GEP && "Expected GEP argument to load instruction.");
       auto A = dyn_cast<const Argument>(GEP->getPointerOperand());
       assert(A && "Expected function argument to GEP instruction.");
-      assert(A->hasName() && "Expected named argument.");
       auto T = GEP->getType()->getElementType();
       const unsigned bits = T->getIntegerBitWidth();
       const unsigned bytes = bits / 8;
