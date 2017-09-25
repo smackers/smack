@@ -30,7 +30,9 @@ private:
   int maxIndex;
 
   void initProcMap(Program *program);
-  void insertModifiesClause(Decl *&decl, Regex &PROC_DECL, const std::set<std::string> &bplGlobals);
+  std::string getBplGlobalsModifiesClause(const std::set<std::string> &bplGlobals);
+  void fixPrelude(Program *program, const std::string &modClause);
+  void addModifiesToSmackProcs(Program *program, const std::string &modClause);
   void genSmackCodeModifies(Program *program, const std::set<std::string> &bplGlobals);
   void addNewSCC(const std::string &procName);
   void dfs(ProcDecl *curProc);

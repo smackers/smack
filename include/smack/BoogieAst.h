@@ -582,6 +582,7 @@ public:
   bool empty() { return decls.empty(); }
   DeclarationList& getDeclarations() { return decls; }
   void appendPrelude(std::string s) { prelude += s; }
+  std::string& getPrelude() { return prelude; }
 };
 
 std::ostream& operator<<(std::ostream& os, const Expr& e);

@@ -24,35 +24,54 @@ void GenModifies::initProcMap(Program *program) {
   }
 }
 
-void GenModifies::insertModifiesClause(Decl *&decl, Regex &PROC_DECL, const std::set<std::string> &bplGlobals) {
-  std::string modStr = "\nmodifies";
+std::string GenModifies::getBplGlobalsModifiesClause(const std::set<std::string> &bplGlobals) {
+  std::string modClause = "\nmodifies";
 
   for (std::string var : bplGlobals) {
-    modStr += " " + var + ",";
+    modClause += " " + var + ",";
   }
 
-  modStr[modStr.size() - 1] = ';';
-  modStr.push_back('\n');
+  modClause[modClause.size() - 1] = ';';
+  modClause.push_back('\n');
 
-  std::string newStr = PROC_DECL.sub("\\1", decl->getName()) + modStr + PROC_DECL.sub("\\6", decl->getName());
-
-  decl = Decl::code(newStr, newStr);
+  return modClause; 
 }
 
-void GenModifies::genSmackCodeModifies(Program *program, const std::set<std::string> &bplGlobals) {
+void GenModifies::fixPrelude(Program *program, const std::string &modClause) {
+  std::string searchStr = "procedure $global_allocations()\n";
+
+  std::string &prelude = program->getPrelude();
+
+  size_t pos = prelude.find(searchStr) + searchStr.size();;
+
+  std::string str1 = prelude.substr(0, pos);
+  std::string str2 = prelude.substr(pos);
+
+  prelude = str1 + modClause + str2;
+}
+
+void GenModifies::addModifiesToSmackProcs(Program *program, const std::string &modClause) {
   const std::string NAME_REGEX = "[[:alpha:]_.$#'`^\?][[:alnum:]_.$#'`^\?]*";
-  Regex PROC_DECL("^([[:space:]]*procedure(.|[[:space:]])*[[:space:]]+(" + NAME_REGEX + ")[[:space:]]*\\((.|[[:space:]])*\\)(.|[[:space:]])*)(\\{(.|[[:space:]])*\\})");
+  Regex PROC_DECL("^([[:space:]]*procedure[[:space:]]+[^\\(]*(" + NAME_REGEX + ")[[:space:]]*\\([^\\)]*\\)[^\\{]*)(\\{(.|[[:space:]])*(\\}[[:space:]]*)$)");
   Regex MOD_CL("modifies[[:space:]]+" + NAME_REGEX + "([[:space:]]*,[[:space:]]*" + NAME_REGEX + ")*;"); 
 
   for (Decl *&decl : *program) {
     if (isa<CodeDecl>(decl)) {
-      if (!bplGlobals.empty()) {
-        if (PROC_DECL.match(decl->getName()) && !MOD_CL.match(decl->getName())) {
-          insertModifiesClause(decl, PROC_DECL, bplGlobals);
-        }
+      if (PROC_DECL.match(decl->getName()) && !MOD_CL.match(decl->getName())) {
+        std::string newStr = PROC_DECL.sub("\\1", decl->getName()) + modClause + PROC_DECL.sub("\\3", decl->getName());
+
+        decl = Decl::code(newStr, newStr);
       }
     }
   }
+}
+
+void GenModifies::genSmackCodeModifies(Program *program, const std::set<std::string> &bplGlobals) {
+  std::string modClause = getBplGlobalsModifiesClause(bplGlobals);
+
+  fixPrelude(program, modClause);
+
+  addModifiesToSmackProcs(program, modClause);
 }
 
 void GenModifies::addNewSCC(const std::string &procName) {
@@ -233,7 +252,9 @@ bool GenModifies::runOnModule(llvm::Module& m) {
 
   initProcMap(program);
 
-  genSmackCodeModifies(program, bplGlobals);
+  if (!bplGlobals.empty()) {
+    genSmackCodeModifies(program, bplGlobals);
+  }
 
   genUserCodeModifies(program, bplGlobals);
 

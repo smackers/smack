@@ -1584,19 +1584,20 @@ void __SMACK_decls(void) {
   D("function $base(ref) returns (ref);");
   D("var $allocatedCounter: int;\n");
 
+
+#if MEMORY_MODEL_NO_REUSE_IMPLS
+  D("var $Alloc: [ref] bool;");
+  D("function $Size(ref) returns (ref);");
+  D("var $CurrAddr:ref;\n");
+
   D("procedure $malloc(n: ref) returns (p: ref)\n"
-    "modifies $allocatedCounter;\n"
+    "modifies $allocatedCounter, $Alloc, $CurrAddr;\n"
     "{\n"
     "  if ($ne.ref.bool(n, $0.ref)) {\n"
     "    $allocatedCounter := $allocatedCounter + 1;\n"
     "  }\n"
     "  call p := $$alloc(n);\n"
     "}\n");
-
-#if MEMORY_MODEL_NO_REUSE_IMPLS
-  D("var $Alloc: [ref] bool;");
-  D("function $Size(ref) returns (ref);");
-  D("var $CurrAddr:ref;\n");
 
   D("procedure $galloc(base_addr: ref, size: ref)\n"
     "{\n"
@@ -1638,6 +1639,16 @@ void __SMACK_decls(void) {
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
 
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "modifies $allocatedCounter, $Alloc, $Size;\n"
+    "{\n"
+    "  if ($ne.ref.bool(n, $0.ref)) {\n"
+    "    $allocatedCounter := $allocatedCounter + 1;\n"
+    "  }\n"
+    "  call p := $$alloc(n);\n"
+    "}\n");
+
+
   D("procedure $galloc(base_addr: ref, size: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $Size[base_addr] == size;\n"
@@ -1672,6 +1683,16 @@ void __SMACK_decls(void) {
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "modifies $allocatedCounter, $Alloc, $CurrAddr;\n"
+    "{\n"
+    "  if ($ne.ref.bool(n, $0.ref)) {\n"
+    "    $allocatedCounter := $allocatedCounter + 1;\n"
+    "  }\n"
+    "  call p := $$alloc(n);\n"
+    "}\n");
+
+
   D("procedure $galloc(base_addr: ref, size: ref);\n"
     "modifies $Alloc;\n"
     "ensures $Size(base_addr) == size;\n"
@@ -1701,13 +1722,15 @@ void __SMACK_decls(void) {
 #endif
 
 #else
-  D("procedure $malloc(n: ref) returns (p: ref)\n"
-    "{\n"
-    "  call p := $$alloc(n);\n"
-    "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
   D("var $CurrAddr:ref;\n");
+
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "modifies $allocatedCounter, $CurrAddr;\n"
+    "{\n"
+    "  call p := $$alloc(n);\n"
+    "}\n");
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
     "modifies $CurrAddr;\n"
@@ -1729,6 +1752,12 @@ void __SMACK_decls(void) {
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
 
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "modifies $allocatedCounter, $Alloc, $Size;\n"
+    "{\n"
+    "  call p := $$alloc(n);\n"
+    "}\n");
+
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sle.ref.bool($0.ref, n);\n"
@@ -1748,6 +1777,12 @@ void __SMACK_decls(void) {
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $CurrAddr:ref;\n");
+
+  D("procedure $malloc(n: ref) returns (p: ref)\n"
+    "modifies $allocatedCounter, $CurrAddr;\n"
+    "{\n"
+    "  call p := $$alloc(n);\n"
+    "}\n");
 
   D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
     "modifies $CurrAddr;\n"
