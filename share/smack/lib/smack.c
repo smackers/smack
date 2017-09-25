@@ -1407,6 +1407,7 @@ void __SMACK_decls(void) {
   D("function {:inline} $load.bv24(M: [ref] bv24, p: ref) returns (bv24) { M[p] }");
   D("function {:inline} $load.bv16(M: [ref] bv16, p: ref) returns (bv16) { M[p] }");
   D("function {:inline} $load.bv8(M: [ref] bv8, p: ref) returns (bv8) { M[p] }");
+  D("function {:inline} $load.bv1(M: [ref] bv1, p: ref) returns (bv1) { M[p] }");
 
   D("function {:inline} $load.bytes.bv128(M: [ref] bv8, p: ref) returns (bv128)"
     "{ $load.bytes.bv64(M, $add.ref(p, $8.ref)) ++ $load.bytes.bv64(M, p) }");
@@ -1455,6 +1456,7 @@ void __SMACK_decls(void) {
   D("function {:inline} $store.bv24(M: [ref] bv24, p: ref, v: bv24) returns ([ref] bv24) { M[p := v] }");
   D("function {:inline} $store.bv16(M: [ref] bv16, p: ref, v: bv16) returns ([ref] bv16) { M[p := v] }");
   D("function {:inline} $store.bv8(M: [ref] bv8, p: ref, v: bv8) returns ([ref] bv8) { M[p := v] }");
+  D("function {:inline} $store.bv1(M: [ref] bv1, p: ref, v: bv1) returns ([ref] bv1) { M[p := v] }");
 
   D("function {:inline} $store.bytes.bv128(M:[ref]bv8, p:ref, v:bv128) returns ([ref]bv8){"
     "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
