@@ -7,6 +7,7 @@
 #include <list>
 #include <algorithm>
 #include <iterator>
+#include <iostream>
 
 namespace smack {
 
@@ -42,12 +43,14 @@ void GenModifies::fixPrelude(Program *program, const std::string &modClause) {
 
   std::string &prelude = program->getPrelude();
 
-  size_t pos = prelude.find(searchStr) + searchStr.size();;
+  size_t pos = prelude.find(searchStr);
 
-  std::string str1 = prelude.substr(0, pos);
-  std::string str2 = prelude.substr(pos);
+  if (pos != std::string::npos) {
+    std::string str1 = prelude.substr(0, pos + searchStr.size());
+    std::string str2 = prelude.substr(pos + searchStr.size());
 
-  prelude = str1 + modClause + str2;
+    prelude = str1 + modClause + str2;
+  }
 }
 
 void GenModifies::addModifiesToSmackProcs(Program *program, const std::string &modClause) {
