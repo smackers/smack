@@ -1727,7 +1727,7 @@ void __SMACK_decls(void) {
   D("var $CurrAddr:ref;\n");
 
   D("procedure $malloc(n: ref) returns (p: ref)\n"
-    "modifies $allocatedCounter, $CurrAddr;\n"
+    "modifies $CurrAddr;\n"
     "{\n"
     "  call p := $$alloc(n);\n"
     "}\n");
@@ -1753,7 +1753,7 @@ void __SMACK_decls(void) {
   D("var $Size: [ref] ref;\n");
 
   D("procedure $malloc(n: ref) returns (p: ref)\n"
-    "modifies $allocatedCounter, $Alloc, $Size;\n"
+    "modifies $Alloc, $Size;\n"
     "{\n"
     "  call p := $$alloc(n);\n"
     "}\n");
@@ -1779,7 +1779,7 @@ void __SMACK_decls(void) {
   D("var $CurrAddr:ref;\n");
 
   D("procedure $malloc(n: ref) returns (p: ref)\n"
-    "modifies $allocatedCounter, $CurrAddr;\n"
+    "modifies $CurrAddr;\n"
     "{\n"
     "  call p := $$alloc(n);\n"
     "}\n");
