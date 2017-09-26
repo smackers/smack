@@ -7,7 +7,6 @@
 #include <list>
 #include <algorithm>
 #include <iterator>
-#include <iostream>
 
 namespace smack {
 
