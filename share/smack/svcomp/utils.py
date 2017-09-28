@@ -191,8 +191,6 @@ def verify_bpl_svcomp(args):
     if args.bit_precise:
       x = "bopt:" if args.verifier != 'boogie' else ""
       boogie_command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-      boogie_command += ["/%sz3opt:smt.relevancy=0" % x]
-      boogie_command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
       boogie_command += ["/%sboolControlVC" % x]
 
     if args.verifier_options:
@@ -301,8 +299,6 @@ def verify_bpl_svcomp(args):
     heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
     corral_command += ["/bopt:boolControlVC"]
-    if not args.bit_precise_pointers:
-      corral_command += ["/bopt:z3opt:smt.bv.enable_int2bv=true"]
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
