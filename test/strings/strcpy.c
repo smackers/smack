@@ -1,7 +1,6 @@
 #include <strings.h>
 #include "smack.h"
 
-// @flag --unroll=5
 // @expect verified
 
 int main(void) {
