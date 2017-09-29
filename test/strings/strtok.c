@@ -1,4 +1,3 @@
-
 #include <string.h>
 #include "smack.h"
 
@@ -6,7 +5,6 @@
 // @expect verified
 
 int main(void) {
-
   char *string = "a-b";
   char *delim = "-";
 
