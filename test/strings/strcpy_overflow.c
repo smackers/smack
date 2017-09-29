@@ -6,7 +6,7 @@
 // @flag --memory-safety
 // @expect error
 
-int main() {
+int main(void) {
   const char *sentence = "long";
   char container[2];
   

@@ -5,7 +5,7 @@
 // @flag --unroll=5
 // @expect error
 
-int main() {
+int main(void) {
   char *website = "a..b";
 
   char dotCom = strrchr(website,'.');

@@ -5,7 +5,7 @@
 // @flag --unroll=5
 // @expect verified
 
-int main() {
+int main(void) {
   const char *word = "made";
   char container[5];
   

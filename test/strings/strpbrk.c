@@ -5,7 +5,7 @@
 // @flag unroll=5
 // @expect verified
 
-int main() {
+int main(void) {
   char *letters = "abcd";
   
   char *fromFirstBorC = strpbrk(letters,"cb");

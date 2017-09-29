@@ -6,7 +6,7 @@
 // @flag --memory-safety
 // @expect error
 
-int main() {
+int main(void) {
   char notLong[5] = "Some";
 
   char *moreText = "...";

@@ -5,7 +5,7 @@
 // @flag --unroll=5
 // @expect verified
 
-int main() {
+int main(void) {
   char *field = "bbab";
 
   size_t firstNonB = strspn(field,"b");

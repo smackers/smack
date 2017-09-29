@@ -5,7 +5,7 @@
 // @flag --unroll=5
 // @expect verified
 
-int main() {
+int main(void) {
   char *website = "a..b";
 
   char *dotCom = strrchr(website,'.');

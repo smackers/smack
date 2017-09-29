@@ -6,7 +6,7 @@
 // @flag --unroll=5
 // @expect error
 
-int main() {
+int main(void) {
   char word[] = "Hi";
 
   assert(strlen(word) == 4);

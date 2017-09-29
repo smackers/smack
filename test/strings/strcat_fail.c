@@ -5,7 +5,7 @@
 // @flag --unroll=10
 // @expect error 
 
-int main() {
+int main(void) {
   char brick[10];
   strcpy(brick,"brick");
   
