@@ -19,7 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "dsa/DSGraph.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/ADT/Statistic.h"
@@ -105,9 +105,9 @@ bool TDDataStructures::runOnModule(Module &M) {
   GlobalsGraph->getAuxFunctionCalls().clear();
 
   // Functions without internal linkage are definitely externally callable!
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration() && !I->hasInternalLinkage() && !I->hasPrivateLinkage())
-      ExternallyCallable.insert(I);
+  for (Function &F : M)
+    if (!F.isDeclaration() && !F.hasInternalLinkage() && !F.hasPrivateLinkage())
+      ExternallyCallable.insert(&F);
 
   // Debug code to print the functions that are externally callable
 #if 0
@@ -129,9 +129,9 @@ bool TDDataStructures::runOnModule(Module &M) {
     ComputePostOrder(*F, VisitedGraph, PostOrder);
 
   // Next calculate the graphs for each unreachable function...
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration())
-      ComputePostOrder(*I, VisitedGraph, PostOrder);
+  for (Function &F : M)
+    if (!F.isDeclaration())
+      ComputePostOrder(F, VisitedGraph, PostOrder);
 
   VisitedGraph.clear();   // Release memory!
 }
@@ -161,9 +161,9 @@ bool TDDataStructures::runOnModule(Module &M) {
   // Make sure each graph has updated external information about globals
   // in the globals graph.
   VisitedGraph.clear();
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())){
-      DSGraph *Graph  = getOrCreateGraph(F);
+  for (Function &F : M) {
+    if (!(F.isDeclaration())){
+      DSGraph *Graph  = getOrCreateGraph(&F);
       if (!VisitedGraph.insert(Graph).second) continue;
 
       cloneGlobalsInto(Graph, DSGraph::DontCloneCallNodes |

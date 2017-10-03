@@ -20,7 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 
 #include <set>
 #include <map>
@@ -51,12 +51,14 @@ bool StructRet::runOnModule(Module& M) {
   const llvm::DataLayout targetData(&M);
 
   std::vector<Function*> worklist;
-  for (Module::iterator I = M.begin(); I != M.end(); ++I)
-    if (!I->mayBeOverridden()) {
-      if(I->hasAddressTaken())
+  for (Function &F : M)
+    if (!F.isInterposable()) {
+      if(F.isDeclaration())
         continue;
-      if(I->getReturnType()->isStructTy()) {
-        worklist.push_back(I);
+      if(F.hasAddressTaken())
+        continue;
+      if(F.getReturnType()->isStructTy()) {
+        worklist.push_back(&F);
       }
     }
 
@@ -76,15 +78,15 @@ bool StructRet::runOnModule(Module& M) {
     FunctionType *NFTy = FunctionType::get(F->getReturnType(), TP, F->isVarArg());
 
     // Create the new function body and insert it into the module.
-    Function *NF = Function::Create(NFTy, 
+    Function *NF = Function::Create(NFTy,
                                     F->getLinkage(),
                                     F->getName(), &M);
     ValueToValueMapTy ValueMap;
-    Function::arg_iterator NI = NF->arg_begin();
+    auto NI = NF->arg_begin();
     NI->setName("ret");
     ++NI;
-    for (Function::arg_iterator II = F->arg_begin(); II != F->arg_end(); ++II, ++NI) {
-      ValueMap[II] = NI;
+    for (auto II = F->arg_begin(); II != F->arg_end(); ++II, ++NI) {
+      ValueMap[&*II] = &*NI;
       NI->setName(II->getName());
       AttributeSet attrs = F->getAttributes().getParamAttributes(II->getArgNo() + 1);
       if (!attrs.isEmpty())
@@ -95,27 +97,39 @@ bool StructRet::runOnModule(Module& M) {
     if (!F->isDeclaration())
       CloneFunctionInto(NF, F, ValueMap, false, Returns);
     std::vector<Value*> fargs;
-    for(Function::arg_iterator ai = NF->arg_begin(), 
-        ae= NF->arg_end(); ai != ae; ++ai) {
-      fargs.push_back(ai);
+    for (auto &Arg : NF->args()) {
+      fargs.push_back(&Arg);
     }
     NF->setAttributes(NF->getAttributes().addAttributes(
         M.getContext(), 0, F->getAttributes().getRetAttributes()));
     NF->setAttributes(NF->getAttributes().addAttributes(
         M.getContext(), ~0, F->getAttributes().getFnAttributes()));
-    
-    for (Function::iterator B = NF->begin(), FE = NF->end(); B != FE; ++B) {      
+
+    for (Function::iterator B = NF->begin(), FE = NF->end(); B != FE; ++B) {
       for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {
         ReturnInst * RI = dyn_cast<ReturnInst>(I++);
         if(!RI)
           continue;
-        LoadInst *LI = dyn_cast<LoadInst>(RI->getOperand(0));
-        assert(LI && "Return should be preceded by a load instruction");
         IRBuilder<> Builder(RI);
-        Builder.CreateMemCpy(fargs.at(0),
-            LI->getPointerOperand(),
-            targetData.getTypeStoreSize(LI->getType()),
-            targetData.getPrefTypeAlignment(LI->getType()));
+        if (auto LI = dyn_cast<LoadInst>(RI->getOperand(0))) {
+          Builder.CreateMemCpy(fargs.at(0),
+              LI->getPointerOperand(),
+              targetData.getTypeStoreSize(LI->getType()),
+              targetData.getPrefTypeAlignment(LI->getType()));
+        } else if (auto CS = dyn_cast<ConstantStruct>(RI->getReturnValue())) {
+          StructType* ST = CS->getType();
+          // We could store the struct into the allocated space pointed by the first
+          // argument and then load it once SMACK can handle store inst of structs.
+          for (unsigned i = 0; i < ST->getNumElements(); ++i) {
+            std::vector<Value*> idxs = {ConstantInt::get(Type::getInt32Ty(CS->getContext()),0),
+                ConstantInt::get(Type::getInt32Ty(CS->getContext()),i)};
+            Builder.CreateStore(CS->getAggregateElement(i),
+                Builder.CreateGEP(fargs.at(0), ArrayRef<Value*>(idxs)));
+          }
+          assert(RI->getNumOperands() == 1 && "Return should only have one operand");
+          RI->setOperand(0, UndefValue::get(ST));
+        } else
+          llvm_unreachable("Unexpected struct-type return value.");
       }
     }
 
@@ -133,12 +147,12 @@ bool StructRet::runOnModule(Module& M) {
 
       //this should probably be done in a different manner
       AttributeSet NewCallPAL=AttributeSet();
-      
+
       // Get the initial attributes of the call
       AttributeSet CallPAL = CI->getAttributes();
       AttributeSet RAttrs = CallPAL.getRetAttributes();
       AttributeSet FnAttrs = CallPAL.getFnAttributes();
-      
+
       if (!RAttrs.isEmpty())
         NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
 

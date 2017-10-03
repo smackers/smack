@@ -1,8 +1,8 @@
 /* https://graphics.stanford.edu/~seander/bithacks.html#InterleaveTableObvious */
 #include "smack.h"
 
-// @flag --loop-limit=33
-// @flag --unroll=33
+// @flag --loop-limit=17
+// @flag --unroll=17
 // @expect error
 
 int main()
@@ -19,7 +19,7 @@ int main()
     unsigned int z = 0; /* z gets the resulting Morton Number. */
     unsigned int i = 0;
 
-    while (i < 32U) {
+    while (i < sizeof(x) * 8) {
         z |= ((x & (1U << i)) << i) | ((y & (1U << i)) << (i + 1));
         i += 1U;
     }

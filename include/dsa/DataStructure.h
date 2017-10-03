@@ -165,7 +165,6 @@ public:
   /// getAnalysisUsage - This obviously provides a data structure graph.
   ///
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayoutPass>();
     AU.setPreservesAll();
   }
 };
@@ -188,7 +187,6 @@ public:
   /// getAnalysisUsage - This obviously provides a data structure graph.
   ///
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayoutPass>();
     AU.addRequired<AddressTakenAnalysis>();
     AU.setPreservesAll();
   }

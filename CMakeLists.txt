@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.9 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -18,7 +18,15 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
-  set(LLVM_CXXFLAGS "${LLVM_CXXFLAGS} -fno-exceptions -fno-rtti")
+  string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-Wl," "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "-gsplit-dwarf" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -Wno-undefined-var-template")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
@@ -52,7 +60,12 @@ else()
     message(FATAL_ERROR "Invalid LLVM build directory: ${LLVM_BUILD}")
   endif()
 
-  set(LLVM_CXXFLAGS "\"/I${LLVM_SRC}/include\" \"/I${LLVM_BUILD}/include\" -D_SCL_SECURE_NO_WARNINGS -wd4146 -wd4244 -wd4355 -wd4482 -wd4800")
+  ## TODO how to enable debug mode on Windows?
+  # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+  # set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+
+  set(CMAKE_CXX_FLAGS "\"/I${LLVM_SRC}/include\" \"/I${LLVM_BUILD}/include\" -D_SCL_SECURE_NO_WARNINGS -wd4146 -wd4244 -wd4355 -wd4482 -wd4800")
+
   set(LLVM_LDFLAGS "")
   set(LLVM_LIBS "${LLVM_LIBDIR}/LLVMTransformUtils.lib" "${LLVM_LIBDIR}/LLVMipa.lib" "${LLVM_LIBDIR}/LLVMAnalysis.lib" "${LLVM_LIBDIR}/LLVMTarget.lib" "${LLVM_LIBDIR}/LLVMMC.lib" "${LLVM_LIBDIR}/LLVMObject.lib" "${LLVM_LIBDIR}/LLVMBitReader.lib" "${LLVM_LIBDIR}/LLVMCore.lib" "${LLVM_LIBDIR}/LLVMSupport.lib")
 
@@ -143,10 +156,11 @@ add_library(dsa STATIC
 )
 
 add_library(smackTranslator STATIC
+  include/smack/AddTiming.h
   include/smack/BoogieAst.h
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
-  include/smack/DSAAliasAnalysis.h
+  include/smack/DSAWrapper.h
   include/smack/Naming.h
   include/smack/Regions.h
   include/smack/SmackInstGenerator.h
@@ -156,13 +170,18 @@ add_library(smackTranslator STATIC
   include/smack/RemoveDeadDefs.h
   include/smack/RenameIntrinsics.h
   include/smack/ExtractContracts.h
+  include/smack/VerifierCodeMetadata.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
-  include/smack/SmackRepFlatMem.h
+  include/smack/MemorySafetyChecker.h
+  include/smack/SignedIntegerOverflowChecker.h
+  include/smack/SplitAggregateLoadStore.h
+  lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
   lib/smack/BplPrinter.cpp
-  lib/smack/DSAAliasAnalysis.cpp
+  lib/smack/Debug.cpp
+  lib/smack/DSAWrapper.cpp
   lib/smack/Naming.cpp
   lib/smack/Regions.cpp
   lib/smack/SmackInstGenerator.cpp
@@ -172,17 +191,17 @@ add_library(smackTranslator STATIC
   lib/smack/RemoveDeadDefs.cpp
   lib/smack/RenameIntrinsics.cpp
   lib/smack/ExtractContracts.cpp
+  lib/smack/VerifierCodeMetadata.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
-  lib/smack/SmackRepFlatMem.cpp
+  lib/smack/MemorySafetyChecker.cpp
+  lib/smack/SignedIntegerOverflowChecker.cpp
+  lib/smack/SplitAggregateLoadStore.cpp
 )
 
 add_executable(llvm2bpl
   tools/llvm2bpl/llvm2bpl.cpp
 )
-
-set_target_properties(llvm2bpl smackTranslator assistDS dsa
-    PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(llvm2bpl smackTranslator assistDS dsa)

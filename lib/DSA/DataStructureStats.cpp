@@ -22,7 +22,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 
 #include <ostream>
@@ -81,7 +81,6 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.setPreservesAll();
       AU.addRequired<TDDataStructures>();
-      AU.addRequired<DataLayoutPass>();
       AU.addRequired<dsa::TypeSafety<TDDataStructures> >();
     }
 
@@ -237,7 +236,7 @@ void DSGraphStats::visitStore(StoreInst &SI) {
 
 bool DSGraphStats::runOnFunction(Function& F) {
   DS = &getAnalysis<TDDataStructures>();
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &F.getParent()->getDataLayout();
   TS = &getAnalysis<dsa::TypeSafety<TDDataStructures> >();
   TDGraph = DS->getDSGraph(F);
   countCallees(F);

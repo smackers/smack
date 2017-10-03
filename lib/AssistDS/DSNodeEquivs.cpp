@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/ADT/SmallSet.h"
+#include "smack/Debug.h"
 
 #include <deque>
 
@@ -149,7 +150,7 @@ void DSNodeEquivs::equivNodesThroughCallsite(CallInst *CI) {
       if (isa<Constant>(*ArgIt))
         continue;
 
-      DSNodeHandle &CalleeArgNH = CalleeGraph.getNodeForValue(FArgIt);
+      DSNodeHandle &CalleeArgNH = CalleeGraph.getNodeForValue(&*FArgIt);
       DSNodeHandle &CSArgNH = Graph.getNodeForValue(*ArgIt);
       DSGraph::computeNodeMapping(CalleeArgNH, CSArgNH, NodeMap, false);
     }

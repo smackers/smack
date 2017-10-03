@@ -17,7 +17,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Intrinsics.h"
@@ -152,7 +152,7 @@ bool TypeChecks::runOnModule(Module &M) {
   bool modified = false; // Flags whether we modified the module.
   bool transformIndirectCalls = true;
 
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   addrAnalysis = &getAnalysis<AddressTakenAnalysis>();
 
   // Create the necessary prototypes
@@ -349,19 +349,8 @@ bool TypeChecks::runOnModule(Module &M) {
             }
           }
 
-          //
-          // Do replacements in the worklist.
-          // Special case for ContantArray(triggered by 253.perl)
-          // ConstantArray::replaceUsesOfWithOnConstant, replace all uses
-          // in that constant, unlike the other versions, which  only
-          // replace the use specified in ReplaceWorklist.
-          //
-          if(isa<ConstantArray>(C)) {
-              C->replaceUsesOfWithOnConstant(F, CNew, ReplaceWorklist[0]);
-          } else {
-            for (unsigned index = 0; index < ReplaceWorklist.size(); ++index) {
-              C->replaceUsesOfWithOnConstant(F, CNew, ReplaceWorklist[index]);
-            }
+          if (ReplaceWorklist.size() > 0) {
+            C->handleOperandChange(F, CNew);
           }
           continue;
         }
@@ -551,7 +540,7 @@ void TypeChecks::optimizeChecks(Module &M) {
     if(F.isDeclaration())
       continue;
     DominatorTree & DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-    LoopInfo & LI = getAnalysis<LoopInfo>(F);
+    LoopInfo & LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
     std::deque<DomTreeNode *> Worklist;
     Worklist.push_back (DT.getRootNode());
     while(Worklist.size()) {
@@ -578,7 +567,7 @@ void TypeChecks::optimizeChecks(Module &M) {
 
         if(hoist) {
           CI->removeFromParent();
-          L->getLoopPreheader()->getInstList().insert(L->getLoopPreheader()->getTerminator(), CI);
+          L->getLoopPreheader()->getInstList().insert(L->getLoopPreheader()->getTerminator()->getIterator(), CI);
         }
       }
     }
@@ -609,7 +598,7 @@ void TypeChecks::addTypeMap(Module &M) {
                                           CA,
                                           "");
   GV->setInitializer(CA);
-  Constant *C = ConstantExpr::getGetElementPtr(GV,Indices);
+  Constant *C = ConstantExpr::getGetElementPtr(nullptr,GV,Indices);
   Values[0] = C;
 
   // For each used type, create a new entry. 
@@ -631,7 +620,7 @@ void TypeChecks::addTypeMap(Module &M) {
                                             CA,
                                             "");
     GV->setInitializer(CA);
-    Constant *C = ConstantExpr::getGetElementPtr(GV, Indices);
+    Constant *C = ConstantExpr::getGetElementPtr(nullptr,GV, Indices);
     Values[TI->second]= C;
   }
 
@@ -667,17 +656,16 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
                                     &M);
 
   // 3. Set the mapping for the args
-  Function::arg_iterator NI = NewF->arg_begin();
+  auto NI = NewF->arg_begin();
   ValueToValueMapTy ValueMap;
   NI->setName("TotalCount");
   NI++;
   NI->setName("MD");
   NI++;
-  for(Function::arg_iterator II = F.arg_begin(); 
-      NI!=NewF->arg_end(); ++II, ++NI) {
+  for(auto II = F.arg_begin(); NI!=NewF->arg_end(); ++II, ++NI) {
     // Each new argument maps to the argument in the old function
     // For each of these also copy attributes
-    ValueMap[II] = NI;
+    ValueMap[&*II] = &*NI;
     NI->setName(II->getName());
     NI->addAttr(F.getAttributes().getParamAttributes(II->getArgNo()+1));
   }
@@ -787,7 +775,7 @@ bool TypeChecks::visitVarArgFunction(Module &M, Function &F) {
 
   // create internal clone
   ValueToValueMapTy VMap;
-  Function *F_clone = CloneFunction(&F, VMap, false);
+  Function *F_clone = CloneFunction(&F, VMap);
   F_clone->setName(F.getName().str() + "internal");
   F.setLinkage(GlobalValue::InternalLinkage);
   F.getParent()->getFunctionList().push_back(F_clone);
@@ -833,17 +821,16 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
                                     &M);
 
   // 3. Set the mapping for the args
-  Function::arg_iterator NI = NewF->arg_begin();
+  auto NI = NewF->arg_begin();
   ValueToValueMapTy ValueMap;
   NI->setName("TotalArgCount");
   NI++;
   NI->setName("MD");
   NI++;
-  for(Function::arg_iterator II = F.arg_begin(); 
-      NI!=NewF->arg_end(); ++II, ++NI) {
+  for(auto II = F.arg_begin(); NI!=NewF->arg_end(); ++II, ++NI) {
     // Each new argument maps to the argument in the old function
     // For each of these also copy attributes
-    ValueMap[II] = NI;
+    ValueMap[&*II] = &*NI;
     NI->setName(II->getName());
     NI->addAttr(F.getAttributes().getParamAttributes(II->getArgNo()+1));
   }
@@ -862,11 +849,11 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
 
   // Store the information
   inst_iterator InsPt = inst_begin(NewF);
-  Function::arg_iterator NII = NewF->arg_begin();
+  auto NII = NewF->arg_begin();
   // Subtract the number of initial arguments
   Constant *InitialArgs = ConstantInt::get(Int64Ty, F.arg_size());
   Instruction *NewValue = BinaryOperator::Create(BinaryOperator::Sub,
-                                                 NII,
+                                                 &*NII,
                                                  InitialArgs,
                                                  "varargs",
                                                  &*InsPt);
@@ -877,7 +864,7 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
   Value *Idx[1];
   Idx[0] = InitialArgs;
   // For each vararg argument, also add its type information
-  GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(NII,Idx, "", &*InsPt);
+  GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(&*NII,Idx, "", &*InsPt);
   // visit all VAStarts and initialize the counter
   for (Function::iterator B = NewF->begin(), FE = NewF->end(); B != FE; ++B) {
     for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;I++) {
@@ -1021,7 +1008,7 @@ bool TypeChecks::visitByValFunction(Module &M, Function &F) {
   } else {
     // create internal clone
     ValueToValueMapTy VMap;
-    Function *F_clone = CloneFunction(&F, VMap, false);
+    Function *F_clone = CloneFunction(&F, VMap);
     F_clone->setName(F.getName().str() + "internal");
     F.setLinkage(GlobalValue::InternalLinkage);
     F.getParent()->getFunctionList().push_back(F_clone);
@@ -1037,15 +1024,15 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
   // for every byval argument
   // add an alloca, a load, and a store inst
   Instruction * InsertBefore = &(F.getEntryBlock().front());
-  for (Function::arg_iterator I = F.arg_begin(); I != F.arg_end(); ++I) {
-    if (!I->hasByValAttr())
+  for (auto &Arg : F.args()) {
+    if (!Arg.hasByValAttr())
       continue;
-    assert(I->getType()->isPointerTy());
-    Type *ETy = (cast<PointerType>(I->getType()))->getElementType();
+    assert(Arg.getType()->isPointerTy());
+    Type *ETy = (cast<PointerType>(Arg.getType()))->getElementType();
     AllocaInst *AI = new AllocaInst(ETy, "", InsertBefore);
     // Do this before adding the load/store pair, so that those uses are not replaced.
-    I->replaceAllUsesWith(AI);
-    LoadInst *LI = new LoadInst(I, "", InsertBefore);
+    Arg.replaceAllUsesWith(AI);
+    LoadInst *LI = new LoadInst(&Arg, "", InsertBefore);
     new StoreInst(LI, AI, InsertBefore);
   }
 
@@ -1169,21 +1156,21 @@ bool TypeChecks::visitExternalByValFunction(Module &M, Function &F) {
   // A list of the byval arguments that we are setting metadata for
   typedef SmallVector<Value *, 4> RegisteredArgTy;
   RegisteredArgTy registeredArguments;
-  for (Function::arg_iterator I = F.arg_begin(); I != F.arg_end(); ++I) {
-    if (I->hasByValAttr()) {
-      assert (isa<PointerType>(I->getType()));
-      PointerType * PT = cast<PointerType>(I->getType());
+  for (auto &Arg : F.args()) {
+    if (Arg.hasByValAttr()) {
+      assert (isa<PointerType>(Arg.getType()));
+      PointerType * PT = cast<PointerType>(Arg.getType());
       Type * ET = PT->getElementType();
       Value * AllocSize = ConstantInt::get(Int64Ty, TD->getTypeAllocSize(ET));
       Instruction * InsertPt = &(F.getEntryBlock().front());
-      Value *BCI = castTo(I, VoidPtrTy, "", InsertPt);
+      Value *BCI = castTo(&Arg, VoidPtrTy, "", InsertPt);
       std::vector<Value *> Args;
       Args.push_back(BCI);
       Args.push_back(AllocSize);
       Args.push_back(getTagCounter());
       // Set the metadata for the byval argument to TOP/Initialized
       CallInst::Create(trackInitInst, Args, "", InsertPt);
-      registeredArguments.push_back(&*I);
+      registeredArguments.push_back(&Arg);
     }
   }
 
@@ -1252,29 +1239,28 @@ bool TypeChecks::initShadow(Module &M) {
   Instruction *InsertPt = ReturnInst::Create(M.getContext(), BB); 
 
   // record all globals
-  for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-       I != E; ++I) {
-    if(I->use_empty())
+  for (GlobalVariable &G : M.globals()) {
+    if(G.use_empty())
       continue;
-    if(I->getName().str() == "stderr" ||
-       I->getName().str() == "stdout" ||
-       I->getName().str() == "stdin" ||
-       I->getName().str() == "optind" ||
-       I->getName().str() == "optarg") {
+    if(G.getName().str() == "stderr" ||
+       G.getName().str() == "stdout" ||
+       G.getName().str() == "stdin" ||
+       G.getName().str() == "optind" ||
+       G.getName().str() == "optarg") {
       // assume initialized
-      Value *BCI = castTo(I, VoidPtrTy, "", InsertPt);
+      Value *BCI = castTo(&G, VoidPtrTy, "", InsertPt);
       std::vector<Value *> Args;
       Args.push_back(BCI);
-      Args.push_back(getSizeConstant(I->getType()->getElementType()));
+      Args.push_back(getSizeConstant(G.getType()->getElementType()));
       Args.push_back(getTagCounter());
       CallInst::Create(trackInitInst, Args, "", InsertPt);
       continue;
     } 
-    if(!I->hasInitializer())
+    if(!G.hasInitializer())
       continue;
     SmallVector<Value*,8>index;
     index.push_back(Zero);
-    visitGlobal(M, *I, I->getInitializer(), *InsertPt, index);
+    visitGlobal(M, G, G.getInitializer(), *InsertPt, index);
   }
   //
   // Insert the run-time ctor into the ctor list.
@@ -1341,11 +1327,11 @@ bool TypeChecks::initShadow(Module &M) {
       // No need to register
       return false;
 
-    Function::arg_iterator AI = MainFunc.arg_begin();
-    Value *Argc = AI;
-    Value *Argv = ++AI;
+    auto AI = MainFunc.arg_begin();
+    Value *Argc = &*AI;
+    Value *Argv = &*(++AI);
 
-    Instruction *InsertPt = MainFunc.front().begin();
+    Instruction *InsertPt = &*MainFunc.front().begin();
     std::vector<Value *> fargs;
     fargs.push_back (Argc);
     fargs.push_back (Argv);
@@ -1354,7 +1340,7 @@ bool TypeChecks::initShadow(Module &M) {
     if(MainFunc.arg_size() < 3)
       return true;
 
-    Value *Envp = ++AI;
+    Value *Envp = &*(++AI);
     std::vector<Value*> Args;
     Args.push_back(Envp);
     CallInst::Create(RegisterEnvp, Args, "", InsertPt);
@@ -1513,22 +1499,23 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
   if (Function *F = dyn_cast<Function>(Callee)) {
     if (F->isIntrinsic()) {
       switch(F->getIntrinsicID()) {
-      case Intrinsic::memcpy: 
-      case Intrinsic::memmove: 
-        {
-          Value *BCI_Src = castTo(CS.getArgument(1), VoidPtrTy, "", I);
-          Value *BCI_Dest = castTo(CS.getArgument(0), VoidPtrTy, "", I);
-          std::vector<Value *> Args;
-          Args.push_back(BCI_Dest);
-          Args.push_back(BCI_Src);
-          CastInst *Size = CastInst::CreateIntegerCast(CS.getArgument(2), Int64Ty, false, "", I);
-          Args.push_back(Size);
-          Args.push_back(getTagCounter());
-          CallInst::Create(copyTypeInfo, Args, "", I);
-          return true;
-        }
+      case Intrinsic::memcpy:
+      case Intrinsic::memmove:
+      {
+        Value *BCI_Src = castTo(CS.getArgument(1), VoidPtrTy, "", I);
+        Value *BCI_Dest = castTo(CS.getArgument(0), VoidPtrTy, "", I);
+        std::vector<Value *> Args;
+        Args.push_back(BCI_Dest);
+        Args.push_back(BCI_Src);
+        CastInst *Size = CastInst::CreateIntegerCast(CS.getArgument(2), Int64Ty, false, "", I);
+        Args.push_back(Size);
+        Args.push_back(getTagCounter());
+        CallInst::Create(copyTypeInfo, Args, "", I);
+        return true;
+      }
 
       case Intrinsic::memset:
+      {
         Value *BCI = castTo(CS.getArgument(0), VoidPtrTy, "", I);
         std::vector<Value *> Args;
         Args.push_back(BCI);
@@ -1538,6 +1525,9 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
         CallInst::Create(trackInitInst, Args, "", I);
         return true;
       }
+
+      default: break;
+      }
     } else if (F->getName().str() == std::string("_ZNKSs5c_strEv")) { //c_str
       std::vector<Value *>Args;
       Args.push_back(I);
@@ -1546,7 +1536,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       CallInst *CI = CallInst::Create(F, Args);
       Instruction *InsertPt = I;  
       if (InvokeInst *II = dyn_cast<InvokeInst>(InsertPt)) {
-        InsertPt = II->getNormalDest()->begin();
+        InsertPt = &*II->getNormalDest()->begin();
         while (isa<PHINode>(InsertPt))
           ++InsertPt;
       } else
@@ -1561,7 +1551,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       CallInst *CI = CallInst::Create(F, Args);
       Instruction *InsertPt = I;  
       if (InvokeInst *II = dyn_cast<InvokeInst>(InsertPt)) {
-        InsertPt = II->getNormalDest()->begin();
+        InsertPt = &*II->getNormalDest()->begin();
         while (isa<PHINode>(InsertPt))
           ++InsertPt;
       } else

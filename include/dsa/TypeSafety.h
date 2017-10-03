@@ -70,7 +70,6 @@ struct TypeSafety : public ModulePass {
     }
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<DataLayoutPass>();
       AU.addRequired<dsa>();
       AU.setPreservesAll();
     }
@@ -89,4 +88,3 @@ struct TypeSafety : public ModulePass {
 
 }
 #endif
-

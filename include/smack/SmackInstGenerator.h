@@ -4,9 +4,6 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
-#include "smack/BoogieAst.h"
-#include "smack/SmackRep.h"
-#include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include <unordered_set>
@@ -14,15 +11,25 @@
 
 namespace smack {
 
+class Naming;
+class Program;
+class ProcDecl;
+class Block;
+class Stmt;
+class Expr;
+class Attr;
+class SmackRep;
+
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
-  LoopInfo& loops;
-  SmackRep& rep;
-  ProcDecl& proc;
-  Naming& naming;
+  llvm::LoopInfo& loops;
+  SmackRep* rep;
+  ProcDecl* proc;
+  Naming* naming;
 
   Block* currBlock;
+  llvm::BasicBlock::const_iterator nextInst;
   std::map<const llvm::BasicBlock*, Block*> blockMap;
   std::map<const llvm::Value*, std::string> sourceNames;
 
@@ -36,16 +43,13 @@ private:
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
-public:
-  void emit(const Stmt* s) {
-    // stringstream str;
-    // s->print(str);
-    // DEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
-    currBlock->addStmt(s);
-  }
+  const Stmt* recordProcedureCall(llvm::Value* V, std::list<const Attr*> attrs);
 
 public:
-  SmackInstGenerator(LoopInfo& LI, SmackRep& R, ProcDecl& P, Naming& N)
+  void emit(const Stmt* s);
+
+public:
+  SmackInstGenerator(llvm::LoopInfo& LI, SmackRep* R, ProcDecl* P, Naming* N)
     : loops(LI), rep(R), proc(P), naming(N) {}
 
 

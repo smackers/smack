@@ -21,7 +21,7 @@
 #include "llvm/Pass.h"
 #include "dsa/DSGraph.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -44,10 +44,10 @@ bool EquivBUDataStructures::runOnModule(Module &M) {
 
   //make a list of all the DSGraphs
   std::set<DSGraph *>graphList;
-  for(Module::iterator F = M.begin(); F != M.end(); ++F) 
+  for(Function &F : M) 
   {
-    if(!(F->isDeclaration()))
-      graphList.insert(getOrCreateGraph(F));
+    if(!(F.isDeclaration()))
+      graphList.insert(getOrCreateGraph(&F));
   }
 
   //update the EQ class from indirect calls
@@ -56,10 +56,10 @@ bool EquivBUDataStructures::runOnModule(Module &M) {
   mergeGraphsByGlobalECs();
   
   //remove all the DSGraph, that still have references
-  for(Module::iterator F = M.begin(); F != M.end(); ++F) 
+  for(Function &F : M) 
   {
-    if(!(F->isDeclaration()))
-      graphList.erase(getOrCreateGraph(F));
+    if(!(F.isDeclaration()))
+      graphList.erase(getOrCreateGraph(&F));
   }
   // free memory for the DSGraphs, no longer in use.
   for(std::set<DSGraph*>::iterator i = graphList.begin(),e = graphList.end();
@@ -70,9 +70,9 @@ bool EquivBUDataStructures::runOnModule(Module &M) {
 
   formGlobalECs();
 
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())) {
-      if (DSGraph * Graph = getOrCreateGraph(F)) {
+  for (Function &F: M) {
+    if (!(F.isDeclaration())) {
+      if (DSGraph * Graph = getOrCreateGraph(&F)) {
         cloneGlobalsInto(Graph, DSGraph::DontCloneCallNodes |
                         DSGraph::DontCloneAuxCallNodes);
       }

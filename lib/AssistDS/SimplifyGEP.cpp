@@ -17,7 +17,7 @@
 #include "assistDS/SimplifyGEP.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Operator.h"
@@ -75,7 +75,7 @@ static void preprocess(Module& M) {
 //  false - The module was not modified.
 //
 bool SimplifyGEP::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   preprocess(M);
   for (Module::iterator F = M.begin(); F != M.end(); ++F){
     for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {      
@@ -107,7 +107,7 @@ bool SimplifyGEP::runOnModule(Module& M) {
                 // -> GEP i8* X, ...
                 SmallVector<Value*, 8> Idx(GEP->idx_begin()+1, GEP->idx_end());
                 GetElementPtrInst *Res =
-                  GetElementPtrInst::Create(StrippedPtr, Idx, GEP->getName(), GEP);
+                  GetElementPtrInst::Create(nullptr, StrippedPtr, Idx, GEP->getName(), GEP);
                 Res->setIsInBounds(GEP->isInBounds());
                 GEP->replaceAllUsesWith(Res);
                 continue;
@@ -139,7 +139,7 @@ bool SimplifyGEP::runOnModule(Module& M) {
               Value *Idx[2];
               Idx[0] = Constant::getNullValue(Type::getInt32Ty(GEP->getContext()));
               Idx[1] = GEP->getOperand(1);
-              Value *NewGEP = GetElementPtrInst::Create(StrippedPtr, Idx,
+              Value *NewGEP = GetElementPtrInst::Create(nullptr, StrippedPtr, Idx,
                                                         GEP->getName(), GEP);
               // V and GEP are both pointer types --> BitCast
               GEP->replaceAllUsesWith(new BitCastInst(NewGEP, GEP->getType(), GEP->getName(), GEP));
@@ -198,7 +198,7 @@ bool SimplifyGEP::runOnModule(Module& M) {
                 Value *Idx[2];
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(GEP->getContext()));
                 Idx[1] = NewIdx;
-                Value *NewGEP = GetElementPtrInst::Create(StrippedPtr, Idx,
+                Value *NewGEP = GetElementPtrInst::Create(nullptr, StrippedPtr, Idx,
                                                           GEP->getName(), GEP);
                 GEP->replaceAllUsesWith(new BitCastInst(NewGEP, GEP->getType(), GEP->getName(), GEP));
                 continue;

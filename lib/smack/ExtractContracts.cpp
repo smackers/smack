@@ -7,10 +7,10 @@
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"
 #include "smack/ExtractContracts.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "smack/Debug.h"
 
 #include <vector>
 #include <stack>
@@ -131,7 +131,7 @@ namespace {
 }
 
 void ExtractContracts::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfo>();
+  AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
 }
 
@@ -187,7 +187,7 @@ void ExtractContracts::validateAnnotation(CallInst &I) {
   auto B = I.getParent();
   auto F = B->getParent();
   auto& DT = getAnalysis<DominatorTreeWrapperPass>(*F).getDomTree();
-  auto& LI = getAnalysis<LoopInfo>(*F);
+  auto& LI = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
   if (I.getCalledFunction()->getName() == Naming::CONTRACT_INVARIANT) {
     auto L = LI[B];
     if (!L) {
@@ -300,9 +300,8 @@ ExtractContracts::extractExpression(Value* V, BasicBlock* E) {
         llvm_unreachable("Unexpected store instruction!");
 
       } else if (auto I = dyn_cast<Instruction>(V)) {
-        auto B = I->getParent();
-        assert(clones.count(B) && "Forgot to visit parent block.");
-        assert(clones[B] != B && "Forgot to clone parent block.");
+        assert(clones.count(I->getParent()) && "Forgot to visit parent block.");
+        assert(clones[I->getParent()] != I->getParent() && "Forgot to clone parent block.");
 
         auto II = I->clone();
         clones[I] = II;

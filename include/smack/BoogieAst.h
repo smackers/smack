@@ -4,14 +4,9 @@
 #ifndef BOOGIEAST_H
 #define BOOGIEAST_H
 
-#include "llvm/Support/Casting.h"
-
-#include <cassert>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <list>
-#include <set>
 
 namespace smack {
 
@@ -38,6 +33,7 @@ public:
   static const Expr* lit(long v);
   static const Expr* lit(std::string v, unsigned w);
   static const Expr* lit(unsigned long v, unsigned w);
+  static const Expr* lit(bool n, std::string s, std::string e, unsigned ss, unsigned es);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
@@ -113,6 +109,17 @@ public:
   void print(std::ostream& os) const;
 };
 
+class FPLit : public Expr {
+  bool neg;
+  std::string sig;
+  std::string expo;
+  unsigned sigSize;
+  unsigned expSize;
+public:
+  FPLit(bool n, std::string s, std::string e, unsigned ss, unsigned es) : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
+  void print(std::ostream& os) const;
+};
+
 class StringLit : public Expr {
   std::string val;
 public:
@@ -181,7 +188,9 @@ protected:
   std::list<const Expr*> vals;
 public:
   Attr(std::string n, std::initializer_list<const Expr*> vs) : name(n), vals(vs) {}
+  Attr(std::string n, std::list<const Expr*> vs) : name(n), vals(vs) {}
   void print(std::ostream& os) const;
+  std::string getName() const { return name; }
 
   static const Attr* attr(std::string s);
   static const Attr* attr(std::string s, std::string v);
@@ -189,6 +198,7 @@ public:
   static const Attr* attr(std::string s, std::string v, int i);
   static const Attr* attr(std::string s, std::string v, int i, int j);
   static const Attr* attr(std::string s, std::initializer_list<const Expr*> vs);
+  static const Attr* attr(std::string s, std::list<const Expr*> vs);
 };
 
 class Stmt {
@@ -255,6 +265,13 @@ public:
   AssumeStmt(const Expr* e) : Stmt(ASSUME), expr(e) {}
   void add(const Attr* a) {
     attrs.push_back(a);
+  }
+  bool hasAttr(std::string name) const {
+    for (auto a = attrs.begin(); a != attrs.end(); ++a) {
+      if ((*a)->getName() == name)
+        return true;
+    }
+    return false;
   }
   void print(std::ostream& os) const;
   static bool classof(const Stmt* S) { return S->getKind() == ASSUME; }

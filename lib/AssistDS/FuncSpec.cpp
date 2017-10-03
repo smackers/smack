@@ -18,7 +18,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 
 #include <set>
 #include <map>
@@ -50,33 +50,31 @@ bool FuncSpec::runOnModule(Module& M) {
   std::map<CallInst*, std::vector<std::pair<unsigned, Constant*> > > cloneSites;
   std::map<std::pair<Function*, std::vector<std::pair<unsigned, Constant*> > >, Function* > toClone;
 
-  for (Module::iterator I = M.begin(); I != M.end(); ++I)
-    if (!I->isDeclaration() && !I->mayBeOverridden()) {
+  for (Function &F : M)
+    if (!F.isDeclaration() && !F.isInterposable()) {
       std::vector<unsigned> FPArgs;
-      for (Function::arg_iterator ii = I->arg_begin(), ee = I->arg_end();
-           ii != ee; ++ii) {
+      for (auto &Arg : F.args()) {
         // check if this function has a FunctionType(or a pointer to) argument 
-        if (const PointerType* Ty = dyn_cast<PointerType>(ii->getType())) {
+        if (const PointerType* Ty = dyn_cast<PointerType>(Arg.getType())) {
           if (isa<FunctionType>(Ty->getElementType())) {
             // Store the index of such an argument
-            FPArgs.push_back(ii->getArgNo());
-            DEBUG(errs() << "Eligible: " << I->getName().str() << "\n");
+            FPArgs.push_back(Arg.getArgNo());
+            DEBUG(errs() << "Eligible: " << F.getName().str() << "\n");
           }
-        } else if (isa<FunctionType>(ii->getType())) {
+        } else if (isa<FunctionType>(Arg.getType())) {
           // Store the index of such an argument
-          FPArgs.push_back(ii->getArgNo());
-          DEBUG(errs() << "Eligible: " << I->getName().str() << "\n");
+          FPArgs.push_back(Arg.getArgNo());
+          DEBUG(errs() << "Eligible: " << F.getName().str() << "\n");
         } 
       }
       // Now find all call sites that it is called from
-      for(Value::user_iterator ui = I->user_begin(), ue = I->user_end();
-          ui != ue; ++ui) {
-        if (CallInst* CI = dyn_cast<CallInst>(*ui)) {
+      for (User *U : F.users()) {
+        if (CallInst* CI = dyn_cast<CallInst>(U)) {
           // Check that it is the called value (and not an argument)
-          if(CI->getCalledValue()->stripPointerCasts() == I) {
+          if(CI->getCalledValue()->stripPointerCasts() == &F) {
             std::vector<std::pair<unsigned, Constant*> > Consts;
             for (unsigned x = 0; x < FPArgs.size(); ++x)
-              if (Constant* C = dyn_cast<Constant>(ui->getOperand(FPArgs.at(x) + 1))) {
+              if (Constant* C = dyn_cast<Constant>(U->getOperand(FPArgs.at(x) + 1))) {
                 // If the argument passed, at any of the locations noted earlier
                 // is a constant function, store the pair
                 Consts.push_back(std::make_pair(FPArgs.at(x), C));
@@ -85,7 +83,7 @@ bool FuncSpec::runOnModule(Module& M) {
               // If at least one of the arguments is a constant function,
               // we must clone the function.
               cloneSites[CI] = Consts;
-              toClone[std::make_pair(I, Consts)] = 0;
+              toClone[std::make_pair(&F, Consts)] = 0;
             }
           }
         }
@@ -97,7 +95,7 @@ bool FuncSpec::runOnModule(Module& M) {
   for (std::map<std::pair<Function*, std::vector<std::pair<unsigned, Constant*> > >, Function* >::iterator I = toClone.begin(), E = toClone.end(); I != E; ++I) {
     // Clone all the functions we need cloned
     ValueToValueMapTy VMap;
-    Function* DirectF = CloneFunction(I->first.first, VMap, false);
+    Function* DirectF = CloneFunction(I->first.first, VMap);
     DirectF->setName(I->first.first->getName().str() + "_SPEC");
     DirectF->setLinkage(GlobalValue::InternalLinkage);
     I->first.first->getParent()->getFunctionList().push_back(DirectF);

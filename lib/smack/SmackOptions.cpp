@@ -38,6 +38,8 @@ const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
   "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
 );
 
+const llvm::cl::opt<bool> SmackOptions::AddTiming("timing-annotations", llvm::cl::desc("Add timing annotations."));
+
 const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
   "no-memory-splitting", llvm::cl::desc("Disable splitting memory into regions.")
 );
@@ -45,6 +47,13 @@ const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
   "no-byte-access-inference", llvm::cl::desc("Optimize bit-precision with DSA.")
 );
+
+const llvm::cl::opt<bool> SmackOptions::FloatEnabled(
+  "float", llvm::cl::desc("Enable interpreted floating-point type")
+);
+
+const llvm::cl::opt<bool> SmackOptions::MemorySafety(
+  "memory-safety", llvm::cl::desc("Enable memory safety checks"));
 
 bool SmackOptions::isEntryPoint(std::string name) {
   for (auto EP : EntryPoints)

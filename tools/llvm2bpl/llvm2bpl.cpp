@@ -3,8 +3,10 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/LinkAllPasses.h"
-#include "llvm/PassManager.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
@@ -15,23 +17,31 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Target/TargetMachine.h"
 
+#include "smack/SmackOptions.h"
 #include "smack/BplFilePrinter.h"
-#include "smack/DSAAliasAnalysis.h"
 #include "smack/SmackModuleGenerator.h"
 #include "assistDS/StructReturnToPointer.h"
 #include "assistDS/SimplifyExtractValue.h"
 #include "assistDS/SimplifyInsertValue.h"
 #include "assistDS/MergeGEP.h"
 #include "assistDS/Devirt.h"
+#include "smack/AddTiming.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/RenameIntrinsics.h"
 #include "smack/ExtractContracts.h"
+#include "smack/VerifierCodeMetadata.h"
 #include "smack/SimplifyLibCalls.h"
+#include "smack/MemorySafetyChecker.h"
+#include "smack/SignedIntegerOverflowChecker.h"
+#include "smack/SplitAggregateLoadStore.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -53,6 +63,18 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
+static llvm::cl::opt<bool>
+SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
+  llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
+  llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+SplitStructs("split-aggregate-values", llvm::cl::desc("Split load/store instructions of LLVM aggregate types"),
+  llvm::cl::init(false));
+
 std::string filenamePrefix(const std::string &str) {
   return str.substr(0, str.find_last_of("."));
 }
@@ -72,18 +94,50 @@ namespace {
       exit(1);
     }
   }
+
+  // Returns the TargetMachine instance or zero if no triple is provided.
+  static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
+					 StringRef FeaturesStr,
+					 const TargetOptions &Options) {
+    std::string Error;
+
+    StringRef MArch;
+
+    const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
+							   Error);
+
+    assert(TheTarget && "If we don't have a target machine, can't do timing analysis");
+
+    return TheTarget->
+      createTargetMachine(TheTriple.getTriple(),
+			  CPUStr,
+			  FeaturesStr,
+			  Options,
+			  Reloc::Static, /* was getRelocModel(),*/
+			  CodeModel::Default, /* was CMModel,*/
+			  CodeGenOpt::None /*GetCodeGenOptLevel())*/
+			  );
+
+  }
 }
 
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   llvm::cl::ParseCommandLineOptions(argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
 
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;
 
   llvm::SMDiagnostic err;
-  std::unique_ptr<llvm::Module> module = llvm::parseIRFile(InputFilename, err, llvm::getGlobalContext());
+  llvm::LLVMContext Context;
+
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+
+  std::unique_ptr<llvm::Module> module = llvm::parseIRFile(InputFilename, err, Context);
   if (!err.getMessage().empty())
     check("Problem reading input bitcode/IR: " + err.getMessage().str());
 
@@ -98,11 +152,10 @@ int main(int argc, char **argv) {
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
 
-  llvm::PassManager pass_manager;
+  llvm::legacy::PassManager pass_manager;
 
-  pass_manager.add(new DataLayoutPass());
   pass_manager.add(llvm::createLowerSwitchPass());
-  pass_manager.add(llvm::createCFGSimplificationPass());
+  //pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
@@ -118,12 +171,45 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::ExtractContracts());
+  pass_manager.add(new smack::VerifierCodeMetadata());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
   pass_manager.add(new smack::CodifyStaticInits());
-  pass_manager.add(new smack::RemoveDeadDefs());
+  if (!Modular) {
+    pass_manager.add(new smack::RemoveDeadDefs());
+  }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
+
+  if (SplitStructs)
+    pass_manager.add(new smack::SplitAggregateLoadStore());
+
+  if (smack::SmackOptions::MemorySafety) {
+    pass_manager.add(new smack::MemorySafetyChecker());
+  }
+
+  if (SignedIntegerOverflow)
+    pass_manager.add(new smack::SignedIntegerOverflowChecker());
+
+
+  if(smack::SmackOptions::AddTiming){
+    Triple ModuleTriple(module->getTargetTriple());
+    assert (ModuleTriple.getArch() && "Module has no defined architecture: unable to add timing annotations");
+
+    const TargetOptions Options; /* = InitTargetOptionsFromCodeGenFlags();*/
+    std::string CPUStr = ""; /*getCPUStr();*/
+    std::string FeaturesStr = ""; /*getFeaturesStr();*/
+    TargetMachine *Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
+
+    assert(Machine && "Module did not have a Target Machine: Cannot set up timing pass");
+    // Add an appropriate TargetLibraryInfo pass for the module's triple.
+    TargetLibraryInfoImpl TLII(ModuleTriple);
+    pass_manager.add(new TargetLibraryInfoWrapperPass(TLII));
+
+    // Add internal analysis passes from the target machine.
+    pass_manager.add(createTargetTransformInfoWrapperPass(Machine->getTargetIRAnalysis()));
+    pass_manager.add(new smack::AddTiming());
+  }
 
   std::vector<tool_output_file*> files;
 

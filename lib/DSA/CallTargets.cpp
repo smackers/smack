@@ -24,7 +24,7 @@
 #include "dsa/DSGraph.h"
 #include "dsa/CallTargets.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/IR/Constants.h"
 #include <ostream>
@@ -41,7 +41,8 @@ namespace {
 }
 
 namespace dsa {
-  template<typename dsa>
+
+template<typename dsa>
 char CallTargetFinder<dsa>::ID = 0;
 
   template<class dsa>
@@ -51,12 +52,12 @@ void CallTargetFinder<dsa>::findIndTargets(Module &M)
   const DSCallGraph & callgraph = T->getCallGraph();
   DSGraph* G = T->getGlobalsGraph();
   DSGraph::ScalarMapTy& SM = G->getScalarMap();
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration())
-      for (Function::iterator F = I->begin(), FE = I->end(); F != FE; ++F)
-        for (BasicBlock::iterator B = F->begin(), BE = F->end(); B != BE; ++B)
-          if (isa<CallInst>(B) || isa<InvokeInst>(B)) {
-            CallSite cs(B);
+  for (Function &F : M)
+    if (!F.isDeclaration())
+      for (BasicBlock &B : F)
+        for (Instruction &I : B)
+          if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
+            CallSite cs(&I);
             AllSites.push_back(cs);
             Function* CF = cs.getCalledFunction();
 

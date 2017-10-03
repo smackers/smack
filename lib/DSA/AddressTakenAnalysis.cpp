@@ -21,7 +21,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/IR/CallSite.h"
 
 #include <fstream>
@@ -68,14 +68,15 @@ static bool isAddressTaken(Value* V) {
 }
 
 bool AddressTakenAnalysis::runOnModule(llvm::Module& M) {
-  for (Module::iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI){
-    if(isAddressTaken(FI)) {
-      addressTakenFunctions.insert(FI);
+  for (Function &F : M) {
+    if(isAddressTaken(&F)) {
+      addressTakenFunctions.insert(&F);
     }
   }
 
   return false;
 }
+
 bool AddressTakenAnalysis::hasAddressTaken(llvm::Function *F){
   return addressTakenFunctions.find(F) != addressTakenFunctions.end();
 }

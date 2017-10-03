@@ -6,6 +6,7 @@
 #include "llvm/IR/Constants.h"
 #include <sstream>
 #include <iostream>
+#include <set>
 
 namespace smack {
 
@@ -94,6 +95,10 @@ const Expr* Expr::lit(unsigned long v, unsigned w) {
   return new BvLit(v,w);
 }
 
+const Expr* Expr::lit(bool n, std::string s, std::string e, unsigned ss, unsigned es) {
+  return new FPLit(n, s, e, ss, es);
+}
+
 const Expr* Expr::neq(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Neq, l, r);
 }
@@ -111,6 +116,10 @@ const Expr* Expr::sel(std::string b, std::string i) {
 }
 
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
+  return new Attr(s,vs);
+}
+
+const Attr* Attr::attr(std::string s, std::list<const Expr*> vs) {
   return new Attr(s,vs);
 }
 
@@ -412,6 +421,10 @@ void IntLit::print(std::ostream& os) const {
 
 void BvLit::print(std::ostream& os) const {
   os << val << "bv" << width;
+}
+
+void FPLit::print(std::ostream& os) const {
+  os << (neg ? "-" : "") << sig << "e" << expo << "f" << sigSize << "e" << expSize;
 }
 
 void NegExpr::print(std::ostream& os) const {

@@ -4,47 +4,24 @@
 #ifndef SMACKMODULEGENERATOR_H
 #define SMACKMODULEGENERATOR_H
 
-#include "smack/BoogieAst.h"
-#include "smack/SmackInstGenerator.h"
-#include "smack/DSAAliasAnalysis.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/GraphWriter.h"
-#include <sstream>
-#include <stack>
-
-using llvm::errs;
+#include "llvm/Pass.h"
 
 namespace smack {
 
+class Program;
+
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
-  Program program;
+  Program* program;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  SmackModuleGenerator() : ModulePass(ID) {}
-
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<DataLayoutPass>();
-    AU.addRequired<LoopInfo>();
-    AU.addRequired<Regions>();
-  }
-
-  virtual bool runOnModule(llvm::Module& m) {
-    generateProgram(m);
-    return false;
-  }
-
+  SmackModuleGenerator();
+  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
+  virtual bool runOnModule(llvm::Module& m);
   void generateProgram(llvm::Module& m);
-
-  Program& getProgram() {
+  Program* getProgram() {
     return program;
   }
 };

@@ -18,7 +18,7 @@
 #include "dsa/DSGraph.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
@@ -50,17 +50,17 @@ CompleteBUDataStructures::runOnModule (Module &M) {
   // formGlobalECs assumes that DSInfo is populated with a list of
   // DSgraphs for all the functions.
 
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())){
-      getOrCreateGraph(F);
+  for (Function &F : M) {
+    if (!(F.isDeclaration())){
+      getOrCreateGraph(&F);
     }
   }
 
   buildIndirectFunctionSets();
   formGlobalECs();
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())) {
-      if (DSGraph * Graph = getOrCreateGraph(F)) {
+  for (Function &F : M) {
+    if (!(F.isDeclaration())) {
+      if (DSGraph * Graph = getOrCreateGraph(&F)) {
         cloneIntoGlobals(Graph, DSGraph::DontCloneCallNodes |
                         DSGraph::DontCloneAuxCallNodes |
                         DSGraph::StripAllocaBit);
@@ -68,9 +68,9 @@ CompleteBUDataStructures::runOnModule (Module &M) {
     }
   }
 
-  for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-    if (!(F->isDeclaration())) {
-      if (DSGraph * Graph = getOrCreateGraph(F)) {
+  for (Function &F : M) {
+    if (!(F.isDeclaration())) {
+      if (DSGraph * Graph = getOrCreateGraph(&F)) {
         cloneGlobalsInto(Graph, DSGraph::DontCloneCallNodes |
                         DSGraph::DontCloneAuxCallNodes);
       }

@@ -19,7 +19,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
@@ -522,10 +522,10 @@ TypeSafety<dsa>::findTypeSafeDSNodes (const DSGraph * Graph) {
   DSGraph::node_const_iterator N = Graph->node_begin();
   DSGraph::node_const_iterator NE = Graph->node_end();
   for (; N != NE; ++N) {
-    if (isTypeSafe (N)) {
+    if (isTypeSafe (&*N)) {
       TypeSafeNodes.insert (&*N);
     }
-    fieldMapUpdate(N);
+    fieldMapUpdate(&*N);
   }
 }
 
@@ -534,7 +534,7 @@ TypeSafety<dsa>::runOnModule(Module & M) {
   //
   // Get access to prerequisite passes.
   //
-  TD      = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD      = &M.getDataLayout();
   dsaPass = &getAnalysis<dsa>();
 
   //
@@ -551,4 +551,3 @@ TypeSafety<dsa>::runOnModule(Module & M) {
 }
 
 }
-

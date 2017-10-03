@@ -1,16 +1,23 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#include "dsa/DSNode.h"
+#include "dsa/DSGraph.h"
+#include "dsa/DataStructure.h"
+#include "dsa/TypeSafety.h"
+#include "assistDS/DSNodeEquivs.h"
 #include "smack/Regions.h"
 #include "smack/SmackOptions.h"
+#include "smack/DSAWrapper.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "smack/Debug.h"
 
 #define DEBUG_TYPE "regions"
 
 namespace smack {
 
 const DataLayout* Region::DL = nullptr;
-DSAAliasAnalysis* Region::DSA = nullptr;
+DSAWrapper* Region::DSA = nullptr;
 // DSNodeEquivs* Region::NEQS = nullptr;
 
 namespace {
@@ -29,7 +36,7 @@ namespace {
     llvm_unreachable("Unexpected value.");
   }
 
-  bool isFieldDisjoint(DSAAliasAnalysis* DSA, const Value* V, unsigned offset) {
+  bool isFieldDisjoint(DSAWrapper* DSA, const Value* V, unsigned offset) {
     if (const GlobalValue* G = dyn_cast<GlobalValue>(V))
       return DSA->isFieldDisjoint(G, offset);
     else
@@ -39,8 +46,8 @@ namespace {
 }
 
 void Region::init(Module& M, Pass& P) {
-  DL = M.getDataLayout();
-  DSA = &P.getAnalysis<DSAAliasAnalysis>();
+  DL = &M.getDataLayout();
+  DSA = &P.getAnalysis<DSAWrapper>();
 }
 
 namespace {
@@ -96,7 +103,6 @@ bool Region::isSingleton(const DSNode* N, unsigned offset, unsigned length) {
       if (I->second->begin() == I->second->end()) break;
       if ((++(I->second->begin())) != I->second->end()) break;
       Type* T = *I->second->begin();
-      while (T->isPointerTy()) T = T->getPointerElementType();
       if (!T->isSized()) break;
       if (DL->getTypeAllocSize(T) != length) break;
       if (!T->isSingleValueType()) break;
@@ -120,12 +126,20 @@ bool Region::isComplicated(const DSNode* N) {
 
 void Region::init(const Value* V, unsigned length) {
   Type* T = V->getType();
-  while (T->isPointerTy()) T = T->getPointerElementType();
+  assert (T->isPointerTy() && "Expected pointer argument.");
+  T = T->getPointerElementType();
   context = &V->getContext();
-  representative = DSA ? DSA->getNode(V) : nullptr;
+  representative = (DSA && !dyn_cast<ConstantPointerNull>(V))
+    ? DSA->getNode(V) : nullptr;
   this->type = T;
-  this->offset = DSA ? DSA->getOffset(V) : 0;
-  this->length = length;
+  int offset = DSA ? DSA->getOffset(V) : 0;
+  if (offset < 0) {
+    this->offset = 0;
+    this->length = -1U;
+  } else {
+    this->offset = offset;
+    this->length = length;
+  }
 
   singleton = DL && representative
     && isSingleton(representative, offset, length);
@@ -133,7 +147,7 @@ void Region::init(const Value* V, unsigned length) {
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
-    T->isIntegerTy(8));
+    DSA->isMemcpyd(representative) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncompleteNode();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isCollapsedNode();
@@ -191,13 +205,12 @@ RegisterPass<Regions> RegionsPass("smack-regions", "SMACK Memory Regions Pass");
 void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   if (!SmackOptions::NoMemoryRegionSplitting) {
-    AU.addRequired<DataLayoutPass>();
-    AU.addRequiredTransitive<LocalDataStructures>();
-    AU.addRequiredTransitive<BUDataStructures>();
-    AU.addRequiredTransitive<TDDataStructures>();
-    AU.addRequiredTransitive<DSNodeEquivs>();
-    AU.addRequiredTransitive<dsa::TypeSafety<TDDataStructures> >();
-    AU.addRequired<DSAAliasAnalysis>();
+    AU.addRequiredTransitive<llvm::LocalDataStructures>();
+    AU.addRequiredTransitive<llvm::BUDataStructures>();
+    AU.addRequiredTransitive<llvm::TDDataStructures>();
+    AU.addRequiredTransitive<llvm::DSNodeEquivs>();
+    AU.addRequiredTransitive<dsa::TypeSafety<llvm::TDDataStructures> >();
+    AU.addRequired<DSAWrapper>();
   }
 }
 

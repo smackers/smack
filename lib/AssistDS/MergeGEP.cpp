@@ -22,7 +22,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
 
 #include <vector>
 // Pass statistics
@@ -142,7 +142,7 @@ static void simplifyGEP(GetElementPtrInst *GEP) {
       GetElementPtrInst *GEPNew =  (GEP->isInBounds() && Src->isInBounds()) ?
         GetElementPtrInst::CreateInBounds(Src->getOperand(0), Indices,
                                           GEP->getName(), GEP) :
-        GetElementPtrInst::Create(Src->getOperand(0), Indices,
+        GetElementPtrInst::Create(nullptr, Src->getOperand(0), Indices,
                                   GEP->getName(), GEP);
       numMerged++;
       GEP->replaceAllUsesWith(GEPNew);

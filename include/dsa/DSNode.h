@@ -17,12 +17,10 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/ilist.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "dsa/svset.h"
 #include "dsa/super_set.h"
 #include "dsa/keyiterator.h"
-#include "dsa/DSGraph.h"
 #include "dsa/DSSupport.h"
 
 #include <map>

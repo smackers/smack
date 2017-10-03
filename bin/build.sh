@@ -24,9 +24,10 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
-BUILD_LOCKPWN=0
+BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=0
+TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
@@ -43,7 +44,7 @@ LLVM_DIR="${ROOT}/llvm"
 source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT}/smack.environment
-WGET="wget --no-verbose --method=GET"
+WGET="wget --no-verbose"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -52,6 +53,8 @@ CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependnecies; the rest are added depending on the platform
 DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
+
+shopt -s extglob
 
 ################################################################################
 #
@@ -155,18 +158,18 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-debian-8.2.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.2.zip"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
-linux-ubuntu-14*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-3.6 llvm-3.6 mono-complete libz-dev libedit-dev"
+linux-@(ubuntu|neon)-1[46]*)
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-14.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION} mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -221,21 +224,36 @@ then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-ubuntu-14*)
+  linux-@(ubuntu|neon)-1[46]*)
+    RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
+    UBUNTU_CODENAME="trusty"
+    case "$RELEASE_VERSION" in
+    14*)
+      UBUNTU_CODENAME="trusty"
+      ;;
+    16*)
+      UBUNTU_CODENAME="xenial"
+      ;;
+    *)
+      puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
+      exit 1
+      ;;
+    esac
+
     # Adding LLVM repository
-    sudo add-apt-repository "deb http://llvm-apt.ecranbleu.org/apt/trusty/ llvm-toolchain-trusty-3.6 main"
-    ${WGET} -O - http://llvm-apt.ecranbleu.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
+    ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     # Adding MONO repository
     sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
 #    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.6 20
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.6 20
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.6 20
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.6 20
-    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.6 20
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 30
+    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 30
     ;;
 
   linux-ubuntu-12*)
@@ -299,16 +317,16 @@ then
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
-  ${WGET} http://llvm.org/releases/3.6.2/llvm-3.6.2.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.6.2/cfe-3.6.2.src.tar.xz
-  ${WGET} http://llvm.org/releases/3.6.2/compiler-rt-3.6.2.src.tar.xz
+  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/cfe-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz
 
-  tar -C ${LLVM_DIR}/src -xvf llvm-3.6.2.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-3.6.2.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-3.6.2.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src -xvf llvm-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
+  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
   sudo make install
 
@@ -322,7 +340,7 @@ then
 
   ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
   unzip -o z3-downloaded.zip -d z3-extracted
-  mv z3-extracted/z3-* ${Z3_DIR}
+  mv -f --backup=numbered z3-extracted/z3-* ${Z3_DIR}
   rm -rf z3-downloaded.zip z3-extracted
 
   puts "Installed Z3"
@@ -333,15 +351,17 @@ if [ ${BUILD_BOOGIE} -eq 1 ]
 then
   puts "Building Boogie"
 
-  git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+  if [ ! -d "$BOOGIE_DIR" ] ; then
+    git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+  fi
   cd ${BOOGIE_DIR}
   git reset --hard ${BOOGIE_COMMIT}
   cd ${BOOGIE_DIR}/Source
-  ${WGET} https://nuget.org/nuget.exe
+  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
   mono ./nuget.exe restore Boogie.sln
   rm -rf /tmp/nuget/
-  xbuild Boogie.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+  msbuild Boogie.sln /p:Configuration=Release
+  ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
 
   puts "Built Boogie"
 fi
@@ -351,13 +371,15 @@ if [ ${BUILD_CORRAL} -eq 1 ]
 then
   puts "Building Corral"
 
-  git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+  if [ ! -d "$CORRAL_DIR" ] ; then
+    git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+  fi
   cd ${CORRAL_DIR}
   git reset --hard ${CORRAL_COMMIT}
   git submodule init
   git submodule update
-  xbuild cba.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+  msbuild cba.sln /p:Configuration=Release
+  ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
 
   puts "Built Corral"
 fi
@@ -367,10 +389,13 @@ then
   puts "Building lockpwn"
 
   cd ${ROOT}
-  git clone https://github.com/smackers/lockpwn.git
+  if [ ! -d "$LOCKPWN_DIR" ] ; then
+    git clone https://github.com/smackers/lockpwn.git
+  fi
   cd ${LOCKPWN_DIR}
-  xbuild lockpwn.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
+  git reset --hard ${LOCKPWN_COMMIT}
+  msbuild lockpwn.sln /p:Configuration=Release
+  ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
 
   puts "Built lockpwn"
 fi
@@ -402,7 +427,7 @@ then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
-  ./regtest.py
+  ./regtest.py ${TRAVIS_ENV}
   res=$?
 
   puts "Regression tests complete"

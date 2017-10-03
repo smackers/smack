@@ -6,7 +6,8 @@
 
 #include "smack/SmackOptions.h"
 #include "smack/RemoveDeadDefs.h"
-#include "llvm/Support/Debug.h"
+#include "smack/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/DataLayout.h"
 
 #include <vector>
@@ -16,15 +17,15 @@ namespace smack {
 using namespace llvm;
 
 bool RemoveDeadDefs::runOnModule(Module& M) {
-  TD = &getAnalysis<DataLayoutPass>().getDataLayout();
+  TD = &M.getDataLayout();
   std::vector<Function*> dead;
 
   do {
     dead.clear();
-    for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-      std::string name = F->getName();
+    for (Function &F : M) {
+      std::string name = F.getName();
 
-      if (!(F->isDefTriviallyDead() || F->getNumUses() == 0))
+      if (!(F.isDefTriviallyDead() || F.getNumUses() == 0))
         continue;
 
       if (name.find("__SMACK_") != std::string::npos)
@@ -34,7 +35,7 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
         continue;
 
       DEBUG(errs() << "removing dead definition: " << name << "\n");
-      dead.push_back(F);
+      dead.push_back(&F);
     }
 
     for (auto F : dead)

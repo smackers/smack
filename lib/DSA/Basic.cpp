@@ -33,7 +33,7 @@ X("dsa-basic", "Basic Data Structure Analysis(No Analysis)");
 char BasicDataStructures::ID = 0;
 
 bool BasicDataStructures::runOnModule(Module &M) {
-  init(&getAnalysis<DataLayoutPass>().getDataLayout());
+  init(&M.getDataLayout());
 
   //
   // Create a void pointer type.  This is simply a pointer to an 8 bit value.
@@ -60,30 +60,29 @@ bool BasicDataStructures::runOnModule(Module &M) {
   // together the globals into equivalence classes.
   formGlobalECs();
 
-  for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
-    if (!F->isDeclaration()) {
+  for (Function &F : M) {
+    if (!F.isDeclaration()) {
       DSGraph* G = new DSGraph(GlobalECs, getDataLayout(), *TypeSS, GlobalsGraph);
       DSNode * Node = new DSNode(G);
           
-      if (!F->hasInternalLinkage())
+      if (!F.hasInternalLinkage())
         Node->setExternalMarker();
 
       // Create scalar nodes for all pointer arguments...
-      for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end();
-          I != E; ++I) {
-        if (isa<PointerType>(I->getType())) {
-          G->getNodeForValue(&*I).mergeWith(Node);
+      for (auto &Arg : F.args()) {
+        if (isa<PointerType>(Arg.getType())) {
+          G->getNodeForValue(&Arg).mergeWith(Node);
         }
       }
 
-      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+      for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ++I) {
         G->getNodeForValue(&*I).mergeWith(Node);
       }
 
       Node->foldNodeCompletely();
       Node->maskNodeTypes(DSNode::IncompleteNode);
 
-      setDSGraph(*F, G);
+      setDSGraph(F, G);
     }
   }
  

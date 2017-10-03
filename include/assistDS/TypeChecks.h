@@ -100,9 +100,8 @@ public:
   virtual void print(raw_ostream &OS, const Module *M) const;
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<DataLayoutPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfo>();
+    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<AddressTakenAnalysis>();
   }
 

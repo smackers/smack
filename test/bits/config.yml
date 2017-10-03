@@ -1,1 +1,2 @@
-flags: ['--bit-precise']
+flags: [--bit-precise]
+time-limit: 90
