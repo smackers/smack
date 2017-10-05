@@ -15,6 +15,7 @@
 # - Z3
 # - Boogie
 # - Corral
+# - Symbooglix
 # - lockpwn
 #
 ################################################################################
@@ -24,6 +25,7 @@ INSTALL_DEPENDENCIES=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
+BUILD_SYMBOOGLIX=1
 BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
@@ -36,6 +38,7 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
+SYMBOOGLIX_DIR="${ROOT}/symbooglix"
 LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
@@ -383,6 +386,22 @@ then
   puts "Built Corral"
 fi
 
+if [ ${BUILD_SYMBOOGLIX} -eq 1 ]
+then
+  puts "Building Symbooglix"
+
+  git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
+  cd ${SYMBOOGLIX_DIR}/src
+  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+  mono ./nuget.exe restore Symbooglix.sln
+  rm -rf /tmp/nuget/
+  xbuild Symbooglix.sln /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
+  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+
+  puts "Built Symbooglix"
+fi
+
 if [ ${BUILD_LOCKPWN} -eq 1 ]
 then
   puts "Building lockpwn"
@@ -412,6 +431,7 @@ then
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
+  echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
   echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
