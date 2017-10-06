@@ -22,6 +22,7 @@ class Naming {
   unsigned blockNum;
   unsigned varNum;
   unsigned undefNum;
+  unsigned globalNum;
 
 public:
   static const std::string BOOL_TYPE;
@@ -80,6 +81,7 @@ public:
   static const std::string FLOAT_VAR;
   static const std::string INT_VAR;
   static const std::string PTR_VAR;
+  static const std::string GLOBAL_VAR;
   static const std::string UNDEF_SYM;
   static const std::string CONTRACT_EXPR;
   static const std::string MEMORY_SAFETY_FUNCTION;
@@ -89,12 +91,13 @@ public:
   static const std::map<unsigned,std::string> CMPINST_TABLE;
   static const std::map<unsigned,std::string> ATOMICRMWINST_TABLE;
 
-  Naming() : blockNum(0), varNum(0), undefNum(0) { }
+  Naming() : blockNum(0), varNum(0), undefNum(0), globalNum(0) { }
   Naming(Naming& n) : blockNum(n.blockNum), varNum(n.varNum) { }
 
   void reset();
   std::string get(const Value& V);
 
+  std::string freshGlobalName();
   std::string freshBlockName();
   std::string freshUndefName();
   std::string freshVarName(const Value& V);
