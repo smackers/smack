@@ -180,6 +180,9 @@ std::string Naming::escape(std::string s) {
     case '@':
       Str[i] = '.';
       break;
+    case ':':
+      Str[i] = '_';
+      break;
     }
   return Str;
 }
