@@ -1,18 +1,17 @@
 #include <string.h>
 #include "smack.h"
 
-// @flag --unroll=10
 // @expect error 
 
 int main(void) {
-  char brick[10];
-  strcpy(brick,"brick");
+  char brick[4];
+  strcpy(brick,"bl");
   
-  char *glue = "glu!";
+  char *glue = "u!";
 
   char *modernart = strcat(brick,glue);
 
-  assert(strcmp(modernart,"brickglu") == 0);
+  assert(strcmp(modernart,"blue") == 0);
 
   return 0;
 }
