@@ -1,8 +1,8 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef MODS_H
-#define MODS_H
+#ifndef MODANALYSIS_H
+#define MODANALYSIS_H
 
 #include "smack/SmackModuleGenerator.h"
 #include "smack/BoogieAst.h"
@@ -15,7 +15,7 @@ namespace smack {
 
 using llvm::Regex;
 
-class GenModifies : public llvm::ModulePass {
+class ModAnalysis : public llvm::ModulePass {
 
 private:
   std::stack<std::string> st;
@@ -51,7 +51,7 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  GenModifies() : llvm::ModulePass(ID), maxIndex(1) {
+  ModAnalysis() : llvm::ModulePass(ID), maxIndex(1) {
     SCCGraph.push_back(std::set<int>());
     modVars.push_back(std::set<std::string>());
   }
@@ -69,5 +69,5 @@ public:
 };
 }
 
-#endif // MODS_H
+#endif // MODANALYSIS_H
 
