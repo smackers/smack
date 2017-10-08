@@ -39,15 +39,12 @@ std::string ModAnalysis::getBplGlobalsModifiesClause(const std::set<std::string>
 
 void ModAnalysis::fixPrelude(Program *program, const std::string &modClause) {
   std::string searchStr = "procedure $global_allocations()\n";
-
   std::string &prelude = program->getPrelude();
-
   size_t pos = prelude.find(searchStr);
 
   if (pos != std::string::npos) {
     std::string str1 = prelude.substr(0, pos + searchStr.size());
     std::string str2 = prelude.substr(pos + searchStr.size());
-
     prelude = str1 + modClause + str2;
   }
 }
@@ -61,7 +58,6 @@ void ModAnalysis::addModifiesToSmackProcs(Program *program, const std::string &m
     if (isa<CodeDecl>(decl)) {
       if (PROC_DECL.match(decl->getName()) && !MOD_CL.match(decl->getName())) {
         std::string newStr = PROC_DECL.sub("\\1", decl->getName()) + modClause + PROC_DECL.sub("\\3", decl->getName());
-
         decl = Decl::code(newStr, newStr);
       }
     }
@@ -70,9 +66,7 @@ void ModAnalysis::addModifiesToSmackProcs(Program *program, const std::string &m
 
 void ModAnalysis::genSmackCodeModifies(Program *program, const std::set<std::string> &bplGlobals) {
   std::string modClause = getBplGlobalsModifiesClause(bplGlobals);
-
   fixPrelude(program, modClause);
-
   addModifiesToSmackProcs(program, modClause);
 }
 
@@ -82,9 +76,7 @@ void ModAnalysis::addNewSCC(const std::string &procName) {
   do {
     toAdd = st.top();
     st.pop();
-
     onStack[toAdd] = false;
-
     SCCOfProc[toAdd] = modVars.size();
   } while (toAdd != procName);
 
@@ -107,7 +99,6 @@ void ModAnalysis::dfs(ProcDecl *procDecl) {
 
         if (proc.count(next) && !index[next]) {
           dfs(proc[next]);
-
           low[name] = std::min(low[name], low[next]);
         } else if (onStack[next]) {
           low[name] = std::min(low[name], index[next]);
@@ -221,9 +212,7 @@ void ModAnalysis::addModifies(Program *program) {
     if (ProcDecl *procDecl = dyn_cast<ProcDecl>(decl)) {
       if (procDecl->begin() != procDecl->end()) {
         int index = SCCOfProc[procDecl->getName()];
-
         std::list<std::string> &modList = procDecl->getModifies();
-
         modList.insert(modList.end(), modVars[index].begin(), modVars[index].end());
       }
     }
@@ -232,15 +221,10 @@ void ModAnalysis::addModifies(Program *program) {
 
 void ModAnalysis::genUserCodeModifies(Program *program, const std::set<std::string> &bplGlobals) {
   genSCCs(program);
-
   calcModifiesOfSCCs(program);
-
   genSCCGraph(program);
-
   propagateModifiesUpGraph();
-
   addSmackGlobals(bplGlobals);
-
   addModifies(program);
 }
 
