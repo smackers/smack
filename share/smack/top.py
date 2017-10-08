@@ -305,7 +305,6 @@ def default_clang_compile_command(args, lib = False):
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
-  if args.strings: cmd += ['-DSTRINGS_ENABLED']
   return cmd
 
 def build_libs(args):
@@ -316,7 +315,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.memory_safety or args.signed_integer_overflow:
+  if args.strings or args.memory_safety or args.signed_integer_overflow:
     libs += ['string.c']
 
   if args.float:
