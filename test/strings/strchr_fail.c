@@ -7,6 +7,6 @@ int main(void) {
   char *notAWebAddress = "word";
   char *dotToEnd = strchr(notAWebAddress,'.');
 
-  assert(dotToEnd != 0); // or assert(dotToEnd);
+  assert(dotToEnd != 0);
   return 0;
 }

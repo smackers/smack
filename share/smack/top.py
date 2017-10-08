@@ -181,7 +181,7 @@ def arguments():
   translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
     help='enable splitting of load/store instructions of LLVM aggregate types')
 
-  translate_group.add_argument('--strings', action='store_true', default=False, help='enable c string methods')
+  translate_group.add_argument('--strings', action='store_true', default=False, help='enable support for string')
 
   verifier_group = parser.add_argument_group('verifier options')
 
