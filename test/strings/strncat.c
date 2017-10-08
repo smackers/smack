@@ -6,6 +6,7 @@
 int main(void) {
   char dish[40];
   strcpy(dish,"R");
+
   char *milk = "ice";
   strncat(dish,milk,2);
 
