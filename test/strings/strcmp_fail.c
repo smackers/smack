@@ -6,7 +6,6 @@
 int main(void) {
   char *alpha = "alph";
   char *zeta = "zeta";
-
   int comparison = strcmp(alpha,zeta);
 
   assert(comparison == 0);
