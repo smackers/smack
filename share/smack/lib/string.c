@@ -38,8 +38,6 @@ int strcmp(const char *s1, const char *s2) {
 }
 
 int strncmp(const char *s1, const char *s2, size_t n) {
- 
-// what do we do if n is bigger than s1 and s2? 
   while (n--) {
     if (*s1 != *s2)
       return *s1 - *s2;
@@ -53,7 +51,6 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 // concatenation
 
 char *strcat(char *dest, const char *src) {
-
   char *retDest = dest;
 
   while (*dest)
@@ -64,9 +61,6 @@ char *strcat(char *dest, const char *src) {
 }
 
 char *strncat(char *dest, const char *src, size_t n) {
-  
- // what happens when n is too big?
-
   char *retDest = dest;
 
   while (*dest)
@@ -81,7 +75,6 @@ char *strncat(char *dest, const char *src, size_t n) {
 // searching
 
 char *strchr(const char *src, int c) {
-  
   while (*src != 0) {
     if (*src == c) {
       return src;
