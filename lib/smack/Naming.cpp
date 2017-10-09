@@ -67,6 +67,7 @@ const std::string Naming::BOOL_VAR = "$b";
 const std::string Naming::FLOAT_VAR = "$f";
 const std::string Naming::INT_VAR = "$i";
 const std::string Naming::PTR_VAR = "$p";
+const std::string Naming::GLOBAL_VAR = "$g";
 const std::string Naming::UNDEF_SYM = "$u";
 const std::string Naming::CONTRACT_EXPR = "$expr";
 const std::string Naming::MEMORY_SAFETY_FUNCTION = "__SMACK_check_memory_safety";
@@ -179,6 +180,9 @@ std::string Naming::escape(std::string s) {
     case '@':
       Str[i] = '.';
       break;
+    case ':':
+      Str[i] = '_';
+      break;
     }
   return Str;
 }
@@ -201,8 +205,7 @@ std::string Naming::get(const Value& V) {
       name = name + "_";
 
   } else if (isa<GlobalValue>(&V)) {
-    // XXX is this a problem?
-    assert( false && "Unexpected unnamed global vlaue." );
+    name = freshGlobalName();
 
   } else if (isa<BasicBlock>(&V)) {
     name = freshBlockName();
@@ -222,6 +225,12 @@ std::string Naming::get(const Value& V) {
 
   names[&V] = name;
   return name;
+}
+
+std::string Naming::freshGlobalName() {
+  std::stringstream s;
+  s << GLOBAL_VAR << globalNum++;
+  return s.str();
 }
 
 std::string Naming::freshBlockName() {
