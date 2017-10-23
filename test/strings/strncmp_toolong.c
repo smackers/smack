@@ -1,7 +1,7 @@
 #include <string.h>
 #include "smack.h"
 
-// @expect error
+// @expect verified
 
 int main(void) {
   char *shorty = "go";
