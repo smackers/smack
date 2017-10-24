@@ -1,7 +1,7 @@
 #include <string.h>
 #include "smack.h"
 
-// @expect verified
+// @expect error
 
 int main(void) {
   const char *word = "made";
