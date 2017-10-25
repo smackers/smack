@@ -181,6 +181,7 @@ def arguments():
   translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
     help='enable splitting of load/store instructions of LLVM aggregate types')
 
+  translate_group.add_argument('--strings', action='store_true', default=False, help='enable support for string')
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -314,7 +315,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.memory_safety or args.signed_integer_overflow:
+  if args.strings or args.memory_safety or args.signed_integer_overflow:
     libs += ['string.c']
 
   if args.float:

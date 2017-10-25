@@ -15,6 +15,7 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=contracts"
     - TRAVIS_ENV="--exhaustive --folder=memory-safety"
     - TRAVIS_ENV="--exhaustive --folder=pthread"
+    - TRAVIS_ENV="--exhaustive --folder=strings"
 
 before_install:
   - sudo rm -rf /usr/local/clang-3.5.0
