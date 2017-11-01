@@ -490,15 +490,13 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
   processInstruction(i);
   std::string x = naming->get(i);
   const Expr
-  *c = rep->expr(i.getOperand(0)),
-   *v1 = rep->expr(i.getOperand(1)),
-    *v2 = rep->expr(i.getOperand(2));
+  *c = rep->expr(i.getCondition()),
+   *v1 = rep->expr(i.getTrueValue()),
+    *v2 = rep->expr(i.getFalseValue());
 
-  emit(Stmt::havoc(x));
-  emit(Stmt::assume(Expr::and_(
-    Expr::impl(Expr::eq(c,rep->integerLit(1L,1)), Expr::eq(Expr::id(x), v1)),
-    Expr::impl(Expr::neq(c,rep->integerLit(1L,1)), Expr::eq(Expr::id(x), v2))
-  )));
+  assert(!i.getCondition()->getType()->isVectorTy() && "Vector condition is not supported.");
+  emit(Stmt::assign(Expr::id(x),
+    Expr::if_then_else(Expr::eq(c, rep->integerLit(1L,1)), v1, v2)));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
