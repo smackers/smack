@@ -65,7 +65,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
       return output + ("\n%s timed out." % cmd[0])
     elif rc == -signal.SIGSEGV:
       raise Exception("segmentation fault")
-    elif rc:
+    elif rc and args.verifier != 'symbooglix':
       raise Exception(output)
     else:
       return output
