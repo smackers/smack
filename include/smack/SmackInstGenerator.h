@@ -30,6 +30,7 @@ private:
 
   Block* currBlock;
   llvm::BasicBlock::const_iterator nextInst;
+  llvm::Instruction* fstNonDebugInst;
   std::map<const llvm::BasicBlock*, Block*> blockMap;
   std::map<const llvm::Value*, std::string> sourceNames;
 
