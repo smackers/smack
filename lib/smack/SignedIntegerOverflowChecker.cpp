@@ -17,7 +17,7 @@ namespace smack {
 
 using namespace llvm;
 
-Regex OVERFLOW_INTRINSICS("^llvm.s(add|sub|mul).with.overflow.i(32|64)$");
+Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
 
 std::map<std::string, Instruction::BinaryOps> SignedIntegerOverflowChecker::INSTRUCTION_TABLE {
   {"add", Instruction::Add},
@@ -38,7 +38,6 @@ std::map<int, std::string> SignedIntegerOverflowChecker::INT_MIN_TABLE {
 bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
-
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
@@ -53,8 +52,9 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             Function* f = ci->getCalledFunction();
             SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
             if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-              std::string op = ar->begin()[1].str();
-              std::string len = ar->begin()[2].str();
+	      bool sign = ar->begin()[1].str() == "s";
+              std::string op = ar->begin()[2].str();
+              std::string len = ar->begin()[3].str();
               int bits = std::stoi(len);
               if (ei->getIndices()[0] == 1) {
                 Instruction* prev = &*std::prev(I);
@@ -110,3 +110,4 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
 // Pass ID variable
 char SignedIntegerOverflowChecker::ID = 0;
 }
+
