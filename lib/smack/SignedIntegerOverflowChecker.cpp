@@ -12,6 +12,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Regex.h"
 #include <string>
+#include "llvm/ADT/APInt.h"
 
 namespace smack {
 
@@ -25,16 +26,24 @@ std::map<std::string, Instruction::BinaryOps> SignedIntegerOverflowChecker::INST
   {"mul", Instruction::Mul}
 };
 
-std::map<int, std::string> SignedIntegerOverflowChecker::INT_MAX_TABLE {
-  {32, "2147483647"},
-  {64, "9223372036854775807"}
-};
+  std::string getMax(unsigned bits, bool is_signed) {
+  if (is_signed) {
+    return APInt::getSignedMaxValue(bits).toString(10, true);
+  }
+  else {
+    return APInt::getMaxValue(bits).toString(10, false);
+  }
+}
 
-std::map<int, std::string> SignedIntegerOverflowChecker::INT_MIN_TABLE {
-  {32, "-2147483648"},
-  {64, "-9223372036854775808"}
-};
-
+std::string getMin(unsigned bits, bool is_signed) {
+  if (is_signed) {
+    return APInt::getSignedMinValue(bits).toString(10, true);
+  }
+  else {
+    return APInt::getMinValue(bits).toString(10, false);
+  }
+}
+  
 bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
@@ -52,7 +61,7 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             Function* f = ci->getCalledFunction();
             SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
             if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-	      bool sign = ar->begin()[1].str() == "s";
+	      bool is_signed = ar->begin()[1].str() == "s";
               std::string op = ar->begin()[2].str();
               std::string len = ar->begin()[3].str();
               int bits = std::stoi(len);
@@ -72,8 +81,8 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
                     }
                   }
                 }
-                ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MAX_TABLE.at(bits), 10);
-                ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MIN_TABLE.at(bits), 10);
+                ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, is_signed), 10);
+                ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, is_signed), 10);
                 ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, ai, max, "");
                 ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, ai, min, "");
                 BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
@@ -90,8 +99,8 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
             CastInst* so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
             CastInst* so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
             BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, so1, so2, "", &*I);
-            ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MAX_TABLE.at(bits), 10);
-            ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), INT_MIN_TABLE.at(bits), 10);
+            ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, true), 10);
+            ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, true), 10);
             ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, lsdi, max, "");
             ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, lsdi, min, "");
             BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
@@ -110,4 +119,3 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
 // Pass ID variable
 char SignedIntegerOverflowChecker::ID = 0;
 }
-
