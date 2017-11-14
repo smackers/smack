@@ -1,7 +1,7 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include "smack/SignedIntegerOverflowChecker.h"
+#include "smack/IntegerOverflowChecker.h"
 #include "smack/Naming.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
@@ -20,7 +20,7 @@ using namespace llvm;
 
 Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
 
-std::map<std::string, Instruction::BinaryOps> SignedIntegerOverflowChecker::INSTRUCTION_TABLE {
+std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTION_TABLE {
   {"add", Instruction::Add},
   {"sub", Instruction::Sub},
   {"mul", Instruction::Mul}
@@ -44,7 +44,7 @@ std::string getMin(unsigned bits, bool is_signed) {
   }
 }
   
-bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
+bool IntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
   for (auto& F : m) {
@@ -119,5 +119,5 @@ bool SignedIntegerOverflowChecker::runOnModule(Module& m) {
 }
 
 // Pass ID variable
-char SignedIntegerOverflowChecker::ID = 0;
+char IntegerOverflowChecker::ID = 0;
 }
