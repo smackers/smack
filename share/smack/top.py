@@ -320,7 +320,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.strings or args.memory_safety or args.signed_integer_overflow:
+  if args.strings or args.memory_safety or args.integer_overflow:
     libs += ['string.c']
 
   if args.float:
@@ -406,6 +406,7 @@ def rust_frontend(args):
 
   bitcodes = []
   libs = ['smack.c']
+  args.integer_overflow = True
   rust_files = args.input_files
   smack_compile_command = default_clang_compile_command(args)
   rust_compile_command = default_rust_compile_command(args)
@@ -425,7 +426,6 @@ def rust_frontend(args):
 
     try_command(rust_compile_command + [temp_rs, '-o', bc], console=True)
     bitcodes.append(bc)
-  bitcodes.append(os.path.join(smack_lib(), "foo.ll"))
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
