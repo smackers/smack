@@ -58,7 +58,6 @@ def check_verifier(cmd):
     check("%s invokes mono" % var, re.match(r'\Amono', os.environ[var]))
     verifier_exe = os.environ[var].split()[1]
     check("%s verifier executable exists" % var, os.path.isfile(verifier_exe))
-    check("%s verifier is executable" % var, os.access(verifier_exe, os.X_OK))
     solver_exe = os.path.join(os.path.dirname(verifier_exe), "z3.exe")
     check("%s solver executable exists" % var, os.path.isfile(solver_exe))
     check("%s solver is executable" % var, os.access(solver_exe, os.X_OK))
@@ -79,6 +78,7 @@ def check_headers(prefix):
 
 def main():
   global args
+  global count
   parser = argparse.ArgumentParser(description='Diagnose SMACK configuration issues.')
   parser.add_argument('-q', '--quiet', dest='quiet', action="store_true", default=False,
                       help='only show failed diagnostics')

@@ -14,10 +14,23 @@ Zvonimir Rakamaric, Michael Emmi,
 This is an incomplete list of publications that use, leverage, or extend SMACK.
 If you have a publication for this list, please email [Zvonimir](mailto:zvonimir@cs.utah.edu).
 
+1. [Counterexample-Guided Bit-Precision Selection](http://soarlab.org/2017/09/aplas2017-hr/),
+Shaobo He, Zvonimir Rakamaric,
+15th Asian Symposium on Programming Languages and Systems (APLAS 2017)
+
+1. [Static Assertion Checking of Production Software with Angelic Verification](http://soarlab.org/2017/09/tapas2017-hllr/),
+Shaobo He, Shuvendu Lahiri, Akash Lal, Zvonimir Rakamaric,
+8th Workshop on Tools for Automatic Program Analysis (TAPAS 2017)
+
 1. [Refining Interprocedural Change-Impact Analysis using Equivalence Relations](https://www.microsoft.com/en-us/research/publication/refining-interprocedural-change-impact-analysis-using-equivalence-relations),
 Alex Gyori, Shuvendu Lahiri, Nimrod Partush,
 26th ACM SIGSOFT International Symposium on Software Testing and Analysis
 (ISSTA 2017)
+
+1. [System Programming in Rust: Beyond Safety](http://soarlab.org/2017/06/hotos2017-bbbprr/),
+Abhiram Balasubramanian, Marek S. Baranowski, Anton Burtsev, Aurojit Panda,
+Zvonimir Rakamaric, Leonid Ryzhyk,
+16th Workshop on Hot Topics in Operating Systems (HotOS 2017)
 
 1. [Verifying Constant-Time Implementations](https://www.usenix.org/conference/usenixsecurity16/technical-sessions/presentation/almeida),
 Jose Bacelar Almeida, Manuel Barbosa, Gilles Barthe, Francois Dupressoir, Michael Emmi,

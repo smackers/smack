@@ -115,6 +115,10 @@ const Expr* Expr::sel(std::string b, std::string i) {
   return new SelExpr(id(b), id(i));
 }
 
+const Expr* Expr::if_then_else(const Expr* c, const Expr* t, const Expr* e) {
+  return new IfThenElseExpr(c, t, e);
+}
+
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
   return new Attr(s,vs);
 }
@@ -470,6 +474,10 @@ void CodeExpr::print(std::ostream& os) const {
     print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");
   print_seq<Block*>(os, blocks, "\n");
   os << "\n" << "}|";
+}
+
+void IfThenElseExpr::print(std::ostream& os) const {
+  os << "if " << cond << " then " << true_value << " else " << false_value;
 }
 
 void StringLit::print(std::ostream& os) const {
