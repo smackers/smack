@@ -43,7 +43,7 @@ std::string getMin(unsigned bits, bool is_signed) {
     return APInt::getMinValue(bits).toString(10, false);
   }
 }
-  
+
 bool IntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
@@ -61,7 +61,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
             Function* f = ci->getCalledFunction();
             SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
             if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-	      bool is_signed = ar->begin()[1].str() == "s";
+              bool is_signed = ar->begin()[1].str() == "s";
               std::string op = ar->begin()[2].str();
               std::string len = ar->begin()[3].str();
               int bits = std::stoi(len);
@@ -83,8 +83,8 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                 }
                 ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, is_signed), 10);
                 ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, is_signed), 10);
-		CmpInst::Predicate max_cmp = (is_signed ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-		CmpInst::Predicate min_cmp = (is_signed ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+                CmpInst::Predicate max_cmp = (is_signed ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
+                CmpInst::Predicate min_cmp = (is_signed ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
                 ICmpInst* gt = new ICmpInst(&*I, max_cmp, ai, max, "");
                 ICmpInst* lt = new ICmpInst(&*I, min_cmp, ai, min, "");
                 BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
