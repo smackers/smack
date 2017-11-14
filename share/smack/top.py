@@ -173,8 +173,8 @@ def arguments():
   translate_group.add_argument('--only-check-memleak', action='store_true', default=False,
     help='only enable memory leak checks')
 
-  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
-    help='enable signed integer overflow checks')
+  translate_group.add_argument('--integer-overflow', action='store_true', default=False,
+    help='enable integer overflow checks')
 
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
@@ -182,6 +182,7 @@ def arguments():
   translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
     help='enable splitting of load/store instructions of LLVM aggregate types')
 
+  translate_group.add_argument('--strings', action='store_true', default=False, help='enable support for string')
 
   verifier_group = parser.add_argument_group('verifier options')
 
@@ -288,7 +289,7 @@ def smack_header_path():
 def smack_headers():
   paths = []
   paths.append(smack_header_path())
-  if args.memory_safety or args.signed_integer_overflow:
+  if args.memory_safety or args.integer_overflow:
     paths.append(os.path.join(smack_header_path(), 'string'))
   if args.float:
     paths.append(os.path.join(smack_header_path(), 'math'))
@@ -303,7 +304,7 @@ def default_clang_compile_command(args, lib = False):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 
@@ -319,7 +320,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.memory_safety or args.signed_integer_overflow:
+  if args.strings or args.memory_safety or args.integer_overflow:
     libs += ['string.c']
 
   if args.float:
@@ -492,7 +493,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
-  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
+  if args.integer_overflow: cmd += ['-integer-overflow']
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
   if args.split_aggregate_values: cmd += ['-split-aggregate-values']
@@ -628,8 +629,6 @@ def verify_bpl(args):
   if args.bit_precise:
     x = "bopt:" if args.verifier != 'boogie' else ""
     command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-    command += ["/%sz3opt:smt.relevancy=0" % x]
-    command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
     command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:

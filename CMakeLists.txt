@@ -174,7 +174,7 @@ add_library(smackTranslator STATIC
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
   include/smack/MemorySafetyChecker.h
-  include/smack/SignedIntegerOverflowChecker.h
+  include/smack/IntegerOverflowChecker.h
   include/smack/SplitAggregateLoadStore.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
@@ -195,7 +195,7 @@ add_library(smackTranslator STATIC
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
   lib/smack/MemorySafetyChecker.cpp
-  lib/smack/SignedIntegerOverflowChecker.cpp
+  lib/smack/IntegerOverflowChecker.cpp
   lib/smack/SplitAggregateLoadStore.cpp
 )
 

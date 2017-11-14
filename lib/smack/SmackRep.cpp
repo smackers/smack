@@ -711,7 +711,6 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
   }
 
   if (isa<GlobalValue>(v)) {
-    assert(v->hasName());
     return Expr::id(naming->get(*v));
 
   } else if (isa<UndefValue>(v)) {

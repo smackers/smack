@@ -40,7 +40,7 @@
 #include "smack/VerifierCodeMetadata.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
-#include "smack/SignedIntegerOverflowChecker.h"
+#include "smack/IntegerOverflowChecker.h"
 #include "smack/SplitAggregateLoadStore.h"
 
 static llvm::cl::opt<std::string>
@@ -64,7 +64,7 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
 static llvm::cl::opt<bool>
-SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
+IntegerOverflow("integer-overflow", llvm::cl::desc("Enable integer overflow checks"),
   llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
@@ -188,8 +188,8 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 
-  if (SignedIntegerOverflow)
-    pass_manager.add(new smack::SignedIntegerOverflowChecker());
+  if (IntegerOverflow)
+    pass_manager.add(new smack::IntegerOverflowChecker());
 
 
   if(smack::SmackOptions::AddTiming){
