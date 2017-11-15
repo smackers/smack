@@ -519,6 +519,10 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
+  } else if (name.find("llvm.expect.") != std::string::npos) {
+    Value* val = ci.getArgOperand(0);
+    emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
+
   } else if (name.find("std") != std::string::npos &&
 	     name.find("rt") != std::string::npos &&
 	     name.find("lang_start") != std::string::npos)  {
