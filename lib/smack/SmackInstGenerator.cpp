@@ -503,6 +503,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   Function* f = ci.getCalledFunction();
+
   if (!f) {
     assert(ci.getCalledValue() && "Called value is null");
     f = cast<Function>(ci.getCalledValue()->stripPointerCasts());
@@ -518,7 +519,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
-  } else if (name.find("_ZN2rt10lang_start") != std::string::npos) {
+  } else if (name.find("std") != std::string::npos &&
+	     name.find("rt") != std::string::npos &&
+	     name.find("lang_start") != std::string::npos)  {
     auto castExpr = ci.getArgOperand(0);
     if (auto CE = dyn_cast<const Constant>(castExpr)) {
       auto mainFunc = CE->getOperand(0);
