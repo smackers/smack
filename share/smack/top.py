@@ -309,7 +309,7 @@ def default_clang_compile_command(args, lib = False):
   return cmd
 
 def default_rust_compile_command(args):
-  cmd = ['rustc', '-g', '--emit', 'llvm-bc']
+  cmd = ['rustc', '-g', '--emit=llvm-bc']
   return cmd
 
 def build_libs(args):
@@ -359,6 +359,7 @@ def clang_frontend(args):
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def insert_rust_macros(victim_filename, macros_filename, write_to=None):
@@ -405,17 +406,9 @@ def rust_frontend(args):
   """Generate Boogie code from Rust-language source(s)."""
 
   bitcodes = []
-  libs = ['smack.c']
   args.integer_overflow = True
   rust_files = args.input_files
-  smack_compile_command = default_clang_compile_command(args)
   rust_compile_command = default_rust_compile_command(args)
-
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(smack_compile_command + ['-o', bc, c], console=False)
-    bitcodes.append(bc)
-
   rust_macros = os.path.join(smack_lib(), 'smack.rs')
 
   for rs in args.input_files:
@@ -428,7 +421,7 @@ def rust_frontend(args):
     bitcodes.append(bc)
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
-  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
+  try_command(['llvm-link', '-o', args.linked_bc_file] + [args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def json_compilation_database_frontend(args):
