@@ -304,7 +304,7 @@ def default_clang_compile_command(args, lib = False):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DNOFLAG'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 
