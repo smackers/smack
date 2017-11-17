@@ -172,7 +172,7 @@ shell in the `test` directory by executing
 [Clang]: http://clang.llvm.org
 [Clang-3.9.1]: http://llvm.org/releases/download.html#3.9.1
 [Boogie]: https://github.com/boogie-org/boogie
-[Corral]: https://corral.codeplex.com/
+[Corral]: https://github.com/boogie-org/corral
 [Z3]: https://github.com/Z3Prover/z3/
 [Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com
