@@ -41,7 +41,8 @@ def results(args):
     'invalid-memtrack': 'SMACK found an error: memory leak.',
     'overflow': 'SMACK found an error: signed integer overflow.',
     'timeout': 'SMACK timed out.',
-    'unknown': 'SMACK result is unknown.'
+    'unknown': 'SMACK result is unknown.',
+    'rust_panic': "SMACK found an error: rust panic"
   }
 
 def inlined_procedures():
@@ -561,6 +562,8 @@ def verification_result(verifier_output):
       return 'invalid-memtrack'
     elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
       return 'overflow'
+    elif re.search(r'ASSERTION FAILS assert {:rust_panic}', verifier_output):
+      return 'rust_panic'
     else:
       listCall = re.findall(r'\(CALL .+\)', verifier_output)
       if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):
