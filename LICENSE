@@ -51,6 +51,6 @@ tools and packages, which come with their own licenses:
 - LLVM, clang, LLVM runtime (http://llvm.org/)
 - mono (http://www.mono-project.com/)
 - Boogie (https://github.com/boogie-org/boogie/)
-- Corral (http://corral.codeplex.com/)
+- Corral (https://github.com/boogie-org/corral/)
 - Z3 (https://github.com/Z3Prover/z3/)
 
