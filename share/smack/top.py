@@ -23,6 +23,7 @@ def frontends():
     'i': clang_frontend,
     'cc': clang_frontend,
     'cpp': clang_frontend,
+    'm': objc_clang_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
     'bc': llvm_frontend,
@@ -297,6 +298,15 @@ def smack_headers():
 def smack_lib():
   return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
+def objc_clang_compile_command(args, lib = False):
+  cmd = default_clang_compile_command(args,lib)
+  if sys.platform in ['linux', 'linux2']:
+    objc_flags = try_command(['gnustep-config', '--objc-flags'])
+    cmd += objc_flags.split()
+  elif sys.platform == 'darwin'
+    pass # add future macOS modifications here.
+  return cmd
+
 def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   cmd += map(lambda path: '-I' + path, smack_headers())
@@ -345,8 +355,17 @@ def llvm_frontend(args):
 def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
-  bitcodes = []
   compile_command = default_clang_compile_command(args)
+  clang_frontend_helper(compile_command, args)
+
+def objc_clang_frontend(args):
+  """Generate Boogie code from Objective-C language source(s)."""
+  compile_command = objc_clang_compile_command(args)
+  clang_frontend_helper(compile_command, args)
+  
+
+def clang_frontend_helper(compile_command, args):
+  bitcodes = []
 
   for c in args.input_files:
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
