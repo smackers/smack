@@ -89,7 +89,7 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
     }
   }
 
-  if (SmackOptions::SourceLocSymbols && I.getMetadata("dbg") && &I != fstNonDebugInst) {
+  if (SmackOptions::SourceLocSymbols && I.getMetadata("dbg") && &I != firstNonDebugInst) {
     const DebugLoc DL = I.getDebugLoc();
     auto *scope = cast<DIScope>(DL.getScope());
     B->addStmt(Stmt::annot(Attr::attr("sourceloc", scope->getFilename().str(),
@@ -143,7 +143,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
         continue;
       if (I.getDebugLoc()) {
         annotate(I, currBlock);
-        fstNonDebugInst = &I;
+        firstNonDebugInst = &I;
         break;
       }
     }
