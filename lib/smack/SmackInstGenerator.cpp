@@ -147,11 +147,11 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
         break;
       }
     }
-  }
-  if (SmackOptions::isEntryPoint(naming->get(*F))) {
-    emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
-    for (auto& A : F->getArgumentList()) {
-      emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming->get(*F) + ":" + naming->get(A))}));
+    if (SmackOptions::isEntryPoint(naming->get(*F))) {
+      emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
+      for (auto& A : F->getArgumentList()) {
+        emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming->get(*F) + ":" + naming->get(A))}));
+      }
     }
   }
 }
@@ -691,7 +691,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
       }
       Function* F = dvi.getFunction();
       for(auto &arg : F->args()) {
-        if (&arg == V) {
+        if (&arg == V && var->getScope() == F->getMetadata("dbg")) {
           emit(recordProcedureCall(V, {Attr::attr("cexpr", naming->get(*F) + ":arg:"+ var->getName().str())}));
           break;
         }
