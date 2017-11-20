@@ -90,6 +90,10 @@ installation of SMACK and its requirements. However, we do not expect this
 script to work out of the box on all configurations. Instead, it can be used as
 reference guidelines for manual installation.
 
+**NOTE** A common omission is to forget to set the required environment
+variables after the installation process, as indicated in the end of the build
+script.  Alternatively, you can read how to accomplish this below.
+
 ### Installation on OS X
 
 The general instructions for installation on OS X mainly follow those above for
