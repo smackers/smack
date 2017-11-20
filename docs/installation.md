@@ -86,9 +86,10 @@ generally not indexed by Linux package managers, and must be installed manually.
 To facilitate the installation of SMACK and its requirements, we provide an
 automated [build.sh][] script in `bin/build.sh`. Running this script on a fresh
 installation of Ubuntu or openSUSE Linux should actually result in the full
-installation of SMACK and its requirements. However, we do not expect this
-script to work out of the box on all configurations. Instead, it can be used as
-reference guidelines for manual installation.
+installation of SMACK and its requirements, apart from setting the required
+environment variables in your shell's `.profile`. However, we do not expect
+this script to work out of the box on all configurations. Instead, it can be
+used as reference guidelines for manual installation.
 
 **NOTE** A common omission is to forget to set the required environment
 variables after the installation process, as indicated in the end of the build
