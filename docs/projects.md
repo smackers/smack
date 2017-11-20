@@ -16,7 +16,7 @@ be targeted by SMACK, at least in theory. So pick your favorite language
 (e.g., C++, Objective-C, Swift, Fortran) supported by LLVM and try to extend
 SMACK to support it. For example, if you are an iPhone developer, you
 might have some expertise in Objective-C and/or Swift. And you could
-even base the project around verifying your own iPhone app.s code.
+even base the project around verifying your own iPhone app's code.
 
 3. Try to use and extend SMACK to verify some of the example from the
 annual [Verified Software Competition (VSCOMP)](http://vscomp.org/).
