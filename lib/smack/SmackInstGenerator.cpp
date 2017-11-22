@@ -25,12 +25,12 @@ using llvm::errs;
 using namespace llvm;
 
 const bool CODE_WARN = true;
-const bool SHOW_ORIG = false;
+const bool SHOW_ORIG = true;
 
 #define WARN(str) \
     if (CODE_WARN) emit(Stmt::comment(std::string("WARNING: ") + str))
 #define ORIG(ins) \
-    if (SHOW_ORIG) emit(Stmt::comment(i2s(ins)))
+    if (SHOW_ORIG) emit(Stmt::comment(i2s(ins), true))
 
 Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$#'`~^\\?]*):.*;");
 
@@ -490,21 +490,20 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
   processInstruction(i);
   std::string x = naming->get(i);
   const Expr
-  *c = rep->expr(i.getOperand(0)),
-   *v1 = rep->expr(i.getOperand(1)),
-    *v2 = rep->expr(i.getOperand(2));
+  *c = rep->expr(i.getCondition()),
+   *v1 = rep->expr(i.getTrueValue()),
+    *v2 = rep->expr(i.getFalseValue());
 
-  emit(Stmt::havoc(x));
-  emit(Stmt::assume(Expr::and_(
-    Expr::impl(Expr::eq(c,rep->integerLit(1L,1)), Expr::eq(Expr::id(x), v1)),
-    Expr::impl(Expr::neq(c,rep->integerLit(1L,1)), Expr::eq(Expr::id(x), v2))
-  )));
+  assert(!i.getCondition()->getType()->isVectorTy() && "Vector condition is not supported.");
+  emit(Stmt::assign(Expr::id(x),
+    Expr::if_then_else(Expr::eq(c, rep->integerLit(1L,1)), v1, v2)));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   Function* f = ci.getCalledFunction();
+
   if (!f) {
     assert(ci.getCalledValue() && "Called value is null");
     f = cast<Function>(ci.getCalledValue()->stripPointerCasts());
@@ -519,6 +518,24 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   } else if (name.find("llvm.dbg.") != std::string::npos) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
+
+  } else if (name.find("llvm.expect.") != std::string::npos) {
+    Value* val = ci.getArgOperand(0);
+    emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
+
+  } else if (name.find("std") != std::string::npos &&
+	     name.find("rt") != std::string::npos &&
+	     name.find("lang_start") != std::string::npos)  {
+    auto castExpr = ci.getArgOperand(0);
+    if (auto CE = dyn_cast<const Constant>(castExpr)) {
+      auto mainFunc = CE->getOperand(0);
+      emit(Stmt::call(mainFunc->getName(), {},{}));
+    }
+
+  } else if (name.find("core") != std::string::npos &&
+	     name.find("panicking") != std::string::npos &&
+	     name.find("panic") != std::string::npos) {
+    emit(Stmt::assert_(Expr::lit(false), {Attr::attr("rust_panic")}));
 
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep->valueAnnotation(ci));

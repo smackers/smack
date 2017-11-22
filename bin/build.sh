@@ -15,17 +15,21 @@
 # - Z3
 # - Boogie
 # - Corral
+# - Symbooglix
 # - lockpwn
 #
 ################################################################################
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
+INSTALL_RUST=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
+BUILD_SYMBOOGLIX=1
 BUILD_LOCKPWN=1
 BUILD_SMACK=1
+TEST_SMACK=0
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
@@ -36,6 +40,7 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
+SYMBOOGLIX_DIR="${ROOT}/symbooglix"
 LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
@@ -217,7 +222,15 @@ done
 if [ ${INSTALL_DEPENDENCIES} -eq 1 ]
 then
   puts "Installing required packages"
-
+  if [ ${INSTALL_RUST} -eq 1 ]
+  then
+      puts "Installing Rust"
+      ${WGET} https://static.rust-lang.org/dist/2016-12-16/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
+      tar xf rust.tar.gz
+      cd rust-nightly-x86_64-unknown-linux-gnu
+      sudo ./install.sh
+      cd ..
+  fi
   case "$distro" in
   linux-opensuse*)
     sudo zypper --non-interactive install ${DEPENDENCIES}
@@ -243,9 +256,8 @@ then
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     # Adding MONO repository
-    sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-#    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
+    echo "deb http://download.mono-project.com/repo/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/mono-official.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
@@ -383,6 +395,22 @@ then
   puts "Built Corral"
 fi
 
+if [ ${BUILD_SYMBOOGLIX} -eq 1 ]
+then
+  puts "Building Symbooglix"
+
+  git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
+  cd ${SYMBOOGLIX_DIR}/src
+  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+  mono ./nuget.exe restore Symbooglix.sln
+  rm -rf /tmp/nuget/
+  xbuild Symbooglix.sln /p:Configuration=Release
+  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
+  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+
+  puts "Built Symbooglix"
+fi
+
 if [ ${BUILD_LOCKPWN} -eq 1 ]
 then
   puts "Building lockpwn"
@@ -412,6 +440,7 @@ then
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
+  echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
   echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"

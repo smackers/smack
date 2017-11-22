@@ -352,7 +352,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
     if (dyn_cast<const Argument>(V)) {
-      assert(V->hasName() && "Expected named argument.");
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*V))}));
 
     } else if (auto LI = dyn_cast<const LoadInst>(V)) {
@@ -360,7 +359,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       assert(GEP && "Expected GEP argument to load instruction.");
       auto A = dyn_cast<const Argument>(GEP->getPointerOperand());
       assert(A && "Expected function argument to GEP instruction.");
-      assert(A->hasName() && "Expected named argument.");
       auto T = GEP->getType()->getElementType();
       const unsigned bits = T->getIntegerBitWidth();
       const unsigned bytes = bits / 8;
@@ -713,7 +711,6 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
   }
 
   if (isa<GlobalValue>(v)) {
-    assert(v->hasName());
     return Expr::id(naming->get(*v));
 
   } else if (isa<UndefValue>(v)) {
@@ -821,7 +818,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
-  if (name == "malloc") {
+  if (name == "malloc" || name == "je_mallocx") {
     Type* W = F->getFunctionType()->getParamType(0);
     assert(W->isIntegerTy() && "Expected integer argument.");
     unsigned width = W->getIntegerBitWidth();

@@ -173,7 +173,7 @@ add_library(smackTranslator STATIC
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
   include/smack/MemorySafetyChecker.h
-  include/smack/SignedIntegerOverflowChecker.h
+  include/smack/IntegerOverflowChecker.h
   include/smack/SplitAggregateLoadStore.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
@@ -193,7 +193,7 @@ add_library(smackTranslator STATIC
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
   lib/smack/MemorySafetyChecker.cpp
-  lib/smack/SignedIntegerOverflowChecker.cpp
+  lib/smack/IntegerOverflowChecker.cpp
   lib/smack/SplitAggregateLoadStore.cpp
 )
 
@@ -211,6 +211,7 @@ INSTALL(TARGETS llvm2bpl
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/symbooglix
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/lockpwn
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
@@ -223,5 +224,5 @@ INSTALL(FILES
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   DESTINATION share
   USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile"
+  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs"
 )

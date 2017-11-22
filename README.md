@@ -1,5 +1,5 @@
-| **master** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=master)](https://travis-ci.org/smackers/smack) | **develop** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=develop)](https://travis-ci.org/smackers/smack) |
-| --- | --- | --- | --- |
+<!-- [![Build Status](http://kornat.cs.utah.edu:8080/job/smack/badge/icon)](http://kornat.cs.utah.edu:8080/job/smack/) -->
+
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 

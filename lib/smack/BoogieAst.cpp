@@ -115,6 +115,10 @@ const Expr* Expr::sel(std::string b, std::string i) {
   return new SelExpr(id(b), id(i));
 }
 
+const Expr* Expr::if_then_else(const Expr* c, const Expr* t, const Expr* e) {
+  return new IfThenElseExpr(c, t, e);
+}
+
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
   return new Attr(s,vs);
 }
@@ -181,8 +185,8 @@ const Stmt* Stmt::call(std::string p, std::list<const Expr*> args, std::list<std
   return new CallStmt(p, attrs, args, rets);
 }
 
-const Stmt* Stmt::comment(std::string s) {
-  return new Comment(s);
+const Stmt* Stmt::comment(std::string s, bool star) {
+  return new Comment(s, star);
 }
 
 const Stmt* Stmt::goto_(std::list<std::string> ts) {
@@ -472,6 +476,10 @@ void CodeExpr::print(std::ostream& os) const {
   os << "\n" << "}|";
 }
 
+void IfThenElseExpr::print(std::ostream& os) const {
+  os << "if " << cond << " then " << true_value << " else " << false_value;
+}
+
 void StringLit::print(std::ostream& os) const {
   os << "\"" << val << "\"";
 }
@@ -516,7 +524,10 @@ void CallStmt::print(std::ostream& os) const {
 }
 
 void Comment::print(std::ostream& os) const {
-  os << "// " << str;
+  if(star)
+    os << "/* " << str << " */";
+  else
+    os << "// " << str;
 }
 
 void GotoStmt::print(std::ostream& os) const {
