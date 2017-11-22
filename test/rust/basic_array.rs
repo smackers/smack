@@ -6,6 +6,7 @@
 
 
 #![feature(alloc)]
+#![feature(heap_api)]
 extern crate alloc;
 use alloc::heap::allocate;
 
