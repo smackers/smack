@@ -26,16 +26,11 @@ using namespace llvm;
 
 namespace {
 
-  bool isInvariantFunction(Function *F) {
-    auto name = F->getName();
-    return name == Naming::CONTRACT_INVARIANT;
-  }
-
   bool isContractFunction(Function *F) {
     auto name = F->getName();
-    return isInvariantFunction(F)
-      || name == Naming::CONTRACT_REQUIRES
-      || name == Naming::CONTRACT_ENSURES;
+    return name == Naming::CONTRACT_REQUIRES
+      || name == Naming::CONTRACT_ENSURES
+      || name == Naming::CONTRACT_INVARIANT;
   }
 
   typedef std::vector<BasicBlock*> BlockList;
@@ -100,14 +95,10 @@ namespace {
               LI.getLoopFor(B)->addBasicBlockToLoop(NewBB, LI);
               blocks.push_front(NewBB);
 
-              if (!isInvariantFunction(CF))
-                contractBlocks.push_back(B);
-
-              else if (auto L = LI[B])
+              if (auto L = LI[B])
                 invariantBlocks[L].push_back(B);
-
               else
-                llvm_unreachable("loop invariants must occur inside loops.");
+                contractBlocks.push_back(B);
 
               break;
             }
