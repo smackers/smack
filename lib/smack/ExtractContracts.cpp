@@ -188,7 +188,7 @@ namespace {
       F->getFunctionType()->params(),
       F->getFunctionType()->isVarArg());
 
-    Function *NewF = Function::Create(FT, F->getLinkage(), F->getName(), F->getParent());
+    Function *NewF = Function::Create(FT, F->getLinkage(), Naming::CONTRACT_EXPR, F->getParent());
 
     // Loop over the arguments, copying the names of the mapped arguments over...
     // See implementation of llvm::CloneFunction
