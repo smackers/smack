@@ -209,7 +209,7 @@ namespace {
 }
 
 bool ExtractContracts::runOnModule(Module &M) {
-  modified = false;
+  bool modified = false;
 
   std::vector<Function*> Fs;
   std::vector<Function*> newFs;
