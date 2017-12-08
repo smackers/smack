@@ -212,12 +212,16 @@ namespace smack {
     auto ET = PT->getElementType();
     type(ET);
 
-    auto FN = rep->opName(Naming::LOAD, {ET});
-    auto M = rep->memType(rep->regions->idx(V));
+    auto R = rep->regions->idx(V);
+    auto MT = rep->regions->get(R).getType();
+    MT || (MT = IntegerType::get(V->getContext(), 8));
+    auto FN = rep->opName(Naming::LOAD, {ET, MT});
+    auto M = rep->memType(R);
     auto P = rep->type(PT);
     auto E = rep->type(ET);
-    auto F = Decl::function(FN, {{"M", M}, {"p", P}}, E,
-      Expr::sel(Expr::id("M"), Expr::id("p")));
+    auto F = (MT == ET)
+      ? Decl::function(FN, {{"M", M}, {"p", P}}, E,  Expr::sel(Expr::id("M"), Expr::id("p")))
+      : Decl::function(FN, {{"M", M}, {"p", P}}, E);
     rep->addAuxiliaryDeclaration(F);
     return F;
   }
@@ -228,12 +232,16 @@ namespace smack {
     auto ET = PT->getElementType();
     type(ET);
 
-    auto FN = rep->opName(Naming::STORE, {ET});
-    auto M = rep->memType(rep->regions->idx(V));
+    auto R = rep->regions->idx(V);
+    auto MT = rep->regions->get(R).getType();
+    MT || (MT = IntegerType::get(V->getContext(), 8));
+    auto FN = rep->opName(Naming::STORE, {ET, MT});
+    auto M = rep->memType(R);
     auto P = rep->type(PT);
     auto E = rep->type(ET);
-    auto F = Decl::function(FN, {{"M", M}, {"p", P}, {"v", E}}, M,
-      Expr::upd(Expr::id("M"), Expr::id("p"), Expr::id("v")));
+    auto F = (MT == ET)
+      ? Decl::function(FN, {{"M", M}, {"p", P}, {"v", E}}, M, Expr::upd(Expr::id("M"), Expr::id("p"), Expr::id("v")))
+      : Decl::function(FN, {{"M", M}, {"p", P}, {"v", E}}, M);
     rep->addAuxiliaryDeclaration(F);
     return F;
   }
