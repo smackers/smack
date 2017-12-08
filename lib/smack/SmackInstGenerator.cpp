@@ -542,7 +542,16 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
 
 void SmackInstGenerator::visitCmpInst(llvm::CmpInst& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I),rep->cmp(&I)));
+  const Expr *E;
+  if (isa<VectorType>(I.getType())) {
+    auto X = I.getOperand(0);
+    auto Y = I.getOperand(1);
+    auto D = VectorOperations(rep).simd(&I);
+    E = Expr::fn(D->getName(), rep->expr(X), rep->expr(Y));
+  } else {
+    E = rep->cmp(&I);
+  }
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {

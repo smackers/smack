@@ -55,22 +55,35 @@ namespace smack {
     assert(U && "expected vector type");
     type(U);
 
-    bool unary = isa<UnaryInstruction>(I);
-    unsigned arity = unary ? 1 : 2;
-    auto opcode = I->getOpcode();
-
+    std::string N;
+    unsigned arity;
     std::list<const Type*> Ts;
     std::list<const Type*> ETs;
-    if (unary) {
-      Ts = {U, T};
-      ETs = {U->getElementType(), T->getElementType()};
-    } else {
+
+    if (auto BI = dyn_cast<BinaryOperator>(I)) {
+      arity = 2;
       Ts = {T};
       ETs = {T->getElementType()};
+      N = Naming::INSTRUCTION_TABLE.at(I->getOpcode());
+
+    } else if (auto UI = dyn_cast<UnaryInstruction>(I)) {
+      arity = 1;
+      Ts = {U, T};
+      ETs = {U->getElementType(), T->getElementType()};
+      N = Naming::INSTRUCTION_TABLE.at(I->getOpcode());
+
+    } else if (auto CI = dyn_cast<CmpInst>(I)) {
+      arity = 2;
+      Ts = {U};
+      ETs = {U->getElementType()};
+      N = Naming::CMPINST_TABLE.at(CI->getPredicate());
+
+    } else {
+      llvm_unreachable("unexpected instruction");
     }
 
-    auto FN = rep->opName(Naming::INSTRUCTION_TABLE.at(opcode), Ts);
-    auto baseFN = rep->opName(Naming::INSTRUCTION_TABLE.at(opcode), ETs);
+    auto FN = rep->opName(N, Ts);
+    auto baseFN = rep->opName(N, ETs);
 
     std::list<std::pair<std::string,std::string>> params;
     for (unsigned j=1; j<=arity; j++)
@@ -87,6 +100,7 @@ namespace smack {
     auto F = T->getNumElements() == U->getNumElements()
       ? Decl::function(FN, params, rep->type(T), Expr::fn(constructor(T), args))
       : Decl::function(FN, params, rep->type(T));
+
     rep->addAuxiliaryDeclaration(F);
     return F;
   }
