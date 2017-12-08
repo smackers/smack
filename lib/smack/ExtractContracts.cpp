@@ -42,7 +42,7 @@ namespace {
   // in the given selection of blocks, as well as in the given function.
   BlockList blockPrefix(BlockList BBs, Function &F) {
     BlockList prefix;
-    if (BBs.size()) {
+    if (!BBs.empty()) {
       for (auto &BB : F) {
         prefix.push_back(&BB);
         if (&BB == BBs.back())
@@ -58,7 +58,7 @@ namespace {
   // in the given selection of blocks, as well as in the given loop.
   BlockList blockPrefix(BlockList BBs, const Loop &L) {
     BlockList prefix;
-    if (BBs.size()) {
+    if (!BBs.empty()) {
       for (auto BB : L.getBlocks()) {
         if (BB == L.getHeader())
           continue;
@@ -81,7 +81,7 @@ namespace {
     for (auto &BB : F)
       blocks.push_back(&BB);
 
-    while (blocks.size()) {
+    while (!blocks.empty()) {
       auto BB = blocks.front();
       blocks.pop_front();
 
@@ -224,12 +224,12 @@ bool ExtractContracts::runOnModule(Module &M) {
     auto& LI = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
     std::tie(contractBlocks, invariantBlocks) = splitContractBlocks(*F, LI);
 
-    if (contractBlocks.size() || invariantBlocks.size()) {
+    if (!contractBlocks.empty() || !invariantBlocks.empty()) {
       DEBUG(errs() << "function " << F->getName() << " after splitting: " << *F << "\n");
       modified = true;
     }
 
-    if (contractBlocks.size()) {
+    if (!contractBlocks.empty()) {
       auto *newF = CodeExtractor(contractBlocks).extractCodeRegion();
 
       std::vector<CallInst*> Is;
