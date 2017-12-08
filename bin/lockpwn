@@ -1,2 +1,3 @@
 #!/bin/bash
+"${LOCKPWN:?The required LOCKPWN environment variable is not set. See SMACK documentation for details.}"
 $LOCKPWN "$@"
