@@ -330,7 +330,39 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
 /*                   VECTOR                    OPERATIONS                     */
 /******************************************************************************/
 
-// TODO implement std::vector operations
+void SmackInstGenerator::visitExtractElementInst(ExtractElementInst &I) {
+  processInstruction(I);
+  auto X = I.getOperand(0);
+  auto Y = I.getOperand(1);
+  std::stringstream procName;
+  procName << Naming::INSTRUCTION_TABLE.at(Instruction::ExtractElement);
+  procName << "." << rep->type(X);
+  emit(Stmt::call(procName.str(), {rep->expr(X), rep->expr(Y)}, {naming->get(I)}));
+}
+
+void SmackInstGenerator::visitInsertElementInst(InsertElementInst &I) {
+  processInstruction(I);
+  auto X = I.getOperand(0);
+  auto Y = I.getOperand(1);
+  auto Z = I.getOperand(2);
+  std::stringstream procName;
+  procName << Naming::INSTRUCTION_TABLE.at(Instruction::InsertElement);
+  procName << "." << rep->type(X);
+  emit(Stmt::call(procName.str(), {rep->expr(X), rep->expr(Y), rep->expr(Z)}, {naming->get(I)}));
+}
+
+void SmackInstGenerator::visitShuffleVectorInst(ShuffleVectorInst &I) {
+  processInstruction(I);
+  auto X = I.getOperand(0);
+  auto Y = I.getOperand(1);
+  auto M = I.getShuffleMask();
+  std::stringstream procName;
+  procName << Naming::INSTRUCTION_TABLE.at(Instruction::ShuffleVector);
+  procName << "." << rep->type(X);
+  for (auto idx : M)
+    procName << "." << idx;
+  emit(Stmt::call(procName.str(), {rep->expr(X), rep->expr(Y)}, {naming->get(I)}));
+}
 
 /******************************************************************************/
 /*                  AGGREGATE                   OPERATIONS                    */

@@ -155,6 +155,16 @@ std::string SmackRep::intType(unsigned width) {
     return (SmackOptions::BitPrecise ? "bv" : "i") + std::to_string(width);
 }
 
+std::string SmackRep::vectorType(int n, Type *T) {
+  if (auto IT = dyn_cast<IntegerType>(T)) {
+    std::stringstream s;
+    s << Naming::VECTOR_TYPE << "." << n << "x" << type(T);
+    return s.str();
+
+  } else
+    llvm_unreachable("Unexpected vector type");
+}
+
 std::string SmackRep::opName(const std::string& operation, std::initializer_list<const llvm::Type*> types) {
   std::stringstream s;
   s << operation;
@@ -214,6 +224,9 @@ std::string SmackRep::type(const llvm::Type* t) {
 
   else if (t->isPointerTy())
     return Naming::PTR_TYPE;
+
+  else if (auto VT = dyn_cast<VectorType>(t))
+    return vectorType(VT->getNumElements(), VT->getElementType());
 
   else
     return Naming::PTR_TYPE;

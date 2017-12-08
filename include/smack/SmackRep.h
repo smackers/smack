@@ -83,6 +83,7 @@ private:
 
   std::string pointerType();
   std::string intType(unsigned width);
+  std::string vectorType(int n, llvm::Type *T);
 
   unsigned numElements(const llvm::Constant* v);
 
