@@ -40,6 +40,7 @@ public:
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
   static const Expr* sel(std::string b, std::string i);
+  static const Expr* upd(const Expr* b, const Expr* i, const Expr* v);
   static const Expr* if_then_else(const Expr* c, const Expr* t, const Expr* e);
 };
 

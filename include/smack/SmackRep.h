@@ -146,6 +146,7 @@ public:
   std::string memReg(unsigned i);
   std::string memType(unsigned region);
   std::string memPath(unsigned region);
+  std::string memPath(const llvm::Value* v);
 
   std::list< std::pair< std::string, std::string > > memoryMaps();
 

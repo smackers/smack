@@ -5,6 +5,7 @@
 #define VECTOROPERATIONS_H
 
 #include "llvm/IR/Type.h"
+#include <list>
 
 class SmackRep;
 class Decl;
@@ -26,6 +27,8 @@ namespace smack {
     FuncDecl *shuffle(Type *T, Type *U, std::vector<int> mask);
     FuncDecl *insert(Type *T, Type *IT);
     FuncDecl *extract(Type *T, Type *IT);
+    FuncDecl *load(const Value *V);
+    FuncDecl *store(const Value *V);
   };
 }
 

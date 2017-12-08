@@ -279,6 +279,10 @@ std::string SmackRep::memPath(unsigned region) {
   return memReg(region);
 }
 
+std::string SmackRep::memPath(const llvm::Value* v) {
+  return memPath(regions->idx(v));
+}
+
 std::list< std::pair< std::string, std::string > > SmackRep::memoryMaps() {
   std::list< std::pair< std::string, std::string > > mms;
   for (unsigned i=0; i<regions->size(); i++)

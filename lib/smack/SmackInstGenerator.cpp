@@ -430,16 +430,27 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
+  auto P = li.getPointerOperand();
+  auto T = dyn_cast<PointerType>(P->getType());
+  assert(T && "expected pointer type");
 
   // TODO what happens with aggregate types?
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
-  emit(Stmt::assign(rep->expr(&li), rep->load(li.getPointerOperand())));
+  const Expr *E;
+  if (isa<VectorType>(T->getElementType())) {
+    auto D = VectorOperations(rep).load(P);
+    E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
+  } else {
+    E = rep->load(P);
+  }
+
+  emit(Stmt::assign(rep->expr(&li), E));
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
     emit(Stmt::call("boogie_si_record_int", {Expr::lit(0L)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(li.getPointerOperand())}));
+    emit(Stmt::call("boogie_si_record_int", {rep->expr(P)}));
     emit(Stmt::call("boogie_si_record_int", {rep->expr(&li)}));
   }
 }
@@ -450,7 +461,14 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   const llvm::Value* V = si.getOperand(0)->stripPointerCasts();
   assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
-  emit(rep->store(P,V));
+  if (isa<VectorType>(V->getType())) {
+    auto D = VectorOperations(rep).store(P);
+    auto M = Expr::id(rep->memPath(P));
+    auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
+    emit(Stmt::assign(M, E));
+  } else {
+    emit(rep->store(P,V));
+  }
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {

@@ -5,10 +5,12 @@
 #include "llvm/IR/Instruction.h"
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
+#include "smack/Regions.h"
 #include "smack/VectorOperations.h"
 #include "smack/Naming.h"
 #include "smack/Debug.h"
 #include <sstream>
+#include <list>
 
 using namespace llvm;
 
@@ -163,6 +165,38 @@ namespace smack {
       ));
     }
 
+    return F;
+  }
+
+  FuncDecl *VectorOperations::load(const Value *V) {
+    auto PT = dyn_cast<PointerType>(V->getType());
+    assert(PT && "expected pointer type");
+    auto ET = PT->getElementType();
+    type(ET);
+
+    auto FN = rep->opName(Naming::LOAD, {ET});
+    auto M = rep->memType(rep->regions->idx(V));
+    auto P = rep->type(PT);
+    auto E = rep->type(ET);
+    auto F = Decl::function(FN, {{"M", M}, {"p", P}}, E,
+      Expr::sel(Expr::id("M"), Expr::id("p")));
+    rep->addAuxiliaryDeclaration(F);
+    return F;
+  }
+
+  FuncDecl *VectorOperations::store(const Value *V) {
+    auto PT = dyn_cast<PointerType>(V->getType());
+    assert(PT && "expected pointer type");
+    auto ET = PT->getElementType();
+    type(ET);
+
+    auto FN = rep->opName(Naming::STORE, {ET});
+    auto M = rep->memType(rep->regions->idx(V));
+    auto P = rep->type(PT);
+    auto E = rep->type(ET);
+    auto F = Decl::function(FN, {{"M", M}, {"p", P}, {"v", E}}, M,
+      Expr::upd(Expr::id("M"), Expr::id("p"), Expr::id("v")));
+    rep->addAuxiliaryDeclaration(F);
     return F;
   }
 }

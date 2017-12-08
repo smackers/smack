@@ -111,6 +111,10 @@ const Expr* Expr::sel(std::string b, std::string i) {
   return new SelExpr(id(b), id(i));
 }
 
+const Expr* Expr::upd(const Expr* b, const Expr* i, const Expr* v) {
+  return new UpdExpr(b, i, v);
+}
+
 const Expr* Expr::if_then_else(const Expr* c, const Expr* t, const Expr* e) {
   return new IfThenElseExpr(c, t, e);
 }
