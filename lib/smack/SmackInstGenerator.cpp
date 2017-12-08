@@ -54,8 +54,10 @@ void SmackInstGenerator::emit(const Stmt* s) {
 }
 
 const Stmt* SmackInstGenerator::recordProcedureCall(
-    llvm::Value* V, std::list<const Attr*> attrs) {
-  return Stmt::call("boogie_si_record_" + rep->type(V), {rep->expr(V)}, {}, attrs);
+    const llvm::Value* V, std::list<const Attr*> attrs) {
+  auto D = Decl::procedure("boogie_si_record_" + rep->type(V), {{"x", rep->type(V)}});
+  rep->addAuxiliaryDeclaration(D);
+  return Stmt::call(D->getName(), {rep->expr(V)}, {}, attrs);
 }
 
 Block* SmackInstGenerator::createBlock() {
@@ -449,9 +451,9 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
-    emit(Stmt::call("boogie_si_record_int", {Expr::lit(0L)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(P)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(&li)}));
+    emit(recordProcedureCall(ConstantInt::get(Type::getInt32Ty(li.getContext()), 0), {}));
+    emit(recordProcedureCall(P, {}));
+    emit(recordProcedureCall(&li, {}));
   }
 }
 
@@ -475,7 +477,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
       if (const llvm::PointerType* t = llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
         if (!t->getElementType()->isPointerTy()) {
           assert(G->hasName() && "Expected named global variable.");
-          emit(Stmt::call("boogie_si_record_" + rep->type(V), {rep->expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+          emit(recordProcedureCall(V, {Attr::attr("cexpr", G->getName().str())}));
         }
       }
     }
@@ -483,9 +485,9 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
-    emit(Stmt::call("boogie_si_record_int", {Expr::lit(1L)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(P)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(V)}));
+    emit(recordProcedureCall(ConstantInt::get(Type::getInt32Ty(si.getContext()), 1), {}));
+    emit(recordProcedureCall(P, {}));
+    emit(recordProcedureCall(V, {}));
   }
 }
 
@@ -739,9 +741,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
         V = V->stripPointerCasts();
         WARN(i2s(pi));
         if (!llvm::isa<const PHINode>(&pi) && V == llvm::dyn_cast<const Value>(&pi)) {
-          std::stringstream recordProc;
-          recordProc << "boogie_si_record_" << rep->type(V);
-          emit(Stmt::call(recordProc.str(), {rep->expr(V)}, {}, {Attr::attr("cexpr", var->getName().str())}));
+          emit(recordProcedureCall(V, {Attr::attr("cexpr", var->getName())}));
         }
       }
     }

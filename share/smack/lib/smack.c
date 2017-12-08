@@ -273,9 +273,6 @@ void __SMACK_dummy(int v) {
 #define xstr(s) str(s)
 #define str(s) #s
 
-#define RECORD_PROC(type) \
-  procedure boogie_si_record_ ## type (i: type);
-
 #define UNINTERPRETED_UNARY_OP(type,name) \
   function name.type(i: type) returns (type);
 
@@ -1431,7 +1428,7 @@ void __SMACK_decls(void) {
     "{ M[$add.ref(p, $1.ref)] ++ M[p] }");
   D("function {:inline} $load.bytes.bv8(M: [ref] bv8, p: ref) returns (bv8) { M[p] }");
   D("function {:inline} $load.bytes.bv1(M: [ref] bv8, p: ref) returns (bv1) { $trunc.bv8.bv1(M[p]) }");
-  
+
   D("function {:inline} $store.i128(M: [ref] i128, p: ref, v: i128) returns ([ref] i128) { M[p := v] }");
   D("function {:inline} $store.i96(M: [ref] i96, p: ref, v: i96) returns ([ref] i96) { M[p := v] }");
   D("function {:inline} $store.i88(M: [ref] i88, p: ref, v: i88) returns ([ref] i88) { M[p := v] }");
@@ -1509,7 +1506,7 @@ void __SMACK_decls(void) {
     "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
   D("function {:inline} $store.bytes.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
   D("function {:inline} $store.bytes.bv1(M:[ref]bv8, p:ref, v:bv1) returns ([ref]bv8) {M[p := $zext.bv1.bv8(v)]}");
-  
+
   D("function {:inline} $load.ref(M: [ref] ref, p: ref) returns (ref) { M[p] }");
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
 
@@ -1538,38 +1535,6 @@ void __SMACK_decls(void) {
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
   D("const $MOP: $mop;");
-
-  DECLARE(RECORD_PROC, bool);
-  DECLARE(RECORD_PROC, i1);
-  DECLARE(RECORD_PROC, i8);
-  DECLARE(RECORD_PROC, i16);
-  DECLARE(RECORD_PROC, i24);
-  DECLARE(RECORD_PROC, i32);
-  DECLARE(RECORD_PROC, i40);
-  DECLARE(RECORD_PROC, i48);
-  DECLARE(RECORD_PROC, i56);
-  DECLARE(RECORD_PROC, i64);
-  DECLARE(RECORD_PROC, i88);
-  DECLARE(RECORD_PROC, i96);
-  DECLARE(RECORD_PROC, i128);
-  DECLARE(RECORD_PROC, bv1);
-  DECLARE(RECORD_PROC, bv8);
-  DECLARE(RECORD_PROC, bv16);
-  DECLARE(RECORD_PROC, bv24);
-  DECLARE(RECORD_PROC, bv32);
-  DECLARE(RECORD_PROC, bv40);
-  DECLARE(RECORD_PROC, bv48);
-  DECLARE(RECORD_PROC, bv56);
-  DECLARE(RECORD_PROC, bv64);
-  DECLARE(RECORD_PROC, bv88);
-  DECLARE(RECORD_PROC, bv96);
-  DECLARE(RECORD_PROC, bv128);
-  DECLARE(RECORD_PROC, ref);
-  DECLARE(RECORD_PROC, float);
-  #if FLOAT_ENABLED
-  DECLARE(RECORD_PROC, bvfloat);
-  DECLARE(RECORD_PROC, bvdouble);
-  #endif
 
   D("var $exn: bool;");
   D("var $exnv: int;");

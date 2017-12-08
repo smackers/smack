@@ -109,7 +109,7 @@ namespace smack {
     auto V = rep->type(T);
     auto E = rep->type(VT->getElementType());
     auto I = rep->type(IT);
-    auto F = Decl::function(FN, {{"v", V}, {"x", E}, {"i", I}}, E);
+    auto F = Decl::function(FN, {{"v", V}, {"x", E}, {"i", I}}, V);
     rep->addAuxiliaryDeclaration(F);
 
     // A per-index axiomatization
