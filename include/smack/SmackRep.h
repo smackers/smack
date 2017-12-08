@@ -28,6 +28,8 @@ using llvm::SmallVector;
 using llvm::StringRef;
 
 class SmackRep {
+  friend class VectorOperations;
+
 protected:
   const llvm::DataLayout* targetData;
   Naming* naming;
@@ -159,12 +161,8 @@ public:
   std::string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
 
-  std::list<Decl*> auxiliaryDeclarations() {
-    std::list<Decl*> ds;
-    for (auto D : auxDecls)
-      ds.push_back(D.second);
-    return ds;
-  }
+  void addAuxiliaryDeclaration(Decl* D);
+  std::list<Decl*> auxiliaryDeclarations();
 };
 
 }

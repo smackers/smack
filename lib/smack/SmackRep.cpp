@@ -114,6 +114,19 @@ SmackRep::SmackRep(const DataLayout* L, Naming* N, Program* P, Regions* R)
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
+void SmackRep::addAuxiliaryDeclaration(Decl* D) {
+  if (auxDecls.count(D->getName()))
+    return;
+  auxDecls[D->getName()] = D;
+}
+
+std::list<Decl*> SmackRep::auxiliaryDeclarations() {
+  std::list<Decl*> ds;
+  for (auto D : auxDecls)
+    ds.push_back(D.second);
+  return ds;
+}
+
 std::string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)

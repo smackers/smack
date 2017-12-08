@@ -5,6 +5,7 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
+#include "smack/VectorOperations.h"
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
@@ -323,7 +324,16 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I),rep->bop(&I)));
+  const Expr *E;
+  if (isa<VectorType>(I.getType())) {
+    auto X = I.getOperand(0);
+    auto Y = I.getOperand(1);
+    auto D = VectorOperations(rep).simd(I.getType(), I.getOpcode());
+    E = Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)});
+  } else {
+    E = rep->bop(&I);
+  }
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 /******************************************************************************/
@@ -334,10 +344,8 @@ void SmackInstGenerator::visitExtractElementInst(ExtractElementInst &I) {
   processInstruction(I);
   auto X = I.getOperand(0);
   auto Y = I.getOperand(1);
-  std::stringstream procName;
-  procName << Naming::INSTRUCTION_TABLE.at(Instruction::ExtractElement);
-  procName << "." << rep->type(X);
-  emit(Stmt::call(procName.str(), {rep->expr(X), rep->expr(Y)}, {naming->get(I)}));
+  auto D = VectorOperations(rep).extract(X->getType(), Y->getType());
+  emit(Stmt::assign(rep->expr(&I), Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)})));
 }
 
 void SmackInstGenerator::visitInsertElementInst(InsertElementInst &I) {
@@ -345,10 +353,8 @@ void SmackInstGenerator::visitInsertElementInst(InsertElementInst &I) {
   auto X = I.getOperand(0);
   auto Y = I.getOperand(1);
   auto Z = I.getOperand(2);
-  std::stringstream procName;
-  procName << Naming::INSTRUCTION_TABLE.at(Instruction::InsertElement);
-  procName << "." << rep->type(X);
-  emit(Stmt::call(procName.str(), {rep->expr(X), rep->expr(Y), rep->expr(Z)}, {naming->get(I)}));
+  auto D = VectorOperations(rep).insert(X->getType(), Z->getType());
+  emit(Stmt::assign(rep->expr(&I), Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y), rep->expr(Z)})));
 }
 
 void SmackInstGenerator::visitShuffleVectorInst(ShuffleVectorInst &I) {
@@ -356,12 +362,11 @@ void SmackInstGenerator::visitShuffleVectorInst(ShuffleVectorInst &I) {
   auto X = I.getOperand(0);
   auto Y = I.getOperand(1);
   auto M = I.getShuffleMask();
-  std::stringstream procName;
-  procName << Naming::INSTRUCTION_TABLE.at(Instruction::ShuffleVector);
-  procName << "." << rep->type(X);
+  std::vector<int> mask;
   for (auto idx : M)
-    procName << "." << idx;
-  emit(Stmt::call(procName.str(), {rep->expr(X), rep->expr(Y)}, {naming->get(I)}));
+    mask.push_back(idx);
+  auto D = VectorOperations(rep).shuffle(X->getType(), I.getType(), mask);
+  emit(Stmt::assign(rep->expr(&I), Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)})));
 }
 
 /******************************************************************************/
@@ -606,7 +611,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       args.push_back(Expr::id(m.first));
     auto E = Expr::fn(F->getName(), args);
     emit(Stmt::assign(rep->expr(&ci),
-      Expr::cond(Expr::forall(binding, "int", E),
+      Expr::cond(Expr::forall({{binding, "int"}}, E),
         rep->integerLit(1U,1), rep->integerLit(0U,1))));
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
