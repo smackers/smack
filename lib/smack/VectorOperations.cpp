@@ -46,23 +46,47 @@ namespace smack {
     return decls;
   }
 
-  FuncDecl *VectorOperations::simd(Type *T, unsigned opcode) {
-    auto VT = dyn_cast<VectorType>(T);
-    assert(VT && "expected vector type");
+  FuncDecl *VectorOperations::simd(Instruction *I) {
+    auto T = dyn_cast<VectorType>(I->getType());
+    assert(T && "expected vector type");
     type(T);
 
-    auto FN = rep->opName(Naming::INSTRUCTION_TABLE.at(opcode), {T});
-    auto baseFN = rep->opName(Naming::INSTRUCTION_TABLE.at(opcode), {VT->getElementType()});
+    auto U = dyn_cast<VectorType>(I->getOperand(0)->getType());
+    assert(U && "expected vector type");
+    type(U);
+
+    bool unary = isa<UnaryInstruction>(I);
+    unsigned arity = unary ? 1 : 2;
+    auto opcode = I->getOpcode();
+
+    std::list<const Type*> Ts;
+    std::list<const Type*> ETs;
+    if (unary) {
+      Ts = {U, T};
+      ETs = {U->getElementType(), T->getElementType()};
+    } else {
+      Ts = {T};
+      ETs = {T->getElementType()};
+    }
+
+    auto FN = rep->opName(Naming::INSTRUCTION_TABLE.at(opcode), Ts);
+    auto baseFN = rep->opName(Naming::INSTRUCTION_TABLE.at(opcode), ETs);
+
+    std::list<std::pair<std::string,std::string>> params;
+    for (unsigned j=1; j<=arity; j++)
+      params.push_back({"v" + std::to_string(j), rep->type(U)});
 
     std::list<const Expr*> args;
-    for (unsigned i=0; i<VT->getNumElements(); i++)
-      args.push_back(Expr::fn(baseFN, {
-        Expr::fn(selector(T, i), Expr::id("v1")),
-        Expr::fn(selector(T, i), Expr::id("v2"))
-      }));
+    for (unsigned i=0; i<T->getNumElements(); i++) {
+      std::list<const Expr*> operands;
+      for (unsigned j=1; j<=arity; j++)
+        operands.push_back(Expr::fn(selector(U,i), Expr::id("v" + std::to_string(j))));
+      args.push_back(Expr::fn(baseFN, operands));
+    }
 
-    auto V = rep->type(T);
-    auto F = Decl::function(FN, {{"v1", V}, {"v2", V}}, V, Expr::fn(constructor(T), args));
+    auto F = T->getNumElements() == U->getNumElements()
+      ? Decl::function(FN, params, rep->type(T), Expr::fn(constructor(T), args))
+      : Decl::function(FN, params, rep->type(T));
     rep->addAuxiliaryDeclaration(F);
     return F;
   }

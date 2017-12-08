@@ -330,7 +330,7 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
   if (isa<VectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto Y = I.getOperand(1);
-    auto D = VectorOperations(rep).simd(I.getType(), I.getOpcode());
+    auto D = VectorOperations(rep).simd(&I);
     E = Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)});
   } else {
     E = rep->bop(&I);
@@ -525,7 +525,15 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& I) {
 
 void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I),rep->cast(&I)));
+  const Expr *E;
+  if (isa<VectorType>(I.getType())) {
+    auto X = I.getOperand(0);
+    auto D = VectorOperations(rep).simd(&I);
+    E = Expr::fn(D->getName(), rep->expr(X));
+  } else {
+    E = rep->cast(&I);
+  }
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 /******************************************************************************/

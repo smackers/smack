@@ -169,16 +169,12 @@ std::string SmackRep::intType(unsigned width) {
 }
 
 std::string SmackRep::vectorType(int n, Type *T) {
-  if (auto IT = dyn_cast<IntegerType>(T)) {
-    std::stringstream s;
-    s << Naming::VECTOR_TYPE << "." << n << "x" << type(T);
-    return s.str();
-
-  } else
-    llvm_unreachable("Unexpected vector type");
+  std::stringstream s;
+  s << Naming::VECTOR_TYPE << "." << n << "x" << type(T);
+  return s.str();
 }
 
-std::string SmackRep::opName(const std::string& operation, std::initializer_list<const llvm::Type*> types) {
+std::string SmackRep::opName(const std::string& operation, std::list<const llvm::Type*> types) {
   std::stringstream s;
   s << operation;
   for (auto t : types)

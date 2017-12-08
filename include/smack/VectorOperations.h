@@ -23,7 +23,7 @@ namespace smack {
   public:
     VectorOperations(SmackRep *rep) : rep(rep) {}
     std::list<Decl*> type(Type *T);
-    FuncDecl *simd(Type *T, unsigned opcode);
+    FuncDecl *simd(Instruction *I);
     FuncDecl *shuffle(Type *T, Type *U, std::vector<int> mask);
     FuncDecl *insert(Type *T, Type *IT);
     FuncDecl *extract(Type *T, Type *IT);
