@@ -13,6 +13,7 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=float"
     - TRAVIS_ENV="--exhaustive --folder=locks"
     - TRAVIS_ENV="--exhaustive --folder=contracts"
+    - TRAVIS_ENV="--exhaustive --folder=simd"
     - TRAVIS_ENV="--exhaustive --folder=memory-safety"
     - TRAVIS_ENV="--exhaustive --folder=pthread"
     - TRAVIS_ENV="--exhaustive --folder=strings"
@@ -39,4 +40,3 @@ script:
   - clang --version
   - clang++ --version
   - ./bin/build.sh
-
