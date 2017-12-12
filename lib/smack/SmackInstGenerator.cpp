@@ -625,31 +625,34 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // emit(Stmt::assign(rep->expr(&ci), Expr::id(rep->getString(ci.getArgOperand(0)))));
 
   } else if (name == Naming::CONTRACT_FORALL) {
-    assert(ci.getNumArgOperands() == 2
-        && "Expected contract expression argument to contract function.");
-    CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(1));
-    assert(cj && "Expected contract expression argument to contract function.");
-    Function* F = cj->getCalledFunction();
-    assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
-        && "Expected contract expression argument to contract function.");
 
-    auto binding = rep->getString(ci.getArgOperand(0));
-    std::list<const Expr*> args;
+	  llvm_unreachable("universal quantifiers not implemented.");
 
-    auto AX = F->getAttributes();
-    for (unsigned i = 0; i < cj->getNumArgOperands(); i++) {
-      std::string var = "";
-      if (AX.hasAttribute(i+1, "contract-var"))
-        var = AX.getAttribute(i+1, "contract-var").getValueAsString();
-      args.push_back(
-        var == binding ? Expr::id(binding) : rep->expr(cj->getArgOperand(i)));
-    }
-    for (auto m : rep->memoryMaps())
-      args.push_back(Expr::id(m.first));
-    auto E = Expr::fn(F->getName(), args);
-    emit(Stmt::assign(rep->expr(&ci),
-      Expr::cond(Expr::forall({{binding, "int"}}, E),
-        rep->integerLit(1U,1), rep->integerLit(0U,1))));
+    // assert(ci.getNumArgOperands() == 2
+    //     && "Expected contract expression argument to contract function.");
+    // CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(1));
+    // assert(cj && "Expected contract expression argument to contract function.");
+    // Function* F = cj->getCalledFunction();
+    // assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+    //     && "Expected contract expression argument to contract function.");
+    //
+    // auto binding = rep->getString(ci.getArgOperand(0));
+    // std::list<const Expr*> args;
+    //
+    // auto AX = F->getAttributes();
+    // for (unsigned i = 0; i < cj->getNumArgOperands(); i++) {
+    //   std::string var = "";
+    //   if (AX.hasAttribute(i+1, "contract-var"))
+    //     var = AX.getAttribute(i+1, "contract-var").getValueAsString();
+    //   args.push_back(
+    //     var == binding ? Expr::id(binding) : rep->expr(cj->getArgOperand(i)));
+    // }
+    // for (auto m : rep->memoryMaps())
+    //   args.push_back(Expr::id(m.first));
+    // auto E = Expr::fn(F->getName(), args);
+    // emit(Stmt::assign(rep->expr(&ci),
+    //   Expr::cond(Expr::forall(binding, "int", E),
+    //     rep->integerLit(1U,1), rep->integerLit(0U,1))));
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
              name == Naming::CONTRACT_ENSURES ||

@@ -1,2 +1,3 @@
 #!/bin/bash
+"${CORRAL:?The required CORRAL environment variable is not set. See SMACK documentation for details.}"
 $CORRAL "$@"

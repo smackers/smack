@@ -1,2 +1,3 @@
 #!/bin/bash
+"${SYMBOOGLIX:?The required SYMBOOGLIX environment variable is not set. See SMACK documentation for details.}"
 $SYMBOOGLIX "$@"
