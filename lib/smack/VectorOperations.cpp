@@ -46,6 +46,19 @@ namespace smack {
     return decls;
   }
 
+  Decl *VectorOperations::inverseCastAxiom(CastInst *CI) {
+    auto N = Naming::INSTRUCTION_TABLE.at(CI->getOpcode());
+    auto SrcTy = CI->getOperand(0)->getType();
+    auto DstTy = CI->getType();
+    auto Fn = rep->opName(N, {SrcTy, DstTy});
+    auto Inv = rep->opName(N, {DstTy, SrcTy});
+
+    return Decl::axiom(Expr::forall({{"v", rep->type(SrcTy)}},
+      Expr::eq(
+        Expr::fn(Inv, Expr::fn(Fn, Expr::id("v"))),
+        Expr::id("v"))));
+  }
+
   FuncDecl *VectorOperations::simd(Instruction *I) {
     auto T = dyn_cast<VectorType>(I->getType());
     assert(T && "expected vector type");
@@ -102,6 +115,10 @@ namespace smack {
       : Decl::function(FN, params, rep->type(T));
 
     rep->addAuxiliaryDeclaration(F);
+
+    if (auto CI = dyn_cast<CastInst>(I))
+      rep->addAuxiliaryDeclaration(inverseCastAxiom(CI));
+
     return F;
   }
 

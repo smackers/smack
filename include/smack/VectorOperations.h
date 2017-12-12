@@ -20,6 +20,8 @@ namespace smack {
     std::string field(Type *T, unsigned idx);
     std::string selector(Type *T, unsigned idx);
 
+    Decl *inverseCastAxiom(CastInst *CI);
+
   public:
     VectorOperations(SmackRep *rep) : rep(rep) {}
     std::list<Decl*> type(Type *T);
