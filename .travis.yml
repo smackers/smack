@@ -14,14 +14,6 @@ addons:
       - libz-dev
       - libedit-dev
 
-cache:
-  directories:
-    - $HOME/build/smackers/z3
-    - $HOME/build/smackers/boogie
-    - $HOME/build/smackers/corral
-    - $HOME/build/smackers/symbooglix
-    - $HOME/build/smackers/lockpwn
-
 env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
@@ -46,8 +38,7 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
-  - ls -al $HOME/build/smackers/boogie
-  - ls -al $HOME/build/smackers/boogie/Binaries
+  - smack $HOME/build/smackers/smack/examples/simple/simple.c
   - python --version
   - $CXX --version
   - $CC --version
