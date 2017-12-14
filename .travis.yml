@@ -26,7 +26,7 @@ env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
   matrix:
-    - TRAVIS_ENV="--exhaustive --folder=basic"
+    - TRAVIS_ENV="--exhaustive --folder=float"
 
 before_install:
   - sudo rm -rf /usr/local/clang-3.5.0
