@@ -339,8 +339,6 @@ if [ ${BUILD_Z3} -eq 1 ] ; then
     unzip -o z3-downloaded.zip -d z3-extracted
     mv -f --backup=numbered z3-extracted/z3-*/* ${Z3_DIR}
     rm -rf z3-downloaded.zip z3-extracted
-    ls -al ${Z3_DIR}
-    whoami
     puts "Installed Z3"
   else
     puts "Z3 already built"

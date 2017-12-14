@@ -17,10 +17,10 @@ addons:
 cache:
   directories:
     - $HOME/build/smackers/z3
-#    - $HOME/build/smackers/boogie
-#    - $HOME/build/smackers/corral
-#    - $HOME/build/smackers/symbooglix
-#    - $HOME/build/smackers/lockpwn
+    - $HOME/build/smackers/boogie
+    - $HOME/build/smackers/corral
+    - $HOME/build/smackers/symbooglix
+    - $HOME/build/smackers/lockpwn
 
 env:
   global:
@@ -46,8 +46,6 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
-  - ls -al $HOME/build/smackers/z3
-  - ls -al $HOME/build/smackers/z3/bin
   - python --version
   - $CXX --version
   - $CC --version
