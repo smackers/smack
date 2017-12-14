@@ -334,9 +334,10 @@ fi
 if [ ${BUILD_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR/bin" ] ; then
     puts "Installing Z3"
+    mkdir -p ${Z3_DIR}
     ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
     unzip -o z3-downloaded.zip -d z3-extracted
-    mv -f --backup=numbered z3-extracted/z3-* ${Z3_DIR}
+    mv -f --backup=numbered z3-extracted/z3-*/* ${Z3_DIR}
     rm -rf z3-downloaded.zip z3-extracted
     ls -al ${Z3_DIR}
     whoami
