@@ -40,5 +40,5 @@ script:
   - $CC --version
   - clang --version
   - clang++ --version
-  - ./bin/build.sh
+  - ./bin/build.sh --skip-dependencies
 

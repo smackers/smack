@@ -209,6 +209,12 @@ do
     shift
     ;;
 
+  --skip-dependencies)
+    puts "Skipping dependencies"
+    INSTALL_DEPENDENCIES=0
+    shift
+    ;;
+
   *)
     puts "Unknown option: $1"
     exit 1
