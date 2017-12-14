@@ -217,7 +217,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ ${TRAVIS} != "true" ] ; then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   puts "Installing required packages"
 
   case "$distro" in

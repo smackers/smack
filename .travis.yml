@@ -15,7 +15,6 @@ addons:
       - libedit-dev
 
 cache:
-  apt: true
   directories:
     - $HOME/build/smackers/z3
     - $HOME/build/smackers/boogie
