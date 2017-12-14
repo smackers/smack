@@ -436,6 +436,7 @@ fi
 if [ ${TEST_SMACK} -eq 1 ] ; then
   puts "Running SMACK regression tests"
 
+  smack ${SMACK_DIR}/examples/simple/simple.c
   cd ${SMACK_DIR}/test
   ./regtest.py ${TRAVIS_ENV}
   res=$?
