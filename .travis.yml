@@ -17,9 +17,11 @@ addons:
 cache:
   apt: true
   directories:
-    - $HOME/boogie
-    - $HOME/corral
-    - $HOME/z3
+    - $HOME/build/smackers/z3
+    - $HOME/build/smackers/boogie
+    - $HOME/build/smackers/corral
+    - $HOME/build/smackers/symbooglix
+    - $HOME/build/smackers/lockpwn
 
 env:
   global:
@@ -53,8 +55,6 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
-  - echo $HOME
-  - echo $TRAVIS_BUILD_DIR
   - python --version
   - $CXX --version
   - $CC --version

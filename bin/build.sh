@@ -212,6 +212,11 @@ do
   --skip-dependencies)
     puts "Skipping dependencies"
     INSTALL_DEPENDENCIES=0
+    BUILD_Z3=0
+    BUILD_BOOGIE=0
+    BUILD_CORRAL=0
+    BUILD_SYMBOOGLIX=0
+    BUILD_LOCKPWN=0
     shift
     ;;
 
