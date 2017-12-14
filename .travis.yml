@@ -3,6 +3,24 @@ dist: trusty
 sudo: required
 compiler: clang
 
+addons:
+  apt:
+    packages:
+      - git
+      - cmake
+      - python-yaml
+      - python-psutil
+      - unzip
+      - libz-dev
+      - libedit-dev
+
+cache:
+  apt: true
+  directories:
+    - $HOME/boogie
+    - $HOME/corral
+    - $HOME/z3
+
 env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
@@ -26,7 +44,7 @@ before_install:
   - sudo apt-get update
 
 install:
-  - sudo apt-get install -y git cmake python-yaml python-psutil unzip clang-3.9 llvm-3.9 mono-complete libz-dev libedit-dev
+  - sudo apt-get install -y clang-3.9 llvm-3.9 mono-complete
   - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.9 20
   - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.9 20
   - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.9 20
