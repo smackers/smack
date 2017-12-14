@@ -55,6 +55,8 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
+  - ls -al $HOME/build/smackers/boogie
+  - ls -al $HOME/build/smackers/boogie/Binaries
   - python --version
   - $CXX --version
   - $CC --version
