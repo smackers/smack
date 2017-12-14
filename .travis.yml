@@ -53,6 +53,7 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
+  - echo $HOME
   - python --version
   - $CXX --version
   - $CC --version
