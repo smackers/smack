@@ -217,7 +217,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ] || [ ${TRAVIS} != "true" ] ; then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ ${TRAVIS} != "true" ] ; then
   puts "Installing required packages"
 
   case "$distro" in
@@ -332,7 +332,7 @@ fi
 
 
 if [ ${BUILD_Z3} -eq 1 ] ; then
-  if [ ! -d "$Z3_DIR" ] ; then
+  if [ ! -d "$Z3_DIR/bin" ] ; then
     puts "Installing Z3"
     ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
     unzip -o z3-downloaded.zip -d z3-extracted
@@ -346,7 +346,7 @@ fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  if [ ! -d "$BOOGIE_DIR" ] ; then
+  if [ ! -d "$BOOGIE_DIR/Binaries" ] ; then
     puts "Building Boogie"
     git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
     cd ${BOOGIE_DIR}
@@ -365,7 +365,7 @@ fi
 
 
 if [ ${BUILD_CORRAL} -eq 1 ] ; then
-  if [ ! -d "$CORRAL_DIR" ] ; then
+  if [ ! -d "$CORRAL_DIR/bin" ] ; then
     puts "Building Corral"
     git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
     cd ${CORRAL_DIR}
@@ -381,7 +381,7 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
 fi
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
-  if [ ! -d "$SYMBOOGLIX_DIR" ] ; then
+  if [ ! -d "$SYMBOOGLIX_DIR/src/SymbooglixDriver/bin" ] ; then
     puts "Building Symbooglix"
     git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
     cd ${SYMBOOGLIX_DIR}/src
@@ -398,7 +398,7 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
-  if [ ! -d "$LOCKPWN_DIR" ] ; then
+  if [ ! -d "$LOCKPWN_DIR/Binaries" ] ; then
     puts "Building lockpwn"
     git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
     cd ${LOCKPWN_DIR}

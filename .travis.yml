@@ -55,7 +55,6 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
-  - echo $TRAVIS
   - python --version
   - $CXX --version
   - $CC --version
