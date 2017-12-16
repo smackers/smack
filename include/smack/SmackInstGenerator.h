@@ -30,7 +30,6 @@ private:
 
   Block* currBlock;
   llvm::BasicBlock::const_iterator nextInst;
-  llvm::Instruction* firstNonDebugInst;
   std::map<const llvm::BasicBlock*, Block*> blockMap;
   std::map<const llvm::Value*, std::string> sourceNames;
 
@@ -51,7 +50,7 @@ public:
 
 public:
   SmackInstGenerator(llvm::LoopInfo& LI, SmackRep* R, ProcDecl* P, Naming* N)
-    : loops(LI), rep(R), proc(P), naming(N), firstNonDebugInst(nullptr) {}
+    : loops(LI), rep(R), proc(P), naming(N) {}
 
 
   void visitBasicBlock(llvm::BasicBlock& bb);
