@@ -1,3 +1,6 @@
 #!/bin/bash
-"${CORRAL:?The required CORRAL environment variable is not set. See SMACK documentation for details.}"
+if [ -z "$CORRAL" ] ; then
+  echo "The required CORRAL environment variable is not set. See SMACK documentation for details."
+  exit 1
+fi
 $CORRAL "$@"

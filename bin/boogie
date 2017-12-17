@@ -1,3 +1,6 @@
 #!/bin/bash
-"${BOOGIE:?The required BOOGIE environment variable is not set. See SMACK documentation for details.}"
+if [ -z "$BOOGIE" ] ; then
+  echo "The required BOOGIE environment variable is not set. See SMACK documentation for details."
+  exit 1
+fi
 $BOOGIE "$@"
