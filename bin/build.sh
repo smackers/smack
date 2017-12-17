@@ -359,6 +359,12 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
     puts "Built Boogie"
+  elif [ "$TRAVIS" == "true" ] ; then
+    puts "Rebuilding Boogie for Travis CI"
+    cd ${BOOGIE_DIR}
+    git reset --hard ${BOOGIE_COMMIT}
+    cd ${BOOGIE_DIR}/Source
+    msbuild Boogie.sln /p:Configuration=Release
   else
     puts "Boogie already built"
   fi
