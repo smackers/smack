@@ -34,7 +34,7 @@ BUILD_MONO=0
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-ROOT="$( cd "${SMACK_DIR}" && cd .. && cd .. && pwd )"
+ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
@@ -145,7 +145,7 @@ function get-platform {
 # Check if git repo is up to date.
 # ================================================================
 function upToDate {
-  if [ ! -d "${1}" ] ; then
+  if [ ! -d "$1" ] ; then
     echo "false1"
   else
     cd $1
