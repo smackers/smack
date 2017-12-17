@@ -349,7 +349,7 @@ fi
 
 
 if [ ${BUILD_Z3} -eq 1 ] ; then
-  if [ ! -d "$Z3_DIR/bin" ] ; then
+  if [ ! -d "$Z3_DIR" ] ; then
     puts "Installing Z3"
     mkdir -p ${Z3_DIR}
     ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
