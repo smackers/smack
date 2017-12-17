@@ -150,8 +150,8 @@ function upToDate {
   else
     cd $1
     hash=$(git rev-parse --short HEAD)
-    echo $hash >&2
-    echo $2 >&2
+    echo $hash
+    echo $2
     if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
       echo "true"
     else
@@ -366,6 +366,7 @@ fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
+  echo $(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)
   if [ "$(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)" == "false" ] ; then
     puts "Building Boogie"
     if [ ! -d "$BOOGIE_DIR" ] ; then
