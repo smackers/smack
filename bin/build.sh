@@ -145,7 +145,7 @@ function get-platform {
 # Check if git repo is up to date.
 # ================================================================
 function upToDate {
-  if [ ! -d "$1" ] ; then
+  if [ ! -d "${1}" ] ; then
     echo "false1"
   else
     cd $1
