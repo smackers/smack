@@ -16,7 +16,6 @@ addons:
 
 cache:
   directories:
-    - $HOME/build/smackers/z3
     - $HOME/build/smackers/boogie
     - $HOME/build/smackers/corral
     - $HOME/build/smackers/symbooglix

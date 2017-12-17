@@ -141,6 +141,19 @@ function get-platform {
   esac
 }
 
+# ================================================================
+# Check if git repo is up to date.
+# ================================================================
+function upToDate {
+  cd $1
+  hash=$(git rev-parse --short HEAD)
+  if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+    echo "true"
+  else
+    echo "false"
+  fi
+}
+
 function puts {
   echo -e "\033[35m*** SMACK BUILD: ${1} ***\033[0m"
 }
@@ -347,7 +360,7 @@ fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  if [ ! -d "$BOOGIE_DIR/Binaries" ] ; then
+  if [ ! -d "$BOOGIE_DIR" ] || [ "$(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)" == "false" ] ; then
     puts "Building Boogie"
     git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
     cd ${BOOGIE_DIR}
@@ -359,12 +372,6 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
     puts "Built Boogie"
-  elif [ "$TRAVIS" == "true" ] ; then
-    puts "Rebuilding Boogie for Travis CI"
-    cd ${BOOGIE_DIR}
-    git reset --hard ${BOOGIE_COMMIT}
-    cd ${BOOGIE_DIR}/Source
-    msbuild Boogie.sln /p:Configuration=Release
   else
     puts "Boogie already built"
   fi
