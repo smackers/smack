@@ -146,7 +146,7 @@ function get-platform {
 # ================================================================
 function upToDate {
   if [ ! -d $1 ] ; then
-    echo "false"
+    echo "false1"
   else
     cd $1
     hash=$(git rev-parse --short HEAD)
@@ -155,7 +155,7 @@ function upToDate {
     if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
       echo "true"
     else
-      echo "false"
+      echo "false2"
     fi
   fi
 }
