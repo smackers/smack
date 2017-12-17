@@ -152,7 +152,7 @@ function upToDate {
     hash=$(git rev-parse --short=10 HEAD)
     echo $hash
     echo $2
-    if [ "$TRAVIS" != "true" ] || [ $hash == "$2"* ] ; then
+    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
       echo "true"
     else
       echo "false2"
