@@ -21,14 +21,14 @@
 ################################################################################
 
 # Set these flags to control various installation options
-INSTALL_DEPENDENCIES=0
-BUILD_Z3=0
+INSTALL_DEPENDENCIES=1
+BUILD_Z3=1
 BUILD_BOOGIE=1
-BUILD_CORRAL=0
-BUILD_SYMBOOGLIX=0
-BUILD_LOCKPWN=0
-BUILD_SMACK=0
-TEST_SMACK=0
+BUILD_CORRAL=1
+BUILD_SYMBOOGLIX=1
+BUILD_LOCKPWN=1
+BUILD_SMACK=1
+TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
@@ -146,16 +146,14 @@ function get-platform {
 # ================================================================
 function upToDate {
   if [ ! -d "$1" ] ; then
-    echo "false1"
+    echo "false"
   else
     cd $1
     hash=$(git rev-parse --short=10 HEAD)
-    echo $hash
-    echo $2
     if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
       echo "true"
     else
-      echo "false2"
+      echo "false"
     fi
   fi
 }
@@ -366,7 +364,6 @@ fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  echo $(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)
   if [ "$(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)" == "false" ] ; then
     puts "Building Boogie"
     if [ ! -d "$BOOGIE_DIR" ] ; then
@@ -388,9 +385,11 @@ fi
 
 
 if [ ${BUILD_CORRAL} -eq 1 ] ; then
-  if [ ! -d "$CORRAL_DIR/bin" ] ; then
+  if [ "$(upToDate $CORRAL_DIR $CORRAL_COMMIT)" == "false" ] ; then
     puts "Building Corral"
-    git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+    if [ ! -d "$CORRAL_DIR" ] ; then
+      git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+    fi
     cd ${CORRAL_DIR}
     git reset --hard ${CORRAL_COMMIT}
     git submodule init
@@ -406,8 +405,11 @@ fi
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   if [ ! -d "$SYMBOOGLIX_DIR/src/SymbooglixDriver/bin" ] ; then
     puts "Building Symbooglix"
-    git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
+    if [ ! -d "$SYMBOOGLIX_DIR" ] ; then
+      git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
+    fi
     cd ${SYMBOOGLIX_DIR}/src
+    git reset --hard ${SYMBOOGLIX_COMMIT}
     ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
     mono ./nuget.exe restore Symbooglix.sln
     rm -rf /tmp/nuget/
@@ -421,9 +423,11 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
-  if [ ! -d "$LOCKPWN_DIR/Binaries" ] ; then
+  if [ "$(upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT)" == "false" ] ; then
     puts "Building lockpwn"
-    git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
+    if [ ! -d "$LOCKPWN_DIR" ] ; then
+      git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
+    fi
     cd ${LOCKPWN_DIR}
     git reset --hard ${LOCKPWN_COMMIT}
     msbuild lockpwn.sln /p:Configuration=Release
