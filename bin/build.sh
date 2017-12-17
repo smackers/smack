@@ -21,20 +21,20 @@
 ################################################################################
 
 # Set these flags to control various installation options
-INSTALL_DEPENDENCIES=1
-BUILD_Z3=1
+INSTALL_DEPENDENCIES=0
+BUILD_Z3=0
 BUILD_BOOGIE=1
-BUILD_CORRAL=1
-BUILD_SYMBOOGLIX=1
-BUILD_LOCKPWN=1
-BUILD_SMACK=1
-TEST_SMACK=1
+BUILD_CORRAL=0
+BUILD_SYMBOOGLIX=0
+BUILD_LOCKPWN=0
+BUILD_SMACK=0
+TEST_SMACK=0
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
+ROOT="$( cd "${SMACK_DIR}" && cd .. && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
@@ -150,6 +150,8 @@ function upToDate {
   else
     cd $1
     hash=$(git rev-parse --short HEAD)
+    echo $hash >&2
+    echo $2 >&2
     if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
       echo "true"
     else
