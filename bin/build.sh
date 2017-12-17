@@ -145,12 +145,16 @@ function get-platform {
 # Check if git repo is up to date.
 # ================================================================
 function upToDate {
-  cd $1
-  hash=$(git rev-parse --short HEAD)
-  if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
-    echo "true"
-  else
+  if [ ! -d $1 ] ; then
     echo "false"
+  else
+    cd $1
+    hash=$(git rev-parse --short HEAD)
+    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+      echo "true"
+    else
+      echo "false"
+    fi
   fi
 }
 
@@ -360,9 +364,11 @@ fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  if [ ! -d "$BOOGIE_DIR" ] || [ "$(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)" == "false" ] ; then
+  if [ "$(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)" == "false" ] ; then
     puts "Building Boogie"
-    git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+    if [ ! -d "$BOOGIE_DIR" ] ; then
+      git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+    fi
     cd ${BOOGIE_DIR}
     git reset --hard ${BOOGIE_COMMIT}
     cd ${BOOGIE_DIR}/Source
