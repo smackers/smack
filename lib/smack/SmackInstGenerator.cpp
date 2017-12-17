@@ -140,7 +140,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
   currBlock = getBlock(&bb);
 
   auto* F = bb.getParent();
-  if (SmackOptions::isEntryPoint(naming->get(*F)) && &bb == &F->getEntryBlock()) {
+  if (&bb == &F->getEntryBlock()) {
     for (auto& I : bb.getInstList()) {
       if (llvm::isa<llvm::DbgInfoIntrinsic>(I))
         continue;
@@ -149,9 +149,11 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
         break;
       }
     }
-    emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
-    for (auto& A : F->getArgumentList()) {
-      emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming->get(*F) + ":" + naming->get(A))}));
+    if (SmackOptions::isEntryPoint(naming->get(*F))) {
+      emit(recordProcedureCall(F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
+      for (auto& A : F->getArgumentList()) {
+        emit(recordProcedureCall(&A, {Attr::attr("cexpr", "smack:arg:" + naming->get(*F) + ":" + naming->get(A))}));
+      }
     }
   }
 }
@@ -747,7 +749,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
   processInstruction(dvi);
 
   if (SmackOptions::SourceLocSymbols) {
-    const Value* V = dvi.getValue();
+    Value* V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
     //if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
     if (V && !V->getType()->isPointerTy()) {
@@ -760,8 +762,14 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
         const Instruction& pi = *std::prev(currInst);
         V = V->stripPointerCasts();
         WARN(i2s(pi));
-        if (!llvm::isa<const PHINode>(&pi) && V == llvm::dyn_cast<const Value>(&pi)) {
-          emit(recordProcedureCall(V, {Attr::attr("cexpr", var->getName())}));
+        if (!llvm::isa<const PHINode>(&pi) && V == llvm::dyn_cast<const Value>(&pi))
+          emit(recordProcedureCall(V, {Attr::attr("cexpr", var->getName().str())}));
+      }
+      Function* F = dvi.getFunction();
+      for(auto &arg : F->args()) {
+        if (&arg == V && var->getScope() == F->getMetadata("dbg")) {
+          emit(recordProcedureCall(V, {Attr::attr("cexpr", naming->get(*F) + ":arg:"+ var->getName().str())}));
+          break;
         }
       }
     }
