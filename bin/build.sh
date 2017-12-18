@@ -146,14 +146,14 @@ function get-platform {
 # ================================================================
 function upToDate {
   if [ ! -d "$1" ] ; then
-    echo "false"
+    return 1
   else
     cd $1
     hash=$(git rev-parse --short=10 HEAD)
     if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
-      echo "true"
+      return 0
     else
-      echo "false"
+      return 1
     fi
   fi
 }
@@ -364,7 +364,7 @@ fi
 
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  if [ "$(upToDate $BOOGIE_DIR $BOOGIE_COMMIT)" == "false" ] ; then
+  if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
     puts "Building Boogie"
     if [ ! -d "$BOOGIE_DIR" ] ; then
       git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
@@ -385,7 +385,7 @@ fi
 
 
 if [ ${BUILD_CORRAL} -eq 1 ] ; then
-  if [ "$(upToDate $CORRAL_DIR $CORRAL_COMMIT)" == "false" ] ; then
+  if ! upToDate $CORRAL_DIR $CORRAL_COMMIT ; then
     puts "Building Corral"
     if [ ! -d "$CORRAL_DIR" ] ; then
       git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
@@ -403,7 +403,7 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
 fi
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
-  if [ ! -d "$SYMBOOGLIX_DIR/src/SymbooglixDriver/bin" ] ; then
+  if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
     puts "Building Symbooglix"
     if [ ! -d "$SYMBOOGLIX_DIR" ] ; then
       git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
@@ -423,7 +423,7 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
-  if [ "$(upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT)" == "false" ] ; then
+  if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
     puts "Building lockpwn"
     if [ ! -d "$LOCKPWN_DIR" ] ; then
       git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
