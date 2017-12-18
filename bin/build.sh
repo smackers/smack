@@ -141,6 +141,23 @@ function get-platform {
   esac
 }
 
+# ================================================================
+# Check if git repo is up to date.
+# ================================================================
+function upToDate {
+  if [ ! -d "$1" ] ; then
+    return 1
+  else
+    cd $1
+    hash=$(git rev-parse --short=10 HEAD)
+    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+      return 0
+    else
+      return 1
+    fi
+  fi
+}
+
 function puts {
   echo -e "\033[35m*** SMACK BUILD: ${1} ***\033[0m"
 }
@@ -217,8 +234,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ]
-then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   puts "Installing required packages"
 
   case "$distro" in
@@ -281,8 +297,7 @@ then
 fi
 
 
-if [ ${BUILD_MONO} -eq 1 ]
-then
+if [ ${BUILD_MONO} -eq 1 ] ; then
   puts "Building mono"
 
   git clone git://github.com/mono/mono.git ${MONO_DIR}
@@ -301,8 +316,7 @@ then
   make
   sudo make install
 
-  if [[ ${INSTALL_PREFIX} ]]
-  then
+  if [[ ${INSTALL_PREFIX} ]] ; then
     echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
     source ${SMACKENV}
   fi
@@ -311,8 +325,7 @@ then
 fi
 
 
-if [ ${BUILD_LLVM} -eq 1 ]
-then
+if [ ${BUILD_LLVM} -eq 1 ] ; then
   puts "Building LLVM"
 
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
@@ -335,90 +348,97 @@ then
 fi
 
 
-if [ ${BUILD_Z3} -eq 1 ]
-then
-  puts "Installing Z3"
-
-  ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
-  unzip -o z3-downloaded.zip -d z3-extracted
-  mv -f --backup=numbered z3-extracted/z3-* ${Z3_DIR}
-  rm -rf z3-downloaded.zip z3-extracted
-
-  puts "Installed Z3"
-fi
-
-
-if [ ${BUILD_BOOGIE} -eq 1 ]
-then
-  puts "Building Boogie"
-
-  if [ ! -d "$BOOGIE_DIR" ] ; then
-    git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+if [ ${BUILD_Z3} -eq 1 ] ; then
+  if [ ! -d "$Z3_DIR" ] ; then
+    puts "Installing Z3"
+    mkdir -p ${Z3_DIR}
+    ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
+    unzip -o z3-downloaded.zip -d z3-extracted
+    mv -f --backup=numbered z3-extracted/z3-*/* ${Z3_DIR}
+    rm -rf z3-downloaded.zip z3-extracted
+    puts "Installed Z3"
+  else
+    puts "Z3 already built"
   fi
-  cd ${BOOGIE_DIR}
-  git reset --hard ${BOOGIE_COMMIT}
-  cd ${BOOGIE_DIR}/Source
-  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-  mono ./nuget.exe restore Boogie.sln
-  rm -rf /tmp/nuget/
-  msbuild Boogie.sln /p:Configuration=Release
-  ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
-
-  puts "Built Boogie"
 fi
 
 
-if [ ${BUILD_CORRAL} -eq 1 ]
-then
-  puts "Building Corral"
-
-  if [ ! -d "$CORRAL_DIR" ] ; then
-    git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+if [ ${BUILD_BOOGIE} -eq 1 ] ; then
+  if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
+    puts "Building Boogie"
+    if [ ! -d "$BOOGIE_DIR" ] ; then
+      git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+    fi
+    cd ${BOOGIE_DIR}
+    git reset --hard ${BOOGIE_COMMIT}
+    cd ${BOOGIE_DIR}/Source
+    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+    mono ./nuget.exe restore Boogie.sln
+    rm -rf /tmp/nuget/
+    msbuild Boogie.sln /p:Configuration=Release
+    ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+    puts "Built Boogie"
+  else
+    puts "Boogie already built"
   fi
-  cd ${CORRAL_DIR}
-  git reset --hard ${CORRAL_COMMIT}
-  git submodule init
-  git submodule update
-  msbuild cba.sln /p:Configuration=Release
-  ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
-
-  puts "Built Corral"
 fi
 
-if [ ${BUILD_SYMBOOGLIX} -eq 1 ]
-then
-  puts "Building Symbooglix"
 
-  git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
-  cd ${SYMBOOGLIX_DIR}/src
-  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-  mono ./nuget.exe restore Symbooglix.sln
-  rm -rf /tmp/nuget/
-  xbuild Symbooglix.sln /p:Configuration=Release
-  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
-  ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
-
-  puts "Built Symbooglix"
-fi
-
-if [ ${BUILD_LOCKPWN} -eq 1 ]
-then
-  puts "Building lockpwn"
-
-  cd ${ROOT}
-  if [ ! -d "$LOCKPWN_DIR" ] ; then
-    git clone https://github.com/smackers/lockpwn.git
+if [ ${BUILD_CORRAL} -eq 1 ] ; then
+  if ! upToDate $CORRAL_DIR $CORRAL_COMMIT ; then
+    puts "Building Corral"
+    if [ ! -d "$CORRAL_DIR" ] ; then
+      git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+    fi
+    cd ${CORRAL_DIR}
+    git reset --hard ${CORRAL_COMMIT}
+    git submodule init
+    git submodule update
+    msbuild cba.sln /p:Configuration=Release
+    ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+    puts "Built Corral"
+  else
+    puts "Corral already built"
   fi
-  cd ${LOCKPWN_DIR}
-  git reset --hard ${LOCKPWN_COMMIT}
-  msbuild lockpwn.sln /p:Configuration=Release
-  ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
-
-  puts "Built lockpwn"
 fi
 
-if [ ${BUILD_SMACK} -eq 1 ]
-then
+if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
+  if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
+    puts "Building Symbooglix"
+    if [ ! -d "$SYMBOOGLIX_DIR" ] ; then
+      git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
+    fi
+    cd ${SYMBOOGLIX_DIR}/src
+    git reset --hard ${SYMBOOGLIX_COMMIT}
+    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+    mono ./nuget.exe restore Symbooglix.sln
+    rm -rf /tmp/nuget/
+    xbuild Symbooglix.sln /p:Configuration=Release
+    ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
+    ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+    puts "Built Symbooglix"
+  else
+    puts "Symbooglix already built"
+  fi
+fi
+
+if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
+  if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
+    puts "Building lockpwn"
+    if [ ! -d "$LOCKPWN_DIR" ] ; then
+      git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
+    fi
+    cd ${LOCKPWN_DIR}
+    git reset --hard ${LOCKPWN_COMMIT}
+    msbuild lockpwn.sln /p:Configuration=Release
+    ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
+    puts "Built lockpwn"
+  else
+    puts "Lockpwn already built"
+  fi
+fi
+
+if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
 
   mkdir -p ${SMACK_DIR}/build
@@ -440,8 +460,7 @@ then
 fi
 
 
-if [ ${TEST_SMACK} -eq 1 ]
-then
+if [ ${TEST_SMACK} -eq 1 ] ; then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
