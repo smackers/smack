@@ -43,7 +43,7 @@ private:
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
-  const Stmt* recordProcedureCall(llvm::Value* V, std::list<const Attr*> attrs);
+  const Stmt* recordProcedureCall(const llvm::Value* V, std::list<const Attr*> attrs);
 
 public:
   void emit(const Stmt* s);
@@ -66,9 +66,9 @@ public:
 
   void visitBinaryOperator(llvm::BinaryOperator& I);
 
-  // TODO implement extractelement
-  // TODO implement insertelement
-  // TODO implement shufflestd::vector
+  void visitExtractElementInst(llvm::ExtractElementInst &I);
+  void visitInsertElementInst(llvm::InsertElementInst &I);
+  void visitShuffleVectorInst(llvm::ShuffleVectorInst &I);
 
   void visitExtractValueInst(llvm::ExtractValueInst& i);
   void visitInsertValueInst(llvm::InsertValueInst& i);

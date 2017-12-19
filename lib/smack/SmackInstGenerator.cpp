@@ -5,6 +5,7 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
+#include "smack/VectorOperations.h"
 #include "smack/SmackOptions.h"
 #include "smack/Naming.h"
 #include "llvm/IR/InstVisitor.h"
@@ -53,8 +54,10 @@ void SmackInstGenerator::emit(const Stmt* s) {
 }
 
 const Stmt* SmackInstGenerator::recordProcedureCall(
-    llvm::Value* V, std::list<const Attr*> attrs) {
-  return Stmt::call("boogie_si_record_" + rep->type(V), {rep->expr(V)}, {}, attrs);
+    const llvm::Value* V, std::list<const Attr*> attrs) {
+  auto D = Decl::procedure("boogie_si_record_" + rep->type(V), {{"x", rep->type(V)}});
+  rep->addAuxiliaryDeclaration(D);
+  return Stmt::call(D->getName(), {rep->expr(V)}, {}, attrs);
 }
 
 Block* SmackInstGenerator::createBlock() {
@@ -325,14 +328,50 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I),rep->bop(&I)));
+  const Expr *E;
+  if (isa<VectorType>(I.getType())) {
+    auto X = I.getOperand(0);
+    auto Y = I.getOperand(1);
+    auto D = VectorOperations(rep).simd(&I);
+    E = Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)});
+  } else {
+    E = rep->bop(&I);
+  }
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 /******************************************************************************/
 /*                   VECTOR                    OPERATIONS                     */
 /******************************************************************************/
 
-// TODO implement std::vector operations
+void SmackInstGenerator::visitExtractElementInst(ExtractElementInst &I) {
+  processInstruction(I);
+  auto X = I.getOperand(0);
+  auto Y = I.getOperand(1);
+  auto D = VectorOperations(rep).extract(X->getType(), Y->getType());
+  emit(Stmt::assign(rep->expr(&I), Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)})));
+}
+
+void SmackInstGenerator::visitInsertElementInst(InsertElementInst &I) {
+  processInstruction(I);
+  auto X = I.getOperand(0);
+  auto Y = I.getOperand(1);
+  auto Z = I.getOperand(2);
+  auto D = VectorOperations(rep).insert(X->getType(), Z->getType());
+  emit(Stmt::assign(rep->expr(&I), Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y), rep->expr(Z)})));
+}
+
+void SmackInstGenerator::visitShuffleVectorInst(ShuffleVectorInst &I) {
+  processInstruction(I);
+  auto X = I.getOperand(0);
+  auto Y = I.getOperand(1);
+  auto M = I.getShuffleMask();
+  std::vector<int> mask;
+  for (auto idx : M)
+    mask.push_back(idx);
+  auto D = VectorOperations(rep).shuffle(X->getType(), I.getType(), mask);
+  emit(Stmt::assign(rep->expr(&I), Expr::fn(D->getName(), {rep->expr(X), rep->expr(Y)})));
+}
 
 /******************************************************************************/
 /*                  AGGREGATE                   OPERATIONS                    */
@@ -395,17 +434,28 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst& ai) {
 
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
   processInstruction(li);
+  auto P = li.getPointerOperand();
+  auto T = dyn_cast<PointerType>(P->getType());
+  assert(T && "expected pointer type");
 
   // TODO what happens with aggregate types?
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
-  emit(Stmt::assign(rep->expr(&li), rep->load(li.getPointerOperand())));
+  const Expr *E;
+  if (isa<VectorType>(T->getElementType())) {
+    auto D = VectorOperations(rep).load(P);
+    E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
+  } else {
+    E = rep->load(P);
+  }
+
+  emit(Stmt::assign(rep->expr(&li), E));
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
-    emit(Stmt::call("boogie_si_record_int", {Expr::lit(0L)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(li.getPointerOperand())}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(&li)}));
+    emit(recordProcedureCall(ConstantInt::get(Type::getInt32Ty(li.getContext()), 0), {}));
+    emit(recordProcedureCall(P, {}));
+    emit(recordProcedureCall(&li, {}));
   }
 }
 
@@ -415,14 +465,21 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   const llvm::Value* V = si.getOperand(0)->stripPointerCasts();
   assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
-  emit(rep->store(P,V));
+  if (isa<VectorType>(V->getType())) {
+    auto D = VectorOperations(rep).store(P);
+    auto M = Expr::id(rep->memPath(P));
+    auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
+    emit(Stmt::assign(M, E));
+  } else {
+    emit(rep->store(P,V));
+  }
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       if (const llvm::PointerType* t = llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
         if (!t->getElementType()->isPointerTy()) {
           assert(G->hasName() && "Expected named global variable.");
-          emit(Stmt::call("boogie_si_record_" + rep->type(V), {rep->expr(V)}, {}, {Attr::attr("cexpr", G->getName().str())}));
+          emit(recordProcedureCall(V, {Attr::attr("cexpr", G->getName().str())}));
         }
       }
     }
@@ -430,9 +487,9 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
-    emit(Stmt::call("boogie_si_record_int", {Expr::lit(1L)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(P)}));
-    emit(Stmt::call("boogie_si_record_int", {rep->expr(V)}));
+    emit(recordProcedureCall(ConstantInt::get(Type::getInt32Ty(si.getContext()), 1), {}));
+    emit(recordProcedureCall(P, {}));
+    emit(recordProcedureCall(V, {}));
   }
 }
 
@@ -470,7 +527,15 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& I) {
 
 void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I),rep->cast(&I)));
+  const Expr *E;
+  if (isa<VectorType>(I.getType())) {
+    auto X = I.getOperand(0);
+    auto D = VectorOperations(rep).simd(&I);
+    E = Expr::fn(D->getName(), rep->expr(X));
+  } else {
+    E = rep->cast(&I);
+  }
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 /******************************************************************************/
@@ -479,7 +544,16 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
 
 void SmackInstGenerator::visitCmpInst(llvm::CmpInst& I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I),rep->cmp(&I)));
+  const Expr *E;
+  if (isa<VectorType>(I.getType())) {
+    auto X = I.getOperand(0);
+    auto Y = I.getOperand(1);
+    auto D = VectorOperations(rep).simd(&I);
+    E = Expr::fn(D->getName(), rep->expr(X), rep->expr(Y));
+  } else {
+    E = rep->cmp(&I);
+  }
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 void SmackInstGenerator::visitPHINode(llvm::PHINode& phi) {

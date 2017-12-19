@@ -172,6 +172,7 @@ add_library(smackTranslator STATIC
   include/smack/VerifierCodeMetadata.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
+  include/smack/VectorOperations.h
   include/smack/MemorySafetyChecker.h
   include/smack/SignedIntegerOverflowChecker.h
   include/smack/SplitAggregateLoadStore.h
@@ -192,6 +193,7 @@ add_library(smackTranslator STATIC
   lib/smack/VerifierCodeMetadata.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
+  lib/smack/VectorOperations.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/SignedIntegerOverflowChecker.cpp
   lib/smack/SplitAggregateLoadStore.cpp
