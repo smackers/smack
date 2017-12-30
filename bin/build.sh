@@ -221,13 +221,14 @@ then
   puts "Installing required packages"
   if [ ${INSTALL_RUST} -eq 1 ]
   then
-      puts "Installing Rust"
-      ${WGET} https://static.rust-lang.org/dist/2016-12-16/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
-      tar xf rust.tar.gz
-      cd rust-nightly-x86_64-unknown-linux-gnu
-      sudo ./install.sh
-      cd ..
+    puts "Installing Rust"
+    ${WGET} https://static.rust-lang.org/dist/2016-12-16/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
+    tar xf rust.tar.gz
+    cd rust-nightly-x86_64-unknown-linux-gnu
+    sudo ./install.sh
+    cd ..
   fi
+  
   case "$distro" in
   linux-opensuse*)
     sudo zypper --non-interactive install ${DEPENDENCIES}
