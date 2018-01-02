@@ -303,8 +303,10 @@ def objc_clang_compile_command(args, lib = False):
   if sys.platform in ['linux', 'linux2']:
     objc_flags = try_command(['gnustep-config', '--objc-flags'])
     cmd += objc_flags.split()
-  elif sys.platform == 'darwin'
-    pass # add future macOS modifications here.
+  elif sys.platform == 'darwin':
+    sys.exit("Objective-C not yet supported on macOS")
+  else:
+    sys.exit("Objective-C not supported for this operating system.")
   return cmd
 
 def default_clang_compile_command(args, lib = False):
@@ -360,11 +362,13 @@ def clang_frontend(args):
 
 def objc_clang_frontend(args):
   """Generate Boogie code from Objective-C language source(s)."""
+
   compile_command = objc_clang_compile_command(args)
   clang_frontend_helper(compile_command, args)
-  
 
 def clang_frontend_helper(compile_command, args):
+  """Allow abstraction over clang's programming languages."""
+
   bitcodes = []
 
   for c in args.input_files:
