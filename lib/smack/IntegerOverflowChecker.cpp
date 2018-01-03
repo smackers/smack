@@ -26,7 +26,7 @@ std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTIO
   {"mul", Instruction::Mul}
 };
 
-  std::string getMax(unsigned bits, bool is_signed) {
+std::string getMax(unsigned bits, bool is_signed) {
   if (is_signed) {
     return APInt::getSignedMaxValue(bits).toString(10, true);
   } else {
