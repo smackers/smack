@@ -29,8 +29,7 @@ std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTIO
   std::string getMax(unsigned bits, bool is_signed) {
   if (is_signed) {
     return APInt::getSignedMaxValue(bits).toString(10, true);
-  }
-  else {
+  } else {
     return APInt::getMaxValue(bits).toString(10, false);
   }
 }
@@ -38,12 +37,11 @@ std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTIO
 std::string getMin(unsigned bits, bool is_signed) {
   if (is_signed) {
     return APInt::getSignedMinValue(bits).toString(10, true);
-  }
-  else {
+  } else {
     return APInt::getMinValue(bits).toString(10, false);
   }
 }
-  
+
 bool IntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
@@ -69,15 +67,14 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                 Instruction* prev = &*std::prev(I);
                 Value* o1 = ci->getArgOperand(0);
                 Value* o2 = ci->getArgOperand(1);
-		CastInst* so1, *so2;
-		if (is_signed) {
-		  so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		  so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		}
-		else {
-		  so1 = CastInst::CreateZExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		  so2 = CastInst::CreateZExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		}
+                CastInst* so1, *so2;
+                if (is_signed) {
+                  so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                  so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                } else {
+                  so1 = CastInst::CreateZExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                  so2 = CastInst::CreateZExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                }
                 BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), so1, so2, "", &*I);
                 if (prev && isa<ExtractValueInst>(prev)) {
                   ExtractValueInst* pei = cast<ExtractValueInst>(prev);
