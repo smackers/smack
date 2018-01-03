@@ -30,7 +30,7 @@ const bool SHOW_ORIG = true;
 #define WARN(str) \
     if (CODE_WARN) emit(Stmt::comment(std::string("WARNING: ") + str))
 #define ORIG(ins) \
-    if (SHOW_ORIG) emit(Stmt::comment(i2s(ins), true))
+    if (SHOW_ORIG) emit(Stmt::comment(i2s(ins)))
 
 Regex VAR_DECL("^[[:space:]]*var[[:space:]]+([[:alpha:]_.$#'`~^\\?][[:alnum:]_.$#'`~^\\?]*):.*;");
 
