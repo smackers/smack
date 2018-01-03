@@ -239,7 +239,7 @@ public:
     std::list<const Expr*> args = std::list<const Expr*>(),
     std::list<std::string> rets = std::list<std::string>(),
     std::list<const Attr*> attrs = std::list<const Attr*>());
-  static const Stmt* comment(std::string c, bool star = false);
+  static const Stmt* comment(std::string c);
   static const Stmt* goto_(std::list<std::string> ts);
   static const Stmt* havoc(std::string x);
   static const Stmt* return_();
@@ -306,9 +306,8 @@ public:
 
 class Comment : public Stmt {
   std::string str;
-  bool star;
 public:
-  Comment(std::string s, bool st) : Stmt(COMMENT), str(s), star(st){}
+  Comment(std::string s) : Stmt(COMMENT), str(s) {}
   void print(std::ostream& os) const;
   static bool classof(const Stmt* S) { return S->getKind() == COMMENT; }
 };
