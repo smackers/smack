@@ -185,8 +185,8 @@ const Stmt* Stmt::call(std::string p, std::list<const Expr*> args, std::list<std
   return new CallStmt(p, attrs, args, rets);
 }
 
-const Stmt* Stmt::comment(std::string s, bool star) {
-  return new Comment(s, star);
+const Stmt* Stmt::comment(std::string s) {
+  return new Comment(s);
 }
 
 const Stmt* Stmt::goto_(std::list<std::string> ts) {
@@ -524,10 +524,7 @@ void CallStmt::print(std::ostream& os) const {
 }
 
 void Comment::print(std::ostream& os) const {
-  if(star)
-    os << "/* " << str << " */";
-  else
-    os << "// " << str;
+  os << "// " << str;
 }
 
 void GotoStmt::print(std::ostream& os) const {
