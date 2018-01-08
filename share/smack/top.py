@@ -358,15 +358,15 @@ def clang_frontend(args):
   """Generate Boogie code from C-language source(s)."""
 
   compile_command = default_clang_compile_command(args)
-  clang_frontend_helper(compile_command, args)
+  default_link_bc_files(compile_command, args)
 
 def objc_clang_frontend(args):
   """Generate Boogie code from Objective-C language source(s)."""
 
   compile_command = objc_clang_compile_command(args)
-  clang_frontend_helper(compile_command, args)
+  default_link_bc_files(compile_command, args)
 
-def clang_frontend_helper(compile_command, args):
+def default_link_bc_files(compile_command, args):
   """Allow abstraction over clang's programming languages."""
 
   bitcodes = []

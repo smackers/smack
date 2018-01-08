@@ -32,6 +32,9 @@ TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0
 
+# Programming Language support
+INSTALL_OBJECTIVEC=1
+
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
@@ -450,5 +453,18 @@ then
 
   puts "Regression tests complete"
 fi
+
+if [ ${INSTALL_OBJECTIVEC} -eq 1 ]
+then
+  puts "Installing GNU Objective-C for linux"
+
+  sudo apt-get -y install gobjc gnustep gnustep-make gnustep-common gnustep-devel
+  # The version numbers here will have to change by OS.
+  sudo ln -s /usr/lib/gcc/x86_64-linux-gnu/4.8/include/objc /usr/local/include/objc
+  echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ~/.bashrc
+  source ~/.bashrc
+
+  puts "Objective-C installed"
+fi 
 
 exit $res
