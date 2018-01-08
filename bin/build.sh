@@ -23,7 +23,7 @@
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
 INSTALL_RUST=1
-BUILD_Z3=1
+INSTALL_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
 BUILD_SYMBOOGLIX=1
@@ -31,7 +31,7 @@ BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
-BUILD_MONO=0
+BUILD_MONO=0 # mono is typically installed from packages (see below)
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
@@ -202,7 +202,7 @@ linux-ubuntu-12*)
 
 linux-cygwin*)
   BUILD_LLVM=1
-  BUILD_Z3=0
+  INSTALL_Z3=0
   BUILD_BOOGIE=0
   BUILD_CORRAL=0
   ;;
@@ -358,7 +358,7 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
 fi
 
 
-if [ ${BUILD_Z3} -eq 1 ] ; then
+if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
     puts "Installing Z3"
     mkdir -p ${Z3_DIR}
