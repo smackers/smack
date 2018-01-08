@@ -25,7 +25,7 @@ using llvm::errs;
 using namespace llvm;
 
 const bool CODE_WARN = true;
-const bool SHOW_ORIG = true;
+const bool SHOW_ORIG = false;
 
 #define WARN(str) \
     if (CODE_WARN) emit(Stmt::comment(std::string("WARNING: ") + str))
