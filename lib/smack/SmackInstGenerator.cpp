@@ -579,6 +579,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   processInstruction(ci);
 
   Function* f = ci.getCalledFunction();
+
   if (!f) {
     assert(ci.getCalledValue() && "Called value is null");
     f = cast<Function>(ci.getCalledValue()->stripPointerCasts());
@@ -593,6 +594,24 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   } else if (name.find("llvm.dbg.") != std::string::npos) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
+
+  } else if (name.find("llvm.expect.") != std::string::npos) {
+    Value* val = ci.getArgOperand(0);
+    emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
+
+  } else if (name.find("std") != std::string::npos &&
+	     name.find("rt") != std::string::npos &&
+	     name.find("lang_start") != std::string::npos)  {
+    auto castExpr = ci.getArgOperand(0);
+    if (auto CE = dyn_cast<const Constant>(castExpr)) {
+      auto mainFunc = CE->getOperand(0);
+      emit(Stmt::call(mainFunc->getName(), {},{}));
+    }
+
+  } else if (name.find("core") != std::string::npos &&
+	     name.find("panicking") != std::string::npos &&
+	     name.find("panic") != std::string::npos) {
+    emit(Stmt::assert_(Expr::lit(false), {Attr::attr("rust_panic")}));
 
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep->valueAnnotation(ci));

@@ -844,7 +844,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
-  if (name == "malloc") {
+  if (name == "malloc" || name == "je_mallocx") {
     Type* W = F->getFunctionType()->getParamType(0);
     assert(W->isIntegerTy() && "Expected integer argument.");
     unsigned width = W->getIntegerBitWidth();

@@ -25,6 +25,7 @@ def frontends():
     'cpp': clang_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
+    'rs': rust_frontend,
     'bc': llvm_frontend,
     'll': llvm_frontend,
     'bpl': boogie_frontend,
@@ -40,7 +41,8 @@ def results(args):
     'invalid-memtrack': 'SMACK found an error: memory leak.',
     'overflow': 'SMACK found an error: signed integer overflow.',
     'timeout': 'SMACK timed out.',
-    'unknown': 'SMACK result is unknown.'
+    'unknown': 'SMACK result is unknown.',
+    'rust_panic': "SMACK found an error: rust panic"
   }
 
 def inlined_procedures():
@@ -172,8 +174,8 @@ def arguments():
   translate_group.add_argument('--only-check-memleak', action='store_true', default=False,
     help='only enable memory leak checks')
 
-  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
-    help='enable signed integer overflow checks')
+  translate_group.add_argument('--integer-overflow', action='store_true', default=False,
+    help='enable integer overflow checks')
 
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
@@ -288,7 +290,7 @@ def smack_header_path():
 def smack_headers():
   paths = []
   paths.append(smack_header_path())
-  if args.memory_safety or args.signed_integer_overflow:
+  if args.memory_safety or args.integer_overflow:
     paths.append(os.path.join(smack_header_path(), 'string'))
   if args.float:
     paths.append(os.path.join(smack_header_path(), 'math'))
@@ -303,8 +305,12 @@ def default_clang_compile_command(args, lib = False):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DNOFLAG'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
+  return cmd
+
+def default_rust_compile_command(args):
+  cmd = ['rustc', '-g', '--emit=llvm-bc']
   return cmd
 
 def build_libs(args):
@@ -315,7 +321,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.strings or args.memory_safety or args.signed_integer_overflow:
+  if args.strings or args.memory_safety or args.integer_overflow:
     libs += ['string.c']
 
   if args.float:
@@ -355,6 +361,68 @@ def clang_frontend(args):
 
   try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
   try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
+  llvm_to_bpl(args)
+
+def insert_rust_macros(victim_filename, macros_filename, write_to=None):
+  '''
+  Inserts the file 'macros_filename' into the Rust file 'victim_filename'.
+  if 'write_to' is not None, then it is used as the output filename
+  Note: This doesn't currently work if there are multiline comments
+  at the top of the file.
+  '''
+  def continue_check(line):
+    '''Returns true if execution should keep scrolling down file'''
+    rust_comment    = '//'
+    rust_feature    = '#'
+    line = line.strip()
+    return (len(line) == 0 or
+             line.startswith(rust_comment) 
+             or line.startswith(rust_feature))
+  
+  macro_file_lines = []
+  with open(macros_filename, 'r') as m_file:
+    macro_file_lines = m_file.readlines()
+
+  victim_file_lines = []
+  index             = 0
+  with open(victim_filename, 'r') as v_file:
+    victim_file_lines = v_file.readlines()   
+    for line in victim_file_lines:
+      if not continue_check(line):
+        break
+      else:
+        index += 1
+
+  victim_file_lines = (victim_file_lines[0:index] 
+                        + macro_file_lines 
+                        + victim_file_lines[index:len(victim_file_lines)])
+  victim_file_str = ''.join(victim_file_lines)
+
+  if write_to is None:
+    write_to = victim_filename
+  with open(write_to, 'w') as out_file:
+    out_file.write(victim_file_str)
+
+def rust_frontend(args):
+  """Generate Boogie code from Rust-language source(s)."""
+
+  bitcodes = []
+  args.integer_overflow = True
+  rust_files = args.input_files
+  rust_compile_command = default_rust_compile_command(args)
+  rust_macros = os.path.join(smack_lib(), 'smack.rs')
+
+  for rs in args.input_files:
+    bc      = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
+    temp_rs = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.rs', args)
+
+    insert_rust_macros(rs, rust_macros, write_to=temp_rs)
+
+    try_command(rust_compile_command + [temp_rs, '-o', bc], console=True)
+    bitcodes.append(bc)
+
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file] + [args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
 
 def json_compilation_database_frontend(args):
@@ -403,7 +471,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
-  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
+  if args.integer_overflow: cmd += ['-integer-overflow']
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
   if args.split_aggregate_values: cmd += ['-split-aggregate-values']
@@ -494,6 +562,8 @@ def verification_result(verifier_output):
       return 'invalid-memtrack'
     elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
       return 'overflow'
+    elif re.search(r'ASSERTION FAILS assert {:rust_panic}', verifier_output):
+      return 'rust_panic'
     else:
       listCall = re.findall(r'\(CALL .+\)', verifier_output)
       if len(listCall) > 0 and re.search(r'free_', listCall[len(listCall)-1]):

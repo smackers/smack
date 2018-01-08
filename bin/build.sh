@@ -22,6 +22,7 @@
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
+INSTALL_RUST=1
 BUILD_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
@@ -236,7 +237,16 @@ done
 
 if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   puts "Installing required packages"
-
+  if [ ${INSTALL_RUST} -eq 1 ]
+  then
+    puts "Installing Rust"
+    ${WGET} https://static.rust-lang.org/dist/2016-12-16/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
+    tar xf rust.tar.gz
+    cd rust-nightly-x86_64-unknown-linux-gnu
+    sudo ./install.sh
+    cd ..
+  fi
+  
   case "$distro" in
   linux-opensuse*)
     sudo zypper --non-interactive install ${DEPENDENCIES}
