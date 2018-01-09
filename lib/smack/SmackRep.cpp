@@ -114,6 +114,19 @@ SmackRep::SmackRep(const DataLayout* L, Naming* N, Program* P, Regions* R)
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
+void SmackRep::addAuxiliaryDeclaration(Decl* D) {
+  if (auxDecls.count(D->getName()))
+    return;
+  auxDecls[D->getName()] = D;
+}
+
+std::list<Decl*> SmackRep::auxiliaryDeclarations() {
+  std::list<Decl*> ds;
+  for (auto D : auxDecls)
+    ds.push_back(D.second);
+  return ds;
+}
+
 std::string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
@@ -155,7 +168,13 @@ std::string SmackRep::intType(unsigned width) {
     return (SmackOptions::BitPrecise ? "bv" : "i") + std::to_string(width);
 }
 
-std::string SmackRep::opName(const std::string& operation, std::initializer_list<const llvm::Type*> types) {
+std::string SmackRep::vectorType(int n, Type *T) {
+  std::stringstream s;
+  s << Naming::VECTOR_TYPE << "." << n << "x" << type(T);
+  return s.str();
+}
+
+std::string SmackRep::opName(const std::string& operation, std::list<const llvm::Type*> types) {
   std::stringstream s;
   s << operation;
   for (auto t : types)
@@ -215,6 +234,9 @@ std::string SmackRep::type(const llvm::Type* t) {
   else if (t->isPointerTy())
     return Naming::PTR_TYPE;
 
+  else if (auto VT = dyn_cast<VectorType>(t))
+    return vectorType(VT->getNumElements(), VT->getElementType());
+
   else
     return Naming::PTR_TYPE;
 }
@@ -251,6 +273,10 @@ std::string SmackRep::memType(unsigned region) {
 
 std::string SmackRep::memPath(unsigned region) {
   return memReg(region);
+}
+
+std::string SmackRep::memPath(const llvm::Value* v) {
+  return memPath(regions->idx(v));
 }
 
 std::list< std::pair< std::string, std::string > > SmackRep::memoryMaps() {

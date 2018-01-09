@@ -12,15 +12,11 @@ namespace smack {
 
 unsigned Decl::uniqueId = 0;
 
-const Expr* Expr::exists(std::string v, std::string t, const Expr* e) {
-  std::list< std::pair<std::string,std::string> > vars;
-  vars.push_back({v,t});
+const Expr* Expr::exists(std::list<Binding> vars, const Expr* e) {
   return new QuantExpr(QuantExpr::Exists, vars, e);
 }
 
-const Expr* Expr::forall(std::string v, std::string t, const Expr* e) {
-  std::list< std::pair<std::string,std::string> > vars;
-  vars.push_back({v,t});
+const Expr* Expr::forall(std::list<Binding> vars, const Expr* e) {
   return new QuantExpr(QuantExpr::Forall, vars, e);
 }
 
@@ -113,6 +109,14 @@ const Expr* Expr::sel(const Expr* b, const Expr* i) {
 
 const Expr* Expr::sel(std::string b, std::string i) {
   return new SelExpr(id(b), id(i));
+}
+
+const Expr* Expr::upd(const Expr* b, const Expr* i, const Expr* v) {
+  return new UpdExpr(b, i, v);
+}
+
+const Expr* Expr::if_then_else(const Expr* c, const Expr* t, const Expr* e) {
+  return new IfThenElseExpr(c, t, e);
 }
 
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
@@ -209,13 +213,13 @@ const Stmt* Stmt::code(std::string s) {
   return new CodeStmt(s);
 }
 
-Decl* Decl::typee(std::string name, std::string type) {
-  return new TypeDecl(name,type);
+Decl* Decl::typee(std::string name, std::string type, std::list<const Attr*> attrs) {
+  return new TypeDecl(name,type,attrs);
 }
-Decl* Decl::axiom(const Expr* e) {
-  return new AxiomDecl(e);
+Decl* Decl::axiom(const Expr* e, std::string name) {
+  return new AxiomDecl(name, e);
 }
-FuncDecl* Decl::function(std::string name, std::list< std::pair<std::string,std::string> > args,
+FuncDecl* Decl::function(std::string name, std::list<Binding> args,
     std::string type, const Expr* e, std::list<const Attr*> attrs) {
   return new FuncDecl(name,attrs,args,type,e);
 }
@@ -232,7 +236,7 @@ Decl* Decl::variable(std::string name, std::string type) {
   return new VarDecl(name, type);
 }
 ProcDecl* Decl::procedure(std::string name,
-    std::list< std::pair<std::string,std::string> > args, std::list< std::pair<std::string,std::string> > rets,
+    std::list<Binding> args, std::list<Binding> rets,
     std::list<Decl*> decls, std::list<Block*> blocks) {
   return new ProcDecl(name, args, rets, decls, blocks);
 }
@@ -445,7 +449,7 @@ void QuantExpr::print(std::ostream& os) const {
     os << "exists ";
     break;
   }
-  print_seq< std::pair<std::string,std::string> >(os, vars, ",");
+  print_seq<Binding>(os, vars, ", ");
   os << " :: " << expr << ")";
 }
 
@@ -470,6 +474,10 @@ void CodeExpr::print(std::ostream& os) const {
     print_seq<Decl*>(os, decls, "  ", "\n  ", "\n");
   print_seq<Block*>(os, blocks, "\n");
   os << "\n" << "}|";
+}
+
+void IfThenElseExpr::print(std::ostream& os) const {
+  os << "if " << cond << " then " << true_value << " else " << false_value;
 }
 
 void StringLit::print(std::ostream& os) const {

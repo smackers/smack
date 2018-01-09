@@ -17,6 +17,7 @@ const std::string Naming::FLOAT_TYPE = "bvfloat";
 const std::string Naming::DOUBLE_TYPE = "bvdouble";
 const std::string Naming::LONG_DOUBLE_TYPE = "bvlongdouble";
 const std::string Naming::PTR_TYPE = "ref";
+const std::string Naming::VECTOR_TYPE = "vec";
 const std::string Naming::NULL_VAL = "$0.ref";
 
 const std::string Naming::INIT_FUNC_PREFIX = "__SMACK_init_func";
@@ -66,6 +67,7 @@ const std::string Naming::EXN_VAL_VAR = "$exnv";
 const std::string Naming::BOOL_VAR = "$b";
 const std::string Naming::FLOAT_VAR = "$f";
 const std::string Naming::INT_VAR = "$i";
+const std::string Naming::VECTOR_VAR = "$v";
 const std::string Naming::PTR_VAR = "$p";
 const std::string Naming::GLOBAL_VAR = "$g";
 const std::string Naming::UNDEF_SYM = "$u";
@@ -105,7 +107,10 @@ const std::map<unsigned,std::string> Naming::INSTRUCTION_TABLE {
   {Instruction::FSub, "$fsub"},
   {Instruction::FMul, "$fmul"},
   {Instruction::FDiv, "$fdiv"},
-  {Instruction::FRem, "$frem"}
+  {Instruction::FRem, "$frem"},
+  {Instruction::ShuffleVector, "$shufflevector"},
+  {Instruction::InsertElement, "$insertelement"},
+  {Instruction::ExtractElement, "$extractelement"}
 };
 
 const std::map<unsigned,std::string> Naming::CMPINST_TABLE {
@@ -253,6 +258,9 @@ std::string Naming::freshVarName(const Value& V) {
 
   else if (V.getType()->isIntegerTy())
     s << INT_VAR;
+
+  else if (auto VT = dyn_cast<VectorType>(V.getType()))
+    s << VECTOR_VAR;
 
   else
     s << PTR_VAR;

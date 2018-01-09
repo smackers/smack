@@ -37,7 +37,7 @@ installation support. The following versions are required:
 * [Vagrant][] version 1.7.2 or greater
 
 Once both are properly installed, launch [Vagrant][] by running the following
-command in SMACK.s root directory (that which contains `Vagrantfile`):
+command in SMACK's root directory (that which contains `Vagrantfile`):
 ````Shell
 vagrant up
 ````
@@ -76,9 +76,9 @@ Some distributions of Linux may have various SMACK dependencies like [Python][]
 installed out of the box. Nevertheless it is important to ensure that the
 required version numbers, as indicated above, are installed and selected for
 use. Generally speaking, apart from [Z3][], [Boogie][], and [Corral][], these
-dependencies can be installed via the system.s default package manager, such as
+dependencies can be installed via the system's default package manager, such as
 `apt-get`, `rpm`, or `yast`. In some cases, it may be necessary to specify
-alternate package repositories for the system.s default package manager, or to
+alternate package repositories for the system's default package manager, or to
 subvert the package manager altogether, and download, compile, and install the
 required project manually. The [Z3][], [Boogie][], and [Corral][] projects are
 generally not indexed by Linux package managers, and must be installed manually.
@@ -86,9 +86,14 @@ generally not indexed by Linux package managers, and must be installed manually.
 To facilitate the installation of SMACK and its requirements, we provide an
 automated [build.sh][] script in `bin/build.sh`. Running this script on a fresh
 installation of Ubuntu or openSUSE Linux should actually result in the full
-installation of SMACK and its requirements. However, we do not expect this
-script to work out of the box on all configurations. Instead, it can be used as
-reference guidelines for manual installation.
+installation of SMACK and its requirements, apart from setting the required
+environment variables in your shell's `.profile`. However, we do not expect
+this script to work out of the box on all configurations. Instead, it can be
+used as reference guidelines for manual installation.
+
+**NOTE** A common omission is to forget to set the required environment
+variables after the installation process, as indicated in the end of the build
+script.  Alternatively, you can read how to accomplish this below.
 
 ### Installation on OS X
 
@@ -119,7 +124,7 @@ and [Clang][] is problematic on some [Cygwin][] configurations. Please consult
 ### Installing SMACK Itself
 
 SMACK is built using [CMake][] via the following sequence of shell commands
-from SMACK.s root directory:
+from SMACK's root directory:
 ````Shell
 mkdir build
 cd build
@@ -141,7 +146,7 @@ residing in paths prefixed by `XXX` and `YYY`:
 export BOOGIE="mono /XXX/Boogie/Binaries/Boogie.exe"
 export CORRAL="mono /YYY/Corral/bin/Release/corral.exe"
 ````
-Source the preceding lines in your shell.s `.profile`, and ensure they invoke
+Source the preceding lines in your shell's `.profile`, and ensure they invoke
 Boogie/Corral correctly. For example, running
 ````Shell
 BOOGIE
@@ -172,7 +177,7 @@ shell in the `test` directory by executing
 [Clang]: http://clang.llvm.org
 [Clang-3.9.1]: http://llvm.org/releases/download.html#3.9.1
 [Boogie]: https://github.com/boogie-org/boogie
-[Corral]: https://corral.codeplex.com/
+[Corral]: https://github.com/boogie-org/corral
 [Z3]: https://github.com/Z3Prover/z3/
 [Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com

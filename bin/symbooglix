@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ -z "$SYMBOOGLIX" ] ; then
+  echo "The required SYMBOOGLIX environment variable is not set. See SMACK documentation for details."
+  exit 1
+fi
+$SYMBOOGLIX "$@"

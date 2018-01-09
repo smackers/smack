@@ -31,6 +31,7 @@ public:
   static const std::string DOUBLE_TYPE;
   static const std::string LONG_DOUBLE_TYPE;
   static const std::string PTR_TYPE;
+  static const std::string VECTOR_TYPE;
   static const std::string NULL_VAL;
 
   static const std::string INIT_FUNC_PREFIX;
@@ -80,6 +81,7 @@ public:
   static const std::string BOOL_VAR;
   static const std::string FLOAT_VAR;
   static const std::string INT_VAR;
+  static const std::string VECTOR_VAR;
   static const std::string PTR_VAR;
   static const std::string GLOBAL_VAR;
   static const std::string UNDEF_SYM;

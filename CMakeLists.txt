@@ -172,6 +172,7 @@ add_library(smackTranslator STATIC
   include/smack/VerifierCodeMetadata.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
+  include/smack/VectorOperations.h
   include/smack/MemorySafetyChecker.h
   include/smack/IntegerOverflowChecker.h
   include/smack/SplitAggregateLoadStore.h
@@ -192,6 +193,7 @@ add_library(smackTranslator STATIC
   lib/smack/VerifierCodeMetadata.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
+  lib/smack/VectorOperations.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/IntegerOverflowChecker.cpp
   lib/smack/SplitAggregateLoadStore.cpp
@@ -211,6 +213,7 @@ INSTALL(TARGETS llvm2bpl
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/symbooglix
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/lockpwn
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
