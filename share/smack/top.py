@@ -172,8 +172,8 @@ def arguments():
   translate_group.add_argument('--only-check-memleak', action='store_true', default=False,
     help='only enable memory leak checks')
 
-  translate_group.add_argument('--integer-overflow', action='store_true', default=False,
-    help='enable integer overflow checks')
+  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
+    help='enable signed integer overflow checks')
 
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
@@ -186,7 +186,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp'], default='corral',
+    choices=['boogie', 'corral', 'symbooglix', 'duality', 'svcomp'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -288,7 +288,7 @@ def smack_header_path():
 def smack_headers():
   paths = []
   paths.append(smack_header_path())
-  if args.memory_safety or args.integer_overflow:
+  if args.memory_safety or args.signed_integer_overflow:
     paths.append(os.path.join(smack_header_path(), 'string'))
   if args.float:
     paths.append(os.path.join(smack_header_path(), 'math'))
@@ -303,7 +303,7 @@ def default_clang_compile_command(args, lib = False):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+  if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 
@@ -315,7 +315,7 @@ def build_libs(args):
   if args.pthread:
     libs += ['pthread.c']
 
-  if args.strings or args.memory_safety or args.integer_overflow:
+  if args.strings or args.memory_safety or args.signed_integer_overflow:
     libs += ['string.c']
 
   if args.float:
@@ -403,7 +403,7 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
-  if args.integer_overflow: cmd += ['-integer-overflow']
+  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
   if args.split_aggregate_values: cmd += ['-split-aggregate-values']
@@ -481,11 +481,11 @@ def transform_out(args, old):
   return out
 
 def verification_result(verifier_output):
-  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT', verifier_output):
     return 'timeout'
-  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT', verifier_output):
     return 'verified'
-  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
+  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT', verifier_output):
     if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
       return 'invalid-deref'
     elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
@@ -529,6 +529,14 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
+	
+  elif args.verifier == 'symbooglix':
+    command = ['symbooglix']
+    command += [args.bpl_file]
+    command += ["--file-logging=0"]
+    command += ["--entry-points=%s" % ",".join(args.entry_points)]
+    command += ["--timeout=%d" % args.time_limit]
+    command += ["--max-loop-depth=%d" % args.unroll]
 
   else:
     # Duality!
@@ -536,7 +544,7 @@ def verify_bpl(args):
     command += ["/tryCTrace", "/noTraceOnDisk", "/useDuality", "/oldStratifiedInlining"]
     command += ["/recursionBound:1073741824", "/k:1"]
 
-  if args.bit_precise:
+  if args.bit_precise and args.verifier != 'symbooglix':
     x = "bopt:" if args.verifier != 'boogie' else ""
     command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
     command += ["/%sboolControlVC" % x]
