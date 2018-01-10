@@ -62,9 +62,9 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
-static llvm::cl::opt<bool>
+/*static llvm::cl::opt<bool>
 IntegerOverflow("integer-overflow", llvm::cl::desc("Enable integer overflow checks"),
-  llvm::cl::init(false));
+llvm::cl::init(false)); */
 
 static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
@@ -186,8 +186,7 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 
-  if (IntegerOverflow)
-    pass_manager.add(new smack::IntegerOverflowChecker());
+  pass_manager.add(new smack::IntegerOverflowChecker());
 
 
   if(smack::SmackOptions::AddTiming){
