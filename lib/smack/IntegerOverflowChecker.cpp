@@ -45,8 +45,11 @@ std::string getMin(unsigned bits, bool is_signed) {
 
 bool IntegerOverflowChecker::runOnModule(Module& m) {
   Function* va = m.getFunction("__SMACK_overflow_false");
+  assert(va != NULL && "Function __SMACK_overflow_false should be present.");
   Function* co = m.getFunction("__SMACK_check_overflow");
+  assert(co != NULL && "Function __SMACK_check_overflow should be present.");
   Function* verif_assume = m.getFunction("__VERIFIER_assume");
+  assert(verif_assume != NULL && "Function __VERIFIER_assume should be present.");
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
@@ -104,12 +107,12 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
 		  // Check for an overflow
 		  ArrayRef<Value*> check_overflow_args(flag);
 		  Instruction* check_overflow = CallInst::Create(co, check_overflow_args, "");
-		  flag->insertAfter(check_overflow);
+		  check_overflow->insertAfter(flag);
 
 		  // Block paths after an assertion failure
 		  ArrayRef<Value*> assume_args(flag);
 		  Instruction* v_assume = CallInst::Create(verif_assume, assume_args, "");
-		  check_overflow->insertAfter(v_assume);
+		  v_assume->insertAfter(check_overflow);
 
 
 		} else {
