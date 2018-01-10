@@ -13,6 +13,7 @@ namespace smack {
 class IntegerOverflowChecker: public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
+  const char* getPassName() const;
   IntegerOverflowChecker() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& m);
 private:
