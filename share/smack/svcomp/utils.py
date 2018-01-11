@@ -30,7 +30,7 @@ def svcomp_frontend(args):
     if file_type == 'bitvector':
       args.bit_precise = True
       args.bit_precise_pointers = True
-    if file_type == 'float' and not args.signed_integer_overflow:
+    if file_type == 'float' and not args.integer_overflow:
       #sys.exit(smack.top.results(args)['unknown'])
       args.float = True
       args.bit_precise = True
@@ -70,7 +70,7 @@ def svcomp_check_property(args):
     if "valid-deref" in prop:
       args.memory_safety = True
     elif "overflow" in prop:
-      args.signed_integer_overflow = True
+      args.integer_overflow = True
     elif not "__VERIFIER_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
@@ -106,7 +106,7 @@ def svcomp_process_file(args, name, ext):
 
     if 'argv=malloc' in s:
 #      args.bit_precise = True
-      if args.signed_integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
+      if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
         args.bit_precise = True
         args.bit_precise_pointers = True
 
@@ -284,10 +284,10 @@ def verify_bpl_svcomp(args):
   elif args.memory_safety and "__main($i0" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
-  elif args.signed_integer_overflow and "__main($i0" in bpl:
+  elif args.integer_overflow and "__main($i0" in bpl:
     heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
-  elif args.signed_integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
+  elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
 

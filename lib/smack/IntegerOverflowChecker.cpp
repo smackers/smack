@@ -73,14 +73,14 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                 Instruction* prev = &*std::prev(I);
                 Value* o1 = ci->getArgOperand(0);
                 Value* o2 = ci->getArgOperand(1);
-		CastInst* so1, *so2;
-		if (is_signed) {
-		  so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		  so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		} else {
-		  so1 = CastInst::CreateZExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		  so2 = CastInst::CreateZExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-		}
+                CastInst* so1, *so2;
+                if (is_signed) {
+                  so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                  so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                } else {
+                  so1 = CastInst::CreateZExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                  so2 = CastInst::CreateZExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
+                }
 
                 BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), so1, so2, "", &*I);
                 if (prev && isa<ExtractValueInst>(prev)) {
@@ -89,39 +89,36 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                     if (pci == ci) {
                       CastInst* tr = CastInst::CreateTruncOrBitCast(ai, IntegerType::get(F.getContext(), bits), "", &*I);
                       prev->replaceAllUsesWith(tr);
+                      inst_to_remove.push_back(prev);
                     }
                   }
                 }
 
-		BinaryOperator* flag;
-		if (smack::SmackOptions::IntegerOverflow) {
-		  ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, is_signed), 10);
-		  ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, is_signed), 10);
-		  CmpInst::Predicate max_cmp = (is_signed ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-		  CmpInst::Predicate min_cmp = (is_signed ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
-		  ICmpInst* gt = new ICmpInst(&*I, max_cmp, ai, max, "");
-		  ICmpInst* lt = new ICmpInst(&*I, min_cmp, ai, min, "");
-		  flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
-		  I->replaceAllUsesWith(flag);
-		  inst_to_remove.push_back(&*I);
+                BinaryOperator* flag;
+                inst_to_remove.push_back(&*I);
+                if (smack::SmackOptions::IntegerOverflow) {
+                  ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, is_signed), 10);
+                  ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, is_signed), 10);
+                  CmpInst::Predicate max_cmp = (is_signed ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
+                  CmpInst::Predicate min_cmp = (is_signed ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+                  ICmpInst* gt = new ICmpInst(&*I, max_cmp, ai, max, "");
+                  ICmpInst* lt = new ICmpInst(&*I, min_cmp, ai, min, "");
+                  flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
 
-		  // Check for an overflow
-		  ArrayRef<Value*> check_overflow_args(flag);
-		  Instruction* check_overflow = CallInst::Create(co, check_overflow_args, "");
-		  check_overflow->insertAfter(flag);
+                  // Check for an overflow
+                  ArrayRef<Value*> check_overflow_args(flag);
+                  CallInst::Create(co, check_overflow_args, "", &*I);
 
-		  // Block paths after an assertion failure
-		  ArrayRef<Value*> assume_args(flag);
-		  Instruction* v_assume = CallInst::Create(verif_assume, assume_args, "");
-		  v_assume->insertAfter(check_overflow);
+                  // Block paths after an assertion failure
+                  ArrayRef<Value*> assume_args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", &*I),
+                        verif_assume->arg_begin()->getType(), false, "", &*I));
+                  CallInst::Create(verif_assume, assume_args, "", &*I);
 
-
-		} else {
-		  ConstantInt* a = ConstantInt::getFalse(F.getContext());
-		  flag = BinaryOperator::Create(Instruction::And, a, a, "", &*I);
-		  I->replaceAllUsesWith(flag);
-		  inst_to_remove.push_back(&*I);
-		}
+                } else {
+                  ConstantInt* a = ConstantInt::getFalse(F.getContext());
+                  flag = BinaryOperator::Create(Instruction::And, a, a, "", &*I);
+                }
+                I->replaceAllUsesWith(flag);
               }
             }
           }
