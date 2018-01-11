@@ -62,10 +62,6 @@ static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
-/*static llvm::cl::opt<bool>
-IntegerOverflow("integer-overflow", llvm::cl::desc("Enable integer overflow checks"),
-llvm::cl::init(false)); */
-
 static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
   llvm::cl::init(false));
