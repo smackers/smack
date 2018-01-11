@@ -26,7 +26,7 @@ const std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INST
   {"mul", Instruction::Mul}
 };
 
-std::string getMax(unsigned bits, bool isSigned) {
+std::string IntegerOverflowChecker::getMax(unsigned bits, bool isSigned) {
   if (isSigned) {
     return APInt::getSignedMaxValue(bits).toString(10, true);
   } else {
@@ -34,7 +34,7 @@ std::string getMax(unsigned bits, bool isSigned) {
   }
 }
 
-std::string getMin(unsigned bits, bool isSigned) {
+std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
   if (isSigned) {
     return APInt::getSignedMinValue(bits).toString(10, true);
   } else {
@@ -42,8 +42,8 @@ std::string getMin(unsigned bits, bool isSigned) {
   }
 }
 
-Value* IntegerOverflowChecker::extValue(Value* v, int bits, bool isSigned, Instruction* i, bool check) {
-  if (check) {
+Value* IntegerOverflowChecker::extendBitWidth(Value* v, int bits, bool isSigned, Instruction* i) {
+  if (SmackOptions::IntegerOverflow) {
     if (isSigned) {
       return CastInst::CreateSExtOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits*2), "", i);
     } else {
@@ -53,8 +53,8 @@ Value* IntegerOverflowChecker::extValue(Value* v, int bits, bool isSigned, Instr
     return v;
 }
 
-BinaryOperator* IntegerOverflowChecker::mkFlag(Value* v, int bits, bool isSigned, Instruction* i, bool check) {
-  if (check) {
+BinaryOperator* IntegerOverflowChecker::createFlag(Value* v, int bits, bool isSigned, Instruction* i) {
+  if (SmackOptions::IntegerOverflow) {
     ConstantInt* max = ConstantInt::get(IntegerType::get(i->getFunction()->getContext(), bits*2), getMax(bits, isSigned), 10);
     ConstantInt* min = ConstantInt::get(IntegerType::get(i->getFunction()->getContext(), bits*2), getMin(bits, isSigned), 10);
     CmpInst::Predicate maxCmpPred = (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
@@ -68,19 +68,19 @@ BinaryOperator* IntegerOverflowChecker::mkFlag(Value* v, int bits, bool isSigned
   }
 }
 
-Value* IntegerOverflowChecker::mkResult(Value* v, int bits, Instruction* i, bool check) {
-  if (check)
+Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) {
+  if (SmackOptions::IntegerOverflow)
     return CastInst::CreateTruncOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
   else
     return v;
 }
 
-void IntegerOverflowChecker::mkCheck(Function* co, BinaryOperator* flag, Instruction* i) {
+void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
   CallInst::Create(co, args, "", i);
 }
 
-void IntegerOverflowChecker::mkBlockingAssume(Function* va, BinaryOperator* flag, Instruction* i) {
+void IntegerOverflowChecker::addBlockingAssume(Function* va, BinaryOperator* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
         va->arg_begin()->getType(), false, "", i));
   CallInst::Create(va, args, "", i);
@@ -93,53 +93,53 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
   std::vector<Instruction*> instToRemove;
   for (auto& F : m) {
-    if (!Naming::isSmackName(F.getName())) {
-      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-        if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
-          if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
-            Function* f = ci->getCalledFunction();
-            SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
-            if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-              if (ei->getIndices()[0] == 1) {
-                Instruction* prev = &*std::prev(I);
-                bool isSigned = ar->begin()[1].str() == "s";
-                std::string op = ar->begin()[2].str();
-                std::string len = ar->begin()[3].str();
-                int bits = std::stoi(len);
-                Value* eo1 = extValue(ci->getArgOperand(0), bits, isSigned, &*I, SmackOptions::IntegerOverflow);
-                Value* eo2 = extValue(ci->getArgOperand(1), bits, isSigned, &*I, SmackOptions::IntegerOverflow);
-                BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
-                if (prev && isa<ExtractValueInst>(prev)) {
-                  ExtractValueInst* pei = cast<ExtractValueInst>(prev);
-                  if (auto pci = dyn_cast<CallInst>(pei->getAggregateOperand())) {
-                    if (pci == ci) {
-                      Value* r = mkResult(ai, bits, &*I, SmackOptions::IntegerOverflow);
-                      prev->replaceAllUsesWith(r);
-                      instToRemove.push_back(prev);
-                    }
+    if (!Naming::isSmackName(F.getName()))
+      continue;
+    for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+      if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
+        if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
+          Function* f = ci->getCalledFunction();
+          SmallVectorImpl<StringRef> *info = new SmallVector<StringRef, 3>;
+          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), info)) {
+            if (ei->getIndices()[0] == 1) {
+              Instruction* prev = &*std::prev(I);
+              bool isSigned = info->begin()[1].str() == "s";
+              std::string op = info->begin()[2].str();
+              std::string len = info->begin()[3].str();
+              int bits = std::stoi(len);
+              Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
+              Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
+              BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
+              if (prev && isa<ExtractValueInst>(prev)) {
+                ExtractValueInst* pei = cast<ExtractValueInst>(prev);
+                if (auto pci = dyn_cast<CallInst>(pei->getAggregateOperand())) {
+                  if (pci == ci) {
+                    Value* r = createResult(ai, bits, &*I);
+                    prev->replaceAllUsesWith(r);
+                    instToRemove.push_back(prev);
                   }
                 }
-                BinaryOperator* flag = mkFlag(ai, bits, isSigned, &*I, SmackOptions::IntegerOverflow);
-                mkCheck(co, flag, &*I);
-                mkBlockingAssume(va, flag, &*I);
-                I->replaceAllUsesWith(flag);
-                instToRemove.push_back(&*I);
               }
+              BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
+              addCheck(co, flag, &*I);
+              addBlockingAssume(va, flag, &*I);
+              I->replaceAllUsesWith(flag);
+              instToRemove.push_back(&*I);
             }
           }
         }
-        if (auto sdi = dyn_cast<BinaryOperator>(&*I)) {
-          if (sdi->getOpcode() == Instruction::SDiv && SmackOptions::IntegerOverflow) {
-            int bits = sdi->getType()->getIntegerBitWidth();
-            Value* eo1 = extValue(sdi->getOperand(0), bits, true, &*I);
-            Value* eo2 = extValue(sdi->getOperand(1), bits, true, &*I);
-            BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, eo1, eo2, "", &*I);
-            BinaryOperator* flag = mkFlag(lsdi, bits, true, &*I, smack::SmackOptions::IntegerOverflow);
-            mkCheck(co, flag, &*I);
-            Value* r = mkResult(lsdi, bits, &*I);
-            I->replaceAllUsesWith(r);
-            instToRemove.push_back(&*I);
-          }
+      }
+      if (auto sdi = dyn_cast<BinaryOperator>(&*I)) {
+        if (sdi->getOpcode() == Instruction::SDiv && SmackOptions::IntegerOverflow) {
+          int bits = sdi->getType()->getIntegerBitWidth();
+          Value* eo1 = extendBitWidth(sdi->getOperand(0), bits, true, &*I);
+          Value* eo2 = extendBitWidth(sdi->getOperand(1), bits, true, &*I);
+          BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, eo1, eo2, "", &*I);
+          BinaryOperator* flag = createFlag(lsdi, bits, true, &*I);
+          addCheck(co, flag, &*I);
+          Value* r = createResult(lsdi, bits, &*I);
+          I->replaceAllUsesWith(r);
+          instToRemove.push_back(&*I);
         }
       }
     }

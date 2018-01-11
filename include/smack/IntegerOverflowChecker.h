@@ -14,16 +14,18 @@ namespace smack {
 class IntegerOverflowChecker: public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  const char* getPassName() const;
   IntegerOverflowChecker() : llvm::ModulePass(ID) {}
+  const char* getPassName() const;
   virtual bool runOnModule(llvm::Module& m);
 private:
   static const std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
-  llvm::Value* extValue(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i, bool check = true);
-  llvm::BinaryOperator* mkFlag(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i, bool check = true);
-  llvm::Value* mkResult(llvm::Value* v, int bits, llvm::Instruction* i, bool check = true);
-  void mkCheck(llvm::Function* co, llvm::BinaryOperator* flag, llvm::Instruction* i);
-  void mkBlockingAssume(llvm::Function* va, llvm::BinaryOperator* flag, llvm::Instruction* i);
+  std::string getMax(unsigned bits, bool isSigned);
+  std::string getMin(unsigned bits, bool isSigned);
+  llvm::Value* extendBitWidth(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i);
+  llvm::BinaryOperator* createFlag(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i);
+  llvm::Value* createResult(llvm::Value* v, int bits, llvm::Instruction* i);
+  void addCheck(llvm::Function* co, llvm::BinaryOperator* flag, llvm::Instruction* i);
+  void addBlockingAssume(llvm::Function* va, llvm::BinaryOperator* flag, llvm::Instruction* i);
 };
 }
 
