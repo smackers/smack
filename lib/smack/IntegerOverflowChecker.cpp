@@ -106,7 +106,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                   flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
 
                   // Check for an overflow
-                  ArrayRef<Value*> check_overflow_args(flag);
+                  ArrayRef<Value*> check_overflow_args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", &*I));
                   CallInst::Create(co, check_overflow_args, "", &*I);
 
                   // Block paths after an assertion failure
