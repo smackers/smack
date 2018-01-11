@@ -50,6 +50,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
   assert(co != NULL && "Function __SMACK_check_overflow should be present.");
   Function* verif_assume = m.getFunction("__VERIFIER_assume");
   assert(verif_assume != NULL && "Function __VERIFIER_assume should be present.");
+  std::vector<Instruction*> inst_to_remove;
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
@@ -102,7 +103,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
 		  ICmpInst* lt = new ICmpInst(&*I, min_cmp, ai, min, "");
 		  flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
 		  I->replaceAllUsesWith(flag);
-		  I->removeFromParent();  
+		  inst_to_remove.push_back(&*I);
 
 		  // Check for an overflow
 		  ArrayRef<Value*> check_overflow_args(flag);
@@ -119,7 +120,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
 		  ConstantInt* a = ConstantInt::getFalse(F.getContext());
 		  flag = BinaryOperator::Create(Instruction::And, a, a, "", &*I);
 		  I->replaceAllUsesWith(flag);
-		  I->removeFromParent();
+		  inst_to_remove.push_back(&*I);
 		}
               }
             }
@@ -146,6 +147,9 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
         }
       }
     }
+  }
+  for (auto I : inst_to_remove) {
+    I->removeFromParent();
   }
   return true;
 }
