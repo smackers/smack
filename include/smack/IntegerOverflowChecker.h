@@ -6,6 +6,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Instructions.h"
 #include <map>
 
 namespace smack {
@@ -17,10 +18,13 @@ public:
   IntegerOverflowChecker() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& m);
 private:
-  static std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
-  void replaceValue(llvm::Value* ee, llvm::Value* er);
+  static const std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
+  llvm::Value* extValue(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i, bool check = true);
+  llvm::BinaryOperator* mkFlag(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i, bool check = true);
+  llvm::Value* mkResult(llvm::Value* v, int bits, llvm::Instruction* i, bool check = true);
+  void mkCheck(llvm::Function* co, llvm::BinaryOperator* flag, llvm::Instruction* i);
+  void mkBlockingAssume(llvm::Function* va, llvm::BinaryOperator* flag, llvm::Instruction* i);
 };
-
 }
 
 #endif //INTEGEROVERFLOWCHECKER_H

@@ -54,7 +54,8 @@ def inlined_procedures():
     '__VERIFIER_',
     '$initialize',
     '__SMACK_static_init',
-    '__SMACK_init_func_memory_model'
+    '__SMACK_init_func_memory_model',
+    '__SMACK_check_overflow'
   ]
 
 def validate_input_file(file):
