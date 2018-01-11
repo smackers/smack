@@ -21,11 +21,13 @@ using namespace llvm;
 
 Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
 
-std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTION_TABLE {
+const std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTION_TABLE {
   {"add", Instruction::Add},
   {"sub", Instruction::Sub},
   {"mul", Instruction::Mul}
 };
+
+
 
 std::string getMax(unsigned bits, bool is_signed) {
   if (is_signed) {
@@ -48,9 +50,9 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
   assert(va != NULL && "Function __SMACK_overflow_false should be present.");
   Function* co = m.getFunction("__SMACK_check_overflow");
   assert(co != NULL && "Function __SMACK_check_overflow should be present.");
-  Function* verif_assume = m.getFunction("__VERIFIER_assume");
-  assert(verif_assume != NULL && "Function __VERIFIER_assume should be present.");
-  std::vector<Instruction*> inst_to_remove;
+  Function* verifierAssume = m.getFunction("__VERIFIER_assume");
+  assert(verifierAssume != NULL && "Function __VERIFIER_assume should be present.");
+  std::vector<Instruction*> instToRemove;
   for (auto& F : m) {
     if (!Naming::isSmackName(F.getName())) {
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
@@ -65,7 +67,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
             Function* f = ci->getCalledFunction();
             SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
             if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-              bool is_signed = ar->begin()[1].str() == "s";
+              bool isSigned = ar->begin()[1].str() == "s";
               std::string op = ar->begin()[2].str();
               std::string len = ar->begin()[3].str();
               int bits = std::stoi(len);
@@ -74,7 +76,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                 Value* o1 = ci->getArgOperand(0);
                 Value* o2 = ci->getArgOperand(1);
                 CastInst* so1, *so2;
-                if (is_signed) {
+                if (isSigned) {
                   so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
                   so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
                 } else {
@@ -89,20 +91,20 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                     if (pci == ci) {
                       CastInst* tr = CastInst::CreateTruncOrBitCast(ai, IntegerType::get(F.getContext(), bits), "", &*I);
                       prev->replaceAllUsesWith(tr);
-                      inst_to_remove.push_back(prev);
+                      instToRemove.push_back(prev);
                     }
                   }
                 }
 
                 BinaryOperator* flag;
-                inst_to_remove.push_back(&*I);
+                instToRemove.push_back(&*I);
                 if (smack::SmackOptions::IntegerOverflow) {
-                  ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, is_signed), 10);
-                  ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, is_signed), 10);
-                  CmpInst::Predicate max_cmp = (is_signed ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-                  CmpInst::Predicate min_cmp = (is_signed ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
-                  ICmpInst* gt = new ICmpInst(&*I, max_cmp, ai, max, "");
-                  ICmpInst* lt = new ICmpInst(&*I, min_cmp, ai, min, "");
+                  ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, isSigned), 10);
+                  ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, isSigned), 10);
+                  CmpInst::Predicate maxCmp = (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
+                  CmpInst::Predicate minCmp = (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+                  ICmpInst* gt = new ICmpInst(&*I, maxCmp, ai, max, "");
+                  ICmpInst* lt = new ICmpInst(&*I, minCmp, ai, min, "");
                   flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
 
                   // Check for an overflow
@@ -110,9 +112,9 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                   CallInst::Create(co, check_overflow_args, "", &*I);
 
                   // Block paths after an assertion failure
-                  ArrayRef<Value*> assume_args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", &*I),
-                        verif_assume->arg_begin()->getType(), false, "", &*I));
-                  CallInst::Create(verif_assume, assume_args, "", &*I);
+                  ArrayRef<Value*> assumeArgs(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", &*I),
+                        verifierAssume->arg_begin()->getType(), false, "", &*I));
+                  CallInst::Create(verifierAssume, assumeArgs, "", &*I);
 
                 } else {
                   ConstantInt* a = ConstantInt::getFalse(F.getContext());
@@ -145,7 +147,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
       }
     }
   }
-  for (auto I : inst_to_remove) {
+  for (auto I : instToRemove) {
     I->removeFromParent();
   }
   return true;

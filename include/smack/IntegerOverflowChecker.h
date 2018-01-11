@@ -17,7 +17,7 @@ public:
   IntegerOverflowChecker() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module& m);
 private:
-  static std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
+  static const std::map<std::string, llvm::Instruction::BinaryOps> INSTRUCTION_TABLE;
   void replaceValue(llvm::Value* ee, llvm::Value* er);
 };
 
