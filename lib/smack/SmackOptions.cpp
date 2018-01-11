@@ -55,6 +55,9 @@ const llvm::cl::opt<bool> SmackOptions::FloatEnabled(
 const llvm::cl::opt<bool> SmackOptions::MemorySafety(
   "memory-safety", llvm::cl::desc("Enable memory safety checks"));
 
+const llvm::cl::opt<bool> SmackOptions::IntegerOverflow(
+  "integer-overflow", llvm::cl::desc("Enable checking of integer arithmetic"));
+
 bool SmackOptions::isEntryPoint(std::string name) {
   for (auto EP : EntryPoints)
     if (name == EP)
