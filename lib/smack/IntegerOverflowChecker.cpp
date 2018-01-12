@@ -93,7 +93,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
   std::vector<Instruction*> instToRemove;
   for (auto& F : m) {
-    if (!Naming::isSmackName(F.getName()))
+    if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
       if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
