@@ -27,28 +27,25 @@ const std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INST
 };
 
 std::string IntegerOverflowChecker::getMax(unsigned bits, bool isSigned) {
-  if (isSigned) {
+  if (isSigned)
     return APInt::getSignedMaxValue(bits).toString(10, true);
-  } else {
+  else
     return APInt::getMaxValue(bits).toString(10, false);
-  }
 }
 
 std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
-  if (isSigned) {
+  if (isSigned)
     return APInt::getSignedMinValue(bits).toString(10, true);
-  } else {
+  else
     return APInt::getMinValue(bits).toString(10, false);
-  }
 }
 
 Value* IntegerOverflowChecker::extendBitWidth(Value* v, int bits, bool isSigned, Instruction* i) {
   if (SmackOptions::IntegerOverflow) {
-    if (isSigned) {
+    if (isSigned)
       return CastInst::CreateSExtOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits*2), "", i);
-    } else {
+    else
       return CastInst::CreateZExtOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits*2), "", i);
-    }
   } else
     return v;
 }
@@ -111,12 +108,10 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
               Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
               BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
               if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
-                if (auto pci = dyn_cast<CallInst>(pei->getAggregateOperand())) {
-                  if (pci == ci) {
-                    Value* r = createResult(ai, bits, &*I);
-                    prev->replaceAllUsesWith(r);
-                    instToRemove.push_back(prev);
-                  }
+                if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
+                  Value* r = createResult(ai, bits, &*I);
+                  prev->replaceAllUsesWith(r);
+                  instToRemove.push_back(prev);
                 }
               }
               BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
