@@ -110,8 +110,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
               Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
               Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
               BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
-              if (prev && isa<ExtractValueInst>(prev)) {
-                ExtractValueInst* pei = cast<ExtractValueInst>(prev);
+              if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
                 if (auto pci = dyn_cast<CallInst>(pei->getAggregateOperand())) {
                   if (pci == ci) {
                     Value* r = createResult(ai, bits, &*I);
@@ -121,7 +120,8 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
                 }
               }
               BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
-              addCheck(co, flag, &*I);
+              if (SmackOptions::IntegerOverflow)
+                addCheck(co, flag, &*I);
               addBlockingAssume(va, flag, &*I);
               I->replaceAllUsesWith(flag);
               instToRemove.push_back(&*I);
