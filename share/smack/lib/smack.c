@@ -50,15 +50,9 @@ void __VERIFIER_error(void) {
 #endif
 }
 
-#if SIGNED_INTEGER_OVERFLOW_CHECK
-void __SMACK_overflow_false(void) {
-  __SMACK_code("assert {:overflow} false;");
-}
-
 void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag); __SMACK_code("assert {:overflow} @ == $0;", flag);
 }
-#endif
 
 void exit(int x) {
 #if MEMORY_SAFETY

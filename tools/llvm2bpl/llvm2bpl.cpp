@@ -39,7 +39,7 @@
 #include "smack/VerifierCodeMetadata.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
-#include "smack/SignedIntegerOverflowChecker.h"
+#include "smack/IntegerOverflowChecker.h"
 #include "smack/SplitAggregateLoadStore.h"
 
 static llvm::cl::opt<std::string>
@@ -61,10 +61,6 @@ StaticUnroll("static-unroll", llvm::cl::desc("Use LLVM to statically unroll loop
 static llvm::cl::opt<std::string>
 DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to use if not specified by module"),
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
-
-static llvm::cl::opt<bool>
-SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
-  llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
@@ -186,8 +182,7 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 
-  if (SignedIntegerOverflow)
-    pass_manager.add(new smack::SignedIntegerOverflowChecker());
+  pass_manager.add(new smack::IntegerOverflowChecker());
 
 
   if(smack::SmackOptions::AddTiming){
