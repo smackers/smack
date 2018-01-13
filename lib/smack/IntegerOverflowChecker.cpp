@@ -1,6 +1,12 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+
+//
+// This pass converts LLVM's checked integer-arithmetic operations into basic
+// operations, and optionally allows for the checking of overflow.
+//
+
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/Naming.h"
 #include "llvm/IR/Module.h"
@@ -40,6 +46,10 @@ std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
     return APInt::getMinValue(bits).toString(10, false);
 }
 
+/*
+ * Optionally generates a double wide version of v for the purpose of detecting
+ * overflow.
+ */
 Value* IntegerOverflowChecker::extendBitWidth(Value* v, int bits, bool isSigned, Instruction* i) {
   if (SmackOptions::IntegerOverflow) {
     if (isSigned)
@@ -50,6 +60,10 @@ Value* IntegerOverflowChecker::extendBitWidth(Value* v, int bits, bool isSigned,
     return v;
 }
 
+/*
+ * Generates instructions to determine whether a Value v is is out of range for
+ * its bit width and sign.
+ */
 BinaryOperator* IntegerOverflowChecker::createFlag(Value* v, int bits, bool isSigned, Instruction* i) {
   if (SmackOptions::IntegerOverflow) {
     ConstantInt* max = ConstantInt::get(IntegerType::get(i->getFunction()->getContext(), bits*2), getMax(bits, isSigned), 10);
@@ -65,6 +79,9 @@ BinaryOperator* IntegerOverflowChecker::createFlag(Value* v, int bits, bool isSi
   }
 }
 
+/*
+ * Create an instruction to cast v to bits size.
+ */
 Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) {
   if (SmackOptions::IntegerOverflow)
     return CastInst::CreateTruncOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
@@ -72,11 +89,19 @@ Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) 
     return v;
 }
 
+/*
+ * This adds a call instruction to __SMACK_check_overflow to determine if an
+ * overflow occured as indicated by flag.
+ */
 void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
   CallInst::Create(co, args, "", i);
 }
 
+/*
+ * This inserts a call to assume with flag negated to prevent the verifier
+ * from exploring paths past a __SMACK_check_overflow
+ */
 void IntegerOverflowChecker::addBlockingAssume(Function* va, BinaryOperator* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
         va->arg_begin()->getType(), false, "", i));
@@ -97,30 +122,42 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
         if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
           Function* f = ci->getCalledFunction();
           SmallVectorImpl<StringRef> *info = new SmallVector<StringRef, 3>;
-          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), info)) {
-            if (ei->getIndices()[0] == 1) {
-              Instruction* prev = &*std::prev(I);
-              bool isSigned = info->begin()[1].str() == "s";
-              std::string op = info->begin()[2].str();
-              std::string len = info->begin()[3].str();
-              int bits = std::stoi(len);
-              Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
-              Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
-              BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
-              if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
-                if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
-                  Value* r = createResult(ai, bits, &*I);
-                  prev->replaceAllUsesWith(r);
-                  instToRemove.push_back(prev);
-                }
+          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), info)
+              && ei->getIndices()[0] == 1) {
+            /*
+             * If ei is an ExtractValueInst whose value flows from an LLVM
+             * checked value intrinsic f, then we do the following:
+             * - The intrinsic is replaced with the non-intrinsic version of the
+             *   operation.
+             * - If checking is enabled, the operation is computed in double bit
+             *   width.
+             * - A flag is computed to determine whether an overflow occured.
+             * - The overflow flag is optionally checked to raise an
+             *   integer-overflow assertion violation.
+             * - Finally, an assumption about the value of the flag is created
+             *   to block erroneous checking of paths after the overflow check.
+             */
+            Instruction* prev = &*std::prev(I);
+            bool isSigned = info->begin()[1].str() == "s";
+            std::string op = info->begin()[2].str();
+            std::string len = info->begin()[3].str();
+            int bits = std::stoi(len);
+            Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
+            Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
+            BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
+            if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
+              if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
+                Value* r = createResult(ai, bits, &*I);
+                prev->replaceAllUsesWith(r);
+                instToRemove.push_back(prev);
               }
-              BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
-              if (SmackOptions::IntegerOverflow)
-                addCheck(co, flag, &*I);
-              addBlockingAssume(va, flag, &*I);
-              I->replaceAllUsesWith(flag);
-              instToRemove.push_back(&*I);
             }
+            BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
+            if (SmackOptions::IntegerOverflow)
+              addCheck(co, flag, &*I);
+            addBlockingAssume(va, flag, &*I);
+            I->replaceAllUsesWith(flag);
+            instToRemove.push_back(&*I);
           }
         }
       }
