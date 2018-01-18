@@ -39,7 +39,7 @@ def results(args):
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
     'invalid-memtrack': 'SMACK found an error: memory leak.',
-    'overflow': 'SMACK found an error: signed integer overflow.',
+    'overflow': 'SMACK found an error: integer overflow.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.',
     'rust_panic': "SMACK found an error: rust panic"
@@ -56,7 +56,8 @@ def inlined_procedures():
     '__VERIFIER_',
     '$initialize',
     '__SMACK_static_init',
-    '__SMACK_init_func_memory_model'
+    '__SMACK_init_func_memory_model',
+    '__SMACK_check_overflow'
   ]
 
 def validate_input_file(file):
@@ -305,7 +306,7 @@ def default_clang_compile_command(args, lib = False):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DNOFLAG'])
+  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
   return cmd
 

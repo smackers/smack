@@ -14,6 +14,10 @@ Zvonimir Rakamaric, Michael Emmi,
 This is an incomplete list of publications that use, leverage, or extend SMACK.
 If you have a publication for this list, please email [Zvonimir](mailto:zvonimir@cs.utah.edu).
 
+1. [Formal Verification of Optimizing Compilers](https://link.springer.com/chapter/10.1007/978-3-319-72344-0_3),
+Yiji Zhang, Lenore D. Zuck,
+Keynote at the 14th International Conference on Distributed Computing and Internet Technology (ICDCIT 2018)
+
 1. [Counterexample-Guided Bit-Precision Selection](http://soarlab.org/2017/09/aplas2017-hr/),
 Shaobo He, Zvonimir Rakamaric,
 15th Asian Symposium on Programming Languages and Systems (APLAS 2017)

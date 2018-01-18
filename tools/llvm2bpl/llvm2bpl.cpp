@@ -63,10 +63,6 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
 static llvm::cl::opt<bool>
-IntegerOverflow("integer-overflow", llvm::cl::desc("Enable integer overflow checks"),
-  llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
   llvm::cl::init(false));
 
@@ -164,7 +160,7 @@ int main(int argc, char **argv) {
     //pass_manager.add(llvm::createIndVarSimplifyPass());
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
-  
+
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
@@ -186,8 +182,7 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 
-  if (IntegerOverflow)
-    pass_manager.add(new smack::IntegerOverflowChecker());
+  pass_manager.add(new smack::IntegerOverflowChecker());
 
 
   if(smack::SmackOptions::AddTiming){

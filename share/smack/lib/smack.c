@@ -36,16 +36,18 @@ void __VERIFIER_assume(int x) {
 
 #ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
+#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_dummy(x); __SMACK_code("assert @ != $0;", x);
+#endif
 }
 #endif
 
 void __VERIFIER_error(void) {
+#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_code("assert false;");
-}
-
-void __SMACK_overflow_false(void) {
-  __SMACK_code("assert {:overflow} false;");
+#else
+  __SMACK_code("assume false;");
+#endif
 }
 
 void __SMACK_check_overflow(int flag) {

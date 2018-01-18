@@ -1,10 +1,15 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+
+//
+// This pass converts LLVM's checked integer-arithmetic operations into basic
+// operations, and optionally allows for the checking of overflow.
+//
+
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/Naming.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Constants.h"
 #include "smack/Debug.h"
@@ -13,6 +18,7 @@
 #include "llvm/Support/Regex.h"
 #include <string>
 #include "llvm/ADT/APInt.h"
+#include "smack/SmackOptions.h"
 
 namespace smack {
 
@@ -20,108 +26,166 @@ using namespace llvm;
 
 Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
 
-std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTION_TABLE {
+const std::map<std::string, Instruction::BinaryOps> IntegerOverflowChecker::INSTRUCTION_TABLE {
   {"add", Instruction::Add},
   {"sub", Instruction::Sub},
   {"mul", Instruction::Mul}
 };
 
-std::string getMax(unsigned bits, bool is_signed) {
-  if (is_signed) {
+std::string IntegerOverflowChecker::getMax(unsigned bits, bool isSigned) {
+  if (isSigned)
     return APInt::getSignedMaxValue(bits).toString(10, true);
-  } else {
+  else
     return APInt::getMaxValue(bits).toString(10, false);
+}
+
+std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
+  if (isSigned)
+    return APInt::getSignedMinValue(bits).toString(10, true);
+  else
+    return APInt::getMinValue(bits).toString(10, false);
+}
+
+/*
+ * Optionally generates a double wide version of v for the purpose of detecting
+ * overflow.
+ */
+Value* IntegerOverflowChecker::extendBitWidth(Value* v, int bits, bool isSigned, Instruction* i) {
+  if (SmackOptions::IntegerOverflow) {
+    if (isSigned)
+      return CastInst::CreateSExtOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits*2), "", i);
+    else
+      return CastInst::CreateZExtOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits*2), "", i);
+  } else
+    return v;
+}
+
+/*
+ * Generates instructions to determine whether a Value v is is out of range for
+ * its bit width and sign.
+ */
+BinaryOperator* IntegerOverflowChecker::createFlag(Value* v, int bits, bool isSigned, Instruction* i) {
+  if (SmackOptions::IntegerOverflow) {
+    ConstantInt* max = ConstantInt::get(IntegerType::get(i->getFunction()->getContext(), bits*2), getMax(bits, isSigned), 10);
+    ConstantInt* min = ConstantInt::get(IntegerType::get(i->getFunction()->getContext(), bits*2), getMin(bits, isSigned), 10);
+    CmpInst::Predicate maxCmpPred = (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
+    CmpInst::Predicate minCmpPred = (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+    ICmpInst* gt = new ICmpInst(i, maxCmpPred, v, max, "");
+    ICmpInst* lt = new ICmpInst(i, minCmpPred, v, min, "");
+    return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
+  } else {
+    ConstantInt* a = ConstantInt::getFalse(i->getFunction()->getContext());
+    return BinaryOperator::Create(Instruction::And, a, a, "", i);
   }
 }
 
-std::string getMin(unsigned bits, bool is_signed) {
-  if (is_signed) {
-    return APInt::getSignedMinValue(bits).toString(10, true);
-  } else {
-    return APInt::getMinValue(bits).toString(10, false);
-  }
+/*
+ * Create an instruction to cast v to bits size.
+ */
+Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) {
+  if (SmackOptions::IntegerOverflow)
+    return CastInst::CreateTruncOrBitCast(v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
+  else
+    return v;
+}
+
+/*
+ * This adds a call instruction to __SMACK_check_overflow to determine if an
+ * overflow occured as indicated by flag.
+ */
+void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instruction* i) {
+  ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
+  CallInst::Create(co, args, "", i);
+}
+
+/*
+ * This inserts a call to assume with flag negated to prevent the verifier
+ * from exploring paths past a __SMACK_check_overflow
+ */
+void IntegerOverflowChecker::addBlockingAssume(Function* va, BinaryOperator* flag, Instruction* i) {
+  ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
+        va->arg_begin()->getType(), false, "", i));
+  CallInst::Create(va, args, "", i);
 }
 
 bool IntegerOverflowChecker::runOnModule(Module& m) {
-  Function* va = m.getFunction("__SMACK_overflow_false");
   Function* co = m.getFunction("__SMACK_check_overflow");
+  assert(co != NULL && "Function __SMACK_check_overflow should be present.");
+  Function* va = m.getFunction("__VERIFIER_assume");
+  assert(va != NULL && "Function __VERIFIER_assume should be present.");
+  std::vector<Instruction*> instToRemove;
   for (auto& F : m) {
-    if (!Naming::isSmackName(F.getName())) {
-      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-        if (auto ci = dyn_cast<CallInst>(&*I)) {
+    if (Naming::isSmackName(F.getName()))
+      continue;
+    for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+      if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
+        if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
           Function* f = ci->getCalledFunction();
-          if (f && f->hasName() && f->getName() == "llvm.trap") {
-            ci->setCalledFunction(va);
-          }
-        }
-        if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
-          if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
-            Function* f = ci->getCalledFunction();
-            SmallVectorImpl<StringRef> *ar = new SmallVector<StringRef, 3>;
-            if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), ar)) {
-              bool is_signed = ar->begin()[1].str() == "s";
-              std::string op = ar->begin()[2].str();
-              std::string len = ar->begin()[3].str();
-              int bits = std::stoi(len);
-              if (ei->getIndices()[0] == 1) {
-                Instruction* prev = &*std::prev(I);
-                Value* o1 = ci->getArgOperand(0);
-                Value* o2 = ci->getArgOperand(1);
-                CastInst* so1, *so2;
-                if (is_signed) {
-                  so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-                  so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-                } else {
-                  so1 = CastInst::CreateZExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-                  so2 = CastInst::CreateZExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-                }
-                BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), so1, so2, "", &*I);
-                if (prev && isa<ExtractValueInst>(prev)) {
-                  ExtractValueInst* pei = cast<ExtractValueInst>(prev);
-                  if (auto pci = dyn_cast<CallInst>(pei->getAggregateOperand())) {
-                    if (pci == ci) {
-                      CastInst* tr = CastInst::CreateTruncOrBitCast(ai, IntegerType::get(F.getContext(), bits), "", &*I);
-                      prev->replaceAllUsesWith(tr);
-                    }
-                  }
-                }
-                ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, is_signed), 10);
-                ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, is_signed), 10);
-                CmpInst::Predicate max_cmp = (is_signed ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-                CmpInst::Predicate min_cmp = (is_signed ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
-                ICmpInst* gt = new ICmpInst(&*I, max_cmp, ai, max, "");
-                ICmpInst* lt = new ICmpInst(&*I, min_cmp, ai, min, "");
-                BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
-                (*I).replaceAllUsesWith(flag);
+          SmallVectorImpl<StringRef> *info = new SmallVector<StringRef, 3>;
+          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), info)
+              && ei->getIndices()[0] == 1) {
+            /*
+             * If ei is an ExtractValueInst whose value flows from an LLVM
+             * checked value intrinsic f, then we do the following:
+             * - The intrinsic is replaced with the non-intrinsic version of the
+             *   operation.
+             * - If checking is enabled, the operation is computed in double bit
+             *   width.
+             * - A flag is computed to determine whether an overflow occured.
+             * - The overflow flag is optionally checked to raise an
+             *   integer-overflow assertion violation.
+             * - Finally, an assumption about the value of the flag is created
+             *   to block erroneous checking of paths after the overflow check.
+             */
+            Instruction* prev = &*std::prev(I);
+            bool isSigned = info->begin()[1].str() == "s";
+            std::string op = info->begin()[2].str();
+            std::string len = info->begin()[3].str();
+            int bits = std::stoi(len);
+            Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
+            Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
+            BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
+            if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
+              if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
+                Value* r = createResult(ai, bits, &*I);
+                prev->replaceAllUsesWith(r);
+                instToRemove.push_back(prev);
               }
             }
-          }
-        }
-        if (auto sdi = dyn_cast<BinaryOperator>(&*I)) {
-          if (sdi->getOpcode() == Instruction::SDiv) {
-            int bits = sdi->getType()->getIntegerBitWidth();
-            Value* o1 = sdi->getOperand(0);
-            Value* o2 = sdi->getOperand(1);
-            CastInst* so1 = CastInst::CreateSExtOrBitCast(o1, IntegerType::get(F.getContext(), bits*2), "", &*I);
-            CastInst* so2 = CastInst::CreateSExtOrBitCast(o2, IntegerType::get(F.getContext(), bits*2), "", &*I);
-            BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, so1, so2, "", &*I);
-            ConstantInt* max = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMax(bits, true), 10);
-            ConstantInt* min = ConstantInt::get(IntegerType::get(F.getContext(), bits*2), getMin(bits, true), 10);
-            ICmpInst* gt = new ICmpInst(&*I, CmpInst::ICMP_SGT, lsdi, max, "");
-            ICmpInst* lt = new ICmpInst(&*I, CmpInst::ICMP_SLT, lsdi, min, "");
-            BinaryOperator* flag = BinaryOperator::Create(Instruction::Or, gt, lt, "", &*I);
-            CastInst* tf = CastInst::CreateSExtOrBitCast(flag, co->getArgumentList().begin()->getType(), "", &*I);
-            CallInst::Create(co, {tf}, "", &*I);
-            CastInst* tv = CastInst::CreateTruncOrBitCast(lsdi, sdi->getType(), "", &*I);
-            (*I).replaceAllUsesWith(tv);
+            BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
+            if (SmackOptions::IntegerOverflow)
+              addCheck(co, flag, &*I);
+            addBlockingAssume(va, flag, &*I);
+            I->replaceAllUsesWith(flag);
+            instToRemove.push_back(&*I);
           }
         }
       }
+      if (auto sdi = dyn_cast<BinaryOperator>(&*I)) {
+        if (sdi->getOpcode() == Instruction::SDiv && SmackOptions::IntegerOverflow) {
+          int bits = sdi->getType()->getIntegerBitWidth();
+          Value* eo1 = extendBitWidth(sdi->getOperand(0), bits, true, &*I);
+          Value* eo2 = extendBitWidth(sdi->getOperand(1), bits, true, &*I);
+          BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, eo1, eo2, "", &*I);
+          BinaryOperator* flag = createFlag(lsdi, bits, true, &*I);
+          addCheck(co, flag, &*I);
+          Value* r = createResult(lsdi, bits, &*I);
+          I->replaceAllUsesWith(r);
+          instToRemove.push_back(&*I);
+        }
+      }
     }
+  }
+  for (auto I : instToRemove) {
+    I->removeFromParent();
   }
   return true;
 }
 
 // Pass ID variable
 char IntegerOverflowChecker::ID = 0;
+
+const char* IntegerOverflowChecker::getPassName() const {
+  return "Checked integer arithmetic intrinsics";
+}
 }
