@@ -1,0 +1,3 @@
+These files are taken from the IFC example in https://gitlab.flux.utah.edu/crust/crust,
+and slightly modified to make the test function into the main function of the
+program to aid verification.
