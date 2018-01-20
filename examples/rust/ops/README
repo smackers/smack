@@ -1,0 +1,5 @@
+arith.rs: Tests arithmetic operations on integers. This file should pass.
+*_fail.rs: Each file asserts an incorrect value for the result of the indicated
+           operation. All are expected to fail verification.
+*_overflow.rs: Run with `--integer-overflow' to trigger overflow errors on these
+               files.
