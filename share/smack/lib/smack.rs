@@ -30,6 +30,12 @@ macro_rules! assert_eq {
   ( $lhs:expr, $rhs:expr ) => ( assert!($lhs == $rhs); )
 }
 
+#[cfg(verifier = "smack")]
+#[macro_export]
+macro_rules! assert_neq {
+  ( $lhs:expr, $rhs:expr ) => ( assert!($lhs != $rhs); )
+}
+
 #[macro_export]
 macro_rules! assume {
   ( $cond:expr ) =>
@@ -45,7 +51,13 @@ macro_rules! assume {
 #[macro_export]
 macro_rules! nondet {
   ($e:expr) =>
-  { $e }
+    (
+      #[cfg(verifier = "smack")]
+      $e.nondet()
+
+      #[cfg(not(verifier = "smack"))]
+      $e
+    )
 }
 
 pub trait NonDet {
