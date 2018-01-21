@@ -311,7 +311,8 @@ def default_clang_compile_command(args, lib = False):
   return cmd
 
 def default_rust_compile_command(args):
-  cmd = ['rustc', '-g', '--emit=llvm-bc']
+  cmd = ['rustc', '-C', 'opt-level=0', '-C', 'no-prepopulate-passes', '-g',
+         '--emit=llvm-bc', '--cfg', 'verifier="smack"']
   return cmd
 
 def build_libs(args):
@@ -408,7 +409,6 @@ def rust_frontend(args):
   """Generate Boogie code from Rust-language source(s)."""
 
   bitcodes = []
-  args.integer_overflow = True
   rust_files = args.input_files
   rust_compile_command = default_rust_compile_command(args)
   rust_macros = os.path.join(smack_lib(), 'smack.rs')
