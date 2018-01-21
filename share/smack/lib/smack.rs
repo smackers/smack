@@ -30,12 +30,15 @@ macro_rules! assert_eq {
   ( $lhs:expr, $rhs:expr ) => ( assert!($lhs == $rhs); )
 }
 
-#[cfg(verifier = "smack")]
 #[macro_export]
 macro_rules! assume {
   ( $cond:expr ) =>
     (
-      unsafe { __VERIFIER_assume($cond as i32); }     
+      #[cfg(verifier = "smack")]
+      unsafe { __VERIFIER_assume($cond as i32); }
+
+      #[cfg(not(verifier = "smack"))]
+      ();
     )
 }
 
@@ -45,7 +48,7 @@ macro_rules! nondet {
   { $e }
 }
 
-trait NonDet {
+pub trait NonDet {
   fn nondet(self) -> Self;
 }
 
@@ -58,11 +61,11 @@ macro_rules! make_nondet {
         fn nondet(self) -> Self {
           unsafe { $nondet() as Self }
         }
-        
+
         #[cfg(not(verifier = "smack"))]
         fn nondet(self) -> Self {
-          val
-        }            
+          self
+        }
       }
     );
 }
