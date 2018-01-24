@@ -1,15 +1,15 @@
 #[cfg(verifier = "smack")]
 extern {
-  fn __VERIFIER_assert(x: i32);
-  fn __VERIFIER_assume(x: i32);
-  fn __VERIFIER_nondet_signed_char() -> i8;
-  fn __VERIFIER_nondet_unsigned_char() -> u8;
-  fn __VERIFIER_nondet_signed_short() -> i16;
-  fn __VERIFIER_nondet_unsigned_short() -> u16;
-  fn __VERIFIER_nondet_signed_int() -> i32;
-  fn __VERIFIER_nondet_unsigned_int() -> u32;
-  fn __VERIFIER_nondet_signed_long_long() -> i64;
-  fn __VERIFIER_nondet_unsigned_long_long() -> u64;
+  pub fn __VERIFIER_assert(x: i32);
+  pub fn __VERIFIER_assume(x: i32);
+  pub fn __VERIFIER_nondet_signed_char() -> i8;
+  pub fn __VERIFIER_nondet_unsigned_char() -> u8;
+  pub fn __VERIFIER_nondet_signed_short() -> i16;
+  pub fn __VERIFIER_nondet_unsigned_short() -> u16;
+  pub fn __VERIFIER_nondet_signed_int() -> i32;
+  pub fn __VERIFIER_nondet_unsigned_int() -> u32;
+  pub fn __VERIFIER_nondet_signed_long_long() -> i64;
+  pub fn __VERIFIER_nondet_unsigned_long_long() -> u64;
 
 }
 
@@ -19,8 +19,7 @@ extern {
 macro_rules! assert {
   ( $cond:expr ) =>
     (
-      #[cfg(verifier = "smack")]
-      unsafe { __VERIFIER_assert($cond as i32); }
+      unsafe { __VERIFIER_assert($cond as i32); };
     )
 }
 
