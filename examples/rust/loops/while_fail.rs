@@ -1,3 +1,7 @@
+#[macro_use]
+mod smack;
+use smack::*;
+
 fn main() {
   let bound = 7;
   let mut a = 0;

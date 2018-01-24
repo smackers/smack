@@ -1,3 +1,7 @@
+#[macro_use]
+mod smack;
+use smack::*;
+
 fn main() {
   let mut sum = 0;
   let b = 7u64.nondet();

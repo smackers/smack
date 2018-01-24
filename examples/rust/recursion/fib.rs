@@ -1,3 +1,7 @@
+#[macro_use]
+mod smack;
+use smack::*;
+
 fn fib(x: u64) -> u64 {
   match x {
     0 => 1,

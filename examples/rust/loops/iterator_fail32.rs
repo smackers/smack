@@ -4,8 +4,8 @@ use smack::*;
 
 fn main() {
   let mut a = 1;
-  for i in 1..7 as u64 {
+  for i in 1..7 as u32 {
     a *= i;
   }
-  assert!(a == 720); // a == 6!
+  assert!(a == 720); // a should equal 6!
 }

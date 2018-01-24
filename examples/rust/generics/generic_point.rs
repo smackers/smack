@@ -1,3 +1,7 @@
+#[macro_use]
+mod smack;
+use smack::*;
+
 struct Point<T> {
   pub x: T,
   pub y: T

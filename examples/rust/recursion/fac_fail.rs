@@ -1,3 +1,7 @@
+#[macro_use]
+mod smack;
+use smack::*;
+
 fn fac(n: u64, acc: u64) -> u64 {
   match n {
     0 => acc,

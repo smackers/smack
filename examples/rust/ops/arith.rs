@@ -1,3 +1,7 @@
+#[macro_use]
+mod smack;
+use smack::*;
+
 fn main() {
   // unsigned
   {
