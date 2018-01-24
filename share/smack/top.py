@@ -311,7 +311,7 @@ def default_clang_compile_command(args, lib = False):
   return cmd
 
 def default_rust_compile_command(args):
-  cmd = ['rustc', '-C', 'opt-level=0', '-C', 'no-prepopulate-passes', '-g',
+  cmd = ['rustc', '-A', 'unused-imports', '-C', 'opt-level=0', '-C', 'no-prepopulate-passes', '-g',
          '--emit=llvm-bc', '--cfg', 'verifier="smack"']
   return cmd
 
@@ -413,12 +413,28 @@ def rust_frontend(args):
   rust_compile_command = default_rust_compile_command(args)
   rust_macros = os.path.join(smack_lib(), 'smack.rs')
 
+  created_module = False
   for rs in args.input_files:
     bc      = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.bc', args)
-    temp_rs = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.rs', args)
+    # temp_rs = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.rs', args)
 
-    insert_rust_macros(rs, rust_macros, write_to=temp_rs)
-
+    try:
+      if created_module == False:
+        abs_path = os.path.dirname(os.path.abspath(rs))
+        mod_path = os.path.join(abs_path, "smack")
+        if not os.path.exists(mod_path):
+          os.mkdir(mod_path)
+        link_target = os.path.join(mod_path, "mod.rs")
+        if not os.path.exists(link_target):
+          os.symlink(rust_macros, link_target)
+        temp_rs = rs
+        created_module = True
+    except:
+      # temp_rs = temporary_file(os.path.splitext(os.path.basename(rs))[0], '.rs', args)
+      # insert_rust_macros(rs, rust_macros, write_to=temp_rs)
+      if created_module == False:
+        raise RuntimeError("Could not find or create smack module.")
+      
     try_command(rust_compile_command + [temp_rs, '-o', bc], console=True)
     bitcodes.append(bc)
 
