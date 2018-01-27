@@ -24,7 +24,7 @@ Shaobo He, Zvonimir Rakamaric,
 
 1. [FaCT: A Flexible, Constant-Time Programming Language](https://cseweb.ucsd.edu/~dstefan/pubs/cauligi:2017:fact.pdf),
 Sunjay Cauligi, Gary Soeller, Fraser Brown, Brian Johannesmeyer, Yunlu Huang, Ranjit Jhala, Deian Stefan,
-IEEE Secure Development Conference (SecDev 2017),
+IEEE Secure Development Conference (SecDev 2017)
 
 1. [Static Assertion Checking of Production Software with Angelic Verification](http://soarlab.org/2017/09/tapas2017-hllr/),
 Shaobo He, Shuvendu Lahiri, Akash Lal, Zvonimir Rakamaric,
