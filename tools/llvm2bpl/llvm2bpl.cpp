@@ -40,7 +40,7 @@
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/IntegerOverflowChecker.h"
-#include "smack/SplitAggregateLoadStore.h"
+#include "smack/SplitAggregateValue.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -64,10 +64,6 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
 
 static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
-  llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
-SplitStructs("split-aggregate-values", llvm::cl::desc("Split load/store instructions of LLVM aggregate types"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -161,7 +157,7 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
-  pass_manager.add(new llvm::StructRet());
+  //pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::ExtractContracts());
@@ -174,9 +170,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-
-  if (SplitStructs)
-    pass_manager.add(new smack::SplitAggregateLoadStore());
+  pass_manager.add(new smack::SplitAggregateValue());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());

@@ -175,7 +175,7 @@ add_library(smackTranslator STATIC
   include/smack/VectorOperations.h
   include/smack/MemorySafetyChecker.h
   include/smack/IntegerOverflowChecker.h
-  include/smack/SplitAggregateLoadStore.h
+  include/smack/SplitAggregateValue.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
@@ -196,7 +196,7 @@ add_library(smackTranslator STATIC
   lib/smack/VectorOperations.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/IntegerOverflowChecker.cpp
-  lib/smack/SplitAggregateLoadStore.cpp
+  lib/smack/SplitAggregateValue.cpp
 )
 
 add_executable(llvm2bpl
