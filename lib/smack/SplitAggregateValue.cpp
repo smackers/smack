@@ -90,7 +90,6 @@ void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>
   Type* T = ri->getReturnValue()->getType();
   Value* V = UndefValue::get(T);
   Value* box = irb.CreateAlloca(T);
-  assert(info.size() == 2);
   for (auto& e : info) {
     IndexT idxs = std::get<0>(e);
     Constant* c = std::get<1>(e);
@@ -98,9 +97,7 @@ void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>
     irb.CreateStore(c, P);
     V = irb.CreateInsertValue(V, irb.CreateLoad(P),
       ArrayRef<unsigned>(getSeconds(idxs)));
-    //V = irb.CreateInsertValue(V, c, ArrayRef<unsigned>(getSeconds(idxs)));
   }
-  irb.CreateRet(std::get<1>(info[1]));
   ri->setOperand(0, V);
 }
 
