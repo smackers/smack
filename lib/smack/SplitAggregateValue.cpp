@@ -104,7 +104,7 @@ void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>
 void SplitAggregateValue::visitAggregateValue(Constant* baseVal, Type* T, IndexT idxs,
                                                     std::vector<InfoT>& info, LLVMContext& C){
   Constant* newBaseVal = baseVal;
-  if(!isa<CompositeType>(T))
+  if(T->isIntegerTy() || T->isFloatingPointTy() || T->isPointerTy())
       info.push_back(std::make_pair(idxs, newBaseVal));
   else if (ArrayType* AT = dyn_cast<ArrayType>(T)) {
     for (unsigned i = 0; i < AT->getNumElements(); ++i) {
@@ -133,7 +133,7 @@ char SplitAggregateValue::ID = 0;
 
 // Register the pass
 static RegisterPass<SplitAggregateValue>
-X("split-aggregate-load-store", "Split Load/Store to Aggregate Types");
+X("split-aggregate-values", "Split Load/Store/ConstantReturn of Aggregate Types");
 
 }
 
