@@ -46,6 +46,14 @@ namespace smack {
     return decls;
   }
 
+  const Expr *VectorOperations::constant(const ConstantDataVector *C) {
+    auto T = C->getType();
+    std::list<const Expr*> args;
+    for (unsigned i = 0; i < C->getNumElements(); i++)
+      args.push_back(rep->expr(C->getElementAsConstant(i)));
+    return Expr::fn(constructor(T), args);
+  }
+
   Decl *VectorOperations::inverseCastAxiom(CastInst *CI) {
     auto N = Naming::INSTRUCTION_TABLE.at(CI->getOpcode());
     auto SrcTy = CI->getOperand(0)->getType();

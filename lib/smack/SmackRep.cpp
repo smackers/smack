@@ -5,6 +5,7 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
+#include "smack/VectorOperations.h"
 
 #include "smack/BoogieAst.h"
 #include "smack/Naming.h"
@@ -773,6 +774,9 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
 
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
+
+    } else if (auto cv = dyn_cast<const ConstantDataVector>(constant)) {
+      return VectorOperations(this).constant(cv);
 
     } else if (constant->isNullValue())
       return Expr::id(Naming::NULL_VAL);
