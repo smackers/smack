@@ -19,8 +19,9 @@ namespace smack {
     std::string constructor(Type *T);
     std::string field(Type *T, unsigned idx);
     std::string selector(Type *T, unsigned idx);
-
-    Decl *inverseCastAxiom(CastInst *CI);
+    FuncDecl *function(VectorType *T, VectorType *U, std::string N,
+      unsigned arity, std::list<const Type*> Ts, std::list<const Type*> ETs);
+    std::list<Decl*> inverseCastAxiom(CastInst *CI);
 
   public:
     VectorOperations(SmackRep *rep) : rep(rep) {}

@@ -54,17 +54,47 @@ namespace smack {
     return Expr::fn(constructor(T), args);
   }
 
-  Decl *VectorOperations::inverseCastAxiom(CastInst *CI) {
+  FuncDecl *VectorOperations::function(
+      VectorType *T, VectorType *U,
+      std::string N, unsigned arity,
+      std::list<const Type*> Ts, std::list<const Type*> ETs) {
+
+    auto FN = rep->opName(N, Ts);
+    auto baseFN = rep->opName(N, ETs);
+
+    std::list<std::pair<std::string,std::string>> params;
+    for (unsigned j=1; j<=arity; j++)
+      params.push_back({"v" + std::to_string(j), rep->type(U)});
+
+    std::list<const Expr*> args;
+    for (unsigned i=0; i<T->getNumElements(); i++) {
+      std::list<const Expr*> operands;
+      for (unsigned j=1; j<=arity; j++)
+        operands.push_back(Expr::fn(selector(U,i), Expr::id("v" + std::to_string(j))));
+      args.push_back(Expr::fn(baseFN, operands));
+    }
+
+    auto F = T->getNumElements() == U->getNumElements()
+      ? Decl::function(FN, params, rep->type(T), Expr::fn(constructor(T), args))
+      : Decl::function(FN, params, rep->type(T));
+
+    return F;
+  }
+
+  std::list<Decl*> VectorOperations::inverseCastAxiom(CastInst *CI) {
     auto N = Naming::INSTRUCTION_TABLE.at(CI->getOpcode());
-    auto SrcTy = CI->getOperand(0)->getType();
-    auto DstTy = CI->getType();
+    auto SrcTy = dyn_cast<VectorType>(CI->getOperand(0)->getType());
+    auto DstTy = dyn_cast<VectorType>(CI->getType());
     auto Fn = rep->opName(N, {SrcTy, DstTy});
     auto Inv = rep->opName(N, {DstTy, SrcTy});
 
-    return Decl::axiom(Expr::forall({{"v", rep->type(SrcTy)}},
-      Expr::eq(
-        Expr::fn(Inv, Expr::fn(Fn, Expr::id("v"))),
-        Expr::id("v"))));
+    return {
+      function(SrcTy, DstTy, N, 1, {DstTy, SrcTy}, {DstTy->getElementType(), SrcTy->getElementType()}),
+      Decl::axiom(Expr::forall({{"v", rep->type(SrcTy)}},
+        Expr::eq(
+          Expr::fn(Inv, Expr::fn(Fn, Expr::id("v"))),
+          Expr::id("v"))))
+    };
   }
 
   FuncDecl *VectorOperations::simd(Instruction *I) {
@@ -103,29 +133,12 @@ namespace smack {
       llvm_unreachable("unexpected instruction");
     }
 
-    auto FN = rep->opName(N, Ts);
-    auto baseFN = rep->opName(N, ETs);
-
-    std::list<std::pair<std::string,std::string>> params;
-    for (unsigned j=1; j<=arity; j++)
-      params.push_back({"v" + std::to_string(j), rep->type(U)});
-
-    std::list<const Expr*> args;
-    for (unsigned i=0; i<T->getNumElements(); i++) {
-      std::list<const Expr*> operands;
-      for (unsigned j=1; j<=arity; j++)
-        operands.push_back(Expr::fn(selector(U,i), Expr::id("v" + std::to_string(j))));
-      args.push_back(Expr::fn(baseFN, operands));
-    }
-
-    auto F = T->getNumElements() == U->getNumElements()
-      ? Decl::function(FN, params, rep->type(T), Expr::fn(constructor(T), args))
-      : Decl::function(FN, params, rep->type(T));
-
+    auto F = function(T, U, N, arity, Ts, ETs);
     rep->addAuxiliaryDeclaration(F);
 
     if (auto CI = dyn_cast<CastInst>(I))
-      rep->addAuxiliaryDeclaration(inverseCastAxiom(CI));
+      for (auto D : inverseCastAxiom(CI))
+        rep->addAuxiliaryDeclaration(D);
 
     return F;
   }
