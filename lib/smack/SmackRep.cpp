@@ -778,6 +778,9 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
     } else if (auto cv = dyn_cast<const ConstantDataVector>(constant)) {
       return VectorOperations(this).constant(cv);
 
+    } else if (auto cd = dyn_cast<const ConstantAggregateZero>(constant)) {
+      return VectorOperations(this).constant(cd);
+
     } else if (constant->isNullValue())
       return Expr::id(Naming::NULL_VAL);
 

@@ -54,6 +54,14 @@ namespace smack {
     return Expr::fn(constructor(T), args);
   }
 
+  const Expr *VectorOperations::constant(const ConstantAggregateZero *C) {
+    auto T = C->getType();
+    std::list<const Expr*> args;
+    for (unsigned i = 0; i < C->getNumElements(); i++)
+      args.push_back(rep->expr(C->getElementValue(i)));
+    return Expr::fn(constructor(T), args);
+  }
+
   FuncDecl *VectorOperations::function(
       VectorType *T, VectorType *U,
       std::string N, unsigned arity,
