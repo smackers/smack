@@ -62,92 +62,102 @@ namespace smack {
     return Expr::fn(constructor(T), args);
   }
 
-  FuncDecl *VectorOperations::function(
-      VectorType *T, VectorType *U,
-      std::string N, unsigned arity,
-      std::list<const Type*> Ts, std::list<const Type*> ETs) {
+  FuncDecl *VectorOperations::cast(unsigned OpCode, Type *SrcTy, Type *DstTy) {
+    auto SrcVecTy = dyn_cast<VectorType>(SrcTy);
+    auto DstVecTy = dyn_cast<VectorType>(DstTy);
+    assert((SrcVecTy || DstVecTy) && "Expected a vector type");
 
-    auto FN = rep->opName(N, Ts);
-    auto baseFN = rep->opName(N, ETs);
+    auto FnName = rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {SrcTy, DstTy});
+    const Expr *Body;
 
-    std::list<std::pair<std::string,std::string>> params;
-    for (unsigned j=1; j<=arity; j++)
-      params.push_back({"v" + std::to_string(j), rep->type(U)});
+    if (!SrcVecTy && DstVecTy && DstVecTy->getNumElements() == 1)
+      Body = Expr::fn(constructor(DstVecTy), Expr::id("v"));
+    else if (SrcVecTy && SrcVecTy->getNumElements() == 1 && !DstVecTy)
+      Body = Expr::fn(selector(SrcVecTy,0), Expr::id("v"));
+    else
+      Body = nullptr;
 
-    std::list<const Expr*> args;
-    for (unsigned i=0; i<T->getNumElements(); i++) {
-      std::list<const Expr*> operands;
-      for (unsigned j=1; j<=arity; j++)
-        operands.push_back(Expr::fn(selector(U,i), Expr::id("v" + std::to_string(j))));
-      args.push_back(Expr::fn(baseFN, operands));
+    return Decl::function(FnName, {{"v", rep->type(SrcTy)}}, rep->type(DstTy), Body);
+  }
+
+  Decl *VectorOperations::inverseAxiom(unsigned OpCode, Type *SrcTy, Type *DstTy) {
+    auto Fn = rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {SrcTy, DstTy});
+    auto Inv = rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {DstTy, SrcTy});
+    return Decl::axiom(Expr::forall({{"v", rep->type(SrcTy)}}, Expr::eq(
+        Expr::fn(Inv, Expr::fn(Fn, Expr::id("v"))),
+        Expr::id("v"))
+      ),
+      Fn + "inverse"
+    );
+  }
+
+  FuncDecl *VectorOperations::binary(unsigned OpCode, VectorType *T) {
+    auto FnName = rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {T});
+    auto FnBase = rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {T->getElementType()});
+    std::list<const Expr*> Args;
+    for (unsigned i = 0; i < T->getNumElements(); i++) {
+      Args.push_back(Expr::fn(FnBase, {
+        Expr::fn(selector(T, i), Expr::id("v1")),
+        Expr::fn(selector(T, i), Expr::id("v2"))
+      }));
     }
+    return Decl::function(FnName,
+      {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
+      rep->type(T),
+      Expr::fn(constructor(T), Args));
+  }
 
-    auto F = T->getNumElements() == U->getNumElements()
-      ? Decl::function(FN, params, rep->type(T), Expr::fn(constructor(T), args))
-      : Decl::function(FN, params, rep->type(T));
+  FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, VectorType *T) {
+    auto FnName = rep->opName(Naming::CMPINST_TABLE.at(P), {T});
+    auto FnBase = rep->opName(Naming::CMPINST_TABLE.at(P), {T->getElementType()});
+    std::list<const Expr*> Args;
+    for (unsigned i = 0; i < T->getNumElements(); i++) {
+      Args.push_back(Expr::fn(FnBase, {
+        Expr::fn(selector(T, i), Expr::id("v1")),
+        Expr::fn(selector(T, i), Expr::id("v2"))
+      }));
+    }
+    return Decl::function(FnName,
+      {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
+      rep->type(VectorType::get(IntegerType::get(T->getContext(), 1), T->getNumElements())),
+      Expr::fn(constructor(T), Args));
+  }
 
+  FuncDecl *VectorOperations::cast(CastInst *I) {
+    DEBUG(errs() << "simd-cast: " << *I << "\n");
+    auto F = cast(I->getOpcode(), I->getSrcTy(), I->getDestTy());
+    auto G = cast(I->getOpcode(), I->getDestTy(), I->getSrcTy());
+    auto A = inverseAxiom(I->getOpcode(), I->getSrcTy(), I->getDestTy());
+    auto B = inverseAxiom(I->getOpcode(), I->getDestTy(), I->getSrcTy());
+    if (isa<VectorType>(I->getSrcTy()))
+      type(I->getSrcTy());
+    if (isa<VectorType>(I->getDestTy()))
+      type(I->getDestTy());
+    rep->addAuxiliaryDeclaration(F);
+    rep->addAuxiliaryDeclaration(G);
+    rep->addAuxiliaryDeclaration(A);
+    rep->addAuxiliaryDeclaration(B);
     return F;
   }
 
-  std::list<Decl*> VectorOperations::inverseCastAxiom(CastInst *CI) {
-    auto N = Naming::INSTRUCTION_TABLE.at(CI->getOpcode());
-    auto SrcTy = dyn_cast<VectorType>(CI->getOperand(0)->getType());
-    auto DstTy = dyn_cast<VectorType>(CI->getType());
-    auto Fn = rep->opName(N, {SrcTy, DstTy});
-    auto Inv = rep->opName(N, {DstTy, SrcTy});
-
-    return {
-      function(SrcTy, DstTy, N, 1, {DstTy, SrcTy}, {DstTy->getElementType(), SrcTy->getElementType()}),
-      Decl::axiom(Expr::forall({{"v", rep->type(SrcTy)}},
-        Expr::eq(
-          Expr::fn(Inv, Expr::fn(Fn, Expr::id("v"))),
-          Expr::id("v"))))
-    };
+  FuncDecl *VectorOperations::binary(BinaryOperator *I) {
+    DEBUG(errs() << "simd-binary: " << *I << "\n");
+    auto T = dyn_cast<VectorType>(I->getType());
+    assert(T && T == I->getOperand(0)->getType() && "expected equal vector types");
+    auto F = binary(I->getOpcode(), T);
+    type(T);
+    rep->addAuxiliaryDeclaration(F);
+    return F;
   }
 
-  FuncDecl *VectorOperations::simd(Instruction *I) {
-    auto T = dyn_cast<VectorType>(I->getType());
+  FuncDecl *VectorOperations::cmp(CmpInst *I) {
+    DEBUG(errs() << "simd-binary: " << *I << "\n");
+    auto T = dyn_cast<VectorType>(I->getOperand(0)->getType());
     assert(T && "expected vector type");
+    auto F = cmp(I->getPredicate(), T);
     type(T);
-
-    auto U = dyn_cast<VectorType>(I->getOperand(0)->getType());
-    assert(U && "expected vector type");
-    type(U);
-
-    std::string N;
-    unsigned arity;
-    std::list<const Type*> Ts;
-    std::list<const Type*> ETs;
-
-    if (auto BI = dyn_cast<BinaryOperator>(I)) {
-      arity = 2;
-      Ts = {T};
-      ETs = {T->getElementType()};
-      N = Naming::INSTRUCTION_TABLE.at(I->getOpcode());
-
-    } else if (auto UI = dyn_cast<UnaryInstruction>(I)) {
-      arity = 1;
-      Ts = {U, T};
-      ETs = {U->getElementType(), T->getElementType()};
-      N = Naming::INSTRUCTION_TABLE.at(I->getOpcode());
-
-    } else if (auto CI = dyn_cast<CmpInst>(I)) {
-      arity = 2;
-      Ts = {U};
-      ETs = {U->getElementType()};
-      N = Naming::CMPINST_TABLE.at(CI->getPredicate());
-
-    } else {
-      llvm_unreachable("unexpected instruction");
-    }
-
-    auto F = function(T, U, N, arity, Ts, ETs);
+    type(VectorType::get(IntegerType::get(T->getContext(), 1), T->getNumElements()));
     rep->addAuxiliaryDeclaration(F);
-
-    if (auto CI = dyn_cast<CastInst>(I))
-      for (auto D : inverseCastAxiom(CI))
-        rep->addAuxiliaryDeclaration(D);
-
     return F;
   }
 
