@@ -146,6 +146,8 @@ namespace {
     void visitVAStart(CallSite CS);
     void visitVAStartNode(DSNode* N);
 
+    void processLoadOp(Instruction &I);
+
   public:
     GraphBuilder(Function &f, DSGraph &g, LocalDataStructures& DSi)
       : G(g), FB(&f), DS(&DSi), TD(g.getDataLayout()), VAArray(0) {
@@ -389,33 +391,37 @@ void GraphBuilder::visitSelectInst(SelectInst &SI) {
 }
 
 void GraphBuilder::visitLoadInst(LoadInst &LI) {
-  DEBUG(errs() << "[local] visiting load: " << LI << "\n");
+  processLoadOp(LI);
+}
+
+void GraphBuilder::processLoadOp(Instruction &I) {
+  DEBUG(errs() << "[local] visiting load: " << I << "\n");
   //
   // Create a DSNode for the pointer dereferenced by the load.  If the DSNode
   // is NULL, do nothing more (this can occur if the load is loading from a
   // NULL pointer constant (bugpoint can generate such code).
   //
-  DSNodeHandle Ptr = getValueDest(LI.getPointerOperand());
+  DSNodeHandle Ptr = getValueDest(I.getOperand(0));
   if (Ptr.isNull()) return; // Load from null
 
   // Make that the node is read from...
   Ptr.getNode()->setReadMarker();
 
   // Ensure a typerecord exists...
-  Ptr.getNode()->growSizeForType(LI.getType(), Ptr.getOffset());
+  Ptr.getNode()->growSizeForType(I.getType(), Ptr.getOffset());
 
-  if (isa<PointerType>(LI.getType()))
-    setDestTo(LI, getLink(Ptr));
+  if (isa<PointerType>(I.getType()))
+    setDestTo(I, getLink(Ptr));
 
   // check that it is the inserted value
   if(TypeInferenceOptimize)
-    if(LI.hasOneUse())
-      if(StoreInst *SI = dyn_cast<StoreInst>(*(LI.use_begin())))
-        if(SI->getOperand(0) == &LI) {
+    if(I.hasOneUse())
+      if(StoreInst *SI = dyn_cast<StoreInst>(*(I.use_begin())))
+        if(SI->getOperand(0) == &I) {
         ++NumIgnoredInst;
         return;
       }
-  Ptr.getNode()->mergeTypeInfo(LI.getType(), Ptr.getOffset());
+  Ptr.getNode()->mergeTypeInfo(I.getType(), Ptr.getOffset());
 }
 
 void GraphBuilder::visitStoreInst(StoreInst &SI) {
@@ -1167,6 +1173,10 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
   case Intrinsic::lifetime_end:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
+    return true;
+
+  case Intrinsic::x86_sse3_ldu_dq:
+    processLoadOp(*CS.getInstruction());
     return true;
 
   default: {
