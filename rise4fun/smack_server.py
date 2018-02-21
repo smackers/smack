@@ -11,12 +11,12 @@ import random
 PORT = 8080
 version = "1.4.4"
 rise_simple = """#include "smack.h"
-//__VERIFIER_nondet() : Is used to permit assigned memory to have unconstrained values
+//__VERIFIER_nondet_int() : Is used to permit assigned memory to have unconstrained values
 //assume(): Is used to enforce constraints on specified regions of memory
 //assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values.
 int main() {
-  int x = __VERIFIER_nondet();
-  int n = __VERIFIER_nondet();
+  int x = __VERIFIER_nondet_int();
+  int n = __VERIFIER_nondet_int();
   assume(n>0);
   assert(x+n > x);
   return 0;
@@ -27,8 +27,8 @@ rise_simple_buggy = """#include "smack.h"
 //assume(): Is used to enforce constraints on specified regions of memory
 //assert(): Is used to prove some assertions on values in the program. Assertions may contain unconstrained values
 int main() {
-  int x = __VERIFIER_nondet();
-  int n = __VERIFIER_nondet();
+  int x = __VERIFIER_nondet_int();
+  int n = __VERIFIER_nondet_int();
   assume(n>=0);
   assert(x+n > x);
   return 0;
@@ -46,7 +46,7 @@ int decr(int x) {
 
 int main(void) {
   int (*fp)(int);
-  int x = __VERIFIER_nondet(), y = __VERIFIER_nondet(), old_x = x;
+  int x = __VERIFIER_nondet_int(), y = __VERIFIER_nondet_int(), old_x = x;
 
   if (y > 0) {
     fp = incr;
@@ -73,7 +73,7 @@ void initDescArray(int number[], int size)
 int main()
 {
   int num[6], size = 6;
-  int i = __VERIFIER_nondet();
+  int i = __VERIFIER_nondet_int();
   initDescArray(num,size);
   if(i >= 1 && i < 6)
     assert(num[i] > num[i-1]);
@@ -116,7 +116,7 @@ int foo(int x, int y) {
 int main(void) {
   int b;
 
-  b = foo(__VERIFIER_nondet(), __VERIFIER_nondet());
+  b = foo(__VERIFIER_nondet_int(), __VERIFIER_nondet_int());
   assert(b != 0);
   return 0;
 }"""
@@ -129,8 +129,8 @@ int main(void) {
   x = 4;
   y = 3;
   z = 19;
-  a = __VERIFIER_nondet();
-  b = __VERIFIER_nondet();
+  a = __VERIFIER_nondet_int();
+  b = __VERIFIER_nondet_int();
   if(a>=0 && b>=0)
         assert(z != (a*x+b*y));
   return 0;
@@ -243,11 +243,11 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				return
 			return
 		except IOError:
-			print 'IOError'
+			print ('IOError')
 			self.send_error(404,'File Not Found: %s' % self.path)
 
 	def do_POST(self):
-		length = int(self.headers.getheader('content-length'))      
+		length = int(self.headers.getheader('content-length'))
 		data_string = self.rfile.read(length)
 		data = json.loads(data_string)
 
@@ -267,15 +267,21 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 			lucount = regulex.groupdict()["lu"]
 		else:
 			lucount = '2'
-		
+
 
 		f = open('logs','a')
 
-		p = subprocess.Popen(["timeout","10s",'smackverify.py', '--unroll', lucount, filename + '.c', '-o', filename +'.bpl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		p = subprocess.Popen(["timeout", "10s", '/uusoc/exports/scratch/rise4fun/smack/install/bin/smack', '--time-limit', '10', '--unroll', lucount, filename + '.c', '-bpl',
+							  filename + '.bpl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		smack_string = p.communicate()
+		smack_response = ""
 		return_code = p.returncode
+		#check that smack ran successfully.
 		if not return_code == 0:
-			if return_code == 124:
+			output = smack_string[0].replace(filename + '.c', 'input.c')
+			print("Output contained timeout code: " + str('timed out' in output))
+			output = output.split('\n')
+			if "SMACK timed out." in smack_string[1]:
 				resp = "Program is taking unusually long to verify. Request timed out."
                         	smack_response = {
                                 	"Version": version,
@@ -289,113 +295,61 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				f.write(self.client_address[0]+"--"+filename+".c--"+"Timed Out\n")
 				f.close()
 			else:
-				output = smack_string[0].replace(filename+'.c', 'input.c')
-				output = output.split(' ')
 				error = []
 				smack = ''
 				for i in range(len(output)):
-					if(output[i] == "error:" or output[i] == "warning:"):
-						error.append(i)
-				for i in range(len(error)):
-					t = output[error[i]-1].split(':')
-					flag =1
-					if(output[error[i]-1] == 'fatal'):
-						flag = 0
-					if(i < len(error)-1 and flag):
-						m = output[error[i]].split(':')
-						j = error[i]+1
-						while 1:
-							if('\n' in output[j]):
-								break
-							j = j+1
-						haha = output[j].find('\n')
-						output[j] = output[j][0:haha]
-						p = output[error[i]+1:j+1]
-						we = " "
-						p = we.join(p)
-						if(len(t) < 3 or len(m) < 1):
-							smack = smack+" SMACK Error\r\n"
-						else:
-							smack = smack+"input.c("+t[1]+","+t[2]+") : "+m[0]+" "+str(i)+": "+p+"\r\n"
-					elif(i == len(error)-1 and flag):
-						m = output[error[i]].split(':')
-                       	                        j = error[i]+1
-                               	                while 1:
-                                       	                if('\n' in output[j]):
-                                               	                break
-							j = j+ 1
-						haha = output[j].find('\n')
-                                                output[j] = output[j][0:haha]
-                                                p = output[error[i]+1:j+1]
-       	                                        we = " "
-               	                                p = we.join(p)
-						if(len(t) >= 3 or len(m) >= 1):
-	                       	                        smack = smack+"input.c("+t[1]+","+t[2]+") : "+m[0]+" "+str(i)+": "+p+"\r\n"
-						else:
-							smack = smack+" SMACK Error\r\n"
-				if(smack == ''):
-					smack = "SMACK Error"
-				smack_response = {
-					"Version": version,
-					"Outputs": [
+					#Check if an error's trace is avaliable in the smack output.
+					if "Trace" in output[i] and "input.c" in output[i]:
+						line_number = output[i][output[i].index("input.c("):output[i].index(",")]
+						trace = output[i][output[i].index(":") + 1:]
+						smack += line_number + "): error 1: " + trace + "\r\n"
+					#Check if an assert failed while running smack.
+					if "(ASSERTION FAILS" in output[i]: #we have an assertion that is failing, so report it.
+						line_number = output[i+1][output[i+1].index("("):output[i+1].index(",")]
+						smack = "input.c" + line_number + "): error 1: Assertion Failed!\r\n" + smack
+						#Grab each individual trace from the failed assertion and add to smack string
+					if "error: " in output[i]: #check if any syntax errors exist.
+						line_number = "(" + output[i][output[i].index(":") + 1:output[i].index(" ") - 1] + ")" #grab the line and column number from the error.
+						line_number = line_number[:line_number.index(":")] + ")"
+						error = output[i][output[i].index("error: "):] #grab the error
+						error = error.replace("error:", "error 2:")
+						smack += "input.c " + line_number + ": " + error + "\r\n"
+				if smack == '': #Something happened while trying to read the input. Let Rise4Fun know we couldn't process the file.
+					smack = "input.c(0): error 3: SMACK encountered an error and was unable to process the input file.\r\n"
+			smack_response = {
+				"Version": version,
+				"Outputs": [
 					{
 						"MimeType": "text/plain",
 						"Value": smack
 					}
 					]
-				}
-				f.write(self.client_address[0]+"--"+filename+".c--"+"SMACK Error\n")
-				f.close()
-		else:  
+			}
+			f.write(self.client_address[0]+"--"+filename+".c--"+"SMACK Error\n")
+			f.close()
+		else:
 			outp = smack_string[0].replace(filename+'.c', 'input.c')
 			output = outp.split(' ')
                         output = [i for i in output if '$' not in i]
 			for i in range(len(output)):
 				if '):' in output[i]:
-					output[i]=output[i][0:len(output[i])-1]+"\n"                
+					output[i]=output[i][0:len(output[i])-1]+"\n"
                         t=" "
-                        smack = t.join(output) 
+                        smack = t.join(output)
 			g = open(filename+".output",'w')
                         g.write(smack)
                         g.close()
 			f.write(self.client_address[0]+"--"+filename+".c--"+"Output\n")
 			f.close()
-			if('not hold' in outp):
-				temp = smack.split('\n')
-				temp = [w for w in temp if w != '']
-				response = temp[0]+"\r\n"
-				flag = 1
-				cnt = 0
-				for i in range(len(temp)):
-					if('input' in temp[i] and flag):
-						response = response+temp[i]+" : error main: This assertion might not hold\r\n"
-						flag = 0
-					elif('input' in temp[i] and flag == 0): 
-						response = response+temp[i]+" : Trace Element: Error trace["+str(cnt)+"]\r\n"
-						cnt = cnt +1
-				response = response + temp[len(temp)-1]
-					
-				smack_response = {
-					"Version": version,
-					"Outputs": [
-					{
-						"MimeType": "text/plain",
-						"Value": response
-					}
-					]
+		smack_response = {
+			"Version": version,
+			"Outputs": [
+				{
+					"MimeType": "text/plain",
+					"Value": smack
 				}
-			else:
-				 smack_response = {
-                                        "Version": version,
-                                        "Outputs": [
-                                        {
-                                                "MimeType": "text/plain",
-                                                "Value": smack
-                                        }
-                                        ]
-                                }
-
-			f.close()
+			]
+		}
 		body = json.dumps(smack_response)
 		self.send_response(200)
 		self.send_header('Content-Type', 'text/javascript')
@@ -409,7 +363,7 @@ class TestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		self.end_headers()
 		self.wfile.write(body)
 		self.wfile.flush()
-		os.system("rm "+filename+".b*")
+		os.system("rm "+filename+".c*")
 		self.connection.shutdown(1)
 		return
 
