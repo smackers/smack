@@ -105,23 +105,23 @@ void SplitAggregateValue::visitAggregateValue(Constant* baseVal, Type* T, IndexT
                                                     std::vector<InfoT>& info, LLVMContext& C){
   Constant* newBaseVal = baseVal;
   if(T->isIntegerTy() || T->isFloatingPointTy() || T->isPointerTy())
-      info.push_back(std::make_pair(idxs, newBaseVal));
+      info.push_back({idxs, newBaseVal});
   else if (ArrayType* AT = dyn_cast<ArrayType>(T)) {
     for (unsigned i = 0; i < AT->getNumElements(); ++i) {
       newBaseVal = baseVal? baseVal->getAggregateElement(i) : baseVal;
-      std::vector<std::pair<Value*, unsigned> > lidxs(idxs);
+      IndexT lidxs(idxs);
       if (lidxs.empty())
-        lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
-      lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt64Ty(C),i), i));
+        lidxs.push_back({ConstantInt::get(Type::getInt32Ty(C),0), 0});
+      lidxs.push_back({ConstantInt::get(Type::getInt64Ty(C),i), i});
       visitAggregateValue(newBaseVal, AT->getElementType(), lidxs, info, C);
     }
   } else if (StructType* ST = dyn_cast<StructType>(T)) {
     for (unsigned i = 0; i < ST->getNumElements(); ++i) {
       newBaseVal = baseVal? baseVal->getAggregateElement(i) : baseVal;
-      std::vector<std::pair<Value*, unsigned> > lidxs(idxs);
+      IndexT lidxs(idxs);
       if (lidxs.empty())
-        lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),0), 0));
-      lidxs.push_back(std::make_pair(ConstantInt::get(Type::getInt32Ty(C),i), i));
+        lidxs.push_back({ConstantInt::get(Type::getInt32Ty(C),0), 0});
+      lidxs.push_back({ConstantInt::get(Type::getInt32Ty(C),i), i});
       visitAggregateValue(newBaseVal, ST->getElementType(i), lidxs, info, C);
     }
   } else
