@@ -1,8 +1,5 @@
 #include "smack.h"
 
-// The assertion will fail without flag `--split-aggregate-values`.
-
-// @flag --split-aggregate-values
 // @expect verified
 
 typedef struct {
