@@ -36,7 +36,7 @@ float roundf(float x) {
 
 long lroundf(float x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
+  __SMACK_code("@ := $lround.bvfloat(@);", ret, x);
   return ret;
 }
 
@@ -125,49 +125,49 @@ float copysignf(float x, float y) {
 
 int __isnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isnormal.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isSubnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __iszerof(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $iszero.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $iszero.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isinff(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isinfinite.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isnanf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isnan.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isnegativef(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isnegative.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __ispositivef(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $ispositive.bvfloat(dtf(@)) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $ispositive.bvfloat(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __signbitf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then $1 else $0;", ret, x);
   return ret;
 }
 
@@ -313,49 +313,49 @@ double nan(const char* x) {
 
 int __isnormal(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isnormal.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isSubnormal(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __iszero(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $iszero.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $iszero.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isinf(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isinfinite.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isnan(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isnan.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isnegative(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $isnegative.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __ispositive(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $ispositive.bvdouble(@) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if $ispositive.bvdouble(@) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __signbit(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (@ <= 0e0f53e11) then 1bv32 else 0bv32;", ret, x);
+  __SMACK_code("@ := if (@ <= 0e0f53e11) then $1 else $0;", ret, x);
   return ret;
 }
 

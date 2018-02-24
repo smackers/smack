@@ -276,63 +276,54 @@ void __SMACK_dummy(int v) {
 #define UNINTERPRETED_BINARY_PRED(type,name) \
   function name.type(i1: type, i2: type) returns (i1);
 
-#define INLINE_UNARY_OP(type,name,body) \
-  function {:inline} name.type(i: type) returns (type) body
+#define UNARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(i: type) returns (type) body
 
-#define INLINE_BINARY_OP(type,name,body) \
-  function {:inline} name.type(i1: type, i2: type) returns (type) body
+#define BINARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(i1: type, i2: type) returns (type) body
+
+#define BINARY_COMP(attrib,type,name,cond) \
+  function {:attrib} name.type.bool(i1: type, i2: type) returns (bool) cond
+
+#define INLINE_BINARY_OP(type,name,cond) \
+  BINARY_OP(inline,type,name,cond)
+
+#define INLINE_BINARY_COMP(type,name,cond) \
+  BINARY_COMP(inline,type,name,cond)
 
 #define INLINE_BINARY_PRED(type,name,cond) \
-  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
-  function {:inline} name.type(i1: type, i2: type) returns (i1) {if cond then 1 else 0}
+  INLINE_BINARY_COMP(type,name,cond) \
+  function {:inline} name.type(i1: type, i2: type) returns (i1) {if name.type.bool(i1,i2) then 1 else 0}
 
 #define INLINE_BINARY_BV_PRED(type,name,cond) \
-  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
-  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if cond then 1bv1 else 0bv1}
+  INLINE_BINARY_COMP(type,name,cond) \
+  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
 
 #define INLINE_CONVERSION(t1,t2,name,body) \
   function {:inline} name.t1.t2(i: t1) returns (t2) body
 
 #define BUILTIN_UNARY_OP(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i: type) returns (type);
+  UNARY_OP(builtin xstr(prim),type,name,);
+
+#define BUILTIN_UNARY_PRED(type,name,prim) \
+  function {:builtin xstr(prim)} name.type(i: type) returns (bool);
 
 #define BUILTIN_BINARY_OP(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i1: type, i2: type) returns (type);
-
-#define BUILTIN_BINARY_PRED(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i1: type, i2: type) returns (i1);
+  BINARY_OP(builtin xstr(prim),type,name,);
 
 #define BVBUILTIN_UNARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(i: type) returns (type);
+  UNARY_OP(bvbuiltin xstr(prim),type,name,);
 
 #define BVBUILTIN_BINARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(i1: type, i2: type) returns (type);
-
-#define BVBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(i1: type, i2: type) returns (i1);
+  BINARY_OP(bvbuiltin xstr(prim),type,name,);
 
 #define INLINE_BVBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type.bool(i1: type, i2: type) returns (bool); \
+  BINARY_COMP(bvbuiltin xstr(prim),type,name,); \
   function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
 
 #define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
   function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
 
-#define FPBUILTIN_UNARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(f: type) returns (type);
-
-#define FPBUILTIN_BINARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (type);
-
-#define FPBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (i1);
-
-#define INLINE_FPBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type.bool(f1: type, f2: type) returns (bool); \
-  function {:inline} name.type(f1: type, f2: type) returns (bv1) {if name.type.bool(f1,f2) then 1bv1 else 0bv1}
-
-#define INLINE_FPBUILTIN_BINARY_SELECT(type,name,pred) \
-  function {:inline} name.type(f1: type, f2: type) returns (type) {if pred.type.bool(f1,f2) then i1 else i2}
 
 #define D(d) __SMACK_top_decl(d)
 
@@ -368,6 +359,7 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bv1,args)));
 
 #define DECLARE_EACH_FLOAT_TYPE(M,args...) \
+  D(xstr(M(bvhalf,args))); \
   D(xstr(M(bvfloat,args))); \
   D(xstr(M(bvdouble,args))); \
   D(xstr(M(bvlongdouble,args)));
@@ -401,8 +393,8 @@ void __SMACK_decls(void) {
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $xor, bvxor)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $nand, bvnand)
 
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, i1 == i2)
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, i1 != i2)
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, {i1 == i2})
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, {i1 != i2})
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ule, bvule)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ult, bvult)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $uge, bvuge)
@@ -642,16 +634,16 @@ void __SMACK_decls(void) {
   DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $xor)
   DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $nand)
 
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $eq, i1 == i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ne, i1 != i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ule, i1 <= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ult, i1 < i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $uge, i1 >= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ugt, i1 > i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sle, i1 <= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $slt, i1 < i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sge, i1 >= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sgt, i1 > i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $eq, {i1 == i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ne, {i1 != i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ule, {i1 <= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ult, {i1 < i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $uge, {i1 >= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ugt, {i1 > i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sle, {i1 <= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $slt, {i1 < i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sge, {i1 >= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sgt, {i1 > i2})
 
   D("axiom $and.i1(0,0) == 0;");
   D("axiom $and.i1(0,1) == 0;");
@@ -1045,65 +1037,44 @@ void __SMACK_decls(void) {
 
 #if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
+  D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
+  D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
 
+  // Boogie built-in arithmetic
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fsub, {i1 - i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fmul, {i1 * i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fdiv, {i1 / i2})
-  DECLARE_EACH_FLOAT_TYPE(FPBUILTIN_BINARY_OP, $frem, fp.rem)
-  D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
-  D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
 
-  D("function {:builtin \"fp.abs\"} $abs.bvfloat(bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.fma\"} $fma.bvfloat(bvfloat, bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.sqrt\"} $sqrt.bvfloat(bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.rem\"} $rem.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.min\"} $min.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.max\"} $max.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
+  // FP arithmetic
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $abs, fp.abs)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $sqrt, fp.sqrt)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $fma, fp.fma)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $frem, fp.rem)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $min, fp.min)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $max, fp.max)
 
-  D("function {:builtin \"fp.abs\"} $abs.bvdouble(bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.fma\"} $fma.bvdouble(bvdouble, bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.sqrt\"} $sqrt.bvdouble(bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.rem\"} $rem.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.min\"} $min.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.max\"} $max.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
+  // FP value predicates
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnormal, fp.isNormal)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $issubnormal, fp.isSubnormal)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $iszero, fp.isZero)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isinfinite, fp.isInfinite)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnan, fp.isNaN)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnegative, fp.isNegative)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $ispositive, fp.isPositive)
 
-  D("function {:builtin \"fp.isNormal\"} $isnormal.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isZero\"} $iszero.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isInfinite\"} $isinfinite.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isNaN\"} $isnan.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isNegative\"} $isnegative.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isPositive\"} $ispositive.bvfloat(bvfloat) returns (bool);");
-
-  D("function {:builtin \"fp.isNormal\"} $isnormal.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isZero\"} $iszero.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isInfinite\"} $isinfinite.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isNaN\"} $isnan.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isNegative\"} $isnegative.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isPositive\"} $ispositive.bvdouble(bvdouble) returns (bool);");
-
-  D("function {:builtin \"fp.isNormal\"} $isnormal.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isZero\"} $iszero.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isInfinite\"} $isinfinite.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isNaN\"} $isnan.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isNegative\"} $isnegative.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isPositive\"} $ispositive.bvlongdouble(bvlongdouble) returns (bool);");
-
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, !(i1 == i2))
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fole, i1 <= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $folt, i1 < i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foge, i1 >= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fogt, i1 > i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fueq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fune, !(i1 == i2))
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fule, i1 <= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fult, i1 < i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fuge, i1 >= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fugt, i1 > i2)
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $foeq, {i1 == i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fone, {!(i1 == i2)})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fole, {i1 <= i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $folt, {i1 < i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $foge, {i1 >= i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fogt, {i1 > i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fueq, {i1 == i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fune, {!(i1 == i2)})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fule, {i1 <= i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fult, {i1 < i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fuge, {i1 >= i2})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fugt, {i1 > i2})
 
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");

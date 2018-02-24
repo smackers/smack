@@ -217,9 +217,11 @@ std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> t
 std::string SmackRep::type(const llvm::Type* t) {
 
   if (t->isFloatingPointTy()) {
-    if (!SmackOptions::BitPrecise)
+    if (!SmackOptions::FloatEnabled)
       return Naming::UNINTERPRETED_FLOAT_TYPE;
-    if (t->isFloatTy())
+    if (t->isHalfTy())
+      return Naming::HALF_TYPE;
+    else if (t->isFloatTy())
       return Naming::FLOAT_TYPE;
     else if (t->isDoubleTy())
       return Naming::DOUBLE_TYPE;
@@ -636,7 +638,7 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
-    if (SmackOptions::BitPrecise) {
+    if (SmackOptions::FloatEnabled) {
       const APFloat APF = CFP->getValueAPF();
       const Type* type = CFP->getType();
       unsigned expSize, sigSize;
@@ -834,8 +836,14 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned) {
-  std::string fn = Naming::CMPINST_TABLE.at(predicate);
-  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs, isUnsigned), expr(rhs, isUnsigned));
+  std::string fn = opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
+  const Expr* e1 = expr(lhs, isUnsigned);
+  const Expr* e2 = expr(rhs, isUnsigned);
+  if (SmackOptions::FloatEnabled && !SmackOptions::BitPrecise)
+    return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1UL,1), integerLit(0UL,1));
+  else
+    return Expr::fn(fn, e1, e2);
+;
 }
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
@@ -987,6 +995,7 @@ std::string SmackRep::getPrelude() {
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
   if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::HALF_TYPE, "float11e5") << "\n";
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
@@ -997,6 +1006,8 @@ std::string SmackRep::getPrelude() {
   s << "// Basic constants" << "\n";
   s << Decl::constant("$0",intType(32)) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << "\n";
+  s << Decl::constant("$1",intType(32)) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id("$1"),integerLit(1UL,32))) << "\n";
 
   for (unsigned i : REF_CONSTANTS) {
     std::stringstream t;
@@ -1067,6 +1078,14 @@ std::string SmackRep::getPrelude() {
       << "returns ([ref] bv8) { $store.bytes.bv64(M,p,$p2i.ref.bv64(v)) }"
       << "\n";
   }
+
+  //s << "// Context-aware float-integer conversions" << "\n";
+  //if (SmackOptions::FloatEnabled && !SmackOptions::BitPrecise) {
+  //  s << "function {:inline} $half2int(f:bvhalf) returns(int) {$bv2int.16($fp2ui.bvhalf.bv16)}" << "\n";
+  //  s << "function {:inline} $int2half(i:int) returns(bvhalf) {$ui2fp.bv16.bvhalf($int2bv.16(i))}" << "\n";
+  //} else {
+  //  s << "function {:inline} $half2int(f:bvhalf)"
+  //}
 
   s << "// Pointer-number conversions" << "\n";
   for (unsigned i = 8; i <= 64; i <<= 1) {
