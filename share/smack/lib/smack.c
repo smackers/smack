@@ -1037,8 +1037,6 @@ void __SMACK_decls(void) {
 
 #if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
-  D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
-  D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
 
   // Boogie built-in arithmetic
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
@@ -1069,12 +1067,32 @@ void __SMACK_decls(void) {
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $folt, {i1 < i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $foge, {i1 >= i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fogt, {i1 > i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fueq, {i1 == i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fune, {!(i1 == i2)})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fule, {i1 <= i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fult, {i1 < i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fuge, {i1 >= i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fugt, {i1 > i2})
+  D("function {:inline} $ford.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {!$funo.bvhalf(f1,f2)}");
+  D("function {:inline} $ford.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {!$funo.bvfloat(f1,f2)}");
+  D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {!$funo.bvdouble(f1,f2)}");
+  D("function {:inline} $fueq.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1==f2}");
+  D("function {:inline} $fugt.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1>f2}");
+  D("function {:inline} $fuge.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1>=f2}");
+  D("function {:inline} $fult.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1<f2}");
+  D("function {:inline} $fule.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1<=f2}");
+  D("function {:inline} $fune.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||!(f1==f2)}");
+  D("function {:inline} $funo.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)}");
+  D("function {:inline} $fueq.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1==f2}");
+  D("function {:inline} $fugt.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1>f2}");
+  D("function {:inline} $fuge.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1>=f2}");
+  D("function {:inline} $fult.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1<f2}");
+  D("function {:inline} $fule.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1<=f2}");
+  D("function {:inline} $fune.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||!(f1==f2)}");
+  D("function {:inline} $funo.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)}");
+  D("function {:inline} $fueq.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1==f2}");
+  D("function {:inline} $fugt.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1>f2}");
+  D("function {:inline} $fuge.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1>=f2}");
+  D("function {:inline} $fult.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1<f2}");
+  D("function {:inline} $fule.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1<=f2}");
+  D("function {:inline} $fune.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||!(f1==f2)}");
+  D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)}");
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ffalse, {false})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ftrue, {true})
 
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
@@ -1089,9 +1107,6 @@ void __SMACK_decls(void) {
   DECLARE(INLINE_CONVERSION,bvfloat,bvlongdouble,$fpext,{ftl(i)});
   DECLARE(INLINE_CONVERSION,bvdouble,bvlongdouble,$fpext,{dtl(i)});
 
-  //This isn't the correct implementation, so change as needed
-  D("function {:inline} $ford.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
-  D("function {:inline} $funo.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
 
   D("function $fptrunc.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
   D("function $fpext.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
@@ -1213,9 +1228,6 @@ void __SMACK_decls(void) {
 
   #endif
 
-  //This isn't the correct implementation, so change as needed
-  D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
-  D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
 
   D("function $fptrunc.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
   D("function $fpext.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
