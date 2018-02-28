@@ -843,7 +843,6 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
     return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1UL,1), integerLit(0UL,1));
   else
     return Expr::fn(fn, e1, e2);
-;
 }
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
