@@ -839,7 +839,7 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   std::string fn = opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
   const Expr* e1 = expr(lhs, isUnsigned);
   const Expr* e2 = expr(rhs, isUnsigned);
-  if (SmackOptions::FloatEnabled && !SmackOptions::BitPrecise)
+  if (lhs->getType()->isFloatingPointTy())
     return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1UL,1), integerLit(0UL,1));
   else
     return Expr::fn(fn, e1, e2);
@@ -1000,7 +1000,7 @@ std::string SmackRep::getPrelude() {
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
   }
-  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
+  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";
