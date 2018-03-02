@@ -517,15 +517,14 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 // }
 
 bool SmackRep::isUnsafeFloatAccess(const Type* elemTy, const Type* resultTy) {
-  bool unsafeFloat = false;
   if (elemTy->isFloatingPointTy()) {
     if (!resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL)) {
       if (!SmackOptions::BitPrecise)
-        unsafeFloat = true;
+        return true;
     } else
       assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
   }
-  return unsafeFloat;
+  return false;
 }
 
 const Expr* SmackRep::load(const llvm::Value* P) {
@@ -1092,14 +1091,6 @@ std::string SmackRep::getPrelude() {
       << "returns ([ref] bv8) { $store.bytes.bv64(M,p,$p2i.ref.bv64(v)) }"
       << "\n";
   }
-
-  //s << "// Context-aware float-integer conversions" << "\n";
-  //if (SmackOptions::FloatEnabled && !SmackOptions::BitPrecise) {
-  //  s << "function {:inline} $half2int(f:bvhalf) returns(int) {$bv2int.16($fp2ui.bvhalf.bv16)}" << "\n";
-  //  s << "function {:inline} $int2half(i:int) returns(bvhalf) {$ui2fp.bv16.bvhalf($int2bv.16(i))}" << "\n";
-  //} else {
-  //  s << "function {:inline} $half2int(f:bvhalf)"
-  //}
 
   s << "// Pointer-number conversions" << "\n";
   for (unsigned i = 8; i <= 64; i <<= 1) {
