@@ -516,14 +516,28 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 //
 // }
 
+bool SmackRep::isUnsafeFloatAccess(const Type* elemTy, const Type* resultTy) {
+  bool unsafeFloat = false;
+  if (elemTy->isFloatingPointTy()) {
+    if (!resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL)) {
+      if (!SmackOptions::BitPrecise)
+        unsafeFloat = true;
+    } else
+      assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
+  }
+  return unsafeFloat;
+}
+
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   const unsigned R = regions->idx(P);
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
+  const Type* resultTy = regions->get(R).getType();
+  bool unsafeFloat = isUnsafeFloatAccess(T->getElementType(), resultTy);
   const Expr* M = Expr::id(memPath(R));
-  std::string N = Naming::LOAD + "." + (bytewise ? "bytes." : "") +
+  std::string N = Naming::LOAD + "." + (bytewise ? "bytes." : (unsafeFloat? "unsafe." : "")) +
     type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
@@ -542,8 +556,9 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
-
-  std::string N = Naming::STORE + "." + (bytewise ? "bytes." : "") + type(T);
+  const Type* resultTy = regions->get(R).getType();
+  bool unsafeFloat = isUnsafeFloatAccess(T, resultTy);
+  std::string N = Naming::STORE + "." + (bytewise ? "bytes." : (unsafeFloat? "unsafe." : "")) + type(T);
   const Expr* M = Expr::id(memPath(R));
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }

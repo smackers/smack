@@ -273,6 +273,9 @@ void __SMACK_dummy(int v) {
 #define UNINTERPRETED_BINARY_OP(type,name) \
   function name.type(i1: type, i2: type) returns (type);
 
+#define UNINTERPRETED_UNARY_PRED(type,name) \
+  function name.type(i: type) returns (i1);
+
 #define UNINTERPRETED_BINARY_PRED(type,name) \
   function name.type(i1: type, i2: type) returns (i1);
 
@@ -315,7 +318,10 @@ void __SMACK_dummy(int v) {
   UNARY_OP(builtin xstr(prim),type,name,);
 
 #define BUILTIN_UNARY_PRED(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i: type) returns (bool);
+  function {:builtin xstr(prim)} name.type.bool(i: type) returns (bool);
+
+#define BUILTIN_BINARY_COMP(type,name,prim) \
+  BINARY_COMP(builtin xstr(prim),type,name,);
 
 #define BUILTIN_BINARY_OP(type,name,prim) \
   BINARY_OP(builtin xstr(prim),type,name,);
@@ -992,6 +998,10 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,float,float,$fptrunc);
   DECLARE(UNINTERPRETED_CONVERSION,float,float,$fpext);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$bitcast);
 
 #ifndef NO_FORALL
   D("axiom (forall f1, f2: float :: $foeq.float.bool(f1,f2) <==> !$fune.float.bool(f1,f2));");
@@ -1001,6 +1011,8 @@ void __SMACK_decls(void) {
   D("axiom (forall f1, f2: float :: $folt.float.bool(f1,f2) <==> !$fuge.float.bool(f1,f2));");
   D("axiom (forall f1, f2: float :: $fole.float.bool(f1,f2) <==> !$fugt.float.bool(f1,f2));");
   D("axiom (forall f1, f2: float :: $ford.float.bool(f1,f2) <==> !$funo.float.bool(f1,f2));");
+  D("axiom (forall f: float, i: i8 :: $bitcast.float.i8(f) == i <==> $bitcast.i8.float(i) == f);");
+  // TODO: add proper axiom for float/bv8 conversions
 #endif
 
 #if FLOAT_ENABLED
@@ -1029,36 +1041,40 @@ void __SMACK_decls(void) {
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnegative, fp.isNegative)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $ispositive, fp.isPositive)
 
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $foeq, {i1 == i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fone, {!(i1 == i2)})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fole, {i1 <= i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $folt, {i1 < i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $foge, {i1 >= i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $fogt, {i1 > i2})
-  D("function {:inline} $ford.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {!$funo.bvhalf(f1,f2)}");
-  D("function {:inline} $ford.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {!$funo.bvfloat(f1,f2)}");
-  D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {!$funo.bvdouble(f1,f2)}");
-  D("function {:inline} $fueq.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1==f2}");
-  D("function {:inline} $fugt.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1>f2}");
-  D("function {:inline} $fuge.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1>=f2}");
-  D("function {:inline} $fult.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1<f2}");
-  D("function {:inline} $fule.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||f1<=f2}");
-  D("function {:inline} $fune.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)||!(f1==f2)}");
-  D("function {:inline} $funo.bvhalf(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf(f1)||$isnan.bvhalf(f2)}");
-  D("function {:inline} $fueq.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1==f2}");
-  D("function {:inline} $fugt.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1>f2}");
-  D("function {:inline} $fuge.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1>=f2}");
-  D("function {:inline} $fult.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1<f2}");
-  D("function {:inline} $fule.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||f1<=f2}");
-  D("function {:inline} $fune.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)||!(f1==f2)}");
-  D("function {:inline} $funo.bvfloat(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat(f1)||$isnan.bvfloat(f2)}");
-  D("function {:inline} $fueq.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1==f2}");
-  D("function {:inline} $fugt.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1>f2}");
-  D("function {:inline} $fuge.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1>=f2}");
-  D("function {:inline} $fult.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1<f2}");
-  D("function {:inline} $fule.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||f1<=f2}");
-  D("function {:inline} $fune.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)||!(f1==f2)}");
-  D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble(f1)||$isnan.bvdouble(f2)}");
+  // FP comparison predicates
+  // I assume fp.eq is exactly ieee compareQuietEqual
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $foeq, fp.eq)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $fole, fp.leq)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $folt, fp.lt)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $foge, fp.geq)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $fogt, fp.gt)
+  D("function {:inline} $fone.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {!$fueq.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fone.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {!$fueq.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fone.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {!$fueq.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $ford.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {!$funo.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $ford.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {!$funo.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $ford.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {!$funo.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fueq.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$foeq.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fogt.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$foge.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fult.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$folt.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fule.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fole.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fune.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fone.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $funo.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)}");
+  D("function {:inline} $fueq.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$foeq.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$fogt.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$foge.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fult.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$folt.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fule.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$fole.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fune.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$fone.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $funo.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)}");
+  D("function {:inline} $fueq.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$foeq.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fogt.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$foge.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fult.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$folt.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fule.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fole.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fune.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fone.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $funo.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)}");
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ffalse, {false})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ftrue, {true})
 
@@ -1432,24 +1448,65 @@ void __SMACK_decls(void) {
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
 
   D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
+  D("function {:inline} $load.unsafe.float(M: [ref] i8, p: ref) returns (float) { $bitcast.i8.float(M[p]) }");
   D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
+  D("function {:inline} $store.unsafe.float(M: [ref] i8, p: ref, v: float) returns ([ref] i8) { M[p := $bitcast.float.i8(v)] }");
+  D("function {:inline} $load.bytes.float(M: [ref] bv8, p: ref) returns (float) { $bitcast.bv8.float(M[p]) }");
+  D("function {:inline} $store.bytes.float(M:[ref]bv8, p:ref, v:float) returns ([ref]bv8) {M[p := $bitcast.float.bv8(v)]}");
 
   #if FLOAT_ENABLED
+  DECLARE(UNINTERPRETED_CONVERSION,bvhalf,bv16,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,bv32,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,bv64,$bitcast);
+  DECLARE(BUILTIN_CONVERSION,bv16,bvhalf,$bitcast,(_ to_fp 5 11));
+  DECLARE(BUILTIN_CONVERSION,bv32,bvfloat,$bitcast,(_ to_fp 8 24));
+  DECLARE(BUILTIN_CONVERSION,bv64,bvdouble,$bitcast,(_ to_fp 11 53));
+  DECLARE(UNINTERPRETED_CONVERSION,bvhalf,i16,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i32,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i64,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,bvhalf,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,bvfloat,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,bvdouble,$bitcast);
+  D("axiom (forall f: bvhalf, i: bv16 :: $bitcast.bvhalf.bv16(f) == i <==> $bitcast.bv16.bvhalf(i) == f);");
+  D("axiom (forall f: bvfloat, i: bv32 :: $bitcast.bvfloat.bv32(f) == i <==> $bitcast.bv32.bvfloat(i) == f);");
+  D("axiom (forall f: bvdouble, i: bv64 :: $bitcast.bvdouble.bv64(f) == i <==> $bitcast.bv64.bvdouble(i) == f);");
+  // TODO: add more constraints
+  D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
+  D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
+  D("axiom (forall f: bvdouble, i: i64 :: $bitcast.bvdouble.i64(f) == i <==> $bitcast.i64.bvdouble(i) == f);");
+
+  D("function {:inline} $load.bvhalf(M: [ref] bvhalf, p: ref) returns (bvhalf) { M[p] }");
+  D("function {:inline} $store.bvhalf(M: [ref] bvhalf, p: ref, v: bvhalf) returns ([ref] bvhalf) { M[p := v] }");
   D("function {:inline} $load.bvfloat(M: [ref] bvfloat, p: ref) returns (bvfloat) { M[p] }");
   D("function {:inline} $store.bvfloat(M: [ref] bvfloat, p: ref, v: bvfloat) returns ([ref] bvfloat) { M[p := v] }");
-
   D("function {:inline} $load.bvdouble(M: [ref] bvdouble, p: ref) returns (bvdouble) { M[p] }");
   D("function {:inline} $store.bvdouble(M: [ref] bvdouble, p: ref, v: bvdouble) returns ([ref] bvdouble) { M[p := v] }");
 
+  D("function {:inline} $store.bytes.bvhalf(M:[ref]bv8, p:ref, v:bvhalf) returns ([ref]bv8) {"
+    "$store.bytes.bv16(M, p, $bitcast.bvhalf.bv16(v))}");
   D("function {:inline} $store.bytes.bvfloat(M:[ref]bv8, p:ref, v:bvfloat) returns ([ref]bv8) {"
-    "$store.bytes.bv32(M, p, $fp2ui.bvfloat.bv32(v))}");
+    "$store.bytes.bv32(M, p, $bitcast.bvfloat.bv32(v))}");
   D("function {:inline} $store.bytes.bvdouble(M:[ref]bv8, p:ref, v:bvdouble) returns ([ref]bv8) {"
-    "$store.bytes.bv64(M, p, $fp2ui.bvdouble.bv64(v))}");
+    "$store.bytes.bv64(M, p, $bitcast.bvdouble.bv64(v))}");
+  D("function {:inline} $store.unsafe.bvhalf(M:[ref]i8, p:ref, v:bvhalf) returns ([ref]i8) {"
+    "$store.i16(M, p, $bitcast.bvhalf.i16(v))}");
+  D("function {:inline} $store.unsafe.bvfloat(M:[ref]i8, p:ref, v:bvfloat) returns ([ref]i8) {"
+    "$store.i32(M, p, $bitcast.bvfloat.i32(v))}");
+  D("function {:inline} $store.unsafe.bvdouble(M:[ref]i8, p:ref, v:bvdouble) returns ([ref]i8) {"
+    "$store.i64(M, p, $bitcast.bvdouble.i64(v))}");
 
+  D("function {:inline} $load.bytes.bvhalf(M: [ref] bv8, p: ref) returns (bvhalf) {"
+    "$bitcast.bv16.bvhalf($load.bytes.bv16(M, p))}");
   D("function {:inline} $load.bytes.bvfloat(M: [ref] bv8, p: ref) returns (bvfloat) {"
-    "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");
+    "$bitcast.bv32.bvfloat($load.bytes.bv32(M, p))}");
   D("function {:inline} $load.bytes.bvdouble(M: [ref] bv8, p: ref) returns (bvdouble) {"
-    "$ui2fp.bv64.bvdouble($load.bytes.bv64(M, p))}");
+    "$bitcast.bv64.bvdouble($load.bytes.bv64(M, p))}");
+  D("function {:inline} $load.unsafe.bvhalf(M: [ref] i8, p: ref) returns (bvhalf) {"
+    "$bitcast.i16.bvhalf($load.i16(M, p))}");
+  D("function {:inline} $load.unsafe.bvfloat(M: [ref] i8, p: ref) returns (bvfloat) {"
+    "$bitcast.i32.bvfloat($load.i32(M, p))}");
+  D("function {:inline} $load.unsafe.bvdouble(M: [ref] i8, p: ref) returns (bvdouble) {"
+    "$bitcast.i64.bvdouble($load.i64(M, p))}");
   #endif
 
   // Memory debugging symbols
