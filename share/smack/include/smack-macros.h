@@ -1,4 +1,9 @@
-// shamelessly stole these macro definitions from https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
+
+// shamelessly stole these macro definitions from
+// https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
 #define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
 
 #define DEC(x) PRIMITIVE_CAT(DEC_, x)
