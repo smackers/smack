@@ -36,6 +36,25 @@
 #define INC_128 0
 #define INC_0 0
 
+#define DEC_BYTE(x) PRIMITIVE_CAT(DEC_BYTE_, x)
+#define DEC_BYTE_0 0
+#define DEC_BYTE_8 0
+#define DEC_BYTE_16 8
+#define DEC_BYTE_24 16
+#define DEC_BYTE_32 24
+#define DEC_BYTE_40 32
+#define DEC_BYTE_48 40
+#define DEC_BYTE_56 48
+#define DEC_BYTE_64 56
+#define DEC_BYTE_72 64
+#define DEC_BYTE_80 72
+#define DEC_BYTE_88 80
+#define DEC_BYTE_96 88
+#define DEC_BYTE_104 96
+#define DEC_BYTE_112 104
+#define DEC_BYTE_120 112
+#define DEC_BYTE_128 120
+
 #define EVAL(...)  EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
 #define EVAL1(...) EVAL2(EVAL2(EVAL2(__VA_ARGS__)))
 #define EVAL2(...) EVAL3(EVAL3(EVAL3(__VA_ARGS__)))
@@ -86,8 +105,8 @@
     )
 #define REPEAT_INDIRECT() REPEAT
 
-#define INT_TYPE(bw) i ## bw
-#define BV_TYPE(bw) bv ## bw
+#define INT_TYPE(bw) PRIMITIVE_CAT(i, bw)
+#define BV_TYPE(bw) PRIMITIVE_CAT(bv, bw)
 
 #define APPLY_MACRO_ON_BV(bw,M,args...) \
   D(xstr(M(BV_TYPE(bw),args)));
@@ -145,3 +164,33 @@
 
 #define DECLARE_INT_SEXTS \
   EVAL(COMBINE(1,8,INC,DECLARE_INT_SEXT))
+
+#define SAFE_LOAD_OP(type,name,body) \
+  function {:inline} name.type(M: [ref] type, p: ref) returns (type) body
+
+#define UNSAFE_LOAD_OP(type,name,body) \
+  function {:inline} name.type(M: [ref] bv8, p: ref) returns (type) body
+
+#define SAFE_STORE_OP(type,name,body) \
+  function {:inline} name.type(M: [ref] type, p: ref, v: type) returns ([ref] type) body
+
+#define UNSAFE_STORE_OP(type,name,body) \
+  function {:inline} name.type(M: [ref] bv8, p: ref, v: type) returns ([ref] bv8) body
+
+#define DECLARE_UNSAFE_LOAD(bw1,bw2) \
+  WHEN(BOOL(DEC_BYTE(bw2))) \
+  ( \
+    DECLARE(UNSAFE_LOAD_OP, BV_TYPE(bw2), $load.bytes, {$load.bytes.BV_TYPE(DEC_BYTE(bw2))(M, $add.ref(p, $1.ref)) ++ $load.bytes.bv8(M,p)}); \
+  )
+
+#define DECLARE_UNSAFE_STORE(bw1,bw2) \
+  WHEN(BOOL(DEC_BYTE(bw2))) \
+  ( \
+    DECLARE(UNSAFE_STORE_OP, BV_TYPE(bw2), $store.bytes, {$store.bytes.BV_TYPE(DEC_BYTE(bw2))(M, $add.ref(p, $1.ref), v[bw2:8])[p := v[8:0]]}); \
+  )
+
+#define DECLARE_UNSAFE_LOADS \
+  EVAL(COMBINE(8,128,DEC_BYTE,DECLARE_UNSAFE_LOAD))
+
+#define DECLARE_UNSAFE_STORES \
+  EVAL(COMBINE(8,128,DEC_BYTE,DECLARE_UNSAFE_STORE))

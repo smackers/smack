@@ -1079,132 +1079,17 @@ void __SMACK_decls(void) {
   D("const $MALLOC_TOP: ref;");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
 
-  D("function {:inline} $load.i128(M: [ref] i128, p: ref) returns (i128) { M[p] }");
-  D("function {:inline} $load.i96(M: [ref] i96, p: ref) returns (i96) { M[p] }");
-  D("function {:inline} $load.i88(M: [ref] i88, p: ref) returns (i88) { M[p] }");
-  D("function {:inline} $load.i64(M: [ref] i64, p: ref) returns (i64) { M[p] }");
-  D("function {:inline} $load.i56(M: [ref] i56, p: ref) returns (i56) { M[p] }");
-  D("function {:inline} $load.i48(M: [ref] i48, p: ref) returns (i48) { M[p] }");
-  D("function {:inline} $load.i40(M: [ref] i40, p: ref) returns (i40) { M[p] }");
-  D("function {:inline} $load.i32(M: [ref] i32, p: ref) returns (i32) { M[p] }");
-  D("function {:inline} $load.i24(M: [ref] i24, p: ref) returns (i24) { M[p] }");
-  D("function {:inline} $load.i16(M: [ref] i16, p: ref) returns (i16) { M[p] }");
-  D("function {:inline} $load.i8(M: [ref] i8, p: ref) returns (i8) { M[p] }");
-  D("function {:inline} $load.i1(M: [ref] i1, p: ref) returns (i1) { M[p] }");
+  DECLARE_EACH_INT_TYPE(SAFE_LOAD_OP, $load, { M[p] })
+  DECLARE_EACH_BV_TYPE(SAFE_LOAD_OP, $load, { M[p] })
+  DECLARE_UNSAFE_LOADS
+  DECLARE(UNSAFE_LOAD_OP, bv8, $load.bytes, { M[p] });
+  DECLARE(UNSAFE_LOAD_OP, bv1, $load.bytes, { $trunc.bv8.bv1(M[p]) });
 
-  D("function {:inline} $load.bv128(M: [ref] bv128, p: ref) returns (bv128) { M[p] }");
-  D("function {:inline} $load.bv96(M: [ref] bv96, p: ref) returns (bv96) { M[p] }");
-  D("function {:inline} $load.bv88(M: [ref] bv88, p: ref) returns (bv88) { M[p] }");
-  D("function {:inline} $load.bv64(M: [ref] bv64, p: ref) returns (bv64) { M[p] }");
-  D("function {:inline} $load.bv56(M: [ref] bv56, p: ref) returns (bv56) { M[p] }");
-  D("function {:inline} $load.bv48(M: [ref] bv48, p: ref) returns (bv48) { M[p] }");
-  D("function {:inline} $load.bv40(M: [ref] bv40, p: ref) returns (bv40) { M[p] }");
-  D("function {:inline} $load.bv32(M: [ref] bv32, p: ref) returns (bv32) { M[p] }");
-  D("function {:inline} $load.bv24(M: [ref] bv24, p: ref) returns (bv24) { M[p] }");
-  D("function {:inline} $load.bv16(M: [ref] bv16, p: ref) returns (bv16) { M[p] }");
-  D("function {:inline} $load.bv8(M: [ref] bv8, p: ref) returns (bv8) { M[p] }");
-  D("function {:inline} $load.bv1(M: [ref] bv1, p: ref) returns (bv1) { M[p] }");
-
-  D("function {:inline} $load.bytes.bv128(M: [ref] bv8, p: ref) returns (bv128)"
-    "{ $load.bytes.bv64(M, $add.ref(p, $8.ref)) ++ $load.bytes.bv64(M, p) }");
-  D("function {:inline} $load.bytes.bv96(M: [ref] bv8, p: ref) returns (bv96)"
-    "{ $load.bytes.bv64(M, $add.ref(p, $4.ref)) ++ $load.bytes.bv32(M, p) }");
-  D("function {:inline} $load.bytes.bv88(M: [ref] bv8, p: ref) returns (bv88)"
-    "{ $load.bytes.bv56(M, $add.ref(p, $4.ref)) ++ $load.bytes.bv32(M, p) }");
-  D("function {:inline} $load.bytes.bv64(M: [ref] bv8, p: ref) returns (bv64)"
-    "{ $load.bytes.bv32(M, $add.ref(p, $4.ref)) ++ $load.bytes.bv32(M, p) }");
-  D("function {:inline} $load.bytes.bv56(M: [ref] bv8, p: ref) returns (bv56)"
-    "{ $load.bytes.bv24(M, $add.ref(p, $4.ref)) ++ $load.bytes.bv32(M, p) }");
-  D("function {:inline} $load.bytes.bv48(M: [ref] bv8, p: ref) returns (bv48)"
-    "{ $load.bytes.bv16(M, $add.ref(p, $4.ref)) ++ $load.bytes.bv32(M, p) }");
-  D("function {:inline} $load.bytes.bv40(M: [ref] bv8, p: ref) returns (bv40)"
-    "{ M[$add.ref(p, $4.ref)] ++ $load.bytes.bv32(M, p) }");
-  D("function {:inline} $load.bytes.bv32(M: [ref] bv8, p: ref) returns (bv32)"
-    "{ M[$add.ref(p, $3.ref)] ++ M[$add.ref(p, $2.ref)] ++ M[$add.ref(p, $1.ref)]++M[p] }");
-  D("function {:inline} $load.bytes.bv24(M: [ref] bv8, p: ref) returns (bv24)"
-    "{ M[$add.ref(p, $2.ref)] ++ M[$add.ref(p, $1.ref)]++M[p] }");
-  D("function {:inline} $load.bytes.bv16(M: [ref] bv8, p: ref) returns (bv16)"
-    "{ M[$add.ref(p, $1.ref)] ++ M[p] }");
-  D("function {:inline} $load.bytes.bv8(M: [ref] bv8, p: ref) returns (bv8) { M[p] }");
-  D("function {:inline} $load.bytes.bv1(M: [ref] bv8, p: ref) returns (bv1) { $trunc.bv8.bv1(M[p]) }");
-
-  D("function {:inline} $store.i128(M: [ref] i128, p: ref, v: i128) returns ([ref] i128) { M[p := v] }");
-  D("function {:inline} $store.i96(M: [ref] i96, p: ref, v: i96) returns ([ref] i96) { M[p := v] }");
-  D("function {:inline} $store.i88(M: [ref] i88, p: ref, v: i88) returns ([ref] i88) { M[p := v] }");
-  D("function {:inline} $store.i64(M: [ref] i64, p: ref, v: i64) returns ([ref] i64) { M[p := v] }");
-  D("function {:inline} $store.i56(M: [ref] i56, p: ref, v: i56) returns ([ref] i56) { M[p := v] }");
-  D("function {:inline} $store.i48(M: [ref] i48, p: ref, v: i48) returns ([ref] i48) { M[p := v] }");
-  D("function {:inline} $store.i40(M: [ref] i40, p: ref, v: i40) returns ([ref] i40) { M[p := v] }");
-  D("function {:inline} $store.i32(M: [ref] i32, p: ref, v: i32) returns ([ref] i32) { M[p := v] }");
-  D("function {:inline} $store.i24(M: [ref] i24, p: ref, v: i24) returns ([ref] i24) { M[p := v] }");
-  D("function {:inline} $store.i16(M: [ref] i16, p: ref, v: i16) returns ([ref] i16) { M[p := v] }");
-  D("function {:inline} $store.i8(M: [ref] i8, p: ref, v: i8) returns ([ref] i8) { M[p := v] }");
-  D("function {:inline} $store.i1(M: [ref] i1, p: ref, v: i1) returns ([ref] i1) { M[p := v] }");
-
-  D("function {:inline} $store.bv128(M: [ref] bv128, p: ref, v: bv128) returns ([ref] bv128) { M[p := v] }");
-  D("function {:inline} $store.bv96(M: [ref] bv96, p: ref, v: bv96) returns ([ref] bv96) { M[p := v] }");
-  D("function {:inline} $store.bv88(M: [ref] bv88, p: ref, v: bv88) returns ([ref] bv88) { M[p := v] }");
-  D("function {:inline} $store.bv64(M: [ref] bv64, p: ref, v: bv64) returns ([ref] bv64) { M[p := v] }");
-  D("function {:inline} $store.bv56(M: [ref] bv56, p: ref, v: bv56) returns ([ref] bv56) { M[p := v] }");
-  D("function {:inline} $store.bv48(M: [ref] bv48, p: ref, v: bv48) returns ([ref] bv48) { M[p := v] }");
-  D("function {:inline} $store.bv40(M: [ref] bv40, p: ref, v: bv40) returns ([ref] bv40) { M[p := v] }");
-  D("function {:inline} $store.bv32(M: [ref] bv32, p: ref, v: bv32) returns ([ref] bv32) { M[p := v] }");
-  D("function {:inline} $store.bv24(M: [ref] bv24, p: ref, v: bv24) returns ([ref] bv24) { M[p := v] }");
-  D("function {:inline} $store.bv16(M: [ref] bv16, p: ref, v: bv16) returns ([ref] bv16) { M[p := v] }");
-  D("function {:inline} $store.bv8(M: [ref] bv8, p: ref, v: bv8) returns ([ref] bv8) { M[p := v] }");
-  D("function {:inline} $store.bv1(M: [ref] bv1, p: ref, v: bv1) returns ([ref] bv1) { M[p := v] }");
-
-  D("function {:inline} $store.bytes.bv128(M:[ref]bv8, p:ref, v:bv128) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
-    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
-    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
-    "[$add.ref(p, $9.ref) := v[88:80]][$add.ref(p, $10.ref) := v[96:88]]"
-    "[$add.ref(p, $11.ref) := v[104:96]][$add.ref(p, $12.ref) := v[112:104]]"
-    "[$add.ref(p, $13.ref) := v[120:112]][$add.ref(p, $14.ref) := v[128:120]]}");
-  D("function {:inline} $store.bytes.bv96(M:[ref]bv8, p:ref, v:bv96) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
-    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
-    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
-    "[$add.ref(p, $9.ref) := v[88:80]][$add.ref(p, $10.ref) := v[96:88]]}");
-  D("function {:inline} $store.bytes.bv88(M:[ref]bv8, p:ref, v:bv88) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
-    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]"
-    "[$add.ref(p, $7.ref) := v[72:64]][$add.ref(p, $8.ref) := v[80:72]]"
-    "[$add.ref(p, $9.ref) := v[88:80]]}");
-  D("function {:inline} $store.bytes.bv64(M:[ref]bv8, p:ref, v:bv64) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
-    "[$add.ref(p, $6.ref) := v[56:48]][$add.ref(p, $7.ref) := v[64:56]]}");
-  D("function {:inline} $store.bytes.bv56(M:[ref]bv8, p:ref, v:bv56) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]"
-    "[$add.ref(p, $6.ref) := v[56:48]]}");
-  D("function {:inline} $store.bytes.bv48(M:[ref]bv8, p:ref, v:bv48) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]][$add.ref(p, $5.ref) := v[48:40]]}");
-  D("function {:inline} $store.bytes.bv40(M:[ref]bv8, p:ref, v:bv40) returns ([ref]bv8){"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]"
-    "[$add.ref(p, $4.ref) := v[40:32]]}");
-  D("function {:inline} $store.bytes.bv32(M:[ref]bv8, p:ref, v:bv32) returns ([ref]bv8) {"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]][$add.ref(p, $3.ref) := v[32:24]]}");
-  D("function {:inline} $store.bytes.bv24(M:[ref]bv8, p:ref, v:bv24) returns ([ref]bv8) {"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]"
-    "[$add.ref(p, $2.ref) := v[24:16]]}");
-  D("function {:inline} $store.bytes.bv16(M:[ref]bv8, p:ref, v:bv16) returns ([ref]bv8) {"
-    "M[p := v[8:0]][$add.ref(p, $1.ref) := v[16:8]]}");
-  D("function {:inline} $store.bytes.bv8(M:[ref]bv8, p:ref, v:bv8) returns ([ref]bv8) {M[p := v]}");
-  D("function {:inline} $store.bytes.bv1(M:[ref]bv8, p:ref, v:bv1) returns ([ref]bv8) {M[p := $zext.bv1.bv8(v)]}");
+  DECLARE_EACH_INT_TYPE(SAFE_STORE_OP, $store, { M[p := v] })
+  DECLARE_EACH_BV_TYPE(SAFE_STORE_OP, $store, { M[p := v] })
+  DECLARE_UNSAFE_STORES
+  DECLARE(UNSAFE_STORE_OP, bv8, $store.bytes, {M[p := v]});
+  DECLARE(UNSAFE_STORE_OP, bv1, $store.bytes, {M[p := $zext.bv1.bv8(v)]});
 
   D("function {:inline} $load.ref(M: [ref] ref, p: ref) returns (ref) { M[p] }");
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
