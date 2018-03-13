@@ -518,10 +518,10 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 
 bool SmackRep::isUnsafeFloatAccess(const Type* elemTy, const Type* resultTy) {
   if (elemTy->isFloatingPointTy()) {
-    if (!resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL)) {
-      if (!SmackOptions::BitPrecise)
-        return true;
-    } else
+    bool isByteMap = !resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL);
+    if (isByteMap && !SmackOptions::BitPrecise)
+      return true;
+    else
       assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
   }
   return false;
