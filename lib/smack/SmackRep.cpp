@@ -534,10 +534,10 @@ const Expr* SmackRep::load(const llvm::Value* P) {
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
   const Type* resultTy = regions->get(R).getType();
-  bool unsafeFloat = isUnsafeFloatAccess(T->getElementType(), resultTy);
   const Expr* M = Expr::id(memPath(R));
-  std::string N = Naming::LOAD + "." + (bytewise ? "bytes." : (unsafeFloat? "unsafe." : "")) +
-    type(T->getElementType());
+  std::string N = Naming::LOAD + "."
+    + (bytewise ? "bytes." : (isUnsafeFloatAccess(T->getElementType(), resultTy)? "unsafe." : ""))
+    + type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
@@ -556,8 +556,8 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
   const Type* resultTy = regions->get(R).getType();
-  bool unsafeFloat = isUnsafeFloatAccess(T, resultTy);
-  std::string N = Naming::STORE + "." + (bytewise ? "bytes." : (unsafeFloat? "unsafe." : "")) + type(T);
+  std::string N = Naming::STORE + "."
+    + (bytewise ? "bytes." : (isUnsafeFloatAccess(T, resultTy)? "unsafe." : "")) + type(T);
   const Expr* M = Expr::id(memPath(R));
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
