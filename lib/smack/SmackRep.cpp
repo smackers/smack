@@ -372,9 +372,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
 
   assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
   assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
-  const Value* V = CI.getArgOperand(0);
-  while (isa<const CastInst>(V))
-    V = dyn_cast<const CastInst>(V)->getOperand(0);
+  const Value* V = CI.getArgOperand(0)->stripPointerCasts();
 
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
@@ -436,7 +434,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       llvm_unreachable("Unexpected argument type.");
     }
 
-    assert(A->hasName() && "Expected named argument.");
     assert(T && "Unkown access type.");
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
     assert(I && "expected constant size expression.");
