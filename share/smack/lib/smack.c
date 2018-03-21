@@ -1467,9 +1467,12 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,i16,bvhalf,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i32,bvfloat,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i64,bvdouble,$bitcast);
-  D("axiom (forall f: bvhalf, i: bv16 :: $bitcast.bvhalf.bv16(f) == i <==> $bitcast.bv16.bvhalf(i) == f);");
-  D("axiom (forall f: bvfloat, i: bv32 :: $bitcast.bvfloat.bv32(f) == i <==> $bitcast.bv32.bvfloat(i) == f);");
-  D("axiom (forall f: bvdouble, i: bv64 :: $bitcast.bvdouble.bv64(f) == i <==> $bitcast.bv64.bvdouble(i) == f);");
+  D("axiom (forall f: bvhalf :: $bitcast.bv16.bvhalf($bitcast.bvhalf.bv16(f)) == f);");
+  D("axiom (forall f: bvfloat :: $bitcast.bv32.bvfloat($bitcast.bvfloat.bv32(f)) == f);");
+  D("axiom (forall f: bvdouble :: $bitcast.bv64.bvdouble($bitcast.bvdouble.bv64(f)) == f);");
+  D("axiom (forall b: bv16 :: b[15:10] == 31bv5 && b[10:0] != 0bv10 ==> $bitcast.bvhalf.bv16($bitcast.bv16.bvhalf(b)) == b);");
+  D("axiom (forall b: bv32 :: b[31:23] == 255bv8 && b[23:0] != 0bv23 ==> $bitcast.bvfloat.bv32($bitcast.bv32.bvfloat(b)) == b);");
+  D("axiom (forall b: bv64 :: b[63:52] == 2047bv11 && b[52:0] != 0bv52 ==> $bitcast.bvdouble.bv64($bitcast.bv64.bvdouble(b)) == b);");
   // TODO: add more constraints
   D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
   D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
