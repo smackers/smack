@@ -21,8 +21,8 @@ def frontends():
   return {
     'c': clang_frontend,
     'i': clang_frontend,
-    'cc': clang_frontend,
-    'cpp': clang_frontend,
+    'cc': clang_plusplus_frontend,
+    'cpp': clang_plusplus_frontend,
     'm': objc_clang_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
@@ -307,6 +307,11 @@ def objc_clang_compile_command(args, lib = False):
     sys.exit("Objective-C not supported for this operating system.")
   return cmd
 
+def cplusplus_clang_compile_command(args, lib = False):
+  cmd = default_clang_compile_command(args,lib)
+  cmd[0] = 'clang++'
+  return cmd
+
 def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   cmd += map(lambda path: '-I' + path, smack_headers())
@@ -357,6 +362,11 @@ def clang_frontend(args):
 
   compile_command = default_clang_compile_command(args)
   default_link_bc_files(compile_command, args)
+
+def clang_plusplus_frontend(args):
+  """Generate Boogie code from C++ language source(s)."""
+  compile_command = cplusplus_clang_compile_command(args)
+  clang_frontend_helper(compile_command, args)
 
 def objc_clang_frontend(args):
   """Generate Boogie code from Objective-C language source(s)."""
