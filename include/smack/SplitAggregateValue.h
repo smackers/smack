@@ -25,6 +25,8 @@ private:
   void splitAggregateLoad(llvm::LoadInst* li, std::vector<InfoT>& info);
   void splitAggregateStore(llvm::StoreInst* si, std::vector<InfoT>& info);
   void splitConstantReturn(llvm::ReturnInst* ri, std::vector<InfoT>& info);
+  void splitConstantArg(llvm::CallInst* ci, unsigned i, std::vector<InfoT>& info);
   void visitAggregateValue(llvm::Constant* baseVal, llvm::Type* T, IndexT idxs, std::vector<InfoT>& info, llvm::LLVMContext& C);
+  llvm::Value* createInsertedValue(llvm::IRBuilder<>& irb, llvm::Type* T, std::vector<InfoT>& info);
 };
 }

@@ -47,6 +47,15 @@ bool SplitAggregateValue::runOnBasicBlock(BasicBlock& BB) {
         visitAggregateValue(cast<Constant>(V), V->getType(), idx, info, C);
         splitConstantReturn(ri, info);
       }
+    } else if (CallInst* ci = dyn_cast<CallInst>(&I)) {
+      for (unsigned i = 0; i < ci->getNumArgOperands(); ++i) {
+        if (auto arg = dyn_cast_or_null<ConstantAggregate>(ci->getArgOperand(i))) {
+          info.clear();
+          idx.clear();
+          visitAggregateValue(cast<Constant>(arg), arg->getType(), idx, info, C);
+          splitConstantArg(ci, i, info);
+        }
+      }
     }
   }
 
@@ -85,9 +94,7 @@ void SplitAggregateValue::splitAggregateStore(StoreInst* si, std::vector<InfoT>&
   }
 }
 
-void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>& info) {
-  IRBuilder<> irb(ri);
-  Type* T = ri->getReturnValue()->getType();
+Value* SplitAggregateValue::createInsertedValue(IRBuilder<>& irb, Type* T, std::vector<InfoT>& info) {
   Value* V = UndefValue::get(T);
   Value* box = irb.CreateAlloca(T);
   for (auto& e : info) {
@@ -98,7 +105,19 @@ void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>
     V = irb.CreateInsertValue(V, irb.CreateLoad(P),
       ArrayRef<unsigned>(getSeconds(idxs)));
   }
-  ri->setOperand(0, V);
+  return V;
+}
+
+void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>& info) {
+  IRBuilder<> irb(ri);
+  Type* T = ri->getReturnValue()->getType();
+  ri->setOperand(0, createInsertedValue(irb, T, info));
+}
+
+void SplitAggregateValue::splitConstantArg(CallInst* ci, unsigned i, std::vector<InfoT>& info) {
+  IRBuilder<> irb(ci);
+  Type* T = ci->getArgOperand(i)->getType();
+  ci->setArgOperand(i, createInsertedValue(irb, T, info));
 }
 
 void SplitAggregateValue::visitAggregateValue(Constant* baseVal, Type* T, IndexT idxs,
