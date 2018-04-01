@@ -43,13 +43,14 @@ bool SplitAggregateValue::runOnBasicBlock(BasicBlock& BB) {
       }
     } else if (ReturnInst* ri = dyn_cast<ReturnInst>(&I)) {
       Value* V = ri->getReturnValue();
-      if (auto crv = dyn_cast_or_null<ConstantAggregate>(V)) {
+      if (isConstantAggregate(V)) {
         visitAggregateValue(cast<Constant>(V), V->getType(), idx, info, C);
         splitConstantReturn(ri, info);
       }
     } else if (CallInst* ci = dyn_cast<CallInst>(&I)) {
       for (unsigned i = 0; i < ci->getNumArgOperands(); ++i) {
-        if (auto arg = dyn_cast_or_null<ConstantAggregate>(ci->getArgOperand(i))) {
+        Value* arg = ci->getArgOperand(i);
+        if (isConstantAggregate(arg)) {
           info.clear();
           idx.clear();
           visitAggregateValue(cast<Constant>(arg), arg->getType(), idx, info, C);
@@ -62,6 +63,15 @@ bool SplitAggregateValue::runOnBasicBlock(BasicBlock& BB) {
   for (auto& i : toRemove)
     i->eraseFromParent();
   return true;
+}
+
+bool SplitAggregateValue::isConstantAggregate(Value* V) {
+  // we do not want to touch vector type here since there is
+  // special support for it
+  if (V && (V->getType()->isStructTy() || V->getType()->isArrayTy()))
+    return isa<ConstantAggregate>(V) || isa<ConstantAggregateZero>(V);
+  else
+    return false;
 }
 
 void SplitAggregateValue::splitAggregateLoad(LoadInst* li, std::vector<InfoT>& info) {
@@ -123,7 +133,7 @@ void SplitAggregateValue::splitConstantArg(CallInst* ci, unsigned i, std::vector
 void SplitAggregateValue::visitAggregateValue(Constant* baseVal, Type* T, IndexT idxs,
                                                     std::vector<InfoT>& info, LLVMContext& C){
   Constant* newBaseVal = baseVal;
-  if(T->isIntegerTy() || T->isFloatingPointTy() || T->isPointerTy())
+  if (T->isIntegerTy() || T->isFloatingPointTy() || T->isPointerTy())
       info.push_back({idxs, newBaseVal});
   else if (ArrayType* AT = dyn_cast<ArrayType>(T)) {
     for (unsigned i = 0; i < AT->getNumElements(); ++i) {

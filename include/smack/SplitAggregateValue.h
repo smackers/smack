@@ -7,6 +7,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Constants.h"
 
 #include <vector>
 #include <utility>
@@ -28,5 +29,6 @@ private:
   void splitConstantArg(llvm::CallInst* ci, unsigned i, std::vector<InfoT>& info);
   void visitAggregateValue(llvm::Constant* baseVal, llvm::Type* T, IndexT idxs, std::vector<InfoT>& info, llvm::LLVMContext& C);
   llvm::Value* createInsertedValue(llvm::IRBuilder<>& irb, llvm::Type* T, std::vector<InfoT>& info);
+  bool isConstantAggregate(llvm::Value* V);
 };
 }
