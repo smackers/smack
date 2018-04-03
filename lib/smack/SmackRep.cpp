@@ -521,8 +521,7 @@ bool SmackRep::isUnsafeFloatAccess(const Type* elemTy, const Type* resultTy) {
     bool isByteMap = !resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL);
     if (isByteMap && !SmackOptions::BitPrecise)
       return true;
-    else
-      assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
+    assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
   }
   return false;
 }

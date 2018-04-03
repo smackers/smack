@@ -2,8 +2,7 @@
 // @flag --bit-precise --clang-options="-fno-strict-aliasing"
 // @expect verified
 
-int main()
-{
+int main(void) {
   int i = 2;
   float f = *((float*) &i);
   int i1 = *((int*) &f);
