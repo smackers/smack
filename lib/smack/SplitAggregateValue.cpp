@@ -31,21 +31,33 @@ bool SplitAggregateValue::runOnBasicBlock(BasicBlock& BB) {
     if (LoadInst* li = dyn_cast<LoadInst>(&I)) {
       if (li->getType()->isAggregateType()) {
         visitAggregateValue(nullptr, li->getType(), idx, info, C);
-        splitAggregateLoad(li, info);
+        IRBuilder<> irb(li);
+        li->replaceAllUsesWith(splitAggregateLoad(li, info, irb));
         toRemove.push_back(li);
       }
     } else if (StoreInst* si = dyn_cast<StoreInst>(&I)) {
       Value* V = si->getValueOperand();
       if (V->getType()->isAggregateType()) {
         visitAggregateValue(dyn_cast_or_null<Constant>(V), V->getType(), idx, info, C);
-        splitAggregateStore(si, info);
+        IRBuilder<> irb(si);
+        splitAggregateStore(si, info, irb);
         toRemove.push_back(si);
       }
     } else if (ReturnInst* ri = dyn_cast<ReturnInst>(&I)) {
       Value* V = ri->getReturnValue();
-      if (auto crv = dyn_cast_or_null<ConstantAggregate>(V)) {
+      if (isConstantAggregate(V)) {
         visitAggregateValue(cast<Constant>(V), V->getType(), idx, info, C);
         splitConstantReturn(ri, info);
+      }
+    } else if (CallInst* ci = dyn_cast<CallInst>(&I)) {
+      for (unsigned i = 0; i < ci->getNumArgOperands(); ++i) {
+        Value* arg = ci->getArgOperand(i);
+        if (isConstantAggregate(arg)) {
+          info.clear();
+          idx.clear();
+          visitAggregateValue(cast<Constant>(arg), arg->getType(), idx, info, C);
+          splitConstantArg(ci, i, info);
+        }
       }
     }
   }
@@ -55,8 +67,16 @@ bool SplitAggregateValue::runOnBasicBlock(BasicBlock& BB) {
   return true;
 }
 
-void SplitAggregateValue::splitAggregateLoad(LoadInst* li, std::vector<InfoT>& info) {
-  IRBuilder<> irb(li);
+bool SplitAggregateValue::isConstantAggregate(Value* V) {
+  // we do not want to touch vector type here since there is
+  // special support for it
+  if (V && (V->getType()->isStructTy() || V->getType()->isArrayTy()))
+    return isa<ConstantAggregate>(V) || isa<ConstantAggregateZero>(V);
+  else
+    return false;
+}
+
+Value* SplitAggregateValue::splitAggregateLoad(LoadInst* li, std::vector<InfoT>& info, IRBuilder<>& irb) {
   Value* V = UndefValue::get(li->getType());
   Value* P = li->getPointerOperand();
   for (auto& e : info) {
@@ -65,11 +85,10 @@ void SplitAggregateValue::splitAggregateLoad(LoadInst* li, std::vector<InfoT>& i
       irb.CreateLoad(irb.CreateGEP(P, ArrayRef<Value*>(getFirsts(idxs)))),
       ArrayRef<unsigned>(getSeconds(idxs)));
   }
-  li->replaceAllUsesWith(V);
+  return V;
 }
 
-void SplitAggregateValue::splitAggregateStore(StoreInst* si, std::vector<InfoT>& info) {
-  IRBuilder<> irb(si);
+void SplitAggregateValue::splitAggregateStore(StoreInst* si, std::vector<InfoT>& info, IRBuilder<>& irb) {
   Value* P = si->getPointerOperand();
   Value* V = si->getValueOperand();
   for (auto& e : info) {
@@ -85,26 +104,30 @@ void SplitAggregateValue::splitAggregateStore(StoreInst* si, std::vector<InfoT>&
   }
 }
 
+Value* SplitAggregateValue::createInsertedValue(IRBuilder<>& irb, Type* T, std::vector<InfoT>& info, Value* V) {
+  Value* box = irb.CreateAlloca(T);
+  StoreInst* si = new StoreInst(V, box);
+  LoadInst* li = new LoadInst(box);
+  splitAggregateStore(si, info, irb);
+  return splitAggregateLoad(li, info, irb);
+}
+
 void SplitAggregateValue::splitConstantReturn(ReturnInst* ri, std::vector<InfoT>& info) {
   IRBuilder<> irb(ri);
   Type* T = ri->getReturnValue()->getType();
-  Value* V = UndefValue::get(T);
-  Value* box = irb.CreateAlloca(T);
-  for (auto& e : info) {
-    IndexT idxs = std::get<0>(e);
-    Constant* c = std::get<1>(e);
-    Value* P = irb.CreateGEP(box, ArrayRef<Value*>(getFirsts(idxs)));
-    irb.CreateStore(c, P);
-    V = irb.CreateInsertValue(V, irb.CreateLoad(P),
-      ArrayRef<unsigned>(getSeconds(idxs)));
-  }
-  ri->setOperand(0, V);
+  ri->setOperand(0, createInsertedValue(irb, T, info, ri->getReturnValue()));
+}
+
+void SplitAggregateValue::splitConstantArg(CallInst* ci, unsigned i, std::vector<InfoT>& info) {
+  IRBuilder<> irb(ci);
+  Type* T = ci->getArgOperand(i)->getType();
+  ci->setArgOperand(i, createInsertedValue(irb, T, info, ci->getArgOperand(i)));
 }
 
 void SplitAggregateValue::visitAggregateValue(Constant* baseVal, Type* T, IndexT idxs,
                                                     std::vector<InfoT>& info, LLVMContext& C){
   Constant* newBaseVal = baseVal;
-  if(T->isIntegerTy() || T->isFloatingPointTy() || T->isPointerTy())
+  if (T->isIntegerTy() || T->isFloatingPointTy() || T->isPointerTy())
       info.push_back({idxs, newBaseVal});
   else if (ArrayType* AT = dyn_cast<ArrayType>(T)) {
     for (unsigned i = 0; i < AT->getNumElements(); ++i) {
