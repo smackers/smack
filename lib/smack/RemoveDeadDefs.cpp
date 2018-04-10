@@ -31,6 +31,9 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
       if (name.find("__SMACK_") != std::string::npos)
         continue;
 
+      if (name.find("__VERIFIER_assume") != std::string::npos)
+	continue;
+
       if (SmackOptions::isEntryPoint(name))
         continue;
 

@@ -10,12 +10,14 @@
 
 namespace smack {
 
+typedef std::pair<std::string, std::string> Binding;
+
 class Expr {
 public:
   virtual ~Expr() {}
   virtual void print(std::ostream& os) const = 0;
-  static const Expr* exists(std::string v, std::string t, const Expr* e);
-  static const Expr* forall(std::string v, std::string t, const Expr* e);
+  static const Expr* exists(std::list<Binding>, const Expr* e);
+  static const Expr* forall(std::list<Binding>, const Expr* e);
   static const Expr* and_(const Expr* l, const Expr* r);
   static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
@@ -38,6 +40,7 @@ public:
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
   static const Expr* sel(std::string b, std::string i);
+  static const Expr* upd(const Expr* b, const Expr* i, const Expr* v);
   static const Expr* if_then_else(const Expr* c, const Expr* t, const Expr* e);
 };
 
@@ -147,10 +150,10 @@ public:
   enum Quantifier { Exists, Forall };
 private:
   Quantifier quant;
-  std::list< std::pair<std::string,std::string> > vars;
+  std::list<Binding> vars;
   const Expr* expr;
 public:
-  QuantExpr(Quantifier q, std::list< std::pair<std::string,std::string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
+  QuantExpr(Quantifier q, std::list<Binding> vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
   void print(std::ostream& os) const;
 };
 
@@ -372,11 +375,12 @@ public:
   std::string getName() const { return name; }
   void addAttr(const Attr* a) { attrs.push_back(a); }
 
-  static Decl* typee(std::string name, std::string type);
-  static Decl* axiom(const Expr* e);
+  static Decl* typee(std::string name, std::string type,
+    std::list<const Attr*> attrs = std::list<const Attr*>());
+  static Decl* axiom(const Expr* e, std::string name = "");
   static FuncDecl* function(
     std::string name,
-    std::list< std::pair<std::string,std::string> > args,
+    std::list<Binding> args,
     std::string type,
     const Expr* e = NULL,
     std::list<const Attr*> attrs = std::list<const Attr*>());
@@ -385,8 +389,8 @@ public:
   static Decl* constant(std::string name, std::string type, std::list<const Attr*> ax, bool unique);
   static Decl* variable(std::string name, std::string type);
   static ProcDecl* procedure(std::string name,
-    std::list< std::pair<std::string,std::string> > params = std::list< std::pair<std::string,std::string> >(),
-    std::list< std::pair<std::string,std::string> > rets = std::list< std::pair<std::string,std::string> >(),
+    std::list<Binding> params = std::list<Binding>(),
+    std::list<Binding> rets = std::list<Binding>(),
     std::list<Decl*> decls = std::list<Decl*>(),
     std::list<Block*> blocks = std::list<Block*>());
   static Decl* code(std::string name, std::string s);
@@ -396,7 +400,8 @@ public:
 class TypeDecl : public Decl {
   std::string alias;
 public:
-  TypeDecl(std::string n, std::string t) : Decl(TYPE, n, {}), alias(t) {}
+  TypeDecl(std::string n, std::string t, std::list<const Attr*> ax)
+    : Decl(TYPE, n, ax), alias(t) {}
   void print(std::ostream& os) const;
   static bool classof(const Decl* D) { return D->getKind() == TYPE; }
 };
@@ -405,7 +410,7 @@ class AxiomDecl : public Decl {
   const Expr* expr;
   static int uniqueId;
 public:
-  AxiomDecl(const Expr* e) : Decl(AXIOM, "", {}), expr(e) {}
+  AxiomDecl(std::string n, const Expr* e) : Decl(AXIOM, n, {}), expr(e) {}
   void print(std::ostream& os) const;
   static bool classof(const Decl* D) { return D->getKind() == AXIOM; }
 };
@@ -421,11 +426,11 @@ public:
 };
 
 class FuncDecl : public Decl {
-  std::list< std::pair<std::string, std::string> > params;
+  std::list<Binding> params;
   std::string type;
   const Expr* body;
 public:
-  FuncDecl(std::string n, std::list<const Attr*> ax, std::list< std::pair<std::string, std::string> > ps,
+  FuncDecl(std::string n, std::list<const Attr*> ax, std::list<Binding> ps,
     std::string t, const Expr* b)
     : Decl(FUNCTION, n, ax), params(ps), type(t), body(b) {}
   void print(std::ostream& os) const;
@@ -502,7 +507,7 @@ public:
 };
 
 class ProcDecl : public Decl, public CodeContainer {
-  typedef std::pair<std::string,std::string> Parameter;
+  typedef Binding Parameter;
   typedef std::list<Parameter> ParameterList;
   typedef std::list<const Expr*> SpecificationList;
 

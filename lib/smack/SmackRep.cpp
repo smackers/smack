@@ -5,6 +5,7 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
+#include "smack/VectorOperations.h"
 
 #include "smack/BoogieAst.h"
 #include "smack/Naming.h"
@@ -114,6 +115,19 @@ SmackRep::SmackRep(const DataLayout* L, Naming* N, Program* P, Regions* R)
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
+void SmackRep::addAuxiliaryDeclaration(Decl* D) {
+  if (auxDecls.count(D->getName()))
+    return;
+  auxDecls[D->getName()] = D;
+}
+
+std::list<Decl*> SmackRep::auxiliaryDeclarations() {
+  std::list<Decl*> ds;
+  for (auto D : auxDecls)
+    ds.push_back(D.second);
+  return ds;
+}
+
 std::string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
@@ -155,7 +169,13 @@ std::string SmackRep::intType(unsigned width) {
     return (SmackOptions::BitPrecise ? "bv" : "i") + std::to_string(width);
 }
 
-std::string SmackRep::opName(const std::string& operation, std::initializer_list<const llvm::Type*> types) {
+std::string SmackRep::vectorType(int n, Type *T) {
+  std::stringstream s;
+  s << Naming::VECTOR_TYPE << "." << n << "x" << type(T);
+  return s.str();
+}
+
+std::string SmackRep::opName(const std::string& operation, std::list<const llvm::Type*> types) {
   std::stringstream s;
   s << operation;
   for (auto t : types)
@@ -215,6 +235,9 @@ std::string SmackRep::type(const llvm::Type* t) {
   else if (t->isPointerTy())
     return Naming::PTR_TYPE;
 
+  else if (auto VT = dyn_cast<VectorType>(t))
+    return vectorType(VT->getNumElements(), VT->getElementType());
+
   else
     return Naming::PTR_TYPE;
 }
@@ -251,6 +274,10 @@ std::string SmackRep::memType(unsigned region) {
 
 std::string SmackRep::memPath(unsigned region) {
   return memReg(region);
+}
+
+std::string SmackRep::memPath(const llvm::Value* v) {
+  return memPath(regions->idx(v));
 }
 
 std::list< std::pair< std::string, std::string > > SmackRep::memoryMaps() {
@@ -345,9 +372,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
 
   assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
   assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
-  const Value* V = CI.getArgOperand(0);
-  while (isa<const CastInst>(V))
-    V = dyn_cast<const CastInst>(V)->getOperand(0);
+  const Value* V = CI.getArgOperand(0)->stripPointerCasts();
 
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
@@ -409,7 +434,6 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       llvm_unreachable("Unexpected argument type.");
     }
 
-    assert(A->hasName() && "Expected named argument.");
     assert(T && "Unkown access type.");
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
     assert(I && "expected constant size expression.");
@@ -747,6 +771,12 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
 
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
+
+    } else if (auto cv = dyn_cast<const ConstantDataVector>(constant)) {
+      return VectorOperations(this).constant(cv);
+
+    } else if (auto cd = dyn_cast<const ConstantAggregateZero>(constant)) {
+      return VectorOperations(this).constant(cd);
 
     } else if (constant->isNullValue())
       return Expr::id(Naming::NULL_VAL);
