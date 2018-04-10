@@ -32,6 +32,9 @@ TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 BUILD_MONO=0 # mono is typically installed from packages (see below)
 
+# Support for more programming languages
+INSTALL_OBJECTIVEC=0
+
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
@@ -53,7 +56,7 @@ INSTALL_PREFIX=
 CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
-# Partial list of dependnecies; the rest are added depending on the platform
+# Partial list of dependencies; the rest are added depending on the platform
 DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
 
 shopt -s extglob
@@ -258,6 +261,10 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
       ;;
     esac
 
+    if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
+      sudo apt-get install -y gobjc gnustep gnustep-make gnustep-common gnustep-devel
+    fi
+
     # Adding LLVM repository
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
@@ -348,6 +355,17 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
 fi
 
 
+if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
+  puts "Installing Objective-C"
+
+  # The version numbers here will have to change by OS
+  sudo ln -s /usr/lib/gcc/x86_64-linux-gnu/4.8/include/objc /usr/local/include/objc
+  echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
+
+  puts "Installed Objective-C"
+fi 
+
+
 if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
     puts "Installing Z3"
@@ -358,7 +376,7 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
     rm -rf z3-downloaded.zip z3-extracted
     puts "Installed Z3"
   else
-    puts "Z3 already built"
+    puts "Z3 already installed"
   fi
 fi
 
