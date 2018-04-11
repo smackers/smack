@@ -296,22 +296,6 @@ def smack_headers():
 def smack_lib():
   return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
-def objc_clang_compile_command(args, lib = False):
-  cmd = default_clang_compile_command(args,lib)
-  if sys.platform in ['linux', 'linux2']:
-    objc_flags = try_command(['gnustep-config', '--objc-flags'])
-    cmd += objc_flags.split()
-  elif sys.platform == 'darwin':
-    sys.exit("Objective-C not yet supported on macOS")
-  else:
-    sys.exit("Objective-C not supported for this operating system.")
-  return cmd
-
-def cplusplus_clang_compile_command(args, lib = False):
-  cmd = default_clang_compile_command(args,lib)
-  cmd[0] = 'clang++'
-  return cmd
-
 def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
   cmd += map(lambda path: '-I' + path, smack_headers())
@@ -365,12 +349,21 @@ def clang_frontend(args):
 
 def clang_plusplus_frontend(args):
   """Generate Boogie code from C++ language source(s)."""
-  compile_command = cplusplus_clang_compile_command(args)
-  clang_frontend_helper(compile_command, args)
+  compile_command = default_clang_compile_command(args)
+  compile_command[0] = 'clang++'
+  default_link_bc_files(compile_command, args)
 
 def objc_clang_frontend(args):
   """Generate Boogie code from Objective-C language source(s)."""
 
+  compile_command = default_clang_compile_command(args)
+  if sys.platform in ['linux', 'linux2']:
+    objc_flags = try_command(['gnustep-config', '--objc-flags'])
+    compile_command += objc_flags.split()
+  elif sys.platform == 'darwin':
+    sys.exit("Objective-C not yet supported on macOS")
+  else:
+    sys.exit("Objective-C not supported for this operating system.")
   compile_command = objc_clang_compile_command(args)
   default_link_bc_files(compile_command, args)
 
