@@ -37,7 +37,7 @@ float roundf(float x) {
 
 long lroundf(float x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(@);", ret, x);
+  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
   return ret;
 }
 
@@ -126,13 +126,13 @@ float copysignf(float x, float y) {
 
 int __isnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvfloat.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isnormal.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isSubnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvfloat.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
   return ret;
 }
 */
@@ -169,7 +169,7 @@ int __ispositivef(float x) {
 
 int __signbitf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (@ <= 0e0f24e8) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then $1 else $0;", ret, x);
   return ret;
 }
 
