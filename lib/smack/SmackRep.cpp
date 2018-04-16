@@ -217,9 +217,11 @@ std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> t
 std::string SmackRep::type(const llvm::Type* t) {
 
   if (t->isFloatingPointTy()) {
-    if (!SmackOptions::BitPrecise)
+    if (!SmackOptions::FloatEnabled)
       return Naming::UNINTERPRETED_FLOAT_TYPE;
-    if (t->isFloatTy())
+    if (t->isHalfTy())
+      return Naming::HALF_TYPE;
+    else if (t->isFloatTy())
       return Naming::FLOAT_TYPE;
     else if (t->isDoubleTy())
       return Naming::DOUBLE_TYPE;
@@ -511,15 +513,27 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 //
 // }
 
+bool SmackRep::isUnsafeFloatAccess(const Type* elemTy, const Type* resultTy) {
+  if (elemTy->isFloatingPointTy()) {
+    bool isByteMap = !resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL);
+    if (isByteMap && !SmackOptions::BitPrecise)
+      return true;
+    assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
+  }
+  return false;
+}
+
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   const unsigned R = regions->idx(P);
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
+  const Type* resultTy = regions->get(R).getType();
   const Expr* M = Expr::id(memPath(R));
-  std::string N = Naming::LOAD + "." + (bytewise ? "bytes." : "") +
-    type(T->getElementType());
+  std::string N = Naming::LOAD + "."
+    + (bytewise ? "bytes." : (isUnsafeFloatAccess(T->getElementType(), resultTy)? "unsafe." : ""))
+    + type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
@@ -537,8 +551,9 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
-
-  std::string N = Naming::STORE + "." + (bytewise ? "bytes." : "") + type(T);
+  const Type* resultTy = regions->get(R).getType();
+  std::string N = Naming::STORE + "."
+    + (bytewise ? "bytes." : (isUnsafeFloatAccess(T, resultTy)? "unsafe." : "")) + type(T);
   const Expr* M = Expr::id(memPath(R));
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
@@ -633,7 +648,7 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
-    if (SmackOptions::BitPrecise) {
+    if (SmackOptions::FloatEnabled) {
       const APFloat APF = CFP->getValueAPF();
       const Type* type = CFP->getType();
       unsigned expSize, sigSize;
@@ -831,8 +846,13 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned) {
-  std::string fn = Naming::CMPINST_TABLE.at(predicate);
-  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs, isUnsigned), expr(rhs, isUnsigned));
+  std::string fn = opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
+  const Expr* e1 = expr(lhs, isUnsigned);
+  const Expr* e2 = expr(rhs, isUnsigned);
+  if (lhs->getType()->isFloatingPointTy())
+    return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1UL,1), integerLit(0UL,1));
+  else
+    return Expr::fn(fn, e1, e2);
 }
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
@@ -984,16 +1004,19 @@ std::string SmackRep::getPrelude() {
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
   if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::HALF_TYPE, "float11e5") << "\n";
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
   }
-  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
+  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";
   s << Decl::constant("$0",intType(32)) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << "\n";
+  s << Decl::constant("$1",intType(32)) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id("$1"),integerLit(1UL,32))) << "\n";
 
   for (unsigned i : REF_CONSTANTS) {
     std::stringstream t;

@@ -282,66 +282,72 @@ void __SMACK_dummy(int v) {
 #define UNINTERPRETED_BINARY_OP(type,name) \
   function name.type(i1: type, i2: type) returns (type);
 
+#define UNINTERPRETED_UNARY_PRED(type,name) \
+  function name.type(i: type) returns (i1);
+
 #define UNINTERPRETED_BINARY_PRED(type,name) \
   function name.type(i1: type, i2: type) returns (i1);
 
-#define INLINE_UNARY_OP(type,name,body) \
-  function {:inline} name.type(i: type) returns (type) body
+#define UNINTERPRETED_BINARY_COMP(type,name) \
+  function name.type.bool(i1: type, i2: type) returns (bool);
 
-#define INLINE_BINARY_OP(type,name,body) \
-  function {:inline} name.type(i1: type, i2: type) returns (type) body
+#define UNINTERPRETED_CONVERSION(t1,t2,name) \
+  function name.t1.t2(i: t1) returns (t2);
+
+#define UNARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(i: type) returns (type) body
+
+#define BINARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(i1: type, i2: type) returns (type) body
+
+#define BINARY_COMP(attrib,type,name,cond) \
+  function {:attrib} name.type.bool(i1: type, i2: type) returns (bool) cond
+
+#define INLINE_BINARY_OP(type,name,cond) \
+  BINARY_OP(inline,type,name,cond)
+
+#define INLINE_BINARY_COMP(type,name,cond) \
+  BINARY_COMP(inline,type,name,cond)
 
 #define INLINE_BINARY_PRED(type,name,cond) \
-  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
-  function {:inline} name.type(i1: type, i2: type) returns (i1) {if cond then 1 else 0}
+  INLINE_BINARY_COMP(type,name,cond) \
+  function {:inline} name.type(i1: type, i2: type) returns (i1) {if name.type.bool(i1,i2) then 1 else 0}
 
 #define INLINE_BINARY_BV_PRED(type,name,cond) \
-  function {:inline} name.type.bool(i1: type, i2: type) returns (bool) {cond} \
-  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if cond then 1bv1 else 0bv1}
+  INLINE_BINARY_COMP(type,name,cond) \
+  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
+
+#define BUILTIN_CONVERSION(t1,t2,name,prim) \
+  function {:builtin xstr(prim)} name.t1.t2(i: t1) returns (t2);
 
 #define INLINE_CONVERSION(t1,t2,name,body) \
   function {:inline} name.t1.t2(i: t1) returns (t2) body
 
 #define BUILTIN_UNARY_OP(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i: type) returns (type);
+  UNARY_OP(builtin xstr(prim),type,name,);
+
+#define BUILTIN_UNARY_PRED(type,name,prim) \
+  function {:builtin xstr(prim)} name.type.bool(i: type) returns (bool);
+
+#define BUILTIN_BINARY_COMP(type,name,prim) \
+  BINARY_COMP(builtin xstr(prim),type,name,);
 
 #define BUILTIN_BINARY_OP(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i1: type, i2: type) returns (type);
-
-#define BUILTIN_BINARY_PRED(type,name,prim) \
-  function {:builtin xstr(prim)} name.type(i1: type, i2: type) returns (i1);
+  BINARY_OP(builtin xstr(prim),type,name,);
 
 #define BVBUILTIN_UNARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(i: type) returns (type);
+  UNARY_OP(bvbuiltin xstr(prim),type,name,);
 
 #define BVBUILTIN_BINARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(i1: type, i2: type) returns (type);
-
-#define BVBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(i1: type, i2: type) returns (i1);
+  BINARY_OP(bvbuiltin xstr(prim),type,name,);
 
 #define INLINE_BVBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type.bool(i1: type, i2: type) returns (bool); \
+  BINARY_COMP(bvbuiltin xstr(prim),type,name,); \
   function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
 
 #define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
   function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
 
-#define FPBUILTIN_UNARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(f: type) returns (type);
-
-#define FPBUILTIN_BINARY_OP(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (type);
-
-#define FPBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type(f1: type, f2: type) returns (i1);
-
-#define INLINE_FPBUILTIN_BINARY_PRED(type,name,prim) \
-  function {:bvbuiltin xstr(prim)} name.type.bool(f1: type, f2: type) returns (bool); \
-  function {:inline} name.type(f1: type, f2: type) returns (bv1) {if name.type.bool(f1,f2) then 1bv1 else 0bv1}
-
-#define INLINE_FPBUILTIN_BINARY_SELECT(type,name,pred) \
-  function {:inline} name.type(f1: type, f2: type) returns (type) {if pred.type.bool(f1,f2) then i1 else i2}
 
 #define D(d) __SMACK_top_decl(d)
 
@@ -351,6 +357,7 @@ void __SMACK_dummy(int v) {
 #include "smack-macros.h"
 
 #define DECLARE_EACH_FLOAT_TYPE(M,args...) \
+  D(xstr(M(bvhalf,args))); \
   D(xstr(M(bvfloat,args))); \
   D(xstr(M(bvdouble,args))); \
   D(xstr(M(bvlongdouble,args)));
@@ -384,8 +391,8 @@ void __SMACK_decls(void) {
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $xor, bvxor)
   DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $nand, bvnand)
 
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, i1 == i2)
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, i1 != i2)
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, {i1 == i2})
+  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, {i1 != i2})
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ule, bvule)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ult, bvult)
   DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $uge, bvuge)
@@ -561,16 +568,16 @@ void __SMACK_decls(void) {
   DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $xor)
   DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $nand)
 
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $eq, i1 == i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ne, i1 != i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ule, i1 <= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ult, i1 < i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $uge, i1 >= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ugt, i1 > i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sle, i1 <= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $slt, i1 < i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sge, i1 >= i2)
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sgt, i1 > i2)
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $eq, {i1 == i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ne, {i1 != i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ule, {i1 <= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ult, {i1 < i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $uge, {i1 >= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ugt, {i1 > i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sle, {i1 <= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $slt, {i1 < i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sge, {i1 >= i2})
+  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sgt, {i1 > i2})
 
   D("axiom $and.i1(0,0) == 0;");
   D("axiom $and.i1(0,1) == 0;");
@@ -593,231 +600,197 @@ void __SMACK_decls(void) {
   //Non bit-precise modeling of floating-points
 
   D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
-  D("function $fadd.float(f1:float, f2:float) returns (float);");
-  D("function $fsub.float(f1:float, f2:float) returns (float);");
-  D("function $fmul.float(f1:float, f2:float) returns (float);");
-  D("function $fdiv.float(f1:float, f2:float) returns (float);");
-  D("function $frem.float(f1:float, f2:float) returns (float);");
-  D("function $ffalse.float(f1:float, f2:float) returns (i1);");
-  D("function $ftrue.float(f1:float, f2:float) returns (i1);");
-  D("function {:inline} $foeq.float(f1:float, f2:float) returns (i1) { if $foeq.bool(f1,f2) then 1 else 0 }");
-  D("function $foeq.bool(f1:float, f2:float) returns (bool);");
-  D("function $foge.float(f1:float, f2:float) returns (i1);");
-  D("function $fogt.float(f1:float, f2:float) returns (i1);");
-  D("function $fole.float(f1:float, f2:float) returns (i1);");
-  D("function $folt.float(f1:float, f2:float) returns (i1);");
-  D("function $fone.float(f1:float, f2:float) returns (i1);");
-  D("function $ford.float(f1:float, f2:float) returns (i1);");
-  D("function $fueq.float(f1:float, f2:float) returns (i1);");
-  D("function $fuge.float(f1:float, f2:float) returns (i1);");
-  D("function $fugt.float(f1:float, f2:float) returns (i1);");
-  D("function $fule.float(f1:float, f2:float) returns (i1);");
-  D("function $fult.float(f1:float, f2:float) returns (i1);");
-  D("function $fune.float(f1:float, f2:float) returns (i1);");
-  D("function $funo.float(f1:float, f2:float) returns (i1);");
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fadd);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fsub);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fmul);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fdiv);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$frem);
+  DECLARE(INLINE_BINARY_COMP,float,$ffalse,{false});
+  DECLARE(INLINE_BINARY_COMP,float,$ftrue,{true});
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$foeq);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$foge);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fogt);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fole);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$folt);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fone);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$ford);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fueq);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fuge);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fugt);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fule);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fult);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fune);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$funo);
 
-  D("function $fp2si.float.i128(f:float) returns (i128);");
-  D("function $fp2ui.float.i128(f:float) returns (i128);");
-  D("function $si2fp.i128.float(i:i128) returns (float);");
-  D("function $ui2fp.i128.float(i:i128) returns (float);");
-  D("function $fp2si.float.i96(f:float) returns (i96);");
-  D("function $fp2ui.float.i96(f:float) returns (i96);");
-  D("function $si2fp.i96.float(i:i96) returns (float);");
-  D("function $ui2fp.i96.float(i:i96) returns (float);");
-  D("function $fp2si.float.i88(f:float) returns (i88);");
-  D("function $fp2ui.float.i88(f:float) returns (i88);");
-  D("function $si2fp.i88.float(i:i88) returns (float);");
-  D("function $ui2fp.i88.float(i:i88) returns (float);");
-  D("function $fp2si.float.i64(f:float) returns (i64);");
-  D("function $fp2ui.float.i64(f:float) returns (i64);");
-  D("function $si2fp.i64.float(i:i64) returns (float);");
-  D("function $ui2fp.i64.float(i:i64) returns (float);");
-  D("function $fp2si.float.i56(f:float) returns (i56);");
-  D("function $fp2ui.float.i56(f:float) returns (i56);");
-  D("function $si2fp.i56.float(i:i56) returns (float);");
-  D("function $ui2fp.i56.float(i:i56) returns (float);");
-  D("function $fp2si.float.i48(f:float) returns (i48);");
-  D("function $fp2ui.float.i48(f:float) returns (i48);");
-  D("function $si2fp.i48.float(i:i48) returns (float);");
-  D("function $ui2fp.i48.float(i:i48) returns (float);");
-  D("function $fp2si.float.i40(f:float) returns (i40);");
-  D("function $fp2ui.float.i40(f:float) returns (i40);");
-  D("function $si2fp.i40.float(i:i40) returns (float);");
-  D("function $ui2fp.i40.float(i:i40) returns (float);");
-
-  D("function $fp2si.float.i32(f:float) returns (i32);");
-  D("function $fp2ui.float.i32(f:float) returns (i32);");
-  D("function $si2fp.i32.float(i:i32) returns (float);");
-  D("function $ui2fp.i32.float(i:i32) returns (float);");
-  D("function $fp2si.float.i24(f:float) returns (i24);");
-  D("function $fp2ui.float.i24(f:float) returns (i24);");
-  D("function $si2fp.i24.float(i:i24) returns (float);");
-  D("function $ui2fp.i24.float(i:i24) returns (float);");
-  D("function $fp2si.float.i16(f:float) returns (i16);");
-  D("function $fp2ui.float.i16(f:float) returns (i16);");
-  D("function $si2fp.i16.float(i:i16) returns (float);");
-  D("function $ui2fp.i16.float(i:i16) returns (float);");
-  D("function $fp2si.float.i8(f:float) returns (i8);");
-  D("function $fp2ui.float.i8(f:float) returns (i8);");
-  D("function $si2fp.i8.float(i:i8) returns (float);");
-  D("function $ui2fp.i8.float(i:i8) returns (float);");
-
-  D("function $fptrunc.float.float(f:float) returns (float);");
-  D("function $fpext.float.float(f:float) returns (float);");
-  D("function $fp2si.float.bv128(f:float) returns (bv128);");
-  D("function $fp2ui.float.bv128(f:float) returns (bv128);");
-  D("function $si2fp.bv128.float(i:bv128) returns (float);");
-  D("function $ui2fp.bv128.float(i:bv128) returns (float);");
-  D("function $fp2si.float.bv96(f:float) returns (bv96);");
-  D("function $fp2ui.float.bv96(f:float) returns (bv96);");
-  D("function $si2fp.bv96.float(i:bv96) returns (float);");
-  D("function $ui2fp.bv96.float(i:bv96) returns (float);");
-  D("function $fp2si.float.bv88(f:float) returns (bv88);");
-  D("function $fp2ui.float.bv88(f:float) returns (bv88);");
-  D("function $si2fp.bv88.float(i:bv88) returns (float);");
-  D("function $ui2fp.bv88.float(i:bv88) returns (float);");
-  D("function $fp2si.float.bv64(f:float) returns (bv64);");
-  D("function $fp2ui.float.bv64(f:float) returns (bv64);");
-  D("function $si2fp.bv64.float(i:bv64) returns (float);");
-  D("function $ui2fp.bv64.float(i:bv64) returns (float);");
-  D("function $fp2si.float.bv56(f:float) returns (bv56);");
-  D("function $fp2ui.float.bv56(f:float) returns (bv56);");
-  D("function $si2fp.bv56.float(i:bv56) returns (float);");
-  D("function $ui2fp.bv56.float(i:bv56) returns (float);");
-  D("function $fp2si.float.bv48(f:float) returns (bv48);");
-  D("function $fp2ui.float.bv48(f:float) returns (bv48);");
-  D("function $si2fp.bv48.float(i:bv48) returns (float);");
-  D("function $ui2fp.bv48.float(i:bv48) returns (float);");
-  D("function $fp2si.float.bv40(f:float) returns (bv40);");
-  D("function $fp2ui.float.bv40(f:float) returns (bv40);");
-  D("function $si2fp.bv40.float(i:bv40) returns (float);");
-  D("function $ui2fp.bv40.float(i:bv40) returns (float);");
-  D("function $fp2si.float.bv32(f:float) returns (bv32);");
-  D("function $fp2ui.float.bv32(f:float) returns (bv32);");
-  D("function $si2fp.bv32.float(i:bv32) returns (float);");
-  D("function $ui2fp.bv32.float(i:bv32) returns (float);");
-  D("function $fp2si.float.bv24(f:float) returns (bv24);");
-  D("function $fp2ui.float.bv24(f:float) returns (bv24);");
-  D("function $si2fp.bv24.float(i:bv24) returns (float);");
-  D("function $ui2fp.bv24.float(i:bv24) returns (float);");
-  D("function $fp2si.float.bv16(f:float) returns (bv16);");
-  D("function $fp2ui.float.bv16(f:float) returns (bv16);");
-  D("function $si2fp.bv16.float(i:bv16) returns (float);");
-  D("function $ui2fp.bv16.float(i:bv16) returns (float);");
-  D("function $fp2si.float.bv8(f:float) returns (bv8);");
-  D("function $fp2ui.float.bv8(f:float) returns (bv8);");
-  D("function $si2fp.bv8.float(i:bv8) returns (float);");
-  D("function $ui2fp.bv8.float(i:bv8) returns (float);");
+  DECLARE(UNINTERPRETED_CONVERSION,float,i128,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i128,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i96,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i96,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i88,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i64,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i64,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i56,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i56,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i48,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i48,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i40,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i40,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i32,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i32,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i24,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i24,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i16,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i16,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,i128,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i128,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i96,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i96,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i88,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i88,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i56,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i56,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i48,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i48,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i40,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i40,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i24,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i24,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv128,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv128,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv96,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv96,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv88,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv56,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv56,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv48,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv48,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv40,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv40,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv32,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv32,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv24,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv24,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv16,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv16,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bv128,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv128,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv96,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv96,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv88,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv88,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv56,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv56,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv48,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv48,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv40,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv40,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv32,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv32,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv24,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv24,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv16,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv16,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,float,float,$fptrunc);
+  DECLARE(UNINTERPRETED_CONVERSION,float,float,$fpext);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$bitcast);
 
 #ifndef NO_FORALL
-  D("axiom (forall f1, f2: float :: f1 != f2 || $foeq.bool(f1,f2));");
-  D("axiom (forall i: i128 :: $fp2ui.float.i128($ui2fp.i128.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i128.float($fp2ui.float.i128(f)) == f);");
-  D("axiom (forall i: i128 :: $fp2si.float.i128($si2fp.i128.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i128.float($fp2si.float.i128(f)) == f);");
-  D("axiom (forall i: i96 :: $fp2ui.float.i96($ui2fp.i96.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i96.float($fp2ui.float.i96(f)) == f);");
-  D("axiom (forall i: i96 :: $fp2si.float.i96($si2fp.i96.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i96.float($fp2si.float.i96(f)) == f);");
-  D("axiom (forall i: i88 :: $fp2ui.float.i88($ui2fp.i88.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i88.float($fp2ui.float.i88(f)) == f);");
-  D("axiom (forall i: i88 :: $fp2si.float.i88($si2fp.i88.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i88.float($fp2si.float.i88(f)) == f);");
-  D("axiom (forall i: i64 :: $fp2ui.float.i64($ui2fp.i64.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i64.float($fp2ui.float.i64(f)) == f);");
-  D("axiom (forall i: i64 :: $fp2si.float.i64($si2fp.i64.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i64.float($fp2si.float.i64(f)) == f);");
-  D("axiom (forall i: i56 :: $fp2ui.float.i56($ui2fp.i56.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i56.float($fp2ui.float.i56(f)) == f);");
-  D("axiom (forall i: i56 :: $fp2si.float.i56($si2fp.i56.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i56.float($fp2si.float.i56(f)) == f);");
-  D("axiom (forall i: i48 :: $fp2ui.float.i48($ui2fp.i48.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i48.float($fp2ui.float.i48(f)) == f);");
-  D("axiom (forall i: i48 :: $fp2si.float.i48($si2fp.i48.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i48.float($fp2si.float.i48(f)) == f);");
-  D("axiom (forall i: i40 :: $fp2ui.float.i40($ui2fp.i40.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i40.float($fp2ui.float.i40(f)) == f);");
-  D("axiom (forall i: i40 :: $fp2si.float.i40($si2fp.i40.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i40.float($fp2si.float.i40(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2ui.float.i32($ui2fp.i32.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i32.float($fp2ui.float.i32(f)) == f);");
-  D("axiom (forall i: i32 :: $fp2si.float.i32($si2fp.i32.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i32.float($fp2si.float.i32(f)) == f);");
-  D("axiom (forall i: i24 :: $fp2ui.float.i24($ui2fp.i24.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i24.float($fp2ui.float.i24(f)) == f);");
-  D("axiom (forall i: i24 :: $fp2si.float.i24($si2fp.i24.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i24.float($fp2si.float.i24(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2ui.float.i16($ui2fp.i16.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i16.float($fp2ui.float.i16(f)) == f);");
-  D("axiom (forall i: i16 :: $fp2si.float.i16($si2fp.i16.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i16.float($fp2si.float.i16(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2ui.float.i8($ui2fp.i8.float(i)) == i);");
-  D("axiom (forall f: float :: $ui2fp.i8.float($fp2ui.float.i8(f)) == f);");
-  D("axiom (forall i: i8 :: $fp2si.float.i8($si2fp.i8.float(i)) == i);");
-  D("axiom (forall f: float :: $si2fp.i8.float($fp2si.float.i8(f)) == f);");
+  D("axiom (forall f1, f2: float :: $foeq.float.bool(f1,f2) <==> !$fune.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $fone.float.bool(f1,f2) <==> !$fueq.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $fogt.float.bool(f1,f2) <==> !$fule.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $foge.float.bool(f1,f2) <==> !$fult.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $folt.float.bool(f1,f2) <==> !$fuge.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $fole.float.bool(f1,f2) <==> !$fugt.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $ford.float.bool(f1,f2) <==> !$funo.float.bool(f1,f2));");
+  D("axiom (forall f: float, i: i8 :: $bitcast.float.i8(f) == i <==> $bitcast.i8.float(i) == f);");
+  // TODO: add proper axiom for float/bv8 conversions
 #endif
 
 #if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
 
+  // Boogie built-in arithmetic
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fsub, {i1 - i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fmul, {i1 * i2})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fdiv, {i1 / i2})
-  DECLARE_EACH_FLOAT_TYPE(FPBUILTIN_BINARY_OP, $frem, fp.rem)
-  D("function $ffalse.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
-  D("function $ftrue.bvfloat(f1:bvfloat, f2:bvfloat) returns (i1);");
 
-  D("function {:builtin \"fp.abs\"} $abs.bvfloat(bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.fma\"} $fma.bvfloat(bvfloat, bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.sqrt\"} $sqrt.bvfloat(bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.rem\"} $rem.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.min\"} $min.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.max\"} $max.bvfloat(bvfloat, bvfloat) returns (bvfloat);");
+  // FP arithmetic
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $abs, fp.abs)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $sqrt, fp.sqrt)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $fma, fp.fma)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $frem, fp.rem)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $min, fp.min)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $max, fp.max)
 
-  D("function {:builtin \"fp.abs\"} $abs.bvdouble(bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.fma\"} $fma.bvdouble(bvdouble, bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.sqrt\"} $sqrt.bvdouble(bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.rem\"} $rem.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.min\"} $min.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.max\"} $max.bvdouble(bvdouble, bvdouble) returns (bvdouble);");
+  // FP value predicates
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnormal, fp.isNormal)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $issubnormal, fp.isSubnormal)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $iszero, fp.isZero)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isinfinite, fp.isInfinite)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnan, fp.isNaN)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnegative, fp.isNegative)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $ispositive, fp.isPositive)
 
-  D("function {:builtin \"fp.isNormal\"} $isnormal.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isZero\"} $iszero.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isInfinite\"} $isinfinite.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isNaN\"} $isnan.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isNegative\"} $isnegative.bvfloat(bvfloat) returns (bool);");
-  D("function {:builtin \"fp.isPositive\"} $ispositive.bvfloat(bvfloat) returns (bool);");
-
-  D("function {:builtin \"fp.isNormal\"} $isnormal.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isZero\"} $iszero.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isInfinite\"} $isinfinite.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isNaN\"} $isnan.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isNegative\"} $isnegative.bvdouble(bvdouble) returns (bool);");
-  D("function {:builtin \"fp.isPositive\"} $ispositive.bvdouble(bvdouble) returns (bool);");
-
-  D("function {:builtin \"fp.isNormal\"} $isnormal.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isSubnormal\"} $issubnormal.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isZero\"} $iszero.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isInfinite\"} $isinfinite.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isNaN\"} $isnan.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isNegative\"} $isnegative.bvlongdouble(bvlongdouble) returns (bool);");
-  D("function {:builtin \"fp.isPositive\"} $ispositive.bvlongdouble(bvlongdouble) returns (bool);");
-
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foeq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fone, !(i1 == i2))
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fole, i1 <= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $folt, i1 < i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $foge, i1 >= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fogt, i1 > i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fueq, i1 == i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fune, !(i1 == i2))
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fule, i1 <= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fult, i1 < i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fuge, i1 >= i2)
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_BV_PRED, $fugt, i1 > i2)
+  // FP comparison predicates
+  // I assume fp.eq is exactly ieee compareQuietEqual
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $foeq, fp.eq)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $fole, fp.leq)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $folt, fp.lt)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $foge, fp.geq)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $fogt, fp.gt)
+  D("function {:inline} $fone.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {!$fueq.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fone.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {!$fueq.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fone.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {!$fueq.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $ford.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {!$funo.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $ford.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {!$funo.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $ford.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {!$funo.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fueq.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$foeq.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fogt.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$foge.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fult.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$folt.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fule.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fole.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $fune.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fone.bvhalf.bool(f1,f2)}");
+  D("function {:inline} $funo.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)}");
+  D("function {:inline} $fueq.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$foeq.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$fogt.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$foge.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fult.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$folt.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fule.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$fole.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $fune.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)||$fone.bvfloat.bool(f1,f2)}");
+  D("function {:inline} $funo.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {$isnan.bvfloat.bool(f1)||$isnan.bvfloat.bool(f2)}");
+  D("function {:inline} $fueq.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$foeq.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fogt.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$foge.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fult.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$folt.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fule.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fole.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fune.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fone.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $funo.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)}");
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ffalse, {false})
+  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ftrue, {true})
 
   D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
   D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
@@ -832,240 +805,209 @@ void __SMACK_decls(void) {
   DECLARE(INLINE_CONVERSION,bvfloat,bvlongdouble,$fpext,{ftl(i)});
   DECLARE(INLINE_CONVERSION,bvdouble,bvlongdouble,$fpext,{dtl(i)});
 
-  //This isn't the correct implementation, so change as needed
-  D("function {:inline} $ford.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
-  D("function {:inline} $funo.bvfloat(f1:bvfloat, f2:bvfloat) returns (bv1);");
-
-  D("function $fptrunc.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
-  D("function $fpext.bvfloat.bvfloat(f:bvfloat) returns (bvfloat) {f}");
-
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv128tf(bv128) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv96tf(bv96) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv88tf(bv88) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv64tf(bv64) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv56tf(bv56) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv48tf(bv48) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv40tf(bv40) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv32tf(bv32) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv24tf(bv24) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv16tf(bv16) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} sbv8tf(bv8) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv128tf(bv128) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv96tf(bv96) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv88tf(bv88) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv64tf(bv64) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv56tf(bv56) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv48tf(bv48) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv40tf(bv40) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv32tf(bv32) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv24tf(bv24) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv16tf(bv16) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ubv8tf(bv8) returns (bvfloat);");
-  D("function {:builtin \"(_ fp.to_sbv 128) RNE\"} ftsbv128(bvfloat) returns (bv128);");
-  D("function {:builtin \"(_ fp.to_sbv 96) RNE\"} ftsbv96(bvfloat) returns (bv96);");
-  D("function {:builtin \"(_ fp.to_sbv 88) RNE\"} ftsbv88(bvfloat) returns (bv88);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} ftsbv64(bvfloat) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 56) RNE\"} ftsbv56(bvfloat) returns (bv56);");
-  D("function {:builtin \"(_ fp.to_sbv 48) RNE\"} ftsbv48(bvfloat) returns (bv48);");
-  D("function {:builtin \"(_ fp.to_sbv 40) RNE\"} ftsbv40(bvfloat) returns (bv40);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RNE\"} ftsbv32(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 24) RNE\"} ftsbv24(bvfloat) returns (bv24);");
-  D("function {:builtin \"(_ fp.to_sbv 16) RNE\"} ftsbv16(bvfloat) returns (bv16);");
-  D("function {:builtin \"(_ fp.to_sbv 8) RNE\"} ftsbv8(bvfloat) returns (bv8);");
-  D("function {:builtin \"(_ fp.to_ubv 128) RNE\"} ftubv128(bvfloat) returns (bv128);");
-  D("function {:builtin \"(_ fp.to_ubv 96) RNE\"} ftubv96(bvfloat) returns (bv96);");
-  D("function {:builtin \"(_ fp.to_ubv 88) RNE\"} ftubv88(bvfloat) returns (bv88);");
-  D("function {:builtin \"(_ fp.to_ubv 64) RNE\"} ftubv64(bvfloat) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_ubv 56) RNE\"} ftubv56(bvfloat) returns (bv56);");
-  D("function {:builtin \"(_ fp.to_ubv 48) RNE\"} ftubv48(bvfloat) returns (bv48);");
-  D("function {:builtin \"(_ fp.to_ubv 40) RNE\"} ftubv40(bvfloat) returns (bv40);");
-  D("function {:builtin \"(_ fp.to_ubv 32) RNE\"} ftubv32(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_ubv 24) RNE\"} ftubv24(bvfloat) returns (bv24);");
-  D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} ftubv16(bvfloat) returns (bv16);");
-  D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} ftubv8(bvfloat) returns (bv8);");
-
   // Add truncation for default casts to int
-  D("function {:builtin \"(_ fp.to_sbv 128) RTZ\"} ftsi128(bvfloat) returns (bv128);");
-  D("function {:builtin \"(_ fp.to_sbv 96) RTZ\"} ftsi96(bvfloat) returns (bv96);");
-  D("function {:builtin \"(_ fp.to_sbv 88) RTZ\"} ftsi88(bvfloat) returns (bv88);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} ftsi64(bvfloat) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 56) RTZ\"} ftsi56(bvfloat) returns (bv56);");
-  D("function {:builtin \"(_ fp.to_sbv 48) RTZ\"} ftsi48(bvfloat) returns (bv48);");
-  D("function {:builtin \"(_ fp.to_sbv 40) RTZ\"} ftsi40(bvfloat) returns (bv40);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} ftsi32(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 24) RTZ\"} ftsi24(bvfloat) returns (bv24);");
-  D("function {:builtin \"(_ fp.to_sbv 16) RTZ\"} ftsi16(bvfloat) returns (bv16);");
-  D("function {:builtin \"(_ fp.to_sbv 8) RTZ\"} ftsi8(bvfloat) returns (bv8);");
-
-  DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2si, {ftsi128(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv128, $fp2ui, {ftubv128(i)});
-  DECLARE(INLINE_CONVERSION, bv128, bvfloat, $si2fp, {sbv128tf(i)});
-  DECLARE(INLINE_CONVERSION, bv128, bvfloat, $ui2fp, {ubv128tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv96, $fp2si, {ftsi96(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv96, $fp2ui, {ftubv96(i)});
-  DECLARE(INLINE_CONVERSION, bv96, bvfloat, $si2fp, {sbv96tf(i)});
-  DECLARE(INLINE_CONVERSION, bv96, bvfloat, $ui2fp, {ubv96tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv88, $fp2si, {ftsi88(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv88, $fp2ui, {ftubv88(i)});
-  DECLARE(INLINE_CONVERSION, bv88, bvfloat, $si2fp, {sbv88tf(i)});
-  DECLARE(INLINE_CONVERSION, bv88, bvfloat, $ui2fp, {ubv88tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv64, $fp2si, {ftsi64(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv64, $fp2ui, {ftubv64(i)});
-  DECLARE(INLINE_CONVERSION, bv64, bvfloat, $si2fp, {sbv64tf(i)});
-  DECLARE(INLINE_CONVERSION, bv64, bvfloat, $ui2fp, {ubv64tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv56, $fp2si, {ftsi56(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv56, $fp2ui, {ftubv56(i)});
-  DECLARE(INLINE_CONVERSION, bv56, bvfloat, $si2fp, {sbv56tf(i)});
-  DECLARE(INLINE_CONVERSION, bv56, bvfloat, $ui2fp, {ubv56tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv48, $fp2si, {ftsi48(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv48, $fp2ui, {ftubv48(i)});
-  DECLARE(INLINE_CONVERSION, bv48, bvfloat, $si2fp, {sbv48tf(i)});
-  DECLARE(INLINE_CONVERSION, bv48, bvfloat, $ui2fp, {ubv48tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv40, $fp2si, {ftsi40(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv40, $fp2ui, {ftubv40(i)});
-  DECLARE(INLINE_CONVERSION, bv40, bvfloat, $si2fp, {sbv40tf(i)});
-  DECLARE(INLINE_CONVERSION, bv40, bvfloat, $ui2fp, {ubv40tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv32, $fp2si, {ftsi32(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv32, $fp2ui, {ftubv32(i)});
-  DECLARE(INLINE_CONVERSION, bv32, bvfloat, $si2fp, {sbv32tf(i)});
-  DECLARE(INLINE_CONVERSION, bv32, bvfloat, $ui2fp, {ubv32tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv24, $fp2si, {ftsi24(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv24, $fp2ui, {ftubv24(i)});
-  DECLARE(INLINE_CONVERSION, bv24, bvfloat, $si2fp, {sbv24tf(i)});
-  DECLARE(INLINE_CONVERSION, bv24, bvfloat, $ui2fp, {ubv24tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv16, $fp2si, {ftsi16(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv16, $fp2ui, {ftubv16(i)});
-  DECLARE(INLINE_CONVERSION, bv16, bvfloat, $si2fp, {sbv16tf(i)});
-  DECLARE(INLINE_CONVERSION, bv16, bvfloat, $ui2fp, {ubv16tf(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2si, {ftsi8(i)});
-  DECLARE(INLINE_CONVERSION, bvfloat, bv8, $fp2ui, {ftubv8(i)});
-  DECLARE(INLINE_CONVERSION, bv8, bvfloat, $si2fp, {sbv8tf(i)});
-  DECLARE(INLINE_CONVERSION, bv8, bvfloat, $ui2fp, {ubv8tf(i)});
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv128,$fp2si,(_ fp.to_sbv 128) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv96,$fp2si,(_ fp.to_sbv 96) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv88,$fp2si,(_ fp.to_sbv 88) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv64,$fp2si,(_ fp.to_sbv 64) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv56,$fp2si,(_ fp.to_sbv 56) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv48,$fp2si,(_ fp.to_sbv 48) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv40,$fp2si,(_ fp.to_sbv 40) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv32,$fp2si,(_ fp.to_sbv 32) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv24,$fp2si,(_ fp.to_sbv 24) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv16,$fp2si,(_ fp.to_sbv 16) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv8,$fp2si,(_ fp.to_sbv 8) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv1,$fp2si,(_ fp.to_sbv 1) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv128,$fp2ui,(_ fp.to_ubv 128) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv96,$fp2ui,(_ fp.to_ubv 96) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv88,$fp2ui,(_ fp.to_ubv 88) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv64,$fp2ui,(_ fp.to_ubv 64) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv56,$fp2ui,(_ fp.to_ubv 56) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv48,$fp2ui,(_ fp.to_ubv 48) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv40,$fp2ui,(_ fp.to_ubv 40) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv32,$fp2ui,(_ fp.to_ubv 32) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv24,$fp2ui,(_ fp.to_ubv 24) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv16,$fp2ui,(_ fp.to_ubv 16) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv8,$fp2ui,(_ fp.to_ubv 8) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvfloat,bv1,$fp2ui,(_ fp.to_ubv 1) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv128,$fp2si,(_ fp.to_sbv 128) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv96,$fp2si,(_ fp.to_sbv 96) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv88,$fp2si,(_ fp.to_sbv 88) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv64,$fp2si,(_ fp.to_sbv 64) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv56,$fp2si,(_ fp.to_sbv 56) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv48,$fp2si,(_ fp.to_sbv 48) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv40,$fp2si,(_ fp.to_sbv 40) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv32,$fp2si,(_ fp.to_sbv 32) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv24,$fp2si,(_ fp.to_sbv 24) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv16,$fp2si,(_ fp.to_sbv 16) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv8,$fp2si,(_ fp.to_sbv 8) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv1,$fp2si,(_ fp.to_sbv 1) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv128,$fp2ui,(_ fp.to_ubv 128) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv96,$fp2ui,(_ fp.to_ubv 96) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv88,$fp2ui,(_ fp.to_ubv 88) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv64,$fp2ui,(_ fp.to_ubv 64) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv56,$fp2ui,(_ fp.to_ubv 56) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv48,$fp2ui,(_ fp.to_ubv 48) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv40,$fp2ui,(_ fp.to_ubv 40) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv32,$fp2ui,(_ fp.to_ubv 32) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv24,$fp2ui,(_ fp.to_ubv 24) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv16,$fp2ui,(_ fp.to_ubv 16) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv8,$fp2ui,(_ fp.to_ubv 8) RTZ);
+  DECLARE(BUILTIN_CONVERSION,bvdouble,bv1,$fp2ui,(_ fp.to_ubv 1) RTZ);
+  // Warning: do we need bv2int cast here?
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i128,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i96,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i88,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i64,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i56,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i48,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i40,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i32,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i24,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i16,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i8,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i1,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i128,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i96,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i64,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i56,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i48,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i40,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i32,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i24,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i16,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i8,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i1,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i128,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i96,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i88,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i64,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i56,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i48,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i40,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i32,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i24,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i16,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i8,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i1,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i128,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i96,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i64,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i56,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i48,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i40,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i32,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i24,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i16,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i8,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i1,$fp2ui);
+  // Warning: undefined behaviors can occur
+  // https://llvm.org/docs/LangRef.html#uitofp-to-instruction
+  DECLARE(BUILTIN_CONVERSION, bv128, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv96, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv88, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv64, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv56, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv48, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv40, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv32, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv24, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv16, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv8, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv1, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv128, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv96, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv88, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv64, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv56, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv48, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv40, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv32, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv24, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv16, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv8, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv1, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv128, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv96, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv88, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv64, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv56, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv48, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv40, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv32, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv24, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv16, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv8, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv1, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv128, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv96, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv88, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv64, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv56, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv48, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv40, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv32, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv24, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv16, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv8, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, bv1, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  // Warning: integer-encoding fixes needed here
+  DECLARE(UNINTERPRETED_CONVERSION, i128, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i96, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i88, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i64, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i56, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i48, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i40, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i32, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i24, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i16, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i8, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i1, bvfloat, $ui2fp);
+  DECLARE(BUILTIN_CONVERSION, i128, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i96, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i88, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i64, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i56, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i48, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i40, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i32, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i24, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i16, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i8, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_CONVERSION, i1, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(UNINTERPRETED_CONVERSION, i128, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i96, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i88, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i64, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i56, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i48, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i40, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i32, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i24, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i16, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i8, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION, i1, bvdouble, $ui2fp);
+  DECLARE(BUILTIN_CONVERSION, i128, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i96, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i88, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i64, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i56, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i48, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i40, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i32, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i24, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i16, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i8, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_CONVERSION, i1, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
 
   D("function {:builtin \"(_ fp.to_sbv 32) RNE\"} $round.rne.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $round.rna.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RTN\"} $floor.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RTP\"} $ceil.bvfloat(bvfloat) returns (bv32);");
   D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} $trunc.bvfloat(bvfloat) returns (bv32);");
-
-  #if BUILD_64
-    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
-
-  #else
-    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
-
-  #endif
-
-  //This isn't the correct implementation, so change as needed
-  D("function {:inline} $ford.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
-  D("function {:inline} $funo.bvdouble(f1:bvdouble, f2:bvdouble) returns (bv1);");
-
-  D("function $fptrunc.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
-  D("function $fpext.bvdouble.bvdouble(f:bvdouble) returns (bvdouble) {f}");
-
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv128td(bv128) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv96td(bv96) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv88td(bv88) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv64td(bv64) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv56td(bv56) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv48td(bv48) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv40td(bv40) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv32td(bv32) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv24td(bv24) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv16td(bv16) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} sbv8td(bv8) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv128td(bv128) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv96td(bv96) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv88td(bv88) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv64td(bv64) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv56td(bv56) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv48td(bv48) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv40td(bv40) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv32td(bv32) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv24td(bv24) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv16td(bv16) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ubv8td(bv8) returns (bvdouble);");
-  D("function {:builtin \"(_ fp.to_sbv 128) RNE\"} dtsbv128(bvdouble) returns (bv128);");
-  D("function {:builtin \"(_ fp.to_sbv 96) RNE\"} dtsbv96(bvdouble) returns (bv96);");
-  D("function {:builtin \"(_ fp.to_sbv 88) RNE\"} dtsbv88(bvdouble) returns (bv88);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} dtsbv64(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 56) RNE\"} dtsbv56(bvdouble) returns (bv56);");
-  D("function {:builtin \"(_ fp.to_sbv 48) RNE\"} dtsbv48(bvdouble) returns (bv48);");
-  D("function {:builtin \"(_ fp.to_sbv 40) RNE\"} dtsbv40(bvdouble) returns (bv40);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RNE\"} dtsbv32(bvdouble) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 24) RNE\"} dtsbv24(bvdouble) returns (bv24);");
-  D("function {:builtin \"(_ fp.to_sbv 16) RNE\"} dtsbv16(bvdouble) returns (bv16);");
-  D("function {:builtin \"(_ fp.to_sbv 8) RNE\"} dtsbv8(bvdouble) returns (bv8);");
-  D("function {:builtin \"(_ fp.to_ubv 128) RNE\"} dtubv128(bvdouble) returns (bv128);");
-  D("function {:builtin \"(_ fp.to_ubv 96) RNE\"} dtubv96(bvdouble) returns (bv96);");
-  D("function {:builtin \"(_ fp.to_ubv 88) RNE\"} dtubv88(bvdouble) returns (bv88);");
-  D("function {:builtin \"(_ fp.to_ubv 64) RNE\"} dtubv64(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_ubv 56) RNE\"} dtubv56(bvdouble) returns (bv56);");
-  D("function {:builtin \"(_ fp.to_ubv 48) RNE\"} dtubv48(bvdouble) returns (bv48);");
-  D("function {:builtin \"(_ fp.to_ubv 40) RNE\"} dtubv40(bvdouble) returns (bv40);");
-  D("function {:builtin \"(_ fp.to_ubv 32) RNE\"} dtubv32(bvdouble) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_ubv 24) RNE\"} dtubv24(bvdouble) returns (bv24);");
-  D("function {:builtin \"(_ fp.to_ubv 16) RNE\"} dtubv16(bvdouble) returns (bv16);");
-  D("function {:builtin \"(_ fp.to_ubv 8) RNE\"} dtubv8(bvdouble) returns (bv8);");
-
-  // Add truncation for default casts to int
-  D("function {:builtin \"(_ fp.to_sbv 128) RTZ\"} dtsi128(bvdouble) returns (bv128);");
-  D("function {:builtin \"(_ fp.to_sbv 96) RTZ\"} dtsi96(bvdouble) returns (bv96);");
-  D("function {:builtin \"(_ fp.to_sbv 88) RTZ\"} dtsi88(bvdouble) returns (bv88);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} dtsi64(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 56) RTZ\"} dtsi56(bvdouble) returns (bv56);");
-  D("function {:builtin \"(_ fp.to_sbv 48) RTZ\"} dtsi48(bvdouble) returns (bv48);");
-  D("function {:builtin \"(_ fp.to_sbv 40) RTZ\"} dtsi40(bvdouble) returns (bv40);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} dtsi32(bvdouble) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 24) RTZ\"} dtsi24(bvdouble) returns (bv24);");
-  D("function {:builtin \"(_ fp.to_sbv 16) RTZ\"} dtsi16(bvdouble) returns (bv16);");
-  D("function {:builtin \"(_ fp.to_sbv 8) RTZ\"} dtsi8(bvdouble) returns (bv8);");
-
-  DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2si, {dtsi128(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv128, $fp2ui, {dtubv128(i)});
-  DECLARE(INLINE_CONVERSION, bv128, bvdouble, $si2fp, {sbv128td(i)});
-  DECLARE(INLINE_CONVERSION, bv128, bvdouble, $ui2fp, {ubv128td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv96, $fp2si, {dtsi96(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv96, $fp2ui, {dtubv96(i)});
-  DECLARE(INLINE_CONVERSION, bv96, bvdouble, $si2fp, {sbv96td(i)});
-  DECLARE(INLINE_CONVERSION, bv96, bvdouble, $ui2fp, {ubv96td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv88, $fp2si, {dtsi88(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv88, $fp2ui, {dtubv88(i)});
-  DECLARE(INLINE_CONVERSION, bv88, bvdouble, $si2fp, {sbv88td(i)});
-  DECLARE(INLINE_CONVERSION, bv88, bvdouble, $ui2fp, {ubv88td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv64, $fp2si, {dtsi64(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv64, $fp2ui, {dtubv64(i)});
-  DECLARE(INLINE_CONVERSION, bv64, bvdouble, $si2fp, {sbv64td(i)});
-  DECLARE(INLINE_CONVERSION, bv64, bvdouble, $ui2fp, {ubv64td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv56, $fp2si, {dtsi56(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv56, $fp2ui, {dtubv56(i)});
-  DECLARE(INLINE_CONVERSION, bv56, bvdouble, $si2fp, {sbv56td(i)});
-  DECLARE(INLINE_CONVERSION, bv56, bvdouble, $ui2fp, {ubv56td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv48, $fp2si, {dtsi48(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv48, $fp2ui, {dtubv48(i)});
-  DECLARE(INLINE_CONVERSION, bv48, bvdouble, $si2fp, {sbv48td(i)});
-  DECLARE(INLINE_CONVERSION, bv48, bvdouble, $ui2fp, {ubv48td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv40, $fp2si, {dtsi40(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv40, $fp2ui, {dtubv40(i)});
-  DECLARE(INLINE_CONVERSION, bv40, bvdouble, $si2fp, {sbv40td(i)});
-  DECLARE(INLINE_CONVERSION, bv40, bvdouble, $ui2fp, {ubv40td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv32, $fp2si, {dtsi32(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv32, $fp2ui, {dtubv32(i)});
-  DECLARE(INLINE_CONVERSION, bv32, bvdouble, $si2fp, {sbv32td(i)});
-  DECLARE(INLINE_CONVERSION, bv32, bvdouble, $ui2fp, {ubv32td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv24, $fp2si, {dtsi24(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv24, $fp2ui, {dtubv24(i)});
-  DECLARE(INLINE_CONVERSION, bv24, bvdouble, $si2fp, {sbv24td(i)});
-  DECLARE(INLINE_CONVERSION, bv24, bvdouble, $ui2fp, {ubv24td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv16, $fp2si, {dtsi16(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv16, $fp2ui, {dtubv16(i)});
-  DECLARE(INLINE_CONVERSION, bv16, bvdouble, $si2fp, {sbv16td(i)});
-  DECLARE(INLINE_CONVERSION, bv16, bvdouble, $ui2fp, {ubv16td(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2si, {dtsi8(i)});
-  DECLARE(INLINE_CONVERSION, bvdouble, bv8, $fp2ui, {dtubv8(i)});
-  DECLARE(INLINE_CONVERSION, bv8, bvdouble, $si2fp, {sbv8td(i)});
-  DECLARE(INLINE_CONVERSION, bv8, bvdouble, $ui2fp, {ubv8td(i)});
-
   D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} $round.rne.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $round.rna.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RTN\"} $floor.bvdouble(bvdouble) returns (bv64);");
@@ -1073,11 +1015,12 @@ void __SMACK_decls(void) {
   D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} $trunc.bvdouble(bvdouble) returns (bv64);");
 
   #if BUILD_64
+    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
 
   #else
+    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
     D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvdouble(bvdouble) returns (bv32);");
-
   #endif
 
 #endif
@@ -1104,24 +1047,68 @@ void __SMACK_decls(void) {
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
 
   D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
+  D("function {:inline} $load.unsafe.float(M: [ref] i8, p: ref) returns (float) { $bitcast.i8.float(M[p]) }");
   D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
+  D("function {:inline} $store.unsafe.float(M: [ref] i8, p: ref, v: float) returns ([ref] i8) { M[p := $bitcast.float.i8(v)] }");
+  D("function {:inline} $load.bytes.float(M: [ref] bv8, p: ref) returns (float) { $bitcast.bv8.float(M[p]) }");
+  D("function {:inline} $store.bytes.float(M:[ref]bv8, p:ref, v:float) returns ([ref]bv8) {M[p := $bitcast.float.bv8(v)]}");
 
   #if FLOAT_ENABLED
+  DECLARE(UNINTERPRETED_CONVERSION,bvhalf,bv16,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,bv32,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,bv64,$bitcast);
+  DECLARE(BUILTIN_CONVERSION,bv16,bvhalf,$bitcast,(_ to_fp 5 11));
+  DECLARE(BUILTIN_CONVERSION,bv32,bvfloat,$bitcast,(_ to_fp 8 24));
+  DECLARE(BUILTIN_CONVERSION,bv64,bvdouble,$bitcast,(_ to_fp 11 53));
+  DECLARE(UNINTERPRETED_CONVERSION,bvhalf,i16,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i32,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i64,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,bvhalf,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,bvfloat,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,bvdouble,$bitcast);
+  D("axiom (forall f: bvhalf :: $bitcast.bv16.bvhalf($bitcast.bvhalf.bv16(f)) == f);");
+  D("axiom (forall f: bvfloat :: $bitcast.bv32.bvfloat($bitcast.bvfloat.bv32(f)) == f);");
+  D("axiom (forall f: bvdouble :: $bitcast.bv64.bvdouble($bitcast.bvdouble.bv64(f)) == f);");
+  //D("axiom (forall b: bv16 :: b[15:10] == 31bv5 && b[10:0] != 0bv10 ==> $bitcast.bvhalf.bv16($bitcast.bv16.bvhalf(b)) == b);");
+  //D("axiom (forall b: bv32 :: b[31:23] == 255bv8 && b[23:0] != 0bv23 ==> $bitcast.bvfloat.bv32($bitcast.bv32.bvfloat(b)) == b);");
+  //D("axiom (forall b: bv64 :: b[63:52] == 2047bv11 && b[52:0] != 0bv52 ==> $bitcast.bvdouble.bv64($bitcast.bv64.bvdouble(b)) == b);");
+  // TODO: add more constraints
+  D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
+  D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
+  D("axiom (forall f: bvdouble, i: i64 :: $bitcast.bvdouble.i64(f) == i <==> $bitcast.i64.bvdouble(i) == f);");
+
+  D("function {:inline} $load.bvhalf(M: [ref] bvhalf, p: ref) returns (bvhalf) { M[p] }");
+  D("function {:inline} $store.bvhalf(M: [ref] bvhalf, p: ref, v: bvhalf) returns ([ref] bvhalf) { M[p := v] }");
   D("function {:inline} $load.bvfloat(M: [ref] bvfloat, p: ref) returns (bvfloat) { M[p] }");
   D("function {:inline} $store.bvfloat(M: [ref] bvfloat, p: ref, v: bvfloat) returns ([ref] bvfloat) { M[p := v] }");
-
   D("function {:inline} $load.bvdouble(M: [ref] bvdouble, p: ref) returns (bvdouble) { M[p] }");
   D("function {:inline} $store.bvdouble(M: [ref] bvdouble, p: ref, v: bvdouble) returns ([ref] bvdouble) { M[p := v] }");
 
+  D("function {:inline} $store.bytes.bvhalf(M:[ref]bv8, p:ref, v:bvhalf) returns ([ref]bv8) {"
+    "$store.bytes.bv16(M, p, $bitcast.bvhalf.bv16(v))}");
   D("function {:inline} $store.bytes.bvfloat(M:[ref]bv8, p:ref, v:bvfloat) returns ([ref]bv8) {"
-    "$store.bytes.bv32(M, p, $fp2ui.bvfloat.bv32(v))}");
+    "$store.bytes.bv32(M, p, $bitcast.bvfloat.bv32(v))}");
   D("function {:inline} $store.bytes.bvdouble(M:[ref]bv8, p:ref, v:bvdouble) returns ([ref]bv8) {"
-    "$store.bytes.bv64(M, p, $fp2ui.bvdouble.bv64(v))}");
+    "$store.bytes.bv64(M, p, $bitcast.bvdouble.bv64(v))}");
+  D("function {:inline} $store.unsafe.bvhalf(M:[ref]i8, p:ref, v:bvhalf) returns ([ref]i8) {"
+    "$store.i16(M, p, $bitcast.bvhalf.i16(v))}");
+  D("function {:inline} $store.unsafe.bvfloat(M:[ref]i8, p:ref, v:bvfloat) returns ([ref]i8) {"
+    "$store.i32(M, p, $bitcast.bvfloat.i32(v))}");
+  D("function {:inline} $store.unsafe.bvdouble(M:[ref]i8, p:ref, v:bvdouble) returns ([ref]i8) {"
+    "$store.i64(M, p, $bitcast.bvdouble.i64(v))}");
 
+  D("function {:inline} $load.bytes.bvhalf(M: [ref] bv8, p: ref) returns (bvhalf) {"
+    "$bitcast.bv16.bvhalf($load.bytes.bv16(M, p))}");
   D("function {:inline} $load.bytes.bvfloat(M: [ref] bv8, p: ref) returns (bvfloat) {"
-    "$ui2fp.bv32.bvfloat($load.bytes.bv32(M, p))}");
+    "$bitcast.bv32.bvfloat($load.bytes.bv32(M, p))}");
   D("function {:inline} $load.bytes.bvdouble(M: [ref] bv8, p: ref) returns (bvdouble) {"
-    "$ui2fp.bv64.bvdouble($load.bytes.bv64(M, p))}");
+    "$bitcast.bv64.bvdouble($load.bytes.bv64(M, p))}");
+  D("function {:inline} $load.unsafe.bvhalf(M: [ref] i8, p: ref) returns (bvhalf) {"
+    "$bitcast.i16.bvhalf($load.i16(M, p))}");
+  D("function {:inline} $load.unsafe.bvfloat(M: [ref] i8, p: ref) returns (bvfloat) {"
+    "$bitcast.i32.bvfloat($load.i32(M, p))}");
+  D("function {:inline} $load.unsafe.bvdouble(M: [ref] i8, p: ref) returns (bvdouble) {"
+    "$bitcast.i64.bvdouble($load.i64(M, p))}");
   #endif
 
   // Memory debugging symbols

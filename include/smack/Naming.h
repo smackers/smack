@@ -27,6 +27,7 @@ class Naming {
 public:
   static const std::string BOOL_TYPE;
   static const std::string UNINTERPRETED_FLOAT_TYPE;
+  static const std::string HALF_TYPE;
   static const std::string FLOAT_TYPE;
   static const std::string DOUBLE_TYPE;
   static const std::string LONG_DOUBLE_TYPE;

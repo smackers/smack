@@ -94,6 +94,8 @@ private:
   Decl* memsetProc(std::string type,
     unsigned length = std::numeric_limits<unsigned>::max());
 
+  bool isUnsafeFloatAccess(const llvm::Type* elemTy, const llvm::Type* resultTy);
+
 public:
   const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
   const Expr* pointerLit(unsigned long v);

@@ -1,1 +1,1 @@
-flags: [--bit-precise, --float]
+flags: [--float]
