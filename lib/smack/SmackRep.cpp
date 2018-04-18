@@ -387,7 +387,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       auto A = dyn_cast<const Argument>(GEP->getPointerOperand());
       assert(A && "Expected function argument to GEP instruction.");
       auto T = GEP->getType()->getElementType();
-      const unsigned bits = T->getIntegerBitWidth();
+      const unsigned bits = this->getSize(T);
       const unsigned bytes = bits / 8;
       const unsigned R = regions->idx(GEP);
       bool bytewise = regions->get(R).bytewiseAccess();
@@ -406,7 +406,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   } else {
     name = Naming::VALUE_PROC + "s";
     const Argument* A;
-    const Type* T;
+    Type* T;
     const Expr* addr;
 
     if ((A = dyn_cast<const Argument>(V))) {
@@ -440,7 +440,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
     assert(I && "expected constant size expression.");
     const unsigned count = I->getZExtValue();
-    const unsigned bits = T->getIntegerBitWidth();
+    const unsigned bits = this->getSize(T);
     const unsigned bytes = bits / 8;
     const unsigned length = count * bytes;
     const unsigned R = regions->idx(V, length);
