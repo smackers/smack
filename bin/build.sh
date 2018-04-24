@@ -424,7 +424,7 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
     puts "Building Symbooglix"
     if [ ! -d "$SYMBOOGLIX_DIR/.git" ] ; then
-      git clone --recursive https://github.com/symbooglix/symbooglix.git ${SYMBOOGLIX_DIR}
+      git clone --recursive https://github.com/boogie-org/symbooglix.git ${SYMBOOGLIX_DIR}
     fi
     cd ${SYMBOOGLIX_DIR}/src
     git reset --hard ${SYMBOOGLIX_COMMIT}
