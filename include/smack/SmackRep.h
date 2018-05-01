@@ -164,6 +164,9 @@ public:
   std::string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
 
+  bool isContractExpr(const llvm::Value* V) const;
+  bool isContractExpr(const std::string S) const;
+
   void addAuxiliaryDeclaration(Decl* D);
   std::list<Decl*> auxiliaryDeclarations();
 };

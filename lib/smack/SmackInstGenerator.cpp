@@ -618,7 +618,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
       rep->addBplGlobal(var);
     }
 
-  } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
+  } else if (rep->isContractExpr(f)) {
     // NOTE do not generate code for contract expressions
 
   } else if (name == "__CONTRACT_int_variable") {
@@ -635,7 +635,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(1));
     // assert(cj && "Expected contract expression argument to contract function.");
     // Function* F = cj->getCalledFunction();
-    // assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+    // assert(F && rep->isContractExpr(F)
     //     && "Expected contract expression argument to contract function.");
     //
     // auto binding = rep->getString(ci.getArgOperand(0));
@@ -665,7 +665,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(0));
     assert(cj && "Expected contract expression argument to contract function.");
     Function* F = cj->getCalledFunction();
-    assert(F && F->getName().find(Naming::CONTRACT_EXPR) != std::string::npos
+    assert(F && rep->isContractExpr(F)
         && "Expected contract expression argument to contract function.");
 
     std::list<const Expr*> args;

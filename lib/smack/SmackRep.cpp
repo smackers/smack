@@ -855,6 +855,16 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
     return Expr::fn(fn, e1, e2);
 }
 
+
+bool SmackRep::isContractExpr(const llvm::Value* V) const {
+  auto name = naming->get(*V);
+  return isContractExpr(name);
+}
+
+bool SmackRep::isContractExpr(const std::string S) const {
+  return S.find(Naming::CONTRACT_EXPR) == 0;
+}
+
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   assert(F && "Unknown function call.");
   std::string name = naming->get(*F);
@@ -888,7 +898,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
       })
     );
 
-  } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
+  } else if (isContractExpr(F)) {
     for (auto m : memoryMaps())
       params.push_back(m);
 
