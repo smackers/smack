@@ -364,7 +364,6 @@ def objc_clang_frontend(args):
     sys.exit("Objective-C not yet supported on macOS")
   else:
     sys.exit("Objective-C not supported for this operating system.")
-  compile_command = objc_clang_compile_command(args)
   default_link_bc_files(compile_command, args)
 
 def default_link_bc_files(compile_command, args):
