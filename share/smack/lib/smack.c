@@ -1073,6 +1073,9 @@ void __SMACK_decls(void) {
   //D("axiom (forall b: bv32 :: b[31:23] == 255bv8 && b[23:0] != 0bv23 ==> $bitcast.bvfloat.bv32($bitcast.bv32.bvfloat(b)) == b);");
   //D("axiom (forall b: bv64 :: b[63:52] == 2047bv11 && b[52:0] != 0bv52 ==> $bitcast.bvdouble.bv64($bitcast.bv64.bvdouble(b)) == b);");
   // TODO: add more constraints
+
+  D("axiom (forall f: bvfloat :: dtf(ftd(f)) == f);");
+
   D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
   D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
   D("axiom (forall f: bvdouble, i: i64 :: $bitcast.bvdouble.i64(f) == i <==> $bitcast.i64.bvdouble(i) == f);");
