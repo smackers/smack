@@ -8,11 +8,11 @@
 float fabsf(float x);
 float fdimf(float x, float y);
 float roundf(float x);
+long lroundf(float x);
 //The following 3 functions are incomplete pending rounding mode implementation
 float rintf(float x);
 float nearbyintf(float x);
 long lrintf(float x);
-long lroundf(float x);
 float floorf(float x);
 float ceilf(float x);
 float truncf(float x);
@@ -23,19 +23,16 @@ float fmaxf(float x, float y);
 float fmodf(float x, float y);
 float modff(float x, float* y);
 float copysignf(float x, float y);
+float nanf(const char* x);
 int __isnormalf(float x);
-int __isSubnormalf(float x);
+int __issubnormalf(float x);
 int __iszerof(float x);
 int __isinff(float x);
 int __isnanf(float x);
 int __isnegativef(float x);
-int __ispositivef(float x);
 int __signbitf(float x);
-int signbitf(float x);
 int __fpclassifyf(float x);
-int fpclassifyf(float x);
-int __finitef(float x);
-//float nan(float x);
+int __isfinitef(float x);
 
 //doubles
 double fabs(double x);
@@ -58,30 +55,24 @@ double modf(double x, double* y);
 double copysign(double x, double y);
 double nan(const char* x);
 int __isnormal(double x);
-int __isSubnormal(double x);
+int __issubnormal(double x);
 int __iszero(double x);
 int __isinf(double x);
 int __isnan(double x);
 int __isnegative(double x);
-int __ispositive(double x);
 int __signbit(double x);
-int signbit(double x);
 int __fpclassify(double x);
-int fpclassify(double x);
-int __finite(double x);
+int __isfinite(double x);
 
 //long doubles
 /*int __isnormall(long double x);
-int __isSubnormall(long double x);
+int __issubnormall(long double x);
 int __iszerol(long double x);
 int __isinfl(long double x);
 int __isnanl(long double x);
 int __isnegativel(long double x);
-int __ispositivel(long double x);
 int __signbitl(long double x);
-int signbitl(long double x);
 int __fpclassifyl(long double x);
-int fpclassifyl(long double x);
-int __finitel(long double x);*/
+int __isfinitel(long double x);*/
 
 #endif
