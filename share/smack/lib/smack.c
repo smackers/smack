@@ -1003,16 +1003,16 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_CONVERSION, i8, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
   DECLARE(BUILTIN_CONVERSION, i1, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
 
-  D("function {:builtin \"(_ fp.to_sbv 32) RNE\"} $round.rne.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $round.rna.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTN\"} $floor.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTP\"} $ceil.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} $trunc.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} $round.rne.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $round.rna.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTN\"} $floor.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTP\"} $ceil.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} $trunc.bvdouble(bvdouble) returns (bv64);");
+  D("function {:builtin \"fp.roundToIntegral RNE\"} $round.rne.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.roundToIntegral RNA\"} $round.rna.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.roundToIntegral RTP\"} $ceil.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.roundToIntegral RTN\"} $floor.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.roundToIntegral RTZ\"} $trunc.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.roundToIntegral RNE\"} $round.rne.bvdouble(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.roundToIntegral RNA\"} $round.rna.bvdouble(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.roundToIntegral RTP\"} $ceil.bvdouble(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.roundToIntegral RTN\"} $floor.bvdouble(bvdouble) returns (bvdouble);");
+  D("function {:builtin \"fp.roundToIntegral RTZ\"} $trunc.bvdouble(bvdouble) returns (bvdouble);");
 
   #if BUILD_64
     D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
