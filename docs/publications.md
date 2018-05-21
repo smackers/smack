@@ -14,6 +14,10 @@ Zvonimir Rakamaric, Michael Emmi,
 This is an incomplete list of publications that use, leverage, or extend SMACK.
 If you have a publication for this list, please email [Zvonimir](mailto:zvonimir@cs.utah.edu).
 
+1. [ZEUS: Analyzing Safety of Smart Contracts](http://wp.internetsociety.org/ndss/wp-content/uploads/sites/25/2018/02/ndss2018_09-1_Kalra_paper.pdf),
+Sukrit Kalra, Seep Goel, Mohan Dhawan, Subodh Sharma,
+25th Annual Network and Distributed System Security Symposium (NDSS 2018)
+
 1. [Formal Verification of Optimizing Compilers](https://link.springer.com/chapter/10.1007/978-3-319-72344-0_3),
 Yiji Zhang, Lenore D. Zuck,
 Keynote at the 14th International Conference on Distributed Computing and Internet Technology (ICDCIT 2018)
