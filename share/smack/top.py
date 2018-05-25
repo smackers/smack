@@ -29,6 +29,8 @@ def frontends():
     'bc': llvm_frontend,
     'll': llvm_frontend,
     'bpl': boogie_frontend,
+    'f90' : fortran_frontend,
+    'f' : fortran_frontend, # TODO: add all fortran extensions
   }
 
 def results(args):
@@ -366,6 +368,29 @@ def objc_clang_frontend(args):
     sys.exit("Objective-C not supported for this operating system.")
   compile_command = objc_clang_compile_command(args)
   default_link_bc_files(compile_command, args)
+
+def fortran_frontend(args):
+  """Generate Boogie code from Fortran language source(s)."""
+
+  compile_command = default_clang_compile_command(args)
+  compile_command[0] = 'flang'
+  compile_command[1] = '-S'
+  
+  bitcodes = []
+
+  for c in args.input_files:
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.ll', args)
+    try_command(compile_command + ['-o', bc, c], console=True)
+    # Workaround for "Debug Info Version" bug - required for fortran to link
+    #    with non-fortran code.
+    try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', bc])
+    bitcodes.append(bc)
+
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
+  llvm_to_bpl(args)
+  
+  
 
 def default_link_bc_files(compile_command, args):
   """Allow abstraction over clang's programming languages."""
