@@ -374,7 +374,7 @@ def d_frontend(args):
   # Right now, it works, and with these options, smack crashes.
   compile_command = ['ldc2', '-output-ll'] 
   compile_command += map(lambda path: '-I=' + path, smack_headers())
-  args.entry_points += ['_Dmain']
+  args.entry_points = [ep if ep != 'main' else '_Dmain' for ep in args.entry_points]
   default_link_bc_files(compile_command, args)
 
 def default_link_bc_files(compile_command, args):
