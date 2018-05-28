@@ -372,11 +372,23 @@ def objc_clang_frontend(args):
 def fortran_frontend(args):
   """Generate Boogie code from Fortran language source(s)."""
 
+  args.entry_points = [ep if ep != 'main' else 'MAIN_' for ep in args.entry_points]
+
   compile_command = default_clang_compile_command(args)
   compile_command[0] = 'flang'
   compile_command[1] = '-S'
   
   bitcodes = []
+
+  # must be done before compilation of input files
+  #   so that smack.mod appears
+  smack_fortran_lib = 'smack.f90'
+  smack_path = os.path.join(smack_lib(), smack_fortran_lib)
+  smack_fortran_bc = temporary_file(os.path.splitext(os.path.basename(smack_path))[0], '.ll', args)
+  try_command(compile_command + ['-o', smack_fortran_bc, smack_path], console=True)
+  try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', smack_fortran_bc])
+  bitcodes.append(smack_fortran_bc)
+  
 
   for c in args.input_files:
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.ll', args)
@@ -390,8 +402,6 @@ def fortran_frontend(args):
   try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
   llvm_to_bpl(args)
   
-  
-
 def default_link_bc_files(compile_command, args):
   """Allow abstraction over clang's programming languages."""
 
