@@ -24,6 +24,7 @@ def frontends():
     'cc': clang_plusplus_frontend,
     'cpp': clang_plusplus_frontend,
     'm': objc_clang_frontend,
+    'd' : d_frontend,
     'json': json_compilation_database_frontend,
     'svcomp': svcomp_frontend,
     'bc': llvm_frontend,
@@ -364,7 +365,16 @@ def objc_clang_frontend(args):
     sys.exit("Objective-C not yet supported on macOS")
   else:
     sys.exit("Objective-C not supported for this operating system.")
-  compile_command = objc_clang_compile_command(args)
+  default_link_bc_files(compile_command, args)
+
+def d_frontend(args):
+  """Generate Boogie code from D programming language source(s)."""
+
+  # note: -g and -O0 are not used here. 
+  # Right now, it works, and with these options, smack crashes.
+  compile_command = ['ldc2', '-output-ll'] 
+  compile_command += map(lambda path: '-I=' + path, smack_headers())
+  args.entry_points = [ep if ep != 'main' else '_Dmain' for ep in args.entry_points]
   default_link_bc_files(compile_command, args)
 
 def default_link_bc_files(compile_command, args):
