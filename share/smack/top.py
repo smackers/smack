@@ -30,6 +30,11 @@ def frontends():
     'bc': llvm_frontend,
     'll': llvm_frontend,
     'bpl': boogie_frontend,
+    'f' : fortran_frontend,
+    'for' : fortran_frontend,
+    'f90' : fortran_frontend,
+    'f95' : fortran_frontend,
+    'f03' : fortran_frontend,
   }
 
 def results(args):
@@ -377,6 +382,55 @@ def d_frontend(args):
   args.entry_points = [ep if ep != 'main' else '_Dmain' for ep in args.entry_points]
   default_link_bc_files(compile_command, args)
 
+def fortran_frontend(args):
+  """Generate Boogie code from Fortran language source(s)."""
+
+  # Requires two hacks as of right now:
+  #    1. The Debug Info Version in flang is incompatible with 
+  #       the version that clang uses. The workaround is to use
+  #       sed to change the file so llvm-link gives a warning
+  #       and not an error. This will be fixed in flang in the
+  #       near future (summer/fall 2018), after which this hack
+  #       will no longer be necessary.
+  #    2. For a fortran file that includes smack.f90 as a module,
+  #       it will not compile unless the file 'smack.mod' exists
+  #       in the working directory. 'smack.mod' is a build artifact
+  #       of compiling smack.f90. Therefore, the solution is to 
+  #       compile smack.f90 before the source files, even though
+  #       it is a smack library and could be in a generalized build_libs()
+
+  # replace the default entry point with the fortran default 'MAIN_'
+  args.entry_points = [ep if ep != 'main' else 'MAIN_' for ep in args.entry_points]
+
+  compile_command = default_clang_compile_command(args)
+  compile_command[0] = 'flang'
+  # compile to .ll instead of .bc in order to hack Debug Info Version
+  compile_command[1] = '-S'
+  
+  bitcodes = []
+
+  # must be done before compilation of input files
+  #   so that smack.mod appears
+  smack_fortran_lib = 'smack.f90'
+  smack_path = os.path.join(smack_lib(), smack_fortran_lib)
+  # use '.ll' instead of '.bc'
+  smack_fortran_bc = temporary_file(os.path.splitext(os.path.basename(smack_path))[0], '.ll', args)
+  try_command(compile_command + ['-o', smack_fortran_bc, smack_path], console=True)
+  # change the throw level of 'Debug Info Version' from error to warning in the IR
+  try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', smack_fortran_bc])
+  bitcodes.append(smack_fortran_bc)
+  
+  for c in args.input_files:
+    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.ll', args)
+    try_command(compile_command + ['-o', bc, c], console=True)
+    # change the throw level of 'Debug Info Version' from error to warning in the IR
+    try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', bc])
+    bitcodes.append(bc)
+
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
+  llvm_to_bpl(args)
+  
 def default_link_bc_files(compile_command, args):
   """Allow abstraction over clang's programming languages."""
 
