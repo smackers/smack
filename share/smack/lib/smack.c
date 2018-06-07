@@ -1127,7 +1127,7 @@ void __SMACK_decls(void) {
 
 #if MEMORY_SAFETY
 
-  D("implementation __SMACK_check_memory_safety(p: ref, size: i64)\n"
+  D("implementation __SMACK_check_memory_safety(p: ref, size: ref)\n"
     "{\n"
     "  assert {:valid_deref} $Alloc[$base(p)] == true;\n"
     "  assert {:valid_deref} $sle.ref.bool($base(p), p);\n"
