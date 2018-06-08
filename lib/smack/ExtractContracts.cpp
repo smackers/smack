@@ -136,28 +136,23 @@ namespace {
   // Replace the given invocation with a return of its argument; also remove
   // all other contract invocations.
   void setReturnToArgumentValue(Function *F, CallInst *II) {
+    auto RetVal = II->getArgOperand(0);
 
     for (auto &BB : *F) {
 
       // Replace existing returns with return true.
       if (auto RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
         IRBuilder<> Builder(RI);
-        Builder.CreateRet(ConstantInt::getTrue(F->getFunctionType()->getReturnType()));
+        Builder.CreateRet(RetVal);
         RI->eraseFromParent();
         continue;
       }
 
-      // Erase contract invocations, and replace the given invocation
-      // with a return of its argument.
+      // Erase all contract invocations.
       for (auto &I : BB) {
         if (auto CI = dyn_cast<CallInst>(&I)) {
           if (auto F = CI->getCalledFunction()) {
             if (isContractFunction(F)) {
-              if (CI == II) {
-                IRBuilder<> Builder(CI);
-                BB.getTerminator()->eraseFromParent();
-                Builder.CreateRet(CI->getArgOperand(0));
-              }
               CI->eraseFromParent();
               break;
             }
