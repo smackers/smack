@@ -1323,20 +1323,6 @@ void __SMACK_decls(void) {
 }
 
 #if MEMORY_SAFETY
-// The size parameter represents number of bytes that are being accessed
-void __SMACK_check_memory_safety(void* pointer, unsigned long size) {
-  void* sizeRef = (void*)size;
-  __SMACK_code("assert {:valid_deref} $Alloc[$base(@)];", pointer);
-  __SMACK_code("assert {:valid_deref} $sle.ref.bool($base(@), @);", pointer, pointer);
-#if MEMORY_MODEL_NO_REUSE_IMPLS
-  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, sizeRef, pointer, pointer);
-#elif MEMORY_MODEL_REUSE
-  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", pointer, sizeRef, pointer, pointer);
-#else
-  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", pointer, sizeRef, pointer, pointer);
-#endif
-}
-
 void __SMACK_check_memory_leak(void) {
   __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
 }

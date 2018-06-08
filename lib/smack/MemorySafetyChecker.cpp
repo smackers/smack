@@ -51,7 +51,7 @@ void MemorySafetyChecker::insertMemoryAccessCheck(Value* addr, Value* size, Inst
   auto T = PointerType::getUnqual(Type::getInt8Ty(C));
   CallInst::Create(getSafetyCheckFunction(M), {
     CastInst::Create(Instruction::BitCast, addr, T, "", I),
-    CastInst::Create(Instruction::BitCast, size, T, "", I)
+    CastInst::CreateBitOrPointerCast(size, T, "", I)
   }, "", I);
   }
 
