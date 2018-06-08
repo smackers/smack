@@ -1134,7 +1134,7 @@ void __SMACK_decls(void) {
   #if MEMORY_MODEL_NO_REUSE_IMPLS
     "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
   #elif MEMORY_MODEL_REUSE
-    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
+    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size[$base(p)]));\n"
   #else
     "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
   #endif
