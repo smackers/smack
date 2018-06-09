@@ -17,7 +17,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <vector>
 #include <set>
@@ -107,7 +106,7 @@ void processLoop(Loop *loop) {
   std::set<BasicBlock*> phiIncBlocks;
   std::set<BasicBlock*> loopBlocks(loop->block_begin(), loop->block_end());
   BasicBlock* headerBlock = loop->getHeader();
-  errs() << headerBlock->getParent()->getName() << ": " << *loop << "\n";
+
   // Gather Phis in the header
   for (Instruction& I : *headerBlock) {
     if (auto* phi = dyn_cast<PHINode>(&I)) {
