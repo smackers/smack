@@ -21,9 +21,9 @@ Function* MemorySafetyChecker::getLeakCheckFunction(Module& M) {
     auto F = M.getFunction(Naming::MEMORY_LEAK_FUNCTION);
     assert (F && "Memory leak check function must be present.");
     leakCheckFunction[&M] = F;
-	}
+  }
   return leakCheckFunction[&M];
-      }
+}
 
 Function* MemorySafetyChecker::getSafetyCheckFunction(Module& M) {
   if (!safetyCheckFunction.count(&M)) {
@@ -43,7 +43,7 @@ Function* MemorySafetyChecker::getSafetyCheckFunction(Module& M) {
 void MemorySafetyChecker::insertMemoryLeakCheck(Instruction* I) {
   auto& M = *I->getParent()->getParent()->getParent();
   CallInst::Create(getLeakCheckFunction(M), "", I);
-    }
+}
 
 void MemorySafetyChecker::insertMemoryAccessCheck(Value* addr, Value* size, Instruction* I) {
   auto& M = *I->getParent()->getParent()->getParent();
@@ -53,7 +53,7 @@ void MemorySafetyChecker::insertMemoryAccessCheck(Value* addr, Value* size, Inst
     CastInst::Create(Instruction::BitCast, addr, T, "", I),
     CastInst::CreateBitOrPointerCast(size, T, "", I)
   }, "", I);
-  }
+}
 
 bool MemorySafetyChecker::runOnModule(Module& M) {
   this->visit(M);
