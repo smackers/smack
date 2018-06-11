@@ -41,6 +41,7 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/SplitAggregateValue.h"
+#include "smack/NormalizeLoops.h"
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -158,6 +159,7 @@ int main(int argc, char **argv) {
   }
 
   //pass_manager.add(new llvm::StructRet());
+  pass_manager.add(new smack::NormalizeLoops());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::ExtractContracts());
