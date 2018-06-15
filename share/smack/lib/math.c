@@ -31,7 +31,9 @@ float roundf(float x) {
 }
 
 long lroundf(float x) {
-  return roundf(x);
+  long ret = __VERIFIER_nondet_long();
+  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
+  return ret;
 }
 
 float rintf(float x) {
@@ -43,7 +45,7 @@ float nearbyintf(float x) {
 }
 
 long lrintf(float x) {
-  return roundf(x);
+  return lroundf(x);
 }
 
 float floorf(float x) {
@@ -203,7 +205,9 @@ double round(double x) {
 }
 
 long lround(double x) {
-  return round(x);
+  long ret = __VERIFIER_nondet_long();
+  __SMACK_code("@ := $lround.bvdouble(@);", ret, x);
+  return ret;
 }
 
 double rint(double x) {
@@ -215,7 +219,7 @@ double nearbyint(double x) {
 }
 
 long lrint(double x) {
-  return round(x);
+  return lround(x);
 }
 
 double floor(double x) {

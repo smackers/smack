@@ -1020,12 +1020,12 @@ void __SMACK_decls(void) {
   D("function {:builtin \"fp.roundToIntegral RTZ\"} $trunc.bvdouble(bvdouble) returns (bvdouble);");
 
   #if BUILD_64
-    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvfloat(bvfloat) returns (bv64);");
-    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvdouble(bvdouble) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
 
   #else
-    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvfloat(bvfloat) returns (bv32);");
-    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvdouble(bvdouble) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvdouble(bvdouble) returns (bv32);");
   #endif
 
 #endif
