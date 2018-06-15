@@ -8,17 +8,12 @@ int main(void) {
   double Inf = 1.0 / 0.0;
   double negInf = -1.0 / 0.0;
 
-  double val = __VERIFIER_nondet_double();
-
-  if (!__isnan(val) && !__isinf(val) && !__iszero(val)) {
-    if (val > 1) {
-      //assert(sqrt(val) <= val);
-    } else if (val > 0) {
-      //assert(sqrt(val) >= val);
-    } else {
-      //assert(__isnan(sqrt(val)));
-    }
-  }
+  double a = 4.0;
+  double b = 4.0 / 9.0;
+  double c = -1.0;
+  assert(fabs(2.0 - sqrt(a)) < 1e-8);
+  assert(fabs(2.0 / 3.0 - sqrt(b)) < 1e-8);
+  assert(__isnan(sqrt(c)));
 
   assert(sqrt(0.0) == 0.0);
   assert(sqrt(-0.0) == -0.0);

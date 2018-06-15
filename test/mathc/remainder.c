@@ -8,19 +8,12 @@ int main(void) {
   double Inf = 1.0 / 0.0;
   double negInf = -1.0 / 0.0;
 
+  assert(remainder(2, 4) == 2);
+  assert(remainder(2.00000001, 4) == -1.99999999);
+  assert(remainder(1.99999999, 4) == 1.99999999);
+
   double x = __VERIFIER_nondet_double();
   double y = __VERIFIER_nondet_double();
-
-  if (!__isnan(x) && !__isinf(x) && !__iszero(x)) {
-    if (!__isnan(y) && !__isinf(y) && !__iszero(y)) {
-      double rem = remainder(x, y);
-      if (x > 0 && y > 0 || x < 0 && y < 0) {
-        assert(rem >= 0 && rem <= y);
-      } else {
-        assert(rem >= -y && rem <= 0);
-      }
-    }
-  }
 
   if (!__isnan(y)) {
     assert(__isnan(remainder(Inf, y)));

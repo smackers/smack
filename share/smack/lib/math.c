@@ -6,7 +6,7 @@
 //Check the length of pointers
 //#if ( __WORDSIZE == 64 )
 #if defined(__LP64__) || defined(_LP64)
-#define BUILD_64   1
+#define BUILD_64 1
 #endif
 
 float fabsf(float x) {
@@ -26,14 +26,12 @@ float fdimf(float x, float y) {
 
 float roundf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($round.rna.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := ftd($round.bvfloat(dtf(@)));", ret, x);
   return ret;
 }
 
 long lroundf(float x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
-  return ret;
+  return roundf(x);
 }
 
 float rintf(float x) {
@@ -45,9 +43,7 @@ float nearbyintf(float x) {
 }
 
 long lrintf(float x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
-  return ret;
+  return roundf(x);
 }
 
 float floorf(float x) {
@@ -63,7 +59,7 @@ float ceilf(float x) {
 }
 
 float truncf(float x) {
-  float ret = __VERIFIER_nondet_float();
+  double ret = __VERIFIER_nondet_double();
   __SMACK_code("@ := ftd($trunc.bvfloat(dtf(@)));", ret, x);
   return ret;
 }
@@ -75,8 +71,8 @@ float sqrtf(float x) {
 }
 
 float remainderf(float x, float y) {
-  float ret = __VERIFIER_nondet_float();
-  __SMACK_code("@ := ftd($rem.rne.bvfloat(dtf(@), dtf(@)));", ret, x, y);
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := ftd($frem.bvfloat(dtf(@), dtf(@)));", ret, x, y);
   return ret;
 }
 
@@ -87,19 +83,26 @@ float fminf(float x, float y) {
 }
 
 float fmaxf(float x, float y) {
-  float ret = __VERIFIER_nondet_float();
+  double ret = __VERIFIER_nondet_double();
   __SMACK_code("@ := ftd($max.bvfloat(dtf(@), dtf(@)));", ret, x, y);
   return ret;
 }
 
 float fmodf(float x, float y) {
-  float ret = __VERIFIER_nondet_float();
-  __SMACK_code("@ := ftd($rem.rtz.bvfloat(dtf(@), dtf(@)));", ret, x, y);
-  return ret;
+   if (__isnanf(x) || __isnanf(y) || __isinff(x) || __iszerof(y)) {
+    return nanf(0);
+  }
+  double ret = __VERIFIER_nondet_double();
+  y = fabsf(y);
+  ret = remainderf(fabsf(x), y);
+  if (__signbitf(ret)) {
+    __SMACK_code("@ := ftd($fadd.bvfloat(dtf(@), dtf(@)));", ret, ret, y);
+  }
+  return copysignf(ret, x);
 }
 
-float modff(float x, float* iPart) {
-  double fPart;
+float modff(float x, float *iPart) {
+  double fPart = __VERIFIER_nondet_double();
   if (__isinff(x)) {
     *iPart = x;
     fPart = 0.0f;
@@ -175,7 +178,7 @@ int __fpclassifyf(float x) {
 }
 
 int __isfinitef(float x) {
-  return !__isinf(x) && !__isnanf(x);
+  return !__isinff(x) && !__isnanf(x);
 }
 
 double fabs(double x) {
@@ -195,14 +198,12 @@ double fdim(double x, double y) {
 
 double round(double x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $round.rna.bvdouble(@);", ret, x);
+  __SMACK_code("@ := $round.bvdouble(@);", ret, x);
   return ret;
 }
 
 long lround(double x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvdouble(@);", ret, x);
-  return ret;
+  return round(x);
 }
 
 double rint(double x) {
@@ -214,7 +215,7 @@ double nearbyint(double x) {
 }
 
 long lrint(double x) {
-  return lround(x);
+  return round(x);
 }
 
 double floor(double x) {
@@ -243,7 +244,7 @@ double sqrt(double x) {
 
 double remainder(double x, double y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $rem.rne.bvdouble(@, @);", ret, x, y);
+  __SMACK_code("@ := $frem.bvdouble(@, @);", ret, x, y);
   return ret;
 }
 
@@ -260,13 +261,20 @@ double fmax(double x, double y) {
 }
 
 double fmod(double x, double y) {
+  if (__isnan(x) || __isnan(y) || __isinf(x) || __iszero(y)) {
+    return nan(0);
+  }
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $rem.rtz.bvdouble(@, @);", ret, x, y);
-  return ret;
+  y = fabs(y);
+  ret = remainder(fabs(x), y);
+  if (__signbit(ret)) {
+    __SMACK_code("@ := $fadd.bvdouble(@, @);", ret, ret, y);
+  }
+  return copysign(ret, x);
 }
 
-double modf(double x, double* iPart) {
-  double fPart;
+double modf(double x, double *iPart) {
+  double fPart = __VERIFIER_nondet_double();
   if (__isinf(x)) {
     *iPart = x;
     fPart = 0.0;
@@ -276,7 +284,7 @@ double modf(double x, double* iPart) {
     __SMACK_code("@ := $fsub.bvdouble(@, @);", fPart, x, *iPart);
   }
   if (__iszero(fPart)) {
-    fPart = __signbit(x) ? -0.0 : 0.0;
+    fPart = (__signbit(x)) ? -0.0 : 0.0;
   }
   return fPart;
 }
@@ -349,50 +357,50 @@ int __isfinite(double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $isnormal.bvlongdouble.bool(@) then $1 else $0;", ret, x);
   return ret;
-}
+  }
 
-int __issubnormall(long double x) {
+  int __issubnormall(long double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $issubnormal.bvlongdouble.bool(@) then $1 else $0;", ret, x);
   return ret;
-}
+  }
 
-int __iszerol(long double x) {
+  int __iszerol(long double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $iszero.bvlongdouble.bool(@) then $1 else $0;", ret, x);
   return ret;
-}
+  }
 
-int __isinfl(long double x) {
+  int __isinfl(long double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $isinfinite.bvlongdouble.bool(@) then $1 else $0;", ret, x);
   return ret;
-}
+  }
 
-int __isnanl(long double x) {
+  int __isnanl(long double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $isnan.bvlongdouble.bool(@) then $1 else $0;", ret, x);
   return ret;
-}
+  }
 
-int __signbitl(long double x) {
+  int __signbitl(long double x) {
   int ret = __VERIFIER_nondet_int();
   __SMACK_code("@ := if $isnegative.bvlongdouble.bool(@) then $1 else $0;", ret, x);
   return ret;
-}
+  }
 
-int __fpclassifyl(long double x) {
+  int __fpclassifyl(long double x) {
   if (__isnanl(x))
-    return 0;
+  return 0;
   if (__isinfl(x))
-    return 1;
+  return 1;
   if (__iszerol(x))
-    return 2;
+  return 2;
   if (__issubnormall(x))
-    return 3;
+  return 3;
   return 4;
-}
+  }
 
-int __isfinitel(long double x) {
+  int __isfinitel(long double x) {
   return !__isinfl(x) && !__isnanl(x);
-}*/
+  }*/

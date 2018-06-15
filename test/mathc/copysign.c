@@ -14,7 +14,7 @@ int main(void) {
   if (!__isnan(x) && !__isinf(x) && !__iszero(x)) {
     if (!__isnan(y) && !__isinf(y) && !__iszero(y)) {
       double val = copysign(x, y);
-      if (__signbit(x) ^ __signbit(y)) {
+      if (__signbit(x) - __signbit(y)) {
         assert(val == -x);
       } else {
         assert(val == x);

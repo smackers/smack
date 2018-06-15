@@ -300,6 +300,9 @@ void __SMACK_dummy(int v) {
 #define BINARY_OP(attrib,type,name,body) \
   function {:attrib} name.type(i1: type, i2: type) returns (type) body
 
+#define RNE_UNARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(type) returns (type) body
+
 #define BINARY_COMP(attrib,type,name,cond) \
   function {:attrib} name.type.bool(i1: type, i2: type) returns (bool) cond
 
@@ -334,6 +337,9 @@ void __SMACK_dummy(int v) {
 
 #define BUILTIN_BINARY_OP(type,name,prim) \
   BINARY_OP(builtin xstr(prim),type,name,);
+
+#define BUILTIN_RNE_UNARY_OP(type,name,prim) \
+  RNE_UNARY_OP(builtin xstr(prim RNE),type,name,);
 
 #define BVBUILTIN_UNARY_OP(type,name,prim) \
   UNARY_OP(bvbuiltin xstr(prim),type,name,);
@@ -740,7 +746,7 @@ void __SMACK_decls(void) {
 
   // FP arithmetic
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $abs, fp.abs)
-  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $sqrt, fp.sqrt)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RNE_UNARY_OP, $sqrt, fp.sqrt)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $fma, fp.fma)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $frem, fp.rem)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $min, fp.min)
@@ -1003,24 +1009,23 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_CONVERSION, i8, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
   DECLARE(BUILTIN_CONVERSION, i1, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
 
-  D("function {:builtin \"fp.roundToIntegral RNE\"} $round.rne.bvfloat(bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.roundToIntegral RNA\"} $round.rna.bvfloat(bvfloat) returns (bvfloat);");
+  D("function {:builtin \"fp.roundToIntegral RNA\"} $round.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.roundToIntegral RTP\"} $ceil.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.roundToIntegral RTN\"} $floor.bvfloat(bvfloat) returns (bvfloat);");
   D("function {:builtin \"fp.roundToIntegral RTZ\"} $trunc.bvfloat(bvfloat) returns (bvfloat);");
-  D("function {:builtin \"fp.roundToIntegral RNE\"} $round.rne.bvdouble(bvdouble) returns (bvdouble);");
-  D("function {:builtin \"fp.roundToIntegral RNA\"} $round.rna.bvdouble(bvdouble) returns (bvdouble);");
+
+  D("function {:builtin \"fp.roundToIntegral RNA\"} $round.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.roundToIntegral RTP\"} $ceil.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.roundToIntegral RTN\"} $floor.bvdouble(bvdouble) returns (bvdouble);");
   D("function {:builtin \"fp.roundToIntegral RTZ\"} $trunc.bvdouble(bvdouble) returns (bvdouble);");
 
   #if BUILD_64
-    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
-    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvfloat(bvfloat) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvdouble(bvdouble) returns (bv64);");
 
   #else
-    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
-    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvdouble(bvdouble) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvfloat(bvfloat) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvdouble(bvdouble) returns (bv32);");
   #endif
 
 #endif
