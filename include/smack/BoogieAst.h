@@ -108,7 +108,6 @@ public:
   void print(std::ostream& os) const;
 };
 
-
 class BvLit : public Expr {
   std::string val;
   unsigned width;
