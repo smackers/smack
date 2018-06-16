@@ -14,15 +14,6 @@ int fegetround()
 
 int fesetround(int rm) 
 {
-  /*char *rmStr;
-  switch (rm) {
-  case FE_TONEARESTEVEN: rmStr = "RNE"; break;
-  case FE_TONEARESTAWAY: rmStr = "RNA"; break;
-  case FE_UPWARD: rmStr = "RTP"; break;
-  case FE_DOWNWARD: rmStr = "RTN"; break;
-  case FE_TOWARDZERO: rmStr = "RTZ";
-  }
-  __SMACK_code("$rmode := @;", rmStr);*/
   switch (rm) {
   case FE_TONEARESTEVEN: __SMACK_code("$rmode := RNE;"); break;
   case FE_TONEARESTAWAY: __SMACK_code("$rmode := RNA;"); break;
