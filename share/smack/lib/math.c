@@ -100,7 +100,7 @@ float fmodf(float x, float y) {
   y = fabsf(y);
   ret = remainderf(fabsf(x), y);
   if (__signbitf(ret)) {
-    __SMACK_code("@ := ftd($fadd.rm.bvfloat($rmode, dtf(@), dtr(@)));", ret, ret, y);
+    __SMACK_code("@ := ftd($fadd.rm.bvfloat($rmode, dtf(@), dtf(@)));", ret, ret, y);
   }
   return copysignf(ret, x);
 }
