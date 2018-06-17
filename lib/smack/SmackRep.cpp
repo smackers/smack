@@ -1156,6 +1156,7 @@ Decl* SmackRep::getInitFuncs() {
   Block* b = Block::block();
   for (auto name : initFuncs)
     b->addStmt(Stmt::call(name));
+  b->addStmt(Stmt::assign(Expr::id("$rmode"), Expr::rmode("RNE")));
   b->addStmt(Stmt::return_());
   proc->getBlocks().push_back(b);
   return proc;

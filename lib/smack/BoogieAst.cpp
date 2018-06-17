@@ -103,6 +103,10 @@ const Expr* Expr::not_(const Expr* e) {
   return new NotExpr(e);
 }
 
+const Expr* Expr::rmode(std::string v) {
+  return new RModeLit(v);
+}
+
 const Expr* Expr::sel(const Expr* b, const Expr* i) {
   return new SelExpr(b, i);
 }
@@ -417,6 +421,10 @@ void FunExpr::print(std::ostream& os) const {
 
 void BoolLit::print(std::ostream& os) const {
   os << (val ? "true" : "false");
+}
+
+void RModeLit::print(std::ostream& os) const {
+  os << val;
 }
 
 void IntLit::print(std::ostream& os) const {

@@ -20,55 +20,57 @@ float fdimf(float x, float y) {
     return nanf(0);
   }
   double val = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($fsub.bvfloat(dtf(@), dtf(@)));", val, x, y);
+  __SMACK_code("@ := ftd($fsub.rm.bvfloat($rmode, dtf(@), dtf(@)));", val, x, y);
   return fmaxf(0.0f, val);
 }
 
 float roundf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($round.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := ftd($round.rm.bvfloat(RNA, dtf(@)));", ret, x);
   return ret;
 }
 
 long lroundf(float x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
-  return ret;
+  return roundf(x);
 }
 
 float rintf(float x) {
-  return roundf(x);
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := ftd($round.rm.bvfloat($rmode, dtf(@)));", ret, x);
+  return ret;
 }
 
 float nearbyintf(float x) {
-  return roundf(x);
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := ftd($round.rm.bvfloat($rmode, dtf(@)));", ret, x);
+  return ret;
 }
 
 long lrintf(float x) {
-  return lroundf(x);
+  return rintf(x);
 }
 
 float floorf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($floor.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := ftd($round.rm.bvfloat(RTN, dtf(@)));", ret, x);
   return ret;
 }
 
 float ceilf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($ceil.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := ftd($round.rm.bvfloat(RTP, dtf(@)));", ret, x);
   return ret;
 }
 
 float truncf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($trunc.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := ftd($round.rm.bvfloat(RTZ, dtf(@)));", ret, x);
   return ret;
 }
 
 float sqrtf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($sqrt.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := ftd($sqrt.rm.bvfloat($rmode, dtf(@)));", ret, x);
   return ret;
 }
 
@@ -98,7 +100,7 @@ float fmodf(float x, float y) {
   y = fabsf(y);
   ret = remainderf(fabsf(x), y);
   if (__signbitf(ret)) {
-    __SMACK_code("@ := ftd($fadd.bvfloat(dtf(@), dtf(@)));", ret, ret, y);
+    __SMACK_code("@ := ftd($fadd.rm.bvfloat($rmode, dtf(@), dtf(@)));", ret, ret, y);
   }
   return copysignf(ret, x);
 }
@@ -111,7 +113,7 @@ float modff(float x, float *iPart) {
   } else {
     *iPart = truncf(x);
     fPart = __VERIFIER_nondet_double();
-    __SMACK_code("@ := ftd($fsub.bvdouble(dtf(@), dtf(@)));", fPart, x, *iPart);
+    __SMACK_code("@ := ftd($fsub.rm.bvdouble($rmode, dtf(@), dtf(@)));", fPart, x, *iPart);
   }
   if (__iszerof(fPart)) {
     fPart = __signbitf(x) ? -0.0f : 0.0f;
@@ -194,55 +196,57 @@ double fdim(double x, double y) {
     return nan(0);
   }
   double val = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $fsub.bvdouble(@, @);", val, x, y);
+  __SMACK_code("@ := $fsub.rm.bvdouble($rmode, @, @);", val, x, y);
   return fmax(0.0, val);
 }
 
 double round(double x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $round.bvdouble(@);", ret, x);
+  __SMACK_code("@ := $round.rm.bvdouble(RNA, @);", ret, x);
   return ret;
 }
 
 long lround(double x) {
-  long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvdouble(@);", ret, x);
-  return ret;
+  return round(x);
 }
 
 double rint(double x) {
-  return round(x);
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $round.rm.bvdouble($rmode, @);", ret, x);
+  return ret;
 }
 
 double nearbyint(double x) {
-  return round(x);
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := $round.rm.bvdouble($rmode, @);", ret, x);
+  return ret;
 }
 
 long lrint(double x) {
-  return lround(x);
+  return rint(x);
 }
 
 double floor(double x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $floor.bvdouble(@);", ret, x);
+  __SMACK_code("@ := $round.rm.bvdouble(RTN, @);", ret, x);
   return ret;
 }
 
 double ceil(double x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $ceil.bvdouble(@);", ret, x);
+  __SMACK_code("@ := $round.rm.bvdouble(RTP, @);", ret, x);
   return ret;
 }
 
 double trunc(double x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $trunc.bvdouble(@);", ret, x);
+  __SMACK_code("@ := $round.rm.bvdouble(RTZ, @);", ret, x);
   return ret;
 }
 
 double sqrt(double x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $sqrt.bvdouble(@);", ret, x);
+  __SMACK_code("@ := $sqrt.rm.bvdouble($rmode, @);", ret, x);
   return ret;
 }
 
@@ -272,7 +276,7 @@ double fmod(double x, double y) {
   y = fabs(y);
   ret = remainder(fabs(x), y);
   if (__signbit(ret)) {
-    __SMACK_code("@ := $fadd.bvdouble(@, @);", ret, ret, y);
+    __SMACK_code("@ := $fadd.rm.bvdouble($rmode, @, @);", ret, ret, y);
   }
   return copysign(ret, x);
 }
@@ -285,7 +289,7 @@ double modf(double x, double *iPart) {
   } else {
     *iPart = trunc(x);
     fPart = __VERIFIER_nondet_double();
-    __SMACK_code("@ := $fsub.bvdouble(@, @);", fPart, x, *iPart);
+    __SMACK_code("@ := $fsub.rm.bvdouble($rmode, @, @);", fPart, x, *iPart);
   }
   if (__iszero(fPart)) {
     fPart = (__signbit(x)) ? -0.0 : 0.0;

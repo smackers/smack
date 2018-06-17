@@ -1,5 +1,5 @@
 #include "smack.h"
-#include "math.h"
+#include <math.h>
 #include <stdio.h>
 
 // @expect verified

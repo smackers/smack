@@ -38,6 +38,7 @@ public:
   static const Expr* lit(bool n, std::string s, std::string e, unsigned ss, unsigned es);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
+  static const Expr* rmode(std::string rm);
   static const Expr* sel(const Expr* b, const Expr* i);
   static const Expr* sel(std::string b, std::string i);
   static const Expr* upd(const Expr* b, const Expr* i, const Expr* v);
@@ -80,6 +81,13 @@ class BoolLit : public Expr {
   bool val;
 public:
   BoolLit(bool b) : val(b) {}
+  void print(std::ostream& os) const;
+};
+
+class RModeLit : public Expr {
+  std::string val;
+public:
+  RModeLit(std::string v) : val(v) {}
   void print(std::ostream& os) const;
 };
 
