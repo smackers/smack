@@ -297,8 +297,14 @@ void __SMACK_dummy(int v) {
 #define UNARY_OP(attrib,type,name,body) \
   function {:attrib} name.type(i: type) returns (type) body
 
+#define RMODE_UNARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(rm: rmode, i: type) returns (type) body
+
 #define BINARY_OP(attrib,type,name,body) \
   function {:attrib} name.type(i1: type, i2: type) returns (type) body
+
+#define RMODE_BINARY_OP(attrib,type,name,body) \
+  function {:attrib} name.type(rm: rmode, i1: type, i2: type) returns (type) body
 
 #define BINARY_COMP(attrib,type,name,cond) \
   function {:attrib} name.type.bool(i1: type, i2: type) returns (bool) cond
@@ -320,11 +326,20 @@ void __SMACK_dummy(int v) {
 #define BUILTIN_CONVERSION(t1,t2,name,prim) \
   function {:builtin xstr(prim)} name.t1.t2(i: t1) returns (t2);
 
+#define BUILTIN_RMODE_CONVERSION(t1,t2,name,prim) \
+  function {:builtin xstr(prim)} name.t1.t2(rm: rmode, i: t1) returns (t2);
+
 #define INLINE_CONVERSION(t1,t2,name,body) \
   function {:inline} name.t1.t2(i: t1) returns (t2) body
 
+#define INLINE_RMODE_CONVERSION(t1,t2,name,body) \
+  function {:inline} name.t1.t2(rm: rmode, i: t1) returns (t2) body
+
 #define BUILTIN_UNARY_OP(type,name,prim) \
   UNARY_OP(builtin xstr(prim),type,name,);
+
+#define BUILTIN_RMODE_UNARY_OP(type,name,prim) \
+  RMODE_UNARY_OP(builtin xstr(prim),type,name,);
 
 #define BUILTIN_UNARY_PRED(type,name,prim) \
   function {:builtin xstr(prim)} name.type.bool(i: type) returns (bool);
@@ -334,6 +349,9 @@ void __SMACK_dummy(int v) {
 
 #define BUILTIN_BINARY_OP(type,name,prim) \
   BINARY_OP(builtin xstr(prim),type,name,);
+
+#define BUILTIN_RMODE_BINARY_OP(type,name,prim) \
+  RMODE_BINARY_OP(builtin xstr(prim),type,name,);
 
 #define BVBUILTIN_UNARY_OP(type,name,prim) \
   UNARY_OP(bvbuiltin xstr(prim),type,name,);
@@ -363,6 +381,8 @@ void __SMACK_dummy(int v) {
   D(xstr(M(bvlongdouble,args)));
 
 void __SMACK_decls(void) {
+
+  D("var $rmode: rmode;");
 
   DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
@@ -732,15 +752,15 @@ void __SMACK_decls(void) {
 #if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
 
-  // Boogie built-in arithmetic
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fadd, {i1 + i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fsub, {i1 - i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fmul, {i1 * i2})
-  DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_OP, $fdiv, {i1 / i2})
-
   // FP arithmetic
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_UNARY_OP, $sqrt, fp.sqrt)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_UNARY_OP, $round, fp.roundToIntegral)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_BINARY_OP, $fadd, fp.add)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_BINARY_OP, $fsub, fp.sub)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_BINARY_OP, $fmul, fp.mul)
+  DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_BINARY_OP, $fdiv, fp.div)
+
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $abs, fp.abs)
-  DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_OP, $sqrt, fp.sqrt)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $fma, fp.fma)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $frem, fp.rem)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $min, fp.min)
@@ -792,68 +812,68 @@ void __SMACK_decls(void) {
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ffalse, {false})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ftrue, {true})
 
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} dtf(bvdouble) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ftd(bvfloat) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 8 24) RNE\"} ltf(bvlongdouble) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 11 53) RNE\"} ltd(bvlongdouble) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 15 65) RNE\"} ftl(bvfloat) returns (bvlongdouble);");
-  D("function {:builtin \"(_ to_fp 15 65) RNE\"} dtl(bvdouble) returns (bvlongdouble);");
-  DECLARE(INLINE_CONVERSION,bvdouble,bvfloat,$fptrunc,{dtf(i)});
-  DECLARE(INLINE_CONVERSION,bvfloat,bvdouble,$fpext,{ftd(i)});
-  DECLARE(INLINE_CONVERSION,bvlongdouble,bvfloat,$fptrunc,{ltf(i)});
-  DECLARE(INLINE_CONVERSION,bvlongdouble,bvdouble,$fptrunc,{ltd(i)});
-  DECLARE(INLINE_CONVERSION,bvfloat,bvlongdouble,$fpext,{ftl(i)});
-  DECLARE(INLINE_CONVERSION,bvdouble,bvlongdouble,$fpext,{dtl(i)});
+  D("function {:builtin \"(_ to_fp 8 24)\"} dtf(rmode, bvdouble) returns (bvfloat);");
+  D("function {:builtin \"(_ to_fp 11 53)\"} ftd(rmode, bvfloat) returns (bvdouble);");
+  D("function {:builtin \"(_ to_fp 8 24)\"} ltf(rmode, bvlongdouble) returns (bvfloat);");
+  D("function {:builtin \"(_ to_fp 11 53)\"} ltd(rmode, bvlongdouble) returns (bvdouble);");
+  D("function {:builtin \"(_ to_fp 15 65)\"} ftl(rmode, bvfloat) returns (bvlongdouble);");
+  D("function {:builtin \"(_ to_fp 15 65)\"} dtl(rmode, bvdouble) returns (bvlongdouble);");
+  DECLARE(INLINE_RMODE_CONVERSION,bvdouble,bvfloat,$fptrunc,{dtf(rm, i)});
+  DECLARE(INLINE_RMODE_CONVERSION,bvfloat,bvdouble,$fpext,{ftd(rm, i)});
+  DECLARE(INLINE_RMODE_CONVERSION,bvlongdouble,bvfloat,$fptrunc,{ltf(rm, i)});
+  DECLARE(INLINE_RMODE_CONVERSION,bvlongdouble,bvdouble,$fptrunc,{ltd(rm, i)});
+  DECLARE(INLINE_RMODE_CONVERSION,bvfloat,bvlongdouble,$fpext,{ftl(rm, i)});
+  DECLARE(INLINE_RMODE_CONVERSION,bvdouble,bvlongdouble,$fpext,{dtl(rm, i)});
 
   // Add truncation for default casts to int
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv128,$fp2si,(_ fp.to_sbv 128) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv96,$fp2si,(_ fp.to_sbv 96) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv88,$fp2si,(_ fp.to_sbv 88) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv64,$fp2si,(_ fp.to_sbv 64) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv56,$fp2si,(_ fp.to_sbv 56) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv48,$fp2si,(_ fp.to_sbv 48) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv40,$fp2si,(_ fp.to_sbv 40) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv32,$fp2si,(_ fp.to_sbv 32) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv24,$fp2si,(_ fp.to_sbv 24) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv16,$fp2si,(_ fp.to_sbv 16) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv8,$fp2si,(_ fp.to_sbv 8) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv1,$fp2si,(_ fp.to_sbv 1) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv128,$fp2ui,(_ fp.to_ubv 128) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv96,$fp2ui,(_ fp.to_ubv 96) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv88,$fp2ui,(_ fp.to_ubv 88) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv64,$fp2ui,(_ fp.to_ubv 64) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv56,$fp2ui,(_ fp.to_ubv 56) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv48,$fp2ui,(_ fp.to_ubv 48) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv40,$fp2ui,(_ fp.to_ubv 40) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv32,$fp2ui,(_ fp.to_ubv 32) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv24,$fp2ui,(_ fp.to_ubv 24) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv16,$fp2ui,(_ fp.to_ubv 16) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv8,$fp2ui,(_ fp.to_ubv 8) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvfloat,bv1,$fp2ui,(_ fp.to_ubv 1) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv128,$fp2si,(_ fp.to_sbv 128) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv96,$fp2si,(_ fp.to_sbv 96) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv88,$fp2si,(_ fp.to_sbv 88) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv64,$fp2si,(_ fp.to_sbv 64) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv56,$fp2si,(_ fp.to_sbv 56) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv48,$fp2si,(_ fp.to_sbv 48) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv40,$fp2si,(_ fp.to_sbv 40) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv32,$fp2si,(_ fp.to_sbv 32) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv24,$fp2si,(_ fp.to_sbv 24) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv16,$fp2si,(_ fp.to_sbv 16) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv8,$fp2si,(_ fp.to_sbv 8) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv1,$fp2si,(_ fp.to_sbv 1) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv128,$fp2ui,(_ fp.to_ubv 128) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv96,$fp2ui,(_ fp.to_ubv 96) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv88,$fp2ui,(_ fp.to_ubv 88) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv64,$fp2ui,(_ fp.to_ubv 64) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv56,$fp2ui,(_ fp.to_ubv 56) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv48,$fp2ui,(_ fp.to_ubv 48) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv40,$fp2ui,(_ fp.to_ubv 40) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv32,$fp2ui,(_ fp.to_ubv 32) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv24,$fp2ui,(_ fp.to_ubv 24) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv16,$fp2ui,(_ fp.to_ubv 16) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv8,$fp2ui,(_ fp.to_ubv 8) RTZ);
-  DECLARE(BUILTIN_CONVERSION,bvdouble,bv1,$fp2ui,(_ fp.to_ubv 1) RTZ);
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv128,$fp2si,(_ fp.to_sbv 128));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv96,$fp2si,(_ fp.to_sbv 96));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv88,$fp2si,(_ fp.to_sbv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv64,$fp2si,(_ fp.to_sbv 64));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv56,$fp2si,(_ fp.to_sbv 56));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv48,$fp2si,(_ fp.to_sbv 48));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv40,$fp2si,(_ fp.to_sbv 40));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv32,$fp2si,(_ fp.to_sbv 32));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv24,$fp2si,(_ fp.to_sbv 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv16,$fp2si,(_ fp.to_sbv 16));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv8,$fp2si,(_ fp.to_sbv 8));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv1,$fp2si,(_ fp.to_sbv 1));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv128,$fp2ui,(_ fp.to_ubv 128));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv96,$fp2ui,(_ fp.to_ubv 96));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv88,$fp2ui,(_ fp.to_ubv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv64,$fp2ui,(_ fp.to_ubv 64));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv56,$fp2ui,(_ fp.to_ubv 56));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv48,$fp2ui,(_ fp.to_ubv 48));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv40,$fp2ui,(_ fp.to_ubv 40));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv32,$fp2ui,(_ fp.to_ubv 32));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv24,$fp2ui,(_ fp.to_ubv 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv16,$fp2ui,(_ fp.to_ubv 16));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv8,$fp2ui,(_ fp.to_ubv 8));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv1,$fp2ui,(_ fp.to_ubv 1));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv128,$fp2si,(_ fp.to_sbv 128));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv96,$fp2si,(_ fp.to_sbv 96));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv88,$fp2si,(_ fp.to_sbv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv64,$fp2si,(_ fp.to_sbv 64));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv56,$fp2si,(_ fp.to_sbv 56));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv48,$fp2si,(_ fp.to_sbv 48));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv40,$fp2si,(_ fp.to_sbv 40));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv32,$fp2si,(_ fp.to_sbv 32));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv24,$fp2si,(_ fp.to_sbv 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv16,$fp2si,(_ fp.to_sbv 16));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv8,$fp2si,(_ fp.to_sbv 8));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv1,$fp2si,(_ fp.to_sbv 1));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv128,$fp2ui,(_ fp.to_ubv 128));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv96,$fp2ui,(_ fp.to_ubv 96));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv88,$fp2ui,(_ fp.to_ubv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv64,$fp2ui,(_ fp.to_ubv 64));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv56,$fp2ui,(_ fp.to_ubv 56));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv48,$fp2ui,(_ fp.to_ubv 48));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv40,$fp2ui,(_ fp.to_ubv 40));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv32,$fp2ui,(_ fp.to_ubv 32));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv24,$fp2ui,(_ fp.to_ubv 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv16,$fp2ui,(_ fp.to_ubv 16));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv8,$fp2ui,(_ fp.to_ubv 8));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv1,$fp2ui,(_ fp.to_ubv 1));
   // Warning: do we need bv2int cast here?
   DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i128,$fp2si);
   DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i96,$fp2si);
@@ -905,54 +925,54 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i1,$fp2ui);
   // Warning: undefined behaviors can occur
   // https://llvm.org/docs/LangRef.html#uitofp-to-instruction
-  DECLARE(BUILTIN_CONVERSION, bv128, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv96, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv88, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv64, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv56, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv48, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv40, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv32, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv24, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv16, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv8, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv1, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv128, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv96, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv88, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv64, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv56, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv48, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv40, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv32, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv24, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv16, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv8, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv1, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv128, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv96, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv88, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv64, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv56, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv48, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv40, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv32, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv24, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv16, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv8, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv1, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv128, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv96, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv88, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv64, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv56, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv48, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv40, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv32, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv24, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv16, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv8, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, bv1, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv40, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv32, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv24, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv40, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv32, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv24, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv40, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv32, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv24, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv40, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv32, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv24, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvdouble, $si2fp,(_ to_fp 11 53));
   // Warning: integer-encoding fixes needed here
   DECLARE(UNINTERPRETED_CONVERSION, i128, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i96, bvfloat, $ui2fp);
@@ -966,18 +986,18 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION, i16, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i8, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i1, bvfloat, $ui2fp);
-  DECLARE(BUILTIN_CONVERSION, i128, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i96, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i88, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i64, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i56, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i48, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i40, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i32, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i24, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i16, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i8, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
-  DECLARE(BUILTIN_CONVERSION, i1, bvfloat, $si2fp,(_ to_fp 8 24) RNE);
+  DECLARE(BUILTIN_RMODE_CONVERSION, i128, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i96, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i88, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i64, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i56, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i48, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i40, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i32, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i24, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i16, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i8, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i1, bvfloat, $si2fp,(_ to_fp 8 24));
   DECLARE(UNINTERPRETED_CONVERSION, i128, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i96, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i88, bvdouble, $ui2fp);
@@ -990,37 +1010,26 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION, i16, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i8, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION, i1, bvdouble, $ui2fp);
-  DECLARE(BUILTIN_CONVERSION, i128, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i96, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i88, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i64, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i56, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i48, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i40, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i32, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i24, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i16, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i8, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-  DECLARE(BUILTIN_CONVERSION, i1, bvdouble, $si2fp,(_ to_fp 11 53) RNE);
-
-  D("function {:builtin \"(_ fp.to_sbv 32) RNE\"} $round.rne.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $round.rna.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTN\"} $floor.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTP\"} $ceil.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RTZ\"} $trunc.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNE\"} $round.rne.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $round.rna.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTN\"} $floor.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTP\"} $ceil.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} $trunc.bvdouble(bvdouble) returns (bv64);");
+  DECLARE(BUILTIN_RMODE_CONVERSION, i128, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i96, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i88, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i64, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i56, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i48, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i40, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i32, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i24, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i16, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i8, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, i1, bvdouble, $si2fp,(_ to_fp 11 53));
 
   #if BUILD_64
-    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvfloat(bvfloat) returns (bv64);");
-    D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvfloat(rmode, bvfloat) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvdouble(rmode, bvdouble) returns (bv64);");
 
   #else
-    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
-    D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvdouble(bvdouble) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvfloat(rmode, bvfloat) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvdouble(rmode, bvdouble) returns (bv32);");
   #endif
 
 #endif
@@ -1073,6 +1082,9 @@ void __SMACK_decls(void) {
   //D("axiom (forall b: bv32 :: b[31:23] == 255bv8 && b[23:0] != 0bv23 ==> $bitcast.bvfloat.bv32($bitcast.bv32.bvfloat(b)) == b);");
   //D("axiom (forall b: bv64 :: b[63:52] == 2047bv11 && b[52:0] != 0bv52 ==> $bitcast.bvdouble.bv64($bitcast.bv64.bvdouble(b)) == b);");
   // TODO: add more constraints
+
+  D("axiom (forall f: bvfloat, rm1: rmode, rm2: rmode :: dtf(rm1, ftd(rm2, f)) == f);");
+
   D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
   D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
   D("axiom (forall f: bvdouble, i: i64 :: $bitcast.bvdouble.i64(f) == i <==> $bitcast.i64.bvdouble(i) == f);");

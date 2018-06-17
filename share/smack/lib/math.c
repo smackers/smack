@@ -145,7 +145,7 @@ int __iszerof(float x) {
 
 int __isinff(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isinfinite.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 
@@ -243,10 +243,8 @@ long lrint(double x) {
 */
 
 double floor(double x) {
-  if (__isnan(x) || __isinf(x) || __iszero(x))
-    return x;
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $si2fp.bv64.bvdouble($floor.bvdouble(@));", ret, x);
+  __SMACK_code("@ := $round.bvdouble(RTN, @);", ret, x);
   return ret;
 }
 

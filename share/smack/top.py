@@ -325,6 +325,7 @@ def build_libs(args):
 
   if args.float:
     libs += ['math.c']
+    libs += ['fenv.c']
 
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
     bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)

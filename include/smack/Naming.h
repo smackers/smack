@@ -79,6 +79,7 @@ public:
   static const std::string RET_VAR;
   static const std::string EXN_VAR;
   static const std::string EXN_VAL_VAR;
+  static const std::string RMODE_VAR;
   static const std::string BOOL_VAR;
   static const std::string FLOAT_VAR;
   static const std::string INT_VAR;
