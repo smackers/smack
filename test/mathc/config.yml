@@ -1,0 +1,2 @@
+verifiers: [boogie]
+flags: [--float]
