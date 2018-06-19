@@ -74,16 +74,21 @@ BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
     ConstantInt *max = ConstantInt::get(
         IntegerType::get(i->getFunction()->getContext(), bits * 2),
         getMax(bits, isSigned), 10);
-    ConstantInt *min = ConstantInt::get(
-        IntegerType::get(i->getFunction()->getContext(), bits * 2),
-        getMin(bits, isSigned), 10);
     CmpInst::Predicate maxCmpPred =
         (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-    CmpInst::Predicate minCmpPred =
-        (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
     ICmpInst *gt = new ICmpInst(i, maxCmpPred, v, max, "");
-    ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
-    return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
+    if (isSigned) {
+      ConstantInt *min = ConstantInt::get(
+          IntegerType::get(i->getFunction()->getContext(), bits * 2),
+          getMin(bits, isSigned), 10);
+      CmpInst::Predicate minCmpPred =
+          (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+      ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
+      return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
+    } else { // Unsigned: No need to check if result is less than 0, only larger
+             // than max
+      return BinaryOperator::Create(Instruction::And, gt, gt, "", i);
+    }
   } else {
     ConstantInt *a = ConstantInt::getFalse(i->getFunction()->getContext());
     return BinaryOperator::Create(Instruction::And, a, a, "", i);
