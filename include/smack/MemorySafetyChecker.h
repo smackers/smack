@@ -10,8 +10,8 @@
 #include <map>
 
 namespace smack {
-  
-class MemorySafetyChecker: public llvm::ModulePass, public llvm::InstVisitor<MemorySafetyChecker> {
+
+class MemorySafetyChecker: public llvm::FunctionPass, public llvm::InstVisitor<MemorySafetyChecker> {
 private:
   std::map<llvm::Module*, llvm::Function*> leakCheckFunction;
   std::map<llvm::Module*, llvm::Function*> safetyCheckFunction;
@@ -24,8 +24,8 @@ private:
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  MemorySafetyChecker() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& m);
+  MemorySafetyChecker() : llvm::FunctionPass(ID) {}
+  virtual bool runOnFunction(llvm::Function& F);
 
   void visitReturnInst(llvm::ReturnInst& I);
   void visitLoadInst(llvm::LoadInst& I);

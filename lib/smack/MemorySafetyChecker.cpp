@@ -55,15 +55,16 @@ void MemorySafetyChecker::insertMemoryAccessCheck(Value* addr, Value* size, Inst
   }, "", I);
 }
 
-bool MemorySafetyChecker::runOnModule(Module& M) {
-  this->visit(M);
+bool MemorySafetyChecker::runOnFunction(Function& F) {
+  if (Naming::isSmackName(F.getName()))
+    return false;
+
+  this->visit(F);
   return true;
 }
 
 void MemorySafetyChecker::visitReturnInst(llvm::ReturnInst& I) {
   auto& F = *I.getParent()->getParent();
-  if (Naming::isSmackName(F.getName()))
-    return;
 
   if (SmackOptions::isEntryPoint(F.getName()))
     insertMemoryLeakCheck(&I);
@@ -93,34 +94,18 @@ namespace {
 }
 
 void MemorySafetyChecker::visitLoadInst(LoadInst& I) {
-  auto& F = *I.getParent()->getParent();
-  if (Naming::isSmackName(F.getName()))
-    return;
-
   insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
 }
 
 void MemorySafetyChecker::visitStoreInst(StoreInst& I) {
-  auto& F = *I.getParent()->getParent();
-  if (Naming::isSmackName(F.getName()))
-    return;
-
   insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
 }
 
 void MemorySafetyChecker::visitMemSetInst(MemSetInst& I) {
-  auto& F = *I.getParent()->getParent();
-  if (Naming::isSmackName(F.getName()))
-    return;
-
   insertMemoryAccessCheck(I.getDest(), I.getLength(), &I);
 }
 
 void MemorySafetyChecker::visitMemTransferInst(MemTransferInst& I) {
-  auto& F = *I.getParent()->getParent();
-  if (Naming::isSmackName(F.getName()))
-    return;
-
   insertMemoryAccessCheck(I.getDest(), I.getLength(), &I);
   insertMemoryAccessCheck(I.getSource(), I.getLength(), &I);
 }
