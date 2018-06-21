@@ -1127,19 +1127,6 @@ void __SMACK_decls(void) {
 
 #if MEMORY_SAFETY
 
-  D("implementation __SMACK_check_memory_safety(p: ref, size: ref)\n"
-    "{\n"
-    "  assert {:valid_deref} $Alloc[$base(p)] == true;\n"
-    "  assert {:valid_deref} $sle.ref.bool($base(p), p);\n"
-  #if MEMORY_MODEL_NO_REUSE_IMPLS
-    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
-  #elif MEMORY_MODEL_REUSE
-    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size[$base(p)]));\n"
-  #else
-    "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), $add.ref($base(p), $Size($base(p))));\n"
-  #endif
-    "}\n");
-
   D("function $base(ref) returns (ref);");
   D("var $allocatedCounter: int;\n");
 
@@ -1323,6 +1310,20 @@ void __SMACK_decls(void) {
 }
 
 #if MEMORY_SAFETY
+void __SMACK_check_memory_safety(void* addr, void* size) {
+  __SMACK_dummy(addr);
+  __SMACK_dummy(size);
+  __SMACK_code("assert {:valid_deref} $Alloc[$base(@)] == true;", addr);
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($base(@), @);", addr, addr);
+#if MEMORY_MODEL_NO_REUSE_IMPLS
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", addr, size, addr, addr);
+#elif MEMORY_MODEL_REUSE
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size[$base(@)]));", addr, size, addr, addr);
+#else
+  __SMACK_code("assert {:valid_deref} $sle.ref.bool($add.ref(@, @), $add.ref($base(@), $Size($base(@))));", addr, size, addr, addr);
+#endif
+}
+
 void __SMACK_check_memory_leak(void) {
   __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
 }
