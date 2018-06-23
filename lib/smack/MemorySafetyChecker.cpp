@@ -16,66 +16,100 @@ namespace smack {
 
 using namespace llvm;
 
-void insertMemoryLeakCheck(Function& F, Module& m) {
-  Function* memoryLeakCheckFunction = m.getFunction(Naming::MEMORY_LEAK_FUNCTION);
-  assert (memoryLeakCheckFunction != NULL && "Memory leak check function must be present.");
-  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    if (isa<ReturnInst>(&*I)) {
-      CallInst::Create(memoryLeakCheckFunction, "", &*I);
-    }
+Function* MemorySafetyChecker::getLeakCheckFunction(Module& M) {
+  if (!leakCheckFunction.count(&M)) {
+    auto F = M.getFunction(Naming::MEMORY_LEAK_FUNCTION);
+    assert (F && "Memory leak check function must be present.");
+    leakCheckFunction[&M] = F;
   }
+  return leakCheckFunction[&M];
 }
 
-void inserMemoryAccessCheck(Value* memoryPointer, Instruction* I, DataLayout* dataLayout, Function* memorySafetyFunction, Function* F) {
-  // Finding the exact type of the second argument to our memory safety function
-  Type* sizeType = memorySafetyFunction->getFunctionType()->getParamType(1);
-  PointerType* pointerType = cast<PointerType>(memoryPointer->getType());
-  uint64_t storeSize = dataLayout->getTypeStoreSize(pointerType->getPointerElementType());
-  Value* size = ConstantInt::get(sizeType, storeSize);
-  Type *voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F->getContext()));
-  CastInst* castPointer = CastInst::Create(Instruction::BitCast, memoryPointer, voidPtrTy, "", &*I);
-  Value* args[] = {castPointer, size};
-  CallInst::Create(memorySafetyFunction, ArrayRef<Value*>(args, 2), "", &*I);
+Function* MemorySafetyChecker::getSafetyCheckFunction(Module& M) {
+  if (!safetyCheckFunction.count(&M)) {
+    auto& C = M.getContext();
+    auto T = PointerType::getUnqual(Type::getInt8Ty(C));
+    auto F = dyn_cast<Function>(M.getOrInsertFunction(
+      Naming::MEMORY_SAFETY_FUNCTION,
+      FunctionType::get(Type::getVoidTy(C), {T, T}, false)));
+    assert(F && "Memory safety function must be present.");
+    F->addFnAttr(Attribute::AttrKind::ReadNone);
+    F->addFnAttr(Attribute::AttrKind::NoUnwind);
+    safetyCheckFunction[&M] = F;
+  }
+  return safetyCheckFunction[&M];
 }
 
-bool MemorySafetyChecker::runOnModule(Module& m) {
-  DataLayout* dataLayout = new DataLayout(&m);
-  Function* memorySafetyFunction = m.getFunction(Naming::MEMORY_SAFETY_FUNCTION);
-  assert(memorySafetyFunction != NULL && "Memory safety function must be present.");
-  for (auto& F : m) {
-    if (!Naming::isSmackName(F.getName())) {
-      if (SmackOptions::isEntryPoint(F.getName())) {
-        insertMemoryLeakCheck(F, m);
-      }
-      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-        if (LoadInst* li = dyn_cast<LoadInst>(&*I)) {
-          inserMemoryAccessCheck(li->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
-        } else if (StoreInst* si = dyn_cast<StoreInst>(&*I)) {
-          inserMemoryAccessCheck(si->getPointerOperand(), &*I, dataLayout, memorySafetyFunction, &F);
-        } else if (MemSetInst* memseti = dyn_cast<MemSetInst>(&*I)) {
-	    Value* dest = memseti->getDest();
-	    Value* size = memseti->getLength();
-	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
-	    CastInst* castPtr = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
-	    CallInst::Create(memorySafetyFunction, {castPtr, size}, "", &*I);
-        } else if (MemTransferInst* memtrni = dyn_cast<MemTransferInst>(&*I)) {
-            // MemTransferInst is abstract class for both MemCpyInst and MemMoveInst
-	    Value* dest = memtrni->getDest();
-	    Value* src = memtrni->getSource();
-	    Value* size = memtrni->getLength();
-	    Type* voidPtrTy = PointerType::getUnqual(IntegerType::getInt8Ty(F.getContext()));
-	    CastInst* castPtrDest = CastInst::Create(Instruction::BitCast, dest, voidPtrTy, "", &*I);
-	    CastInst* castPtrSrc = CastInst::Create(Instruction::BitCast, src, voidPtrTy, "", &*I);
-	    CallInst::Create(memorySafetyFunction, {castPtrDest, size}, "", &*I);  
-	    CallInst::Create(memorySafetyFunction, {castPtrSrc, size}, "", &*I);  
-	}
-      }
-    }
-  }
+void MemorySafetyChecker::insertMemoryLeakCheck(Instruction* I) {
+  auto& M = *I->getParent()->getParent()->getParent();
+  CallInst::Create(getLeakCheckFunction(M), "", I);
+}
+
+void MemorySafetyChecker::insertMemoryAccessCheck(Value* addr, Value* size, Instruction* I) {
+  auto& M = *I->getParent()->getParent()->getParent();
+  auto& C = M.getContext();
+  auto T = PointerType::getUnqual(Type::getInt8Ty(C));
+  CallInst::Create(getSafetyCheckFunction(M), {
+    CastInst::Create(Instruction::BitCast, addr, T, "", I),
+    CastInst::CreateBitOrPointerCast(size, T, "", I)
+  }, "", I);
+}
+
+bool MemorySafetyChecker::runOnFunction(Function& F) {
+  if (Naming::isSmackName(F.getName()))
+    return false;
+
+  this->visit(F);
   return true;
+}
+
+void MemorySafetyChecker::visitReturnInst(llvm::ReturnInst& I) {
+  auto& F = *I.getParent()->getParent();
+
+  if (SmackOptions::isEntryPoint(F.getName()))
+    insertMemoryLeakCheck(&I);
+}
+
+namespace {
+  Value* accessSizeAsPointer(Module& M, Value* V) {
+    auto T = dyn_cast<PointerType>(V->getType());
+    assert(T && "expected pointer type");
+
+    return ConstantExpr::getIntToPtr(
+      ConstantInt::get(
+        Type::getInt64Ty(M.getContext()),
+        M.getDataLayout().getTypeStoreSize(T->getPointerElementType())),
+      PointerType::getUnqual(Type::getInt8Ty(M.getContext())));
+  }
+
+  Value* accessSizeAsPointer(LoadInst& I) {
+    auto& M = *I.getParent()->getParent()->getParent();
+    return accessSizeAsPointer(M, I.getPointerOperand());
+  }
+
+  Value* accessSizeAsPointer(StoreInst& I) {
+    auto& M = *I.getParent()->getParent()->getParent();
+    return accessSizeAsPointer(M, I.getPointerOperand());
+  }
+}
+
+void MemorySafetyChecker::visitLoadInst(LoadInst& I) {
+  insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
+}
+
+void MemorySafetyChecker::visitStoreInst(StoreInst& I) {
+  insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
+}
+
+void MemorySafetyChecker::visitMemSetInst(MemSetInst& I) {
+  insertMemoryAccessCheck(I.getDest(), I.getLength(), &I);
+}
+
+void MemorySafetyChecker::visitMemTransferInst(MemTransferInst& I) {
+  insertMemoryAccessCheck(I.getDest(), I.getLength(), &I);
+  insertMemoryAccessCheck(I.getSource(), I.getLength(), &I);
 }
 
 // Pass ID variable
 char MemorySafetyChecker::ID = 0;
 }
-
