@@ -95,6 +95,10 @@ const Expr* Expr::lit(bool n, std::string s, std::string e, unsigned ss, unsigne
   return new FPLit(n, s, e, ss, es);
 }
 
+const Expr* Expr::lit(RModeKind v) {
+  return new RModeLit(v);
+}
+
 const Expr* Expr::neq(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Neq, l, r);
 }
@@ -417,6 +421,26 @@ void FunExpr::print(std::ostream& os) const {
 
 void BoolLit::print(std::ostream& os) const {
   os << (val ? "true" : "false");
+}
+
+void RModeLit::print(std::ostream& os) const {
+  switch (val) {
+  case RModeKind::RNE:
+    os << "RNE";
+    break;
+  case RModeKind::RNA:
+    os << "RNA";
+    break;
+  case RModeKind::RTP:
+    os << "RTP";
+    break;
+  case RModeKind::RTN:
+    os << "RTN";
+    break;
+  case RModeKind::RTZ:
+    os << "RTZ";
+    break;
+  }
 }
 
 void IntLit::print(std::ostream& os) const {

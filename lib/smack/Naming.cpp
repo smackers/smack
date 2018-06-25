@@ -65,6 +65,7 @@ const std::string Naming::BLOCK_LBL = "$bb";
 const std::string Naming::RET_VAR = "$r";
 const std::string Naming::EXN_VAR = "$exn";
 const std::string Naming::EXN_VAL_VAR = "$exnv";
+const std::string Naming::RMODE_VAR = "$rmode";
 const std::string Naming::BOOL_VAR = "$b";
 const std::string Naming::FLOAT_VAR = "$f";
 const std::string Naming::INT_VAR = "$i";

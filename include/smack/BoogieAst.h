@@ -12,6 +12,8 @@ namespace smack {
 
 typedef std::pair<std::string, std::string> Binding;
 
+enum class RModeKind { RNE, RNA, RTP, RTN, RTZ };
+
 class Expr {
 public:
   virtual ~Expr() {}
@@ -36,6 +38,7 @@ public:
   static const Expr* lit(std::string v, unsigned w);
   static const Expr* lit(unsigned long v, unsigned w);
   static const Expr* lit(bool n, std::string s, std::string e, unsigned ss, unsigned es);
+  static const Expr* lit(RModeKind v);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
@@ -80,6 +83,13 @@ class BoolLit : public Expr {
   bool val;
 public:
   BoolLit(bool b) : val(b) {}
+  void print(std::ostream& os) const;
+};
+
+class RModeLit : public Expr {
+  RModeKind val;
+public:
+  RModeLit(RModeKind v) : val(v) {}
   void print(std::ostream& os) const;
 };
 
