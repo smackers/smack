@@ -178,16 +178,34 @@ bool Naming::isSmackGeneratedName(std::string n) {
 }
 
 std::string Naming::escape(std::string s) {
-  std::string Str(llvm::DOT::EscapeString(s));
+  std::string Str(s);
   for (unsigned i = 0; i != Str.length(); ++i)
     switch (Str[i]) {
-    case '\01':
-      Str[i] = '_';
-      break;
+    // Special boogie characters
     case '@':
       Str[i] = '.';
       break;
-    case ':':
+    case '\01': case '\\':
+    case '$': case ':':
+    case '(': case ')':
+    case '[': case ']':
+      Str[i] = '_';
+      break;
+    
+    // Reproduce behavior of llvm::DOT::EscapeString without backslashes
+    case '\n':
+      Str.insert(Str.begin()+i, '_');  // convert '\n' to "_n"
+      ++i;
+      Str[i] = 'n';
+      break;
+    case '\t':
+      Str.insert(Str.begin()+i, ' ');  // Convert to two spaces
+      ++i;
+      Str[i] = ' ';
+      break;
+    case '{': case '}':
+    case '<': case '>':
+    case '|': case '"':
       Str[i] = '_';
       break;
     }
