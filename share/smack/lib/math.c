@@ -3,12 +3,6 @@
 #include <math.h>
 #include <smack.h>
 
-//Check the length of pointers
-//#if ( __WORDSIZE == 64 )
-#if defined(__LP64__) || defined(_LP64)
-#define BUILD_64 1
-#endif
-
 float fabsf(float x) {
   double ret = __VERIFIER_nondet_double();
   __SMACK_code("@ := ftd($rmode, $abs.bvfloat(dtf($rmode, @)));", ret, x);
