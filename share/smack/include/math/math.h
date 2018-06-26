@@ -4,12 +4,10 @@
 #ifndef MATH_H
 #define MATH_H
 
-//floats
 float fabsf(float x);
 float fdimf(float x, float y);
 float roundf(float x);
 long lroundf(float x);
-//The following 3 functions are incomplete pending rounding mode implementation
 float rintf(float x);
 float nearbyintf(float x);
 long lrintf(float x);
@@ -34,12 +32,10 @@ int __signbitf(float x);
 int __fpclassifyf(float x);
 int __isfinitef(float x);
 
-//doubles
 double fabs(double x);
 double fdim(double x, double y);
 double round(double x);
 long lround(double x);
-//The following 3 functions are incomplete pending rounding mode implementation
 double rint(double x);
 double nearbyint(double x);
 long lrint(double x);
