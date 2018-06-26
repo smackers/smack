@@ -60,15 +60,4 @@ int __signbit(double x);
 int __fpclassify(double x);
 int __isfinite(double x);
 
-//long doubles
-/*int __isnormall(long double x);
-int __issubnormall(long double x);
-int __iszerol(long double x);
-int __isinfl(long double x);
-int __isnanl(long double x);
-int __isnegativel(long double x);
-int __signbitl(long double x);
-int __fpclassifyl(long double x);
-int __isfinitel(long double x);*/
-
 #endif
