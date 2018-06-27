@@ -41,7 +41,7 @@ smack_value_t __SMACK_return_value(void);
 #if MEMORY_SAFETY
 // Inserts memory access checks in form of assert to check null pointer access
 // and buffer overflow errors
-void __SMACK_check_memory_safety(void*, unsigned long);
+void __SMACK_check_memory_safety(void*, void*) __attribute__((const));
 void __SMACK_check_memory_leak(void);
 #endif
 
