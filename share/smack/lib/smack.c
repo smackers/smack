@@ -1014,10 +1014,17 @@ void __SMACK_decls(void) {
   D("function {:builtin \"(_ fp.to_sbv 64) RTP\"} $ceil.bvdouble(bvdouble) returns (bv64);");
   D("function {:builtin \"(_ fp.to_sbv 64) RTZ\"} $trunc.bvdouble(bvdouble) returns (bv64);");
 
-  D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 32) RNA\"} $lround.bvfloat(bvfloat) returns (bv32);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
-  D("function {:builtin \"(_ fp.to_sbv 64) RNA\"} $lround.bvdouble(bvdouble) returns (bv64);");
+  #if defined(__LP64__) || defined(_LP64) || defined (_WIN64)
+
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvfloat(rmode, bvfloat) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvdouble(rmode, bvdouble) returns (bv64);");
+
+  #else
+
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvfloat(rmode, bvfloat) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvdouble(rmode, bvdouble) returns (bv32);");
+
+  #endif
 
 #endif
 
