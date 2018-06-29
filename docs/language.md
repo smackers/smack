@@ -1,0 +1,50 @@
+
+# How to use SMACK with your own programming language.
+
+SMACK can be used to verify any langauge that comiples to LLVM IR. Because there are so many languages, we are unable to provide out-of-the-box for the majority of LLVM languages. However, you can still verify code by manually compiling to LLVM and running SMACK on the LLVM IR.
+
+### Prerequisites
+
+- An AoT compiler that targets the same version of LLVM as SMACK.
+ 
+For compatibility, SMACK version == LLVM version - 2. So, for LLVM 3.9, you want SMACK 1.9, etc.
+
+- A working C interop
+
+### Tutorial
+
+Step 1: Import smack.h using C interop
+
+You can use the functions smack.h to call verifier operations like `__VERIFIER_assert`.
+
+Step 2: Compile to LLVM IR
+
+Compile your code to either a .ll or a .bc file (the two formats are equivalent). Most compilers provide a command-line option like `-emit-llvm` or `-output-ll`. You should also add debug symbols, which is `-g` on most compilers. Disabling optimizations may also be useful, with `-O0` or similar.
+
+Step 3: Find the entry point
+
+Inspect the code to find the `main` function or equivalent entry point. Add `--entry-points [mainfunction]` whenever you call SMACK if this is anything other than `main`.
+
+If you chose to compile your program into a .bc, you can use llvm-dis and llvm-as to convert between bitcode and human-readable format.
+
+Step 4: Run SMACK!
+
+Now, you can run SMACK on your .ll or .bc file. There may be small bugs if your compiler uses LLVM features that aren't used by current languages. If there are any problems, feel free to open an issue. 
+
+### Example commands
+
+#### Clang
+
+`clang -S -g -O0 -emit-llvm program.c`
+
+Note: as flang implements the same compiler options as clang, we can compile FORTRAN for SMACK with  
+
+`flang -S -g -O0 -emit-llvm program.f90`
+
+#### Swift
+
+`swiftc -g -emit-ir -import-objc-header smack.h program.swift > program.ll`
+
+#### D
+
+`ldc2 -g -O0 -output-ll program.d`
