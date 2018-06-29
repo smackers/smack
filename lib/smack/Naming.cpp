@@ -186,11 +186,13 @@ std::string Naming::escape(std::string s) {
       Str[i] = '.';
       break;
     case '\01': case '\\':
-    case '$': case ':':
+    case ':':
     case '(': case ')':
     case '[': case ']':
       Str[i] = '_';
       break;
+    // Another character to escape would be '$', but SMACK internally
+    // generates LLVM IR that uses this character.
     
     // Reproduce behavior of llvm::DOT::EscapeString without backslashes
     case '\n':
