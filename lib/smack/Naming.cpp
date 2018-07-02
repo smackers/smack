@@ -186,7 +186,7 @@ std::string Naming::escape(std::string s) {
       Str[i] = '.';
       break;
     case '\01': case '\\':
-    case ':':
+    case ':': case ' ':
     case '(': case ')':
     case '[': case ']':
       Str[i] = '_';
@@ -195,16 +195,6 @@ std::string Naming::escape(std::string s) {
     // generates LLVM IR that uses this character.
     
     // Reproduce behavior of llvm::DOT::EscapeString without backslashes
-    case '\n':
-      Str.insert(Str.begin()+i, '_');  // convert '\n' to "_n"
-      ++i;
-      Str[i] = 'n';
-      break;
-    case '\t':
-      Str.insert(Str.begin()+i, ' ');  // Convert to two spaces
-      ++i;
-      Str[i] = ' ';
-      break;
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
