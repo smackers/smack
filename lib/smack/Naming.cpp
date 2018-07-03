@@ -178,18 +178,24 @@ bool Naming::isSmackGeneratedName(std::string n) {
 }
 
 std::string Naming::escape(std::string s) {
-  std::string Str(llvm::DOT::EscapeString(s));
+  std::string Str(s);
   for (unsigned i = 0; i != Str.length(); ++i)
     switch (Str[i]) {
-    case '\01':
-      Str[i] = '_';
-      break;
     case '@':
       Str[i] = '.';
       break;
-    case ':':
+    case '\01': case '\\':
+    case ':': case ' ':
+    case '(': case ')':
+    case '[': case ']':
+    case '{': case '}':
+    case '<': case '>':
+    case '|': case '"':
+    case '-':
       Str[i] = '_';
       break;
+    // Another character to escape would be '$', but SMACK internally
+    // generates LLVM IR that uses this character.
     }
   return Str;
 }
