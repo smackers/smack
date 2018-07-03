@@ -37,7 +37,7 @@ float roundf(float x) {
 
 long lroundf(float x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
+  __SMACK_code("@ := $lround.bvfloat(dtf($rmode, @));", ret, x);
   return ret;
 }
 
@@ -51,7 +51,7 @@ float nearbyintf(float x) {
 
 long lrintf(float x) {
   long ret = __VERIFIER_nondet_long();
-  __SMACK_code("@ := $lround.bvfloat(dtf(@));", ret, x);
+  __SMACK_code("@ := $lround.bvfloat(dtf($rmode, @));", ret, x);
   return ret;
 }
 
@@ -59,7 +59,7 @@ float floorf(float x) {
   if (__isnanf(x) || __isinff(x) || __iszerof(x))
     return x;
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($floor.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := sbv32td($floor.bvfloat(dtf($rmode, @)));", ret, x);
   return ret;
 }
 
@@ -67,7 +67,7 @@ float ceilf(float x) {
   if (__isnanf(x) || __isinff(x) || __iszerof(x))
     return x;
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($ceil.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := sbv32td($ceil.bvfloat(dtf($rmode, @)));", ret, x);
   return ret;
 }
 
@@ -75,31 +75,31 @@ float truncf(float x) {
   if (__isnanf(x) || __isinff(x) || __iszerof(x))
     return x;
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := sbv32td($trunc.bvfloat(dtf(@)));", ret, x);
+  __SMACK_code("@ := sbv32td($trunc.bvfloat(dtf($rmode, @)));", ret, x);
   return ret;
 }
 
 float sqrtf(float x) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $sqrt.bvfloat(dtf(@));", ret, x);
+  __SMACK_code("@ := $sqrt.bvfloat(dtf($rmode, @));", ret, x);
   return ret;
 }
 
 float remainderf(float x, float y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd($rem.bvfloat(dtf(@), dtf(@)));", ret, x, y);
+  __SMACK_code("@ := ftd($rmode, $rem.bvfloat(dtf($rmode, @), dtf($rmode, @)));", ret, x, y);
   return ret;
 }
 
 float fminf(float x, float y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $min.bvfloat(dtf(@), dtf(@));", ret, x, y);
+  __SMACK_code("@ := $min.bvfloat(dtf($rmode, @), dtf($rmode, @));", ret, x, y);
   return ret;
 }
 
 float fmaxf(float x, float y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := $max.bvfloat(dtf(@), dtf(@));", ret, x, y);
+  __SMACK_code("@ := $max.bvfloat(dtf($rmode, @), dtf($rmode, @));", ret, x, y);
   return ret;
 }
 
@@ -118,7 +118,7 @@ float modff(float x, float* y) {
 float copysignf(float x, float y) {
   double ret = __VERIFIER_nondet_double();
   if (__isnegativef(x)^__isnegativef(y))
-    __SMACK_code("@ := $fmul.bvfloat(dtf(@), -0e127f24e8);", ret, x);
+    __SMACK_code("@ := $fmul.bvfloat(dtf($rmode, @), -0e127f24e8);", ret, x);
   else
     ret = x;
   return ret;
@@ -126,20 +126,20 @@ float copysignf(float x, float y) {
 
 int __isnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isnormal.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isSubnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 */
 
 int __iszerof(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $iszero.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $iszero.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 
@@ -151,25 +151,25 @@ int __isinff(float x) {
 
 int __isnanf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isnan.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __isnegativef(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isnegative.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __ispositivef(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $ispositive.bvfloat.bool(dtf(@)) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $ispositive.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
   return ret;
 }
 
 int __signbitf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if (dtf(@) <= 0e0f24e8) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if (dtf($rmode, @) <= 0e0f24e8) then $1 else $0;", ret, x);
   return ret;
 }
 
@@ -272,7 +272,7 @@ double sqrt(double x) {
 
 double remainder(double x, double y) {
   double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd(dtf($rem.bvdouble(ftd(dtf(@)), ftd(dtf(@)))));", ret, x, y);
+  __SMACK_code("@ := ftd($rmode, dtf($rmode, $rem.bvdouble(ftd($rmode, dtf($rmode, @)), ftd($rmode, dtf($rmode, @)))));", ret, x, y);
   return ret;
 }
 
