@@ -191,6 +191,7 @@ std::string Naming::escape(std::string s) {
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
+    case '-':
       Str[i] = '_';
       break;
     // Another character to escape would be '$', but SMACK internally
