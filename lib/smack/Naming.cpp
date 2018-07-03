@@ -181,7 +181,6 @@ std::string Naming::escape(std::string s) {
   std::string Str(s);
   for (unsigned i = 0; i != Str.length(); ++i)
     switch (Str[i]) {
-    // Special boogie characters
     case '@':
       Str[i] = '.';
       break;
@@ -189,17 +188,13 @@ std::string Naming::escape(std::string s) {
     case ':': case ' ':
     case '(': case ')':
     case '[': case ']':
-      Str[i] = '_';
-      break;
-    // Another character to escape would be '$', but SMACK internally
-    // generates LLVM IR that uses this character.
-    
-    // Reproduce behavior of llvm::DOT::EscapeString without backslashes
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
       Str[i] = '_';
       break;
+    // Another character to escape would be '$', but SMACK internally
+    // generates LLVM IR that uses this character.
     }
   return Str;
 }
