@@ -16,25 +16,46 @@ from replay import replay_error_trace
 
 VERSION = '1.9.0'
 
-def frontends():
-  """A dictionary of front-ends per file extension."""
+def languages():
+  """A dictionary of languages per file extension."""
   return {
-    'c': clang_frontend,
-    'i': clang_frontend,
-    'cc': clang_plusplus_frontend,
-    'cpp': clang_plusplus_frontend,
-    'm': objc_clang_frontend,
-    'd' : d_frontend,
-    'json': json_compilation_database_frontend,
-    'svcomp': svcomp_frontend,
-    'bc': llvm_frontend,
-    'll': llvm_frontend,
-    'bpl': boogie_frontend,
-    'f' : fortran_frontend,
-    'for' : fortran_frontend,
-    'f90' : fortran_frontend,
-    'f95' : fortran_frontend,
-    'f03' : fortran_frontend,
+    'c'      : 'C',
+    'i'      : 'C',
+    'cc'     : 'CXX',
+    'cpp'    : 'CXX',
+    'm'      : 'OBJC',
+    'd'      : 'D',
+    'json'   : 'JSON',
+    'svcomp' : 'SVCOMP',
+    'bc'     : 'LLVM',
+    'll'     : 'LLVM',
+    'bpl'    : 'BOOGIE',
+    'f'      : 'FORTRAN',
+    'for'    : 'FORTRAN',
+    'f90'    : 'FORTRAN',
+    'f95'    : 'FORTRAN',
+    'f03'    : 'FORTRAN',
+  }
+
+def frontends():
+  """A dictionary of front-ends per language."""
+  return {
+    'C'        : clang_frontend,
+    'CXX'      : clang_plusplus_frontend,
+    'OBJC'     : clang_objc_frontend,
+    'D'        : d_frontend,
+    'JSON'     : json_compilation_database_frontend,
+    'SVCOMP'   : svcomp_frontend,
+    'LLVM'     : llvm_frontend,
+    'BOOGIE'   : boogie_frontend,
+    'FORTRAN'  : fortran_frontend,
+  }
+
+def extra_libs():
+  """A dictionary of extra SMACK libraries required by languages."""
+  return {
+    'FORTRAN' : fortran_build_libs, 
+    # coming soon - libraries for OBJC, Rust, Swift, etc.
   }
 
 def results(args):
@@ -72,7 +93,7 @@ def validate_input_file(file):
   if not os.path.isfile(file):
     return ("Cannot find file %s." % file)
 
-  elif not file_extension in frontends():
+  elif not file_extension in languages():
     return ("Unexpected source file extension '%s'." % file_extension)
 
   else:
@@ -275,14 +296,27 @@ def target_selection(args):
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
+  bitcodes = []
+  libs = []
+  
+  def add_libs(lang):
+    if lang in extra_libs():
+      libs.append(extra_libs()[lang])
+
   if args.language:
-    lang = args.language
+    lang = languages()[args.language]
+    add_libs(lang)
+    frontend = frontends()[lang]
+    for input_file in args.input_files:
+      bitcodes.append(frontend(input_file,lang))
+  
   else:
-    extensions = map(lambda f: os.path.splitext(f)[1][1:], args.input_files)
-    if any(map(lambda ext: ext != extensions[0], extensions)):
-      raise RuntimeError("All input files must have the same file type (extension).")
-    lang = extensions[0]
-  return frontends()[lang](args)
+    for input_file in args.input_files:
+      lang = languages()[os.path.splitext(input_file)[1][1:]]
+      add_libs(lang)
+      bitcodes.append(frontends()[lang](input_file,args))
+  
+  return link_bc_files(bitcodes,libs,args)
 
 def smack_root():
   return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -313,7 +347,7 @@ def default_clang_compile_command(args, lib = False):
   if sys.stdout.isatty(): cmd += ['-fcolor-diagnostics']
   return cmd
 
-def build_libs(args):
+def default_build_libs(args):
   """Generate LLVM bitcodes for SMACK libraries."""
   bitcodes = []
   libs = ['smack.c']
@@ -328,9 +362,24 @@ def build_libs(args):
     libs += ['math.c']
     libs += ['fenv.c']
 
+  compile_command = default_clang_compile_command(args, True)
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(default_clang_compile_command(args, True) + ['-o', bc, c])
+    bc = compile_to_bc(c,compile_command,args)
+    bitcodes.append(bc)
+
+  return bitcodes
+
+def fortran_build_libs(args):
+  """Generate FORTRAN-specific LLVM bitcodes for SMACK libraries."""
+
+  bitcodes = []
+  libs = ['smack.f90']
+
+  compile_command = default_clang_compile_command(args)
+  compile_command[0] = 'flang'
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = fortran_compile_to_bc(c,compile_command,args)
     bitcodes.append(bc)
 
   return bitcodes
@@ -342,27 +391,25 @@ def boogie_frontend(args):
       with open(src) as f:
         out.write(f.read())
 
-def llvm_frontend(args):
-  """Generate Boogie code from LLVM bitcodes."""
+def llvm_frontend(input_file, args):
+  """Return LLVM IR file. Exists for symmetry with other frontends."""
 
-  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
-  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
-  llvm_to_bpl(args)
+  return input_file
 
-def clang_frontend(args):
-  """Generate Boogie code from C-language source(s)."""
+def clang_frontend(input_file, args):
+  """Generate LLVM IR from C-language source(s)."""
 
   compile_command = default_clang_compile_command(args)
-  default_link_bc_files(compile_command, args)
+  return compile_to_bc(input_file,compile_command,args)
 
-def clang_plusplus_frontend(args):
-  """Generate Boogie code from C++ language source(s)."""
+def clang_plusplus_frontend(input_file, args):
+  """Generate LLVM IR from C++ language source(s)."""
   compile_command = default_clang_compile_command(args)
   compile_command[0] = 'clang++'
-  default_link_bc_files(compile_command, args)
+  return compile_to_bc(input_file,compile_command,args)
 
-def objc_clang_frontend(args):
-  """Generate Boogie code from Objective-C language source(s)."""
+def clang_objc_frontend(input_file, args):
+  """Generate LLVM IR from Objective-C language source(s)."""
 
   compile_command = default_clang_compile_command(args)
   if sys.platform in ['linux', 'linux2']:
@@ -372,9 +419,9 @@ def objc_clang_frontend(args):
     sys.exit("Objective-C not yet supported on macOS")
   else:
     sys.exit("Objective-C not supported for this operating system.")
-  default_link_bc_files(compile_command, args)
+  return compile_to_bc(input_file,compile_command,args)
 
-def d_frontend(args):
+def d_frontend(input_file, args):
   """Generate Boogie code from D programming language source(s)."""
 
   # note: -g and -O0 are not used here. 
@@ -382,70 +429,27 @@ def d_frontend(args):
   compile_command = ['ldc2', '-output-ll'] 
   compile_command += map(lambda path: '-I=' + path, smack_headers())
   args.entry_points = [ep if ep != 'main' else '_Dmain' for ep in args.entry_points]
-  default_link_bc_files(compile_command, args)
+  return compile_to_bc(input_file,compile_command,args)
 
-def fortran_frontend(args):
+def fortran_frontend(input_file, args):
   """Generate Boogie code from Fortran language source(s)."""
 
-  # Requires two hacks as of right now:
-  #    1. The Debug Info Version in flang is incompatible with 
-  #       the version that clang uses. The workaround is to use
-  #       sed to change the file so llvm-link gives a warning
-  #       and not an error. This will be fixed in flang in the
-  #       near future (summer/fall 2018), after which this hack
-  #       will no longer be necessary.
-  #    2. For a fortran file that includes smack.f90 as a module,
-  #       it will not compile unless the file 'smack.mod' exists
-  #       in the working directory. 'smack.mod' is a build artifact
-  #       of compiling smack.f90. Therefore, the solution is to 
-  #       compile smack.f90 before the source files, even though
-  #       it is a smack library and could be in a generalized build_libs()
+  #  For a fortran file that includes smack.f90 as a module,
+  #  it will not compile unless the file 'smack.mod' exists
+  #  in the working directory. 'smack.mod' is a build artifact
+  #  of compiling smack.f90. Therefore, the solution is to 
+  #  compile smack.f90 before the source files.
+  fortran_build_libs(args)
+  #  The result of this computation will be discarded when SMACK
+  #  builds it's libraries later.
 
   # replace the default entry point with the fortran default 'MAIN_'
   args.entry_points = [ep if ep != 'main' else 'MAIN_' for ep in args.entry_points]
 
   compile_command = default_clang_compile_command(args)
   compile_command[0] = 'flang'
-  # compile to .ll instead of .bc in order to hack Debug Info Version
-  compile_command[1] = '-S'
-  
-  bitcodes = []
 
-  # must be done before compilation of input files
-  #   so that smack.mod appears
-  smack_fortran_lib = 'smack.f90'
-  smack_path = os.path.join(smack_lib(), smack_fortran_lib)
-  # use '.ll' instead of '.bc'
-  smack_fortran_bc = temporary_file(os.path.splitext(os.path.basename(smack_path))[0], '.ll', args)
-  try_command(compile_command + ['-o', smack_fortran_bc, smack_path], console=True)
-  # change the throw level of 'Debug Info Version' from error to warning in the IR
-  try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', smack_fortran_bc])
-  bitcodes.append(smack_fortran_bc)
-  
-  for c in args.input_files:
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.ll', args)
-    try_command(compile_command + ['-o', bc, c], console=True)
-    # change the throw level of 'Debug Info Version' from error to warning in the IR
-    try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', bc])
-    bitcodes.append(bc)
-
-  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
-  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
-  llvm_to_bpl(args)
-  
-def default_link_bc_files(compile_command, args):
-  """Allow abstraction over clang's programming languages."""
-
-  bitcodes = []
-
-  for c in args.input_files:
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], console=True)
-    bitcodes.append(bc)
-
-  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
-  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
-  llvm_to_bpl(args)
+  return fortran_compile_to_bc(input_file,compile_command,args)
 
 def json_compilation_database_frontend(args):
   """Generate Boogie code from a JSON compilation database."""
@@ -472,6 +476,47 @@ def json_compilation_database_frontend(args):
         command = command + " -emit-llvm"
         try_command(command.split(),cc['directory'], console=True)
 
+  llvm_to_bpl(args)
+
+def compile_to_bc(input_file, compile_command, args):
+  """Compile a source file to LLVM IR."""
+  bc = temporary_file(os.path.splitext(os.path.basename(input_file))[0], '.bc', args)
+  try_command(compile_command + ['-o', bc, input_file], console=True)
+  return bc
+
+def fortran_compile_to_bc(input_file, compile_command, args):
+  """Compile a FORTRAN source file to LLVM IR."""
+
+  #  This method only exists as a hack to get flang to work
+  #  with SMACK. When we update to the latest flang on LLVM 5,
+  #  this method will no longer be necessary. The hack is 
+  #  self-contained in this method.
+
+  #  The Debug Info Version in flang is incompatible with 
+  #  the version that clang uses. The workaround is to use
+  #  sed to change the file so llvm-link gives a warning
+  #  and not an error. 
+
+  # compile to human-readable format in order to tweak the IR
+  compile_command[1] = '-S'
+  ll = temporary_file(os.path.splitext(os.path.basename(input_file))[0], '.ll', args)
+  try_command(compile_command + ['-o', ll, input_file], console=True)
+  # change the throw level of 'Debug Info Version' from error to warning in the IR
+  try_command(['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', ll])
+  try_command(['llvm-as', ll])
+  try_command(['rm', ll])
+  bc = '.'.join(ll.split('.')[:-1] + ['bc'])
+  return bc 
+ 
+def link_bc_files(bitcodes, libs, args):
+  """Link generated LLVM bitcode and relevant smack libraries."""
+
+  smack_libs = default_build_libs(args)
+  for build_lib in libs:
+    smack_libs += build_lib(args)
+
+  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
+  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + smack_libs)
   llvm_to_bpl(args)
 
 def llvm_to_bpl(args):
