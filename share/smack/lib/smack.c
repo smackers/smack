@@ -1053,16 +1053,12 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i8, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i1, bvdouble, $si2fp);
 
-  #if defined(__LP64__) || defined(_LP64) || defined (_WIN64)
-
+  #if defined(__LP64__) || defined(_LP64) || defined(_WIN64)
     D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvfloat(rmode, bvfloat) returns (bv64);");
     D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvdouble(rmode, bvdouble) returns (bv64);");
-
   #else
-
     D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvfloat(rmode, bvfloat) returns (bv32);");
     D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvdouble(rmode, bvdouble) returns (bv32);");
-
   #endif
 
 #endif
