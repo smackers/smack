@@ -821,7 +821,8 @@ const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
 
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
-  if (opcode == Instruction::FPTrunc || opcode == Instruction::FPExt || opcode == Instruction::SIToFP) {
+  if (opcode == Instruction::FPTrunc || opcode == Instruction::FPExt || opcode == Instruction::SIToFP
+    || opcode == Instruction::UIToFP || opcode == Instruction::FPToSI || opcode == Instruction::FPToUI) {
     return Expr::fn(opName(fn, {v->getType(), t}), Expr::id(Naming::RMODE_VAR), expr(v));
   }
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
