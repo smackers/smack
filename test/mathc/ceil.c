@@ -8,6 +8,8 @@ int main(void) {
   double Inf = 1.0 / 0.0;
   double negInf = -1.0 / 0.0;
 
+  assert(ceil(2.1) == 3.0);
+
   double val = __VERIFIER_nondet_double();
 
   if (!__isnan(val) && !__isinf(val) && !__iszero(val)) {

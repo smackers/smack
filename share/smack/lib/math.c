@@ -116,7 +116,7 @@ float modff(float x, float *iPart) {
 }
 
 float copysignf(float x, float y) {
-  if (__signbitf(x) - __signbitf(y)) {
+  if (__signbitf(x) != __signbitf(y)) {
     return -x;
   } else {
     return x;
@@ -292,7 +292,7 @@ double modf(double x, double *iPart) {
 }
 
 double copysign(double x, double y) {
-  if (__signbit(x) - __signbit(y)) {
+  if (__signbit(x) != __signbit(y)) {
     return -x;
   } else {
     return x;
@@ -352,5 +352,5 @@ int __fpclassify(double x) {
 }
 
 int __isfinite(double x) {
-  return !__isinf(x) & !__isnan(x);
+  return !__isinf(x) && !__isnan(x);
 }

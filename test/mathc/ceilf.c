@@ -8,6 +8,8 @@ int main(void) {
   float Inf = 1.0f / 0.0f;
   float negInf = -1.0f / 0.0f;
 
+  assert(ceilf(2.1f) == 3.0f);
+
   float val = __VERIFIER_nondet_float();
 
   if (!__isnanf(val) && !__isinff(val) && !__iszerof(val)) {
