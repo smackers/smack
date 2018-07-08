@@ -100,10 +100,6 @@ def svcomp_process_file(args, name, ext):
       while (True):
         pass
 
-    if args.float:
-      if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
-        sys.exit(smack.top.results(args)['unknown'])
-
     if 'argv=malloc' in s:
 #      args.bit_precise = True
       if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
