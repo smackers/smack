@@ -4,12 +4,16 @@
 #include <smack.h>
 
 int fegetround(void) {
+  const int CONST_FE_TONEAREST = FE_TONEAREST;
+  const int CONST_FE_DOWNWARD = FE_DOWNWARD;
+  const int CONST_FE_UPWARD = FE_UPWARD;
+  const int CONST_FE_TOWARDZERO = FE_TOWARDZERO;
   int ret = __VERIFIER_nondet_int();
   assume(ret < 0);
-  __SMACK_code("if ($rmode == RNE) {@ := 0;}", ret);
-  __SMACK_code("if ($rmode == RTN) {@ := 1024;}", ret);
-  __SMACK_code("if ($rmode == RTP) {@ := 2048;}", ret);
-  __SMACK_code("if ($rmode == RTZ) {@ := 3072;}", ret);
+  __SMACK_code("if ($rmode == RNE) {@ := @;}", ret, CONST_FE_TONEAREST);
+  __SMACK_code("if ($rmode == RTN) {@ := @;}", ret, CONST_FE_DOWNWARD);
+  __SMACK_code("if ($rmode == RTP) {@ := @;}", ret, CONST_FE_UPWARD);
+  __SMACK_code("if ($rmode == RTZ) {@ := @;}", ret, CONST_FE_TOWARDZERO);
   return ret;
 }
 
