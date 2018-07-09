@@ -14,21 +14,15 @@ int main(void) {
   float c = -2.5000000001f;
   float d = 8.3f;
 
-  fesetround(FE_TONEARESTEVEN);
+  fesetround(FE_TONEAREST);
   assert(lrintf(a) == -2);
   assert(lrintf(b) == -2);
-  assert(lrintf(c) == -3);
-  assert(lrintf(d) == 8);
-
-  fesetround(FE_TONEARESTAWAY);
-  assert(lrintf(a) == -3);
-  assert(lrintf(b) == 2);
   assert(lrintf(c) == -3);
   assert(lrintf(d) == 8);
 
   fesetround(FE_UPWARD);
   assert(lrintf(a) == -2);
-  assert(lrintf(b) == -2);
+  assert(lrintf(b) == -1);
   assert(lrintf(c) == -2);
   assert(lrintf(d) == 9);
 

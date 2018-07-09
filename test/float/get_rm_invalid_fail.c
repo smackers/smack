@@ -5,7 +5,7 @@
 
 int main(void) {
   int rm = fegetround();
-  assume(rm <= 1 || rm > 5);
+  assume(rm != FE_DOWNWARD && rm != FE_UPWARD && rm != FE_TOWARDZERO);
 
   assert(rm < 0);
 

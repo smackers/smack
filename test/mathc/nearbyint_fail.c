@@ -14,14 +14,8 @@ int main(void) {
   double c = -3.5000000001;
   double d = 7.3;
 
-  fesetround(FE_TONEARESTEVEN);
-  assert(nearbyint(a) == 4.0);
-  assert(nearbyint(b) == -3.0);
-  assert(nearbyint(c) == -4.0);
-  assert(nearbyint(d) == 7.0);
-
-  fesetround(FE_TONEARESTAWAY);
-  assert(nearbyint(a) == -4.0);
+  fesetround(FE_TONEAREST);
+  assert(nearbyint(a) == -3.0);
   assert(nearbyint(b) == -3.0);
   assert(nearbyint(c) == -4.0);
   assert(nearbyint(d) == 7.0);
