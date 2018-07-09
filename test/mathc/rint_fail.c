@@ -14,14 +14,8 @@ int main(void) {
   double c = -4.5000000001;
   double d = 5.3;
 
-  fesetround(FE_TONEARESTEVEN);
+  fesetround(FE_TONEAREST);
   assert(rint(a) == 4.0);
-  assert(rint(b) == -4.0);
-  assert(rint(c) == -5.0);
-  assert(rint(d) == 5.0);
-
-  fesetround(FE_TONEARESTAWAY);
-  assert(rint(a) == -5.0);
   assert(rint(b) == -4.0);
   assert(rint(c) == -5.0);
   assert(rint(d) == 5.0);
