@@ -310,6 +310,7 @@ def default_clang_compile_command(args, lib = False):
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
   if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
+  if sys.stdout.isatty(): cmd += ['-fcolor-diagnostics']
   return cmd
 
 def build_libs(args):
