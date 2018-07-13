@@ -4,26 +4,18 @@
 #ifndef MATH_H
 #define MATH_H
 
-enum
-  {
-    FP_NAN,
-# define FP_NAN FP_NAN
-    FP_INFINITE,
-# define FP_INFINITE FP_INFINITE
-    FP_ZERO,
-# define FP_ZERO FP_ZERO
-    FP_SUBNORMAL,
-# define FP_SUBNORMAL FP_SUBNORMAL
-    FP_NORMAL
-# define FP_NORMAL FP_NORMAL
-  };
+#define FP_NAN 0
+#define FP_INFINITE 1
+#define FP_ZERO 2
+#define FP_SUBNORMAL 3
+#define FP_NORMAL 4
 
-#define fpclassify(x) (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : __fpclassify(x))
-#define signbit(x) (sizeof(x) == sizeof(float) ? __signbitf(x) : __signbit(x))
-#define isfinite(x) (sizeof(x) == sizeof(float) ? __finitef(x) : __finite(x))
-#define isnormal(x) (sizeof(x) == sizeof(float) ? __isnormalf(x) : __isnormal(x))
-#define isnan(x) (sizeof(x) == sizeof(float) ? __isnanf(x) : __isnan(x))
-#define isinf(x) (sizeof(x) == sizeof(float) ? __isinff(x) : __isinf(x))
+#define isnormal(x) (sizeof(x) == sizeof(double) ? __isnormal(x) : __isnormalf(x))
+#define isinf(x) (sizeof(x) == sizeof(double) ? __isinf(x) : __isinff(x))
+#define isnan(x) (sizeof(x) == sizeof(double) ? __isnan(x) : __isnanf(x))
+#define signbit(x) (sizeof(x) == sizeof(double) ? __signbit(x) : __signbitf(x))
+#define fpclassify(x) (sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
+#define isfinite(x) (sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
 
 float fabsf(float x);
 float fdimf(float x, float y);
