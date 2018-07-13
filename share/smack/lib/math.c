@@ -165,17 +165,17 @@ int __signbitf(float x) {
 
 int __fpclassifyf(float x) {
   if (__isnanf(x))
-    return 0;
+    return FP_NAN;
   if (__isinff(x))
-    return 1;
+    return FP_INFINITE;
   if (__iszerof(x))
-    return 2;
+    return FP_ZERO;
   if (__issubnormalf(x))
-    return 3;
-  return 4;
+    return FP_SUBNORMAL;
+  return FP_NORMAL;
 }
 
-int __isfinitef(float x) {
+int __finitef(float x) {
   return !__isinff(x) && !__isnanf(x);
 }
 
@@ -341,16 +341,16 @@ int __signbit(double x) {
 
 int __fpclassify(double x) {
   if (__isnan(x))
-    return 0;
+    return FP_NAN;
   if (__isinf(x))
-    return 1;
+    return FP_INFINITE;
   if (__iszero(x))
-    return 2;
+    return FP_ZERO;
   if (__issubnormal(x))
-    return 3;
-  return 4;
+    return FP_SUBNORMAL;
+  return FP_NORMAL;
 }
 
-int __isfinite(double x) {
+int __finite(double x) {
   return !__isinf(x) && !__isnan(x);
 }

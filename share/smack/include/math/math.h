@@ -4,6 +4,27 @@
 #ifndef MATH_H
 #define MATH_H
 
+enum
+  {
+    FP_NAN,
+# define FP_NAN FP_NAN
+    FP_INFINITE,
+# define FP_INFINITE FP_INFINITE
+    FP_ZERO,
+# define FP_ZERO FP_ZERO
+    FP_SUBNORMAL,
+# define FP_SUBNORMAL FP_SUBNORMAL
+    FP_NORMAL
+# define FP_NORMAL FP_NORMAL
+  };
+
+#define fpclassify(x) (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : __fpclassify(x))
+#define signbit(x) (sizeof(x) == sizeof(float) ? __signbitf(x) : __signbit(x))
+#define isfinite(x) (sizeof(x) == sizeof(float) ? __finitef(x) : __finite(x))
+#define isnormal(x) (sizeof(x) == sizeof(float) ? __isnormalf(x) : __isnormal(x))
+#define isnan(x) (sizeof(x) == sizeof(float) ? __isnanf(x) : __isnan(x))
+#define isinf(x) (sizeof(x) == sizeof(float) ? __isinff(x) : __isinf(x))
+
 float fabsf(float x);
 float fdimf(float x, float y);
 float roundf(float x);
@@ -30,7 +51,7 @@ int __isnanf(float x);
 int __isnegativef(float x);
 int __signbitf(float x);
 int __fpclassifyf(float x);
-int __isfinitef(float x);
+int __finitef(float x);
 
 double fabs(double x);
 double fdim(double x, double y);
@@ -58,6 +79,6 @@ int __isnan(double x);
 int __isnegative(double x);
 int __signbit(double x);
 int __fpclassify(double x);
-int __isfinite(double x);
+int __finite(double x);
 
 #endif
