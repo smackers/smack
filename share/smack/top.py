@@ -95,13 +95,16 @@ def validate_input_files(files):
   map(validate_input_file, files)
 
 def validate_output_file(file):
-  file_extension = os.path.splitext(file)[1][1:]
-
-  try:
-    with open(file, 'w') as f:
-      pass
-  except IOError:
+  dir_name = os.path.dirname(os.path.abspath(file))
+  if not os.path.isdir(dir_name):
+    exit_with_error("directory %s doesn't exist" % dirname)
+  if not os.access(dir_name, os.W_OK):
     exit_with_error("file %s may not be writeable" % file)
+  #try:
+  #  with open(file, 'w') as f:
+  #    pass
+  #except IOError:
+  #  exit_with_error("file %s may not be writeable" % file)
 
 def arguments():
   """Parse command-line arguments"""
