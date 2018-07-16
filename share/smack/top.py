@@ -65,27 +65,52 @@ def inlined_procedures():
     '__SMACK_check_overflow'
   ]
 
-def validate_input_file(file):
-  """Check whether the given input file is valid, returning a reason if not."""
+class FileAction(argparse.Action):
+  def __init__(self, option_strings, dest, **kwargs):
+    super(FileAction, self).__init__(option_strings, dest, **kwargs)
+  def __call__(self, parser, namespace, values, option_string=None):
+    if option_string is None:
+      validate_input_files(values)
+    else:
+      # presumably output files (e.g., .bc, .ll, etc)
+      validate_output_file(values)
+    setattr(namespace, self.dest, values)
 
+def exit_with_error(error):
+  sys.exit('Error: %s.' % error)
+
+def validate_input_files(files):
+  def validate_input_file(file):
+    """Check whether the given input file is valid, returning a reason if not."""
+
+    file_extension = os.path.splitext(file)[1][1:]
+    if not os.path.isfile(file):
+      exit_with_error("Cannot find file %s" % file)
+
+    if not os.access(file, os.R_OK):
+      exit_with_error("Cannot read file %s" % file)
+
+    elif not file_extension in frontends():
+      exit_with_error("Unexpected source file extension '%s'" % file_extension)
+  map(validate_input_file, files)
+
+def validate_output_file(file):
   file_extension = os.path.splitext(file)[1][1:]
-  if not os.path.isfile(file):
-    return ("Cannot find file %s." % file)
 
-  elif not file_extension in frontends():
-    return ("Unexpected source file extension '%s'." % file_extension)
-
-  else:
-    return None
+  try:
+    f = open(file, 'w')
+  except OSError:
+    exit_with_error("file %s may not be writeable" % file)
+  finally:
+    f.close()
 
 def arguments():
   """Parse command-line arguments"""
 
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('input_files', metavar='input-files', nargs='+',
-    type = lambda x: (lambda r: x if r is None else parser.error(r))(validate_input_file(x)),
-    help = 'source file to be translated/verified')
+  parser.add_argument('input_files', metavar='input-files', nargs='+', action=FileAction,
+    type = str, help = 'source file to be translated/verified')
 
   parser.add_argument('--version', action='version',
     version='SMACK version ' + VERSION)
@@ -117,7 +142,7 @@ def arguments():
     choices=frontends().keys(), default=None,
     help='Treat input files as having type LANG.')
 
-  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
+  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None, action=FileAction,
     type=str, help='save initial LLVM bitcode to FILE')
 
   frontend_group.add_argument('--linked-bc-file', metavar='FILE', default=None,
@@ -129,7 +154,7 @@ def arguments():
   frontend_group.add_argument('--replay-exe-file', metavar='FILE', default='replay-exe',
     type=str, help=argparse.SUPPRESS)
 
-  frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None,
+  frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None, action=FileAction,
     type=str, help='save final LLVM IR to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
@@ -138,7 +163,7 @@ def arguments():
 
   translate_group = parser.add_argument_group('translation options')
 
-  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
+  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None, action=FileAction,
     type=str, help='save (intermediate) Boogie code to FILE')
 
   translate_group.add_argument('--no-memory-splitting', action="store_true", default=False,
