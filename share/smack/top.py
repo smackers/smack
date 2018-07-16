@@ -98,11 +98,10 @@ def validate_output_file(file):
   file_extension = os.path.splitext(file)[1][1:]
 
   try:
-    f = open(file, 'w')
-  except OSError:
+    with open(file, 'w') as f:
+      pass
+  except IOError:
     exit_with_error("file %s may not be writeable" % file)
-  finally:
-    f.close()
 
 def arguments():
   """Parse command-line arguments"""
