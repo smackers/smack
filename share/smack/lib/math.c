@@ -117,10 +117,12 @@ float modff(float x, float *iPart) {
 
 float copysignf(float x, float y) {
   if (__signbitf(x) != __signbitf(y)) {
-    return -x;
-  } else {
-    return x;
+    fi u;
+    u.f = x;
+    u.i ^= 0x80000000;
+    x = u.f;
   }
+  return x;
 }
 
 float nanf(const char *c) {
@@ -158,9 +160,9 @@ int __isnanf(float x) {
 }
 
 int __signbitf(float x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvfloat.bool(dtf($rmode, @)) then $1 else $0;", ret, x);
-  return ret;
+  fi u;
+  u.f = x;
+  return u.i & 0x80000000;
 }
 
 int __fpclassifyf(float x) {
@@ -293,10 +295,12 @@ double modf(double x, double *iPart) {
 
 double copysign(double x, double y) {
   if (__signbit(x) != __signbit(y)) {
-    return -x;
-  } else {
-    return x;
+    di u;
+    u.d = x;
+    u.i.highOrderBits ^= 0x80000000;
+    x = u.d;
   }
+  return x;
 }
 
 double nan(const char *x) {
@@ -334,9 +338,9 @@ int __isnan(double x) {
 }
 
 int __signbit(double x) {
-  int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnegative.bvdouble.bool(@) then $1 else $0;", ret, x);
-  return ret;
+  di u;
+  u.d = x;
+  return u.i.highOrderBits & 0x80000000;
 }
 
 int __fpclassify(double x) {

@@ -17,6 +17,32 @@
 #define fpclassify(x) (sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
 #define isfinite(x) (sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
 
+typedef union
+{
+  float f;
+  int i;
+} fi;
+
+typedef union
+{
+  double d;
+  struct
+  {
+    int lowOrderBits;
+    int highOrderBits;
+  } i;
+} di;
+
+#define FLOAT_TO_INT(f, i) \
+  fi u; \
+  u.f = f; \
+  i = u.i;
+
+#define DOUBLE_HIGH_TO_INT(d, i) \
+  di u; \
+  u.d = d; \
+  i = u.i.highOrderBits;
+
 float fabsf(float x);
 float fdimf(float x, float y);
 float roundf(float x);
