@@ -10,17 +10,21 @@
 #define FP_SUBNORMAL 3
 #define FP_NORMAL 4
 
-#define isnormal(x) (sizeof(x) == sizeof(double) ? __isnormal(x) : __isnormalf(x))
-#define isinf(x) (sizeof(x) == sizeof(double) ? __isinf(x) : __isinff(x))
-#define isnan(x) (sizeof(x) == sizeof(double) ? __isnan(x) : __isnanf(x))
-#define signbit(x) (sizeof(x) == sizeof(double) ? __signbit(x) : __signbitf(x))
-#define fpclassify(x) (sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
-#define isfinite(x) (sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
+#define isnormal(x) (sizeof(x) == sizeof(long double) ? __isnormall(x) : sizeof(x) == sizeof(double) ? __isnormal(x) : __isnormalf(x))
+#define isinf(x) (sizeof(x) == sizeof(long double) ? __isinfl(x) : sizeof(x) == sizeof(double) ? __isinf(x) : __isinff(x))
+#define isnan(x) (sizeof(x) == sizeof(long double) ? __isnanl(x) : sizeof(x) == sizeof(double) ? __isnan(x) : __isnanf(x))
+#define signbit(x) (sizeof(x) == sizeof(long double) ? __signbitl(x) : sizeof(x) == sizeof(double) ? __signbit(x) : __signbitf(x))
+#define fpclassify(x) (sizeof(x) == sizeof(long double) ? __fpclassifyl(x) : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
+#define isfinite(x) (sizeof(x) == sizeof(long double) ? __isfinitel(x) : sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
 
 typedef union
 {
   float f;
-  int i;
+  struct
+  {
+    int sigAndExp: 31;
+    int sign: 1;
+  } i;
 } fi;
 
 typedef union
@@ -28,20 +32,23 @@ typedef union
   double d;
   struct
   {
-    int lowOrderBits;
-    int highOrderBits;
+    int sigAndExpLower: 32;
+    int sigAndExpUpper: 31;
+    int sign: 1;
   } i;
 } di;
 
-#define FLOAT_TO_INT(f, i) \
-  fi u; \
-  u.f = f; \
-  i = u.i;
-
-#define DOUBLE_HIGH_TO_INT(d, i) \
-  di u; \
-  u.d = d; \
-  i = u.i.highOrderBits;
+typedef union
+{
+  long double l;
+  struct
+  {
+    int sigAndExpLower: 32;
+    int sigAndExpMiddle: 32;
+    int sigAndExpUpper: 15;
+    int sign: 1;
+  } i;
+} li;
 
 float fabsf(float x);
 float fdimf(float x, float y);
@@ -98,5 +105,33 @@ int __isnegative(double x);
 int __signbit(double x);
 int __fpclassify(double x);
 int __finite(double x);
+
+long double fabsl(long double x);
+long double fdiml(long double x, long double y);
+long double roundl(long double x);
+long lroundl(long double x);
+long double rintl(long double x);
+long double nearbyintl(long double x);
+long lrintl(long double x);
+long double floorl(long double x);
+long double ceill(long double x);
+long double truncl(long double x);
+long double sqrtl(long double x);
+long double remainderl(long double x, long double y);
+long double fminl(long double x, long double y);
+long double fmaxl(long double x, long double y);
+long double fmodl(long double x, long double y);
+long double modfl(long double x, long double* y);
+long double copysignl(long double x, long double y);
+long double nanl(const char* x);
+int __isnormall(long double x);
+int __issubnormall(long double x);
+int __iszerol(long double x);
+int __isinfl(long double x);
+int __isnanl(long double x);
+int __isnegativel(long double x);
+int __signbitl(long double x);
+int __fpclassifyl(long double x);
+int __finitel(long double x);
 
 #endif

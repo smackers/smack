@@ -815,9 +815,11 @@ void __SMACK_decls(void) {
   D("function {:inline} $fone.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {!$fueq.bvhalf.bool(f1,f2)}");
   D("function {:inline} $fone.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {!$fueq.bvfloat.bool(f1,f2)}");
   D("function {:inline} $fone.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {!$fueq.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $fone.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {!$fueq.bvlongdouble.bool(f1,f2)}");
   D("function {:inline} $ford.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {!$funo.bvhalf.bool(f1,f2)}");
   D("function {:inline} $ford.bvfloat.bool(f1:bvfloat, f2:bvfloat) returns (bool) {!$funo.bvfloat.bool(f1,f2)}");
   D("function {:inline} $ford.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {!$funo.bvdouble.bool(f1,f2)}");
+  D("function {:inline} $ford.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {!$funo.bvlongdouble.bool(f1,f2)}");
   D("function {:inline} $fueq.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$foeq.bvhalf.bool(f1,f2)}");
   D("function {:inline} $fugt.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$fogt.bvhalf.bool(f1,f2)}");
   D("function {:inline} $fuge.bvhalf.bool(f1:bvhalf, f2:bvhalf) returns (bool) {$isnan.bvhalf.bool(f1)||$isnan.bvhalf.bool(f2)||$foge.bvhalf.bool(f1,f2)}");
@@ -839,6 +841,13 @@ void __SMACK_decls(void) {
   D("function {:inline} $fule.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fole.bvdouble.bool(f1,f2)}");
   D("function {:inline} $fune.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)||$fone.bvdouble.bool(f1,f2)}");
   D("function {:inline} $funo.bvdouble.bool(f1:bvdouble, f2:bvdouble) returns (bool) {$isnan.bvdouble.bool(f1)||$isnan.bvdouble.bool(f2)}");
+  D("function {:inline} $fueq.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)||$foeq.bvlongdouble.bool(f1,f2)}");
+  D("function {:inline} $fugt.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)||$fogt.bvlongdouble.bool(f1,f2)}");
+  D("function {:inline} $fuge.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)||$foge.bvlongdouble.bool(f1,f2)}");
+  D("function {:inline} $fult.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)||$folt.bvlongdouble.bool(f1,f2)}");
+  D("function {:inline} $fule.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)||$fole.bvlongdouble.bool(f1,f2)}");
+  D("function {:inline} $fune.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)||$fone.bvlongdouble.bool(f1,f2)}");
+  D("function {:inline} $funo.bvlongdouble.bool(f1:bvlongdouble, f2:bvlongdouble) returns (bool) {$isnan.bvlongdouble.bool(f1)||$isnan.bvlongdouble.bool(f2)}");
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ffalse, {false})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ftrue, {true})
 
@@ -904,6 +913,30 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv16,$fp2ui,(_ fp.to_ubv 16));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv8,$fp2ui,(_ fp.to_ubv 8));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv1,$fp2ui,(_ fp.to_ubv 1));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv128,$fp2si,(_ fp.to_sbv 128));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv96,$fp2si,(_ fp.to_sbv 96));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv88,$fp2si,(_ fp.to_sbv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv64,$fp2si,(_ fp.to_sbv 64));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv56,$fp2si,(_ fp.to_sbv 56));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv48,$fp2si,(_ fp.to_sbv 48));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv40,$fp2si,(_ fp.to_sbv 40));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv32,$fp2si,(_ fp.to_sbv 32));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv24,$fp2si,(_ fp.to_sbv 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv16,$fp2si,(_ fp.to_sbv 16));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv8,$fp2si,(_ fp.to_sbv 8));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv1,$fp2si,(_ fp.to_sbv 1));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv128,$fp2ui,(_ fp.to_ubv 128));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv96,$fp2ui,(_ fp.to_ubv 96));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv88,$fp2ui,(_ fp.to_ubv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv64,$fp2ui,(_ fp.to_ubv 64));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv56,$fp2ui,(_ fp.to_ubv 56));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv48,$fp2ui,(_ fp.to_ubv 48));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv40,$fp2ui,(_ fp.to_ubv 40));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv32,$fp2ui,(_ fp.to_ubv 32));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv24,$fp2ui,(_ fp.to_ubv 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv16,$fp2ui,(_ fp.to_ubv 16));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv8,$fp2ui,(_ fp.to_ubv 8));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv1,$fp2ui,(_ fp.to_ubv 1));
   // Warning: do we need bv2int cast here?
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i128,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i96,$fp2si);
@@ -953,6 +986,30 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i16,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i8,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i1,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i128,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i96,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i88,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i64,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i56,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i48,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i40,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i32,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i24,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i16,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i8,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i1,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i128,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i96,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i64,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i56,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i48,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i40,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i32,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i24,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i16,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i8,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i1,$fp2ui);
   // Warning: undefined behaviors can occur
   // https://llvm.org/docs/LangRef.html#uitofp-to-instruction
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
@@ -1003,6 +1060,30 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv40, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv32, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv24, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvlongdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv40, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv32, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv24, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv16, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv8, bvlongdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv1, bvlongdouble, $si2fp,(_ to_fp 11 53));
   // Warning: integer-encoding fixes needed here
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvfloat, $ui2fp);
@@ -1052,13 +1133,39 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i16, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i8, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i1, bvdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i40, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i32, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i24, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i16, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i8, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i1, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i40, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i32, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i24, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i16, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i8, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i1, bvlongdouble, $si2fp);
 
   #if defined(__LP64__) || defined(_LP64) || defined(_WIN64)
     D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvfloat(rmode, bvfloat) returns (bv64);");
     D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvdouble(rmode, bvdouble) returns (bv64);");
+    D("function {:builtin \"(_ fp.to_sbv 64)\"} $lround.bvlongdouble(rmode, bvlongdouble) returns (bv64);");
   #else
     D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvfloat(rmode, bvfloat) returns (bv32);");
     D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvdouble(rmode, bvdouble) returns (bv32);");
+    D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvlongdouble(rmode, bvlongdouble) returns (bv32);");
   #endif
 
 #endif
@@ -1095,28 +1202,36 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,bvhalf,bv16,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bvfloat,bv32,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bvdouble,bv64,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvlongdouble,bv80,$bitcast);
   DECLARE(BUILTIN_CONVERSION,bv16,bvhalf,$bitcast,(_ to_fp 5 11));
   DECLARE(BUILTIN_CONVERSION,bv32,bvfloat,$bitcast,(_ to_fp 8 24));
   DECLARE(BUILTIN_CONVERSION,bv64,bvdouble,$bitcast,(_ to_fp 11 53));
+  DECLARE(BUILTIN_CONVERSION,bv80,bvlongdouble,$bitcast,(_ to_fp 15 65));
   DECLARE(UNINTERPRETED_CONVERSION,bvhalf,i16,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bvfloat,i32,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bvdouble,i64,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bvlongdouble,i80,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i16,bvhalf,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i32,bvfloat,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i64,bvdouble,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i80,bvlongdouble,$bitcast);
   D("axiom (forall f: bvhalf :: $bitcast.bv16.bvhalf($bitcast.bvhalf.bv16(f)) == f);");
   D("axiom (forall f: bvfloat :: $bitcast.bv32.bvfloat($bitcast.bvfloat.bv32(f)) == f);");
   D("axiom (forall f: bvdouble :: $bitcast.bv64.bvdouble($bitcast.bvdouble.bv64(f)) == f);");
+  D("axiom (forall f: bvlongdouble :: $bitcast.bv80.bvlongdouble($bitcast.bvlongdouble.bv80(f)) == f);");
   //D("axiom (forall b: bv16 :: b[15:10] == 31bv5 && b[10:0] != 0bv10 ==> $bitcast.bvhalf.bv16($bitcast.bv16.bvhalf(b)) == b);");
   //D("axiom (forall b: bv32 :: b[31:23] == 255bv8 && b[23:0] != 0bv23 ==> $bitcast.bvfloat.bv32($bitcast.bv32.bvfloat(b)) == b);");
   //D("axiom (forall b: bv64 :: b[63:52] == 2047bv11 && b[52:0] != 0bv52 ==> $bitcast.bvdouble.bv64($bitcast.bv64.bvdouble(b)) == b);");
+  //D("axiom (forall b: bv80 :: b[79:64] == 32768bv15 && b[64:0] != 0bv64 ==> $bitcast.bvlongdouble.bv80($bitcast.bv80.bvlongdouble(b)) == b);");
   // TODO: add more constraints
 
   D("axiom (forall f: bvfloat, rm1: rmode, rm2: rmode :: dtf(rm1, ftd(rm2, f)) == f);");
+  D("axiom (forall f: bvlongdouble, rm1: rmode, rm2: rmode :: dtl(rm1, ltd(rm2, f)) == f);");
 
   D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
   D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
   D("axiom (forall f: bvdouble, i: i64 :: $bitcast.bvdouble.i64(f) == i <==> $bitcast.i64.bvdouble(i) == f);");
+  D("axiom (forall f: bvlongdouble, i: i80 :: $bitcast.bvlongdouble.i80(f) == i <==> $bitcast.i80.bvlongdouble(i) == f);");
 
   D("function {:inline} $load.bvhalf(M: [ref] bvhalf, p: ref) returns (bvhalf) { M[p] }");
   D("function {:inline} $store.bvhalf(M: [ref] bvhalf, p: ref, v: bvhalf) returns ([ref] bvhalf) { M[p := v] }");
@@ -1124,6 +1239,8 @@ void __SMACK_decls(void) {
   D("function {:inline} $store.bvfloat(M: [ref] bvfloat, p: ref, v: bvfloat) returns ([ref] bvfloat) { M[p := v] }");
   D("function {:inline} $load.bvdouble(M: [ref] bvdouble, p: ref) returns (bvdouble) { M[p] }");
   D("function {:inline} $store.bvdouble(M: [ref] bvdouble, p: ref, v: bvdouble) returns ([ref] bvdouble) { M[p := v] }");
+  D("function {:inline} $load.bvlongdouble(M: [ref] bvlongdouble, p: ref) returns (bvlongdouble) { M[p] }");
+  D("function {:inline} $store.bvlongdouble(M: [ref] bvlongdouble, p: ref, v: bvlongdouble) returns ([ref] bvlongdouble) { M[p := v] }");
 
   D("function {:inline} $store.bytes.bvhalf(M:[ref]bv8, p:ref, v:bvhalf) returns ([ref]bv8) {"
     "$store.bytes.bv16(M, p, $bitcast.bvhalf.bv16(v))}");
@@ -1131,12 +1248,16 @@ void __SMACK_decls(void) {
     "$store.bytes.bv32(M, p, $bitcast.bvfloat.bv32(v))}");
   D("function {:inline} $store.bytes.bvdouble(M:[ref]bv8, p:ref, v:bvdouble) returns ([ref]bv8) {"
     "$store.bytes.bv64(M, p, $bitcast.bvdouble.bv64(v))}");
+  D("function {:inline} $store.bytes.bvlongdouble(M:[ref]bv8, p:ref, v:bvlongdouble) returns ([ref]bv8) {"
+    "$store.bytes.bv80(M, p, $bitcast.bvlongdouble.bv80(v))}");
   D("function {:inline} $store.unsafe.bvhalf(M:[ref]i8, p:ref, v:bvhalf) returns ([ref]i8) {"
     "$store.i16(M, p, $bitcast.bvhalf.i16(v))}");
   D("function {:inline} $store.unsafe.bvfloat(M:[ref]i8, p:ref, v:bvfloat) returns ([ref]i8) {"
     "$store.i32(M, p, $bitcast.bvfloat.i32(v))}");
   D("function {:inline} $store.unsafe.bvdouble(M:[ref]i8, p:ref, v:bvdouble) returns ([ref]i8) {"
     "$store.i64(M, p, $bitcast.bvdouble.i64(v))}");
+  D("function {:inline} $store.unsafe.bvlongdouble(M:[ref]i8, p:ref, v:bvlongdouble) returns ([ref]i8) {"
+    "$store.i80(M, p, $bitcast.bvlongdouble.i80(v))}");
 
   D("function {:inline} $load.bytes.bvhalf(M: [ref] bv8, p: ref) returns (bvhalf) {"
     "$bitcast.bv16.bvhalf($load.bytes.bv16(M, p))}");
@@ -1144,12 +1265,16 @@ void __SMACK_decls(void) {
     "$bitcast.bv32.bvfloat($load.bytes.bv32(M, p))}");
   D("function {:inline} $load.bytes.bvdouble(M: [ref] bv8, p: ref) returns (bvdouble) {"
     "$bitcast.bv64.bvdouble($load.bytes.bv64(M, p))}");
+  D("function {:inline} $load.bytes.bvlongdouble(M: [ref] bv8, p: ref) returns (bvlongdouble) {"
+    "$bitcast.bv80.bvlongdouble($load.bytes.bv80(M, p))}");
   D("function {:inline} $load.unsafe.bvhalf(M: [ref] i8, p: ref) returns (bvhalf) {"
     "$bitcast.i16.bvhalf($load.i16(M, p))}");
   D("function {:inline} $load.unsafe.bvfloat(M: [ref] i8, p: ref) returns (bvfloat) {"
     "$bitcast.i32.bvfloat($load.i32(M, p))}");
   D("function {:inline} $load.unsafe.bvdouble(M: [ref] i8, p: ref) returns (bvdouble) {"
     "$bitcast.i64.bvdouble($load.i64(M, p))}");
+  D("function {:inline} $load.unsafe.bvlongdouble(M: [ref] i8, p: ref) returns (bvlongdouble) {"
+    "$bitcast.i80.bvlongdouble($load.i80(M, p))}");
   #endif
 
   // Memory debugging symbols
