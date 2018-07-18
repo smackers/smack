@@ -106,8 +106,7 @@ float modff(float x, float *iPart) {
     fPart = 0.0f;
   } else {
     *iPart = truncf(x);
-    fPart = __VERIFIER_nondet_double();
-    __SMACK_code("@ := ftd($rmode, $fsub.bvdouble($rmode, dtf($rmode, @), dtf($rmode, @)));", fPart, x, *iPart);
+    __SMACK_code("@ := ftd($rmode, $fsub.bvfloat($rmode, dtf($rmode, @), dtf($rmode, @)));", fPart, x, *iPart);
   }
   if (__iszerof(fPart)) {
     fPart = __signbitf(x) ? -0.0f : 0.0f;
@@ -284,7 +283,6 @@ double modf(double x, double *iPart) {
     fPart = 0.0;
   } else {
     *iPart = trunc(x);
-    fPart = __VERIFIER_nondet_double();
     __SMACK_code("@ := $fsub.bvdouble($rmode, @, @);", fPart, x, *iPart);
   }
   if (__iszero(fPart)) {
@@ -462,8 +460,7 @@ long double modfl(long double x, long double *iPart) {
     fPart = 0.0l;
   } else {
     *iPart = truncl(x);
-    fPart = __VERIFIER_nondet_long_double();
-    __SMACK_code("@ := $fsub.bvdouble($rmode, @, @);", fPart, x, *iPart);
+    __SMACK_code("@ := $fsub.bvlongdouble($rmode, @, @);", fPart, x, *iPart);
   }
   if (__iszerol(fPart)) {
     fPart = __signbitl(x) ? -0.0l : 0.0l;
