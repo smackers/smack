@@ -162,7 +162,7 @@ int __isnanf(float x) {
 int __signbitf(float x) {
   fi u;
   u.f = x;
-  return u.i.sign ^ 1;
+  return u.i.sign;
 }
 
 int __fpclassifyf(float x) {
@@ -340,7 +340,7 @@ int __isnan(double x) {
 int __signbit(double x) {
   di u;
   u.d = x;
-  return u.i.sign ^ 1;
+  return u.i.sign;
 }
 
 int __fpclassify(double x) {
@@ -518,7 +518,7 @@ int __isnanl(long double x) {
 int __signbitl(long double x) {
   li u;
   u.l = x;
-  return u.i.sign ^ 1;
+  return u.i.sign;
 }
 
 int __fpclassifyl(long double x) {
