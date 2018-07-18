@@ -17,7 +17,8 @@
 #define DEC_48  40
 #define DEC_56  48
 #define DEC_64  56
-#define DEC_88  64
+#define DEC_80  64
+#define DEC_88  80
 #define DEC_96  88
 #define DEC_128 96
 
@@ -30,7 +31,8 @@
 #define INC_40  48
 #define INC_48  56
 #define INC_56  64
-#define INC_64  88
+#define INC_64  80
+#define INC_80  88
 #define INC_88  96
 #define INC_96  128
 #define INC_128 0
