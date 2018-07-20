@@ -119,7 +119,7 @@ float copysignf(float x, float y) {
   if (__signbitf(x) != __signbitf(y)) {
     fi u;
     u.f = x;
-    u.i ^= 0x80000000;
+    u.i.sign ^= 1;
     x = u.f;
   }
   return x;
@@ -162,7 +162,7 @@ int __isnanf(float x) {
 int __signbitf(float x) {
   fi u;
   u.f = x;
-  return u.i & 0x80000000;
+  return u.i.sign;
 }
 
 int __fpclassifyf(float x) {
@@ -297,7 +297,7 @@ double copysign(double x, double y) {
   if (__signbit(x) != __signbit(y)) {
     di u;
     u.d = x;
-    u.i.highOrderBits ^= 0x80000000;
+    u.i.sign ^= 1;
     x = u.d;
   }
   return x;
@@ -340,7 +340,7 @@ int __isnan(double x) {
 int __signbit(double x) {
   di u;
   u.d = x;
-  return u.i.highOrderBits & 0x80000000;
+  return u.i.sign;
 }
 
 int __fpclassify(double x) {

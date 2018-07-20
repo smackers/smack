@@ -20,7 +20,11 @@
 typedef union
 {
   float f;
-  int i;
+  struct
+  {
+    int sigAndExp: 31;
+    int sign: 1;
+  } i;
 } fi;
 
 typedef union
@@ -28,20 +32,11 @@ typedef union
   double d;
   struct
   {
-    int lowOrderBits;
-    int highOrderBits;
+    int sigAndExpLower: 32;
+    int sigAndExpUpper: 31;
+    int sign: 1;
   } i;
 } di;
-
-#define FLOAT_TO_INT(f, i) \
-  fi u; \
-  u.f = f; \
-  i = u.i;
-
-#define DOUBLE_HIGH_TO_INT(d, i) \
-  di u; \
-  u.d = d; \
-  i = u.i.highOrderBits;
 
 float fabsf(float x);
 float fdimf(float x, float y);
