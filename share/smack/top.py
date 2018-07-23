@@ -55,6 +55,7 @@ def extra_libs():
   """A dictionary of extra SMACK libraries required by languages."""
   return {
     'FORTRAN' : fortran_build_libs, 
+    'CXX'     : cplusplus_build_libs,
     # coming soon - libraries for OBJC, Rust, Swift, etc.
   }
 
@@ -380,6 +381,21 @@ def fortran_build_libs(args):
 
   for c in map(lambda c: os.path.join(smack_lib(), c), libs):
     bc = fortran_compile_to_bc(c,compile_command,args)
+    bitcodes.append(bc)
+
+  return bitcodes
+
+def cplusplus_build_libs(args):
+  """Generate C++ specific LLVM bitcodes for SMACK libraries."""
+
+  bitcodes = []
+  libs = ['smack.cpp']
+
+  compile_command = default_clang_compile_command(args,True)
+  compile_command[0] = 'clang++'
+
+  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+    bc = compile_to_bc(c,compile_command,args)
     bitcodes.append(bc)
 
   return bitcodes

@@ -257,7 +257,13 @@ void* calloc(size_t num, size_t size) {
   return ret;
 }
 
+#ifdef __cplusplus
 
+void * operator new(size_t size) {
+	    return malloc(size);
+}
+
+#endif
 
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
