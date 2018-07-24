@@ -315,8 +315,13 @@ def frontend(args):
     for input_file in args.input_files:
       lang = languages()[os.path.splitext(input_file)[1][1:]]
       add_libs(lang)
-      bitcodes.append(frontends()[lang](input_file,args))
+      bitcode = frontends()[lang](input_file,args) 
+      if bitcode is not None:
+          bitcodes.append(bitcode)
   
+  if len(bitcodes) == 0: # for specialized single-file frontends
+      return
+
   return link_bc_files(bitcodes,libs,args)
 
 def smack_root():
@@ -400,12 +405,6 @@ def cplusplus_build_libs(args):
 
   return bitcodes
 
-def boogie_frontend(args):
-  """Generate Boogie code by concatenating the input file(s)."""
-  with open(args.bpl_file, 'w') as out:
-    for src in args.input_files:
-      with open(src) as f:
-        out.write(f.read())
 
 def llvm_frontend(input_file, args):
   """Return LLVM IR file. Exists for symmetry with other frontends."""
@@ -467,7 +466,16 @@ def fortran_frontend(input_file, args):
 
   return fortran_compile_to_bc(input_file,compile_command,args)
 
-def json_compilation_database_frontend(args):
+def boogie_frontend(input_file, args):
+  """Pass Boogie code to the verifier."""
+  if len(args.input_files) > 1: 
+      raise RuntimeError("Expected a single Boogie file.")
+
+  with open(args.bpl_file, 'a+') as out:
+    with open(input_file) as f:
+      out.write(f.read())
+
+def json_compilation_database_frontend(input_file, args):
   """Generate Boogie code from a JSON compilation database."""
 
   if len(args.input_files) > 1:
@@ -476,7 +484,7 @@ def json_compilation_database_frontend(args):
   output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
   optimization_flags = re.compile(r"-O[1-9]\b")
 
-  with open(args.input_files[0]) as f:
+  with open(input_file) as f:
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
