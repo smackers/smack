@@ -1,6 +1,6 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
-
+//
 #include <smack.h>
 #include <limits.h>
 #include <stddef.h>
