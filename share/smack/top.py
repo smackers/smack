@@ -299,6 +299,7 @@ def frontend(args):
   """Generate the LLVM bitcode file."""
   bitcodes = []
   libs = []
+  noreturning_frontend = False
   
   def add_libs(lang):
     if lang in extra_libs():
@@ -306,23 +307,29 @@ def frontend(args):
 
   if args.language:
     lang = languages()[args.language]
+    if lang in ['BOOGIE', 'SVCOMP', 'JSON']:
+      noreturning_frontend = True
+
     add_libs(lang)
     frontend = frontends()[lang]
     for input_file in args.input_files:
-      bitcodes.append(frontend(input_file,lang))
+      bitcode = frontend(input_file,args)
+      if bitcode is not None:
+        bitcodes.append(bitcode)
   
   else:
     for input_file in args.input_files:
       lang = languages()[os.path.splitext(input_file)[1][1:]]
+      if lang in ['BOOGIE', 'SVCOMP', 'JSON']:
+        noreturning_frontend = True
+
       add_libs(lang)
       bitcode = frontends()[lang](input_file,args) 
-      if bitcode is not None:
-          bitcodes.append(bitcode)
+      if bitcode is not None: 
+        bitcodes.append(bitcode)
   
-  if len(bitcodes) == 0: # for specialized single-file frontends
-      return
-
-  return link_bc_files(bitcodes,libs,args)
+  if not noreturning_frontend:
+    return link_bc_files(bitcodes,libs,args)
 
 def smack_root():
   return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
