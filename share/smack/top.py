@@ -450,7 +450,7 @@ def d_frontend(input_file, args):
   # Right now, it works, and with these options, smack crashes.
   compile_command = ['ldc2', '-output-ll'] 
   compile_command += map(lambda path: '-I=' + path, smack_headers())
-  args.entry_points = [ep if ep != 'main' else '_Dmain' for ep in args.entry_points]
+  args.entry_points += ['_Dmain']
   return compile_to_bc(input_file,compile_command,args)
 
 def fortran_frontend(input_file, args):
@@ -466,7 +466,7 @@ def fortran_frontend(input_file, args):
   #  builds it's libraries later.
 
   # replace the default entry point with the fortran default 'MAIN_'
-  args.entry_points = [ep if ep != 'main' else 'MAIN_' for ep in args.entry_points]
+  args.entry_points += ['MAIN_']
 
   compile_command = default_clang_compile_command(args)
   compile_command[0] = 'flang'
