@@ -17,36 +17,30 @@
 #define fpclassify(x) (sizeof(x) == sizeof(long double) ? __fpclassifyl(x) : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
 #define isfinite(x) (sizeof(x) == sizeof(long double) ? __isfinitel(x) : sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
 
-typedef union
-{
+typedef union {
   float f;
-  struct
-  {
-    int sigAndExp: 31;
-    int sign: 1;
+  struct {
+    unsigned sigAndExp: 31;
+    unsigned sign: 1;
   } i;
 } fi;
 
-typedef union
-{
+typedef union {
   double d;
-  struct
-  {
-    int sigAndExpLower: 32;
-    int sigAndExpUpper: 31;
-    int sign: 1;
+  struct {
+    unsigned sigAndExpLower: 32;
+    unsigned sigAndExpUpper: 31;
+    unsigned sign: 1;
   } i;
 } di;
 
-typedef union
-{
+typedef union {
   long double l;
-  struct
-  {
-    int sigAndExpLower: 32;
-    int sigAndExpMiddle: 32;
-    int sigAndExpUpper: 15;
-    int sign: 1;
+  struct {
+    unsigned sigAndExpLower: 32;
+    unsigned sigAndExpMiddle: 32;
+    unsigned sigAndExpUpper: 15;
+    unsigned sign: 1;
   } i;
 } li;
 
