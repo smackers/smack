@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 // @expect verified
+// @flag --bit-precise
 
 int main(void) {
   double NaN = 0.0 / 0.0;
