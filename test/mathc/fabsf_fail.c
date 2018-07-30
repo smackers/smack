@@ -2,6 +2,7 @@
 #include <math.h>
 
 // @expect error
+// @flag --bit-precise
 
 int main(void) {
   float NaN = 0.0f / 0.0f;
