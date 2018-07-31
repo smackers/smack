@@ -823,9 +823,17 @@ const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Ty
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (opcode == Instruction::FPTrunc || opcode == Instruction::FPExt
     || opcode == Instruction::SIToFP || opcode == Instruction::UIToFP) {
-    return Expr::fn(opName(fn, {v->getType(), t}), Expr::id(Naming::RMODE_VAR), expr(v));
+    if (SmackOptions::FloatEnabled) {
+      return Expr::fn(opName(fn, {v->getType(), t}), Expr::id(Naming::RMODE_VAR), expr(v));
+    } else {
+      return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
+    }
   } else if (opcode == Instruction::FPToSI || opcode == Instruction::FPToUI) {
-    return Expr::fn(opName(fn, {v->getType(), t}), Expr::lit(RModeKind::RTZ), expr(v));
+    if (SmackOptions::FloatEnabled) {
+      return Expr::fn(opName(fn, {v->getType(), t}), Expr::lit(RModeKind::RTZ), expr(v));
+    } else {
+      return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
+    }
   }
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
@@ -840,8 +848,13 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
-  if (opcode == Instruction::FAdd || opcode == Instruction::FSub || opcode == Instruction::FMul || opcode == Instruction::FDiv) {
-    return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR), expr(lhs), expr(rhs));
+  if (opcode == Instruction::FAdd || opcode == Instruction::FSub
+    || opcode == Instruction::FMul || opcode == Instruction::FDiv) {
+    if (SmackOptions::FloatEnabled) {
+      return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR), expr(lhs), expr(rhs));
+    } else {
+      return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
+    }
   }
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
@@ -1176,7 +1189,9 @@ Decl* SmackRep::getInitFuncs() {
   Block* b = Block::block();
   for (auto name : initFuncs)
     b->addStmt(Stmt::call(name));
-  b->addStmt(Stmt::assign(Expr::id(Naming::RMODE_VAR), Expr::lit(RModeKind::RNE)));
+  if (SmackOptions::FloatEnabled) {
+    b->addStmt(Stmt::assign(Expr::id(Naming::RMODE_VAR), Expr::lit(RModeKind::RNE)));
+  }
   b->addStmt(Stmt::return_());
   proc->getBlocks().push_back(b);
   return proc;
