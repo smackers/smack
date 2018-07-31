@@ -979,9 +979,6 @@ std::list<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
   return expr(v);
-  // (f && f->isVarArg() && isFloat(v))
-  //   ? Expr::fn(opName("$fp2si", {v->getType(), f->getType()}), expr(v))
-  //   : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
@@ -1112,7 +1109,7 @@ std::string SmackRep::getPrelude() {
   s << "\n";
 
   if (SmackOptions::BitPrecise) {
-    // XXX TODO don’t assume 64-bit pointers TODO XXX
+    // XXX TODO don't assume 64-bit pointers TODO XXX
     s << "// Bytewise pointer storage" << "\n";
     s << "function {:inline} $load.bytes.ref(M: [ref] bv8, p: ref) "
       << "returns (ref) { $i2p.bv64.ref($load.bytes.bv64(M, p)) }"
