@@ -1270,7 +1270,6 @@ void __SMACK_decls(void) {
     "$bitcast.i64.bvdouble($load.i64(M, p))}");
   D("function {:inline} $load.unsafe.bvlongdouble(M: [ref] i8, p: ref) returns (bvlongdouble) {"
     "$bitcast.i80.bvlongdouble($load.i80(M, p))}");
-  #endif
 
 #else
   D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
