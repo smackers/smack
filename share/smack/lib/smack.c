@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * The SMACK "prelude" definitions
@@ -282,9 +283,6 @@ void __SMACK_dummy(int v) {
 #define UNINTERPRETED_BINARY_OP(type,name) \
   function name.type(i1: type, i2: type) returns (type);
 
-#define UNINTERPRETED_RMODE_BINARY_OP(type,name) \
-  function name.type(rm: rmode, i1: type, i2: type) returns (type);
-
 #define UNINTERPRETED_UNARY_PRED(type,name) \
   function name.type(i: type) returns (i1);
 
@@ -388,7 +386,9 @@ void __SMACK_dummy(int v) {
 
 void __SMACK_decls(void) {
 
+#if FLOAT_ENABLED
   D("var $rmode: rmode;");
+#endif
 
   DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
@@ -623,166 +623,10 @@ void __SMACK_decls(void) {
   DECLARE_INT_ZEXTS
   DECLARE_INT_SEXTS
 
-  //Non bit-precise modeling of floating-points
-
-  D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
-  DECLARE(UNINTERPRETED_RMODE_BINARY_OP,float,$fadd);
-  DECLARE(UNINTERPRETED_RMODE_BINARY_OP,float,$fsub);
-  DECLARE(UNINTERPRETED_RMODE_BINARY_OP,float,$fmul);
-  DECLARE(UNINTERPRETED_RMODE_BINARY_OP,float,$fdiv);
-  DECLARE(UNINTERPRETED_BINARY_OP,float,$frem);
-  DECLARE(INLINE_BINARY_COMP,float,$ffalse,{false});
-  DECLARE(INLINE_BINARY_COMP,float,$ftrue,{true});
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$foeq);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$foge);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fogt);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fole);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$folt);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fone);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$ford);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fueq);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fuge);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fugt);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fule);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fult);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fune);
-  DECLARE(UNINTERPRETED_BINARY_COMP,float,$funo);
-
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i128,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i128,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i96,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i96,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i88,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i88,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i64,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i64,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i56,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i56,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i48,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i48,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i40,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i40,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i32,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i32,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i24,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i24,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i16,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i16,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i8,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i8,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i1,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,i1,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i128,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i128,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i96,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i96,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i88,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i88,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i64,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i64,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i56,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i56,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i48,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i48,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i40,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i40,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i32,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i32,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i24,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i24,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i16,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i16,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i8,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i8,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i1,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,i1,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv128,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv128,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv96,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv96,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv88,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv88,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv64,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv64,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv56,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv56,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv48,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv48,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv40,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv40,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv32,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv32,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv24,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv24,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv16,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv16,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv8,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv8,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv1,$fp2si);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,bv1,$fp2ui);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv128,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv128,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv96,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv96,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv88,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv88,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv64,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv64,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv56,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv56,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv48,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv48,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv40,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv40,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv32,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv32,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv24,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv24,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv16,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv16,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv8,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv8,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv1,float,$si2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bv1,float,$ui2fp);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,float,$fptrunc);
-  DECLARE(UNINTERPRETED_RMODE_CONVERSION,float,float,$fpext);
-  DECLARE(UNINTERPRETED_CONVERSION,float,i1,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,bv1,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,i1,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,bv1,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,i16,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,bv16,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,i16,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,bv16,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,i32,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,bv32,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,i32,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,bv32,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,i64,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,i64,float,$bitcast);
-  DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$bitcast);
-
-#ifndef NO_FORALL
-  D("axiom (forall f1, f2: float :: $foeq.float.bool(f1,f2) <==> !$fune.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $fone.float.bool(f1,f2) <==> !$fueq.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $fogt.float.bool(f1,f2) <==> !$fule.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $foge.float.bool(f1,f2) <==> !$fult.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $folt.float.bool(f1,f2) <==> !$fuge.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $fole.float.bool(f1,f2) <==> !$fugt.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $ford.float.bool(f1,f2) <==> !$funo.float.bool(f1,f2));");
-  D("axiom (forall f: float, i: i8 :: $bitcast.float.i8(f) == i <==> $bitcast.i8.float(i) == f);");
-  // TODO: add proper axiom for float/bv8 conversions
-#endif
-
 #if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
 
-  // FP arithmetic
+  // Floating-point arithmetic
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_UNARY_OP, $sqrt, fp.sqrt)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_UNARY_OP, $round, fp.roundToIntegral)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_RMODE_BINARY_OP, $fadd, fp.add)
@@ -796,7 +640,7 @@ void __SMACK_decls(void) {
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $min, fp.min)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_OP, $max, fp.max)
 
-  // FP value predicates
+  // Floating-point value predicates
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnormal, fp.isNormal)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $issubnormal, fp.isSubnormal)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $iszero, fp.isZero)
@@ -805,8 +649,8 @@ void __SMACK_decls(void) {
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $isnegative, fp.isNegative)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_UNARY_PRED, $ispositive, fp.isPositive)
 
-  // FP comparison predicates
-  // I assume fp.eq is exactly ieee compareQuietEqual
+  // Floating-point comparison predicates
+  // We assume fp.eq is exactly IEEE compareQuietEqual
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $foeq, fp.eq)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $fole, fp.leq)
   DECLARE_EACH_FLOAT_TYPE(BUILTIN_BINARY_COMP, $folt, fp.lt)
@@ -1168,6 +1012,164 @@ void __SMACK_decls(void) {
     D("function {:builtin \"(_ fp.to_sbv 32)\"} $lround.bvlongdouble(rmode, bvlongdouble) returns (bv32);");
   #endif
 
+#else
+  // Non-bit-precise modeling of floating-points
+
+  D("function $fp(ipart:int, fpart:int, epart:int) returns (float);");
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fadd);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fsub);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fmul);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$fdiv);
+  DECLARE(UNINTERPRETED_BINARY_OP,float,$frem);
+  DECLARE(INLINE_BINARY_COMP,float,$ffalse,{false});
+  DECLARE(INLINE_BINARY_COMP,float,$ftrue,{true});
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$foeq);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$foge);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fogt);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fole);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$folt);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fone);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$ford);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fueq);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fuge);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fugt);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fule);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fult);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$fune);
+  DECLARE(UNINTERPRETED_BINARY_COMP,float,$funo);
+
+  DECLARE(UNINTERPRETED_CONVERSION,float,i128,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i128,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i96,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i96,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i88,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i64,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i64,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i56,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i56,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i48,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i48,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i40,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i40,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i32,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i32,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i24,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i24,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i16,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i16,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i1,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i1,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,i128,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i128,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i96,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i96,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i88,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i88,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i56,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i56,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i48,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i48,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i40,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i40,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i24,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i24,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i1,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i1,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv128,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv128,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv96,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv96,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv88,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv56,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv56,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv48,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv48,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv40,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv40,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv32,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv32,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv24,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv24,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv16,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv16,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv1,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv1,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,bv128,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv128,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv96,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv96,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv88,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv88,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv56,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv56,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv48,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv48,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv40,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv40,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv32,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv32,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv24,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv24,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv16,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv16,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv1,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv1,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,float,float,$fptrunc);
+  DECLARE(UNINTERPRETED_CONVERSION,float,float,$fpext);
+
+  DECLARE(UNINTERPRETED_CONVERSION,float,i1,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv1,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i1,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv1,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i8,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv8,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i8,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv8,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i16,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv16,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i16,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv16,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i32,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv32,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i32,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv32,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i64,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i64,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$bitcast);
+
+#ifndef NO_FORALL
+  D("axiom (forall f1, f2: float :: $foeq.float.bool(f1,f2) <==> !$fune.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $fone.float.bool(f1,f2) <==> !$fueq.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $fogt.float.bool(f1,f2) <==> !$fule.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $foge.float.bool(f1,f2) <==> !$fult.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $folt.float.bool(f1,f2) <==> !$fuge.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $fole.float.bool(f1,f2) <==> !$fugt.float.bool(f1,f2));");
+  D("axiom (forall f1, f2: float :: $ford.float.bool(f1,f2) <==> !$funo.float.bool(f1,f2));");
+  D("axiom (forall f: float, i: i8 :: $bitcast.float.i8(f) == i <==> $bitcast.i8.float(i) == f);");
+  // TODO: add proper axiom for float/bv8 conversions
+#endif
+
 #endif
 
   // Memory Model
@@ -1191,14 +1193,7 @@ void __SMACK_decls(void) {
   D("function {:inline} $load.ref(M: [ref] ref, p: ref) returns (ref) { M[p] }");
   D("function {:inline} $store.ref(M: [ref] ref, p: ref, v: ref) returns ([ref] ref) { M[p := v] }");
 
-  D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
-  D("function {:inline} $load.unsafe.float(M: [ref] i8, p: ref) returns (float) { $bitcast.i8.float(M[p]) }");
-  D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
-  D("function {:inline} $store.unsafe.float(M: [ref] i8, p: ref, v: float) returns ([ref] i8) { M[p := $bitcast.float.i8(v)] }");
-  D("function {:inline} $load.bytes.float(M: [ref] bv8, p: ref) returns (float) { $bitcast.bv8.float(M[p]) }");
-  D("function {:inline} $store.bytes.float(M:[ref]bv8, p:ref, v:float) returns ([ref]bv8) {M[p := $bitcast.float.bv8(v)]}");
-
-  #if FLOAT_ENABLED
+#if FLOAT_ENABLED
   DECLARE(UNINTERPRETED_CONVERSION,bvhalf,bv16,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bvfloat,bv32,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bvdouble,bv64,$bitcast);
@@ -1276,6 +1271,15 @@ void __SMACK_decls(void) {
   D("function {:inline} $load.unsafe.bvlongdouble(M: [ref] i8, p: ref) returns (bvlongdouble) {"
     "$bitcast.i80.bvlongdouble($load.i80(M, p))}");
   #endif
+
+#else
+  D("function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }");
+  D("function {:inline} $load.unsafe.float(M: [ref] i8, p: ref) returns (float) { $bitcast.i8.float(M[p]) }");
+  D("function {:inline} $store.float(M: [ref] float, p: ref, v: float) returns ([ref] float) { M[p := v] }");
+  D("function {:inline} $store.unsafe.float(M: [ref] i8, p: ref, v: float) returns ([ref] i8) { M[p := $bitcast.float.i8(v)] }");
+  D("function {:inline} $load.bytes.float(M: [ref] bv8, p: ref) returns (float) { $bitcast.bv8.float(M[p]) }");
+  D("function {:inline} $store.bytes.float(M:[ref]bv8, p:ref, v:float) returns ([ref]bv8) {M[p := $bitcast.float.bv8(v)]}");
+#endif
 
   // Memory debugging symbols
   D("type $mop;");
