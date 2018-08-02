@@ -1,7 +1,8 @@
-// Tests pthread_equal()
-// @expect verified
 #include <pthread.h>
 #include <smack.h>
+
+// Tests pthread_equal()
+// @expect verified
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_t aggregator;
@@ -16,9 +17,10 @@ void *t1(void *arg) {
     x++;
     pthread_mutex_unlock(&lock);
   }
+  return 0;
 }
 
-int main() {
+int main(void) {
   pthread_t tid1, tid2;
 
   pthread_create(&aggregator, 0, t1, 0);
@@ -32,3 +34,4 @@ int main() {
   pthread_join(tid2, 0);
   assert(x == 4);
 }
+
