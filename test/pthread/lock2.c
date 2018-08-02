@@ -1,9 +1,8 @@
-// Tests PTHREAD_MUTEX_INITIALIZER macro
-
-// @expect verified
-
 #include <pthread.h>
 #include <smack.h>
+
+// Tests PTHREAD_MUTEX_INITIALIZER macro
+// @expect verified
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -13,10 +12,10 @@ void *t1(void *arg) {
   pthread_mutex_lock(&lock);
   x++;
   pthread_mutex_unlock(&lock);
+  return 0;
 }
 
-int main() {
-
+int main(void) {
   pthread_t tid1, tid2;
   assert(lock.lock == UNLOCKED);
   assert(lock.init == INITIALIZED);
@@ -29,4 +28,6 @@ int main() {
   pthread_join(tid1, 0);
   pthread_join(tid2, 0);
   assert(x == 4);
+  return 0;
 }
+

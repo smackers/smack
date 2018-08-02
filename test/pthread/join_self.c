@@ -1,9 +1,8 @@
-// Tests deadlock detection when join on self
-
-// @expect verified
-
 #include <pthread.h>
 #include <smack.h>
+
+// Tests deadlock detection when join on self
+// @expect verified
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -14,16 +13,14 @@ void* t1(void* arg) {
   int err = pthread_join(self, (void*)&ret);
   // Should be an EDEADLK error
   assert(err == 35);
-  if(err != 35)
-    assert(0);
-
   pthread_exit((void*)1);
   return 0;
 }
 
-int main() {
+int main(void) {
   pthread_t tid1 = __VERIFIER_nondet_int();
   int ret;
   pthread_create(&tid1, 0, t1, &tid1);
   return 0;
 }
+
