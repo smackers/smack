@@ -208,19 +208,11 @@ unsigned long long int __VERIFIER_nondet_unsigned_long_long_int(void) {
 
 // Used in SVCCOMP benchmarks
 
-#ifdef __cplusplus
-bool __VERIFIER_nondet_bool(void) {
-  bool x = (bool)__VERIFIER_nondet_int();
-  __VERIFIER_assume(x == 0 || x == 1);
-  return x;
-}
-#else
 _Bool __VERIFIER_nondet_bool(void) {
   _Bool x = (_Bool)__VERIFIER_nondet_int();
   __VERIFIER_assume(x == 0 || x == 1);
   return x;
 }
-#endif
 
 unsigned char __VERIFIER_nondet_uchar(void) {
   unsigned char x = __VERIFIER_nondet_unsigned_char();
@@ -256,14 +248,6 @@ void* calloc(size_t num, size_t size) {
   }
   return ret;
 }
-
-#ifdef __cplusplus
-
-void * operator new(size_t size) {
-	    return malloc(size);
-}
-
-#endif
 
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
