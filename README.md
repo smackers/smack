@@ -19,7 +19,7 @@ optimizations, and analyses. Currently SMACK robustly supports the C language
 (and experimentally, C++ and Objective-C) via the [Clang](http://clang.llvm.org) compiler. 
 We are in the process of adding support for FORTRAN 
 (via [Flang](https://github.com/flang-compiler/flang)), Rust, and Swift. 
-In general, any AoT comipler that targets LLVM can be used with SMACK 
+In general, any Ahead of Time comipler that targets LLVM can be used with SMACK 
 (see the [tutorial](docs/language.md)). Targeting Boogie exploits a canonical
 platform which simplifies the implementation of algorithms for verification,
 model checking, and abstract interpretation. Currently, SMACK leverages the
