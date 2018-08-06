@@ -6,36 +6,6 @@
 // https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
 #define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
 
-#define DEC(x) PRIMITIVE_CAT(DEC_, x)
-#define DEC_0   0
-#define DEC_1   0
-#define DEC_8   1
-#define DEC_16  8
-#define DEC_24  16
-#define DEC_32  24
-#define DEC_40  32
-#define DEC_48  40
-#define DEC_56  48
-#define DEC_64  56
-#define DEC_88  64
-#define DEC_96  88
-#define DEC_128 96
-
-#define INC(x) PRIMITIVE_CAT(INC_, x)
-#define INC_1   8
-#define INC_8   16
-#define INC_16  24
-#define INC_24  32
-#define INC_32  40
-#define INC_40  48
-#define INC_48  56
-#define INC_56  64
-#define INC_64  88
-#define INC_88  96
-#define INC_96  128
-#define INC_128 0
-#define INC_0 0
-
 #define DEC_BYTE(x) PRIMITIVE_CAT(DEC_BYTE_, x)
 #define DEC_BYTE_0 0
 #define DEC_BYTE_8 0
@@ -91,34 +61,7 @@
 #define BITAND_0(y) 0
 #define BITAND_1(y) y
 
-#define REPEAT(count, macro, M, args...) \
-    WHEN(count) \
-    ( \
-        OBSTRUCT(REPEAT_INDIRECT) () \
-        ( \
-            DEC(count), macro, M, args \
-        ) \
-        OBSTRUCT(macro) \
-        ( \
-            count, M, args \
-        ) \
-    )
-#define REPEAT_INDIRECT() REPEAT
-
-#define INT_TYPE(bw) PRIMITIVE_CAT(i, bw)
 #define BV_TYPE(bw) PRIMITIVE_CAT(bv, bw)
-
-#define APPLY_MACRO_ON_BV(bw,M,args...) \
-  D(xstr(M(BV_TYPE(bw),args)));
-
-#define APPLY_MACRO_ON_INT(bw,M,args...) \
-  D(xstr(M(INT_TYPE(bw),args)));
-
-#define DECLARE_EACH_BV_TYPE(M,args...) \
-  EVAL(REPEAT(128,APPLY_MACRO_ON_BV,M,args))
-
-#define DECLARE_EACH_INT_TYPE(M,args...) \
-  EVAL(REPEAT(128,APPLY_MACRO_ON_INT,M,args))
 
 #define COMBINE(count1, count2, direction, macro) \
     WHEN(BITAND(BOOL(count1))(BOOL(count2))) \
@@ -141,38 +84,8 @@
      )
 #define COMBINE_INDIRECT() COMBINE
 
-#define DECLARE_BV_TRUNC(bw1, bw2) \
-  DECLARE(INLINE_CONVERSION,BV_TYPE(bw1),BV_TYPE(bw2),$trunc,{i[bw2:0]});
-
-#define DECLARE_BV_TRUNCS \
-  EVAL(COMBINE(128,96,DEC,DECLARE_BV_TRUNC))
-
-#define DECLARE_INT_TRUNC(bw1, bw2) \
-  DECLARE(INLINE_CONVERSION,INT_TYPE(bw1),INT_TYPE(bw2),$trunc,{i});
-
-#define DECLARE_INT_TRUNCS \
-  EVAL(COMBINE(128,96,DEC,DECLARE_INT_TRUNC))
-
-#define DECLARE_INT_ZEXT(bw1, bw2) \
-  DECLARE(INLINE_CONVERSION,INT_TYPE(bw1),INT_TYPE(bw2),$zext,{i});
-
-#define DECLARE_INT_ZEXTS \
-  EVAL(COMBINE(1,8,INC,DECLARE_INT_ZEXT))
-
-#define DECLARE_INT_SEXT(bw1, bw2) \
-  DECLARE(INLINE_CONVERSION,INT_TYPE(bw1),INT_TYPE(bw2),$sext,{i});
-
-#define DECLARE_INT_SEXTS \
-  EVAL(COMBINE(1,8,INC,DECLARE_INT_SEXT))
-
-#define SAFE_LOAD_OP(type,name,body) \
-  function {:inline} name.type(M: [ref] type, p: ref) returns (type) body
-
 #define UNSAFE_LOAD_OP(type,name,body) \
   function {:inline} name.type(M: [ref] bv8, p: ref) returns (type) body
-
-#define SAFE_STORE_OP(type,name,body) \
-  function {:inline} name.type(M: [ref] type, p: ref, v: type) returns ([ref] type) body
 
 #define UNSAFE_STORE_OP(type,name,body) \
   function {:inline} name.type(M: [ref] bv8, p: ref, v: type) returns ([ref] bv8) body
