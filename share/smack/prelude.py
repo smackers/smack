@@ -42,10 +42,10 @@ def generate_prelude(args):
   bpl = declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvadd", "$add")
   bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsub", "$sub")
   bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvmul", "$mul")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvudiv", "$udiv")
   bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsdiv", "$sdiv")
   bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsmod", "$smod")
   bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsrem", "$srem")
+  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvudiv", "$udiv")
   bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvurem", "$urem")
 
   bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_SELECT, "$min", "$slt")
