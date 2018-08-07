@@ -1,124 +1,129 @@
-UNINTERPRETED_UNARY_OP = "function {0}.{1}(i: {1}) returns ({1});\n"
-UNINTERPRETED_BINARY_OP = "function {0}.{1}(i1: {1}, i2: {1}) returns ({1});\n"
-INLINE_BINARY_OP = "function {{:inline}} {0}.{2}(i1: {2}, i2: {2}) returns ({2}) {1}\n"
-BUILTIN_BINARY_OP =  "function {{:builtin \"{0}\"}} {1}.{2}(i1: {2}, i2: {2}) returns ({2}) ;\n"
-BVBUILTIN_UNARY_OP = "function {{:bvbuiltin \"{0}\"}} {1}.{2}(i: {2}) returns ({2}) ;\n"
-BVBUILTIN_BINARY_OP = "function {{:bvbuiltin \"{0}\"}} {1}.{2}(i1: {2}, i2: {2}) returns ({2}) ;\n"
-INLINE_BINARY_COMP = "function {{:inline}} {0}.{2}.bool(i1: {2}, i2: {2}) returns (bool) {1}"
-BVBUILTIN_BINARY_COMP = "function {{:bvbuiltin \"{0}\"}} {1}.{2}.bool(i1: {2}, i2: {2}) returns (bool) ;"
-INLINE_BINARY_PRED = "%s %s\n" % (INLINE_BINARY_COMP, "function {{:inline}} {0}.{2}(i1: {2}, i2: {2}) returns (i1) {{if {0}.{2}.bool(i1,i2) then 1 else 0}}")
-INLINE_BINARY_BV_PRED = "%s %s\n" % (INLINE_BINARY_COMP, "function {{:inline}} {0}.{2}(i1: {2}, i2: {2}) returns (bv1) {{if {0}.{2}.bool(i1,i2) then 1bv1 else 0bv1}}")
-SAFE_LOAD_OP = "function {{:inline}} $load.{1}(M: [ref] {1}, p: ref) returns ({1}) {0}\n"
-SAFE_STORE_OP = "function {{:inline}} $store.{1}(M: [ref] {1}, p: ref, v: {1}) returns ([ref] {1}) {0}\n"
-INLINE_BVBUILTIN_BINARY_SELECT = "function {{:inline}} {0}.{2}(i1: {2}, i2: {2}) returns ({2}) {{if {1}.{2}.bool(i1,i2) then i1 else i2}}\n"
-INLINE_BVBUILTIN_BINARY_PRED = "%s %s\n" % (BVBUILTIN_BINARY_COMP, "function {{:inline}} {1}.{2}(i1: {2}, i2: {2}) returns (bv1) {{if {1}.{2}.bool(i1,i2) then 1bv1 else 0bv1}}")
-INLINE_CONVERSION = "function {{:inline}} {0}.{2}.{3}(i: {2}) returns ({3}) {1}\n"
-TRUNC_OP = "function {{:inline}} $trunc.{0}.{1}(i: {0}) returns ({1}) {{i}}\n"
-TRUNC_BV_OP = "function {{:inline}} $trunc.{0}.{1}(i: {0}) returns ({1}) {{i[{2}:0]}}\n"
+class Function:
+  def __init__(self, attr, attr_arg, name, arg_types, ret_type, body):
+    self.attr = attr
+    self.attr_arg = attr_arg
+    self.name = name
+    self.arg_types = arg_types
+    self.ret_type = ret_type
+    self.vars = map(lambda i : 'i' + str(i), range(len(arg_types)))
+    self.body = body
+
+  def toStr(self):
+    func_str = 'function '
+    if self.attr is not None:
+      func_str += '{:' + self.attr
+      if self.attr_arg is not None:
+        func_str += ' \"' + self.attr_arg + '\"'
+      func_str += '} '
+    func_str += self.name + '('
+    for i in range(len(self.arg_types)):
+      func_str += 'i' + str(i + 1) + ': ' + self.arg_types[i]
+      if i < len(self.arg_types) - 1:
+        func_str += ', '
+    func_str += ') returns (' + self.ret_type + ')'
+    if self.body is not None:
+      func_str += ' {'+ self.body + '}'
+    else:
+      func_str += ';'
+    func_str += '\n'
+    return func_str
+
+mk_int = lambda bitwidth: 'i' + str(bitwidth)
+mk_bv = lambda bitwidth: 'bv' + str(bitwidth)
+
+UNINTERPRETED_UNARY_OP = lambda bitwidth, name: Function(None, None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth)], mk_int(bitwidth), None)
+UNINTERPRETED_BINARY_OP = lambda bitwidth, name: Function(None, None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], mk_int(bitwidth), None)
+INLINE_BINARY_OP = lambda bitwidth, name, body: Function('inline', None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], mk_int(bitwidth), body)
+BUILTIN_BINARY_OP = lambda bitwidth, builtin_name, name: Function('builtin', builtin_name, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], mk_int(bitwidth), None)
+BVBUILTIN_UNARY_OP = lambda bitwidth, builtin_name, name: Function('bvbuiltin', builtin_name, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth)], mk_bv(bitwidth), None)
+BVBUILTIN_BINARY_OP = lambda bitwidth, builtin_name, name: Function('bvbuiltin', builtin_name, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], mk_bv(bitwidth), None)
+INLINE_BINARY_COMP = lambda bitwidth, name, body: Function('inline', None, '.'.join([name, mk_int(bitwidth), 'bool']), [mk_int(bitwidth), mk_int(bitwidth)], 'bool', body)
+INLINE_BINARY_BV_COMP = lambda bitwidth, name, body: Function('inline', None, '.'.join([name, mk_bv(bitwidth), 'bool']), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bool', body)
+BVBUILTIN_BINARY_COMP = lambda bitwidth, builtin_name, name: Function('bvbuiltin', builtin_name, '.'.join([name, mk_bv(bitwidth), 'bool']), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bool', None)
+INLINE_BINARY_PRED = lambda bitwidth, name: Function('inline', None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], 'i1', 'if ' + '.'.join([name, mk_int(bitwidth), 'bool']) + '(i1, i2) then 1 else 0') #preceded by inline_binary_comp
+INLINE_BINARY_BV_PRED = lambda bitwidth, name: Function('inline', None, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bv1', 'if ' + '.'.join([name, mk_bv(bitwidth), 'bool']) + '(i1, i2) then 1bv1 else 0bv1') #preceded by inline_binary_comp
+SAFE_LOAD_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$load', mk_int(bitwidth)]), ['[ref] ' + mk_int(bitwidth), 'ref'], mk_int(bitwidth), body)
+SAFE_STORE_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$store', mk_int(bitwidth)]), ['[ref] ' + mk_int(bitwidth), 'ref', mk_int(bitwidth)], '[ref] ' + mk_int(bitwidth), body)
+SAFE_LOAD_BV_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$load', mk_bv(bitwidth)]), ['[ref] ' + mk_bv(bitwidth), 'ref'], mk_bv(bitwidth), body)
+SAFE_STORE_BV_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$store', mk_bv(bitwidth)]), ['[ref] ' + mk_bv(bitwidth), 'ref', mk_bv(bitwidth)], '[ref] ' + mk_bv(bitwidth), body)
+INLINE_BVBUILTIN_BINARY_SELECT = lambda bitwidth, name, name2: Function('inline', None, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], mk_bv(bitwidth), 'if ' + '.'.join([name2, mk_bv(bitwidth), 'bool']) + '(i1, i2) then i1 else i2')
+INLINE_BVBUILTIN_BINARY_PRED = lambda bitwidth, name: Function('inline', None, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bv1', 'if ' + '.'.join([name, mk_bv(bitwidth), 'bool']) + '(i1,i2) then 1bv1 else 0bv1') #preceded with bvbuiltin_binary_comp
+INLINE_CONVERSION = lambda bitwidth2, bitwidth1, name, body: Function('inline', None, '.'.join([name, mk_int(bitwidth1), mk_int(bitwidth2)]), [mk_int(bitwidth1)], mk_int(bitwidth2), body)
+TRUNC_OP = lambda bitwidth1, bitwidth2: Function('inline', None, '.'.join(['$trunc', mk_int(bitwidth1), mk_int(bitwidth2)]), [mk_int(bitwidth1)], mk_int(bitwidth2), 'i1')
+TRUNC_BV_OP = lambda bitwidth1, bitwidth2: Function('inline', None, '.'.join(['$trunc', mk_bv(bitwidth1), mk_bv(bitwidth2)]), [mk_bv(bitwidth1)], mk_bv(bitwidth2), 'i1[' + str(bitwidth2) + ':0]')
 
 sizes = [1, 8, 16, 24, 32, 40, 48, 56, 64, 88, 96, 128]
+binary_ops = ['$add', '$sub', '$mul', '$sdiv', '$smod', '$srem', '$udiv', '$urem', '$shl', '$lshr', '$ashr', '$and', '$or', '$xor', '$nand']
+bvbuiltin_binary_funcs = ['bvadd', 'bvsub', 'bvmul', 'bvsdiv', 'bvsmod', 'bvsrem', 'bvudiv', 'bvurem', 'bvshl', 'bvlshr', 'bvashr', 'bvand', 'bvor', 'bvxor', 'bvnand']
+builtin_binary_funcs = ['div', 'mod', 'rem', 'div', 'rem']
+binary_ops_body = ['i1 + i2', 'i1 - i2', 'i1 * i2']
+comp_ops = ['$ule', '$ult', '$uge', '$ugt', '$sle', '$slt', '$sge', '$sgt']
+bvbuiltin_comp_funcs = ['bvule', 'bvult', 'bvuge', 'bvugt', 'bvsle', 'bvslt', 'bvsge', 'bvsgt']
+comp_ops_body = ['i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2', 'i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2']
+eq_ops = ['$eq', '$ne']
+eq_ops_body = ['i1 == i2', 'i1 != i2']
 
-def declare_each_type(prefix, func_decl, *args):
-  bpl = ""
-  for size in sizes:
-    t = "%s%s" % (prefix, size)
-    tmp = (args + (t,))
-    bpl += func_decl.format(*tmp)
+def declare_each_type(func_decl, *args):
+  bpl = ''
+  for i in sizes:
+    tmp = ((i,) + args)
+    bpl += func_decl(*tmp).toStr()
   return bpl
 
-def declare_each_type_nested(prefix, func_decl, *args):
-  bpl = ""
+def declare_each_type_nested(func_decl, *args):
+  bpl = ''
   for i in range(len(sizes)):
     for j in range(0,i):
-      t1 = "%s%s" % (prefix, sizes[i])
-      t2 = "%s%s" % (prefix, sizes[j])
-      if "trunc" not in func_decl:
-        t1, t2 = t2, t1
-      tmp = args + (t1, t2, sizes[j])
-      bpl += func_decl.format(*tmp)
+      tmp = (sizes[i], sizes[j]) + args
+      bpl += func_decl(*tmp).toStr()
   return bpl
 
 def generate_prelude(args):
-  bpl = declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvadd", "$add")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsub", "$sub")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvmul", "$mul")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsdiv", "$sdiv")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsmod", "$smod")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvsrem", "$srem")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvudiv", "$udiv")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvurem", "$urem")
+  bpl = ''
+  for i in range(len(binary_ops)):
+    bpl += declare_each_type(BVBUILTIN_BINARY_OP, bvbuiltin_binary_funcs[i], binary_ops[i])
+    if 0 <= i <= 2:
+      bpl += declare_each_type(INLINE_BINARY_OP, binary_ops[i], binary_ops_body[i])
+    elif 3 <= i <= 7:
+      bpl += declare_each_type(BUILTIN_BINARY_OP, builtin_binary_funcs[i - 3], binary_ops[i])
+    else:
+      bpl += declare_each_type(UNINTERPRETED_BINARY_OP, binary_ops[i])
 
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_SELECT, "$min", "$slt")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_SELECT, "$max", "$sgt")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_SELECT, "$umin", "$ult")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_SELECT, "$umax", "$ugt")
+  for i in range(len(comp_ops)):
+    bpl += declare_each_type(BVBUILTIN_BINARY_COMP, bvbuiltin_comp_funcs[i], comp_ops[i])
+    bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_PRED, comp_ops[i])
+    bpl += declare_each_type(INLINE_BINARY_COMP, comp_ops[i], comp_ops_body[i])
+    bpl += declare_each_type(INLINE_BINARY_PRED, comp_ops[i])
 
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvshl", "$shl")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvlshr", "$lshr")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvashr", "$ashr")
-  bpl += declare_each_type("bv", BVBUILTIN_UNARY_OP, "bvnot", "$not")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvand", "$and")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvor", "$or")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvxor", "$xor")
-  bpl += declare_each_type("bv", BVBUILTIN_BINARY_OP, "bvnand", "$nand")
+  for i in range(len(eq_ops)):
+    bpl += declare_each_type(INLINE_BINARY_BV_COMP, eq_ops[i], eq_ops_body[i])
+    bpl += declare_each_type(INLINE_BINARY_BV_PRED, eq_ops[i])
+    bpl += declare_each_type(INLINE_BINARY_COMP, eq_ops[i], eq_ops_body[i])
+    bpl += declare_each_type(INLINE_BINARY_PRED, eq_ops[i])
 
-  bpl += declare_each_type("bv", INLINE_BINARY_BV_PRED, "$eq", "{i1 == i2}")
-  bpl += declare_each_type("bv", INLINE_BINARY_BV_PRED, "$ne", "{i1 != i2}")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvule", "$ule")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvult", "$ult")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvuge", "$uge")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvugt", "$ugt")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvsle", "$sle")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvslt", "$slt")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvsge", "$sge")
-  bpl += declare_each_type("bv", INLINE_BVBUILTIN_BINARY_PRED, "bvsgt", "$sgt")
+  bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_SELECT, '$min', '$slt')
+  bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_SELECT, '$max', '$sgt')
+  bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_SELECT, '$umin', '$ult')
+  bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_SELECT, '$umax', '$ugt')
 
-  bpl += declare_each_type_nested("bv", TRUNC_BV_OP)
+  bpl += declare_each_type(INLINE_BINARY_OP, '$smin', '$min(i1,i2)')
+  bpl += declare_each_type(INLINE_BINARY_OP, '$smax', '$max(i1,i2)')
+  bpl += declare_each_type(INLINE_BINARY_OP, '$umin', '$min(i1,i2)')
+  bpl += declare_each_type(INLINE_BINARY_OP, '$umax', '$max(i1,i2)')
 
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$add", "{i1 + i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$sub", "{i1 - i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$mul", "{i1 * i2}")
+  bpl += declare_each_type(BVBUILTIN_UNARY_OP, 'bvnot', '$not')
+  bpl += declare_each_type(UNINTERPRETED_UNARY_OP, '$not')
 
-  bpl += declare_each_type("i", BUILTIN_BINARY_OP, "div", "$sdiv")
-  bpl += declare_each_type("i", BUILTIN_BINARY_OP, "mod", "$smod")
-  bpl += declare_each_type("i", BUILTIN_BINARY_OP, "rem", "$srem")
-  bpl += declare_each_type("i", BUILTIN_BINARY_OP, "div", "$udiv")
-  bpl += declare_each_type("i", BUILTIN_BINARY_OP, "rem", "$urem")
+  bpl += declare_each_type_nested(TRUNC_BV_OP)
+  bpl += declare_each_type_nested(TRUNC_OP)
 
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$smin", "{$min(i1,i2)}")
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$smax", "{$max(i1,i2)}")
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$umin", "{$min(i1,i2)}")
-  bpl += declare_each_type("i", INLINE_BINARY_OP, "$umax", "{$max(i1,i2)}")
+  bpl += declare_each_type_nested(INLINE_CONVERSION, '$zext', 'i1')
+  bpl += declare_each_type_nested(INLINE_CONVERSION, '$sext', 'i1')
 
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$shl")
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$lshr")
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$ashr")
-  bpl += declare_each_type("i", UNINTERPRETED_UNARY_OP, "$not")
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$and")
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$or")
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$xor")
-  bpl += declare_each_type("i", UNINTERPRETED_BINARY_OP, "$nand")
-
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$eq", "{i1 == i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$ne", "{i1 != i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$ule", "{i1 <= i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$ult", "{i1 < i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$uge", "{i1 >= i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$ugt", "{i1 > i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$sle", "{i1 <= i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$slt", "{i1 < i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$sge", "{i1 >= i2}")
-  bpl += declare_each_type("i", INLINE_BINARY_PRED, "$sgt", "{i1 > i2}")
-
-  bpl += declare_each_type_nested("i", TRUNC_OP)
-
-  bpl += declare_each_type_nested("i", INLINE_CONVERSION, "$zext", "{i}")
-  bpl += declare_each_type_nested("i", INLINE_CONVERSION, "$sext", "{i}")
-
-  bpl += declare_each_type("i", SAFE_LOAD_OP, "{ M[p] }")
-  bpl += declare_each_type("bv", SAFE_LOAD_OP, "{ M[p] }")
-  bpl += declare_each_type("i", SAFE_STORE_OP, "{ M[p := v] }")
-  bpl += declare_each_type("bv", SAFE_STORE_OP, "{ M[p := v] }")
+  bpl += declare_each_type(SAFE_LOAD_OP, 'i1[i2]')
+  bpl += declare_each_type(SAFE_LOAD_BV_OP, 'i1[i2]')
+  bpl += declare_each_type(SAFE_STORE_OP, 'i1[i2 := i3]')
+  bpl += declare_each_type(SAFE_STORE_BV_OP, 'i1[i2 := i3]')
 
   f = open(args.bpl_file, 'a+')
   f.write(bpl)
