@@ -411,7 +411,7 @@ void BinExpr::print(std::ostream& os) const {
 }
 
 void CondExpr::print(std::ostream& os) const {
-  os << "if " << cond << " then " << then << " else " << else_;
+  os << "(if " << cond << " then " << then << " else " << else_ << ")";
 }
 
 void FunExpr::print(std::ostream& os) const {
