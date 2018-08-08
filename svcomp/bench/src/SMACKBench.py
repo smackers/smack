@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import sys
 sys.dont_write_bytecode = True # prevent creation of .pyc files
 

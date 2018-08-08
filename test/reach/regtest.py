@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 import subprocess
 import re
@@ -75,4 +75,3 @@ if __name__ == '__main__':
   
   print '\nPASSED count: ', passed
   print 'FAILED count: ', failed
-
