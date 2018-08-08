@@ -31,36 +31,133 @@ class Function:
 mk_int = lambda bitwidth: 'i' + str(bitwidth)
 mk_bv = lambda bitwidth: 'bv' + str(bitwidth)
 
-UNINTERPRETED_UNARY_OP = lambda bitwidth, name: Function(None, None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth)], mk_int(bitwidth), None)
-UNINTERPRETED_BINARY_OP = lambda bitwidth, name: Function(None, None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], mk_int(bitwidth), None)
-INLINE_BINARY_OP = lambda bitwidth, name, body: Function('inline', None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], mk_int(bitwidth), body)
-BUILTIN_BINARY_OP = lambda bitwidth, builtin_name, name: Function('builtin', builtin_name, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], mk_int(bitwidth), None)
-BVBUILTIN_UNARY_OP = lambda bitwidth, builtin_name, name: Function('bvbuiltin', builtin_name, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth)], mk_bv(bitwidth), None)
-BVBUILTIN_BINARY_OP = lambda bitwidth, builtin_name, name: Function('bvbuiltin', builtin_name, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], mk_bv(bitwidth), None)
-INLINE_BINARY_COMP = lambda bitwidth, name, body: Function('inline', None, '.'.join([name, mk_int(bitwidth), 'bool']), [mk_int(bitwidth), mk_int(bitwidth)], 'bool', body)
-INLINE_BINARY_BV_COMP = lambda bitwidth, name, body: Function('inline', None, '.'.join([name, mk_bv(bitwidth), 'bool']), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bool', body)
-BVBUILTIN_BINARY_COMP = lambda bitwidth, builtin_name, name: Function('bvbuiltin', builtin_name, '.'.join([name, mk_bv(bitwidth), 'bool']), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bool', None)
-INLINE_BINARY_PRED = lambda bitwidth, name: Function('inline', None, '.'.join([name, mk_int(bitwidth)]), [mk_int(bitwidth), mk_int(bitwidth)], 'i1', 'if ' + '.'.join([name, mk_int(bitwidth), 'bool']) + '(i1, i2) then 1 else 0')
-INLINE_BINARY_BV_PRED = lambda bitwidth, name: Function('inline', None, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bv1', 'if ' + '.'.join([name, mk_bv(bitwidth), 'bool']) + '(i1, i2) then 1bv1 else 0bv1')
-SAFE_LOAD_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$load', mk_int(bitwidth)]), ['[ref] ' + mk_int(bitwidth), 'ref'], mk_int(bitwidth), body)
-SAFE_STORE_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$store', mk_int(bitwidth)]), ['[ref] ' + mk_int(bitwidth), 'ref', mk_int(bitwidth)], '[ref] ' + mk_int(bitwidth), body)
-SAFE_LOAD_BV_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$load', mk_bv(bitwidth)]), ['[ref] ' + mk_bv(bitwidth), 'ref'], mk_bv(bitwidth), body)
-SAFE_STORE_BV_OP = lambda bitwidth, body: Function('inline', None, '.'.join(['$store', mk_bv(bitwidth)]), ['[ref] ' + mk_bv(bitwidth), 'ref', mk_bv(bitwidth)], '[ref] ' + mk_bv(bitwidth), body)
-INLINE_BVBUILTIN_BINARY_SELECT = lambda bitwidth, name, name2: Function('inline', None, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], mk_bv(bitwidth), 'if ' + '.'.join([name2, mk_bv(bitwidth), 'bool']) + '(i1, i2) then i1 else i2')
-INLINE_BVBUILTIN_BINARY_PRED = lambda bitwidth, name: Function('inline', None, '.'.join([name, mk_bv(bitwidth)]), [mk_bv(bitwidth), mk_bv(bitwidth)], 'bv1', 'if ' + '.'.join([name, mk_bv(bitwidth), 'bool']) + '(i1,i2) then 1bv1 else 0bv1')
-INLINE_CONVERSION = lambda bitwidth2, bitwidth1, name, body: Function('inline', None, '.'.join([name, mk_int(bitwidth1), mk_int(bitwidth2)]), [mk_int(bitwidth1)], mk_int(bitwidth2), body)
-TRUNC_OP = lambda bitwidth1, bitwidth2: Function('inline', None, '.'.join(['$trunc', mk_int(bitwidth1), mk_int(bitwidth2)]), [mk_int(bitwidth1)], mk_int(bitwidth2), 'i1')
-TRUNC_BV_OP = lambda bitwidth1, bitwidth2: Function('inline', None, '.'.join(['$trunc', mk_bv(bitwidth1), mk_bv(bitwidth2)]), [mk_bv(bitwidth1)], mk_bv(bitwidth2), 'i1[' + str(bitwidth2) + ':0]')
+UNINTERPRETED_UNARY_OP = lambda bitwidth, name: Function(None,
+  None,
+  '.'.join([name, mk_int(bitwidth)]),
+  [mk_int(bitwidth)],
+  mk_int(bitwidth),
+  None)
+UNINTERPRETED_BINARY_OP = lambda bitwidth, name: Function(None,
+  None,
+  '.'.join([name, mk_int(bitwidth)]),
+  [mk_int(bitwidth), mk_int(bitwidth)],
+  mk_int(bitwidth),
+  None)
+INLINE_BINARY_OP = lambda bitwidth, name, body: Function('inline',
+  None,
+  '.'.join([name, mk_int(bitwidth)]),
+  [mk_int(bitwidth), mk_int(bitwidth)],
+  mk_int(bitwidth),
+  body)
+BUILTIN_BINARY_OP = lambda bitwidth, builtin_name, name: Function('builtin',
+  builtin_name,
+  '.'.join([name, mk_int(bitwidth)]),
+  [mk_int(bitwidth), mk_int(bitwidth)],
+  mk_int(bitwidth),
+  None)
+BVBUILTIN_UNARY_OP = lambda bitwidth, builtin_name, name: Function('bvbuiltin',
+  builtin_name,
+  '.'.join([name, mk_bv(bitwidth)]),
+  [mk_bv(bitwidth)],
+  mk_bv(bitwidth),
+  None)
+BVBUILTIN_BINARY_OP = lambda bitwidth, builtin_name, name: Function('bvbuiltin',
+  builtin_name,
+  '.'.join([name, mk_bv(bitwidth)]),
+  [mk_bv(bitwidth), mk_bv(bitwidth)],
+  mk_bv(bitwidth),
+  None)
+INLINE_BINARY_COMP = lambda bitwidth, name, body: Function('inline',
+  None,
+  '.'.join([name, mk_int(bitwidth), 'bool']),
+  [mk_int(bitwidth), mk_int(bitwidth)],
+  'bool',
+  body)
+INLINE_BINARY_BV_COMP = lambda bitwidth, name, body: Function('inline',
+  None,
+  '.'.join([name, mk_bv(bitwidth), 'bool']),
+  [mk_bv(bitwidth), mk_bv(bitwidth)],
+  'bool',
+  body)
+BVBUILTIN_BINARY_COMP = lambda bitwidth, builtin_name, name: Function('bvbuiltin',
+  builtin_name,
+  '.'.join([name, mk_bv(bitwidth), 'bool']),
+  [mk_bv(bitwidth), mk_bv(bitwidth)],
+  'bool',
+  None)
+INLINE_BINARY_PRED = lambda bitwidth, name: Function('inline',
+  None,
+  '.'.join([name, mk_int(bitwidth)]),
+  [mk_int(bitwidth), mk_int(bitwidth)],
+  'i1',
+  'if ' + '.'.join([name, mk_int(bitwidth), 'bool']) + '(i1, i2) then 1 else 0')
+INLINE_BINARY_BV_PRED = lambda bitwidth, name: Function('inline',
+  None,
+  '.'.join([name, mk_bv(bitwidth)]),
+  [mk_bv(bitwidth), mk_bv(bitwidth)],
+  'bv1',
+  'if ' + '.'.join([name, mk_bv(bitwidth), 'bool']) + '(i1, i2) then 1bv1 else 0bv1')
+SAFE_LOAD_OP = lambda bitwidth, body: Function('inline',
+  None,
+  '.'.join(['$load', mk_int(bitwidth)]),
+  ['[ref] ' + mk_int(bitwidth), 'ref'],
+  mk_int(bitwidth),
+  body)
+SAFE_STORE_OP = lambda bitwidth, body: Function('inline',
+  None,
+  '.'.join(['$store', mk_int(bitwidth)]),
+  ['[ref] ' + mk_int(bitwidth), 'ref', mk_int(bitwidth)],
+  '[ref] ' + mk_int(bitwidth),
+  body)
+SAFE_LOAD_BV_OP = lambda bitwidth, body: Function('inline',
+  None,
+  '.'.join(['$load', mk_bv(bitwidth)]),
+  ['[ref] ' + mk_bv(bitwidth), 'ref'],
+  mk_bv(bitwidth),
+  body)
+SAFE_STORE_BV_OP = lambda bitwidth, body: Function('inline',
+  None,
+  '.'.join(['$store', mk_bv(bitwidth)]),
+  ['[ref] ' + mk_bv(bitwidth), 'ref', mk_bv(bitwidth)],
+  '[ref] ' + mk_bv(bitwidth),
+  body)
+INLINE_BVBUILTIN_BINARY_SELECT = lambda bitwidth, name, name2: Function('inline',
+  None,
+  '.'.join([name, mk_bv(bitwidth)]),
+  [mk_bv(bitwidth), mk_bv(bitwidth)],
+  mk_bv(bitwidth),
+  'if ' + '.'.join([name2, mk_bv(bitwidth), 'bool']) + '(i1, i2) then i1 else i2')
+INLINE_BVBUILTIN_BINARY_PRED = lambda bitwidth, name: Function('inline',
+  None,
+  '.'.join([name, mk_bv(bitwidth)]),
+  [mk_bv(bitwidth), mk_bv(bitwidth)],
+  'bv1',
+  'if ' + '.'.join([name, mk_bv(bitwidth), 'bool']) + '(i1,i2) then 1bv1 else 0bv1')
+INLINE_CONVERSION = lambda bitwidth2, bitwidth1, name, body: Function('inline',
+  None,
+  '.'.join([name, mk_int(bitwidth1), mk_int(bitwidth2)]),
+  [mk_int(bitwidth1)],
+  mk_int(bitwidth2),
+  body)
+TRUNC_OP = lambda bitwidth1, bitwidth2: Function('inline',
+  None,
+  '.'.join(['$trunc', mk_int(bitwidth1), mk_int(bitwidth2)]),
+  [mk_int(bitwidth1)],
+  mk_int(bitwidth2),
+  'i1')
+TRUNC_BV_OP = lambda bitwidth1, bitwidth2: Function('inline',
+  None,
+  '.'.join(['$trunc', mk_bv(bitwidth1), mk_bv(bitwidth2)]),
+  [mk_bv(bitwidth1)],
+  mk_bv(bitwidth2),
+  'i1[' + str(bitwidth2) + ':0]')
 
 sizes = [1, 8, 16, 24, 32, 40, 48, 56, 64, 88, 96, 128]
-binary_ops = ['$add', '$sub', '$mul', '$sdiv', '$smod', '$srem', '$udiv', '$urem', '$shl', '$lshr', '$ashr', '$and', '$or', '$xor', '$nand']
-bvbuiltin_binary_funcs = ['bvadd', 'bvsub', 'bvmul', 'bvsdiv', 'bvsmod', 'bvsrem', 'bvudiv', 'bvurem', 'bvshl', 'bvlshr', 'bvashr', 'bvand', 'bvor', 'bvxor', 'bvnand']
-builtin_binary_funcs = ['div', 'mod', 'rem', 'div', 'rem']
+binary_ops = ['add', 'sub', 'mul', 'sdiv', 'smod', 'srem', 'udiv', 'urem', 'shl', 'lshr', 'ashr', 'and', 'or', 'xor', 'nand']
 binary_ops_body = ['i1 + i2', 'i1 - i2', 'i1 * i2']
-comp_ops = ['$ule', '$ult', '$uge', '$ugt', '$sle', '$slt', '$sge', '$sgt']
-bvbuiltin_comp_funcs = ['bvule', 'bvult', 'bvuge', 'bvugt', 'bvsle', 'bvslt', 'bvsge', 'bvsgt']
+comp_ops = ['ule', 'ult', 'uge', 'ugt', 'sle', 'slt', 'sge', 'sgt']
 comp_ops_body = ['i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2', 'i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2']
-eq_ops = ['$eq', '$ne']
+eq_ops = ['eq', 'ne']
 eq_ops_body = ['i1 == i2', 'i1 != i2']
 
 def declare_each_type(func_decl, *args):
@@ -81,25 +178,28 @@ def declare_each_type_nested(func_decl, *args):
 def generate_prelude(args):
   bpl = ''
   for i in range(len(binary_ops)):
-    bpl += declare_each_type(BVBUILTIN_BINARY_OP, bvbuiltin_binary_funcs[i], binary_ops[i])
+    op_name = '$' + binary_ops[i]
+    bpl += declare_each_type(BVBUILTIN_BINARY_OP, 'bv' + binary_ops[i], op_name)
     if 0 <= i <= 2:
-      bpl += declare_each_type(INLINE_BINARY_OP, binary_ops[i], binary_ops_body[i])
+      bpl += declare_each_type(INLINE_BINARY_OP, op_name, binary_ops_body[i])
     elif 3 <= i <= 7:
-      bpl += declare_each_type(BUILTIN_BINARY_OP, builtin_binary_funcs[i - 3], binary_ops[i])
+      bpl += declare_each_type(BUILTIN_BINARY_OP, binary_ops[i][1:], op_name)
     else:
-      bpl += declare_each_type(UNINTERPRETED_BINARY_OP, binary_ops[i])
+      bpl += declare_each_type(UNINTERPRETED_BINARY_OP, op_name)
 
   for i in range(len(comp_ops)):
-    bpl += declare_each_type(BVBUILTIN_BINARY_COMP, bvbuiltin_comp_funcs[i], comp_ops[i])
-    bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_PRED, comp_ops[i])
-    bpl += declare_each_type(INLINE_BINARY_COMP, comp_ops[i], comp_ops_body[i])
-    bpl += declare_each_type(INLINE_BINARY_PRED, comp_ops[i])
+    op_name = '$' + comp_ops[i]
+    bpl += declare_each_type(BVBUILTIN_BINARY_COMP, 'bv' + comp_ops[i], op_name)
+    bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_PRED, op_name)
+    bpl += declare_each_type(INLINE_BINARY_COMP, op_name, comp_ops_body[i])
+    bpl += declare_each_type(INLINE_BINARY_PRED, op_name)
 
   for i in range(len(eq_ops)):
-    bpl += declare_each_type(INLINE_BINARY_BV_COMP, eq_ops[i], eq_ops_body[i])
-    bpl += declare_each_type(INLINE_BINARY_BV_PRED, eq_ops[i])
-    bpl += declare_each_type(INLINE_BINARY_COMP, eq_ops[i], eq_ops_body[i])
-    bpl += declare_each_type(INLINE_BINARY_PRED, eq_ops[i])
+    op_name = '$' + eq_ops[i]
+    bpl += declare_each_type(INLINE_BINARY_BV_COMP, op_name, eq_ops_body[i])
+    bpl += declare_each_type(INLINE_BINARY_BV_PRED, op_name)
+    bpl += declare_each_type(INLINE_BINARY_COMP, op_name, eq_ops_body[i])
+    bpl += declare_each_type(INLINE_BINARY_PRED, op_name)
 
   bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_SELECT, '$min', '$slt')
   bpl += declare_each_type(INLINE_BVBUILTIN_BINARY_SELECT, '$max', '$sgt')
