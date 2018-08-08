@@ -172,11 +172,13 @@ TRUNC_BV_OP = lambda bitwidth1, bitwidth2: Function('inline',
   'i1[' + str(bitwidth2) + ':0]')
 
 sizes = [1, 8, 16, 24, 32, 40, 48, 56, 64, 88, 96, 128]
+
 binary_ops = ['add', 'sub', 'mul', 'sdiv', 'smod', 'srem', 'udiv', 'urem', 'shl', 'lshr', 'ashr', 'and', 'or', 'xor', 'nand']
-binary_ops_body = ['i1 + i2', 'i1 - i2', 'i1 * i2']
 comp_ops = ['ule', 'ult', 'uge', 'ugt', 'sle', 'slt', 'sge', 'sgt']
-comp_ops_body = ['i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2', 'i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2']
 eq_ops = ['eq', 'ne']
+
+binary_ops_body = ['i1 + i2', 'i1 - i2', 'i1 * i2']
+comp_ops_body = ['i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2', 'i1 <= i2', 'i1 < i2', 'i1 >= i2', 'i1 > i2']
 eq_ops_body = ['i1 == i2', 'i1 != i2']
 
 def declare_each_type(func_decl, *args):
