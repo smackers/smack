@@ -255,12 +255,12 @@ def target_selection(args):
 def frontend(args):
   """Generate the LLVM bitcode file."""
   bitcodes = []
-  libs = []
+  libs = set()
   noreturning_frontend = False
   
   def add_libs(lang):
     if lang in extra_libs():
-      libs.append(extra_libs()[lang])
+      libs.add(extra_libs()[lang])
 
   if args.language:
     lang = languages()[args.language]
