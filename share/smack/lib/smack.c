@@ -367,6 +367,7 @@ void __SMACK_decls(void) {
   DECLARE(INLINE_CONVERSION,bv1,bv48,$zext,{if i == 0bv1 then 0bv48 else 1bv48});
   DECLARE(INLINE_CONVERSION,bv1,bv56,$zext,{if i == 0bv1 then 0bv56 else 1bv56});
   DECLARE(INLINE_CONVERSION,bv1,bv64,$zext,{if i == 0bv1 then 0bv64 else 1bv64});
+  DECLARE(INLINE_CONVERSION,bv1,bv80,$zext,{if i == 0bv1 then 0bv80 else 1bv80});
   DECLARE(INLINE_CONVERSION,bv1,bv88,$zext,{if i == 0bv1 then 0bv88 else 1bv88});
   DECLARE(INLINE_CONVERSION,bv1,bv96,$zext,{if i == 0bv1 then 0bv96 else 1bv96});
   DECLARE(INLINE_CONVERSION,bv1,bv128,$zext,{if i == 0bv1 then 0bv128 else 1bv128});
@@ -377,6 +378,7 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv8.bv48(i: bv8) returns (bv48);");
   D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv8.bv56(i: bv8) returns (bv56);");
   D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 72)\"} $zext.bv8.bv80(i: bv8) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 80)\"} $zext.bv8.bv88(i: bv8) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 88)\"} $zext.bv8.bv96(i: bv8) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 120)\"} $zext.bv8.bv128(i: bv8) returns (bv128);");
@@ -386,6 +388,7 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv16.bv48(i: bv16) returns (bv48);");
   D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv16.bv56(i: bv16) returns (bv56);");
   D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 64)\"} $zext.bv16.bv80(i: bv16) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 72)\"} $zext.bv16.bv88(i: bv16) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 80)\"} $zext.bv16.bv96(i: bv16) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 112)\"} $zext.bv16.bv128(i: bv16) returns (bv128);");
@@ -394,6 +397,7 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv24.bv48(i: bv24) returns (bv48);");
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv24.bv56(i: bv24) returns (bv56);");
   D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv24.bv64(i: bv24) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv24.bv80(i: bv24) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 64)\"} $zext.bv24.bv88(i: bv24) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 72)\"} $zext.bv24.bv96(i: bv24) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 104)\"} $zext.bv24.bv128(i: bv24) returns (bv128);");
@@ -401,26 +405,34 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv32.bv48(i: bv32) returns (bv48);");
   D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv32.bv56(i: bv32) returns (bv56);");
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv32.bv64(i: bv32) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv32.bv80(i: bv32) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv32.bv88(i: bv32) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 64)\"} $zext.bv32.bv96(i: bv32) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 96)\"} $zext.bv32.bv128(i: bv32) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv40.bv48(i: bv40) returns (bv48);");
   D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv40.bv56(i: bv40) returns (bv56);");
   D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv40.bv64(i: bv40) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv40.bv80(i: bv40) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv40.bv88(i: bv40) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 56)\"} $zext.bv40.bv96(i: bv40) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 88)\"} $zext.bv40.bv128(i: bv40) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv48.bv64(i: bv48) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv48.bv80(i: bv48) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv48.bv88(i: bv48) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv48.bv96(i: bv48) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 80)\"} $zext.bv48.bv128(i: bv48) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv56.bv64(i: bv56) returns (bv64);");
+  D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv56.bv80(i: bv56) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv56.bv88(i: bv56) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv56.bv96(i: bv56) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 72)\"} $zext.bv56.bv128(i: bv56) returns (bv128);");
+  D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv64.bv80(i: bv64) returns (bv80);");
   D("function {:bvbuiltin \"(_ zero_extend 24)\"} $zext.bv64.bv88(i: bv64) returns (bv88);");
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv64.bv96(i: bv64) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 64)\"} $zext.bv64.bv128(i: bv64) returns (bv128);");
+  D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv80.bv88(i: bv80) returns (bv88);");
+  D("function {:bvbuiltin \"(_ zero_extend 16)\"} $zext.bv80.bv96(i: bv80) returns (bv96);");
+  D("function {:bvbuiltin \"(_ zero_extend 48)\"} $zext.bv80.bv128(i: bv80) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 8)\"} $zext.bv88.bv96(i: bv88) returns (bv96);");
   D("function {:bvbuiltin \"(_ zero_extend 40)\"} $zext.bv88.bv128(i: bv88) returns (bv128);");
   D("function {:bvbuiltin \"(_ zero_extend 32)\"} $zext.bv96.bv128(i: bv96) returns (bv128);");
@@ -433,6 +445,7 @@ void __SMACK_decls(void) {
   DECLARE(INLINE_CONVERSION,bv1,bv48,$sext,{if i == 0bv1 then 0bv48 else 281474976710655bv48});
   DECLARE(INLINE_CONVERSION,bv1,bv56,$sext,{if i == 0bv1 then 0bv56 else 72057594037927935bv56});
   DECLARE(INLINE_CONVERSION,bv1,bv64,$sext,{if i == 0bv1 then 0bv64 else 18446744073709551615bv64});
+  DECLARE(INLINE_CONVERSION,bv1,bv80,$sext,{if i == 0bv1 then 0bv80 else 1208925819614629174706175bv80});
   DECLARE(INLINE_CONVERSION,bv1,bv88,$sext,{if i == 0bv1 then 0bv88 else 309485009821345068724781055bv88});
   DECLARE(INLINE_CONVERSION,bv1,bv96,$sext,{if i == 0bv1 then 0bv96 else 79228162514264337593543950335bv96});
   DECLARE(INLINE_CONVERSION,bv1,bv128,$sext,{if i == 0bv1 then 0bv128 else 340282366920938463463374607431768211455bv128});
@@ -443,6 +456,7 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv8.bv48(i: bv8) returns (bv48);");
   D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv8.bv56(i: bv8) returns (bv56);");
   D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv8.bv64(i: bv8) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 72)\"} $sext.bv8.bv80(i: bv8) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 80)\"} $sext.bv8.bv88(i: bv8) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 88)\"} $sext.bv8.bv96(i: bv8) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 120)\"} $sext.bv8.bv128(i: bv8) returns (bv128);");
@@ -452,6 +466,7 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv16.bv48(i: bv16) returns (bv48);");
   D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv16.bv56(i: bv16) returns (bv56);");
   D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv16.bv64(i: bv16) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 64)\"} $sext.bv16.bv80(i: bv16) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 72)\"} $sext.bv16.bv88(i: bv16) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 80)\"} $sext.bv16.bv96(i: bv16) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 112)\"} $sext.bv16.bv128(i: bv16) returns (bv128);");
@@ -460,6 +475,7 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv24.bv48(i: bv24) returns (bv48);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv24.bv56(i: bv24) returns (bv56);");
   D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv24.bv64(i: bv24) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv24.bv80(i: bv24) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 64)\"} $sext.bv24.bv88(i: bv24) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 72)\"} $sext.bv24.bv96(i: bv24) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 104)\"} $sext.bv24.bv128(i: bv24) returns (bv128);");
@@ -467,27 +483,35 @@ void __SMACK_decls(void) {
   D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv32.bv48(i: bv32) returns (bv48);");
   D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv32.bv56(i: bv32) returns (bv56);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv32.bv64(i: bv32) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv32.bv80(i: bv32) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv32.bv88(i: bv32) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 64)\"} $sext.bv32.bv96(i: bv32) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 96)\"} $sext.bv32.bv128(i: bv32) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv40.bv48(i: bv40) returns (bv48);");
   D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv40.bv56(i: bv40) returns (bv56);");
   D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv40.bv64(i: bv40) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv40.bv80(i: bv40) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv40.bv88(i: bv40) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 56)\"} $sext.bv40.bv96(i: bv40) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 88)\"} $sext.bv40.bv128(i: bv40) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv48.bv56(i: bv48) returns (bv56);");
   D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv48.bv64(i: bv48) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv48.bv80(i: bv48) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv48.bv88(i: bv48) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv48.bv96(i: bv48) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 80)\"} $sext.bv48.bv128(i: bv48) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv56.bv64(i: bv56) returns (bv64);");
+  D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv56.bv80(i: bv56) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv56.bv88(i: bv56) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv56.bv96(i: bv56) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 72)\"} $sext.bv56.bv128(i: bv56) returns (bv128);");
+  D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv64.bv80(i: bv64) returns (bv80);");
   D("function {:bvbuiltin \"(_ sign_extend 24)\"} $sext.bv64.bv88(i: bv64) returns (bv88);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv64.bv96(i: bv64) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 64)\"} $sext.bv64.bv128(i: bv64) returns (bv128);");
+  D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv80.bv88(i: bv80) returns (bv88);");
+  D("function {:bvbuiltin \"(_ sign_extend 16)\"} $sext.bv80.bv96(i: bv80) returns (bv96);");
+  D("function {:bvbuiltin \"(_ sign_extend 48)\"} $sext.bv80.bv128(i: bv80) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 8)\"} $sext.bv88.bv96(i: bv88) returns (bv96);");
   D("function {:bvbuiltin \"(_ sign_extend 40)\"} $sext.bv88.bv128(i: bv88) returns (bv128);");
   D("function {:bvbuiltin \"(_ sign_extend 32)\"} $sext.bv96.bv128(i: bv96) returns (bv128);");
@@ -603,6 +627,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv128,$fp2si,(_ fp.to_sbv 128));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv96,$fp2si,(_ fp.to_sbv 96));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv88,$fp2si,(_ fp.to_sbv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv80,$fp2si,(_ fp.to_sbv 80));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv64,$fp2si,(_ fp.to_sbv 64));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv56,$fp2si,(_ fp.to_sbv 56));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv48,$fp2si,(_ fp.to_sbv 48));
@@ -615,6 +640,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv128,$fp2ui,(_ fp.to_ubv 128));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv96,$fp2ui,(_ fp.to_ubv 96));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv88,$fp2ui,(_ fp.to_ubv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv80,$fp2ui,(_ fp.to_ubv 80));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv64,$fp2ui,(_ fp.to_ubv 64));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv56,$fp2ui,(_ fp.to_ubv 56));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv48,$fp2ui,(_ fp.to_ubv 48));
@@ -627,6 +653,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv128,$fp2si,(_ fp.to_sbv 128));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv96,$fp2si,(_ fp.to_sbv 96));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv88,$fp2si,(_ fp.to_sbv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv80,$fp2si,(_ fp.to_sbv 80));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv64,$fp2si,(_ fp.to_sbv 64));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv56,$fp2si,(_ fp.to_sbv 56));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv48,$fp2si,(_ fp.to_sbv 48));
@@ -639,6 +666,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv128,$fp2ui,(_ fp.to_ubv 128));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv96,$fp2ui,(_ fp.to_ubv 96));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv88,$fp2ui,(_ fp.to_ubv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv80,$fp2ui,(_ fp.to_ubv 80));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv64,$fp2ui,(_ fp.to_ubv 64));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv56,$fp2ui,(_ fp.to_ubv 56));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bv48,$fp2ui,(_ fp.to_ubv 48));
@@ -651,6 +679,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv128,$fp2si,(_ fp.to_sbv 128));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv96,$fp2si,(_ fp.to_sbv 96));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv88,$fp2si,(_ fp.to_sbv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv80,$fp2si,(_ fp.to_sbv 80));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv64,$fp2si,(_ fp.to_sbv 64));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv56,$fp2si,(_ fp.to_sbv 56));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv48,$fp2si,(_ fp.to_sbv 48));
@@ -663,6 +692,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv128,$fp2ui,(_ fp.to_ubv 128));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv96,$fp2ui,(_ fp.to_ubv 96));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv88,$fp2ui,(_ fp.to_ubv 88));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv80,$fp2ui,(_ fp.to_ubv 80));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv64,$fp2ui,(_ fp.to_ubv 64));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv56,$fp2ui,(_ fp.to_ubv 56));
   DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bv48,$fp2ui,(_ fp.to_ubv 48));
@@ -676,6 +706,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i128,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i96,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i88,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i80,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i64,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i56,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i48,$fp2si);
@@ -688,6 +719,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i128,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i96,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i80,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i64,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i56,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvfloat,i48,$fp2ui);
@@ -700,6 +732,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i128,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i96,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i88,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i80,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i64,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i56,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i48,$fp2si);
@@ -712,6 +745,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i128,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i96,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i80,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i64,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i56,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvdouble,i48,$fp2ui);
@@ -724,6 +758,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i128,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i96,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i88,$fp2si);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i80,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i64,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i56,$fp2si);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i48,$fp2si);
@@ -736,6 +771,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i128,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i96,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i80,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i64,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i56,$fp2ui);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION,bvlongdouble,i48,$fp2ui);
@@ -750,6 +786,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv80, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvfloat, $ui2fp,(_ to_fp_unsigned 8 24));
@@ -762,6 +799,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvfloat, $si2fp,(_ to_fp 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvfloat, $si2fp,(_ to_fp 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvfloat, $si2fp,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv80, bvfloat, $si2fp,(_ to_fp 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvfloat, $si2fp,(_ to_fp 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvfloat, $si2fp,(_ to_fp 8 24));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvfloat, $si2fp,(_ to_fp 8 24));
@@ -774,6 +812,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv80, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvdouble, $ui2fp,(_ to_fp_unsigned 11 53));
@@ -786,6 +825,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvdouble, $si2fp,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv80, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvdouble, $si2fp,(_ to_fp 11 53));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvdouble, $si2fp,(_ to_fp 11 53));
@@ -798,6 +838,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv80, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvlongdouble, $ui2fp,(_ to_fp_unsigned 15 65));
@@ -810,6 +851,7 @@ void __SMACK_decls(void) {
   DECLARE(BUILTIN_RMODE_CONVERSION, bv128, bvlongdouble, $si2fp,(_ to_fp 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv96, bvlongdouble, $si2fp,(_ to_fp 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv88, bvlongdouble, $si2fp,(_ to_fp 15 65));
+  DECLARE(BUILTIN_RMODE_CONVERSION, bv80, bvlongdouble, $si2fp,(_ to_fp 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv64, bvlongdouble, $si2fp,(_ to_fp 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv56, bvlongdouble, $si2fp,(_ to_fp 15 65));
   DECLARE(BUILTIN_RMODE_CONVERSION, bv48, bvlongdouble, $si2fp,(_ to_fp 15 65));
@@ -823,6 +865,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvfloat, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i80, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvfloat, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvfloat, $ui2fp);
@@ -835,6 +878,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvfloat, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvfloat, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvfloat, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i80, bvfloat, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvfloat, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvfloat, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvfloat, $si2fp);
@@ -847,6 +891,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i80, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvdouble, $ui2fp);
@@ -859,6 +904,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i80, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvdouble, $si2fp);
@@ -871,6 +917,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvlongdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvlongdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvlongdouble, $ui2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i80, bvlongdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvlongdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvlongdouble, $ui2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvlongdouble, $ui2fp);
@@ -883,6 +930,7 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i128, bvlongdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i96, bvlongdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i88, bvlongdouble, $si2fp);
+  DECLARE(UNINTERPRETED_RMODE_CONVERSION, i80, bvlongdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i64, bvlongdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i56, bvlongdouble, $si2fp);
   DECLARE(UNINTERPRETED_RMODE_CONVERSION, i48, bvlongdouble, $si2fp);
@@ -935,6 +983,8 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,float,i96,$fp2ui);
   DECLARE(UNINTERPRETED_CONVERSION,float,i88,$fp2si);
   DECLARE(UNINTERPRETED_CONVERSION,float,i88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i80,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i80,$fp2ui);
   DECLARE(UNINTERPRETED_CONVERSION,float,i64,$fp2si);
   DECLARE(UNINTERPRETED_CONVERSION,float,i64,$fp2ui);
   DECLARE(UNINTERPRETED_CONVERSION,float,i56,$fp2si);
@@ -959,6 +1009,8 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,i96,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,i88,float,$si2fp);
   DECLARE(UNINTERPRETED_CONVERSION,i88,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i80,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,i80,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,i64,float,$si2fp);
   DECLARE(UNINTERPRETED_CONVERSION,i64,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,i56,float,$si2fp);
@@ -983,6 +1035,8 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,float,bv96,$fp2ui);
   DECLARE(UNINTERPRETED_CONVERSION,float,bv88,$fp2si);
   DECLARE(UNINTERPRETED_CONVERSION,float,bv88,$fp2ui);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv80,$fp2si);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv80,$fp2ui);
   DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$fp2si);
   DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$fp2ui);
   DECLARE(UNINTERPRETED_CONVERSION,float,bv56,$fp2si);
@@ -1007,6 +1061,8 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,bv96,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,bv88,float,$si2fp);
   DECLARE(UNINTERPRETED_CONVERSION,bv88,float,$ui2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv80,float,$si2fp);
+  DECLARE(UNINTERPRETED_CONVERSION,bv80,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$si2fp);
   DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$ui2fp);
   DECLARE(UNINTERPRETED_CONVERSION,bv56,float,$si2fp);
@@ -1048,6 +1104,10 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,float,bv64,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i64,float,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bv64,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,i80,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,float,bv80,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,i80,float,$bitcast);
+  DECLARE(UNINTERPRETED_CONVERSION,bv80,float,$bitcast);
 
 #ifndef NO_FORALL
   D("axiom (forall f1, f2: float :: $foeq.float.bool(f1,f2) <==> !$fune.float.bool(f1,f2));");
