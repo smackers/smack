@@ -303,19 +303,8 @@ void __SMACK_dummy(int v) {
 #define BINARY_COMP(attrib,type,name,cond) \
   function {:attrib} name.type.bool(i1: type, i2: type) returns (bool) cond
 
-#define INLINE_BINARY_OP(type,name,cond) \
-  BINARY_OP(inline,type,name,cond)
-
 #define INLINE_BINARY_COMP(type,name,cond) \
   BINARY_COMP(inline,type,name,cond)
-
-#define INLINE_BINARY_PRED(type,name,cond) \
-  INLINE_BINARY_COMP(type,name,cond) \
-  function {:inline} name.type(i1: type, i2: type) returns (i1) {if name.type.bool(i1,i2) then 1 else 0}
-
-#define INLINE_BINARY_BV_PRED(type,name,cond) \
-  INLINE_BINARY_COMP(type,name,cond) \
-  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
 
 #define BUILTIN_CONVERSION(t1,t2,name,prim) \
   function {:builtin xstr(prim)} name.t1.t2(i: t1) returns (t2);
@@ -347,20 +336,6 @@ void __SMACK_dummy(int v) {
 #define BUILTIN_RMODE_BINARY_OP(type,name,prim) \
   RMODE_BINARY_OP(builtin xstr(prim),type,name,);
 
-#define BVBUILTIN_UNARY_OP(type,name,prim) \
-  UNARY_OP(bvbuiltin xstr(prim),type,name,);
-
-#define BVBUILTIN_BINARY_OP(type,name,prim) \
-  BINARY_OP(bvbuiltin xstr(prim),type,name,);
-
-#define INLINE_BVBUILTIN_BINARY_PRED(type,name,prim) \
-  BINARY_COMP(bvbuiltin xstr(prim),type,name,); \
-  function {:inline} name.type(i1: type, i2: type) returns (bv1) {if name.type.bool(i1,i2) then 1bv1 else 0bv1}
-
-#define INLINE_BVBUILTIN_BINARY_SELECT(type,name,pred) \
-  function {:inline} name.type(i1: type, i2: type) returns (type) {if pred.type.bool(i1,i2) then i1 else i2}
-
-
 #define D(d) __SMACK_top_decl(d)
 
 #define DECLARE(M,args...) \
@@ -383,42 +358,6 @@ void __SMACK_decls(void) {
   DECLARE(INLINE_CONVERSION,ref,ref,$bitcast,{i});
 
   // BITVECTOR MODELING
-
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $add, bvadd)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sub, bvsub)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $mul, bvmul)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $udiv, bvudiv)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $sdiv, bvsdiv)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $smod, bvsmod)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $srem, bvsrem)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $urem, bvurem)
-
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $min, $slt)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $max, $sgt)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $umin, $ult)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_SELECT, $umax, $ugt)
-
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $shl, bvshl)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $lshr, bvlshr)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $ashr, bvashr)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_UNARY_OP, $not, bvnot)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $and, bvand)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $or, bvor)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $xor, bvxor)
-  DECLARE_EACH_BV_TYPE(BVBUILTIN_BINARY_OP, $nand, bvnand)
-
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $eq, {i1 == i2})
-  DECLARE_EACH_BV_TYPE(INLINE_BINARY_BV_PRED, $ne, {i1 != i2})
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ule, bvule)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ult, bvult)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $uge, bvuge)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $ugt, bvugt)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sle, bvsle)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $slt, bvslt)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sge, bvsge)
-  DECLARE_EACH_BV_TYPE(INLINE_BVBUILTIN_BINARY_PRED, $sgt, bvsgt)
-
-  DECLARE_BV_TRUNCS
 
   DECLARE(INLINE_CONVERSION,bv1,bv8,$zext,{if i == 0bv1 then 0bv8 else 1bv8});
   DECLARE(INLINE_CONVERSION,bv1,bv16,$zext,{if i == 0bv1 then 0bv16 else 1bv16});
@@ -555,45 +494,11 @@ void __SMACK_decls(void) {
 
   // INTEGER MODELING
 
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $add, {i1 + i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $sub, {i1 - i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $mul, {i1 * i2})
   D("function {:builtin \"div\"} $div(i1: int, i2: int) returns (int);");
   D("function {:builtin \"mod\"} $mod(i1: int, i2: int) returns (int);");
   D("function {:builtin \"rem\"} $rem(i1: int, i2: int) returns (int);");
   D("function {:inline} $min(i1: int, i2: int) returns (int) {if i1 < i2 then i1 else i2}");
   D("function {:inline} $max(i1: int, i2: int) returns (int) {if i1 > i2 then i1 else i2}");
-
-  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $sdiv, div)
-  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $smod, mod)
-  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $srem, rem)
-  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $udiv, div);
-  DECLARE_EACH_INT_TYPE(BUILTIN_BINARY_OP, $urem, rem);
-
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smin, {$min(i1,i2)})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $smax, {$max(i1,i2)})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umin, {$min(i1,i2)})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_OP, $umax, {$max(i1,i2)})
-
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $shl)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $lshr)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $ashr)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_UNARY_OP, $not)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $and)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $or)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $xor)
-  DECLARE_EACH_INT_TYPE(UNINTERPRETED_BINARY_OP, $nand)
-
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $eq, {i1 == i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ne, {i1 != i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ule, {i1 <= i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ult, {i1 < i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $uge, {i1 >= i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $ugt, {i1 > i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sle, {i1 <= i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $slt, {i1 < i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sge, {i1 >= i2})
-  DECLARE_EACH_INT_TYPE(INLINE_BINARY_PRED, $sgt, {i1 > i2})
 
   D("axiom $and.i1(0,0) == 0;");
   D("axiom $and.i1(0,1) == 0;");
@@ -608,10 +513,6 @@ void __SMACK_decls(void) {
   D("axiom $xor.i1(1,0) == 1;");
   D("axiom $xor.i1(1,1) == 0;");
   D("axiom($and.i32(32, 16) == 0);");
-
-  DECLARE_INT_TRUNCS
-  DECLARE_INT_ZEXTS
-  DECLARE_INT_SEXTS
 
 #if FLOAT_ENABLED
   // Bit-precise modeling of floating-points
@@ -1061,14 +962,10 @@ void __SMACK_decls(void) {
   D("const $MALLOC_TOP: ref;");
   D("function {:inline} $isExternal(p: ref) returns (bool) {$slt.ref.bool(p,$EXTERNS_BOTTOM)}");
 
-  DECLARE_EACH_INT_TYPE(SAFE_LOAD_OP, $load, { M[p] })
-  DECLARE_EACH_BV_TYPE(SAFE_LOAD_OP, $load, { M[p] })
   DECLARE_UNSAFE_LOADS
   DECLARE(UNSAFE_LOAD_OP, bv8, $load.bytes, { M[p] });
   DECLARE(UNSAFE_LOAD_OP, bv1, $load.bytes, { $trunc.bv8.bv1(M[p]) });
 
-  DECLARE_EACH_INT_TYPE(SAFE_STORE_OP, $store, { M[p := v] })
-  DECLARE_EACH_BV_TYPE(SAFE_STORE_OP, $store, { M[p := v] })
   DECLARE_UNSAFE_STORES
   DECLARE(UNSAFE_STORE_OP, bv8, $store.bytes, {M[p := v]});
   DECLARE(UNSAFE_STORE_OP, bv1, $store.bytes, {M[p := $zext.bv1.bv8(v)]});
