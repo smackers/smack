@@ -26,6 +26,7 @@ env:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
   matrix:
     - TRAVIS_ENV="--exhaustive --folder=basic"
+    - TRAVIS_ENV="--exhaustive --folder=data"
     - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
     - TRAVIS_ENV="--exhaustive --folder=bits"
     - TRAVIS_ENV="--exhaustive --folder=float"
