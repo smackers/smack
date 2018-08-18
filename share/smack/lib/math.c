@@ -357,3 +357,181 @@ int __fpclassify(double x) {
 int __finite(double x) {
   return !__isinf(x) && !__isnan(x);
 }
+
+long double fabsl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $abs.bvlongdouble(@);", ret, x);
+  return ret;
+}
+
+long double fdiml(long double x, long double y) {
+  if (__isnanl(x) || __isnanl(y)) {
+    return nanl(0);
+  }
+  double val = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $fsub.bvlongdouble($rmode, @, @);", val, x, y);
+  return fmaxl(0.0l, val);
+}
+
+long double roundl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $round.bvlongdouble(RNA, @);", ret, x);
+  return ret;
+}
+
+long lroundl(long double x) {
+  return roundl(x);
+}
+
+long double rintl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $round.bvlongdouble($rmode, @);", ret, x);
+  return ret;
+}
+
+long double nearbyintl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $round.bvlongdouble($rmode, @);", ret, x);
+  return ret;
+}
+
+long lrintl(long double x) {
+  return rintl(x);
+}
+
+long double floorl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $round.bvlongdouble(RTN, @);", ret, x);
+  return ret;
+}
+
+long double ceill(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $round.bvlongdouble(RTP, @);", ret, x);
+  return ret;
+}
+
+long double truncl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $round.bvlongdouble(RTZ, @);", ret, x);
+  return ret;
+}
+
+long double sqrtl(long double x) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $sqrt.bvlongdouble($rmode, @);", ret, x);
+  return ret;
+}
+
+long double remainderl(long double x, long double y) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $frem.bvlongdouble(@, @);", ret, x, y);
+  return ret;
+}
+
+long double fminl(long double x, long double y) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $min.bvlongdouble(@, @);", ret, x, y);
+  return ret;
+}
+
+long double fmaxl(long double x, long double y) {
+  long double ret = __VERIFIER_nondet_long_double();
+  __SMACK_code("@ := $max.bvlongdouble(@, @);", ret, x, y);
+  return ret;
+}
+
+long double fmodl(long double x, long double y) {
+   if (__isnanl(x) || __isnanl(y) || __isinfl(x) || __iszerol(y)) {
+    return nanl(0);
+  }
+  long double ret = __VERIFIER_nondet_long_double();
+  y = fabsl(y);
+  ret = remainderl(fabsl(x), y);
+  if (__signbitl(ret)) {
+    __SMACK_code("@ := $fadd.bvlongdouble($rmode, @, @);", ret, ret, y);
+  }
+  return copysignl(ret, x);
+}
+
+long double modfl(long double x, long double *iPart) {
+  long double fPart = __VERIFIER_nondet_long_double();
+  if (__isinfl(x)) {
+    *iPart = x;
+    fPart = 0.0l;
+  } else {
+    *iPart = truncl(x);
+    __SMACK_code("@ := $fsub.bvlongdouble($rmode, @, @);", fPart, x, *iPart);
+  }
+  if (__iszerol(fPart)) {
+    fPart = __signbitl(x) ? -0.0l : 0.0l;
+  }
+  return fPart;
+}
+
+long double copysignl(long double x, long double y) {
+  if (__signbitl(x) != __signbitl(y)) {
+    li u;
+    u.l = x;
+    u.i.sign ^= 1;
+    x = u.l;
+  }
+  return x;
+}
+
+long double nanl(const char *c) {
+  return 0.0l / 0.0l;
+}
+
+int __isnormall(long double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $isnormal.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  return ret;
+}
+
+int __issubnormall(long double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $issubnormal.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  return ret;
+}
+
+int __iszerol(long double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $iszero.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  return ret;
+}
+
+int __isinfl(long double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $isinfinite.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  return ret;
+}
+
+int __isnanl(long double x) {
+  int ret = __VERIFIER_nondet_int();
+  __SMACK_code("@ := if $isnan.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  return ret;
+}
+
+int __signbitl(long double x) {
+  li u;
+  u.l = x;
+  return u.i.sign;
+}
+
+int __fpclassifyl(long double x) {
+  if (__isnanl(x))
+    return FP_NAN;
+  if (__isinfl(x))
+    return FP_INFINITE;
+  if (__iszerol(x))
+    return FP_ZERO;
+  if (__issubnormall(x))
+    return FP_SUBNORMAL;
+  return FP_NORMAL;
+}
+
+int __finitel(long double x) {
+  return !__isinfl(x) && !__isnanl(x);
+}
+
