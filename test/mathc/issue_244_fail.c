@@ -2,6 +2,7 @@
 #include <math.h>
 
 // @expect error
+// @flag --bit-precise
 
 int main(void)
 {

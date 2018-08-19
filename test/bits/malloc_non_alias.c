@@ -4,7 +4,7 @@
 // @flag --bit-precise-pointers
 // @expect verified
 
-int main() {
+int main(void) {
   int* x = (int*)malloc(sizeof(int));
   int* y = (int*)malloc(sizeof(int));
   int* z = (int*)malloc(sizeof(int));

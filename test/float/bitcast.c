@@ -1,4 +1,5 @@
-#include "smack.h" 
+#include "smack.h"
+
 // @flag --bit-precise --clang-options="-fno-strict-aliasing"
 // @expect verified
 

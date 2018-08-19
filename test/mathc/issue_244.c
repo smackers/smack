@@ -2,6 +2,7 @@
 #include <math.h>
 
 // @expect verified
+// @flag --bit-precise
 
 int main(void)
 {
