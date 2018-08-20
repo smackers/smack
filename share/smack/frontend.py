@@ -6,43 +6,43 @@ from svcomp.utils import svcomp_frontend
 def languages():
   """A dictionary of languages per file extension."""
   return {
-    'c'      : 'C',
-    'i'      : 'C',
-    'cc'     : 'CXX',
-    'cpp'    : 'CXX',
-    'm'      : 'OBJC',
-    'd'      : 'D',
-    'json'   : 'JSON',
-    'svcomp' : 'SVCOMP',
-    'bc'     : 'LLVM',
-    'll'     : 'LLVM',
-    'bpl'    : 'BOOGIE',
-    'f'      : 'FORTRAN',
-    'for'    : 'FORTRAN',
-    'f90'    : 'FORTRAN',
-    'f95'    : 'FORTRAN',
-    'f03'    : 'FORTRAN',
+    'c'      : 'c',
+    'i'      : 'c',
+    'cc'     : 'cxx',
+    'cpp'    : 'cxx',
+    'm'      : 'objc',
+    'd'      : 'd',
+    'json'   : 'json',
+    'svcomp' : 'svcomp',
+    'bc'     : 'llvm',
+    'll'     : 'llvm',
+    'bpl'    : 'boogie',
+    'f'      : 'fortran',
+    'for'    : 'fortran',
+    'f90'    : 'fortran',
+    'f95'    : 'fortran',
+    'f03'    : 'fortran',
   }
 
 def frontends():
   """A dictionary of front-ends per language."""
   return {
-    'C'        : clang_frontend,
-    'CXX'      : clang_plusplus_frontend,
-    'OBJC'     : clang_objc_frontend,
-    'D'        : d_frontend,
-    'JSON'     : json_compilation_database_frontend,
-    'SVCOMP'   : svcomp_frontend,
-    'LLVM'     : llvm_frontend,
-    'BOOGIE'   : boogie_frontend,
-    'FORTRAN'  : fortran_frontend,
+    'c'        : clang_frontend,
+    'cxx'      : clang_plusplus_frontend,
+    'objc'     : clang_objc_frontend,
+    'd'        : d_frontend,
+    'json'     : json_compilation_database_frontend,
+    'svcomp'   : svcomp_frontend,
+    'llvm'     : llvm_frontend,
+    'boogie'   : boogie_frontend,
+    'fortran'  : fortran_frontend,
   }
 
 def extra_libs():
   """A dictionary of extra SMACK libraries required by languages."""
   return {
-    'FORTRAN' : fortran_build_libs, 
-    'CXX'     : cplusplus_build_libs,
+    'fortran' : fortran_build_libs, 
+    'cxx'     : cplusplus_build_libs,
     # coming soon - libraries for OBJC, Rust, Swift, etc.
   }
 

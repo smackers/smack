@@ -265,7 +265,7 @@ def frontend(args):
 
   if args.language:
     lang = languages()[args.language]
-    if lang in ['BOOGIE', 'SVCOMP', 'JSON']:
+    if lang in ['boogie', 'svcomp', 'json']:
       noreturning_frontend = True
 
     add_libs(lang)
@@ -278,7 +278,7 @@ def frontend(args):
   else:
     for input_file in args.input_files:
       lang = languages()[os.path.splitext(input_file)[1][1:]]
-      if lang in ['BOOGIE', 'SVCOMP', 'JSON']:
+      if lang in ['boogie', 'svcomp', 'json']:
         noreturning_frontend = True
 
       add_libs(lang)
