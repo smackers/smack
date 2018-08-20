@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // @expect verified
-// @flag -x=svcomp
+// @flag --unroll=6
 
 #define TRUE	  (1)
 #define FALSE	  (0) 
