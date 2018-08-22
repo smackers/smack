@@ -5,6 +5,7 @@ import subprocess
 import time
 from shutil import copyfile
 import smack.top
+import smack.frontend
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph
 from random_testing import random_test
@@ -60,7 +61,12 @@ def svcomp_frontend(input_file, args):
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
-  smack.top.clang_frontend(args)
+  bc = smack.frontend.clang_frontend(input_file, args)
+
+  # run with no extra smack libraries
+  libs = set()
+
+  smack.top.link_bc_files([bc],libs,args)
 
 def svcomp_check_property(args):
   # Check if property is vanilla reachability, and return unknown otherwise

@@ -1,7 +1,6 @@
 import os
 import sys
 from utils import temporary_file, try_command
-from svcomp.utils import svcomp_frontend
 
 def languages():
   """A dictionary of languages per file extension."""
@@ -26,6 +25,10 @@ def languages():
 
 def frontends():
   """A dictionary of front-ends per language."""
+
+  # Avoid circular import
+  from svcomp.utils import svcomp_frontend
+
   return {
     'c'        : clang_frontend,
     'cxx'      : clang_plusplus_frontend,
