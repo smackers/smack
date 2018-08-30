@@ -61,7 +61,7 @@ def svcomp_frontend(input_file, args):
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
-  bc = smack.frontend.clang_frontend(input_file, args)
+  bc = smack.frontend.clang_frontend(args.input_files[0], args)
 
   # run with no extra smack libraries
   libs = set()
