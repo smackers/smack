@@ -34,6 +34,7 @@ BUILD_MONO=0 # mono is typically installed from packages (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=0
+INSTALL_RUST=0
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
@@ -365,6 +366,17 @@ if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
   puts "Installed Objective-C"
 fi 
 
+if [ ${INSTALL_RUST} -eq 1 ] ; then
+  puts "Installing Rust"
+
+  ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
+  tar xf rust.tar.gz
+  cd rust-nightly-x86_64-unknown-linux-gnu
+  sudo ./install.sh
+  cd ..
+  
+  puts "Installed Rust"
+fi
 
 if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
