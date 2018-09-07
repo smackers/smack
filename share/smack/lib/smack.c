@@ -127,7 +127,7 @@ unsigned __VERIFIER_nondet_unsigned(void) {
   unsigned x = __SMACK_nondet_unsigned();
   unsigned min = __SMACK_nondet_unsigned();
   unsigned max = __SMACK_nondet_unsigned();
-  __VERIFIER_assume(min == 0 && max == UINT_MAX);
+  __VERIFIER_assume(min == 0 && max >= UINT_MAX && max <= UINT_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
 }
@@ -136,7 +136,7 @@ unsigned int __VERIFIER_nondet_unsigned_int(void) {
   unsigned int x = __SMACK_nondet_unsigned_int();
   unsigned int min = __SMACK_nondet_unsigned_int();
   unsigned int max = __SMACK_nondet_unsigned_int();
-  __VERIFIER_assume(min == 0 && max == UINT_MAX);
+  __VERIFIER_assume(min == 0 && max >= UINT_MAX && max <= UINT_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
 }
@@ -169,7 +169,7 @@ unsigned long __VERIFIER_nondet_unsigned_long(void) {
   unsigned long x = __SMACK_nondet_unsigned_long();
   unsigned long min = __SMACK_nondet_unsigned_long();
   unsigned long max = __SMACK_nondet_unsigned_long();
-  __VERIFIER_assume(min == 0 && max == ULONG_MAX);
+  __VERIFIER_assume(min == 0 && max >= ULONG_MAX && max <= ULONG_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
 }
@@ -178,7 +178,7 @@ unsigned long int __VERIFIER_nondet_unsigned_long_int(void) {
   unsigned long int x = __SMACK_nondet_unsigned_long_int();
   unsigned long int min = __SMACK_nondet_unsigned_long_int();
   unsigned long int max = __SMACK_nondet_unsigned_long_int();
-  __VERIFIER_assume(min == 0 && max == ULONG_MAX);
+  __VERIFIER_assume(min == 0 && max >= ULONG_MAX && max <= ULONG_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
 }
@@ -211,7 +211,7 @@ unsigned long long __VERIFIER_nondet_unsigned_long_long(void) {
   unsigned long long x = __SMACK_nondet_unsigned_long_long();
   unsigned long long min = __SMACK_nondet_unsigned_long_long();
   unsigned long long max = __SMACK_nondet_unsigned_long_long();
-  __VERIFIER_assume(min == 0 && max == ULLONG_MAX);
+  __VERIFIER_assume(min == 0 && max >= ULLONG_MAX && max <= ULLONG_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
 }
@@ -220,7 +220,7 @@ unsigned long long int __VERIFIER_nondet_unsigned_long_long_int(void) {
   unsigned long long int x = __SMACK_nondet_unsigned_long_long_int();
   unsigned long long int min = __SMACK_nondet_unsigned_long_long_int();
   unsigned long long int max = __SMACK_nondet_unsigned_long_long_int();
-  __VERIFIER_assume(min == 0 && max == ULLONG_MAX);
+  __VERIFIER_assume(min == 0 && max >= ULLONG_MAX && max <= ULLONG_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
 }
