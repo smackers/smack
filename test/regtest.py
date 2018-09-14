@@ -19,6 +19,7 @@ import shlex
 
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
+FILE_EXTENSIONS = ['.c', '.ll']
 
 def bold(text):
   return '\033[1m' + text + '\033[0m'
@@ -216,9 +217,16 @@ def main():
     # start the tests
     logging.info("Running regression tests...")
 
+
+    # find test files
+    test_files = []
+    for ext in FILE_EXTENSIONS:
+      test_files += glob.glob("./" + args.folder + "/*" + ext)
+    test_files = sorted(test_files)
+    
     # start processing the tests.
     results = []
-    for test in sorted(glob.glob("./" + args.folder + "/*.c")):
+    for test in test_files:
       # get the meta data for this test
       meta = metadata(test)
 

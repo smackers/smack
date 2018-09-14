@@ -1,4 +1,4 @@
-; @expect verified
+; @expect error
 
 ; This file tests that the semantics of the llvm.expect intrinsic is properly
 ; modeled.
@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @main() {
   %1 = add nsw i32 0, 1
-  %2 = call i32 @llvm.expect.i32(i32 %1, i32 1)
+  %2 = call i32 @llvm.expect.i32(i32 0, i32 1)
   call void @__VERIFIER_assert(i32 %2)
   ret i32 0
 }
