@@ -594,6 +594,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     WARN("ignoring llvm.debug call.");
     emit(Stmt::skip());
 
+  } else if (name.find("llvm.expect.") != std::string::npos) {
+    // The llvm.expect.* function has two arguments: a value v and an expected
+    // value that is supposed to be used by optimizers.
+    // Semantically, this function simply returns the value v.
+    Value* val = ci.getArgOperand(0);
+    emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
+    
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep->valueAnnotation(ci));
 
