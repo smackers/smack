@@ -21,6 +21,7 @@ def languages():
     'f90'    : 'fortran',
     'f95'    : 'fortran',
     'f03'    : 'fortran',
+    'rs'     : 'rust',
   }
 
 def frontends():
@@ -39,6 +40,7 @@ def frontends():
     'llvm'     : llvm_frontend,
     'boogie'   : boogie_frontend,
     'fortran'  : fortran_frontend,
+    'rust'     : rust_frontend,
   }
 
 def extra_libs():
@@ -46,6 +48,7 @@ def extra_libs():
   return {
     'fortran' : fortran_build_libs, 
     'cxx'     : cplusplus_build_libs,
+    'rust'    : rust_build_libs,
     # coming soon - libraries for OBJC, Rust, Swift, etc.
   }
 
@@ -207,6 +210,27 @@ def json_compilation_database_frontend(input_file, args):
         try_command(command.split(),cc['directory'], console=True)
 
   llvm_to_bpl(args)
+
+def rust_frontend(input_file, args):
+  """Generate Boogie code from Rust programming language source(s)."""
+  compile_command = ['rustc', '-A', 'unused-imports', '-C', 'opt-level=0',
+                     '-C', 'no-prepopulate-passes', '-g', '--emit=llvm-bc',
+                     '--cfg', 'verifier="smack"']
+  
+  # This links in the Rust SMACK library. This is needed due to the way rustc
+  # finds a programs libraries.
+  try:
+    abs_path = os.path.dirname(os.path.abspath(rs))
+    mod_path = os.path.join(abs_path, "smack")
+    if not os.path.exists(mod_path):
+      os.mkdir(mod_path)
+      link_target = os.path.join(mod_path, "mod.rs")
+      if not os.path.exists(link_target):
+        os.symlink(rust_macros, link_target)
+        temp_rs = rs
+  except:
+    raise RuntimeError("Could not find or create smack module.")
+  return compile_to_bc(input_file,compile_command,args)
 
 # Build libs functions here
 
