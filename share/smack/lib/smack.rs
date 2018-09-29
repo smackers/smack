@@ -454,51 +454,6 @@ macro_rules! vec {
   };  
 }
 
-// #[cfg(verifier = "smack")]
-// pub struct String {
-//     backing_store: Vec<u8>,
-// }
-
-// #[cfg(verifier = "smack")]
-// impl String {
-//   pub fn from(s: &str) -> String {
-//     let mut bs = vec![];
-//     // let bytes = s.as_bytes();  
-//     // for i in 0..bytes.len() {
-//     //   bs.push(bytes[i]);
-//     // }
-//     String{backing_store: bs}
-//   }
-//   pub fn from_i64(i: i64) -> String {
-//       String::from("")
-//   }
-// }
-
-// #[cfg(verifier = "smack")]
-// impl Default for String {
-//   fn default() -> String {
-//     String{backing_store: vec![]}
-//   }
-// }
-
-// #[cfg(verifier = "smack")]
-// impl Clone for String {
-//     fn clone(&self) -> Self {
-//         let mut new_bs = vec![];
-//         for x in self.backing_store.iter() {
-//             new_bs.push(*x);
-//         }
-//         String {backing_store: new_bs}
-//   }
-// }
-
-// #[cfg(verifier = "smack")]
-// impl String {
-//     pub fn get(&self, idx: usize) -> char {
-//         self.backing_store[idx] as char
-//     }
-// }
-
 #[cfg(verifier = "smack")]
 #[allow(dead_code)]
 pub struct Box<T: Sized> {
@@ -523,10 +478,3 @@ impl<T: Sized> Deref for Box<T> {
         unsafe{ mem::transmute::<*mut T, &T>(self.ptr.as_ptr()) }
     }
 }
-
-/*#[cfg(verifier = "smack")]
-impl<T: Sized> Default for Box<T> {
-  fn default() -> Box<T> {
-      Box<T>::new{ ptr: Default::default() };
-  }
-}*/
