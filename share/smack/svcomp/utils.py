@@ -287,8 +287,8 @@ def verify_bpl_svcomp(args):
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
   elif args.integer_overflow and "__main($i0" in bpl:
-    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 4.\n"
-    loopUnrollBar = 4
+    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 11.\n"
+    loopUnrollBar = 11
   elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
