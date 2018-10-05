@@ -9,26 +9,13 @@ import shutil
 import sys
 import shlex
 import subprocess
-from svcomp.utils import svcomp_frontend
 from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
+from prelude import append_prelude
+from frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '1.9.0'
-
-def frontends():
-  """A dictionary of front-ends per file extension."""
-  return {
-    'c': clang_frontend,
-    'i': clang_frontend,
-    'cc': clang_frontend,
-    'cpp': clang_frontend,
-    'json': json_compilation_database_frontend,
-    'svcomp': svcomp_frontend,
-    'bc': llvm_frontend,
-    'll': llvm_frontend,
-    'bpl': boogie_frontend,
-  }
+VERSION = '1.9.1'
 
 def results(args):
   """A dictionary of the result output messages."""
@@ -38,7 +25,7 @@ def results(args):
     'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
     'invalid-free': 'SMACK found an error: invalid memory deallocation.',
     'invalid-memtrack': 'SMACK found an error: memory leak.',
-    'overflow': 'SMACK found an error: signed integer overflow.',
+    'overflow': 'SMACK found an error: integer overflow.',
     'timeout': 'SMACK timed out.',
     'unknown': 'SMACK result is unknown.'
   }
@@ -54,7 +41,8 @@ def inlined_procedures():
     '__VERIFIER_',
     '$initialize',
     '__SMACK_static_init',
-    '__SMACK_init_func_memory_model'
+    '__SMACK_init_func_memory_model',
+    '__SMACK_check_overflow'
   ]
 
 def validate_input_file(file):
@@ -64,7 +52,7 @@ def validate_input_file(file):
   if not os.path.isfile(file):
     return ("Cannot find file %s." % file)
 
-  elif not file_extension in frontends():
+  elif not file_extension in languages():
     return ("Unexpected source file extension '%s'." % file_extension)
 
   else:
@@ -172,20 +160,18 @@ def arguments():
   translate_group.add_argument('--only-check-memleak', action='store_true', default=False,
     help='only enable memory leak checks')
 
-  translate_group.add_argument('--signed-integer-overflow', action='store_true', default=False,
-    help='enable signed integer overflow checks')
+  translate_group.add_argument('--integer-overflow', action='store_true', default=False,
+    help='enable integer overflow checks')
 
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
 
-  translate_group.add_argument('--split-aggregate-values', action='store_true', default=False,
-    help='enable splitting of load/store instructions of LLVM aggregate types')
-
+  translate_group.add_argument('--strings', action='store_true', default=False, help='enable support for string')
 
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'duality', 'svcomp'], default='corral',
+    choices=['boogie', 'corral', 'symbooglix', 'duality', 'svcomp'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -269,119 +255,39 @@ def target_selection(args):
 
 def frontend(args):
   """Generate the LLVM bitcode file."""
+  bitcodes = []
+  libs = set()
+  noreturning_frontend = False
+  
+  def add_libs(lang):
+    if lang in extra_libs():
+      libs.add(extra_libs()[lang])
+
   if args.language:
-    lang = args.language
+    lang = languages()[args.language]
+    if lang in ['boogie', 'svcomp', 'json']:
+      noreturning_frontend = True
+
+    add_libs(lang)
+    frontend = frontends()[lang]
+    for input_file in args.input_files:
+      bitcode = frontend(input_file,args)
+      if bitcode is not None:
+        bitcodes.append(bitcode)
+  
   else:
-    extensions = map(lambda f: os.path.splitext(f)[1][1:], args.input_files)
-    if any(map(lambda ext: ext != extensions[0], extensions)):
-      raise RuntimeError("All input files must have the same file type (extension).")
-    lang = extensions[0]
-  return frontends()[lang](args)
+    for input_file in args.input_files:
+      lang = languages()[os.path.splitext(input_file)[1][1:]]
+      if lang in ['boogie', 'svcomp', 'json']:
+        noreturning_frontend = True
 
-def smack_root():
-  return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-
-def smack_header_path():
-  return os.path.join(smack_root(), 'share', 'smack', 'include')
-
-def smack_headers():
-  paths = []
-  paths.append(smack_header_path())
-  if args.memory_safety or args.signed_integer_overflow:
-    paths.append(os.path.join(smack_header_path(), 'string'))
-  if args.float:
-    paths.append(os.path.join(smack_header_path(), 'math'))
-  return paths
-
-def smack_lib():
-  return os.path.join(smack_root(), 'share', 'smack', 'lib')
-
-def default_clang_compile_command(args, lib = False):
-  cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
-  cmd += map(lambda path: '-I' + path, smack_headers())
-  cmd += args.clang_options.split()
-  cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
-  if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.signed_integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
-  if args.float: cmd += ['-DFLOAT_ENABLED']
-  return cmd
-
-def build_libs(args):
-  """Generate LLVM bitcodes for SMACK libraries."""
-  bitcodes = []
-  libs = ['smack.c']
-
-  if args.pthread:
-    libs += ['pthread.c']
-
-  if args.memory_safety or args.signed_integer_overflow:
-    libs += ['string.c']
-
-  if args.float:
-    libs += ['math.c']
-
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(default_clang_compile_command(args, True) + ['-o', bc, c])
-    bitcodes.append(bc)
-
-  return bitcodes
-
-def boogie_frontend(args):
-  """Generate Boogie code by concatenating the input file(s)."""
-  with open(args.bpl_file, 'w') as out:
-    for src in args.input_files:
-      with open(src) as f:
-        out.write(f.read())
-
-def llvm_frontend(args):
-  """Generate Boogie code from LLVM bitcodes."""
-
-  try_command(['llvm-link', '-o', args.bc_file] + args.input_files)
-  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
-  llvm_to_bpl(args)
-
-def clang_frontend(args):
-  """Generate Boogie code from C-language source(s)."""
-
-  bitcodes = []
-  compile_command = default_clang_compile_command(args)
-
-  for c in args.input_files:
-    bc = temporary_file(os.path.splitext(os.path.basename(c))[0], '.bc', args)
-    try_command(compile_command + ['-o', bc, c], console=True)
-    bitcodes.append(bc)
-
-  try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
-  try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
-  llvm_to_bpl(args)
-
-def json_compilation_database_frontend(args):
-  """Generate Boogie code from a JSON compilation database."""
-
-  if len(args.input_files) > 1:
-    raise RuntimeError("Expected a single JSON compilation database.")
-
-  output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
-  optimization_flags = re.compile(r"-O[1-9]\b")
-
-  with open(args.input_files[0]) as f:
-    for cc in json.load(f):
-      if 'objects' in cc:
-        # TODO what to do when there are multiple linkings?
-        bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
-        try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
-        try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
-
-      else:
-        out_file = output_flags.findall(cc['command'])[0] + '.bc'
-        command = cc['command']
-        command = output_flags.sub(r"-o \1.bc", command)
-        command = optimization_flags.sub("-O0", command)
-        command = command + " -emit-llvm"
-        try_command(command.split(),cc['directory'], console=True)
-
-  llvm_to_bpl(args)
+      add_libs(lang)
+      bitcode = frontends()[lang](input_file,args) 
+      if bitcode is not None: 
+        bitcodes.append(bitcode)
+  
+  if not noreturning_frontend:
+    return link_bc_files(bitcodes,libs,args)
 
 def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
@@ -402,11 +308,11 @@ def llvm_to_bpl(args):
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
-  if args.signed_integer_overflow: cmd += ['-signed-integer-overflow']
+  if args.integer_overflow: cmd += ['-integer-overflow']
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
-  if args.split_aggregate_values: cmd += ['-split-aggregate-values']
   try_command(cmd, console=True)
+  append_prelude(args)
   annotate_bpl(args)
   property_selection(args)
   transform_bpl(args)
@@ -480,11 +386,11 @@ def transform_out(args, old):
   return out
 
 def verification_result(verifier_output):
-  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out', verifier_output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT', verifier_output):
     return 'timeout'
-  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', verifier_output):
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT', verifier_output):
     return 'verified'
-  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail', verifier_output):
+  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT', verifier_output):
     if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
       return 'invalid-deref'
     elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
@@ -528,6 +434,14 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
+	
+  elif args.verifier == 'symbooglix':
+    command = ['symbooglix']
+    command += [args.bpl_file]
+    command += ["--file-logging=0"]
+    command += ["--entry-points=%s" % ",".join(args.entry_points)]
+    command += ["--timeout=%d" % args.time_limit]
+    command += ["--max-loop-depth=%d" % args.unroll]
 
   else:
     # Duality!
@@ -535,11 +449,9 @@ def verify_bpl(args):
     command += ["/tryCTrace", "/noTraceOnDisk", "/useDuality", "/oldStratifiedInlining"]
     command += ["/recursionBound:1073741824", "/k:1"]
 
-  if args.bit_precise:
+  if (args.bit_precise or args.float) and args.verifier != 'symbooglix':
     x = "bopt:" if args.verifier != 'boogie' else ""
     command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-    command += ["/%sz3opt:smt.relevancy=0" % x]
-    command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
     command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:

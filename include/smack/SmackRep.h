@@ -28,6 +28,8 @@ using llvm::SmallVector;
 using llvm::StringRef;
 
 class SmackRep {
+  friend class VectorOperations;
+
 protected:
   const llvm::DataLayout* targetData;
   Naming* naming;
@@ -64,7 +66,7 @@ private:
   const Expr* pointerToInteger(const Expr* e, unsigned width);
   const Expr* integerToPointer(const Expr* e, unsigned width);
 
-  std::string opName(const std::string& operation, std::initializer_list<const llvm::Type*> types);
+  std::string opName(const std::string& operation, std::list<const llvm::Type*> types);
   std::string opName(const std::string& operation, std::initializer_list<unsigned> types);
 
   const Stmt* store(unsigned R, const llvm::Type* T, const Expr* P, const Expr* V);
@@ -83,6 +85,7 @@ private:
 
   std::string pointerType();
   std::string intType(unsigned width);
+  std::string vectorType(int n, llvm::Type *T);
 
   unsigned numElements(const llvm::Constant* v);
 
@@ -90,6 +93,8 @@ private:
     unsigned length = std::numeric_limits<unsigned>::max());
   Decl* memsetProc(std::string type,
     unsigned length = std::numeric_limits<unsigned>::max());
+
+  bool isUnsafeFloatAccess(const llvm::Type* elemTy, const llvm::Type* resultTy);
 
 public:
   const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
@@ -143,6 +148,7 @@ public:
   std::string memReg(unsigned i);
   std::string memType(unsigned region);
   std::string memPath(unsigned region);
+  std::string memPath(const llvm::Value* v);
 
   std::list< std::pair< std::string, std::string > > memoryMaps();
 
@@ -158,12 +164,11 @@ public:
   std::string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
 
-  std::list<Decl*> auxiliaryDeclarations() {
-    std::list<Decl*> ds;
-    for (auto D : auxDecls)
-      ds.push_back(D.second);
-    return ds;
-  }
+  bool isContractExpr(const llvm::Value* V) const;
+  bool isContractExpr(const std::string S) const;
+
+  void addAuxiliaryDeclaration(Decl* D);
+  std::list<Decl*> auxiliaryDeclarations();
 };
 
 }

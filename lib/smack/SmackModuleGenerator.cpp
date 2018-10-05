@@ -99,7 +99,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
   std::list<Decl*> kill_list;
   for (auto D : *program) {
     if (auto P = dyn_cast<ProcDecl>(D)) {
-      if (D->getName().find(Naming::CONTRACT_EXPR) != std::string::npos) {
+      if (rep.isContractExpr(D->getName())) {
         decls.insert(decls.end(), Decl::code(P));
         kill_list.push_back(P);
       }

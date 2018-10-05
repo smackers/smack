@@ -1,9 +1,8 @@
-// Tests deadlock detection when join on self
-
-// @expect error
-
 #include <pthread.h>
 #include <smack.h>
+
+// Tests deadlock detection when join on self
+// @expect error
 
 ////////////////////////////////////////////////////////////////
 // 
@@ -36,14 +35,11 @@ void* t1(void* arg) {
   int err = pthread_join2(self, (void*)&ret);
   // Should be an EDEADLK error
   assert(err == 35);
-  if(err != 35)
-    assert(0);
-
   pthread_exit((void*)1);
   return 0;
 }
 
-int main() {
+int main(void) {
   pthread_t tid1 = __VERIFIER_nondet_int();
   int ret;
   pthread_create2(&tid1, 0, t1, &tid1);
@@ -89,7 +85,7 @@ int pthread_join2(pthread_t __th, void **__thread_return) {
   __SMACK_code("assume $pthreadStatus[@][0] == $pthread_stopped;", __th);
 
   // Get the thread's return value
-  void* tmp_thread_return_pointer = (void*)__VERIFIER_nondet_long();
+  void* tmp_thread_return_pointer = __VERIFIER_nondet_pointer();
   __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
   *__thread_return = tmp_thread_return_pointer;
 
@@ -142,8 +138,4 @@ int pthread_create2(pthread_t *__restrict __newthread,
 
   return 0;
 }
-
-
-
-
 

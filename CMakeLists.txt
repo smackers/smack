@@ -21,6 +21,8 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "--no-keep-files-mapped" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
+  string(REPLACE "--no-map-whole-files" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-Wl," "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-gsplit-dwarf" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
@@ -172,9 +174,11 @@ add_library(smackTranslator STATIC
   include/smack/VerifierCodeMetadata.h
   include/smack/SimplifyLibCalls.h
   include/smack/SmackRep.h
+  include/smack/VectorOperations.h
   include/smack/MemorySafetyChecker.h
-  include/smack/SignedIntegerOverflowChecker.h
-  include/smack/SplitAggregateLoadStore.h
+  include/smack/IntegerOverflowChecker.h
+  include/smack/NormalizeLoops.h
+  include/smack/SplitAggregateValue.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
@@ -192,9 +196,11 @@ add_library(smackTranslator STATIC
   lib/smack/VerifierCodeMetadata.cpp
   lib/smack/SimplifyLibCalls.cpp
   lib/smack/SmackRep.cpp
+  lib/smack/VectorOperations.cpp
   lib/smack/MemorySafetyChecker.cpp
-  lib/smack/SignedIntegerOverflowChecker.cpp
-  lib/smack/SplitAggregateLoadStore.cpp
+  lib/smack/IntegerOverflowChecker.cpp
+  lib/smack/NormalizeLoops.cpp
+  lib/smack/SplitAggregateValue.cpp
 )
 
 add_executable(llvm2bpl
@@ -211,6 +217,7 @@ INSTALL(TARGETS llvm2bpl
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/symbooglix
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/lockpwn
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
@@ -223,5 +230,5 @@ INSTALL(FILES
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   DESTINATION share
   USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile"
+  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di"
 )

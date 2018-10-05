@@ -5,11 +5,12 @@ import subprocess
 import time
 from shutil import copyfile
 import smack.top
+import smack.frontend
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph
 from random_testing import random_test
 
-def svcomp_frontend(args):
+def svcomp_frontend(input_file, args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
   # enable static LLVM unroll pass
@@ -30,7 +31,7 @@ def svcomp_frontend(args):
     if file_type == 'bitvector':
       args.bit_precise = True
       args.bit_precise_pointers = True
-    if file_type == 'float' and not args.signed_integer_overflow:
+    if file_type == 'float' and not args.integer_overflow:
       #sys.exit(smack.top.results(args)['unknown'])
       args.float = True
       args.bit_precise = True
@@ -40,7 +41,7 @@ def svcomp_frontend(args):
       args.unroll = 100
     args.execute = executable
   else:
-    with open(args.input_files[0], "r") as sf:
+    with open(input_file, "r") as sf:
       sc = sf.read()
     if 'unsigned char b:2' in sc or "4294967294u" in sc:
       args.bit_precise = True
@@ -56,11 +57,16 @@ def svcomp_frontend(args):
   args.clang_options += " -DDISABLE_PTHREAD_ASSERTS"
   args.clang_options += " -include smack.h"
 
-  if os.path.splitext(args.input_files[0])[1] == ".i":
+  if os.path.splitext(input_file)[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
-  smack.top.clang_frontend(args)
+  bc = smack.frontend.clang_frontend(args.input_files[0], args)
+
+  # run with no extra smack libraries
+  libs = set()
+
+  smack.top.link_bc_files([bc],libs,args)
 
 def svcomp_check_property(args):
   # Check if property is vanilla reachability, and return unknown otherwise
@@ -70,7 +76,7 @@ def svcomp_check_property(args):
     if "valid-deref" in prop:
       args.memory_safety = True
     elif "overflow" in prop:
-      args.signed_integer_overflow = True
+      args.integer_overflow = True
     elif not "__VERIFIER_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
@@ -100,13 +106,9 @@ def svcomp_process_file(args, name, ext):
       while (True):
         pass
 
-    if args.float:
-      if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
-        sys.exit(smack.top.results(args)['unknown'])
-
     if 'argv=malloc' in s:
 #      args.bit_precise = True
-      if args.signed_integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
+      if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
         args.bit_precise = True
         args.bit_precise_pointers = True
 
@@ -191,8 +193,6 @@ def verify_bpl_svcomp(args):
     if args.bit_precise:
       x = "bopt:" if args.verifier != 'boogie' else ""
       boogie_command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-      boogie_command += ["/%sz3opt:smt.relevancy=0" % x]
-      boogie_command += ["/%sz3opt:smt.bv.enable_int2bv=true" % x]
       boogie_command += ["/%sboolControlVC" % x]
 
     if args.verifier_options:
@@ -286,10 +286,10 @@ def verify_bpl_svcomp(args):
   elif args.memory_safety and "__main($i0" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
-  elif args.signed_integer_overflow and "__main($i0" in bpl:
-    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 4.\n"
-    loopUnrollBar = 4
-  elif args.signed_integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
+  elif args.integer_overflow and "__main($i0" in bpl:
+    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 11.\n"
+    loopUnrollBar = 11
+  elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
 
@@ -301,8 +301,6 @@ def verify_bpl_svcomp(args):
     heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
     corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
     corral_command += ["/bopt:boolControlVC"]
-    if not args.bit_precise_pointers:
-      corral_command += ["/bopt:z3opt:smt.bv.enable_int2bv=true"]
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':

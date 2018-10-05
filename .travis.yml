@@ -3,27 +3,50 @@ dist: trusty
 sudo: required
 compiler: clang
 
+addons:
+  apt:
+    packages:
+      - git
+      - cmake
+      - python-yaml
+      - python-psutil
+      - unzip
+      - libz-dev
+      - libedit-dev
+
+cache:
+  directories:
+    - $HOME/build/smackers/boogie
+    - $HOME/build/smackers/corral
+    - $HOME/build/smackers/symbooglix
+    - $HOME/build/smackers/lockpwn
+
 env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
   matrix:
     - TRAVIS_ENV="--exhaustive --folder=basic"
+    - TRAVIS_ENV="--exhaustive --folder=data"
     - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
     - TRAVIS_ENV="--exhaustive --folder=bits"
     - TRAVIS_ENV="--exhaustive --folder=float"
     - TRAVIS_ENV="--exhaustive --folder=locks"
     - TRAVIS_ENV="--exhaustive --folder=contracts"
+    - TRAVIS_ENV="--exhaustive --folder=simd"
     - TRAVIS_ENV="--exhaustive --folder=memory-safety"
     - TRAVIS_ENV="--exhaustive --folder=pthread"
+    - TRAVIS_ENV="--exhaustive --folder=strings"
 
 before_install:
   - sudo rm -rf /usr/local/clang-3.5.0
   - sudo add-apt-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main"
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+  - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+  - echo "deb http://download.mono-project.com/repo/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/mono-official.list
   - sudo apt-get update
 
 install:
-  - sudo apt-get install -y clang-3.9 llvm-3.9
+  - sudo apt-get install -y clang-3.9 llvm-3.9 mono-complete
   - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.9 20
   - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.9 20
   - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.9 20
@@ -38,4 +61,3 @@ script:
   - clang --version
   - clang++ --version
   - ./bin/build.sh
-

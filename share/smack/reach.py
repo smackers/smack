@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # This file is distributed under the MIT License. See LICENSE for details.
 #
@@ -11,7 +11,7 @@ import json
 from smackgen import *
 from smackverify import *
 
-VERSION = '1.9.0'
+VERSION = '1.9.1'
 
 def reachParser():
     parser = argparse.ArgumentParser(add_help=False, parents=[verifyParser()])
