@@ -15,7 +15,7 @@ from replay import replay_error_trace
 from prelude import append_prelude
 from frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '1.9.0'
+VERSION = '1.9.1'
 
 def results(args):
   """A dictionary of the result output messages."""
