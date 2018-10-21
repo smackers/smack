@@ -3,10 +3,11 @@
 //
 #include <string.h>
 #include <stdlib.h>
+#include <smack.h>
 
 char *strcpy(char *dest, const char *src) {
   char *save = dest;
-  while (*dest++ = *src++);
+  while ((*dest++ = *src++));
   return save;
 }
 
@@ -55,7 +56,7 @@ char *strcat(char *dest, const char *src) {
 
   while (*dest)
     dest++;
-  while (*dest++ = *src++) ;
+  while ((*dest++ = *src++)) ;
 
   return retDest;
 }
@@ -77,7 +78,7 @@ char *strncat(char *dest, const char *src, size_t n) {
 char *strchr(const char *src, int c) {
   while (*src != 0) {
     if (*src == c) {
-      return src;
+      return (char *)src;
     }
     src++;
   }
@@ -90,7 +91,7 @@ char *strrchr(const char *src, int c) {
 
   while (*src != 0) {
     if (*src == c) {
-      result = src;
+      result = (char *)src;
     }
     src++;
   }
@@ -118,8 +119,8 @@ size_t strcspn(const char *s1, const char *s2) {
 }
 
 char *strpbrk(const char *s1, const char *s2) {
-  for (char *c1 = s1; *c1; c1++)
-    for (char *c2 = s2; *c2; c2++)
+  for (char *c1 = (char *)s1; *c1; c1++)
+    for (char *c2 = (char *)s2; *c2; c2++)
       if (*c1 == *c2)
         return c1;
   return 0;
@@ -133,7 +134,7 @@ char *strstr(const char *haystack, const char *needle) {
     const char *h, *n;
     for (h = haystack, n = needle; *h && *n && (*h == *n); h++, n++);
     if (*n == '\0')
-      return haystack;
+      return (char *)haystack;
   }
   return 0;
 }
@@ -168,13 +169,13 @@ char *strtok(char *str, const char *delim) {
 unsigned long int strtoul(const char *nptr, char **endptr, int base) {
   if (__VERIFIER_nondet_int()) {
     if (endptr != 0) {
-      *endptr = nptr;
+      *endptr = (char *)nptr;
     }
     return 0;
   } else {
     if (endptr != 0) {
       size_t size = strlen(nptr);
-      *endptr = nptr + size;
+      *endptr = (char *)nptr + size;
     }
     return __VERIFIER_nondet_ulong();
   }
@@ -183,13 +184,13 @@ unsigned long int strtoul(const char *nptr, char **endptr, int base) {
 double strtod(const char *nptr, char **endptr) {
   if (__VERIFIER_nondet_int()) {
     if (endptr != 0) {
-      *endptr = nptr;
+      *endptr = (char *)nptr;
     }
     return 0.0;
   } else {
     if (endptr != 0) {
       size_t size = strlen(nptr);
-      *endptr = nptr + size;
+      *endptr = (char *)nptr + size;
     }
     return __VERIFIER_nondet_long();
   }

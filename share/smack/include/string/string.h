@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+void *memcpy(void *str1, const void *str2, size_t n);
+void *memset(void *str, int c, size_t n);
 char *strcpy(char *dest, const char *src);
 size_t strlen(const char *str);
 char *strrchr(const char *src, int c);
