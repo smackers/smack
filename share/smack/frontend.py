@@ -61,10 +61,6 @@ def smack_header_path():
 def smack_headers(args):
   paths = []
   paths.append(smack_header_path())
-  if args.memory_safety or args.integer_overflow:
-    paths.append(os.path.join(smack_header_path(), 'string'))
-  if args.float:
-    paths.append(os.path.join(smack_header_path(), 'math'))
   return paths
 
 def smack_lib():
@@ -237,7 +233,7 @@ def rust_frontend(input_file, args):
 def default_build_libs(args):
   """Generate LLVM bitcodes for SMACK libraries."""
   bitcodes = []
-  libs = ['smack.c']
+  libs = ['smack.c', 'stdlib.c']
 
   if args.pthread:
     libs += ['pthread.c']

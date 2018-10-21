@@ -166,36 +166,6 @@ char *strtok(char *str, const char *delim) {
   return tok;
 }
 
-unsigned long int strtoul(const char *nptr, char **endptr, int base) {
-  if (__VERIFIER_nondet_int()) {
-    if (endptr != 0) {
-      *endptr = (char *)nptr;
-    }
-    return 0;
-  } else {
-    if (endptr != 0) {
-      size_t size = strlen(nptr);
-      *endptr = (char *)nptr + size;
-    }
-    return __VERIFIER_nondet_ulong();
-  }
-}
-
-double strtod(const char *nptr, char **endptr) {
-  if (__VERIFIER_nondet_int()) {
-    if (endptr != 0) {
-      *endptr = (char *)nptr;
-    }
-    return 0.0;
-  } else {
-    if (endptr != 0) {
-      size_t size = strlen(nptr);
-      *endptr = (char *)nptr + size;
-    }
-    return __VERIFIER_nondet_long();
-  }
-}
-
 char *error_str = "xx";
 char *strerror(int errnum) {
   error_str[0] = __VERIFIER_nondet_char();
@@ -203,18 +173,3 @@ char *strerror(int errnum) {
   return error_str;
 }
 
-char *env_value_str = "xx";
-char *getenv(const char *name) {
-  if (__VERIFIER_nondet_int()) {
-    return 0;
-  } else {
-    env_value_str[0] = __VERIFIER_nondet_char();
-    env_value_str[1] = __VERIFIER_nondet_char();
-    return env_value_str;
-  }
-}
-
-void *realloc (void *__ptr, size_t __size) {
-  free(__ptr);
-  return malloc(__size);
-}

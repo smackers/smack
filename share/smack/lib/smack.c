@@ -257,17 +257,6 @@ void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
 }
 
-void* calloc(size_t num, size_t size) {
-  void* ret;
-  if (__VERIFIER_nondet_int()) {
-    ret = 0;
-  } else {
-    ret = malloc(num * size);
-    memset(ret, 0, num * size);
-  }
-  return ret;
-}
-
 void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
