@@ -127,9 +127,6 @@ char *strpbrk(const char *s1, const char *s2) {
 }
 
 char *strstr(const char *haystack, const char *needle) {
-  if (!haystack || !needle)
-    return 0;
-
   for (; *haystack; haystack++) {
     const char *h, *n;
     for (h = haystack, n = needle; *h && *n && (*h == *n); h++, n++);
