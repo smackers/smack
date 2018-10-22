@@ -477,8 +477,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       if (const llvm::PointerType* t = llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
-        if (!t->getElementType()->isPointerTy()) {
-          assert(G->hasName() && "Expected named global variable.");
+        if (!t->getElementType()->isPointerTy() && G->hasName()) {
           emit(recordProcedureCall(V, {Attr::attr("cexpr", G->getName().str())}));
         }
       }
