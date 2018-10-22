@@ -21,34 +21,44 @@ void *realloc(void *ptr, size_t size) {
   return malloc(size);
 }
 
-unsigned long int strtoul(const char *nptr, char **endptr, int base) {
-  if (__VERIFIER_nondet_int()) {
-    if (endptr != 0) {
-      *endptr = (char *)nptr;
-    }
-    return 0;
-  } else {
-    if (endptr != 0) {
-      size_t size = strlen(nptr);
-      *endptr = (char *)nptr + size;
-    }
-    return __VERIFIER_nondet_ulong();
+long int strtol(const char *nptr, char **endptr, int base) {
+  if (endptr != 0) {
+    size_t size = strlen(nptr);
+    unsigned nondet = __VERIFIER_nondet_unsigned_int();
+    __VERIFIER_assume(nondet <= size);
+    *endptr = (char *)nptr + nondet;
   }
+  return __VERIFIER_nondet_long();
+}
+
+unsigned long int strtoul(const char *nptr, char **endptr, int base) {
+  if (endptr != 0) {
+    size_t size = strlen(nptr);
+    unsigned nondet = __VERIFIER_nondet_unsigned_int();
+    __VERIFIER_assume(nondet <= size);
+    *endptr = (char *)nptr + nondet;
+  }
+  return __VERIFIER_nondet_unsigned_long();
+}
+
+unsigned long long int strtoull(const char *nptr, char **endptr, int base) {
+  if (endptr != 0) {
+    size_t size = strlen(nptr);
+    unsigned nondet = __VERIFIER_nondet_unsigned_int();
+    __VERIFIER_assume(nondet <= size);
+    *endptr = (char *)nptr + nondet;
+  }
+  return __VERIFIER_nondet_unsigned_long_long();
 }
 
 double strtod(const char *nptr, char **endptr) {
-  if (__VERIFIER_nondet_int()) {
-    if (endptr != 0) {
-      *endptr = (char *)nptr;
-    }
-    return 0.0;
-  } else {
-    if (endptr != 0) {
-      size_t size = strlen(nptr);
-      *endptr = (char *)nptr + size;
-    }
-    return __VERIFIER_nondet_long();
+  if (endptr != 0) {
+    size_t size = strlen(nptr);
+    unsigned nondet = __VERIFIER_nondet_unsigned_int();
+    __VERIFIER_assume(nondet <= size);
+    *endptr = (char *)nptr + nondet;
   }
+  return __VERIFIER_nondet_double();
 }
 
 char *env_value_str = "xx";
