@@ -133,6 +133,9 @@ def formatAssign(assignStmt):
     else:
       return ""
 
+def isSMACKInitFunc(funcName):
+  return funcName == '$initialize' or funcName == '__SMACK_static_init' or funcName == '__SMACK_init_func_memory_model'
+
 def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
@@ -157,22 +160,25 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
       for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
+          desc = jsonTrace["description"]
           if formatAssign(jsonTrace["description"]):
           # Create new node and edge
             newNode = addGraphNode(tree)
             attribs = {"startline":str(jsonTrace["line"])}
-            attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
+            attribs["assumption"] = formatAssign(desc) + ";"
             attribs["assumption.scope"] = callStack[-1]
             newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
             prevLineNo = jsonTrace["line"]
             prevColNo = jsonTrace["column"]
             lastNode = newNode
             lastEdge = newEdge
-          if "CALL" in jsonTrace["description"]:
+          if "CALL" in desc:
             # Add function to call stack
             calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
             if calledFunc.startswith("devirtbounce"):
               print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              continue
+            if isSMACKInitFunc(calledFunc):
               continue
             callStack.append(calledFunc)
             if (("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]) or
@@ -185,14 +191,16 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
                 if vNode.attrib["id"] == newNode:
                   addKey(vNode, "violation", "true")
               attribs = {"startline":str(jsonTrace["line"])}
-              if not args.signed_integer_overflow:
+              if not args.integer_overflow:
                 attribs["enterFunction"] = callStack[-1]
               addGraphEdge(tree, lastNode, newNode, attribs)
               break
-          if "RETURN from" in jsonTrace["description"]:
-            returnedFunc = str(jsonTrace["description"][len("RETURN from "):]).strip()
+          if "RETURN from" in desc:
+            returnedFunc = str(desc[len("RETURN from "):]).strip()
             if returnedFunc.startswith("devirtbounce"):
               print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              continue
+            if isSMACKInitFunc(returnedFunc):
               continue
             if returnedFunc != callStack[-1]:
               raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1], returnedFunc))
