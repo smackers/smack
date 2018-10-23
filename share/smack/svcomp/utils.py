@@ -50,6 +50,7 @@ def svcomp_frontend(input_file, args):
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
 
+  args.clang_options += " -fbracket-depth=2048"
   args.clang_options += " -DSVCOMP"
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
