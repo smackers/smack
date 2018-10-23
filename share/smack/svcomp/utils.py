@@ -119,6 +119,7 @@ def svcomp_process_file(args, name, ext):
       s = re.sub(r'100000', r'10', s)
       s = re.sub(r'15000', r'5', s)
       s = re.sub(r'i<=10000', r'i<=1', s)
+      s = re.sub(r'500000', r'50', s)
     elif length < 710 and 'dll_create_master' in s:
       args.no_memory_splitting = True
 
