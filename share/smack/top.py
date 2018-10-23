@@ -517,6 +517,8 @@ def error_trace(verifier_output, args):
 
 def smackdOutput(corralOutput):
   FILENAME = '[\w#$~%.\/-]+'
+  traceP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$')
+  errorP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$')
 
   passedMatch = re.search('Program has no bugs', corralOutput)
   if passedMatch:
@@ -533,32 +535,30 @@ def smackdOutput(corralOutput):
     threadid = 0
     desc = ''
     for traceLine in corralOutput.splitlines(True):
-      traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
-      traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\s*\w+\s*=\s*\w+\s*)\))$', traceLine)
-      errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
+      traceMatch = traceP.match(traceLine)
       if traceMatch:
         filename = str(traceMatch.group(1))
         lineno = int(traceMatch.group(2))
         colno = int(traceMatch.group(3))
         threadid = int(traceMatch.group(4))
         desc = str(traceMatch.group(6))
-        assm = ''
-        if traceAssumeMatch:
-          assm = str(traceAssumeMatch.group(6))
-          #Remove bitvector indicator from trace assumption
-          assm = re.sub(r'=(\s*\d+)bv\d+', r'=\1', assm)
-        trace = { 'threadid': threadid,
+        for e in desc.split(','):
+          e = e.strip()
+          assm = re.sub(r'=(\s*\d+)bv\d+', r'=\1', e) if '=' in e else ''
+          trace = { 'threadid': threadid,
                   'file': filename,
                   'line': lineno,
                   'column': colno,
-                  'description': '' if desc == 'None' else desc,
+                  'description': e,
                   'assumption': assm }
-        traces.append(trace)
-      elif errorMatch:
-        filename = str(errorMatch.group(1))
-        lineno = int(errorMatch.group(2))
-        colno = int(errorMatch.group(3))
-        desc = str(errorMatch.group(4))
+          traces.append(trace)
+      else:
+        errorMatch = errorP.match(traceLine)
+        if errorMatch:
+          filename = str(errorMatch.group(1))
+          lineno = int(errorMatch.group(2))
+          colno = int(errorMatch.group(3))
+          desc = str(errorMatch.group(4))
 
     failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
 
