@@ -55,14 +55,6 @@ void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag); __SMACK_code("assert {:overflow} @ == $0;", flag);
 }
 
-void exit(int x) {
-#if MEMORY_SAFETY
-  __SMACK_code("assert $allocatedCounter == 0;");
-#endif
-  __SMACK_code("assume false;");
-  while(1);
-}
-
 char __VERIFIER_nondet_char(void) {
   char x = __SMACK_nondet_char();
   __VERIFIER_assume(x >= SCHAR_MIN && x <= SCHAR_MAX);
