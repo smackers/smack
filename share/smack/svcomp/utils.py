@@ -331,7 +331,7 @@ def verify_bpl_svcomp(args):
   command += ["/v:1"]
   command += ["/maxStaticLoopBound:%d" % staticLoopBound]
   command += ["/recursionBound:65536"]
-  command += ["/irreducibleLoopUnroll:2"]
+  command += ["/irreducibleLoopUnroll:12"]
   command += ["/trackAllVars"]
 
   verifier_output = smack.top.try_command(command, timeout=time_limit)
