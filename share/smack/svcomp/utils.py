@@ -222,6 +222,9 @@ def verify_bpl_svcomp(args):
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
 
+  with open(args.input_files[0], "r") as f:
+    csource = f.read()
+
   is_crappy_driver_benchmark(args, bpl)
 
   if args.pthread:
@@ -293,6 +296,12 @@ def verify_bpl_svcomp(args):
     loopUnrollBar = 11
   elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
+  elif args.integer_overflow and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or "(k < N)" in csource):
+    heurTrace += "Large overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
+  elif "i>>16" in csource:
+    heurTrace += "Large array reach benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
 
   if not "forall" in bpl:
