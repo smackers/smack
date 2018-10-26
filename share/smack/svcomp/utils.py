@@ -51,7 +51,7 @@ def svcomp_frontend(input_file, args):
   svcomp_process_file(args, name, ext)
 
   args.clang_options += " -fbracket-depth=2048"
-  args.clang_options += " -Wunknown-attributes"
+  args.clang_options += " -Wno-unknown-attributes"
   args.clang_options += " -DSVCOMP"
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
@@ -239,7 +239,8 @@ def verify_bpl_svcomp(args):
   else:
     corral_command += ["/k:1"]
     if not (args.memory_safety or args.bit_precise):
-      corral_command += ["/di"]
+      if not ("dll_create" in csource or "sll_create" in csource):
+        corral_command += ["/di"]
 
   # we are not modeling strcpy
   if args.pthread and "strcpy" in bpl:
