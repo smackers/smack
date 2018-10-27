@@ -7,6 +7,7 @@
 // operations, and optionally allows for the checking of overflow.
 //
 
+#define DEBUG_TYPE "smack-overflow"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/Naming.h"
 #include "llvm/IR/Module.h"
@@ -144,6 +145,8 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
             int bits = std::stoi(len);
             Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
             Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
+            DEBUG(errs() << "Processing operator: " << op << "\n");
+            assert(INSTRUCTION_TABLE.count(op) != 0 && "Operator must be present in our instruction table.");
             BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
             if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
               if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
