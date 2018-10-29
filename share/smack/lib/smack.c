@@ -46,6 +46,9 @@ void __VERIFIER_assert(int x) {
 void __VERIFIER_error(void) {
 #if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_code("assert false;");
+#elif MEMORY_SAFETY
+  __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
+  __SMACK_code("assume false;");
 #else
   __SMACK_code("assume false;");
 #endif
