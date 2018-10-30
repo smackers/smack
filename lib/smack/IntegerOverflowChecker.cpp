@@ -143,12 +143,12 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
             bool isSigned = (info[1] == "s");
             std::string op = info[2];
             int bits = std::stoi(info[3]);
+            Instruction* prev = &*std::prev(I);
             Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
             Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
             DEBUG(errs() << "Processing operator: " << op << "\n");
             assert(INSTRUCTION_TABLE.count(op) != 0 && "Operator must be present in our instruction table.");
             BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
-            Instruction* prev = &*std::prev(I);
             if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
               if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
                 Value* r = createResult(ai, bits, &*I);
