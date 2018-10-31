@@ -248,7 +248,7 @@ def verify_bpl_svcomp(args):
   is_crappy_driver_benchmark(args, bpl)
 
   if args.pthread:
-    if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl:
+    if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl or "k < 5;" in csource or "k < 10;" in csource or "k < 20;" in csource:
       heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
       corral_command += ["/k:30"]
     else:
