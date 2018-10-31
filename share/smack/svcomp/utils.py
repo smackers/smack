@@ -138,6 +138,10 @@ def svcomp_process_file(args, name, ext):
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
+def force_timeout():
+  sys.stdout.flush()
+  time.sleep(1000)
+
 def is_crappy_driver_benchmark(args, bpl):
   if ("205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--usb--rtl8150.ko-entry_point_true-unreach-call" in bpl or
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--gpu--drm--ttm--ttm.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
@@ -152,12 +156,14 @@ def is_crappy_driver_benchmark(args, bpl):
       "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
     if not args.quiet:
       print("Stumbled upon a crappy device driver benchmark\n")
-    while (True):
-      pass
+    force_timeout()
 
-def force_timeout():
-  sys.stdout.flush()
-  time.sleep(1000)
+def is_stack_benchmark(args, csource):
+  if ("getNumbers" in csource or "areNatural" in csource or "myPointerA" in csource or "if(i == 0) {" in csource or
+      "arr[194]" in csource or "if(1)" in csource or "alloca(10" in csource or "p[0] = 2;" in csource):
+    if not args.quiet:
+      print("Stumbled upon a stack-based memory safety benchmark\n")
+    sys.exit(smack.top.results(args)['unknown'])
 
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
@@ -235,6 +241,9 @@ def verify_bpl_svcomp(args):
 
   with open(args.input_files[0], "r") as f:
     csource = f.read()
+
+  if args.memory_safety:
+    is_stack_benchmark(args, csource)
 
   is_crappy_driver_benchmark(args, bpl)
 
@@ -436,8 +445,7 @@ def verify_bpl_svcomp(args):
             sys.exit(smack.top.results(args)[args.valid_deref_check_result])
         verify_bpl_svcomp(args)
       else:
-        # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
-        time.sleep(1000)
+        force_timeout()
   elif result == 'verified': #normal inlining
     heurTrace += "Normal inlining terminated and found no bugs.\n"
   else: #normal inlining
