@@ -94,7 +94,7 @@ Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) 
  * This adds a call instruction to __SMACK_check_overflow to determine if an
  * overflow occured as indicated by flag.
  */
-void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instruction* i) {
+void IntegerOverflowChecker::addCheck(Function* co, Value* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
   CallInst::Create(co, args, "", i);
 }
@@ -103,7 +103,7 @@ void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instru
  * This inserts a call to assume with flag negated to prevent the verifier
  * from exploring paths past a __SMACK_check_overflow
  */
-void IntegerOverflowChecker::addBlockingAssume(Function* va, BinaryOperator* flag, Instruction* i) {
+void IntegerOverflowChecker::addBlockingAssume(Function* va, Value* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
         va->arg_begin()->getType(), false, "", i));
   CallInst::Create(va, args, "", i);
@@ -119,6 +119,22 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
     if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+      // Add check for UBSan left shift
+      if (auto chkshft = dyn_cast<CallInst>(&*I)) {
+	Function* chkfn = chkshft->getCalledFunction();
+        if (chkfn!= nullptr &&
+            chkfn->hasName() &&
+            chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos &&
+            SmackOptions::IntegerOverflow) {
+          // If the call to __ubsan_handle_shift_out_of_bounds is reachable,
+          // then an overflow is possible.
+          ConstantInt* flag = ConstantInt::getTrue(chkshft->getFunction()->getContext());
+          addCheck(co, flag, &*I);
+          addBlockingAssume(va, flag, &*I);
+          I->replaceAllUsesWith(flag);
+          instToRemove.push_back(&*I);
+        }
+      }
       if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
         if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
           Function* f = ci->getCalledFunction();
