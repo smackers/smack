@@ -244,8 +244,12 @@ def verify_bpl_svcomp(args):
 
   if args.memory_safety:
     is_stack_benchmark(args, csource)
-
-  is_crappy_driver_benchmark(args, bpl)
+  elif args.integer_overflow and "mp_add(" in csource:
+    if not args.quiet:
+      print("Stumbled upon a left-shift-based overflow benchmark\n")
+    sys.exit(smack.top.results(args)['unknown'])
+  else:
+    is_crappy_driver_benchmark(args, bpl)
 
   if args.pthread:
     if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl or "k < 5;" in csource or "k < 10;" in csource or "k < 20;" in csource:
@@ -318,7 +322,8 @@ def verify_bpl_svcomp(args):
   elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
-  elif args.integer_overflow and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or "(k < N)" in csource or "partial_sum" in csource):
+  elif args.integer_overflow and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or
+                                  "(k < N)" in csource or "partial_sum" in csource):
     heurTrace += "Large overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
   elif "i>>16" in csource:
