@@ -53,7 +53,7 @@ def bv_filter(lines, raw_line_count, pruned_line_count):
       "fabs_double" in lines or "round_double" in lines or "trunc_double" in lines or "zero_log" in lines or
       "isinf_float" in lines or "trunc_float" in lines):
     return 0
-  elif ('4294967294u' in lines or '616783' in lines):
+  elif ('4294967294u' in lines or '616783' in lines or '__main(argc' in lines):
     return 1
 
   if raw_line_count > 1500:
