@@ -83,6 +83,12 @@ def compile_to_bc(input_file, compile_command, args):
   try_command(compile_command + ['-o', bc, input_file], console=True)
   return bc
 
+def d_compile_to_bc(input_file, compile_command, args):
+  """Compile a D source file to LLVM IR."""
+  bc = temporary_file(os.path.splitext(os.path.basename(input_file))[0], '.bc', args)
+  try_command(compile_command + ['-of=' + bc, input_file], console=True)
+  return bc
+
 def fortran_compile_to_bc(input_file, compile_command, args):
   """Compile a FORTRAN source file to LLVM IR."""
 
@@ -148,7 +154,7 @@ def d_frontend(input_file, args):
   compile_command = ['ldc2', '-output-ll']
   compile_command += map(lambda path: '-I=' + path, smack_headers(args))
   args.entry_points += ['_Dmain']
-  return compile_to_bc(input_file,compile_command,args)
+  return d_compile_to_bc(input_file,compile_command,args)
 
 def fortran_frontend(input_file, args):
   """Generate Boogie code from Fortran language source(s)."""
