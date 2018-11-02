@@ -119,28 +119,28 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
     if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-      // Add check for UBSan left shift
-      if (auto chkshft = dyn_cast<CallInst>(&*I)) {
-	Function* chkfn = chkshft->getCalledFunction();
-        if (chkfn!= nullptr &&
-            chkfn->hasName() &&
-            chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos &&
-            SmackOptions::IntegerOverflow) {
-          // If the call to __ubsan_handle_shift_out_of_bounds is reachable,
-          // then an overflow is possible.
-          ConstantInt* flag = ConstantInt::getTrue(chkshft->getFunction()->getContext());
-          addCheck(co, flag, &*I);
-          addBlockingAssume(va, flag, &*I);
-          I->replaceAllUsesWith(flag);
-          instToRemove.push_back(&*I);
+      // Add check for UBSan left shift when needed
+      if (SmackOptions::IntegerOverflow) {
+        if (auto chkshft = dyn_cast<CallInst>(&*I)) {
+	  Function* chkfn = chkshft->getCalledFunction();
+          if (chkfn && chkfn->hasName() &&
+              chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos) {
+            // If the call to __ubsan_handle_shift_out_of_bounds is reachable,
+            // then an overflow is possible.
+            ConstantInt* flag = ConstantInt::getTrue(chkshft->getFunction()->getContext());
+            addCheck(co, flag, &*I);
+            addBlockingAssume(va, flag, &*I);
+            I->replaceAllUsesWith(flag);
+            instToRemove.push_back(&*I);
+          }
         }
       }
       if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
         if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
           Function* f = ci->getCalledFunction();
           SmallVector<StringRef, 4> info;
-          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName(), &info)
-              && ei->getIndices()[0] == 1) {
+          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName(), &info) &&
+              ei->getIndices()[0] == 1) {
             /*
              * If ei is an ExtractValueInst whose value flows from an LLVM
              * checked value intrinsic f, then we do the following:

@@ -244,10 +244,6 @@ def verify_bpl_svcomp(args):
 
   if args.memory_safety:
     is_stack_benchmark(args, csource)
-  elif args.integer_overflow and "mp_add(" in csource:
-    if not args.quiet:
-      print("Stumbled upon a left-shift-based overflow benchmark\n")
-    sys.exit(smack.top.results(args)['unknown'])
   else:
     is_crappy_driver_benchmark(args, bpl)
 
