@@ -24,8 +24,8 @@ private:
   llvm::Value* extendBitWidth(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i);
   llvm::BinaryOperator* createFlag(llvm::Value* v, int bits, bool isSigned, llvm::Instruction* i);
   llvm::Value* createResult(llvm::Value* v, int bits, llvm::Instruction* i);
-  void addCheck(llvm::Function* co, llvm::BinaryOperator* flag, llvm::Instruction* i);
-  void addBlockingAssume(llvm::Function* va, llvm::BinaryOperator* flag, llvm::Instruction* i);
+  void addCheck(llvm::Function* co, llvm::Value* flag, llvm::Instruction* i);
+  void addBlockingAssume(llvm::Function* va, llvm::Value* flag, llvm::Instruction* i);
 };
 }
 
