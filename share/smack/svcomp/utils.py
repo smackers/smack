@@ -43,7 +43,7 @@ def svcomp_frontend(input_file, args):
   else:
     with open(input_file, "r") as sf:
       sc = sf.read()
-    if 'unsigned char b:2' in sc or "4294967294u" in sc:
+    if 'unsigned char b:2' in sc or "4294967294u" in sc or "_ddv_module_init" in sc:
       args.bit_precise = True
       #args.bit_precise_pointers = True
 
