@@ -1080,7 +1080,7 @@ std::string SmackRep::getPrelude() {
     s << "// Global allocations" << "\n";
     std::list<const Stmt*> stmts;
     for (auto E : globalAllocations)
-      stmts.push_back(Stmt::call("$galloc", {expr(E.first), Expr::lit(E.second)}));
+      stmts.push_back(Stmt::call("$galloc", {expr(E.first), pointerLit(E.second)}));
     s << Decl::procedure("$global_allocations", {}, {}, {}, {Block::block("",stmts)}) << "\n";
     s << "\n";
   }
