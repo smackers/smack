@@ -599,7 +599,20 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // Semantically, this function simply returns the value v.
     Value* val = ci.getArgOperand(0);
     emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
-    
+
+    // Set the entry point for Rust programs
+  } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
+    auto castExpr = ci.getArgOperand(0);
+    if (auto CE = dyn_cast<const Constant>(castExpr)) {
+      auto mainFunc = CE->getOperand(0);
+      emit(Stmt::call(mainFunc->getName(), {},{}));
+    }
+
+    // Convert Rust's panic functions into assertion violations
+  } else if (name.find(Naming::RUST_PANIC1) != std::string::npos
+             || name.find(Naming::RUST_PANIC2) != std::string::npos) {
+    emit(Stmt::assert_(Expr::lit(false), {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
+
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep->valueAnnotation(ci));
 

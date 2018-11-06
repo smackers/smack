@@ -91,6 +91,11 @@ public:
   static const std::string MEMORY_SAFETY_FUNCTION;
   static const std::string MEMORY_LEAK_FUNCTION;
 
+  static const std::string RUST_ENTRY;
+  static const std::string RUST_PANIC1;
+  static const std::string RUST_PANIC2;
+  static const std::string RUST_PANIC_ANNOTATION;
+
   static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
   static const std::map<unsigned,std::string> CMPINST_TABLE;
   static const std::map<unsigned,std::string> ATOMICRMWINST_TABLE;
