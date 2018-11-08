@@ -474,7 +474,7 @@ def verify_bpl_svcomp(args):
 
 def write_error_file(args, status, verifier_output):
   #return
-  if args.memory_safety or args.only_check_memcleanup or status == 'timeout' or status == 'unknown':
+  if status == 'timeout' or status == 'unknown':
     return
   hasBug = (status != 'verified')
   #if not hasBug:
