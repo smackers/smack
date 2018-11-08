@@ -161,11 +161,13 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
         # Make sure it isn't a smack header file
         if not pat.match(jsonTrace["file"]):
           desc = jsonTrace["description"]
-          if formatAssign(jsonTrace["description"]):
+          formattedAssign = formatAssign(desc)
+          # Make sure it is not return value
+          if formattedAssign and not ":" in formattedAssign:
           # Create new node and edge
             newNode = addGraphNode(tree)
             attribs = {"startline":str(jsonTrace["line"])}
-            attribs["assumption"] = formatAssign(desc) + ";"
+            attribs["assumption"] = formattedAssign + ";"
             attribs["assumption.scope"] = callStack[-1]
             newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
             prevLineNo = jsonTrace["line"]
