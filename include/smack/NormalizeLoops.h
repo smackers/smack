@@ -15,7 +15,7 @@ class NormalizeLoops: public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
   NormalizeLoops() : llvm::ModulePass(ID) {}
-  const char* getPassName() const override;
+  virtual llvm::StringRef getPassName() const override;
   virtual bool runOnModule(llvm::Module& m) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage&) const override;
 };
