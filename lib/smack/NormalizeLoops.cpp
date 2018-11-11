@@ -147,7 +147,7 @@ bool NormalizeLoops::runOnModule(Module& m) {
 // Pass ID variable
 char NormalizeLoops::ID = 0;
 
-const char* NormalizeLoops::getPassName() const {
+StringRef NormalizeLoops::getPassName() const {
   return "NormalizeLoops";
 }
 }

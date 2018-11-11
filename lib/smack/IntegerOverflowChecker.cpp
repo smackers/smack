@@ -205,7 +205,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
 // Pass ID variable
 char IntegerOverflowChecker::ID = 0;
 
-const char* IntegerOverflowChecker::getPassName() const {
+StringRef IntegerOverflowChecker::getPassName() const {
   return "Checked integer arithmetic intrinsics";
 }
 }
