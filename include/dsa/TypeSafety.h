@@ -65,7 +65,7 @@ struct TypeSafety : public ModulePass {
     TypeSafety() : ModulePass(ID) {}
     virtual bool runOnModule (Module & M);
 
-    const char *getPassName() const {
+    virtual StringRef getPassName() const {
       return "DSA Type-Safety Analysis";
     }
 
