@@ -144,30 +144,21 @@ bool StructRet::runOnModule(Module& M) {
         continue;
       AllocaInst *AllocaNew = new AllocaInst(F->getReturnType(), 0, "", CI);
       SmallVector<Value*, 8> Args;
-
-      //this should probably be done in a different manner
-      AttributeSet NewCallPAL=AttributeSet();
+      SmallVector<AttributeSet, 8> ArgAttrs;
 
       // Get the initial attributes of the call
-      AttributeSet CallPAL = CI->getAttributes();
+      AttributeList CallPAL = CI->getAttributes();
       AttributeSet RAttrs = CallPAL.getRetAttributes();
       AttributeSet FnAttrs = CallPAL.getFnAttributes();
 
-      if (!RAttrs.isEmpty())
-        NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
-
       Args.push_back(AllocaNew);
+      ArgAttrs.push_back(AttributeSet());
       for(unsigned j = 0; j < CI->getNumOperands()-1; j++) {
         Args.push_back(CI->getOperand(j));
-        // position in the NewCallPAL
-        AttributeSet Attrs = CallPAL.getParamAttributes(j);
-        if (!Attrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F->getContext(),Args.size(), Attrs);
+        ArgAttrs.push_back(CallPAL.getParamAttributes(j));
       }
-      // Create the new attributes vec.
-      if (!FnAttrs.isEmpty())
-        NewCallPAL=NewCallPAL.addAttributes(F->getContext(),~0, FnAttrs);
 
+      auto NewCallPAL = AttributeList::get(F->getContext(), FnAttrs, RAttrs, ArgAttrs);
       CallInst *CallI = CallInst::Create(NF, Args, "", CI);
       CallI->setCallingConv(CI->getCallingConv());
       CallI->setAttributes(NewCallPAL);
