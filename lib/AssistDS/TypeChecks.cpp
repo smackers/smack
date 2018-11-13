@@ -1046,37 +1046,25 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
     if(InvokeInst *II = dyn_cast<InvokeInst>(*ui)) {
       if(II->getCalledFunction() == &F) {
         SmallVector<Value*, 8> Args;
-        
-        // TODO: not a good idea:
-        AttributeSet NewCallPAL=AttributeSet();
+        SmallVector<AttributeSet, 8> ArgAttrs;
 
         // Get the initial attributes of the call
-        AttributeSet CallPAL = II->getAttributes();
+        AttributeList CallPAL = II->getAttributes();
         AttributeSet RAttrs = CallPAL.getRetAttributes();
         AttributeSet FnAttrs = CallPAL.getFnAttributes();
-
-        if (!RAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext() ,0, RAttrs);
 
         Function::arg_iterator NI = F.arg_begin();
         for(unsigned j =3;j<II->getNumOperands();j++, NI++) {
           // Add the original argument
           Args.push_back(II->getOperand(j));
+
           // If there are attributes on this argument, copy them to the correct 
           // position in the NewCallPAL
           //FIXME: copy the rest of the attributes.
           if(NI->hasByValAttr()) 
             continue;
-          AttributeSet Attrs = CallPAL.getParamAttributes(j);
-          if (!Attrs.isEmpty()) {
-            NewCallPAL=NewCallPAL.addAttributes(F.getContext(), j, Attrs);
-          }
+          ArgAttrs.push_back(CallPAL.getParamAttributes(j));
         }
-
-        // Create the new attributes vec.
-        if (!FnAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext(),~0, FnAttrs);
-
 
         // Create the substitute call
         InvokeInst *CallI = InvokeInst::Create(&F,
@@ -1085,6 +1073,7 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
                                                Args,
                                                "", II);
 
+        auto NewCallPAL = AttributeList::get(F.getContext(), FnAttrs, RAttrs, ArgAttrs);
         CallI->setCallingConv(II->getCallingConv());
         CallI->setAttributes(NewCallPAL);
         II->replaceAllUsesWith(CallI);
@@ -1094,17 +1083,12 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
     } else if(CallInst *CI = dyn_cast<CallInst>(*ui)) {
       if(CI->getCalledFunction() == &F) {
         SmallVector<Value*, 8> Args;
-        
-      // TODO: not a good idea:
-      AttributeSet NewCallPAL=AttributeSet();
+        SmallVector<AttributeSet, 8> ArgAttrs;
 
         // Get the initial attributes of the call
-        AttributeSet CallPAL = CI->getAttributes();
+        AttributeList CallPAL = CI->getAttributes();
         AttributeSet RAttrs = CallPAL.getRetAttributes();
         AttributeSet FnAttrs = CallPAL.getFnAttributes();
-
-        if (!RAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext(),0, RAttrs);
 
         Function::arg_iterator II = F.arg_begin();
         for(unsigned j =1;j<CI->getNumOperands();j++, II++) {
@@ -1115,21 +1099,15 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
           //FIXME: copy the rest of the attributes.
           if(II->hasByValAttr()) 
             continue;
-          AttributeSet Attrs = CallPAL.getParamAttributes(j);
-          if (!Attrs.isEmpty()) {
-            NewCallPAL=NewCallPAL.addAttributes(F.getContext(),j, Attrs);
-          }
+          ArgAttrs.push_back(CallPAL.getParamAttributes(j));
         }
-
-        // Create the new attributes vec.
-        if (!FnAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext(),~0, FnAttrs);
 
         // Create the substitute call
         CallInst *CallI = CallInst::Create(&F,
                                            Args,
                                            "", CI);
 
+        auto NewCallPAL = AttributeList::get(F.getContext(), FnAttrs, RAttrs, ArgAttrs);
         CallI->setCallingConv(CI->getCallingConv());
         CallI->setAttributes(NewCallPAL);
         CI->replaceAllUsesWith(CallI);
