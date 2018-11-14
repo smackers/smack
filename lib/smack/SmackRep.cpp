@@ -379,7 +379,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       assert(GEP && "Expected GEP argument to load instruction.");
       auto A = dyn_cast<const Argument>(GEP->getPointerOperand());
       assert(A && "Expected function argument to GEP instruction.");
-      auto T = GEP->getType()->getElementType();
+      auto T = GEP->getResultElementType();
       const unsigned bits = this->getSize(T);
       const unsigned bytes = bits / 8;
       const unsigned R = regions->idx(GEP);
@@ -411,7 +411,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
     } else if (auto GEP = dyn_cast<const GetElementPtrInst>(V)) {
       A = dyn_cast<const Argument>(GEP->getPointerOperand());
       assert(A && "Expected function argument to GEP instruction.");
-      T = GEP->getType()->getElementType();
+      T = GEP->getResultElementType();
       addr = ptrArith(GEP);
 
     } else if (auto LI = dyn_cast<const LoadInst>(V)) {
