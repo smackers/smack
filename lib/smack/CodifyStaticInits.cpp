@@ -29,7 +29,7 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   DSAWrapper *DSA = &getAnalysis<DSAWrapper>();
 
   Function *F = dyn_cast<Function>(M.getOrInsertFunction(
-      Naming::STATIC_INIT_PROC, Type::getVoidTy(C), NULL));
+      Naming::STATIC_INIT_PROC, Type::getVoidTy(C)));
 
   BasicBlock *B = BasicBlock::Create(C, "entry", F);
   IRBuilder<> IRB(B);

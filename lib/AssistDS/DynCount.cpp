@@ -128,7 +128,7 @@ Dyncount::runOnModule (Module & M) {
     : M.getFunction ("MAIN__");
 
   BasicBlock & BB = MainFunc->getEntryBlock();
-  Constant * Setup = M.getOrInsertFunction ("DYN_COUNT_setup", Type::getVoidTy(M.getContext()), Total->getType(), Safe->getType(), NULL);
+  Constant * Setup = M.getOrInsertFunction ("DYN_COUNT_setup", Type::getVoidTy(M.getContext()), Total->getType(), Safe->getType());
   std::vector<Value *> args;
   args.push_back (Total);
   args.push_back (Safe);
