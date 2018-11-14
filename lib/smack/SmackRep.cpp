@@ -701,7 +701,7 @@ const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
   std::vector< std::pair<Value*, Type*> > args;
   gep_type_iterator T = gep_type_begin(I);
   for (unsigned i = 1; i < I->getNumOperands(); i++, ++T)
-    args.push_back({I->getOperand(i), *T});
+    args.push_back({I->getOperand(i), T.getIndexedType()});
   return ptrArith(I->getPointerOperand(), args);
 }
 
@@ -710,7 +710,7 @@ const Expr* SmackRep::ptrArith(const llvm::ConstantExpr* CE) {
   std::vector< std::pair<Value*, Type*> > args;
   gep_type_iterator T = gep_type_begin(CE);
   for (unsigned i = 1; i < CE->getNumOperands(); i++, ++T)
-    args.push_back({CE->getOperand(i), *T});
+    args.push_back({CE->getOperand(i), T.getIndexedType()});
   return ptrArith(CE->getOperand(0), args);
 }
 
