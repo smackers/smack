@@ -9,6 +9,7 @@
 #include "smack/SimplifyLibCalls.h"
 #include "smack/Debug.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include <vector>
@@ -29,7 +30,8 @@ bool SimplifyLibCalls::runOnModule(Module& M) {
   modified = false;
   simplifier = new LibCallSimplifier(
     M.getDataLayout(),
-    &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()
+    &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+    getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE()
   );
   if (simplifier)
     visit(M);
