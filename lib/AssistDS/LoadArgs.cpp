@@ -80,8 +80,8 @@ bool LoadArgs::runOnModule(Module& M) {
             // do not care about dead arguments
             if(ai->use_empty())
               continue;
-            if(F->getAttributes().getParamAttributes(argNum).hasAttrSomewhere(Attribute::SExt) ||
-               F->getAttributes().getParamAttributes(argNum).hasAttrSomewhere(Attribute::ZExt))
+            if(F->getAttributes().getParamAttributes(argNum).hasAttribute(Attribute::SExt) ||
+               F->getAttributes().getParamAttributes(argNum).hasAttribute(Attribute::ZExt))
               continue;
             if (isa<LoadInst>(CI->getArgOperand(argNum)))
               break;
