@@ -696,7 +696,7 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
       unsigned int i;
       unsigned int NumArgs = II->getNumOperands() - 3;
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 3; i <II->getNumOperands(); i++) {
         Value *Idx[1];
@@ -733,7 +733,7 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
       unsigned int NumArgs = CI->getNumOperands() - 1;
       inst_iterator InsPt = inst_begin(CI->getParent()->getParent());
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 1; i <CI->getNumOperands(); i++) {
         Value *Idx[1];
@@ -926,7 +926,7 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
       unsigned int i;
       unsigned int NumArgs = II->getNumOperands() - 3;
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 3; i <II->getNumOperands(); i++) {
         Value *Idx[1];
@@ -959,7 +959,7 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
       unsigned int i;
       unsigned int NumArgs = CI->getNumArgOperands();
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 0; i <CI->getNumArgOperands(); i++) {
         Value *Idx[1];
@@ -1031,7 +1031,7 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
       continue;
     assert(Arg.getType()->isPointerTy());
     Type *ETy = (cast<PointerType>(Arg.getType()))->getElementType();
-    AllocaInst *AI = new AllocaInst(ETy, "", InsertBefore);
+    AllocaInst *AI = new AllocaInst(ETy, 0, "", InsertBefore);
     // Do this before adding the load/store pair, so that those uses are not replaced.
     Arg.replaceAllUsesWith(AI);
     LoadInst *LI = new LoadInst(&Arg, "", InsertBefore);
@@ -1996,7 +1996,7 @@ bool TypeChecks::visitIndirectCallSite(Module &M, Instruction *I) {
   CallSite CS = CallSite(I);
   unsigned int NumArgs = CS.arg_size();
   Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-  AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+  AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
   for(unsigned int i = 0; i < CS.arg_size(); i++) {
     Value *Idx[1];
     Idx[0] = ConstantInt::get(Int32Ty, i-1);
@@ -2061,7 +2061,7 @@ bool TypeChecks::visitLoadInst(Module &M, LoadInst &LI) {
   Value *BCI = castTo(LI.getPointerOperand(), VoidPtrTy, "", &LI);
 
   Value *Size = ConstantInt::get(Int32Ty, getSize(LI.getType()));
-  AllocaInst *AI = new AllocaInst(TypeTagTy, Size, "", &*InsPt);
+  AllocaInst *AI = new AllocaInst(TypeTagTy, LI.getPointerAddressSpace(), Size, "", &*InsPt);
 
   std::vector<Value *>Args1;
   Args1.push_back(BCI);
