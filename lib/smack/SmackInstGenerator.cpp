@@ -288,8 +288,8 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst &si) {
   for (llvm::SwitchInst::CaseIt i = si.case_begin(); i != si.case_begin();
        ++i) {
 
-    const Expr *v = rep->expr(i.getCaseValue());
-    targets.push_back({Expr::eq(e, v), i.getCaseSuccessor()});
+    const Expr *v = rep->expr(i->getCaseValue());
+    targets.push_back({Expr::eq(e, v), i->getCaseSuccessor()});
 
     // Add the negation of this case to the default case
     n = Expr::and_(n, Expr::neq(e, v));
