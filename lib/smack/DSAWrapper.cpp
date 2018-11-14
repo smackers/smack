@@ -193,7 +193,7 @@ bool DSAWrapper::isSingletonGlobal(const Value *V) {
 
 unsigned DSAWrapper::getPointedTypeSize(const Value* v) {
   if (llvm::PointerType* t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
-    llvm::Type* pointedType = t->getTypeAtIndex(0u);
+    llvm::Type* pointedType = t->getElementType();
     if (pointedType->isSized())
       return dataLayout->getTypeStoreSize(pointedType);
     else
