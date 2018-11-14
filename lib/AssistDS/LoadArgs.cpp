@@ -157,7 +157,8 @@ bool LoadArgs::runOnModule(Module& M) {
               }
               ValueMap[&*II] = &*NI;
               NI->setName(II->getName());
-              NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+              auto ArgAttrs = AttrBuilder(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+              NI->addAttrs(ArgAttrs);
               ++II;
             }
             // Perform the cloning.

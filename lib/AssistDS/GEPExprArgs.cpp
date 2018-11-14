@@ -118,7 +118,8 @@ bool GEPExprArgs::runOnModule(Module& M) {
           for (auto II = F->arg_begin(); NI != NewF->arg_end(); ++II, ++NI) {
             ValueMap[&*II] = &*NI;
             NI->setName(II->getName());
-            NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+            auto ArgAttrs = AttrBuilder(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+            NI->addAttrs(ArgAttrs);
           }
           NewF->setAttributes(NewF->getAttributes().addAttributes(
               F->getContext(), 0, F->getAttributes().getRetAttributes()));
