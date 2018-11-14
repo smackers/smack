@@ -895,7 +895,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
   std::list<Decl*> decls;
   std::list<Block*> blocks;
 
-  for (auto &A : F->getArgumentList())
+  for (auto &A : F->args())
     params.push_back({naming->get(A), type(A.getType())});
 
   if (!F->getReturnType()->isVoidTy())
@@ -1176,7 +1176,7 @@ unsigned SmackRep::numElements(const llvm::Constant* v) {
 void SmackRep::addInitFunc(const llvm::Function* f) {
   assert(f->getReturnType()->isVoidTy()
     && "Init functions cannot return a value");
-  assert(f->getArgumentList().empty()
+  assert(f->arg_empty()
     && "Init functions cannot take parameters");
   initFuncs.push_back(naming->get(*f));
 }
