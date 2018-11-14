@@ -93,7 +93,8 @@ bool LoadArgs::runOnModule(Module& M) {
 
           LoadInst *LI = dyn_cast<LoadInst>(CI->getArgOperand(argNum));
           Instruction * InsertPt = &(Func->getEntryBlock().front());
-          AllocaInst *NewVal = new AllocaInst(LI->getType(), "",InsertPt);
+          AllocaInst *NewVal = new AllocaInst(
+                  LI->getType(), LI->getPointerAddressSpace(), "", InsertPt);
 
           StoreInst *Copy = new StoreInst(LI, NewVal);
           Copy->insertAfter(LI);
