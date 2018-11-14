@@ -10,6 +10,7 @@ import sys
 import pprint
 import os
 import hashlib
+import datetime
 
 nextNum = 0
 
@@ -36,8 +37,8 @@ def addKeyDefs(root):
     keys.append(["specification", "string",  "graph", "specification", False])
     keys.append(["programfile", "string",  "graph", "programfile", False])
     keys.append(["programhash", "string",  "graph", "programhash", False])
-    keys.append(["MemoryModel", "string",  "graph", "memorymodel", False])
     keys.append(["architecture", "string",  "graph", "architecture", False])
+    keys.append(["creationtime", "string",  "graph", "creationtime", False])
     keys.append(["tokenSet",           "string",  "edge",  "tokens",         False])
     keys.append(["originTokenSet",     "string",  "edge",  "origintokens",   False])
     keys.append(["negativeCase",       "string",  "edge",  "negated",        True, "false"])
@@ -117,10 +118,10 @@ def buildEmptyXmlGraph(args, hasBug):
     programfile = os.path.abspath(args.orig_files[0])
     addKey(graph, "programfile", programfile)
     with open(programfile, 'r') as pgf:
-      addKey(graph, "programhash", hashlib.sha1(pgf.read()).hexdigest())
-    addKey(graph, "memorymodel", "precise")
+      addKey(graph, "programhash", hashlib.sha256(pgf.read()).hexdigest())
     addKey(graph, "architecture",
             re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
+    addKey(graph, "creationtime", datetime.datetime.now().replace(microsecond=0).isoformat())
     return tree
 
 def formatAssign(assignStmt):
@@ -136,7 +137,7 @@ def formatAssign(assignStmt):
 def isSMACKInitFunc(funcName):
   return funcName == '$initialize' or funcName == '__SMACK_static_init' or funcName == '__SMACK_init_func_memory_model'
 
-def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
+def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
     # Build tree & start node
@@ -183,20 +184,40 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
             if isSMACKInitFunc(calledFunc):
               continue
             callStack.append(calledFunc)
-            if (("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]) or
-                ("__SMACK_overflow_false" in jsonTrace["description"][len("CALL"):]) or
-                 ("__SMACK_check_overflow" in jsonTrace["description"][len("CALL"):])):
-              newNode = addGraphNode(tree)
-              # addGraphNode returns a string, so we had to search the graph to get the node that we want
-              vNodes =tree.find("graph").findall("node")
-              for vNode in vNodes:
-                if vNode.attrib["id"] == newNode:
-                  addKey(vNode, "violation", "true")
-              attribs = {"startline":str(jsonTrace["line"])}
-              if not args.integer_overflow:
+            if args.only_check_memcleanup or status == 'invalid-memtrack':
+              if "__SMACK_check_memory_leak" in jsonTrace["description"][len("CALL"):]:
+                newNode = addGraphNode(tree)
+                # addGraphNode returns a string, so we had to search the graph to get the node that we want
+                vNodes =tree.find("graph").findall("node")
+                for vNode in vNodes:
+                  if vNode.attrib["id"] == newNode:
+                    addKey(vNode, "violation", "true")
+                attribs = {"startline":str(jsonTrace["line"])}
+                addGraphEdge(tree, lastNode, newNode, attribs)
+                break
+            elif args.integer_overflow:
+              if "__SMACK_check_overflow" in jsonTrace["description"][len("CALL"):]:
+                newNode = addGraphNode(tree)
+                # addGraphNode returns a string, so we had to search the graph to get the node that we want
+                vNodes =tree.find("graph").findall("node")
+                for vNode in vNodes:
+                  if vNode.attrib["id"] == newNode:
+                    addKey(vNode, "violation", "true")
+                attribs = {"startline":str(jsonTrace["line"])}
+                addGraphEdge(tree, lastNode, newNode, attribs)
+                break
+            else:
+              if "__VERIFIER_error" in jsonTrace["description"][len("CALL"):]:
+                newNode = addGraphNode(tree)
+                # addGraphNode returns a string, so we had to search the graph to get the node that we want
+                vNodes =tree.find("graph").findall("node")
+                for vNode in vNodes:
+                  if vNode.attrib["id"] == newNode:
+                    addKey(vNode, "violation", "true")
+                attribs = {"startline":str(jsonTrace["line"])}
                 attribs["enterFunction"] = callStack[-1]
-              addGraphEdge(tree, lastNode, newNode, attribs)
-              break
+                addGraphEdge(tree, lastNode, newNode, attribs)
+                break
           if "RETURN from" in desc:
             returnedFunc = str(desc[len("RETURN from "):]).strip()
             if returnedFunc.startswith("devirtbounce"):

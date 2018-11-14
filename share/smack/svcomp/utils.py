@@ -482,7 +482,7 @@ def write_error_file(args, status, verifier_output):
   if args.error_file:
     error = None
     if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args, hasBug)
+      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args, hasBug, status)
     elif hasBug:
       error = smack.top.error_trace(verifier_output, args)
     if error is not None:
