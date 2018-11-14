@@ -89,8 +89,10 @@ bool StructRet::runOnModule(Module& M) {
       ValueMap[&*II] = &*NI;
       NI->setName(II->getName());
       AttributeSet attrs = F->getAttributes().getParamAttributes(II->getArgNo() + 1);
-      if (!attrs.isEmpty())
-        NI->addAttr(attrs);
+      if (attrs.hasAttributes()) {
+          auto AB = AttrBuilder(attrs);
+          NI->addAttrs(AB);
+      }
     }
     // Perform the cloning.
     SmallVector<ReturnInst*,100> Returns;

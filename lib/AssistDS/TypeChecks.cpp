@@ -667,7 +667,8 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
     // For each of these also copy attributes
     ValueMap[&*II] = &*NI;
     NI->setName(II->getName());
-    NI->addAttr(F.getAttributes().getParamAttributes(II->getArgNo()+1));
+    AttrBuilder AB{F.getAttributes().getParamAttributes(II->getArgNo()+1)};
+    NI->addAttrs(AB);
   }
 
   // 4. Copy over attributes for the function
@@ -832,7 +833,8 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
     // For each of these also copy attributes
     ValueMap[&*II] = &*NI;
     NI->setName(II->getName());
-    NI->addAttr(F.getAttributes().getParamAttributes(II->getArgNo()+1));
+    AttrBuilder AB{F.getAttributes().getParamAttributes(II->getArgNo()+1)};
+    NI->addAttrs(AB);
   }
 
   // 4. Copy over attributes for the function
