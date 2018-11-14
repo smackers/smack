@@ -163,7 +163,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
     if (SmackOptions::isEntryPoint(naming->get(*F))) {
       emit(recordProcedureCall(
           F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
-      for (auto &A : F->getArgumentList()) {
+      for (auto &A : F->args()) {
         emit(recordProcedureCall(&A,
                                  {Attr::attr("cexpr",
                                              "smack:arg:" + naming->get(*F) +
