@@ -8,6 +8,7 @@
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -28,7 +29,8 @@ void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage &AU) const {
 bool SimplifyLibCalls::runOnModule(Module &M) {
   modified = false;
   simplifier = new LibCallSimplifier(
-      M.getDataLayout(), &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI());
+      M.getDataLayout(), &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE());
   if (simplifier)
     visit(M);
   return modified;
