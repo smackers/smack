@@ -106,7 +106,7 @@ namespace {
 			  FeaturesStr,
 			  Options,
 			  Reloc::Static, /* was getRelocModel(),*/
-			  CodeModel::Default, /* was CMModel,*/
+			  None, /* Use default CodeModel */
 			  CodeGenOpt::None /*GetCodeGenOptLevel())*/
 			  );
 
