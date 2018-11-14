@@ -105,9 +105,9 @@ static TargetMachine *GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 
   return TheTarget->createTargetMachine(
       TheTriple.getTriple(), CPUStr, FeaturesStr, Options,
-      Reloc::Static,      /* was getRelocModel(),*/
-      CodeModel::Default, /* was CMModel,*/
-      CodeGenOpt::None    /*GetCodeGenOptLevel())*/
+      Reloc::Static,   /* was getRelocModel(),*/
+      None,            /* Use default CodeModel */
+      CodeGenOpt::None /*GetCodeGenOptLevel())*/
       );
 }
 }
