@@ -112,7 +112,7 @@ public:
 
   const Expr* ptrArith(const llvm::GetElementPtrInst* I);
   const Expr* ptrArith(const llvm::ConstantExpr* CE);
-  const Expr* ptrArith(const llvm::Value* p, std::vector< std::pair<llvm::Value*,llvm::Type*> > args);
+  const Expr* ptrArith(const llvm::Value* p, std::vector< std::pair<llvm::Value*,llvm::gep_type_iterator> > args);
 
   const Expr* expr(const llvm::Value* v, bool isConstIntUnsigned=false);
 

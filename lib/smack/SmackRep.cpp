@@ -698,37 +698,38 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
 }
 
 const Expr* SmackRep::ptrArith(const llvm::GetElementPtrInst* I) {
-  std::vector< std::pair<Value*, Type*> > args;
+  std::vector< std::pair<Value*, gep_type_iterator> > args;
   gep_type_iterator T = gep_type_begin(I);
   for (unsigned i = 1; i < I->getNumOperands(); i++, ++T)
-    args.push_back({I->getOperand(i), *T});
+    args.push_back({I->getOperand(i), T});
   return ptrArith(I->getPointerOperand(), args);
 }
 
 const Expr* SmackRep::ptrArith(const llvm::ConstantExpr* CE) {
   assert (CE->getOpcode() == Instruction::GetElementPtr);
-  std::vector< std::pair<Value*, Type*> > args;
+  std::vector< std::pair<Value*, gep_type_iterator> > args;
   gep_type_iterator T = gep_type_begin(CE);
   for (unsigned i = 1; i < CE->getNumOperands(); i++, ++T)
-    args.push_back({CE->getOperand(i), *T});
+    args.push_back({CE->getOperand(i), T});
   return ptrArith(CE->getOperand(0), args);
 }
 
 const Expr* SmackRep::ptrArith(const llvm::Value* p,
-    std::vector< std::pair<llvm::Value*, llvm::Type*> > args) {
+    std::vector< std::pair<llvm::Value*, llvm::gep_type_iterator> > args) {
   using namespace llvm;
 
   const Expr* e = expr(p);
 
   for (auto a : args) {
-    if (StructType* st = dyn_cast<StructType>(a.second)) {
+
+    if (StructType* st = a.second.getStructTypeOrNull()) {
       assert(a.first->getType()->isIntegerTy()
         && a.first->getType()->getPrimitiveSizeInBits() == 32
         && "Illegal struct index");
       unsigned fieldNo = dyn_cast<ConstantInt>(a.first)->getZExtValue();
       e = pa(e, offset(st, fieldNo), 1);
     } else {
-      Type* et = dyn_cast<SequentialType>(a.second)->getElementType();
+      Type* et = a.second.getIndexedType();
       assert(a.first->getType()->isIntegerTy() && "Illegal index");
       if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first)) {
         assert(ci->getBitWidth() <= 64 && "Unsupported index bitwidth");

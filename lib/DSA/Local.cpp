@@ -748,8 +748,9 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
   //        conservative type-folding.
   //
   for (gep_type_iterator I = gep_type_begin(GEP), E = gep_type_end(GEP);
-       I != E; ++I)
-    if (StructType *STy = dyn_cast<StructType>(*I)) {
+      I != E; ++I) {
+
+    if (StructType *STy = I.getStructTypeOrNull()) {
       // indexing into a structure
       // next index must be a constant
       const ConstantInt* CUI = cast<ConstantInt>(I.getOperand());
@@ -780,7 +781,7 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
           // J is the type of the next index.
           // Uncomment the line below to get all the nested types.
           gep_type_iterator J = I;
-          while (isa<ArrayType>(*(++J))) {
+          while ((++J).isSequential()) {
             //      NodeH.getNode()->mergeTypeInfo(AT1, NodeH.getOffset() + Offset);
             if((++I) == E) {
               break;
@@ -792,136 +793,38 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
           }
         }
       }
-    } else if (ArrayType *ATy = dyn_cast<ArrayType>(*I)) {
-      // indexing into an array.
-      NodeH.getNode()->setArrayMarker();
-      Type *CurTy = ATy->getElementType();
-
-      //
-      // Ensure that the DSNode's size is large enough to contain one
-      // element of the type to which the pointer points.
-      //
-      if (!isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0) {
-        NodeH.getNode()->growSize(TD.getTypeAllocSize(CurTy));
-      } else if(isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0){
-        Type *ETy = (cast<ArrayType>(CurTy))->getElementType();
-        while(isa<ArrayType>(ETy)) {
-          ETy = (cast<ArrayType>(ETy))->getElementType();
-        }
-        NodeH.getNode()->growSize(TD.getTypeAllocSize(ETy));
-      }
-
-      // Find if the DSNode belongs to the array
-      // If not fold.
-      if((NodeH.getOffset() || Offset != 0)
-         || (!isa<ArrayType>(CurTy)
-             && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
-
-        M.witness(NodeH, {&GEP, I.getOperand()},
-          "node does not belong to array"
-        );
-
-        DEBUG(
-          errs() << "[local] FOLDING FOR ARRAY ACCESS" << "\n";
-          errs() << "[local] type:    " << *CurTy << "\n";
-          errs() << "[local] offset:  " << Offset
-                 << " (" << NodeH.getOffset() << ")\n";
-          errs() << "[local] size:    " << TD.getTypeAllocSize(CurTy)
-                 << " (" << NodeH.getNode()->getSize() << ")\n";
-          errs() << "[local] value: " << GEP << "\n";
-          errs() << "[local] index: " << *I.getOperand() << "\n";
-        );
-        NodeH.getNode()->foldNodeCompletely();
-        NodeH.getNode();
-        Offset = 0;
-        break;
-      }
-    } else if (const PointerType *PtrTy = dyn_cast<PointerType>(*I)) {
-      // Get the type pointed to by the pointer
-      Type *CurTy = PtrTy->getElementType();
-
-      //
-      // Some LLVM transforms lower structure indexing into byte-level
-      // indexing.  Try to recognize forms of that here.
-      //
-      Type * Int8Type  = Type::getInt8Ty(CurTy->getContext());
-      ConstantInt * IS = dyn_cast<ConstantInt>(I.getOperand());
-      if (IS &&
-          (NodeH.getOffset() == 0) &&
-          (!(NodeH.getNode()->isArrayNode())) &&
-          (CurTy == Int8Type)) {
-        // Calculate the offset of the field
-        Offset += IS->getSExtValue() * TD.getTypeAllocSize (Int8Type);
-
-        //
-        // Grow the DSNode size as needed.
-        //
-        unsigned requiredSize = Offset + TD.getTypeAllocSize (Int8Type);
-        if (NodeH.getNode()->getSize() <= requiredSize){
-          NodeH.getNode()->growSize (requiredSize);
-        }
-
-        // Add in the offset calculated...
-        NodeH.setOffset(NodeH.getOffset()+Offset);
-
-        // Check the offset
-        DSNode *N = NodeH.getNode();
-        if (N) N->checkOffsetFoldIfNeeded(NodeH.getOffset());
-
-        // NodeH is now the pointer we want to GEP to be...
-        setDestTo(GEP, NodeH);
-        return;
-      }
-
-      //
-      // Unless we're advancing the pointer by zero bytes via array indexing,
-      // fold the node (i.e., mark it type-unknown) and indicate that we're
-      // indexing zero bytes into the object (because all fields are aliased).
-      //
-      // Note that we break out of the loop if we fold the node.  Once
-      // something is folded, all values within it are considered to alias.
-      //
-      if (!isa<Constant>(I.getOperand()) ||
-          !cast<Constant>(I.getOperand())->isNullValue()) {
-
-        //
-        // Treat the memory object (DSNode) as an array.
-        //
+    } else {
+      Type *CurTy = I.getIndexedType();
+      if (I.isBoundedSequential()) {
+        // indexing into an array.
         NodeH.getNode()->setArrayMarker();
 
         //
         // Ensure that the DSNode's size is large enough to contain one
         // element of the type to which the pointer points.
         //
-        if (!isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0){
+        if (!isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0) {
           NodeH.getNode()->growSize(TD.getTypeAllocSize(CurTy));
-        } else if (isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0){
+        } else if(isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0){
           Type *ETy = (cast<ArrayType>(CurTy))->getElementType();
-          while (isa<ArrayType>(ETy)) {
+          while(isa<ArrayType>(ETy)) {
             ETy = (cast<ArrayType>(ETy))->getElementType();
           }
           NodeH.getNode()->growSize(TD.getTypeAllocSize(ETy));
         }
 
-        //
-        // Fold the DSNode if we're indexing into it in a type-incompatible
-        // manner.  That can occur if:
-        //  1) The DSNode represents a pointer into the object at a non-zero
-        //     offset.
-        //  2) The offset of the pointer is already non-zero.
-        //  3) The size of the array element does not match the size into which
-        //     the pointer indexing is indexing.
-        //
-        if (NodeH.getOffset() || Offset != 0 ||
-            (!isa<ArrayType>(CurTy) &&
-             (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+        // Find if the DSNode belongs to the array
+        // If not fold.
+        if((NodeH.getOffset() || Offset != 0)
+           || (!isa<ArrayType>(CurTy)
+               && (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
 
           M.witness(NodeH, {&GEP, I.getOperand()},
-            "type-incompatible access into node"
+            "node does not belong to array"
           );
 
           DEBUG(
-            errs() << "[local] FOLDING FOR POINTER ACCESS" << "\n";
+            errs() << "[local] FOLDING FOR ARRAY ACCESS" << "\n";
             errs() << "[local] type:    " << *CurTy << "\n";
             errs() << "[local] offset:  " << Offset
                    << " (" << NodeH.getOffset() << ")\n";
@@ -935,8 +838,108 @@ void GraphBuilder::visitGetElementPtrInst(User &GEP) {
           Offset = 0;
           break;
         }
+      } else {
+        // Pointer type
+
+        //
+        // Some LLVM transforms lower structure indexing into byte-level
+        // indexing.  Try to recognize forms of that here.
+        //
+        Type * Int8Type  = Type::getInt8Ty(CurTy->getContext());
+        ConstantInt * IS = dyn_cast<ConstantInt>(I.getOperand());
+        if (IS &&
+            (NodeH.getOffset() == 0) &&
+            (!(NodeH.getNode()->isArrayNode())) &&
+            (CurTy == Int8Type)) {
+          // Calculate the offset of the field
+          Offset += IS->getSExtValue() * TD.getTypeAllocSize (Int8Type);
+
+          //
+          // Grow the DSNode size as needed.
+          //
+          unsigned requiredSize = Offset + TD.getTypeAllocSize (Int8Type);
+          if (NodeH.getNode()->getSize() <= requiredSize){
+            NodeH.getNode()->growSize (requiredSize);
+          }
+
+          // Add in the offset calculated...
+          NodeH.setOffset(NodeH.getOffset()+Offset);
+
+          // Check the offset
+          DSNode *N = NodeH.getNode();
+          if (N) N->checkOffsetFoldIfNeeded(NodeH.getOffset());
+
+          // NodeH is now the pointer we want to GEP to be...
+          setDestTo(GEP, NodeH);
+          return;
+        }
+
+        //
+        // Unless we're advancing the pointer by zero bytes via array indexing,
+        // fold the node (i.e., mark it type-unknown) and indicate that we're
+        // indexing zero bytes into the object (because all fields are aliased).
+        //
+        // Note that we break out of the loop if we fold the node.  Once
+        // something is folded, all values within it are considered to alias.
+        //
+        if (!isa<Constant>(I.getOperand()) ||
+            !cast<Constant>(I.getOperand())->isNullValue()) {
+
+          //
+          // Treat the memory object (DSNode) as an array.
+          //
+          NodeH.getNode()->setArrayMarker();
+
+          //
+          // Ensure that the DSNode's size is large enough to contain one
+          // element of the type to which the pointer points.
+          //
+          if (!isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0){
+            NodeH.getNode()->growSize(TD.getTypeAllocSize(CurTy));
+          } else if (isa<ArrayType>(CurTy) && NodeH.getNode()->getSize() <= 0){
+            Type *ETy = (cast<ArrayType>(CurTy))->getElementType();
+            while (isa<ArrayType>(ETy)) {
+              ETy = (cast<ArrayType>(ETy))->getElementType();
+            }
+            NodeH.getNode()->growSize(TD.getTypeAllocSize(ETy));
+          }
+
+          //
+          // Fold the DSNode if we're indexing into it in a type-incompatible
+          // manner.  That can occur if:
+          //  1) The DSNode represents a pointer into the object at a non-zero
+          //     offset.
+          //  2) The offset of the pointer is already non-zero.
+          //  3) The size of the array element does not match the size into which
+          //     the pointer indexing is indexing.
+          //
+          if (NodeH.getOffset() || Offset != 0 ||
+              (!isa<ArrayType>(CurTy) &&
+               (NodeH.getNode()->getSize() != TD.getTypeAllocSize(CurTy)))) {
+
+            M.witness(NodeH, {&GEP, I.getOperand()},
+              "type-incompatible access into node"
+            );
+
+            DEBUG(
+              errs() << "[local] FOLDING FOR POINTER ACCESS" << "\n";
+              errs() << "[local] type:    " << *CurTy << "\n";
+              errs() << "[local] offset:  " << Offset
+                     << " (" << NodeH.getOffset() << ")\n";
+              errs() << "[local] size:    " << TD.getTypeAllocSize(CurTy)
+                     << " (" << NodeH.getNode()->getSize() << ")\n";
+              errs() << "[local] value: " << GEP << "\n";
+              errs() << "[local] index: " << *I.getOperand() << "\n";
+            );
+            NodeH.getNode()->foldNodeCompletely();
+            NodeH.getNode();
+            Offset = 0;
+            break;
+          }
+        }
       }
     }
+  }
 
   // Add in the offset calculated...
   NodeH.setOffset(NodeH.getOffset()+Offset);
