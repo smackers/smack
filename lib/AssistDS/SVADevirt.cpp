@@ -170,8 +170,7 @@ namespace {
 
       IndirectFuncFail = M.getOrInsertFunction ("pchk_ind_fail",
                                                 Type::VoidTy,
-                                                PointerType::getUnqual(Type::Int8Ty),
-                                                NULL);
+                                                PointerType::getUnqual(Type::Int8Ty));
       
       std::set<Value*> safecalls;
       std::vector<Instruction*> toDelete;
