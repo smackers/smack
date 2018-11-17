@@ -116,7 +116,7 @@ FunctionList DSNodeEquivs::getCallees(CallSite &CS) {
   DEBUG(
   if (Callees.empty()) {
     errs() << "Failed to get callees for callsite:\n";
-    CS.getInstruction()->dump();
+    CS.getInstruction()->print(smack::dbgs(), true);
   });
 
   return Callees;
