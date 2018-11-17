@@ -810,13 +810,11 @@ void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
 
 void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst& mci) {
   processInstruction(mci);
-  assert (mci.getNumOperands() == 6);
   emit(rep->memcpy(mci));
 }
 
 void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst& msi) {
   processInstruction(msi);
-  assert (msi.getNumOperands() == 6);
   emit(rep->memset(msi));
 }
 

@@ -305,64 +305,58 @@ const Stmt* SmackRep::alloca(llvm::AllocaInst& i) {
 }
 
 const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
+  const Value
+    *dst = mci.getDest(),
+    *src = mci.getSource();
+
+  // TODO: Should this be divided by size of dst?
   unsigned length;
   if (auto CI = dyn_cast<ConstantInt>(mci.getLength()))
     length = CI->getZExtValue();
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r1 = regions->idx(mci.getOperand(0),length);
-  unsigned r2 = regions->idx(mci.getOperand(1),length);
+  unsigned r1 = regions->idx(dst,length);
+  unsigned r2 = regions->idx(src,length);
 
   const Type* T = regions->get(r1).getType();
   Decl* P = memcpyProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
-
-  const Value
-    *dst = mci.getArgOperand(0),
-    *src = mci.getArgOperand(1),
-    *len = mci.getArgOperand(2),
-    *aln = mci.getArgOperand(3),
-    *vol = mci.getArgOperand(4);
 
   return Stmt::call(P->getName(), {
     Expr::id(memReg(r1)),
     Expr::id(memReg(r2)),
     expr(dst),
     expr(src),
-    integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
-    integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
-    Expr::eq(expr(vol), integerLit(1UL,1))
+    integerToPointer(expr(mci.getLength()), mci.getLength()->getType()->getIntegerBitWidth()),
+    Expr::lit(mci.isVolatile())
   }, {memReg(r1)});
 }
 
 const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
+  const Value
+    *dst = msi.getDest(),
+    *val = msi.getValue();
+
+  // TODO: Should this be divided by size of dst?
   unsigned length;
   if (auto CI = dyn_cast<ConstantInt>(msi.getLength()))
     length = CI->getZExtValue();
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r = regions->idx(msi.getOperand(0),length);
+  unsigned r = regions->idx(dst,length);
 
   const Type* T = regions->get(r).getType();
   Decl* P = memsetProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
-  const Value
-    *dst = msi.getArgOperand(0),
-    *val = msi.getArgOperand(1),
-    *len = msi.getArgOperand(2),
-    *aln = msi.getArgOperand(3),
-    *vol = msi.getArgOperand(4);
-
   return Stmt::call(P->getName(), {
     Expr::id(memReg(r)),
     expr(dst),
     expr(val),
-    integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
-    integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
-    Expr::eq(expr(vol), integerLit(1UL,1))
+    integerToPointer(expr(msi.getLength()), msi.getLength()->getType()->getIntegerBitWidth()),
+    Expr::lit(msi.isVolatile())
   }, {memReg(r)});
 }
 
@@ -1276,7 +1270,6 @@ Decl* SmackRep::memcpyProc(std::string type, unsigned length) {
     << "dst: ref, "
     << "src: ref, "
     << "len: ref, "
-    << "align: ref, "
     << "isvolatile: bool"
     << ") returns ("
     << "M.ret: [ref] " << type
@@ -1338,7 +1331,6 @@ Decl* SmackRep::memsetProc(std::string type, unsigned length) {
     << "dst: ref, "
     << "val: " << intType(8) << ", "
     << "len: ref, "
-    << "align: ref, "
     << "isvolatile: bool"
     << ") returns ("
     << "M.ret: [ref] " << type
