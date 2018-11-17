@@ -1,5 +1,5 @@
 language: generic
-dist: trusty
+dist: xenial
 sudo: required
 compiler: clang
 
@@ -38,21 +38,20 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=strings"
 
 before_install:
-  - sudo rm -rf /usr/local/clang-3.5.0
-  - sudo add-apt-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main"
+  - sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main"
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
   - sudo apt-get install -y apt-transport-https
-  - echo "deb https://download.mono-project.com/repo/ubuntu stable-trusty main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+  - echo "deb https://download.mono-project.com/repo/ubuntu stable-xenial main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
   - sudo apt-get update
 
 install:
-  - sudo apt-get install -y clang-3.9 llvm-3.9 mono-complete
-  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.9 20
-  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.9 20
-  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-3.9 20
-  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-3.9 20
-  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-3.9 20
+  - sudo apt-get install -y clang-7 llvm-7 mono-complete
+  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 20
+  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-7 20
+  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-7 20
+  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-7 20
+  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-7 20
   - sudo pip install pyyaml psutil
 
 script:
