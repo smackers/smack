@@ -153,8 +153,8 @@ bool ArgCast::runOnModule(Module& M) {
           } 
         } 
       } else {
-        SDEBUG(ArgType->dump());
-        SDEBUG(FormalType->dump());
+        SDEBUG(ArgType->print(smack::dbgs(), true));
+        SDEBUG(FormalType->print(smack::dbgs(), true));
         break;
       }
     }
@@ -199,10 +199,10 @@ bool ArgCast::runOnModule(Module& M) {
     // Debug printing
     SDEBUG(errs() << "ARGCAST:");
     SDEBUG(errs() << "ERASE:");
-    SDEBUG(CI->dump());
+    SDEBUG(CI->print(smack::dbgs(), true));
     SDEBUG(errs() << "ARGCAST:");
     SDEBUG(errs() << "ADDED:");
-    SDEBUG(CINew->dump());
+    SDEBUG(CINew->print(smack::dbgs(), true));
 
     CI->eraseFromParent();
     numChanged++;

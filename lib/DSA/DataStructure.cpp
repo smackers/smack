@@ -277,7 +277,7 @@ void DSNode::addValueList(std::vector<const Value*> &List) const {
   DSScalarMap &SN = getParentGraph()->getScalarMap();
   for(DSScalarMap::const_iterator I = SN.begin(), E = SN.end(); I!= E; I++) {
     if(SN[I->first].getNode() == this){
-      //I->first->dump();
+      //I->first->print(smack::dbgs(), true);
     }
 
   }
