@@ -65,7 +65,7 @@ bool SimplifyEV::runOnModule(Module& M) {
             EV->replaceAllUsesWith(Agg);
             DEBUG(errs() << "EV:");
             DEBUG(errs() << "ERASE:");
-            DEBUG(EV->dump());
+            DEBUG(EV->print(smack::dbgs(), true));
             EV->eraseFromParent();
             numErased++;
             changed = true;
@@ -76,7 +76,7 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(UndefValue::get(EV->getType()));
               DEBUG(errs() << "EV:");
               DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              DEBUG(EV->print(smack::dbgs(), true));
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -86,7 +86,7 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(Constant::getNullValue(EV->getType()));
               DEBUG(errs() << "EV:");
               DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              DEBUG(EV->print(smack::dbgs(), true));
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -104,7 +104,7 @@ bool SimplifyEV::runOnModule(Module& M) {
                 EV->replaceAllUsesWith(EV_new);
                 DEBUG(errs() << "EV:");
                 DEBUG(errs() << "ERASE:");
-                DEBUG(EV->dump());
+                DEBUG(EV->print(smack::dbgs(), true));
                 EV->eraseFromParent();
                 numErased++;
                 changed = true;
@@ -113,7 +113,7 @@ bool SimplifyEV::runOnModule(Module& M) {
                 EV->replaceAllUsesWith(V);
                 DEBUG(errs() << "EV:");
                 DEBUG(errs() << "ERASE:");
-                DEBUG(EV->dump());
+                DEBUG(EV->print(smack::dbgs(), true));
                 EV->eraseFromParent();
                 numErased++;
                 changed = true;
@@ -165,7 +165,7 @@ bool SimplifyEV::runOnModule(Module& M) {
                 EV->replaceAllUsesWith(EV_new);
                 DEBUG(errs() << "EV:");
                 DEBUG(errs() << "ERASE:");
-                DEBUG(EV->dump());
+                DEBUG(EV->print(smack::dbgs(), true));
                 EV->eraseFromParent();
                 numErased++;
                 done = true;
@@ -183,7 +183,7 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(IV->getInsertedValueOperand());
               DEBUG(errs() << "EV:");
               DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              DEBUG(EV->print(smack::dbgs(), true));
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -205,7 +205,7 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(NewIV);
               DEBUG(errs() << "EV:");
               DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              DEBUG(EV->print(smack::dbgs(), true));
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -225,7 +225,7 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(EV_new);
               DEBUG(errs() << "EV:");
               DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              DEBUG(EV->print(smack::dbgs(), true));
               EV->eraseFromParent();
               numErased++;
               changed = true;
