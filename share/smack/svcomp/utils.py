@@ -142,7 +142,7 @@ def force_timeout():
   sys.stdout.flush()
   time.sleep(1000)
 
-def is_crappy_driver_benchmark(args, bpl):
+def is_buggy_driver_benchmark(args, bpl):
   if ("205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--usb--rtl8150.ko-entry_point_true-unreach-call" in bpl or
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--gpu--drm--ttm--ttm.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--media--dvb-core--dvb-core.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
@@ -153,6 +153,10 @@ def is_crappy_driver_benchmark(args, bpl):
       "linux-4.2-rc1.tar.xz-32_7a-drivers--net--usb--r8152.ko-entry_point_true-unreach-call" in bpl or
       "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-ethernet-smsc-smsc911x_true-unreach-call" in bpl or
       "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-wan-lmc-lmc_true-unreach-call" in bpl or
+      "linux-4.2-rc1.tar.xz-32_7a-drivers--usb--gadget--libcomposite.ko-entry_point_true-unreach-call" in bpl or
+      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-media-platform-marvell-ccic-cafe_ccic_true-unreach-call" in bpl or
+      "linux-4.0-rc1---drivers--media--usb--uvc--uvcvideo.ko_false-unreach-call" in bpl or
+      "linux-4.0-rc1---drivers--char--ipmi--ipmi_msghandler.ko_true-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
     if not args.quiet:
       print("Stumbled upon a crappy device driver benchmark\n")
@@ -245,7 +249,7 @@ def verify_bpl_svcomp(args):
   if args.memory_safety:
     is_stack_benchmark(args, csource)
   else:
-    is_crappy_driver_benchmark(args, bpl)
+    is_buggy_driver_benchmark(args, bpl)
 
   if args.pthread:
     if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl or "k < 5;" in csource or "k < 10;" in csource or "k < 20;" in csource:
