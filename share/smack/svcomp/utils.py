@@ -159,7 +159,7 @@ def is_buggy_driver_benchmark(args, bpl):
       "linux-4.0-rc1---drivers--char--ipmi--ipmi_msghandler.ko_true-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
     if not args.quiet:
-      print("Stumbled upon a crappy device driver benchmark\n")
+      print("Stumbled upon a buggy device driver benchmark\n")
     force_timeout()
 
 def is_stack_benchmark(args, csource):
