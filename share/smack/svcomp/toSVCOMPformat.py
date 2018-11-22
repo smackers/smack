@@ -185,9 +185,9 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
               continue
             callStack.append(calledFunc)
             if args.only_check_memcleanup or status == 'invalid-memtrack':
-              if "__SMACK_check_memory_leak" in jsonTrace["description"][len("CALL"):] or
-                 "__VERIFIER_error" in jsonTrace["description"][len("CALL"):] or
-                 "exit" in jsonTrace["description"][len("CALL"):]:
+              if ("__SMACK_check_memory_leak" in jsonTrace["description"][len("CALL"):] or
+                  "__VERIFIER_error" in jsonTrace["description"][len("CALL"):] or
+                  "exit" in jsonTrace["description"][len("CALL"):]):
                 newNode = addGraphNode(tree)
                 # addGraphNode returns a string, so we had to search the graph to get the node that we want
                 vNodes =tree.find("graph").findall("node")
