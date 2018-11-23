@@ -249,6 +249,10 @@ def verify_bpl_svcomp(args):
   if args.memory_safety:
     is_stack_benchmark(args, csource)
   else:
+    if "angleInRadian" in csource:
+      if not args.quiet:
+        print("Stumbled upon trigonometric function is float benchmark\n")
+      sys.exit(smack.top.results(args)['unknown'])
     is_buggy_driver_benchmark(args, bpl)
 
   if args.pthread:
