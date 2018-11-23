@@ -156,10 +156,20 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
       pat = re.compile(".*smack\.[c|h]$")
       prevLineNo = -1
       prevColNo = -1
-      callStack = ['main']
+      callStack = [('main', '0')]
       # Loop through each trace
       for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
+        if "ASSERTION FAILS" in jsonTrace["description"]:
+          newNode = addGraphNode(tree)
+          # addGraphNode returns a string, so we had to search the graph to get the node that we want
+          vNodes =tree.find("graph").findall("node")
+          for vNode in vNodes:
+            if vNode.attrib["id"] == newNode:
+              addKey(vNode, "violation", "true")
+          attribs = {"startline":str(callStack[-1][1])}
+          addGraphEdge(tree, lastNode, newNode, attribs)
+          break
         if not pat.match(jsonTrace["file"]):
           desc = jsonTrace["description"]
           formattedAssign = formatAssign(desc)
@@ -169,7 +179,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
             newNode = addGraphNode(tree)
             attribs = {"startline":str(jsonTrace["line"])}
             attribs["assumption"] = formattedAssign + ";"
-            attribs["assumption.scope"] = callStack[-1]
+            attribs["assumption.scope"] = callStack[-1][0]
             newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
             prevLineNo = jsonTrace["line"]
             prevColNo = jsonTrace["column"]
@@ -183,44 +193,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
               continue
             if isSMACKInitFunc(calledFunc):
               continue
-            callStack.append(calledFunc)
-            if args.only_check_memcleanup or status == 'invalid-memtrack':
-              if ("__SMACK_check_memory_leak" in jsonTrace["description"][len("CALL"):] or
-                  "__VERIFIER_error" in jsonTrace["description"][len("CALL"):] or
-                  "abort" in jsonTrace["description"][len("CALL"):] or
-                  "exit" in jsonTrace["description"][len("CALL"):]):
-                newNode = addGraphNode(tree)
-                # addGraphNode returns a string, so we had to search the graph to get the node that we want
-                vNodes =tree.find("graph").findall("node")
-                for vNode in vNodes:
-                  if vNode.attrib["id"] == newNode:
-                    addKey(vNode, "violation", "true")
-                attribs = {"startline":str(jsonTrace["line"])}
-                addGraphEdge(tree, lastNode, newNode, attribs)
-                break
-            elif args.integer_overflow:
-              if "__SMACK_check_overflow" in jsonTrace["description"][len("CALL"):]:
-                newNode = addGraphNode(tree)
-                # addGraphNode returns a string, so we had to search the graph to get the node that we want
-                vNodes =tree.find("graph").findall("node")
-                for vNode in vNodes:
-                  if vNode.attrib["id"] == newNode:
-                    addKey(vNode, "violation", "true")
-                attribs = {"startline":str(jsonTrace["line"])}
-                addGraphEdge(tree, lastNode, newNode, attribs)
-                break
-            else:
-              if "__VERIFIER_error" in jsonTrace["description"][len("CALL"):]:
-                newNode = addGraphNode(tree)
-                # addGraphNode returns a string, so we had to search the graph to get the node that we want
-                vNodes =tree.find("graph").findall("node")
-                for vNode in vNodes:
-                  if vNode.attrib["id"] == newNode:
-                    addKey(vNode, "violation", "true")
-                attribs = {"startline":str(jsonTrace["line"])}
-                attribs["enterFunction"] = callStack[-1]
-                addGraphEdge(tree, lastNode, newNode, attribs)
-                break
+            callStack.append((calledFunc, jsonTrace["line"]))
           if "RETURN from" in desc:
             returnedFunc = str(desc[len("RETURN from "):]).strip()
             if returnedFunc.startswith("devirtbounce"):
@@ -228,8 +201,8 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
               continue
             if isSMACKInitFunc(returnedFunc):
               continue
-            if returnedFunc != callStack[-1]:
-              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1], returnedFunc))
+            if returnedFunc != callStack[-1][0]:
+              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1][0], returnedFunc))
             callStack.pop()
     print
     print

@@ -544,7 +544,7 @@ def error_trace(verifier_output, args):
 
 def smackdOutput(corralOutput):
   FILENAME = '[\w#$~%.\/-]+'
-  traceP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$')
+  traceP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)[\);])?$')
   errorP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$')
 
   passedMatch = re.search('Program has no bugs', corralOutput)
