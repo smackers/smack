@@ -35,7 +35,6 @@ def svcomp_frontend(input_file, args):
       #sys.exit(smack.top.results(args)['unknown'])
       args.float = True
       args.bit_precise = True
-      args.bit_precise_pointers = True
       #args.verifier = 'boogie'
       args.time_limit = 1000
       args.unroll = 100
@@ -202,29 +201,6 @@ def verify_bpl_svcomp(args):
     args.only_check_memleak = True
     smack.top.property_selection(args)
     args.only_check_memleak = False
-
-  # invoke boogie for floats
-  # I have to copy/paste part of verify_bpl
-  if args.float:
-    args.verifier = 'boogie'
-    boogie_command = ["boogie"]
-    boogie_command += [args.bpl_file]
-    boogie_command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
-    boogie_command += ["/timeLimit:%s" % args.time_limit]
-    boogie_command += ["/errorLimit:%s" % args.max_violations]
-    boogie_command += ["/loopUnroll:%d" % args.unroll]
-    if args.bit_precise:
-      x = "bopt:" if args.verifier != 'boogie' else ""
-      boogie_command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-      boogie_command += ["/%sboolControlVC" % x]
-
-    if args.verifier_options:
-      boogie_command += args.verifier_options.split()
-
-    boogie_output = smack.top.try_command(boogie_command, timeout=args.time_limit)
-    boogie_result = smack.top.verification_result(boogie_output)
-    write_error_file(args, boogie_result, boogie_output)
-    sys.exit(smack.top.results(args)[boogie_result])
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
