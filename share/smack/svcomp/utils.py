@@ -32,17 +32,17 @@ def svcomp_frontend(input_file, args):
       args.bit_precise = True
       args.bit_precise_pointers = True
     if file_type == 'float' and not args.integer_overflow:
-      #sys.exit(smack.top.results(args)['unknown'])
       args.float = True
       args.bit_precise = True
-      #args.verifier = 'boogie'
-      args.time_limit = 1000
-      args.unroll = 100
+      with open(input_file, "r") as sf:
+        sc = sf.read()
+      if 'copysign(1' in sc:
+        args.bit_precise_pointers = True
     args.execute = executable
   else:
     with open(input_file, "r") as sf:
       sc = sf.read()
-    if 'unsigned char b:2' in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
+    if "unsigned char b:2" in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
       args.bit_precise = True
       #args.bit_precise_pointers = True
 
