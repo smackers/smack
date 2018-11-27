@@ -10,6 +10,7 @@ import sys
 import pprint
 import os
 import hashlib
+import datetime
 
 nextNum = 0
 
@@ -36,8 +37,8 @@ def addKeyDefs(root):
     keys.append(["specification", "string",  "graph", "specification", False])
     keys.append(["programfile", "string",  "graph", "programfile", False])
     keys.append(["programhash", "string",  "graph", "programhash", False])
-    keys.append(["MemoryModel", "string",  "graph", "memorymodel", False])
     keys.append(["architecture", "string",  "graph", "architecture", False])
+    keys.append(["creationtime", "string",  "graph", "creationtime", False])
     keys.append(["tokenSet",           "string",  "edge",  "tokens",         False])
     keys.append(["originTokenSet",     "string",  "edge",  "origintokens",   False])
     keys.append(["negativeCase",       "string",  "edge",  "negated",        True, "false"])
@@ -117,10 +118,10 @@ def buildEmptyXmlGraph(args, hasBug):
     programfile = os.path.abspath(args.orig_files[0])
     addKey(graph, "programfile", programfile)
     with open(programfile, 'r') as pgf:
-      addKey(graph, "programhash", hashlib.sha1(pgf.read()).hexdigest())
-    addKey(graph, "memorymodel", "precise")
+      addKey(graph, "programhash", hashlib.sha256(pgf.read()).hexdigest())
     addKey(graph, "architecture",
             re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
+    addKey(graph, "creationtime", datetime.datetime.now().replace(microsecond=0).isoformat())
     return tree
 
 def formatAssign(assignStmt):
@@ -133,7 +134,10 @@ def formatAssign(assignStmt):
     else:
       return ""
 
-def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
+def isSMACKInitFunc(funcName):
+  return funcName == '$initialize' or funcName == '__SMACK_static_init' or funcName == '__SMACK_init_func_memory_model'
+
+def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
     """Converts output from SMACK (in the smackd json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
     # Build tree & start node
@@ -152,50 +156,53 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug):
       pat = re.compile(".*smack\.[c|h]$")
       prevLineNo = -1
       prevColNo = -1
-      callStack = ['main']
+      callStack = [('main', '0')]
       # Loop through each trace
       for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
+        if "ASSERTION FAILS" in jsonTrace["description"]:
+          newNode = addGraphNode(tree)
+          # addGraphNode returns a string, so we had to search the graph to get the node that we want
+          vNodes =tree.find("graph").findall("node")
+          for vNode in vNodes:
+            if vNode.attrib["id"] == newNode:
+              addKey(vNode, "violation", "true")
+          attribs = {"startline":str(callStack[-1][1])}
+          addGraphEdge(tree, lastNode, newNode, attribs)
+          break
         if not pat.match(jsonTrace["file"]):
-          if formatAssign(jsonTrace["description"]):
+          desc = jsonTrace["description"]
+          formattedAssign = formatAssign(desc)
+          # Make sure it is not return value
+          if formattedAssign and not ":" in formattedAssign:
           # Create new node and edge
             newNode = addGraphNode(tree)
             attribs = {"startline":str(jsonTrace["line"])}
-            attribs["assumption"] = formatAssign(str(jsonTrace["description"])) + ";"
-            attribs["assumption.scope"] = callStack[-1]
+            attribs["assumption"] = formattedAssign + ";"
+            attribs["assumption.scope"] = callStack[-1][0]
             newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
             prevLineNo = jsonTrace["line"]
             prevColNo = jsonTrace["column"]
             lastNode = newNode
             lastEdge = newEdge
-          if "CALL" in jsonTrace["description"]:
+          if "CALL" in desc:
             # Add function to call stack
             calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
             if calledFunc.startswith("devirtbounce"):
               print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
               continue
-            callStack.append(calledFunc)
-            if (("__VERIFIER_error" in jsonTrace["description"][len("CALL"):]) or
-                ("__SMACK_overflow_false" in jsonTrace["description"][len("CALL"):]) or
-                 ("__SMACK_check_overflow" in jsonTrace["description"][len("CALL"):])):
-              newNode = addGraphNode(tree)
-              # addGraphNode returns a string, so we had to search the graph to get the node that we want
-              vNodes =tree.find("graph").findall("node")
-              for vNode in vNodes:
-                if vNode.attrib["id"] == newNode:
-                  addKey(vNode, "violation", "true")
-              attribs = {"startline":str(jsonTrace["line"])}
-              if not args.signed_integer_overflow:
-                attribs["enterFunction"] = callStack[-1]
-              addGraphEdge(tree, lastNode, newNode, attribs)
-              break
-          if "RETURN from" in jsonTrace["description"]:
-            returnedFunc = str(jsonTrace["description"][len("RETURN from "):]).strip()
+            if isSMACKInitFunc(calledFunc):
+              continue
+            callStack.append((calledFunc, jsonTrace["line"]))
+          if "RETURN from" in desc:
+            returnedFunc = str(desc[len("RETURN from "):]).strip()
             if returnedFunc.startswith("devirtbounce"):
               print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
               continue
-            if returnedFunc != callStack[-1]:
-              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1], returnedFunc))
+            if isSMACKInitFunc(returnedFunc):
+              continue
+            if returnedFunc != callStack[-1][0]:
+              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1][0], returnedFunc))
             callStack.pop()
     print
     print

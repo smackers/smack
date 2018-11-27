@@ -477,8 +477,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable* G = llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       if (const llvm::PointerType* t = llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
-        if (!t->getElementType()->isPointerTy()) {
-          assert(G->hasName() && "Expected named global variable.");
+        if (!t->getElementType()->isPointerTy() && G->hasName()) {
           emit(recordProcedureCall(V, {Attr::attr("cexpr", G->getName().str())}));
         }
       }
@@ -600,7 +599,20 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // Semantically, this function simply returns the value v.
     Value* val = ci.getArgOperand(0);
     emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
-    
+
+  } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
+    // Set the entry point for Rust programs
+    auto castExpr = ci.getArgOperand(0);
+    if (auto CE = dyn_cast<const Constant>(castExpr)) {
+      auto mainFunc = CE->getOperand(0);
+      emit(Stmt::call(mainFunc->getName(), {},{}));
+    }
+
+  } else if (name.find(Naming::RUST_PANIC1) != std::string::npos
+             || name.find(Naming::RUST_PANIC2) != std::string::npos) {
+    // Convert Rust's panic functions into assertion violations
+    emit(Stmt::assert_(Expr::lit(false), {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
+
   } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep->valueAnnotation(ci));
 

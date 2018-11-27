@@ -10,7 +10,7 @@ Vagrant.configure(2) do |config|
   config.vm.synced_folder ".", "/home/vagrant/#{project_name}"
 
   config.vm.define :ubuntu do |ubuntu_config|
-    ubuntu_config.vm.box = "minimal/trusty64"
+    ubuntu_config.vm.box = "bento/ubuntu-16.04"
   end
 
   # This provision, 'fix-no-tty', gets rid of an error during build

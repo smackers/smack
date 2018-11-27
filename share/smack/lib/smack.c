@@ -46,6 +46,9 @@ void __VERIFIER_assert(int x) {
 void __VERIFIER_error(void) {
 #if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_code("assert false;");
+#elif MEMORY_SAFETY
+  __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
+  __SMACK_code("assume false;");
 #else
   __SMACK_code("assume false;");
 #endif
@@ -53,14 +56,6 @@ void __VERIFIER_error(void) {
 
 void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag); __SMACK_code("assert {:overflow} @ == $0;", flag);
-}
-
-void exit(int x) {
-#if MEMORY_SAFETY
-  __SMACK_code("assert $allocatedCounter == 0;");
-#endif
-  __SMACK_code("assume false;");
-  while(1);
 }
 
 char __VERIFIER_nondet_char(void) {
@@ -255,17 +250,6 @@ unsigned long __VERIFIER_nondet_ulong(void) {
 
 void* __VERIFIER_nondet_pointer(void) {
   return __VERIFIER_nondet();
-}
-
-void* calloc(size_t num, size_t size) {
-  void* ret;
-  if (__VERIFIER_nondet_int()) {
-    ret = 0;
-  } else {
-    ret = malloc(num * size);
-    memset(ret, 0, num * size);
-  }
-  return ret;
 }
 
 void __SMACK_dummy(int v) {

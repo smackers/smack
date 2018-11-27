@@ -7,6 +7,7 @@
 // operations, and optionally allows for the checking of overflow.
 //
 
+#define DEBUG_TYPE "smack-overflow"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/Naming.h"
 #include "llvm/IR/Module.h"
@@ -93,7 +94,7 @@ Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) 
  * This adds a call instruction to __SMACK_check_overflow to determine if an
  * overflow occured as indicated by flag.
  */
-void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instruction* i) {
+void IntegerOverflowChecker::addCheck(Function* co, Value* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
   CallInst::Create(co, args, "", i);
 }
@@ -102,7 +103,7 @@ void IntegerOverflowChecker::addCheck(Function* co, BinaryOperator* flag, Instru
  * This inserts a call to assume with flag negated to prevent the verifier
  * from exploring paths past a __SMACK_check_overflow
  */
-void IntegerOverflowChecker::addBlockingAssume(Function* va, BinaryOperator* flag, Instruction* i) {
+void IntegerOverflowChecker::addBlockingAssume(Function* va, Value* flag, Instruction* i) {
   ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
         va->arg_begin()->getType(), false, "", i));
   CallInst::Create(va, args, "", i);
@@ -118,12 +119,28 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
     if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+      // Add check for UBSan left shift when needed
+      if (SmackOptions::IntegerOverflow) {
+        if (auto chkshft = dyn_cast<CallInst>(&*I)) {
+	  Function* chkfn = chkshft->getCalledFunction();
+          if (chkfn && chkfn->hasName() &&
+              chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos) {
+            // If the call to __ubsan_handle_shift_out_of_bounds is reachable,
+            // then an overflow is possible.
+            ConstantInt* flag = ConstantInt::getTrue(chkshft->getFunction()->getContext());
+            addCheck(co, flag, &*I);
+            addBlockingAssume(va, flag, &*I);
+            I->replaceAllUsesWith(flag);
+            instToRemove.push_back(&*I);
+          }
+        }
+      }
       if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
         if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
           Function* f = ci->getCalledFunction();
-          SmallVectorImpl<StringRef> *info = new SmallVector<StringRef, 3>;
-          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName().str(), info)
-              && ei->getIndices()[0] == 1) {
+          SmallVector<StringRef, 4> info;
+          if (f && f->hasName() && OVERFLOW_INTRINSICS.match(f->getName(), &info) &&
+              ei->getIndices()[0] == 1) {
             /*
              * If ei is an ExtractValueInst whose value flows from an LLVM
              * checked value intrinsic f, then we do the following:
@@ -137,13 +154,16 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
              * - Finally, an assumption about the value of the flag is created
              *   to block erroneous checking of paths after the overflow check.
              */
+            DEBUG(errs() << "Processing intrinsic: " << f->getName().str() << "\n");
+            assert(info.size() == 4 && "Must capture three matched strings.");
+            bool isSigned = (info[1] == "s");
+            std::string op = info[2];
+            int bits = std::stoi(info[3]);
             Instruction* prev = &*std::prev(I);
-            bool isSigned = info->begin()[1].str() == "s";
-            std::string op = info->begin()[2].str();
-            std::string len = info->begin()[3].str();
-            int bits = std::stoi(len);
             Value* eo1 = extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
             Value* eo2 = extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
+            DEBUG(errs() << "Processing operator: " << op << "\n");
+            assert(INSTRUCTION_TABLE.count(op) != 0 && "Operator must be present in our instruction table.");
             BinaryOperator* ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
             if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
               if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {

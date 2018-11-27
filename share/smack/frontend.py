@@ -61,10 +61,6 @@ def smack_header_path():
 def smack_headers(args):
   paths = []
   paths.append(smack_header_path())
-  if args.memory_safety or args.integer_overflow:
-    paths.append(os.path.join(smack_header_path(), 'string'))
-  if args.float:
-    paths.append(os.path.join(smack_header_path(), 'math'))
   return paths
 
 def smack_lib():
@@ -76,7 +72,7 @@ def default_clang_compile_command(args, lib = False):
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
-  if args.integer_overflow: cmd += (['-ftrapv'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+  if args.integer_overflow: cmd += (['-ftrapv', '-fsanitize=shift'] if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
   if args.float: cmd += ['-DFLOAT_ENABLED']
   if sys.stdout.isatty(): cmd += ['-fcolor-diagnostics']
   return cmd
@@ -85,6 +81,12 @@ def compile_to_bc(input_file, compile_command, args):
   """Compile a source file to LLVM IR."""
   bc = temporary_file(os.path.splitext(os.path.basename(input_file))[0], '.bc', args)
   try_command(compile_command + ['-o', bc, input_file], console=True)
+  return bc
+
+def d_compile_to_bc(input_file, compile_command, args):
+  """Compile a D source file to LLVM IR."""
+  bc = temporary_file(os.path.splitext(os.path.basename(input_file))[0], '.bc', args)
+  try_command(compile_command + ['-of=' + bc, input_file], console=True)
   return bc
 
 def fortran_compile_to_bc(input_file, compile_command, args):
@@ -152,7 +154,7 @@ def d_frontend(input_file, args):
   compile_command = ['ldc2', '-output-ll']
   compile_command += map(lambda path: '-I=' + path, smack_headers(args))
   args.entry_points += ['_Dmain']
-  return compile_to_bc(input_file,compile_command,args)
+  return d_compile_to_bc(input_file,compile_command,args)
 
 def fortran_frontend(input_file, args):
   """Generate Boogie code from Fortran language source(s)."""
@@ -237,7 +239,7 @@ def rust_frontend(input_file, args):
 def default_build_libs(args):
   """Generate LLVM bitcodes for SMACK libraries."""
   bitcodes = []
-  libs = ['smack.c']
+  libs = ['smack.c', 'stdlib.c']
 
   if args.pthread:
     libs += ['pthread.c']

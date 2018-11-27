@@ -15,7 +15,7 @@ from replay import replay_error_trace
 from prelude import append_prelude
 from frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '1.9.1'
+VERSION = '1.9.2'
 
 def results(args):
   """A dictionary of the result output messages."""
@@ -45,27 +45,54 @@ def inlined_procedures():
     '__SMACK_check_overflow'
   ]
 
-def validate_input_file(file):
-  """Check whether the given input file is valid, returning a reason if not."""
+class FileAction(argparse.Action):
+  def __init__(self, option_strings, dest, **kwargs):
+    super(FileAction, self).__init__(option_strings, dest, **kwargs)
+  def __call__(self, parser, namespace, values, option_string=None):
+    if option_string is None:
+      validate_input_files(values)
+    else:
+      # presumably output files (e.g., .bc, .ll, etc)
+      validate_output_file(values)
+    setattr(namespace, self.dest, values)
 
-  file_extension = os.path.splitext(file)[1][1:]
-  if not os.path.isfile(file):
-    return ("Cannot find file %s." % file)
+def exit_with_error(error):
+  sys.exit('Error: %s.' % error)
 
-  elif not file_extension in languages():
-    return ("Unexpected source file extension '%s'." % file_extension)
+def validate_input_files(files):
+  def validate_input_file(file):
+    """Check whether the given input file is valid, returning a reason if not."""
 
-  else:
-    return None
+    file_extension = os.path.splitext(file)[1][1:]
+    if not os.path.isfile(file):
+      exit_with_error("Cannot find file %s" % file)
+
+    if not os.access(file, os.R_OK):
+      exit_with_error("Cannot read file %s" % file)
+
+    elif not file_extension in languages():
+      exit_with_error("Unexpected source file extension '%s'" % file_extension)
+  map(validate_input_file, files)
+
+def validate_output_file(file):
+  dir_name = os.path.dirname(os.path.abspath(file))
+  if not os.path.isdir(dir_name):
+    exit_with_error("directory %s doesn't exist" % dirname)
+  if not os.access(dir_name, os.W_OK):
+    exit_with_error("file %s may not be writeable" % file)
+  #try:
+  #  with open(file, 'w') as f:
+  #    pass
+  #except IOError:
+  #  exit_with_error("file %s may not be writeable" % file)
 
 def arguments():
   """Parse command-line arguments"""
 
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('input_files', metavar='input-files', nargs='+',
-    type = lambda x: (lambda r: x if r is None else parser.error(r))(validate_input_file(x)),
-    help = 'source file to be translated/verified')
+  parser.add_argument('input_files', metavar='input-files', nargs='+', action=FileAction,
+    type = str, help = 'source file to be translated/verified')
 
   parser.add_argument('--version', action='version',
     version='SMACK version ' + VERSION)
@@ -97,7 +124,7 @@ def arguments():
     choices=frontends().keys(), default=None,
     help='Treat input files as having type LANG.')
 
-  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None,
+  frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None, action=FileAction,
     type=str, help='save initial LLVM bitcode to FILE')
 
   frontend_group.add_argument('--linked-bc-file', metavar='FILE', default=None,
@@ -109,7 +136,7 @@ def arguments():
   frontend_group.add_argument('--replay-exe-file', metavar='FILE', default='replay-exe',
     type=str, help=argparse.SUPPRESS)
 
-  frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None,
+  frontend_group.add_argument('-ll', '--ll-file', metavar='FILE', default=None, action=FileAction,
     type=str, help='save final LLVM IR to FILE')
 
   frontend_group.add_argument('--clang-options', metavar='OPTIONS', default='',
@@ -118,7 +145,7 @@ def arguments():
 
   translate_group = parser.add_argument_group('translation options')
 
-  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None,
+  translate_group.add_argument('-bpl', '--bpl-file', metavar='FILE', default=None, action=FileAction,
     type=str, help='save (intermediate) Boogie code to FILE')
 
   translate_group.add_argument('--no-memory-splitting', action="store_true", default=False,
@@ -517,6 +544,8 @@ def error_trace(verifier_output, args):
 
 def smackdOutput(corralOutput):
   FILENAME = '[\w#$~%.\/-]+'
+  traceP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)[\);])?$')
+  errorP = re.compile('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$')
 
   passedMatch = re.search('Program has no bugs', corralOutput)
   if passedMatch:
@@ -533,32 +562,30 @@ def smackdOutput(corralOutput):
     threadid = 0
     desc = ''
     for traceLine in corralOutput.splitlines(True):
-      traceMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)\))?$', traceLine)
-      traceAssumeMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((\s*\w+\s*=\s*\w+\s*)\))$', traceLine)
-      errorMatch = re.match('(' + FILENAME + ')\((\d+),(\d+)\): (error .*)$', traceLine)
+      traceMatch = traceP.match(traceLine)
       if traceMatch:
         filename = str(traceMatch.group(1))
         lineno = int(traceMatch.group(2))
         colno = int(traceMatch.group(3))
         threadid = int(traceMatch.group(4))
         desc = str(traceMatch.group(6))
-        assm = ''
-        if traceAssumeMatch:
-          assm = str(traceAssumeMatch.group(6))
-          #Remove bitvector indicator from trace assumption
-          assm = re.sub(r'=(\s*\d+)bv\d+', r'=\1', assm)
-        trace = { 'threadid': threadid,
+        for e in desc.split(','):
+          e = e.strip()
+          assm = re.sub(r'=(\s*\d+)bv\d+', r'=\1', e) if '=' in e else ''
+          trace = { 'threadid': threadid,
                   'file': filename,
                   'line': lineno,
                   'column': colno,
-                  'description': '' if desc == 'None' else desc,
+                  'description': e,
                   'assumption': assm }
-        traces.append(trace)
-      elif errorMatch:
-        filename = str(errorMatch.group(1))
-        lineno = int(errorMatch.group(2))
-        colno = int(errorMatch.group(3))
-        desc = str(errorMatch.group(4))
+          traces.append(trace)
+      else:
+        errorMatch = errorP.match(traceLine)
+        if errorMatch:
+          filename = str(errorMatch.group(1))
+          lineno = int(errorMatch.group(2))
+          colno = int(errorMatch.group(3))
+          desc = str(errorMatch.group(4))
 
     failsAt = { 'file': filename, 'line': lineno, 'column': colno, 'description': desc }
 
