@@ -309,6 +309,9 @@ def verify_bpl_svcomp(args):
   elif "i>>16" in csource:
     heurTrace += "Large array reach benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
+  elif "whoop_poll_table" in csource:
+    heurTrace += "Large concurrency benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
