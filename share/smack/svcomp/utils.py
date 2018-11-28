@@ -156,6 +156,8 @@ def is_buggy_driver_benchmark(args, bpl):
       "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-media-platform-marvell-ccic-cafe_ccic_true-unreach-call" in bpl or
       "linux-4.0-rc1---drivers--media--usb--uvc--uvcvideo.ko_false-unreach-call" in bpl or
       "linux-4.0-rc1---drivers--char--ipmi--ipmi_msghandler.ko_true-unreach-call" in bpl or
+      "205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--wireless--libertas_tf--libertas_tf.ko-entry_point_true-unreach-call" in bpl or
+      "linux-4.2-rc1.tar.xz-32_7a-drivers--md--dm-raid.ko-entry_point_false-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
     if not args.quiet:
       print("Stumbled upon a buggy device driver benchmark\n")
@@ -228,6 +230,10 @@ def verify_bpl_svcomp(args):
     if "angleInRadian" in csource:
       if not args.quiet:
         print("Stumbled upon trigonometric function is float benchmark\n")
+      sys.exit(smack.top.results(args)['unknown'])
+    elif "copysign(1" in csource:
+      if not args.quiet:
+        print("Stumbled upon tricky float benchmark\n")
       sys.exit(smack.top.results(args)['unknown'])
     is_buggy_driver_benchmark(args, bpl)
 
