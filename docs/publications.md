@@ -14,6 +14,10 @@ Zvonimir Rakamaric, Michael Emmi,
 This is an incomplete list of publications that use, leverage, or extend SMACK.
 If you have a publication for this list, please email [Zvonimir](mailto:zvonimir@cs.utah.edu).
 
+1. [CANAL: A Cache Timing Analysis Framework via LLVM Transformation](https://dl.acm.org/citation.cfm?id=3240485),
+Chungha Sung, Brandon Paulsen, Chao Wang,
+33rd ACM/IEEE International Conference on Automated Software Engineering (ASE 2018)
+
 1. [Formal Security Verification of Concurrent Firmware in SoCs using Instruction-Level Abstraction for Hardware](https://dl.acm.org/citation.cfm?id=3196055),
 Bo-Yuan Huang, Sayak Ray, Aarti Gupta, Jason M. Fung, Sharad Malik,
 55th Annual Design Automation Conference (DAC 2018)
