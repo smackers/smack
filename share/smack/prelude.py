@@ -262,7 +262,7 @@ def trunc_bv_op(width, width_2):
     body = 'i1[' + str(width_2) + ':0]'
   )
 
-sizes = [1, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128]
+sizes = [1, 5, 6, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128]
 
 binary_ops = ['add', 'sub', 'mul', 'sdiv', 'smod', 'srem', 'udiv', 'urem', 'shl', 'lshr', 'ashr', 'and', 'or', 'xor', 'nand']
 comp_ops = ['ule', 'ult', 'uge', 'ugt', 'sle', 'slt', 'sge', 'sgt']
