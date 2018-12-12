@@ -1243,10 +1243,15 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
 
   // Add padding between globals to be able to check memory overflows/underflows
   const unsigned globalsPadding = 1024;
-  decls.push_back(Decl::axiom(Expr::eq(
-    Expr::id(name),
-    pointerLit(external ? externsBottom -= size : globalsBottom -= (size + globalsPadding)) )));
-
+  if (external) {
+    decls.push_back(Decl::axiom(Expr::eq(
+      Expr::id(name),
+      Expr::fn("$add.ref", Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(externsBottom -= size)))));
+  } else {
+    decls.push_back(Decl::axiom(Expr::eq(
+      Expr::id(name),
+      pointerLit(globalsBottom -= (size + globalsPadding)))));
+  }
   globalAllocations[v] = size;
 
   return decls;
