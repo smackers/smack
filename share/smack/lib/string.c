@@ -137,7 +137,6 @@ char *strstr(const char *haystack, const char *needle) {
 }
 
 static char *olds;
-
 char *strtok(char *str, const char *delim) {
   if (!str)
     str = olds;
