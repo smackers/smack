@@ -107,7 +107,7 @@ bool isCodeString(const llvm::Value* V) {
 
 SmackRep::SmackRep(const DataLayout* L, Naming* N, Program* P, Regions* R)
     : targetData(L), naming(N), program(P), regions(R),
-      globalsBottom(0), externsBottom(-32768), uniqueFpNum(0),
+      globalsOffset(0), externsOffset(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits())
 {
     if (SmackOptions::MemorySafety)
@@ -1064,8 +1064,8 @@ std::string SmackRep::getPrelude() {
   s << "\n";
 
   s << "// Memory address bounds" << "\n";
-  s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM),pointerLit(globalsBottom))) << "\n";
-  s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM),pointerLit(externsBottom))) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(globalsOffset))) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM), Expr::fn("$add.ref", Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(externsOffset)))) << "\n";
   unsigned long malloc_top;
   if (ptrSizeInBits == 32)
     malloc_top = 2147483647UL;
@@ -1246,11 +1246,11 @@ std::list<Decl*> SmackRep::globalDecl(const llvm::GlobalValue* v) {
   if (external) {
     decls.push_back(Decl::axiom(Expr::eq(
       Expr::id(name),
-      Expr::fn("$add.ref", Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(externsBottom -= size)))));
+      Expr::fn("$add.ref", Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(externsOffset -= size)))));
   } else {
     decls.push_back(Decl::axiom(Expr::eq(
       Expr::id(name),
-      pointerLit(globalsBottom -= (size + globalsPadding)))));
+      pointerLit(globalsOffset -= (size + globalsPadding)))));
   }
   globalAllocations[v] = size;
 
