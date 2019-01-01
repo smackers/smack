@@ -1,2 +1,3 @@
+skip: ok
 verifiers: [boogie]
 flags: [--modular]

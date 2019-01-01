@@ -27,10 +27,12 @@ class Naming {
 public:
   static const std::string BOOL_TYPE;
   static const std::string UNINTERPRETED_FLOAT_TYPE;
+  static const std::string HALF_TYPE;
   static const std::string FLOAT_TYPE;
   static const std::string DOUBLE_TYPE;
   static const std::string LONG_DOUBLE_TYPE;
   static const std::string PTR_TYPE;
+  static const std::string VECTOR_TYPE;
   static const std::string NULL_VAL;
 
   static const std::string INIT_FUNC_PREFIX;
@@ -77,15 +79,22 @@ public:
   static const std::string RET_VAR;
   static const std::string EXN_VAR;
   static const std::string EXN_VAL_VAR;
+  static const std::string RMODE_VAR;
   static const std::string BOOL_VAR;
   static const std::string FLOAT_VAR;
   static const std::string INT_VAR;
+  static const std::string VECTOR_VAR;
   static const std::string PTR_VAR;
   static const std::string GLOBAL_VAR;
   static const std::string UNDEF_SYM;
   static const std::string CONTRACT_EXPR;
   static const std::string MEMORY_SAFETY_FUNCTION;
   static const std::string MEMORY_LEAK_FUNCTION;
+
+  static const std::string RUST_ENTRY;
+  static const std::string RUST_PANIC1;
+  static const std::string RUST_PANIC2;
+  static const std::string RUST_PANIC_ANNOTATION;
 
   static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
   static const std::map<unsigned,std::string> CMPINST_TABLE;

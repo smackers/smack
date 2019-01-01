@@ -1,12 +1,15 @@
 The MIT License
 
-Copyright (c) 2008-2017 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+Copyright (c) 2008-2019 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
                         Michael Emmi (michael.emmi@gmail.com)
-Modified work Copyright (c) 2013-2017 Montgomery Carter,
+Modified work Copyright (c) 2013-2019 Marek Baranowski,
+                                      Montgomery Carter,
                                       Pantazis Deligiannis,
+                                      Jack J. Garzella,
                                       Dietrich Geisler,
                                       Arvind Haran,
                                       Shaobo He,
+                                      Liam Machado,
                                       Jiten Thakkar,
                                       Jonathan Whitaker
 
@@ -39,18 +42,18 @@ code.
 The following pieces of software have additional or alternate copyrights,
 licenses, and/or restrictions:
 
-Program             Directories
--------             -----------
-poolalloc           include/assistDS
+Program             Directories           License
+-------             -----------           -------
+poolalloc           include/assistDS      lib/DSA/LICENSE
                     include/dsa
                     lib/AssistDS
                     lib/DSA
 
 In addition, a binary distribution of SMACK contains at least the following
 tools and packages, which come with their own licenses:
-- LLVM, clang, LLVM runtime (http://llvm.org/)
-- mono (http://www.mono-project.com/)
-- Boogie (https://github.com/boogie-org/boogie/)
-- Corral (http://corral.codeplex.com/)
-- Z3 (https://github.com/Z3Prover/z3/)
+- LLVM, clang, LLVM runtime (http://llvm.org)
+- Boogie (https://github.com/boogie-org/boogie)
+- Corral (https://github.com/boogie-org/corral)
+- lockpwn (https://github.com/smackers/lockpwn)
+- Z3 (https://github.com/Z3Prover/z3)
 

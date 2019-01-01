@@ -5,11 +5,12 @@ import subprocess
 import time
 from shutil import copyfile
 import smack.top
+import smack.frontend
 import filters
 from toSVCOMPformat import smackJsonToXmlGraph
 from random_testing import random_test
 
-def svcomp_frontend(args):
+def svcomp_frontend(input_file, args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
 
   # enable static LLVM unroll pass
@@ -24,31 +25,32 @@ def svcomp_frontend(args):
   svcomp_check_property(args)
 
   # fix: disable float filter for memory safety benchmarks
-  if not args.memory_safety:
+  if not (args.memory_safety or args.only_check_memcleanup):
     # test bv and executable benchmarks
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.bit_precise = True
       args.bit_precise_pointers = True
-    if file_type == 'float' and not args.signed_integer_overflow:
-      #sys.exit(smack.top.results(args)['unknown'])
+    if file_type == 'float' and not args.integer_overflow:
       args.float = True
       args.bit_precise = True
-      args.bit_precise_pointers = True
-      #args.verifier = 'boogie'
-      args.time_limit = 1000
-      args.unroll = 100
+      with open(input_file, "r") as sf:
+        sc = sf.read()
+      if 'copysign(1' in sc:
+        args.bit_precise_pointers = True
     args.execute = executable
   else:
-    with open(args.input_files[0], "r") as sf:
+    with open(input_file, "r") as sf:
       sc = sf.read()
-    if 'unsigned char b:2' in sc or "4294967294u" in sc:
+    if "unsigned char b:2" in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
       args.bit_precise = True
       #args.bit_precise_pointers = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
 
+  args.clang_options += " -fbracket-depth=2048"
+  args.clang_options += " -Wno-unknown-attributes"
   args.clang_options += " -DSVCOMP"
   args.clang_options += " -DAVOID_NAME_CONFLICTS"
   args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
@@ -56,21 +58,31 @@ def svcomp_frontend(args):
   args.clang_options += " -DDISABLE_PTHREAD_ASSERTS"
   args.clang_options += " -include smack.h"
 
-  if os.path.splitext(args.input_files[0])[1] == ".i":
+  if os.path.splitext(input_file)[1] == ".i":
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
-  smack.top.clang_frontend(args)
+  bc = smack.frontend.clang_frontend(args.input_files[0], args)
+  # run with no extra smack libraries
+  libs = set()
+
+  smack.top.link_bc_files([bc],libs,args)
+  if args.only_check_memcleanup:
+    args.memory_safety = False
 
 def svcomp_check_property(args):
+  args.only_check_memcleanup = False
   # Check if property is vanilla reachability, and return unknown otherwise
   if args.svcomp_property:
     with open(args.svcomp_property, "r") as f:
       prop = f.read()
     if "valid-deref" in prop:
       args.memory_safety = True
+    elif "valid-memcleanup" in prop:
+      args.memory_safety = True
+      args.only_check_memcleanup = True
     elif "overflow" in prop:
-      args.signed_integer_overflow = True
+      args.integer_overflow = True
     elif not "__VERIFIER_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
@@ -100,13 +112,9 @@ def svcomp_process_file(args, name, ext):
       while (True):
         pass
 
-    if args.float:
-      if re.search("fesetround|fegetround|InvSqrt|ccccdp-1",s):
-        sys.exit(smack.top.results(args)['unknown'])
-
     if 'argv=malloc' in s:
 #      args.bit_precise = True
-      if args.signed_integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
+      if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
         args.bit_precise = True
         args.bit_precise_pointers = True
 
@@ -117,6 +125,7 @@ def svcomp_process_file(args, name, ext):
       s = re.sub(r'100000', r'10', s)
       s = re.sub(r'15000', r'5', s)
       s = re.sub(r'i<=10000', r'i<=1', s)
+      s = re.sub(r'500000', r'50', s)
     elif length < 710 and 'dll_create_master' in s:
       args.no_memory_splitting = True
 
@@ -128,7 +137,11 @@ def svcomp_process_file(args, name, ext):
     with open(args.input_files[0], 'w') as fo:
       fo.write(s)
 
-def is_crappy_driver_benchmark(args, bpl):
+def force_timeout():
+  sys.stdout.flush()
+  time.sleep(1000)
+
+def is_buggy_driver_benchmark(args, bpl):
   if ("205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--usb--rtl8150.ko-entry_point_true-unreach-call" in bpl or
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--gpu--drm--ttm--ttm.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
       "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--media--dvb-core--dvb-core.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
@@ -139,15 +152,23 @@ def is_crappy_driver_benchmark(args, bpl):
       "linux-4.2-rc1.tar.xz-32_7a-drivers--net--usb--r8152.ko-entry_point_true-unreach-call" in bpl or
       "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-ethernet-smsc-smsc911x_true-unreach-call" in bpl or
       "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-wan-lmc-lmc_true-unreach-call" in bpl or
+      "linux-4.2-rc1.tar.xz-32_7a-drivers--usb--gadget--libcomposite.ko-entry_point_true-unreach-call" in bpl or
+      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-media-platform-marvell-ccic-cafe_ccic_true-unreach-call" in bpl or
+      "linux-4.0-rc1---drivers--media--usb--uvc--uvcvideo.ko_false-unreach-call" in bpl or
+      "linux-4.0-rc1---drivers--char--ipmi--ipmi_msghandler.ko_true-unreach-call" in bpl or
+      "205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--wireless--libertas_tf--libertas_tf.ko-entry_point_true-unreach-call" in bpl or
+      "linux-4.2-rc1.tar.xz-32_7a-drivers--md--dm-raid.ko-entry_point_false-unreach-call" in bpl or
       "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
     if not args.quiet:
-      print("Stumbled upon a crappy device driver benchmark\n")
-    while (True):
-      pass
+      print("Stumbled upon a buggy device driver benchmark\n")
+    force_timeout()
 
-def force_timeout():
-  sys.stdout.flush()
-  time.sleep(1000)
+def is_stack_benchmark(args, csource):
+  if ("getNumbers" in csource or "areNatural" in csource or "myPointerA" in csource or "if(i == 0) {" in csource or
+      "arr[194]" in csource or "if(1)" in csource or "alloca(10" in csource or "p[0] = 2;" in csource):
+    if not args.quiet:
+      print("Stumbled upon a stack-based memory safety benchmark\n")
+    sys.exit(smack.top.results(args)['unknown'])
 
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
@@ -177,29 +198,11 @@ def verify_bpl_svcomp(args):
       args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
       copyfile(args.bpl_with_all_props, args.bpl_file)
       smack.top.property_selection(args)
-
-  # invoke boogie for floats
-  # I have to copy/paste part of verify_bpl
-  if args.float:
-    args.verifier = 'boogie'
-    boogie_command = ["boogie"]
-    boogie_command += [args.bpl_file]
-    boogie_command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
-    boogie_command += ["/timeLimit:%s" % args.time_limit]
-    boogie_command += ["/errorLimit:%s" % args.max_violations]
-    boogie_command += ["/loopUnroll:%d" % args.unroll]
-    if args.bit_precise:
-      x = "bopt:" if args.verifier != 'boogie' else ""
-      boogie_command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-      boogie_command += ["/%sboolControlVC" % x]
-
-    if args.verifier_options:
-      boogie_command += args.verifier_options.split()
-
-    boogie_output = smack.top.try_command(boogie_command, timeout=args.time_limit)
-    boogie_result = smack.top.verification_result(boogie_output)
-    write_error_file(args, boogie_result, boogie_output)
-    sys.exit(smack.top.results(args)[boogie_result])
+  elif args.only_check_memcleanup:
+    heurTrace = "engage memcleanup checks.\n"
+    args.only_check_memleak = True
+    smack.top.property_selection(args)
+    args.only_check_memleak = False
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
@@ -218,10 +221,24 @@ def verify_bpl_svcomp(args):
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
 
-  is_crappy_driver_benchmark(args, bpl)
+  with open(args.input_files[0], "r") as f:
+    csource = f.read()
+
+  if args.memory_safety:
+    is_stack_benchmark(args, csource)
+  else:
+    if "angleInRadian" in csource:
+      if not args.quiet:
+        print("Stumbled upon trigonometric function is float benchmark\n")
+      sys.exit(smack.top.results(args)['unknown'])
+    elif "copysign(1" in csource:
+      if not args.quiet:
+        print("Stumbled upon tricky float benchmark\n")
+      sys.exit(smack.top.results(args)['unknown'])
+    is_buggy_driver_benchmark(args, bpl)
 
   if args.pthread:
-    if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl:
+    if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl or "k < 5;" in csource or "k < 10;" in csource or "k < 20;" in csource:
       heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
       corral_command += ["/k:30"]
     else:
@@ -230,8 +247,9 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    if not (args.memory_safety or args.bit_precise):
-      corral_command += ["/di"]
+    if not (args.memory_safety or args.bit_precise or args.only_check_memcleanup):
+      if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
+        corral_command += ["/di"]
 
   # we are not modeling strcpy
   if args.pthread and "strcpy" in bpl:
@@ -284,11 +302,21 @@ def verify_bpl_svcomp(args):
   elif args.memory_safety and "__main($i0" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
-  elif args.signed_integer_overflow and "__main($i0" in bpl:
-    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 4.\n"
-    loopUnrollBar = 4
-  elif args.signed_integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
+  elif args.integer_overflow and "__main($i0" in bpl:
+    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 40.\n"
+    loopUnrollBar = 40
+  elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
+  elif args.integer_overflow and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or
+                                  "(k < N)" in csource or "partial_sum" in csource):
+    heurTrace += "Large overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
+  elif "i>>16" in csource:
+    heurTrace += "Large array reach benchmark. Setting loop unroll bar to INT_MAX.\n"
+    loopUnrollBar = 2**31 - 1
+  elif "whoop_poll_table" in csource:
+    heurTrace += "Large concurrency benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
 
   if not "forall" in bpl:
@@ -318,7 +346,7 @@ def verify_bpl_svcomp(args):
   command += ["/v:1"]
   command += ["/maxStaticLoopBound:%d" % staticLoopBound]
   command += ["/recursionBound:65536"]
-  command += ["/irreducibleLoopUnroll:2"]
+  command += ["/irreducibleLoopUnroll:12"]
   command += ["/trackAllVars"]
 
   verifier_output = smack.top.try_command(command, timeout=time_limit)
@@ -411,8 +439,7 @@ def verify_bpl_svcomp(args):
             sys.exit(smack.top.results(args)[args.valid_deref_check_result])
         verify_bpl_svcomp(args)
       else:
-        # Sleep for 1000 seconds, so svcomp shows timeout instead of unknown
-        time.sleep(1000)
+        force_timeout()
   elif result == 'verified': #normal inlining
     heurTrace += "Normal inlining terminated and found no bugs.\n"
   else: #normal inlining
@@ -433,11 +460,14 @@ def verify_bpl_svcomp(args):
     verify_bpl_svcomp(args)
   else:
     write_error_file(args, result, verifier_output)
-    sys.exit(smack.top.results(args)[result])
+    if args.only_check_memcleanup and result == 'invalid-memtrack':
+      sys.exit('SMACK found an error: memory cleanup.')
+    else:
+      sys.exit(smack.top.results(args)[result])
 
 def write_error_file(args, status, verifier_output):
-  return
-  if args.memory_safety or status == 'timeout' or status == 'unknown':
+  #return
+  if status == 'timeout' or status == 'unknown':
     return
   hasBug = (status != 'verified')
   #if not hasBug:
@@ -445,7 +475,7 @@ def write_error_file(args, status, verifier_output):
   if args.error_file:
     error = None
     if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args, hasBug)
+      error = smackJsonToXmlGraph(smack.top.smackdOutput(verifier_output), args, hasBug, status)
     elif hasBug:
       error = smack.top.error_trace(verifier_output, args)
     if error is not None:

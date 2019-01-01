@@ -15,20 +15,26 @@
 # - Z3
 # - Boogie
 # - Corral
+# - Symbooglix
 # - lockpwn
 #
 ################################################################################
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
-BUILD_Z3=1
+INSTALL_Z3=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
+BUILD_SYMBOOGLIX=1
 BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
-BUILD_MONO=0
+BUILD_MONO=0 # mono is typically installed from packages (see below)
+
+# Support for more programming languages
+INSTALL_OBJECTIVEC=0
+INSTALL_RUST=0
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
@@ -36,6 +42,7 @@ ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
+SYMBOOGLIX_DIR="${ROOT}/symbooglix"
 LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
@@ -50,7 +57,7 @@ INSTALL_PREFIX=
 CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
-# Partial list of dependnecies; the rest are added depending on the platform
+# Partial list of dependencies; the rest are added depending on the platform
 DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
 
 shopt -s extglob
@@ -138,6 +145,23 @@ function get-platform {
   esac
 }
 
+# ================================================================
+# Check if git repo is up to date.
+# ================================================================
+function upToDate {
+  if [ ! -d "$1/.git" ] ; then
+    return 1
+  else
+    cd $1
+    hash=$(git rev-parse --short=10 HEAD)
+    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+      return 0
+    else
+      return 1
+    fi
+  fi
+}
+
 function puts {
   echo -e "\033[35m*** SMACK BUILD: ${1} ***\033[0m"
 }
@@ -157,18 +181,23 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.2.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-debian-8.10.zip"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
-linux-@(ubuntu|neon)-1[46]*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-14.04.zip"
+linux-@(ubuntu|neon)-14*)
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION} mono-complete libz-dev libedit-dev"
+  ;;
+
+linux-@(ubuntu|neon)-16*)
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION} mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-14.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -181,7 +210,7 @@ linux-ubuntu-12*)
 
 linux-cygwin*)
   BUILD_LLVM=1
-  BUILD_Z3=0
+  INSTALL_Z3=0
   BUILD_BOOGIE=0
   BUILD_CORRAL=0
   ;;
@@ -214,8 +243,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ]
-then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   puts "Installing required packages"
 
   case "$distro" in
@@ -225,7 +253,6 @@ then
 
   linux-@(ubuntu|neon)-1[46]*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
-    UBUNTU_CODENAME="trusty"
     case "$RELEASE_VERSION" in
     14*)
       UBUNTU_CODENAME="trusty"
@@ -239,13 +266,17 @@ then
       ;;
     esac
 
+    if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
+      sudo apt-get install -y gobjc gnustep gnustep-make gnustep-common gnustep-devel
+    fi
+
     # Adding LLVM repository
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     # Adding MONO repository
-    sudo add-apt-repository "deb http://download.mono-project.com/repo/debian wheezy main"
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-#    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
+    sudo apt-get install -y apt-transport-https
+    echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
@@ -279,8 +310,7 @@ then
 fi
 
 
-if [ ${BUILD_MONO} -eq 1 ]
-then
+if [ ${BUILD_MONO} -eq 1 ] ; then
   puts "Building mono"
 
   git clone git://github.com/mono/mono.git ${MONO_DIR}
@@ -299,8 +329,7 @@ then
   make
   sudo make install
 
-  if [[ ${INSTALL_PREFIX} ]]
-  then
+  if [[ ${INSTALL_PREFIX} ]] ; then
     echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
     source ${SMACKENV}
   fi
@@ -309,8 +338,7 @@ then
 fi
 
 
-if [ ${BUILD_LLVM} -eq 1 ]
-then
+if [ ${BUILD_LLVM} -eq 1 ] ; then
   puts "Building LLVM"
 
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
@@ -333,74 +361,119 @@ then
 fi
 
 
-if [ ${BUILD_Z3} -eq 1 ]
-then
-  puts "Installing Z3"
+if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
+  puts "Installing Objective-C"
 
-  ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
-  unzip -o z3-downloaded.zip -d z3-extracted
-  mv -f --backup=numbered z3-extracted/z3-* ${Z3_DIR}
-  rm -rf z3-downloaded.zip z3-extracted
+  # The version numbers here will have to change by OS
+  sudo ln -s /usr/lib/gcc/x86_64-linux-gnu/4.8/include/objc /usr/local/include/objc
+  echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
 
-  puts "Installed Z3"
+  puts "Installed Objective-C"
+fi 
+
+if [ ${INSTALL_RUST} -eq 1 ] ; then
+  puts "Installing Rust"
+
+  ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
+  tar xf rust.tar.gz
+  cd rust-nightly-x86_64-unknown-linux-gnu
+  sudo ./install.sh
+  cd ..
+  
+  puts "Installed Rust"
 fi
 
-
-if [ ${BUILD_BOOGIE} -eq 1 ]
-then
-  puts "Building Boogie"
-
-  if [ ! -d "$BOOGIE_DIR" ] ; then
-    git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+if [ ${INSTALL_Z3} -eq 1 ] ; then
+  if [ ! -d "$Z3_DIR" ] ; then
+    puts "Installing Z3"
+    mkdir -p ${Z3_DIR}
+    ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
+    unzip -o z3-downloaded.zip -d z3-extracted
+    mv -f --backup=numbered z3-extracted/z3-*/* ${Z3_DIR}
+    rm -rf z3-downloaded.zip z3-extracted
+    puts "Installed Z3"
+  else
+    puts "Z3 already installed"
   fi
-  cd ${BOOGIE_DIR}
-  git reset --hard ${BOOGIE_COMMIT}
-  cd ${BOOGIE_DIR}/Source
-  ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-  mono ./nuget.exe restore Boogie.sln
-  rm -rf /tmp/nuget/
-  msbuild Boogie.sln /p:Configuration=Release
-  ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
-
-  puts "Built Boogie"
 fi
 
 
-if [ ${BUILD_CORRAL} -eq 1 ]
-then
-  puts "Building Corral"
-
-  if [ ! -d "$CORRAL_DIR" ] ; then
-    git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+if [ ${BUILD_BOOGIE} -eq 1 ] ; then
+  if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
+    puts "Building Boogie"
+    if [ ! -d "$BOOGIE_DIR/.git" ] ; then
+      git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
+    fi
+    cd ${BOOGIE_DIR}
+    git reset --hard ${BOOGIE_COMMIT}
+    cd ${BOOGIE_DIR}/Source
+    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+    mono ./nuget.exe restore Boogie.sln
+    rm -rf /tmp/nuget/
+    msbuild Boogie.sln /p:Configuration=Release
+    ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+    puts "Built Boogie"
+  else
+    puts "Boogie already built"
   fi
-  cd ${CORRAL_DIR}
-  git reset --hard ${CORRAL_COMMIT}
-  git submodule init
-  git submodule update
-  msbuild cba.sln /p:Configuration=Release
-  ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
-
-  puts "Built Corral"
 fi
 
-if [ ${BUILD_LOCKPWN} -eq 1 ]
-then
-  puts "Building lockpwn"
 
-  cd ${ROOT}
-  if [ ! -d "$LOCKPWN_DIR" ] ; then
-    git clone https://github.com/smackers/lockpwn.git
+if [ ${BUILD_CORRAL} -eq 1 ] ; then
+  if ! upToDate $CORRAL_DIR $CORRAL_COMMIT ; then
+    puts "Building Corral"
+    if [ ! -d "$CORRAL_DIR/.git" ] ; then
+      git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
+    fi
+    cd ${CORRAL_DIR}
+    git reset --hard ${CORRAL_COMMIT}
+    git submodule init
+    git submodule update
+    msbuild cba.sln /p:Configuration=Release
+    ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+    puts "Built Corral"
+  else
+    puts "Corral already built"
   fi
-  cd ${LOCKPWN_DIR}
-  git reset --hard ${LOCKPWN_COMMIT}
-  msbuild lockpwn.sln /p:Configuration=Release
-  ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
-
-  puts "Built lockpwn"
 fi
 
-if [ ${BUILD_SMACK} -eq 1 ]
-then
+if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
+  if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
+    puts "Building Symbooglix"
+    if [ ! -d "$SYMBOOGLIX_DIR/.git" ] ; then
+      git clone --recursive https://github.com/boogie-org/symbooglix.git ${SYMBOOGLIX_DIR}
+    fi
+    cd ${SYMBOOGLIX_DIR}/src
+    git reset --hard ${SYMBOOGLIX_COMMIT}
+    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+    mono ./nuget.exe restore Symbooglix.sln
+    rm -rf /tmp/nuget/
+    xbuild Symbooglix.sln /p:Configuration=Release
+    ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
+    ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+    puts "Built Symbooglix"
+  else
+    puts "Symbooglix already built"
+  fi
+fi
+
+if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
+  if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
+    puts "Building lockpwn"
+    if [ ! -d "$LOCKPWN_DIR/.git" ] ; then
+      git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
+    fi
+    cd ${LOCKPWN_DIR}
+    git reset --hard ${LOCKPWN_COMMIT}
+    msbuild lockpwn.sln /p:Configuration=Release
+    ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
+    puts "Built lockpwn"
+  else
+    puts "Lockpwn already built"
+  fi
+fi
+
+if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
 
   mkdir -p ${SMACK_DIR}/build
@@ -412,6 +485,7 @@ then
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
+  echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
   echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
@@ -421,8 +495,7 @@ then
 fi
 
 
-if [ ${TEST_SMACK} -eq 1 ]
-then
+if [ ${TEST_SMACK} -eq 1 ] ; then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test

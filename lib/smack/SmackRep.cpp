@@ -5,6 +5,7 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/CodifyStaticInits.h"
+#include "smack/VectorOperations.h"
 
 #include "smack/BoogieAst.h"
 #include "smack/Naming.h"
@@ -53,7 +54,7 @@ namespace smack {
 
 const unsigned MEMORY_INTRINSIC_THRESHOLD = 0;
 
-const std::vector<unsigned> INTEGER_SIZES = {1, 8, 16, 24, 32, 40, 48, 56, 64, 88, 96, 128};
+const std::vector<unsigned> INTEGER_SIZES = {1, 5, 6, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128};
 const std::vector<unsigned> REF_CONSTANTS = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
   1024
@@ -114,6 +115,19 @@ SmackRep::SmackRep(const DataLayout* L, Naming* N, Program* P, Regions* R)
     initFuncs.push_back(Naming::STATIC_INIT_PROC);
 }
 
+void SmackRep::addAuxiliaryDeclaration(Decl* D) {
+  if (auxDecls.count(D->getName()))
+    return;
+  auxDecls[D->getName()] = D;
+}
+
+std::list<Decl*> SmackRep::auxiliaryDeclarations() {
+  std::list<Decl*> ds;
+  for (auto D : auxDecls)
+    ds.push_back(D.second);
+  return ds;
+}
+
 std::string SmackRep::getString(const llvm::Value* v) {
   if (const llvm::ConstantExpr* constantExpr = llvm::dyn_cast<const llvm::ConstantExpr>(v))
     if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
@@ -155,7 +169,13 @@ std::string SmackRep::intType(unsigned width) {
     return (SmackOptions::BitPrecise ? "bv" : "i") + std::to_string(width);
 }
 
-std::string SmackRep::opName(const std::string& operation, std::initializer_list<const llvm::Type*> types) {
+std::string SmackRep::vectorType(int n, Type *T) {
+  std::stringstream s;
+  s << Naming::VECTOR_TYPE << "." << n << "x" << type(T);
+  return s.str();
+}
+
+std::string SmackRep::opName(const std::string& operation, std::list<const llvm::Type*> types) {
   std::stringstream s;
   s << operation;
   for (auto t : types)
@@ -197,9 +217,11 @@ std::string SmackRep::procName(llvm::Function* F, std::list<const llvm::Type*> t
 std::string SmackRep::type(const llvm::Type* t) {
 
   if (t->isFloatingPointTy()) {
-    if (!SmackOptions::BitPrecise)
+    if (!SmackOptions::FloatEnabled)
       return Naming::UNINTERPRETED_FLOAT_TYPE;
-    if (t->isFloatTy())
+    if (t->isHalfTy())
+      return Naming::HALF_TYPE;
+    else if (t->isFloatTy())
       return Naming::FLOAT_TYPE;
     else if (t->isDoubleTy())
       return Naming::DOUBLE_TYPE;
@@ -214,6 +236,9 @@ std::string SmackRep::type(const llvm::Type* t) {
 
   else if (t->isPointerTy())
     return Naming::PTR_TYPE;
+
+  else if (auto VT = dyn_cast<VectorType>(t))
+    return vectorType(VT->getNumElements(), VT->getElementType());
 
   else
     return Naming::PTR_TYPE;
@@ -251,6 +276,10 @@ std::string SmackRep::memType(unsigned region) {
 
 std::string SmackRep::memPath(unsigned region) {
   return memReg(region);
+}
+
+std::string SmackRep::memPath(const llvm::Value* v) {
+  return memPath(regions->idx(v));
 }
 
 std::list< std::pair< std::string, std::string > > SmackRep::memoryMaps() {
@@ -345,9 +374,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
 
   assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
   assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
-  const Value* V = CI.getArgOperand(0);
-  while (isa<const CastInst>(V))
-    V = dyn_cast<const CastInst>(V)->getOperand(0);
+  const Value* V = CI.getArgOperand(0)->stripPointerCasts();
 
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
@@ -360,7 +387,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       auto A = dyn_cast<const Argument>(GEP->getPointerOperand());
       assert(A && "Expected function argument to GEP instruction.");
       auto T = GEP->getType()->getElementType();
-      const unsigned bits = T->getIntegerBitWidth();
+      const unsigned bits = this->getSize(T);
       const unsigned bytes = bits / 8;
       const unsigned R = regions->idx(GEP);
       bool bytewise = regions->get(R).bytewiseAccess();
@@ -379,7 +406,7 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
   } else {
     name = Naming::VALUE_PROC + "s";
     const Argument* A;
-    const Type* T;
+    Type* T;
     const Expr* addr;
 
     if ((A = dyn_cast<const Argument>(V))) {
@@ -409,12 +436,11 @@ const Stmt* SmackRep::valueAnnotation(const CallInst& CI) {
       llvm_unreachable("Unexpected argument type.");
     }
 
-    assert(A->hasName() && "Expected named argument.");
     assert(T && "Unkown access type.");
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
     assert(I && "expected constant size expression.");
     const unsigned count = I->getZExtValue();
-    const unsigned bits = T->getIntegerBitWidth();
+    const unsigned bits = this->getSize(T);
     const unsigned bytes = bits / 8;
     const unsigned length = count * bytes;
     const unsigned R = regions->idx(V, length);
@@ -487,15 +513,27 @@ const Stmt* SmackRep::returnValueAnnotation(const CallInst& CI) {
 //
 // }
 
+bool SmackRep::isUnsafeFloatAccess(const Type* elemTy, const Type* resultTy) {
+  if (elemTy->isFloatingPointTy()) {
+    bool isByteMap = !resultTy || (resultTy->isIntegerTy() && resultTy->getIntegerBitWidth() == 8UL);
+    if (isByteMap && !SmackOptions::BitPrecise)
+      return true;
+    assert(resultTy->isFloatingPointTy() && "Unsupported map result type.");
+  }
+  return false;
+}
+
 const Expr* SmackRep::load(const llvm::Value* P) {
   const PointerType* T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   const unsigned R = regions->idx(P);
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
+  const Type* resultTy = regions->get(R).getType();
   const Expr* M = Expr::id(memPath(R));
-  std::string N = Naming::LOAD + "." + (bytewise ? "bytes." : "") +
-    type(T->getElementType());
+  std::string N = Naming::LOAD + "."
+    + (bytewise ? "bytes." : (isUnsafeFloatAccess(T->getElementType(), resultTy)? "unsafe." : ""))
+    + type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
@@ -513,8 +551,9 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
     const Expr* P, const Expr* V) {
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
-
-  std::string N = Naming::STORE + "." + (bytewise ? "bytes." : "") + type(T);
+  const Type* resultTy = regions->get(R).getType();
+  std::string N = Naming::STORE + "."
+    + (bytewise ? "bytes." : (isUnsafeFloatAccess(T, resultTy)? "unsafe." : "")) + type(T);
   const Expr* M = Expr::id(memPath(R));
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
@@ -609,7 +648,7 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
     return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
-    if (SmackOptions::BitPrecise) {
+    if (SmackOptions::FloatEnabled) {
       const APFloat APF = CFP->getValueAPF();
       const Type* type = CFP->getType();
       unsigned expSize, sigSize;
@@ -748,6 +787,12 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
     } else if (const ConstantFP* cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
 
+    } else if (auto cv = dyn_cast<const ConstantDataVector>(constant)) {
+      return VectorOperations(this).constant(cv);
+
+    } else if (auto cd = dyn_cast<const ConstantAggregateZero>(constant)) {
+      return VectorOperations(this).constant(cd);
+
     } else if (constant->isNullValue())
       return Expr::id(Naming::NULL_VAL);
 
@@ -775,7 +820,22 @@ const Expr* SmackRep::cast(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t) {
-  return Expr::fn(opName(Naming::INSTRUCTION_TABLE.at(opcode), {v->getType(), t}), expr(v));
+  std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
+  if (opcode == Instruction::FPTrunc || opcode == Instruction::FPExt
+    || opcode == Instruction::SIToFP || opcode == Instruction::UIToFP) {
+    if (SmackOptions::FloatEnabled) {
+      return Expr::fn(opName(fn, {v->getType(), t}), Expr::id(Naming::RMODE_VAR), expr(v));
+    } else {
+      return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
+    }
+  } else if (opcode == Instruction::FPToSI || opcode == Instruction::FPToUI) {
+    if (SmackOptions::FloatEnabled) {
+      return Expr::fn(opName(fn, {v->getType(), t}), Expr::lit(RModeKind::RTZ), expr(v));
+    } else {
+      return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
+    }
+  }
+  return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
 const Expr* SmackRep::bop(const llvm::ConstantExpr* CE) {
@@ -788,6 +848,14 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
+  if (opcode == Instruction::FAdd || opcode == Instruction::FSub
+    || opcode == Instruction::FMul || opcode == Instruction::FDiv) {
+    if (SmackOptions::FloatEnabled) {
+      return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR), expr(lhs), expr(rhs));
+    } else {
+      return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
+    }
+  }
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
@@ -801,8 +869,23 @@ const Expr* SmackRep::cmp(const llvm::ConstantExpr* CE) {
 }
 
 const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned) {
-  std::string fn = Naming::CMPINST_TABLE.at(predicate);
-  return Expr::fn(opName(fn, {lhs->getType()}), expr(lhs, isUnsigned), expr(rhs, isUnsigned));
+  std::string fn = opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
+  const Expr* e1 = expr(lhs, isUnsigned);
+  const Expr* e2 = expr(rhs, isUnsigned);
+  if (lhs->getType()->isFloatingPointTy())
+    return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1UL,1), integerLit(0UL,1));
+  else
+    return Expr::fn(fn, e1, e2);
+}
+
+
+bool SmackRep::isContractExpr(const llvm::Value* V) const {
+  auto name = naming->get(*V);
+  return isContractExpr(name);
+}
+
+bool SmackRep::isContractExpr(const std::string S) const {
+  return S.find(Naming::CONTRACT_EXPR) == 0;
 }
 
 ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
@@ -838,7 +921,7 @@ ProcDecl* SmackRep::procedure(Function* F, CallInst* CI) {
       })
     );
 
-  } else if (name.find(Naming::CONTRACT_EXPR) != std::string::npos) {
+  } else if (isContractExpr(F)) {
     for (auto m : memoryMaps())
       params.push_back(m);
 
@@ -896,9 +979,6 @@ std::list<ProcDecl*> SmackRep::procedure(llvm::Function* F) {
 
 const Expr* SmackRep::arg(llvm::Function* f, unsigned pos, llvm::Value* v) {
   return expr(v);
-  // (f && f->isVarArg() && isFloat(v))
-  //   ? Expr::fn(opName("$fp2si", {v->getType(), f->getType()}), expr(v))
-  //   : expr(v);
 }
 
 const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
@@ -954,16 +1034,20 @@ std::string SmackRep::getPrelude() {
     s << Decl::typee("i" + std::to_string(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, pointerType()) << "\n";
   if (SmackOptions::FloatEnabled) {
+    s << Decl::typee(Naming::HALF_TYPE, "float11e5") << "\n";
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
+  } else {
+    s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   }
-  s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, intType(32)) << "\n";
   s << "\n";
 
   s << "// Basic constants" << "\n";
   s << Decl::constant("$0",intType(32)) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << "\n";
+  s << Decl::constant("$1",intType(32)) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id("$1"),integerLit(1UL,32))) << "\n";
 
   for (unsigned i : REF_CONSTANTS) {
     std::stringstream t;
@@ -996,7 +1080,7 @@ std::string SmackRep::getPrelude() {
     s << "// Global allocations" << "\n";
     std::list<const Stmt*> stmts;
     for (auto E : globalAllocations)
-      stmts.push_back(Stmt::call("$galloc", {expr(E.first), Expr::lit(E.second)}));
+      stmts.push_back(Stmt::call("$galloc", {expr(E.first), pointerLit(E.second)}));
     s << Decl::procedure("$global_allocations", {}, {}, {}, {Block::block("",stmts)}) << "\n";
     s << "\n";
   }
@@ -1025,7 +1109,7 @@ std::string SmackRep::getPrelude() {
   s << "\n";
 
   if (SmackOptions::BitPrecise) {
-    // XXX TODO don’t assume 64-bit pointers TODO XXX
+    // XXX TODO don't assume 64-bit pointers TODO XXX
     s << "// Bytewise pointer storage" << "\n";
     s << "function {:inline} $load.bytes.ref(M: [ref] bv8, p: ref) "
       << "returns (ref) { $i2p.bv64.ref($load.bytes.bv64(M, p)) }"
@@ -1103,6 +1187,9 @@ Decl* SmackRep::getInitFuncs() {
   Block* b = Block::block();
   for (auto name : initFuncs)
     b->addStmt(Stmt::call(name));
+  if (SmackOptions::FloatEnabled) {
+    b->addStmt(Stmt::assign(Expr::id(Naming::RMODE_VAR), Expr::lit(RModeKind::RNE)));
+  }
   b->addStmt(Stmt::return_());
   proc->getBlocks().push_back(b);
   return proc;

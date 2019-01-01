@@ -1,6 +1,5 @@
 #include "smack.h"
 
-// @flag --split-aggregate-values
 // @expect error 
 
 typedef struct {

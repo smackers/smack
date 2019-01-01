@@ -59,7 +59,8 @@ bool CodifyStaticInits::runOnModule(Module& M) {
 
     if (V->getType()->isIntegerTy() ||
         V->getType()->isPointerTy() ||
-        V->getType()->isFloatingPointTy())
+        V->getType()->isFloatingPointTy() ||
+        V->getType()->isVectorTy())
 
       IRB.CreateStore(V, IRB.CreateGEP(P, ArrayRef<Value*>(I)));
 

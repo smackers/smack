@@ -13,14 +13,14 @@ bitwise operations.
 
 Under the hood, SMACK is a translator from the [LLVM](http://www.llvm.org)
 compiler's popular intermediate representation (IR) into the
-[Boogie](http://boogie.codeplex.com) intermediate verification language (IVL).
+[Boogie](https://github.com/boogie-org/boogie) intermediate verification language (IVL).
 Sourcing LLVM IR exploits an increasing number of compiler front-ends,
 optimizations, and analyses. Currently SMACK only supports the C language via
 the [Clang](http://clang.llvm.org) compiler, though we are working on providing
 support for additional languages. Targeting Boogie exploits a canonical
 platform which simplifies the implementation of algorithms for verification,
 model checking, and abstract interpretation. Currently, SMACK leverages the
-[Boogie](http://boogie.codeplex.com) and [Corral](http://corral.codeplex.com)
+[Boogie](https://github.com/boogie-org/boogie) and [Corral](https://github.com/boogie-org/corral)
 verifiers.
 
 See below for system requirements, installation, usage, and everything else.

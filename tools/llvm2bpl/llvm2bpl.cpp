@@ -39,8 +39,9 @@
 #include "smack/VerifierCodeMetadata.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/MemorySafetyChecker.h"
-#include "smack/SignedIntegerOverflowChecker.h"
-#include "smack/SplitAggregateLoadStore.h"
+#include "smack/IntegerOverflowChecker.h"
+#include "smack/SplitAggregateValue.h"
+#include "smack/NormalizeLoops.h"
 #include "smack/ModAnalysis.h"
 
 static llvm::cl::opt<std::string>
@@ -64,15 +65,7 @@ DefaultDataLayout("default-data-layout", llvm::cl::desc("data layout string to u
   llvm::cl::init(""), llvm::cl::value_desc("layout-string"));
 
 static llvm::cl::opt<bool>
-SignedIntegerOverflow("signed-integer-overflow", llvm::cl::desc("Enable signed integer overflow checks"),
-  llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
 Modular("modular", llvm::cl::desc("Enable contracts-based modular deductive verification"),
-  llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
-SplitStructs("split-aggregate-values", llvm::cl::desc("Split load/store instructions of LLVM aggregate types"),
   llvm::cl::init(false));
 
 std::string filenamePrefix(const std::string &str) {
@@ -166,7 +159,8 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
-  pass_manager.add(new llvm::StructRet());
+  //pass_manager.add(new llvm::StructRet());
+  pass_manager.add(new smack::NormalizeLoops());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::ExtractContracts());
@@ -179,16 +173,13 @@ int main(int argc, char **argv) {
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
-
-  if (SplitStructs)
-    pass_manager.add(new smack::SplitAggregateLoadStore());
+  pass_manager.add(new smack::SplitAggregateValue());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
   }
 
-  if (SignedIntegerOverflow)
-    pass_manager.add(new smack::SignedIntegerOverflowChecker());
+  pass_manager.add(new smack::IntegerOverflowChecker());
 
 
   if(smack::SmackOptions::AddTiming){
