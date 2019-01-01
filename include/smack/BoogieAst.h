@@ -17,7 +17,7 @@ enum class RModeKind { RNE, RNA, RTP, RTN, RTZ };
 class Expr {
 public:
   enum Kind {
-    BIN, COND, FUN, BOOL_LIT, INT_LIT, BV_LIT, FP_LIT, STRING_LIT, NEG, NOT, QUANT, SEL, UPD, VAR, CODE
+    BIN, COND, FUN, BOOL_LIT, RMODE_LIT, INT_LIT, BV_LIT, FP_LIT, STRING_LIT, NEG, NOT, QUANT, SEL, UPD, VAR, IF_THEN_ELSE, CODE
   };
 private:
   const Kind kind;
@@ -104,7 +104,7 @@ public:
 class RModeLit : public Expr {
   RModeKind val;
 public:
-  RModeLit(RModeKind v) : val(v) {}
+  RModeLit(RModeKind v) : Expr(RMODE_LIT), val(v) {}
   void print(std::ostream& os) const;
 };
 
@@ -184,7 +184,7 @@ private:
   std::list<Binding> vars;
   const Expr* expr;
 public:
-  QuantExpr(Quantifier q, std::list<Binding> vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
+  QuantExpr(Quantifier q, std::list<Binding> vs, const Expr* e) : Expr(QUANT), quant(q), vars(vs), expr(e) {}
   void print(std::ostream& os) const;
   static bool classof(const Expr *e) { return e->getKind() == QUANT; }
 };
@@ -227,7 +227,7 @@ class IfThenElseExpr : public Expr {
   const Expr* false_value;
 public:
   IfThenElseExpr(const Expr* c, const Expr* t, const Expr* e)
-    : cond(c), true_value(t), false_value(e) {}
+    : Expr(IF_THEN_ELSE), cond(c), true_value(t), false_value(e) {}
   void print(std::ostream& os) const;
 };
 
