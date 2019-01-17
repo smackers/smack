@@ -38,8 +38,8 @@ protected:
   std::vector<std::string> bplGlobals;
   std::map<const llvm::Value*, unsigned> globalAllocations;
 
-  long globalsBottom;
-  long externsBottom;
+  long globalsOffset;
+  long externsOffset;
   unsigned uniqueFpNum;
   unsigned ptrSizeInBits;
 
