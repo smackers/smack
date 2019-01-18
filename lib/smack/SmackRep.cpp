@@ -731,7 +731,8 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p,
       Type* et = dyn_cast<SequentialType>(a.second)->getElementType();
       assert(a.first->getType()->isIntegerTy() && "Illegal index");
       if (const ConstantInt* ci = dyn_cast<ConstantInt>(a.first)) {
-        assert(ci->getBitWidth() <= 64 && "Unsupported index bitwidth");
+        const APInt& API = ci->getValue();
+        assert(API.getMinSignedBits() <= 32 && "Index value too large (or too small if negative)");
         e = pa(e, (long long) ci->getSExtValue(), storageSize(et));
       } else
         e = pa(e, integerToPointer(expr(a.first), a.first->getType()->getIntegerBitWidth()),
