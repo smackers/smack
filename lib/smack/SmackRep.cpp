@@ -560,7 +560,7 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
 
 const Expr* SmackRep::pa(const Expr* base, long long idx, unsigned size) {
   if (idx >= 0) {
-    return pa(base, idx * size);
+    return pa(base, pointerLit(idx), pointerLit(size));
   } else {
     return pa(base, Expr::fn("$sub.ref", pointerLit(0ULL),
       pointerLit((unsigned long long) std::abs(idx))), pointerLit(size));
