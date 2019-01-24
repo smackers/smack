@@ -113,7 +113,7 @@ void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {
       for(auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE; ++AI){
 	if (auto *CI = mdconst::dyn_extract<ConstantInt>(*AI)){
 	  auto value = CI->getZExtValue();
-	  attrs.push_back(Expr::lit((long) value));
+	  attrs.push_back(Expr::lit((long long) value));
 	} else if (auto *CI = dyn_cast<MDString>(*AI)){
 	  auto value = CI->getString();
 	  attrs.push_back(Expr::lit(value));
@@ -249,7 +249,7 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst& bi) {
 
     // Conditional branch
     assert(bi.getNumSuccessors() == 2);
-    const Expr* e = Expr::eq(rep->expr(bi.getCondition()), rep->integerLit(1UL,1));
+    const Expr* e = Expr::eq(rep->expr(bi.getCondition()), rep->integerLit(1ULL,1));
     targets.push_back({e,bi.getSuccessor(0)});
     targets.push_back({Expr::not_(e),bi.getSuccessor(1)});
   }
@@ -382,7 +382,7 @@ void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
   if (!SmackOptions::BitPrecise) {
     const Expr* e = rep->expr(evi.getAggregateOperand());
     for (unsigned i = 0; i < evi.getNumIndices(); i++)
-      e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long) evi.getIndices()[i]));
+      e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long long) evi.getIndices()[i]));
     emit(Stmt::assign(rep->expr(&evi),e));
   } else {
     WARN("Ignoring extract instruction under bit vector mode.");
@@ -571,7 +571,7 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst& i) {
 
   assert(!i.getCondition()->getType()->isVectorTy() && "Vector condition is not supported.");
   emit(Stmt::assign(Expr::id(x),
-    Expr::if_then_else(Expr::eq(c, rep->integerLit(1L,1)), v1, v2)));
+    Expr::if_then_else(Expr::eq(c, rep->integerLit(1LL,1)), v1, v2)));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {

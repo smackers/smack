@@ -332,7 +332,7 @@ const Stmt* SmackRep::memcpy(const llvm::MemCpyInst& mci) {
     expr(src),
     integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
     integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
-    Expr::eq(expr(vol), integerLit(1UL,1))
+    Expr::eq(expr(vol), integerLit(1ULL,1))
   }, {memReg(r1)});
 }
 
@@ -362,7 +362,7 @@ const Stmt* SmackRep::memset(const llvm::MemSetInst& msi) {
     expr(val),
     integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
     integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
-    Expr::eq(expr(vol), integerLit(1UL,1))
+    Expr::eq(expr(vol), integerLit(1ULL,1))
   }, {memReg(r)});
 }
 
@@ -558,20 +558,20 @@ const Stmt* SmackRep::store(unsigned R, const Type* T,
   return Stmt::assign(M, singleton ? V : Expr::fn(N,M,P,V));
 }
 
-const Expr* SmackRep::pa(const Expr* base, long long idx, unsigned long size) {
+const Expr* SmackRep::pa(const Expr* base, long long idx, unsigned size) {
   if (idx >= 0) {
     return pa(base, idx * size);
   } else {
-    return pa(base, Expr::fn("$sub.ref", pointerLit(0UL),
-      pointerLit((unsigned long) std::abs(idx))), pointerLit(size));
+    return pa(base, Expr::fn("$sub.ref", pointerLit(0ULL),
+      pointerLit((unsigned long long) std::abs(idx))), pointerLit(size));
   }
 }
 
-const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned long size) {
+const Expr* SmackRep::pa(const Expr* base, const Expr* idx, unsigned size) {
   return pa(base, idx, pointerLit(size));
 }
 
-const Expr* SmackRep::pa(const Expr* base, unsigned long offset) {
+const Expr* SmackRep::pa(const Expr* base, unsigned long long offset) {
   return offset > 0 ? pa(base, pointerLit(offset)) : base;
 }
 
@@ -609,28 +609,28 @@ const Expr* SmackRep::bitConversion(const Expr* e, bool src, bool dst) {
   return Expr::fn(fn.str(), e);
 }
 
-const Expr* SmackRep::pointerLit(unsigned long v) {
+const Expr* SmackRep::pointerLit(unsigned long long v) {
   return SmackOptions::BitPrecisePointers ? Expr::lit(v,ptrSizeInBits) : Expr::lit(v);
 }
 
-const Expr* SmackRep::pointerLit(long v) {
+const Expr* SmackRep::pointerLit(long long v) {
   if (v >= 0)
-    return pointerLit((unsigned long) v);
+    return pointerLit((unsigned long long) v);
   else
-    return Expr::fn("$sub.ref", pointerLit(0UL), pointerLit((unsigned long) std::abs(v)));
+    return Expr::fn("$sub.ref", pointerLit(0ULL), pointerLit((unsigned long long) std::abs(v)));
 }
 
-const Expr* SmackRep::integerLit(unsigned long v, unsigned width) {
+const Expr* SmackRep::integerLit(unsigned long long v, unsigned width) {
   return SmackOptions::BitPrecise ? Expr::lit(v,width) : Expr::lit(v);
 }
 
-const Expr* SmackRep::integerLit(long v, unsigned width) {
+const Expr* SmackRep::integerLit(long long v, unsigned width) {
   if (v >= 0)
-    return integerLit((unsigned long) v, width);
+    return integerLit((unsigned long long) v, width);
   else {
     std::stringstream op;
     op << "$sub." << (SmackOptions::BitPrecise ? "bv" : "i") << width;
-    return Expr::fn(op.str(), integerLit(0UL, width), integerLit((unsigned long) std::abs(v), width));
+    return Expr::fn(op.str(), integerLit(0ULL, width), integerLit((unsigned long long) std::abs(v), width));
   }
 }
 
@@ -645,7 +645,7 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
     const Expr* e = SmackOptions::BitPrecise ? Expr::lit(str,width) : Expr::lit(str,0);
     std::stringstream op;
     op << "$sub." << (SmackOptions::BitPrecise ? "bv" : "i") << width;
-    return neg ? Expr::fn(op.str(), integerLit(0UL,width), e) : e;
+    return neg ? Expr::fn(op.str(), integerLit(0ULL,width), e) : e;
 
   } else if (const ConstantFP* CFP = dyn_cast<const ConstantFP>(v)) {
     if (SmackOptions::FloatEnabled) {
@@ -676,7 +676,7 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
       ss << *CFP;
       std::istringstream iss(str);
       std::string float_type;
-      long integerPart, fractionalPart, exponentPart;
+      long long integerPart, fractionalPart, exponentPart;
       char point, sign, exponent;
       iss >> float_type;
       iss >> integerPart;
@@ -807,7 +807,7 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
 
   } else if (isa<InlineAsm>(v)) {
     errs() << "warning: ignoring inline asm passed as argument.\n";
-    return pointerLit(0UL);
+    return pointerLit(0ULL);
 
   } else {
     DEBUG(errs() << "VALUE : " << *v << "\n");
@@ -877,7 +877,7 @@ const Expr* SmackRep::cmp(unsigned predicate, const llvm::Value* lhs, const llvm
   const Expr* e1 = expr(lhs, isUnsigned);
   const Expr* e2 = expr(rhs, isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
-    return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1UL,1), integerLit(0UL,1));
+    return Expr::if_then_else(Expr::fn(fn+".bool", e1, e2), integerLit(1ULL,1), integerLit(0ULL,1));
   else
     return Expr::fn(fn, e1, e2);
 }
@@ -1049,15 +1049,15 @@ std::string SmackRep::getPrelude() {
 
   s << "// Basic constants" << "\n";
   s << Decl::constant("$0",intType(32)) << "\n";
-  s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0UL,32))) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id("$0"),integerLit(0ULL,32))) << "\n";
   s << Decl::constant("$1",intType(32)) << "\n";
-  s << Decl::axiom(Expr::eq(Expr::id("$1"),integerLit(1UL,32))) << "\n";
+  s << Decl::axiom(Expr::eq(Expr::id("$1"),integerLit(1ULL,32))) << "\n";
 
   for (unsigned i : REF_CONSTANTS) {
     std::stringstream t;
     s << "const $" << i << ".ref: ref;" << "\n";
     t << "$" << i << ".ref";
-    s << Decl::axiom(Expr::eq(Expr::id(t.str()),pointerLit((unsigned long) i))) << "\n";
+    s << Decl::axiom(Expr::eq(Expr::id(t.str()),pointerLit((unsigned long long) i))) << "\n";
   }
   s << "\n";
 
@@ -1070,7 +1070,7 @@ std::string SmackRep::getPrelude() {
   s << "// Memory address bounds" << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(globalsOffset))) << "\n";
   s << Decl::axiom(Expr::eq(Expr::id(Naming::EXTERNS_BOTTOM), Expr::fn("$add.ref", Expr::id(Naming::GLOBALS_BOTTOM), pointerLit(externsOffset)))) << "\n";
-  unsigned long malloc_top;
+  unsigned long long malloc_top;
   if (ptrSizeInBits == 32)
     malloc_top = 2147483647UL;
   else if (ptrSizeInBits == 64)
@@ -1106,7 +1106,7 @@ std::string SmackRep::getPrelude() {
     else
       llvm_unreachable("Unexpected pointer bit width.");
     s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it,
-      Expr::cond(Expr::fn(indexedName("$slt", {bt, "bool"}), {arg, Expr::lit(0UL, ptrSizeInBits)}),
+      Expr::cond(Expr::fn(indexedName("$slt", {bt, "bool"}), {arg, Expr::lit(0ULL, ptrSizeInBits)}),
         Expr::fn(indexedName("$sub", {it}), {uint, Expr::lit(offset, 0U)}), uint), {Attr::attr("inline")});
   } else
     s << Decl::function(indexedName("$bv2int",{ptrSizeInBits}), {{"i",bt}}, it, NULL, {Attr::attr("builtin", "bv2int")}) << "\n";
@@ -1139,8 +1139,8 @@ std::string SmackRep::getPrelude() {
       {{"p1",Naming::PTR_TYPE}, {"p2",Naming::PTR_TYPE}}, intType(1),
       Expr::cond(
         Expr::fn(indexedName(pred,{pointerType(),Naming::BOOL_TYPE}), {Expr::id("p1"),Expr::id("p2")}),
-        integerLit(1L,1),
-        integerLit(0L,1)),
+        integerLit(1LL,1),
+        integerLit(0LL,1)),
       {Attr::attr("inline")} )
       << "\n";
     s << Decl::function(indexedName(pred,{Naming::PTR_TYPE,Naming::BOOL_TYPE}),
