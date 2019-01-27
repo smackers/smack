@@ -26,8 +26,9 @@
  * A > 0                                            Heap
  * A = 0                                            Not allocated (null)
  * $GLOBALS_BOTTOM <= A < 0                         Static (global storage)
- * $GLOBALS_BOTTOM - 32768 < A < $GLOBALS_BOTTOM    Not allocated (padding)
- * A < $GLOBALS_BOTTOM - 32768                      External
+ * $GLOBALS_BOTTOM - 32768 <= A < $GLOBALS_BOTTOM   Not allocated (padding)
+ * $EXTERNS_BOTTOM <= A < $GLOBALS_BOTTOM - 32768   External globals
+ * A < $EXTERNS_BOTTOM                              Objects returned from external functions
  *
  */
 

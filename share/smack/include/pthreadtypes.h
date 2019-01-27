@@ -1,3 +1,6 @@
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #ifndef PTHREADTYPES_H
 #define PTHREADTYPES_H
 #define _BITS_PTHREADTYPES_H	1

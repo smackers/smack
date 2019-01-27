@@ -42,11 +42,11 @@ public:
   static const Expr* impl(const Expr* l, const Expr* r);
   static const Expr* lit(bool b);
   static const Expr* lit(std::string v);
-  static const Expr* lit(unsigned v) { return lit((unsigned long) v); }
-  static const Expr* lit(unsigned long v);
-  static const Expr* lit(long v);
+  static const Expr* lit(unsigned v) { return lit((unsigned long long) v); }
+  static const Expr* lit(unsigned long long v);
+  static const Expr* lit(long long v);
   static const Expr* lit(std::string v, unsigned w);
-  static const Expr* lit(unsigned long v, unsigned w);
+  static const Expr* lit(unsigned long long v, unsigned w);
   static const Expr* lit(bool n, std::string s, std::string e, unsigned ss, unsigned es);
   static const Expr* lit(RModeKind v);
   static const Expr* neq(const Expr* l, const Expr* r);
@@ -112,12 +112,12 @@ class IntLit : public Expr {
   std::string val;
 public:
   IntLit(std::string v) : Expr(INT_LIT), val(v) {}
-  IntLit(unsigned long v) : Expr(INT_LIT) {
+  IntLit(unsigned long long v) : Expr(INT_LIT) {
     std::stringstream s;
     s << v;
     val = s.str();
   }
-  IntLit(long v) : Expr(INT_LIT) {
+  IntLit(long long v) : Expr(INT_LIT) {
     std::stringstream s;
     s << v;
     val = s.str();
@@ -131,7 +131,7 @@ class BvLit : public Expr {
   unsigned width;
 public:
   BvLit(std::string v, unsigned w) : Expr(BV_LIT), val(v), width(w) {}
-  BvLit(unsigned long v, unsigned w) : Expr(BV_LIT), width(w) {
+  BvLit(unsigned long long v, unsigned w) : Expr(BV_LIT), width(w) {
     std::stringstream s;
     s << v;
     val = s.str();

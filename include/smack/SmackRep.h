@@ -38,8 +38,8 @@ protected:
   std::vector<std::string> bplGlobals;
   std::map<const llvm::Value*, unsigned> globalAllocations;
 
-  long globalsBottom;
-  long externsBottom;
+  long long globalsOffset;
+  long long externsOffset;
   unsigned uniqueFpNum;
   unsigned ptrSizeInBits;
 
@@ -56,9 +56,9 @@ private:
   unsigned offset(llvm::ArrayType* T, unsigned idx);
   unsigned offset(llvm::StructType* T, unsigned idx);
 
-  const Expr* pa(const Expr* base, long long index, unsigned long size);
-  const Expr* pa(const Expr* base, const Expr* index, unsigned long size);
-  const Expr* pa(const Expr* base, unsigned long offset);
+  const Expr* pa(const Expr* base, long long index, unsigned size);
+  const Expr* pa(const Expr* base, const Expr* index, unsigned size);
+  const Expr* pa(const Expr* base, unsigned long long offset);
   const Expr* pa(const Expr* base, const Expr* index, const Expr* size);
   const Expr* pa(const Expr* base, const Expr* offset);
 
@@ -97,12 +97,12 @@ private:
   bool isUnsafeFloatAccess(const llvm::Type* elemTy, const llvm::Type* resultTy);
 
 public:
-  const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long) v); }
-  const Expr* pointerLit(unsigned long v);
-  const Expr* pointerLit(long v);
-  const Expr* integerLit(unsigned v, unsigned width) { return integerLit((unsigned long) v, width); }
-  const Expr* integerLit(unsigned long v, unsigned width);
-  const Expr* integerLit(long v, unsigned width);
+  const Expr* pointerLit(unsigned v) { return pointerLit((unsigned long long) v); }
+  const Expr* pointerLit(unsigned long long v);
+  const Expr* pointerLit(long long v);
+  const Expr* integerLit(unsigned v, unsigned width) { return integerLit((unsigned long long) v, width); }
+  const Expr* integerLit(unsigned long long v, unsigned width);
+  const Expr* integerLit(long long v, unsigned width);
 
   std::string type(const llvm::Type* t);
   std::string type(const llvm::Value* v);

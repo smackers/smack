@@ -1,6 +1,6 @@
+//
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-
 #ifndef MATH_H
 #define MATH_H
 
@@ -15,7 +15,7 @@
 #define isnan(x) (sizeof(x) == sizeof(long double) ? __isnanl(x) : sizeof(x) == sizeof(double) ? __isnan(x) : __isnanf(x))
 #define signbit(x) (sizeof(x) == sizeof(long double) ? __signbitl(x) : sizeof(x) == sizeof(double) ? __signbit(x) : __signbitf(x))
 #define fpclassify(x) (sizeof(x) == sizeof(long double) ? __fpclassifyl(x) : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
-#define isfinite(x) (sizeof(x) == sizeof(long double) ? __isfinitel(x) : sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
+#define isfinite(x) (sizeof(x) == sizeof(long double) ? __finitel(x) : sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
 
 typedef union {
   float f;

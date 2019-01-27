@@ -75,11 +75,11 @@ const Expr* Expr::lit(std::string v) {
   return new StringLit(v);
 }
 
-const Expr* Expr::lit(unsigned long v) {
+const Expr* Expr::lit(unsigned long long v) {
   return new IntLit(v);
 }
 
-const Expr* Expr::lit(long v) {
+const Expr* Expr::lit(long long v) {
   return new IntLit(v);
 }
 
@@ -87,7 +87,7 @@ const Expr* Expr::lit(std::string v, unsigned w) {
   return w ? (const Expr*) new BvLit(v,w) : (const Expr*) new IntLit(v);
 }
 
-const Expr* Expr::lit(unsigned long v, unsigned w) {
+const Expr* Expr::lit(unsigned long long v, unsigned w) {
   return new BvLit(v,w);
 }
 
@@ -140,15 +140,15 @@ const Attr* Attr::attr(std::string s, std::string v) {
 }
 
 const Attr* Attr::attr(std::string s, int v) {
-  return attr(s, {Expr::lit((long) v)});
+  return attr(s, {Expr::lit((long long) v)});
 }
 
 const Attr* Attr::attr(std::string s, std::string v, int i) {
-  return attr(s, {Expr::lit(v), Expr::lit((long) i)});
+  return attr(s, {Expr::lit(v), Expr::lit((long long) i)});
 }
 
 const Attr* Attr::attr(std::string s, std::string v, int i, int j) {
-  return attr(s, {Expr::lit(v), Expr::lit((long) i), Expr::lit((long) j)});
+  return attr(s, {Expr::lit(v), Expr::lit((long long) i), Expr::lit((long long) j)});
 }
 
 const Stmt* Stmt::annot(std::list<const Attr*> attrs) {
