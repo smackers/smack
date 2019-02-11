@@ -1111,19 +1111,6 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,float,bv80,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i80,float,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,bv80,float,$bitcast);
-
-#ifndef NO_FORALL
-  D("axiom (forall f1, f2: float :: $foeq.float.bool(f1,f2) <==> !$fune.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $fone.float.bool(f1,f2) <==> !$fueq.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $fogt.float.bool(f1,f2) <==> !$fule.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $foge.float.bool(f1,f2) <==> !$fult.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $folt.float.bool(f1,f2) <==> !$fuge.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $fole.float.bool(f1,f2) <==> !$fugt.float.bool(f1,f2));");
-  D("axiom (forall f1, f2: float :: $ford.float.bool(f1,f2) <==> !$funo.float.bool(f1,f2));");
-  D("axiom (forall f: float, i: i8 :: $bitcast.float.i8(f) == i <==> $bitcast.i8.float(i) == f);");
-  // TODO: add proper axiom for float/bv8 conversions
-#endif
-
 #endif
 
   // Memory Model
