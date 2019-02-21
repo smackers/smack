@@ -462,7 +462,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst& li) {
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
   processInstruction(si);
   const llvm::Value* P = si.getPointerOperand();
-  const llvm::Value* V = si.getOperand(0)->stripPointerCasts();
+  const llvm::Value* V = si.getValueOperand()->stripPointerCasts();
   assert (!V->getType()->isAggregateType() && "Unexpected store value.");
 
   if (isa<VectorType>(V->getType())) {
@@ -472,6 +472,9 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst& si) {
     emit(Stmt::assign(M, E));
   } else {
     emit(rep->store(P,V));
+    if (const Stmt* inverseAssume = rep->inverseFPCastAssume(&si)) {
+      emit(inverseAssume);
+    }
   }
 
   if (SmackOptions::SourceLocSymbols) {
@@ -535,6 +538,12 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst& I) {
     E = rep->cast(&I);
   }
   emit(Stmt::assign(rep->expr(&I), E));
+
+  if (I.getOpcode() == Instruction::BitCast) {
+    if (const Stmt* inverseAssume = rep->inverseFPCastAssume(I.getOperand(0), I.getType())) {
+      emit(inverseAssume);
+    }
+  }
 }
 
 /******************************************************************************/

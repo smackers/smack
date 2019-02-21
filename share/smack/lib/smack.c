@@ -1147,23 +1147,6 @@ void __SMACK_decls(void) {
   DECLARE(UNINTERPRETED_CONVERSION,i32,bvfloat,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i64,bvdouble,$bitcast);
   DECLARE(UNINTERPRETED_CONVERSION,i80,bvlongdouble,$bitcast);
-  D("axiom (forall f: bvhalf :: $bitcast.bv16.bvhalf($bitcast.bvhalf.bv16(f)) == f);");
-  D("axiom (forall f: bvfloat :: $bitcast.bv32.bvfloat($bitcast.bvfloat.bv32(f)) == f);");
-  D("axiom (forall f: bvdouble :: $bitcast.bv64.bvdouble($bitcast.bvdouble.bv64(f)) == f);");
-  D("axiom (forall f: bvlongdouble :: $bitcast.bv80.bvlongdouble($bitcast.bvlongdouble.bv80(f)) == f);");
-  //D("axiom (forall b: bv16 :: b[15:10] == 31bv5 && b[10:0] != 0bv10 ==> $bitcast.bvhalf.bv16($bitcast.bv16.bvhalf(b)) == b);");
-  //D("axiom (forall b: bv32 :: b[31:23] == 255bv8 && b[23:0] != 0bv23 ==> $bitcast.bvfloat.bv32($bitcast.bv32.bvfloat(b)) == b);");
-  //D("axiom (forall b: bv64 :: b[63:52] == 2047bv11 && b[52:0] != 0bv52 ==> $bitcast.bvdouble.bv64($bitcast.bv64.bvdouble(b)) == b);");
-  //D("axiom (forall b: bv80 :: b[79:64] == 32768bv15 && b[64:0] != 0bv64 ==> $bitcast.bvlongdouble.bv80($bitcast.bv80.bvlongdouble(b)) == b);");
-  // TODO: add more constraints
-
-  D("axiom (forall f: bvfloat, rm1: rmode, rm2: rmode :: dtf(rm1, ftd(rm2, f)) == f);");
-  D("axiom (forall f: bvlongdouble, rm1: rmode, rm2: rmode :: dtl(rm1, ltd(rm2, f)) == f);");
-
-  D("axiom (forall f: bvhalf, i: i16 :: $bitcast.bvhalf.i16(f) == i <==> $bitcast.i16.bvhalf(i) == f);");
-  D("axiom (forall f: bvfloat, i: i32 :: $bitcast.bvfloat.i32(f) == i <==> $bitcast.i32.bvfloat(i) == f);");
-  D("axiom (forall f: bvdouble, i: i64 :: $bitcast.bvdouble.i64(f) == i <==> $bitcast.i64.bvdouble(i) == f);");
-  D("axiom (forall f: bvlongdouble, i: i80 :: $bitcast.bvlongdouble.i80(f) == i <==> $bitcast.i80.bvlongdouble(i) == f);");
 
   D("function {:inline} $load.bvhalf(M: [ref] bvhalf, p: ref) returns (bvhalf) { M[p] }");
   D("function {:inline} $store.bvhalf(M: [ref] bvhalf, p: ref, v: bvhalf) returns ([ref] bvhalf) { M[p := v] }");
