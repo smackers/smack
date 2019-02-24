@@ -18,14 +18,13 @@
 
 namespace {
   using namespace llvm;
-  using namespace std;
 
-  list<CallInst*> findCallers(Function* F) {
-    list<CallInst*> callers;
+  std::list<CallInst*> findCallers(Function* F) {
+    std::list<CallInst*> callers;
 
     if (F) {
-      queue<User*> users;
-      set<User*> covered;
+      std::queue<User*> users;
+      std::set<User*> covered;
 
       users.push(F);
       covered.insert(F);
@@ -1179,7 +1178,7 @@ const Stmt* SmackRep::inverseFPCastAssume(const Value* src, const Type* destType
   if (!(srcType->isFloatingPointTy() && destType->isIntegerTy())) {
     return nullptr;
   }
-  string fn = Naming::INSTRUCTION_TABLE.at(Instruction::BitCast);
+  std::string fn = Naming::INSTRUCTION_TABLE.at(Instruction::BitCast);
   const Expr *srcExpr = expr(src);
   const Expr *castFPToInt = Expr::fn(opName(fn, {src->getType(), destType}), srcExpr);
   const Expr *castIntToFP = Expr::fn(opName(fn, {destType, src->getType()}), castFPToInt);
