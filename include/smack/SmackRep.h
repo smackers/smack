@@ -156,6 +156,8 @@ public:
   std::string getString(const llvm::Value* v);
   bool isExternal(const llvm::Value* v);
   void addBplGlobal(std::string name);
+  const Stmt* inverseFPCastAssume(const llvm::Value* src, const llvm::Type* destType);
+  const Stmt* inverseFPCastAssume(const llvm::StoreInst* si);
 
   // used in SmackModuleGenerator
   std::list<Decl*> globalDecl(const llvm::GlobalValue* g);

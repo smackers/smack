@@ -18,14 +18,13 @@
 
 namespace {
   using namespace llvm;
-  using namespace std;
 
-  list<CallInst*> findCallers(Function* F) {
-    list<CallInst*> callers;
+  std::list<CallInst*> findCallers(Function* F) {
+    std::list<CallInst*> callers;
 
     if (F) {
-      queue<User*> users;
-      set<User*> covered;
+      std::queue<User*> users;
+      std::set<User*> covered;
 
       users.push(F);
       covered.insert(F);
@@ -1167,6 +1166,37 @@ std::string SmackRep::getPrelude() {
 
 void SmackRep::addBplGlobal(std::string name) {
   bplGlobals.push_back(name);
+}
+
+// Dealing with bitcasts between integers and floating-points
+// by adding appropriate assume statements constraining cast inverses
+const Stmt* SmackRep::inverseFPCastAssume(const Value* src, const Type* destType) {
+  if (!(SmackOptions::BitPrecise && SmackOptions::FloatEnabled)) {
+    return nullptr;
+  }
+  const Type *srcType = src->getType();
+  if (!(srcType->isFloatingPointTy() && destType->isIntegerTy())) {
+    return nullptr;
+  }
+  std::string fn = Naming::INSTRUCTION_TABLE.at(Instruction::BitCast);
+  const Expr *srcExpr = expr(src);
+  const Expr *castFPToInt = Expr::fn(opName(fn, {src->getType(), destType}), srcExpr);
+  const Expr *castIntToFP = Expr::fn(opName(fn, {destType, src->getType()}), castFPToInt);
+  return Stmt::assume(Expr::eq(castIntToFP, srcExpr));
+}
+
+const Stmt* SmackRep::inverseFPCastAssume(const StoreInst* si) {
+  const Value* P = si->getPointerOperand();
+  const PointerType* PT = dyn_cast<PointerType>(P->getType());
+  assert(PT && "Expected pointer type.");
+  const Type* T = PT->getElementType();
+  unsigned R = regions->idx(P);
+  if (!T->isFloatingPointTy() || !regions->get(R).bytewiseAccess() ||
+      regions->get(R).isSingleton()) {
+    return nullptr;
+  }
+  return inverseFPCastAssume(si->getValueOperand(),
+    Type::getIntNTy(T->getContext(), T->getPrimitiveSizeInBits()));
 }
 
 unsigned SmackRep::numElements(const llvm::Constant* v) {
