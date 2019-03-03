@@ -265,14 +265,15 @@ std::string Naming::freshUndefName() {
 
 std::string Naming::freshVarName(const Value& V) {
   std::stringstream s;
+  const Type* type = V.getType();
 
-  if (V.getType()->isFloatingPointTy())
+  if (type->isFloatingPointTy())
     s << FLOAT_VAR;
 
-  else if (V.getType()->isIntegerTy())
+  else if (type->isIntegerTy())
     s << INT_VAR;
 
-  else if (auto VT = dyn_cast<VectorType>(V.getType()))
+  else if (type->isVectorTy())
     s << VECTOR_VAR;
 
   else
