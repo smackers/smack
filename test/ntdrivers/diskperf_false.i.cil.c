@@ -3345,18 +3345,6 @@ int main(void)
   return (status);
 }
 }
-char _SLAM_alloc_dummy  ;
-char *malloc(int i ) 
-{ int __BLAST_NONDET___0 = __VERIFIER_nondet_int() ;
-
-  {
-  if (__BLAST_NONDET___0) {
-    return ((char *)0);
-  } else {
-    return ((char *)1);
-  }
-}
-}
   void ExAcquireFastMutex(PFAST_MUTEX FastMutex ) ;
 void ExAcquireFastMutex(PFAST_MUTEX FastMutex ) 
 { 

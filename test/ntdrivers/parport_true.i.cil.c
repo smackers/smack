@@ -1941,7 +1941,6 @@ struct _SCSI_REQUEST_BLOCK;
 #pragma warning(disable:4035)
 #pragma warning(pop)
 #pragma once
-extern void *malloc(unsigned long sz ) ;
 extern void *memcpy(void * , void const   * , size_t  ) ;
 extern void *memset(void * , int  , size_t  ) ;
 extern void *memmove(void * , void const   * , size_t  ) ;

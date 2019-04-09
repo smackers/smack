@@ -29874,17 +29874,6 @@ int main(void)
   return ((int )status);
 }
 }
-#line 220 "../slam-kernel.c"
-char _SLAM_alloc_dummy  ;
-#line 222 "../slam-kernel.c"
-char *malloc(int i ) 
-{ 
-
-  {
-#line 222
-  return (& _SLAM_alloc_dummy);
-}
-}
 #line 230
 void ( __attribute__((__fastcall__)) ExAcquireFastMutex)(PFAST_MUTEX FastMutex ) ;
 #line 230 "../slam-kernel.c"
