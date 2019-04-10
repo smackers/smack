@@ -10,7 +10,7 @@ typedef struct {
 
 int main(void) {
   a *x = (a*)malloc(sizeof(a));
-  long *p = x;
+  long *p = (long*)x;
   x->i = 10;
   x->j = 20;
   *p = 0;

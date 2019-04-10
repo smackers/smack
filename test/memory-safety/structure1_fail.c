@@ -11,7 +11,7 @@ typedef struct _strct {
 
 int main(void) {
   strct* s = malloc(sizeof(strct));
-  int x = s->a[22];
+  int x = *((int*)s + 22);
   free(s);
   return x;
 }
