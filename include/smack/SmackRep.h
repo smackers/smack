@@ -27,8 +27,12 @@ using llvm::Regex;
 using llvm::SmallVector;
 using llvm::StringRef;
 
+std::string indexedName(std::string name, std::initializer_list<std::string> idxs);
+std::string indexedName(std::string name, std::initializer_list<unsigned> idxs);
+
 class SmackRep {
   friend class VectorOperations;
+  friend class Prelude;
 
 protected:
   const llvm::DataLayout* targetData;
@@ -163,7 +167,6 @@ public:
   std::list<Decl*> globalDecl(const llvm::GlobalValue* g);
   void addInitFunc(const llvm::Function* f);
   Decl* getInitFuncs();
-  std::string getPrelude();
   const Expr* declareIsExternal(const Expr* e);
 
   bool isContractExpr(const llvm::Value* V) const;

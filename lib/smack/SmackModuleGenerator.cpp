@@ -10,6 +10,7 @@
 #include "smack/SmackRep.h"
 #include "smack/SmackOptions.h"
 #include "smack/Debug.h"
+#include "smack/Prelude.h"
 
 namespace smack {
 
@@ -94,7 +95,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
 
   // NOTE we must do this after instruction generation, since we would not
   // otherwise know how many regions to declare.
-  program->appendPrelude(rep.getPrelude());
+  Prelude prelude(rep);
+  program->appendPrelude(prelude.getPrelude());
 
   std::list<Decl*> kill_list;
   for (auto D : *program) {
