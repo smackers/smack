@@ -1002,6 +1002,11 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   return Stmt::call(procName(f, ci), args, rets);
 }
 
+// we use C-style format characters
+// (https://docs.python.org/2.7/library/struct.html#format-characters)
+// e.g., @f means the variable is a float
+// while @h means the variable is a short
+// absence of a format character means use the promoted type as it is
 std::string SmackRep::code(llvm::CallInst& ci) {
 
   llvm::Function* f = ci.getCalledFunction();
@@ -1012,13 +1017,47 @@ std::string SmackRep::code(llvm::CallInst& ci) {
 
   std::string s = fmt;
   for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
-    const Expr* a = arg(f, i, ci.getOperand(i));
+    Value* a = ci.getOperand(i);
     std::string::size_type idx = s.find('@');
     assert(idx != std::string::npos && "inline code: too many arguments.");
 
+    llvm::Type* target_type = a->getType();
+    bool is_cast = false;
+    if (idx + 1 < s.length()) {
+      switch(s[idx+1]) {
+      case 'c': {
+	target_type = Type::getInt8Ty(a->getContext());
+	is_cast = true;
+	break;
+      }
+      case 'f': {
+	target_type = Type::getFloatTy(a->getContext());
+	is_cast = true;
+	break;
+      }
+      case 'h': {
+	target_type = Type::getInt16Ty(a->getContext());
+	is_cast = true;
+	break;
+      }
+      case 'i': {
+	target_type = Type::getInt32Ty(a->getContext());
+	is_cast = true;
+	break;
+      }
+      default:
+	break;
+      }
+    }
+    if (a->getType() != target_type) {
+	assert(isa<CastInst>(a) && "Expected a cast expression.");
+	CastInst* c = llvm::cast<CastInst>(a);
+	a = c->getOperand(0);
+    }
+
     std::ostringstream ss;
-    a->print(ss);
-    s = s.replace(idx,1,ss.str());
+    arg(f, i, a)->print(ss);
+    s = s.replace(idx,(is_cast ? 2 : 1),ss.str());
   }
   return s;
 }
