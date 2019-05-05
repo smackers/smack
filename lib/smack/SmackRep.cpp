@@ -1017,47 +1017,44 @@ std::string SmackRep::code(llvm::CallInst& ci) {
 
   std::string s = fmt;
   for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
-    Value* a = ci.getOperand(i);
+    Value* argV = ci.getOperand(i);
     std::string::size_type idx = s.find('@');
     assert(idx != std::string::npos && "inline code: too many arguments.");
 
-    llvm::Type* target_type = a->getType();
-    bool is_cast = false;
+    llvm::Type* targetType = argV->getType();
+    bool isCast = false;
     if (idx + 1 < s.length()) {
       switch(s[idx+1]) {
-      case 'c': {
-	target_type = Type::getInt8Ty(a->getContext());
-	is_cast = true;
-	break;
-      }
-      case 'f': {
-	target_type = Type::getFloatTy(a->getContext());
-	is_cast = true;
-	break;
-      }
-      case 'h': {
-	target_type = Type::getInt16Ty(a->getContext());
-	is_cast = true;
-	break;
-      }
-      case 'i': {
-	target_type = Type::getInt32Ty(a->getContext());
-	is_cast = true;
-	break;
-      }
-      default:
-	break;
+        case 'c':
+          targetType = Type::getInt8Ty(argV->getContext());
+          isCast = true;
+          break;
+        case 'f':
+          targetType = Type::getFloatTy(argV->getContext());
+          isCast = true;
+          break;
+        case 'h':
+          targetType = Type::getInt16Ty(argV->getContext());
+          isCast = true;
+          break;
+        case 'i':
+          targetType = Type::getInt32Ty(argV->getContext());
+          isCast = true;
+          break;
+        default:
+          break;
       }
     }
-    if (a->getType() != target_type) {
-	assert(isa<CastInst>(a) && "Expected a cast expression.");
-	CastInst* c = llvm::cast<CastInst>(a);
-	a = c->getOperand(0);
+    if (argV->getType() != targetType) {
+      assert(isa<CastInst>(argV) && "Expected a cast expression.");
+      CastInst* c = llvm::cast<CastInst>(argV);
+      argV = c->getOperand(0);
+      assert(argV->getType() == targetType && "Argument type does not match specified type.");
     }
 
     std::ostringstream ss;
-    arg(f, i, a)->print(ss);
-    s = s.replace(idx,(is_cast ? 2 : 1),ss.str());
+    arg(f, i, argV)->print(ss);
+    s = s.replace(idx,(isCast ? 2 : 1),ss.str());
   }
   return s;
 }
