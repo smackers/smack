@@ -51,7 +51,7 @@ float floorf(float x) {
    return ret;
  }
 ```
-, where the `ftd` and `dtf` functions are conversions between `float` and `double` variables.
+where the `ftd` and `dtf` functions are conversions between `float` and `double` variables that are needed to deal with the promotion of the arguments.
 Whereas a better definition using these annotations is:
 ```C
 float floorf(float x) {
