@@ -1025,24 +1025,28 @@ std::string SmackRep::code(llvm::CallInst& ci) {
     bool isCast = false;
     if (idx + 1 < s.length()) {
       switch(s[idx+1]) {
-        case 'c':
-          targetType = Type::getInt8Ty(argV->getContext());
-          isCast = true;
-          break;
-        case 'f':
-          targetType = Type::getFloatTy(argV->getContext());
-          isCast = true;
-          break;
-        case 'h':
-          targetType = Type::getInt16Ty(argV->getContext());
-          isCast = true;
-          break;
-        case 'i':
-          targetType = Type::getInt32Ty(argV->getContext());
-          isCast = true;
-          break;
-        default:
-          break;
+      case 'c':
+      case 'b':
+      case 'B':
+        targetType = Type::getInt8Ty(argV->getContext());
+        isCast = true;
+        break;
+      case 'f':
+        targetType = Type::getFloatTy(argV->getContext());
+        isCast = true;
+        break;
+      case 'h':
+      case 'H':
+        targetType = Type::getInt16Ty(argV->getContext());
+        isCast = true;
+        break;
+      case 'i':
+      case 'I':
+        targetType = Type::getInt32Ty(argV->getContext());
+        isCast = true;
+        break;
+      default:
+        break;
       }
     }
     if (argV->getType() != targetType) {
