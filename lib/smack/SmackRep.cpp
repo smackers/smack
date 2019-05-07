@@ -658,10 +658,49 @@ const Expr* SmackRep::lit(const llvm::Value* v, bool isUnsigned) {
         llvm_unreachable("Unsupported floating-point type.");
       }
       const APInt API = APF.bitcastToAPInt();
-      const APInt n_sign = API.trunc(expSize+sigSize-1);
-      const APInt sig = n_sign.trunc(sigSize-1);
-      const APInt exp = n_sign.lshr(sigSize-1);
-      return Expr::lit(APF.isNegative(), sig.toString(10, false), exp.toString(10, false), sigSize, expSize);
+      const APInt exp = API.lshr(sigSize-1).trunc(expSize);
+      APInt sig = API.trunc(sigSize-1).zext(sigSize);
+
+      if (exp.isAllOnesValue()) {
+        if (sig != 0) {
+          return Expr::lit("NaN", sigSize, expSize);
+        }
+        if (API.isNegative()) {
+          return Expr::lit("-oo", sigSize, expSize);
+        }
+        return Expr::lit("+oo", sigSize, expSize);
+      }
+
+      if (exp != 0) {
+        sig.setBit(sigSize - 1); // hidden bit
+      }
+
+      APInt bias = APInt::getSignedMaxValue(expSize);
+      if (exp == 0) {
+        --bias;
+      }
+
+      bool overflow;
+      APInt moveDec = exp.usub_ov(bias, overflow);
+      moveDec &= APInt(expSize, 3);
+      int moveDecAsInt = *moveDec.getRawData();
+
+      APInt finalExp = exp.usub_ov(bias, overflow).usub_ov(moveDec, overflow)
+        .ashr(2);
+
+      int leftSize = 4 * (moveDecAsInt / 4 + 1);
+      int rightSize = 4 * ((sigSize - moveDecAsInt - 2) / 4 + 1);
+
+      sig = sig.zext(leftSize + rightSize + 4)
+        << (rightSize - sigSize + moveDecAsInt + 1);
+
+      sig.setBit(sig.getBitWidth() - 1);
+
+      std::string hexSig = sig.toString(16, false).substr(1);
+      hexSig.insert(leftSize / 4, ".");
+
+      return Expr::lit(API.isNegative(), hexSig, finalExp.toString(10, true),
+          sigSize, expSize);
     } else {
       const APFloat APF = CFP->getValueAPF();
       std::string str;

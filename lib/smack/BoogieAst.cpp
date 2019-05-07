@@ -95,6 +95,10 @@ const Expr* Expr::lit(bool n, std::string s, std::string e, unsigned ss, unsigne
   return new FPLit(n, s, e, ss, es);
 }
 
+const Expr* Expr::lit(std::string v, unsigned ss, unsigned es) {
+  return new FPLit(v, ss, es);
+}
+
 const Expr* Expr::lit(RModeKind v) {
   return new RModeLit(v);
 }
@@ -452,7 +456,12 @@ void BvLit::print(std::ostream& os) const {
 }
 
 void FPLit::print(std::ostream& os) const {
-  os << (neg ? "-" : "") << sig << "e" << expo << "f" << sigSize << "e" << expSize;
+  if (specialValue.empty()) {
+    os << (neg ? "-" : "") << "0x" << sig << "e" << expo << "f";
+  } else {
+    os << "0" << specialValue;
+  }
+  os << sigSize << "e" << expSize;
 }
 
 void NegExpr::print(std::ostream& os) const {

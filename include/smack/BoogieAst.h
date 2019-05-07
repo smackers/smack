@@ -38,6 +38,7 @@ public:
   static const Expr* lit(std::string v, unsigned w);
   static const Expr* lit(unsigned long long v, unsigned w);
   static const Expr* lit(bool n, std::string s, std::string e, unsigned ss, unsigned es);
+  static const Expr* lit(std::string v, unsigned ss, unsigned es);
   static const Expr* lit(RModeKind v);
   static const Expr* neq(const Expr* l, const Expr* r);
   static const Expr* not_(const Expr* e);
@@ -127,10 +128,12 @@ class FPLit : public Expr {
   bool neg;
   std::string sig;
   std::string expo;
+  std::string specialValue;
   unsigned sigSize;
   unsigned expSize;
 public:
   FPLit(bool n, std::string s, std::string e, unsigned ss, unsigned es) : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
+  FPLit(std::string v, unsigned ss, unsigned es) : specialValue(v), sigSize(ss), expSize(es) {}
   void print(std::ostream& os) const;
 };
 
