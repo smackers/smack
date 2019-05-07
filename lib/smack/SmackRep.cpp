@@ -1006,7 +1006,7 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
 // (https://docs.python.org/2.7/library/struct.html#format-characters)
 // e.g., @f means the variable is a float
 // while @h means the variable is a short
-// absence of a format character means use the promoted type as it is
+// absence of a format character means use the promoted type as is
 std::string SmackRep::code(llvm::CallInst& ci) {
 
   llvm::Function* f = ci.getCalledFunction();
