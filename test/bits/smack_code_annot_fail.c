@@ -1,7 +1,6 @@
 #include "smack.h"
 
-// @expect verified
-// @flag --bit-precise --float
+// @expect error
 
 typedef unsigned int u32;
 typedef unsigned short u16;
@@ -19,9 +18,15 @@ u32 u8_to_u32(u8 x) {
   return ret;
 }
 
-double f16_to_f32(float x) {
-  double ret = __VERIFIER_nondet_double();
-  __SMACK_code("@ := ftd(RNE, @f);", ret, x);
+u16 u16_id(u16 x) {
+  u16 ret = __VERIFIER_nondet_unsigned_short();
+  __SMACK_code("@H := @h;", ret, x);
+  return ret;
+}
+
+u8 u8_id(u8 x) {
+  u8 ret = __VERIFIER_nondet_unsigned_char();
+  __SMACK_code("@b := @B;", ret, x);
   return ret;
 }
 
@@ -30,11 +35,10 @@ int main(void) {
   u8 y8 = __VERIFIER_nondet_unsigned_char();
   u16 x16 = __VERIFIER_nondet_unsigned_short();
   u16 y16 = __VERIFIER_nondet_unsigned_short();
-  __VERIFIER_assume(x8 > y8);
-  __VERIFIER_assume(x16 > y16);
-  assert(u8_to_u32(x8) > u8_to_u32(y8));
+  __VERIFIER_assume(u8_id(x8) > u8_id(y8));
+  __VERIFIER_assume(u16_id(x16) > u16_id(y16));
+  assert(u8_to_u32(x8) < u8_to_u32(y8));
   assert(u16_to_u32(x16) > u16_to_u32(y16));
-  assert(f16_to_f32(2.0f) == 2.0);
   return 0;
 }
 
