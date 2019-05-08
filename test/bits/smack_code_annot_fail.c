@@ -35,8 +35,8 @@ int main(void) {
   u8 y8 = __VERIFIER_nondet_unsigned_char();
   u16 x16 = __VERIFIER_nondet_unsigned_short();
   u16 y16 = __VERIFIER_nondet_unsigned_short();
-  __VERIFIER_assume(u8_id(x8) > u8_id(y8));
-  __VERIFIER_assume(u16_id(x16) > u16_id(y16));
+  assume(u8_id(x8) > u8_id(y8));
+  assume(u16_id(x16) > u16_id(y16));
   assert(u8_to_u32(x8) < u8_to_u32(y8));
   assert(u16_to_u32(x16) > u16_to_u32(y16));
   return 0;
