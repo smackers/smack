@@ -70,7 +70,6 @@ private:
   const Expr* pointerToInteger(const Expr* e, unsigned width);
   const Expr* integerToPointer(const Expr* e, unsigned width);
 
-  std::string opName(const std::string& operation, std::list<const llvm::Type*> types);
   std::string opName(const std::string& operation, std::initializer_list<unsigned> types);
 
   const Stmt* store(unsigned R, const llvm::Type* T, const Expr* P, const Expr* V);
@@ -174,6 +173,7 @@ public:
 
   void addAuxiliaryDeclaration(Decl* D);
   std::list<Decl*> auxiliaryDeclarations();
+  std::string opName(const std::string& operation, std::list<const llvm::Type*> types);
 };
 
 }
