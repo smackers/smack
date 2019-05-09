@@ -40,20 +40,11 @@ void assume(bool v) {
 SMACK interprets the `@` symbol by inserting the value of the C variable `v`.
 Since the arguments of variadic functions may be promoted, SMACK allows users
 to append a format character to the `@` symbol as an indicator that the argument,
-rather than its promoted form, should be used in the format string. The format
-characters are given in the following table along with their corresponding C
-types and their effective types within SMACK:
-
-| Format | Original C Type | SMACK Type |
-|--------|-----------------|------------|
-| c      | char            | i8         |
-| b      | signed char     | i8         |
-| B      | unsigned char   | i8         |
-| h      | signed short    | i16        |
-| H      | unsigned short  | i16        |
-| i      | signed int      | i32        |
-| I      | unsigned int    | i32        |
-| f      | float           | float      |
+rather than its promoted form, should be used in the format string. We allow the
+following format characters (inspired by Python and C) for the respective C types:
+`c` (`char`), `b` (`signed char`), `B` (`unsigned char`), `h` (`signed short`),
+`H` (`unsigned short`), `i` (`signed int`), `I` (`unsigned int`) and `f`
+(`float`).
 
 For example, without using such annotations, the definition of the `floorf`
 function is:
