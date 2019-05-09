@@ -613,18 +613,18 @@ void __SMACK_decls(void) {
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ffalse, {false})
   DECLARE_EACH_FLOAT_TYPE(INLINE_BINARY_COMP, $ftrue, {true})
 
-  D("function {:builtin \"(_ to_fp 8 24)\"} dtf(rmode, bvdouble) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 11 53)\"} ftd(rmode, bvfloat) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 8 24)\"} ltf(rmode, bvlongdouble) returns (bvfloat);");
-  D("function {:builtin \"(_ to_fp 11 53)\"} ltd(rmode, bvlongdouble) returns (bvdouble);");
-  D("function {:builtin \"(_ to_fp 15 65)\"} ftl(rmode, bvfloat) returns (bvlongdouble);");
-  D("function {:builtin \"(_ to_fp 15 65)\"} dtl(rmode, bvdouble) returns (bvlongdouble);");
-  DECLARE(INLINE_RMODE_CONVERSION,bvdouble,bvfloat,$fptrunc,{dtf(rm, i)});
-  DECLARE(INLINE_RMODE_CONVERSION,bvfloat,bvdouble,$fpext,{ftd(rm, i)});
-  DECLARE(INLINE_RMODE_CONVERSION,bvlongdouble,bvfloat,$fptrunc,{ltf(rm, i)});
-  DECLARE(INLINE_RMODE_CONVERSION,bvlongdouble,bvdouble,$fptrunc,{ltd(rm, i)});
-  DECLARE(INLINE_RMODE_CONVERSION,bvfloat,bvlongdouble,$fpext,{ftl(rm, i)});
-  DECLARE(INLINE_RMODE_CONVERSION,bvdouble,bvlongdouble,$fpext,{dtl(rm, i)});
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bvhalf,$fptrunc,(_ to_fp 5 11));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvhalf,bvfloat,$fpext,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bvhalf,$fptrunc,(_ to_fp 5 11));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvhalf,bvdouble,$fpext,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bvhalf,$fptrunc,(_ to_fp 5 11));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvhalf,bvlongdouble,$fpext,(_ to_fp 15 65));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bvfloat,$fptrunc,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bvdouble,$fpext,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bvfloat,$fptrunc,(_ to_fp 8 24));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bvlongdouble,$fpext,(_ to_fp 15 65));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvlongdouble,bvdouble,$fptrunc,(_ to_fp 11 53));
+  DECLARE(BUILTIN_RMODE_CONVERSION,bvdouble,bvlongdouble,$fpext,(_ to_fp 15 65));
 
   // Add truncation for default casts to int
   DECLARE(BUILTIN_RMODE_CONVERSION,bvfloat,bv128,$fp2si,(_ fp.to_sbv 128));
