@@ -38,6 +38,33 @@ void assume(bool v) {
 }
 ````
 SMACK interprets the `@` symbol by inserting the value of the C variable `v`.
+Since the arguments of variadic functions may be promoted, SMACK allows users
+to append a format character to the `@` symbol as an indicator that the argument,
+rather than its promoted form, should be used in the format string. We allow the
+following format characters (inspired by Python and C) for the respective C types:
+`c` (`char`), `b` (`signed char`), `B` (`unsigned char`), `h` (`signed short`),
+`H` (`unsigned short`), `i` (`signed int`), `I` (`unsigned int`) and `f`
+(`float`).
+
+For example, without using such annotations, the definition of the `floorf`
+function is:
+```C
+float floorf(float x) {
+  double ret = __VERIFIER_nondet_double();
+  __SMACK_code("@ := ftd($rmode, $round.bvfloat(RTN, dtf($rmode, @)));", ret, x);
+   return ret;
+ }
+```
+where the `ftd` and `dtf` functions are conversions between `float` and `double`
+variables that are needed to deal with the promotion of the arguments.
+Whereas a better definition using these annotations is:
+```C
+float floorf(float x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@f := $round.bvfloat(RTN, @f);", ret, x);
+   return ret;
+ }
+ ```
 
 One application of this functionality which has been valuable to the authors of
 SMACK is in encoding concurrency primitives into the generated Boogie code. The

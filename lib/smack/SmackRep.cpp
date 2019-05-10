@@ -1002,6 +1002,11 @@ const Stmt* SmackRep::call(llvm::Function* f, const llvm::User& ci) {
   return Stmt::call(procName(f, ci), args, rets);
 }
 
+// we use C-style format characters
+// (https://docs.python.org/2.7/library/struct.html#format-characters)
+// e.g., @f means the variable is a float
+// while @h means the variable is a short
+// absence of a format character means use the promoted type as is
 std::string SmackRep::code(llvm::CallInst& ci) {
 
   llvm::Function* f = ci.getCalledFunction();
@@ -1012,13 +1017,48 @@ std::string SmackRep::code(llvm::CallInst& ci) {
 
   std::string s = fmt;
   for (unsigned i=1; i<ci.getNumOperands()-1; i++) {
-    const Expr* a = arg(f, i, ci.getOperand(i));
+    Value* argV = ci.getOperand(i);
     std::string::size_type idx = s.find('@');
     assert(idx != std::string::npos && "inline code: too many arguments.");
 
+    llvm::Type* targetType = argV->getType();
+    bool isCast = false;
+    if (idx + 1 < s.length()) {
+      switch(s[idx+1]) {
+      case 'c':
+      case 'b':
+      case 'B':
+        targetType = Type::getInt8Ty(argV->getContext());
+        isCast = true;
+        break;
+      case 'f':
+        targetType = Type::getFloatTy(argV->getContext());
+        isCast = true;
+        break;
+      case 'h':
+      case 'H':
+        targetType = Type::getInt16Ty(argV->getContext());
+        isCast = true;
+        break;
+      case 'i':
+      case 'I':
+        targetType = Type::getInt32Ty(argV->getContext());
+        isCast = true;
+        break;
+      default:
+        break;
+      }
+    }
+    if (argV->getType() != targetType) {
+      assert(isa<CastInst>(argV) && "Expected a cast expression.");
+      CastInst* c = llvm::cast<CastInst>(argV);
+      argV = c->getOperand(0);
+      assert(argV->getType() == targetType && "Argument type does not match specified type.");
+    }
+
     std::ostringstream ss;
-    a->print(ss);
-    s = s.replace(idx,1,ss.str());
+    arg(f, i, argV)->print(ss);
+    s = s.replace(idx,(isCast ? 2 : 1),ss.str());
   }
   return s;
 }
