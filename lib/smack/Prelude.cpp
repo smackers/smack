@@ -253,6 +253,21 @@ FuncDecl* truncBvOp(unsigned width, unsigned width2) {
     makeVars(1, type), type2, body, {makeInlineAttr()});
 }
 
+FuncDecl* extractValue(std::string resType) {
+  std::string aggType = Naming::PTR_TYPE;
+  std::list<Binding> args = makeVars(1, aggType);
+  args.emplace_back(Binding {"i", "int"});
+  return Decl::function(
+    indexedName("$extractvalue", {resType}),
+    args, resType, nullptr, {});
+}
+
+FuncDecl* extractValue(unsigned width) {
+  std::string resType = SmackOptions::BitPrecise?
+    getBvTypeName(width) : getIntegerTypeName(width);
+  return extractValue(resType);
+}
+
 std::string getBytewisePointerStorageStr() {
   std::stringstream s;
   s << "// Bytewise pointer storage" << "\n";
@@ -514,6 +529,18 @@ std::string Prelude::getPrelude() {
     s << safeStoreOp(size, Expr::id("M[p := v]")) << "\n";
     s << safeStoreBvOp(size, Expr::id("M[p := v]")) << "\n";
   }
+
+  // extractvalue functions
+  for (auto size : INTEGER_SIZES)
+    s << extractValue(size) << "\n";
+  s << extractValue(Naming::PTR_TYPE) << "\n";
+  if (SmackOptions::FloatEnabled) {
+    s << extractValue(Naming::HALF_TYPE) << "\n";
+    s << extractValue(Naming::FLOAT_TYPE) << "\n";
+    s << extractValue(Naming::DOUBLE_TYPE) << "\n";
+    s << extractValue(Naming::LONG_DOUBLE_TYPE) << "\n";
+  } else
+    s << extractValue(Naming::UNINTERPRETED_FLOAT_TYPE) << "\n";
 
   for (size_t s1 = 0; s1 < INTEGER_SIZES.size(); ++s1) {
     const unsigned &size = INTEGER_SIZES[s1];

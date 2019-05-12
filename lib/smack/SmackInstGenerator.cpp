@@ -46,6 +46,15 @@ std::string i2s(const llvm::Instruction& i) {
   return s;
 }
 
+Type* getElemType(const Type* t, unsigned idx) {
+  if (const llvm::StructType* st = llvm::dyn_cast<const llvm::StructType>(t))
+    return st->getElementType(idx);
+  else if (const llvm::ArrayType* at = llvm::dyn_cast<const llvm::ArrayType>(t))
+    return at->getElementType();
+  else
+    llvm_unreachable("Unexpected aggregate type.");
+}
+
 void SmackInstGenerator::emit(const Stmt* s) {
   // stringstream str;
   // s->print(str);
@@ -379,14 +388,16 @@ void SmackInstGenerator::visitShuffleVectorInst(ShuffleVectorInst &I) {
 
 void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst& evi) {
   processInstruction(evi);
-  if (!SmackOptions::BitPrecise) {
-    const Expr* e = rep->expr(evi.getAggregateOperand());
-    for (unsigned i = 0; i < evi.getNumIndices(); i++)
-      e = Expr::fn(Naming::EXTRACT_VALUE, e, Expr::lit((unsigned long long) evi.getIndices()[i]));
-    emit(Stmt::assign(rep->expr(&evi),e));
-  } else {
-    WARN("Ignoring extract instruction under bit vector mode.");
+  const Value* ao = evi.getAggregateOperand();
+  const Expr* e = rep->expr(ao);
+  const Type* t = ao->getType();
+
+  for (auto& idx: evi.indices()) {
+    e = Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t,idx)}),
+      e, Expr::lit((unsigned long long) idx));
+    t = getElemType(t,idx);
   }
+  emit(Stmt::assign(rep->expr(&evi),e));
 }
 
 void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
@@ -395,30 +406,33 @@ void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst& ivi) {
   const Expr* res = rep->expr(&ivi);
   const llvm::Type* t = ivi.getType();
 
-  for (unsigned i = 0; i < ivi.getNumIndices(); i++) {
-    unsigned idx = ivi.getIndices()[i];
-
-    unsigned num_elements;
+  auto getNumElements = [] (const Type* t) -> unsigned {
     if (const llvm::StructType* st = llvm::dyn_cast<const llvm::StructType>(t)) {
-      num_elements = st->getNumElements();
-      t = st->getElementType(idx);
+      return st->getNumElements();
     } else if (const llvm::ArrayType* at = llvm::dyn_cast<const llvm::ArrayType>(t)) {
-      num_elements = at->getNumElements();
-      t = at->getElementType();
+      return at->getNumElements();
     } else {
       llvm_unreachable("Unexpected aggregate type.");
     }
+  };
 
-    for (unsigned j = 0; j < num_elements; j++) {
+  for (auto& idx: ivi.indices()) {
+
+    for (unsigned j = 0; j < getNumElements(t); j++) {
       if (j != idx) {
         emit(Stmt::assume(Expr::eq(
-          Expr::fn(Naming::EXTRACT_VALUE, res, Expr::lit(j)),
-          Expr::fn(Naming::EXTRACT_VALUE, old, Expr::lit(j))
+          Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t,j)}),
+            res, Expr::lit(j)),
+          Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t,j)}),
+            old, Expr::lit(j))
         )));
       }
     }
-    res = Expr::fn(Naming::EXTRACT_VALUE, res, Expr::lit(idx));
-    old = Expr::fn(Naming::EXTRACT_VALUE, old, Expr::lit(idx));
+    res = Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t,idx)}),
+      res, Expr::lit(idx));
+    old = Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t, idx)}),
+      old, Expr::lit(idx));
+    t = getElemType(t,idx);
   }
   emit(Stmt::assume(Expr::eq(res,rep->expr(ivi.getInsertedValueOperand()))));
 }

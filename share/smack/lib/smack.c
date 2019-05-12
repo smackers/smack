@@ -1207,7 +1207,6 @@ void __SMACK_decls(void) {
 
   D("var $exn: bool;");
   D("var $exnv: int;");
-  D("function $extractvalue(p: int, i: int) returns (int);\n");
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "{\n"
