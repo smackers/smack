@@ -257,6 +257,30 @@ void __SMACK_dummy(int v) {
   __SMACK_code("assume true;");
 }
 
+float __SMACK_f16_to_f32(unsigned short x) {
+  float ret = __VERIFIER_nondet_float();
+  __SMACK_code("@f := $fpext.bvhalf.bvfloat(RNE, $bitcast.bv16.bvhalf(@H));", ret, x);
+  return ret;
+}
+
+double __SMACK_f16_to_f64(unsigned short x) {
+  double ret = __VERIFIER_nondet_float();
+  __SMACK_code("@ := $fpext.bvhalf.bvdouble(RNE, $bitcast.bv16.bvhalf(@H));", ret, x);
+  return ret;
+}
+
+unsigned short __SMACK_f32_to_f16(float x) {
+  unsigned short ret = __VERIFIER_nondet_unsigned_short();
+  __SMACK_code("assume($bitcast.bv16.bvhalf(@H) == $fptrunc.bvfloat.bvhalf(RNE, @f));", ret, x);
+  return ret;
+}
+
+unsigned short __SMACK_f64_to_f16(double x) {
+  unsigned short ret = __VERIFIER_nondet_unsigned_short();
+  __SMACK_code("assume $bitcast.bv16.bvhalf(@H) == $fptrunc.bvdouble.bvhalf(RNE, @);", ret, x);
+  return ret;
+}
+
 #define LIMIT_1 2
 #define LIMIT_7 128
 #define LIMIT_8 256

@@ -623,6 +623,22 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     Value* val = ci.getArgOperand(0);
     emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
 
+  } else if (name.find("llvm.convert.from.fp16.f32") != std::string::npos) {
+    emit(Stmt::call("__SMACK_f16_to_f32", {rep->expr(ci.getArgOperand(0))},
+                    {naming->get(ci)}));
+
+  } else if (name.find("llvm.convert.from.fp16.f64") != std::string::npos) {
+    emit(Stmt::call("__SMACK_f16_to_f64", {rep->expr(ci.getArgOperand(0))},
+                    {naming->get(ci)}));
+
+  } else if (name.find("llvm.convert.to.fp16.f32") != std::string::npos) {
+    emit(Stmt::call("__SMACK_f32_to_f16", {rep->expr(ci.getArgOperand(0))},
+                    {naming->get(ci)}));
+
+  } else if (name.find("llvm.convert.to.fp16.f64") != std::string::npos) {
+    emit(Stmt::call("__SMACK_f64_to_f16", {rep->expr(ci.getArgOperand(0))},
+                    {naming->get(ci)}));
+
   } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
     // Set the entry point for Rust programs
     auto castExpr = ci.getArgOperand(0);
