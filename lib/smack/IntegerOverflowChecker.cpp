@@ -119,13 +119,14 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
     if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-      // Add check for UBSan left shift when needed
+      // Add check for UBSan left shift/signed division when needed
       if (SmackOptions::IntegerOverflow) {
         if (auto chkshft = dyn_cast<CallInst>(&*I)) {
 	  Function* chkfn = chkshft->getCalledFunction();
           if (chkfn && chkfn->hasName() &&
-              chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos) {
-            // If the call to __ubsan_handle_shift_out_of_bounds is reachable,
+              (chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos ||
+               chkfn->getName().find("__ubsan_handle_divrem_overflow") != std::string::npos)) {
+            // If the call to __ubsan_handle_* is reachable,
             // then an overflow is possible.
             ConstantInt* flag = ConstantInt::getTrue(chkshft->getFunction()->getContext());
             addCheck(co, flag, &*I);
@@ -179,19 +180,6 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
             I->replaceAllUsesWith(flag);
             instToRemove.push_back(&*I);
           }
-        }
-      }
-      if (auto sdi = dyn_cast<BinaryOperator>(&*I)) {
-        if (sdi->getOpcode() == Instruction::SDiv && SmackOptions::IntegerOverflow) {
-          int bits = sdi->getType()->getIntegerBitWidth();
-          Value* eo1 = extendBitWidth(sdi->getOperand(0), bits, true, &*I);
-          Value* eo2 = extendBitWidth(sdi->getOperand(1), bits, true, &*I);
-          BinaryOperator* lsdi = BinaryOperator::Create(Instruction::SDiv, eo1, eo2, "", &*I);
-          BinaryOperator* flag = createFlag(lsdi, bits, true, &*I);
-          addCheck(co, flag, &*I);
-          Value* r = createResult(lsdi, bits, &*I);
-          I->replaceAllUsesWith(r);
-          instToRemove.push_back(&*I);
         }
       }
     }
