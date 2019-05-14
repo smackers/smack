@@ -144,6 +144,42 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
   nextInst++;
 }
 
+void SmackInstGenerator::processIntrinsicCall(llvm::IntrinsicInst* ii) {
+  static const auto f16UpCast = [&ii, this] {
+    std::string funcName;
+    auto tyID = ii->getFunctionType()->getReturnType()->getTypeID();
+    if (tyID == llvm::Type::FloatTyID)
+      funcName = "__SMACK_convert_from_fp16_f32";
+    else if (tyID == llvm::Type::DoubleTyID)
+      funcName = "__SMACK_convert_from_fp16_f64";
+    else
+      llvm_unreachable("Unexpected return type of half-precision upcast intrinsic.");
+    return Stmt::call(funcName, {rep->expr(ii->getArgOperand(0))},
+      {naming->get(*ii)});
+  };
+  static const auto f16DownCast = [&ii, this] {
+    std::string funcName;
+    auto tyID = ii->getArgOperand(0)->getType()->getTypeID();
+    if (tyID == llvm::Type::FloatTyID)
+      funcName = "__SMACK_convert_to_fp16_f32";
+    else if (tyID == llvm::Type::DoubleTyID)
+      funcName = "__SMACK_convert_to_fp16_f64";
+    else
+      llvm_unreachable("Unexpected operand type of half-precision downcast intrinsic.");
+    return Stmt::call(funcName, {rep->expr(ii->getArgOperand(0))},
+      {naming->get(*ii)});
+  };
+  static const std::map<llvm::Intrinsic::ID, std::function<const Stmt*()>> stmtMap {
+    {llvm::Intrinsic::convert_from_fp16, f16UpCast},
+    {llvm::Intrinsic::convert_to_fp16, f16DownCast}
+  };
+  auto it = stmtMap.find(ii->getIntrinsicID());
+  if (it != stmtMap.end())
+    return emit(it->second());
+  else
+    return emit(rep->call(ii->getCalledFunction(), *ii));
+}
+
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock& bb) {
   nextInst = bb.begin();
   currBlock = getBlock(&bb);
@@ -622,6 +658,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
     // Semantically, this function simply returns the value v.
     Value* val = ci.getArgOperand(0);
     emit(Stmt::assign(rep->expr(&ci), rep->expr(val)));
+
+  } else if (auto ii = dyn_cast<IntrinsicInst>(&ci)) {
+    processIntrinsicCall(ii);
 
   } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
     // Set the entry point for Rust programs
