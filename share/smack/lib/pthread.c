@@ -249,9 +249,9 @@ int pthread_cond_destroy(pthread_cond_t *__cond) {
   return 0;
 }
 
-void __call_wrapper(pthread_t *__restrict __newthread,
+void __call_wrapper(pthread_t *__newthread,
                     void *(*__start_routine) (void *),
-                    void *__restrict __arg) {
+                    void *__arg) {
 
   pthread_t ctid = pthread_self();
   // Wait for parent to set child's thread ID in original pthread_t struct
@@ -265,10 +265,10 @@ void __call_wrapper(pthread_t *__restrict __newthread,
   __SMACK_code("$pthreadStatus[@][0] := $pthread_stopped;", ctid);
 }
 
-int pthread_create(pthread_t *__restrict __newthread,
-                   __const pthread_attr_t *__restrict __attr,
+int pthread_create(pthread_t *__newthread,
+                   __const pthread_attr_t *__attr,
                    void *(*__start_routine) (void *),
-                   void *__restrict __arg) {
+                   void *__arg) {
 
   pthread_t tmp = __VERIFIER_nondet_int();
 
