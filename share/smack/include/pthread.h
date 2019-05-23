@@ -66,8 +66,8 @@ int pthread_cond_broadcast(pthread_cond_t *__cond);
 
 int pthread_cond_destroy(pthread_cond_t *__cond);
 
-void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg);
+void __call_wrapper(pthread_t *__newthread, void *(*__start_routine) (void *), void *__arg);
 
-int pthread_create(pthread_t *__restrict __newthread, __const pthread_attr_t *__restrict __attr, void *(*__start_routine) (void *), void *__restrict __arg);
+int pthread_create(pthread_t *__newthread, __const pthread_attr_t *__attr, void *(*__start_routine) (void *), void *__arg);
 
 #endif // PTHREAD_H

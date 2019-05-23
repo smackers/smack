@@ -19,7 +19,7 @@ public:
 
   virtual bool runOnModule(llvm::Module& m);
 
-  virtual const char *getPassName() const {
+  virtual llvm::StringRef getPassName() const {
     return "Boogie file printing";
   }
 

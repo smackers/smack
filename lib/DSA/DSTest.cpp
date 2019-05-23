@@ -199,7 +199,7 @@ class NodeValue {
       // Now we try to find the value...
       // FIXME: This only works for named values, things like "%1" don't work.
       // That might not be a deal breaker, but should be clear.
-      V = F->getValueSymbolTable().lookup(value);
+      V = F->getValueSymbolTable()->lookup(value);
 
       assert(V && "Unable to find value in specified function!");
 
