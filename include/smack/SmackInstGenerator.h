@@ -40,6 +40,7 @@ private:
   void generateGotoStmts(llvm::Instruction& i,
                          std::vector<std::pair<const Expr*, llvm::BasicBlock*> > target);
   void processInstruction(llvm::Instruction& i);
+  void processIntrinsicCall(llvm::IntrinsicInst* ii);
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
