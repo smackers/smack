@@ -84,9 +84,6 @@ bool CodifyStaticInits::runOnModule(Module& M) {
         worklist.push_front(std::make_tuple(A, P, std::vector<Value*>(idxs)));
       }
 
-    else if (V->getType()->isX86_FP80Ty())
-      errs() << "warning: ignored X86 FP80 initializer" << "\n";
-
     else
       assert (false && "Unexpected static initializer.");
   }
