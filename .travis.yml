@@ -64,5 +64,5 @@ script:
   - clang++ --version
   - llvm-link --version
   - llvm-config --version
-  - ./bin/run-clang-format.py -e test/basic/transform-out.c -r lib/smack include/smack test
+  - ./bin/run-clang-format.py -e test/basic/transform-out.c -r lib/smack include/smack test examples
   - ./bin/build.sh
