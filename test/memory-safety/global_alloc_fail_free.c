@@ -6,7 +6,7 @@
 
 int x;
 int main(void) {
-  int* a = &x;
+  int *a = &x;
   int c = a[0];
   free(a);
   return c;

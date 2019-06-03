@@ -41,4 +41,3 @@ int main(void) {
   assert(u16_to_u32(x16) > u16_to_u32(y16));
   return 0;
 }
-

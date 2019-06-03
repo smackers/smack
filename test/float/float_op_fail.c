@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
@@ -13,6 +13,6 @@ int main(void) {
   b = 2.25f;
   c = a * (b / a);
   assert(c == 2.0f);
-  
+
   return 0;
 }

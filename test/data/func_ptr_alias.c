@@ -2,14 +2,12 @@
 
 // @expect verified
 
-int __incr(int x) {
-  return x + 1;
-}
+int __incr(int x) { return x + 1; }
 
 #ifdef __MACH__
 int (*incr)(int) = __incr;
 #else
-int incr(int) __attribute__((alias ("__incr")));
+int incr(int) __attribute__((alias("__incr")));
 #endif
 
 int main(void) {
@@ -19,4 +17,3 @@ int main(void) {
   assert(x == y + 1);
   return 0;
 }
-

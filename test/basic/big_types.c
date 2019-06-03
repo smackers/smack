@@ -1,20 +1,20 @@
+#include <smack.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <smack.h>
 
 // @expect verified
 
 typedef struct {
-  unsigned a: 32;
-  unsigned b: 32;
-  unsigned c: 32;
+  unsigned a : 32;
+  unsigned b : 32;
+  unsigned c : 32;
 } S1;
 
 typedef struct {
-  unsigned a: 32;
-  unsigned b: 32;
-  unsigned c: 32;
-  unsigned d: 32;
+  unsigned a : 32;
+  unsigned b : 32;
+  unsigned c : 32;
+  unsigned d : 32;
 } S2;
 
 int main(void) {

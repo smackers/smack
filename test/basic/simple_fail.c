@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
@@ -12,4 +12,3 @@ int main(void) {
   assert(a != -1);
   return a;
 }
-

@@ -1,16 +1,14 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
-void incr(int *x) {
-  (*x)++;
-}
+void incr(int *x) { (*x)++; }
 
 int main() {
-  int *a = (int*)malloc(sizeof(int));
-  int *b = (int*)malloc(sizeof(int));
+  int *a = (int *)malloc(sizeof(int));
+  int *b = (int *)malloc(sizeof(int));
 
   *a = *b = 0;
 
@@ -23,4 +21,3 @@ int main() {
 
   return 0;
 }
-

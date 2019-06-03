@@ -26,19 +26,18 @@ int main(void) {
     assert(__isnanl(fmodl(x, -0.0l)));
   }
 
-  
   if (!__isnanl(x) && !__isinfl(x)) {
     assert(fmodl(x, Inf) == x);
     assert(fmodl(x, negInf) == x);
   }
- 
+
   if (!__isnanl(y) && !__iszerol(y)) {
     assert(fmodl(0.0l, y) == 0.0l);
     assert(fmodl(-0.0l, y) == -0.0l);
     int isNeg = __signbitl(fmodl(-0.0l, y));
     assert(isNeg);
   }
- 
+
   assert(__isnanl(fmodl(NaN, y)));
   assert(__isnanl(fmodl(x, NaN)));
 

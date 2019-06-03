@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
@@ -30,9 +30,9 @@ int main(void) {
   p.x = 1000;
   p.y = 2000;
 
-  assert(elem.count != 2 || elem.data != 5 || elem.point2.x != 200 || p.x != 1000 ||
-                 p.y != 2000 || elem.point1->x != 1000 || elem.point1->y != 2000);
+  assert(elem.count != 2 || elem.data != 5 || elem.point2.x != 200 ||
+         p.x != 1000 || p.y != 2000 || elem.point1->x != 1000 ||
+         elem.point1->y != 2000);
 
   return 0;
 }
-

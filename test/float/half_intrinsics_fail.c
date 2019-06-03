@@ -1,11 +1,14 @@
-#include "smack.h"
 #include "math.h"
+#include "smack.h"
 
 // @flag --bit-precise
 // @expect error
 
 int main(void) {
-  union {unsigned short u; __fp16 h;} uh;
+  union {
+    unsigned short u;
+    __fp16 h;
+  } uh;
   uh.u = 1U;
   assert(isnormal((float)uh.h));
   assert(isnormal((double)uh.h));

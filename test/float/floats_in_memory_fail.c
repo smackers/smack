@@ -3,9 +3,7 @@
 // @expect error
 
 void ff1(float f);
-void ff2(float *f1, float *f2) {
-  *f1 = *f2 + 2.0f;
-}
+void ff2(float *f1, float *f2) { *f1 = *f2 + 2.0f; }
 
 int main(void) {
   float f1;

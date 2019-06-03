@@ -1,7 +1,7 @@
 #include "smack.h"
 
 // @flag --clang-options=-O1
-// @expect error 
+// @expect error
 
 typedef struct {
   int a;

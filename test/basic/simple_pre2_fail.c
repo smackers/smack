@@ -1,12 +1,10 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
-int incr(int x) {
-  return x + 1;
-}
+int incr(int x) { return x + 1; }
 
 int main(void) {
   int a;
@@ -16,4 +14,3 @@ int main(void) {
   assert(a == 1);
   return a;
 }
-

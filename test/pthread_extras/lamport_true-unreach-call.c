@@ -10,7 +10,7 @@
 
 int x, y;
 int b1, b2; // boolean flags
-int X; // boolean variable to test mutual exclusion
+int X;      // boolean variable to test mutual exclusion
 
 void *thr1(void *arg) {
   while (1) {
@@ -18,16 +18,19 @@ void *thr1(void *arg) {
     x = 1;
     if (y != 0) {
       b1 = 0;
-      while (y != 0) {};
+      while (y != 0) {
+      };
       continue;
     }
     y = 1;
     if (x != 1) {
       b1 = 0;
-      while (b2 >= 1) {};
+      while (b2 >= 1) {
+      };
       if (y != 1) {
-	while (y != 0) {};
-	continue;
+        while (y != 0) {
+        };
+        continue;
       }
     }
     break;
@@ -46,16 +49,19 @@ void *thr2(void *arg) {
     x = 2;
     if (y != 0) {
       b2 = 0;
-      while (y != 0) {};
+      while (y != 0) {
+      };
       continue;
     }
     y = 2;
     if (x != 2) {
       b2 = 0;
-      while (b1 >= 1) {};
+      while (b1 >= 1) {
+      };
       if (y != 2) {
-	while (y != 0) {};
-	continue;
+        while (y != 0) {
+        };
+        continue;
       }
     }
     break;
@@ -76,4 +82,3 @@ int main() {
   pthread_join(t2, 0);
   return 0;
 }
-

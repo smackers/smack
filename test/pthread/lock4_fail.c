@@ -26,4 +26,3 @@ int main(void) {
   pthread_join(tid1, 0);
   assert(x == 3);
 }
-

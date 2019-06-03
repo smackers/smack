@@ -1,14 +1,12 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 // @checkbpl grep -v "call bar"
 // @checkout grep "checking_invert_bpl.c(11,1)"
 
-void foo(void) {
-
-}
+void foo(void) {}
 
 int main(void) {
   foo();

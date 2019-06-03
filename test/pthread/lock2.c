@@ -30,4 +30,3 @@ int main(void) {
   assert(x == 4);
   return 0;
 }
-

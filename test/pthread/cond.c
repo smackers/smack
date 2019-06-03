@@ -23,7 +23,7 @@ void *j1(void *arg) {
 
 void *j2(void *arg) {
   pthread_mutex_lock(&lock);
-  while(!thread1Done)
+  while (!thread1Done)
     pthread_cond_wait(&cond, &lock);
   assert(count == 1);
   pthread_mutex_unlock(&lock);
@@ -42,4 +42,3 @@ int main(void) {
   pthread_join(t2, 0);
   return 0;
 }
-

@@ -1,10 +1,10 @@
-#include <stdlib.h>
 #include <smack.h>
+#include <stdlib.h>
 
 // @expect verified
 
 void foo();
-int* bar();
+int *bar();
 
 int main() {
   int *x = malloc(4);

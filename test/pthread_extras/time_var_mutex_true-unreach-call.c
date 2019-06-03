@@ -2,7 +2,7 @@
    http://www.model.in.tum.de/~popeea/research/threader
 
    This file is adapted from the example introduced in the paper:
-   Thread-Modular Verification for Shared-Memory Programs 
+   Thread-Modular Verification for Shared-Memory Programs
    by Cormac Flanagan, Stephen Freund, Shaz Qadeer.
 */
 
@@ -12,14 +12,15 @@
 // @expect verified
 
 int block;
-int busy; // boolean flag indicating whether the block has been allocated to an inode
+int busy; // boolean flag indicating whether the block has been allocated to an
+          // inode
 int inode;
 pthread_mutex_t m_inode; // protects the inode
-pthread_mutex_t m_busy; // protects the busy flag
+pthread_mutex_t m_busy;  // protects the busy flag
 
-void *allocator(void *arg){
+void *allocator(void *arg) {
   pthread_mutex_lock(&m_inode);
-  if(inode == 0){
+  if (inode == 0) {
     pthread_mutex_lock(&m_busy);
     busy = 1;
     pthread_mutex_unlock(&m_busy);
@@ -31,16 +32,16 @@ void *allocator(void *arg){
   return 0;
 }
 
-void *de_allocator(void *arg){
+void *de_allocator(void *arg) {
   pthread_mutex_lock(&m_busy);
-  if(busy == 0){
+  if (busy == 0) {
     block = 0;
     assert(block == 0);
   }
   pthread_mutex_unlock(&m_busy);
   return ((void *)0);
 }
- 
+
 int main() {
   pthread_t t1, t2;
   __VERIFIER_assume(inode == busy);
@@ -54,4 +55,3 @@ int main() {
   pthread_mutex_destroy(&m_busy);
   return 0;
 }
-
