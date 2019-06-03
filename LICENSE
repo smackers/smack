@@ -35,7 +35,7 @@ THE SOFTWARE.
 Copyrights and Licenses for Third Party Software Distributed with SMACK:
 ==============================================================================
 SMACK contains code written by third parties.  Such software will have its own
-individual LICENSE.TXT file in the directory in which it appears.  This file
+individual LICENSE file in the directory in which it appears.  This file
 will describe the copyrights, license, and restrictions which apply to that
 code.
 
@@ -48,6 +48,7 @@ poolalloc           include/assistDS      lib/DSA/LICENSE
                     include/dsa
                     lib/AssistDS
                     lib/DSA
+run-clang-format    format                format/LICENSE
 
 In addition, a binary distribution of SMACK contains at least the following
 tools and packages, which come with their own licenses:
