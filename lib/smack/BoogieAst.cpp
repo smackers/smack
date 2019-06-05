@@ -127,6 +127,22 @@ const Expr* Expr::if_then_else(const Expr* c, const Expr* t, const Expr* e) {
   return new IfThenElseExpr(c, t, e);
 }
 
+const Expr* Expr::bvExtract(const Expr* v, const Expr* u, const Expr* l) {
+  return new BvExtract(v, u, l);
+}
+
+const Expr* Expr::bvExtract(const Expr* v, unsigned u, unsigned l) {
+  return new BvExtract(v, Expr::lit(u), Expr::lit(l));
+}
+
+const Expr* Expr::bvExtract(std::string v, unsigned u, unsigned l) {
+  return new BvExtract(Expr::id(v), Expr::lit(u), Expr::lit(l));
+}
+
+const Expr* Expr::bvConcat(const Expr* left, const Expr* right) {
+  return new BvConcat(left, right);
+}
+
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
   return new Attr(s,vs);
 }
@@ -511,6 +527,14 @@ void CodeExpr::print(std::ostream& os) const {
 
 void IfThenElseExpr::print(std::ostream& os) const {
   os << "if " << cond << " then " << true_value << " else " << false_value;
+}
+
+void BvExtract::print(std::ostream& os) const {
+  os << var << "[" << upper << ":" << lower << "]";
+}
+
+void BvConcat::print(std::ostream& os) const {
+  os << "(" << left << "++" << right << ")";
 }
 
 void StringLit::print(std::ostream& os) const {
