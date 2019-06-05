@@ -561,11 +561,12 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst& i) {
   const Expr* res = rep->expr(&i);
   const Expr* mem = rep->load(i.getPointerOperand());
   const Expr* val = rep->expr(i.getValOperand());
+  auto valT = rep->type(i.getValOperand()->getType());
   emit(Stmt::assign(res,mem));
   emit(rep->store(i.getPointerOperand(),
     i.getOperation() == AtomicRMWInst::Xchg
       ? val
-      : Expr::fn(Naming::ATOMICRMWINST_TABLE.at(i.getOperation()),mem,val) ));
+      : Expr::fn(indexedName(Naming::ATOMICRMWINST_TABLE.at(i.getOperation()), {valT}), mem, val)));
   }
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst& I) {
