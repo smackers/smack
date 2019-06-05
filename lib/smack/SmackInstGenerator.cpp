@@ -877,18 +877,6 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
       generateUnModeledCall(ci);
   };
 
-  static const auto assignUnFPFuncApp = [this] (CallInst* ci, std::string fnBase) {
-    // translation: $res := $<func>.bv*($arg1);
-    if (SmackOptions::FloatEnabled)
-      emit(Stmt::assign(
-            rep->expr(ci),
-            Expr::fn(indexedName(fnBase,
-                {rep->type(ci->getArgOperand(0)->getType())}),
-              rep->expr(ci->getArgOperand(0)))));
-    else
-      generateUnModeledCall(ci);
-  };
-
   static const auto fma = [this](CallInst* ci) {
     if (SmackOptions::FloatEnabled)
       emit(Stmt::assign(rep->expr(ci),
@@ -922,7 +910,22 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
       generateUnModeledCall(ci);
   };
 
-  static const auto assignBinFPFuncApp = [this] (CallInst* ci, std::string fnBase) {
+  static const auto assignUnFPFuncApp = [this] (std::string fnBase) {
+    return [this, fnBase] (CallInst* ci) {
+      // translation: $res := $<func>.bv*($arg1);
+      if (SmackOptions::FloatEnabled)
+        emit(Stmt::assign(
+              rep->expr(ci),
+              Expr::fn(indexedName(fnBase,
+                  {rep->type(ci->getArgOperand(0)->getType())}),
+                rep->expr(ci->getArgOperand(0)))));
+      else
+        generateUnModeledCall(ci);
+    };
+  };
+
+  static const auto assignBinFPFuncApp = [this] (std::string fnBase) {
+    return [this, fnBase] (CallInst* ci) {
     // translation: $res := $<func>.bv*($arg1, $arg2);
     if (SmackOptions::FloatEnabled)
       emit(Stmt::assign(
@@ -932,9 +935,11 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
               {rep->expr(ci->getArgOperand(0)), rep->expr(ci->getArgOperand(1))})));
     else
       generateUnModeledCall(ci);
+    };
   };
 
-  static const auto assignRoundFPFuncApp = [this] (CallInst* ci, const Expr* rMode) {
+  static const auto assignRoundFPFuncApp = [this] (const Expr* rMode) {
+    return [this, rMode] (CallInst* ci) {
     // translation: $res := $round.bv*(rmode, $arg1);
     if (SmackOptions::FloatEnabled)
       emit(Stmt::assign(
@@ -944,6 +949,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
               {rMode, rep->expr(ci->getArgOperand(0))})));
     else
       generateUnModeledCall(ci);
+    };
   };
 
   static const auto identity = [this] (CallInst* ci) {
@@ -958,30 +964,20 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
 
   static const std::map<llvm::Intrinsic::ID, std::function<void(CallInst*)>> stmtMap {
     {llvm::Intrinsic::convert_from_fp16, f16UpCast},
-    {llvm::Intrinsic::convert_to_fp16, f16DownCast},
-    {llvm::Intrinsic::bswap, bswap},
-    {llvm::Intrinsic::expect, identity},
-    {llvm::Intrinsic::fabs,
-      [] (CallInst* ci){ assignUnFPFuncApp(ci,"$abs"); }},
-    {llvm::Intrinsic::fma, fma},
-    {llvm::Intrinsic::sqrt,
-      [] (CallInst* ci){ assignUnFPFuncApp(ci,"$sqrt"); }},
-    {llvm::Intrinsic::maxnum,
-      [] (CallInst* ci){ assignBinFPFuncApp(ci,"$max"); }},
-    {llvm::Intrinsic::minnum,
-      [] (CallInst* ci){ assignBinFPFuncApp(ci,"$min"); }},
-    {llvm::Intrinsic::ceil,
-      [] (CallInst* ci){ assignRoundFPFuncApp(ci,Expr::lit(RModeKind::RTP)); }},
-    {llvm::Intrinsic::floor,
-      [] (CallInst* ci){ assignRoundFPFuncApp(ci,Expr::lit(RModeKind::RTN)); }},
-    {llvm::Intrinsic::nearbyint,
-      [] (CallInst* ci){ assignRoundFPFuncApp(ci,Expr::id(Naming::RMODE_VAR)); }},
-    {llvm::Intrinsic::rint,
-      [] (CallInst* ci){ assignRoundFPFuncApp(ci,Expr::id(Naming::RMODE_VAR)); }},
-    {llvm::Intrinsic::round,
-      [] (CallInst* ci){ assignRoundFPFuncApp(ci,Expr::lit(RModeKind::RNA)); }},
-    {llvm::Intrinsic::trunc,
-      [] (CallInst* ci){ assignRoundFPFuncApp(ci,Expr::lit(RModeKind::RTZ)); }}
+    {llvm::Intrinsic::convert_to_fp16,   f16DownCast},
+    {llvm::Intrinsic::bswap,             bswap},
+    {llvm::Intrinsic::expect,            identity},
+    {llvm::Intrinsic::fabs,              assignUnFPFuncApp("$abs")},
+    {llvm::Intrinsic::fma,               fma},
+    {llvm::Intrinsic::sqrt,              assignUnFPFuncApp("$sqrt")},
+    {llvm::Intrinsic::maxnum,            assignBinFPFuncApp("$max")},
+    {llvm::Intrinsic::minnum,            assignBinFPFuncApp("$min")},
+    {llvm::Intrinsic::ceil,              assignRoundFPFuncApp(Expr::lit(RModeKind::RTP))},
+    {llvm::Intrinsic::floor,             assignRoundFPFuncApp(Expr::lit(RModeKind::RTN))},
+    {llvm::Intrinsic::nearbyint,         assignRoundFPFuncApp(Expr::id(Naming::RMODE_VAR))},
+    {llvm::Intrinsic::rint,              assignRoundFPFuncApp(Expr::id(Naming::RMODE_VAR))},
+    {llvm::Intrinsic::round,             assignRoundFPFuncApp(Expr::lit(RModeKind::RNA))},
+    {llvm::Intrinsic::trunc,             assignRoundFPFuncApp(Expr::lit(RModeKind::RTZ))}
     //TODO: we cannot properly handle copysign because our fp2bv is not carefully implemented.
     // The current version of llvm does not have these intrinsics while the latest version does
     // we keep the code to save work in the future
