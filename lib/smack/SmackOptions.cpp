@@ -30,12 +30,12 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
   "source-loc-syms", llvm::cl::desc("Include source locations in generated code.")
 );
 
-const llvm::cl::opt<bool> SmackOptions::BitPrecise(
+llvm::cl::opt<bool> SmackOptions::BitPrecise(
   "bit-precise", llvm::cl::desc("Model non-pointer values as bit vectors.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
-  "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
+  "bit-precise-pointers", llvm::cl::desc("Model pointers and non-pointer values as bit vectors.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::AddTiming("timing-annotations", llvm::cl::desc("Add timing annotations."));

@@ -117,6 +117,10 @@ int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   llvm::cl::ParseCommandLineOptions(argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
 
+  if (smack::SmackOptions::BitPrecisePointers) {
+    smack::SmackOptions::BitPrecise = true;
+  }
+
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;

@@ -160,13 +160,13 @@ def arguments():
     help='enable support for pthread programs')
 
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
-    help='enable bit precision for non-pointer values')
+    help='model non-pointer values as bit vectors')
 
   translate_group.add_argument('--timing-annotations', action="store_true", default=False,
     help='enable timing annotations')
 
   translate_group.add_argument('--bit-precise-pointers', action="store_true", default=False,
-    help='enable bit precision for pointer values')
+    help='model pointers and non-pointer values as bit vectors')
 
   translate_group.add_argument('--no-byte-access-inference', action="store_true", default=False,
     help='disable bit-precision-related optimizations with DSA')
@@ -252,6 +252,9 @@ def arguments():
 
   if args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak:
     args.memory_safety = True
+
+  if args.bit_precise_pointers:
+    args.bit_precise = True
 
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
