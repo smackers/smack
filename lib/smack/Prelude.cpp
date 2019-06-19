@@ -20,12 +20,13 @@ std::string getBvTypeName(unsigned width) {
   return "bv" + std::to_string(width);
 }
 
+// make type name rmode
 std::string getRMODETypeName() {
   return "rmode";
 }
 
 // make floating-point type names by bit width
-// when the bit width is 0, the uninterpreted type is returned.
+// when bitWidth is 0, the uninterpreted type is returned
 std::string getFpTypeName(unsigned bitWidth) {
   static const std::map<unsigned, std::string> floatNameTable {
     {0, Naming::UNINTERPRETED_FLOAT_TYPE},
@@ -77,7 +78,7 @@ std::string makeRMODEVarName() {
   return makeVarName(0, "rm");
 }
 
-// make id exprs
+// make id expr
 const Expr* makeIntVarExpr(unsigned i) {
   return Expr::id(makeIntVarName(i));
 }
@@ -150,6 +151,7 @@ std::list<const Expr*> makeMapVarExprs(unsigned numExprs) {
   return makeListOfElems<const Expr*>(numExprs, &makeMapVarExpr);
 }
 
+// make attributes
 const Attr* makeBuiltinAttr(std::string arg) {
   return Attr::attr("builtin", arg);
 }
@@ -162,6 +164,7 @@ const Attr* makeInlineAttr() {
   return Attr::attr("inline");
 }
 
+// declare an uninterpreted function
 FuncDecl* uninterpretedOp(std::string baseName,
   std::initializer_list<std::string> nameArgs, std::list<Binding> args,
   std::string retType) {
@@ -169,6 +172,7 @@ FuncDecl* uninterpretedOp(std::string baseName,
     nullptr, {});
 }
 
+// declare a function with `:inline` attribute
 FuncDecl* inlinedOp(std::string baseName,
   std::initializer_list<std::string> nameArgs, std::list<Binding> args,
   std::string retType, const Expr* body) {
@@ -176,6 +180,7 @@ FuncDecl* inlinedOp(std::string baseName,
     {makeInlineAttr()});
 }
 
+// declare a function with an attribute indicating it's a built-in function
 FuncDecl* builtinOp(std::string baseName, const Attr* attr,
   std::initializer_list<std::string> nameArgs, std::list<Binding> args,
   std::string retType) {
@@ -187,6 +192,7 @@ const std::vector<unsigned> IntOpGen::INTEGER_SIZES {
   1, 5, 6, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128, 160, 256
 };
 
+// floating-point layout map: bit-width -> (exponent bit-width, significand bit-width)
 const std::map<unsigned, std::pair<unsigned, unsigned>> FpOpGen::FP_LAYOUT {
   {16, {5, 11}},
   {32, {8, 24}},
@@ -198,6 +204,8 @@ const std::vector<unsigned> FpOpGen::FP_BIT_WIDTHS {
   16, 32, 64, 80
 };
 
+// make Boogie map selection expression such as
+// M[p], M[$add.ref(p, 1)]
 const Expr* Prelude::mapSelExpr (unsigned idx) {
   auto ptrVar = makePtrVarExpr(0);
   auto idxExpr = idx?
@@ -206,6 +214,8 @@ const Expr* Prelude::mapSelExpr (unsigned idx) {
   return Expr::sel(makeMapVarExpr(0), idxExpr);
 }
 
+// make Boogie map update expression such as
+// M[p:=v], M[$add.ref(p,1):=v]
 const Expr* Prelude::mapUpdExpr (unsigned idx, const Expr* val, const Expr* map) {
   auto ptrVar = makePtrVarExpr(0);
   auto mapExpr = map? map : makeMapVarExpr(0);
@@ -215,18 +225,23 @@ const Expr* Prelude::mapUpdExpr (unsigned idx, const Expr* val, const Expr* map)
   return Expr::upd(mapExpr, idxExpr, val);
 }
 
+// make type-safe load functions
 FuncDecl* Prelude::safeLoad(std::string elemType) {
   return inlinedOp("$load", {elemType},
     {makeMapVars(1,elemType).front(), makePtrVars(1).front()},
     elemType, mapSelExpr(0));
 }
 
+// make type-unsafe load functions
+// argument `bytes` indicate whether the map element type is bv or int given
+// the `--float` flag is enabled
 FuncDecl* Prelude::unsafeLoad(std::string elemType, const Expr* body, bool bytes) {
   return inlinedOp("$load", {bytes? "bytes" : "unsafe", elemType},
     {makeMapVars(1, bytes? getBvTypeName(8) : getIntTypeName(8)).front(),
       makePtrVars(1).front()}, elemType, body);
 }
 
+// make type-safe store functions
 FuncDecl* Prelude::safeStore(Binding elemBinding) {
   auto elemType = elemBinding.second;
   auto elemExpr = Expr::id(elemBinding.first);
@@ -238,6 +253,9 @@ FuncDecl* Prelude::safeStore(Binding elemBinding) {
     mapUpdExpr(0, elemExpr));
 }
 
+// make type-unsafe store functions
+// argument `bytes` indicate whether the map element type is bv or int given
+// the `--float` flag is enabled
 FuncDecl* Prelude::unsafeStore(Binding elemBinding, const Expr* body, bool bytes) {
   auto elemType = elemBinding.second;
   return inlinedOp("$store", {bytes? "bytes" : "unsafe", elemType},
@@ -247,17 +265,16 @@ FuncDecl* Prelude::unsafeStore(Binding elemBinding, const Expr* body, bool bytes
     getMapTypeName(bytes? getBvTypeName(8) : getIntTypeName(8)), body);
 }
 
-FuncDecl* inlineConversion(std::string type1, std::string type2,
-  std::list<Binding> args, std::string name, const Expr* body) {
-  return inlinedOp(name, {type1, type2}, args, type2, body);
-}
-
+// declare extractvalue functions
+// e.g., function $extractvalue.float(p: ref, i: int) returns (float);
 FuncDecl* extractValue(std::string resType) {
   std::list<Binding> args = makePtrVars(1);
   args.emplace_back(Binding {"i", "int"});
   return uninterpretedOp("$extractvalue", {resType}, args, resType);
 }
 
+// declare extractvalue functions for integers
+// e.g., function $extractvalue.bv256(p: ref, i: int) returns (bv256);
 FuncDecl* extractValue(unsigned width) {
   std::string resType = SmackOptions::BitPrecise?
     getBvTypeName(width) : getIntTypeName(width);
@@ -282,10 +299,16 @@ void printFuncs(FuncsT funcs, std::stringstream& s) {
     s << f << "\n";
 }
 
+void describe(std::string comment, std::stringstream& s) {
+  s << "// " << comment << "\n";
+}
+
+// generate bv arithmetic attribute
 const Attr* IntOp::bvAttrFunc(std::string opName) {
   return makeBvbuiltinAttr("bv"+opName);
 }
 
+// generate int arithmetic attribute
 const Attr* IntOp::intAttrFunc(std::string opName) {
   return makeBuiltinAttr(opName.substr(1));
 }
@@ -341,32 +364,38 @@ struct IntOpGen::IntArithOp : public IntOp {
     return funcs;
   }
 
+  // generate inlined int arithmetic function body such as `i1+i2`
   template <BinExpr::Binary OP>
-    static const Expr* intArithExpr(unsigned size) {
-      return new BinExpr(OP, makeIntVarExpr(1), makeIntVarExpr(2));
-    }
+  static const Expr* intArithExpr(unsigned size) {
+    return new BinExpr(OP, makeIntVarExpr(1), makeIntVarExpr(2));
+  }
 
+  // generate inlined bv min/max function body such as
+  // `if $slt.bv1.bool(i1, i2) then i1 else i2`
   template <bool SIGN, bool MIN>
-    static const Expr* bvMinMaxExpr(unsigned size) {
-      std::string signLetter = SIGN? "s" : "u";
-      std::string pred = MIN? "lt" : "gt";
-      return Expr::if_then_else(
-          Expr::fn(indexedName("$"+signLetter+pred,
-              {getBvTypeName(size), Naming::BOOL_TYPE}),
-            makeIntVarExprs(2)),
-          makeIntVarExpr(1), makeIntVarExpr(2));
-    }
+  static const Expr* bvMinMaxExpr(unsigned size) {
+    std::string signLetter = SIGN? "s" : "u";
+    std::string pred = MIN? "lt" : "gt";
+    return Expr::if_then_else(
+        Expr::fn(indexedName("$"+signLetter+pred,
+            {getBvTypeName(size), Naming::BOOL_TYPE}),
+          makeIntVarExprs(2)),
+        makeIntVarExpr(1), makeIntVarExpr(2));
+  }
 
+  // generate inlined int min/max function body such as `if (i1 < i2) then i1 else i2`
   template <bool MIN>
-    static const Expr* intMinMaxExpr(unsigned size) {
-      const Expr* a1 = makeIntVarExpr(1);
-      const Expr* a2 = makeIntVarExpr(2);
-      auto pred = MIN? Expr::lt(a1, a2) : Expr::lt(a2, a1);
-      return Expr::if_then_else(pred, a1, a2);
-    }
+  static const Expr* intMinMaxExpr(unsigned size) {
+    const Expr* a1 = makeIntVarExpr(1);
+    const Expr* a2 = makeIntVarExpr(2);
+    auto pred = MIN? Expr::lt(a1, a2) : Expr::lt(a2, a1);
+    return Expr::if_then_else(pred, a1, a2);
+  }
 };
 
 void IntOpGen::generateArithOps(std::stringstream& s) const {
+  describe("Integer arithmetic operations", s);
+
   const auto bvBuiltinOp = new BuiltinOp<IntOp::attrT>(IntOp::bvAttrFunc);
   const auto intBuiltinOp = new BuiltinOp<IntOp::attrT>(IntOp::intAttrFunc);
   const auto uninterpretedOp = new UninterpretedOp();
@@ -404,8 +433,9 @@ void IntOpGen::generateArithOps(std::stringstream& s) const {
     for (auto size : INTEGER_SIZES)
       printFuncs(op.getFuncs(size), s);
 
-  // axioms for i1
   if (!SmackOptions::BitPrecise) {
+    // axioms for i1
+    // e.g., axiom ($and.i1(0, 0) == 0);
     for (unsigned i = 0; i < 2; ++i) {
       for (unsigned j = 0; j < 2; ++j) {
         s << Decl::axiom(Expr::eq(Expr::fn(indexedName("$and", {getIntTypeName(1)}),
@@ -416,6 +446,7 @@ void IntOpGen::generateArithOps(std::stringstream& s) const {
                 Expr::lit(i), Expr::lit(j)), Expr::lit(i ^ j))) << "\n";
       }
     }
+    // special axiom for $and.i32: axiom ($and.i32(32, 16) == 0);
     s << Decl::axiom(Expr::eq(Expr::fn(indexedName("$and", {getIntTypeName(32)}),
             Expr::lit(32U), Expr::lit(16U)), Expr::lit(0U))) << "\n";
   }
@@ -490,6 +521,8 @@ struct IntOpGen::IntPred : public IntOp {
 };
 
 void IntOpGen::generatePreds(std::stringstream& s) const {
+  describe("Integer predicates", s);
+
   const auto bvBuiltinOp = new BuiltinOp<IntOp::attrT>(IntOp::bvAttrFunc);
   const auto leInlinedOp = new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::intArithExpr<BinExpr::Lte>);
   const auto ltInlinedOp = new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::intArithExpr<BinExpr::Lt>);
@@ -529,7 +562,7 @@ struct IntOpGen::IntConv {
     std::string type1 = getIntTypeName(size1);
     std::string type2 = getIntTypeName(size2);
 
-    //e.g.: function {:inline} $zext.i1.i5(i1: i1) returns (i5) { i1 }
+    //e.g.: function {:inline} $zext.i1.i5(i: i1) returns (i5) { i }
     return inlinedOp("$" + opName, {type1, type2}, makeIntVars(1, type1), type2, ((idExprT)iop->func)());
   }
 
@@ -542,7 +575,7 @@ struct IntOpGen::IntConv {
       return builtinOp(name, ((attrT)bop->func)(size1, size2), {type1, type2},
         makeIntVars(1, type1), type2);
     } else if (auto iop = dyn_cast<InlinedOp<truncExprT>>(bvOp)) {
-      //e.g.: function {:inline} $trunc.bv5.bv1(i1: bv5) returns (bv1) { i1[1:0] }
+      //e.g.: function {:inline} $trunc.bv5.bv1(i: bv5) returns (bv1) { i[1:0] }
       return inlinedOp(name, {type1, type2}, makeIntVars(1, type1), type2, ((truncExprT)iop->func)(size2));
     } else
       llvm_unreachable("no uninterpreted bv cast");
@@ -555,23 +588,28 @@ struct IntOpGen::IntConv {
       return {getIntFunc(size1, size2)};
   }
 
+  // generate identity expression such as `i1`
   static const Expr* intIdentityExpr() {
     return makeIntVarExpr(0);
   }
 
+  // generate bv truncation function body such as `i[1:0]`
   static const Expr* truncExpr(unsigned size) {
     return Expr::bvExtract(makeIntVarName(0), size, 0);
   }
 
+  // generate bv extension function attribute such as `:bvbuiltin (_ sign_extend 8)`
   template <bool SIGN>
-    static const Attr* extAttr(unsigned size1, unsigned size2) {
-      std::string builtInOp = SIGN? "sign_extend" : "zero_extend";
-      std::string builtInAttrArg = "(_ " + builtInOp + " " + std::to_string(size2-size1) + ")";
-      return makeBvbuiltinAttr(builtInAttrArg);
-    }
+  static const Attr* extAttr(unsigned size1, unsigned size2) {
+    std::string builtInOp = SIGN? "sign_extend" : "zero_extend";
+    std::string builtInAttrArg = "(_ " + builtInOp + " " + std::to_string(size2-size1) + ")";
+    return makeBvbuiltinAttr(builtInAttrArg);
+  }
 };
 
 void IntOpGen::generateConvOps(std::stringstream& s) const {
+  describe("Conversion between integer types", s);
+
   const auto inlinedIdentity = new InlinedOp<IntConv::idExprT>(IntConv::intIdentityExpr);
   const auto inlinedTrunc = new InlinedOp<IntConv::truncExprT>(IntConv::truncExpr);
   const auto builtinSext = new BuiltinOp<IntConv::attrT>(IntConv::extAttr<true>);
@@ -597,6 +635,8 @@ void IntOpGen::generateConvOps(std::stringstream& s) const {
 }
 
 void IntOpGen::generateMemOps(std::stringstream& s) const {
+  describe("Integer load/store operations", s);
+
   for (auto size : INTEGER_SIZES) {
     if (!SmackOptions::BitPrecise) {
       std::string type = getIntTypeName(size);
@@ -614,17 +654,23 @@ void IntOpGen::generateMemOps(std::stringstream& s) const {
       //e.g.: function {:inline} $store.bv1(M: [ref] bv1, p: ref, v: bv1)
       //        returns ([ref] bv1) { M[p := i] }
       s << prelude.safeStore(binding) << "\n";
-      //e.g.:
+
       auto byteType = getBvTypeName(8);
       auto valExpr = makeIntVarExpr(0);
 
       if (size < 8) {
+        // e.g., function {:inline} $load.bytes.bv1(M: [ref] bv8, p: ref)
+        // returns (bv1) { $trunc.bv8.bv1(M[p]) }
         s << prelude.unsafeLoad(type, Expr::fn(indexedName("$trunc", {byteType, type}),
               prelude.mapSelExpr(0))) << "\n";
+        // e.g., function {:inline} $store.bytes.bv1(M: [ref] bv8, p: ref, i: bv1)
+        // returns ([ref] bv8) { M[p := $zext.bv1.bv8(i)] }
         s << prelude.unsafeStore(binding, prelude.mapUpdExpr(0, Expr::fn(indexedName("$zext",
                   {type, byteType}), valExpr))) << "\n";
       } else if (size == 8) {
+        // function {:inline} $load.bytes.bv8(M: [ref] bv8, p: ref) returns (bv8) { M[p] }
         s << prelude.unsafeLoad(type, prelude.mapSelExpr(0)) << "\n";
+        // function {:inline} $load.bytes.bv8(M: [ref] bv8, p: ref) returns (bv8) { M[p] }
         s << prelude.unsafeStore(binding, prelude.mapUpdExpr(0, valExpr)) << "\n";
       } else {
         auto loadBody = prelude.mapSelExpr(0);
@@ -636,7 +682,11 @@ void IntOpGen::generateMemOps(std::stringstream& s) const {
           storeBody = prelude.mapUpdExpr(i,
               Expr::bvExtract(valExpr, upperIdx, lowerIdx), storeBody);
         }
+        // e.g., function {:inline} $load.bytes.bv16(M: [ref] bv8, p: ref)
+        // returns (bv16) { (M[$add.ref(p, 1)]++M[p]) }
         s << prelude.unsafeLoad(type, loadBody) << "\n";
+        // e.g., function {:inline} $store.bytes.bv16(M: [ref] bv8, p: ref, i: bv16)
+        // returns ([ref] bv8) { M[p := i[8:0]][$add.ref(p, 1) := i[16:8]] }
         s << prelude.unsafeStore(binding, storeBody) << "\n";
       }
     }
@@ -649,7 +699,8 @@ void IntOpGen::generateExtractValueFuncs(std::stringstream& s) const {
 }
 
 void IntOpGen::generateBvIntConvs(std::stringstream& s) const {
-  s << "// Bitstd::vector-integer conversions" << "\n";
+  describe("SMT bit-vector/integer conversion", s);
+
   auto ptrSize = prelude.rep.ptrSizeInBits;
   std::string b = std::to_string(ptrSize);
   std::string bt = "bv" + b;
@@ -695,7 +746,8 @@ void IntOpGen::generate(std::stringstream& s) const {
 }
 
 void TypeDeclGen::generate(std::stringstream& s) const {
-  s << "// Basic types" << "\n";
+  describe("Basic types", s);
+
   for (unsigned size : IntOpGen::INTEGER_SIZES)
     s << Decl::typee(getIntTypeName(size),"int") << "\n";
   s << Decl::typee(Naming::PTR_TYPE, prelude.rep.pointerType()) << "\n";
@@ -723,27 +775,20 @@ void ConstDeclGen::generateIntConstant(unsigned val, std::stringstream& s) const
 }
 
 void ConstDeclGen::generate(std::stringstream& s) const {
-  s << "// Basic constants" << "\n";
+  describe("Basic constants", s);
+
+  // e.g., const $0: i32; axiom ($0 == 0);
   generateIntConstant(0, s);
   generateIntConstant(1, s);
 
-  // we don't need so many constants
-  /*
-  for (unsigned i : REF_CONSTANTS) {
-    std::stringstream t;
-    s << "const $" << i << ".ref: ref;" << "\n";
-    t << "$" << i << ".ref";
-    s << Decl::axiom(Expr::eq(Expr::id(t.str()),
-          rep.pointerLit((unsigned long long) i)))
-      << "\n";
-  }
-  */
-  // make it as a function
+  // e.g., const $1.ref: ref; axiom ($1.ref == 1);
   generatePtrConstant(0, s);
   generatePtrConstant(1, s);
   generatePtrConstant(1024, s);
 
-  s << "// Memory model constants" << "\n";
+  describe("Memory model constants", s);
+
+  // e.g., const $GLOBALS_BOTTOM: ref;
   s << Decl::constant(Naming::GLOBALS_BOTTOM, Naming::PTR_TYPE) << "\n";
   s << Decl::constant(Naming::EXTERNS_BOTTOM, Naming::PTR_TYPE) << "\n";
   s << Decl::constant(Naming::MALLOC_TOP, Naming::PTR_TYPE) << "\n";
@@ -751,7 +796,9 @@ void ConstDeclGen::generate(std::stringstream& s) const {
 }
 
 void MemDeclGen::generateMemoryMaps(std::stringstream& s) const {
-  s << "// Memory maps (" << prelude.rep.regions->size() << " regions)" << "\n";
+  describe("Memory maps (" + std::to_string(prelude.rep.regions->size())
+    + " regions)", s);
+
   for (auto M : prelude.rep.memoryMaps())
     s << "var " << M.first << ": " << M.second << ";" << "\n";
 
@@ -759,7 +806,9 @@ void MemDeclGen::generateMemoryMaps(std::stringstream& s) const {
 }
 
 void MemDeclGen::generateAddrBoundsAndPred(std::stringstream& s) const {
-  s << "// Memory address bounds" << "\n";
+  describe("Memory address bounds", s);
+
+  // e.g., axiom ($GLOBALS_BOTTOM == $sub.ref(0, 45419));
   s << Decl::axiom(Expr::eq(Expr::id(Naming::GLOBALS_BOTTOM),
         prelude.rep.pointerLit(prelude.rep.globalsOffset)))
     << "\n";
@@ -789,7 +838,8 @@ void MemDeclGen::generateAddrBoundsAndPred(std::stringstream& s) const {
 
 void MemDeclGen::generateGlobalAllocations(std::stringstream& s) const {
   if (SmackOptions::MemorySafety) {
-    s << "// Global allocations" << "\n";
+    describe("Global allocations", s);
+
     std::list<const Stmt*> stmts;
     for (auto E : prelude.rep.globalAllocations)
       stmts.push_back(Stmt::call("$galloc",
@@ -808,7 +858,9 @@ void MemDeclGen::generate(std::stringstream& s) const {
 }
 
 void PtrOpGen::generatePtrNumConvs(std::stringstream& s) const {
-  s << "// Pointer-number conversions" << "\n";
+  describe("Pointer-number conversion", s);
+
+  // e.g., function {:inline} $p2i.ref.i8(p: ref) returns (i8) { $trunc.i64.i8(p) }
   for (unsigned i = 8; i <= 64; i <<= 1) {
     s << Decl::function(indexedName("$p2i", {Naming::PTR_TYPE,
         prelude.rep.intType(i)}), {{"p",Naming::PTR_TYPE}}, prelude.rep.intType(i),
@@ -823,11 +875,15 @@ void PtrOpGen::generatePtrNumConvs(std::stringstream& s) const {
 }
 
 void PtrOpGen::generatePreds(std::stringstream& s) const {
-  s << "// Pointer predicates" << "\n";
+  describe("Pointer predicates", s);
+
   const std::vector<std::string> predicates {
     "$eq", "$ne", "$ugt", "$uge", "$ult",
     "$ule", "$sgt", "$sge", "$slt","$sle"
   };
+
+  // e.g., function {:inline} $eq.ref(p1: ref, p2: ref)
+  // returns (i1) { (if $eq.i64.bool(p1, p2) then 1 else 0) }
   for (auto pred : predicates) {
     s << Decl::function(indexedName(pred,{Naming::PTR_TYPE}),
       {{"p1",Naming::PTR_TYPE}, {"p2",Naming::PTR_TYPE}}, prelude.rep.intType(1),
@@ -850,8 +906,11 @@ void PtrOpGen::generatePreds(std::stringstream& s) const {
 }
 
 void PtrOpGen::generateArithOps(std::stringstream& s) const {
-  s << "// Pointer operations" << "\n";
+  describe("Pointer arithmetic operations", s);
+
   const std::vector<std::string> operations = {"$add", "$sub", "$mul"};
+
+  // e.g., function {:inline} $add.ref(p1: ref, p2: ref) returns (ref) { $add.i64(p1, p2) }
   for (auto op : operations) {
     s << Decl::function(indexedName(op,{Naming::PTR_TYPE}),
       {{"p1",Naming::PTR_TYPE},{"p2",Naming::PTR_TYPE}}, Naming::PTR_TYPE,
@@ -864,6 +923,8 @@ void PtrOpGen::generateArithOps(std::stringstream& s) const {
 }
 
 void PtrOpGen::generateMemOps(std::stringstream& s) const {
+  describe("Pointer load/store operations", s);
+
   if (SmackOptions::BitPrecise) {
     // XXX TODO don't assume 64-bit pointers TODO XXX
     s << getBytewisePointerStorageStr() << "\n";
@@ -875,10 +936,12 @@ void PtrOpGen::generateMemOps(std::stringstream& s) const {
 }
 
 void PtrOpGen::generateConvOps(std::stringstream& s) const {
+  describe("Pointer conversion", s);
+
   // pointer bit casts:
   // function {:inline} $bitcast.ref.ref(i: ref) returns (ref) {i}
-  s << inlineConversion(Naming::PTR_TYPE, Naming::PTR_TYPE,
-    makePtrVars(1), "$bitcast", makePtrVarExpr(0)) << "\n";
+  s << inlinedOp("$bitcast", {Naming::PTR_TYPE, Naming::PTR_TYPE},
+    makePtrVars(1), Naming::PTR_TYPE, makePtrVarExpr(0)) << "\n";
 }
 
 void PtrOpGen::generateExtractValueFuncs(std::stringstream& s) const {
@@ -894,6 +957,7 @@ void PtrOpGen::generate(std::stringstream& s) const {
   generatePtrNumConvs(s);
 }
 
+// generate floating-point built-in attributes
 const Attr* FpOp::fpAttrFunc(std::string opName) {
   static const std::map<std::string, std::string> fpAttrTable {
     {"abs", "fp.abs"},
@@ -939,18 +1003,22 @@ struct FpOpGen::FpArithOp : public FpOp {
     if (rMode)
       bs.insert(bs.begin(), {makeRMODEVarName(), getRMODETypeName()});
 
+    // e.g., function {:builtin "fp.add"} $fadd.bvhalf(rm: rmode, f1: bvhalf, f2: bvhalf)
+    // returns (bvhalf);
     return builtinOp(name, builtinAttr, {type}, bs, type);
   }
 
   FuncDecl* getUninterpretedFpFunc() const override {
     auto name = "$" + opName;
     std::string type = getFpTypeName(0);
-    //e.g.: function $fadd.fp(f1: float, f2: float) returns (float);
+    // e.g.: function $fadd.fp(f1: float, f2: float) returns (float);
     return uninterpretedOp(name, {type}, makeFpVars(arity, 0), type);
   }
 };
 
 void FpOpGen::generateArithOps(std::stringstream& s) const {
+  describe("Floating-point arithmetic operations", s);
+
   // TODO eliminate the fourth item
   const std::vector<FpArithOp> fpArithOps {
     {"abs", 1, false},
@@ -1011,35 +1079,43 @@ struct FpOpGen::FpPred : public FpOp {
       return nullptr;
   }
 
+  // helper function: generate expressions such as `$isnan.bvhalf.bool(f1)`
   static const Expr* applyCompFn(std::string baseName, unsigned bitWidth,
       std::list<const Expr*> args) {
     return Expr::fn(indexedName(baseName,
           {getFpTypeName(bitWidth), Naming::BOOL_TYPE}), args);
   }
 
+  // helper function: generate expressions that negate a predicate such as
+  // !($fueq.bvhalf.bool(f1, f2))
   static std::function<const Expr*(const Expr*, const Expr*, unsigned)> fpPredNegBody (std::string opName) {
     return [opName] (const Expr* a1, const Expr* a2, unsigned bitWidth) {
       return Expr::not_(applyCompFn(opName, bitWidth, {a1, a2}));
     };
   }
 
+  // e.g., ($isnan.bvhalf.bool(f1) || $isnan.bvhalf.bool(f2))
   static const Expr* funoBody(const Expr* a1, const Expr* a2, unsigned bitWidth) {
     return Expr::or_(
         applyCompFn("$isnan", bitWidth, {a1}),
         applyCompFn("$isnan", bitWidth, {a2}));
   }
 
+  // generate fp predicate function body that follows the pattern p1 || p2 where p1 and p2
+  // are fp predicates
   static std::function<const Expr*(const Expr*, const Expr*, unsigned)> fpPredDisjuncBody (std::string opName) {
     return [opName](const Expr* a1, const Expr* a2, unsigned bitWidth) {
       return Expr::or_(funoBody(a1, a2, bitWidth), applyCompFn(opName, bitWidth, {a1, a2}));
     };
   }
 
+  // generate function bodies for `ftrue` and `ffalse`
   template <bool VALUE>
-    static const Expr* fpLitBody(const Expr* a1, const Expr* a2, unsigned bitWidth) {
-      return Expr::lit(VALUE);
-    }
+  static const Expr* fpLitBody(const Expr* a1, const Expr* a2, unsigned bitWidth) {
+    return Expr::lit(VALUE);
+  }
 
+  // generate inlined fp predicate function body
   static const Expr* fpPredExpr (std::string opName, const Expr* a1, const Expr* a2, unsigned bitWidth) {
     static const std::map<std::string, std::function<const Expr*(const Expr*, const Expr*, unsigned)>> fpPredExprTable {
       {"fone", fpPredNegBody("$fueq")},
@@ -1060,6 +1136,8 @@ struct FpOpGen::FpPred : public FpOp {
 };
 
 void FpOpGen::generatePreds(std::stringstream& s) const {
+  describe("Floating-point predicates", s);
+
   const auto fpBuiltinOp = new BuiltinOp<FpOp::attrT>(FpOp::fpAttrFunc);
   const auto fpInlinedPred = new InlinedOp<FpPred::exprT>(FpPred::fpPredExpr);
   const std::vector<FpPred> fpPredTable {
@@ -1100,6 +1178,8 @@ void FpOpGen::generatePreds(std::stringstream& s) const {
 }
 
 void FpOpGen::generateConvOps(std::stringstream& s) const {
+  describe("Floating-point conversion", s);
+
   if (SmackOptions::FloatEnabled) {
     for (auto srcBw : FP_BIT_WIDTHS) {
       for (auto desBw : FP_BIT_WIDTHS) {
@@ -1114,6 +1194,8 @@ void FpOpGen::generateConvOps(std::stringstream& s) const {
           std::list<Binding> bs = makeFpVars(1, srcBw);
 
           bs.insert(bs.begin(), {makeRMODEVarName(), getRMODETypeName()});
+          // e.g., function {:builtin "(_ to_fp 8 24)"}
+          // $fpext.bvhalf.bvfloat(rm: rmode, f: bvhalf) returns (bvfloat);
           s << builtinOp(name, makeBuiltinAttr(attr), {srcType, desType}, bs, desType) << "\n";
         }
       }
@@ -1121,6 +1203,7 @@ void FpOpGen::generateConvOps(std::stringstream& s) const {
   } else {
     std::string srcType = getFpTypeName(0);
     std::string desType = getFpTypeName(0);
+    // e.g., function $fpext.float(f: float) returns (float);
     s << uninterpretedOp("$fpext", {srcType, desType}, makeFpVars(1,0), desType) << "\n";
     s << uninterpretedOp("$fptrunc", {srcType, desType}, makeFpVars(1,0), desType) << "\n";
   }
@@ -1144,6 +1227,7 @@ struct FpOpGen::FpIntConv {
     if (rMode)
       bs.insert(bs.begin(), {makeRMODEVarName(), getRMODETypeName()});
 
+    // e.g., function $fp2ui.bvhalf.i1(rm: rmode, f: bvhalf) returns (i1);
     return uninterpretedOp("$"+opName, {srcType, desType}, bs, desType);
   }
 
@@ -1165,9 +1249,12 @@ struct FpOpGen::FpIntConv {
     if (!bitCast)
       bs.insert(bs.begin(), {makeRMODEVarName(), getRMODETypeName()});
     if (auto bop = dyn_cast<BuiltinOp<attrT>>(modeledFpOp))
+      // e.g., function {:builtin "(_ fp.to_sbv 1)"}
+      // $fp2si.bvhalf.bv1(rm: rmode, f: bvhalf) returns (bv1);
       return builtinOp(name, ((attrT)bop->func)(fpBw, intBw),
         {srcType, desType}, bs, desType);
     else if (auto uop = dyn_cast<UninterpretedOp>(modeledFpOp))
+      // e.g., function $bitcast.bvhalf.bv16(f: bvhalf) returns (bv16);
       return uninterpretedOp(name, {srcType, desType}, bs, desType);
     else
       llvm_unreachable("no inlined fp/bv cast");
@@ -1181,15 +1268,18 @@ struct FpOpGen::FpIntConv {
     std::string desType = f2i? getBvTypeName(intBw) : getFpTypeName(0);
     std::list<Binding> bs = f2i? makeFpVars(1, 0) : makeIntVars(1, srcType);
 
+    // e.g., function $fp2ui.float.i1(f: float) returns (i1);
     return uninterpretedOp("$"+opName, {srcType, desType}, bs, desType);
   }
 
+  // generate bv to fp bitcast builtin attribute such as `:builtin "(_ to_fp 5 11)"`
   static const Attr* bitcastAttr(unsigned fpBw, unsigned intBw) {
     std::string attr = "(_ to_fp " + std::to_string(FP_LAYOUT.at(fpBw).first) +
       " " + std::to_string(FP_LAYOUT.at(fpBw).second) + ")";
     return makeBuiltinAttr(attr);
   }
 
+  // generate fp/bv conversion builtin attribute such as `:builtin "(_ fp.to_sbv 1)"`
   template <bool SIGN, bool F2I>
   static const Attr* fpIntAttr(unsigned fpBw, unsigned intBw) {
     std::string signLetter = SIGN? "s" : "u";
@@ -1202,6 +1292,8 @@ struct FpOpGen::FpIntConv {
 };
 
 void FpOpGen::generateFpIntConv(std::stringstream& s) const {
+  describe("Floating-point/integer conversion", s);
+
   auto uninterpretedOp = new UninterpretedOp();
   const std::vector<FpIntConv> fpIntConvTable {
     {"bitcast", true, true, uninterpretedOp},
@@ -1235,23 +1327,37 @@ void FpOpGen::generateFpIntConv(std::stringstream& s) const {
 }
 
 void FpOpGen::generateMemOps(std::stringstream& s) const {
+  describe("Floating-point load/store operations", s);
+
   if (SmackOptions::FloatEnabled) {
     for (auto bw : FP_BIT_WIDTHS) {
       std::string type = getFpTypeName(bw);
       auto binding = makeFpVars(1, bw).front();
+      // e.g., function {:inline} $load.bvhalf(M: [ref] bvhalf, p: ref)
+      // returns (bvhalf) { M[p] }
       s << prelude.safeLoad(type) << "\n";
+      // e.g., function {:inline} $store.bvhalf(M: [ref] bvhalf, p: ref, f: bvhalf)
+      // returns ([ref] bvhalf) { M[p := f] }
       s << prelude.safeStore(binding) << "\n";
 
       if (SmackOptions::BitPrecise) {
         std::string bvType = getBvTypeName(bw);
+        // e.g., function {:inline} $load.bytes.bvhalf(M: [ref] bv8, p: ref)
+        // returns (bvhalf) { $bitcast.bv16.bvhalf($load.bytes.bv16(M, p)) }
         s << prelude.unsafeLoad(type, Expr::fn(indexedName("$bitcast", {bvType, type}),
               Expr::fn(indexedName("$load", {"bytes", bvType}), makeMapVarExpr(0), makePtrVarExpr(0)))) << "\n";
+        // e.g., function {:inline} $store.bytes.bvhalf(M: [ref] bv8, p: ref, f: bvhalf)
+        // returns ([ref] bv8) { $store.bytes.bv16(M, p, $bitcast.bvhalf.bv16(f)) }
         s << prelude.unsafeStore(binding, Expr::fn(indexedName("$store", {"bytes", bvType}), makeMapVarExpr(0), makePtrVarExpr(0),
               Expr::fn(indexedName("$bitcast", {type, bvType}), makeFpVarExpr(0)))) << "\n";
       } else {
         std::string intType = getIntTypeName(bw);
+        // e.g., function {:inline} $load.unsafe.bvhalf(M: [ref] i8, p: ref)
+        // returns (bvhalf) { $bitcast.i16.bvhalf($load.i16(M, p)) }
         s << prelude.unsafeLoad(type, Expr::fn(indexedName("$bitcast", {intType, type}),
               Expr::fn(indexedName("$load", {intType}), makeMapVarExpr(0), makePtrVarExpr(0))), false) << "\n";
+        // e.g., function {:inline} $store.unsafe.bvfloat(M: [ref] i8, p: ref, f: bvfloat)
+        // returns ([ref] i8) { $store.i32(M, p, $bitcast.bvfloat.i32(f)) }
         s << prelude.unsafeStore(binding, Expr::fn(indexedName("$store", {intType}), makeMapVarExpr(0), makePtrVarExpr(0),
               Expr::fn(indexedName("$bitcast", {type, intType}), makeFpVarExpr(0))), false) << "\n";
       }
@@ -1259,16 +1365,27 @@ void FpOpGen::generateMemOps(std::stringstream& s) const {
   } else {
     std::string type = getFpTypeName(0);
     auto binding = makeFpVars(1, 0).front();
+    // function {:inline} $load.float(M: [ref] float, p: ref) returns (float) { M[p] }
     s << prelude.safeLoad(type) << "\n";
+    // function {:inline} $store.float(M: [ref] float, p: ref, f: float)
+    // returns ([ref] float) { M[p := f] }
     s << prelude.safeStore(binding) << "\n";
 
     if (SmackOptions::BitPrecise) {
       std::string bvType = getBvTypeName(8);
+      // function {:inline} $load.bytes.float(M: [ref] bv8, p: ref)
+      // returns (float) { $bitcast.bv8.float(M[p]) }
       s << prelude.unsafeLoad(type, Expr::fn(indexedName("$bitcast", {bvType, type}), prelude.mapSelExpr(0))) << "\n";
+      // function {:inline} $store.bytes.float(M: [ref] bv8, p: ref, f: float)
+      // returns ([ref] bv8) { M[p := $bitcast.float.bv8(f)] }
       s << prelude.unsafeStore(binding, prelude.mapUpdExpr(0, Expr::fn(indexedName("$bitcast", {type, bvType}), makeFpVarExpr(0)))) << "\n";
     } else {
       std::string intType = getIntTypeName(8);
+      // function {:inline} $load.unsafe.float(M: [ref] i8, p: ref)
+      // returns (float) { $bitcast.i8.float(M[p]) }
       s << prelude.unsafeLoad(type, Expr::fn(indexedName("$bitcast", {intType, type}), prelude.mapSelExpr(0)), false) << "\n";
+      // function {:inline} $store.unsafe.float(M: [ref] i8, p: ref, f: float)
+      // returns ([ref] i8) { M[p := $bitcast.float.i8(f)] }
       s << prelude.unsafeStore(binding, prelude.mapUpdExpr(0, Expr::fn(indexedName("$bitcast", {type, intType}), makeFpVarExpr(0))), false) << "\n";
     }
   }
@@ -1283,10 +1400,13 @@ void FpOpGen::generateExtractValueFuncs(std::stringstream& s) const {
 }
 
 void FpOpGen::generate(std::stringstream& s) const {
+  // generate type-specific declarations
   if (SmackOptions::FloatEnabled) {
-
+    // rounding mode declaration
+    // var $rmode: rmode;
+    s << Decl::variable(Naming::RMODE_VAR, getRMODETypeName());
   } else {
-    // uninterpreted float type defintion
+    // uninterpreted floating-point type constructor
     // function $fp(ipart:int, fpart:int, epart:int) returns (float);
     s << Decl::function("$fp",
       {{"ipart", "int"}, {"fpart", "int"}, {"epart", "int"}},

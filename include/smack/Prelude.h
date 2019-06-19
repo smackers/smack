@@ -13,8 +13,9 @@
 namespace smack {
 typedef std::list<FuncDecl*> FuncsT;
 
+// function declaration type
 struct Op {
-  enum OpType { B, I, U };
+  enum OpType { Builtin, Inlined, Uninterpreted };
   private:
     const OpType type;
   public:
@@ -22,6 +23,10 @@ struct Op {
     Op(OpType type) : type(type) {}
 };
 
+// represent a set of integer operations such as $add.<T>,
+// where `T` is an integer type parameterized by integer bit-width
+// the virtual method `getFuncs` therefore generates a set of
+// function declarations for <$opName>.<T>.
 struct IntOp {
   typedef const Attr* (*attrT)(std::string);
   typedef const Expr* (*exprT)(unsigned);
@@ -41,6 +46,7 @@ struct IntOp {
   static const Attr* intAttrFunc(std::string opName);
 };
 
+// represent a set of integer operations such as $fadd.<T>
 struct FpOp {
   typedef const Attr* (*attrT)(std::string);
 
@@ -55,34 +61,40 @@ struct FpOp {
   static const Attr* fpAttrFunc(std::string opName);
 };
 
+// builtin functions templated by a function type. A function
+// of such type, when applied, returns an attribute
 template<typename ATTRT>
 struct BuiltinOp : public Op {
   typedef const Attr* (*attrT)();
   attrT func;
-  BuiltinOp(ATTRT func) : Op(B), func((attrT)func) {}
+  BuiltinOp(ATTRT func) : Op(Builtin), func((attrT)func) {}
   static bool classof(const Op* op) {
-    return op->getOpType() == B;
+    return op->getOpType() == Builtin;
   }
 };
 
+// inlined functions templated by a function type. A function
+// of such type, when applied, returns an expression as the function body
 template<typename EXPRT>
 struct InlinedOp : public Op {
   typedef const Expr* (*exprT)();
   exprT func;
-  InlinedOp(EXPRT func) : Op(I), func((exprT)func) {}
+  InlinedOp(EXPRT func) : Op(Inlined), func((exprT)func) {}
   static bool classof(const Op* op) {
-    return op->getOpType() == I;
+    return op->getOpType() == Inlined;
   }
 };
 
+// uninterpreted functions
 struct UninterpretedOp : public Op {
-  UninterpretedOp() : Op(U) {}
+  UninterpretedOp() : Op(Uninterpreted) {}
   static bool classof(const Op* op) {
-    return op->getOpType() == U;
+    return op->getOpType() == Uninterpreted;
   }
 };
 
 class Prelude;
+// generic generator class that produces relevant declarations
 struct Gen {
   Prelude& prelude;
 
@@ -90,6 +102,7 @@ struct Gen {
   virtual void generate(std::stringstream& s) const = 0;
 };
 
+// generator class for integer, pointer, and floating-point types
 struct TypeGen : public Gen {
   TypeGen(Prelude& prelude) : Gen(prelude) {}
   virtual void generateArithOps(std::stringstream& s) const = 0;
@@ -99,6 +112,7 @@ struct TypeGen : public Gen {
   virtual void generateExtractValueFuncs(std::stringstream& s) const = 0;
 };
 
+// generator class for integers
 struct IntOpGen: public TypeGen {
   struct IntArithOp;
   struct IntPred;
@@ -117,6 +131,7 @@ struct IntOpGen: public TypeGen {
   void generate(std::stringstream& s) const;
 };
 
+// generator class for pointers
 struct PtrOpGen: public TypeGen {
   PtrOpGen(Prelude& prelude) : TypeGen(prelude) {}
 
@@ -129,6 +144,7 @@ struct PtrOpGen: public TypeGen {
   void generate(std::stringstream& s) const;
 };
 
+// generator class for floats
 struct FpOpGen: public TypeGen {
   struct FpArithOp;
   struct FpPred;

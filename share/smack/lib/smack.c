@@ -260,11 +260,6 @@ void __SMACK_dummy(int v) {
 #define D(d) __SMACK_top_decl(d)
 
 void __SMACK_decls(void) {
-
-#if FLOAT_ENABLED
-  D("var $rmode: rmode;");
-#endif
-
   // Memory debugging symbols
   D("type $mop;");
   D("procedure boogie_si_record_mop(m: $mop);");
