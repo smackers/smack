@@ -24,6 +24,10 @@ const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
 
+const Expr* Expr::or_(const Expr* l, const Expr* r) {
+  return new BinExpr(BinExpr::Or, l, r);
+}
+
 const Expr* Expr::cond(const Expr* c, const Expr* t, const Expr* e) {
   return new CondExpr(c,t,e);
 }

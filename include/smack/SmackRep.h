@@ -33,6 +33,11 @@ std::string indexedName(std::string name, std::initializer_list<unsigned> idxs);
 class SmackRep {
   friend class VectorOperations;
   friend class Prelude;
+  friend struct PtrOpGen;
+  friend struct IntOpGen;
+  friend struct TypeDeclGen;
+  friend struct ConstDeclGen;
+  friend struct MemDeclGen;
 
 protected:
   const llvm::DataLayout* targetData;

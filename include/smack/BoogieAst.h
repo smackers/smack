@@ -21,6 +21,7 @@ public:
   static const Expr* exists(std::list<Binding>, const Expr* e);
   static const Expr* forall(std::list<Binding>, const Expr* e);
   static const Expr* and_(const Expr* l, const Expr* r);
+  static const Expr* or_(const Expr* l, const Expr* r);
   static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
   static const Expr* lt(const Expr* l, const Expr* r);
