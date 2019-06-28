@@ -889,26 +889,131 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
     else
       generateUnModeledCall(ci);
   };
+  
+  static const auto bitreverse = [this](Value* arg){
+    auto width = arg->getType()->getIntegerBitWidth();
+    auto var = rep->expr(arg);
 
-  static const auto bswap = [this](CallInst* ci){
+    // Swap the bits to the right and left of the middle
+    const Expr* body;
+    if (width % 2 == 0) {
+      body = Expr::bvConcat(Expr::bvExtract(var,width/2,width/2-1),
+                            Expr::bvExtract(var,width/2+1,width/2));
+    }
+    else {
+      body = Expr::bvExtract(var, width/2+1, width/2);
+    }
+    // Swap the bits to the right and the left of the already swapped portion.
+    unsigned offset = width&1;
+    for (unsigned i = width%2==0 ? 1 : 0; i < width/2; ++i) {
+      body = Expr::bvConcat(Expr::bvConcat(Expr::bvExtract(var,width/2-i,width/2-i-1),
+                                           body),
+                            Expr::bvExtract(var, width/2+i+1+offset, width/2+i+offset));
+    }
+    return body;
+  };
+
+  static const auto bswap = [this](Value* arg){
+    auto width = arg->getType()->getIntegerBitWidth();
+    auto var = rep->expr(arg);
+
+    // Swap the bytes to the right and left of the middle
+    const Expr* body = Expr::bvConcat(Expr::bvExtract(var,width/2,width/2-8),
+                                      Expr::bvExtract(var,width/2+8,width/2));
+
+    // Swap the bytes to the right and the left of the already swapped portion.
+    for (unsigned i = 8; i < width/2; i += 8) {
+      body = Expr::bvConcat(Expr::bvConcat(Expr::bvExtract(var,width/2-i,width/2-i-8),
+                                           body),
+                            Expr::bvExtract(var, width/2+i+8, width/2+i));
+    }
+    return body;
+  };
+
+  // Count leading zeros
+  static const auto ctlz = [this](CallInst* ci) {
     if (SmackOptions::BitPrecise) {
       auto width = ci->getArgOperand(0)->getType()->getIntegerBitWidth();
       auto var = rep->expr(ci->getArgOperand(0));
 
-      // Swap the bytes to the right and left of the middle
-      const Expr* body = Expr::bvConcat(Expr::bvExtract(var,width/2,width/2-8),
-                                        Expr::bvExtract(var,width/2+8,width/2));
-
-      // Swap the bytes to the right and the left of the already swapped portion.
-      for (unsigned i = 8; i < width/2; i += 8) {
-        body = Expr::bvConcat(Expr::bvConcat(Expr::bvExtract(var,width/2-i,width/2-i-8),
-                                             body),
-                              Expr::bvExtract(var, width/2+i+8, width/2+i));
+      // e.g., if v[32:31] == 1 then 0bv32 else if v[31:30] == 1 then 1bv32 else
+      // ... else if v[1:0] == 1 then 31bv32 else 32bv32
+      const Expr* body = Expr::lit(width, width);
+      for (unsigned i = 0; i < width; ++i) {
+        body = Expr::if_then_else(Expr::eq(Expr::bvExtract(var, i+1, i),
+                                           Expr::lit(1,1)),
+                                  Expr::lit(width-i-1, width),
+                                  body);
       }
+
+      // Handle the is_zero_undef case, i.e. if the flag is set and the argument
+      // is zero, then the result is undefined.
+      auto isZeroUndef = rep->expr(ci->getArgOperand(1));
+      body = Expr::if_then_else(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
+                                           Expr::eq(var, Expr::lit(0,width))),
+                                rep->expr(ci), // The result is undefined
+                                body);
+      emit(Stmt::havoc(rep->expr(ci)));
       emit(Stmt::assign(rep->expr(ci), body));
     }
     else
       generateUnModeledCall(ci);
+  };
+
+  // Count trailing zeros
+  static const auto cttz = [this](CallInst* ci) {
+    if (SmackOptions::BitPrecise) {
+      auto width = ci->getArgOperand(0)->getType()->getIntegerBitWidth();
+      auto arg = rep->expr(ci->getArgOperand(0));
+
+      // e.g., if v[1:0] == 1 then 0bv32 else if v[2:1] == 1 then 1bv32 else
+      // ... else if v[32:31] == 1 then 31bv32 else 32bv32
+      const Expr* body = Expr::lit(width, width);
+      for (unsigned i = width; i > 0; --i) {
+        body = Expr::if_then_else(Expr::eq(Expr::bvExtract(arg, i, i-1),
+                                           Expr::lit(1,1)),
+                                  Expr::lit(i-1, width),
+                                  body);
+      }
+
+      // Handle the is_zero_undef case, i.e. if the flag is set and the argument
+      // is zero, then the result is undefined.
+      auto isZeroUndef = rep->expr(ci->getArgOperand(1));
+      body = Expr::if_then_else(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
+                                           Expr::eq(arg, Expr::lit(0,width))),
+                                rep->expr(ci), // The result is undefined
+                                body);
+      emit(Stmt::havoc(rep->expr(ci)));
+      emit(Stmt::assign(rep->expr(ci), body));
+    }
+    else
+      generateUnModeledCall(ci);
+  };
+
+  // Count the population of 1s in a bv
+  static const auto ctpop = [this](Value* arg) {
+    auto width = arg->getType()->getIntegerBitWidth();
+    auto var = rep->expr(arg);
+    auto body = Expr::lit(0, width);
+    auto type = rep->type(arg->getType());
+
+    for (unsigned i = 0; i < width; ++i) {
+      body = Expr::fn(indexedName("$add", {type}),
+                      Expr::fn(indexedName("$zext", {"bv1", type}),
+                               Expr::bvExtract(var, i+1, i)),
+                      body);
+    }
+    return body;
+  };
+
+  static const auto assignBvExpr = [this] (std::function<const Expr*(Value*)> exprGenFunc) {
+    return [this, exprGenFunc] (CallInst* ci) {
+      if (SmackOptions::BitPrecise)
+	emit(Stmt::assign(rep->expr(ci),
+			  exprGenFunc(ci->getArgOperand(0))));
+      else
+	generateUnModeledCall(ci);
+    };
   };
 
   static const auto assignUnFPFuncApp = [this] (std::string fnBase) {
@@ -964,9 +1069,13 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
   // modeled using __SMACK_code.
 
   static const std::map<llvm::Intrinsic::ID, std::function<void(CallInst*)>> stmtMap {
+    {llvm::Intrinsic::bitreverse,        assignBvExpr(bitreverse)},
+    {llvm::Intrinsic::bswap,             assignBvExpr(bswap)},
     {llvm::Intrinsic::convert_from_fp16, f16UpCast},
     {llvm::Intrinsic::convert_to_fp16,   f16DownCast},
-    {llvm::Intrinsic::bswap,             bswap},
+    {llvm::Intrinsic::ctlz,              ctlz},
+    {llvm::Intrinsic::ctpop,             assignBvExpr(ctpop)},
+    {llvm::Intrinsic::cttz,              cttz},
     {llvm::Intrinsic::expect,            identity},
     {llvm::Intrinsic::fabs,              assignUnFPFuncApp("$abs")},
     {llvm::Intrinsic::fma,               fma},

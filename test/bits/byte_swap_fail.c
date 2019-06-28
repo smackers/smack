@@ -37,7 +37,7 @@ int main(void) {
   uint32_t x32 = __VERIFIER_nondet_unsigned_int();
   uint64_t x64 = __VERIFIER_nondet_unsigned_long_long();
   assert(__builtin_bswap16(x16) != bswap16(x16) ||
-	 __builtin_bswap32(x32) != bswap32(x32) ||
-	 __builtin_bswap64(x64) != bswap64(x64));
+         __builtin_bswap32(x32) != bswap32(x32) ||
+         __builtin_bswap64(x64) != bswap64(x64));
   return 0;
 }
