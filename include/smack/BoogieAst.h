@@ -282,6 +282,7 @@ public:
   static const Stmt* comment(std::string c);
   static const Stmt* goto_(std::list<std::string> ts);
   static const Stmt* havoc(std::string x);
+  static const Stmt* havoc(const Expr* x);
   static const Stmt* return_();
   static const Stmt* return_(const Expr* e);
   static const Stmt* skip();

@@ -225,6 +225,12 @@ const Stmt* Stmt::havoc(std::string x) {
   return new HavocStmt(std::list<std::string>(1, x));
 }
 
+const Stmt* Stmt::havoc(const Expr* x) {
+  std::stringstream s;
+  s << x;
+  return new HavocStmt(std::list<std::string>(1, s.str()));
+}
+
 const Stmt* Stmt::return_(const Expr* e) {
   return new ReturnStmt(e);
 }
