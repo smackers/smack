@@ -520,9 +520,49 @@ def error_step(step):
           if src:
             return "%s%s(%s,%s): %s" % (step.group(1), src.group(1), src.group(2), src.group(3), message)
     else:
-      return step.group(0)
+      return corral_error_step(step.group(0))
   else:
     return None
+
+def reformat_assignment(line):
+  def repl(m):
+    val = m.group(1)
+    if 'bv' in val:
+      return m.group(2)+'UL'
+    else:
+      sig_size = int(m.group(7))
+      exp_size = int(m.group(8))
+      # assume we can only handle double
+      if sig_size > 53 or exp_size > 11:
+        return m.group()
+
+      sign_val = -1 if m.group(3) != '' else 1
+      sig_val = m.group(4)
+      exp_sign_val = -1 if m.group(5) != '' else 1
+      # note that the exponent base is 16
+      exp_val = 2**(4*exp_sign_val*int(m.group(6)))
+      return str(sign_val*float.fromhex(sig_val)*exp_val)
+
+  # Boogie FP const grammar: (-)0x[sig]e[exp]f[sigSize]e[expSize], where
+  # sig = hexdigit {hexdigit} '.' hexdigit {hexdigit}
+  # exp = digit {digit}
+  # sigSize = digit {digit}
+  # expSize = digit {digit}
+  return re.sub('((\d+)bv\d+|(-?)0x([0-9a-fA-F]+\.[0-9a-fA-F]+)e(-?)(\d+)f(\d+)e(\d+))', repl, line.strip())
+
+def transform(info):
+  return ','.join(map(reformat_assignment, filter(
+    lambda x: not re.search('((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x), info.split(','))))
+
+def corral_error_step(step):
+  m = re.match('([^\s]*)\s+Trace:\s+(Thread=\d+)\s+\((.*)[\)|;]', step)
+  if m:
+    path = m.group(1)
+    tid = m.group(2)
+    info = transform(m.group(3))
+    return '{0}\t{1}  {2}'.format(path,tid,info)
+  else:
+    return step
 
 def error_trace(verifier_output, args):
   trace = ""
