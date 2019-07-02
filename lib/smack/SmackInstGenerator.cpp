@@ -20,16 +20,15 @@
 #include "llvm/Support/raw_ostream.h"
 #include "dsa/DSNode.h"
 
+#include "smack/SmackWarnings.h"
+
 namespace smack {
 
 using llvm::errs;
 using namespace llvm;
 
-const bool CODE_WARN = true;
 const bool SHOW_ORIG = false;
 
-#define WARN(str) \
-    if (CODE_WARN) emit(Stmt::comment(std::string("WARNING: ") + str))
 #define ORIG(ins) \
     if (SHOW_ORIG) emit(Stmt::comment(i2s(ins)))
 
@@ -304,7 +303,8 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst& ii) {
     emit(rep->call(f, ii));
   } else {
     // llvm_unreachable("Unexpected invoke instruction.");
-    WARN("unsoundly ignoring invoke instruction... ");
+    SmackWarnings::warnUnsound("invoke instruction", currBlock, &ii,
+      ii.getType()->isVoidTy());
   }
   std::vector<std::pair<const Expr*, llvm::BasicBlock*> > targets;
   targets.push_back({
@@ -337,6 +337,13 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst& ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator& I) {
   processInstruction(I);
+  if (rep->isBitwiseOp(&I))
+    SmackWarnings::warnIfUnsound(std::string("bitwise operation ")+I.getOpcodeName(),
+      SmackOptions::BitPrecise, currBlock, &I);
+  if (rep->isFpArithOp(&I))
+    SmackWarnings::warnIfUnsound(std::string("floating-point arithmetic ")+I.getOpcodeName(),
+      SmackOptions::FloatEnabled, currBlock, &I);
+
   const Expr *E;
   if (isa<VectorType>(I.getType())) {
     auto X = I.getOperand(0);
@@ -610,7 +617,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst& ci) {
   std::string name = f->hasName() ? f->getName() : "";
 
   if (ci.isInlineAsm()) {
-    WARN("unsoundly ignoring inline asm call: " + i2s(ci));
+    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
+      ci.getType()->isVoidTy());
     emit(Stmt::skip());
 
   } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
@@ -793,7 +801,6 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst& dvi) {
       if (currInst != dvi.getParent()->begin()) {
         const Instruction& pi = *std::prev(currInst);
         V = V->stripPointerCasts();
-        WARN(i2s(pi));
         if (!llvm::isa<const PHINode>(&pi) && V == llvm::dyn_cast<const Value>(&pi))
           emit(recordProcedureCall(V, {Attr::attr("cexpr", var->getName().str())}));
       }
@@ -814,7 +821,7 @@ void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst& lpi) {
   emit(Stmt::assign(rep->expr(&lpi),Expr::id(Naming::EXN_VAL_VAR)));
   if (lpi.isCleanup())
     emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
-  WARN("unsoundly ignoring landingpad clauses...");
+  SmackWarnings::warnUnsound("landingpad clauses", currBlock, &lpi, true);
 }
 
 /******************************************************************************/
@@ -834,61 +841,62 @@ void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst& msi) {
 }
 
 void SmackInstGenerator::generateUnModeledCall(llvm::CallInst* ci) {
-  if (ci->getFunctionType()->getReturnType()->isVoidTy()) {
-    WARN("ignoring call to "+ci->getCalledFunction()->getName().str());
-    emit(Stmt::skip());
-  } else {
-    errs() << "warning: over-approximate call to : "
-      << ci->getCalledFunction()->getName() << "\n";
-    emit(rep->call(ci->getCalledFunction(), *ci));
-  }
+  SmackWarnings::warnUnsound(ci->getCalledFunction()->getName(),
+    currBlock, ci, ci->getType()->isVoidTy());
+  emit(rep->call(ci->getCalledFunction(), *ci));
 }
 
 void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
   processInstruction(ii);
 
-  static const auto f16UpCast = [this] (CallInst* ci) {
+  //(CallInst -> Void) -> [Flags] -> (CallInst -> Void)
+  static const auto conditionalModel = [this] (std::function<void(CallInst*)> modelGenFunc,
+    std::initializer_list<const cl::opt<bool>*> requiredFlags) {
+    return [this, requiredFlags, modelGenFunc] (CallInst* ci) {
+      auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
+      if (unsetFlags.empty())
+        modelGenFunc(ci);
+      else {
+        SmackWarnings::warnUnsound("call to " + ci->getCalledFunction()->getName().str(),
+          unsetFlags, currBlock, ci);
+        emit(rep->call(ci->getCalledFunction(), *ci));
+      }
+    };
+  };
+
+  static const auto f16UpCast = conditionalModel([this] (CallInst* ci) {
     // translation: $f := $fpext.bvhalf.*($rmode, $bitcast.bv16.bvhalf($i));
     auto argT = rep->type(ci->getArgOperand(0)->getType());
     auto retT = rep->type(ci->getFunctionType()->getReturnType());
-    if (SmackOptions::FloatEnabled && SmackOptions::BitPrecise)
-      emit(Stmt::assign(
-            rep->expr(ci),
-            Expr::fn(indexedName("$fpext", {Naming::HALF_TYPE, retT}),
-              {Expr::id(Naming::RMODE_VAR),
-              Expr::fn(indexedName("$bitcast", {argT, Naming::HALF_TYPE}),
-                  rep->expr(ci->getArgOperand(0)))})));
-    else
-      generateUnModeledCall(ci);
-  };
+    emit(Stmt::assign(
+      rep->expr(ci),
+      Expr::fn(indexedName("$fpext", {Naming::HALF_TYPE, retT}),
+          {Expr::id(Naming::RMODE_VAR),
+        Expr::fn(indexedName("$bitcast", {argT, Naming::HALF_TYPE}),
+          rep->expr(ci->getArgOperand(0)))})));
+    }, {&SmackOptions::FloatEnabled, &SmackOptions::BitPrecise});
 
-  static const auto f16DownCast = [this] (CallInst* ci){
+  static const auto f16DownCast = conditionalModel([this] (CallInst* ci) {
     // translation: assume($bitcast.bv16.bvhalf($i) == $fptrunc.bvfloat.bvhalf($rmode, $f));
     auto argT = rep->type(ci->getArgOperand(0)->getType());
     auto retT = rep->type(ci->getFunctionType()->getReturnType());
-    if (SmackOptions::FloatEnabled && SmackOptions::BitPrecise) {
-      emit(Stmt::assume(
-            Expr::eq(
-              Expr::fn(indexedName("$fptrunc", {argT, Naming::HALF_TYPE}),
-                Expr::id(Naming::RMODE_VAR),
-                rep->expr(ci->getArgOperand(0))),
-              Expr::fn(indexedName("$bitcast", {retT, Naming::HALF_TYPE}),
-                rep->expr(ci)))));
-    } else
-      generateUnModeledCall(ci);
-  };
+    emit(Stmt::assume(
+          Expr::eq(
+            Expr::fn(indexedName("$fptrunc", {argT, Naming::HALF_TYPE}),
+              Expr::id(Naming::RMODE_VAR),
+              rep->expr(ci->getArgOperand(0))),
+            Expr::fn(indexedName("$bitcast", {retT, Naming::HALF_TYPE}),
+              rep->expr(ci)))));
+    }, {&SmackOptions::FloatEnabled, &SmackOptions::BitPrecise});
 
-  static const auto fma = [this](CallInst* ci) {
-    if (SmackOptions::FloatEnabled)
-      emit(Stmt::assign(rep->expr(ci),
-        Expr::fn(indexedName("$fma",
-          {rep->type(ci->getFunctionType()->getReturnType())}),
-        rep->expr(ci->getArgOperand(0)),
-        rep->expr(ci->getArgOperand(1)),
-        rep->expr(ci->getArgOperand(2)))));
-    else
-      generateUnModeledCall(ci);
-  };
+  static const auto fma = conditionalModel([this] (CallInst* ci) {
+    emit(Stmt::assign(rep->expr(ci),
+      Expr::fn(indexedName("$fma",
+        {rep->type(ci->getFunctionType()->getReturnType())}),
+      rep->expr(ci->getArgOperand(0)),
+      rep->expr(ci->getArgOperand(1)),
+      rep->expr(ci->getArgOperand(2)))));
+  }, {&SmackOptions::FloatEnabled});
   
   static const auto bitreverse = [this](Value* arg){
     auto width = arg->getType()->getIntegerBitWidth();
@@ -931,64 +939,54 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
   };
 
   // Count leading zeros
-  static const auto ctlz = [this](CallInst* ci) {
-    if (SmackOptions::BitPrecise) {
-      auto width = ci->getArgOperand(0)->getType()->getIntegerBitWidth();
-      auto var = rep->expr(ci->getArgOperand(0));
+  static const auto ctlz = conditionalModel([this] (CallInst* ci) {
+    auto width = ci->getArgOperand(0)->getType()->getIntegerBitWidth();
+    auto var = rep->expr(ci->getArgOperand(0));
 
-      // e.g., if v[32:31] == 1 then 0bv32 else if v[31:30] == 1 then 1bv32 else
-      // ... else if v[1:0] == 1 then 31bv32 else 32bv32
-      const Expr* body = Expr::lit(width, width);
-      for (unsigned i = 0; i < width; ++i) {
-        body = Expr::if_then_else(Expr::eq(Expr::bvExtract(var, i+1, i),
-                                           Expr::lit(1,1)),
-                                  Expr::lit(width-i-1, width),
-                                  body);
-      }
-
-      // Handle the is_zero_undef case, i.e. if the flag is set and the argument
-      // is zero, then the result is undefined.
-      auto isZeroUndef = rep->expr(ci->getArgOperand(1));
-      body = Expr::if_then_else(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
-                                           Expr::eq(var, Expr::lit(0,width))),
-                                rep->expr(ci), // The result is undefined
+    // e.g., if v[32:31] == 1 then 0bv32 else if v[31:30] == 1 then 1bv32 else
+    // ... else if v[1:0] == 1 then 31bv32 else 32bv32
+    const Expr* body = Expr::lit(width, width);
+    for (unsigned i = 0; i < width; ++i) {
+      body = Expr::if_then_else(Expr::eq(Expr::bvExtract(var, i+1, i),
+                                         Expr::lit(1,1)),
+                                Expr::lit(width-i-1, width),
                                 body);
-      emit(Stmt::havoc(rep->expr(ci)));
-      emit(Stmt::assign(rep->expr(ci), body));
     }
-    else
-      generateUnModeledCall(ci);
-  };
+
+    // Handle the is_zero_undef case, i.e. if the flag is set and the argument
+    // is zero, then the result is undefined.
+    auto isZeroUndef = rep->expr(ci->getArgOperand(1));
+    body = Expr::if_then_else(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
+                                         Expr::eq(var, Expr::lit(0,width))),
+                              rep->expr(ci), // The result is undefined
+                              body);
+    emit(Stmt::havoc(rep->expr(ci)));
+    emit(Stmt::assign(rep->expr(ci), body));}, {&SmackOptions::BitPrecise});
 
   // Count trailing zeros
-  static const auto cttz = [this](CallInst* ci) {
-    if (SmackOptions::BitPrecise) {
-      auto width = ci->getArgOperand(0)->getType()->getIntegerBitWidth();
-      auto arg = rep->expr(ci->getArgOperand(0));
+  static const auto cttz = conditionalModel([this] (CallInst* ci) {
+    auto width = ci->getArgOperand(0)->getType()->getIntegerBitWidth();
+    auto arg = rep->expr(ci->getArgOperand(0));
 
-      // e.g., if v[1:0] == 1 then 0bv32 else if v[2:1] == 1 then 1bv32 else
-      // ... else if v[32:31] == 1 then 31bv32 else 32bv32
-      const Expr* body = Expr::lit(width, width);
-      for (unsigned i = width; i > 0; --i) {
-        body = Expr::if_then_else(Expr::eq(Expr::bvExtract(arg, i, i-1),
-                                           Expr::lit(1,1)),
-                                  Expr::lit(i-1, width),
-                                  body);
-      }
-
-      // Handle the is_zero_undef case, i.e. if the flag is set and the argument
-      // is zero, then the result is undefined.
-      auto isZeroUndef = rep->expr(ci->getArgOperand(1));
-      body = Expr::if_then_else(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
-                                           Expr::eq(arg, Expr::lit(0,width))),
-                                rep->expr(ci), // The result is undefined
+    // e.g., if v[1:0] == 1 then 0bv32 else if v[2:1] == 1 then 1bv32 else
+    // ... else if v[32:31] == 1 then 31bv32 else 32bv32
+    const Expr* body = Expr::lit(width, width);
+    for (unsigned i = width; i > 0; --i) {
+      body = Expr::if_then_else(Expr::eq(Expr::bvExtract(arg, i, i-1),
+                                         Expr::lit(1,1)),
+                                Expr::lit(i-1, width),
                                 body);
-      emit(Stmt::havoc(rep->expr(ci)));
-      emit(Stmt::assign(rep->expr(ci), body));
     }
-    else
-      generateUnModeledCall(ci);
-  };
+
+    // Handle the is_zero_undef case, i.e. if the flag is set and the argument
+    // is zero, then the result is undefined.
+    auto isZeroUndef = rep->expr(ci->getArgOperand(1));
+    body = Expr::if_then_else(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
+                                         Expr::eq(arg, Expr::lit(0,width))),
+                              rep->expr(ci), // The result is undefined
+                              body);
+    emit(Stmt::havoc(rep->expr(ci)));
+    emit(Stmt::assign(rep->expr(ci), body));}, {&SmackOptions::BitPrecise});
 
   // Count the population of 1s in a bv
   static const auto ctpop = [this](Value* arg) {
@@ -1007,61 +1005,50 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
   };
 
   static const auto assignBvExpr = [this] (std::function<const Expr*(Value*)> exprGenFunc) {
-    return [this, exprGenFunc] (CallInst* ci) {
-      if (SmackOptions::BitPrecise)
-	emit(Stmt::assign(rep->expr(ci),
-			  exprGenFunc(ci->getArgOperand(0))));
-      else
-	generateUnModeledCall(ci);
-    };
-  };
+    return conditionalModel([this, exprGenFunc] (CallInst* ci) {
+      emit(Stmt::assign(rep->expr(ci),
+            exprGenFunc(ci->getArgOperand(0))));
+      }, {&SmackOptions::BitPrecise}); };
 
   static const auto assignUnFPFuncApp = [this] (std::string fnBase) {
-    return [this, fnBase] (CallInst* ci) {
+    return conditionalModel([this, fnBase] (CallInst* ci) {
       // translation: $res := $<func>.bv*($arg1);
-      if (SmackOptions::FloatEnabled)
-        emit(Stmt::assign(
-              rep->expr(ci),
-              Expr::fn(indexedName(fnBase,
-                  {rep->type(ci->getArgOperand(0)->getType())}),
-                rep->expr(ci->getArgOperand(0)))));
-      else
-        generateUnModeledCall(ci);
-    };
-  };
+      emit(Stmt::assign(
+            rep->expr(ci),
+            Expr::fn(indexedName(fnBase,
+                {rep->type(ci->getArgOperand(0)->getType())}),
+              rep->expr(ci->getArgOperand(0)))));
+      }, {&SmackOptions::FloatEnabled}); };
 
   static const auto assignBinFPFuncApp = [this] (std::string fnBase) {
-    return [this, fnBase] (CallInst* ci) {
+    return conditionalModel([this, fnBase] (CallInst* ci) {
     // translation: $res := $<func>.bv*($arg1, $arg2);
-    if (SmackOptions::FloatEnabled)
       emit(Stmt::assign(
             rep->expr(ci),
             Expr::fn(indexedName(fnBase,
                 {rep->type(ci->getFunctionType()->getReturnType())}),
               {rep->expr(ci->getArgOperand(0)), rep->expr(ci->getArgOperand(1))})));
-    else
-      generateUnModeledCall(ci);
-    };
-  };
+      }, {&SmackOptions::FloatEnabled}); };
 
+
+  //Expr* -> (CallInst -> Void)
   static const auto assignRoundFPFuncApp = [this] (const Expr* rMode) {
-    return [this, rMode] (CallInst* ci) {
-    // translation: $res := $round.bv*(rmode, $arg1);
-    if (SmackOptions::FloatEnabled)
+    return conditionalModel([this, rMode] (CallInst* ci) {
       emit(Stmt::assign(
             rep->expr(ci),
             Expr::fn(indexedName("$round",
                 {rep->type(ci->getFunctionType()->getReturnType())}),
               {rMode, rep->expr(ci->getArgOperand(0))})));
-    else
-      generateUnModeledCall(ci);
-    };
-  };
+    }, {&SmackOptions::FloatEnabled}); };
 
   static const auto identity = [this] (CallInst* ci) {
     // translation: $res := $arg1
     Value* val = ci->getArgOperand(0);
     emit(Stmt::assign(rep->expr(ci), rep->expr(val)));
+  };
+
+  static const auto ignore = [this] (CallInst* ci) {
+    emit(Stmt::skip());
   };
 
   // TODO: these functions is consistent with the implementations in math.c,
@@ -1076,6 +1063,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
     {llvm::Intrinsic::ctlz,              ctlz},
     {llvm::Intrinsic::ctpop,             assignBvExpr(ctpop)},
     {llvm::Intrinsic::cttz,              cttz},
+    {llvm::Intrinsic::dbg_declare,       ignore},
     {llvm::Intrinsic::expect,            identity},
     {llvm::Intrinsic::fabs,              assignUnFPFuncApp("$abs")},
     {llvm::Intrinsic::fma,               fma},

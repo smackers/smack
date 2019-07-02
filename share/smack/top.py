@@ -110,6 +110,13 @@ def arguments():
   noise_group.add_argument('--debug-only', metavar='MODULES', default=None,
     type=str, help='limit debugging output to given MODULES')
 
+  noise_group.add_argument('--warn', default="unsound",
+    choices=['silent', 'unsound', 'info'],
+    help='''enable certain type of warning messages
+            (silent: no warning messages;
+            unsound: warnings about unsoundness;
+            info: warnings about unsoundness and translation information) [default: %(default)s]''')
+
   parser.add_argument('-t', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
@@ -322,7 +329,8 @@ def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
   cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
-  cmd += ['-warnings']
+  cmd += ['-warn-type', args.warn]
+  if sys.stdout.isatty(): cmd += ['-colored-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
