@@ -281,19 +281,6 @@ FuncDecl* extractValue(unsigned width) {
   return extractValue(resType);
 }
 
-std::string getBytewisePointerStorageStr() {
-  // TODO: add switch for 32 bit pointers
-  std::stringstream s;
-  s << "// Bytewise pointer storage" << "\n";
-  s << "function {:inline} $load.bytes.ref(M: [ref] bv8, p: ref) "
-    << "returns (ref) { $i2p.bv64.ref($load.bytes.bv64(M, p)) }"
-    << "\n";
-  s << "function {:inline} $store.bytes.ref(M: [ref] bv8, p: ref, v: ref)"
-    << "returns ([ref] bv8) { $store.bytes.bv64(M,p,$p2i.ref.bv64(v)) }"
-    << "\n";
-  return s.str();
-}
-
 void printFuncs(FuncsT funcs, std::stringstream& s) {
   for (auto& f : funcs)
     s << f << "\n";
@@ -926,13 +913,29 @@ void PtrOpGen::generateMemOps(std::stringstream& s) const {
   describe("Pointer load/store operations", s);
 
   if (SmackOptions::BitPrecise) {
-    // XXX TODO don't assume 64-bit pointers TODO XXX
-    s << getBytewisePointerStorageStr() << "\n";
-  } else {
-    s << prelude.safeLoad(Naming::PTR_TYPE) << "\n";
-    s << prelude.safeStore(makeIntVars(1, Naming::PTR_TYPE).front()) << "\n";
-    s << "\n";
+    describe("Bytewise pointer storage", s);
+
+    // e.g., function {:inline} $load.bytes.ref(M: [ref] bv8, p: ref)
+    // returns (ref) { $i2p.bv64.ref($load.bytes.bv64(M, p)) }
+    auto intType = getBvTypeName(prelude.rep.ptrSizeInBits);
+    s << prelude.unsafeLoad(Naming::PTR_TYPE,
+      Expr::fn(indexedName("$i2p", {intType, Naming::PTR_TYPE}),
+        Expr::fn(indexedName("$load", {"bytes", intType}),
+          makeMapVarExpr(0), makePtrVarExpr(0)))) << "\n";
+
+    // e.g., function {:inline} $store.bytes.ref(M: [ref] bv8, p: ref, p1: ref)
+    // returns ([ref] bv8) { $store.bytes.bv64(M, p, $p2i.ref.bv64(p1)) }
+    auto binding = makePtrVars(2).front();
+    auto indexExpr = makePtrVarExpr(0);
+    s << prelude.unsafeStore(binding,
+      Expr::fn(indexedName("$store", {"bytes", intType}),
+        makeMapVarExpr(0), indexExpr,
+        Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, intType}),
+          makePtrVarExpr(1)))) << "\n";
   }
+  s << prelude.safeLoad(Naming::PTR_TYPE) << "\n";
+  s << prelude.safeStore(makeIntVars(1, Naming::PTR_TYPE).front()) << "\n";
+  s << "\n";
 }
 
 void PtrOpGen::generateConvOps(std::stringstream& s) const {
