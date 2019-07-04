@@ -27,7 +27,7 @@ wget https://raw.githubusercontent.com/smackers/smack/develop/test/basic/simple.
 vsmack simple.c
 ````
 
-### Quick Setup: Vagrant Development Environment
+### Quick Setup 1: Vagrant Development Environment
 
 SMACK can be run in a preconfigured virtual environment using [Vagrant][] and
 [VirtualBox][]. Both are available for a wide range of systems, with great
@@ -55,6 +55,27 @@ session, and halt, suspend, or destroy the virtual machine:
 vagrant destroy
 ````
 
+### Quick Setup 2: Docker
+SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
+the following configurations:
+
+* Ubuntu 16.04, docker-ce version 18.09.7
+* OS X 10.14.5, Docker Desktop with Docker engine version 18.09.2
+* Windows 10, Docker Desktop with Docker engine version 18.09.2
+
+Once Docker is successfully installed, build the Docker image by running the
+following command in SMACK's root directory that contains `Dockerfile`:
+```Shell
+docker build . -t smack
+```
+After the image is successfully built, invoke a Docker container by running the
+following command:
+```Shell
+docker run -it smack
+```
+For more advanced usages of Docker (e.g., to mount host directories), please refer
+to Docker's official documentation.
+
 ### General System Requirements
 
 SMACK depends on the following projects:
@@ -62,6 +83,7 @@ SMACK depends on the following projects:
 * [LLVM][] version [4.0.1][LLVM-4.0.1]
 * [Clang][] version [4.0.1][Clang-4.0.1]
 * [Python][] version 2.7 or greater
+* [Ninja][] version 1.5.1 or greater
 * [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
@@ -108,7 +130,8 @@ requires the Command Line Tools for [Xcode][]. Generally speaking, apart from
 the [Homebrew][] package manager. [Mono][] can be installed from binaries
 either from the [Mono][] download page, or via [Homebrew Cask][].
 
-### Installation on Windows/Cygwin
+### Installation on Windows
+#### Cygwin (Deprecated)
 
 The general instructions for installation on Windows using [Cygwin][] mainly
 follow those above for Linux, and are outlined in our automated [build.sh][]
@@ -121,6 +144,13 @@ installers rather than built from source.
 and [Clang][] is problematic on some [Cygwin][] configurations. Please consult
 [LLVM][] documentation in case of any issues.
 
+#### Windows Subsystem for Linux (Recommended)
+
+SMACK can be installed on the Windows Subsystem for Linux (WSL) by following the
+same procedure as the Linux installation (i.e., via the build script [build.sh][]).
+We tested the WSL installation on Windows 10 (Build 18362) with Ubuntu 16.04
+installed via the Microsoft Store.
+
 ### Installing SMACK Itself
 
 SMACK is built using [CMake][] via the following sequence of shell commands
@@ -128,8 +158,8 @@ from SMACK's root directory:
 ````Shell
 mkdir build
 cd build
-cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
-make install
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
+ninja install
 ````
 Note that the `llvm-config` binary must be in your executable `PATH`.
 To specify an install location `PREFIX` other than the default installation
@@ -186,3 +216,5 @@ shell in the `test` directory by executing
 [Xcode]: https://developer.apple.com/xcode/
 [Homebrew]: http://brew.sh/
 [Homebrew Cask]: http://caskroom.io
+[Docker]: https://www.docker.com
+[Ninja]: https://ninja-build.org
