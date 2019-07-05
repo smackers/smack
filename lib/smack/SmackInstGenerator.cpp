@@ -852,8 +852,8 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
   //(CallInst -> Void) -> [Flags] -> (CallInst -> Void)
   static const auto conditionalModel = [this] (std::function<void(CallInst*)> modelGenFunc,
     std::initializer_list<const cl::opt<bool>*> requiredFlags) {
-    return [this, requiredFlags, modelGenFunc] (CallInst* ci) {
-      auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
+    auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
+    return [this, unsetFlags, modelGenFunc] (CallInst* ci) {
       if (unsetFlags.empty())
         modelGenFunc(ci);
       else {
