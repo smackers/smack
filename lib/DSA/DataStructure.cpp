@@ -1196,19 +1196,12 @@ void DSNode::markReachableNodes(DenseSet<const DSNode*> &ReachableNodes) const {
 }
 
 void DSCallSite::markReachableNodes(DenseSet<const DSNode*> &Nodes) const {
-  auto node1 = getRetVal().getNode();
-  if (node1)
-    node1->markReachableNodes(Nodes);
-  auto node2 = getVAVal().getNode();
-  if (node2)
-    node2->markReachableNodes(Nodes);
+  getRetVal().getNode()->markReachableNodes(Nodes);
+  getVAVal().getNode()->markReachableNodes(Nodes);
   if (isIndirectCall()) getCalleeNode()->markReachableNodes(Nodes);
 
-  for (unsigned i = 0, e = getNumPtrArgs(); i != e; ++i) {
-    auto node = getPtrArg(i).getNode();
-    if (node)
-      node->markReachableNodes(Nodes);
-  }
+  for (unsigned i = 0, e = getNumPtrArgs(); i != e; ++i)
+    getPtrArg(i).getNode()->markReachableNodes(Nodes);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
