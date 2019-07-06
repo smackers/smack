@@ -1091,8 +1091,11 @@ void DSGraph::removeDeadNodes(unsigned Flags) {
 
   // The return values are alive as well.
   for (ReturnNodesTy::iterator I = ReturnNodes.begin(), E = ReturnNodes.end();
-       I != E; ++I)
-    I->second.getNode()->markReachableNodes(Alive);
+       I != E; ++I) {
+    auto node = I->second.getNode();
+    if (node)
+      node->markReachableNodes(Alive);
+  }
 
   // Mark any nodes reachable by primary calls as alive...
   for (fc_iterator I = fc_begin(), E = fc_end(); I != E; ++I)
