@@ -296,7 +296,7 @@ void DSNode::print(llvm::raw_ostream &O, const DSGraph *G) const {
 }
 
 void DSGraph::print(llvm::raw_ostream &O) const {
-  WriteGraph(O, this, "DataStructures");
+  WriteGraph(O, this);
 }
 
 void DSGraph::writeGraphToFile(llvm::raw_ostream &O,
@@ -325,7 +325,7 @@ void DSGraph::writeGraphToFile(llvm::raw_ostream &O,
 /// then cleanup.  For use from the debugger.
 ///
 void DSGraph::viewGraph() const {
-  ViewGraph(this, "ds.tempgraph", "DataStructures");
+  ViewGraph(this, "ds.tempgraph");
 }
 
 
