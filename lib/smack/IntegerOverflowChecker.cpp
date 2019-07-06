@@ -95,7 +95,7 @@ Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) 
  * overflow occured as indicated by flag.
  */
 void IntegerOverflowChecker::addCheck(Function* co, Value* flag, Instruction* i) {
-  ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
+  Value* args = CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i);
   CallInst::Create(co, args, "", i);
 }
 
@@ -104,8 +104,8 @@ void IntegerOverflowChecker::addCheck(Function* co, Value* flag, Instruction* i)
  * from exploring paths past a __SMACK_check_overflow
  */
 void IntegerOverflowChecker::addBlockingAssume(Function* va, Value* flag, Instruction* i) {
-  ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
-        va->arg_begin()->getType(), false, "", i));
+  Value* args = CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
+        va->arg_begin()->getType(), false, "", i);
   CallInst::Create(va, args, "", i);
 }
 
