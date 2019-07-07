@@ -44,6 +44,7 @@ struct IntOp {
   virtual FuncsT getFuncs(unsigned) const = 0;
   static const Attr* bvAttrFunc(std::string opName);
   static const Attr* intAttrFunc(std::string opName);
+  virtual ~IntOp() { };
 };
 
 // represent a set of integer operations such as $fadd.<T>
@@ -59,6 +60,7 @@ struct FpOp {
   virtual Decl* getModeledFpFunc(unsigned) const = 0;
   virtual Decl* getUninterpretedFpFunc() const = 0;
   static const Attr* fpAttrFunc(std::string opName);
+  virtual ~FpOp() { };
 };
 
 // builtin functions templated by a function type. A function
@@ -100,6 +102,7 @@ struct Gen {
 
   Gen(Prelude& prelude) : prelude(prelude) {}
   virtual void generate(std::stringstream& s) const = 0;
+  virtual ~Gen() { };
 };
 
 // generator class for integer, pointer, and floating-point types
@@ -110,6 +113,7 @@ struct TypeGen : public Gen {
   virtual void generateMemOps(std::stringstream& s) const = 0;
   virtual void generateConvOps(std::stringstream& s) const = 0;
   virtual void generateExtractValueFuncs(std::stringstream& s) const = 0;
+  virtual ~TypeGen() { };
 };
 
 // generator class for integers

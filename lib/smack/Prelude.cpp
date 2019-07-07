@@ -1256,7 +1256,7 @@ struct FpOpGen::FpIntConv {
       // $fp2si.bvhalf.bv1(rm: rmode, f: bvhalf) returns (bv1);
       return builtinOp(name, ((attrT)bop->func)(fpBw, intBw),
         {srcType, desType}, bs, desType);
-    else if (auto uop = dyn_cast<UninterpretedOp>(modeledFpOp))
+    else if (isa<UninterpretedOp>(modeledFpOp))
       // e.g., function $bitcast.bvhalf.bv16(f: bvhalf) returns (bv16);
       return uninterpretedOp(name, {srcType, desType}, bs, desType);
     else
