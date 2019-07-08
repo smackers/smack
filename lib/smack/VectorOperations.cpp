@@ -3,13 +3,10 @@
 //
 #define DEBUG_TYPE "vector-ops"
 #include "smack/VectorOperations.h"
-#include "smack/BoogieAst.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/Regions.h"
-#include "smack/SmackRep.h"
 #include "llvm/IR/Instruction.h"
-#include <list>
 #include <sstream>
 
 using namespace llvm;

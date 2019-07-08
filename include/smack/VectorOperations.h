@@ -4,12 +4,13 @@
 #ifndef VECTOROPERATIONS_H
 #define VECTOROPERATIONS_H
 
+#include "smack/BoogieAst.h"
+#include "smack/SmackRep.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Type.h"
 #include <list>
-
-class SmackRep;
-class Decl;
-class FuncDecl;
 
 using namespace llvm;
 
