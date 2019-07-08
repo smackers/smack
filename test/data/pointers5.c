@@ -3,13 +3,12 @@
 #include <stdlib.h>
 
 // @expect verified
-// @flag --bit-precise-pointers
 
-int main() {
+int main(void) {
   int *a = (int *)malloc(sizeof(int));
-  long int b;
-
-  b = (long int)a;
+  intptr_t b;
+ 
+  b = (intptr_t)a;
   *((int *)b) = 1;
   assert(*a == 1);
   free(a);

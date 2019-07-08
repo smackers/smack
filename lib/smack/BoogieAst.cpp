@@ -24,6 +24,10 @@ const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
 }
 
+const Expr* Expr::or_(const Expr* l, const Expr* r) {
+  return new BinExpr(BinExpr::Or, l, r);
+}
+
 const Expr* Expr::cond(const Expr* c, const Expr* t, const Expr* e) {
   return new CondExpr(c,t,e);
 }
@@ -127,6 +131,22 @@ const Expr* Expr::if_then_else(const Expr* c, const Expr* t, const Expr* e) {
   return new IfThenElseExpr(c, t, e);
 }
 
+const Expr* Expr::bvExtract(const Expr* v, const Expr* u, const Expr* l) {
+  return new BvExtract(v, u, l);
+}
+
+const Expr* Expr::bvExtract(const Expr* v, unsigned u, unsigned l) {
+  return new BvExtract(v, Expr::lit(u), Expr::lit(l));
+}
+
+const Expr* Expr::bvExtract(std::string v, unsigned u, unsigned l) {
+  return new BvExtract(Expr::id(v), Expr::lit(u), Expr::lit(l));
+}
+
+const Expr* Expr::bvConcat(const Expr* left, const Expr* right) {
+  return new BvConcat(left, right);
+}
+
 const Attr* Attr::attr(std::string s, std::initializer_list<const Expr*> vs) {
   return new Attr(s,vs);
 }
@@ -203,6 +223,12 @@ const Stmt* Stmt::goto_(std::list<std::string> ts) {
 
 const Stmt* Stmt::havoc(std::string x) {
   return new HavocStmt(std::list<std::string>(1, x));
+}
+
+const Stmt* Stmt::havoc(const Expr* x) {
+  std::stringstream s;
+  s << x;
+  return new HavocStmt(std::list<std::string>(1, s.str()));
 }
 
 const Stmt* Stmt::return_(const Expr* e) {
@@ -511,6 +537,14 @@ void CodeExpr::print(std::ostream& os) const {
 
 void IfThenElseExpr::print(std::ostream& os) const {
   os << "if " << cond << " then " << true_value << " else " << false_value;
+}
+
+void BvExtract::print(std::ostream& os) const {
+  os << var << "[" << upper << ":" << lower << "]";
+}
+
+void BvConcat::print(std::ostream& os) const {
+  os << "(" << left << "++" << right << ")";
 }
 
 void StringLit::print(std::ostream& os) const {

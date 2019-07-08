@@ -40,11 +40,12 @@ private:
   void generateGotoStmts(llvm::Instruction& i,
                          std::vector<std::pair<const Expr*, llvm::BasicBlock*> > target);
   void processInstruction(llvm::Instruction& i);
-  void processIntrinsicCall(llvm::IntrinsicInst* ii);
   void nameInstruction(llvm::Instruction& i);
   void annotate(llvm::Instruction& i, Block* b);
 
   const Stmt* recordProcedureCall(const llvm::Value* V, std::list<const Attr*> attrs);
+
+  void generateUnModeledCall(llvm::CallInst* ci);
 
 public:
   void emit(const Stmt* s);
@@ -94,6 +95,7 @@ public:
 
   void visitMemCpyInst(llvm::MemCpyInst& i);
   void visitMemSetInst(llvm::MemSetInst& i);
+  void visitIntrinsicInst(llvm::IntrinsicInst& i);
 };
 }
 

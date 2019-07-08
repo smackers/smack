@@ -2,7 +2,8 @@
 #include "dsa/DSMonitor.h"
 #include "dsa/DSGraph.h"
 #include "llvm/IR/DebugInfo.h"
-#include "smack/SmackOptions.h"
+#include "llvm/Support/raw_ostream.h"
+#include "smack/SmackWarnings.h"
 
 #include <deque>
 
@@ -156,40 +157,42 @@ void DSMonitor::watch(DSNodeHandle N, std::vector<Value*> VS, std::string M) {
 }
 
 void DSMonitor::warn() {
-  if (!smack::SmackOptions::Warnings)
-    return;
+  std::string msg;
+  raw_string_ostream ss(msg);
 
   if (location != "")
-    errs() << location << ": ";
+    ss << location << ": ";
 
-  errs() << "warning: collapsing DSA node\n";
+  ss << "warning: collapsing DSA node\n";
 
   if (message != "")
-    errs() << message << "\n";
+    ss << message << "\n";
 
   if (VS.empty()) {
-    errs() << "(unknown value)" << "\n";
+    ss << "(unknown value)" << "\n";
 
   } else {
     if (Instruction *I = getInstruction(VS[0])) {
       if (BasicBlock *B = I->getParent()) {
         if (Function *F = B->getParent()) {
           if (F->hasName())
-            errs() << "in function:\n  " << F->getName() << "\n";
+            ss << "in function:\n  " << F->getName() << "\n";
         }
         if (B->hasName())
-          errs() << "in block:\n  " << I->getParent()->getName() << "\n";
+          ss << "in block:\n  " << I->getParent()->getName() << "\n";
       }
-      errs() << "at instruction:\n" << *I << "\n";
+      ss << "at instruction:\n" << *I << "\n";
     }
 
     for (auto V : VS)
-      errs() << "at value:\n" << *V << "\n";
+      ss << "at value:\n" << *V << "\n";
 
     if (caption != "")
-      errs() << "node:\n  " << caption << "\n";
+      ss << "node:\n  " << caption << "\n";
   }
-  errs() << "\n";
+  ss << "\n";
+
+  smack::SmackWarnings::warnInfo(ss.str());
 }
 
 void DSMonitor::witness(DSNodeHandle N, std::vector<Value*> VS, std::string M) {

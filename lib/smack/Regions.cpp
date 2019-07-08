@@ -119,7 +119,7 @@ bool Region::isAllocated(const DSNode* N) {
 
 bool Region::isComplicated(const DSNode* N) {
   return N->isIntToPtrNode()
-      || N->isIntToPtrNode()
+      || N->isPtrToIntNode()
       || N->isExternalNode()
       || N->isUnknownNode();
 }
@@ -143,7 +143,6 @@ void Region::init(const Value* V, unsigned length) {
 
   singleton = DL && representative
     && isSingleton(representative, offset, length);
-
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
     (SmackOptions::NoByteAccessInference || !isFieldDisjoint(DSA,V,offset) ||
@@ -195,6 +194,7 @@ void Region::print(raw_ostream& O) {
   O << "<Node>[" << offset << "," << (offset + length) << "]{";
   if (isSingleton()) O << "S";
   if (bytewise) O << "B";
+  if (complicated) O << "C";
   if (isAllocated()) O << "A";
   O << "}";
 }

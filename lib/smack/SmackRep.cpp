@@ -11,6 +11,7 @@
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/Debug.h"
+#include "smack/SmackWarnings.h"
 
 #include <list>
 #include <queue>
@@ -839,7 +840,7 @@ const Expr* SmackRep::expr(const llvm::Value* v, bool isConstIntUnsigned) {
     }
 
   } else if (isa<InlineAsm>(v)) {
-    errs() << "warning: ignoring inline asm passed as argument.\n";
+    SmackWarnings::warnUnsound("inline asm passed as argument", nullptr, nullptr);
     return pointerLit(0ULL);
 
   } else {
@@ -875,6 +876,19 @@ const Expr* SmackRep::cast(unsigned opcode, const llvm::Value* v, const llvm::Ty
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
+bool SmackRep::isBitwiseOp(llvm::Instruction* I) {
+  return I->isShift() || I->isBitwiseLogicOp();
+}
+
+bool SmackRep::isFpArithOp(llvm::Instruction* I) {
+  return isFpArithOp(I->getOpcode());
+}
+
+bool SmackRep::isFpArithOp(unsigned opcode) {
+  return opcode == Instruction::FAdd || opcode == Instruction::FSub
+    || opcode == Instruction::FMul || opcode == Instruction::FDiv;
+}
+
 const Expr* SmackRep::bop(const llvm::ConstantExpr* CE) {
   return bop(CE->getOpcode(), CE->getOperand(0), CE->getOperand(1), CE->getType());
 }
@@ -885,8 +899,7 @@ const Expr* SmackRep::bop(const llvm::BinaryOperator* BO) {
 
 const Expr* SmackRep::bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t) {
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
-  if (opcode == Instruction::FAdd || opcode == Instruction::FSub
-    || opcode == Instruction::FMul || opcode == Instruction::FDiv) {
+  if (isFpArithOp(opcode)) {
     if (SmackOptions::FloatEnabled) {
       return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR), expr(lhs), expr(rhs));
     } else {
@@ -1242,10 +1255,8 @@ Decl* SmackRep::memcpyProc(std::string type, unsigned length) {
 
   if (no_quantifiers)
     name = name + "." + std::to_string(length);
-  else if (SmackOptions::Warnings)
-    errs() << "warning: memory intrinsic length exceeds threshold ("
-           << MEMORY_INTRINSIC_THRESHOLD << "); "
-           << "adding quantifiers.\n";
+  SmackWarnings::warnInfo("warning: memory intrinsic length exceeds threshold ("
+    + std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
 
   s << "procedure " << name << "("
     << "M.dst: [ref] " << type << ", "
@@ -1305,10 +1316,8 @@ Decl* SmackRep::memsetProc(std::string type, unsigned length) {
 
   if (no_quantifiers)
     name = name + "." + std::to_string(length);
-  else if (SmackOptions::Warnings)
-    errs() << "warning: memory intrinsic length exceeds threshold ("
-           << MEMORY_INTRINSIC_THRESHOLD << "); "
-           << "adding quantifiers.\n";
+  SmackWarnings::warnInfo("warning: memory intrinsic length exceeds threshold ("
+    + std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
 
   s << "procedure " << name << "("
     << "M: [ref] " << type << ", "

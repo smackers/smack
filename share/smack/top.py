@@ -110,6 +110,13 @@ def arguments():
   noise_group.add_argument('--debug-only', metavar='MODULES', default=None,
     type=str, help='limit debugging output to given MODULES')
 
+  noise_group.add_argument('--warn', default="unsound",
+    choices=['silent', 'unsound', 'info'],
+    help='''enable certain type of warning messages
+            (silent: no warning messages;
+            unsound: warnings about unsoundness;
+            info: warnings about unsoundness and translation information) [default: %(default)s]''')
+
   parser.add_argument('-t', '--no-verify', action="store_true", default=False,
     help='perform only translation, without verification.')
 
@@ -160,13 +167,13 @@ def arguments():
     help='enable support for pthread programs')
 
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
-    help='enable bit precision for non-pointer values')
+    help='model non-pointer values as bit vectors')
 
   translate_group.add_argument('--timing-annotations', action="store_true", default=False,
     help='enable timing annotations')
 
   translate_group.add_argument('--bit-precise-pointers', action="store_true", default=False,
-    help='enable bit precision for pointer values')
+    help='model pointers and non-pointer values as bit vectors')
 
   translate_group.add_argument('--no-byte-access-inference', action="store_true", default=False,
     help='disable bit-precision-related optimizations with DSA')
@@ -253,6 +260,9 @@ def arguments():
   if args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak:
     args.memory_safety = True
 
+  if args.bit_precise_pointers:
+    args.bit_precise = True
+
   # TODO are we (still) using this?
   # with open(args.input_file, 'r') as f:
   #   for line in f.readlines():
@@ -319,7 +329,8 @@ def llvm_to_bpl(args):
   """Translate the LLVM bitcode file to a Boogie source file."""
 
   cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
-  cmd += ['-warnings']
+  cmd += ['-warn-type', args.warn]
+  if sys.stdout.isatty(): cmd += ['-colored-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:
     cmd += ['-entry-points', ep]
@@ -517,9 +528,49 @@ def error_step(step):
           if src:
             return "%s%s(%s,%s): %s" % (step.group(1), src.group(1), src.group(2), src.group(3), message)
     else:
-      return step.group(0)
+      return corral_error_step(step.group(0))
   else:
     return None
+
+def reformat_assignment(line):
+  def repl(m):
+    val = m.group(1)
+    if 'bv' in val:
+      return m.group(2)+'UL'
+    else:
+      sig_size = int(m.group(7))
+      exp_size = int(m.group(8))
+      # assume we can only handle double
+      if sig_size > 53 or exp_size > 11:
+        return m.group()
+
+      sign_val = -1 if m.group(3) != '' else 1
+      sig_val = m.group(4)
+      exp_sign_val = -1 if m.group(5) != '' else 1
+      # note that the exponent base is 16
+      exp_val = 2**(4*exp_sign_val*int(m.group(6)))
+      return str(sign_val*float.fromhex(sig_val)*exp_val)
+
+  # Boogie FP const grammar: (-)0x[sig]e[exp]f[sigSize]e[expSize], where
+  # sig = hexdigit {hexdigit} '.' hexdigit {hexdigit}
+  # exp = digit {digit}
+  # sigSize = digit {digit}
+  # expSize = digit {digit}
+  return re.sub('((\d+)bv\d+|(-?)0x([0-9a-fA-F]+\.[0-9a-fA-F]+)e(-?)(\d+)f(\d+)e(\d+))', repl, line.strip())
+
+def transform(info):
+  return ','.join(map(reformat_assignment, filter(
+    lambda x: not re.search('((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x), info.split(','))))
+
+def corral_error_step(step):
+  m = re.match('([^\s]*)\s+Trace:\s+(Thread=\d+)\s+\((.*)[\)|;]', step)
+  if m:
+    path = m.group(1)
+    tid = m.group(2)
+    info = transform(m.group(3))
+    return '{0}\t{1}  {2}'.format(path,tid,info)
+  else:
+    return step
 
 def error_trace(verifier_output, args):
   trace = ""

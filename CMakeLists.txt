@@ -180,6 +180,7 @@ add_library(smackTranslator STATIC
   include/smack/NormalizeLoops.h
   include/smack/SplitAggregateValue.h
   include/smack/Prelude.h
+  include/smack/SmackWarnings.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
@@ -203,6 +204,7 @@ add_library(smackTranslator STATIC
   lib/smack/NormalizeLoops.cpp
   lib/smack/SplitAggregateValue.cpp
   lib/smack/Prelude.cpp
+  lib/smack/SmackWarnings.cpp
 )
 
 add_executable(llvm2bpl

@@ -95,7 +95,7 @@ Value* IntegerOverflowChecker::createResult(Value* v, int bits, Instruction* i) 
  * overflow occured as indicated by flag.
  */
 void IntegerOverflowChecker::addCheck(Function* co, Value* flag, Instruction* i) {
-  ArrayRef<Value*> args(CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i));
+  Value* args = CastInst::CreateIntegerCast(flag, co->arg_begin()->getType(), false, "", i);
   CallInst::Create(co, args, "", i);
 }
 
@@ -104,8 +104,8 @@ void IntegerOverflowChecker::addCheck(Function* co, Value* flag, Instruction* i)
  * from exploring paths past a __SMACK_check_overflow
  */
 void IntegerOverflowChecker::addBlockingAssume(Function* va, Value* flag, Instruction* i) {
-  ArrayRef<Value*> args(CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
-        va->arg_begin()->getType(), false, "", i));
+  Value* args = CastInst::CreateIntegerCast(BinaryOperator::CreateNot(flag, "", i),
+        va->arg_begin()->getType(), false, "", i);
   CallInst::Create(va, args, "", i);
 }
 
@@ -114,7 +114,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
   assert(co != NULL && "Function __SMACK_check_overflow should be present.");
   Function* va = m.getFunction("__VERIFIER_assume");
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
-  std::vector<Instruction*> instToRemove;
+  std::vector<Instruction*> instToErase;
   for (auto& F : m) {
     if (Naming::isSmackName(F.getName()))
       continue;
@@ -122,7 +122,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
       // Add check for UBSan left shift/signed division when needed
       if (SmackOptions::IntegerOverflow) {
         if (auto chkshft = dyn_cast<CallInst>(&*I)) {
-	  Function* chkfn = chkshft->getCalledFunction();
+          Function* chkfn = chkshft->getCalledFunction();
           if (chkfn && chkfn->hasName() &&
               (chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") != std::string::npos ||
                chkfn->getName().find("__ubsan_handle_divrem_overflow") != std::string::npos)) {
@@ -132,7 +132,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
             addCheck(co, flag, &*I);
             addBlockingAssume(va, flag, &*I);
             I->replaceAllUsesWith(flag);
-            instToRemove.push_back(&*I);
+            instToErase.push_back(&*I);
           }
         }
       }
@@ -170,7 +170,7 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
               if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
                 Value* r = createResult(ai, bits, &*I);
                 prev->replaceAllUsesWith(r);
-                instToRemove.push_back(prev);
+                instToErase.push_back(prev);
               }
             }
             BinaryOperator* flag = createFlag(ai, bits, isSigned, &*I);
@@ -178,14 +178,15 @@ bool IntegerOverflowChecker::runOnModule(Module& m) {
               addCheck(co, flag, &*I);
             addBlockingAssume(va, flag, &*I);
             I->replaceAllUsesWith(flag);
-            instToRemove.push_back(&*I);
+            instToErase.push_back(&*I);
+            instToErase.push_back(ci);
           }
         }
       }
     }
   }
-  for (auto I : instToRemove) {
-    I->removeFromParent();
+  for (auto I : instToErase) {
+    I->eraseFromParent();
   }
   return true;
 }

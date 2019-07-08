@@ -21,6 +21,7 @@ public:
   static const Expr* exists(std::list<Binding>, const Expr* e);
   static const Expr* forall(std::list<Binding>, const Expr* e);
   static const Expr* and_(const Expr* l, const Expr* r);
+  static const Expr* or_(const Expr* l, const Expr* r);
   static const Expr* cond(const Expr* c, const Expr* t, const Expr* e);
   static const Expr* eq(const Expr* l, const Expr* r);
   static const Expr* lt(const Expr* l, const Expr* r);
@@ -46,6 +47,10 @@ public:
   static const Expr* sel(std::string b, std::string i);
   static const Expr* upd(const Expr* b, const Expr* i, const Expr* v);
   static const Expr* if_then_else(const Expr* c, const Expr* t, const Expr* e);
+  static const Expr* bvExtract(const Expr* v, const Expr* upper, const Expr* lower);
+  static const Expr* bvExtract(std::string v, unsigned upper, unsigned lower);
+  static const Expr* bvExtract(const Expr* v, unsigned upper, unsigned lower);
+  static const Expr* bvConcat(const Expr* left, const Expr* right);
 };
 
 class BinExpr : public Expr {
@@ -209,6 +214,25 @@ public:
   void print(std::ostream& os) const;
 };
 
+class BvExtract : public Expr {
+  const Expr* var;
+  const Expr* upper;
+  const Expr* lower;
+public:
+  BvExtract(const Expr* var, const Expr* upper, const Expr* lower)
+    : var(var), upper(upper), lower(lower) {}
+  void print(std::ostream& os) const;
+};
+
+class BvConcat : public Expr {
+  const Expr* left;
+  const Expr* right;
+public:
+  BvConcat(const Expr* left, const Expr* right)
+    : left(left), right(right) {}
+  void print(std::ostream& os) const;
+};
+
 class Attr {
 protected:
   std::string name;
@@ -258,6 +282,7 @@ public:
   static const Stmt* comment(std::string c);
   static const Stmt* goto_(std::list<std::string> ts);
   static const Stmt* havoc(std::string x);
+  static const Stmt* havoc(const Expr* x);
   static const Stmt* return_();
   static const Stmt* return_(const Expr* e);
   static const Stmt* skip();

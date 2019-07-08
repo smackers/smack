@@ -33,6 +33,11 @@ std::string indexedName(std::string name, std::initializer_list<unsigned> idxs);
 class SmackRep {
   friend class VectorOperations;
   friend class Prelude;
+  friend struct PtrOpGen;
+  friend struct IntOpGen;
+  friend struct TypeDeclGen;
+  friend struct ConstDeclGen;
+  friend struct MemDeclGen;
 
 protected:
   const llvm::DataLayout* targetData;
@@ -75,6 +80,7 @@ private:
   const Stmt* store(unsigned R, const llvm::Type* T, const Expr* P, const Expr* V);
 
   const Expr* cast(unsigned opcode, const llvm::Value* v, const llvm::Type* t);
+  bool isFpArithOp(unsigned opcode);
   const Expr* bop(unsigned opcode, const llvm::Value* lhs, const llvm::Value* rhs, const llvm::Type* t);
   const Expr* cmp(unsigned predicate, const llvm::Value* lhs, const llvm::Value* rhs, bool isUnsigned);
 
@@ -121,6 +127,9 @@ public:
 
   const Expr* cast(const llvm::Instruction* I);
   const Expr* cast(const llvm::ConstantExpr* CE);
+
+  bool isBitwiseOp(llvm::Instruction* I);
+  bool isFpArithOp(llvm::Instruction* I);
 
   const Expr* bop(const llvm::BinaryOperator* BO);
   const Expr* bop(const llvm::ConstantExpr* CE);

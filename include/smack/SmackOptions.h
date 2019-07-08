@@ -7,18 +7,21 @@
 
 #include "llvm/Support/CommandLine.h"
 
+#include "smack/SmackWarnings.h"
+
 namespace smack {
 class SmackOptions {
 public:
   static const llvm::cl::list<std::string> EntryPoints;
 
-  static const llvm::cl::opt<bool> Warnings;
+  static const llvm::cl::opt<SmackWarnings::WarningLevel> WarningLevel;
+  static const llvm::cl::opt<bool> ColoredWarnings;
 
   static const llvm::cl::opt<bool> MemoryModelDebug;
   static const llvm::cl::opt<bool> MemoryModelImpls;
 
   static const llvm::cl::opt<bool> SourceLocSymbols;
-  static const llvm::cl::opt<bool> BitPrecise;
+  static llvm::cl::opt<bool> BitPrecise;
   static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
   static const llvm::cl::opt<bool> NoByteAccessInference;

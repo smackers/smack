@@ -14,8 +14,20 @@ const llvm::cl::list<std::string> SmackOptions::EntryPoints(
   llvm::cl::value_desc("PROCS")
 );
 
-const llvm::cl::opt<bool> SmackOptions::Warnings(
-  "warnings", llvm::cl::desc("Enable warnings.")
+const llvm::cl::opt<SmackWarnings::WarningLevel> SmackOptions::WarningLevel(
+  "warn-type",
+  llvm::cl::desc("Enable certain type of warning messages."),
+  llvm::cl::values(
+    clEnumValN(SmackWarnings::WarningLevel::Silent,
+      "silent", "No warning messages"),
+    clEnumValN(SmackWarnings::WarningLevel::Unsound,
+      "unsound", "Enable warnings about unsoundness"),
+    clEnumValN(SmackWarnings::WarningLevel::Info,
+      "info", "Enable warnings about unsoundness and translation information"))
+);
+
+const llvm::cl::opt<bool> SmackOptions::ColoredWarnings(
+  "colored-warnings", llvm::cl::desc("Enable colored warning messages.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::MemoryModelDebug(
@@ -30,12 +42,12 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
   "source-loc-syms", llvm::cl::desc("Include source locations in generated code.")
 );
 
-const llvm::cl::opt<bool> SmackOptions::BitPrecise(
+llvm::cl::opt<bool> SmackOptions::BitPrecise(
   "bit-precise", llvm::cl::desc("Model non-pointer values as bit vectors.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
-  "bit-precise-pointers", llvm::cl::desc("Model pointers as bit vectors.")
+  "bit-precise-pointers", llvm::cl::desc("Model pointers and non-pointer values as bit vectors.")
 );
 
 const llvm::cl::opt<bool> SmackOptions::AddTiming("timing-annotations", llvm::cl::desc("Add timing annotations."));
