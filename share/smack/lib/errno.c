@@ -4,7 +4,4 @@
 #include <errno.h>
 
 static int errno_global;
-int *__errno_location(void) {
-  return &errno_global;
-}
-
+int *__errno_location(void) { return &errno_global; }
