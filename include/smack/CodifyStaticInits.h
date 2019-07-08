@@ -11,12 +11,13 @@ namespace smack {
 
 class CodifyStaticInits : public llvm::ModulePass {
 private:
-  const llvm::DataLayout * TD;
+  const llvm::DataLayout *TD;
+
 public:
   static char ID;
 
   CodifyStaticInits() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& M);
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
+  virtual bool runOnModule(llvm::Module &M);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
 }
