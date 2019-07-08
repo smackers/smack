@@ -4,7 +4,7 @@
 
 // @expect error
 // @checkbpl grep "call foo"
-// @checkout grep "checking.c(11,1)"
+// @checkout grep "checking.c(12,3)"
 
 void foo(void) {}
 
