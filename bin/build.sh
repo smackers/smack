@@ -58,7 +58,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
+DEPENDENCIES="git cmake python-yaml python-psutil unzip wget ninja-build"
 
 shopt -s extglob
 
@@ -486,9 +486,9 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
-  make
-  sudo make install
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
+  ninja
+  sudo ninja install
 
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
