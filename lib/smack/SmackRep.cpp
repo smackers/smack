@@ -816,7 +816,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
         return cmp(CE);
 
       else {
-        DEBUG(errs() << "VALUE : " << *constant << "\n");
+        SDEBUG(errs() << "VALUE : " << *constant << "\n");
         llvm_unreachable("Constant expression of this type not supported.");
       }
 
@@ -836,7 +836,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
       return Expr::id(Naming::NULL_VAL);
 
     else {
-      DEBUG(errs() << "VALUE : " << *constant << "\n");
+      SDEBUG(errs() << "VALUE : " << *constant << "\n");
       llvm_unreachable("This type of constant not supported.");
     }
 
@@ -846,7 +846,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
     return pointerLit(0ULL);
 
   } else {
-    DEBUG(errs() << "VALUE : " << *v << "\n");
+    SDEBUG(errs() << "VALUE : " << *v << "\n");
     llvm_unreachable("Value of this type not supported.");
   }
 }

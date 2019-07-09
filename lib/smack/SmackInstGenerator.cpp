@@ -59,7 +59,7 @@ Type *getElemType(const Type *t, unsigned idx) {
 void SmackInstGenerator::emit(const Stmt *s) {
   // stringstream str;
   // s->print(str);
-  // DEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
+  // SDEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
   currBlock->addStmt(s);
 }
 
@@ -139,7 +139,7 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
 }
 
 void SmackInstGenerator::processInstruction(llvm::Instruction &inst) {
-  DEBUG(errs() << "Inst: " << inst << "\n");
+  SDEBUG(errs() << "Inst: " << inst << "\n");
   annotate(inst, currBlock);
   ORIG(inst);
   nameInstruction(inst);
@@ -174,7 +174,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
 }
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction &inst) {
-  DEBUG(errs() << "Instruction not handled: " << inst << "\n");
+  SDEBUG(errs() << "Instruction not handled: " << inst << "\n");
   llvm_unreachable("Instruction not handled.");
 }
 

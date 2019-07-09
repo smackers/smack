@@ -38,21 +38,21 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
   SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>());
   std::list<Decl *> &decls = program->getDeclarations();
 
-  DEBUG(errs() << "Analyzing globals...\n");
+  SDEBUG(errs() << "Analyzing globals...\n");
 
   for (auto &G : M.globals()) {
     auto ds = rep.globalDecl(&G);
     decls.insert(decls.end(), ds.begin(), ds.end());
   }
 
-  DEBUG(errs() << "Analyzing functions...\n");
+  SDEBUG(errs() << "Analyzing functions...\n");
 
   for (auto &F : M) {
 
     // Reset the counters for per-function names
     naming.reset();
 
-    DEBUG(errs() << "Analyzing function: " << naming.get(F) << "\n");
+    SDEBUG(errs() << "Analyzing function: " << naming.get(F) << "\n");
 
     auto ds = rep.globalDecl(&F);
     decls.insert(decls.end(), ds.begin(), ds.end());
@@ -67,15 +67,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
       continue;
 
     if (!F.empty() && !F.getEntryBlock().empty()) {
-      DEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
+      SDEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
       for (auto P : procs) {
         SmackInstGenerator igen(
             getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), &rep, P,
             &naming);
-        DEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
+        SDEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
         igen.visit(F);
-        DEBUG(errs() << "\n");
+        SDEBUG(errs() << "\n");
 
         // First execute static initializers, in the main procedure.
         if (F.hasName() && SmackOptions::isEntryPoint(F.getName())) {
@@ -84,7 +84,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
         } else if (naming.get(F).find(Naming::INIT_FUNC_PREFIX) == 0)
           rep.addInitFunc(&F);
       }
-      DEBUG(errs() << "Finished analyzing function: " << naming.get(F)
+      SDEBUG(errs() << "Finished analyzing function: " << naming.get(F)
                    << "\n\n");
     }
 

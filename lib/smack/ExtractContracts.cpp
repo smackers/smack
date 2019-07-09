@@ -88,7 +88,7 @@ std::tuple<BlockList, LoopMap> splitContractBlocks(Function &F, LoopInfo &LI) {
       if (auto CI = dyn_cast<CallInst>(&I)) {
         if (auto *CF = CI->getCalledFunction()) {
           if (isContractFunction(CF)) {
-            DEBUG(errs() << "splitting block at contract invocation: " << *CI
+            SDEBUG(errs() << "splitting block at contract invocation: " << *CI
                          << "\n");
             BasicBlock *B = CI->getParent();
             auto NewBB = B->splitBasicBlock(++CI->getIterator());
@@ -223,7 +223,7 @@ bool ExtractContracts::runOnModule(Module &M) {
     std::tie(contractBlocks, invariantBlocks) = splitContractBlocks(*F, LI);
 
     if (!contractBlocks.empty() || !invariantBlocks.empty()) {
-      DEBUG(errs() << "function " << F->getName() << " after splitting: " << *F
+      SDEBUG(errs() << "function " << F->getName() << " after splitting: " << *F
                    << "\n");
       modified = true;
     }
@@ -252,7 +252,7 @@ bool ExtractContracts::runOnModule(Module &M) {
         I->eraseFromParent();
       }
       newF->eraseFromParent();
-      DEBUG(errs() << "function " << F->getName()
+      SDEBUG(errs() << "function " << F->getName()
                    << " after contract extraction: " << *F << "\n");
     }
 
@@ -280,13 +280,13 @@ bool ExtractContracts::runOnModule(Module &M) {
         I->eraseFromParent();
       }
       newF->eraseFromParent();
-      DEBUG(errs() << "function " << F->getName()
+      SDEBUG(errs() << "function " << F->getName()
                    << " after invariant extraction: " << *F << "\n");
     }
   }
 
   for (auto F : newFs) {
-    DEBUG(errs() << "added function:" << *F);
+    SDEBUG(errs() << "added function:" << *F);
   }
 
   return modified;

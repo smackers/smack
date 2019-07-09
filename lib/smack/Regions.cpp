@@ -231,7 +231,7 @@ unsigned Regions::size() const { return regions.size(); }
 Region &Regions::get(unsigned R) { return regions[R]; }
 
 unsigned Regions::idx(const Value *V) {
-  DEBUG(errs() << "[regions] for: " << *V << "\n"; auto U = V;
+  SDEBUG(errs() << "[regions] for: " << *V << "\n"; auto U = V;
         while (U && !isa<Instruction>(U) && !U->use_empty()) U = U->user_back();
         if (auto I = dyn_cast<Instruction>(U)) {
           auto F = I->getParent()->getParent();
@@ -244,7 +244,7 @@ unsigned Regions::idx(const Value *V) {
 }
 
 unsigned Regions::idx(const Value *V, unsigned length) {
-  DEBUG(errs() << "[regions] for: " << *V << " with length " << length << "\n";
+  SDEBUG(errs() << "[regions] for: " << *V << " with length " << length << "\n";
         auto U = V;
         while (U && !isa<Instruction>(U) && !U->use_empty()) U = U->user_back();
         if (auto I = dyn_cast<Instruction>(U)) {
@@ -260,22 +260,22 @@ unsigned Regions::idx(const Value *V, unsigned length) {
 unsigned Regions::idx(Region &R) {
   unsigned r;
 
-  DEBUG(errs() << "[regions]   using region: ");
-  DEBUG(R.print(errs()));
-  DEBUG(errs() << "\n");
+  SDEBUG(errs() << "[regions]   using region: ");
+  SDEBUG(R.print(errs()));
+  SDEBUG(errs() << "\n");
 
   for (r = 0; r < regions.size(); ++r) {
     if (regions[r].overlaps(R)) {
 
-      DEBUG(errs() << "[regions]   found overlap at index " << r << ": ");
-      DEBUG(regions[r].print(errs()));
-      DEBUG(errs() << "\n");
+      SDEBUG(errs() << "[regions]   found overlap at index " << r << ": ");
+      SDEBUG(regions[r].print(errs()));
+      SDEBUG(errs() << "\n");
 
       regions[r].merge(R);
 
-      DEBUG(errs() << "[regions]   merged region: ");
-      DEBUG(regions[r].print(errs()));
-      DEBUG(errs() << "\n");
+      SDEBUG(errs() << "[regions]   merged region: ");
+      SDEBUG(regions[r].print(errs()));
+      SDEBUG(errs() << "\n");
 
       break;
     }
@@ -291,17 +291,17 @@ unsigned Regions::idx(Region &R) {
     while (q < regions.size()) {
       if (regions[r].overlaps(regions[q])) {
 
-        DEBUG(errs() << "[regions]   found extra overlap at index " << q
+        SDEBUG(errs() << "[regions]   found extra overlap at index " << q
                      << ": ");
-        DEBUG(regions[q].print(errs()));
-        DEBUG(errs() << "\n");
+        SDEBUG(regions[q].print(errs()));
+        SDEBUG(errs() << "\n");
 
         regions[r].merge(regions[q]);
         regions.erase(regions.begin() + q);
 
-        DEBUG(errs() << "[regions]   merged region: ");
-        DEBUG(regions[r].print(errs()));
-        DEBUG(errs() << "\n");
+        SDEBUG(errs() << "[regions]   merged region: ");
+        SDEBUG(regions[r].print(errs()));
+        SDEBUG(errs() << "\n");
 
       } else {
         q++;
@@ -309,7 +309,7 @@ unsigned Regions::idx(Region &R) {
     }
   }
 
-  DEBUG(errs() << "[regions]   returning index: " << r << "\n\n");
+  SDEBUG(errs() << "[regions]   returning index: " << r << "\n\n");
 
   return r;
 }

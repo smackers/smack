@@ -59,12 +59,12 @@ bool FuncSpec::runOnModule(Module& M) {
           if (isa<FunctionType>(Ty->getElementType())) {
             // Store the index of such an argument
             FPArgs.push_back(Arg.getArgNo());
-            DEBUG(errs() << "Eligible: " << F.getName().str() << "\n");
+            SDEBUG(errs() << "Eligible: " << F.getName().str() << "\n");
           }
         } else if (isa<FunctionType>(Arg.getType())) {
           // Store the index of such an argument
           FPArgs.push_back(Arg.getArgNo());
-          DEBUG(errs() << "Eligible: " << F.getName().str() << "\n");
+          SDEBUG(errs() << "Eligible: " << F.getName().str() << "\n");
         } 
       }
       // Now find all call sites that it is called from

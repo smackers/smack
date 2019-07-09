@@ -175,7 +175,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
              * - Finally, an assumption about the value of the flag is created
              *   to block erroneous checking of paths after the overflow check.
              */
-            DEBUG(errs() << "Processing intrinsic: " << f->getName().str()
+            SDEBUG(errs() << "Processing intrinsic: " << f->getName().str()
                          << "\n");
             assert(info.size() == 4 && "Must capture three matched strings.");
             bool isSigned = (info[1] == "s");
@@ -186,7 +186,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                 extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
             Value *eo2 =
                 extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
-            DEBUG(errs() << "Processing operator: " << op << "\n");
+            SDEBUG(errs() << "Processing operator: " << op << "\n");
             assert(INSTRUCTION_TABLE.count(op) != 0 &&
                    "Operator must be present in our instruction table.");
             BinaryOperator *ai = BinaryOperator::Create(

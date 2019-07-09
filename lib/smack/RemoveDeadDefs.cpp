@@ -37,7 +37,7 @@ bool RemoveDeadDefs::runOnModule(Module &M) {
       if (SmackOptions::isEntryPoint(name))
         continue;
 
-      DEBUG(errs() << "removing dead definition: " << name << "\n");
+      SDEBUG(errs() << "removing dead definition: " << name << "\n");
       dead.push_back(&F);
     }
 

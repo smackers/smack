@@ -35,8 +35,7 @@ extern bool DebugFlag;
 
 llvm::raw_ostream &dbgs();
 
-#undef DEBUG
-#define DEBUG(X) SMACK_DEBUG_WITH_TYPE(DEBUG_TYPE, X)
+#define SDEBUG(X) SMACK_DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 }
 
 #endif

@@ -122,7 +122,7 @@ FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, VectorType *T) {
 }
 
 FuncDecl *VectorOperations::cast(CastInst *I) {
-  DEBUG(errs() << "simd-cast: " << *I << "\n");
+  SDEBUG(errs() << "simd-cast: " << *I << "\n");
   auto F = cast(I->getOpcode(), I->getSrcTy(), I->getDestTy());
   auto G = cast(I->getOpcode(), I->getDestTy(), I->getSrcTy());
   auto A = inverseAxiom(I->getOpcode(), I->getSrcTy(), I->getDestTy());
@@ -139,7 +139,7 @@ FuncDecl *VectorOperations::cast(CastInst *I) {
 }
 
 FuncDecl *VectorOperations::binary(BinaryOperator *I) {
-  DEBUG(errs() << "simd-binary: " << *I << "\n");
+  SDEBUG(errs() << "simd-binary: " << *I << "\n");
   auto T = dyn_cast<VectorType>(I->getType());
   assert(T && T == I->getOperand(0)->getType() &&
          "expected equal vector types");
@@ -150,7 +150,7 @@ FuncDecl *VectorOperations::binary(BinaryOperator *I) {
 }
 
 FuncDecl *VectorOperations::cmp(CmpInst *I) {
-  DEBUG(errs() << "simd-binary: " << *I << "\n");
+  SDEBUG(errs() << "simd-binary: " << *I << "\n");
   auto T = dyn_cast<VectorType>(I->getOperand(0)->getType());
   assert(T && "expected vector type");
   auto F = cmp(I->getPredicate(), T);
