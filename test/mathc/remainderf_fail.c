@@ -19,7 +19,7 @@ int main(void) {
     assert(__isnanf(remainderf(Inf, y)));
     assert(__isnanf(remainderf(negInf, y)));
   }
- 
+
   if (!__isnanf(x)) {
     assert(__isnanf(remainderf(x, 0.0f)));
     assert(__isnanf(remainderf(x, -0.0f)));

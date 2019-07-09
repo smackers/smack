@@ -1,5 +1,5 @@
-#include <limits.h>
 #include "smack.h"
+#include <limits.h>
 
 // @expect error
 
@@ -76,7 +76,7 @@ int main(void) {
   unsigned long long int x24 = __VERIFIER_nondet_unsigned_long_long_int();
   assert(x24 >= 0 && x24 <= ULLONG_MAX);
 
-// Used in SVCCOMP benchmarks
+  // Used in SVCCOMP benchmarks
   _Bool x25 = __VERIFIER_nondet_bool();
   assert(x25 == 0 || x25 == 1);
 
@@ -94,4 +94,3 @@ int main(void) {
 
   return 0;
 }
-

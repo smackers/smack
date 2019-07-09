@@ -2,13 +2,9 @@
 
 // @expect error
 
-int incr(int x) {
-  return ++x;
-}
+int incr(int x) { return ++x; }
 
-int decr(int x) {
-  return --x;
-}
+int decr(int x) { return --x; }
 
 int main(void) {
   int (*fp)(int);
@@ -24,4 +20,3 @@ int main(void) {
   assert(x == 0 || x == 1);
   return 0;
 }
-

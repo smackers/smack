@@ -6,8 +6,10 @@
 int gcd_test(int a, int b) {
   int t;
 
-  if (a < 0) a = -a;
-  if (b < 0) b = -b;
+  if (a < 0)
+    a = -a;
+  if (b < 0)
+    b = -b;
 
   while (b != 0) {
     t = b;
@@ -29,4 +31,3 @@ int main(void) {
 
   return 0;
 }
-

@@ -1,14 +1,14 @@
-#include <string.h>
 #include "smack.h"
+#include <string.h>
 
 // @expect verified
 
 int main(void) {
   char brick[10];
-  strcpy(brick,"bl");
+  strcpy(brick, "bl");
   char *glue = "ue";
-  char *modernart = strcat(brick,glue);
+  char *modernart = strcat(brick, glue);
 
-  assert(strcmp(modernart,"blue") == 0);
+  assert(strcmp(modernart, "blue") == 0);
   return 0;
 }

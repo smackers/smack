@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
@@ -16,7 +16,7 @@ void incr(point *p) {
 }
 
 int main() {
-  point* p = (point*)malloc(sizeof(int));
+  point *p = (point *)malloc(sizeof(int));
 
   p->a = p->b = 0;
 
@@ -27,4 +27,3 @@ int main() {
 
   return 0;
 }
-

@@ -1,6 +1,6 @@
 #include "smack.h"
-#include <math.h>
 #include <fenv.h>
+#include <math.h>
 
 // @expect error
 
@@ -50,4 +50,3 @@ int main(void) {
 
   return 0;
 }
-

@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @flag --unroll=11
 // @expect verified
@@ -10,9 +10,7 @@ typedef struct {
   int f2;
 } Elem;
 
-Elem* alloc(int size) {
-  return (Elem*)malloc(size * sizeof(Elem));
-}
+Elem *alloc(int size) { return (Elem *)malloc(size * sizeof(Elem)); }
 
 void init(int size) {
   int i;
@@ -33,7 +31,4 @@ void init(int size) {
   }
 }
 
-int main(void) {
-  init(10);
-}
-
+int main(void) { init(10); }

@@ -14,14 +14,14 @@ using llvm::errs;
 
 char BplFilePrinter::ID = 0;
 
-void BplFilePrinter::getAnalysisUsage(llvm::AnalysisUsage& AU) const {
+void BplFilePrinter::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<SmackModuleGenerator>();
 }
 
-bool BplFilePrinter::runOnModule(llvm::Module& m) {
-  SmackModuleGenerator& smackGenerator = getAnalysis<SmackModuleGenerator>();
-  Program* program = smackGenerator.getProgram();
+bool BplFilePrinter::runOnModule(llvm::Module &m) {
+  SmackModuleGenerator &smackGenerator = getAnalysis<SmackModuleGenerator>();
+  Program *program = smackGenerator.getProgram();
   std::ostringstream s;
   program->print(s);
   out << s.str();

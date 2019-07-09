@@ -11,9 +11,8 @@ int main() {
     goto out;
   }
 
-  out:
-    return 0;
-  ERROR:
-    return 0;
+out:
+  return 0;
+ERROR:
+  return 0;
 }
-

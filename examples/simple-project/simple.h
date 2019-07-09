@@ -4,8 +4,8 @@
 #ifndef SIMPLE_H
 #define SIMPLE_H
 
-#include "smack.h"
 #include "incr.h"
+#include "smack.h"
 
 void test(int);
 

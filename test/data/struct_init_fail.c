@@ -8,8 +8,7 @@ struct a {
 };
 
 int main(void) {
-  struct a x = {0,0};
+  struct a x = {0, 0};
   assert(x.j == 1);
   return 0;
 }
-

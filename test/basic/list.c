@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include "smack.h"
+#include <stdlib.h>
 
 // @flag --unroll=4
 // @expect verified
@@ -11,16 +11,16 @@ typedef struct list {
 
 mlist *head;
 
-mlist* search_list(mlist *l, int k) {
+mlist *search_list(mlist *l, int k) {
   l = head;
-  while(l != NULL && l->key != k) {
+  while (l != NULL && l->key != k) {
     l = l->next;
   }
   return l;
 }
 
 void insert_list(mlist *l, int k) {
-  l = (mlist*)malloc(sizeof(mlist));
+  l = (mlist *)malloc(sizeof(mlist));
   l->key = k;
   if (head == NULL) {
     l->next = NULL;
@@ -28,7 +28,7 @@ void insert_list(mlist *l, int k) {
     l->key = k;
     l->next = head;
   }
-  head = l;	
+  head = l;
 }
 
 int main(void) {
@@ -41,4 +41,3 @@ int main(void) {
   temp = search_list(head, 2);
   assert(temp->key == 2);
 }
-

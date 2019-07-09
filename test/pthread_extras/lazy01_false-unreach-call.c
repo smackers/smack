@@ -3,35 +3,28 @@
 
 // @expect error
 
-pthread_mutex_t  mutex;
+pthread_mutex_t mutex;
 int data = 0;
 
-void *thread1(void *arg)
-{
+void *thread1(void *arg) {
   pthread_mutex_lock(&mutex);
   data++;
   pthread_mutex_unlock(&mutex);
 }
 
-
-void *thread2(void *arg)
-{
+void *thread2(void *arg) {
   pthread_mutex_lock(&mutex);
-  data+=2;
+  data += 2;
   pthread_mutex_unlock(&mutex);
 }
 
-
-void *thread3(void *arg)
-{
+void *thread3(void *arg) {
   pthread_mutex_lock(&mutex);
   assert(data < 3);
-  pthread_mutex_unlock(&mutex);    
+  pthread_mutex_unlock(&mutex);
 }
 
-
-int main()
-{
+int main() {
   pthread_mutex_init(&mutex, 0);
 
   pthread_t t1, t2, t3;
@@ -43,7 +36,6 @@ int main()
   pthread_join(t1, 0);
   pthread_join(t2, 0);
   pthread_join(t3, 0);
-  
+
   return 0;
 }
-

@@ -4,33 +4,31 @@
 
 #define DEBUG_TYPE "simplify-libcalls"
 
-#include "smack/SmackOptions.h"
-#include "smack/Naming.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/Debug.h"
+#include "smack/Naming.h"
+#include "smack/SmackOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-#include <vector>
-#include <stack>
 #include <map>
 #include <set>
+#include <stack>
+#include <vector>
 
 namespace smack {
 
 using namespace llvm;
 
-void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage& AU) const {
+void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
-bool SimplifyLibCalls::runOnModule(Module& M) {
+bool SimplifyLibCalls::runOnModule(Module &M) {
   modified = false;
   simplifier = new LibCallSimplifier(
-    M.getDataLayout(),
-    &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()
-  );
+      M.getDataLayout(), &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI());
   if (simplifier)
     visit(M);
   return modified;
@@ -46,7 +44,6 @@ void SimplifyLibCalls::visitCallInst(CallInst &I) {
 char SimplifyLibCalls::ID = 0;
 
 // Register the pass
-static RegisterPass<SimplifyLibCalls>
-X("simplify-libcalls", "Simplify Library Calls");
-
+static RegisterPass<SimplifyLibCalls> X("simplify-libcalls",
+                                        "Simplify Library Calls");
 }

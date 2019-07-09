@@ -12,18 +12,16 @@ class Program;
 
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
-  Program* program;
+  Program *program;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
   SmackModuleGenerator();
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
-  virtual bool runOnModule(llvm::Module& m);
-  void generateProgram(llvm::Module& m);
-  Program* getProgram() {
-    return program;
-  }
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+  virtual bool runOnModule(llvm::Module &m);
+  void generateProgram(llvm::Module &m);
+  Program *getProgram() { return program; }
 };
 }
 

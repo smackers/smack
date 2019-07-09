@@ -1,12 +1,10 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
-int returnOne() {
-  return 1;
-}
+int returnOne() { return 1; }
 
 int main(void) {
   int a;
@@ -16,4 +14,3 @@ int main(void) {
   assert(a == 1);
   return a;
 }
-

@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
@@ -14,4 +14,3 @@ int main(void) {
   assert(b == 3 || a == -1 || b == 0);
   return a;
 }
-

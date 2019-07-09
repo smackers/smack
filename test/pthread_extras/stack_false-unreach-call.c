@@ -5,100 +5,73 @@
 // @expect error
 // @flag --unroll=6
 
-#define TRUE	  (1)
-#define FALSE	  (0) 
-#define SIZE	  (5)
-#define OVERFLOW  (-1)
+#define TRUE (1)
+#define FALSE (0)
+#define SIZE (5)
+#define OVERFLOW (-1)
 #define UNDERFLOW (-2)
 
-static int top=0;
+static int top = 0;
 static unsigned int arr[SIZE];
 pthread_mutex_t m;
-_Bool flag=FALSE;
+_Bool flag = FALSE;
 
-void inc_top(void)
-{
-  top++;
-}
+void inc_top(void) { top++; }
 
-void dec_top(void)
-{
-  top--;
-}
+void dec_top(void) { top--; }
 
-int get_top(void)
-{
-  return top;
-}
+int get_top(void) { return top; }
 
-int stack_empty(void)
-{
-  (top==0) ? TRUE : FALSE; 
-}
+int stack_empty(void) { (top == 0) ? TRUE : FALSE; }
 
-int push(unsigned int *stack, int x)
-{
-  if (top==SIZE) 
-  {
+int push(unsigned int *stack, int x) {
+  if (top == SIZE) {
     printf("stack overflow\n");
     return OVERFLOW;
-  } 
-  else 
-  {
+  } else {
     stack[get_top()] = x;
     inc_top();
   }
   return 0;
 }
 
-int pop(unsigned int *stack)
-{
-  if (get_top()==0) 
-  {
-    printf("stack underflow\n");	
+int pop(unsigned int *stack) {
+  if (get_top() == 0) {
+    printf("stack underflow\n");
     return UNDERFLOW;
-  } 
-  else 
-  {
+  } else {
     dec_top();
-    return stack[get_top()];  
+    return stack[get_top()];
   }
   return 0;
 }
 
-void *t1(void *arg) 
-{
+void *t1(void *arg) {
   int i;
   unsigned int tmp;
 
-  for(i=0; i<SIZE; i++)
-  {
+  for (i = 0; i < SIZE; i++) {
     pthread_mutex_lock(&m);
-    tmp = __VERIFIER_nondet_uint()%SIZE;
-    assert(push(arr,tmp)!=OVERFLOW);
-    flag=TRUE;
+    tmp = __VERIFIER_nondet_uint() % SIZE;
+    assert(push(arr, tmp) != OVERFLOW);
+    flag = TRUE;
     pthread_mutex_unlock(&m);
   }
 }
 
-void *t2(void *arg) 
-{
+void *t2(void *arg) {
   int i;
 
-  for(i=0; i<SIZE; i++)
-  {
+  for (i = 0; i < SIZE; i++) {
     pthread_mutex_lock(&m);
-    if (flag)
-    {
-      assert(pop(arr)!=UNDERFLOW);
+    if (flag) {
+      assert(pop(arr) != UNDERFLOW);
     }
     pthread_mutex_unlock(&m);
   }
 }
 
-
-int main(void) 
-{
+int main(void) {
   pthread_t id1, id2;
 
   pthread_mutex_init(&m, 0);
@@ -111,4 +84,3 @@ int main(void)
 
   return 0;
 }
-

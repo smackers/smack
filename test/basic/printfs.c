@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include "smack.h"
+#include <stdio.h>
 
 // @expect verified
 
@@ -11,4 +11,3 @@ int main(void) {
   printf("Hello World %d %d %d\n", 10, 20, 30);
   printf("Hello World %d %d %d %d\n", 10, 20, 30, 40);
 }
-

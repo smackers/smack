@@ -9,7 +9,6 @@ int foo(int x) {
   return y;
 }
 
-
 int main(void) {
   int x = foo(42);
   int y = foo(42);

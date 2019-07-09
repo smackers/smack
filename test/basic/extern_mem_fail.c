@@ -1,10 +1,10 @@
-#include <stdlib.h>
 #include <smack.h>
+#include <stdlib.h>
 
 // @expect error
 
 void foo(int *);
-int* bar();
+int *bar();
 
 int main() {
   int *x = malloc(4);

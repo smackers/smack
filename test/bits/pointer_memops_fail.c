@@ -4,11 +4,11 @@
 // @expect error
 // @flag --clang-options=-m32 --bit-precise-pointers
 
-int* a[2];
+int *a[2];
 
 int main(void) {
   int b = 1;
-  int** c = (int**)malloc(sizeof(int*));
+  int **c = (int **)malloc(sizeof(int *));
   a[0] = &b;
   a[1] = &b;
   *c = a[0];

@@ -3,14 +3,14 @@
 //
 #define DEBUG_TYPE "smack-mod-gen"
 #include "smack/SmackModuleGenerator.h"
-#include "smack/SmackInstGenerator.h"
 #include "smack/BoogieAst.h"
-#include "smack/Naming.h"
-#include "smack/Regions.h"
-#include "smack/SmackRep.h"
-#include "smack/SmackOptions.h"
 #include "smack/Debug.h"
+#include "smack/Naming.h"
 #include "smack/Prelude.h"
+#include "smack/Regions.h"
+#include "smack/SmackInstGenerator.h"
+#include "smack/SmackOptions.h"
+#include "smack/SmackRep.h"
 
 namespace smack {
 
@@ -21,33 +21,33 @@ SmackModuleGenerator::SmackModuleGenerator() : ModulePass(ID) {
   program = new Program();
 }
 
-void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage& AU) const {
+void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<llvm::LoopInfoWrapperPass>();
   AU.addRequired<Regions>();
 }
 
-bool SmackModuleGenerator::runOnModule(llvm::Module& m) {
+bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
   generateProgram(m);
   return false;
 }
 
-void SmackModuleGenerator::generateProgram(llvm::Module& M) {
+void SmackModuleGenerator::generateProgram(llvm::Module &M) {
 
   Naming naming;
   SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>());
-  std::list<Decl*>& decls = program->getDeclarations();
+  std::list<Decl *> &decls = program->getDeclarations();
 
   DEBUG(errs() << "Analyzing globals...\n");
 
-  for (auto& G : M.globals()) {
+  for (auto &G : M.globals()) {
     auto ds = rep.globalDecl(&G);
     decls.insert(decls.end(), ds.begin(), ds.end());
   }
 
   DEBUG(errs() << "Analyzing functions...\n");
 
-  for (auto& F : M) {
+  for (auto &F : M) {
 
     // Reset the counters for per-function names
     naming.reset();
@@ -70,7 +70,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
       DEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
       for (auto P : procs) {
-        SmackInstGenerator igen(getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), &rep, P, &naming);
+        SmackInstGenerator igen(
+            getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), &rep, P,
+            &naming);
         DEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
         igen.visit(F);
         DEBUG(errs() << "\n");
@@ -82,7 +84,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
         } else if (naming.get(F).find(Naming::INIT_FUNC_PREFIX) == 0)
           rep.addInitFunc(&F);
       }
-      DEBUG(errs() << "Finished analyzing function: " << naming.get(F) << "\n\n");
+      DEBUG(errs() << "Finished analyzing function: " << naming.get(F)
+                   << "\n\n");
     }
 
     // MODIFIES
@@ -98,7 +101,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& M) {
   Prelude prelude(rep);
   program->appendPrelude(prelude.getPrelude());
 
-  std::list<Decl*> kill_list;
+  std::list<Decl *> kill_list;
   for (auto D : *program) {
     if (auto P = dyn_cast<ProcDecl>(D)) {
       if (rep.isContractExpr(D->getName())) {

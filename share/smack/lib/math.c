@@ -25,9 +25,7 @@ float roundf(float x) {
   return ret;
 }
 
-long lroundf(float x) {
-  return roundf(x);
-}
+long lroundf(float x) { return roundf(x); }
 
 float rintf(float x) {
   float ret = __VERIFIER_nondet_float();
@@ -41,9 +39,7 @@ float nearbyintf(float x) {
   return ret;
 }
 
-long lrintf(float x) {
-  return rintf(x);
-}
+long lrintf(float x) { return rintf(x); }
 
 float floorf(float x) {
   float ret = __VERIFIER_nondet_float();
@@ -88,7 +84,7 @@ float fmaxf(float x, float y) {
 }
 
 float fmodf(float x, float y) {
-   if (__isnanf(x) || __isnanf(y) || __isinff(x) || __iszerof(y)) {
+  if (__isnanf(x) || __isnanf(y) || __isinff(x) || __iszerof(y)) {
     return nanf(0);
   }
   float ret = __VERIFIER_nondet_float();
@@ -125,9 +121,7 @@ float copysignf(float x, float y) {
   return x;
 }
 
-float nanf(const char *c) {
-  return 0.0f / 0.0f;
-}
+float nanf(const char *c) { return 0.0f / 0.0f; }
 
 int __isnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
@@ -137,7 +131,8 @@ int __isnormalf(float x) {
 
 int __issubnormalf(float x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvfloat.bool(@f) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvfloat.bool(@f) then $1 else $0;", ret,
+               x);
   return ret;
 }
 
@@ -177,9 +172,7 @@ int __fpclassifyf(float x) {
   return FP_NORMAL;
 }
 
-int __finitef(float x) {
-  return !__isinff(x) && !__isnanf(x);
-}
+int __finitef(float x) { return !__isinff(x) && !__isnanf(x); }
 
 double fabs(double x) {
   double ret = __VERIFIER_nondet_double();
@@ -202,9 +195,7 @@ double round(double x) {
   return ret;
 }
 
-long lround(double x) {
-  return round(x);
-}
+long lround(double x) { return round(x); }
 
 double rint(double x) {
   double ret = __VERIFIER_nondet_double();
@@ -218,9 +209,7 @@ double nearbyint(double x) {
   return ret;
 }
 
-long lrint(double x) {
-  return rint(x);
-}
+long lrint(double x) { return rint(x); }
 
 double floor(double x) {
   double ret = __VERIFIER_nondet_double();
@@ -302,9 +291,7 @@ double copysign(double x, double y) {
   return x;
 }
 
-double nan(const char *x) {
-  return 0.0 / 0.0;
-}
+double nan(const char *x) { return 0.0 / 0.0; }
 
 int __isnormal(double x) {
   int ret = __VERIFIER_nondet_int();
@@ -314,7 +301,8 @@ int __isnormal(double x) {
 
 int __issubnormal(double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvdouble.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvdouble.bool(@) then $1 else $0;", ret,
+               x);
   return ret;
 }
 
@@ -354,9 +342,7 @@ int __fpclassify(double x) {
   return FP_NORMAL;
 }
 
-int __finite(double x) {
-  return !__isinf(x) && !__isnan(x);
-}
+int __finite(double x) { return !__isinf(x) && !__isnan(x); }
 
 long double fabsl(long double x) {
   long double ret = __VERIFIER_nondet_long_double();
@@ -379,9 +365,7 @@ long double roundl(long double x) {
   return ret;
 }
 
-long lroundl(long double x) {
-  return roundl(x);
-}
+long lroundl(long double x) { return roundl(x); }
 
 long double rintl(long double x) {
   long double ret = __VERIFIER_nondet_long_double();
@@ -395,9 +379,7 @@ long double nearbyintl(long double x) {
   return ret;
 }
 
-long lrintl(long double x) {
-  return rintl(x);
-}
+long lrintl(long double x) { return rintl(x); }
 
 long double floorl(long double x) {
   long double ret = __VERIFIER_nondet_long_double();
@@ -442,7 +424,7 @@ long double fmaxl(long double x, long double y) {
 }
 
 long double fmodl(long double x, long double y) {
-   if (__isnanl(x) || __isnanl(y) || __isinfl(x) || __iszerol(y)) {
+  if (__isnanl(x) || __isnanl(y) || __isinfl(x) || __iszerol(y)) {
     return nanl(0);
   }
   long double ret = __VERIFIER_nondet_long_double();
@@ -479,19 +461,19 @@ long double copysignl(long double x, long double y) {
   return x;
 }
 
-long double nanl(const char *c) {
-  return 0.0l / 0.0l;
-}
+long double nanl(const char *c) { return 0.0l / 0.0l; }
 
 int __isnormall(long double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnormal.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isnormal.bvlongdouble.bool(@) then $1 else $0;", ret,
+               x);
   return ret;
 }
 
 int __issubnormall(long double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $issubnormal.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $issubnormal.bvlongdouble.bool(@) then $1 else $0;",
+               ret, x);
   return ret;
 }
 
@@ -503,7 +485,8 @@ int __iszerol(long double x) {
 
 int __isinfl(long double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isinfinite.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isinfinite.bvlongdouble.bool(@) then $1 else $0;", ret,
+               x);
   return ret;
 }
 
@@ -531,7 +514,4 @@ int __fpclassifyl(long double x) {
   return FP_NORMAL;
 }
 
-int __finitel(long double x) {
-  return !__isinfl(x) && !__isnanl(x);
-}
-
+int __finitel(long double x) { return !__isinfl(x) && !__isnanl(x); }

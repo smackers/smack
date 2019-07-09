@@ -12,4 +12,3 @@ int main(void) {
   assert(x.j == 10);
   return 0;
 }
-

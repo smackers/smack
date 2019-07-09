@@ -19,7 +19,7 @@ int main(void) {
     assert(__isnan(remainder(Inf, y)));
     assert(__isnan(remainder(negInf, y)));
   }
- 
+
   if (!__isnan(x)) {
     assert(__isnan(remainder(x, 0.0)));
     assert(__isnan(remainder(x, -0.0)));

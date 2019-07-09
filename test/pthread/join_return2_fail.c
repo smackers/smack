@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include <smack.h>
 
-// Ensures return values from multiple threads can be 
+// Ensures return values from multiple threads can be
 // held simultaneously.
 // @expect error
 
@@ -9,13 +9,13 @@ int x = 1;
 
 void *t1(void *arg) {
   x++;
-  pthread_exit((void*)5);
+  pthread_exit((void *)5);
   return 0;
 }
 
 void *t2(void *arg) {
   x++;
-  pthread_exit((void*)6);
+  pthread_exit((void *)6);
   return 0;
 }
 
@@ -32,4 +32,3 @@ int main(void) {
   assert((int)ret2 == (int)ret1);
   return 0;
 }
-

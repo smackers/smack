@@ -27,19 +27,18 @@ int main(void) {
     assert(__isnanf(fmodf(x, -0.0f)));
   }
 
-  
   if (!__isnanf(x) && !__isinff(x)) {
     assert(fmodf(x, Inf) == x);
     assert(fmodf(x, negInf) == x);
   }
- 
+
   if (!__isnanf(y) && !__iszerof(y)) {
     assert(fmodf(0.0f, y) == 0.0f);
     assert(fmodf(-0.0f, y) == -0.0f);
     int isNeg = __signbitf(fmodf(-0.0f, y));
     assert(isNeg);
   }
- 
+
   assert(__isnanf(fmodf(NaN, y)));
   assert(__isnanf(fmodf(x, NaN)));
 

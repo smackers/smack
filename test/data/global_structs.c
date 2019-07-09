@@ -10,7 +10,7 @@ typedef struct {
 mutex_t m_inode;
 mutex_t m_busy;
 
-void mutex_lock(mutex_t* lock) {
+void mutex_lock(mutex_t *lock) {
   assert(lock->init == 0);
   assert(lock->lock == 0);
   lock->init = 1;
