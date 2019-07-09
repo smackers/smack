@@ -176,7 +176,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
              *   to block erroneous checking of paths after the overflow check.
              */
             SDEBUG(errs() << "Processing intrinsic: " << f->getName().str()
-                         << "\n");
+                          << "\n");
             assert(info.size() == 4 && "Must capture three matched strings.");
             bool isSigned = (info[1] == "s");
             std::string op = info[2];

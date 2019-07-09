@@ -85,7 +85,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
           rep.addInitFunc(&F);
       }
       SDEBUG(errs() << "Finished analyzing function: " << naming.get(F)
-                   << "\n\n");
+                    << "\n\n");
     }
 
     // MODIFIES

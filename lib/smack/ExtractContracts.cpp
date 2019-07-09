@@ -89,7 +89,7 @@ std::tuple<BlockList, LoopMap> splitContractBlocks(Function &F, LoopInfo &LI) {
         if (auto *CF = CI->getCalledFunction()) {
           if (isContractFunction(CF)) {
             SDEBUG(errs() << "splitting block at contract invocation: " << *CI
-                         << "\n");
+                          << "\n");
             BasicBlock *B = CI->getParent();
             auto NewBB = B->splitBasicBlock(++CI->getIterator());
             LI.getLoopFor(B)->addBasicBlockToLoop(NewBB, LI);
@@ -224,7 +224,7 @@ bool ExtractContracts::runOnModule(Module &M) {
 
     if (!contractBlocks.empty() || !invariantBlocks.empty()) {
       SDEBUG(errs() << "function " << F->getName() << " after splitting: " << *F
-                   << "\n");
+                    << "\n");
       modified = true;
     }
 
@@ -253,7 +253,7 @@ bool ExtractContracts::runOnModule(Module &M) {
       }
       newF->eraseFromParent();
       SDEBUG(errs() << "function " << F->getName()
-                   << " after contract extraction: " << *F << "\n");
+                    << " after contract extraction: " << *F << "\n");
     }
 
     for (auto const &entry : invariantBlocks) {
@@ -281,7 +281,7 @@ bool ExtractContracts::runOnModule(Module &M) {
       }
       newF->eraseFromParent();
       SDEBUG(errs() << "function " << F->getName()
-                   << " after invariant extraction: " << *F << "\n");
+                    << " after invariant extraction: " << *F << "\n");
     }
   }
 

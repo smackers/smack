@@ -232,27 +232,28 @@ Region &Regions::get(unsigned R) { return regions[R]; }
 
 unsigned Regions::idx(const Value *V) {
   SDEBUG(errs() << "[regions] for: " << *V << "\n"; auto U = V;
-        while (U && !isa<Instruction>(U) && !U->use_empty()) U = U->user_back();
-        if (auto I = dyn_cast<Instruction>(U)) {
-          auto F = I->getParent()->getParent();
-          if (I != V)
-            errs() << "  at instruction: " << *I << "\n";
-          errs() << "  in function: " << F->getName() << "\n";
-        });
+         while (U && !isa<Instruction>(U) && !U->use_empty()) U =
+             U->user_back();
+         if (auto I = dyn_cast<Instruction>(U)) {
+           auto F = I->getParent()->getParent();
+           if (I != V)
+             errs() << "  at instruction: " << *I << "\n";
+           errs() << "  in function: " << F->getName() << "\n";
+         });
   Region R(V);
   return idx(R);
 }
 
 unsigned Regions::idx(const Value *V, unsigned length) {
   SDEBUG(errs() << "[regions] for: " << *V << " with length " << length << "\n";
-        auto U = V;
-        while (U && !isa<Instruction>(U) && !U->use_empty()) U = U->user_back();
-        if (auto I = dyn_cast<Instruction>(U)) {
-          auto F = I->getParent()->getParent();
-          if (I != V)
-            errs() << "  at instruction: " << *I << "\n";
-          errs() << "  in function: " << F->getName() << "\n";
-        });
+         auto U = V; while (U && !isa<Instruction>(U) && !U->use_empty()) U =
+                         U->user_back();
+         if (auto I = dyn_cast<Instruction>(U)) {
+           auto F = I->getParent()->getParent();
+           if (I != V)
+             errs() << "  at instruction: " << *I << "\n";
+           errs() << "  in function: " << F->getName() << "\n";
+         });
   Region R(V, length);
   return idx(R);
 }
@@ -292,7 +293,7 @@ unsigned Regions::idx(Region &R) {
       if (regions[r].overlaps(regions[q])) {
 
         SDEBUG(errs() << "[regions]   found extra overlap at index " << q
-                     << ": ");
+                      << ": ");
         SDEBUG(regions[q].print(errs()));
         SDEBUG(errs() << "\n");
 
