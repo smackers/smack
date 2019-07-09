@@ -7,31 +7,27 @@
 
 char *v;
 
-void *thread1(void * arg)
-{
+void *thread1(void *arg) {
   v = malloc(sizeof(char));
   return 0;
 }
 
-void *thread2(void *arg)
-{
+void *thread2(void *arg) {
   v[0] = 'X';
   return 0;
 }
 
-void *thread3(void *arg)
-{
+void *thread3(void *arg) {
   v[0] = 'Y';
   return 0;
 }
 
-void *thread0(void *arg)
-{
+void *thread0(void *arg) {
   pthread_t t1, t2, t3, t4, t5;
 
   pthread_create(&t1, 0, thread1, 0);
   pthread_join(t1, 0);
-  pthread_create(&t2, 0, thread2, 0);  
+  pthread_create(&t2, 0, thread2, 0);
   pthread_create(&t3, 0, thread3, 0);
   pthread_create(&t4, 0, thread2, 0);
   pthread_create(&t5, 0, thread2, 0);
@@ -43,15 +39,14 @@ void *thread0(void *arg)
   return 0;
 }
 
-int main(void)
-{
+int main(void) {
   pthread_t t;
 
   pthread_create(&t, 0, thread0, 0);
   pthread_join(t, 0);
 
-  assert(v[0] == 'X'); // <-- wrong, the only thread that writes 'Y' can be the last to write
+  assert(v[0] == 'X'); // <-- wrong, the only thread that writes 'Y' can be the
+                       // last to write
 
   return 0;
 }
-

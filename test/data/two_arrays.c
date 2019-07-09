@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @flag --loop-limit=11
 // @flag --unroll=11
@@ -28,8 +28,8 @@ void setArray(int *array) {
 
 int main() {
   int i = 0;
-  int *arrayOne = (int*)malloc(MAXSIZE * sizeof(int));
-  int *arrayTwo = (int*)malloc(MAXSIZE * sizeof(int));
+  int *arrayOne = (int *)malloc(MAXSIZE * sizeof(int));
+  int *arrayTwo = (int *)malloc(MAXSIZE * sizeof(int));
 
   resetArray(arrayOne);
   setArray(arrayTwo);
@@ -51,4 +51,3 @@ int main() {
   free(arrayTwo);
   return 0;
 }
-

@@ -3,9 +3,7 @@
 // @expect verified
 
 void ff1(float f);
-void ff2(float *f1, float *f2) {
-  *f1 = *f2;
-}
+void ff2(float *f1, float *f2) { *f1 = *f2; }
 
 int main(void) {
   float f1;

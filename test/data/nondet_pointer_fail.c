@@ -3,9 +3,8 @@
 // @expect error
 
 int main(void) {
-  int* a;
+  int *a;
   a = __VERIFIER_nondet();
   assert(a != 0);
   return 0;
 }
-

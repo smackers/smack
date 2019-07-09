@@ -8,7 +8,7 @@ int main(void) {
   double NaN = 0.0 / 0.0;
   double Inf = 1.0 / 0.0;
   double negInf = -1.0 / 0.0;
-  
+
   double a = -1.5;
   double b = -1.49999999999999999;
   double c = 3.5;
@@ -26,4 +26,3 @@ int main(void) {
 
   return 0;
 }
-

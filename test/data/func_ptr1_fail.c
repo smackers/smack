@@ -1,19 +1,15 @@
-#include <stdlib.h>
 #include "smack.h"
+#include <stdlib.h>
 
 // @expect error
 
-void incr(int *x) {
-  (*x)++;
-}
+void incr(int *x) { (*x)++; }
 
-void decr(int *x) {
-  (*x)--;
-}
+void decr(int *x) { (*x)--; }
 
 int main(void) {
-  void (*fp)(int*);
-  int *x = (int*)malloc(sizeof(int));
+  void (*fp)(int *);
+  int *x = (int *)malloc(sizeof(int));
   int y = 1;
 
   *x = 1;
@@ -27,4 +23,3 @@ int main(void) {
   assert(*x == 0 || *x == 1);
   return 0;
 }
-

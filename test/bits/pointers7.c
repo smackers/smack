@@ -19,4 +19,3 @@ int main(void) {
   assert(x.j == 1);
   return 0;
 }
-

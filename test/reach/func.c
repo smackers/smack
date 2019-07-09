@@ -1,8 +1,6 @@
 #include "smack.h"
 
-int func() {
-  return 1;
-}
+int func() { return 1; }
 
 int main() {
   int a;

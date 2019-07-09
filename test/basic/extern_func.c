@@ -9,4 +9,3 @@ int main(void) {
   a = foo(10);
   return a;
 }
-

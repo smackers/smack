@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdlib.h>
 #include <string.h>
-#include "smack.h"
 
 // @expect error
 

@@ -7,4 +7,3 @@ int main() {
   assert(s1[3] == 'f');
   return 0;
 }
-

@@ -4,7 +4,4 @@
 // @expect error
 // @flag --bit-precise
 
-int main(void)
-{
-  assert(__signbit(remainder(0.0, 1.0)));
-}
+int main(void) { assert(__signbit(remainder(0.0, 1.0))); }

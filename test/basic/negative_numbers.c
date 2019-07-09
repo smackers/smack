@@ -2,9 +2,7 @@
 
 // @expect verified
 
-int incr(int x) {
-  return x + 1;
-}
+int incr(int x) { return x + 1; }
 
 int main(void) {
   int a = -11;
@@ -12,4 +10,3 @@ int main(void) {
   assert(a == -10);
   return 0;
 }
-

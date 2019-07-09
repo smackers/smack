@@ -2,13 +2,9 @@
 
 // @expect verified
 
-int incr(int x) {
-  return ++x;
-}
+int incr(int x) { return ++x; }
 
-int decr(int x) {
-  return --x;
-}
+int decr(int x) { return --x; }
 
 int main(void) {
   int (*fp)(int);
@@ -24,4 +20,3 @@ int main(void) {
   assert(x == 2);
   return 0;
 }
-

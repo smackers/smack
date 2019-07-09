@@ -5,9 +5,9 @@
 // @expect verified
 
 int main(void) {
-  int* x = (int*)malloc(sizeof(int));
-  int* y = (int*)malloc(sizeof(int));
-  int* z = (int*)malloc(sizeof(int));
+  int *x = (int *)malloc(sizeof(int));
+  int *y = (int *)malloc(sizeof(int));
+  int *z = (int *)malloc(sizeof(int));
   if (x == y)
     y = z;
   *y = 1;

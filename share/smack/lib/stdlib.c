@@ -1,20 +1,21 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
+#include <smack.h>
 #include <stdlib.h>
 #include <string.h>
-#include <smack.h>
 
 void exit(int x) {
 #if MEMORY_SAFETY
   __SMACK_code("assert $allocatedCounter == 0;");
 #endif
   __SMACK_code("assume false;");
-  while(1);
+  while (1)
+    ;
 }
 
-void* calloc(size_t num, size_t size) {
-  void* ret;
+void *calloc(size_t num, size_t size) {
+  void *ret;
   if (__VERIFIER_nondet_int()) {
     ret = 0;
   } else {
@@ -79,4 +80,3 @@ char *getenv(const char *name) {
     return env_value_str;
   }
 }
-

@@ -48,12 +48,13 @@ before_install:
   - sudo apt-get update
 
 install:
-  - sudo apt-get install -y clang-4.0 llvm-4.0-dev mono-complete ninja-build
+  - sudo apt-get install -y clang-4.0 clang-format-4.0 llvm-4.0-dev mono-complete ninja-build
   - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-4.0 20
   - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-4.0 20
   - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-4.0 20
   - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-4.0 20
   - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-4.0 20
+  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-4.0 20
   - sudo pip install pyyaml psutil
 
 script:
@@ -64,4 +65,5 @@ script:
   - clang++ --version
   - llvm-link --version
   - llvm-config --version
+  - ./format/run-clang-format.py -e test/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
   - ./bin/build.sh

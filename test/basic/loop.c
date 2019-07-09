@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @flag --loop-limit=11
 // @flag --unroll=11
@@ -21,4 +21,3 @@ int main() {
   assert(x == MAXSIZE - 1);
   return 0;
 }
-

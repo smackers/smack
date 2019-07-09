@@ -1,6 +1,6 @@
 #include "smack.h"
-#include <math.h>
 #include <fenv.h>
+#include <math.h>
 
 // @expect verified
 // @flag --bit-precise
@@ -51,4 +51,3 @@ int main(void) {
 
   return 0;
 }
-

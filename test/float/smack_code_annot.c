@@ -12,4 +12,3 @@ int main(void) {
   assert(f32_to_f64(2.0f) == 2.0);
   return 0;
 }
-

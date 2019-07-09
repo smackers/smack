@@ -16,4 +16,3 @@ int main(void) {
   test(a);
   return 0;
 }
-

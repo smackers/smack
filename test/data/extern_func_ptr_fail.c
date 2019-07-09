@@ -12,7 +12,6 @@ int main(void) {
   *y = 2;
 
   assert(*x == 1);
-  
+
   return 0;
 }
-

@@ -128,7 +128,7 @@ bool BUDataStructures::runOnModuleInternal(Module& M) {
   callgraph.buildSCCs();
   callgraph.buildRoots();
 
-  DEBUG(print(errs(), &M));
+  SDEBUG(print(errs(), &M));
   return false;
 }
 
@@ -310,7 +310,7 @@ BUDataStructures::postOrderInline (Module & M) {
   for (Function &F : M)
     if (!F.isDeclaration() && !ValMap.count(&F)) {
       if (MainFunc)
-        DEBUG(errs() << debugname << ": Function unreachable from main: "
+        SDEBUG(errs() << debugname << ": Function unreachable from main: "
         << F.getName() << "\n");
       calculateGraphs(&F, Stack, NextID, ValMap);     // Calculate all graphs.
       CloneAuxIntoGlobal(getDSGraph(F));
@@ -434,13 +434,13 @@ BUDataStructures::calculateGraphs (const Function *F,
   // If this is a new SCC, process it now.
   //
   if (Stack.back() == F) {           // Special case the single "SCC" case here.
-    DEBUG(errs() << "Visiting single node SCC #: " << MyID << " fn: "
+    SDEBUG(errs() << "Visiting single node SCC #: " << MyID << " fn: "
 	  << F->getName() << "\n");
     Stack.pop_back();
-    DEBUG(errs() << "  [BU] Calculating graph for: " << F->getName()<< "\n");
+    SDEBUG(errs() << "  [BU] Calculating graph for: " << F->getName()<< "\n");
     DSGraph* G = getOrCreateGraph(F);
     calculateGraph(G);
-    DEBUG(errs() << "  [BU] Done inlining: " << F->getName() << " ["
+    SDEBUG(errs() << "  [BU] Done inlining: " << F->getName() << " ["
 	  << G->getGraphSize() << "+" << G->getAuxFunctionCalls().size()
 	  << "]\n");
 
@@ -453,7 +453,7 @@ BUDataStructures::calculateGraphs (const Function *F,
     getAllAuxCallees(G, NewCallees);
     if (!NewCallees.empty()) {
       if (hasNewCallees(NewCallees, CalleeFunctions)) {
-        DEBUG(errs() << "Recalculating " << F->getName() << " due to new knowledge\n");
+        SDEBUG(errs() << "Recalculating " << F->getName() << " due to new knowledge\n");
         ValMap.erase(F);
         ++NumRecalculations;
         return calculateGraphs(F, Stack, NextID, ValMap);
@@ -495,7 +495,7 @@ BUDataStructures::calculateGraphs (const Function *F,
     }
     Stack.pop_back();
 
-    DEBUG(errs() << "Calculating graph for SCC #: " << MyID << " of size: "
+    SDEBUG(errs() << "Calculating graph for SCC #: " << MyID << " of size: "
 	  << SCCSize << "\n");
 
     // Compute the Max SCC Size.
@@ -508,14 +508,14 @@ BUDataStructures::calculateGraphs (const Function *F,
     // Now that we have one big happy family, resolve all of the call sites in
     // the graph...
     calculateGraph(SCCGraph);
-    DEBUG(errs() << "  [BU] Done inlining SCC  [" << SCCGraph->getGraphSize()
+    SDEBUG(errs() << "  [BU] Done inlining SCC  [" << SCCGraph->getGraphSize()
 	  << "+" << SCCGraph->getAuxFunctionCalls().size() << "]\n"
 	  << "DONE with SCC #: " << MyID << "\n");
     FuncSet NewCallees;
     getAllAuxCallees(SCCGraph, NewCallees);
     if (!NewCallees.empty()) {
       if (hasNewCallees(NewCallees, CalleeFunctions)) {
-        DEBUG(errs() << "Recalculating SCC Graph " << F->getName() << " due to new knowledge\n");
+        SDEBUG(errs() << "Recalculating SCC Graph " << F->getName() << " due to new knowledge\n");
         ValMap.erase(F);
         ++NumRecalculations;
         return calculateGraphs(F, Stack, NextID, ValMap);
@@ -624,7 +624,7 @@ void BUDataStructures::CloneAuxIntoGlobal(DSGraph* G) {
 //  dealt with
 //
 void BUDataStructures::calculateGraph(DSGraph* Graph) {
-  DEBUG(Graph->AssertGraphOK(); Graph->getGlobalsGraph()->AssertGraphOK());
+  SDEBUG(Graph->AssertGraphOK(); Graph->getGlobalsGraph()->AssertGraphOK());
   Graph->buildCallGraph(callgraph, GlobalFunctionList, filterCallees);
 
   // Move our call site list into TempFCs so that inline call sites go into the
@@ -635,7 +635,7 @@ void BUDataStructures::calculateGraph(DSGraph* Graph) {
 
   for(DSGraph::FunctionListTy::iterator I = TempFCs.begin(), E = TempFCs.end();
       I != E; ++I) {
-    DEBUG(Graph->AssertGraphOK(); Graph->getGlobalsGraph()->AssertGraphOK());
+    SDEBUG(Graph->AssertGraphOK(); Graph->getGlobalsGraph()->AssertGraphOK());
 
     DSCallSite &CS = *I;
 
@@ -684,8 +684,8 @@ void BUDataStructures::calculateGraph(DSGraph* Graph) {
       // Get the data structure graph for the called function.
 
       GI = getDSGraph(*Callee);  // Graph to inline
-      DEBUG(GI->AssertGraphOK(); GI->getGlobalsGraph()->AssertGraphOK());
-      DEBUG(errs() << "    Inlining graph for " << Callee->getName()
+      SDEBUG(GI->AssertGraphOK(); GI->getGlobalsGraph()->AssertGraphOK());
+      SDEBUG(errs() << "    Inlining graph for " << Callee->getName()
 	    << "[" << GI->getGraphSize() << "+"
 	    << GI->getAuxFunctionCalls().size() << "] into '"
 	    << Graph->getFunctionNames() << "' [" << Graph->getGraphSize() <<"+"
@@ -703,7 +703,7 @@ void BUDataStructures::calculateGraph(DSGraph* Graph) {
       Graph->mergeInGraph(CS, *Callee, *GI,
                           DSGraph::StripAllocaBit|DSGraph::DontCloneCallNodes);
       ++NumInlines;
-      DEBUG(Graph->AssertGraphOK(););
+      SDEBUG(Graph->AssertGraphOK(););
     }
   }
   TempFCs.clear();

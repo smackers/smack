@@ -7,7 +7,7 @@
 int z = 1;
 
 void *t1(void *arg) {
-  pthread_mutex_t* lock = arg;
+  pthread_mutex_t *lock = arg;
   pthread_mutex_lock(lock);
   z++;
   pthread_mutex_unlock(lock);
@@ -30,4 +30,3 @@ int main(void) {
   assert(z == 3);
   return 0;
 }
-

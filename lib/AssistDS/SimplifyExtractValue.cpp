@@ -63,9 +63,9 @@ bool SimplifyEV::runOnModule(Module& M) {
           Value *Agg = EV->getAggregateOperand();
           if (!EV->hasIndices()) {
             EV->replaceAllUsesWith(Agg);
-            DEBUG(errs() << "EV:");
-            DEBUG(errs() << "ERASE:");
-            DEBUG(EV->dump());
+            SDEBUG(errs() << "EV:");
+            SDEBUG(errs() << "ERASE:");
+            SDEBUG(EV->dump());
             EV->eraseFromParent();
             numErased++;
             changed = true;
@@ -74,9 +74,9 @@ bool SimplifyEV::runOnModule(Module& M) {
           if (Constant *C = dyn_cast<Constant>(Agg)) {
             if (isa<UndefValue>(C)) {
               EV->replaceAllUsesWith(UndefValue::get(EV->getType()));
-              DEBUG(errs() << "EV:");
-              DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              SDEBUG(errs() << "EV:");
+              SDEBUG(errs() << "ERASE:");
+              SDEBUG(EV->dump());
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -84,9 +84,9 @@ bool SimplifyEV::runOnModule(Module& M) {
             }
             if (isa<ConstantAggregateZero>(C)) {
               EV->replaceAllUsesWith(Constant::getNullValue(EV->getType()));
-              DEBUG(errs() << "EV:");
-              DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              SDEBUG(errs() << "EV:");
+              SDEBUG(errs() << "ERASE:");
+              SDEBUG(EV->dump());
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -102,18 +102,18 @@ bool SimplifyEV::runOnModule(Module& M) {
                                                                     EV->getIndices().slice(1), 
                                                                     "", EV);
                 EV->replaceAllUsesWith(EV_new);
-                DEBUG(errs() << "EV:");
-                DEBUG(errs() << "ERASE:");
-                DEBUG(EV->dump());
+                SDEBUG(errs() << "EV:");
+                SDEBUG(errs() << "ERASE:");
+                SDEBUG(EV->dump());
                 EV->eraseFromParent();
                 numErased++;
                 changed = true;
                 continue;
               }  else {
                 EV->replaceAllUsesWith(V);
-                DEBUG(errs() << "EV:");
-                DEBUG(errs() << "ERASE:");
-                DEBUG(EV->dump());
+                SDEBUG(errs() << "EV:");
+                SDEBUG(errs() << "ERASE:");
+                SDEBUG(EV->dump());
                 EV->eraseFromParent();
                 numErased++;
                 changed = true;
@@ -163,9 +163,9 @@ bool SimplifyEV::runOnModule(Module& M) {
                 ExtractValueInst *EV_new = ExtractValueInst::Create(IV->getAggregateOperand(),
                                                                     EV->getIndices(), "", EV);
                 EV->replaceAllUsesWith(EV_new);
-                DEBUG(errs() << "EV:");
-                DEBUG(errs() << "ERASE:");
-                DEBUG(EV->dump());
+                SDEBUG(errs() << "EV:");
+                SDEBUG(errs() << "ERASE:");
+                SDEBUG(EV->dump());
                 EV->eraseFromParent();
                 numErased++;
                 done = true;
@@ -181,9 +181,9 @@ bool SimplifyEV::runOnModule(Module& M) {
               // %C = extractvalue { i32, { i32 } } %B, 1, 0
               // with "i32 42"
               EV->replaceAllUsesWith(IV->getInsertedValueOperand());
-              DEBUG(errs() << "EV:");
-              DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              SDEBUG(errs() << "EV:");
+              SDEBUG(errs() << "ERASE:");
+              SDEBUG(EV->dump());
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -203,9 +203,9 @@ bool SimplifyEV::runOnModule(Module& M) {
               Value *NewIV = InsertValueInst::Create(NewEV, IV->getInsertedValueOperand(),
                                                      makeArrayRef(insi, inse), "", EV);
               EV->replaceAllUsesWith(NewIV);
-              DEBUG(errs() << "EV:");
-              DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              SDEBUG(errs() << "EV:");
+              SDEBUG(errs() << "ERASE:");
+              SDEBUG(EV->dump());
               EV->eraseFromParent();
               numErased++;
               changed = true;
@@ -223,9 +223,9 @@ bool SimplifyEV::runOnModule(Module& M) {
               ExtractValueInst *EV_new = ExtractValueInst::Create(IV->getInsertedValueOperand(),
                                                                   makeArrayRef(exti, exte), "", EV);
               EV->replaceAllUsesWith(EV_new);
-              DEBUG(errs() << "EV:");
-              DEBUG(errs() << "ERASE:");
-              DEBUG(EV->dump());
+              SDEBUG(errs() << "EV:");
+              SDEBUG(errs() << "ERASE:");
+              SDEBUG(EV->dump());
               EV->eraseFromParent();
               numErased++;
               changed = true;

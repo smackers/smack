@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
@@ -8,9 +8,8 @@
 #define RESET 0
 
 int main() {
-  int *a = (int*)malloc(MAXSIZE * sizeof(int));
+  int *a = (int *)malloc(MAXSIZE * sizeof(int));
 
   free(a);
   return 0;
 }
-
