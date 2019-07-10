@@ -7,7 +7,6 @@ RUN apt-get update && \
       apt-get -y install \
       software-properties-common \
       wget \
-      gcc-multilib \
       sudo
 
 # Borrowed from JFS

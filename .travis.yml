@@ -13,7 +13,6 @@ addons:
       - unzip
       - libz-dev
       - libedit-dev
-      - gcc-multilib
 
 cache:
   directories:
