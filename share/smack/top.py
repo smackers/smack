@@ -14,7 +14,7 @@ from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
 from frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '1.9.3'
+VERSION = '2.0.0'
 
 def results(args):
   """A dictionary of the result output messages."""
