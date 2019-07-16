@@ -66,7 +66,7 @@ bool EquivBUDataStructures::runOnModule(Module &M) {
       i!=e;i++) {
     delete (*i);
   }
-  DEBUG(verifyMerging());
+  SDEBUG(verifyMerging());
 
   formGlobalECs();
 

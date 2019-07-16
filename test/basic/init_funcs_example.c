@@ -11,7 +11,6 @@
 //
 // See share/smack/include/pthread.h for an actual, live example.
 
-
 // In normal use, these would be listed somewhere in the header file
 // containing out model (it does not need to be in a __SMACK_INIT call).
 __SMACK_INIT(defineProcessStates) {
@@ -27,11 +26,11 @@ __SMACK_INIT(defineProcessStates) {
 // since this assumption is not just a declaration/definition.
 // This definition would also be listed in the model's header file.
 __SMACK_INIT(initializeProcessStates) {
-  __SMACK_code("assume (forall x:ref :: $processStatus[x] == $process_uninitialized);");
+  __SMACK_code(
+      "assume (forall x:ref :: $processStatus[x] == $process_uninitialized);");
 }
 
 int main(void) {
-  void* idx = __VERIFIER_nondet_pointer();
+  void *idx = __VERIFIER_nondet_pointer();
   __SMACK_code("assert($processStatus[@] == $process_uninitialized);", idx);
 }
-

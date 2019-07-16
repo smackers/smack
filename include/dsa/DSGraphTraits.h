@@ -24,6 +24,32 @@
 
 namespace llvm {
 
+namespace bugfix {
+
+// XXX: There's a bug in llvm::pointer_iterator. The iterator_category
+// parameter to iterator_adaptor_base is omitted. We can remove this once it is fixed.
+// http://llvm.org/doxygen/iterator_8h_source.html#l00311
+template <typename WrappedIteratorT,
+          typename T = decltype(&*std::declval<WrappedIteratorT>())>
+class pointer_iterator
+    : public iterator_adaptor_base<pointer_iterator<WrappedIteratorT, T>,
+                                   WrappedIteratorT,
+                                   typename std::iterator_traits<WrappedIteratorT>::iterator_category,
+                                   T> {
+  mutable T Ptr;
+
+public:
+  pointer_iterator() = default;
+
+  explicit pointer_iterator(WrappedIteratorT u)
+      : pointer_iterator::iterator_adaptor_base(std::move(u)) {}
+
+  T &operator*() { return Ptr = &*this->I; }
+  const T &operator*() const { return Ptr = &*this->I; }
+};
+
+} // End bugfix namespace
+
 template<typename NodeTy>
 class DSNodeIterator : public std::iterator<std::forward_iterator_tag, const DSNode, ptrdiff_t> {
   friend class DSNode;
@@ -80,38 +106,38 @@ inline DSNode::const_iterator DSNode::end() const {
 }
 
 template <> struct GraphTraits<DSNode*> {
-  typedef DSNode NodeType;
+  typedef DSNode* NodeRef;
   typedef DSNode::iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(NodeType *N) { return N; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
-  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <> struct GraphTraits<const DSNode*> {
-  typedef const DSNode NodeType;
+  typedef const DSNode* NodeRef;
   typedef DSNode::const_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(NodeType *N) { return N; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
-  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <> struct GraphTraits<const DSGraph*> {
-  typedef const DSNode NodeType;
+  typedef const DSNode* NodeRef;
   typedef DSNode::const_iterator ChildIteratorType;
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef DSGraph::node_const_iterator nodes_iterator;
+  typedef bugfix::pointer_iterator<DSGraph::node_const_iterator> nodes_iterator;
   static nodes_iterator nodes_begin(const DSGraph *G) {
-    return G->node_begin();
+    return nodes_iterator(G->node_begin());
   }
   static nodes_iterator nodes_end(const DSGraph *G) {
-    return G->node_end();
+    return nodes_iterator(G->node_end());
   }
 
-  static ChildIteratorType child_begin(const NodeType *N) { return N->begin(); }
-  static ChildIteratorType child_end(const NodeType *N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 } // End llvm namespace

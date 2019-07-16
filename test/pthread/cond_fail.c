@@ -41,4 +41,3 @@ int main(void) {
   pthread_join(t2, 0);
   return 0;
 }
-

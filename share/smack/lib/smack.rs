@@ -97,6 +97,7 @@ make_nondet!(usize, __VERIFIER_nondet_unsigned_long_long);
 
 
 #[cfg(not(verifier = "smack"))]
+#[cfg(feature = "std")]
 #[allow(dead_code)]
 use std::Vec;
 /* Vector class.

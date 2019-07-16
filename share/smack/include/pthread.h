@@ -6,7 +6,7 @@
 
 #include "pthreadtypes.h"
 
-//model mutex:
+// model mutex:
 //  0 = unlocked,
 //  else = locked by thread with matching id
 
@@ -15,9 +15,10 @@
 #define INITIALIZED 1
 //  !!!!! ERROR HERE? - if mutex already initialized, behavior
 //        of initialization should be undefined
-#define PTHREAD_MUTEX_INITIALIZER {UNLOCKED, INITIALIZED}
+#define PTHREAD_MUTEX_INITIALIZER                                              \
+  { UNLOCKED, INITIALIZED }
 
-//Declare corral primitive procedures
+// Declare corral primitive procedures
 //__SMACK_INIT(corral_primitives);
 
 // Initialize thread status tracking variables (OS level behavior)
@@ -66,8 +67,10 @@ int pthread_cond_broadcast(pthread_cond_t *__cond);
 
 int pthread_cond_destroy(pthread_cond_t *__cond);
 
-void __call_wrapper(pthread_t *__restrict __newthread, void *(*__start_routine) (void *), void *__restrict __arg);
+void __call_wrapper(pthread_t *__newthread, void *(*__start_routine)(void *),
+                    void *__arg);
 
-int pthread_create(pthread_t *__restrict __newthread, __const pthread_attr_t *__restrict __attr, void *(*__start_routine) (void *), void *__restrict __arg);
+int pthread_create(pthread_t *__newthread, __const pthread_attr_t *__attr,
+                   void *(*__start_routine)(void *), void *__arg);
 
 #endif // PTHREAD_H

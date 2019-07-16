@@ -1,12 +1,15 @@
 The MIT License
 
-Copyright (c) 2008-2018 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
+Copyright (c) 2008-2019 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
                         Michael Emmi (michael.emmi@gmail.com)
-Modified work Copyright (c) 2013-2018 Montgomery Carter,
+Modified work Copyright (c) 2013-2019 Marek Baranowski,
+                                      Montgomery Carter,
                                       Pantazis Deligiannis,
+                                      Jack J. Garzella,
                                       Dietrich Geisler,
                                       Arvind Haran,
                                       Shaobo He,
+                                      Liam Machado,
                                       Jiten Thakkar,
                                       Jonathan Whitaker
 
@@ -32,25 +35,26 @@ THE SOFTWARE.
 Copyrights and Licenses for Third Party Software Distributed with SMACK:
 ==============================================================================
 SMACK contains code written by third parties.  Such software will have its own
-individual LICENSE.TXT file in the directory in which it appears.  This file
+individual LICENSE file in the directory in which it appears.  This file
 will describe the copyrights, license, and restrictions which apply to that
 code.
 
 The following pieces of software have additional or alternate copyrights,
 licenses, and/or restrictions:
 
-Program             Directories
--------             -----------
-poolalloc           include/assistDS
+Program             Directories           License
+-------             -----------           -------
+poolalloc           include/assistDS      lib/DSA/LICENSE
                     include/dsa
                     lib/AssistDS
                     lib/DSA
+run-clang-format    format                format/LICENSE
 
 In addition, a binary distribution of SMACK contains at least the following
 tools and packages, which come with their own licenses:
-- LLVM, clang, LLVM runtime (http://llvm.org/)
-- mono (http://www.mono-project.com/)
-- Boogie (https://github.com/boogie-org/boogie/)
-- Corral (https://github.com/boogie-org/corral/)
-- Z3 (https://github.com/Z3Prover/z3/)
+- LLVM, clang, LLVM runtime (http://llvm.org)
+- Boogie (https://github.com/boogie-org/boogie)
+- Corral (https://github.com/boogie-org/corral)
+- lockpwn (https://github.com/smackers/lockpwn)
+- Z3 (https://github.com/Z3Prover/z3)
 

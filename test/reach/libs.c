@@ -1,6 +1,4 @@
-#include <stdio.h>
 #include "smack.h"
+#include <stdio.h>
 
-int main() {
-  printf("testLibs\n");
-}
+int main() { printf("testLibs\n"); }

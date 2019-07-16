@@ -1,11 +1,11 @@
-#include <string.h>
 #include "smack.h"
+#include <string.h>
 
 // @expect error
 
 int main(void) {
   char *notAWebAddress = "word";
-  char *dotToEnd = strchr(notAWebAddress,'.');
+  char *dotToEnd = strchr(notAWebAddress, '.');
 
   assert(dotToEnd != 0);
   return 0;

@@ -1,12 +1,10 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
-typedef struct {
-  int x;
-} S1;
+typedef struct { int x; } S1;
 
 typedef struct {
   int a;
@@ -14,8 +12,8 @@ typedef struct {
 } S2;
 
 int main(void) {
-  S2* s2 = (S2*)malloc(sizeof(S2));
-  S1* s1 = (S1*)s2;
+  S2 *s2 = (S2 *)malloc(sizeof(S2));
+  S1 *s1 = (S1 *)s2;
 
   s2->a = 3;
   s2->b = 5;
@@ -24,4 +22,3 @@ int main(void) {
   assert(s2->a == 3);
   return 0;
 }
-

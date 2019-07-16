@@ -10,7 +10,7 @@ pthread_mutex_t lock;
 pthread_mutexattr_t lockattr;
 int x;
 
-void* t1(void *arg) {
+void *t1(void *arg) {
   int err = __VERIFIER_nondet_int();
   pthread_mutex_lock(&lock);
   err = pthread_mutex_lock(&lock);
@@ -42,4 +42,3 @@ int main(void) {
   assert(x == 1);
   return 0;
 }
-

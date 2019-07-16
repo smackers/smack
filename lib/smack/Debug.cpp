@@ -29,9 +29,7 @@ bool isCurrentDebugType(const char *DebugType) {
 
 void setCurrentDebugTypes(const char **Types, unsigned Count);
 
-void setCurrentDebugType(const char *Type) {
-  setCurrentDebugTypes(&Type, 1);
-}
+void setCurrentDebugType(const char *Type) { setCurrentDebugTypes(&Type, 1); }
 
 void setCurrentDebugTypes(const char **Types, unsigned Count) {
   CurrentDebugType->clear();
@@ -42,9 +40,9 @@ void setCurrentDebugTypes(const char **Types, unsigned Count) {
 
 #ifndef NDEBUG
 
-static ::llvm::cl::opt<bool, true>
-Debug("debug", cl::desc("Enable debug output"), cl::Hidden,
-      cl::location(DebugFlag));
+static ::llvm::cl::opt<bool, true> Debug("debug",
+                                         cl::desc("Enable debug output"),
+                                         cl::Hidden, cl::location(DebugFlag));
 
 namespace {
 
@@ -53,28 +51,27 @@ struct DebugOnlyOpt {
     if (Val.empty())
       return;
     DebugFlag = true;
-    SmallVector<StringRef,8> dbgTypes;
+    SmallVector<StringRef, 8> dbgTypes;
     StringRef(Val).split(dbgTypes, ',', -1, false);
     for (auto dbgType : dbgTypes)
       CurrentDebugType->push_back(dbgType);
   }
 };
-
 }
 
 static DebugOnlyOpt DebugOnlyOptLoc;
 
-static ::llvm::cl::opt<DebugOnlyOpt, true, cl::parser<std::string> >
-DebugOnly("debug-only", cl::desc("Enable a specific type of debug output (comma separated list of types)"),
-          cl::Hidden, cl::ZeroOrMore, cl::value_desc("debug string"),
-          cl::location(DebugOnlyOptLoc), cl::ValueRequired);
+static ::llvm::cl::opt<DebugOnlyOpt, true, cl::parser<std::string>>
+    DebugOnly("debug-only", cl::desc("Enable a specific type of debug output "
+                                     "(comma separated list of types)"),
+              cl::Hidden, cl::ZeroOrMore, cl::value_desc("debug string"),
+              cl::location(DebugOnlyOptLoc), cl::ValueRequired);
 
 raw_ostream &smack::dbgs() {
   static struct dbgstream {
     circular_raw_ostream strm;
 
-    dbgstream() :
-        strm(errs(), "*** Debug Log Output ***\n", 0) { }
+    dbgstream() : strm(errs(), "*** Debug Log Output ***\n", 0) {}
   } thestrm;
 
   return thestrm.strm;
@@ -82,9 +79,7 @@ raw_ostream &smack::dbgs() {
 
 #else
 namespace smack {
-  raw_ostream &dbgs() {
-    return llvm::errs();
-  }
+raw_ostream &dbgs() { return llvm::errs(); }
 }
 
 #endif

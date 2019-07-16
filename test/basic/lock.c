@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
@@ -34,4 +34,3 @@ int main(void) {
   release_lock(&global_lock);
   return 0;
 }
-

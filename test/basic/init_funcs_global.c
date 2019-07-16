@@ -4,15 +4,11 @@
 
 int g = 10;
 
-__SMACK_INIT(g1) {
-  g = 11;
-}
+__SMACK_INIT(g1) { g = 11; }
 
-__SMACK_INIT(g2) {
-  g = 12;
-}
+__SMACK_INIT(g2) { g = 12; }
 
-void main() {
+int main(void) {
   assert(g == 12);
+  return 0;
 }
-

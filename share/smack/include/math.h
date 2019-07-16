@@ -1,6 +1,6 @@
+//
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-
 #ifndef MATH_H
 #define MATH_H
 
@@ -10,37 +10,55 @@
 #define FP_SUBNORMAL 3
 #define FP_NORMAL 4
 
-#define isnormal(x) (sizeof(x) == sizeof(long double) ? __isnormall(x) : sizeof(x) == sizeof(double) ? __isnormal(x) : __isnormalf(x))
-#define isinf(x) (sizeof(x) == sizeof(long double) ? __isinfl(x) : sizeof(x) == sizeof(double) ? __isinf(x) : __isinff(x))
-#define isnan(x) (sizeof(x) == sizeof(long double) ? __isnanl(x) : sizeof(x) == sizeof(double) ? __isnan(x) : __isnanf(x))
-#define signbit(x) (sizeof(x) == sizeof(long double) ? __signbitl(x) : sizeof(x) == sizeof(double) ? __signbit(x) : __signbitf(x))
-#define fpclassify(x) (sizeof(x) == sizeof(long double) ? __fpclassifyl(x) : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
-#define isfinite(x) (sizeof(x) == sizeof(long double) ? __isfinitel(x) : sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
+#define isnormal(x)                                                            \
+  (sizeof(x) == sizeof(long double)                                            \
+       ? __isnormall(x)                                                        \
+       : sizeof(x) == sizeof(double) ? __isnormal(x) : __isnormalf(x))
+#define isinf(x)                                                               \
+  (sizeof(x) == sizeof(long double)                                            \
+       ? __isinfl(x)                                                           \
+       : sizeof(x) == sizeof(double) ? __isinf(x) : __isinff(x))
+#define isnan(x)                                                               \
+  (sizeof(x) == sizeof(long double)                                            \
+       ? __isnanl(x)                                                           \
+       : sizeof(x) == sizeof(double) ? __isnan(x) : __isnanf(x))
+#define signbit(x)                                                             \
+  (sizeof(x) == sizeof(long double)                                            \
+       ? __signbitl(x)                                                         \
+       : sizeof(x) == sizeof(double) ? __signbit(x) : __signbitf(x))
+#define fpclassify(x)                                                          \
+  (sizeof(x) == sizeof(long double)                                            \
+       ? __fpclassifyl(x)                                                      \
+       : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyf(x))
+#define isfinite(x)                                                            \
+  (sizeof(x) == sizeof(long double)                                            \
+       ? __finitel(x)                                                          \
+       : sizeof(x) == sizeof(double) ? __finite(x) : __finitef(x))
 
 typedef union {
   float f;
   struct {
-    unsigned sigAndExp: 31;
-    unsigned sign: 1;
+    unsigned sigAndExp : 31;
+    unsigned sign : 1;
   } i;
 } fi;
 
 typedef union {
   double d;
   struct {
-    unsigned sigAndExpLower: 32;
-    unsigned sigAndExpUpper: 31;
-    unsigned sign: 1;
+    unsigned sigAndExpLower : 32;
+    unsigned sigAndExpUpper : 31;
+    unsigned sign : 1;
   } i;
 } di;
 
 typedef union {
   long double l;
   struct {
-    unsigned sigAndExpLower: 32;
-    unsigned sigAndExpMiddle: 32;
-    unsigned sigAndExpUpper: 15;
-    unsigned sign: 1;
+    unsigned sigAndExpLower : 32;
+    unsigned sigAndExpMiddle : 32;
+    unsigned sigAndExpUpper : 15;
+    unsigned sign : 1;
   } i;
 } li;
 
@@ -59,9 +77,9 @@ float remainderf(float x, float y);
 float fminf(float x, float y);
 float fmaxf(float x, float y);
 float fmodf(float x, float y);
-float modff(float x, float* y);
+float modff(float x, float *y);
 float copysignf(float x, float y);
-float nanf(const char* x);
+float nanf(const char *x);
 int __isnormalf(float x);
 int __issubnormalf(float x);
 int __iszerof(float x);
@@ -87,9 +105,9 @@ double remainder(double x, double y);
 double fmin(double x, double y);
 double fmax(double x, double y);
 double fmod(double x, double y);
-double modf(double x, double* y);
+double modf(double x, double *y);
 double copysign(double x, double y);
-double nan(const char* x);
+double nan(const char *x);
 int __isnormal(double x);
 int __issubnormal(double x);
 int __iszero(double x);
@@ -115,9 +133,9 @@ long double remainderl(long double x, long double y);
 long double fminl(long double x, long double y);
 long double fmaxl(long double x, long double y);
 long double fmodl(long double x, long double y);
-long double modfl(long double x, long double* y);
+long double modfl(long double x, long double *y);
 long double copysignl(long double x, long double y);
-long double nanl(const char* x);
+long double nanl(const char *x);
 int __isnormall(long double x);
 int __issubnormall(long double x);
 int __iszerol(long double x);

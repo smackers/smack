@@ -11,4 +11,3 @@ int main(void) {
   pthread_mutex_unlock(&lock);
   return 0;
 }
-

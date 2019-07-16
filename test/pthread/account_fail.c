@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <pthread.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect error
 
@@ -21,7 +21,7 @@ PACCOUNT acc;
 
 // Create and initialize account
 PACCOUNT create(int b) {
-  PACCOUNT acc = (PACCOUNT) malloc(sizeof(ACCOUNT));
+  PACCOUNT acc = (PACCOUNT)malloc(sizeof(ACCOUNT));
   acc->balance = b;
   acc->withdrawn = FALSE;
   pthread_mutex_init(&acc->lock, 0);
@@ -29,12 +29,10 @@ PACCOUNT create(int b) {
 }
 
 // Read account balance
-int read() {
-  return acc->balance;
-}
+int read() { return acc->balance; }
 
 void *deposit(void *arg) {
-  int *n = (int*)arg;
+  int *n = (int *)arg;
   pthread_mutex_lock(&acc->lock);
   acc->balance = acc->balance + *n;
   pthread_mutex_unlock(&acc->lock);
@@ -43,7 +41,7 @@ void *deposit(void *arg) {
 
 // Withdraw if there is enough funds in the account
 void *withdraw(void *arg) {
-  int *n = (int*)arg;
+  int *n = (int *)arg;
   int r;
   r = read();
   if (r >= *n) {
@@ -77,4 +75,3 @@ int main(void) {
   assert(!acc->withdrawn || read() == x + y - z);
   return 0;
 }
-

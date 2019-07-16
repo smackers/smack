@@ -7,7 +7,7 @@ int main(void) {
   long double NaN = 0.0l / 0.0l;
   long double Inf = 1.0l / 0.0l;
   long double negInf = -1.0l / 0.0l;
-  
+
   long double a = -1.5l;
   long double b = -1.49999999999999999l;
   long double c = 3.5l;
@@ -25,4 +25,3 @@ int main(void) {
 
   return 0;
 }
-

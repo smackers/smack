@@ -11,7 +11,7 @@ int main(void) {
 
   long double x = __VERIFIER_nondet_long_double();
   long double fPart, iPart;
- 
+
   if (!__isnanl(x) && !__isinfl(x) && !__iszerol(x)) {
     fPart = modfl(x, &iPart);
     if (x < 0) {
@@ -25,7 +25,7 @@ int main(void) {
 
   fPart = modfl(0.0l, &iPart);
   assert(iPart == 0.0l && fPart == 0.0l);
- 
+
   fPart = modfl(-0.0l, &iPart);
   assert(iPart == -0.0l && fPart == -0.0l);
 

@@ -1,10 +1,12 @@
+//
+// This file is distributed under the MIT License. See LICENSE for details.
+//
 #ifndef PTHREADTYPES_H
 #define PTHREADTYPES_H
-#define _BITS_PTHREADTYPES_H	1
+#define _BITS_PTHREADTYPES_H 1
 
 /* Mutex types.  */
-enum
-{
+enum {
   PTHREAD_MUTEX_TIMED_NP,
   PTHREAD_MUTEX_RECURSIVE_NP,
   PTHREAD_MUTEX_ERRORCHECK_NP,
@@ -23,18 +25,14 @@ typedef int pthread_t;
 typedef int pthread_attr_t;
 #endif
 
-typedef struct{
-  int prioceil, proto, pshared, type;
-} pthread_mutexattr_t;
+typedef struct { int prioceil, proto, pshared, type; } pthread_mutexattr_t;
 
-typedef struct{
+typedef struct {
   int lock, init;
   pthread_mutexattr_t attr;
 } pthread_mutex_t;
 
-typedef struct{
-  int cond, init;
-} pthread_cond_t;
+typedef struct { int cond, init; } pthread_cond_t;
 
 typedef int pthread_condattr_t;
 

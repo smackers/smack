@@ -1,13 +1,14 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#include <string.h>
-#include <stdlib.h>
 #include <smack.h>
+#include <stdlib.h>
+#include <string.h>
 
 char *strcpy(char *dest, const char *src) {
   char *save = dest;
-  while ((*dest++ = *src++));
+  while ((*dest++ = *src++))
+    ;
   return save;
 }
 
@@ -16,7 +17,7 @@ char *strncpy(char *dest, const char *src, size_t n) {
 
   for (i = 0; i < n && src[i] != '\0'; i++)
     dest[i] = src[i];
-  for ( ; i < n; i++)
+  for (; i < n; i++)
     dest[i] = '\0';
 
   return dest;
@@ -24,7 +25,8 @@ char *strncpy(char *dest, const char *src, size_t n) {
 
 size_t strlen(const char *str) {
   size_t count = 0;
-  while (str[count]) count++;
+  while (str[count])
+    count++;
   return count;
 }
 
@@ -42,10 +44,10 @@ int strncmp(const char *s1, const char *s2, size_t n) {
   while (n--) {
     if (*s1 != *s2)
       return *s1 - *s2;
-    s1++; 
+    s1++;
     s2++;
   }
-  
+
   return 0;
 }
 
@@ -56,7 +58,8 @@ char *strcat(char *dest, const char *src) {
 
   while (*dest)
     dest++;
-  while ((*dest++ = *src++)) ;
+  while ((*dest++ = *src++))
+    ;
 
   return retDest;
 }
@@ -66,9 +69,9 @@ char *strncat(char *dest, const char *src, size_t n) {
 
   while (*dest)
     dest++;
-  while (n--) 
+  while (n--)
     *dest++ = *src++;
-  *dest = '\0'; 
+  *dest = '\0';
 
   return retDest;
 }
@@ -102,8 +105,10 @@ size_t strspn(const char *s1, const char *s2) {
   size_t n;
   const char *p;
   for (n = 0; *s1; s1++, n++) {
-    for (p = s2; *p && *p != *s1; p++);
-    if (!*p) break;
+    for (p = s2; *p && *p != *s1; p++)
+      ;
+    if (!*p)
+      break;
   }
   return n;
 }
@@ -112,8 +117,10 @@ size_t strcspn(const char *s1, const char *s2) {
   size_t n;
   const char *p;
   for (n = 0; *s1; s1++, n++) {
-    for (p = s2; *p && *p != *s1; p++);
-    if (*p) break;
+    for (p = s2; *p && *p != *s1; p++)
+      ;
+    if (*p)
+      break;
   }
   return n;
 }
@@ -129,7 +136,8 @@ char *strpbrk(const char *s1, const char *s2) {
 char *strstr(const char *haystack, const char *needle) {
   for (; *haystack; haystack++) {
     const char *h, *n;
-    for (h = haystack, n = needle; *h && *n && (*h == *n); h++, n++);
+    for (h = haystack, n = needle; *h && *n && (*h == *n); h++, n++)
+      ;
     if (*n == '\0')
       return (char *)haystack;
   }
@@ -137,7 +145,6 @@ char *strstr(const char *haystack, const char *needle) {
 }
 
 static char *olds;
-
 char *strtok(char *str, const char *delim) {
   if (!str)
     str = olds;
@@ -147,13 +154,13 @@ char *strtok(char *str, const char *delim) {
     return 0;
 
   // skip first delims
-  str += strspn(str,delim);
+  str += strspn(str, delim);
   if (*str == '\0')
     return 0;
 
   char *tok = str;
   // find end of token
-  str = strpbrk(str,delim);
+  str = strpbrk(str, delim);
   if (!str) // this token finishes the string
     olds = 0;
   else {
@@ -169,4 +176,3 @@ char *strerror(int errnum) {
   error_str[1] = __VERIFIER_nondet_char();
   return error_str;
 }
-

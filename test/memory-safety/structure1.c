@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include "smack.h"
+#include <stdlib.h>
 
 // @expect verified
 
@@ -10,9 +10,8 @@ typedef struct _strct {
 } strct;
 
 int main(void) {
-  strct* s = malloc(sizeof(strct));
-  int x = s->a[11];
+  strct *s = malloc(sizeof(strct));
+  int x = *((int *)s + 11);
   free(s);
   return x;
 }
-

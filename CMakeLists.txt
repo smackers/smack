@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-3.9 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-4.0 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -179,6 +179,8 @@ add_library(smackTranslator STATIC
   include/smack/IntegerOverflowChecker.h
   include/smack/NormalizeLoops.h
   include/smack/SplitAggregateValue.h
+  include/smack/Prelude.h
+  include/smack/SmackWarnings.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
   lib/smack/BplFilePrinter.cpp
@@ -201,6 +203,8 @@ add_library(smackTranslator STATIC
   lib/smack/IntegerOverflowChecker.cpp
   lib/smack/NormalizeLoops.cpp
   lib/smack/SplitAggregateValue.cpp
+  lib/smack/Prelude.cpp
+  lib/smack/SmackWarnings.cpp
 )
 
 add_executable(llvm2bpl

@@ -29,7 +29,7 @@ protected:
 public:
   static char ID;
   Dyncount () : ModulePass (ID) { }
-  const char *getPassName() const {
+  virtual StringRef getPassName() const {
     return "Count safe/unsafe load/store";
   }
   virtual bool runOnModule (Module & M);

@@ -116,7 +116,7 @@ void CallTargetFinder<dsa>::findIndTargets(Module &M)
                 } 
                 if (!N->isIncompleteNode() && !N->isExternalNode() && !IndMap[cs].size()) {
                   ++CompleteEmpty;
-                  DEBUG(errs() << "Call site empty: '"
+                  SDEBUG(errs() << "Call site empty: '"
                                 << cs.getInstruction()->getName()
                                 << "' In '"
                                 << cs.getInstruction()->getParent()->getParent()->getName()

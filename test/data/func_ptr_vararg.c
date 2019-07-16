@@ -13,7 +13,6 @@ void (*dprintf)(unsigned char *, ...) = &no_printf;
 
 int main(void) {
   (*dprintf)((unsigned char *)"%d", 10);
-  assert (g == 1);
+  assert(g == 1);
   return 0;
 }
-

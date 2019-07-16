@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @flag --loop-limit=11
 // @flag --unroll=11
@@ -11,7 +11,7 @@
 
 int main() {
   int i = 0;
-  int *a = (int*)malloc(MAXSIZE * sizeof(int));
+  int *a = (int *)malloc(MAXSIZE * sizeof(int));
 
   for (i = 0; i < MAXSIZE; i++) {
     a[i] = RESET;
@@ -22,4 +22,3 @@ int main() {
   free(a);
   return 0;
 }
-
