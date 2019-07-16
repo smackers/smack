@@ -209,11 +209,11 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::AddTiming());
   }
 
-  std::vector<ToolOutputFile *> files;
+  std::vector<tool_output_file *> files;
 
   if (!FinalIrFilename.empty()) {
     std::error_code EC;
-    auto F = new ToolOutputFile(FinalIrFilename.c_str(), EC, sys::fs::F_None);
+    auto F = new tool_output_file(FinalIrFilename.c_str(), EC, sys::fs::F_None);
     if (EC)
       check(EC.message());
     F->keep();
@@ -223,7 +223,7 @@ int main(int argc, char **argv) {
 
   if (!OutputFilename.empty()) {
     std::error_code EC;
-    auto F = new ToolOutputFile(OutputFilename.c_str(), EC, sys::fs::F_None);
+    auto F = new tool_output_file(OutputFilename.c_str(), EC, sys::fs::F_None);
     if (EC)
       check(EC.message());
     F->keep();
