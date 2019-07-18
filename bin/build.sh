@@ -23,6 +23,7 @@
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
 INSTALL_Z3=1
+INSTALL_CVC4=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
 BUILD_SYMBOOGLIX=1
@@ -40,6 +41,7 @@ INSTALL_RUST=0
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
+CVC4_DIR="${ROOT}/cvc4"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 SYMBOOGLIX_DIR="${ROOT}/symbooglix"
@@ -405,6 +407,18 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
   fi
 fi
 
+if [ ${INSTALL_CVC4} -eq 1 ] ; then
+  if [ ! -d "$CVC4_DIR" ] ; then
+    puts "Installing CVC4"
+    mkdir -p ${CVC4_DIR}
+    ${WGET} https://github.com/CVC4/CVC4/releases/download/1.7/cvc4-1.7-x86_64-linux-opt -O cvc4
+    chmod +x cvc4
+    mv cvc4 ${CVC4_DIR}
+    puts "Installed CVC4"
+  else
+    puts "CVC4 already installed"
+  fi
+fi
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
   if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
@@ -420,6 +434,7 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     rm -rf /tmp/nuget/
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+    ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
     puts "Built Boogie"
   else
     puts "Boogie already built"
@@ -439,6 +454,7 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     git submodule update
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+    ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
     puts "Built Corral"
   else
     puts "Corral already built"
