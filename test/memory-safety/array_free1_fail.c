@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include "smack.h"
+#include <stdlib.h>
 
 // @flag --unroll=6
 // @expect error
@@ -18,7 +18,7 @@ void free_array() {
   DATA a[MAXSIZE];
 
   for (i = 0; i < MAXSIZE - 1; i++) {
-    a[i].f = (int*)malloc(sizeof(int));
+    a[i].f = (int *)malloc(sizeof(int));
     *(a[i].f) = 1;
     a[i].x = 2;
   }
@@ -35,4 +35,3 @@ int main() {
   free_array();
   return 0;
 }
-

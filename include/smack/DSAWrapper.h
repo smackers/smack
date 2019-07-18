@@ -20,24 +20,20 @@ class DSNodeEquivs;
 }
 
 namespace dsa {
-template<class dsa>
-struct TypeSafety;
+template <class dsa> struct TypeSafety;
 }
 
 namespace smack {
 
-
 class MemcpyCollector : public llvm::InstVisitor<MemcpyCollector> {
 private:
   llvm::DSNodeEquivs *nodeEqs;
-  std::vector<const llvm::DSNode*> memcpys;
+  std::vector<const llvm::DSNode *> memcpys;
 
 public:
-  MemcpyCollector(llvm::DSNodeEquivs *neqs) : nodeEqs(neqs) { }
-  void visitMemCpyInst(llvm::MemCpyInst& mci);
-  std::vector<const llvm::DSNode*> getMemcpys() {
-    return memcpys;
-  }
+  MemcpyCollector(llvm::DSNodeEquivs *neqs) : nodeEqs(neqs) {}
+  void visitMemCpyInst(llvm::MemCpyInst &mci);
+  std::vector<const llvm::DSNode *> getMemcpys() { return memcpys; }
 };
 
 class DSAWrapper : public llvm::ModulePass {
@@ -47,15 +43,16 @@ private:
   llvm::BUDataStructures *BU;
   llvm::DSNodeEquivs *nodeEqs;
   dsa::TypeSafety<llvm::TDDataStructures> *TS;
-  std::vector<const llvm::DSNode*> staticInits;
-  std::vector<const llvm::DSNode*> memcpys;
-  std::unordered_set<const llvm::DSNode*> intConversions;
-  const llvm::DataLayout* dataLayout;
+  std::vector<const llvm::DSNode *> staticInits;
+  std::vector<const llvm::DSNode *> memcpys;
+  std::unordered_set<const llvm::DSNode *> intConversions;
+  const llvm::DataLayout *dataLayout;
 
-  std::vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
-  std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
+  std::vector<const llvm::DSNode *> collectMemcpys(llvm::Module &M,
+                                                   MemcpyCollector *mcc);
+  std::vector<const llvm::DSNode *> collectStaticInits(llvm::Module &M);
   llvm::DSGraph *getGraphForValue(const llvm::Value *V);
-  int getOffset(const llvm::MemoryLocation* l);
+  int getOffset(const llvm::MemoryLocation *l);
 
 public:
   static char ID;
@@ -64,18 +61,18 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
   virtual bool runOnModule(llvm::Module &M);
 
-  bool isMemcpyd(const llvm::DSNode* n);
-  bool isStaticInitd(const llvm::DSNode* n);
-  bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
-  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
-  bool isRead(const llvm::Value* V);
-  bool isAlloced(const llvm::Value* v);
-  bool isExternal(const llvm::Value* v);
+  bool isMemcpyd(const llvm::DSNode *n);
+  bool isStaticInitd(const llvm::DSNode *n);
+  bool isFieldDisjoint(const llvm::Value *V, const llvm::Function *F);
+  bool isFieldDisjoint(const llvm::GlobalValue *V, unsigned offset);
+  bool isRead(const llvm::Value *V);
+  bool isAlloced(const llvm::Value *v);
+  bool isExternal(const llvm::Value *v);
   bool isSingletonGlobal(const llvm::Value *V);
-  unsigned getPointedTypeSize(const llvm::Value* v);
-  int getOffset(const llvm::Value* v);
-  const llvm::DSNode *getNode(const llvm::Value* v);
-  void printDSAGraphs(const char* Filename);
+  unsigned getPointedTypeSize(const llvm::Value *v);
+  int getOffset(const llvm::Value *v);
+  const llvm::DSNode *getNode(const llvm::Value *v);
+  void printDSAGraphs(const char *Filename);
 };
 }
 

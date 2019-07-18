@@ -19,7 +19,7 @@ int main(void) {
     assert(__isnanl(remainderl(Inf, y)));
     assert(__isnanl(remainderl(negInf, y)));
   }
- 
+
   if (!__isnanl(x)) {
     assert(__isnanl(remainderl(x, 0.0l)));
     assert(__isnanl(remainderl(x, -0.0l)));

@@ -1,14 +1,14 @@
-#include <string.h>
 #include "smack.h"
+#include <string.h>
 
-// @expect error 
+// @expect error
 
 int main(void) {
   char brick[4];
-  strcpy(brick,"bl");
+  strcpy(brick, "bl");
   char *glue = "u!";
-  char *modernart = strcat(brick,glue);
+  char *modernart = strcat(brick, glue);
 
-  assert(strcmp(modernart,"blue") == 0);
+  assert(strcmp(modernart, "blue") == 0);
   return 0;
 }

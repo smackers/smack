@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <stdarg.h>
 #include "smack.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 // @expect verified
 
@@ -18,4 +18,3 @@ int main(void) {
   panic(1, 2);
   return 0;
 }
-

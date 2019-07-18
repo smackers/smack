@@ -2,20 +2,16 @@
 
 // @expect verified
 
-int __incr(int x) {
-  return ++x;
-}
+int __incr(int x) { return ++x; }
 
-int __decr(int x) {
-  return --x;
-}
+int __decr(int x) { return --x; }
 
 #ifdef __MACH__
 int (*incr)(int) = __incr;
 int (*decr)(int) = __decr;
 #else
-int incr(int) __attribute__((alias ("__incr")));
-int decr(int) __attribute__((alias ("__decr")));
+int incr(int) __attribute__((alias("__incr")));
+int decr(int) __attribute__((alias("__decr")));
 #endif
 
 int main(void) {
@@ -32,4 +28,3 @@ int main(void) {
   assert(x == 2);
   return 0;
 }
-

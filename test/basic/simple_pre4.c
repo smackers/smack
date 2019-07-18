@@ -1,12 +1,10 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
-short incr(short x) {
-  return ++x;
-}
+short incr(short x) { return ++x; }
 
 int main(void) {
   short a;
@@ -16,4 +14,3 @@ int main(void) {
   assert(a > -2);
   return a;
 }
-

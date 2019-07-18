@@ -26,4 +26,3 @@ char *strtok(char *str, const char *delim);
 char *strerror(int errnum);
 
 #endif
-

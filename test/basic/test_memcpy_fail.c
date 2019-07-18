@@ -1,5 +1,5 @@
-#include <string.h>
 #include "smack.h"
+#include <string.h>
 
 // @expect error
 
@@ -10,4 +10,3 @@ int main(void) {
   assert(a != b);
   return 0;
 }
-

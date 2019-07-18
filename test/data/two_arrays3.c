@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
@@ -45,8 +45,8 @@ int main() {
   arraySize = __VERIFIER_nondet_int();
   assume(arraySize > 0);
 
-  elem *arrayOne = (elem*)malloc(arraySize * sizeof(elem));
-  elem *arrayTwo = (elem*)malloc(arraySize * sizeof(elem));
+  elem *arrayOne = (elem *)malloc(arraySize * sizeof(elem));
+  elem *arrayTwo = (elem *)malloc(arraySize * sizeof(elem));
 
   resetArray(arrayOne);
   setArray(arrayTwo);
@@ -72,4 +72,3 @@ int main() {
   free(arrayTwo);
   return 0;
 }
-

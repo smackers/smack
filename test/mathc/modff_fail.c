@@ -12,7 +12,7 @@ int main(void) {
 
   float x = __VERIFIER_nondet_float();
   float fPart, iPart;
- 
+
   if (!__isnanf(x) && !__isinff(x) && !__iszerof(x)) {
     fPart = modff(x, &iPart);
     if (x < 0) {
@@ -26,7 +26,7 @@ int main(void) {
 
   fPart = modff(0.0f, &iPart);
   assert(iPart == 0.0f && fPart == 0.0f);
- 
+
   fPart = modff(-0.0f, &iPart);
   assert(iPart == -0.0f && fPart == -0.0f);
 

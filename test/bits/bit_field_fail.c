@@ -5,11 +5,11 @@
 typedef union {
   int v;
   struct {
-    unsigned a: 8;
-    unsigned b: 8;
-    unsigned c: 8;
-    unsigned d: 8;
- } i;
+    unsigned a : 8;
+    unsigned b : 8;
+    unsigned c : 8;
+    unsigned d : 8;
+  } i;
 } bf;
 
 int main(void) {
@@ -21,4 +21,3 @@ int main(void) {
   assert(b.i.a == ((b.v >> 24) & 0xff));
   return 0;
 }
-

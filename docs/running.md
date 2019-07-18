@@ -114,3 +114,5 @@ verifier leverages to generate more informative error traces. Then, the generate
 file is translated into Boogie code, which is in turn passed to the chosen back-end
 verifier.
 
+For mode advanced usage scenarios, please refer to our [usage notes](usage-notes.md).
+

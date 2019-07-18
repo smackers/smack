@@ -10,14 +10,14 @@
 
 int x = 1;
 
-typedef struct pair{
+typedef struct pair {
   int x;
   int y;
 } pair;
 
 void *t1(void *arg) {
   x++;
-  pair* retptr = (pair*)malloc(sizeof(pair));
+  pair *retptr = (pair *)malloc(sizeof(pair));
   retptr->x = 3;
   retptr->y = 4;
   pthread_exit(retptr);
@@ -26,7 +26,7 @@ void *t1(void *arg) {
 
 int main(void) {
   pthread_t t;
-  pair* ret;
+  pair *ret;
 
   pthread_create(&t, 0, t1, 0);
   pthread_join(t, &ret);
@@ -36,4 +36,3 @@ int main(void) {
   free(ret);
   return 0;
 }
-

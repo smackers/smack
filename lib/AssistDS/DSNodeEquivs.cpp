@@ -113,7 +113,7 @@ FunctionList DSNodeEquivs::getCallees(CallSite &CS) {
   }
 
   // For debugging, dump out the callsites we are unable to get callees for.
-  DEBUG(
+  SDEBUG(
   if (Callees.empty()) {
     errs() << "Failed to get callees for callsite:\n";
     CS.getInstruction()->dump();

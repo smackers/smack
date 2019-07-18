@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include "smack.h"
+#include <stdlib.h>
 
 // @flag --loop-limit=11
 // @flag --unroll=11
@@ -20,7 +20,7 @@ void free_array() {
   DATA a[MAXSIZE];
 
   for (i = 0; i < MAXSIZE; i++) {
-    a[i].f = (int*)malloc(sizeof(int));
+    a[i].f = (int *)malloc(sizeof(int));
     *(a[i].f) = 1;
     a[i].x = 2;
     a[i].y = 3;
@@ -41,4 +41,3 @@ int main() {
   free_array();
   return 0;
 }
-

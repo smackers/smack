@@ -22,9 +22,7 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
   virtual bool runOnModule(llvm::Module& m);
   void generateProgram(llvm::Module& m);
-  Program* getProgram() {
-    return program;
-  }
+  Program* getProgram() { return program; }
   std::vector<std::string> getBplGlobals() { return bplGlobals; }
 };
 }

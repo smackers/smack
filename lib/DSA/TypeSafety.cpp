@@ -157,7 +157,7 @@ TypeSafety<dsa>::isFieldDisjoint (const Value * V, const Function * F) {
   DSNodeHandle DH = getDSNodeHandle (V, F);
   DSNode *node = DH.getNode();
   unsigned offset = DH.getOffset();
-  DEBUG(errs() << " check fields overlap at: " << offset << "\n");
+  SDEBUG(errs() << " check fields overlap at: " << offset << "\n");
 
   //
   // If there is no DSNode, claim that it is not type safe.
@@ -203,7 +203,7 @@ TypeSafety<dsa>::isFieldDisjoint (const GlobalValue * V, unsigned offset) {
   DSNodeHandle DH = getDSNodeHandle (V);
   DSNode *node = DH.getNode();
   //unsigned offset = DH.getOffset();
-  DEBUG(errs() << " check fields overlap at: " << offset << "\n");
+  SDEBUG(errs() << " check fields overlap at: " << offset << "\n");
 
   //
   // If there is no DSNode, claim that it is not type safe.
@@ -301,7 +301,7 @@ TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
       svset<Type*>::const_iterator tb = TypeSet->begin();
       if (++tb != TypeSet->end()) {
         fmap[offset] = true;
-        DEBUG(errs() << "Multiple fields at " << offset << "\n");
+        SDEBUG(errs() << "Multiple fields at " << offset << "\n");
       }
     }
 
@@ -340,7 +340,7 @@ TypeSafety<dsa>::fieldMapUpdate (const DSNode * N) {
             fmap[next_offset] = true;
             overlaps = true;
             if(overlaps) {
-              DEBUG(errs() << "Found overlap at " << offset << " with " << next_offset << "\n");
+              SDEBUG(errs() << "Found overlap at " << offset << " with " << next_offset << "\n");
               break;
             }
           }
@@ -436,7 +436,7 @@ TypeSafety<dsa>::typeFieldsOverlap (const DSNode * N) {
             }
           }
           if(overlaps) {
-            DEBUG(errs() << " Found overlap at " << offset << " with " << next_offset << "\n");
+            SDEBUG(errs() << " Found overlap at " << offset << " with " << next_offset << "\n");
             break;
           }
         }

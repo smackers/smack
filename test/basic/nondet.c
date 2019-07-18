@@ -14,4 +14,3 @@ int main(void) {
   assert(x == 0 || x == 2);
   return 0;
 }
-

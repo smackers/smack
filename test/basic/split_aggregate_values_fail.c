@@ -1,6 +1,6 @@
 #include "smack.h"
 
-// @expect error 
+// @expect error
 
 typedef struct {
   int x;

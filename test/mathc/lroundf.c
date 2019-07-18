@@ -8,7 +8,7 @@ int main(void) {
   float NaN = 0.0f / 0.0f;
   float Inf = 1.0f / 0.0f;
   float negInf = -1.0f / 0.0f;
-  
+
   float a = -1.5f;
   float b = -1.49999999999999999f;
   float c = 3.5f;
@@ -26,4 +26,3 @@ int main(void) {
 
   return 0;
 }
-

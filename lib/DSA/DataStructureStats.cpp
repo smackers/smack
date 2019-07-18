@@ -133,7 +133,7 @@ void DSGraphStats::countCallees(const Function& F) {
         totalNumCallees  += Callees.size();
         ++numIndirectCalls;
       } else {
-        DEBUG(errs() << "WARNING: No callee in Function '" 
+        SDEBUG(errs() << "WARNING: No callee in Function '" 
               << F.getName().str() << " at call: \n"
               << *I->getCallSite().getInstruction());
       }
@@ -143,7 +143,7 @@ void DSGraphStats::countCallees(const Function& F) {
   NumIndirectCalls += numIndirectCalls;
 
   if (numIndirectCalls) {
-    DEBUG(errs() << "  In function " << F.getName() << ":  "
+    SDEBUG(errs() << "  In function " << F.getName() << ":  "
           << (totalNumCallees / (double) numIndirectCalls)
           << " average callees per indirect call\n");
   }
@@ -213,7 +213,7 @@ bool DSGraphStats::isNodeForValueUntyped(Value *V, unsigned Offset, const Functi
       ++NumTypeCount3Accesses;
     else
       ++NumTypeCount4Accesses;
-    DEBUG(assert(TS->isTypeSafe(V,F)));
+    SDEBUG(assert(TS->isTypeSafe(V,F)));
   }
   return false;
 }

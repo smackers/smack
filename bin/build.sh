@@ -58,7 +58,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml python-psutil unzip wget"
+DEPENDENCIES="git cmake python-yaml python-psutil unzip wget ninja-build"
 
 shopt -s extglob
 
@@ -181,23 +181,28 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-debian-8.10.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-debian-8.10.zip"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-@(ubuntu|neon)-14*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION} mono-complete libz-dev libedit-dev"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete libz-dev libedit-dev"
   ;;
 
 linux-@(ubuntu|neon)-16*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION} mono-complete libz-dev libedit-dev"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete libz-dev libedit-dev"
+  ;;
+
+linux-@(ubuntu|neon)-18*)
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
   DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
@@ -251,7 +256,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-1[46]*)
+  linux-@(ubuntu|neon)-1[468]*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     14*)
@@ -259,6 +264,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
       ;;
     16*)
       UBUNTU_CODENAME="xenial"
+      ;;
+    18*)
+      UBUNTU_CODENAME="bionic"
       ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
@@ -478,9 +486,9 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug ..
-  make
-  sudo make install
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
+  ninja
+  sudo ninja install
 
   puts "Configuring shell environment"
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}

@@ -12,15 +12,9 @@ struct T {
   struct S z;
 };
 
-void f(struct S *state)
-{
-  state->w = 0;
-}
+void f(struct S *state) { state->w = 0; }
 
-void g(struct S *state)
-{
-  state->w = 1;
-}
+void g(struct S *state) { state->w = 1; }
 
 int main(void) {
   struct T t;

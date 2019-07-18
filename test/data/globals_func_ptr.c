@@ -1,6 +1,6 @@
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "smack.h"
 
 // @expect verified
 
@@ -16,25 +16,13 @@ struct ops {
   struct int_ops *iops;
 };
 
-int incr(int x) {
-  return ++x;
-}
+int incr(int x) { return ++x; }
 
-int decr(int x) {
-  return --x;
-}
+int decr(int x) { return --x; }
 
-struct int_ops my_int_ops = {
-  .data = 10,
-  .incr = incr,
-  .decr = decr
-};
+struct int_ops my_int_ops = {.data = 10, .incr = incr, .decr = decr};
 
-struct ops my_ops = {
-  .a = 4,
-  .b = 5,
-  &my_int_ops
-};
+struct ops my_ops = {.a = 4, .b = 5, &my_int_ops};
 
 int main() {
   int (*fp)(int);
@@ -48,4 +36,3 @@ int main() {
 
   return 0;
 }
-

@@ -180,7 +180,7 @@ bool TDDataStructures::runOnModule(Module &M) {
   // CBU contains the correct call graph.
   // Restore it, so that subsequent passes and clients can get it.
   restoreCorrectCallGraph();
-  DEBUG(print(errs(), &M));
+  SDEBUG(print(errs(), &M));
   return false;
 }
 
@@ -247,7 +247,7 @@ void TDDataStructures::InlineCallersIntoGraph(DSGraph* DSG) {
   cloneGlobalsInto(DSG, DSGraph::DontCloneCallNodes |
                         DSGraph::DontCloneAuxCallNodes);
 
-  DEBUG(errs() << "[TD] Inlining callers into '"
+  SDEBUG(errs() << "[TD] Inlining callers into '"
         << DSG->getFunctionNames() << "'\n");
 
   DSG->maskIncompleteMarkers();
@@ -265,15 +265,15 @@ void TDDataStructures::InlineCallersIntoGraph(DSGraph* DSG) {
     do {
       const DSCallSite &CS = *EdgesFromCaller.back().CS;
       const Function &CF = *EdgesFromCaller.back().CalledFunction;
-      DEBUG(errs() << "   [TD] Inlining graph into Fn '"
+      SDEBUG(errs() << "   [TD] Inlining graph into Fn '"
             << CF.getName().str() << "' from ");
       if (CallerGraph->getReturnNodes().empty()) {
-        DEBUG(errs() << "SYNTHESIZED INDIRECT GRAPH");
+        SDEBUG(errs() << "SYNTHESIZED INDIRECT GRAPH");
       } else {
-        DEBUG(errs() << "Fn '" << CS.getCallSite().getInstruction()->
+        SDEBUG(errs() << "Fn '" << CS.getCallSite().getInstruction()->
               getParent()->getParent()->getName().str() << "'");
       }
-      DEBUG(errs() << ": " << CF.getFunctionType()->getNumParams()
+      SDEBUG(errs() << ": " << CF.getFunctionType()->getNumParams()
             << " args\n");
 
       // Get the formal argument and return nodes for the called function and
@@ -387,7 +387,7 @@ void TDDataStructures::InlineCallersIntoGraph(DSGraph* DSG) {
 
     // If we already have this graph, recycle it.
     if (IndCallRecI != IndCallMap.end() && IndCallRecI->first == Callees) {
-      DEBUG(errs() << "  [TD] *** Reuse of indcall graph for " << Callees.size()
+      SDEBUG(errs() << "  [TD] *** Reuse of indcall graph for " << Callees.size()
             << " callees!\n");
       DSGraph * IndCallGraph = IndCallRecI->second;
       assert(IndCallGraph->getFunctionCalls().size() == 1);

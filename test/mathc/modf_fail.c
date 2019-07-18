@@ -12,7 +12,7 @@ int main(void) {
 
   double x = __VERIFIER_nondet_double();
   double fPart, iPart;
- 
+
   if (!__isnan(x) && !__isinf(x) && !__iszero(x)) {
     fPart = modf(x, &iPart);
     if (x < 0) {
@@ -26,7 +26,7 @@ int main(void) {
 
   fPart = modf(0.0, &iPart);
   assert(iPart == 0.0 && fPart == 0.0);
- 
+
   fPart = modf(-0.0, &iPart);
   assert(iPart == -0.0 && fPart == -0.0);
 

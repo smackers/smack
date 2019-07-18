@@ -3,8 +3,8 @@
 // @expect verified
 
 struct S {
- short a[3];
- short x;
+  short a[3];
+  short x;
 };
 
 struct S s;
@@ -15,4 +15,3 @@ int main(void) {
   assert(s.a[1] == 0);
   return 0;
 }
-
