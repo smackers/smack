@@ -107,7 +107,7 @@ SMACK should report no errors for this example.
 
 Under the hood, SMACK first compiles the example into an LLVM bitcode file using Clang:
 ```Shell
-clang -c -Wall -emit-llvm -O0 -g -I../../share/smack/include simple.c -o simple.bc
+clang -c -Wall -emit-llvm -O0 -g -Xclang -disable-O0-optnone -I../../share/smack/include simple.c -o simple.bc
 ```
 We use the `-g` flag to compile with debug information enabled, which the SMACK
 verifier leverages to generate more informative error traces. Then, the generated bitcode
