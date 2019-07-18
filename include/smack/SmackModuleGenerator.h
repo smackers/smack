@@ -12,17 +12,17 @@ class Program;
 
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
-  Program* program;
+  Program *program;
   std::vector<std::string> bplGlobals;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
   SmackModuleGenerator();
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
-  virtual bool runOnModule(llvm::Module& m);
-  void generateProgram(llvm::Module& m);
-  Program* getProgram() { return program; }
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+  virtual bool runOnModule(llvm::Module &m);
+  void generateProgram(llvm::Module &m);
+  Program *getProgram() { return program; }
   std::vector<std::string> getBplGlobals() { return bplGlobals; }
 };
 }

@@ -4,9 +4,9 @@
 #include "smack/ModAnalysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
-#include <list>
 #include <algorithm>
 #include <iterator>
+#include <list>
 
 namespace smack {
 
@@ -24,7 +24,8 @@ void ModAnalysis::initProcMap(Program *program) {
   }
 }
 
-std::string ModAnalysis::getBplGlobalsModifiesClause(const std::set<std::string> &bplGlobals) {
+std::string ModAnalysis::getBplGlobalsModifiesClause(
+    const std::set<std::string> &bplGlobals) {
   std::string modClause = "\nmodifies";
 
   for (std::string var : bplGlobals) {
@@ -34,7 +35,7 @@ std::string ModAnalysis::getBplGlobalsModifiesClause(const std::set<std::string>
   modClause[modClause.size() - 1] = ';';
   modClause.push_back('\n');
 
-  return modClause; 
+  return modClause;
 }
 
 void ModAnalysis::fixPrelude(Program *program, const std::string &modClause) {
@@ -49,22 +50,28 @@ void ModAnalysis::fixPrelude(Program *program, const std::string &modClause) {
   }
 }
 
-void ModAnalysis::addModifiesToSmackProcs(Program *program, const std::string &modClause) {
+void ModAnalysis::addModifiesToSmackProcs(Program *program,
+                                          const std::string &modClause) {
   const std::string NAME_REGEX = "[[:alpha:]_.$#'`^\?][[:alnum:]_.$#'`^\?]*";
-  Regex PROC_DECL("^([[:space:]]*procedure[[:space:]]+[^\\(]*(" + NAME_REGEX + ")[[:space:]]*\\([^\\)]*\\)[^\\{]*)(\\{(.|[[:space:]])*(\\}[[:space:]]*)$)");
-  Regex MOD_CL("modifies[[:space:]]+" + NAME_REGEX + "([[:space:]]*,[[:space:]]*" + NAME_REGEX + ")*;"); 
+  Regex PROC_DECL("^([[:space:]]*procedure[[:space:]]+[^\\(]*(" + NAME_REGEX +
+                  ")[[:space:]]*\\([^\\)]*\\)[^\\{]*)(\\{(.|[[:space:]])*(\\}[["
+                  ":space:]]*)$)");
+  Regex MOD_CL("modifies[[:space:]]+" + NAME_REGEX +
+               "([[:space:]]*,[[:space:]]*" + NAME_REGEX + ")*;");
 
   for (Decl *&decl : *program) {
     if (isa<CodeDecl>(decl)) {
       if (PROC_DECL.match(decl->getName()) && !MOD_CL.match(decl->getName())) {
-        std::string newStr = PROC_DECL.sub("\\1", decl->getName()) + modClause + PROC_DECL.sub("\\3", decl->getName());
+        std::string newStr = PROC_DECL.sub("\\1", decl->getName()) + modClause +
+                             PROC_DECL.sub("\\3", decl->getName());
         decl = Decl::code(newStr, newStr);
       }
     }
   }
 }
 
-void ModAnalysis::genSmackCodeModifies(Program *program, const std::set<std::string> &bplGlobals) {
+void ModAnalysis::genSmackCodeModifies(
+    Program *program, const std::set<std::string> &bplGlobals) {
   std::string modClause = getBplGlobalsModifiesClause(bplGlobals);
   fixPrelude(program, modClause);
   addModifiesToSmackProcs(program, modClause);
@@ -146,16 +153,18 @@ void ModAnalysis::genSCCGraph(Program *program) {
   }
 }
 
-void ModAnalysis::addIfGlobalVar(const std::string exprName, const std::string &procName) {
+void ModAnalysis::addIfGlobalVar(const std::string exprName,
+                                 const std::string &procName) {
   static Regex GLOBAL_VAR("\\$M.[[:digit:]]+");
   if (GLOBAL_VAR.match(exprName)) {
-    std::string var = GLOBAL_VAR.sub("\\0", exprName);  
+    std::string var = GLOBAL_VAR.sub("\\0", exprName);
 
     modVars[SCCOfProc[procName]].insert(var);
   }
 }
 
-void ModAnalysis::calcModifiesOfExprs(const std::list<const Expr*> exprs, const std::string &procName) {
+void ModAnalysis::calcModifiesOfExprs(const std::list<const Expr *> exprs,
+                                      const std::string &procName) {
   for (auto expr : exprs) {
     if (const VarExpr *varExpr = dyn_cast<VarExpr>(expr)) {
       addIfGlobalVar(varExpr->name(), procName);
@@ -163,8 +172,9 @@ void ModAnalysis::calcModifiesOfExprs(const std::list<const Expr*> exprs, const 
   }
 }
 
-void ModAnalysis::calcModifiesOfStmt(const Stmt *stmt, const std::string procName) {
-  if (const AssignStmt* assignStmt = dyn_cast<AssignStmt>(stmt)) {
+void ModAnalysis::calcModifiesOfStmt(const Stmt *stmt,
+                                     const std::string procName) {
+  if (const AssignStmt *assignStmt = dyn_cast<AssignStmt>(stmt)) {
     calcModifiesOfExprs(assignStmt->getlhs(), procName);
 
     for (const Expr *expr : assignStmt->getrhs()) {
@@ -213,13 +223,15 @@ void ModAnalysis::addModifies(Program *program) {
       if (procDecl->begin() != procDecl->end()) {
         int index = SCCOfProc[procDecl->getName()];
         std::list<std::string> &modList = procDecl->getModifies();
-        modList.insert(modList.end(), modVars[index].begin(), modVars[index].end());
+        modList.insert(modList.end(), modVars[index].begin(),
+                       modVars[index].end());
       }
     }
   }
 }
 
-void ModAnalysis::genUserCodeModifies(Program *program, const std::set<std::string> &bplGlobals) {
+void ModAnalysis::genUserCodeModifies(Program *program,
+                                      const std::set<std::string> &bplGlobals) {
   genSCCs(program);
   calcModifiesOfSCCs(program);
   genSCCGraph(program);
@@ -228,13 +240,14 @@ void ModAnalysis::genUserCodeModifies(Program *program, const std::set<std::stri
   addModifies(program);
 }
 
-bool ModAnalysis::runOnModule(llvm::Module& m) {
+bool ModAnalysis::runOnModule(llvm::Module &m) {
   SmackModuleGenerator &smackGenerator = getAnalysis<SmackModuleGenerator>();
   Program *program = smackGenerator.getProgram();
 
   std::set<std::string> bplGlobals;
   std::vector<std::string> oldBplGlobals = smackGenerator.getBplGlobals();
-  std::copy(oldBplGlobals.begin(), oldBplGlobals.end(), std::inserter(bplGlobals, bplGlobals.end()));
+  std::copy(oldBplGlobals.begin(), oldBplGlobals.end(),
+            std::inserter(bplGlobals, bplGlobals.end()));
 
   initProcMap(program);
 
