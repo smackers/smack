@@ -93,4 +93,4 @@ void ContractsExtractor::visitCallInst(CallInst &ci) {
     head->getInstList().insert(I, &ci);
   }
 }
-}
+} // namespace smack

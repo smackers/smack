@@ -4,7 +4,9 @@
 
 // @expect error
 
-typedef struct { int x; } S1;
+typedef struct {
+  int x;
+} S1;
 
 typedef struct {
   int a;

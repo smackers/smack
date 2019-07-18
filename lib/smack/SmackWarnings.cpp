@@ -95,4 +95,4 @@ void SmackWarnings::warnInfo(std::string info) {
     return;
   errs() << "warning: " << info << "\n";
 }
-}
+} // namespace smack

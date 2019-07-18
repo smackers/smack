@@ -32,6 +32,6 @@ private:
   void addBlockingAssume(llvm::Function *va, llvm::Value *flag,
                          llvm::Instruction *i);
 };
-}
+} // namespace smack
 
 #endif // INTEGEROVERFLOWCHECKER_H

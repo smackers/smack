@@ -48,7 +48,7 @@ std::list<CallInst *> findCallers(Function *F) {
 
   return callers;
 }
-}
+} // namespace
 
 namespace smack {
 
@@ -377,13 +377,14 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       const unsigned R = regions->idx(GEP);
       bool bytewise = regions->get(R).bytewiseAccess();
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
-      attrs.push_back(
-          Attr::attr("field",
-                     {
-                         Expr::lit(Naming::LOAD + "." +
-                                   (bytewise ? "bytes." : "") + intType(bits)),
-                         Expr::id(memPath(R)), ptrArith(GEP), Expr::lit(bytes),
-                     }));
+      attrs.push_back(Attr::attr(
+          "field", {
+                       Expr::lit(Naming::LOAD + "." +
+                                 (bytewise ? "bytes." : "") + intType(bits)),
+                       Expr::id(memPath(R)),
+                       ptrArith(GEP),
+                       Expr::lit(bytes),
+                   }));
 
     } else {
       llvm_unreachable("Unexpected argument type.");
@@ -512,9 +513,10 @@ const Expr *SmackRep::load(const llvm::Value *P) {
   const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
-      (bytewise ? "bytes." : (isUnsafeFloatAccess(T->getElementType(), resultTy)
-                                  ? "unsafe."
-                                  : "")) +
+      (bytewise
+           ? "bytes."
+           : (isUnsafeFloatAccess(T->getElementType(), resultTy) ? "unsafe."
+                                                                 : "")) +
       type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
@@ -547,8 +549,9 @@ const Expr *SmackRep::pa(const Expr *base, long long idx, unsigned size) {
   if (idx >= 0) {
     return pa(base, pointerLit(idx), pointerLit(size));
   } else {
-    return pa(base, Expr::fn("$sub.ref", pointerLit(0ULL),
-                             pointerLit((unsigned long long)std::abs(idx))),
+    return pa(base,
+              Expr::fn("$sub.ref", pointerLit(0ULL),
+                       pointerLit((unsigned long long)std::abs(idx))),
               pointerLit(size));
   }
 }
@@ -772,8 +775,9 @@ const Expr *SmackRep::ptrArith(
                "Index value too large (or too small if negative)");
         e = pa(e, (long long)ci->getSExtValue(), storageSize(et));
       } else
-        e = pa(e, integerToPointer(expr(a.first),
-                                   a.first->getType()->getIntegerBitWidth()),
+        e = pa(e,
+               integerToPointer(expr(a.first),
+                                a.first->getType()->getIntegerBitWidth()),
                storageSize(et));
     }
   }
@@ -1168,8 +1172,7 @@ unsigned SmackRep::numElements(const llvm::Constant *v) {
 void SmackRep::addInitFunc(const llvm::Function *f) {
   assert(f->getReturnType()->isVoidTy() &&
          "Init functions cannot return a value");
-  assert(f->arg_empty() &&
-         "Init functions cannot take parameters");
+  assert(f->arg_empty() && "Init functions cannot take parameters");
   initFuncs.push_back(naming->get(*f));
 }
 

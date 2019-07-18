@@ -2173,15 +2173,15 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
       /*   KeInitializeEvent(& PagingMutex->Event, 1, 0); */ /* INLINED */
       /* MmPageEntireDriver(& DriverEntry); */               /* INLINED */
     }
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture == 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
+        1) {
       DriveMediaLimits =
           (struct _DRIVE_MEDIA_LIMITS *)(_DriveMediaLimits_NEC98);
     } else {
       DriveMediaLimits = _DriveMediaLimits;
     }
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture == 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
+        1) {
       DriveMediaConstants = _DriveMediaConstants_NEC98;
     } else {
       DriveMediaConstants = _DriveMediaConstants;
@@ -2228,9 +2228,10 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
           {
             tmp = i;
             i = (USHORT)((int)i + 1);
-            swprintf(deviceNameBuffer, "\\\000D\000e\000v\000i\000c\000e\000\\"
-                                       "\000F\000l\000o\000p\000p\000y\000%"
-                                       "\000d\000",
+            swprintf(deviceNameBuffer,
+                     "\\\000D\000e\000v\000i\000c\000e\000\\"
+                     "\000F\000l\000o\000p\000p\000y\000%"
+                     "\000d\000",
                      tmp);
             /*       RtlInitUnicodeString(& deviceName, deviceNameBuffer); */ /* INLINED */
             ntStatus = IoCreateDevice(DriverObject, sizeof(DISKETTE_EXTENSION),
@@ -2267,7 +2268,7 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
                   fdcInfo.BusNumber, fdcInfo.ControllerNumber,
                   fdcInfo.PeripheralNumber);
           /*       RtlInitString(& arcNameString, arcNameBuffer); */ /* INLINED
-                                                                        */
+                                                                      */
           ntStatus = RtlAnsiStringToUnicodeString(&disketteExtension->ArcName,
                                                   &arcNameString, 1);
         }
@@ -2318,7 +2319,7 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
           disketteExtension->IsReadOnly = 0;
           disketteExtension->MediaType = -1;
         }
-        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           disketteExtension->ControllerConfigurable = 0;
         } else {
@@ -2414,7 +2415,7 @@ NTSTATUS FlConfigCallBack(PVOID Context, PUNICODE_STRING PathName,
                             driveType = 4;
                             goto switch_8_break;
                           switch_8_1201: /* CIL Label */;
-                            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                     ->AlternativeArchitecture == 1) {
                               driveType = 5;
                               goto switch_8_break;
@@ -2591,7 +2592,7 @@ NTSTATUS FlQueueIrpToThread(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
       irpSp = Irp->Tail.Overlay.__annonCompField17.__annonCompField16
                   .CurrentStackLocation;
       /*   ExAcquireFastMutex(& DisketteExtension->PowerDownMutex); */ /* INLINED
-                                                                          */
+                                                                        */
     }
     if ((int)DisketteExtension->PoweringDown == 1) {
       {
@@ -2605,7 +2606,7 @@ NTSTATUS FlQueueIrpToThread(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
     }
     {
         /*   ExReleaseFastMutex(& DisketteExtension->PowerDownMutex); */ /* INLINED
-                                                                            */
+                                                                          */
     } {} {
       /*   ExAcquireFastMutex(& DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
       DisketteExtension->ThreadReferenceCount += 1L;
@@ -2729,7 +2730,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       irpSp = Irp->Tail.Overlay.__annonCompField17.__annonCompField16
                   .CurrentStackLocation;
       /*   ExAcquireFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED
-                                                                           */
+                                                                         */
     }
     if (disketteExtension->HoldNewRequests) {
       if (irpSp->Parameters.DeviceIoControl.IoControlCode !=
@@ -2745,7 +2746,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     }
     {
       /*   ExReleaseFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED
-                                                                           */
+                                                                         */
     }
     if (disketteExtension->IsRemoved) {
       {
@@ -3034,14 +3035,14 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     outputBuffer->Cylinders.__annonCompField1
                                         .HighPart = 0;
                                     outputBuffer->TracksPerCylinder =
-                                        (DriveMediaConstants +
-                                         i)->NumberOfHeads;
+                                        (DriveMediaConstants + i)
+                                            ->NumberOfHeads;
                                     outputBuffer->SectorsPerTrack =
-                                        (DriveMediaConstants +
-                                         i)->SectorsPerTrack;
+                                        (DriveMediaConstants + i)
+                                            ->SectorsPerTrack;
                                     outputBuffer->BytesPerSector =
-                                        (DriveMediaConstants +
-                                         i)->BytesPerSector;
+                                        (DriveMediaConstants + i)
+                                            ->BytesPerSector;
                                     {}
                                     outputBuffer += 1;
                                     Irp->IoStatus.Information +=
@@ -3052,8 +3053,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 goto switch_16_break;
                               switch_16_exp_10: /* CIL Label */;
-                                if ((int)((KUSER_SHARED_DATA *
-                                           const)4292804608U)
+                                if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                         ->AlternativeArchitecture == 1) {
                                   {}
                                   if (!(DeviceObject->Characteristics & 1UL)) {
@@ -3097,11 +3097,12 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     queryTable[0].EntryContext =
                                         &driveLetterName;
                                     ntStatus = RtlQueryRegistryValues(
-                                        0, "\\\000R\000e\000g\000i\000s\000t"
-                                           "\000r\000y\000\\\000M\000a\000c\000"
-                                           "h\000i\000n\000e\000\\\000S\000y"
-                                           "\000s\000t\000e\000m\000\\\000D\000"
-                                           "I\000S\000K\000",
+                                        0,
+                                        "\\\000R\000e\000g\000i\000s\000t"
+                                        "\000r\000y\000\\\000M\000a\000c\000"
+                                        "h\000i\000n\000e\000\\\000S\000y"
+                                        "\000s\000t\000e\000m\000\\\000D\000"
+                                        "I\000S\000K\000",
                                         queryTable, (void *)0, (void *)0);
                                   }
                                   if (!(ntStatus >= 0L)) {
@@ -3170,11 +3171,12 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   {
                                     RtlDeleteRegistryValue(
-                                        0, "\\\000R\000e\000g\000i\000s\000t"
-                                           "\000r\000y\000\\\000M\000a\000c\000"
-                                           "h\000i\000n\000e\000\\\000S\000y"
-                                           "\000s\000t\000e\000m\000\\\000D\000"
-                                           "I\000S\000K\000",
+                                        0,
+                                        "\\\000R\000e\000g\000i\000s\000t"
+                                        "\000r\000y\000\\\000M\000a\000c\000"
+                                        "h\000i\000n\000e\000\\\000S\000y"
+                                        "\000s\000t\000e\000m\000\\\000D\000"
+                                        "I\000S\000K\000",
                                         valueName);
                                     /*                               ExFreePool(valueName); */ /* INLINED */
                                     memcpy(suggestedName->Name,
@@ -3189,8 +3191,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 } else {
                                 }
                               switch_16_exp_11: /* CIL Label */;
-                                if ((int)((KUSER_SHARED_DATA *
-                                           const)4292804608U)
+                                if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                         ->AlternativeArchitecture == 1) {
                                   {}
                                   if (irpSp->Parameters.DeviceIoControl
@@ -3276,7 +3277,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         if ((unsigned char)tmp___2) {
           {
             /*         IoSetHardErrorOrVerifyDevice(Irp, DeviceObject); */ /* INLINED
-                                                                              */
+                                                                            */
           }
         } else {
         }
@@ -3733,7 +3734,7 @@ NTSTATUS FloppyStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if (ntStatus >= 0L) {
-        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           disketteExtension->DeviceUnit = (unsigned char)fdcInfo.UnitNumber;
           disketteExtension->DriveOnValue = (unsigned char)fdcInfo.UnitNumber;
@@ -3909,20 +3910,20 @@ NTSTATUS FloppyReadWrite(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       irpSp = Irp->Tail.Overlay.__annonCompField17.__annonCompField16
                   .CurrentStackLocation;
       /*   ExAcquireFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED
-                                                                           */
+                                                                         */
     }
     if (disketteExtension->HoldNewRequests) {
       {
         ntStatus = FloppyQueueRequest(disketteExtension, Irp);
         /*     ExReleaseFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED
-                                                                               */
+                                                                             */
       }
       return (ntStatus);
     } else {
     }
     {
       /*   ExReleaseFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED
-                                                                           */
+                                                                         */
     }
     if (disketteExtension->IsRemoved) {
       goto _L;
@@ -4145,9 +4146,9 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
 
   {
     ntStatus = 0L;
-    {} * (DriveMediaConstants +
-          (DriveMediaLimits + DisketteExtension->DriveType)
-              ->HighestDriveMediaType) =
+    {} *
+        (DriveMediaConstants + (DriveMediaLimits + DisketteExtension->DriveType)
+                                   ->HighestDriveMediaType) =
         DisketteExtension->BiosDriveMediaConstants;
     if ((int)DisketteExtension->MediaType == -1) {
       DisketteExtension->DriveMediaConstants = *(DriveMediaConstants + 0);
@@ -4208,7 +4209,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
           } else {
           }
           if ((int)DisketteExtension->DriveType != 0) {
-            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                     ->AlternativeArchitecture == 1) {
               {
                 DisketteExtension->FifoBuffer[0] = 14;
@@ -4293,7 +4294,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                 }
               }
             }
-            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                     ->AlternativeArchitecture == 1) {
               {
                 DisketteExtension->FifoBuffer[0] = 14;
@@ -4350,7 +4351,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
         }
       } else {
       _L___2: /* CIL Label */
-        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           { FlHdbit(DisketteExtension); }
         } else {
@@ -4392,7 +4393,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
           return (ntStatus);
         } else {
         }
-        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           if (!((int)DisketteExtension->FifoBuffer[0] & 32)) {
             {}
@@ -4505,7 +4506,7 @@ NTSTATUS FlRecalibrateDrive(PDISKETTE_EXTENSION DisketteExtension) {
         } else {
         }
         if (ntStatus >= 0L) {
-          if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+          if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                   ->AlternativeArchitecture == 1) {
             {
               fifoBuffer[0] = DisketteExtension->FifoBuffer[0];
@@ -4594,7 +4595,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
         {
           while (1) {
           while_101_continue: /* CIL Label */;
-            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                     ->AlternativeArchitecture == 1) {
               {
                 sectorLengthCode =
@@ -4639,7 +4640,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                     if ((int)DisketteExtension->FifoBuffer[2] != 0) {
                       goto _L;
                     } else {
-                      if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                      if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                               ->AlternativeArchitecture == 1) {
                         if ((int)DisketteExtension->FifoBuffer[6] !=
                             (int)sectorLengthCode) {
@@ -4669,7 +4670,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                         }
                       } else {
                       _L___0: /* CIL Label */
-                        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                 ->AlternativeArchitecture == 1) {
                           DisketteExtension->MediaType =
                               driveMediaConstants->MediaType;
@@ -4684,7 +4685,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                           DisketteExtension->DriveMediaConstants =
                               *(DriveMediaConstants +
                                 DisketteExtension->DriveMediaType);
-                          if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                          if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                   ->AlternativeArchitecture == 1) {
                             tmp = 1024;
                           } else {
@@ -4702,7 +4703,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                           offset.__annonCompField1.HighPart = 0;
                           offset.__annonCompField1.LowPart =
                               offset.__annonCompField1.HighPart;
-                          if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                          if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                   ->AlternativeArchitecture == 1) {
                             tmp___1 = 1024;
                           } else {
@@ -4731,7 +4732,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                             /*                     MmUnlockPages(irp->MdlAddress); */ /* INLINED */
                             /*                     IoFreeMdl(irp->MdlAddress); */ /* INLINED */
                             /*                     IoFreeIrp(irp); */ /* INLINED
-                                                                         */
+                                                                       */
                             /*                     ExFreePool(bootSector); */ /* INLINED */
                           }
                           if (!(ntStatus >= 0L)) {
@@ -4856,7 +4857,7 @@ void FlAllocateIoBuffer(PDISKETTE_EXTENSION DisketteExtension,
       if (allocateContiguous) {
         {
           /*       MmFreeContiguousMemory(DisketteExtension->IoBuffer); */ /* INLINED
-                                                                              */
+                                                                            */
         }
       } else {
         { /*       ExFreePool(DisketteExtension->IoBuffer); */ /* INLINED */
@@ -4871,7 +4872,7 @@ void FlAllocateIoBuffer(PDISKETTE_EXTENSION DisketteExtension,
     if (allocateContiguous) {
       {
         /*     MmFreeContiguousMemory(DisketteExtension->IoBuffer); */ /* INLINED
-                                                                          */
+                                                                        */
       }
     } else {
       { /*     ExFreePool(DisketteExtension->IoBuffer); */ /* INLINED */
@@ -4904,7 +4905,7 @@ void FlFreeIoBuffer(PDISKETTE_EXTENSION DisketteExtension) {
     if (contiguousBuffer) {
       {
         /*     MmFreeContiguousMemory(DisketteExtension->IoBuffer); */ /* INLINED
-                                                                          */
+                                                                        */
       }
     } else {
       { /*     ExFreePool(DisketteExtension->IoBuffer); */ /* INLINED */
@@ -4945,7 +4946,7 @@ void FloppyThread(PVOID Context) {
               &queueWait);
         }
         if (waitStatus == 258L) {
-          if (!((int)((KUSER_SHARED_DATA * const)4292804608U)
+          if (!((int)((KUSER_SHARED_DATA *const)4292804608U)
                     ->AlternativeArchitecture == 1)) {
             if (disketteExtension->FloppyControllerAllocated) {
               {} {
@@ -4976,7 +4977,7 @@ void FloppyThread(PVOID Context) {
             {
               /*         ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
             }
-            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                     ->AlternativeArchitecture == 1) {
               if (disketteExtension->ReleaseFdcWithMotorRunning) {
                 {
@@ -5085,7 +5086,7 @@ void FloppyThread(PVOID Context) {
                         } else {
                           if ((int)irpSp->MinorFunction == 5) {
                           _L: /* CIL Label */
-                            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                     ->AlternativeArchitecture == 1) {
                               if (disketteExtension
                                       ->ReleaseFdcWithMotorRunning) {
@@ -5125,7 +5126,7 @@ void FloppyThread(PVOID Context) {
                             if (PagingReferenceCount == 0UL) {
                               {
                                 /* MmPageEntireDriver(& DriverEntry); */ /* INLINED
-                                                                            */
+                                                                          */
                               }
                             } else {
                             }
@@ -5148,7 +5149,7 @@ void FloppyThread(PVOID Context) {
                           }
                           if (ntStatus >= 0L) {
                             disketteExtension->FloppyControllerAllocated = 1;
-                            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                     ->AlternativeArchitecture == 1) {
                               disketteExtension->ReleaseFdcWithMotorRunning = 0;
                             } else {
@@ -5180,7 +5181,7 @@ void FloppyThread(PVOID Context) {
                           }
                           if (ntStatus >= 0L) {
                             disketteExtension->FloppyControllerAllocated = 1;
-                            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                     ->AlternativeArchitecture == 1) {
                               disketteExtension->ReleaseFdcWithMotorRunning = 0;
                             } else {
@@ -5356,8 +5357,8 @@ void FloppyThread(PVOID Context) {
                                           }
                                           goto switch_125_break;
                                         switch_125_exp_18: /* CIL Label */;
-                                          if ((int)((KUSER_SHARED_DATA *
-                                                     const)4292804608U)
+                                          if ((int)((KUSER_SHARED_DATA
+                                                         *const)4292804608U)
                                                   ->AlternativeArchitecture ==
                                               1) {
                                             {
@@ -5450,7 +5451,7 @@ void FloppyThread(PVOID Context) {
           }
         while_117_break: /* CIL Label */;
         }
-        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           if (disketteExtension->FloppyControllerAllocated) {
             {
@@ -5520,7 +5521,7 @@ void FlConsolidateMediaTypeWithBootSector(PDISKETTE_EXTENSION DisketteExtension,
     {
       while (1) {
       while_136_continue: /* CIL Label */;
-        if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+        if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           tmp = 21;
         } else {
@@ -5681,8 +5682,8 @@ void FlCheckBootSector(PDISKETTE_EXTENSION DisketteExtension) {
   int tmp___1;
 
   {
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture == 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
+        1) {
       tmp = 1024;
     } else {
       tmp = 512;
@@ -5697,8 +5698,8 @@ void FlCheckBootSector(PDISKETTE_EXTENSION DisketteExtension) {
     }
     offset.__annonCompField1.HighPart = 0;
     offset.__annonCompField1.LowPart = offset.__annonCompField1.HighPart;
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture == 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
+        1) {
       tmp___1 = 1024;
     } else {
       tmp___1 = 512;
@@ -5807,7 +5808,7 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
                           DisketteExtension->FifoBuffer, (void *)0, 0, 0);
                     }
                     if (status >= 0L) {
-                      if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                      if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                               ->AlternativeArchitecture == 1) {
                         if ((int)DisketteExtension->FifoBuffer[0] & 8) {
                           return (-1073741661L);
@@ -5903,7 +5904,7 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
                                       IoOffset, transferBytes);
             }
             if (status >= 0L) {
-              if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+              if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                       ->AlternativeArchitecture == 1) {
                 if ((int)DisketteExtension->FifoBuffer[0] & 8) {
                   return (-1073741661L);
@@ -6062,8 +6063,8 @@ NTSTATUS FlReadWrite(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
       return (status);
     } else {
     }
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture == 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
+        1) {
       { FlHdbit(DisketteExtension); }
     } else {
     }
@@ -6298,8 +6299,8 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
                                    (ULONG)driveMediaConstants->NumberOfHeads +
                                formatParameters->EndHeadNumber);
     {}
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture == 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
+        1) {
       { FlHdbit(DisketteExtension); }
     } else {
     }
@@ -6340,7 +6341,7 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
                 headSettleTime.__annonCompField1.HighPart = -1;
                 KeDelayExecutionThread(0, 0, &headSettleTime);
               }
-              if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+              if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                       ->AlternativeArchitecture == 1) {
 
               } else {
@@ -6462,7 +6463,7 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
         while_175_break: /* CIL Label */;
         }
         if (!(ntStatus >= 0L)) {
-          if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+          if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                   ->AlternativeArchitecture == 1) {
             {
               DisketteExtension->FifoBuffer[0] = 14;
@@ -6580,7 +6581,7 @@ BOOLEAN FlCheckFormatParameters(PDISKETTE_EXTENSION DisketteExtension,
                   FormatParameters->StartCylinderNumber) {
                 return (0);
               } else {
-                if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                         ->AlternativeArchitecture == 1) {
                   if ((int)FormatParameters->MediaType == 6) {
                     return (0);

@@ -41,6 +41,6 @@ public:
   FuncDecl *load(const Value *V);
   FuncDecl *store(const Value *V);
 };
-}
+} // namespace smack
 
 #endif // VECTOROPERATIONS_H

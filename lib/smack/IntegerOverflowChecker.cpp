@@ -222,4 +222,4 @@ char IntegerOverflowChecker::ID = 0;
 StringRef IntegerOverflowChecker::getPassName() const {
   return "Checked integer arithmetic intrinsics";
 }
-}
+} // namespace smack

@@ -40,6 +40,6 @@ public:
   const Decl *getBoogieDecl(Naming *naming, SmackRep *rep);
   const Expr *getBoogieExpression(Naming *naming, SmackRep *rep);
 };
-}
+} // namespace smack
 
 #endif

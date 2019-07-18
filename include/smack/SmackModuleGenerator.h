@@ -23,6 +23,6 @@ public:
   void generateProgram(llvm::Module &m);
   Program *getProgram() { return program; }
 };
-}
+} // namespace smack
 
 #endif // SMACKMODULEGENERATOR_H

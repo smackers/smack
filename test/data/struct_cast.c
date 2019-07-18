@@ -9,7 +9,9 @@ typedef struct {
   int b;
 } S1;
 
-typedef struct { int x; } S2;
+typedef struct {
+  int x;
+} S2;
 
 int main(void) {
   S1 s1;

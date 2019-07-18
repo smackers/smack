@@ -97,9 +97,9 @@ FuncDecl *VectorOperations::binary(unsigned OpCode, VectorType *T) {
       rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {T->getElementType()});
   std::list<const Expr *> Args;
   for (unsigned i = 0; i < T->getNumElements(); i++) {
-    Args.push_back(Expr::fn(FnBase,
-                            {Expr::fn(selector(T, i), Expr::id("v1")),
-                             Expr::fn(selector(T, i), Expr::id("v2"))}));
+    Args.push_back(
+        Expr::fn(FnBase, {Expr::fn(selector(T, i), Expr::id("v1")),
+                          Expr::fn(selector(T, i), Expr::id("v2"))}));
   }
   return Decl::function(FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
                         rep->type(T), Expr::fn(constructor(T), Args));
@@ -110,9 +110,9 @@ FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, VectorType *T) {
   auto FnBase = rep->opName(Naming::CMPINST_TABLE.at(P), {T->getElementType()});
   std::list<const Expr *> Args;
   for (unsigned i = 0; i < T->getNumElements(); i++) {
-    Args.push_back(Expr::fn(FnBase,
-                            {Expr::fn(selector(T, i), Expr::id("v1")),
-                             Expr::fn(selector(T, i), Expr::id("v2"))}));
+    Args.push_back(
+        Expr::fn(FnBase, {Expr::fn(selector(T, i), Expr::id("v1")),
+                          Expr::fn(selector(T, i), Expr::id("v2"))}));
   }
   return Decl::function(
       FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
@@ -303,4 +303,4 @@ FuncDecl *VectorOperations::store(const Value *V) {
   rep->addAuxiliaryDeclaration(F);
   return F;
 }
-}
+} // namespace smack

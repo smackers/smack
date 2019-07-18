@@ -30,7 +30,9 @@ void __SMACK_mod(const char *fmt, ...);
 void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
-typedef struct smack_value { void *dummy; } * smack_value_t;
+typedef struct smack_value {
+  void *dummy;
+} * smack_value_t;
 smack_value_t __SMACK_value();
 smack_value_t __SMACK_values(void *ary, unsigned count);
 smack_value_t __SMACK_return_value(void);

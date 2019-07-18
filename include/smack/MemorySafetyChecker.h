@@ -35,6 +35,6 @@ public:
   void visitMemSetInst(llvm::MemSetInst &I);
   void visitMemTransferInst(llvm::MemTransferInst &I);
 };
-}
+} // namespace smack
 
 #endif // MEMORYSAFETYCHECKER_H

@@ -158,4 +158,4 @@ bool NormalizeLoops::runOnModule(Module &m) {
 char NormalizeLoops::ID = 0;
 
 StringRef NormalizeLoops::getPassName() const { return "NormalizeLoops"; }
-}
+} // namespace smack

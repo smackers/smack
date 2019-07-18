@@ -36,4 +36,4 @@ private:
                                    std::vector<InfoT> &info, llvm::Value *V);
   bool isConstantAggregate(llvm::Value *V);
 };
-}
+} // namespace smack

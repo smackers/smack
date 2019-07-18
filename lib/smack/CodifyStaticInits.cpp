@@ -28,8 +28,8 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   LLVMContext &C = M.getContext();
   DSAWrapper *DSA = &getAnalysis<DSAWrapper>();
 
-  Function *F = dyn_cast<Function>(M.getOrInsertFunction(
-      Naming::STATIC_INIT_PROC, Type::getVoidTy(C)));
+  Function *F = dyn_cast<Function>(
+      M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C)));
 
   BasicBlock *B = BasicBlock::Create(C, "entry", F);
   IRBuilder<> IRB(B);
@@ -101,4 +101,4 @@ char CodifyStaticInits::ID = 0;
 // Register the pass
 static RegisterPass<CodifyStaticInits> X("codify-static-inits",
                                          "Codify Static Initializers");
-}
+} // namespace smack

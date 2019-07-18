@@ -116,6 +116,6 @@ public:
   static bool isSmackGeneratedName(std::string s);
   static std::string escape(std::string s);
 };
-}
+} // namespace smack
 
 #endif
