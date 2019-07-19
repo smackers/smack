@@ -62,7 +62,7 @@ public:
 
   virtual bool runOnModule(llvm::Module &m);
 
-  virtual StringRef *getPassName() const {
+  virtual llvm::StringRef getPassName() const {
     return "Modifies clause generation";
   }
 
