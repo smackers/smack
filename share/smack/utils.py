@@ -4,21 +4,21 @@ import tempfile
 import subprocess
 import signal
 from threading import Timer
-import top
+import smack.top
 
-temporary_files = []
+TEMPORARY_FILES = []
 
 def temporary_file(prefix, extension, args):
-    f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
-    os.close(f)
+    handler, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
+    os.close(handler)
     if not args.debug:
-        temporary_files.append(name)
+        TEMPORARY_FILES.append(name)
     return name
 
 def remove_temp_files():
-    for f in temporary_files:
-        if os.path.isfile(f):
-            os.unlink(f)
+    for file_name in TEMPORARY_FILES:
+        if os.path.isfile(file_name):
+            os.unlink(file_name)
 
 def timeout_killer(proc, timed_out):
     if not timed_out[0]:
@@ -26,7 +26,7 @@ def timeout_killer(proc, timed_out):
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 def try_command(cmd, cwd=None, console=False, timeout=None):
-    args = top.args
+    args = smack.top.ARGS
     console = (console or args.verbose or args.debug) and not args.quiet
     filelog = args.debug
     output = ''
@@ -37,7 +37,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
             print "Running %s" % " ".join(cmd)
 
         proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
-          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         if timeout:
             timed_out = [False]
@@ -59,13 +59,13 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
         if timeout:
             timer.cancel()
 
-        rc = proc.returncode
+        ret_code = proc.returncode
         proc = None
         if timeout and timed_out[0]:
             return output + ("\n%s timed out." % cmd[0])
-        elif rc == -signal.SIGSEGV:
+        elif ret_code == -signal.SIGSEGV:
             raise Exception("segmentation fault")
-        elif rc and args.verifier != 'symbooglix':
+        elif ret_code and args.verifier != 'symbooglix':
             raise Exception(output)
         else:
             return output
@@ -75,8 +75,10 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
         sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
     finally:
-        if timeout and timer: timer.cancel()
-        if proc: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        if timeout and timer:
+            timer.cancel()
+        if proc:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
         if filelog:
-            with open(temporary_file(cmd[0], '.log', args), 'w') as f:
-                f.write(output)
+            with open(temporary_file(cmd[0], '.log', args), 'w') as log_file:
+                log_file.write(output)

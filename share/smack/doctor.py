@@ -8,7 +8,6 @@ from subprocess import Popen, PIPE
 import sys
 import re
 import argparse
-import platform
 
 def red(text):
     return '\033[0;31m' + text + '\033[0m'
@@ -17,14 +16,13 @@ def green(text):
     return '\033[0;32m' + text + '\033[0m'
 
 def check(text, condition):
-    global args
-    global count
+    global COUNT
     if condition:
-        if not args.quiet:
+        if not ARGS.quiet:
             print green("[X] " + text)
     else:
         print >> sys.stderr, red("[-] " + text)
-        count += 1
+        COUNT += 1
 
 def full_path(program):
     for path in os.environ['PATH'].split(os.pathsep):
@@ -40,10 +38,10 @@ def check_command(cmd):
     check("%s is in the path" % cmd, exe is not None)
     if exe is not None:
         try:
-            rc = Popen(cmd, stdout=PIPE, stderr=PIPE).wait()
+            ret_code = Popen(cmd, stdout=PIPE, stderr=PIPE).wait()
         except:
-            rc = None
-        check("%s is executable" % cmd, rc == 1 or rc == 2)
+            ret_code = None
+        check("%s is executable" % cmd, ret_code == 1 or ret_code == 2)
 
 def check_verifier(cmd):
     exe = full_path(cmd)
@@ -65,46 +63,46 @@ def check_verifier(cmd):
     check_command(cmd)
 
 def check_headers(prefix):
-    HEADERS = [
-      (["share", "smack", "include", "smack.h"], "#define SMACK_H_"),
-      (["share", "smack", "lib", "smack.c"], "void __SMACK_decls()")
-    ]
+    headers = [
+        (["share", "smack", "include", "smack.h"], "#define SMACK_H_"),
+        (["share", "smack", "lib", "smack.c"], "void __SMACK_decls()")]
 
-    for (path, content) in HEADERS:
-        file = os.path.join(prefix, *path)
-        check("%s exists" % file, os.path.isfile(file))
-        if os.path.isfile(file):
-            check("%s contains %s" % (file, content), content in open(file).read())
+    for (path, content) in headers:
+        header_file = os.path.join(prefix, *path)
+        check("%s exists" % header_file, os.path.isfile(header_file))
+        if os.path.isfile(header_file):
+            check("%s contains %s" % (header_file, content), content in open(header_file).read())
 
 def main():
-    global args
-    global count
+    global ARGS
+    global COUNT
+
     parser = argparse.ArgumentParser(description='Diagnose SMACK configuration issues.')
     parser.add_argument('-q', '--quiet', dest='quiet', action="store_true", default=False,
                         help='only show failed diagnostics')
     parser.add_argument('--prefix', metavar='P', dest='prefix', type=str, default='',
                         help='point to the installation prefix')
-    args = parser.parse_args()
-    count = 0
+    ARGS = parser.parse_args()
+    COUNT = 0
 
-    if not args.quiet:
+    if not ARGS.quiet:
         print "Checking front-end dependencies..."
     check_command("clang")
     check_command("clang++")
     check_command("llvm-config")
     check_command("llvm-link")
 
-    if not args.quiet:
+    if not ARGS.quiet:
         print "Checking back-end dependencies..."
     check_verifier("boogie")
     check_verifier("corral")
 
-    if not args.quiet:
+    if not ARGS.quiet:
         print "Checking SMACK itself..."
     check_command("llvm2bpl")
     check_command("smack")
 
-    if args.prefix is not '':
-        check_headers(args.prefix)
+    if ARGS.prefix is not '':
+        check_headers(ARGS.prefix)
 
-    exit(count)
+    exit(COUNT)
