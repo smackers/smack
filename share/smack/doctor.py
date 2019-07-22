@@ -16,13 +16,13 @@ def green(text):
     return '\033[0;32m' + text + '\033[0m'
 
 def check(text, condition):
-    global COUNT
+    global issue_count
     if condition:
-        if not ARGS.quiet:
+        if not smack_doctor_args.quiet:
             print green("[X] " + text)
     else:
         print >> sys.stderr, red("[-] " + text)
-        COUNT += 1
+        issue_count += 1
 
 def full_path(program):
     for path in os.environ['PATH'].split(os.pathsep):
@@ -74,35 +74,35 @@ def check_headers(prefix):
             check("%s contains %s" % (header_file, content), content in open(header_file).read())
 
 def main():
-    global ARGS
-    global COUNT
+    global smack_doctor_args
+    global issue_count
 
     parser = argparse.ArgumentParser(description='Diagnose SMACK configuration issues.')
     parser.add_argument('-q', '--quiet', dest='quiet', action="store_true", default=False,
                         help='only show failed diagnostics')
     parser.add_argument('--prefix', metavar='P', dest='prefix', type=str, default='',
                         help='point to the installation prefix')
-    ARGS = parser.parse_args()
-    COUNT = 0
+    smack_doctor_args = parser.parse_args()
+    issue_count = 0
 
-    if not ARGS.quiet:
+    if not smack_doctor_args.quiet:
         print "Checking front-end dependencies..."
     check_command("clang")
     check_command("clang++")
     check_command("llvm-config")
     check_command("llvm-link")
 
-    if not ARGS.quiet:
+    if not smack_doctor_args.quiet:
         print "Checking back-end dependencies..."
     check_verifier("boogie")
     check_verifier("corral")
 
-    if not ARGS.quiet:
+    if not smack_doctor_args.quiet:
         print "Checking SMACK itself..."
     check_command("llvm2bpl")
     check_command("smack")
 
-    if ARGS.prefix is not '':
-        check_headers(ARGS.prefix)
+    if smack_doctor_args.prefix is not '':
+        check_headers(smack_doctor_args.prefix)
 
-    exit(COUNT)
+    exit(issue_count)
