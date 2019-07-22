@@ -64,7 +64,7 @@ def addKeyDefs(root):
 
 def addKey(element, keyType, text):
     """This function adds a <data> element of which is a key of  type 'keyType',
-       where the <data>'s value is 'text'.  The <data> element is added as a 
+       where the <data>'s value is 'text'.  The <data> element is added as a
        child of 'element'"""
     newKey = ET.SubElement(element, "data", attrib={"key":keyType})
     newKey.text = text
@@ -97,10 +97,10 @@ def addGraphEdge(tree, source, target, data={}):
     for datum in data:
         addKey(newEdge, datum, data[datum])
     return newEdge
-        
+
 
 def buildEmptyXmlGraph(args, hasBug):
-    """Builds an empty witness xml file, with all the keys we will be using 
+    """Builds an empty witness xml file, with all the keys we will be using
        already defined."""
     root = ET.Element('graphml')
     root.set("xmlns:xsi","http://www.w3.org/2001/XMLSchema-instance")
@@ -114,11 +114,11 @@ def buildEmptyXmlGraph(args, hasBug):
     from smack.top import VERSION
     addKey(graph, "producer", "SMACK " + VERSION)
     with open(args.svcomp_property, 'r') as ppf:
-      addKey(graph, "specification", ppf.read().strip())
+        addKey(graph, "specification", ppf.read().strip())
     programfile = os.path.abspath(args.orig_files[0])
     addKey(graph, "programfile", programfile)
     with open(programfile, 'r') as pgf:
-      addKey(graph, "programhash", hashlib.sha256(pgf.read()).hexdigest())
+        addKey(graph, "programhash", hashlib.sha256(pgf.read()).hexdigest())
     addKey(graph, "architecture",
             re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
     addKey(graph, "creationtime", datetime.datetime.now().replace(microsecond=0).isoformat())
@@ -126,16 +126,16 @@ def buildEmptyXmlGraph(args, hasBug):
 
 def formatAssign(assignStmt):
     if not assignStmt:
-      return assignStmt
+        return assignStmt
     m = re.match(r'(.*)=(.*)', assignStmt)
     if m:
-      repl = lambda x: '='+ x.group(1) + 'U' if x.group(2) is not None else ''
-      return re.sub(r'=(\s*\d+)(bv\d+)', repl, m.group(1) + "==" + m.group(2))
+        repl = lambda x: '='+ x.group(1) + 'U' if x.group(2) is not None else ''
+        return re.sub(r'=(\s*\d+)(bv\d+)', repl, m.group(1) + "==" + m.group(2))
     else:
-      return ""
+        return ""
 
 def isSMACKInitFunc(funcName):
-  return funcName == '$initialize' or funcName == '__SMACK_static_init' or funcName == '__SMACK_init_func_memory_model'
+    return funcName == '$initialize' or funcName == '__SMACK_static_init' or funcName == '__SMACK_init_func_memory_model'
 
 def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
     """Converts output from SMACK (in the smackd json format) to a graphml
@@ -145,65 +145,65 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
     # Add the start node, which gets marked as being the entry node
     start = addGraphNode(tree, {"entry":"true"})
     if hasBug and not args.pthread:
-      # Convert json string to json object
-      smackJson = json.loads(strJsonOutput)
-      # Get the failure node, and the list of trace entries to get there
-      jsonViolation = smackJson["failsAt"]
-      jsonTraces = smackJson["traces"]
+        # Convert json string to json object
+        smackJson = json.loads(strJsonOutput)
+        # Get the failure node, and the list of trace entries to get there
+        jsonViolation = smackJson["failsAt"]
+        jsonTraces = smackJson["traces"]
 
-      lastNode = start
-      lastEdge = None
-      pat = re.compile(".*smack\.[c|h]$")
-      prevLineNo = -1
-      prevColNo = -1
-      callStack = [('main', '0')]
-      # Loop through each trace
-      for jsonTrace in jsonTraces:
+        lastNode = start
+        lastEdge = None
+        pat = re.compile(".*smack\.[c|h]$")
+        prevLineNo = -1
+        prevColNo = -1
+        callStack = [('main', '0')]
+        # Loop through each trace
+        for jsonTrace in jsonTraces:
         # Make sure it isn't a smack header file
-        if "ASSERTION FAILS" in jsonTrace["description"]:
-          newNode = addGraphNode(tree)
-          # addGraphNode returns a string, so we had to search the graph to get the node that we want
-          vNodes =tree.find("graph").findall("node")
-          for vNode in vNodes:
-            if vNode.attrib["id"] == newNode:
-              addKey(vNode, "violation", "true")
-          attribs = {"startline":str(callStack[-1][1])}
-          addGraphEdge(tree, lastNode, newNode, attribs)
-          break
-        if not pat.match(jsonTrace["file"]):
-          desc = jsonTrace["description"]
-          formattedAssign = formatAssign(desc)
-          # Make sure it is not return value
-          if formattedAssign and not ":" in formattedAssign:
-          # Create new node and edge
-            newNode = addGraphNode(tree)
-            attribs = {"startline":str(jsonTrace["line"])}
-            attribs["assumption"] = formattedAssign + ";"
-            attribs["assumption.scope"] = callStack[-1][0]
-            newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
-            prevLineNo = jsonTrace["line"]
-            prevColNo = jsonTrace["column"]
-            lastNode = newNode
-            lastEdge = newEdge
-          if "CALL" in desc:
-            # Add function to call stack
-            calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
-            if calledFunc.startswith("devirtbounce"):
-              print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
-              continue
-            if isSMACKInitFunc(calledFunc):
-              continue
-            callStack.append((calledFunc, jsonTrace["line"]))
-          if "RETURN from" in desc:
-            returnedFunc = str(desc[len("RETURN from "):]).strip()
-            if returnedFunc.startswith("devirtbounce"):
-              print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
-              continue
-            if isSMACKInitFunc(returnedFunc):
-              continue
-            if returnedFunc != callStack[-1][0]:
-              raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1][0], returnedFunc))
-            callStack.pop()
+            if "ASSERTION FAILS" in jsonTrace["description"]:
+                newNode = addGraphNode(tree)
+                # addGraphNode returns a string, so we had to search the graph to get the node that we want
+                vNodes =tree.find("graph").findall("node")
+                for vNode in vNodes:
+                    if vNode.attrib["id"] == newNode:
+                        addKey(vNode, "violation", "true")
+                attribs = {"startline":str(callStack[-1][1])}
+                addGraphEdge(tree, lastNode, newNode, attribs)
+                break
+            if not pat.match(jsonTrace["file"]):
+                desc = jsonTrace["description"]
+                formattedAssign = formatAssign(desc)
+                # Make sure it is not return value
+                if formattedAssign and not ":" in formattedAssign:
+                # Create new node and edge
+                    newNode = addGraphNode(tree)
+                    attribs = {"startline":str(jsonTrace["line"])}
+                    attribs["assumption"] = formattedAssign + ";"
+                    attribs["assumption.scope"] = callStack[-1][0]
+                    newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
+                    prevLineNo = jsonTrace["line"]
+                    prevColNo = jsonTrace["column"]
+                    lastNode = newNode
+                    lastEdge = newEdge
+                if "CALL" in desc:
+                    # Add function to call stack
+                    calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
+                    if calledFunc.startswith("devirtbounce"):
+                        print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+                        continue
+                    if isSMACKInitFunc(calledFunc):
+                        continue
+                    callStack.append((calledFunc, jsonTrace["line"]))
+                if "RETURN from" in desc:
+                    returnedFunc = str(desc[len("RETURN from "):]).strip()
+                    if returnedFunc.startswith("devirtbounce"):
+                        print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+                        continue
+                    if isSMACKInitFunc(returnedFunc):
+                        continue
+                    if returnedFunc != callStack[-1][0]:
+                        raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1][0], returnedFunc))
+                    callStack.pop()
     print
     print
     return prettify(tree.getroot())
@@ -212,7 +212,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
 if __name__ == '__main__':
     jsonStr = """{"passed?": false, "verifier": "corral", "traces": [{"column": 5, "line": 3, "description": "", "file": "fail.c", "threadid": 1}, {"column": 5, "line": 4, "description": "", "file": "fail.c", "threadid": 1}, {"column": 5, "line": 5, "description": "", "file": "fail.c", "threadid": 1}, {"column": 12, "line": 5, "description": "", "file": "fail.c", "threadid": 1}, {"column": 21, "line": 5, "description": "", "file": "fail.c", "threadid": 1}, {"column": 21, "line": 5, "description": "CALL __SMACK_assert", "file": "fail.c", "threadid": 1}, {"column": 26, "line": 40, "description": "", "file": "/home/mcarter/projects/smack-project/smack/install/include/smack/smack.h", "threadid": 1}, {"column": 3, "line": 41, "description": "", "file": "/home/mcarter/projects/smack-project/smack/install/include/smack/smack.h", "threadid": 1}, {"column": 3, "line": 41, "description": "ASSERTION FAILS", "file": "/home/mcarter/projects/smack-project/smack/install/include/smack/smack.h", "threadid": 1}, {"column": 21, "line": 5, "description": "RETURN from __SMACK_assert ", "file": "fail.c", "threadid": 1}, {"column": 21, "line": 5, "description": "Done", "file": "fail.c", "threadid": 1}], "threadCount": 1, "failsAt": {"column": 1, "line": 41, "description": "error PF5001: This assertion can fail", "file": "/home/mcarter/projects/smack-project/smack/install/include/smack/smack.h"}}"""
     if len(sys.argv) > 1:
-       jsonStr = open(sys.argv[1], "r").read()
+        jsonStr = open(sys.argv[1], "r").read()
 
     print(smackJsonToXmlGraph(jsonStr))
 

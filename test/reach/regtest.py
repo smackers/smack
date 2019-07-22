@@ -32,46 +32,46 @@ tests = [
 ]
 
 def red(text):
-  return '\033[0;31m' + text + '\033[0m'
-  
+    return '\033[0;31m' + text + '\033[0m'
+
 def green(text):
-  return '\033[0;32m' + text + '\033[0m'
+    return '\033[0;32m' + text + '\033[0m'
 
 def runtests():
-  passed = failed = 0
-  for test in tests:
-    for verifier in ['boogie-inline', 'corral']:
+    passed = failed = 0
+    for test in tests:
+        for verifier in ['boogie-inline', 'corral']:
 
-      ansFile = open(test[0] + ".expected")
-      expected = ansFile.read()
-      ansFile.close()
+            ansFile = open(test[0] + ".expected")
+            expected = ansFile.read()
+            ansFile.close()
 
-      print "{0:>20} {1:>16}:".format(test[0], "(" + verifier + ")"),
+            print "{0:>20} {1:>16}:".format(test[0], "(" + verifier + ")"),
 
-      # invoke smack-reach
-      t0 = time.time()
-      p = subprocess.Popen(['smackreach.py', test[0] + '.c',
-                            '--verifier=' + verifier,
-                            '--unroll=' + str(test[1]), 
-                            '-o', test[0] +'.bpl', '--smackd'],
-                           stdout=subprocess.PIPE)
-      
-      smackOutput = p.communicate()[0]
-      elapsed = time.time() - t0
+            # invoke smack-reach
+            t0 = time.time()
+            p = subprocess.Popen(['smackreach.py', test[0] + '.c',
+                                  '--verifier=' + verifier,
+                                  '--unroll=' + str(test[1]),
+                                  '-o', test[0] +'.bpl', '--smackd'],
+                                 stdout=subprocess.PIPE)
 
-      # check SMACK output
-      if(json.loads(expected) == json.loads(smackOutput)):
-        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
-        passed += 1
-      else:
-        print red('FAILED')
-        failed += 1
-  
-  return passed, failed
+            smackOutput = p.communicate()[0]
+            elapsed = time.time() - t0
+
+            # check SMACK output
+            if(json.loads(expected) == json.loads(smackOutput)):
+                print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
+                passed += 1
+            else:
+                print red('FAILED')
+                failed += 1
+
+    return passed, failed
 
 if __name__ == '__main__':
 
-  passed, failed = runtests()
-  
-  print '\nPASSED count: ', passed
-  print 'FAILED count: ', failed
+    passed, failed = runtests()
+
+    print '\nPASSED count: ', passed
+    print 'FAILED count: ', failed
