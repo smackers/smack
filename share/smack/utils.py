@@ -6,17 +6,17 @@ import signal
 from threading import Timer
 import smack.top
 
-TEMPORARY_FILES = []
+temporary_files = []
 
 def temporary_file(prefix, extension, args):
     handler, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
     os.close(handler)
     if not args.debug:
-        TEMPORARY_FILES.append(name)
+        temporary_files.append(name)
     return name
 
 def remove_temp_files():
-    for file_name in TEMPORARY_FILES:
+    for file_name in temporary_files:
         if os.path.isfile(file_name):
             os.unlink(file_name)
 

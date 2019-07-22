@@ -314,7 +314,7 @@ def target_selection(args):
             with open(src, 'r') as input_file:
                 for line in input_file:
                     triple = re.findall('^target triple = "(.*)"', line)
-                    if len(triple) > 0:
+                    if triple:
                         args.clang_options += (" -target %s" % triple[0])
                         break
 
@@ -407,7 +407,7 @@ def property_selection(args):
         selected_props.append('valid_memtrack')
 
     def replace_assertion(match):
-        if len(selected_props) > 0:
+        if selected_props:
             if match.group(2) and match.group(3) in selected_props:
                 attrib = match.group(2)
                 expr = match.group(4)
@@ -448,23 +448,24 @@ def transform_out(args, old):
     return out
 
 def verification_result(verifier_output):
+    def get_result_from_attribute(attribute):
+        if attribute.startswith('valid'):
+            return 'in' + attribute.replace('_', '-')
+        return attribute
+
     if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
                  verifier_output):
         return 'timeout'
     elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT', verifier_output):
         return 'verified'
     elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT', verifier_output):
-        if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
-            return 'invalid-deref'
-        elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
-            return 'invalid-free'
-        elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
-            return 'invalid-memtrack'
-        elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
-            return 'overflow'
+        match = re.search(r'ASSERTION FAILS assert {:(.+)}', verifier_output)
+        if match:
+            attribute = match.group(1)
+            return get_result_from_attribute(attribute)
         else:
             call_list = re.findall(r'\(CALL .+\)', verifier_output)
-            if len(call_list) > 0 and re.search(r'free_', call_list[len(call_list)-1]):
+            if call_list and re.search(r'free_', call_list[len(call_list)-1]):
                 return 'invalid-free'
             else:
                 return 'error'
@@ -474,11 +475,7 @@ def verification_result(verifier_output):
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
 
-    if args.verifier == 'svcomp':
-        verify_bpl_svcomp(args)
-        return
-
-    elif args.verifier == 'boogie' or args.modular:
+    def get_boogie_base_cmd():
         command = ["boogie"]
         command += [args.bpl_file]
         command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
@@ -486,8 +483,9 @@ def verify_bpl(args):
         command += ["/errorLimit:%s" % args.max_violations]
         if not args.modular:
             command += ["/loopUnroll:%d" % args.unroll]
+        return command
 
-    elif args.verifier == 'corral':
+    def get_corral_base_cmd():
         command = ["corral"]
         command += [args.bpl_file]
         command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
@@ -497,14 +495,28 @@ def verify_bpl(args):
         command += ["/cex:%s" % args.max_violations]
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
+        return command
 
-    elif args.verifier == 'symbooglix':
+    def get_symbooglix_base_cmd():
         command = ['symbooglix']
         command += [args.bpl_file]
         command += ["--file-logging=0"]
         command += ["--entry-points=%s" % ",".join(args.entry_points)]
         command += ["--timeout=%d" % args.time_limit]
         command += ["--max-loop-depth=%d" % args.unroll]
+        return command
+
+    base_cmd_func = {
+        'boogie': get_boogie_base_cmd,
+        'corral': get_corral_base_cmd,
+        'symbooglix': get_symbooglix_base_cmd}
+
+    if args.verifier == 'svcomp':
+        verify_bpl_svcomp(args)
+        return
+
+    verifier = 'boogie' if args.modular else args.verifier
+    command = base_cmd_func[verifier]()
 
     if (args.bit_precise or args.float) and args.verifier != 'symbooglix':
         bopt = "bopt:" if args.verifier != 'boogie' else ""
