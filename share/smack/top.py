@@ -16,6 +16,8 @@ from smack.frontend import link_bc_files, frontends, languages, extra_libs
 
 VERSION = '2.0.0'
 
+llvm2bpl_forwarded_opts = []
+
 def results(args):
     """A dictionary of the result output messages."""
     return {
@@ -44,34 +46,32 @@ def inlined_procedures():
         '__SMACK_init_func_memory_model',
         '__SMACK_check_overflow']
 
-class FileAction(argparse.Action):
+class ForwardAction(argparse.Action):
     def __init__(self, option_strings, dest, **kwargs):
-        super(FileAction, self).__init__(option_strings, dest, **kwargs)
+        super(ForwardAction, self).__init__(option_strings, dest, **kwargs)
     def __call__(self, parser, namespace, values, option_string=None):
-        if option_string is None:
-            validate_input_files(values)
+        llvm2bpl_forwarded_opts.append(option_string)
+        if self.nargs == 0:
+            setattr(namespace, self.dest, True)
         else:
-            # presumably output files (e.g., .bc, .ll, etc)
-            validate_output_file(values)
-        setattr(namespace, self.dest, values)
+            llvm2bpl_forwarded_opts.append(values)
+            setattr(namespace, self.dest, values)
 
 def exit_with_error(error):
     sys.exit('Error: %s.' % error)
 
-def validate_input_files(files):
-    def validate_input_file(input_file):
-        """Check whether the given input file is valid, returning a reason if not."""
+def validate_input_file(input_file):
+    """Check whether the given input file is valid, returning a reason if not."""
 
-        file_extension = os.path.splitext(input_file)[1][1:]
-        if not os.path.isfile(input_file):
-            exit_with_error("Cannot find file %s" % input_file)
+    file_extension = os.path.splitext(input_file)[1][1:]
+    if not os.path.isfile(input_file):
+        exit_with_error("Cannot find file %s" % input_file)
 
-        if not os.access(input_file, os.R_OK):
-            exit_with_error("Cannot read file %s" % input_file)
+    if not os.access(input_file, os.R_OK):
+        exit_with_error("Cannot read file %s" % input_file)
 
-        elif file_extension not in languages():
-            exit_with_error("Unexpected source file extension '%s'" % file_extension)
-    map(validate_input_file, files)
+    elif file_extension not in languages():
+        exit_with_error("Unexpected source file extension '%s'" % file_extension)
 
 def validate_output_file(output_file):
     dir_name = os.path.dirname(os.path.abspath(output_file))
@@ -85,6 +85,16 @@ def validate_output_file(output_file):
     #except IOError:
     #  exit_with_error("file %s may not be writeable" % file)
 
+def checked_type(arg_type, check_func, nargs=None):
+    def apply_and_check_type(arg):
+        arg = arg_type(arg)
+        if nargs:
+            map(check_func, arg.split())
+        else:
+            check_func(arg)
+        return arg
+    return apply_and_check_type
+
 def arguments():
     """Parse command-line arguments"""
     def add_group_arg_func(group):
@@ -92,8 +102,9 @@ def arguments():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('input_files', metavar='input-files', nargs='+', action=FileAction,
-                        type=str, help='source file to be translated/verified')
+    parser.add_argument('input_files', metavar='input-files', nargs='+',
+                        type=checked_type(str, validate_input_file, '+'),
+                        help='source file to be translated/verified')
 
     parser.add_argument('--version', action='version',
                         version='SMACK version ' + VERSION)
@@ -106,10 +117,10 @@ def arguments():
     add_noise_arg('-v', '--verbose', action='store_true', default=False,
                   help='enable verbose output')
 
-    add_noise_arg('-d', '--debug', action="store_true", default=False,
+    add_noise_arg('-d', '--debug', action=ForwardAction, nargs=0, default=False,
                   help='enable debugging output')
 
-    add_noise_arg('--debug-only', metavar='MODULES', default=None,
+    add_noise_arg('--debug-only', metavar=ForwardAction, default=None,
                   type=str, help='limit debugging output to given MODULES')
 
     add_noise_arg('--warn', default="unsound",
@@ -133,8 +144,9 @@ def arguments():
                      choices=frontends().keys(), default=None,
                      help='Treat input files as having type LANG.')
 
-    add_frontend_arg('-bc', '--bc-file', metavar='FILE', default=None, action=FileAction,
-                     type=str, help='save initial LLVM bitcode to FILE')
+    add_frontend_arg('-bc', '--bc-file', metavar='FILE', default=None,
+                     type=checked_type(str, validate_output_file),
+                     help='save initial LLVM bitcode to FILE')
 
     add_frontend_arg('--linked-bc-file', metavar='FILE', default=None,
                      type=str, help=argparse.SUPPRESS)
@@ -145,8 +157,10 @@ def arguments():
     add_frontend_arg('--replay-exe-file', metavar='FILE', default='replay-exe',
                      type=str, help=argparse.SUPPRESS)
 
-    add_frontend_arg('-ll', '--ll-file', metavar='FILE', default=None, action=FileAction,
-                     type=str, help='save final LLVM IR to FILE')
+    add_frontend_arg('-ll', '--ll-file', metavar='FILE', default=None,
+                     type=checked_type(str, validate_output_file),
+                     action=ForwardAction,
+                     help='save final LLVM IR to FILE')
 
     add_frontend_arg('--clang-options', metavar='OPTIONS', default='',
                      help='''additional compiler arguments
@@ -156,10 +170,11 @@ def arguments():
     add_translate_arg = add_group_arg_func(parser.add_argument_group('translation options'))
 
     add_translate_arg('-bpl', '--bpl-file', metavar='FILE', default=None,
-                      action=FileAction,
-                      type=str, help='save (intermediate) Boogie code to FILE')
+                      type=checked_type(str, validate_output_file),
+                      help='save (intermediate) Boogie code to FILE')
 
-    add_translate_arg('--no-memory-splitting', action="store_true", default=False,
+    add_translate_arg('--no-memory-splitting',
+                      action=ForwardAction, nargs=0, default=False,
                       help='disable region-based memory splitting')
 
     add_translate_arg('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'],
@@ -168,28 +183,30 @@ def arguments():
                       (no-reuse=never reallocate the same address,
                       reuse=reallocate freed addresses) [default: %(default)s]''')
 
-    add_translate_arg('--static-unroll', action="store_true", default=False,
+    add_translate_arg('--static-unroll', action=ForwardAction, nargs=0, default=False,
                       help='enable static LLVM loop unrolling pass as a preprocessing step')
 
     add_translate_arg('--pthread', action='store_true', default=False,
                       help='enable support for pthread programs')
 
-    add_translate_arg('--bit-precise', action="store_true", default=False,
+    add_translate_arg('--bit-precise', action=ForwardAction, nargs=0, default=False,
                       help='model non-pointer values as bit vectors')
 
-    add_translate_arg('--timing-annotations', action="store_true", default=False,
+    add_translate_arg('--timing-annotations', action=ForwardAction, nargs=0, default=False,
                       help='enable timing annotations')
 
-    add_translate_arg('--bit-precise-pointers', action="store_true", default=False,
+    add_translate_arg('--bit-precise-pointers',
+                      action=ForwardAction, nargs=0, default=False,
                       help='model pointers and non-pointer values as bit vectors')
 
-    add_translate_arg('--no-byte-access-inference', action="store_true", default=False,
+    add_translate_arg('--no-byte-access-inference',
+                      action=ForwardAction, nargs=0, default=False,
                       help='disable bit-precision-related optimizations with DSA')
 
     add_translate_arg('--entry-points', metavar='PROC', nargs='+',
                       default=['main'], help='specify top-level procedures [default: %(default)s]')
 
-    add_translate_arg('--memory-safety', action='store_true', default=False,
+    add_translate_arg('--memory-safety', action=ForwardAction, nargs=0, default=False,
                       help='enable memory safety checks')
 
     add_translate_arg('--only-check-valid-deref', action='store_true', default=False,
@@ -201,10 +218,10 @@ def arguments():
     add_translate_arg('--only-check-memleak', action='store_true', default=False,
                       help='only enable memory leak checks')
 
-    add_translate_arg('--integer-overflow', action='store_true', default=False,
+    add_translate_arg('--integer-overflow', action=ForwardAction, nargs=0, default=False,
                       help='enable integer overflow checks')
 
-    add_translate_arg('--float', action="store_true", default=False,
+    add_translate_arg('--float', action=ForwardAction, nargs=0, default=False,
                       help='enable bit-precise floating-point functions')
 
     add_translate_arg('--strings', action='store_true', default=False,
@@ -217,8 +234,9 @@ def arguments():
                      help='back-end verification engine')
 
     add_verifier_arg('--unroll', metavar='N', default='1',
-                     type=lambda x: int(x) if int(x) > 0
-                     else parser.error('Unroll bound has to be positive.'),
+                     type=checked_type(int,
+                                       lambda x: exit_with_error('Unroll bound has to be positive')
+                                       if x <= 0 else None),
                      help='loop/recursion unroll bound [default: %(default)s]')
 
     add_verifier_arg('--loop-limit', metavar='N', default='1', type=int,
@@ -243,7 +261,7 @@ def arguments():
     add_verifier_arg('--svcomp-property', metavar='FILE', default=None,
                      type=str, help='load SVCOMP property to check from FILE')
 
-    add_verifier_arg('--modular', action="store_true", default=False,
+    add_verifier_arg('--modular', action=ForwardAction, nargs=0, default=False,
                      help='enable contracts-based modular deductive verification (uses Boogie)')
 
     add_verifier_arg('--replay', action="store_true", default=False,
@@ -346,34 +364,9 @@ def llvm_to_bpl(args):
     cmd += ['-source-loc-syms']
     for entry_point in args.entry_points:
         cmd += ['-entry-points', entry_point]
-    if args.debug:
-        cmd += ['-debug']
-    if args.debug_only:
-        cmd += ['-debug-only', args.debug_only]
-    if args.ll_file:
-        cmd += ['-ll', args.ll_file]
     if "impls" in args.mem_mod:
         cmd += ['-mem-mod-impls']
-    if args.static_unroll:
-        cmd += ['-static-unroll']
-    if args.bit_precise:
-        cmd += ['-bit-precise']
-    if args.timing_annotations:
-        cmd += ['-timing-annotations']
-    if args.bit_precise_pointers:
-        cmd += ['-bit-precise-pointers']
-    if args.no_byte_access_inference:
-        cmd += ['-no-byte-access-inference']
-    if args.no_memory_splitting:
-        cmd += ['-no-memory-splitting']
-    if args.memory_safety:
-        cmd += ['-memory-safety']
-    if args.integer_overflow:
-        cmd += ['-integer-overflow']
-    if args.float:
-        cmd += ['-float']
-    if args.modular:
-        cmd += ['-modular']
+    cmd += llvm2bpl_forwarded_opts
     try_command(cmd, console=True)
     annotate_bpl(args)
     property_selection(args)
@@ -685,21 +678,21 @@ def smackd_output(corral_output):
 
 def main():
     try:
-        global ARGS
-        ARGS = arguments()
+        global smack_args
+        smack_args = arguments()
 
-        target_selection(ARGS)
+        target_selection(smack_args)
 
-        if not ARGS.quiet:
+        if not smack_args.quiet:
             print "SMACK program verifier version %s" % VERSION
 
-        generate_llvm_ir(ARGS)
+        generate_llvm_ir(smack_args)
 
-        if ARGS.no_verify:
-            if not ARGS.quiet:
-                print "SMACK generated %s" % ARGS.bpl_file
+        if smack_args.no_verify:
+            if not smack_args.quiet:
+                print "SMACK generated %s" % smack_args.bpl_file
         else:
-            verify_bpl(ARGS)
+            verify_bpl(smack_args)
 
     except KeyboardInterrupt:
         sys.exit("SMACK aborted by keyboard interrupt.")

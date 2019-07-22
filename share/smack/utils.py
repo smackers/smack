@@ -26,7 +26,7 @@ def timeout_killer(proc, timed_out):
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 def try_command(cmd, cwd=None, console=False, timeout=None):
-    args = smack.top.ARGS
+    args = smack.top.smack_args
     console = (console or args.verbose or args.debug) and not args.quiet
     filelog = args.debug
     output = ''
