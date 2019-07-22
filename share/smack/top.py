@@ -9,6 +9,7 @@ import shutil
 import sys
 import shlex
 import subprocess
+import signal
 from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
@@ -642,6 +643,14 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   return json_string
 
+def clean_up_upon_sigterm(main):
+  def handler(signum, frame):
+    remove_temp_files()
+    sys.exit(0)
+  signal.signal(signal.SIGTERM, handler)
+  return main
+
+@clean_up_upon_sigterm
 def main():
   try:
     global args
