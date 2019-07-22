@@ -15,6 +15,7 @@ from smack.replay import replay_error_trace
 from smack.frontend import link_bc_files, frontends, languages, extra_libs
 
 VERSION = '2.0.0'
+LLVMToBPLOPTS = []
 
 def results(args):
     """A dictionary of the result output messages."""
@@ -54,6 +55,16 @@ class FileAction(argparse.Action):
             # presumably output files (e.g., .bc, .ll, etc)
             validate_output_file(values)
         setattr(namespace, self.dest, values)
+
+class LLVMToBPLAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super(LLVMToBPLAction, self).__init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        if len(values) == 0:
+            LLVMToBPLOPTS.append(option_string[1:])
+            setattr(namespace, self.dest, True)
+        else:
+            raise RuntimeError("unsupported llvm2bpl opt")
 
 def exit_with_error(error):
     sys.exit('Error: %s.' % error)
@@ -106,7 +117,7 @@ def arguments():
     add_noise_arg('-v', '--verbose', action='store_true', default=False,
                   help='enable verbose output')
 
-    add_noise_arg('-d', '--debug', action="store_true", default=False,
+    add_noise_arg('-d', '--debug', action=LLVMToBPLAction, nargs=0, default=False,
                   help='enable debugging output')
 
     add_noise_arg('--debug-only', metavar='MODULES', default=None,
@@ -159,7 +170,8 @@ def arguments():
                       action=FileAction,
                       type=str, help='save (intermediate) Boogie code to FILE')
 
-    add_translate_arg('--no-memory-splitting', action="store_true", default=False,
+    add_translate_arg('--no-memory-splitting', action=LLVMToBPLAction, nargs=0,
+                      default=False,
                       help='disable region-based memory splitting')
 
     add_translate_arg('--mem-mod', choices=['no-reuse', 'no-reuse-impls', 'reuse'],
@@ -168,28 +180,32 @@ def arguments():
                       (no-reuse=never reallocate the same address,
                       reuse=reallocate freed addresses) [default: %(default)s]''')
 
-    add_translate_arg('--static-unroll', action="store_true", default=False,
+    add_translate_arg('--static-unroll', action=LLVMToBPLAction, nargs=0, default=False,
                       help='enable static LLVM loop unrolling pass as a preprocessing step')
 
     add_translate_arg('--pthread', action='store_true', default=False,
                       help='enable support for pthread programs')
 
-    add_translate_arg('--bit-precise', action="store_true", default=False,
+    add_translate_arg('--bit-precise', action=LLVMToBPLAction, nargs=0,
+                      default=False,
                       help='model non-pointer values as bit vectors')
 
-    add_translate_arg('--timing-annotations', action="store_true", default=False,
+    add_translate_arg('--timing-annotations', action=LLVMToBPLAction, nargs=0,
+                      default=False,
                       help='enable timing annotations')
 
-    add_translate_arg('--bit-precise-pointers', action="store_true", default=False,
+    add_translate_arg('--bit-precise-pointers', action=LLVMToBPLAction, nargs=0,
+                      default=False,
                       help='model pointers and non-pointer values as bit vectors')
 
-    add_translate_arg('--no-byte-access-inference', action="store_true", default=False,
+    add_translate_arg('--no-byte-access-inference', action=LLVMToBPLAction, nargs=0,
+                      default=False,
                       help='disable bit-precision-related optimizations with DSA')
 
     add_translate_arg('--entry-points', metavar='PROC', nargs='+',
                       default=['main'], help='specify top-level procedures [default: %(default)s]')
 
-    add_translate_arg('--memory-safety', action='store_true', default=False,
+    add_translate_arg('--memory-safety', action=LLVMToBPLAction, nargs=0, default=False,
                       help='enable memory safety checks')
 
     add_translate_arg('--only-check-valid-deref', action='store_true', default=False,
@@ -201,10 +217,10 @@ def arguments():
     add_translate_arg('--only-check-memleak', action='store_true', default=False,
                       help='only enable memory leak checks')
 
-    add_translate_arg('--integer-overflow', action='store_true', default=False,
+    add_translate_arg('--integer-overflow', action=LLVMToBPLAction, nargs=0, default=False,
                       help='enable integer overflow checks')
 
-    add_translate_arg('--float', action="store_true", default=False,
+    add_translate_arg('--float', action=LLVMToBPLAction, nargs=0, default=False,
                       help='enable bit-precise floating-point functions')
 
     add_translate_arg('--strings', action='store_true', default=False,
@@ -243,7 +259,7 @@ def arguments():
     add_verifier_arg('--svcomp-property', metavar='FILE', default=None,
                      type=str, help='load SVCOMP property to check from FILE')
 
-    add_verifier_arg('--modular', action="store_true", default=False,
+    add_verifier_arg('--modular', action=LLVMToBPLAction, nargs=0, default=False,
                      help='enable contracts-based modular deductive verification (uses Boogie)')
 
     add_verifier_arg('--replay', action="store_true", default=False,
@@ -346,34 +362,13 @@ def llvm_to_bpl(args):
     cmd += ['-source-loc-syms']
     for entry_point in args.entry_points:
         cmd += ['-entry-points', entry_point]
-    if args.debug:
-        cmd += ['-debug']
     if args.debug_only:
         cmd += ['-debug-only', args.debug_only]
     if args.ll_file:
         cmd += ['-ll', args.ll_file]
     if "impls" in args.mem_mod:
         cmd += ['-mem-mod-impls']
-    if args.static_unroll:
-        cmd += ['-static-unroll']
-    if args.bit_precise:
-        cmd += ['-bit-precise']
-    if args.timing_annotations:
-        cmd += ['-timing-annotations']
-    if args.bit_precise_pointers:
-        cmd += ['-bit-precise-pointers']
-    if args.no_byte_access_inference:
-        cmd += ['-no-byte-access-inference']
-    if args.no_memory_splitting:
-        cmd += ['-no-memory-splitting']
-    if args.memory_safety:
-        cmd += ['-memory-safety']
-    if args.integer_overflow:
-        cmd += ['-integer-overflow']
-    if args.float:
-        cmd += ['-float']
-    if args.modular:
-        cmd += ['-modular']
+    cmd += LLVMToBPLOPTS
     try_command(cmd, console=True)
     annotate_bpl(args)
     property_selection(args)
