@@ -17,7 +17,7 @@ class DSGraph;
 class TDDataStructures;
 class BUDataStructures;
 class DSNodeEquivs;
-}
+} // namespace llvm
 
 namespace dsa {
 template <class dsa> struct TypeSafety;
@@ -74,6 +74,6 @@ public:
   const llvm::DSNode *getNode(const llvm::Value *v);
   void printDSAGraphs(const char *Filename);
 };
-}
+} // namespace smack
 
 #endif // DSAWRAPPER_H

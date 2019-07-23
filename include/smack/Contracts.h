@@ -33,4 +33,4 @@ private:
     return ConstantInt::get(Type::getInt32Ty(ctx), slices.size());
   }
 };
-}
+} // namespace smack

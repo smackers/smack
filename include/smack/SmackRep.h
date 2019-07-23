@@ -197,6 +197,6 @@ public:
   std::string opName(const std::string &operation,
                      std::list<const llvm::Type *> types);
 };
-}
+} // namespace smack
 
 #endif // SMACKREP_H

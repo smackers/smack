@@ -92,6 +92,6 @@ public:
   void visitMemIntrinsic(MemIntrinsic &);
   void visitCallInst(CallInst &);
 };
-}
+} // namespace smack
 
 #endif // REGIONS_H

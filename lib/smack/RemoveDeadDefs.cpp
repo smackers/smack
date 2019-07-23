@@ -54,4 +54,4 @@ char RemoveDeadDefs::ID = 0;
 // Register the pass
 static RegisterPass<RemoveDeadDefs> X("remove-dead-defs",
                                       "Remove Dead Definitions");
-}
+} // namespace smack

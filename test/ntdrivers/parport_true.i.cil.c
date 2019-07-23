@@ -2920,18 +2920,18 @@ PptRemovePptRemovalRelation(PDEVICE_EXTENSION Extension,
     if ((unsigned int)listHead->Flink == (unsigned int)listHead) {
       {} {
         /*     ExReleaseFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
       }
       return (0L);
     } else {
       {} {
         /*     ExReleaseFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
       }
     }
     {
         /*   ExAcquireFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED
-                                                                        */
+                                                                      */
     } {
       while (1) {
       while_27_continue: /* CIL Label */;
@@ -3016,7 +3016,7 @@ void PptDumpRemovalRelationsList(PDEVICE_EXTENSION Extension) {
     if ((unsigned int)listHead->Flink == (unsigned int)listHead) {
       {} {
         /*     ExReleaseFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
       }
       return;
     } else {
@@ -3614,9 +3614,8 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                         } else {
                                           {
                                             Status = PptTrySelectDevice(
-                                                Extension,
-                                                Irp->AssociatedIrp
-                                                    .SystemBuffer);
+                                                Extension, Irp->AssociatedIrp
+                                                               .SystemBuffer);
                                             IoAcquireCancelSpinLock(
                                                 &CancelIrql);
                                           }
@@ -3912,12 +3911,12 @@ NTSTATUS PptDispatchClose(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       }
       {
           /*     ExReleaseFastMutex(& extension->OpenCloseMutex); */ /* INLINED
-                                                                        */
+                                                                      */
       } {}
     } else {
       {
           /*     ExReleaseFastMutex(& extension->OpenCloseMutex); */ /* INLINED
-                                                                        */
+                                                                      */
       } {}
     }
     {
@@ -6529,10 +6528,10 @@ NTSTATUS PptPnpStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     if (status >= 0L) {
       {
         /*     ExAcquireFastMutex(& extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
         extension->DeviceStateFlags |= 1UL;
         /*     ExReleaseFastMutex(& extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
       }
     } else {
     }
@@ -6579,8 +6578,8 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
       goto targetExit;
     } else {
     }
-    if ((int)((KUSER_SHARED_DATA * const)4292804608U)
-            ->AlternativeArchitecture != 1) {
+    if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture !=
+        1) {
       { tmp = PptIsPci(Extension, Irp); }
       if (1 == (int)tmp) {
         {} {
@@ -6658,7 +6657,7 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
                                 .__annonCompField1.LowPart == 0UL) {
                           if (Extension->PnpInfo.OriginalEcpController
                                   .__annonCompField1.HighPart == 0L) {
-                            if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                            if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                     ->AlternativeArchitecture != 1) {
                               if (PartialResourceDescriptor->u.Port.Start
                                       .__annonCompField1.LowPart <
@@ -7215,10 +7214,10 @@ NTSTATUS PptPnpQueryStopDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         myStatus = 0L;
         status = PptPnpPassThroughPnpIrpAndReleaseRemoveLock(extension, Irp);
         /*     ExAcquireFastMutex(& extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
         extension->DeviceStateFlags |= 65552UL;
         /*     ExReleaseFastMutex(& extension->ExtensionFastMutex); */ /* INLINED
-                                                                          */
+                                                                        */
       }
     }
     return (status);
@@ -7681,7 +7680,7 @@ NTSTATUS PptDispatchPower(PDEVICE_OBJECT pDeviceObject, PIRP pIrp) {
                     if ((int)powerState.DeviceState <
                         (int)Extension->DeviceState) {
                       hookit = 1;
-                      if ((int)((KUSER_SHARED_DATA * const)4292804608U)
+                      if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                               ->AlternativeArchitecture == 1) {
                         { InitNEC_98(Extension); }
                       } else {
@@ -8802,7 +8801,7 @@ NTSTATUS PptInitializeDeviceExtension(PDRIVER_OBJECT DriverObject,
       Extension->OpenCloseMutex.Count = 1;
       Extension->OpenCloseMutex.Contention = 0;
       /*   KeInitializeEvent(& Extension->OpenCloseMutex.Event, 1, 0); */ /* INLINED
-                                                                             */
+                                                                           */
       Extension->ExtensionFastMutex.Count = 1;
       Extension->ExtensionFastMutex.Contention = 0;
       /*   KeInitializeEvent(& Extension->ExtensionFastMutex.Event, 1, 0); */ /* INLINED */
@@ -8844,7 +8843,7 @@ NTSTATUS PptInitializeDeviceExtension(PDRIVER_OBJECT DriverObject,
       Extension->DeviceName.Length = 0;
       Extension->DeviceName.MaximumLength = UniNameString->MaximumLength;
       /*   RtlCopyUnicodeString(& Extension->DeviceName, UniNameString); */ /* INLINED
-                                                                               */
+                                                                             */
       Extension->PnpInfo.CurrentMode = 0;
       Extension_FilterMode = 0;
     }

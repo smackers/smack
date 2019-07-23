@@ -70,49 +70,42 @@ bool TypeChecksOpt::runOnModule(Module &M) {
                                              VoidPtrTy,
                                              Int8Ty,
                                              Int64Ty,
-                                             Int32Ty,
-                                             NULL);
+                                             Int32Ty);
   trackGlobal = M.getOrInsertFunction("trackGlobal",
                                       VoidTy,
                                       VoidPtrTy,/*ptr*/
                                       TypeTagTy,/*type*/
                                       Int64Ty,/*size*/
-                                      Int32Ty,/*tag*/
-                                      NULL);
+                                      Int32Ty /*tag*/);
   trackInitInst = M.getOrInsertFunction("trackInitInst",
                                         VoidTy,
                                         VoidPtrTy,/*ptr*/
                                         Int64Ty,/*size*/
-                                        Int32Ty,/*tag*/
-                                        NULL);
+                                        Int32Ty /*tag*/);
   trackUnInitInst = M.getOrInsertFunction("trackUnInitInst",
                                           VoidTy,
                                           VoidPtrTy,/*ptr*/
                                           Int64Ty,/*size*/
-                                          Int32Ty,/*tag*/
-                                          NULL);
+                                          Int32Ty /*tag*/);
   trackStoreInst = M.getOrInsertFunction("trackStoreInst",
                                          VoidTy,
                                          VoidPtrTy,/*ptr*/
                                          TypeTagTy,/*type*/
                                          Int64Ty,/*size*/
-                                         Int32Ty,/*tag*/
-                                         NULL);
+                                         Int32Ty /*tag*/);
   checkTypeInst = M.getOrInsertFunction("checkType",
                                         VoidTy,
                                         TypeTagTy,/*type*/
                                         Int64Ty,/*size*/
                                         TypeTagPtrTy,
                                         VoidPtrTy,/*ptr*/
-                                        Int32Ty,/*tag*/
-                                        NULL);
+                                        Int32Ty /*tag*/);
   copyTypeInfo = M.getOrInsertFunction("copyTypeInfo",
                                        VoidTy,
                                        VoidPtrTy,/*dest ptr*/
                                        VoidPtrTy,/*src ptr*/
                                        Int64Ty,/*size*/
-                                       Int32Ty,/*tag*/
-                                       NULL);
+                                       Int32Ty /*tag*/);
   setTypeInfo = M.getOrInsertFunction("setTypeInfo",
                                       VoidTy,
                                       VoidPtrTy,/*dest ptr*/
@@ -120,20 +113,17 @@ bool TypeChecksOpt::runOnModule(Module &M) {
                                       Int64Ty,/*size*/
                                       TypeTagTy,
                                       VoidPtrTy,
-                                      Int32Ty,/*tag*/
-                                      NULL);
+                                      Int32Ty /*tag*/);
   trackStringInput = M.getOrInsertFunction("trackStringInput",
                                            VoidTy,
                                            VoidPtrTy,
-                                           Int32Ty,
-                                           NULL);
+                                           Int32Ty );
   getTypeTag = M.getOrInsertFunction("getTypeTag",
                                      VoidTy,
                                      VoidPtrTy, /*ptr*/
                                      Int64Ty, /*size*/
                                      TypeTagPtrTy, /*dest for type tag*/
-                                     Int32Ty, /*tag*/
-                                     NULL);
+                                     Int32Ty  /*tag*/);
   MallocFunc = M.getFunction("malloc");
 
   for(Value::user_iterator User = trackGlobal->user_begin(); User != trackGlobal->user_end(); ++User) {

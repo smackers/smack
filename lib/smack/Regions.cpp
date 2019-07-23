@@ -42,7 +42,7 @@ bool isFieldDisjoint(DSAWrapper *DSA, const Value *V, unsigned offset) {
   else
     return DSA->isFieldDisjoint(V, getFunction(V));
 }
-}
+} // namespace
 
 void Region::init(Module &M, Pass &P) {
   DL = &M.getDataLayout();
@@ -75,7 +75,7 @@ unsigned numGlobals(const DSNode *N) {
 
   return count;
 }
-}
+} // namespace
 
 bool Region::isSingleton(const DSNode *N, unsigned offset, unsigned length) {
   if (N->isGlobalNode() && numGlobals(N) == 1 && !N->isArrayNode() &&

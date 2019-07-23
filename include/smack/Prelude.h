@@ -215,6 +215,6 @@ public:
   FuncDecl *unsafeStore(Binding elemBinding, const Expr *body,
                         bool bytes = true);
 };
-}
+} // namespace smack
 
 #endif // PRELUDE_H

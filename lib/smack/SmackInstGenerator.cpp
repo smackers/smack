@@ -163,11 +163,10 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
     if (SmackOptions::isEntryPoint(naming->get(*F))) {
       emit(recordProcedureCall(
           F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
-      for (auto &A : F->getArgumentList()) {
-        emit(recordProcedureCall(&A,
-                                 {Attr::attr("cexpr",
-                                             "smack:arg:" + naming->get(*F) +
-                                                 ":" + naming->get(A))}));
+      for (auto &A : F->args()) {
+        emit(recordProcedureCall(
+            &A, {Attr::attr("cexpr", "smack:arg:" + naming->get(*F) + ":" +
+                                         naming->get(A))}));
       }
     }
   }
@@ -288,8 +287,8 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst &si) {
   for (llvm::SwitchInst::CaseIt i = si.case_begin(); i != si.case_begin();
        ++i) {
 
-    const Expr *v = rep->expr(i.getCaseValue());
-    targets.push_back({Expr::eq(e, v), i.getCaseSuccessor()});
+    const Expr *v = rep->expr(i->getCaseValue());
+    targets.push_back({Expr::eq(e, v), i->getCaseSuccessor()});
 
     // Add the negation of this case to the default case
     n = Expr::and_(n, Expr::neq(e, v));
@@ -845,9 +844,8 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
       for (auto &arg : F->args()) {
         if (&arg == V && var->getScope() == F->getMetadata("dbg")) {
           emit(recordProcedureCall(
-              V,
-              {Attr::attr("cexpr",
-                          naming->get(*F) + ":arg:" + var->getName().str())}));
+              V, {Attr::attr("cexpr", naming->get(*F) +
+                                          ":arg:" + var->getName().str())}));
           break;
         }
       }
@@ -890,21 +888,21 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   processInstruction(ii);
 
   //(CallInst -> Void) -> [Flags] -> (CallInst -> Void)
-  static const auto conditionalModel = [this](
-      std::function<void(CallInst *)> modelGenFunc,
-      std::initializer_list<const cl::opt<bool> *> requiredFlags) {
-    auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
-    return [this, unsetFlags, modelGenFunc](CallInst *ci) {
-      if (unsetFlags.empty())
-        modelGenFunc(ci);
-      else {
-        SmackWarnings::warnUnsound("call to " +
-                                       ci->getCalledFunction()->getName().str(),
-                                   unsetFlags, currBlock, ci);
-        emit(rep->call(ci->getCalledFunction(), *ci));
-      }
-    };
-  };
+  static const auto conditionalModel =
+      [this](std::function<void(CallInst *)> modelGenFunc,
+             std::initializer_list<const cl::opt<bool> *> requiredFlags) {
+        auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
+        return [this, unsetFlags, modelGenFunc](CallInst *ci) {
+          if (unsetFlags.empty())
+            modelGenFunc(ci);
+          else {
+            SmackWarnings::warnUnsound(
+                "call to " + ci->getCalledFunction()->getName().str(),
+                unsetFlags, currBlock, ci);
+            emit(rep->call(ci->getCalledFunction(), *ci));
+          }
+        };
+      };
 
   static const auto f16UpCast = conditionalModel(
       [this](CallInst *ci) {
@@ -1067,14 +1065,15 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
     return body;
   };
 
-  static const auto assignBvExpr = [this](
-      std::function<const Expr *(Value *)> exprGenFunc) {
-    return conditionalModel(
-        [this, exprGenFunc](CallInst *ci) {
-          emit(Stmt::assign(rep->expr(ci), exprGenFunc(ci->getArgOperand(0))));
-        },
-        {&SmackOptions::BitPrecise});
-  };
+  static const auto assignBvExpr =
+      [this](std::function<const Expr *(Value *)> exprGenFunc) {
+        return conditionalModel(
+            [this, exprGenFunc](CallInst *ci) {
+              emit(Stmt::assign(rep->expr(ci),
+                                exprGenFunc(ci->getArgOperand(0))));
+            },
+            {&SmackOptions::BitPrecise});
+      };
 
   static const auto assignUnFPFuncApp = [this](std::string fnBase) {
     return conditionalModel(

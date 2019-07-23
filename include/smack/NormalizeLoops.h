@@ -19,6 +19,6 @@ public:
   virtual bool runOnModule(llvm::Module &m) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage &) const override;
 };
-}
+} // namespace smack
 
 #endif // NORMALIZELOOPS_H

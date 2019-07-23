@@ -383,66 +383,57 @@ void TypeChecks::initRuntimeCheckPrototypes(Module &M) {
   RegisterArgv = M.getOrInsertFunction("trackArgvType",
                                        VoidTy,
                                        Int32Ty, /*argc */
-                                       VoidPtrTy->getPointerTo(),/*argv*/
-                                       NULL);
+                                       VoidPtrTy->getPointerTo() /*argv*/);
 
   RegisterEnvp = M.getOrInsertFunction("trackEnvpType",
                                        VoidTy,
-                                       VoidPtrTy->getPointerTo(),/*envp*/
-                                       NULL);
+                                       VoidPtrTy->getPointerTo() /*envp*/);
 
   trackGlobal = M.getOrInsertFunction("trackGlobal",
                                       VoidTy,
                                       VoidPtrTy,/*ptr*/
                                       TypeTagTy,/*type*/
                                       Int64Ty,/*size*/
-                                      Int32Ty,/*tag*/
-                                      NULL);
+                                      Int32Ty /*tag*/);
 
   trackArray = M.getOrInsertFunction("trackArray",
                                      VoidTy,
                                      VoidPtrTy,/*ptr*/
                                      Int64Ty,/*size*/
                                      Int64Ty,/*count*/
-                                     Int32Ty,/*tag*/
-                                     NULL);
+                                     Int32Ty /*tag*/);
 
   trackInitInst = M.getOrInsertFunction("trackInitInst",
                                         VoidTy,
                                         VoidPtrTy,/*ptr*/
                                         Int64Ty,/*size*/
-                                        Int32Ty,/*tag*/
-                                        NULL);
+                                        Int32Ty /*tag*/);
 
   trackUnInitInst = M.getOrInsertFunction("trackUnInitInst",
                                           VoidTy,
                                           VoidPtrTy,/*ptr*/
                                           Int64Ty,/*size*/
-                                          Int32Ty,/*tag*/
-                                          NULL);
+                                          Int32Ty /*tag*/);
 
   trackStoreInst = M.getOrInsertFunction("trackStoreInst",
                                          VoidTy,
                                          VoidPtrTy,/*ptr*/
                                          TypeTagTy,/*type*/
                                          Int64Ty,/*size*/
-                                         Int32Ty,/*tag*/
-                                         NULL);
+                                         Int32Ty /*tag*/);
   getTypeTag = M.getOrInsertFunction("getTypeTag",
                                      VoidTy,
                                      VoidPtrTy, /*ptr*/
                                      Int64Ty, /*size*/
                                      TypeTagPtrTy, /*dest for type tag*/
-                                     Int32Ty, /*tag*/
-                                     NULL);
+                                     Int32Ty  /*tag*/);
   checkTypeInst = M.getOrInsertFunction("checkType",
                                         VoidTy,
                                         TypeTagTy,/*type*/
                                         Int64Ty,/*size*/
                                         TypeTagPtrTy,/*ptr to metadata*/
                                         VoidPtrTy,/*ptr*/
-                                        Int32Ty,/*tag*/
-                                        NULL);
+                                        Int32Ty /*tag*/);
   setTypeInfo = M.getOrInsertFunction("setTypeInfo",
                                       VoidTy,
                                       VoidPtrTy,/*dest ptr*/
@@ -450,39 +441,33 @@ void TypeChecks::initRuntimeCheckPrototypes(Module &M) {
                                       Int64Ty,/*size*/
                                       TypeTagTy,
                                       VoidPtrTy, /*src ptr*/
-                                      Int32Ty,/*tag*/
-                                      NULL);
+                                      Int32Ty /*tag*/);
   copyTypeInfo = M.getOrInsertFunction("copyTypeInfo",
                                        VoidTy,
                                        VoidPtrTy,/*dest ptr*/
                                        VoidPtrTy,/*src ptr*/
                                        Int64Ty,/*size*/
-                                       Int32Ty,/*tag*/
-                                       NULL);
+                                       Int32Ty /*tag*/);
   trackStringInput = M.getOrInsertFunction("trackStringInput",
                                            VoidTy,
                                            VoidPtrTy,
-                                           Int32Ty,
-                                           NULL);
+                                           Int32Ty);
   setVAInfo = M.getOrInsertFunction("setVAInfo",
                                     VoidTy,
                                     VoidPtrTy,/*va_list ptr*/
                                     Int64Ty,/*total num of elements in va_list */
                                     TypeTagPtrTy,/*ptr to metadta*/
-                                    Int32Ty,/*tag*/
-                                    NULL);
+                                    Int32Ty /*tag*/);
   copyVAInfo = M.getOrInsertFunction("copyVAInfo",
                                      VoidTy,
                                      VoidPtrTy,/*dst va_list*/
                                      VoidPtrTy,/*src va_list */
-                                     Int32Ty,/*tag*/
-                                     NULL);
+                                     Int32Ty /*tag*/);
   checkVAArg = M.getOrInsertFunction("checkVAArgType",
                                      VoidTy,
                                      VoidPtrTy,/*va_list ptr*/
                                      TypeTagTy,/*type*/
-                                     Int32Ty,/*tag*/
-                                     NULL);
+                                     Int32Ty /*tag*/);
 
 }
 
@@ -667,7 +652,8 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
     // For each of these also copy attributes
     ValueMap[&*II] = &*NI;
     NI->setName(II->getName());
-    NI->addAttr(F.getAttributes().getParamAttributes(II->getArgNo()+1));
+    AttrBuilder AB{F.getAttributes().getParamAttributes(II->getArgNo()+1)};
+    NI->addAttrs(AB);
   }
 
   // 4. Copy over attributes for the function
@@ -695,7 +681,7 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
       unsigned int i;
       unsigned int NumArgs = II->getNumOperands() - 3;
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 3; i <II->getNumOperands(); i++) {
         Value *Idx[1];
@@ -732,7 +718,7 @@ bool TypeChecks::visitAddressTakenFunction(Module &M, Function &F) {
       unsigned int NumArgs = CI->getNumOperands() - 1;
       inst_iterator InsPt = inst_begin(CI->getParent()->getParent());
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 1; i <CI->getNumOperands(); i++) {
         Value *Idx[1];
@@ -832,7 +818,8 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
     // For each of these also copy attributes
     ValueMap[&*II] = &*NI;
     NI->setName(II->getName());
-    NI->addAttr(F.getAttributes().getParamAttributes(II->getArgNo()+1));
+    AttrBuilder AB{F.getAttributes().getParamAttributes(II->getArgNo()+1)};
+    NI->addAttrs(AB);
   }
 
   // 4. Copy over attributes for the function
@@ -924,7 +911,7 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
       unsigned int i;
       unsigned int NumArgs = II->getNumOperands() - 3;
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 3; i <II->getNumOperands(); i++) {
         Value *Idx[1];
@@ -957,7 +944,7 @@ bool TypeChecks::visitInternalVarArgFunction(Module &M, Function &F) {
       unsigned int i;
       unsigned int NumArgs = CI->getNumArgOperands();
       Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-      AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+      AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
       // set the metadata for the varargs in AI
       for(i = 0; i <CI->getNumArgOperands(); i++) {
         Value *Idx[1];
@@ -1029,7 +1016,7 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
       continue;
     assert(Arg.getType()->isPointerTy());
     Type *ETy = (cast<PointerType>(Arg.getType()))->getElementType();
-    AllocaInst *AI = new AllocaInst(ETy, "", InsertBefore);
+    AllocaInst *AI = new AllocaInst(ETy, 0, "", InsertBefore);
     // Do this before adding the load/store pair, so that those uses are not replaced.
     Arg.replaceAllUsesWith(AI);
     LoadInst *LI = new LoadInst(&Arg, "", InsertBefore);
@@ -1044,37 +1031,25 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
     if(InvokeInst *II = dyn_cast<InvokeInst>(*ui)) {
       if(II->getCalledFunction() == &F) {
         SmallVector<Value*, 8> Args;
-        
-        // TODO: not a good idea:
-        AttributeSet NewCallPAL=AttributeSet();
+        SmallVector<AttributeSet, 8> ArgAttrs;
 
         // Get the initial attributes of the call
-        AttributeSet CallPAL = II->getAttributes();
+        AttributeList CallPAL = II->getAttributes();
         AttributeSet RAttrs = CallPAL.getRetAttributes();
         AttributeSet FnAttrs = CallPAL.getFnAttributes();
-
-        if (!RAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext() ,0, RAttrs);
 
         Function::arg_iterator NI = F.arg_begin();
         for(unsigned j =3;j<II->getNumOperands();j++, NI++) {
           // Add the original argument
           Args.push_back(II->getOperand(j));
+
           // If there are attributes on this argument, copy them to the correct 
           // position in the NewCallPAL
           //FIXME: copy the rest of the attributes.
           if(NI->hasByValAttr()) 
             continue;
-          AttributeSet Attrs = CallPAL.getParamAttributes(j);
-          if (!Attrs.isEmpty()) {
-            NewCallPAL=NewCallPAL.addAttributes(F.getContext(), j, Attrs);
-          }
+          ArgAttrs.push_back(CallPAL.getParamAttributes(j));
         }
-
-        // Create the new attributes vec.
-        if (!FnAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext(),~0, FnAttrs);
-
 
         // Create the substitute call
         InvokeInst *CallI = InvokeInst::Create(&F,
@@ -1083,6 +1058,7 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
                                                Args,
                                                "", II);
 
+        auto NewCallPAL = AttributeList::get(F.getContext(), FnAttrs, RAttrs, ArgAttrs);
         CallI->setCallingConv(II->getCallingConv());
         CallI->setAttributes(NewCallPAL);
         II->replaceAllUsesWith(CallI);
@@ -1092,17 +1068,12 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
     } else if(CallInst *CI = dyn_cast<CallInst>(*ui)) {
       if(CI->getCalledFunction() == &F) {
         SmallVector<Value*, 8> Args;
-        
-      // TODO: not a good idea:
-      AttributeSet NewCallPAL=AttributeSet();
+        SmallVector<AttributeSet, 8> ArgAttrs;
 
         // Get the initial attributes of the call
-        AttributeSet CallPAL = CI->getAttributes();
+        AttributeList CallPAL = CI->getAttributes();
         AttributeSet RAttrs = CallPAL.getRetAttributes();
         AttributeSet FnAttrs = CallPAL.getFnAttributes();
-
-        if (!RAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext(),0, RAttrs);
 
         Function::arg_iterator II = F.arg_begin();
         for(unsigned j =1;j<CI->getNumOperands();j++, II++) {
@@ -1113,21 +1084,15 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
           //FIXME: copy the rest of the attributes.
           if(II->hasByValAttr()) 
             continue;
-          AttributeSet Attrs = CallPAL.getParamAttributes(j);
-          if (!Attrs.isEmpty()) {
-            NewCallPAL=NewCallPAL.addAttributes(F.getContext(),j, Attrs);
-          }
+          ArgAttrs.push_back(CallPAL.getParamAttributes(j));
         }
-
-        // Create the new attributes vec.
-        if (!FnAttrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F.getContext(),~0, FnAttrs);
 
         // Create the substitute call
         CallInst *CallI = CallInst::Create(&F,
                                            Args,
                                            "", CI);
 
+        auto NewCallPAL = AttributeList::get(F.getContext(), FnAttrs, RAttrs, ArgAttrs);
         CallI->setCallingConv(CI->getCallingConv());
         CallI->setAttributes(NewCallPAL);
         CI->replaceAllUsesWith(CallI);
@@ -1142,12 +1107,9 @@ bool TypeChecks::visitInternalByValFunction(Module &M, Function &F) {
   }
 
   // remove the byval attribute from the function
-  AttrBuilder B;
-  B.addAttribute(Attribute::ByVal);
   for (Function::arg_iterator I = F.arg_begin(); I != F.arg_end(); ++I) {
-    if (!I->hasByValAttr())
-      continue;
-    I->removeAttr(AttributeSet::get(M.getContext(),0, B));
+    if (I->hasByValAttr())
+      I->removeAttr(Attribute::AttrKind::ByVal);
   }
   return true;
 }
@@ -1227,8 +1189,8 @@ void TypeChecks::print(raw_ostream &OS, const Module *M) const {
 bool TypeChecks::initShadow(Module &M) {
   // Create the call to the runtime initialization function and place it before the store instruction.
 
-  Constant * RuntimeCtor = M.getOrInsertFunction("tc.init", VoidTy, NULL);
-  Constant * InitFn = M.getOrInsertFunction("shadowInit", VoidTy, NULL);
+  Constant * RuntimeCtor = M.getOrInsertFunction("tc.init", VoidTy);
+  Constant * InitFn = M.getOrInsertFunction("shadowInit", VoidTy);
 
   //RuntimeCtor->setDoesNotThrow();
   //RuntimeCtor->setLinkage(GlobalValue::InternalLinkage);
@@ -1532,7 +1494,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(I);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       Instruction *InsertPt = I;  
       if (InvokeInst *II = dyn_cast<InvokeInst>(InsertPt)) {
@@ -1547,7 +1509,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       Instruction *InsertPt = I;  
       if (InvokeInst *II = dyn_cast<InvokeInst>(InsertPt)) {
@@ -1566,7 +1528,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       Args.push_back(BCI);
       Args.push_back(BCI_Size);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackaccept", VoidTy, VoidPtrTy,VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackaccept", VoidTy, VoidPtrTy,VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("poll")) {
@@ -1576,7 +1538,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       Args.push_back(BCI);
       Args.push_back(CS.getArgument(1));
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackpoll", VoidTy, VoidPtrTy, Int64Ty, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackpoll", VoidTy, VoidPtrTy, Int64Ty, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("getaddrinfo")) {
@@ -1585,7 +1547,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetaddrinfo", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetaddrinfo", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("mmap")) {
@@ -1606,7 +1568,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       Args.push_back(BCI_Dest);
       Args.push_back(BCI_Src);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackStrcpyInst", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackStrcpyInst", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI_Src);
     } else if (F->getName().str() == std::string("gettimeofday") || 
@@ -1628,7 +1590,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetpwuid", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetpwuid", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("getpwnam")) {
@@ -1637,7 +1599,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetpwuid", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetpwuid", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if(F->getName().str() == std::string("getopt_long")) {
@@ -1647,7 +1609,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(LI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(LI);
     } else if (F->getName().str() == std::string("getgruid") ||
@@ -1672,7 +1634,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value*>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetservbyname", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetservbyname", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("gethostbyname") ||
@@ -1682,7 +1644,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value*>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgethostbyname", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgethostbyname", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("gethostname")) {
@@ -1691,7 +1653,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value*>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgethostname", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgethostname", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("getenv") ||
@@ -1702,7 +1664,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("getcwd")) {
@@ -1711,7 +1673,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if(F->getName().str() == std::string("crypt")) {
@@ -1720,7 +1682,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("getrusage") || 
@@ -1756,7 +1718,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackctype", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackctype", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("__ctype_toupper_loc")) {
@@ -1765,7 +1727,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackctype_32", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackctype_32", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("__ctype_tolower_loc")) {
@@ -1774,7 +1736,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value *>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackctype_32", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackctype_32", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
     } else if (F->getName().str() == std::string("strtol") ||
@@ -1796,14 +1758,14 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       Args.push_back(BCI_Dest);
       Args.push_back(BCI_Src);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackStrcatInst", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackStrcatInst", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty);
       CallInst::Create(F, Args, "", I);
     } else if (F->getName().str() == std::string("strcpy")) {
       std::vector<Value *> Args;
       Args.push_back(CS.getArgument(0));
       Args.push_back(CS.getArgument(1));
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackStrcpyInst", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackStrcpyInst", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty);
       CallInst::Create(F, Args, "", I);
     } else if (F->getName().str() == std::string("strncpy")) {
       std::vector<Value *>Args;
@@ -1811,14 +1773,14 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       Args.push_back(CS.getArgument(1));
       Args.push_back(CS.getArgument(2));
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackStrncpyInst", VoidTy, VoidPtrTy, VoidPtrTy, I->getOperand(3)->getType(), Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackStrncpyInst", VoidTy, VoidPtrTy, VoidPtrTy, I->getOperand(3)->getType(), Int32Ty);
       CallInst::Create(F, Args, "", I);
     } else if (F->getName().str() == std::string("readlink")) {
       std::vector<Value *>Args;
       Args.push_back(CS.getArgument(1));
       Args.push_back(I);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackReadLink", VoidTy, VoidPtrTy, I->getType(), Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackReadLink", VoidTy, VoidPtrTy, I->getType(), Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(I);
     } else if (F->getName().str() == std::string("pipe")) {
@@ -1826,7 +1788,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value*> Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackpipe", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackpipe", VoidTy, VoidPtrTy, Int32Ty);
       CallInst::Create(F, Args, "", I);
       return true;
     } else if (F->getName().str() == std::string("getsockname")) {
@@ -1838,7 +1800,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       Args.push_back(BCI);
       Args.push_back(BCI_Size);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetsockname", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetsockname", VoidTy, VoidPtrTy, VoidPtrTy, Int32Ty);
       CallInst *CI = CallInst::Create(F, Args);
       CI->insertAfter(BCI);
       return true;
@@ -1951,7 +1913,7 @@ bool TypeChecks::visitCallSite(Module &M, CallSite CS) {
       std::vector<Value*>Args;
       Args.push_back(BCI);
       Args.push_back(getTagCounter());
-      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty, NULL);
+      Constant *F = M.getOrInsertFunction("trackgetcwd", VoidTy, VoidPtrTy, Int32Ty);
       CallInst *CINew = CallInst::Create(F, Args);
       CINew->insertAfter(I);
     } else if(F->getName().str() == std::string("sprintf")) {
@@ -2016,7 +1978,7 @@ bool TypeChecks::visitIndirectCallSite(Module &M, Instruction *I) {
   CallSite CS = CallSite(I);
   unsigned int NumArgs = CS.arg_size();
   Value *NumArgsVal = ConstantInt::get(Int32Ty, NumArgs);
-  AllocaInst *AI = new AllocaInst(TypeTagTy, NumArgsVal, "", &*InsPt);
+  AllocaInst *AI = new AllocaInst(TypeTagTy, 0, NumArgsVal, "", &*InsPt);
   for(unsigned int i = 0; i < CS.arg_size(); i++) {
     Value *Idx[1];
     Idx[0] = ConstantInt::get(Int32Ty, i-1);
@@ -2081,7 +2043,7 @@ bool TypeChecks::visitLoadInst(Module &M, LoadInst &LI) {
   Value *BCI = castTo(LI.getPointerOperand(), VoidPtrTy, "", &LI);
 
   Value *Size = ConstantInt::get(Int32Ty, getSize(LI.getType()));
-  AllocaInst *AI = new AllocaInst(TypeTagTy, Size, "", &*InsPt);
+  AllocaInst *AI = new AllocaInst(TypeTagTy, LI.getPointerAddressSpace(), Size, "", &*InsPt);
 
   std::vector<Value *>Args1;
   Args1.push_back(BCI);

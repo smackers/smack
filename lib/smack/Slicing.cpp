@@ -271,4 +271,4 @@ const Expr *Slice::getBoogieExpression(Naming &naming, SmackRep &rep) {
     args.push_back(Expr::id(getParameter(*V, naming, rep).first));
   return Expr::fn(getName(), args);
 }
-}
+} // namespace smack

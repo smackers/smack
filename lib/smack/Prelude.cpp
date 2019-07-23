@@ -367,14 +367,17 @@ void IntOpGen::generateArithOps(std::stringstream &s) const {
   const auto intBuiltinOp = new BuiltinOp<IntOp::attrT>(IntOp::intAttrFunc);
   const auto uninterpretedOp = new UninterpretedOp();
   const std::vector<IntOpGen::IntArithOp> intArithOpTable{
-      {"add", 2, new InlinedOp<IntOp::exprT>(
-                     IntOpGen::IntArithOp::intArithExpr<BinExpr::Plus>),
+      {"add", 2,
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intArithExpr<BinExpr::Plus>),
        bvBuiltinOp, true},
-      {"sub", 2, new InlinedOp<IntOp::exprT>(
-                     IntOpGen::IntArithOp::intArithExpr<BinExpr::Minus>),
+      {"sub", 2,
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intArithExpr<BinExpr::Minus>),
        bvBuiltinOp, true},
-      {"mul", 2, new InlinedOp<IntOp::exprT>(
-                     IntOpGen::IntArithOp::intArithExpr<BinExpr::Times>),
+      {"mul", 2,
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intArithExpr<BinExpr::Times>),
        bvBuiltinOp, true},
       {"sdiv", 2, intBuiltinOp, bvBuiltinOp, false},
       {"smod", 2, intBuiltinOp, bvBuiltinOp, false},
@@ -874,9 +877,9 @@ void MemDeclGen::generateGlobalAllocations(std::stringstream &s) const {
 
     std::list<const Stmt *> stmts;
     for (auto E : prelude.rep.globalAllocations)
-      stmts.push_back(Stmt::call(
-          "$galloc",
-          {prelude.rep.expr(E.first), prelude.rep.pointerLit(E.second)}));
+      stmts.push_back(
+          Stmt::call("$galloc", {prelude.rep.expr(E.first),
+                                 prelude.rep.pointerLit(E.second)}));
     s << Decl::procedure("$global_allocations", {}, {}, {},
                          {Block::block("", stmts)})
       << "\n";
@@ -924,9 +927,8 @@ void PtrOpGen::generatePreds(std::stringstream &s) const {
              indexedName(pred, {Naming::PTR_TYPE}),
              {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
              prelude.rep.intType(1),
-             Expr::cond(Expr::fn(indexedName(pred,
-                                             {prelude.rep.pointerType(),
-                                              Naming::BOOL_TYPE}),
+             Expr::cond(Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
+                                                    Naming::BOOL_TYPE}),
                                  {Expr::id("p1"), Expr::id("p2")}),
                         prelude.rep.integerLit(1LL, 1),
                         prelude.rep.integerLit(0LL, 1)),
@@ -1449,9 +1451,10 @@ void FpOpGen::generateMemOps(std::stringstream &s) const {
         // e.g., function {:inline} $load.unsafe.bvhalf(M: [ref] i8, p: ref)
         // returns (bvhalf) { $bitcast.i16.bvhalf($load.i16(M, p)) }
         s << prelude.unsafeLoad(
-                 type, Expr::fn(indexedName("$bitcast", {intType, type}),
-                                Expr::fn(indexedName("$load", {intType}),
-                                         makeMapVarExpr(0), makePtrVarExpr(0))),
+                 type,
+                 Expr::fn(indexedName("$bitcast", {intType, type}),
+                          Expr::fn(indexedName("$load", {intType}),
+                                   makeMapVarExpr(0), makePtrVarExpr(0))),
                  false)
           << "\n";
         // e.g., function {:inline} $store.unsafe.bvfloat(M: [ref] i8, p: ref,
@@ -1488,10 +1491,9 @@ void FpOpGen::generateMemOps(std::stringstream &s) const {
       // function {:inline} $store.bytes.float(M: [ref] bv8, p: ref, f: float)
       // returns ([ref] bv8) { M[p := $bitcast.float.bv8(f)] }
       s << prelude.unsafeStore(
-               binding,
-               prelude.mapUpdExpr(
-                   0, Expr::fn(indexedName("$bitcast", {type, bvType}),
-                               makeFpVarExpr(0))))
+               binding, prelude.mapUpdExpr(
+                            0, Expr::fn(indexedName("$bitcast", {type, bvType}),
+                                        makeFpVarExpr(0))))
         << "\n";
     } else {
       std::string intType = getIntTypeName(8);

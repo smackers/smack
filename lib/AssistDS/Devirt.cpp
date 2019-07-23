@@ -237,7 +237,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   // Set the names of the arguments.
   //
   F->arg_begin()->setName("funcPtr");
-  for (auto A = ++F->arg_begin(), E = F->arg_end(); A != E; ++A)
+  for (auto A = std::next(F->arg_begin()), E = F->arg_end(); A != E; ++A)
     A->setName("arg");
 
   //
@@ -263,7 +263,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
     std::vector<Value*> Args;
     Function::arg_iterator P, PE;
     FunctionType::param_iterator T, TE;
-    for (P = ++F->arg_begin(), PE = F->arg_end(),
+    for (P = std::next(F->arg_begin()), PE = F->arg_end(),
          T = FT->param_begin(), TE = FT->param_end();
          P != PE && T != TE; ++P, ++T)
       Args.push_back(castTo(&*P, *T, "", BL));
