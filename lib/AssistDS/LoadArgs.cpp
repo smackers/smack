@@ -80,8 +80,8 @@ bool LoadArgs::runOnModule(Module& M) {
             // do not care about dead arguments
             if(ai->use_empty())
               continue;
-            if(F->getAttributes().getParamAttributes(argNum).hasAttrSomewhere(Attribute::SExt) ||
-               F->getAttributes().getParamAttributes(argNum).hasAttrSomewhere(Attribute::ZExt))
+            if(F->getAttributes().getParamAttributes(argNum).hasAttribute(Attribute::SExt) ||
+               F->getAttributes().getParamAttributes(argNum).hasAttribute(Attribute::ZExt))
               continue;
             if (isa<LoadInst>(CI->getArgOperand(argNum)))
               break;
@@ -93,7 +93,8 @@ bool LoadArgs::runOnModule(Module& M) {
 
           LoadInst *LI = dyn_cast<LoadInst>(CI->getArgOperand(argNum));
           Instruction * InsertPt = &(Func->getEntryBlock().front());
-          AllocaInst *NewVal = new AllocaInst(LI->getType(), "",InsertPt);
+          AllocaInst *NewVal = new AllocaInst(
+                  LI->getType(), LI->getPointerAddressSpace(), "", InsertPt);
 
           StoreInst *Copy = new StoreInst(LI, NewVal);
           Copy->insertAfter(LI);
@@ -156,7 +157,8 @@ bool LoadArgs::runOnModule(Module& M) {
               }
               ValueMap[&*II] = &*NI;
               NI->setName(II->getName());
-              NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+              auto ArgAttrs = AttrBuilder(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+              NI->addAttrs(ArgAttrs);
               ++II;
             }
             // Perform the cloning.
@@ -177,32 +179,24 @@ bool LoadArgs::runOnModule(Module& M) {
             LoadInst *LI_new = new LoadInst(fargs.at(argNum), "", InsertPoint);
             fargs.at(argNum+1)->replaceAllUsesWith(LI_new);
           }
-          
-          //this does not seem to be a good idea
-          AttributeSet NewCallPAL=AttributeSet();
-	  
+
           // Get the initial attributes of the call
-          AttributeSet CallPAL = CI->getAttributes();
+          AttributeList CallPAL = CI->getAttributes();
           AttributeSet RAttrs = CallPAL.getRetAttributes();
           AttributeSet FnAttrs = CallPAL.getFnAttributes();
-          if (!RAttrs.isEmpty())
-            NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
-
+          
           SmallVector<Value*, 8> Args;
+          SmallVector<AttributeSet, 8> ArgAttrs;
           for(unsigned j =0;j<CI->getNumArgOperands();j++) {
             if(j == argNum) {
               Args.push_back(NewVal);
+              ArgAttrs.push_back(AttributeSet());
             }
             Args.push_back(CI->getArgOperand(j));
-            // position in the NewCallPAL
-            AttributeSet Attrs = CallPAL.getParamAttributes(j+1);
-            if (!Attrs.isEmpty())
-              NewCallPAL=NewCallPAL.addAttributes(F->getContext(),Args.size(), Attrs);
+            ArgAttrs.push_back(CallPAL.getParamAttributes(j));
           }
-          // Create the new attributes vec.
-          if (!FnAttrs.isEmpty())
-            NewCallPAL=NewCallPAL.addAttributes(F->getContext(),~0, FnAttrs);
 
+          auto NewCallPAL = AttributeList::get(F->getContext(), FnAttrs, RAttrs, ArgAttrs);
           CallInst *CallI = CallInst::Create(NewF,Args,"", CI);
           CallI->setCallingConv(CI->getCallingConv());
           CallI->setAttributes(NewCallPAL);

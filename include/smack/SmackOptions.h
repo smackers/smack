@@ -32,6 +32,6 @@ public:
 
   static bool isEntryPoint(std::string);
 };
-}
+} // namespace smack
 
 #endif // SMACKREP_H

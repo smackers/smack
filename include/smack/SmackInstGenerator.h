@@ -98,6 +98,6 @@ public:
   void visitMemSetInst(llvm::MemSetInst &i);
   void visitIntrinsicInst(llvm::IntrinsicInst &i);
 };
-}
+} // namespace smack
 
 #endif // SMACKINSTVISITOR_H

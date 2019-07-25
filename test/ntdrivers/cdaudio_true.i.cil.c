@@ -3135,7 +3135,7 @@ NTSTATUS CdAudioAddDevice(PDRIVER_OBJECT DriverObject,
     }
     {
       /*   KeInitializeEvent(& extension->PagingPathCountEvent, 1, 1); */ /* INLINED
-                                                                             */
+                                                                           */
       extension->Active = (unsigned char)regActive;
       extension->DeviceObject = deviceObject;
       extension->TargetPdo = PhysicalDeviceObject;

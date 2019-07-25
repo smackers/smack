@@ -46,4 +46,4 @@ char SimplifyLibCalls::ID = 0;
 // Register the pass
 static RegisterPass<SimplifyLibCalls> X("simplify-libcalls",
                                         "Simplify Library Calls");
-}
+} // namespace smack

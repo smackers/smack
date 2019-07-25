@@ -680,6 +680,6 @@ std::ostream &operator<<(std::ostream &os, const Expr *e);
 
 std::ostream &operator<<(std::ostream &os, Decl &e);
 std::ostream &operator<<(std::ostream &os, Decl *e);
-}
+} // namespace smack
 
 #endif // BOOGIEAST_H

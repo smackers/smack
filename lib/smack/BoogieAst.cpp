@@ -685,4 +685,4 @@ void Program::print(std::ostream &os) const {
   print_seq<Decl *>(os, decls, "\n");
   os << "\n";
 }
-}
+} // namespace smack

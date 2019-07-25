@@ -9,12 +9,13 @@ import shutil
 import sys
 import shlex
 import subprocess
+import signal
 from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
 from frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 
 def results(args):
   """A dictionary of the result output messages."""
@@ -642,6 +643,14 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   return json_string
 
+def clean_up_upon_sigterm(main):
+  def handler(signum, frame):
+    remove_temp_files()
+    sys.exit(0)
+  signal.signal(signal.SIGTERM, handler)
+  return main
+
+@clean_up_upon_sigterm
 def main():
   try:
     global args

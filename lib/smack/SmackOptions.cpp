@@ -72,4 +72,4 @@ bool SmackOptions::isEntryPoint(std::string name) {
       return true;
   return false;
 }
-}
+} // namespace smack

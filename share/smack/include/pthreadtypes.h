@@ -25,14 +25,18 @@ typedef int pthread_t;
 typedef int pthread_attr_t;
 #endif
 
-typedef struct { int prioceil, proto, pshared, type; } pthread_mutexattr_t;
+typedef struct {
+  int prioceil, proto, pshared, type;
+} pthread_mutexattr_t;
 
 typedef struct {
   int lock, init;
   pthread_mutexattr_t attr;
 } pthread_mutex_t;
 
-typedef struct { int cond, init; } pthread_cond_t;
+typedef struct {
+  int cond, init;
+} pthread_cond_t;
 
 typedef int pthread_condattr_t;
 

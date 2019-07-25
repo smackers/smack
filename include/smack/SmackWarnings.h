@@ -50,6 +50,6 @@ private:
   static bool isSufficientWarningLevel(WarningLevel level);
   static std::string getFlagStr(UnsetFlagsT flags);
 };
-}
+} // namespace smack
 
 #endif // SMACKWARNINGS_H

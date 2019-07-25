@@ -92,7 +92,7 @@ Value *accessSizeAsPointer(StoreInst &I) {
   auto &M = *I.getParent()->getParent()->getParent();
   return accessSizeAsPointer(M, I.getPointerOperand());
 }
-}
+} // namespace
 
 void MemorySafetyChecker::visitLoadInst(LoadInst &I) {
   insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
@@ -113,4 +113,4 @@ void MemorySafetyChecker::visitMemTransferInst(MemTransferInst &I) {
 
 // Pass ID variable
 char MemorySafetyChecker::ID = 0;
-}
+} // namespace smack

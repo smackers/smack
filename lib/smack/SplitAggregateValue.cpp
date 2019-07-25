@@ -170,4 +170,4 @@ char SplitAggregateValue::ID = 0;
 static RegisterPass<SplitAggregateValue>
     X("split-aggregate-values",
       "Split Load/Store/ConstantReturn of Aggregate Types");
-}
+} // namespace smack

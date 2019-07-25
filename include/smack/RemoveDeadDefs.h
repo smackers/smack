@@ -18,4 +18,4 @@ public:
   RemoveDeadDefs() : llvm::ModulePass(ID) {}
   virtual bool runOnModule(llvm::Module &M);
 };
-}
+} // namespace smack

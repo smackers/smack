@@ -267,4 +267,4 @@ std::string Naming::freshVarName(const Value &V) {
   s << varNum++;
   return s.str();
 }
-}
+} // namespace smack

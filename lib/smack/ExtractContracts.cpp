@@ -204,7 +204,7 @@ std::vector<std::tuple<Function *, Function *>> getContractExprs(Function &F) {
   }
   return Fs;
 }
-}
+} // namespace
 
 bool ExtractContracts::runOnModule(Module &M) {
   bool modified = false;
@@ -303,4 +303,4 @@ char ExtractContracts::ID = 0;
 // Register the pass
 static RegisterPass<ExtractContracts> X("extract-contracts",
                                         "Extract Contracts");
-}
+} // namespace smack

@@ -28,4 +28,4 @@ bool BplPrinter::runOnModule(llvm::Module &m) {
   DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
   return false;
 }
-}
+} // namespace smack

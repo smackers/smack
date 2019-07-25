@@ -36,7 +36,7 @@ void setCurrentDebugTypes(const char **Types, unsigned Count) {
   for (size_t T = 0; T < Count; ++T)
     CurrentDebugType->push_back(Types[T]);
 }
-}
+} // namespace smack
 
 #ifndef NDEBUG
 
@@ -57,13 +57,14 @@ struct DebugOnlyOpt {
       CurrentDebugType->push_back(dbgType);
   }
 };
-}
+} // namespace
 
 static DebugOnlyOpt DebugOnlyOptLoc;
 
 static ::llvm::cl::opt<DebugOnlyOpt, true, cl::parser<std::string>>
-    DebugOnly("debug-only", cl::desc("Enable a specific type of debug output "
-                                     "(comma separated list of types)"),
+    DebugOnly("debug-only",
+              cl::desc("Enable a specific type of debug output "
+                       "(comma separated list of types)"),
               cl::Hidden, cl::ZeroOrMore, cl::value_desc("debug string"),
               cl::location(DebugOnlyOptLoc), cl::ValueRequired);
 
@@ -80,6 +81,6 @@ raw_ostream &smack::dbgs() {
 #else
 namespace smack {
 raw_ostream &dbgs() { return llvm::errs(); }
-}
+} // namespace smack
 
 #endif
