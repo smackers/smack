@@ -647,7 +647,10 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned) {
       const APFloat APF = CFP->getValueAPF();
       const Type *type = CFP->getType();
       unsigned expSize, sigSize;
-      if (type->isFloatTy()) {
+      if (type->isHalfTy()) {
+        expSize = 5;
+        sigSize = 11;
+      } else if (type->isFloatTy()) {
         expSize = 8;
         sigSize = 24;
       } else if (type->isDoubleTy()) {
