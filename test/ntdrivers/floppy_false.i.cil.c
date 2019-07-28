@@ -2261,7 +2261,8 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
         {
           disketteExtension->DeviceName.Length = 0;
           disketteExtension->DeviceName.MaximumLength = deviceName.Length;
-          /*       RtlCopyUnicodeString(& disketteExtension->DeviceName, & deviceName); */ /* INLINED */
+          /*       RtlCopyUnicodeString(& disketteExtension->DeviceName, &
+           * deviceName); */ /* INLINED */
           tmp___1 = IoGetConfigurationInformation();
           tmp___1->FloppyCount += 1UL;
           sprintf(arcNameBuffer, "%s(%d)disk(%d)fdisk(%d)", "\\ArcName\\multi",
@@ -2273,7 +2274,9 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
                                                   &arcNameString, 1);
         }
         if (ntStatus >= 0L) {
-          { IoCreateSymbolicLink(&disketteExtension->ArcName, &deviceName); }
+          {
+            IoCreateSymbolicLink(&disketteExtension->ArcName, &deviceName);
+          }
         } else {
         }
         deviceObject->Flags |= 8208UL;
@@ -2289,17 +2292,21 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
               IoAttachDeviceToDeviceStack(deviceObject, PhysicalDeviceObject);
         }
         {} {
-          /*       KeInitializeSemaphore(& disketteExtension->RequestSemaphore, 0L, 2147483647); */ /* INLINED */
+          /*       KeInitializeSemaphore(& disketteExtension->RequestSemaphore,
+           * 0L, 2147483647); */ /* INLINED */
           disketteExtension->PowerDownMutex.Count = 1;
           disketteExtension->PowerDownMutex.Contention = 0;
-          /*       KeInitializeEvent(& disketteExtension->PowerDownMutex.Event, 1, 0); */ /* INLINED */
+          /*       KeInitializeEvent(& disketteExtension->PowerDownMutex.Event,
+           * 1, 0); */ /* INLINED */
           /*       KeInitializeSpinLock(& disketteExtension->ListSpinLock); */ /* INLINED */
           disketteExtension->ThreadReferenceMutex.Count = 1;
           disketteExtension->ThreadReferenceMutex.Contention = 0;
-          /*       KeInitializeEvent(& disketteExtension->ThreadReferenceMutex.Event, 1, 0); */ /* INLINED */
+          /*       KeInitializeEvent(&
+           * disketteExtension->ThreadReferenceMutex.Event, 1, 0); */ /* INLINED */
           disketteExtension->HoldNewReqMutex.Count = 1;
           disketteExtension->HoldNewReqMutex.Contention = 0;
-          /*       KeInitializeEvent(& disketteExtension->HoldNewReqMutex.Event, 1, 0); */ /* INLINED */
+          /*       KeInitializeEvent(& disketteExtension->HoldNewReqMutex.Event,
+           * 1, 0); */ /* INLINED */
           disketteExtension->ListEntry.Blink = &disketteExtension->ListEntry;
           disketteExtension->ListEntry.Flink =
               disketteExtension->ListEntry.Blink;
@@ -2311,8 +2318,10 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
               &disketteExtension->NewRequestQueue;
           disketteExtension->NewRequestQueue.Flink =
               disketteExtension->NewRequestQueue.Blink;
-          /*       KeInitializeSpinLock(& disketteExtension->NewRequestQueueSpinLock); */ /* INLINED */
-          /*       KeInitializeSpinLock(& disketteExtension->FlCancelSpinLock); */ /* INLINED */
+          /*       KeInitializeSpinLock(&
+           * disketteExtension->NewRequestQueueSpinLock); */ /* INLINED */
+          /*       KeInitializeSpinLock(& disketteExtension->FlCancelSpinLock);
+           */ /* INLINED */
           disketteExtension->FloppyControllerAllocated = 0;
           disketteExtension->ReleaseFdcWithMotorRunning = 0;
           disketteExtension->DeviceObject = deviceObject;
@@ -2647,7 +2656,8 @@ NTSTATUS FlQueueIrpToThread(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
         }
         {
           /*       ExReleaseFastMutex(PagingMutex); */ /* INLINED */
-          /*       ExReleaseFastMutex(& DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
+          /*       ExReleaseFastMutex(&
+           * DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
         }
         return (status);
       } else {
@@ -2901,7 +2911,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 if (irpSp->Parameters.DeviceIoControl
                                         .InputBufferLength <
                                     (ULONG)sizeof(FORMAT_PARAMETERS)) {
-                                  {}
+                                  {
+                                  }
                                   ntStatus = -1073741811L;
                                   goto switch_16_break;
                                 } else {
@@ -2987,7 +2998,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                         .OutputBufferLength;
                                 if (outputBufferLength <
                                     (ULONG)sizeof(DISK_GEOMETRY)) {
-                                  {}
+                                  {
+                                  }
                                   ntStatus = -1073741789L;
                                   goto switch_16_break;
                                 } else {
@@ -3001,7 +3013,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                         (int)
                                                             lowestDriveMediaType) +
                                                        1))) {
-                                  {}
+                                  {
+                                  }
                                   ntStatus = -2147483643L;
                                   highestDriveMediaType =
                                       (enum _DRIVE_MEDIA_TYPE)(
@@ -3055,7 +3068,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                               switch_16_exp_10: /* CIL Label */;
                                 if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                         ->AlternativeArchitecture == 1) {
-                                  {}
+                                  {
+                                  }
                                   if (!(DeviceObject->Characteristics & 1UL)) {
                                     ntStatus = -1073741275L;
                                     goto switch_16_break;
@@ -3107,7 +3121,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   if (!(ntStatus >= 0L)) {
                                     {
-                                      /*                                 ExFreePool(valueName); */ /* INLINED */
+                                      /*                                 ExFreePool(valueName);
+                                       */ /* INLINED */
                                     }
                                     goto switch_16_break;
                                   } else {
@@ -3115,7 +3130,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   if ((int)driveLetterName.Length != 4) {
                                     {
                                       ntStatus = -1073741275L;
-                                      /*                                 ExFreePool(valueName); */ /* INLINED */
+                                      /*                                 ExFreePool(valueName);
+                                       */ /* INLINED */
                                     }
                                     goto switch_16_break;
                                   } else {
@@ -3123,7 +3139,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                         65) {
                                       {
                                         ntStatus = -1073741275L;
-                                        /*                                   ExFreePool(valueName); */ /* INLINED */
+                                        /*                                   ExFreePool(valueName);
+                                         */ /* INLINED */
                                       }
                                       goto switch_16_break;
                                     } else {
@@ -3131,7 +3148,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                           90) {
                                         {
                                           ntStatus = -1073741275L;
-                                          /*                                     ExFreePool(valueName); */ /* INLINED */
+                                          /*                                     ExFreePool(valueName);
+                                           */ /* INLINED */
                                         }
                                         goto switch_16_break;
                                       } else {
@@ -3139,7 +3157,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                    1) != 58) {
                                           {
                                             ntStatus = -1073741275L;
-                                            /*                                       ExFreePool(valueName); */ /* INLINED */
+                                            /*                                       ExFreePool(valueName);
+                                             */ /* INLINED */
                                           }
                                           goto switch_16_break;
                                         } else {
@@ -3164,7 +3183,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                       Irp->IoStatus.Information =
                                           sizeof(MOUNTDEV_SUGGESTED_LINK_NAME);
                                       ntStatus = -2147483643L;
-                                      /*                                 ExFreePool(valueName); */ /* INLINED */
+                                      /*                                 ExFreePool(valueName);
+                                       */ /* INLINED */
                                     }
                                     goto switch_16_break;
                                   } else {
@@ -3178,7 +3198,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                         "\000s\000t\000e\000m\000\\\000D\000"
                                         "I\000S\000K\000",
                                         valueName);
-                                    /*                               ExFreePool(valueName); */ /* INLINED */
+                                    /*                               ExFreePool(valueName);
+                                     */ /* INLINED */
                                     memcpy(suggestedName->Name,
                                            "\\\000D\000o\000s\000D\000e\000v"
                                            "\000i\000c\000e\000s\000\\\000",
@@ -3193,11 +3214,13 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                               switch_16_exp_11: /* CIL Label */;
                                 if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                                         ->AlternativeArchitecture == 1) {
-                                  {}
+                                  {
+                                  }
                                   if (irpSp->Parameters.DeviceIoControl
                                           .OutputBufferLength <
                                       (ULONG)sizeof(SENSE_DEVISE_STATUS_PTOS)) {
-                                    {}
+                                    {
+                                    }
                                     ntStatus = -1073741811L;
                                     goto switch_16_break;
                                   } else {
@@ -3358,7 +3381,8 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                     switch_32_5: /* CIL Label */;
                     switch_32_1: /* CIL Label */;
                       if ((int)irpSp->MinorFunction == 5) {
-                        {}
+                        {
+                        }
                       } else {
                         {}
                       }
@@ -3380,9 +3404,11 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                       } else {
                       }
                       {
-                        /*                   ExAcquireFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED */
+                        /*                   ExAcquireFastMutex(&
+                         * disketteExtension->HoldNewReqMutex); */ /* INLINED */
                         disketteExtension->HoldNewRequests = 1;
-                        /*                   ExReleaseFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED */
+                        /*                   ExReleaseFastMutex(&
+                         * disketteExtension->HoldNewReqMutex); */ /* INLINED */
                         ntStatus = FlQueueIrpToThread(Irp, disketteExtension);
                       }
                       if (ntStatus == 259L) {
@@ -3393,7 +3419,8 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                         if ((unsigned int)disketteExtension->FloppyThread !=
                             (unsigned int)((void *)0)) {
                           {
-                            /*                       ObfDereferenceObject(disketteExtension->FloppyThread); */ /* INLINED */
+                            /*                       ObfDereferenceObject(disketteExtension->FloppyThread);
+                             */ /* INLINED */
                           }
                         } else {
                         }
@@ -3426,7 +3453,8 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                     switch_32_6: /* CIL Label */;
                     switch_32_3: /* CIL Label */;
                       if ((int)irpSp->MinorFunction == 6) {
-                        {}
+                        {
+                        }
                       } else {
                         {}
                       }
@@ -3461,13 +3489,18 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                  (long)(&((IO_STACK_LOCATION *)0)
                                              ->CompletionRoutine));
                           nextIrpSp->Control = 0;
-                          /*                     KeInitializeEvent(& doneEvent, 1, 0); */ /* INLINED */
+                          /*                     KeInitializeEvent(& doneEvent,
+                           * 1, 0); */ /* INLINED */
                         }
                         if (s != NP) {
-                          { errorFn(); }
+                          {
+                            errorFn();
+                          }
                         } else {
                           if (compRegistered != 0) {
-                            { errorFn(); }
+                            {
+                              errorFn();
+                            }
                           } else {
                             compRegistered = 1;
                             compFptr = &FloppyPnpComplete;
@@ -3496,9 +3529,11 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                         } else {
                         }
                         {
-                          /*                     ExAcquireFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED */
+                          /*                     ExAcquireFastMutex(&
+                           * disketteExtension->HoldNewReqMutex); */ /* INLINED */
                           disketteExtension->HoldNewRequests = 0;
-                          /*                     ExReleaseFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED */
+                          /*                     ExReleaseFastMutex(&
+                           * disketteExtension->HoldNewReqMutex); */ /* INLINED */
                           FloppyProcessQueuedRequests(disketteExtension);
                           Irp->IoStatus.__annonCompField4.Status = ntStatus;
                           myStatus = ntStatus;
@@ -3528,9 +3563,11 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                       goto switch_32_break;
                     switch_32_2: /* CIL Label */;
                       {} {
-                        /*                   ExAcquireFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED */
+                        /*                   ExAcquireFastMutex(&
+                         * disketteExtension->HoldNewReqMutex); */ /* INLINED */
                         disketteExtension->HoldNewRequests = 0;
-                        /*                   ExReleaseFastMutex(& disketteExtension->HoldNewReqMutex); */ /* INLINED */
+                        /*                   ExReleaseFastMutex(&
+                         * disketteExtension->HoldNewReqMutex); */ /* INLINED */
                         disketteExtension->IsStarted = 0;
                         disketteExtension->IsRemoved = 1;
                         FloppyProcessQueuedRequests(disketteExtension);
@@ -3555,25 +3592,32 @@ NTSTATUS FloppyPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                         {
                           IoSetDeviceInterfaceState(
                               &disketteExtension->InterfaceString, 0);
-                          /*                     RtlFreeUnicodeString(& disketteExtension->InterfaceString); */ /* INLINED */
-                          /*                     RtlInitUnicodeString(& disketteExtension->InterfaceString, (void *)0); */ /* INLINED */
+                          /*                     RtlFreeUnicodeString(&
+                           * disketteExtension->InterfaceString); */ /* INLINED */
+                          /*                     RtlInitUnicodeString(&
+                           * disketteExtension->InterfaceString, (void *)0); */ /* INLINED */
                         }
                       } else {
                       }
                       {
-                        /*                   RtlFreeUnicodeString(& disketteExtension->DeviceName); */ /* INLINED */
-                        /*                   RtlInitUnicodeString(& disketteExtension->DeviceName, (void *)0); */ /* INLINED */
+                        /*                   RtlFreeUnicodeString(&
+                         * disketteExtension->DeviceName); */ /* INLINED */
+                        /*                   RtlInitUnicodeString(&
+                         * disketteExtension->DeviceName, (void *)0); */ /* INLINED */
                       }
                       if ((int)disketteExtension->ArcName.Length != 0) {
                         {
                           IoDeleteSymbolicLink(&disketteExtension->ArcName);
-                          /*                     RtlFreeUnicodeString(& disketteExtension->ArcName); */ /* INLINED */
-                          /*                     RtlInitUnicodeString(& disketteExtension->ArcName, (void *)0); */ /* INLINED */
+                          /*                     RtlFreeUnicodeString(&
+                           * disketteExtension->ArcName); */ /* INLINED */
+                          /*                     RtlInitUnicodeString(&
+                           * disketteExtension->ArcName, (void *)0); */ /* INLINED */
                         }
                       } else {
                       }
                       {
-                        /*                   IoDetachDevice(disketteExtension->TargetObject); */ /* INLINED */
+                        /*                   IoDetachDevice(disketteExtension->TargetObject);
+                         */ /* INLINED */
                         /*                   IoDeleteDevice(DeviceObject); */ /* INLINED */
                         tmp = IoGetConfigurationInformation();
                         tmp->FloppyCount -= 1UL;
@@ -3651,10 +3695,14 @@ NTSTATUS FloppyStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       nextIrpSp->Control = 0;
     }
     if (s != NP) {
-      { errorFn(); }
+      {
+        errorFn();
+      }
     } else {
       if (compRegistered != 0) {
-        { errorFn(); }
+        {
+          errorFn();
+        }
       } else {
         compRegistered = 1;
         compFptr = &FloppyPnpComplete;
@@ -3689,7 +3737,9 @@ NTSTATUS FloppyStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       disketteExtension->MaxTransferSize = fdcInfo.MaxTransferSize;
       if (fdcInfo.AcpiBios) {
         if (fdcInfo.AcpiFdiSupported) {
-          { ntStatus = FlAcpiConfigureFloppy(disketteExtension, &fdcInfo); }
+          {
+            ntStatus = FlAcpiConfigureFloppy(disketteExtension, &fdcInfo);
+          }
           if ((int)disketteExtension->DriveType == 4) {
             disketteExtension->PerpendicularMode =
                 (int)disketteExtension->PerpendicularMode |
@@ -3724,7 +3774,8 @@ NTSTATUS FloppyStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                   &FlConfigCallBack, disketteExtension);
             }
             if (ntStatus >= 0L) {
-              {}
+              {
+              }
               goto while_43_break;
             } else {
             }
@@ -3822,7 +3873,8 @@ NTSTATUS FloppyPower(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
             } else {
             }
             {
-              /*         ExAcquireFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*         ExAcquireFastMutex(&
+               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
             }
             if (disketteExtension->ThreadReferenceCount >= 0L) {
               {
@@ -3838,17 +3890,20 @@ NTSTATUS FloppyPower(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
             } else {
             }
             {
-              /*         ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*         ExReleaseFastMutex(&
+               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
               ntStatus = 0L;
             }
             goto switch_46_break;
           switch_46_2: /* CIL Label */;
             if ((int)type == 0) {
               {
-                /*           ExAcquireFastMutex(& disketteExtension->PowerDownMutex); */ /* INLINED */
+                /*           ExAcquireFastMutex(&
+                 * disketteExtension->PowerDownMutex); */ /* INLINED */
               }
               if ((int)state.SystemState == 1) {
-                {}
+                {
+                }
                 disketteExtension->PoweringDown = 0;
                 WaitForCompletion = 0;
               } else {
@@ -3857,7 +3912,8 @@ NTSTATUS FloppyPower(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                 disketteExtension->PoweringDown = 1;
               }
               {
-                /*           ExReleaseFastMutex(& disketteExtension->PowerDownMutex); */ /* INLINED */
+                /*           ExReleaseFastMutex(&
+                 * disketteExtension->PowerDownMutex); */ /* INLINED */
               }
               if ((unsigned int)disketteExtension->FloppyThread !=
                   (unsigned int)((void *)0)) {
@@ -3996,7 +4052,8 @@ NTSTATUS FlInterpretError(UCHAR StatusRegister1, UCHAR StatusRegister2) {
       }
     }
     if ((int)StatusRegister1 & 16) {
-      {}
+      {
+      }
       return (-1073741764L);
     } else {
     }
@@ -4025,17 +4082,20 @@ NTSTATUS FlInterpretError(UCHAR StatusRegister1, UCHAR StatusRegister2) {
       }
     }
     if ((int)StatusRegister1 & 2) {
-      {}
+      {
+      }
       return (-1073741662L);
     } else {
     }
     if ((int)StatusRegister1 & 1) {
-      {}
+      {
+      }
       return (-1073741467L);
     } else {
     }
     if ((int)StatusRegister2 & 16) {
-      {}
+      {
+      }
       return (-1073741466L);
     } else {
     }
@@ -4054,14 +4114,19 @@ void FlFinishOperation(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
         DisketteExtension->HardwareFailCount =
             (UCHAR)((int)DisketteExtension->HardwareFailCount + 1);
         if ((int)DisketteExtension->HardwareFailCount < 2) {
-          { ntStatus = FlInitializeControllerHardware(DisketteExtension); }
+          {
+            ntStatus = FlInitializeControllerHardware(DisketteExtension);
+          }
           if (ntStatus >= 0L) {
-            {}
+            {
+            }
             DisketteExtension->MediaType = -1;
             {} {
-              /*           ExAcquireFastMutex(& DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*           ExAcquireFastMutex(&
+               * DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
               DisketteExtension->ThreadReferenceCount += 1L;
-              /*           ExReleaseFastMutex(& DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*           ExReleaseFastMutex(&
+               * DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
               ExfInterlockedInsertHeadList(
                   &DisketteExtension->ListEntry,
                   &Irp->Tail.Overlay.__annonCompField17.ListEntry,
@@ -4110,7 +4175,8 @@ void FlFinishOperation(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
       }
       if ((unsigned char)tmp) {
         {
-          /*       IoSetHardErrorOrVerifyDevice(Irp, DisketteExtension->DeviceObject); */ /* INLINED */
+          /*       IoSetHardErrorOrVerifyDevice(Irp,
+           * DisketteExtension->DeviceObject); */ /* INLINED */
         }
       } else {
       }
@@ -4119,7 +4185,8 @@ void FlFinishOperation(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
     if (myStatus != 0L) {
       if (myStatus != -2147483626L) {
         if (myStatus != -1073741805L) {
-          {}
+          {
+          }
         } else {
           goto _L___0;
         }
@@ -4201,7 +4268,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
           if ((int)((DisketteExtension->DeviceObject)->Vpb)->Flags & 1) {
             if (Irp) {
               {
-                /*             IoSetHardErrorOrVerifyDevice(Irp, DisketteExtension->DeviceObject); */ /* INLINED */
+                /*             IoSetHardErrorOrVerifyDevice(Irp,
+                 * DisketteExtension->DeviceObject); */ /* INLINED */
               }
             } else {
             }
@@ -4220,7 +4288,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                     DisketteExtension->FifoBuffer, (void *)0, 0, 0);
               }
               if (!(ntStatus >= 0L)) {
-                {}
+                {
+                }
                 return (ntStatus);
               } else {
               }
@@ -4230,7 +4299,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                 driveStatus = 128;
               }
               if ((int)driveStatus & 128) {
-                {}
+                {
+                }
                 if ((int)((DisketteExtension->DeviceObject)->Vpb)->Flags & 1) {
                   (DisketteExtension->DeviceObject)->Flags &= 4294967293UL;
                 } else {
@@ -4249,7 +4319,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                   DisketteExtension->FifoBuffer, (void *)0, 0, 0);
             }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
               return (ntStatus);
             } else {
               if (!((int)DisketteExtension->FifoBuffer[0] & 32)) {
@@ -4279,7 +4350,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
               KeDelayExecutionThread(0, 0, &delay);
             }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
               return (ntStatus);
             } else {
               if (!((int)DisketteExtension->FifoBuffer[0] & 32)) {
@@ -4305,7 +4377,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                     DisketteExtension->FifoBuffer, (void *)0, 0, 0);
               }
               if (!(ntStatus >= 0L)) {
-                {}
+                {
+                }
                 return (ntStatus);
               } else {
               }
@@ -4327,7 +4400,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
               }
             }
             if ((int)driveStatus & 128) {
-              {}
+              {
+              }
               if ((int)((DisketteExtension->DeviceObject)->Vpb)->Flags & 1) {
                 (DisketteExtension->DeviceObject)->Flags &= 4294967293UL;
               } else {
@@ -4339,7 +4413,8 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
           }
           if ((int)IgnoreChange == 0) {
             if ((int)((DisketteExtension->DeviceObject)->Vpb)->Flags & 1) {
-              {}
+              {
+              }
               return (-2147483626L);
             } else {
               return (-1073741435L);
@@ -4353,24 +4428,32 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
       _L___2: /* CIL Label */
         if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
-          { FlHdbit(DisketteExtension); }
+          {
+            FlHdbit(DisketteExtension);
+          }
         } else {
         }
       }
     }
     if (SetUpMedia) {
       if ((int)DisketteExtension->MediaType == -1) {
-        { ntStatus = FlDetermineMediaType(DisketteExtension); }
+        {
+          ntStatus = FlDetermineMediaType(DisketteExtension);
+        }
       } else {
         if ((int)DisketteExtension->MediaType == 0) {
-          {}
+          {
+          }
           return (-1073741804L);
         } else {
           if ((int)DisketteExtension->DriveMediaType !=
               (int)DisketteExtension->LastDriveMediaType) {
-            { ntStatus = FlDatarateSpecifyConfigure(DisketteExtension); }
+            {
+              ntStatus = FlDatarateSpecifyConfigure(DisketteExtension);
+            }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
             } else {
             }
           } else {
@@ -4389,21 +4472,24 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                              DisketteExtension->FifoBuffer, (void *)0, 0, 0);
         }
         if (!(ntStatus >= 0L)) {
-          {}
+          {
+          }
           return (ntStatus);
         } else {
         }
         if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                 ->AlternativeArchitecture == 1) {
           if (!((int)DisketteExtension->FifoBuffer[0] & 32)) {
-            {}
+            {
+            }
             return (-1073741805L);
           } else {
           }
         } else {
         }
         if ((int)DisketteExtension->FifoBuffer[0] & 64) {
-          {}
+          {
+          }
           return (-1073741662L);
         } else {
         }
@@ -4465,7 +4551,9 @@ NTSTATUS FlDatarateSpecifyConfigure(PDISKETTE_EXTENSION DisketteExtension) {
                 &DisketteExtension->DriveMediaConstants.DataTransferRate);
           }
           if (ntStatus >= 0L) {
-            { ntStatus = FlRecalibrateDrive(DisketteExtension); }
+            {
+              ntStatus = FlRecalibrateDrive(DisketteExtension);
+            }
           } else {
           }
         } else {
@@ -4502,7 +4590,8 @@ NTSTATUS FlRecalibrateDrive(PDISKETTE_EXTENSION DisketteExtension) {
                              DisketteExtension->FifoBuffer, (void *)0, 0, 0);
         }
         if (!(ntStatus >= 0L)) {
-          {}
+          {
+          }
         } else {
         }
         if (ntStatus >= 0L) {
@@ -4518,7 +4607,8 @@ NTSTATUS FlRecalibrateDrive(PDISKETTE_EXTENSION DisketteExtension) {
                   DisketteExtension->FifoBuffer, (void *)0, 0, 0);
             }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
               return (ntStatus);
             } else {
             }
@@ -4607,7 +4697,8 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
             }
             { ntStatus = FlDatarateSpecifyConfigure(DisketteExtension); }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
               mediaTypesExhausted = 1;
             } else {
               {
@@ -4716,7 +4807,8 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                           }
                           if (!irp) {
                             {} {
-                              /*                       ExFreePool(bootSector); */ /* INLINED */
+                              /*                       ExFreePool(bootSector);
+                               */ /* INLINED */
                             }
                             return (-1073741670L);
                           } else {
@@ -4729,14 +4821,17 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                             ntStatus = FlReadWrite(DisketteExtension, irp, 1);
                           }
                           {} {
-                            /*                     MmUnlockPages(irp->MdlAddress); */ /* INLINED */
-                            /*                     IoFreeMdl(irp->MdlAddress); */ /* INLINED */
+                            /*                     MmUnlockPages(irp->MdlAddress);
+                             */ /* INLINED */
+                            /*                     IoFreeMdl(irp->MdlAddress);
+                             */ /* INLINED */
                             /*                     IoFreeIrp(irp); */ /* INLINED
                                                                        */
                             /*                     ExFreePool(bootSector); */ /* INLINED */
                           }
                           if (!(ntStatus >= 0L)) {
-                            {}
+                            {
+                            }
                             DisketteExtension->DriveMediaType =
                                 (DRIVE_MEDIA_TYPE)(
                                     (int)DisketteExtension->DriveMediaType - 1);
@@ -4779,7 +4874,8 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
         while_101_break: /* CIL Label */;
         }
         if (ntStatus >= 0L) {
-          {}
+          {
+          }
           goto while_99_break;
         } else {
         }
@@ -4962,20 +5058,23 @@ void FloppyThread(PVOID Context) {
           } else {
           }
           {
-            /*       ExAcquireFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+            /*       ExAcquireFastMutex(&
+             * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
           }
           if (disketteExtension->ThreadReferenceCount == 0L) {
             disketteExtension->ThreadReferenceCount = -1;
             if ((unsigned int)disketteExtension->FloppyThread !=
                 (unsigned int)((void *)0)) {
               {
-                /*           ObfDereferenceObject(disketteExtension->FloppyThread); */ /* INLINED */
+                /*           ObfDereferenceObject(disketteExtension->FloppyThread);
+                 */ /* INLINED */
                 disketteExtension->FloppyThread = (void *)0;
               }
             } else {
             }
             {
-              /*         ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*         ExReleaseFastMutex(&
+               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
             }
             if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                     ->AlternativeArchitecture == 1) {
@@ -5013,7 +5112,8 @@ void FloppyThread(PVOID Context) {
           } else {
           }
           {
-            /*       ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+            /*       ExReleaseFastMutex(&
+             * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
           }
           goto __Cont;
         } else {
@@ -5023,7 +5123,8 @@ void FloppyThread(PVOID Context) {
           while_117_continue: /* CIL Label */;
             {
               request = (void *)0;
-              /* ExfInterlockedRemoveHeadList(& disketteExtension->ListEntry, & disketteExtension->ListSpinLock); */ /* INLINED */
+              /* ExfInterlockedRemoveHeadList(& disketteExtension->ListEntry, &
+               * disketteExtension->ListSpinLock); */ /* INLINED */
             }
             if (request) {
 
@@ -5031,16 +5132,19 @@ void FloppyThread(PVOID Context) {
               goto while_117_break;
             }
             {
-              /*       ExAcquireFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*       ExAcquireFastMutex(&
+               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
               disketteExtension->ThreadReferenceCount -= 1L;
-              /*       ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+              /*       ExReleaseFastMutex(&
+               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
               disketteExtension->HardwareFailed = 0;
               irp =
                   (IRP *)((CHAR *)request -
                           (unsigned long)(&((IRP *)0)
                                                ->Tail.Overlay.__annonCompField17
                                                .ListEntry));
-              /*       ExAcquireFastMutex(& disketteExtension->PowerDownMutex); */ /* INLINED */
+              /*       ExAcquireFastMutex(& disketteExtension->PowerDownMutex);
+               */ /* INLINED */
             }
             if ((int)disketteExtension->PoweringDown == 1) {
               {
@@ -5117,10 +5221,13 @@ void FloppyThread(PVOID Context) {
                             } else {
                             }
                             {
-                              /*                     ExAcquireFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+                              /*                     ExAcquireFastMutex(&
+                               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
                               disketteExtension->ThreadReferenceCount = -1;
-                              /*                     ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
-                              /*                     ExAcquireFastMutex(PagingMutex); */ /* INLINED */
+                              /*                     ExReleaseFastMutex(&
+                               * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+                              /*                     ExAcquireFastMutex(PagingMutex);
+                               */ /* INLINED */
                               PagingReferenceCount -= 1UL;
                             }
                             if (PagingReferenceCount == 0UL) {
@@ -5131,7 +5238,8 @@ void FloppyThread(PVOID Context) {
                             } else {
                             }
                             {
-                              /*                     ExReleaseFastMutex(PagingMutex); */ /* INLINED */
+                              /*                     ExReleaseFastMutex(PagingMutex);
+                               */ /* INLINED */
                               PsTerminateSystemThread(0L);
                             }
                           } else {
@@ -5161,7 +5269,8 @@ void FloppyThread(PVOID Context) {
                         }
                         if ((disketteExtension->DeviceObject)->Flags & 2UL) {
                           if (!((int)irpSp->Flags & 2)) {
-                            {}
+                            {
+                            }
                             ntStatus = -2147483626L;
                           } else {
                             {
@@ -5193,7 +5302,8 @@ void FloppyThread(PVOID Context) {
                         }
                         if ((disketteExtension->DeviceObject)->Flags & 2UL) {
                           if (!((int)irpSp->Flags & 2)) {
-                            {}
+                            {
+                            }
                             ntStatus = -2147483626L;
                           } else {
                             goto _L___2;
@@ -5283,7 +5393,8 @@ void FloppyThread(PVOID Context) {
                                                   disketteExtension->MediaType;
                                               if ((int)disketteExtension
                                                       ->MediaType == 0) {
-                                                {}
+                                                {
+                                                }
                                                 outputBuffer->Cylinders
                                                     .__annonCompField1.LowPart =
                                                     0;
@@ -5421,16 +5532,20 @@ void FloppyThread(PVOID Context) {
                     irp->IoStatus.__annonCompField4.Status = -2147483631L;
                     IofCompleteRequest(irp, 1);
                     request = (void *)0;
-                    /* ExfInterlockedRemoveHeadList(& disketteExtension->ListEntry, & disketteExtension->ListSpinLock); */ /* INLINED */
+                    /* ExfInterlockedRemoveHeadList(&
+                     * disketteExtension->ListEntry, &
+                     * disketteExtension->ListSpinLock); */ /* INLINED */
                   }
                   if (!request) {
                     goto while_134_break;
                   } else {
                   }
                   {
-                    /*           ExAcquireFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+                    /*           ExAcquireFastMutex(&
+                     * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
                     disketteExtension->ThreadReferenceCount -= 1L;
-                    /*           ExReleaseFastMutex(& disketteExtension->ThreadReferenceMutex); */ /* INLINED */
+                    /*           ExReleaseFastMutex(&
+                     * disketteExtension->ThreadReferenceMutex); */ /* INLINED */
                     irp = (IRP *)((CHAR *)request -
                                   (unsigned long)(&((IRP *)0)
                                                        ->Tail.Overlay
@@ -5443,7 +5558,9 @@ void FloppyThread(PVOID Context) {
             } else {
               irp->IoStatus.__annonCompField4.Status = ntStatus;
               if (disketteExtension->IoBuffer) {
-                { FlFreeIoBuffer(disketteExtension); }
+                {
+                  FlFreeIoBuffer(disketteExtension);
+                }
               } else {
               }
               { FlFinishOperation(irp, disketteExtension); }
@@ -5872,7 +5989,8 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
           }
         }
         if (!(status >= 0L)) {
-          {}
+          {
+          }
           recalibrateDrive = 1;
           goto __Cont;
         } else {
@@ -5956,7 +6074,8 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
             } else {
             }
             if (ioRetry >= 2UL) {
-              {}
+              {
+              }
               goto while_149_break;
             } else {
             }
@@ -5976,7 +6095,8 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
     }
     if (!(status >= 0L)) {
       if ((int)NumberOfSectors > 1) {
-        {}
+        {
+        }
         i = 0;
         {
           while (1) {
@@ -5994,7 +6114,8 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
                   (unsigned char)((int)Sector + (int)i), 1, 0);
             }
             if (!(status >= 0L)) {
-              {}
+              {
+              }
               DisketteExtension->HardwareFailed = 1;
               goto while_153_break;
             } else {
@@ -6041,7 +6162,8 @@ NTSTATUS FlReadWrite(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
     {}
     if ((int)irpSp->MajorFunction == 4) {
       if (DisketteExtension->IsReadOnly) {
-        {}
+        {
+        }
         return (-1073741811L);
       } else {
       }
@@ -6059,17 +6181,21 @@ NTSTATUS FlReadWrite(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
       }
     }
     if (!(status >= 0L)) {
-      {}
+      {
+      }
       return (status);
     } else {
     }
     if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
         1) {
-      { FlHdbit(DisketteExtension); }
+      {
+        FlHdbit(DisketteExtension);
+      }
     } else {
     }
     if ((int)DisketteExtension->MediaType == 0) {
-      {}
+      {
+      }
       return (-1073741804L);
     } else {
     }
@@ -6086,12 +6212,14 @@ NTSTATUS FlReadWrite(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
     } else {
       {
         tmp___0 = (void *)0;
-        /* MmMapLockedPagesSpecifyCache(Irp->MdlAddress, 0, 1, (void *)0, 0, 32); */ /* INLINED */
+        /* MmMapLockedPagesSpecifyCache(Irp->MdlAddress, 0, 1, (void *)0, 0,
+         * 32); */ /* INLINED */
         userBuffer = tmp___0;
       }
     }
     if ((unsigned int)userBuffer == (unsigned int)((void *)0)) {
-      {}
+      {
+      }
       return (-1073741670L);
     } else {
     }
@@ -6122,7 +6250,8 @@ NTSTATUS FlReadWrite(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
         if (trackSize > DisketteExtension->MaxTransferSize) {
           {} { FlAllocateIoBuffer(DisketteExtension, trackSize); }
           if (!DisketteExtension->IoBuffer) {
-            {}
+            {
+            }
             return (-1073741670L);
           } else {
           }
@@ -6301,11 +6430,15 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
     {}
     if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture ==
         1) {
-      { FlHdbit(DisketteExtension); }
+      {
+        FlHdbit(DisketteExtension);
+      }
     } else {
     }
     if ((int)DisketteExtension->LastDriveMediaType != (int)driveMediaType) {
-      { ntStatus = FlDatarateSpecifyConfigure(DisketteExtension); }
+      {
+        ntStatus = FlDatarateSpecifyConfigure(DisketteExtension);
+      }
       if (!(ntStatus >= 0L)) {
         return (ntStatus);
       } else {
@@ -6366,7 +6499,8 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
         } else {
         }
         if (!(ntStatus >= 0L)) {
-          {}
+          {
+          }
           return (ntStatus);
         } else {
         }
@@ -6423,7 +6557,8 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
                   0, length);
             }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
             } else {
             }
             if (ntStatus >= 0L) {
@@ -6473,7 +6608,8 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
                   DisketteExtension->FifoBuffer, (void *)0, 0, 0);
             }
             if (!(ntStatus >= 0L)) {
-              {}
+              {
+              }
               return (ntStatus);
             } else {
             }
@@ -6684,7 +6820,8 @@ NTSTATUS FlFdcDeviceIo(PDEVICE_OBJECT DeviceObject, ULONG Ioctl, PVOID Data) {
                                         (void *)0, 0, 1, &doneEvent, &ioStatus);
     }
     if ((unsigned int)irp == (unsigned int)((void *)0)) {
-      {}
+      {
+      }
       return (-1073741670L);
     } else {
     }
@@ -6862,7 +6999,9 @@ NTSTATUS FlHdbit(PDISKETTE_EXTENSION DisketteExtension) {
     } else {
     }
     if (setHdBitParameter.ChangedHdBit) {
-      { ntStatus = FlDatarateSpecifyConfigure(DisketteExtension); }
+      {
+        ntStatus = FlDatarateSpecifyConfigure(DisketteExtension);
+      }
     } else {
     }
     return (ntStatus);
@@ -6900,7 +7039,8 @@ NTSTATUS FloppyQueueRequest(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
           Irp->IoStatus.__annonCompField4.Status = -1073741536L;
           myStatus = -1073741536L;
           Irp->IoStatus.Information = 0;
-          /*       KfReleaseSpinLock(& DisketteExtension->FlCancelSpinLock, oldIrql); */ /* INLINED */
+          /*       KfReleaseSpinLock(& DisketteExtension->FlCancelSpinLock,
+           * oldIrql); */ /* INLINED */
           IofCompleteRequest(Irp, 0);
           /*       ExAcquireFastMutex(PagingMutex); */ /* INLINED */
           PagingReferenceCount -= 1UL;
@@ -6937,7 +7077,8 @@ NTSTATUS FloppyQueueRequest(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
             &DisketteExtension->NewRequestQueue,
             &Irp->Tail.Overlay.__annonCompField17.ListEntry,
             &DisketteExtension->NewRequestQueueSpinLock);
-        /*     KfReleaseSpinLock(& DisketteExtension->FlCancelSpinLock, oldIrql); */ /* INLINED */
+        /*     KfReleaseSpinLock(& DisketteExtension->FlCancelSpinLock,
+         * oldIrql); */ /* INLINED */
         ntStatus = 259L;
       }
     }
@@ -7024,7 +7165,8 @@ void FloppyProcessQueuedRequests(PDISKETTE_EXTENSION DisketteExtension) {
           currentIrp = (void *)0;
         }
         {
-          /*     KfReleaseSpinLock(& DisketteExtension->FlCancelSpinLock, oldIrql); */ /* INLINED */
+          /*     KfReleaseSpinLock(& DisketteExtension->FlCancelSpinLock,
+           * oldIrql); */ /* INLINED */
         }
         if (currentIrp) {
           if (DisketteExtension->IsRemoved) {
@@ -7233,7 +7375,9 @@ int main(void) {
         }
       }
       if (we_should_unload) {
-        { FloppyUnload(&d); }
+        {
+          FloppyUnload(&d);
+        }
       } else {
       }
     } else {
@@ -7263,7 +7407,9 @@ int main(void) {
             if (s != SKIP2) {
               if (s != IPC) {
                 if (s != DC) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                   goto _L___0;
                 }
@@ -7279,10 +7425,14 @@ int main(void) {
                 }
               } else {
                 if (s == DC) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                   if (status != (NTSTATUS)lowerDriverReturn) {
-                    { errorFn(); }
+                    {
+                      errorFn();
+                    }
                   } else {
                   }
                 }
@@ -7720,7 +7870,9 @@ NTSTATUS IofCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         compRetStatus1 = tmp;
       }
       if ((long)compRetStatus1 == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {
@@ -7874,7 +8026,9 @@ NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason,
         customIrp = 0;
       } else {
         if (s == MPR3) {
-          { errorFn(); }
+          {
+            errorFn();
+          }
         } else {
         }
       }
@@ -8009,7 +8163,9 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         compRetStatus = tmp;
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {
