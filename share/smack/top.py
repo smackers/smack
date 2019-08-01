@@ -197,6 +197,10 @@ def arguments():
   translate_group.add_argument('--integer-overflow', action='store_true', default=False,
     help='enable integer overflow checks')
 
+  translate_group.add_argument('--llvm-assumes', choices=['none', 'use', 'check'], default='none',
+    help='optionally enable generation of Boogie assume statements from LLVM assume statements ' +
+         '(none=no generation [default], use=generate assume statements, check=check assume statements)')
+
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
 
@@ -347,6 +351,7 @@ def llvm_to_bpl(args):
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
   if args.integer_overflow: cmd += ['-integer-overflow']
+  if args.llvm_assumes: cmd += ['-llvm-assumes=' + args.llvm_assumes]
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
   try_command(cmd, console=True)
