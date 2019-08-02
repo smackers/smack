@@ -114,10 +114,12 @@ bool StructRet::runOnModule(Module& M) {
           continue;
         IRBuilder<> Builder(RI);
         if (auto LI = dyn_cast<LoadInst>(RI->getOperand(0))) {
-          Builder.CreateMemCpy(fargs.at(0),
+          Builder.CreateMemCpy(
+              fargs.at(0),
+              targetData.getPrefTypeAlignment(fargs.at(0)->getType()),
               LI->getPointerOperand(),
-              targetData.getTypeStoreSize(LI->getType()),
-              targetData.getPrefTypeAlignment(LI->getType()));
+              targetData.getPrefTypeAlignment(LI->getType()),
+              targetData.getTypeStoreSize(LI->getType()));
         } else if (auto CS = dyn_cast<ConstantStruct>(RI->getReturnValue())) {
           StructType* ST = CS->getType();
           // We could store the struct into the allocated space pointed by the first
