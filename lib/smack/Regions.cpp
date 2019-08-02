@@ -191,7 +191,10 @@ bool Region::overlaps(Region &R) {
 void Region::print(raw_ostream &O) {
   // TODO identify the representative
   O << "<Node:";
-  if (type) O << *type; else O << "*";
+  if (type)
+    O << *type;
+  else
+    O << "*";
   O << ">[" << offset << "," << (offset + length) << "]{";
   if (isSingleton())
     O << "S";
