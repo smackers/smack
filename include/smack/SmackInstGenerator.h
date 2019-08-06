@@ -36,7 +36,7 @@ private:
   Block *createBlock();
   Block *getBlock(llvm::BasicBlock *bb);
 
-  void generatePhiAssigns(llvm::TerminatorInst &i);
+  void generatePhiAssigns(llvm::Instruction &i);
   void generateGotoStmts(
       llvm::Instruction &i,
       std::vector<std::pair<const Expr *, llvm::BasicBlock *>> target);
