@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 MAINTAINER Shaobo He <shaobo@cs.utah.edu>
 
 ENV SMACKDIR /home/user/smack
