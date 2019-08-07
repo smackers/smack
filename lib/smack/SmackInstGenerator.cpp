@@ -177,7 +177,7 @@ void SmackInstGenerator::visitInstruction(llvm::Instruction &inst) {
   llvm_unreachable("Instruction not handled.");
 }
 
-void SmackInstGenerator::generatePhiAssigns(llvm::TerminatorInst &ti) {
+void SmackInstGenerator::generatePhiAssigns(llvm::Instruction &ti) {
   llvm::BasicBlock *block = ti.getParent();
   std::list<const Expr *> lhs;
   std::list<const Expr *> rhs;

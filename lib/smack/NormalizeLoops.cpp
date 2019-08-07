@@ -46,7 +46,7 @@ BasicBlock *makeForwardingBlock(BasicBlock *target) {
  * Returns a vector of each successor index in \param ti which equals \param
  * headerBlock.
  */
-std::vector<unsigned> getSuccessorIndices(TerminatorInst *ti,
+std::vector<unsigned> getSuccessorIndices(Instruction *ti,
                                           BasicBlock *headerBlock) {
   std::vector<unsigned> result;
   unsigned numSuccs = ti->getNumSuccessors();
@@ -71,7 +71,7 @@ std::vector<unsigned> getSuccessorIndices(TerminatorInst *ti,
  */
 void splitBlock(BasicBlock *BB, BasicBlock *headerBlock,
                 std::map<BasicBlock *, BasicBlock *> &blockMap) {
-  TerminatorInst *ti = BB->getTerminator();
+  Instruction *ti = BB->getTerminator();
 
   // Get a list of all successor indices which point to headerBlock.
   std::vector<unsigned> succIndices = getSuccessorIndices(ti, headerBlock);
