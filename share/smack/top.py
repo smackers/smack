@@ -208,6 +208,10 @@ def arguments():
     choices=['boogie', 'corral', 'symbooglix', 'svcomp'], default='corral',
     help='back-end verification engine')
 
+  verifier_group.add_argument('--solver',
+    choices=['z3', 'cvc4'], default='z3',
+    help='back-end SMT solver')
+
   verifier_group.add_argument('--unroll', metavar='N', default='1',
     type = lambda x: int(x) if int(x) > 0 else parser.error('Unroll bound has to be positive.'),
     help='loop/recursion unroll bound [default: %(default)s]')
@@ -460,6 +464,8 @@ def verify_bpl(args):
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
+    if args.solver == 'cvc4':
+      command += ["/proverOpt:SOLVER=cvc4"]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -471,7 +477,9 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
-	
+    if args.solver == 'cvc4':
+      command += ["/bopt:proverOpt:SOLVER=cvc4"]
+
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
     command += [args.bpl_file]
