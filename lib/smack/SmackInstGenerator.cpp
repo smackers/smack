@@ -902,6 +902,28 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         };
       };
 
+  // Optionally generate a boogie assume statement from assume statements in
+  // LLVM. Currently this behavior is experimental and must be enabled by
+  // passing the -llvm-assumes flag. The default behavior of this
+  // function is to ignore the assume statement, specified by the "none"
+  // argument. If the check argument is given, an additional assertion is
+  // generated to check the validity of the assumption.
+  static const auto assume = [this](CallInst *ci) {
+    if (SmackOptions::LLVMAssumes != LLVMAssumeType::none) {
+      auto arg = rep->expr(ci->getArgOperand(0));
+      auto llvmTrue =
+          SmackOptions::BitPrecise ? Expr::lit(1, 1) : Expr::lit(1LL);
+      auto chkStmt = Expr::eq(arg, llvmTrue);
+      if (SmackOptions::LLVMAssumes == LLVMAssumeType::check)
+        emit(Stmt::assert_(chkStmt));
+      else
+        emit(Stmt::assume(chkStmt));
+    } else {
+      // Skip assume statements
+      return;
+    }
+  };
+
   static const auto f16UpCast = conditionalModel(
       [this](CallInst *ci) {
         // translation: $f := $fpext.bvhalf.*($rmode, $bitcast.bv16.bvhalf($i));
@@ -1130,6 +1152,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
 
   static const std::map<llvm::Intrinsic::ID, std::function<void(CallInst *)>>
       stmtMap{
+          {llvm::Intrinsic::assume, assume},
           {llvm::Intrinsic::bitreverse, assignBvExpr(bitreverse)},
           {llvm::Intrinsic::bswap, assignBvExpr(bswap)},
           {llvm::Intrinsic::convert_from_fp16, f16UpCast},

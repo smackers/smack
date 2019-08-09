@@ -36,6 +36,7 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=memory-safety"
     - TRAVIS_ENV="--exhaustive --folder=pthread"
     - TRAVIS_ENV="--exhaustive --folder=strings"
+    - TRAVIS_ENV="--exhaustive --folder=special"
 
 before_install:
   - sudo rm -rf /usr/local/clang-7.0.0
