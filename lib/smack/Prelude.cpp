@@ -381,9 +381,9 @@ void IntOpGen::generateArithOps(std::stringstream &s) const {
        bvBuiltinOp, true},
       {"sdiv", 2, intBuiltinOp, bvBuiltinOp, false},
       {"smod", 2, intBuiltinOp, bvBuiltinOp, false},
-      {"srem", 2, intBuiltinOp, bvBuiltinOp, false},
       {"udiv", 2, intBuiltinOp, bvBuiltinOp, false},
-      {"urem", 2, intBuiltinOp, bvBuiltinOp, false},
+      {"srem", 2, uninterpretedOp, bvBuiltinOp, false},
+      {"urem", 2, uninterpretedOp, bvBuiltinOp, false},
       {"shl", 2, uninterpretedOp, bvBuiltinOp, false},
       {"lshr", 2, uninterpretedOp, bvBuiltinOp, false},
       {"ashr", 2, uninterpretedOp, bvBuiltinOp, false},
@@ -731,7 +731,7 @@ void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
     << "\n";
   if (SmackOptions::BitPrecise && !SmackOptions::BitPrecisePointers) {
     s << Decl::function(indexedName("$bv2uint", {ptrSize}), {{"i", bt}}, it,
-                        nullptr, {makeBuiltinAttr("bv2int")})
+                        nullptr, {makeBuiltinAttr("bv2nat")})
       << "\n";
     const Expr *arg = Expr::id("i");
     const Expr *uint = Expr::fn(indexedName("$bv2uint", {ptrSize}), arg);
@@ -753,7 +753,7 @@ void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
       << "\n";
   } else
     s << Decl::function(indexedName("$bv2int", {ptrSize}), {{"i", bt}}, it,
-                        nullptr, {makeBuiltinAttr("bv2int")})
+                        nullptr, {makeBuiltinAttr("bv2nat")})
       << "\n";
   s << "\n";
 }
