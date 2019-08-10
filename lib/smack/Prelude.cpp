@@ -343,7 +343,7 @@ struct IntOpGen::IntArithOp : public IntOp {
   static const Expr *bvMinMaxExpr(unsigned size) {
     std::string signLetter = SIGN ? "s" : "u";
     std::string pred = MIN ? "lt" : "gt";
-    return Expr::if_then_else(
+    return Expr::ifThenElse(
         Expr::fn(indexedName("$" + signLetter + pred,
                              {getBvTypeName(size), Naming::BOOL_TYPE}),
                  makeIntVarExprs(2)),
@@ -356,7 +356,7 @@ struct IntOpGen::IntArithOp : public IntOp {
     const Expr *a1 = makeIntVarExpr(1);
     const Expr *a2 = makeIntVarExpr(2);
     auto pred = MIN ? Expr::lt(a1, a2) : Expr::lt(a2, a1);
-    return Expr::if_then_else(pred, a1, a2);
+    return Expr::ifThenElse(pred, a1, a2);
   }
 };
 
@@ -465,12 +465,11 @@ struct IntOpGen::IntPred : public IntOp {
                   Naming::BOOL_TYPE, ((IntOp::exprT)iop->func)(size));
     // e.g.: function {:inline} $ule.i1(i1: i1, i2: i1) returns (i1)
     //        { if $ule.i1.bool(i1, i2) then 1 else 0 }
-    auto predFunc =
-        inlinedOp(name, {type}, makeIntVars(2, type), getIntTypeName(1),
-                  Expr::if_then_else(
-                      Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
-                               makeIntVarExprs(2)),
-                      Expr::lit(1ll), Expr::lit(0ll)));
+    auto predFunc = inlinedOp(
+        name, {type}, makeIntVars(2, type), getIntTypeName(1),
+        Expr::ifThenElse(Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
+                                  makeIntVarExprs(2)),
+                         Expr::lit(1ll), Expr::lit(0ll)));
     return {compFunc, predFunc};
   }
 
@@ -494,12 +493,11 @@ struct IntOpGen::IntPred : public IntOp {
       llvm_unreachable("no uninterpreted bv predicates");
     // e.g.: function {:inline} $ule.bv1(i1: bv1, i2: bv1) returns (bv1)
     //        { if $ule.bv1.bool(i1, i2) then 1bv1 else 0bv1 }
-    predFunc =
-        inlinedOp(name, {type}, makeIntVars(2, type), getBvTypeName(1),
-                  Expr::if_then_else(
-                      Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
-                               makeIntVarExpr(1), makeIntVarExpr(2)),
-                      Expr::lit(1, 1), Expr::lit(0, 1)));
+    predFunc = inlinedOp(
+        name, {type}, makeIntVars(2, type), getBvTypeName(1),
+        Expr::ifThenElse(Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
+                                  makeIntVarExpr(1), makeIntVarExpr(2)),
+                         Expr::lit(1, 1), Expr::lit(0, 1)));
     return {compFunc, predFunc};
   }
 
@@ -744,11 +742,12 @@ void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
       llvm_unreachable("Unexpected pointer bit width.");
     s << Decl::function(
              indexedName("$bv2int", {ptrSize}), {{"i", bt}}, it,
-             Expr::cond(Expr::fn(indexedName("$slt", {bt, Naming::BOOL_TYPE}),
-                                 {arg, Expr::lit(0ULL, ptrSize)}),
-                        Expr::fn(indexedName("$sub", {it}),
-                                 {uint, Expr::lit(offset, 0U)}),
-                        uint),
+             Expr::ifThenElse(
+                 Expr::fn(indexedName("$slt", {bt, Naming::BOOL_TYPE}),
+                          {arg, Expr::lit(0ULL, ptrSize)}),
+                 Expr::fn(indexedName("$sub", {it}),
+                          {uint, Expr::lit(offset, 0U)}),
+                 uint),
              {makeInlineAttr()})
       << "\n";
   } else
@@ -927,11 +926,12 @@ void PtrOpGen::generatePreds(std::stringstream &s) const {
              indexedName(pred, {Naming::PTR_TYPE}),
              {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
              prelude.rep.intType(1),
-             Expr::cond(Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
-                                                    Naming::BOOL_TYPE}),
-                                 {Expr::id("p1"), Expr::id("p2")}),
-                        prelude.rep.integerLit(1LL, 1),
-                        prelude.rep.integerLit(0LL, 1)),
+             Expr::ifThenElse(
+                 Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
+                                             Naming::BOOL_TYPE}),
+                          {Expr::id("p1"), Expr::id("p2")}),
+                 prelude.rep.integerLit(1LL, 1),
+                 prelude.rep.integerLit(0LL, 1)),
              {makeInlineAttr()})
       << "\n";
     s << Decl::function(
