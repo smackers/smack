@@ -411,9 +411,8 @@ if [ ${INSTALL_CVC4} -eq 1 ] ; then
   if [ ! -d "$CVC4_DIR" ] ; then
     puts "Installing CVC4"
     mkdir -p ${CVC4_DIR}
-    ${WGET} https://github.com/CVC4/CVC4/releases/download/1.7/cvc4-1.7-x86_64-linux-opt -O cvc4
-    chmod +x cvc4
-    mv cvc4 ${CVC4_DIR}
+    ${WGET} https://github.com/CVC4/CVC4/releases/download/${CVC4_VERSION}/cvc4-${CVC4_VERSION}-x86_64-linux-opt -O ${CVC4_DIR}/cvc4
+    chmod +x ${CVC4_DIR}/cvc4
     puts "Installed CVC4"
   else
     puts "CVC4 already installed"
