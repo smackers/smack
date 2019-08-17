@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ -z "$CVC4" ] ; then
+  echo "The required CVC4 environment variable is not set. See SMACK documentation for details."
+  exit 1
+fi
+$CVC4 "$@"

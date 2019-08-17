@@ -16,6 +16,7 @@
 # - Boogie
 # - Corral
 # - Symbooglix
+# - Ultimate Automizer
 # - lockpwn
 #
 ################################################################################
@@ -27,6 +28,7 @@ INSTALL_CVC4=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
 BUILD_SYMBOOGLIX=1
+BUILD_UAUTOMIZER=1
 BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
@@ -45,6 +47,7 @@ CVC4_DIR="${ROOT}/cvc4"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 SYMBOOGLIX_DIR="${ROOT}/symbooglix"
+UAUTOMIZER_DIR="${ROOT}/uautomizer"
 LOCKPWN_DIR="${ROOT}/lockpwn"
 MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
@@ -60,7 +63,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml python-psutil unzip wget ninja-build"
+DEPENDENCIES="git cmake python-yaml python-psutil unzip wget ninja-build default-jdk"
 
 shopt -s extglob
 
@@ -480,6 +483,20 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   fi
 fi
 
+if [ ${BUILD_UAUTOMIZER} -eq 1 ] ; then
+  if [ ! -d "$UAUTOMIZER_DIR" ] ; then
+    puts "Building Ultimate Automizer"
+    ${WGET} https://github.com/ultimate-pa/ultimate/releases/download/v0.1.24/UltimateAutomizer-linux.zip -O UAutomizer.zip
+    unzip UAutomizer.zip -d ${ROOT}
+    mv ${ROOT}/UAutomizer-linux ${UAUTOMIZER_DIR}
+    rm -rf UAutomizer.zip
+    ${WGET} https://raw.githubusercontent.com/ultimate-pa/ultimate/dev/trunk/examples/Interactive/toolchains/AutomizerBpl.xml -O ${UAUTOMIZER_DIR}/config/AutomizerBpl.xml
+    puts "Built Ultimate Automizer"
+  else
+    puts "Ultimate Automizer already built"
+  fi
+fi
+
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
     puts "Building lockpwn"
@@ -506,9 +523,12 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   sudo ninja install
 
   puts "Configuring shell environment"
+  echo export Z3=\"${Z3_DIR}/bin/z3\" >> ${SMACKENV}
+  echo export CVC4=\"${CVC4_DIR}/cvc4\" >> ${SMACKENV}
   echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
   echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
   echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
+  echo export UAUTOMIZER=\"${UAUTOMIZER_DIR}/Ultimate\" >> ${SMACKENV}
   echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"

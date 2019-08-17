@@ -162,11 +162,10 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
     }
     if (SmackOptions::isEntryPoint(naming->get(*F))) {
       emit(recordProcedureCall(
-          F, {Attr::attr("cexpr", "smack:entry:" + naming->get(*F))}));
+          F, {}));
       for (auto &A : F->args()) {
         emit(recordProcedureCall(
-            &A, {Attr::attr("cexpr", "smack:arg:" + naming->get(*F) + ":" +
-                                         naming->get(A))}));
+            &A, {}));
       }
     }
   }
@@ -517,7 +516,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
               llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
         if (!t->getElementType()->isPointerTy() && G->hasName()) {
           emit(recordProcedureCall(V,
-                                   {Attr::attr("cexpr", G->getName().str())}));
+                                   {}));
         }
       }
     }
@@ -810,7 +809,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
        naming->get(*f).find("__VERIFIER") == 0) &&
       !f->getReturnType()->isVoidTy()) {
     emit(recordProcedureCall(
-        &ci, {Attr::attr("cexpr", "smack:ext:" + naming->get(*f))}));
+        &ci, {}));
   }
 }
 
@@ -839,14 +838,13 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
         if (!llvm::isa<const PHINode>(&pi) &&
             V == llvm::dyn_cast<const Value>(&pi))
           emit(recordProcedureCall(
-              V, {Attr::attr("cexpr", var->getName().str())}));
+              V, {}));
       }
       Function *F = dvi.getFunction();
       for (auto &arg : F->args()) {
         if (&arg == V && var->getScope() == F->getMetadata("dbg")) {
           emit(recordProcedureCall(
-              V, {Attr::attr("cexpr", naming->get(*F) +
-                                          ":arg:" + var->getName().str())}));
+              V, {}));
           break;
         }
       }

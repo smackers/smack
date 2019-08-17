@@ -209,7 +209,7 @@ def arguments():
   verifier_group = parser.add_argument_group('verifier options')
 
   verifier_group.add_argument('--verifier',
-    choices=['boogie', 'corral', 'symbooglix', 'svcomp'], default='corral',
+    choices=['boogie', 'corral', 'symbooglix', 'uautomizer', 'svcomp'], default='corral',
     help='back-end verification engine')
 
   verifier_group.add_argument('--solver',
@@ -350,7 +350,7 @@ def llvm_to_bpl(args):
   if args.static_unroll: cmd += ['-static-unroll']
   if args.bit_precise: cmd += ['-bit-precise']
   if args.timing_annotations: cmd += ['-timing-annotations']
-  if args.bit_precise_pointers: cmd += ['-bit-precise-pointers']
+  if args.bit_precise_pointers or args.verifier == 'uautomizer' and args.bit_precise: cmd += ['-bit-precise-pointers']
   if args.no_byte_access_inference: cmd += ['-no-byte-access-inference']
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
@@ -362,6 +362,28 @@ def llvm_to_bpl(args):
   annotate_bpl(args)
   property_selection(args)
   transform_bpl(args)
+
+  if args.verifier == 'uautomizer':
+    entry_point = 'ULTIMATE.start'
+
+    rename_main(args, entry_point)
+
+    sym_cmd = ['mono', '%s/../../../SymbooglixPassRunner/bin/Release/spr.exe' % subprocess.check_output(['dirname', os.environ['SYMBOOGLIX']]).strip()[5:], args.bpl_file, '-e', entry_point, '-p', 'Transform.FunctionInliningPass,Transform.GlobalDeadDeclEliminationPass']
+    tmp_file = '%s2' % args.bpl_file
+    with open(tmp_file, 'w') as fout:
+      with open(os.devnull, 'w') as nul:
+        subprocess.call(sym_cmd, stdout=fout, stderr=nul)
+
+    os.rename(tmp_file, args.bpl_file)
+
+def rename_main(args, name):
+  tmp_file = '%s2' % args.bpl_file
+  with open(args.bpl_file, 'r') as fin:
+    with open(tmp_file, 'w') as fout:
+      for line in fin:
+        fout.write(line.replace('procedure {:entrypoint} main', 'procedure {:entrypoint} %s' % name))
+
+  os.rename(tmp_file, args.bpl_file)
 
 def procedure_annotation(name, args):
   if name in args.entry_points:
@@ -434,9 +456,9 @@ def transform_out(args, old):
 def verification_result(verifier_output):
   if re.search(r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT', verifier_output):
     return 'timeout'
-  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT', verifier_output):
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT|proved your program to be correct|the program does not contain any specification', verifier_output):
     return 'verified'
-  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT', verifier_output):
+  elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT|proved your program to be incorrect', verifier_output):
     if re.search(r'ASSERTION FAILS assert {:valid_deref}', verifier_output):
       return 'invalid-deref'
     elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
@@ -493,7 +515,16 @@ def verify_bpl(args):
     command += ["--timeout=%d" % args.time_limit]
     command += ["--max-loop-depth=%d" % args.unroll]
 
-  if (args.bit_precise or args.float) and args.verifier != 'symbooglix':
+  elif args.verifier == 'uautomizer':
+    command = ['uautomizer']
+    command += ["-tc"]
+    command += ["%s/config/AutomizerBpl.xml" % subprocess.check_output(['dirname', os.environ['UAUTOMIZER']]).strip()]
+    command += ["-s"]
+    command += ["%s/config/svcomp-Reach-64bit-Automizer_%s.epf" % (subprocess.check_output(['dirname', os.environ['UAUTOMIZER']]).strip(), "Bitvector" if args.bit_precise else "Default")]
+    command += ["-i"]
+    command += ["%s" % args.bpl_file]
+
+  if (args.bit_precise or args.float) and args.verifier != 'symbooglix' and args.verifier != 'uautomizer':
     x = "bopt:" if args.verifier != 'boogie' else ""
     command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
     command += ["/%sboolControlVC" % x]

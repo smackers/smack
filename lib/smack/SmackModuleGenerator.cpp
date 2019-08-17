@@ -41,6 +41,10 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
   SDEBUG(errs() << "Analyzing globals...\n");
 
   for (auto &G : M.globals()) {
+    auto name = G.getName().str();
+    if (name[0] == '.') {
+      G.setName("s" + name);
+    }
     auto ds = rep.globalDecl(&G);
     decls.insert(decls.end(), ds.begin(), ds.end());
   }

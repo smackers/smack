@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ -z "$UAUTOMIZER" ] ; then
+  echo "The required UAUTOMIZER environment variable is not set. See SMACK documentation for details."
+  exit 1
+fi
+$UAUTOMIZER "$@"
