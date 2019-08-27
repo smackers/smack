@@ -188,6 +188,7 @@ public:
   void addInitFunc(const llvm::Function *f);
   Decl *getInitFuncs();
   const Expr *declareIsExternal(const Expr *e);
+  std::vector<std::string> getBplGlobals() { return bplGlobals; }
 
   bool isContractExpr(const llvm::Value *V) const;
   bool isContractExpr(const std::string S) const;

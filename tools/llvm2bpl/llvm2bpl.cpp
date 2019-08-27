@@ -36,6 +36,7 @@
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/NormalizeLoops.h"
+#include "smack/ModAnalysis.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/SmackModuleGenerator.h"
@@ -229,6 +230,7 @@ int main(int argc, char **argv) {
     F->keep();
     files.push_back(F);
     pass_manager.add(new smack::SmackModuleGenerator());
+    pass_manager.add(new smack::ModAnalysis());
     pass_manager.add(new smack::BplFilePrinter(F->os()));
   }
 

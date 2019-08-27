@@ -179,6 +179,7 @@ add_library(smackTranslator STATIC
   include/smack/IntegerOverflowChecker.h
   include/smack/NormalizeLoops.h
   include/smack/SplitAggregateValue.h
+  include/smack/ModAnalysis.h
   include/smack/Prelude.h
   include/smack/SmackWarnings.h
   lib/smack/AddTiming.cpp
@@ -203,6 +204,7 @@ add_library(smackTranslator STATIC
   lib/smack/IntegerOverflowChecker.cpp
   lib/smack/NormalizeLoops.cpp
   lib/smack/SplitAggregateValue.cpp
+  lib/smack/ModAnalysis.cpp
   lib/smack/Prelude.cpp
   lib/smack/SmackWarnings.cpp
 )
