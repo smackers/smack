@@ -66,10 +66,21 @@ const llvm::cl::opt<bool>
 const llvm::cl::opt<bool> SmackOptions::IntegerOverflow(
     "integer-overflow", llvm::cl::desc("Enable integer overflow checks"));
 
+const llvm::cl::opt<LLVMAssumeType> SmackOptions::LLVMAssumes(
+    "llvm-assumes",
+    llvm::cl::desc(
+        "Optionally enable generation of Boogie assumes from LLVM assumes"),
+    llvm::cl::values(clEnumValN(LLVMAssumeType::none, "none",
+                                "disable generation of assume statements"),
+                     clEnumValN(LLVMAssumeType::use, "use",
+                                "enable generation of assume statements"),
+                     clEnumValN(LLVMAssumeType::check, "check",
+                                "enable checking of assume statements")));
+
 bool SmackOptions::isEntryPoint(std::string name) {
   for (auto EP : EntryPoints)
     if (name == EP)
       return true;
   return false;
 }
-}
+} // namespace smack

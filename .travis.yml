@@ -36,10 +36,11 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=memory-safety"
     - TRAVIS_ENV="--exhaustive --folder=pthread"
     - TRAVIS_ENV="--exhaustive --folder=strings"
+    - TRAVIS_ENV="--exhaustive --folder=special"
 
 before_install:
   - sudo rm -rf /usr/local/clang-7.0.0
-  - sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-4.0 main"
+  - sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
   - sudo apt-get install -y apt-transport-https
@@ -47,13 +48,13 @@ before_install:
   - sudo apt-get update
 
 install:
-  - sudo apt-get install -y clang-4.0 clang-format-4.0 llvm-4.0-dev mono-complete ninja-build
-  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-4.0 20
-  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-4.0 20
-  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-4.0 20
-  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-4.0 20
-  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-4.0 20
-  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-4.0 20
+  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev mono-complete ninja-build
+  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 20
+  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-8 20
+  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-8 20
+  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-8 20
+  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-8 20
+  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-8 20
   - sudo pip install pyyaml psutil
 
 script:

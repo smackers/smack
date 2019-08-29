@@ -3135,7 +3135,7 @@ NTSTATUS CdAudioAddDevice(PDRIVER_OBJECT DriverObject,
     }
     {
       /*   KeInitializeEvent(& extension->PagingPathCountEvent, 1, 1); */ /* INLINED
-                                                                             */
+                                                                           */
       extension->Active = (unsigned char)regActive;
       extension->DeviceObject = deviceObject;
       extension->TargetPdo = PhysicalDeviceObject;
@@ -3387,7 +3387,9 @@ NTSTATUS CdAudioStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
         { tmp___7 = memcmp(inquiryDataPtr + 16, "CDR-3650/1650S  ", 16); }
         if (tmp___7) {
-          { tmp___8 = memcmp(inquiryDataPtr + 16, "CDR-1750S       ", 16); }
+          {
+            tmp___8 = memcmp(inquiryDataPtr + 16, "CDR-1750S       ", 16);
+          }
           if (tmp___8) {
 
           } else {
@@ -3578,7 +3580,9 @@ NTSTATUS CdAudioPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
             return (status);
           switch_2_22: /* CIL Label */;
             if ((int)irpSp->Parameters.UsageNotification.Type != 1) {
-              { tmp = CdAudioSendToNextDriver(DeviceObject, Irp); }
+              {
+                tmp = CdAudioSendToNextDriver(DeviceObject, Irp);
+              }
               return (tmp);
             } else {
             }
@@ -3603,7 +3607,9 @@ NTSTATUS CdAudioPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
             { status = CdAudioForwardIrpSynchronous(DeviceObject, Irp); }
             if (status >= 0L) {
               if (irpSp->Parameters.UsageNotification.InPath) {
-                { InterlockedIncrement(&deviceExtension->PagingPathCount); }
+                {
+                  InterlockedIncrement(&deviceExtension->PagingPathCount);
+                }
               } else {
                 { InterlockedDecrement(&deviceExtension->PagingPathCount); }
               }
@@ -3985,7 +3991,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   if (!(status >= 0L)) {
                                     if (status != -1073741764L) {
                                       {
-                                        /*                                   ExFreePool(Toc); */ /* INLINED */
+                                        /*                                   ExFreePool(Toc);
+                                         */ /* INLINED */
                                         Irp->IoStatus.Information = 0;
                                       }
                                       goto SetStatusAndReturn;
@@ -4011,7 +4018,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   if (*((ULONG *)(Toc + 14)) == 0UL) {
                                     {
-                                      /*                                 ExFreePool(Toc); */ /* INLINED */
+                                      /*                                 ExFreePool(Toc);
+                                       */ /* INLINED */
                                     }
                                     goto switch_4_break;
                                   } else {
@@ -4043,7 +4051,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                         (unsigned char)(address >> 8);
                                     cdaudioDataOut->TrackData[0].Address[3] =
                                         (unsigned char)address;
-                                    /*                               ExFreePool(Toc); */ /* INLINED */
+                                    /*                               ExFreePool(Toc);
+                                     */ /* INLINED */
                                   }
                                   goto switch_4_break;
                                 switch_4_exp_1 : /* CIL Label */
@@ -4092,7 +4101,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                       if (status != -1073741764L) {
                                         {
                                           Irp->IoStatus.Information = 0;
-                                          /*                                     ExFreePool(Toc); */ /* INLINED */
+                                          /*                                     ExFreePool(Toc);
+                                           */ /* INLINED */
                                         }
                                         goto SetStatusAndReturn;
                                       } else {
@@ -4215,7 +4225,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     Irp->IoStatus
                                         .Information = (unsigned long)((
                                         long)(&((CDROM_TOC *)0)->TrackData[i]));
-                                    /*                               ExFreePool(Toc); */ /* INLINED */
+                                    /*                               ExFreePool(Toc);
+                                     */ /* INLINED */
                                   }
                                   goto switch_4_break;
                                 switch_4_exp_2 : /* CIL Label */
@@ -4346,7 +4357,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     Irp->IoStatus.Information = 0;
                                     if (SubQPtr) {
                                       {
-                                        /*                                   ExFreePool(SubQPtr); */ /* INLINED */
+                                        /*                                   ExFreePool(SubQPtr);
+                                         */ /* INLINED */
                                       }
                                     } else {
                                     }
@@ -4365,7 +4377,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                 userPtr)
                                           ->Format != 1) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr);
+                                       */ /* INLINED */
                                       status = -1073741823L;
                                       Irp->IoStatus.Information = 0;
                                     }
@@ -4473,7 +4486,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     }
                                   }
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                   }
                                   goto switch_4_break;
                                 switch_4_exp_8 : /* CIL Label */
@@ -4529,7 +4543,8 @@ NTSTATUS CdAudioNECDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
       }
       {
-        /*     IoSetHardErrorOrVerifyDevice(Irp, deviceExtension->TargetDeviceObject); */ /* INLINED */
+        /*     IoSetHardErrorOrVerifyDevice(Irp,
+         * deviceExtension->TargetDeviceObject); */ /* INLINED */
         Irp->IoStatus.Information = 0;
       }
     } else {
@@ -4682,7 +4697,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 if (!(status >= 0L)) {
                                   {
-                                    /*                               ExFreePool(Toc); */ /* INLINED */
+                                    /*                               ExFreePool(Toc);
+                                     */ /* INLINED */
                                     Irp->IoStatus.Information = 0;
                                   }
                                   goto SetStatusAndReturn;
@@ -4700,7 +4716,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 if (!(status >= 0L)) {
                                   {
-                                    /*                               ExFreePool(Toc); */ /* INLINED */
+                                    /*                               ExFreePool(Toc);
+                                     */ /* INLINED */
                                     Irp->IoStatus.Information = 0;
                                   }
                                   goto SetStatusAndReturn;
@@ -4765,7 +4782,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     }
                                     if (!(status >= 0L)) {
                                       {
-                                        /*                                 ExFreePool(Toc); */ /* INLINED */
+                                        /*                                 ExFreePool(Toc);
+                                         */ /* INLINED */
                                         Irp->IoStatus.Information = 0;
                                       }
                                       goto SetStatusAndReturn;
@@ -4805,7 +4823,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   if (!(status >= 0L)) {
                                     {
-                                      /*                                 ExFreePool(Toc); */ /* INLINED */
+                                      /*                                 ExFreePool(Toc);
+                                       */ /* INLINED */
                                       Irp->IoStatus.Information = 0;
                                     }
                                     goto SetStatusAndReturn;
@@ -4832,7 +4851,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 {
                                   Irp->IoStatus.Information = (unsigned long)((
                                       long)(&((CDROM_TOC *)0)->TrackData[i]));
-                                  /*                             ExFreePool(Toc); */ /* INLINED */
+                                  /*                             ExFreePool(Toc);
+                                   */ /* INLINED */
                                 }
                                 goto switch_6_break;
                               switch_6_exp_14 : /* CIL Label */
@@ -5025,7 +5045,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   Irp->IoStatus.Information = 0;
                                   if (SubQPtr) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr);
+                                       */ /* INLINED */
                                     }
                                   } else {
                                   }
@@ -5047,7 +5068,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                               userPtr)
                                         ->Format != 1) {
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                     memset(userPtr, 0,
                                            sizeof(SUB_Q_CURRENT_POSITION));
                                     Irp->IoStatus.Information = 0;
@@ -5110,7 +5132,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                 } else {
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                     Irp->IoStatus.Information = 0;
                                   }
                                   goto SetStatusAndReturn;
@@ -5184,7 +5207,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   Irp->IoStatus.Information = 0;
                                 }
                                 {
-                                  /*                             ExFreePool(SubQPtr); */ /* INLINED */
+                                  /*                             ExFreePool(SubQPtr);
+                                   */ /* INLINED */
                                 }
                                 goto switch_6_break;
                               switch_6_exp_20: /* CIL Label */
@@ -5247,7 +5271,8 @@ NTSTATUS CdAudioPioneerDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
       }
       {
-        /*     IoSetHardErrorOrVerifyDevice(Irp, deviceExtension->TargetDeviceObject); */ /* INLINED */
+        /*     IoSetHardErrorOrVerifyDevice(Irp,
+         * deviceExtension->TargetDeviceObject); */ /* INLINED */
         Irp->IoStatus.Information = 0;
       }
     } else {
@@ -5400,7 +5425,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     if (status != -1073741764L) {
                                       if (status != -1073741764L) {
                                         {
-                                          /*                                     ExFreePool(Toc); */ /* INLINED */
+                                          /*                                     ExFreePool(Toc);
+                                           */ /* INLINED */
                                           Irp->IoStatus.Information = 0;
                                         }
                                         goto SetStatusAndReturn;
@@ -5523,7 +5549,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     deviceExtension->LastEndM = 0;
                                     deviceExtension->LastEndS = 0;
                                     deviceExtension->LastEndF = 0;
-                                    /*                               ExFreePool(Toc); */ /* INLINED */
+                                    /*                               ExFreePool(Toc);
+                                     */ /* INLINED */
                                   }
                                   goto switch_13_break;
                                 switch_13_exp_27: /* CIL Label */;
@@ -5688,7 +5715,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   if ((int)deviceExtension->Paused == 1) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr);
+                                       */ /* INLINED */
                                       status = 0L;
                                     }
                                     goto SetStatusAndReturn;
@@ -5704,7 +5732,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   if (!(status >= 0L)) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr);
+                                       */ /* INLINED */
                                     }
                                     goto SetStatusAndReturn;
                                   } else {
@@ -5722,7 +5751,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                   if (!(status >= 0L)) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr);
+                                       */ /* INLINED */
                                     }
                                     goto SetStatusAndReturn;
                                   } else {
@@ -5732,7 +5762,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     deviceExtension->PausedM = *(SubQPtr + 7);
                                     deviceExtension->PausedS = *(SubQPtr + 8);
                                     deviceExtension->PausedF = *(SubQPtr + 9);
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                   }
                                   goto switch_13_break;
                                 switch_13_exp_31: /* CIL Label */
@@ -5781,7 +5812,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     Irp->IoStatus.Information = 0;
                                     if (SubQPtr___0) {
                                       {
-                                        /*                                   ExFreePool(SubQPtr___0); */ /* INLINED */
+                                        /*                                   ExFreePool(SubQPtr___0);
+                                         */ /* INLINED */
                                       }
                                     } else {
                                     }
@@ -5803,7 +5835,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                 userPtr)
                                           ->Format != 1) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr___0); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr___0);
+                                       */ /* INLINED */
                                       memset(userPtr, 0,
                                              sizeof(SUB_Q_CURRENT_POSITION));
                                       status = -1073741823L;
@@ -5882,7 +5915,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     Irp->IoStatus.Information = 0;
                                   }
                                   {
-                                    /*                               ExFreePool(SubQPtr___0); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr___0);
+                                     */ /* INLINED */
                                   }
                                   goto switch_13_break;
                                 switch_13_exp_33 : /* CIL Label */
@@ -5938,7 +5972,8 @@ NTSTATUS CdAudioDenonDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
       }
       {
-        /*     IoSetHardErrorOrVerifyDevice(Irp, deviceExtension->TargetDeviceObject); */ /* INLINED */
+        /*     IoSetHardErrorOrVerifyDevice(Irp,
+         * deviceExtension->TargetDeviceObject); */ /* INLINED */
         Irp->IoStatus.Information = 0;
       }
     } else {
@@ -6130,7 +6165,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   if (status != -1073741764L) {
                                     if (status != -1073741764L) {
                                       {
-                                        /*                                   ExFreePool(Toc); */ /* INLINED */
+                                        /*                                   ExFreePool(Toc);
+                                         */ /* INLINED */
                                         Irp->IoStatus.Information = 0;
                                       }
                                       goto SetStatusAndReturn;
@@ -6331,7 +6367,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                       long)(&((CDROM_TOC *)0)->TrackData[i]));
                                 }
                                 {
-                                  /*                             ExFreePool(Toc); */ /* INLINED */
+                                  /*                             ExFreePool(Toc);
+                                   */ /* INLINED */
                                 }
                                 goto switch_15_break;
                               switch_15_exp_39 : /* CIL Label */
@@ -6467,7 +6504,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   deviceExtension->PausedM = *(PausePos + 0);
                                   deviceExtension->PausedS = *(PausePos + 1);
                                   deviceExtension->PausedF = *(PausePos + 2);
-                                  /*                             ExFreePool(PausePos); */ /* INLINED */
+                                  /*                             ExFreePool(PausePos);
+                                   */ /* INLINED */
                                 }
                                 goto switch_15_break;
                               switch_15_exp_43 : /* CIL Label */
@@ -6512,7 +6550,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   Irp->IoStatus.Information = 0;
                                   if (SubQPtr) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr);
+                                       */ /* INLINED */
                                     }
                                   } else {
                                   }
@@ -6530,7 +6569,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                               userPtr)
                                         ->Format != 1) {
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                     status = -1073741823L;
                                     Irp->IoStatus.Information = 0;
                                   }
@@ -6600,7 +6640,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   }
                                 }
                                 {
-                                  /*                             ExFreePool(SubQPtr); */ /* INLINED */
+                                  /*                             ExFreePool(SubQPtr);
+                                   */ /* INLINED */
                                 }
                                 goto switch_15_break;
                               switch_15_exp_45 : /* CIL Label */
@@ -6636,7 +6677,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 } else {
                                 }
                                 {
-                                  /*                             ExFreePool(EjectStatus); */ /* INLINED */
+                                  /*                             ExFreePool(EjectStatus);
+                                   */ /* INLINED */
                                 }
                                 goto switch_15_break;
                               switch_15_exp_46: /* CIL Label */;
@@ -6680,7 +6722,8 @@ NTSTATUS CdAudioHitachiDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
       }
       {
-        /*     IoSetHardErrorOrVerifyDevice(Irp, deviceExtension->TargetDeviceObject); */ /* INLINED */
+        /*     IoSetHardErrorOrVerifyDevice(Irp,
+         * deviceExtension->TargetDeviceObject); */ /* INLINED */
         Irp->IoStatus.Information = 0;
       }
     } else {
@@ -6817,7 +6860,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                             }
                             if (!(status >= 0L)) {
                               {
-                                /*                           ExFreePool(lastSession); */ /* INLINED */
+                                /*                           ExFreePool(lastSession);
+                                 */ /* INLINED */
                                 Irp->IoStatus.Information = 0;
                               }
                               goto SetStatusAndReturn;
@@ -6837,7 +6881,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                             }
                             if (lastSession->LogicalBlockAddress == 0UL) {
                               {
-                                /*                           ExFreePool(lastSession); */ /* INLINED */
+                                /*                           ExFreePool(lastSession);
+                                 */ /* INLINED */
                               }
                               goto switch_18_break;
                             } else {
@@ -6848,7 +6893,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                               *((ULONG *)(&cdaudioDataOut->TrackData[0]
                                                .Address[0])) =
                                   lastSession->LogicalBlockAddress;
-                              /*                         ExFreePool(lastSession); */ /* INLINED */
+                              /*                         ExFreePool(lastSession);
+                               */ /* INLINED */
                             }
                             goto switch_18_break;
                           switch_18_exp_51: /* CIL Label */;
@@ -6898,7 +6944,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                               if (status != -1073741764L) {
                                 if (status != -1073741764L) {
                                   {
-                                    /*                               ExFreePool(Toc); */ /* INLINED */
+                                    /*                               ExFreePool(Toc);
+                                     */ /* INLINED */
                                     Irp->IoStatus.Information = 0;
                                   }
                                   goto SetStatusAndReturn;
@@ -7009,7 +7056,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                               Irp->IoStatus.Information = 0;
                               if (SubQPtr) {
                                 {
-                                  /*                             ExFreePool(SubQPtr); */ /* INLINED */
+                                  /*                             ExFreePool(SubQPtr);
+                                   */ /* INLINED */
                                 }
                               } else {
                               }
@@ -7031,7 +7079,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                           userPtr)
                                     ->Format != 1) {
                               {
-                                /*                           ExFreePool(SubQPtr); */ /* INLINED */
+                                /*                           ExFreePool(SubQPtr);
+                                 */ /* INLINED */
                                 memset(userPtr, 0,
                                        sizeof(SUB_Q_CURRENT_POSITION));
                                 status = -1073741823L;
@@ -7228,7 +7277,8 @@ NTSTATUS CdAudio535DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
   SetStatusAndReturn:
     if (status == -2147483626L) {
       {
-        /*     IoSetHardErrorOrVerifyDevice(Irp, deviceExtension->TargetDeviceObject); */ /* INLINED */
+        /*     IoSetHardErrorOrVerifyDevice(Irp,
+         * deviceExtension->TargetDeviceObject); */ /* INLINED */
         Irp->IoStatus.Information = 0;
       }
     } else {
@@ -7380,7 +7430,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   if (status != -1073741764L) {
                                     if (status != -1073741764L) {
                                       {
-                                        /*                                   ExFreePool(Toc); */ /* INLINED */
+                                        /*                                   ExFreePool(Toc);
+                                         */ /* INLINED */
                                         Irp->IoStatus.Information = 0;
                                       }
                                       goto SetStatusAndReturn;
@@ -7482,7 +7533,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   deviceExtension->LastEndM = 0;
                                   deviceExtension->LastEndS = 0;
                                   deviceExtension->LastEndF = 0;
-                                  /*                             ExFreePool(Toc); */ /* INLINED */
+                                  /*                             ExFreePool(Toc);
+                                   */ /* INLINED */
                                 }
                                 goto switch_20_break;
                               switch_20_exp_61: /* CIL Label */;
@@ -7615,7 +7667,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 if ((int)deviceExtension->Paused == 1) {
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                     status = 0L;
                                   }
                                   goto SetStatusAndReturn;
@@ -7635,7 +7688,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 if (!(status >= 0L)) {
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                   }
                                   goto SetStatusAndReturn;
                                 } else {
@@ -7653,7 +7707,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 if (!(status >= 0L)) {
                                   {
-                                    /*                               ExFreePool(SubQPtr); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr);
+                                     */ /* INLINED */
                                   }
                                   goto SetStatusAndReturn;
                                 } else {
@@ -7664,7 +7719,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   deviceExtension->PausedM = *(SubQPtr + 9);
                                   deviceExtension->PausedS = *(SubQPtr + 10);
                                   deviceExtension->PausedF = *(SubQPtr + 11);
-                                  /*                             ExFreePool(SubQPtr); */ /* INLINED */
+                                  /*                             ExFreePool(SubQPtr);
+                                   */ /* INLINED */
                                 }
                                 goto switch_20_break;
                               switch_20_exp_65: /* CIL Label */
@@ -7713,7 +7769,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   Irp->IoStatus.Information = 0;
                                   if (SubQPtr___0) {
                                     {
-                                      /*                                 ExFreePool(SubQPtr___0); */ /* INLINED */
+                                      /*                                 ExFreePool(SubQPtr___0);
+                                       */ /* INLINED */
                                     }
                                   } else {
                                   }
@@ -7735,7 +7792,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                               userPtr)
                                         ->Format != 1) {
                                   {
-                                    /*                               ExFreePool(SubQPtr___0); */ /* INLINED */
+                                    /*                               ExFreePool(SubQPtr___0);
+                                     */ /* INLINED */
                                     memset(userPtr, 0,
                                            sizeof(SUB_Q_CURRENT_POSITION));
                                     status = -1073741823L;
@@ -7803,7 +7861,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   Irp->IoStatus.Information = 0;
                                 }
                                 {
-                                  /*                             ExFreePool(SubQPtr___0); */ /* INLINED */
+                                  /*                             ExFreePool(SubQPtr___0);
+                                   */ /* INLINED */
                                 }
                                 goto switch_20_break;
                               switch_20_exp_67 : /* CIL Label */
@@ -7873,7 +7932,8 @@ NTSTATUS CdAudio435DeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
   SetStatusAndReturn:
     if (status == -2147483626L) {
       {
-        /*     IoSetHardErrorOrVerifyDevice(Irp, deviceExtension->TargetDeviceObject); */ /* INLINED */
+        /*     IoSetHardErrorOrVerifyDevice(Irp,
+         * deviceExtension->TargetDeviceObject); */ /* INLINED */
         Irp->IoStatus.Information = 0;
       }
     } else {
@@ -8005,10 +8065,14 @@ NTSTATUS CdAudioHPCdrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         nextIrpSp->Control = 0;
       }
       if (s != NP) {
-        { errorFn(); }
+        {
+          errorFn();
+        }
       } else {
         if (compRegistered != 0) {
-          { errorFn(); }
+          {
+            errorFn();
+          }
         } else {
           compRegistered = 1;
           routine = 0;
@@ -8058,10 +8122,14 @@ NTSTATUS CdAudioForwardIrpSynchronous(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       nextIrpSp->Control = 0;
     }
     if (s != NP) {
-      { errorFn(); }
+      {
+        errorFn();
+      }
     } else {
       if (compRegistered != 0) {
-        { errorFn(); }
+        {
+          errorFn();
+        }
       } else {
         compRegistered = 1;
         routine = 1;
@@ -8266,7 +8334,9 @@ int main(void) {
             if (s != SKIP2) {
               if (s != IPC) {
                 if (s != DC) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                   goto _L___0;
                 }
@@ -8277,18 +8347,24 @@ int main(void) {
             _L___0: /* CIL Label */
               if (pended == 1) {
                 if (status != 259L) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                 }
               } else {
                 if (s == DC) {
                   if (status == 259L) {
-                    { errorFn(); }
+                    {
+                      errorFn();
+                    }
                   } else {
                   }
                 } else {
                   if (status != (NTSTATUS)lowerDriverReturn) {
-                    { errorFn(); }
+                    {
+                      errorFn();
+                    }
                   } else {
                   }
                 }
@@ -8744,7 +8820,9 @@ NTSTATUS IofCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {
@@ -8902,7 +8980,9 @@ NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason,
         customIrp = 0;
       } else {
         if (s == MPR3) {
-          { errorFn(); }
+          {
+            errorFn();
+          }
         } else {
         }
       }
@@ -9048,7 +9128,9 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {

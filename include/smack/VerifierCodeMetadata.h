@@ -26,4 +26,4 @@ public:
   void visitInstruction(Instruction &);
   static bool isMarked(const Instruction &I);
 };
-}
+} // namespace smack

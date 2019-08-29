@@ -68,6 +68,10 @@ def smack_lib():
 
 def default_clang_compile_command(args, lib = False):
   cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
+  # Starting from LLVM 5.0, we need the following two options
+  # in order to enable optimization passes.
+  # See: https://stackoverflow.com/a/46753969.
+  cmd += ['-Xclang', '-disable-O0-optnone']
   cmd += map(lambda path: '-I' + path, smack_headers(args))
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]

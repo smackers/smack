@@ -17,6 +17,6 @@ public:
   virtual bool runOnModule(llvm::Module &m);
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
-}
+} // namespace smack
 
 #endif // BPLPRINTER_H

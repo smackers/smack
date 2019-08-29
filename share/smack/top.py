@@ -9,12 +9,13 @@ import shutil
 import sys
 import shlex
 import subprocess
+import signal
 from svcomp.utils import verify_bpl_svcomp
 from utils import temporary_file, try_command, remove_temp_files
 from replay import replay_error_trace
 from frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '2.0.0'
+VERSION = '2.4.0'
 
 def results(args):
   """A dictionary of the result output messages."""
@@ -196,6 +197,10 @@ def arguments():
   translate_group.add_argument('--integer-overflow', action='store_true', default=False,
     help='enable integer overflow checks')
 
+  translate_group.add_argument('--llvm-assumes', choices=['none', 'use', 'check'], default='none',
+    help='optionally enable generation of Boogie assume statements from LLVM assume statements ' +
+         '(none=no generation [default], use=generate assume statements, check=check assume statements)')
+
   translate_group.add_argument('--float', action="store_true", default=False,
     help='enable bit-precise floating-point functions')
 
@@ -206,6 +211,10 @@ def arguments():
   verifier_group.add_argument('--verifier',
     choices=['boogie', 'corral', 'symbooglix', 'svcomp'], default='corral',
     help='back-end verification engine')
+
+  verifier_group.add_argument('--solver',
+    choices=['z3', 'cvc4'], default='z3',
+    help='back-end SMT solver')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
     type = lambda x: int(x) if int(x) > 0 else parser.error('Unroll bound has to be positive.'),
@@ -346,6 +355,7 @@ def llvm_to_bpl(args):
   if args.no_memory_splitting: cmd += ['-no-memory-splitting']
   if args.memory_safety: cmd += ['-memory-safety']
   if args.integer_overflow: cmd += ['-integer-overflow']
+  if args.llvm_assumes: cmd += ['-llvm-assumes=' + args.llvm_assumes]
   if args.float: cmd += ['-float']
   if args.modular: cmd += ['-modular']
   try_command(cmd, console=True)
@@ -459,6 +469,8 @@ def verify_bpl(args):
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
+    if args.solver == 'cvc4':
+      command += ["/proverOpt:SOLVER=cvc4"]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -470,7 +482,9 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
-	
+    if args.solver == 'cvc4':
+      command += ["/bopt:proverOpt:SOLVER=cvc4"]
+
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
     command += [args.bpl_file]
@@ -642,6 +656,14 @@ def smackdOutput(corralOutput):
   json_string = json.dumps(json_data)
   return json_string
 
+def clean_up_upon_sigterm(main):
+  def handler(signum, frame):
+    remove_temp_files()
+    sys.exit(0)
+  signal.signal(signal.SIGTERM, handler)
+  return main
+
+@clean_up_upon_sigterm
 def main():
   try:
     global args

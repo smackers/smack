@@ -66,7 +66,7 @@ bool onlyVerifierUsers(Instruction &I) {
   }
   return true;
 }
-}
+} // namespace
 
 bool VerifierCodeMetadata::isMarked(const Instruction &I) {
   auto *N = I.getMetadata("verifier.code");
@@ -124,4 +124,4 @@ char VerifierCodeMetadata::ID = 0;
 // Register the pass
 static RegisterPass<VerifierCodeMetadata> X("verifier-code-metadata",
                                             "Verifier Code Metadata");
-}
+} // namespace smack

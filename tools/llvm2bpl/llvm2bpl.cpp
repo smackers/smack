@@ -106,9 +106,9 @@ static TargetMachine *GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 
   return TheTarget->createTargetMachine(
       TheTriple.getTriple(), CPUStr, FeaturesStr, Options,
-      Reloc::Static,      /* was getRelocModel(),*/
-      CodeModel::Default, /* was CMModel,*/
-      CodeGenOpt::None    /*GetCodeGenOptLevel())*/
+      Reloc::Static,   /* was getRelocModel(),*/
+      None,            /* Use default CodeModel */
+      CodeGenOpt::None /*GetCodeGenOptLevel())*/
       );
 }
 }
@@ -210,11 +210,11 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::AddTiming());
   }
 
-  std::vector<tool_output_file *> files;
+  std::vector<ToolOutputFile *> files;
 
   if (!FinalIrFilename.empty()) {
     std::error_code EC;
-    auto F = new tool_output_file(FinalIrFilename.c_str(), EC, sys::fs::F_None);
+    auto F = new ToolOutputFile(FinalIrFilename.c_str(), EC, sys::fs::F_None);
     if (EC)
       check(EC.message());
     F->keep();
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
 
   if (!OutputFilename.empty()) {
     std::error_code EC;
-    auto F = new tool_output_file(OutputFilename.c_str(), EC, sys::fs::F_None);
+    auto F = new ToolOutputFile(OutputFilename.c_str(), EC, sys::fs::F_None);
     if (EC)
       check(EC.message());
     F->keep();

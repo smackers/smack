@@ -10,6 +10,8 @@
 #include "smack/SmackWarnings.h"
 
 namespace smack {
+enum class LLVMAssumeType { none, use, check };
+
 class SmackOptions {
 public:
   static const llvm::cl::list<std::string> EntryPoints;
@@ -28,10 +30,11 @@ public:
   static const llvm::cl::opt<bool> FloatEnabled;
   static const llvm::cl::opt<bool> MemorySafety;
   static const llvm::cl::opt<bool> IntegerOverflow;
+  static const llvm::cl::opt<LLVMAssumeType> LLVMAssumes;
   static const llvm::cl::opt<bool> AddTiming;
 
   static bool isEntryPoint(std::string);
 };
-}
+} // namespace smack
 
 #endif // SMACKREP_H

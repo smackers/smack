@@ -48,7 +48,7 @@ std::list<CallInst *> findCallers(Function *F) {
 
   return callers;
 }
-}
+} // namespace
 
 namespace smack {
 
@@ -305,23 +305,21 @@ const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r1 = regions->idx(mci.getOperand(0), length);
-  unsigned r2 = regions->idx(mci.getOperand(1), length);
+  unsigned r1 = regions->idx(mci.getRawDest(), length);
+  unsigned r2 = regions->idx(mci.getRawSource(), length);
 
   const Type *T = regions->get(r1).getType();
   Decl *P = memcpyProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
-  const Value *dst = mci.getArgOperand(0), *src = mci.getArgOperand(1),
-              *len = mci.getArgOperand(2), *aln = mci.getArgOperand(3),
-              *vol = mci.getArgOperand(4);
+  const Value *dst = mci.getRawDest(), *src = mci.getRawSource(),
+              *len = mci.getLength();
 
   return Stmt::call(
       P->getName(),
       {Expr::id(memReg(r1)), Expr::id(memReg(r2)), expr(dst), expr(src),
        integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
-       integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
-       Expr::eq(expr(vol), integerLit(1ULL, 1))},
+       Expr::lit(mci.isVolatile())},
       {memReg(r1)});
 }
 
@@ -332,22 +330,20 @@ const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r = regions->idx(msi.getOperand(0), length);
+  unsigned r = regions->idx(msi.getRawDest(), length);
 
   const Type *T = regions->get(r).getType();
   Decl *P = memsetProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
-  const Value *dst = msi.getArgOperand(0), *val = msi.getArgOperand(1),
-              *len = msi.getArgOperand(2), *aln = msi.getArgOperand(3),
-              *vol = msi.getArgOperand(4);
+  const Value *dst = msi.getRawDest(), *val = msi.getValue(),
+              *len = msi.getLength();
 
   return Stmt::call(
       P->getName(),
       {Expr::id(memReg(r)), expr(dst), expr(val),
        integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
-       integerToPointer(expr(aln), aln->getType()->getIntegerBitWidth()),
-       Expr::eq(expr(vol), integerLit(1ULL, 1))},
+       Expr::lit(msi.isVolatile())},
       {memReg(r)});
 }
 
@@ -377,13 +373,14 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       const unsigned R = regions->idx(GEP);
       bool bytewise = regions->get(R).bytewiseAccess();
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
-      attrs.push_back(
-          Attr::attr("field",
-                     {
-                         Expr::lit(Naming::LOAD + "." +
-                                   (bytewise ? "bytes." : "") + intType(bits)),
-                         Expr::id(memPath(R)), ptrArith(GEP), Expr::lit(bytes),
-                     }));
+      attrs.push_back(Attr::attr(
+          "field", {
+                       Expr::lit(Naming::LOAD + "." +
+                                 (bytewise ? "bytes." : "") + intType(bits)),
+                       Expr::id(memPath(R)),
+                       ptrArith(GEP),
+                       Expr::lit(bytes),
+                   }));
 
     } else {
       llvm_unreachable("Unexpected argument type.");
@@ -512,9 +509,10 @@ const Expr *SmackRep::load(const llvm::Value *P) {
   const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
-      (bytewise ? "bytes." : (isUnsafeFloatAccess(T->getElementType(), resultTy)
-                                  ? "unsafe."
-                                  : "")) +
+      (bytewise
+           ? "bytes."
+           : (isUnsafeFloatAccess(T->getElementType(), resultTy) ? "unsafe."
+                                                                 : "")) +
       type(T->getElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
@@ -547,8 +545,9 @@ const Expr *SmackRep::pa(const Expr *base, long long idx, unsigned size) {
   if (idx >= 0) {
     return pa(base, pointerLit(idx), pointerLit(size));
   } else {
-    return pa(base, Expr::fn("$sub.ref", pointerLit(0ULL),
-                             pointerLit((unsigned long long)std::abs(idx))),
+    return pa(base,
+              Expr::fn("$sub.ref", pointerLit(0ULL),
+                       pointerLit((unsigned long long)std::abs(idx))),
               pointerLit(size));
   }
 }
@@ -644,7 +643,10 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned) {
       const APFloat APF = CFP->getValueAPF();
       const Type *type = CFP->getType();
       unsigned expSize, sigSize;
-      if (type->isFloatTy()) {
+      if (type->isHalfTy()) {
+        expSize = 5;
+        sigSize = 11;
+      } else if (type->isFloatTy()) {
         expSize = 8;
         sigSize = 24;
       } else if (type->isDoubleTy()) {
@@ -772,8 +774,9 @@ const Expr *SmackRep::ptrArith(
                "Index value too large (or too small if negative)");
         e = pa(e, (long long)ci->getSExtValue(), storageSize(et));
       } else
-        e = pa(e, integerToPointer(expr(a.first),
-                                   a.first->getType()->getIntegerBitWidth()),
+        e = pa(e,
+               integerToPointer(expr(a.first),
+                                a.first->getType()->getIntegerBitWidth()),
                storageSize(et));
     }
   }
@@ -934,8 +937,8 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
   const Expr *e1 = expr(lhs, isUnsigned);
   const Expr *e2 = expr(rhs, isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
-    return Expr::if_then_else(Expr::fn(fn + ".bool", e1, e2),
-                              integerLit(1ULL, 1), integerLit(0ULL, 1));
+    return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
+                            integerLit(0ULL, 1));
   else
     return Expr::fn(fn, e1, e2);
 }
@@ -956,7 +959,7 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
   std::list<Decl *> decls;
   std::list<Block *> blocks;
 
-  for (auto &A : F->getArgumentList())
+  for (auto &A : F->args())
     params.push_back({naming->get(A), type(A.getType())});
 
   if (!F->getReturnType()->isVoidTy())
@@ -1168,8 +1171,7 @@ unsigned SmackRep::numElements(const llvm::Constant *v) {
 void SmackRep::addInitFunc(const llvm::Function *f) {
   assert(f->getReturnType()->isVoidTy() &&
          "Init functions cannot return a value");
-  assert(f->getArgumentList().empty() &&
-         "Init functions cannot take parameters");
+  assert(f->arg_empty() && "Init functions cannot take parameters");
   initFuncs.push_back(naming->get(*f));
 }
 
@@ -1270,7 +1272,6 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
     << "dst: ref, "
     << "src: ref, "
     << "len: ref, "
-    << "align: ref, "
     << "isvolatile: bool"
     << ") returns ("
     << "M.ret: [ref] " << type << ")";
@@ -1345,7 +1346,6 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
     << "dst: ref, "
     << "val: " << intType(8) << ", "
     << "len: ref, "
-    << "align: ref, "
     << "isvolatile: bool"
     << ") returns ("
     << "M.ret: [ref] " << type << ")";

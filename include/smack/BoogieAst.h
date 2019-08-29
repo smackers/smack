@@ -53,9 +53,9 @@ public:
   static const Expr *forall(std::list<Binding>, const Expr *e);
   static const Expr *and_(const Expr *l, const Expr *r);
   static const Expr *or_(const Expr *l, const Expr *r);
-  static const Expr *cond(const Expr *c, const Expr *t, const Expr *e);
   static const Expr *eq(const Expr *l, const Expr *r);
   static const Expr *lt(const Expr *l, const Expr *r);
+  static const Expr *ifThenElse(const Expr *c, const Expr *t, const Expr *e);
   static const Expr *fn(std::string f, const Expr *x);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y,
@@ -79,7 +79,6 @@ public:
   static const Expr *sel(const Expr *b, const Expr *i);
   static const Expr *sel(std::string b, std::string i);
   static const Expr *upd(const Expr *b, const Expr *i, const Expr *v);
-  static const Expr *if_then_else(const Expr *c, const Expr *t, const Expr *e);
   static const Expr *bvExtract(const Expr *v, const Expr *upper,
                                const Expr *lower);
   static const Expr *bvExtract(std::string v, unsigned upper, unsigned lower);
@@ -119,18 +118,6 @@ public:
       : Expr(BIN), op(b), lhs(l), rhs(r) {}
   void print(std::ostream &os) const;
   static bool classof(const Expr *e) { return e->getKind() == BIN; }
-};
-
-class CondExpr : public Expr {
-  const Expr *cond;
-  const Expr *then;
-  const Expr *else_;
-
-public:
-  CondExpr(const Expr *c, const Expr *t, const Expr *e)
-      : Expr(COND), cond(c), then(t), else_(e) {}
-  void print(std::ostream &os) const;
-  static bool classof(const Expr *e) { return e->getKind() == COND; }
 };
 
 class FunExpr : public Expr {
@@ -296,12 +283,12 @@ public:
 
 class IfThenElseExpr : public Expr {
   const Expr *cond;
-  const Expr *true_value;
-  const Expr *false_value;
+  const Expr *trueValue;
+  const Expr *falseValue;
 
 public:
   IfThenElseExpr(const Expr *c, const Expr *t, const Expr *e)
-      : Expr(IF_THEN_ELSE), cond(c), true_value(t), false_value(e) {}
+      : Expr(IF_THEN_ELSE), cond(c), trueValue(t), falseValue(e) {}
   void print(std::ostream &os) const;
   static bool classof(const Expr *e) { return e->getKind() == IF_THEN_ELSE; }
 };
@@ -742,6 +729,6 @@ std::ostream &operator<<(std::ostream &os, const Expr *e);
 
 std::ostream &operator<<(std::ostream &os, Decl &e);
 std::ostream &operator<<(std::ostream &os, Decl *e);
-}
+} // namespace smack
 
 #endif // BOOGIEAST_H

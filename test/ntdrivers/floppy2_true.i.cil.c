@@ -4011,7 +4011,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
     }
     {
 #line 276
-      __cil_tmp52 = (KUSER_SHARED_DATA * const)4292804608U;
+      __cil_tmp52 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 276
       __cil_tmp53 = (unsigned int)__cil_tmp52;
 #line 276
@@ -4043,7 +4043,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
     }
     {
 #line 279
-      __cil_tmp62 = (KUSER_SHARED_DATA * const)4292804608U;
+      __cil_tmp62 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 279
       __cil_tmp63 = (unsigned int)__cil_tmp62;
 #line 279
@@ -5030,7 +5030,7 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
         }
         {
 #line 505
-          __cil_tmp204 = (KUSER_SHARED_DATA * const)4292804608U;
+          __cil_tmp204 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 505
           __cil_tmp205 = (unsigned int)__cil_tmp204;
 #line 505
@@ -5423,7 +5423,7 @@ NTSTATUS FlConfigCallBack(PVOID Context, PUNICODE_STRING PathName,
                                 {
 #line 651
                                   __cil_tmp54 =
-                                      (KUSER_SHARED_DATA * const)4292804608U;
+                                      (KUSER_SHARED_DATA *const)4292804608U;
 #line 651
                                   __cil_tmp55 = (unsigned int)__cil_tmp54;
 #line 651
@@ -8698,7 +8698,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   {
 #line 1378
                                     __cil_tmp331 =
-                                        (KUSER_SHARED_DATA * const)4292804608U;
+                                        (KUSER_SHARED_DATA *const)4292804608U;
 #line 1378
                                     __cil_tmp332 = (unsigned int)__cil_tmp331;
 #line 1378
@@ -9248,7 +9248,7 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                   {
 #line 1478
                                     __cil_tmp456 =
-                                        (KUSER_SHARED_DATA * const)4292804608U;
+                                        (KUSER_SHARED_DATA *const)4292804608U;
 #line 1478
                                     __cil_tmp457 = (unsigned int)__cil_tmp456;
 #line 1478
@@ -12021,7 +12021,7 @@ NTSTATUS FloppyStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       if (ntStatus >= 0L) {
         {
 #line 1993
-          __cil_tmp139 = (KUSER_SHARED_DATA * const)4292804608U;
+          __cil_tmp139 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 1993
           __cil_tmp140 = (unsigned int)__cil_tmp139;
 #line 1993
@@ -14569,7 +14569,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                 if (__cil_tmp109 != 0) {
                   {
 #line 2743
-                    __cil_tmp110 = (KUSER_SHARED_DATA * const)4292804608U;
+                    __cil_tmp110 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 2743
                     __cil_tmp111 = (unsigned int)__cil_tmp110;
 #line 2743
@@ -15105,7 +15105,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
                   }
                   {
 #line 2903
-                    __cil_tmp256 = (KUSER_SHARED_DATA * const)4292804608U;
+                    __cil_tmp256 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 2903
                     __cil_tmp257 = (unsigned int)__cil_tmp256;
 #line 2903
@@ -15408,7 +15408,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
         } else {
         _L___2 : {
 #line 3004
-          __cil_tmp334 = (KUSER_SHARED_DATA * const)4292804608U;
+          __cil_tmp334 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 3004
           __cil_tmp335 = (unsigned int)__cil_tmp334;
 #line 3004
@@ -15611,7 +15611,7 @@ NTSTATUS FlStartDrive(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
         }
         {
 #line 3085
-          __cil_tmp379 = (KUSER_SHARED_DATA * const)4292804608U;
+          __cil_tmp379 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 3085
           __cil_tmp380 = (unsigned int)__cil_tmp379;
 #line 3085
@@ -16401,7 +16401,7 @@ NTSTATUS FlRecalibrateDrive(PDISKETTE_EXTENSION DisketteExtension) {
         if (ntStatus >= 0L) {
           {
 #line 3307
-            __cil_tmp28 = (KUSER_SHARED_DATA * const)4292804608U;
+            __cil_tmp28 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 3307
             __cil_tmp29 = (unsigned int)__cil_tmp28;
 #line 3307
@@ -17157,7 +17157,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
           while_101_continue: /* CIL Label */;
             {
 #line 3452
-              __cil_tmp29 = (KUSER_SHARED_DATA * const)4292804608U;
+              __cil_tmp29 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 3452
               __cil_tmp30 = (unsigned int)__cil_tmp29;
 #line 3452
@@ -17409,7 +17409,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                                 {
 #line 3502
                                   __cil_tmp111 =
-                                      (KUSER_SHARED_DATA * const)4292804608U;
+                                      (KUSER_SHARED_DATA *const)4292804608U;
 #line 3502
                                   __cil_tmp112 = (unsigned int)__cil_tmp111;
 #line 3502
@@ -17587,7 +17587,7 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                                   _L___0 : {
 #line 3553
                                     __cil_tmp154 =
-                                        (KUSER_SHARED_DATA * const)4292804608U;
+                                        (KUSER_SHARED_DATA *const)4292804608U;
 #line 3553
                                     __cil_tmp155 = (unsigned int)__cil_tmp154;
 #line 3553
@@ -17730,8 +17730,8 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                                       *mem_357 = *__cil_tmp194;
                                       {
 #line 3588
-                                        __cil_tmp195 = (KUSER_SHARED_DATA *
-                                                        const)4292804608U;
+                                        __cil_tmp195 = (KUSER_SHARED_DATA
+                                                            *const)4292804608U;
 #line 3588
                                         __cil_tmp196 =
                                             (unsigned int)__cil_tmp195;
@@ -17799,8 +17799,8 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                                       *mem_361 = (unsigned long)__cil_tmp207;
                                       {
 #line 3594
-                                        __cil_tmp208 = (KUSER_SHARED_DATA *
-                                                        const)4292804608U;
+                                        __cil_tmp208 = (KUSER_SHARED_DATA
+                                                            *const)4292804608U;
 #line 3594
                                         __cil_tmp209 =
                                             (unsigned int)__cil_tmp208;
@@ -19461,7 +19461,7 @@ void FloppyThread(PVOID Context) {
         if (waitStatus == 258L) {
           {
 #line 3938
-            __cil_tmp20 = (KUSER_SHARED_DATA * const)4292804608U;
+            __cil_tmp20 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 3938
             __cil_tmp21 = (unsigned int)__cil_tmp20;
 #line 3938
@@ -19648,7 +19648,7 @@ void FloppyThread(PVOID Context) {
               }
               {
 #line 3977
-                __cil_tmp75 = (KUSER_SHARED_DATA * const)4292804608U;
+                __cil_tmp75 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 3977
                 __cil_tmp76 = (unsigned int)__cil_tmp75;
 #line 3977
@@ -20098,7 +20098,7 @@ void FloppyThread(PVOID Context) {
                                 _L : {
 #line 4057
                                   __cil_tmp189 =
-                                      (KUSER_SHARED_DATA * const)4292804608U;
+                                      (KUSER_SHARED_DATA *const)4292804608U;
 #line 4057
                                   __cil_tmp190 = (unsigned int)__cil_tmp189;
 #line 4057
@@ -20380,7 +20380,7 @@ void FloppyThread(PVOID Context) {
                                 {
 #line 4117
                                   __cil_tmp257 =
-                                      (KUSER_SHARED_DATA * const)4292804608U;
+                                      (KUSER_SHARED_DATA *const)4292804608U;
 #line 4117
                                   __cil_tmp258 = (unsigned int)__cil_tmp257;
 #line 4117
@@ -20524,7 +20524,7 @@ void FloppyThread(PVOID Context) {
                                 {
 #line 4170
                                   __cil_tmp289 =
-                                      (KUSER_SHARED_DATA * const)4292804608U;
+                                      (KUSER_SHARED_DATA *const)4292804608U;
 #line 4170
                                   __cil_tmp290 = (unsigned int)__cil_tmp289;
 #line 4170
@@ -21199,8 +21199,8 @@ void FloppyThread(PVOID Context) {
                                               {
 #line 4448
                                                 __cil_tmp408 =
-                                                    (KUSER_SHARED_DATA *
-                                                     const)4292804608U;
+                                                    (KUSER_SHARED_DATA
+                                                         *const)4292804608U;
 #line 4448
                                                 __cil_tmp409 =
                                                     (unsigned int)__cil_tmp408;
@@ -21538,7 +21538,7 @@ void FloppyThread(PVOID Context) {
         }
         {
 #line 4546
-          __cil_tmp477 = (KUSER_SHARED_DATA * const)4292804608U;
+          __cil_tmp477 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 4546
           __cil_tmp478 = (unsigned int)__cil_tmp477;
 #line 4546
@@ -22099,7 +22099,7 @@ void FlConsolidateMediaTypeWithBootSector(PDISKETTE_EXTENSION DisketteExtension,
       while_136_continue: /* CIL Label */;
         {
 #line 4629
-          __cil_tmp95 = (KUSER_SHARED_DATA * const)4292804608U;
+          __cil_tmp95 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 4629
           __cil_tmp96 = (unsigned int)__cil_tmp95;
 #line 4629
@@ -22692,7 +22692,7 @@ void FlCheckBootSector(PDISKETTE_EXTENSION DisketteExtension) {
   {
     {
 #line 4776
-      __cil_tmp9 = (KUSER_SHARED_DATA * const)4292804608U;
+      __cil_tmp9 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 4776
       __cil_tmp10 = (unsigned int)__cil_tmp9;
 #line 4776
@@ -22751,7 +22751,7 @@ void FlCheckBootSector(PDISKETTE_EXTENSION DisketteExtension) {
     *mem_63 = (unsigned long)__cil_tmp21;
     {
 #line 4782
-      __cil_tmp22 = (KUSER_SHARED_DATA * const)4292804608U;
+      __cil_tmp22 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 4782
       __cil_tmp23 = (unsigned int)__cil_tmp22;
 #line 4782
@@ -23715,7 +23715,7 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
                           {
 #line 4946
                             __cil_tmp130 =
-                                (KUSER_SHARED_DATA * const)4292804608U;
+                                (KUSER_SHARED_DATA *const)4292804608U;
 #line 4946
                             __cil_tmp131 = (unsigned int)__cil_tmp130;
 #line 4946
@@ -24271,7 +24271,7 @@ NTSTATUS FlReadWriteTrack(PDISKETTE_EXTENSION DisketteExtension, PMDL IoMdl,
             if (status >= 0L) {
               {
 #line 5030
-                __cil_tmp290 = (KUSER_SHARED_DATA * const)4292804608U;
+                __cil_tmp290 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 5030
                 __cil_tmp291 = (unsigned int)__cil_tmp290;
 #line 5030
@@ -25017,7 +25017,7 @@ NTSTATUS FlReadWrite(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp,
     }
     {
 #line 5214
-      __cil_tmp44 = (KUSER_SHARED_DATA * const)4292804608U;
+      __cil_tmp44 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 5214
       __cil_tmp45 = (unsigned int)__cil_tmp44;
 #line 5214
@@ -26589,7 +26589,7 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
     }
     {
 #line 5535
-      __cil_tmp145 = (KUSER_SHARED_DATA * const)4292804608U;
+      __cil_tmp145 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 5535
       __cil_tmp146 = (unsigned int)__cil_tmp145;
 #line 5535
@@ -26860,7 +26860,7 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
                   }
                   {
 #line 5607
-                    __cil_tmp229 = (KUSER_SHARED_DATA * const)4292804608U;
+                    __cil_tmp229 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 5607
                     __cil_tmp230 = (unsigned int)__cil_tmp229;
 #line 5607
@@ -27515,7 +27515,7 @@ NTSTATUS FlFormat(PDISKETTE_EXTENSION DisketteExtension, PIRP Irp) {
           if (!__cil_tmp418) {
             {
 #line 5790
-              __cil_tmp419 = (KUSER_SHARED_DATA * const)4292804608U;
+              __cil_tmp419 = (KUSER_SHARED_DATA *const)4292804608U;
 #line 5790
               __cil_tmp420 = (unsigned int)__cil_tmp419;
 #line 5790
@@ -28132,7 +28132,7 @@ BOOLEAN FlCheckFormatParameters(PDISKETTE_EXTENSION DisketteExtension,
                             {
 #line 5948
                               __cil_tmp74 =
-                                  (KUSER_SHARED_DATA * const)4292804608U;
+                                  (KUSER_SHARED_DATA *const)4292804608U;
 #line 5948
                               __cil_tmp75 = (unsigned int)__cil_tmp74;
 #line 5948

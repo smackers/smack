@@ -89,8 +89,10 @@ bool StructRet::runOnModule(Module& M) {
       ValueMap[&*II] = &*NI;
       NI->setName(II->getName());
       AttributeSet attrs = F->getAttributes().getParamAttributes(II->getArgNo() + 1);
-      if (!attrs.isEmpty())
-        NI->addAttr(attrs);
+      if (attrs.hasAttributes()) {
+          auto AB = AttrBuilder(attrs);
+          NI->addAttrs(AB);
+      }
     }
     // Perform the cloning.
     SmallVector<ReturnInst*,100> Returns;
@@ -112,10 +114,12 @@ bool StructRet::runOnModule(Module& M) {
           continue;
         IRBuilder<> Builder(RI);
         if (auto LI = dyn_cast<LoadInst>(RI->getOperand(0))) {
-          Builder.CreateMemCpy(fargs.at(0),
+          Builder.CreateMemCpy(
+              fargs.at(0),
+              targetData.getPrefTypeAlignment(fargs.at(0)->getType()),
               LI->getPointerOperand(),
-              targetData.getTypeStoreSize(LI->getType()),
-              targetData.getPrefTypeAlignment(LI->getType()));
+              targetData.getPrefTypeAlignment(LI->getType()),
+              targetData.getTypeStoreSize(LI->getType()));
         } else if (auto CS = dyn_cast<ConstantStruct>(RI->getReturnValue())) {
           StructType* ST = CS->getType();
           // We could store the struct into the allocated space pointed by the first
@@ -144,30 +148,21 @@ bool StructRet::runOnModule(Module& M) {
         continue;
       AllocaInst *AllocaNew = new AllocaInst(F->getReturnType(), 0, "", CI);
       SmallVector<Value*, 8> Args;
-
-      //this should probably be done in a different manner
-      AttributeSet NewCallPAL=AttributeSet();
+      SmallVector<AttributeSet, 8> ArgAttrs;
 
       // Get the initial attributes of the call
-      AttributeSet CallPAL = CI->getAttributes();
+      AttributeList CallPAL = CI->getAttributes();
       AttributeSet RAttrs = CallPAL.getRetAttributes();
       AttributeSet FnAttrs = CallPAL.getFnAttributes();
 
-      if (!RAttrs.isEmpty())
-        NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0, RAttrs);
-
       Args.push_back(AllocaNew);
+      ArgAttrs.push_back(AttributeSet());
       for(unsigned j = 0; j < CI->getNumOperands()-1; j++) {
         Args.push_back(CI->getOperand(j));
-        // position in the NewCallPAL
-        AttributeSet Attrs = CallPAL.getParamAttributes(j);
-        if (!Attrs.isEmpty())
-          NewCallPAL=NewCallPAL.addAttributes(F->getContext(),Args.size(), Attrs);
+        ArgAttrs.push_back(CallPAL.getParamAttributes(j));
       }
-      // Create the new attributes vec.
-      if (!FnAttrs.isEmpty())
-        NewCallPAL=NewCallPAL.addAttributes(F->getContext(),~0, FnAttrs);
 
+      auto NewCallPAL = AttributeList::get(F->getContext(), FnAttrs, RAttrs, ArgAttrs);
       CallInst *CallI = CallInst::Create(NF, Args, "", CI);
       CallI->setCallingConv(CI->getCallingConv());
       CallI->setAttributes(NewCallPAL);

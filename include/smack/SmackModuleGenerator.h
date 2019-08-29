@@ -25,6 +25,6 @@ public:
   Program *getProgram() { return program; }
   std::vector<std::string> getBplGlobals() { return bplGlobals; }
 };
-}
+} // namespace smack
 
 #endif // SMACKMODULEGENERATOR_H

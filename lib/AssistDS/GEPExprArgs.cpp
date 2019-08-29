@@ -118,7 +118,8 @@ bool GEPExprArgs::runOnModule(Module& M) {
           for (auto II = F->arg_begin(); NI != NewF->arg_end(); ++II, ++NI) {
             ValueMap[&*II] = &*NI;
             NI->setName(II->getName());
-            NI->addAttr(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+            auto ArgAttrs = AttrBuilder(F->getAttributes().getParamAttributes(II->getArgNo() + 1));
+            NI->addAttrs(ArgAttrs);
           }
           NewF->setAttributes(NewF->getAttributes().addAttributes(
               F->getContext(), 0, F->getAttributes().getRetAttributes()));
@@ -152,29 +153,21 @@ bool GEPExprArgs::runOnModule(Module& M) {
               fargs.at(j)->replaceAllUsesWith(GEP_new);
           }
 
-          // TODO: Should we use attrbuilder?
-          AttributeSet NewCallPAL=AttributeSet();
-          
           // Get the initial attributes of the call
-          AttributeSet CallPAL = CI->getAttributes();
+          AttributeList CallPAL = CI->getAttributes();
           AttributeSet RAttrs = CallPAL.getRetAttributes();
           AttributeSet FnAttrs = CallPAL.getFnAttributes();
-          if (!RAttrs.isEmpty())
-            NewCallPAL=NewCallPAL.addAttributes(F->getContext(),0,RAttrs);
 
           SmallVector<Value*, 8> Args;
+          SmallVector<AttributeSet, 8> ArgAttrs;
           Args.push_back(GEP->getPointerOperand());
+          ArgAttrs.push_back(AttributeSet());
           for(unsigned j =1;j<CI->getNumOperands();j++) {
             Args.push_back(CI->getOperand(j));
-            // position in the AttributesBuilder
-            AttributeSet Attrs = CallPAL.getParamAttributes(j);
-            if (!Attrs.isEmpty())
-              NewCallPAL=NewCallPAL.addAttributes(F->getContext(),Args.size(),Attrs);
+            ArgAttrs.push_back(CallPAL.getParamAttributes(j));
           }
-          // Create the new attributes vec.
-          if (!FnAttrs.isEmpty())
-            NewCallPAL=NewCallPAL.addAttributes(F->getContext(),~0, FnAttrs);
 
+          auto NewCallPAL = AttributeList::get(F->getContext(), FnAttrs, RAttrs, ArgAttrs);
           CallInst *CallI = CallInst::Create(NewF,Args,"", CI);
           CallI->setCallingConv(CI->getCallingConv());
           CallI->setAttributes(NewCallPAL);

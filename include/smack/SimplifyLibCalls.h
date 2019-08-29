@@ -25,4 +25,4 @@ public:
   virtual bool runOnModule(Module &M);
   void visitCallInst(CallInst &);
 };
-}
+} // namespace smack
