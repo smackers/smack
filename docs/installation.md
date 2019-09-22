@@ -215,6 +215,6 @@ shell in the `test` directory by executing
 [build.sh]: https://github.com/smackers/smack/blob/master/bin/build.sh
 [Xcode]: https://developer.apple.com/xcode/
 [Homebrew]: http://brew.sh/
-[Homebrew Cask]: http://caskroom.io
+[Homebrew Cask]: https://formulae.brew.sh/cask/
 [Docker]: https://www.docker.com
 [Ninja]: https://ninja-build.org
