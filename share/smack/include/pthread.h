@@ -4,7 +4,7 @@
 #ifndef PTHREAD_H
 #define PTHREAD_H
 
-#include "pthreadtypes.h"
+#include "bits/pthreadtypes.h"
 
 // model mutex:
 //  0 = unlocked,
