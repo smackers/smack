@@ -178,7 +178,7 @@ def main():
   parser.add_argument("--exhaustive", help="check all configurations on all examples", action="store_true")
   parser.add_argument("--all-configs", help="check all configurations per example", action="store_true")
   parser.add_argument("--all-examples", help="check all examples", action="store_true")
-  parser.add_argument("--folder", action="store", default="**", type=str,
+  parser.add_argument("--folder", action="store", default="**/**", type=str,
                       help="sets the regressions folder to run")
   parser.add_argument("--threads", action="store", dest="n_threads", default=num_cpus, type=int,
                       help="execute regressions using the selected number of threads in parallel")
@@ -217,8 +217,12 @@ def main():
     logging.info("Running regression tests...")
 
     # start processing the tests.
+
+    files = []
+    for ext in ('*.c', '*.cpp', '*.rs'):
+      files.extend(glob.glob(path.join("./" + args.folder + "/", ext)))
     results = []
-    for test in sorted(glob.glob("./" + args.folder + "/*.c")):
+    for test in sorted(files):
       # get the meta data for this test
       meta = metadata(test)
 
