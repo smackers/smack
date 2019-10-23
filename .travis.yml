@@ -25,18 +25,18 @@ env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
   matrix:
-    - TRAVIS_ENV="--exhaustive --folder=basic"
-    - TRAVIS_ENV="--exhaustive --folder=data"
-    - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
-    - TRAVIS_ENV="--exhaustive --folder=bits"
-    - TRAVIS_ENV="--exhaustive --folder=float"
-    - TRAVIS_ENV="--exhaustive --folder=locks"
-    - TRAVIS_ENV="--exhaustive --folder=contracts"
-    - TRAVIS_ENV="--exhaustive --folder=simd"
-    - TRAVIS_ENV="--exhaustive --folder=memory-safety"
-    - TRAVIS_ENV="--exhaustive --folder=pthread"
-    - TRAVIS_ENV="--exhaustive --folder=strings"
-    - TRAVIS_ENV="--exhaustive --folder=special"
+    - TRAVIS_ENV="--exhaustive --folder=c/basic"
+    - TRAVIS_ENV="--exhaustive --folder=c/data"
+    - TRAVIS_ENV="--exhaustive --folder=c/ntdrivers-simplified"
+    - TRAVIS_ENV="--exhaustive --folder=c/bits"
+    - TRAVIS_ENV="--exhaustive --folder=c/float"
+    - TRAVIS_ENV="--exhaustive --folder=c/locks"
+    - TRAVIS_ENV="--exhaustive --folder=c/contracts"
+    - TRAVIS_ENV="--exhaustive --folder=c/simd"
+    - TRAVIS_ENV="--exhaustive --folder=c/memory-safety"
+    - TRAVIS_ENV="--exhaustive --folder=c/pthread"
+    - TRAVIS_ENV="--exhaustive --folder=c/strings"
+    - TRAVIS_ENV="--exhaustive --folder=c/special"
 
 before_install:
   - sudo rm -rf /usr/local/clang-7.0.0
@@ -65,5 +65,5 @@ script:
   - clang++ --version
   - llvm-link --version
   - llvm-config --version
-  - ./format/run-clang-format.py -e test/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
+  - ./format/run-clang-format.py -e test/c/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
   - ./bin/build.sh
