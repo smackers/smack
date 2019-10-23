@@ -220,7 +220,7 @@ def rust_frontend(input_file, args):
   """Generate Boogie code from Rust programming language source(s)."""
   compile_command = ['rustc', '-A', 'unused-imports', '-C', 'opt-level=0',
                      '-C', 'no-prepopulate-passes', '-g', '--emit=llvm-bc',
-                     '--cfg', 'verifier="smack"']
+                     '--cfg', 'verifier="smack"', '-C', 'passes=name-anon-globals']
   
   # This links in the Rust SMACK library. This is needed due to the way rustc
   # finds a programs libraries.

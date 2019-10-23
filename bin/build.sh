@@ -387,8 +387,9 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
   tar xf rust.tar.gz
   cd rust-nightly-x86_64-unknown-linux-gnu
-  sudo ./install.sh
+  sudo ./install.sh --without=rust-docs
   cd ..
+  rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
   
   puts "Installed Rust"
 fi

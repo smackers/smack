@@ -646,10 +646,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
     // Set the entry point for Rust programs
     auto castExpr = ci.getArgOperand(0);
-    if (auto CE = dyn_cast<const Constant>(castExpr)) {
-      auto mainFunc = CE->getOperand(0);
-      emit(Stmt::call(mainFunc->getName(), {}, {}));
-    }
+    auto mainFunction = cast<const Function>(castExpr);
+    emit(Stmt::call(mainFunction->getName(), {}, {}));
 
   } else if (name.find(Naming::RUST_PANIC1) != std::string::npos ||
              name.find(Naming::RUST_PANIC2) != std::string::npos) {
