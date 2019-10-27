@@ -358,6 +358,44 @@ struct IntOpGen::IntArithOp : public IntOp {
     auto pred = MIN ? Expr::lt(a1, a2) : Expr::lt(a2, a1);
     return Expr::ifThenElse(pred, a1, a2);
   }
+
+  // generate inlined `srem(i1, i2)` function body like
+  // if (mod(i1,i2) != 0 && i1 < 0)
+  // then mod(i1,i2) - abs(i2) else mod(i1,i2), where
+  // `i1` is the dividend and `i2` is the divisor
+  // `mod` is the Euclidean function defined in the SMT lib
+  // therefore its result is always positive
+  // the `srem` operation defined by LLVM follows the same
+  // definition as modern C standards
+  // (https://en.wikipedia.org/wiki/Modulo_operation#In_programming_languages)
+  // its result has the same sign as i1 because the division rounds to 0
+  // therefore, the only case `mod` and `srem` differ is when i1 is negative
+  // and the remainder is not 0
+  // for this case, the result of `srem` is the result of `mod` minus |i2|
+  static const Expr *sremExpr(unsigned size) {
+    std::string type = getIntTypeName(size);
+    const Expr *dividend = makeIntVarExpr(1);
+    const Expr *divisor = makeIntVarExpr(2);
+    const Expr *zero = Expr::lit((unsigned long long)0);
+    const Expr *mod = Expr::fn(indexedName("$smod", {type}), dividend, divisor);
+    const Expr *modNeZero =
+        Expr::fn(indexedName("$ne", {type, "bool"}), mod, zero);
+    const Expr *dividendLtZero =
+        Expr::fn(indexedName("$slt", {type, "bool"}), dividend, zero);
+    const Expr *negRemainder = Expr::fn(
+        indexedName("$sub", {type}), mod,
+        Expr::fn(indexedName("$smax", {type}), divisor,
+                 Expr::fn(indexedName("$sub", {type}), zero, divisor)));
+    return Expr::ifThenElse(Expr::and_(modNeZero, dividendLtZero), negRemainder,
+                            mod);
+  }
+
+  // generate inlined `urem` function body like
+  // $smod.i32(i1,i2), where `$smod` is a wrapper to SMT's `mod` function
+  static const Expr *uremExpr(unsigned size) {
+    return Expr::fn(indexedName("$smod", {getIntTypeName(size)}),
+                    makeIntVarExpr(1), makeIntVarExpr(2));
+  }
 };
 
 void IntOpGen::generateArithOps(std::stringstream &s) const {
@@ -382,8 +420,10 @@ void IntOpGen::generateArithOps(std::stringstream &s) const {
       {"sdiv", 2, intBuiltinOp, bvBuiltinOp, false},
       {"smod", 2, intBuiltinOp, bvBuiltinOp, false},
       {"udiv", 2, intBuiltinOp, bvBuiltinOp, false},
-      {"srem", 2, uninterpretedOp, bvBuiltinOp, false},
-      {"urem", 2, uninterpretedOp, bvBuiltinOp, false},
+      {"srem", 2, new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::sremExpr),
+       bvBuiltinOp, false},
+      {"urem", 2, new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::uremExpr),
+       bvBuiltinOp, false},
       {"shl", 2, uninterpretedOp, bvBuiltinOp, false},
       {"lshr", 2, uninterpretedOp, bvBuiltinOp, false},
       {"ashr", 2, uninterpretedOp, bvBuiltinOp, false},
