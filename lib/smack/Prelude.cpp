@@ -905,7 +905,8 @@ void MemDeclGen::generateAddrBoundsAndPred(std::stringstream &s) const {
   s << Decl::function(
            Naming::EXTERNAL_ADDR, makePtrVars(1), Naming::BOOL_TYPE,
            Expr::fn(indexedName("$slt", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
-                    makePtrVarExpr(0), Expr::id(Naming::EXTERNS_BOTTOM)))
+                    makePtrVarExpr(0), Expr::id(Naming::EXTERNS_BOTTOM)),
+           {makeInlineAttr()})
     << "\n";
   s << "\n";
 }
