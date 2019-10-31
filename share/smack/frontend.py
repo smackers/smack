@@ -223,19 +223,17 @@ def rust_frontend(input_file, args):
                      '--cfg', 'verifier="smack"', '-C', 'passes=name-anon-globals']
   
   # This links in the Rust SMACK library. This is needed due to the way rustc
-  # finds a programs libraries.
+  # finds a program's libraries.
+  abs_path = os.path.dirname(os.path.abspath(input_file))
+  link_target = os.path.join(abs_path, "smack.rs")
+  link_source = os.path.join(smack_lib(), 'smack.rs')
   try:
-    abs_path = os.path.dirname(os.path.abspath(input_file))
-    mod_path = os.path.join(abs_path, "smack")
-    if not os.path.exists(mod_path):
-      os.mkdir(mod_path)
-      link_target = os.path.join(mod_path, "mod.rs")
-      if not os.path.exists(link_target):
-        rust_macros = os.path.join(smack_lib(), 'smack.rs')
-        os.symlink(rust_macros, link_target)
+    os.symlink(link_source, link_target)
   except:
-    raise RuntimeError("Could not find or create smack module.")
-
+    if not os.path.exists(link_source):
+      raise RuntimeError("Could not find or create smack module.")
+    # Otherwise okay
+    
   return compile_to_bc(input_file,compile_command,args)
 
 # Build libs functions here

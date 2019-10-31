@@ -35,7 +35,7 @@ BUILD_MONO=0 # mono is typically installed from packages (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=0
-INSTALL_RUST=0
+INSTALL_RUST=${INSTALL_RUST:-0}
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"

@@ -37,6 +37,13 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=c/pthread"
     - TRAVIS_ENV="--exhaustive --folder=c/strings"
     - TRAVIS_ENV="--exhaustive --folder=c/special"
+    - TRAVIS_ENV="--exhaustive --folder=rust/basic --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/functions --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/generics --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/loops --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/recursion --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/structures --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/vector --languages=rust"
 
 before_install:
   - sudo rm -rf /usr/local/clang-7.0.0
@@ -66,4 +73,4 @@ script:
   - llvm-link --version
   - llvm-config --version
   - ./format/run-clang-format.py -e test/c/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
-  - ./bin/build.sh
+  - INSTALL_RUST=1 ./bin/build.sh

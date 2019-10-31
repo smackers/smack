@@ -20,6 +20,10 @@ import shlex
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
 
+LANGUAGES = {'c': {'*.c'},
+             'cplusplus': {'*.cpp'},
+             'rust': {'*.rs'}}
+
 def bold(text):
   return '\033[1m' + text + '\033[0m'
 
@@ -165,6 +169,20 @@ def tally_result(result):
   elif "UNKNOWN" in result:
     unknowns += 1
 
+def get_extensions(languages):
+  languages = list(languages.split(','))
+  extensions = set()
+  for language in languages:
+    extensions |= LANGUAGES[language]
+  return extensions
+
+def get_tests(folder, extensions):
+  tests = []
+  for ext in extensions:
+    tests.extend(glob.glob(path.join('./' + folder + '/',ext)))
+  tests.sort()
+  return tests
+  
 def main():
   """
   Main entry point for the test suite.
@@ -186,11 +204,16 @@ def main():
                       help="sets the logging level (DEBUG, INFO, WARNING)")
   parser.add_argument("--output-log", action="store", dest="log_path", type=str,
                       help="sets the output log path. (std out by default)")
+  parser.add_argument("--languages", action="store", default="c", choices=list(LANGUAGES.keys()),
+                      help="Comma separated list of langauges to test. C[c],C++[cplusplus],Rust[rust]")
   args = parser.parse_args()
 
   if args.exhaustive:
     args.all_examples = True;
     args.all_configs = True;
+
+  extensions = get_extensions(args.languages)
+  tests = get_tests(args.folder, extensions)
 
   # configure the logging
   log_format = ''
@@ -218,11 +241,8 @@ def main():
 
     # start processing the tests.
 
-    files = []
-    for ext in ('*.c', '*.cpp', '*.rs'):
-      files.extend(glob.glob(path.join("./" + args.folder + "/", ext)))
     results = []
-    for test in sorted(files):
+    for test in tests:
       # get the meta data for this test
       meta = metadata(test)
 
