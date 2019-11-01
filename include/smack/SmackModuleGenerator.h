@@ -13,6 +13,7 @@ class Program;
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
   Program *program;
+  std::vector<std::string> bplGlobals;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -22,6 +23,7 @@ public:
   virtual bool runOnModule(llvm::Module &m);
   void generateProgram(llvm::Module &m);
   Program *getProgram() { return program; }
+  std::vector<std::string> getBplGlobals() { return bplGlobals; }
 };
 } // namespace smack
 

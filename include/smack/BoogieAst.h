@@ -16,6 +16,37 @@ enum class RModeKind { RNE, RNA, RTP, RTN, RTZ };
 
 class Expr {
 public:
+  enum Kind {
+    BIN,
+    COND,
+    FUN,
+    BOOL_LIT,
+    RMODE_LIT,
+    INT_LIT,
+    BV_LIT,
+    FP_LIT,
+    STRING_LIT,
+    NEG,
+    NOT,
+    QUANT,
+    SEL,
+    UPD,
+    VAR,
+    IF_THEN_ELSE,
+    BV_EXTRACT,
+    BV_CONCAT,
+    CODE
+  };
+
+private:
+  const Kind kind;
+
+protected:
+  Expr(Kind k) : kind(k) {}
+
+public:
+  Kind getKind() const { return kind; }
+
   virtual ~Expr() {}
   virtual void print(std::ostream &os) const = 0;
   static const Expr *exists(std::list<Binding>, const Expr *e);
@@ -84,8 +115,9 @@ private:
 
 public:
   BinExpr(const Binary b, const Expr *l, const Expr *r)
-      : op(b), lhs(l), rhs(r) {}
+      : Expr(BIN), op(b), lhs(l), rhs(r) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == BIN; }
 };
 
 class FunExpr : public Expr {
@@ -93,42 +125,48 @@ class FunExpr : public Expr {
   std::list<const Expr *> args;
 
 public:
-  FunExpr(std::string f, std::list<const Expr *> xs) : fun(f), args(xs) {}
+  FunExpr(std::string f, std::list<const Expr *> xs)
+      : Expr(FUN), fun(f), args(xs) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == FUN; }
+  std::list<const Expr *> getArgs() const { return args; }
 };
 
 class BoolLit : public Expr {
   bool val;
 
 public:
-  BoolLit(bool b) : val(b) {}
+  BoolLit(bool b) : Expr(BOOL_LIT), val(b) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == BOOL_LIT; }
 };
 
 class RModeLit : public Expr {
   RModeKind val;
 
 public:
-  RModeLit(RModeKind v) : val(v) {}
+  RModeLit(RModeKind v) : Expr(RMODE_LIT), val(v) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == RMODE_LIT; }
 };
 
 class IntLit : public Expr {
   std::string val;
 
 public:
-  IntLit(std::string v) : val(v) {}
-  IntLit(unsigned long long v) {
+  IntLit(std::string v) : Expr(INT_LIT), val(v) {}
+  IntLit(unsigned long long v) : Expr(INT_LIT) {
     std::stringstream s;
     s << v;
     val = s.str();
   }
-  IntLit(long long v) {
+  IntLit(long long v) : Expr(INT_LIT) {
     std::stringstream s;
     s << v;
     val = s.str();
   }
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == INT_LIT; }
 };
 
 class BvLit : public Expr {
@@ -136,13 +174,14 @@ class BvLit : public Expr {
   unsigned width;
 
 public:
-  BvLit(std::string v, unsigned w) : val(v), width(w) {}
-  BvLit(unsigned long long v, unsigned w) : width(w) {
+  BvLit(std::string v, unsigned w) : Expr(BV_LIT), val(v), width(w) {}
+  BvLit(unsigned long long v, unsigned w) : Expr(BV_LIT), width(w) {
     std::stringstream s;
     s << v;
     val = s.str();
   }
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == BV_LIT; }
 };
 
 class FPLit : public Expr {
@@ -155,34 +194,38 @@ class FPLit : public Expr {
 
 public:
   FPLit(bool n, std::string s, std::string e, unsigned ss, unsigned es)
-      : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
+      : Expr(FP_LIT), neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
   FPLit(std::string v, unsigned ss, unsigned es)
-      : specialValue(v), sigSize(ss), expSize(es) {}
+      : Expr(FP_LIT), specialValue(v), sigSize(ss), expSize(es) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == FP_LIT; }
 };
 
 class StringLit : public Expr {
   std::string val;
 
 public:
-  StringLit(std::string v) : val(v) {}
+  StringLit(std::string v) : Expr(STRING_LIT), val(v) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == STRING_LIT; }
 };
 
 class NegExpr : public Expr {
   const Expr *expr;
 
 public:
-  NegExpr(const Expr *e) : expr(e) {}
+  NegExpr(const Expr *e) : Expr(NEG), expr(e) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == NEG; }
 };
 
 class NotExpr : public Expr {
   const Expr *expr;
 
 public:
-  NotExpr(const Expr *e) : expr(e) {}
+  NotExpr(const Expr *e) : Expr(NOT), expr(e) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == NOT; }
 };
 
 class QuantExpr : public Expr {
@@ -196,8 +239,9 @@ private:
 
 public:
   QuantExpr(Quantifier q, std::list<Binding> vs, const Expr *e)
-      : quant(q), vars(vs), expr(e) {}
+      : Expr(QUANT), quant(q), vars(vs), expr(e) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == QUANT; }
 };
 
 class SelExpr : public Expr {
@@ -205,10 +249,12 @@ class SelExpr : public Expr {
   std::list<const Expr *> idxs;
 
 public:
-  SelExpr(const Expr *a, std::list<const Expr *> i) : base(a), idxs(i) {}
+  SelExpr(const Expr *a, std::list<const Expr *> i)
+      : Expr(SEL), base(a), idxs(i) {}
   SelExpr(const Expr *a, const Expr *i)
-      : base(a), idxs(std::list<const Expr *>(1, i)) {}
+      : Expr(SEL), base(a), idxs(std::list<const Expr *>(1, i)) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == SEL; }
 };
 
 class UpdExpr : public Expr {
@@ -218,19 +264,21 @@ class UpdExpr : public Expr {
 
 public:
   UpdExpr(const Expr *a, std::list<const Expr *> i, const Expr *v)
-      : base(a), idxs(i), val(v) {}
+      : Expr(UPD), base(a), idxs(i), val(v) {}
   UpdExpr(const Expr *a, const Expr *i, const Expr *v)
-      : base(a), idxs(std::list<const Expr *>(1, i)), val(v) {}
+      : Expr(UPD), base(a), idxs(std::list<const Expr *>(1, i)), val(v) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == UPD; }
 };
 
 class VarExpr : public Expr {
   std::string var;
 
 public:
-  VarExpr(std::string v) : var(v) {}
+  VarExpr(std::string v) : Expr(VAR), var(v) {}
   std::string name() const { return var; }
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == VAR; }
 };
 
 class IfThenElseExpr : public Expr {
@@ -240,8 +288,9 @@ class IfThenElseExpr : public Expr {
 
 public:
   IfThenElseExpr(const Expr *c, const Expr *t, const Expr *e)
-      : cond(c), trueValue(t), falseValue(e) {}
+      : Expr(IF_THEN_ELSE), cond(c), trueValue(t), falseValue(e) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == IF_THEN_ELSE; }
 };
 
 class BvExtract : public Expr {
@@ -251,8 +300,9 @@ class BvExtract : public Expr {
 
 public:
   BvExtract(const Expr *var, const Expr *upper, const Expr *lower)
-      : var(var), upper(upper), lower(lower) {}
+      : Expr(BV_EXTRACT), var(var), upper(upper), lower(lower) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == BV_EXTRACT; }
 };
 
 class BvConcat : public Expr {
@@ -260,8 +310,10 @@ class BvConcat : public Expr {
   const Expr *right;
 
 public:
-  BvConcat(const Expr *left, const Expr *right) : left(left), right(right) {}
+  BvConcat(const Expr *left, const Expr *right)
+      : Expr(BV_CONCAT), left(left), right(right) {}
   void print(std::ostream &os) const;
+  static bool classof(const Expr *e) { return e->getKind() == BV_CONCAT; }
 };
 
 class Attr {
@@ -354,6 +406,8 @@ class AssignStmt : public Stmt {
 public:
   AssignStmt(std::list<const Expr *> lhs, std::list<const Expr *> rhs)
       : Stmt(ASSIGN), lhs(lhs), rhs(rhs) {}
+  std::list<const Expr *> getlhs() const { return lhs; }
+  std::list<const Expr *> getrhs() const { return rhs; }
   void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == ASSIGN; }
 };
@@ -387,6 +441,10 @@ public:
            std::list<const Expr *> args, std::list<std::string> rets)
       : Stmt(CALL), proc(p), attrs(attrs), params(args), returns(rets) {}
 
+  std::string getName() const { return proc; }
+  std::list<const Attr *> getAttrs() const { return attrs; }
+  std::list<const Expr *> getParams() const { return params; }
+  std::list<std::string> getReturns() const { return returns; }
   void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == CALL; }
 };
@@ -594,8 +652,10 @@ public:
 
 class CodeExpr : public Expr, public CodeContainer {
 public:
-  CodeExpr(DeclarationList ds, BlockList bs) : CodeContainer(ds, bs) {}
+  CodeExpr(DeclarationList ds, BlockList bs)
+      : Expr(CODE), CodeContainer(ds, bs) {}
   void print(std::ostream &os) const;
+  static bool classof(Expr *e) { return e->getKind() == CODE; }
 };
 
 class ProcDecl : public Decl, public CodeContainer {
@@ -661,6 +721,7 @@ public:
   bool empty() { return decls.empty(); }
   DeclarationList &getDeclarations() { return decls; }
   void appendPrelude(std::string s) { prelude += s; }
+  std::string &getPrelude() { return prelude; }
 };
 
 std::ostream &operator<<(std::ostream &os, const Expr &e);
