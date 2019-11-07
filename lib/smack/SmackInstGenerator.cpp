@@ -798,9 +798,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     emit(rep->call(f, ci));
   }
 
-  if (f->isDeclaration() && rep->isExternal(&ci)) {
+  if (f->isDeclaration()) {
     std::string name = naming->get(*f);
-    if (!EXTERNAL_PROC_IGNORE.match(name))
+    if (!EXTERNAL_PROC_IGNORE.match(name) && rep->isExternal(&ci))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR, rep->expr(&ci))));
   }
 
