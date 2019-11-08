@@ -2,7 +2,6 @@
 mod smack;
 use smack::*;
 
-// @flag --no-memory-splitting
 // @expect verified
 
 struct Point<T> {
