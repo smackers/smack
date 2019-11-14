@@ -347,6 +347,9 @@ void Regions::visitCallInst(CallInst &I) {
   Function *F = I.getCalledFunction();
   std::string name = F && F->hasName() ? F->getName().str() : "";
 
+  if (F && F->isDeclaration() && I.getType()->isPointerTy() && name != "malloc")
+    idx(&I);
+
   if (name.find("__SMACK_values") != std::string::npos) {
     assert(I.getNumArgOperands() == 2 && "Expected two operands.");
     const Value *P = I.getArgOperand(0);
