@@ -347,7 +347,7 @@ void Regions::visitCallInst(CallInst &I) {
   Function *F = I.getCalledFunction();
   std::string name = F && F->hasName() ? F->getName().str() : "";
 
-  if (I.getType()->isPointerTy())
+  if (F && F->isDeclaration() && I.getType()->isPointerTy() && name != "malloc")
     idx(&I);
 
   if (name.find("__SMACK_values") != std::string::npos) {
