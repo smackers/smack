@@ -213,6 +213,6 @@ def scrub_pthreads(s):
 
     
 if __name__ == '__main__':
-  print "What?"
-  print svcomp_filter(sys.argv[1])
+  print("What?")
+  print(svcomp_filter(sys.argv[1]))
 

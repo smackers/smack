@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 import subprocess
 import re
@@ -46,7 +46,7 @@ def runtests():
       expected = ansFile.read()
       ansFile.close()
 
-      print "{0:>20} {1:>16}:".format(test[0], "(" + verifier + ")"),
+      print("{0:>20} {1:>16}:".format(test[0], "(" + verifier + ")"))
 
       # invoke smack-reach
       t0 = time.time()
@@ -54,17 +54,17 @@ def runtests():
                             '--verifier=' + verifier,
                             '--unroll=' + str(test[1]), 
                             '-o', test[0] +'.bpl', '--smackd'],
-                           stdout=subprocess.PIPE)
+                           stdout=subprocess.PIPE, universal_newlines=True)
       
       smackOutput = p.communicate()[0]
       elapsed = time.time() - t0
 
       # check SMACK output
       if(json.loads(expected) == json.loads(smackOutput)):
-        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
+        print(green('PASSED') + '  [%.2fs]' % round(elapsed, 2))
         passed += 1
       else:
-        print red('FAILED')
+        print(red('FAILED'))
         failed += 1
   
   return passed, failed
@@ -73,5 +73,5 @@ if __name__ == '__main__':
 
   passed, failed = runtests()
   
-  print '\nPASSED count: ', passed
-  print 'FAILED count: ', failed
+  print('\nPASSED count: ', passed)
+  print('FAILED count: ', failed)

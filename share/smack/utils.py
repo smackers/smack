@@ -4,7 +4,7 @@ import tempfile
 import subprocess
 import signal
 from threading import Timer
-import top
+from . import top
 
 temporary_files = []
 
@@ -34,10 +34,10 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
   timer = None
   try:
     if args.debug:
-      print "Running %s" % " ".join(cmd)
+      print("Running %s" % " ".join(cmd))
 
     proc = subprocess.Popen(cmd, cwd=cwd, preexec_fn=os.setsid,
-      stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
 
     if timeout:
       timed_out = [False]
@@ -49,7 +49,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
         line = proc.stdout.readline()
         if line:
           output += line
-          print line,
+          print(line, end=' ')
         elif proc.poll() is not None:
           break
       proc.wait
@@ -71,7 +71,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None):
       return output
 
   except (RuntimeError, OSError) as err:
-    print >> sys.stderr, output
+    print(output, file=sys.stderr)
     sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
 
   finally:
