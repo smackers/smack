@@ -180,10 +180,11 @@ def get_extensions(languages):
 def get_tests(folder, extensions):
   tests = []
   for ext in extensions:
-    tests.extend(glob.glob(path.join('./' + folder + '/',ext)))
+    tests_path = path.dirname(__file__)
+    tests.extend(glob.glob(path.join(tests_path, folder, ext)))
   tests.sort()
   return tests
-  
+
 def main():
   """
   Main entry point for the test suite.
