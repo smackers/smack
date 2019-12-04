@@ -2,7 +2,7 @@ import os
 import re
 import subprocess
 import sys
-from utils import temporary_file, try_command
+from .utils import temporary_file, try_command
 
 SPECIAL_NAMES = [
   '__VERIFIER_assert',
@@ -12,36 +12,36 @@ SPECIAL_NAMES = [
 def replay_error_trace(verifier_output, args):
 
   if args.verifier != 'corral':
-    print "Replay for verifiers other than 'corral' currently unsupported; skipping replay"
+    print("Replay for verifiers other than 'corral' currently unsupported; skipping replay")
     return
 
-  print "Attempting to replay error trace."
+  print("Attempting to replay error trace.")
 
   missing_definitions = detect_missing_definitions(args.bc_file)
   if '__SMACK_code' in missing_definitions:
-    print "warning: inline Boogie code found; replay may fail"
+    print("warning: inline Boogie code found; replay may fail")
 
   arguments, return_values = extract_values(verifier_output)
 
   with open(args.replay_harness, 'w') as f:
     f.write(harness(arguments, return_values, missing_definitions))
-  print "Generated replay harness:", args.replay_harness
+  print("Generated replay harness:", args.replay_harness)
 
   stubs_bc = temporary_file('stubs', '.bc', args)
   try_command(['clang', '-c', '-emit-llvm', '-o', stubs_bc, args.replay_harness])
   try_command(['clang', '-Wl,-e,_smack_replay_main', '-o', args.replay_exe_file, args.bc_file, stubs_bc])
-  print "Generated replay executable:", args.replay_exe_file
+  print("Generated replay executable:", args.replay_exe_file)
 
   try:
     if 'error reached!' in try_command(["./" + args.replay_exe_file]):
-      print "Error-trace replay successful."
+      print("Error-trace replay successful.")
       return True
 
     else:
-      print "Error-trace replay failed."
+      print("Error-trace replay failed.")
 
   except Exception as err:
-    print "Error-trace replay caught", err.message
+    print("Error-trace replay caught", err.message)
 
   return False
 
@@ -67,7 +67,7 @@ def extract_values(trace):
   arguments = {}
   return_values = {}
 
-  for key, val in filter(lambda x: x, map(extract, trace.split('\n'))):
+  for key, val in [x for x in map(extract, trace.split('\n')) if x]:
     if 'smack:entry:' in key:
       _, _, fn = key.split(':')
       arguments[fn] = []
@@ -85,7 +85,7 @@ def extract_values(trace):
       return_values[fn].append(val)
 
     else:
-      print "warning: unexpected key %s" % key
+      print("warning: unexpected key %s" % key)
 
   return arguments, return_values
 
@@ -128,7 +128,7 @@ int %(fn)s() {
 """ % {'fn': fn, 'vals': ", ".join(return_values[fn])})
 
     else:
-      print "warning: unknown return value for %s" % fn
+      print("warning: unknown return value for %s" % fn)
       code.append("""// stub for function %(fn)s
 void %(fn)s() {
   return;
@@ -136,12 +136,12 @@ void %(fn)s() {
 """ % {'fn': fn})
 
   if len(arguments) > 1:
-    print "warning: multiple entrypoint argument annotations found"
+    print("warning: multiple entrypoint argument annotations found")
 
   elif len(arguments) < 1:
-    print "warning: no entrypoint argument annotations found"
+    print("warning: no entrypoint argument annotations found")
 
-  for fn, args in arguments.items():
+  for fn, args in list(arguments.items()):
     code.append("""// entry point wrapper
 int _smack_replay_main() {
   %(fn)s(%(vals)s);

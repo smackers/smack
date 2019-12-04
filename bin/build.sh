@@ -60,7 +60,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml python-psutil unzip wget ninja-build"
+DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build"
 
 shopt -s extglob
 

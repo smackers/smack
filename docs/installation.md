@@ -82,7 +82,7 @@ SMACK depends on the following projects:
 
 * [LLVM][] version [8.0.1][LLVM-8.0.1]
 * [Clang][] version [8.0.1][Clang-8.0.1]
-* [Python][] version 2.7 or greater
+* [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
 * [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover

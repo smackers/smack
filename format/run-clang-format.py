@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """A wrapper script around clang-format, suitable for linting multiple files
 and to use for continuous integration.
 
@@ -126,7 +126,7 @@ def run_clang_format_diff(args, file):
     #
     # It's not pretty, due to Python 2 & 3 compatibility.
     encoding_py3 = {}
-    if sys.version_info[0] >= 3:
+    if sys.version_info[0] >= 3 and sys.version_info[1] >= 6:
         encoding_py3['encoding'] = 'utf-8'
 
     try:

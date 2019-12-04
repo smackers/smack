@@ -10,10 +10,10 @@ import sys
 import shlex
 import subprocess
 import signal
-from svcomp.utils import verify_bpl_svcomp
-from utils import temporary_file, try_command, remove_temp_files
-from replay import replay_error_trace
-from frontend import link_bc_files, frontends, languages, extra_libs 
+from .svcomp.utils import verify_bpl_svcomp
+from .utils import temporary_file, try_command, remove_temp_files
+from .replay import replay_error_trace
+from .frontend import link_bc_files, frontends, languages, extra_libs 
 
 VERSION = '2.4.0'
 
@@ -72,7 +72,7 @@ def validate_input_files(files):
 
     elif not file_extension in languages():
       exit_with_error("Unexpected source file extension '%s'" % file_extension)
-  map(validate_input_file, files)
+  list(map(validate_input_file, files))
 
 def validate_output_file(file):
   dir_name = os.path.dirname(os.path.abspath(file))
@@ -128,7 +128,7 @@ def arguments():
   frontend_group = parser.add_argument_group('front-end options')
 
   frontend_group.add_argument('-x', '--language', metavar='LANG',
-    choices=frontends().keys(), default=None,
+    choices=list(frontends().keys()), default=None,
     help='Treat input files as having type LANG.')
 
   frontend_group.add_argument('-bc', '--bc-file', metavar='FILE', default=None, action=FileAction,
@@ -421,13 +421,16 @@ def transform_bpl(args):
       old = bpl.read()
       bpl.seek(0)
       bpl.truncate()
-      tx = subprocess.Popen(shlex.split(args.transform_bpl), stdin=subprocess.PIPE, stdout=bpl)
+      tx = subprocess.Popen(shlex.split(args.transform_bpl),
+        stdin=subprocess.PIPE, stdout=bpl, universal_newlines=True)
       tx.communicate(input = old)
 
 def transform_out(args, old):
   out = old
   if args.transform_out:
-    tx = subprocess.Popen(shlex.split(args.transform_out), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    tx = subprocess.Popen(shlex.split(args.transform_out),
+      stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE, universal_newlines=True)
     out, err = tx.communicate(input = old)
   return out
 
@@ -506,10 +509,10 @@ def verify_bpl(args):
   result = verification_result(verifier_output)
 
   if args.smackd:
-    print smackdOutput(verifier_output)
+    print(smackdOutput(verifier_output))
 
   elif result == 'verified':
-    print results(args)[result]
+    print(results(args)[result])
 
   else:
     if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow':
@@ -520,7 +523,7 @@ def verify_bpl(args):
           f.write(error)
 
       if not args.quiet:
-        print error
+        print(error)
 
       if args.replay:
          replay_error_trace(verifier_output, args)
@@ -573,8 +576,7 @@ def reformat_assignment(line):
   return re.sub('((\d+)bv\d+|(-?)0x([0-9a-fA-F]+\.[0-9a-fA-F]+)e(-?)(\d+)f(\d+)e(\d+))', repl, line.strip())
 
 def transform(info):
-  return ','.join(map(reformat_assignment, filter(
-    lambda x: not re.search('((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x), info.split(','))))
+  return ','.join(map(reformat_assignment, [x for x in info.split(',') if not re.search('((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x)]))
 
 def corral_error_step(step):
   m = re.match('([^\s]*)\s+Trace:\s+(Thread=\d+)\s+\((.*)[\)|;]', step)
@@ -672,13 +674,13 @@ def main():
     target_selection(args)
 
     if not args.quiet:
-      print "SMACK program verifier version %s" % VERSION
+      print("SMACK program verifier version %s" % VERSION)
 
     frontend(args)
 
     if args.no_verify:
       if not args.quiet:
-        print "SMACK generated %s" % args.bpl_file
+        print("SMACK generated %s" % args.bpl_file)
     else:
       verify_bpl(args)
 

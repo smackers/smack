@@ -1,6 +1,6 @@
 import os
 import sys
-from utils import temporary_file, try_command
+from .utils import temporary_file, try_command
 
 def languages():
   """A dictionary of languages per file extension."""
@@ -28,7 +28,7 @@ def frontends():
   """A dictionary of front-ends per language."""
 
   # Avoid circular import
-  from svcomp.utils import svcomp_frontend
+  from .svcomp.utils import svcomp_frontend
 
   return {
     'c'        : clang_frontend,
@@ -72,7 +72,7 @@ def default_clang_compile_command(args, lib = False):
   # in order to enable optimization passes.
   # See: https://stackoverflow.com/a/46753969.
   cmd += ['-Xclang', '-disable-O0-optnone']
-  cmd += map(lambda path: '-I' + path, smack_headers(args))
+  cmd += ['-I' + path for path in smack_headers(args)]
   cmd += args.clang_options.split()
   cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-','_')]
   if args.memory_safety: cmd += ['-DMEMORY_SAFETY']
@@ -156,7 +156,7 @@ def d_frontend(input_file, args):
   # note: -g and -O0 are not used here. 
   # Right now, it works, and with these options, smack crashes.
   compile_command = ['ldc2', '-output-ll']
-  compile_command += map(lambda path: '-I=' + path, smack_headers(args))
+  compile_command += ['-I=' + path for path in smack_headers(args)]
   args.entry_points += ['_Dmain']
   return d_compile_to_bc(input_file,compile_command,args)
 
@@ -202,7 +202,7 @@ def json_compilation_database_frontend(input_file, args):
     for cc in json.load(f):
       if 'objects' in cc:
         # TODO what to do when there are multiple linkings?
-        bit_codes = map(lambda f: re.sub('[.]o$','.bc',f), cc['objects'])
+        bit_codes = [re.sub('[.]o$','.bc',f) for f in cc['objects']]
         try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
         try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + build_libs(args))
 
@@ -254,7 +254,7 @@ def default_build_libs(args):
     libs += ['fenv.c']
 
   compile_command = default_clang_compile_command(args, True)
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+  for c in [os.path.join(smack_lib(), c) for c in libs]:
     bc = compile_to_bc(c,compile_command,args)
     bitcodes.append(bc)
 
@@ -269,7 +269,7 @@ def fortran_build_libs(args):
   compile_command = default_clang_compile_command(args)
   compile_command[0] = 'flang'
 
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+  for c in [os.path.join(smack_lib(), c) for c in libs]:
     bc = fortran_compile_to_bc(c,compile_command,args)
     bitcodes.append(bc)
 
@@ -284,7 +284,7 @@ def cplusplus_build_libs(args):
   compile_command = default_clang_compile_command(args,True)
   compile_command[0] = 'clang++'
 
-  for c in map(lambda c: os.path.join(smack_lib(), c), libs):
+  for c in [os.path.join(smack_lib(), c) for c in libs]:
     bc = compile_to_bc(c,compile_command,args)
     bitcodes.append(bc)
 
@@ -303,6 +303,6 @@ def link_bc_files(bitcodes, libs, args):
   try_command(['llvm-link', '-o', args.linked_bc_file, args.bc_file] + smack_libs)
   
   # import here to avoid a circular import
-  from top import llvm_to_bpl
+  from .top import llvm_to_bpl
   llvm_to_bpl(args)
 

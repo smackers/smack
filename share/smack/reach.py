@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # This file is distributed under the MIT License. See LICENSE for details.
 #
@@ -106,10 +106,10 @@ def GetCodeCoverage(verifier, bplFileName, timeLimit, unroll, contextSwitches, d
         result[curfile] = sorted(result[curfile], key=lambda e:e[0], reverse=False)
 
     if(smackd):
-        print(json.dumps(result))
+        print((json.dumps(result)))
     else:
-        print '\nSMACK verifier version ' + VERSION + '\n\n'
-        print "Unreachable code:"
+        print('\nSMACK verifier version ' + VERSION + '\n\n')
+        print("Unreachable code:")
         pprint.pprint(result, width=100)
 
 def TestReachability(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, lineInfo):
@@ -169,7 +169,7 @@ def main():
     # remove arguments not recognized by lower scripts
     # not sure of a better way to do this
     sysArgv = sys.argv[:]
-    for i in reversed(range(len(sysArgv))):
+    for i in reversed(list(range(len(sysArgv)))):
         if sysArgv[i] == '--smackd':
             del sysArgv[i]
         elif sys.argv[i] == '--time-limit':

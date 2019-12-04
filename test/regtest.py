@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 from os import path
 from multiprocessing.pool import ThreadPool
@@ -98,11 +98,11 @@ def metadata(file):
 
   if not m['skip']:
     if not 'expect' in m:
-      print red("WARNING: @expect MISSING IN %s" % file, None)
+      print(red("WARNING: @expect MISSING IN %s" % file, None))
       m['expect'] = 'verified'
 
     if not m['expect'] in ['verified', 'error', 'timeout', 'unknown']:
-      print red("WARNING: unexpected @expect annotation '%s'" % m['expect'], None)
+      print(red("WARNING: unexpected @expect annotation '%s'" % m['expect'], None))
 
   return m
 
@@ -119,7 +119,8 @@ def process_test(cmd, test, memory, verifier, expect, checkbpl, checkout, log_fi
   str_result += "{0:>20} {1:>10}    :".format(memory, verifier)
 
   t0 = time.time()
-  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    universal_newlines=True)
   out, err  = p.communicate()
   elapsed = time.time() - t0
   status = 0
@@ -179,10 +180,11 @@ def get_extensions(languages):
 def get_tests(folder, extensions):
   tests = []
   for ext in extensions:
-    tests.extend(glob.glob(path.join('./' + folder + '/',ext)))
+    tests_path = path.dirname(__file__)
+    tests.extend(glob.glob(path.join(tests_path, folder, ext)))
   tests.sort()
   return tests
-  
+
 def main():
   """
   Main entry point for the test suite.
