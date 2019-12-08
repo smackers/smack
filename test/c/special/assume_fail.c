@@ -8,5 +8,5 @@ int main(void) {
   // This assumption is not used, and since bit-precise is not enabled,
   // verification will fail.
   __builtin_assume((y & 1) == 0);
-  __VERIFIER_assert((y & 1) == 0);
+  assert((y & 1) == 0);
 }
