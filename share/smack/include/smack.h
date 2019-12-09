@@ -58,13 +58,16 @@ void __VERIFIER_assert(int);
 void __VERIFIER_error(void);
 
 #ifndef AVOID_NAME_CONFLICTS
-#define assert(EX) do {\
-  if (!(EX)) __VERIFIER_assert(0);\
-} while (0)
-
-#define assume(EX) do {\
-  if (!(EX)) __VERIFIER_assume(0);\
-} while (0)
+#define assert(EX)                                                             \
+  do {                                                                         \
+    if (!(EX))                                                                 \
+      __VERIFIER_assert(0);                                                    \
+  } while (0)
+#define assume(EX)                                                             \
+  do {                                                                         \
+    if (!(EX))                                                                 \
+      __VERIFIER_assume(0);                                                    \
+  } while (0)
 #endif
 
 #define S4(a, b, c, d) a b c d

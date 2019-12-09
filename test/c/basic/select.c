@@ -3,9 +3,7 @@
 // @expect verified
 // @checkbpl grep -E ":= \(if.+then.+else.+\)"
 
-void foo(int x) {
-  assert(x);
-}
+void foo(int x) { assert(x); }
 
 int main(void) {
   int c = __VERIFIER_nondet_int();
