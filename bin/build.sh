@@ -379,7 +379,7 @@ if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
   echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
 
   puts "Installed Objective-C"
-fi 
+fi
 
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
@@ -390,7 +390,7 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   sudo ./install.sh --without=rust-docs
   cd ..
   rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
-  
+
   puts "Installed Rust"
 fi
 
@@ -435,6 +435,7 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
+    ln -sf ${BOOGIE_DIR}/Binaries/boogie ${INSTALL_PREFIX}/bin/boogie
     puts "Built Boogie"
   else
     puts "Boogie already built"
@@ -455,6 +456,7 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
+    ln -sf ${CORRAL_DIR}/bin/corral ${INSTALL_PREFIX}/bin/corral
     puts "Built Corral"
   else
     puts "Corral already built"
@@ -507,8 +509,6 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   sudo ninja install
 
   puts "Configuring shell environment"
-  echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
-  echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
   echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
   echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
