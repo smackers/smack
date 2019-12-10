@@ -435,7 +435,7 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
-    ln -sf ${BOOGIE_DIR}/Binaries/boogie ${INSTALL_PREFIX}/bin/boogie
+    sudo ln -sf ${BOOGIE_DIR}/Binaries/boogie ${INSTALL_PREFIX}/bin/boogie
     puts "Built Boogie"
   else
     puts "Boogie already built"
@@ -456,7 +456,7 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
-    ln -sf ${CORRAL_DIR}/bin/corral ${INSTALL_PREFIX}/bin/corral
+    sudo ln -sf ${CORRAL_DIR}/bin/corral ${INSTALL_PREFIX}/bin/corral
     puts "Built Corral"
   else
     puts "Corral already built"
