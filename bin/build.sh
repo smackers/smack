@@ -498,6 +498,7 @@ if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   else
     puts "Lockpwn already built"
   fi
+  echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_SMACK} -eq 1 ] ; then
@@ -511,7 +512,6 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   puts "Configuring shell environment"
   echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
-  echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"

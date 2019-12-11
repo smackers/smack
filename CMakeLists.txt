@@ -220,7 +220,6 @@ INSTALL(TARGETS llvm2bpl
 
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/symbooglix
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/lockpwn
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-svcomp-wrapper.sh
