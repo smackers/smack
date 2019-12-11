@@ -435,11 +435,11 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
-    echo export PATH=\"${BOOGIE_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
     puts "Built Boogie"
   else
     puts "Boogie already built"
   fi
+  echo export PATH=\"${BOOGIE_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 
@@ -456,11 +456,11 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
-    echo export PATH=\"${CORRAL_DIR}/bin:\$PATH\" >> ${SMACKENV}
     puts "Built Corral"
   else
     puts "Corral already built"
   fi
+  echo export PATH=\"${CORRAL_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
