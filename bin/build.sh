@@ -478,10 +478,12 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
     xbuild Symbooglix.sln /p:Configuration=Release
     ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
     ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+    sed -i.debug -e's/Debug/Release/' ${SYMBOOGLIX_DIR}/bin/symbooglix
     puts "Built Symbooglix"
   else
     puts "Symbooglix already built"
   fi
+  echo export PATH=\"${SYMBOOGLIX_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
@@ -511,7 +513,6 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   sudo ninja install
 
   puts "Configuring shell environment"
-  echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"
