@@ -456,7 +456,7 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
-    sed -i ".debug" "s/Debug/Release" ${CORRAL_DIR}/bin/corral
+    sed -i.debug "s/Debug/Release" ${CORRAL_DIR}/bin/corral
     puts "Built Corral"
   else
     puts "Corral already built"
