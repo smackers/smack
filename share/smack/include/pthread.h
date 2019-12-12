@@ -38,11 +38,15 @@ void pthread_exit(void *retval);
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr);
 
+int pthread_mutexattr_destroy(pthread_mutexattr_t *attr);
+
 int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
 
 int pthread_mutex_lock(pthread_mutex_t *__mutex);
+
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
 
 int pthread_mutex_unlock(pthread_mutex_t *__mutex);
 
@@ -72,5 +76,15 @@ void __call_wrapper(pthread_t *__newthread, void *(*__start_routine)(void *),
 
 int pthread_create(pthread_t *__newthread, __const pthread_attr_t *__attr,
                    void *(*__start_routine)(void *), void *__arg);
+
+int pthread_detach(pthread_t thread);
+
+int pthread_once(pthread_once_t *once_control, void (*init_routine)(void));
+
+int pthread_attr_init(pthread_attr_t *attr);
+
+int pthread_attr_setstacksize(pthread_attr_t *attr, unsigned int stacksize);
+
+int pthread_attr_destroy(pthread_attr_t *attr);
 
 #endif // PTHREAD_H
