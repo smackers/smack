@@ -4,10 +4,18 @@
 #include "pthread.h"
 #include "smack.h"
 
+void __SMACK_init_tidtype() {
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("type $tidtype = bv32;");
+#else
+  __SMACK_top_decl("type $tidtype = i32;");
+#endif
+}
+
 void __SMACK_init_func_corral_primitives() {
   // Declare these, so bpl parsing doesn't complain
-  __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
-  __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
+  __SMACK_top_decl("procedure corral_getThreadID() returns (x:$tidtype);");
+  __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:$tidtype);");
   __SMACK_top_decl("procedure corral_atomic_begin();");
   __SMACK_top_decl("procedure corral_atomic_end();");
 }
@@ -15,14 +23,14 @@ void __SMACK_init_func_corral_primitives() {
 void __SMACK_init_func_thread() {
   // Array and possible statuses for tracking pthreads
   __SMACK_top_decl("//dim0=tid, dim1= idx 0 gets status, 1 gets return value");
-  __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
+  __SMACK_top_decl("var $pthreadStatus: [$tidtype][int]int;");
   __SMACK_top_decl("const unique $pthread_uninitialized: int;");
   __SMACK_top_decl("const unique $pthread_initialized: int;");
   __SMACK_top_decl("const unique $pthread_waiting: int;");
   __SMACK_top_decl("const unique $pthread_running: int;");
   __SMACK_top_decl("const unique $pthread_stopped: int;");
   // Initialize this array so all threads begin as uninitialized
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == "
+  __SMACK_code("assume (forall i:$tidtype :: $pthreadStatus[i][0] == "
                "$pthread_uninitialized);");
 }
 
