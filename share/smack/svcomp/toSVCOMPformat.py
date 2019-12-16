@@ -118,7 +118,7 @@ def buildEmptyXmlGraph(args, hasBug):
     programfile = os.path.abspath(args.orig_files[0])
     addKey(graph, "programfile", programfile)
     with open(programfile, 'r') as pgf:
-      addKey(graph, "programhash", hashlib.sha256(pgf.read()).hexdigest())
+      addKey(graph, "programhash", hashlib.sha256(pgf.read().encode('utf-8')).hexdigest())
     addKey(graph, "architecture",
             re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
     addKey(graph, "creationtime", datetime.datetime.now().replace(microsecond=0).isoformat())
