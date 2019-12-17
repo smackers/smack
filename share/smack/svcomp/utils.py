@@ -479,7 +479,7 @@ def write_error_file(args, status, verifier_output):
       error = smack.top.error_trace(verifier_output, args)
     if error is not None:
       with open(args.error_file, 'w') as f:
-        f.write(error)
+        f.write(error.decode('utf-8'))
 
 def run_binary(args):
   #process the file to make it runnable
