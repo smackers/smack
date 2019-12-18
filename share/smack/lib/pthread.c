@@ -69,10 +69,13 @@ int pthread_join(pthread_t __th, void **__thread_return) {
   // Get the thread's return value
   void *tmp_thread_return_pointer = (void *)__VERIFIER_nondet_long();
   __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
-  *__thread_return = tmp_thread_return_pointer;
 
-  // Print return pointer value to SMACK traces
-  void *actual_thread_return_pointer = *__thread_return;
+  if (__thread_return) {
+    *__thread_return = tmp_thread_return_pointer;
+
+    // Print return pointer value to SMACK traces
+    void *actual_thread_return_pointer = *__thread_return;
+  }
 
   return 0;
 }
