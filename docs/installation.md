@@ -169,17 +169,17 @@ prefix, add the additional flag:
 ````
 substituting the string `PREFIX` for the desired location.
 
-Actually running SMACK relies on the environment variables `BOOGIE` and
-`CORRAL` targeting the `Boogie.exe` and `corral.exe` executables, for instance
-residing in paths prefixed by `XXX` and `YYY`:
-````Shell
-export BOOGIE="mono /XXX/Boogie/Binaries/Boogie.exe"
-export CORRAL="mono /YYY/Corral/bin/Release/corral.exe"
+Actually running SMACK relies on `boogie` and `corral` being in the executable
+path. For instance, if you have built Boogie and Corral from source at paths
+at `$BOOGIE_SOURCE` and `$CORRAL_SOURCE`:
+````bash
+export PATH="$BOOGIE_SOURCE/Binaries:$PATH"
+export PATH="$CORRAL_SOURCE/bin:$PATH"
 ````
 Source the preceding lines in your shell's `.profile`, and ensure they invoke
 Boogie/Corral correctly. For example, running
-````Shell
-BOOGIE
+````console
+$ boogie
 ````
 should result in
 ````

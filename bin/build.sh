@@ -379,7 +379,7 @@ if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
   echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
 
   puts "Installed Objective-C"
-fi 
+fi
 
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
@@ -390,7 +390,7 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   sudo ./install.sh --without=rust-docs
   cd ..
   rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
-  
+
   puts "Installed Rust"
 fi
 
@@ -439,6 +439,7 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
   else
     puts "Boogie already built"
   fi
+  echo export PATH=\"${BOOGIE_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 
@@ -455,10 +456,12 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
     ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
+    sed -i.debug -e's/Debug/Release/' ${CORRAL_DIR}/bin/corral
     puts "Built Corral"
   else
     puts "Corral already built"
   fi
+  echo export PATH=\"${CORRAL_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
@@ -475,10 +478,12 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
     xbuild Symbooglix.sln /p:Configuration=Release
     ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
     ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+    sed -i.debug -e's/Debug/Release/' ${SYMBOOGLIX_DIR}/bin/symbooglix
     puts "Built Symbooglix"
   else
     puts "Symbooglix already built"
   fi
+  echo export PATH=\"${SYMBOOGLIX_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
@@ -495,6 +500,7 @@ if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   else
     puts "Lockpwn already built"
   fi
+  echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_SMACK} -eq 1 ] ; then
@@ -507,10 +513,6 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   sudo ninja install
 
   puts "Configuring shell environment"
-  echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
-  echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
-  echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
-  echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"
