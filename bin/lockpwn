@@ -1,6 +1,0 @@
-#!/bin/bash
-if [ -z "$LOCKPWN" ] ; then
-  echo "The required LOCKPWN environment variable is not set. See SMACK documentation for details."
-  exit 1
-fi
-$LOCKPWN "$@"
