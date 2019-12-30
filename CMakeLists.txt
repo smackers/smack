@@ -18,6 +18,8 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
+  # TODO: explain why these are required.
+  # TODO: use string(APPEND ...) rather than string(REPLACE ...)
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
@@ -26,9 +28,27 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
   string(REPLACE "-Wl," "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-gsplit-dwarf" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
+
+  # TODO: append these one at a time; give rationale.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -Wno-undefined-var-template")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+
+  # Apparently avoids a problem with inconsistent visibility settings from LLVM:
+  #
+  # > ld: warning: direct access in function 'llvm::_'
+  # >   from file '/usr/local/opt/llvm@8/lib/_'
+  # >   to global weak symbol 'llvm::_'
+  # >   from file 'libsmackTranslator.a(_.cpp.o)'
+  # >   means the weak symbol cannot be overridden at runtime.
+  # >   This was likely caused by different translation units being compiled
+  # >   with different visibility settings.
+  #
+  # Solution found on Stack Overflow:
+  # https://stackoverflow.com/questions/8685045/xcode-with-boost-linkerid-warning-about-visibility-settings
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fvisibility=hidden")
+
+  # TODO: explain why these are required.
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -O0")
+  string(APPEND CMAKE_C_FLAGS_DEBUG " -O0")
 
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
