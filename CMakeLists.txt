@@ -19,7 +19,6 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
   )
 
   # TODO: explain why these are required.
-  # TODO: use string(APPEND ...) rather than string(REPLACE ...)
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
