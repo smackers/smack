@@ -1,6 +1,6 @@
 language: generic
+os: linux
 dist: bionic
-sudo: required
 compiler: clang
 
 addons:
@@ -24,7 +24,7 @@ cache:
 env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
-  matrix:
+  jobs:
     - TRAVIS_ENV="--exhaustive --folder=c/basic"
     - TRAVIS_ENV="--exhaustive --folder=c/data"
     - TRAVIS_ENV="--exhaustive --folder=c/ntdrivers-simplified"
