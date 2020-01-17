@@ -7,7 +7,7 @@ use smack::*;
 
 fn main() {
   let mut sum = 0;
-  let b = 7u64.nondet();
+  let b = 7u64.verifier_nondet();
   assume!(b > 1);
   for i in 0..b as u64 {
     sum += i;
