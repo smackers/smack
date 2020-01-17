@@ -61,7 +61,7 @@ macro_rules! verifier_nondet {
     )
 }
 
-pub trait NonDet {
+pub trait VerifierNonDet {
   fn verifier_nondet(self) -> Self;
 }
 
@@ -69,7 +69,7 @@ pub trait NonDet {
 macro_rules! make_verifier_nondet {
   ($typ:ident, $nondet:ident) =>
     (
-      impl NonDet for $typ {
+      impl VerifierNonDet for $typ {
         #[cfg(verifier = "smack")]
         fn verifier_nondet(self) -> Self {
           unsafe { $nondet() as Self }
