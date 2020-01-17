@@ -16,13 +16,18 @@ extern {
 }
 
 
-#[cfg(verifier = "smack")]
 #[macro_export]
-macro_rules! assert {
+macro_rules! verifier_assert {
   ( $cond:expr ) =>
     (
       unsafe { __VERIFIER_assert($cond as i32); };
     )
+}
+
+#[cfg(verifier = "smack")]
+#[macro_export]
+macro_rules! assert {
+  ( $cond:expr ) => ( verifier_assert!($cond); )
 }
 
 #[cfg(verifier = "smack")]
@@ -38,7 +43,7 @@ macro_rules! assert_neq {
 }
 
 #[macro_export]
-macro_rules! assume {
+macro_rules! verifier_assume {
   ( $cond:expr ) =>
     (
       #[cfg(verifier = "smack")]
@@ -47,6 +52,11 @@ macro_rules! assume {
       #[cfg(not(verifier = "smack"))]
       ();
     )
+}
+
+#[macro_export]
+macro_rules! assume {
+  ( $cond:expr ) => ( verifier_assume!($cond); )
 }
 
 #[macro_export]
