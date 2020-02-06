@@ -40,4 +40,8 @@ typedef struct {
 
 typedef int pthread_condattr_t;
 
+typedef int pthread_once_t;
+
+typedef int pthread_key_t;
+
 #endif
