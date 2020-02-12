@@ -171,8 +171,6 @@ void __SMACK_decls(void);
 // Concurrency helper functions
 void __VERIFIER_atomic_begin();
 void __VERIFIER_atomic_end();
-void __call_wrapper(pthread_t *__newthread, void *(*__start_routine)(void *),
-                    void *__arg);
 
 #ifdef __cplusplus
 }

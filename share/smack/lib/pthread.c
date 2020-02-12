@@ -16,8 +16,6 @@ void __SMACK_init_func_corral_primitives() {
   // Declare these, so bpl parsing doesn't complain
   __SMACK_top_decl("procedure corral_getThreadID() returns (x:$tidtype);");
   __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:$tidtype);");
-  __SMACK_top_decl("procedure corral_atomic_begin();");
-  __SMACK_top_decl("procedure corral_atomic_end();");
 }
 
 void __SMACK_init_func_thread() {
@@ -33,10 +31,6 @@ void __SMACK_init_func_thread() {
   __SMACK_code("assume (forall i:$tidtype :: $pthreadStatus[i][0] == "
                "$pthread_uninitialized);");
 }
-
-void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
-
-void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
 
 pthread_t pthread_self(void) {
   int tmp_tid = __VERIFIER_nondet_int();
