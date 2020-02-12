@@ -532,4 +532,3 @@ void __SMACK_init_func_memory_model(void) {
 void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
 
 void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
-
