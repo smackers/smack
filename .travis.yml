@@ -1,7 +1,6 @@
 language: generic
 os: linux
 dist: bionic
-compiler: clang
 
 addons:
   apt:
@@ -46,7 +45,6 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=rust/vector --languages=rust"
 
 before_install:
-  - sudo rm -rf /usr/local/clang-7.0.0
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
   - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
