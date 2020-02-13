@@ -168,6 +168,10 @@ void *__VERIFIER_nondet_pointer(void);
 
 void __SMACK_decls(void);
 
+// Concurrency helper functions
+void __VERIFIER_atomic_begin();
+void __VERIFIER_atomic_end();
+
 #ifdef __cplusplus
 }
 #endif

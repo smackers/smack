@@ -268,6 +268,10 @@ void __SMACK_decls(void) {
   D("var $exn: bool;");
   D("var $exnv: int;");
 
+  // Concurrency primitives
+  D("procedure corral_atomic_begin();");
+  D("procedure corral_atomic_end();");
+
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "{\n"
     "  call p := $$alloc(n);\n"
@@ -524,3 +528,7 @@ void __SMACK_init_func_memory_model(void) {
   __SMACK_code("$allocatedCounter := 0;");
 #endif
 }
+
+void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
+
+void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
