@@ -3,7 +3,6 @@ mod smack;
 use smack::*;
 
 // @expect verified
-// @flag --bit-precise
 
 fn main() {
   // unsigned
