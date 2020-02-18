@@ -19,15 +19,21 @@ void *calloc(size_t num, size_t size) {
   if (__VERIFIER_nondet_int()) {
     ret = 0;
   } else {
+    __VERIFIER_atomic_begin();
     ret = malloc(num * size);
     memset(ret, 0, num * size);
+    __VERIFIER_atomic_end();
   }
   return ret;
 }
 
 void *realloc(void *ptr, size_t size) {
+  void *ret;
+  __VERIFIER_atomic_begin();
   free(ptr);
-  return malloc(size);
+  ret = malloc(size);
+  __VERIFIER_atomic_end();
+  return ret;
 }
 
 long int strtol(const char *nptr, char **endptr, int base) {
