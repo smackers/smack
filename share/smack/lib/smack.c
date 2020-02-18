@@ -274,7 +274,9 @@ void __SMACK_decls(void) {
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  call p := $$alloc(n);\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_SAFETY
@@ -301,10 +303,12 @@ void __SMACK_decls(void) {
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $allocatedCounter;\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  if ($ne.ref.bool(n, $0.ref)) {\n"
     "    $allocatedCounter := $allocatedCounter + 1;\n"
     "  }\n"
     "  call p := $$alloc(n);\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
@@ -343,6 +347,7 @@ void __SMACK_decls(void) {
   D("procedure $free(p: ref)\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
     "    assert {:valid_free} $Alloc[p];\n"
@@ -350,6 +355,7 @@ void __SMACK_decls(void) {
     "    $Alloc[p] := false;\n"
     "    $allocatedCounter := $allocatedCounter - 1;\n"
     "  }\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
@@ -445,7 +451,9 @@ void __SMACK_decls(void) {
 #else
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  call p := $$alloc(n);\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS

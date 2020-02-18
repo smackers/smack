@@ -1,5 +1,6 @@
 #include "smack.h"
 #include <pthread.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 // @expect verified
