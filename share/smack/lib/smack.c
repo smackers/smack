@@ -274,7 +274,9 @@ void __SMACK_decls(void) {
 
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  call p := $$alloc(n);\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_SAFETY
@@ -301,10 +303,12 @@ void __SMACK_decls(void) {
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "modifies $allocatedCounter;\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  if ($ne.ref.bool(n, $0.ref)) {\n"
     "    $allocatedCounter := $allocatedCounter + 1;\n"
     "  }\n"
     "  call p := $$alloc(n);\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
@@ -312,6 +316,8 @@ void __SMACK_decls(void) {
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
+  // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
+  // before the program starts using the $galloc procedure.
   D("procedure $galloc(base_addr: ref, size: ref)\n"
     "{\n"
     "  assume $Size(base_addr) == size;\n"
@@ -343,6 +349,7 @@ void __SMACK_decls(void) {
   D("procedure $free(p: ref)\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
     "    assert {:valid_free} $Alloc[p];\n"
@@ -350,12 +357,15 @@ void __SMACK_decls(void) {
     "    $Alloc[p] := false;\n"
     "    $allocatedCounter := $allocatedCounter - 1;\n"
     "  }\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
 
+  // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
+  // before the program starts using the $galloc procedure.
   D("procedure $galloc(base_addr: ref, size: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $Size[base_addr] == size;\n"
@@ -402,6 +412,8 @@ void __SMACK_decls(void) {
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
+  // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
+  // before the program starts using the $galloc procedure.
   D("procedure $galloc(base_addr: ref, size: ref);\n"
     "modifies $Alloc;\n"
     "ensures $Size(base_addr) == size;\n"
@@ -445,7 +457,9 @@ void __SMACK_decls(void) {
 #else
   D("procedure $malloc(n: ref) returns (p: ref)\n"
     "{\n"
+    "  call corral_atomic_begin();\n"
     "  call p := $$alloc(n);\n"
+    "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
