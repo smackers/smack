@@ -316,6 +316,8 @@ void __SMACK_decls(void) {
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
+  // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
+  // before the program starts using the $galloc procedure.
   D("procedure $galloc(base_addr: ref, size: ref)\n"
     "{\n"
     "  assume $Size(base_addr) == size;\n"
@@ -362,6 +364,8 @@ void __SMACK_decls(void) {
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
 
+  // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
+  // before the program starts using the $galloc procedure.
   D("procedure $galloc(base_addr: ref, size: ref);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $Size[base_addr] == size;\n"
@@ -408,6 +412,8 @@ void __SMACK_decls(void) {
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
+  // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
+  // before the program starts using the $galloc procedure.
   D("procedure $galloc(base_addr: ref, size: ref);\n"
     "modifies $Alloc;\n"
     "ensures $Size(base_addr) == size;\n"
