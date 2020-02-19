@@ -1,7 +1,7 @@
 #include "smack.h"
 #include <stdlib.h>
 
-// @expect verified
+// @expect error
 
 int main(void) {
   int *arr = (int *)calloc(5, sizeof(int));
