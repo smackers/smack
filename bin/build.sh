@@ -39,18 +39,19 @@ INSTALL_RUST=${INSTALL_RUST:-0}
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
-Z3_DIR="${ROOT}/z3"
-CVC4_DIR="${ROOT}/cvc4"
-BOOGIE_DIR="${ROOT}/boogie"
-CORRAL_DIR="${ROOT}/corral"
-SYMBOOGLIX_DIR="${ROOT}/symbooglix"
-LOCKPWN_DIR="${ROOT}/lockpwn"
-LLVM_DIR="${ROOT}/llvm"
+ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
+DEPS_DIR="${ROOT_DIR}/smack-deps"
+Z3_DIR="${DEPS_DIR}/z3"
+CVC4_DIR="${DEPS_DIR}/cvc4"
+BOOGIE_DIR="${DEPS_DIR}/boogie"
+CORRAL_DIR="${DEPS_DIR}/corral"
+SYMBOOGLIX_DIR="${DEPS_DIR}/symbooglix"
+LOCKPWN_DIR="${DEPS_DIR}/lockpwn"
+LLVM_DIR="${DEPS_DIR}/llvm"
 
 source ${SMACK_DIR}/bin/versions
 
-SMACKENV=${ROOT}/smack.environment
+SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 
 # Install prefix -- system default is used if left unspecified
