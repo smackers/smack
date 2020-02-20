@@ -5,11 +5,8 @@
 // the University of Illinois Open Source License. See LICENSE for details.
 //
 #include "smack/DSAWrapper.h"
-#include "assistDS/DSNodeEquivs.h"
-#include "dsa/DSGraph.h"
-#include "dsa/DataStructure.h"
-#include "dsa/TypeSafety.h"
 #include "llvm/Support/FileSystem.h"
+#include "smack/SmackOptions.h"
 
 #define DEBUG_TYPE "dsa-wrapper"
 
@@ -22,64 +19,30 @@ RegisterPass<DSAWrapper>
     DSAWrapperPass("dsa-wrapper",
                    "SMACK Data Structure Graph Based Alias Analysis Wrapper");
 
-void MemcpyCollector::visitMemCpyInst(llvm::MemCpyInst &mci) {
-  const llvm::EquivalenceClasses<const llvm::DSNode *> &eqs =
-      nodeEqs->getEquivalenceClasses();
-  const llvm::DSNode *n1 =
-      eqs.getLeaderValue(nodeEqs->getMemberForValue(mci.getOperand(0)));
-  const llvm::DSNode *n2 =
-      eqs.getLeaderValue(nodeEqs->getMemberForValue(mci.getOperand(1)));
-
-  bool f1 = false, f2 = false;
-  for (unsigned i = 0; i < memcpys.size() && (!f1 || !f2); i++) {
-    f1 = f1 || memcpys[i] == n1;
-    f2 = f2 || memcpys[i] == n2;
-  }
-
-  if (!f1)
-    memcpys.push_back(eqs.getLeaderValue(n1));
-  if (!f2)
-    memcpys.push_back(eqs.getLeaderValue(n2));
-}
-
 void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequiredTransitive<llvm::BUDataStructures>();
-  AU.addRequiredTransitive<llvm::TDDataStructures>();
-  AU.addRequiredTransitive<llvm::DSNodeEquivs>();
-  AU.addRequired<dsa::TypeSafety<llvm::TDDataStructures>>();
+  AU.addRequiredTransitive<sea_dsa::DsaAnalysis>();
 }
 
 bool DSAWrapper::runOnModule(llvm::Module &M) {
   dataLayout = &M.getDataLayout();
-  TD = &getAnalysis<llvm::TDDataStructures>();
-  BU = &getAnalysis<llvm::BUDataStructures>();
-  nodeEqs = &getAnalysis<llvm::DSNodeEquivs>();
-  TS = &getAnalysis<dsa::TypeSafety<llvm::TDDataStructures>>();
-  memcpys = collectMemcpys(M, new MemcpyCollector(nodeEqs));
+  SD = &getAnalysis<sea_dsa::DsaAnalysis>().getDsaAnalysis();
+  assert(SD->kind() == sea_dsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE
+         && "Currently we only want the context-insensitive sea-dsa.");
+  for (auto& f : M.functions()) {
+    if(f.hasName() && SmackOptions::isEntryPoint(f.getName())) {
+      DG = &SD->getGraph(f);
+      break;
+    }
+  }
   staticInits = collectStaticInits(M);
   module = &M;
   return false;
 }
 
-std::vector<const llvm::DSNode *>
-DSAWrapper::collectMemcpys(llvm::Module &M, MemcpyCollector *mcc) {
-
-  for (llvm::Module::iterator func = M.begin(), e = M.end(); func != e;
-       ++func) {
-
-    for (llvm::Function::iterator block = func->begin(); block != func->end();
-         ++block) {
-
-      mcc->visit(*block);
-    }
-  }
-  return mcc->getMemcpys();
-}
-
-std::vector<const llvm::DSNode *>
+std::vector<const sea_dsa::Node *>
 DSAWrapper::collectStaticInits(llvm::Module &M) {
-  std::vector<const llvm::DSNode *> sis;
+  std::vector<const sea_dsa::Node *> sis;
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer()) {
       if (auto *N = getNode(&GV)) {
@@ -90,117 +53,26 @@ DSAWrapper::collectStaticInits(llvm::Module &M) {
   return sis;
 }
 
-DSGraph *DSAWrapper::getGraphForValue(const Value *V) {
-  if (const Instruction *I = dyn_cast<Instruction>(V))
-    return TD->getDSGraph(*I->getParent()->getParent());
-  else if (const Argument *A = dyn_cast<Argument>(V))
-    return TD->getDSGraph(*A->getParent());
-  else if (const BasicBlock *BB = dyn_cast<BasicBlock>(V))
-    return TD->getDSGraph(*BB->getParent());
-  else if (isa<GlobalValue>(V))
-    return TD->getGlobalsGraph();
-
-  // XXX I know this looks bad, but it works for now
-  for (auto U : V->users()) {
-    return getGraphForValue(U);
-  }
-
-  llvm_unreachable("Unexpected value.");
-}
-
-int DSAWrapper::getOffset(const MemoryLocation *l) {
-  const DSGraph::ScalarMapTy &S = getGraphForValue(l->Ptr)->getScalarMap();
-  DSGraph::ScalarMapTy::const_iterator I = S.find((const Value *)l->Ptr);
-  if (I == S.end())
-    return 0;
-  if (I->second.getNode() && I->second.getNode()->isCollapsedNode())
-    return -1;
-  unsigned offset = I->second.getOffset();
-  assert(offset <= INT_MAX && "Cannot handle large offsets");
-  return (int)offset;
-}
-
-bool DSAWrapper::isMemcpyd(const llvm::DSNode *n) {
-  const llvm::EquivalenceClasses<const llvm::DSNode *> &eqs =
-      nodeEqs->getEquivalenceClasses();
-  const llvm::DSNode *nn = eqs.getLeaderValue(n);
-  for (unsigned i = 0; i < memcpys.size(); i++)
-    if (memcpys[i] == nn)
-      return true;
-  return false;
-}
-
-bool DSAWrapper::isStaticInitd(const llvm::DSNode *n) {
-  const llvm::EquivalenceClasses<const llvm::DSNode *> &eqs =
-      nodeEqs->getEquivalenceClasses();
-  const llvm::DSNode *nn = eqs.getLeaderValue(n);
+bool DSAWrapper::isStaticInitd(const sea_dsa::Node *n) {
   for (unsigned i = 0; i < staticInits.size(); i++)
-    if (staticInits[i] == nn)
+    if (staticInits[i] == n)
       return true;
   return false;
-}
-
-bool DSAWrapper::isFieldDisjoint(const llvm::Value *V,
-                                 const llvm::Function *F) {
-  return TS->isFieldDisjoint(V, F);
-}
-
-bool DSAWrapper::isFieldDisjoint(const GlobalValue *V, unsigned offset) {
-  return TS->isFieldDisjoint(V, offset);
 }
 
 bool DSAWrapper::isRead(const Value *V) {
-  const DSNode *N = getNode(V);
-  return N && (N->isReadNode());
+  auto N = getNode(V);
+  return N && (N->isRead());
 }
 
 bool DSAWrapper::isAlloced(const Value *v) {
-  const DSNode *N = getNode(v);
-  return N && (N->isHeapNode() || N->isAllocaNode());
+  auto N = getNode(v);
+  return N && (N->isHeap() || N->isAlloca());
 }
 
 bool DSAWrapper::isExternal(const Value *v) {
-  const DSNode *N = getNode(v);
-  return N && N->isExternalNode();
-}
-
-bool DSAWrapper::isSingletonGlobal(const Value *V) {
-  const DSNode *N = getNode(V);
-  if (!N || !N->isGlobalNode() || N->numGlobals() > 1)
-    return false;
-
-  // Ensure this node has a unique scalar type... (?)
-  DSNode::const_type_iterator TSi = N->type_begin();
-  if (TSi == N->type_end())
-    return false;
-  svset<Type *>::const_iterator Ti = TSi->second->begin();
-  if (Ti == TSi->second->end())
-    return false;
-  const Type *T = *Ti;
-  while (T->isPointerTy())
-    T = T->getPointerElementType();
-  if (!T->isSingleValueType())
-    return false;
-  ++Ti;
-  if (Ti != TSi->second->end())
-    return false;
-  ++TSi;
-  if (TSi != N->type_end())
-    return false;
-
-  // Ensure this node is in its own class... (?)
-  const EquivalenceClasses<const DSNode *> &Cs =
-      nodeEqs->getEquivalenceClasses();
-  EquivalenceClasses<const DSNode *>::iterator C = Cs.findValue(N);
-  assert(C != Cs.end() && "Did not find value.");
-  EquivalenceClasses<const DSNode *>::member_iterator I = Cs.member_begin(C);
-  if (I == Cs.member_end())
-    return false;
-  ++I;
-  if (I != Cs.member_end())
-    return false;
-
-  return true;
+  auto N = getNode(v);
+  return N && N->isExternal();
 }
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
@@ -215,23 +87,31 @@ unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
 }
 
 int DSAWrapper::getOffset(const Value *v) {
-  return getOffset(new MemoryLocation(v));
+  if (DG->hasCell(*v)) {
+    auto cell = DG->getCell(*v);
+    auto node = cell.getNode();
+    // Be consistent with the old implementation.
+    if (node && node->isOffsetCollapsed())
+      return -1;
+    auto offset = cell.getOffset();
+    assert(offset <= INT_MAX && "Cannot handle large offsets");
+    return offset;
+  }
+  // Return 0 if we can't find the cell that `v` associates with.
+  return 0;
 }
 
-// TODO: Should this return the node or its leader?
-const DSNode *DSAWrapper::getNode(const Value *v) {
-  const llvm::EquivalenceClasses<const llvm::DSNode *> &eqs =
-      nodeEqs->getEquivalenceClasses();
-  auto *N = nodeEqs->getMemberForValue(v);
-  return N ? eqs.getLeaderValue(N) : nullptr;
+const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
+  // For sea-dsa, a node is obtained by getting the cell first.
+  if (DG->hasCell(*v))
+    return DG->getCell(*v).getNode();
+  return nullptr;
 }
 
 void DSAWrapper::printDSAGraphs(const char *Filename) {
   std::error_code EC;
   llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
-  TD->print(F, module);
-  BU->print(F, module);
-  TS->print(F, module);
+  // TODO: print the ds graph
 }
 
 } // namespace smack

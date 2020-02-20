@@ -153,7 +153,8 @@ int main(int argc, char **argv) {
 
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
-  pass_manager.add(llvm::createInternalizePass());
+  // Shaobo: sea-dsa is inconsistent with the pass below.
+  //pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
   if (StaticUnroll) {

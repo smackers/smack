@@ -5,6 +5,7 @@
 #define REGIONS_H
 
 #include "llvm/IR/InstVisitor.h"
+#include "sea_dsa/Graph.hh"
 
 using namespace llvm;
 
@@ -19,7 +20,7 @@ class DSAWrapper;
 class Region {
 private:
   LLVMContext *context;
-  const DSNode *representative;
+  const sea_dsa::Node *representative;
   const Type *type;
   unsigned offset;
   unsigned length;
@@ -33,12 +34,11 @@ private:
 
   static const DataLayout *DL;
   static DSAWrapper *DSA;
-  // static DSNodeEquivs* NEQS;
 
-  static bool isSingleton(const DSNode *N, unsigned offset, unsigned length);
-  static bool isAllocated(const DSNode *N);
-  static bool bytewiseAccess(const DSNode *N);
-  static bool isComplicated(const DSNode *N);
+  static bool isSingleton(const sea_dsa::Node *N, unsigned offset, unsigned length);
+  static bool isAllocated(const sea_dsa::Node *N);
+  //static bool bytewiseAccess(const DSNode *N);
+  static bool isComplicated(const sea_dsa::Node *N);
 
   void init(const Value *V, unsigned length);
   bool isDisjoint(unsigned offset, unsigned length);
@@ -87,6 +87,8 @@ public:
 
   void visitLoadInst(LoadInst &);
   void visitStoreInst(StoreInst &);
+  void visitMemCpyInst(MemCpyInst &I);
+  void visistMemSetInst(MemSetInst &I);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &);
   void visitAtomicRMWInst(AtomicRMWInst &);
   void visitMemIntrinsic(MemIntrinsic &);

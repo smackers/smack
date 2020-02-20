@@ -93,6 +93,7 @@ else()
 endif()
 
 include_directories(include)
+include_directories(sea-dsa/include)
 
 add_library(assistDS STATIC
   include/assistDS/ArgCast.h
@@ -231,7 +232,7 @@ add_executable(llvm2bpl
 )
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(llvm2bpl smackTranslator assistDS dsa)
+target_link_libraries(llvm2bpl smackTranslator assistDS dsa ${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/build/lib/libSeaDsaAnalysis.a)
 
 INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin

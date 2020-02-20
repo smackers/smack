@@ -20,30 +20,6 @@ const DataLayout *Region::DL = nullptr;
 DSAWrapper *Region::DSA = nullptr;
 // DSNodeEquivs* Region::NEQS = nullptr;
 
-namespace {
-const Function *getFunction(const Value *V) {
-  if (const Instruction *I = dyn_cast<Instruction>(V))
-    return I->getParent()->getParent();
-  else if (const Argument *A = dyn_cast<Argument>(V))
-    return A->getParent();
-  else if (const BasicBlock *BB = dyn_cast<BasicBlock>(V))
-    return BB->getParent();
-
-  // XXX I know this looks bad, but it works for now
-  for (auto U : V->users())
-    return getFunction(U);
-
-  llvm_unreachable("Unexpected value.");
-}
-
-bool isFieldDisjoint(DSAWrapper *DSA, const Value *V, unsigned offset) {
-  if (const GlobalValue *G = dyn_cast<GlobalValue>(V))
-    return DSA->isFieldDisjoint(G, offset);
-  else
-    return DSA->isFieldDisjoint(V, getFunction(V));
-}
-} // namespace
-
 void Region::init(Module &M, Pass &P) {
   DL = &M.getDataLayout();
   DSA = &P.getAnalysis<DSAWrapper>();
@@ -77,52 +53,57 @@ unsigned numGlobals(const DSNode *N) {
 }
 } // namespace
 
-bool Region::isSingleton(const DSNode *N, unsigned offset, unsigned length) {
-  if (N->isGlobalNode() && numGlobals(N) == 1 && !N->isArrayNode() &&
-      !N->isAllocaNode() && !N->isHeapNode() && !N->isExternalNode() &&
-      !N->isUnknownNode()) {
+bool Region::isSingleton(const sea_dsa::Node *N, unsigned offset, unsigned length) {
+  // Shaobo: isSingleton is underapproximated here because the old
+  // implementation considers a field as a singleton whereas the current
+  // implementation only considers a node as a singleton. Therefore, we may find
+  // fewer singletons (e.g., if there are global structs).
+  return !N->isAlloca() && !N->isHeap() && !N->isExternal() && N->isUnique();
+  // if (N->isGlobalNode() && numGlobals(N) == 1 && !N->isArrayNode() &&
+  //     !N->isAllocaNode() && !N->isHeapNode() && !N->isExternalNode() &&
+  //     !N->isUnknownNode()) {
 
-    // TODO can we do something for non-global nodes?
+  //   // TODO can we do something for non-global nodes?
 
-    // TODO don’t need to know if there are other members of this class, right?
-    // assert(NEQS && "Missing DS node equivalence information.");
-    // auto &Cs = NEQS->getEquivalenceClasses();
-    // auto C = Cs.findValue(representative);
-    // assert(C != Cs.end() && "No equivalence class found.");
-    // assert(Cs.member_begin(C) != Cs.member_end() && "Found empty class.");
-    // if (++(Cs.member_begin(C)) != Cs.member_end()) return false;
+  //   // TODO don’t need to know if there are other members of this class, right?
+  //   // assert(NEQS && "Missing DS node equivalence information.");
+  //   // auto &Cs = NEQS->getEquivalenceClasses();
+  //   // auto C = Cs.findValue(representative);
+  //   // assert(C != Cs.end() && "No equivalence class found.");
+  //   // assert(Cs.member_begin(C) != Cs.member_end() && "Found empty class.");
+  //   // if (++(Cs.member_begin(C)) != Cs.member_end()) return false;
 
-    assert(DL && "Missing data layout information.");
+  //   assert(DL && "Missing data layout information.");
 
-    for (auto I = N->type_begin(), E = N->type_end(); I != E; ++I) {
-      if (I->first < offset)
-        continue;
-      if (I->first > offset)
-        break;
-      if (I->second->begin() == I->second->end())
-        break;
-      if ((++(I->second->begin())) != I->second->end())
-        break;
-      Type *T = *I->second->begin();
-      if (!T->isSized())
-        break;
-      if (DL->getTypeAllocSize(T) != length)
-        break;
-      if (!T->isSingleValueType())
-        break;
-      return true;
-    }
-  }
-  return false;
+  //   for (auto I = N->type_begin(), E = N->type_end(); I != E; ++I) {
+  //     if (I->first < offset)
+  //       continue;
+  //     if (I->first > offset)
+  //       break;
+  //     if (I->second->begin() == I->second->end())
+  //       break;
+  //     if ((++(I->second->begin())) != I->second->end())
+  //       break;
+  //     Type *T = *I->second->begin();
+  //     if (!T->isSized())
+  //       break;
+  //     if (DL->getTypeAllocSize(T) != length)
+  //       break;
+  //     if (!T->isSingleValueType())
+  //       break;
+  //     return true;
+  //   }
+  // }
+  // return false;
 }
 
-bool Region::isAllocated(const DSNode *N) {
-  return N->isHeapNode() || N->isAllocaNode();
+bool Region::isAllocated(const sea_dsa::Node *N) {
+  return N->isHeap() || N->isAlloca();
 }
 
-bool Region::isComplicated(const DSNode *N) {
-  return N->isIntToPtrNode() || N->isPtrToIntNode() || N->isExternalNode() ||
-         N->isUnknownNode();
+bool Region::isComplicated(const sea_dsa::Node *N) {
+  return N->isIntToPtr() || N->isPtrToInt() || N->isExternal() ||
+         N->isUnknown();
 }
 
 void Region::init(const Value *V, unsigned length) {
@@ -145,13 +126,20 @@ void Region::init(const Value *V, unsigned length) {
   singleton =
       DL && representative && isSingleton(representative, offset, length);
   allocated = !representative || isAllocated(representative);
+  // Shaobo: I removed the dependency of the bytewise flag on isFieldDisjoint
+  // and isMemcpyd for the following reasons.
+  // TODO: figure out if removing isFieldDisjoint breaks value annotations.
+  // Since we visit memcpy/memset instructions in this pass, the types
+  // of the nodes involving in these instructions are either i8 or changed to
+  // NULL during merging.
   bytewise = DSA && SmackOptions::BitPrecise &&
              (SmackOptions::NoByteAccessInference ||
-              !isFieldDisjoint(DSA, V, offset) ||
-              DSA->isMemcpyd(representative) || T->isIntegerTy(8));
-  incomplete = !representative || representative->isIncompleteNode();
+              //!isFieldDisjoint(DSA, V, offset) ||
+              //DSA->isMemcpyd(representative) ||
+             T->isIntegerTy(8));
+  incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
-  collapsed = !representative || representative->isCollapsedNode();
+  collapsed = !representative || representative->isOffsetCollapsed();
 }
 
 Region::Region(const Value *V) {
@@ -202,6 +190,10 @@ void Region::print(raw_ostream &O) {
     O << "B";
   if (complicated)
     O << "C";
+  if (incomplete)
+    O << "I";
+  if (collapsed)
+    O << "L";
   if (isAllocated())
     O << "A";
   O << "}";
@@ -212,17 +204,25 @@ RegisterPass<Regions> RegionsPass("smack-regions", "SMACK Memory Regions Pass");
 
 void Regions::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  if (!SmackOptions::NoMemoryRegionSplitting) {
-    AU.addRequiredTransitive<llvm::LocalDataStructures>();
-    AU.addRequiredTransitive<llvm::BUDataStructures>();
-    AU.addRequiredTransitive<llvm::TDDataStructures>();
-    AU.addRequiredTransitive<llvm::DSNodeEquivs>();
-    AU.addRequiredTransitive<dsa::TypeSafety<llvm::TDDataStructures>>();
+  if (!SmackOptions::NoMemoryRegionSplitting)
     AU.addRequired<DSAWrapper>();
-  }
 }
 
 bool Regions::runOnModule(Module &M) {
+  // Shaobo: my understanding of how this class works:
+  // First, a bunch of instructions involving pointers are visited (via
+  // Regions::idx). During a visit on an instruction, a region is created
+  // (Region::init) for the pointer operand. Note that a region is always
+  // created for a pointer when it's visited, regardless of whether it alias
+  // with the existing ones.  A region can be roughly seen as a tuple of (cell,
+  // length) or (node, offset, length) since a cell is essentially a tuple of
+  // (node, offset). After a region is created, we will merge it to the existing
+  // ones if it overlaps with the them. So after this pass, we will get a bunch
+  // of regions which are mutually exclusive to each other.
+  // After that, SmackRep will call Regions::idx to get the region for a pointer
+  // operand, which repeats the aforementioned process. Note that we don't have
+  // fancy caching, so a region is created and merged everytime Regions::idx
+  // is called.
   if (!SmackOptions::NoMemoryRegionSplitting) {
     Region::init(M, *this);
     visit(M);
@@ -323,6 +323,29 @@ unsigned Regions::idx(Region &R) {
 void Regions::visitLoadInst(LoadInst &I) { idx(I.getPointerOperand()); }
 
 void Regions::visitStoreInst(StoreInst &I) { idx(I.getPointerOperand()); }
+
+// Shaobo: we need to visit memcpy/memset otherwise extra merges will happen
+// in the translation phrase
+void Regions::visitMemCpyInst(MemCpyInst &I) {
+  unsigned length;
+  if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
+    length = CI->getZExtValue();
+  else
+    length = std::numeric_limits<unsigned>::max();
+
+  idx(I.getRawDest(), length);
+  idx(I.getRawSource(), length);
+}
+
+void Regions::visistMemSetInst(MemSetInst &I) {
+  unsigned length;
+  if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
+    length = CI->getZExtValue();
+  else
+    length = std::numeric_limits<unsigned>::max();
+
+  idx(I.getRawDest(), length);
+}
 
 void Regions::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   idx(I.getPointerOperand());
