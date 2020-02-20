@@ -31,7 +31,6 @@ BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
-BUILD_MONO=0 # mono is typically installed from packages (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=0
@@ -209,7 +208,6 @@ linux-ubuntu-12*)
   DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
   DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
   BUILD_LLVM=1
-  BUILD_MONO=1
   INSTALL_PREFIX="/usr/local"
   CONFIGURE_INSTALL_PREFIX="--prefix=${INSTALL_PREFIX}"
   CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}"
@@ -317,34 +315,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   esac
 
   puts "Installed required packages"
-fi
-
-
-if [ ${BUILD_MONO} -eq 1 ] ; then
-  puts "Building mono"
-
-  git clone git://github.com/mono/mono.git ${MONO_DIR}
-  cd ${MONO_DIR}
-  git checkout mono-${MONO_VERSION}
-  ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
-  make get-monolite-latest
-  make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
-  sudo make install
-
-  # Install libgdiplus
-  cd ${MONO_DIR}
-  git clone git://github.com/mono/libgdiplus.git
-  cd libgdiplus
-  ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
-  make
-  sudo make install
-
-  if [[ ${INSTALL_PREFIX} ]] ; then
-    echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
-    source ${SMACKENV}
-  fi
-
-  puts "Built mono"
 fi
 
 
