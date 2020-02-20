@@ -187,11 +187,6 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
-linux-@(ubuntu|neon)-14*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
-  ;;
-
 linux-@(ubuntu|neon)-16*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
@@ -238,12 +233,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-1[468]*)
+  linux-@(ubuntu|neon)-1[68]*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
-    14*)
-      UBUNTU_CODENAME="trusty"
-      ;;
     16*)
       UBUNTU_CODENAME="xenial"
       ;;
