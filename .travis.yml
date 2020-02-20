@@ -12,13 +12,7 @@ addons:
       - unzip
       - libz-dev
       - libedit-dev
-
-cache:
-  directories:
-    - $HOME/build/smackers/boogie
-    - $HOME/build/smackers/corral
-    - $HOME/build/smackers/symbooglix
-    - $HOME/build/smackers/lockpwn
+      - ninja-build
 
 env:
   global:
@@ -47,13 +41,13 @@ env:
 before_install:
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
   - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
-  - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+  - wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+  - sudo dpkg -i packages-microsoft-prod.deb
   - sudo apt-get install -y apt-transport-https
-  - echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
   - sudo apt-get update
-
+ 
 install:
-  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev mono-complete ca-certificates-mono ninja-build
+  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev dotnet-sdk-3.1
   - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 20
   - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-8 20
   - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-8 20
@@ -63,7 +57,6 @@ install:
   - sudo pip install pyyaml psutil
 
 script:
-  - python --version
   - python3 --version
   - $CXX --version
   - $CC --version
