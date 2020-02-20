@@ -202,24 +202,6 @@ linux-@(ubuntu|neon)-18*)
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
   ;;
 
-linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
-  DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
-  DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
-  BUILD_LLVM=1
-  INSTALL_PREFIX="/usr/local"
-  CONFIGURE_INSTALL_PREFIX="--prefix=${INSTALL_PREFIX}"
-  CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}"
-  ;;
-
-linux-cygwin*)
-  BUILD_LLVM=1
-  INSTALL_Z3=0
-  BUILD_BOOGIE=0
-  BUILD_CORRAL=0
-  ;;
-
 *)
   puts "Distribution ${distro} not supported. Manual installation required."
   exit 1
@@ -292,20 +274,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 30
-    ;;
-
-  linux-ubuntu-12*)
-    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-    sudo add-apt-repository -y ppa:andykimpe/cmake
-    sudo apt-get update
-    sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
-    sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
-    sudo update-alternatives --config gcc
-    sudo update-alternatives --config g++
-    ;;
-
-  linux-cygwin*)
     ;;
 
   *)
