@@ -22,12 +22,13 @@
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
+INSTALL_MONO=0 # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=1
 INSTALL_CVC4=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
-BUILD_SYMBOOGLIX=1
-BUILD_LOCKPWN=1
+BUILD_SYMBOOGLIX=0
+BUILD_LOCKPWN=0
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
@@ -45,7 +46,6 @@ BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 SYMBOOGLIX_DIR="${ROOT}/symbooglix"
 LOCKPWN_DIR="${ROOT}/lockpwn"
-MONO_DIR="${ROOT}/mono"
 LLVM_DIR="${ROOT}/llvm"
 
 source ${SMACK_DIR}/bin/versions
@@ -183,23 +183,23 @@ puts "Detected distribution: $distro"
 case "$distro" in
 linux-opensuse*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-debian-8.10.zip"
-  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete ca-certificates-mono make"
+  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-@(ubuntu|neon)-14*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
   ;;
 
 linux-@(ubuntu|neon)-16*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
   ;;
 
 linux-@(ubuntu|neon)-18*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
   ;;
 
 *)
@@ -263,10 +263,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     # Adding LLVM repository
     ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
-    # Adding MONO repository
-    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-    sudo apt-get install -y apt-transport-https
-    echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
     sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
@@ -283,6 +279,20 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   esac
 
   puts "Installed required packages"
+fi
+
+
+if [ ${INSTALL_MONO} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+  puts "Installing mono"
+
+  # Adding Mono repository
+  sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+  sudo apt-get install -y apt-transport-https
+  echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+  sudo apt-get update
+  sudo apt-get install -y mono-complete ca-certificates-mono
+
+  puts "Installed mono"
 fi
 
 
@@ -344,6 +354,7 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
   else
     puts "Z3 already installed"
   fi
+  echo export PATH=\"${Z3_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${INSTALL_CVC4} -eq 1 ] ; then
