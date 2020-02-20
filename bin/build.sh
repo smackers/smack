@@ -25,8 +25,8 @@ INSTALL_DEPENDENCIES=1
 INSTALL_MONO=0 # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=1
 INSTALL_CVC4=1
-BUILD_BOOGIE=1
-BUILD_CORRAL=1
+INSTALL_BOOGIE=1
+INSTALL_CORRAL=1
 BUILD_SYMBOOGLIX=0
 BUILD_LOCKPWN=0
 BUILD_SMACK=1
@@ -282,21 +282,18 @@ fi
 
 if [ ${INSTALL_MONO} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   puts "Installing mono"
-
   # Adding Mono repository
   sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
   sudo apt-get install -y apt-transport-https
   echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
   sudo apt-get update
   sudo apt-get install -y mono-complete ca-certificates-mono
-
   puts "Installed mono"
 fi
 
 
 if [ ${BUILD_LLVM} -eq 1 ] ; then
   puts "Building LLVM"
-
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
@@ -312,33 +309,30 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
   sudo make install
-
   puts "Built LLVM"
 fi
 
 
 if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
   puts "Installing Objective-C"
-
   # The version numbers here will have to change by OS
   sudo ln -s /usr/lib/gcc/x86_64-linux-gnu/4.8/include/objc /usr/local/include/objc
   echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
-
   puts "Installed Objective-C"
 fi
 
+
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
-
   ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
   tar xf rust.tar.gz
   cd rust-nightly-x86_64-unknown-linux-gnu
   sudo ./install.sh --without=rust-docs
   cd ..
   rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
-
   puts "Installed Rust"
 fi
+
 
 if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
@@ -355,6 +349,7 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
   echo export PATH=\"${Z3_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
+
 if [ ${INSTALL_CVC4} -eq 1 ] ; then
   if [ ! -d "$CVC4_DIR" ] ; then
     puts "Installing CVC4"
@@ -365,51 +360,33 @@ if [ ${INSTALL_CVC4} -eq 1 ] ; then
   else
     puts "CVC4 already installed"
   fi
+  echo export PATH=\"${CVC4_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
-if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
-    puts "Building Boogie"
-    if [ ! -d "$BOOGIE_DIR/.git" ] ; then
-      git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
-    fi
-    cd ${BOOGIE_DIR}
-    git reset --hard ${BOOGIE_COMMIT}
-    cd ${BOOGIE_DIR}/Source
-    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-    mono ./nuget.exe restore Boogie.sln
-    rm -rf /tmp/nuget/
-    msbuild Boogie.sln /p:Configuration=Release
-    ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
-    ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
-    puts "Built Boogie"
+
+if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
+  if [ ! -d "$BOOGIE_DIR" ] ; then
+    puts "Installing Boogie"
+    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION}
+    puts "Installed Boogie"
   else
-    puts "Boogie already built"
+    puts "Boogie already installed"
   fi
-  echo export PATH=\"${BOOGIE_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
+  echo export PATH=\"${BOOGIE_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
 
-if [ ${BUILD_CORRAL} -eq 1 ] ; then
-  if ! upToDate $CORRAL_DIR $CORRAL_COMMIT ; then
-    puts "Building Corral"
-    if [ ! -d "$CORRAL_DIR/.git" ] ; then
-      git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
-    fi
-    cd ${CORRAL_DIR}
-    git reset --hard ${CORRAL_COMMIT}
-    git submodule init
-    git submodule update
-    msbuild cba.sln /p:Configuration=Release
-    ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
-    ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
-    sed -i.debug -e's/Debug/Release/' ${CORRAL_DIR}/bin/corral
-    puts "Built Corral"
+if [ ${INSTALL_CORRAL} -eq 1 ] ; then
+  if [ ! -d "$CORRAL_DIR" ] ; then
+    puts "Installing Corral"
+    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION}
+    puts "Installed Corral"
   else
-    puts "Corral already built"
+    puts "Corral already installed"
   fi
-  echo export PATH=\"${CORRAL_DIR}/bin:\$PATH\" >> ${SMACKENV}
+  echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
 fi
+
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
@@ -433,6 +410,7 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   echo export PATH=\"${SYMBOOGLIX_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
+
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
     puts "Building lockpwn"
@@ -449,6 +427,7 @@ if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   fi
   echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
+
 
 if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
