@@ -10,8 +10,6 @@ addons:
       - python3-yaml
       - python3-psutil
       - unzip
-      - libz-dev
-      - libedit-dev
       - ninja-build
 
 env:

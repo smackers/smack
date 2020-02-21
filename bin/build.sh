@@ -60,7 +60,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build dotnet-sdk-3.1"
+DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build apt-transport-https dotnet-sdk-3.1"
 
 shopt -s extglob
 
@@ -185,17 +185,17 @@ case "$distro" in
 linux-opensuse*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.10.zip"
   DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ make"
-  DEPENDENCIES+=" ncurses-devel zlib-devel"
+  DEPENDENCIES+=" ncurses-devel"
   ;;
 
 linux-@(ubuntu|neon)-16*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
 linux-@(ubuntu|neon)-18*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
 *)
@@ -260,8 +260,8 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     # Adding .NET repository
     wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
     sudo dpkg -i packages-microsoft-prod.deb
-    sudo apt-get install -y apt-transport-https
     sudo apt-get update
+
     sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 30
@@ -284,7 +284,6 @@ if [ ${INSTALL_MONO} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
   puts "Installing mono"
   # Adding Mono repository
   sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-  sudo apt-get install -y apt-transport-https
   echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
   sudo apt-get update
   sudo apt-get install -y mono-complete ca-certificates-mono
