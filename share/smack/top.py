@@ -498,7 +498,6 @@ def verify_bpl(args):
 
   if (args.bit_precise or args.float) and args.verifier != 'symbooglix':
     x = "bopt:" if args.verifier != 'boogie' else ""
-    command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
     command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:
