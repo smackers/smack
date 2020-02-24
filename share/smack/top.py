@@ -467,7 +467,7 @@ def verify_bpl(args):
   elif args.verifier == 'boogie' or args.modular:
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
+    command += ["/nologo", "/noinfer", "/doModSetAnalysis", "/useArrayTheory"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
@@ -495,10 +495,6 @@ def verify_bpl(args):
     command += ["--entry-points=%s" % ",".join(args.entry_points)]
     command += ["--timeout=%d" % args.time_limit]
     command += ["--max-loop-depth=%d" % args.unroll]
-
-  if (args.bit_precise or args.float) and args.verifier != 'symbooglix':
-    x = "bopt:" if args.verifier != 'boogie' else ""
-    command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:
     command += args.verifier_options.split()

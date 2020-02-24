@@ -322,11 +322,6 @@ def verify_bpl_svcomp(args):
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
     corral_command += ["/bopt:z3opt:smt.relevancy=0"]
 
-  if args.bit_precise:
-    heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
-    corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
-    corral_command += ["/bopt:boolControlVC"]
-
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
       if "memleaks_test12_false-valid-free" in bpl:
