@@ -137,46 +137,6 @@ add_library(assistDS STATIC
   lib/AssistDS/SimplifyLoad.cpp
 )
 
-add_library(dsa STATIC
-  include/dsa/AddressTakenAnalysis.h
-  include/dsa/DSCallGraph.h
-  include/dsa/DSNode.h
-  include/dsa/EntryPointAnalysis.h
-  include/dsa/keyiterator.h
-  include/dsa/svset.h
-  include/dsa/AllocatorIdentification.h
-  include/dsa/DSGraph.h
-  include/dsa/DSSupport.h
-  include/dsa/stl_util.h
-  include/dsa/CallTargets.h
-  include/dsa/DSGraphTraits.h
-  include/dsa/DataStructure.h
-  include/dsa/TypeSafety.h
-  include/dsa/super_set.h
-  include/dsa/DSMonitor.h
-  lib/DSA/AddressTakenAnalysis.cpp
-  lib/DSA/CallTargets.cpp
-  lib/DSA/DSTest.cpp
-  lib/DSA/EquivClassGraphs.cpp
-  lib/DSA/StdLibPass.cpp
-  lib/DSA/AllocatorIdentification.cpp
-  lib/DSA/CompleteBottomUp.cpp
-  lib/DSA/DataStructure.cpp
-  lib/DSA/GraphChecker.cpp
-  lib/DSA/Printer.cpp
-  lib/DSA/TopDownClosure.cpp
-  lib/DSA/Basic.cpp
-  lib/DSA/DSCallGraph.cpp
-  lib/DSA/DataStructureStats.cpp
-  lib/DSA/TypeSafety.cpp
-  lib/DSA/BottomUpClosure.cpp
-  lib/DSA/DSGraph.cpp
-  lib/DSA/EntryPointAnalysis.cpp
-  lib/DSA/DSMonitor.cpp
-  lib/DSA/Local.cpp
-  lib/DSA/SanityCheck.cpp
-)
-
 add_library(smackTranslator STATIC
   include/smack/AddTiming.h
   include/smack/BoogieAst.h
@@ -232,7 +192,7 @@ add_executable(llvm2bpl
 )
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(llvm2bpl smackTranslator assistDS dsa ${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/build/lib/libSeaDsaAnalysis.a)
+target_link_libraries(llvm2bpl smackTranslator assistDS ${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/build/lib/libSeaDsaAnalysis.a)
 
 INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin

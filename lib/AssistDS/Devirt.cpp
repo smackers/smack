@@ -374,16 +374,19 @@ Devirtualize::makeDirectCall (CallSite & CS) {
 
   std::vector<const Function*> Targets;
 
-  if (CTF->size(CS) && CTF->isComplete(CS)) {
-    // TODO should we allow non-matching targets?
-    // TODO non-matching targets leads to crashes in bounce creation
-    // TODO formerly, all call-target-finder tarets were included:
-    //   Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
-    // TODO presently we filter out unmatching targets:
-    for (auto F = CTF->begin(CS); F != CTF->end(CS); ++F)
+  //if (CTF->size(CS) && CTF->isComplete(CS)) {
+  //  // TODO should we allow non-matching targets?
+  //  // TODO non-matching targets leads to crashes in bounce creation
+  //  // TODO formerly, all call-target-finder tarets were included:
+  //  //   Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
+  //  // TODO presently we filter out unmatching targets:
+  //  for (auto F = CTF->begin(CS); F != CTF->end(CS); ++F)
+  //    if (match(CS, **F))
+  //      Targets.push_back(*F);
+  if (CCG->isComplete(CS)) {
+    for (auto F = CCG->begin(CS); F != CCG->end(CS); ++F)
       if (match(CS, **F))
         Targets.push_back(*F);
-
   } else {
     for (auto &F : *CS.getInstruction()->getParent()->getParent()->getParent())
       if (F.hasAddressTaken() && match(CS, F))
@@ -472,7 +475,7 @@ Devirtualize::visitCallSite (CallSite &CS) {
   // Second, we will only transform those call sites which are complete (i.e.,
   // for which we know all of the call targets).
   //
-  if (SKIP_INCOMPLETE_NODES && !CTF->isComplete(CS))
+  if (SKIP_INCOMPLETE_NODES && !CCG->isComplete(CS))
     return;
 
   //
@@ -495,7 +498,8 @@ Devirtualize::runOnModule (Module & M) {
   //
   // Get the targets of indirect function calls.
   //
-  CTF = &getAnalysis<dsa::CallTargetFinder<EQTDDataStructures> >();
+  //CTF = &getAnalysis<dsa::CallTargetFinder<EQTDDataStructures> >();
+  CCG = &getAnalysis<sea_dsa::CompleteCallGraph>();
 
   //
   // Get information on the target system.
