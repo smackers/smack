@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "simplify-iv"
 
-#include "assistDS/SimplifyInsertValue.h"
+#include "utils/SimplifyInsertValue.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FormattedStream.h"

@@ -9,7 +9,7 @@
 
 #define DEBUG_TYPE "devirt"
 
-#include "assistDS/Devirt.h"
+#include "utils/Devirt.h"
 
 #include "smack/Debug.h"
 #include "llvm/Support/CommandLine.h"

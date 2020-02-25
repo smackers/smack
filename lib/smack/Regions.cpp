@@ -2,11 +2,6 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/Regions.h"
-#include "assistDS/DSNodeEquivs.h"
-#include "dsa/DSGraph.h"
-#include "dsa/DSNode.h"
-#include "dsa/DataStructure.h"
-#include "dsa/TypeSafety.h"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/SmackOptions.h"
@@ -25,33 +20,33 @@ void Region::init(Module &M, Pass &P) {
   DSA = &P.getAnalysis<DSAWrapper>();
 }
 
-namespace {
-unsigned numGlobals(const DSNode *N) {
-  unsigned count = 0;
-
-  // shamelessly ripped from getCaption(..) in lib/DSA/Printer.cpp
-  EquivalenceClasses<const GlobalValue *> *GlobalECs = 0;
-  const DSGraph *G = N->getParentGraph();
-  if (G)
-    GlobalECs = &G->getGlobalECs();
-
-  for (auto i = N->globals_begin(), e = N->globals_end(); i != e; ++i) {
-    count += 1;
-
-    if (GlobalECs) {
-      // Figure out how many globals are equivalent to this one.
-      auto I = GlobalECs->findValue(*i);
-      if (I != GlobalECs->end()) {
-        count +=
-            std::distance(GlobalECs->member_begin(I), GlobalECs->member_end()) -
-            1;
-      }
-    }
-  }
-
-  return count;
-}
-} // namespace
+//namespace {
+//unsigned numGlobals(const DSNode *N) {
+//  unsigned count = 0;
+//
+//  // shamelessly ripped from getCaption(..) in lib/DSA/Printer.cpp
+//  EquivalenceClasses<const GlobalValue *> *GlobalECs = 0;
+//  const DSGraph *G = N->getParentGraph();
+//  if (G)
+//    GlobalECs = &G->getGlobalECs();
+//
+//  for (auto i = N->globals_begin(), e = N->globals_end(); i != e; ++i) {
+//    count += 1;
+//
+//    if (GlobalECs) {
+//      // Figure out how many globals are equivalent to this one.
+//      auto I = GlobalECs->findValue(*i);
+//      if (I != GlobalECs->end()) {
+//        count +=
+//            std::distance(GlobalECs->member_begin(I), GlobalECs->member_end()) -
+//            1;
+//      }
+//    }
+//  }
+//
+//  return count;
+//}
+//} // namespace
 
 bool Region::isSingleton(const sea_dsa::Node *N, unsigned offset, unsigned length) {
   // Shaobo: isSingleton is underapproximated here because the old

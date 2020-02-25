@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "simplifyev"
 
-#include "assistDS/SimplifyExtractValue.h"
+#include "utils/SimplifyExtractValue.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/ArrayRef.h"

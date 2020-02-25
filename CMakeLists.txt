@@ -95,46 +95,15 @@ endif()
 include_directories(include)
 include_directories(sea-dsa/include)
 
-add_library(assistDS STATIC
-  include/assistDS/ArgCast.h
-  include/assistDS/FuncSimplify.h
-  include/assistDS/Int2PtrCmp.h
-  include/assistDS/SimplifyExtractValue.h
-  include/assistDS/StructReturnToPointer.h
-  include/assistDS/DSNodeEquivs.h
-  include/assistDS/FuncSpec.h
-  include/assistDS/SimplifyGEP.h
-  include/assistDS/TypeChecks.h
-  include/assistDS/DataStructureCallGraph.h
-  include/assistDS/GEPExprArgs.h
-  include/assistDS/LoadArgs.h
-  include/assistDS/SimplifyInsertValue.h
-  include/assistDS/TypeChecksOpt.h
-  include/assistDS/Devirt.h
-  include/assistDS/IndCloner.h
-  include/assistDS/MergeGEP.h
-  include/assistDS/SimplifyLoad.h
-  lib/AssistDS/ArgCast.cpp
-  lib/AssistDS/Devirt.cpp
-  lib/AssistDS/GEPExprArgs.cpp
-  lib/AssistDS/LoadArgs.cpp
-  lib/AssistDS/SimplifyExtractValue.cpp
-  lib/AssistDS/StructReturnToPointer.cpp
-  lib/AssistDS/ArgSimplify.cpp
-  lib/AssistDS/DynCount.cpp
-  lib/AssistDS/IndCloner.cpp
-  lib/AssistDS/SimplifyGEP.cpp
-  lib/AssistDS/TypeChecks.cpp
-  lib/AssistDS/DSNodeEquivs.cpp
-  lib/AssistDS/FuncSimplify.cpp
-  lib/AssistDS/Int2PtrCmp.cpp
-  lib/AssistDS/MergeGEP.cpp
-  lib/AssistDS/SimplifyInsertValue.cpp
-  lib/AssistDS/TypeChecksOpt.cpp
-  lib/AssistDS/DataStructureCallGraph.cpp
-  lib/AssistDS/FuncSpec.cpp
-  lib/AssistDS/SVADevirt.cpp
-  lib/AssistDS/SimplifyLoad.cpp
+add_library(utils STATIC
+  include/utils/Devirt.h
+  include/utils/MergeGEP.h
+  include/utils/SimplifyInsertValue.h
+  include/utils/SimplifyExtractValue.h
+  lib/utils/Devirt.cpp
+  lib/utils/MergeGEP.cpp
+  lib/utils/SimplifyInsertValue.cpp
+  lib/utils/SimplifyExtractValue.cpp
 )
 
 add_library(smackTranslator STATIC
@@ -192,7 +161,7 @@ add_executable(llvm2bpl
 )
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(llvm2bpl smackTranslator assistDS ${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/build/lib/libSeaDsaAnalysis.a)
+target_link_libraries(llvm2bpl smackTranslator utils ${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/build/lib/libSeaDsaAnalysis.a)
 
 INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
