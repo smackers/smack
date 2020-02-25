@@ -21,13 +21,13 @@
 ################################################################################
 
 # Set these flags to control various installation options
-INSTALL_DEPENDENCIES=0
-INSTALL_Z3=0
-INSTALL_CVC4=0
-BUILD_BOOGIE=0
-BUILD_CORRAL=0
-BUILD_SYMBOOGLIX=0
-BUILD_LOCKPWN=0
+INSTALL_DEPENDENCIES=1
+INSTALL_Z3=1
+INSTALL_CVC4=1
+BUILD_BOOGIE=1
+BUILD_CORRAL=1
+BUILD_SYMBOOGLIX=1
+BUILD_LOCKPWN=1
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
