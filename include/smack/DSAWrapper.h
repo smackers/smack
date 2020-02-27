@@ -23,12 +23,16 @@ private:
   // The ds graph since we're using the context-insensitive version which
   // results in one graph for the whole module.
   sea_dsa::Graph *DG;
-  std::vector<const sea_dsa::Node *> staticInits;
+  std::unordered_set<const sea_dsa::Node *> staticInits;
+  std::unordered_set<const sea_dsa::Node*> memCpyds;
+  // Mapping from the DSNodes associated with globals to the numbers of
+  // globals associated with them.
+  std::unordered_map<const sea_dsa::Node*, unsigned> globalRefCount;
   const llvm::DataLayout *dataLayout;
 
-  std::vector<const sea_dsa::Node *> collectStaticInits(llvm::Module &M);
-  std::unordered_map<const sea_dsa::Node*, unsigned> globalNumCount;
-  std::unordered_set<const sea_dsa::Node*> memcpyd;
+  void collectStaticInits(llvm::Module &M);
+  void collectMemCpyds(llvm::Module &M);
+  void countGlobalRefs();
 
 public:
   static char ID;

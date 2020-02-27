@@ -40,18 +40,24 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
     }
   }
 
-  // TODO: make these inside functions
-  for (auto& g : DG->globals()) {
-    auto& cellRef = g.second;
-    auto* node = cellRef->getNode();
-    if (node) {
-      if (!globalNumCount.count(node))
-        globalNumCount[node] = 1;
-      else
-        globalNumCount[node]++;
+  collectStaticInits(M);
+  collectMemCpyds(M);
+  countGlobalRefs();
+  module = &M;
+  return false;
+}
+
+void DSAWrapper::collectStaticInits(llvm::Module &M) {
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.hasInitializer()) {
+      if (auto *N = getNode(&GV)) {
+        staticInits.insert(N);
+      }
     }
   }
+}
 
+void DSAWrapper::collectMemCpyds(llvm::Module &M) {
   for (auto& f : M) {
     for (auto& b : f) {
       for (auto& i : b) {
@@ -59,46 +65,39 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
           auto srcNode = getNode(memcpyInst->getSource());
           auto destNode = getNode(memcpyInst->getDest());
           if (srcNode)
-            memcpyd.insert(srcNode);
+            memCpyds.insert(srcNode);
           if (destNode)
-            memcpyd.insert(destNode);
+            memCpyds.insert(destNode);
         }
         if (auto memsetInst = dyn_cast<MemSetInst>(&i)) {
           auto destNode = getNode(memsetInst->getDest());
           if (destNode)
-            memcpyd.insert(destNode);
+            memCpyds.insert(destNode);
         }
       }
     }
   }
-
-  staticInits = collectStaticInits(M);
-  module = &M;
-  return false;
 }
 
-std::vector<const sea_dsa::Node *>
-DSAWrapper::collectStaticInits(llvm::Module &M) {
-  std::vector<const sea_dsa::Node *> sis;
-  for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasInitializer()) {
-      if (auto *N = getNode(&GV)) {
-        sis.push_back(N);
-      }
+void DSAWrapper::countGlobalRefs() {
+  for (auto& g : DG->globals()) {
+    auto& cellRef = g.second;
+    auto* node = cellRef->getNode();
+    if (node) {
+      if (!globalRefCount.count(node))
+        globalRefCount[node] = 1;
+      else
+        globalRefCount[node]++;
     }
   }
-  return sis;
 }
 
 bool DSAWrapper::isStaticInitd(const sea_dsa::Node *n) {
-  for (unsigned i = 0; i < staticInits.size(); i++)
-    if (staticInits[i] == n)
-      return true;
-  return false;
+  return staticInits.count(n) > 0;
 }
 
 bool DSAWrapper::isMemCpyd(const sea_dsa::Node *n) {
-  return memcpyd.count(n) > 0;
+  return memCpyds.count(n) > 0;
 }
 
 bool DSAWrapper::isRead(const Value *V) {
@@ -238,8 +237,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 }
 
 unsigned DSAWrapper::getNumGlobals(const sea_dsa::Node *n) {
-  if (globalNumCount.count(n))
-    return globalNumCount[n];
+  if (globalRefCount.count(n))
+    return globalRefCount[n];
   else
     return 0;
 }
