@@ -7,8 +7,6 @@
 #ifndef DSAWRAPPER_H
 #define DSAWRAPPER_H
 
-#include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/InstVisitor.h"
 #include <unordered_set>
 #include <unordered_map>
 
@@ -30,6 +28,7 @@ private:
 
   std::vector<const sea_dsa::Node *> collectStaticInits(llvm::Module &M);
   std::unordered_map<const sea_dsa::Node*, unsigned> globalNumCount;
+  std::unordered_set<const sea_dsa::Node*> memcpyd;
 
 public:
   static char ID;
@@ -39,6 +38,7 @@ public:
   virtual bool runOnModule(llvm::Module &M);
 
   bool isStaticInitd(const sea_dsa::Node *n);
+  bool isMemCpyd(const sea_dsa::Node *n);
   bool isRead(const llvm::Value *V);
   bool isAlloced(const llvm::Value *v);
   bool isExternal(const llvm::Value *v);

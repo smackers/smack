@@ -20,39 +20,7 @@ void Region::init(Module &M, Pass &P) {
   DSA = &P.getAnalysis<DSAWrapper>();
 }
 
-//namespace {
-//unsigned numGlobals(const DSNode *N) {
-//  unsigned count = 0;
-//
-//  // shamelessly ripped from getCaption(..) in lib/DSA/Printer.cpp
-//  EquivalenceClasses<const GlobalValue *> *GlobalECs = 0;
-//  const DSGraph *G = N->getParentGraph();
-//  if (G)
-//    GlobalECs = &G->getGlobalECs();
-//
-//  for (auto i = N->globals_begin(), e = N->globals_end(); i != e; ++i) {
-//    count += 1;
-//
-//    if (GlobalECs) {
-//      // Figure out how many globals are equivalent to this one.
-//      auto I = GlobalECs->findValue(*i);
-//      if (I != GlobalECs->end()) {
-//        count +=
-//            std::distance(GlobalECs->member_begin(I), GlobalECs->member_end()) -
-//            1;
-//      }
-//    }
-//  }
-//
-//  return count;
-//}
-//} // namespace
-
 bool Region::isSingleton(const Value* v, unsigned length) {
-  // Shaobo: isSingleton is underapproximated here because the old
-  // implementation considers a field as a singleton whereas the current
-  // implementation only considers a node as a singleton. Therefore, we may find
-  // fewer singletons (e.g., if there are global structs).
   auto node = DSA->getNode(v);
 
   if (DSA->getNumGlobals(node) != 1)
@@ -64,23 +32,10 @@ bool Region::isSingleton(const Value* v, unsigned length) {
   if (!DSA->isTypeSafe(v))
     return false;
 
-  const Type* accessedType = *node->getAccessedType(DSA->getOffset(v)).begin();
-  if (!accessedType->isSized() || !accessedType->isSingleValueType())
+  if (DSA->isMemCpyd(node))
     return false;
 
-  Type* visitedType = (llvm::cast<PointerType>(v->getType()))->getElementType();
-
-  if (accessedType->getTypeID() != visitedType->getTypeID())
-    return false;
-
-  if (accessedType->isIntegerTy()) {
-    if (accessedType->getIntegerBitWidth() != visitedType->getIntegerBitWidth())
-      return false;
-    if (visitedType->isIntegerTy(8))
-      return length == 1;
-    return true;
-  } else
-    return true;
+  return true;
   // if (N->isGlobalNode() && numGlobals(N) == 1 && !N->isArrayNode() &&
   //     !N->isAllocaNode() && !N->isHeapNode() && !N->isExternalNode() &&
   //     !N->isUnknownNode()) {

@@ -6,6 +6,7 @@
 //
 #include "smack/DSAWrapper.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/IR/InstVisitor.h"
 #include "smack/SmackOptions.h"
 
 #include <unordered_map>
@@ -39,6 +40,7 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
     }
   }
 
+  // TODO: make these inside functions
   for (auto& g : DG->globals()) {
     auto& cellRef = g.second;
     auto* node = cellRef->getNode();
@@ -47,6 +49,26 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
         globalNumCount[node] = 1;
       else
         globalNumCount[node]++;
+    }
+  }
+
+  for (auto& f : M) {
+    for (auto& b : f) {
+      for (auto& i : b) {
+        if (auto memcpyInst = dyn_cast<MemCpyInst>(&i)) {
+          auto srcNode = getNode(memcpyInst->getSource());
+          auto destNode = getNode(memcpyInst->getDest());
+          if (srcNode)
+            memcpyd.insert(srcNode);
+          if (destNode)
+            memcpyd.insert(destNode);
+        }
+        if (auto memsetInst = dyn_cast<MemSetInst>(&i)) {
+          auto destNode = getNode(memsetInst->getDest());
+          if (destNode)
+            memcpyd.insert(destNode);
+        }
+      }
     }
   }
 
@@ -73,6 +95,10 @@ bool DSAWrapper::isStaticInitd(const sea_dsa::Node *n) {
     if (staticInits[i] == n)
       return true;
   return false;
+}
+
+bool DSAWrapper::isMemCpyd(const sea_dsa::Node *n) {
+  return memcpyd.count(n) > 0;
 }
 
 bool DSAWrapper::isRead(const Value *V) {
