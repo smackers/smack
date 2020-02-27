@@ -129,7 +129,7 @@ void Region::init(const Value *V, unsigned length) {
   // NULL during merging.
   bytewise = DSA && SmackOptions::BitPrecise &&
              (SmackOptions::NoByteAccessInference ||
-              //!isFieldDisjoint(DSA, V, offset) ||
+              !DSA->isTypeSafe(V) ||
               //DSA->isMemcpyd(representative) ||
              T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
