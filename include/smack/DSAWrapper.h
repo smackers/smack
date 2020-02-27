@@ -10,6 +10,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/InstVisitor.h"
 #include <unordered_set>
+#include <unordered_map>
 
 #include "sea_dsa/DsaAnalysis.hh"
 #include "sea_dsa/Global.hh"
@@ -28,6 +29,7 @@ private:
   const llvm::DataLayout *dataLayout;
 
   std::vector<const sea_dsa::Node *> collectStaticInits(llvm::Module &M);
+  std::unordered_map<const sea_dsa::Node*, unsigned> globalNumCount;
 
 public:
   static char ID;
@@ -46,6 +48,7 @@ public:
   const sea_dsa::Node *getNode(const llvm::Value *v);
   void printDSAGraphs(const char *Filename);
   bool isTypeSafe(const llvm::Value *v);
+  unsigned getNumGlobals(const sea_dsa::Node *n);
 };
 } // namespace smack
 

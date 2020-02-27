@@ -38,6 +38,18 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
       break;
     }
   }
+
+  for (auto& g : DG->globals()) {
+    auto& cellRef = g.second;
+    auto* node = cellRef->getNode();
+    if (node) {
+      if (!globalNumCount.count(node))
+        globalNumCount[node] = 1;
+      else
+        globalNumCount[node]++;
+    }
+  }
+
   staticInits = collectStaticInits(M);
   module = &M;
   return false;
@@ -97,7 +109,6 @@ int DSAWrapper::getOffset(const Value *v) {
     if (node && node->isOffsetCollapsed())
       return -1;
     auto offset = cell.getOffset();
-    errs() << "working on offset: " << offset << "\n";
     assert(offset <= INT_MAX && "Cannot handle large offsets");
     return offset;
   }
@@ -140,11 +151,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
     auto &types = node->types();
     std::set<unsigned> offsets;
 
-    for (auto& t : types) {
-      errs() << "inserting offset: " << t.first << "\n";
+    for (auto& t : types)
       offsets.insert(t.first);
-    }
-
 
     auto offsetIterator = offsets.begin();
 
@@ -155,7 +163,6 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 
       unsigned offset = *offsetIterator;
 
-      errs() << "working on offset: " << offset << "\n";
       auto& typeSet = types.find(offset)->second;
 
       auto ti = typeSet.begin();
@@ -163,8 +170,10 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
         // If there are multiple access types, then it's trivially type-unsafe.
         fieldMap[offset] = false;
 
+      // Get the maximum length
       unsigned fieldLength = 0;
       for (auto &t : typeSet) {
+        // TODO: fix the const_cast
         unsigned length = dataLayout->getTypeStoreSize(const_cast<llvm::Type*>(t));
         if (length > fieldLength)
           fieldLength = length;
@@ -194,15 +203,19 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
   }
 
   auto offset = getOffset(v);
-  errs() << "value is " << *v << "\n";
-  errs() << "offset is " << offset << "\n";
-  //assert(nodeMap[node].count(offset) > 0 && "We should have this info.");
   if (nodeMap[node].count(offset))
     return nodeMap[node][offset];
   else
+    // Shaobo: chances to hit this branch are when we visit memcpy/memset
+    // pointer operands.
     return false;
+}
 
-  
+unsigned DSAWrapper::getNumGlobals(const sea_dsa::Node *n) {
+  if (globalNumCount.count(n))
+    return globalNumCount[n];
+  else
+    return 0;
 }
 
 } // namespace smack

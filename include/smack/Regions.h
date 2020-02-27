@@ -35,7 +35,7 @@ private:
   static const DataLayout *DL;
   static DSAWrapper *DSA;
 
-  static bool isSingleton(const sea_dsa::Node *N, unsigned offset, unsigned length);
+  static bool isSingleton(const llvm::Value *v, unsigned length);
   static bool isAllocated(const sea_dsa::Node *N);
   //static bool bytewiseAccess(const DSNode *N);
   static bool isComplicated(const sea_dsa::Node *N);

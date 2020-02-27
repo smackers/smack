@@ -48,12 +48,39 @@ void Region::init(Module &M, Pass &P) {
 //}
 //} // namespace
 
-bool Region::isSingleton(const sea_dsa::Node *N, unsigned offset, unsigned length) {
+bool Region::isSingleton(const Value* v, unsigned length) {
   // Shaobo: isSingleton is underapproximated here because the old
   // implementation considers a field as a singleton whereas the current
   // implementation only considers a node as a singleton. Therefore, we may find
   // fewer singletons (e.g., if there are global structs).
-  return !N->isAlloca() && !N->isHeap() && !N->isExternal() && N->isUnique();
+  auto node = DSA->getNode(v);
+
+  if (DSA->getNumGlobals(node) != 1)
+    return false;
+
+  if (node->isArray())
+    return false;
+
+  if (!DSA->isTypeSafe(v))
+    return false;
+
+  const Type* accessedType = *node->getAccessedType(DSA->getOffset(v)).begin();
+  if (!accessedType->isSized() || !accessedType->isSingleValueType())
+    return false;
+
+  Type* visitedType = (llvm::cast<PointerType>(v->getType()))->getElementType();
+
+  if (accessedType->getTypeID() != visitedType->getTypeID())
+    return false;
+
+  if (accessedType->isIntegerTy()) {
+    if (accessedType->getIntegerBitWidth() != visitedType->getIntegerBitWidth())
+      return false;
+    if (visitedType->isIntegerTy(8))
+      return length == 1;
+    return true;
+  } else
+    return true;
   // if (N->isGlobalNode() && numGlobals(N) == 1 && !N->isArrayNode() &&
   //     !N->isAllocaNode() && !N->isHeapNode() && !N->isExternalNode() &&
   //     !N->isUnknownNode()) {
@@ -119,7 +146,7 @@ void Region::init(const Value *V, unsigned length) {
   }
 
   singleton =
-      DL && representative && isSingleton(representative, offset, length);
+      DL && representative && isSingleton(V, length);
   allocated = !representative || isAllocated(representative);
   // Shaobo: I removed the dependency of the bytewise flag on isFieldDisjoint
   // and isMemcpyd for the following reasons.
