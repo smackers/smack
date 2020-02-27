@@ -346,29 +346,6 @@ void Regions::visitLoadInst(LoadInst &I) { idx(I.getPointerOperand()); }
 
 void Regions::visitStoreInst(StoreInst &I) { idx(I.getPointerOperand()); }
 
-// Shaobo: we need to visit memcpy/memset otherwise extra merges will happen
-// in the translation phrase
-void Regions::visitMemCpyInst(MemCpyInst &I) {
-  unsigned length;
-  if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
-    length = CI->getZExtValue();
-  else
-    length = std::numeric_limits<unsigned>::max();
-
-  idx(I.getRawDest(), length);
-  idx(I.getRawSource(), length);
-}
-
-void Regions::visistMemSetInst(MemSetInst &I) {
-  unsigned length;
-  if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
-    length = CI->getZExtValue();
-  else
-    length = std::numeric_limits<unsigned>::max();
-
-  idx(I.getRawDest(), length);
-}
-
 void Regions::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   idx(I.getPointerOperand());
 }
@@ -377,7 +354,7 @@ void Regions::visitAtomicRMWInst(AtomicRMWInst &I) {
   idx(I.getPointerOperand());
 }
 
-void Regions::visitMemIntrinsic(MemIntrinsic &I) {
+void Regions::visitMemSetInst(MemSetInst &I) {
   unsigned length;
 
   if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
@@ -385,6 +362,21 @@ void Regions::visitMemIntrinsic(MemIntrinsic &I) {
   else
     length = std::numeric_limits<unsigned>::max();
 
+  idx(I.getDest(), length);
+}
+
+// Shaobo: we need to visit the source location otherwise
+// extra merges will happen in the translation phrase,
+// resulting in ``hanging'' regions.
+void Regions::visitMemTransferInst(MemTransferInst &I) {
+  unsigned length;
+
+  if (auto CI = dyn_cast<ConstantInt>(I.getLength()))
+    length = CI->getZExtValue();
+  else
+    length = std::numeric_limits<unsigned>::max();
+
+  idx(I.getSource(), length);
   idx(I.getDest(), length);
 }
 

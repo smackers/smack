@@ -87,11 +87,10 @@ public:
 
   void visitLoadInst(LoadInst &);
   void visitStoreInst(StoreInst &);
-  void visitMemCpyInst(MemCpyInst &I);
-  void visistMemSetInst(MemSetInst &I);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &);
   void visitAtomicRMWInst(AtomicRMWInst &);
-  void visitMemIntrinsic(MemIntrinsic &);
+  void visitMemSetInst(MemSetInst &);
+  void visitMemTransferInst(MemTransferInst &);
   void visitCallInst(CallInst &);
 };
 } // namespace smack
