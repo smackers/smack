@@ -374,15 +374,8 @@ Devirtualize::makeDirectCall (CallSite & CS) {
 
   std::vector<const Function*> Targets;
 
-  //if (CTF->size(CS) && CTF->isComplete(CS)) {
-  //  // TODO should we allow non-matching targets?
-  //  // TODO non-matching targets leads to crashes in bounce creation
-  //  // TODO formerly, all call-target-finder tarets were included:
-  //  //   Targets.insert (Targets.begin(), CTF->begin(CS), CTF->end(CS));
-  //  // TODO presently we filter out unmatching targets:
-  //  for (auto F = CTF->begin(CS); F != CTF->end(CS); ++F)
-  //    if (match(CS, **F))
-  //      Targets.push_back(*F);
+  // TODO should we allow non-matching targets?
+  // TODO non-matching targets leads to crashes in bounce creation
   if (CCG->isComplete(CS)) {
     for (auto F = CCG->begin(CS); F != CCG->end(CS); ++F)
       if (match(CS, **F))
@@ -498,7 +491,6 @@ Devirtualize::runOnModule (Module & M) {
   //
   // Get the targets of indirect function calls.
   //
-  //CTF = &getAnalysis<dsa::CallTargetFinder<EQTDDataStructures> >();
   CCG = &getAnalysis<sea_dsa::CompleteCallGraph>();
 
   //

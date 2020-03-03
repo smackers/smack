@@ -13,7 +13,6 @@ namespace smack {
 
 const DataLayout *Region::DL = nullptr;
 DSAWrapper *Region::DSA = nullptr;
-// DSNodeEquivs* Region::NEQS = nullptr;
 
 void Region::init(Module &M, Pass &P) {
   DL = &M.getDataLayout();
@@ -21,6 +20,7 @@ void Region::init(Module &M, Pass &P) {
 }
 
 bool Region::isSingleton(const Value* v, unsigned length) {
+  // TODO can we do something for non-global nodes?
   auto node = DSA->getNode(v);
 
   if (DSA->getNumGlobals(node) != 1)
@@ -36,42 +36,6 @@ bool Region::isSingleton(const Value* v, unsigned length) {
     return false;
 
   return true;
-  // if (N->isGlobalNode() && numGlobals(N) == 1 && !N->isArrayNode() &&
-  //     !N->isAllocaNode() && !N->isHeapNode() && !N->isExternalNode() &&
-  //     !N->isUnknownNode()) {
-
-  //   // TODO can we do something for non-global nodes?
-
-  //   // TODO don’t need to know if there are other members of this class, right?
-  //   // assert(NEQS && "Missing DS node equivalence information.");
-  //   // auto &Cs = NEQS->getEquivalenceClasses();
-  //   // auto C = Cs.findValue(representative);
-  //   // assert(C != Cs.end() && "No equivalence class found.");
-  //   // assert(Cs.member_begin(C) != Cs.member_end() && "Found empty class.");
-  //   // if (++(Cs.member_begin(C)) != Cs.member_end()) return false;
-
-  //   assert(DL && "Missing data layout information.");
-
-  //   for (auto I = N->type_begin(), E = N->type_end(); I != E; ++I) {
-  //     if (I->first < offset)
-  //       continue;
-  //     if (I->first > offset)
-  //       break;
-  //     if (I->second->begin() == I->second->end())
-  //       break;
-  //     if ((++(I->second->begin())) != I->second->end())
-  //       break;
-  //     Type *T = *I->second->begin();
-  //     if (!T->isSized())
-  //       break;
-  //     if (DL->getTypeAllocSize(T) != length)
-  //       break;
-  //     if (!T->isSingleValueType())
-  //       break;
-  //     return true;
-  //   }
-  // }
-  // return false;
 }
 
 bool Region::isAllocated(const sea_dsa::Node *N) {
@@ -103,16 +67,9 @@ void Region::init(const Value *V, unsigned length) {
   singleton =
       DL && representative && isSingleton(V, length);
   allocated = !representative || isAllocated(representative);
-  // Shaobo: I removed the dependency of the bytewise flag on isFieldDisjoint
-  // and isMemcpyd for the following reasons.
-  // TODO: figure out if removing isFieldDisjoint breaks value annotations.
-  // Since we visit memcpy/memset instructions in this pass, the types
-  // of the nodes involving in these instructions are either i8 or changed to
-  // NULL during merging.
   bytewise = DSA && SmackOptions::BitPrecise &&
              (SmackOptions::NoByteAccessInference ||
               !DSA->isTypeSafe(V) ||
-              //DSA->isMemcpyd(representative) ||
              T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
@@ -320,9 +277,6 @@ void Regions::visitMemSetInst(MemSetInst &I) {
   idx(I.getDest(), length);
 }
 
-// Shaobo: we need to visit the source location otherwise
-// extra merges will happen in the translation phrase,
-// resulting in ``hanging'' regions.
 void Regions::visitMemTransferInst(MemTransferInst &I) {
   unsigned length;
 
@@ -331,6 +285,9 @@ void Regions::visitMemTransferInst(MemTransferInst &I) {
   else
     length = std::numeric_limits<unsigned>::max();
 
+  // We need to visit the source location otherwise
+  // extra merges will happen in the translation phrase,
+  // resulting in ``hanging'' regions.
   idx(I.getSource(), length);
   idx(I.getDest(), length);
 }

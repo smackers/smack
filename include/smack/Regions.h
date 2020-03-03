@@ -37,7 +37,6 @@ private:
 
   static bool isSingleton(const llvm::Value *v, unsigned length);
   static bool isAllocated(const sea_dsa::Node *N);
-  //static bool bytewiseAccess(const DSNode *N);
   static bool isComplicated(const sea_dsa::Node *N);
 
   void init(const Value *V, unsigned length);

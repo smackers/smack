@@ -168,10 +168,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
     return false;
 
   if (!nodeMap.count(node)) {
-    // Shaobo: iterate all the fields of a node to find out
+    // Iterate all the fields of a node to find out
     // the type-safety of each field. Then, we cache the results.
-
-
     FieldMap fieldMap;
     auto &types = node->types();
     std::set<unsigned> offsets;
@@ -231,7 +229,7 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
   if (nodeMap[node].count(offset))
     return nodeMap[node][offset];
   else
-    // Shaobo: chances to hit this branch are when we visit memcpy/memset
+    // Chances to hit this branch are when we visit memcpy/memset
     // pointer operands.
     return false;
 }
