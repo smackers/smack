@@ -6,7 +6,8 @@
 //
 #include "smack/DSAWrapper.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "smack/SmackOptions.h"
 
 #include <unordered_map>
@@ -59,21 +60,19 @@ void DSAWrapper::collectStaticInits(llvm::Module &M) {
 
 void DSAWrapper::collectMemCpyds(llvm::Module &M) {
   for (auto& f : M) {
-    for (auto& b : f) {
-      for (auto& i : b) {
-        if (auto memcpyInst = dyn_cast<MemCpyInst>(&i)) {
-          auto srcNode = getNode(memcpyInst->getSource());
-          auto destNode = getNode(memcpyInst->getDest());
-          if (srcNode)
-            memCpyds.insert(srcNode);
-          if (destNode)
-            memCpyds.insert(destNode);
-        }
-        if (auto memsetInst = dyn_cast<MemSetInst>(&i)) {
-          auto destNode = getNode(memsetInst->getDest());
-          if (destNode)
-            memCpyds.insert(destNode);
-        }
+    for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
+      if (MemCpyInst* memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
+        auto srcNode = getNode(memcpyInst->getSource());
+        auto destNode = getNode(memcpyInst->getDest());
+        if (srcNode)
+          memCpyds.insert(srcNode);
+        if (destNode)
+          memCpyds.insert(destNode);
+      }
+      if (MemSetInst* memsetInst = dyn_cast<MemSetInst>(&*I)) {
+        auto destNode = getNode(memsetInst->getDest());
+        if (destNode)
+          memCpyds.insert(destNode);
       }
     }
   }
