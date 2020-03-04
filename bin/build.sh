@@ -60,7 +60,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build libboost-all-dev subversion"
+DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build libboost-all-dev"
 
 shopt -s extglob
 
