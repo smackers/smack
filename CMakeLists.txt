@@ -170,7 +170,7 @@ add_executable(llvm2bpl
 
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
-find_package (LLVM 8.0 CONFIG NO_DEFAULT_PATH)
+find_package (LLVM 8.0.1 EXACT CONFIG NO_DEFAULT_PATH)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
