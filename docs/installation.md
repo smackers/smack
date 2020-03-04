@@ -153,9 +153,14 @@ installed via the Microsoft Store.
 
 ### Installing SMACK Itself
 
-SMACK is built using [CMake][] via the following sequence of shell commands
-from SMACK's root directory:
-````Shell
+The prerequisite step for building SMACK is to fetch its submodule. Then, it is
+built using using [CMake][]. Both steps can be done via the following sequence
+of shell commands from SMACK's root directory:
+```Shell
+# fetch the submodule
+git submodule init
+git submodule update
+# build SMACK
 mkdir build
 cd build
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
