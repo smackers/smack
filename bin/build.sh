@@ -506,14 +506,8 @@ fi
 if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
 
-  # Shaobo: this should be in CMakeList.txt 
-  cd ${SMACK_DIR}
   git submodule init
   git submodule update
-  mkdir -p ${SMACK_DIR}/sea-dsa/build
-  cd ${SMACK_DIR}/sea-dsa/build
-  cmake -DCMAKE_INSTALL_PREFIX=run -DLLVM_DIR=/usr/lib/llvm-8/share/llvm/cmake ..
-  cmake --build . --target install
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build

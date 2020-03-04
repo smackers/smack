@@ -2,7 +2,7 @@
 # This file is distributed under the MIT License. See LICENSE for details.
 #
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.4.3)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
@@ -17,6 +17,14 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_VARIABLE LLVM_CXXFLAGS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
+
+  # sea-dsa requires this variable to be set
+  execute_process(
+    COMMAND ${LLVM_CONFIG_EXECUTABLE} --prefix
+    OUTPUT_VARIABLE LLVM_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  string(APPEND LLVM_DIR "/share/llvm/cmake")
 
   # TODO: explain why these are required.
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
@@ -160,8 +168,16 @@ add_executable(llvm2bpl
   tools/llvm2bpl/llvm2bpl.cpp
 )
 
+# We have to import LLVM's cmake definitions to build sea-dsa
+# Borrowed from sea-dsa's CMakeLists.txt
+find_package (LLVM 8.0 CONFIG NO_DEFAULT_PATH)
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+include(AddLLVM)
+include(HandleLLVMOptions)
+add_subdirectory(sea-dsa/src)
+
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(llvm2bpl smackTranslator utils ${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/build/lib/libSeaDsaAnalysis.a)
+target_link_libraries(llvm2bpl smackTranslator utils SeaDsaAnalysis)
 
 INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
