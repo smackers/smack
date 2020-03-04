@@ -174,7 +174,13 @@ find_package (LLVM 8.0 CONFIG NO_DEFAULT_PATH)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
+# We need the release build of sea-dsa otherwise we'll see a lot of crashes in
+# sv-comp benchmarks.
+# The following solution is from: https://stackoverflow.com/questions/30985215/passing-variables-down-to-subdirectory-only
+set(SMACK_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
+set(CMAKE_BUILD_TYPE "Release")
 add_subdirectory(sea-dsa/src)
+set(CMAKE_BUILD_TYPE ${SMACK_BUILD_TYPE})
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(llvm2bpl smackTranslator utils SeaDsaAnalysis)
