@@ -506,6 +506,7 @@ fi
 if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
 
+  cd ${SMACK_DIR}
   git submodule init
   git submodule update
 
