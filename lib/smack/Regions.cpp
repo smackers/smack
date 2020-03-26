@@ -19,7 +19,7 @@ void Region::init(Module &M, Pass &P) {
   DSA = &P.getAnalysis<DSAWrapper>();
 }
 
-bool Region::isSingleton(const Value* v, unsigned length) {
+bool Region::isSingleton(const Value *v, unsigned length) {
   // TODO can we do something for non-global nodes?
   auto node = DSA->getNode(v);
 
@@ -64,13 +64,11 @@ void Region::init(const Value *V, unsigned length) {
     this->length = length;
   }
 
-  singleton =
-      DL && representative && isSingleton(V, length);
+  singleton = DL && representative && isSingleton(V, length);
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
-             (SmackOptions::NoByteAccessInference ||
-              !DSA->isTypeSafe(V) ||
-             T->isIntegerTy(8));
+             (SmackOptions::NoByteAccessInference || !DSA->isTypeSafe(V) ||
+              T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isOffsetCollapsed();

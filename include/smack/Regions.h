@@ -4,8 +4,8 @@
 #ifndef REGIONS_H
 #define REGIONS_H
 
-#include "llvm/IR/InstVisitor.h"
 #include "sea_dsa/Graph.hh"
+#include "llvm/IR/InstVisitor.h"
 
 using namespace llvm;
 

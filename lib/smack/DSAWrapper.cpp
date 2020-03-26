@@ -5,13 +5,14 @@
 // the University of Illinois Open Source License. See LICENSE for details.
 //
 #include "smack/DSAWrapper.h"
-#include "llvm/Support/FileSystem.h"
+#include "smack/SmackOptions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "smack/SmackOptions.h"
 
-#include <unordered_map>
+#include "llvm/Support/FileSystem.h"
+
 #include <set>
+#include <unordered_map>
 
 #define DEBUG_TYPE "dsa-wrapper"
 
@@ -32,10 +33,10 @@ void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 bool DSAWrapper::runOnModule(llvm::Module &M) {
   dataLayout = &M.getDataLayout();
   SD = &getAnalysis<sea_dsa::DsaAnalysis>().getDsaAnalysis();
-  assert(SD->kind() == sea_dsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE
-         && "Currently we only want the context-insensitive sea-dsa.");
-  for (auto& f : M.functions()) {
-    if(f.hasName() && SmackOptions::isEntryPoint(f.getName())) {
+  assert(SD->kind() == sea_dsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
+         "Currently we only want the context-insensitive sea-dsa.");
+  for (auto &f : M.functions()) {
+    if (f.hasName() && SmackOptions::isEntryPoint(f.getName())) {
       DG = &SD->getGraph(f);
       break;
     }
@@ -59,9 +60,9 @@ void DSAWrapper::collectStaticInits(llvm::Module &M) {
 }
 
 void DSAWrapper::collectMemCpyds(llvm::Module &M) {
-  for (auto& f : M) {
+  for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
-      if (MemCpyInst* memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
+      if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
         auto srcNode = getNode(memcpyInst->getSource());
         auto destNode = getNode(memcpyInst->getDest());
         if (srcNode)
@@ -69,7 +70,7 @@ void DSAWrapper::collectMemCpyds(llvm::Module &M) {
         if (destNode)
           memCpyds.insert(destNode);
       }
-      if (MemSetInst* memsetInst = dyn_cast<MemSetInst>(&*I)) {
+      if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I)) {
         auto destNode = getNode(memsetInst->getDest());
         if (destNode)
           memCpyds.insert(destNode);
@@ -79,9 +80,9 @@ void DSAWrapper::collectMemCpyds(llvm::Module &M) {
 }
 
 void DSAWrapper::countGlobalRefs() {
-  for (auto& g : DG->globals()) {
-    auto& cellRef = g.second;
-    auto* node = cellRef->getNode();
+  for (auto &g : DG->globals()) {
+    auto &cellRef = g.second;
+    auto *node = cellRef->getNode();
     if (node) {
       if (!globalRefCount.count(node))
         globalRefCount[node] = 1;
@@ -155,14 +156,14 @@ void DSAWrapper::printDSAGraphs(const char *Filename) {
 
 bool DSAWrapper::isTypeSafe(const Value *v) {
   typedef std::unordered_map<unsigned, bool> FieldMap;
-  typedef std::unordered_map<const sea_dsa::Node*, FieldMap> NodeMap;
+  typedef std::unordered_map<const sea_dsa::Node *, FieldMap> NodeMap;
   static NodeMap nodeMap;
 
   auto node = getNode(v);
 
-  if (!node
-      || node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete()
-      || node->isUnknown() || node->isIntToPtr() || node->isPtrToInt())
+  if (!node || node->isOffsetCollapsed() || node->isExternal() ||
+      node->isIncomplete() || node->isUnknown() || node->isIntToPtr() ||
+      node->isPtrToInt())
     // We consider it type-unsafe to be safe for these cases
     return false;
 
@@ -173,7 +174,7 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
     auto &types = node->types();
     std::set<unsigned> offsets;
 
-    for (auto& t : types)
+    for (auto &t : types)
       offsets.insert(t.first);
 
     auto offsetIterator = offsets.begin();
@@ -185,7 +186,7 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 
       unsigned offset = *offsetIterator;
 
-      auto& typeSet = types.find(offset)->second;
+      auto &typeSet = types.find(offset)->second;
 
       auto ti = typeSet.begin();
       if (++ti != typeSet.end())
@@ -196,7 +197,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
       unsigned fieldLength = 0;
       for (auto &t : typeSet) {
         // TODO: fix the const_cast
-        unsigned length = dataLayout->getTypeStoreSize(const_cast<llvm::Type*>(t));
+        unsigned length =
+            dataLayout->getTypeStoreSize(const_cast<llvm::Type *>(t));
         if (length > fieldLength)
           fieldLength = length;
       }

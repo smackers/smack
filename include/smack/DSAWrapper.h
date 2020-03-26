@@ -7,8 +7,8 @@
 #ifndef DSAWRAPPER_H
 #define DSAWRAPPER_H
 
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "sea_dsa/DsaAnalysis.hh"
 #include "sea_dsa/Global.hh"
@@ -24,10 +24,10 @@ private:
   // results in one graph for the whole module.
   sea_dsa::Graph *DG;
   std::unordered_set<const sea_dsa::Node *> staticInits;
-  std::unordered_set<const sea_dsa::Node*> memCpyds;
+  std::unordered_set<const sea_dsa::Node *> memCpyds;
   // Mapping from the DSNodes associated with globals to the numbers of
   // globals associated with them.
-  std::unordered_map<const sea_dsa::Node*, unsigned> globalRefCount;
+  std::unordered_map<const sea_dsa::Node *, unsigned> globalRefCount;
   const llvm::DataLayout *dataLayout;
 
   void collectStaticInits(llvm::Module &M);
