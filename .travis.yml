@@ -12,6 +12,7 @@ addons:
       - unzip
       - libz-dev
       - libedit-dev
+      - libboost-all-dev
 
 cache:
   directories:
