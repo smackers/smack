@@ -65,15 +65,12 @@ void DSAWrapper::collectMemCpyds(llvm::Module &M) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
         auto srcNode = getNode(memcpyInst->getSource());
         auto destNode = getNode(memcpyInst->getDest());
-        if (srcNode)
-          memCpyds.insert(srcNode);
-        if (destNode)
-          memCpyds.insert(destNode);
+        memCpyds.insert(srcNode);
+        memCpyds.insert(destNode);
       }
       if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I)) {
         auto destNode = getNode(memsetInst->getDest());
-        if (destNode)
-          memCpyds.insert(destNode);
+        memCpyds.insert(destNode);
       }
     }
   }
@@ -101,18 +98,16 @@ bool DSAWrapper::isMemCpyd(const sea_dsa::Node *n) {
 }
 
 bool DSAWrapper::isRead(const Value *V) {
-  auto N = getNode(V);
-  return N && (N->isRead());
+  return getNode(V)->isRead();
 }
 
 bool DSAWrapper::isAlloced(const Value *v) {
   auto N = getNode(v);
-  return N && (N->isHeap() || N->isAlloca());
+  return N->isHeap() || N->isAlloca();
 }
 
 bool DSAWrapper::isExternal(const Value *v) {
-  auto N = getNode(v);
-  return N && N->isExternal();
+  return getNode(v)->isExternal();
 }
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
@@ -131,7 +126,7 @@ int DSAWrapper::getOffset(const Value *v) {
     auto cell = DG->getCell(*v);
     auto node = cell.getNode();
     // Be consistent with the old implementation.
-    if (node && node->isOffsetCollapsed())
+    if (node->isOffsetCollapsed())
       return -1;
     auto offset = cell.getOffset();
     assert(offset <= INT_MAX && "Cannot handle large offsets");
@@ -143,9 +138,12 @@ int DSAWrapper::getOffset(const Value *v) {
 
 const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
   // For sea-dsa, a node is obtained by getting the cell first.
-  if (DG->hasCell(*v))
-    return DG->getCell(*v).getNode();
-  return nullptr;
+  if (DG->hasCell(*v)) {
+    auto node = DG->getCell(*v).getNode();
+    assert(node && "DSNode should not be NULL.");
+    return node;
+  }
+  llvm_unreachable("Values should have cells.");
 }
 
 void DSAWrapper::printDSAGraphs(const char *Filename) {
@@ -161,7 +159,7 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 
   auto node = getNode(v);
 
-  if (!node || node->isOffsetCollapsed() || node->isExternal() ||
+  if (node->isOffsetCollapsed() || node->isExternal() ||
       node->isIncomplete() || node->isUnknown() || node->isIntToPtr() ||
       node->isPtrToInt())
     // We consider it type-unsafe to be safe for these cases
