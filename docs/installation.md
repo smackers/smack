@@ -154,7 +154,7 @@ installed via the Microsoft Store.
 ### Installing SMACK Itself
 
 The prerequisite step for building SMACK is to fetch its submodule. Then, it is
-built using using [CMake][]. Both steps can be done via the following sequence
+built using [CMake][]. Both steps can be done via the following sequence
 of shell commands from SMACK's root directory:
 ```Shell
 # fetch the submodule
