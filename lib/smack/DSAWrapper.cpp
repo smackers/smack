@@ -97,18 +97,14 @@ bool DSAWrapper::isMemCpyd(const sea_dsa::Node *n) {
   return memCpyds.count(n) > 0;
 }
 
-bool DSAWrapper::isRead(const Value *V) {
-  return getNode(V)->isRead();
-}
-
 bool DSAWrapper::isAlloced(const Value *v) {
   auto N = getNode(v);
   return N->isHeap() || N->isAlloca();
 }
 
-bool DSAWrapper::isExternal(const Value *v) {
-  return getNode(v)->isExternal();
-}
+bool DSAWrapper::isExternal(const Value *v) { return getNode(v)->isExternal(); }
+
+bool DSAWrapper::isRead(const Value *V) { return getNode(V)->isRead(); }
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
   if (llvm::PointerType *t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
@@ -146,12 +142,6 @@ const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
   llvm_unreachable("Values should have cells.");
 }
 
-void DSAWrapper::printDSAGraphs(const char *Filename) {
-  std::error_code EC;
-  llvm::raw_fd_ostream F(Filename, EC, sys::fs::OpenFlags::F_None);
-  // TODO: print the ds graph
-}
-
 bool DSAWrapper::isTypeSafe(const Value *v) {
   typedef std::unordered_map<unsigned, bool> FieldMap;
   typedef std::unordered_map<const sea_dsa::Node *, FieldMap> NodeMap;
@@ -159,9 +149,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 
   auto node = getNode(v);
 
-  if (node->isOffsetCollapsed() || node->isExternal() ||
-      node->isIncomplete() || node->isUnknown() || node->isIntToPtr() ||
-      node->isPtrToInt())
+  if (node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete() ||
+      node->isUnknown() || node->isIntToPtr() || node->isPtrToInt())
     // We consider it type-unsafe to be safe for these cases
     return false;
 

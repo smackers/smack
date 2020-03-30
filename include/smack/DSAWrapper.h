@@ -50,7 +50,6 @@ public:
   unsigned getPointedTypeSize(const llvm::Value *v);
   int getOffset(const llvm::Value *v);
   const sea_dsa::Node *getNode(const llvm::Value *v);
-  void printDSAGraphs(const char *Filename);
   bool isTypeSafe(const llvm::Value *v);
   unsigned getNumGlobals(const sea_dsa::Node *n);
 };
