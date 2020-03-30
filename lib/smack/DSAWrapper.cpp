@@ -116,19 +116,15 @@ unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
 }
 
 int DSAWrapper::getOffset(const Value *v) {
-  if (DG->hasCell(*v)) {
-    auto cell = DG->getCell(*v);
-    auto node = cell.getNode();
-    assert(node && "Values should have DSNodes.");
-    // Be consistent with the old implementation.
-    if (node->isOffsetCollapsed())
-      return -1;
-    auto offset = cell.getOffset();
-    assert(offset <= INT_MAX && "Cannot handle large offsets");
-    return offset;
-  }
-  // Return 0 if we can't find the cell that `v` associates with.
-  return 0;
+  auto cell = DG->getCell(*v);
+  auto node = cell.getNode();
+  assert(node && "Values should have DSNodes.");
+  // Be consistent with the old implementation.
+  if (node->isOffsetCollapsed())
+    return -1;
+  auto offset = cell.getOffset();
+  assert(offset <= INT_MAX && "Cannot handle large offsets");
+  return offset;
 }
 
 const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
