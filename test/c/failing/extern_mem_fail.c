@@ -3,6 +3,7 @@
 
 // @expect error
 
+// see: https://github.com/smackers/smack/issues/553
 void foo(int *);
 int *bar();
 
