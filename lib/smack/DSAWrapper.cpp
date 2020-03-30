@@ -35,13 +35,7 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
   SD = &getAnalysis<sea_dsa::DsaAnalysis>().getDsaAnalysis();
   assert(SD->kind() == sea_dsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
          "Currently we only want the context-insensitive sea-dsa.");
-  for (auto &f : M.functions()) {
-    if (f.hasName() && SmackOptions::isEntryPoint(f.getName())) {
-      DG = &SD->getGraph(f);
-      break;
-    }
-  }
-
+  DG = &SD->getGraph(*M.begin());
   collectStaticInits(M);
   collectMemCpyds(M);
   countGlobalRefs();
