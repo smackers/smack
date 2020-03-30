@@ -67,8 +67,7 @@ void DSAWrapper::collectMemCpyds(llvm::Module &M) {
         auto destNode = getNode(memcpyInst->getDest());
         memCpyds.insert(srcNode);
         memCpyds.insert(destNode);
-      }
-      if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I)) {
+      } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I)) {
         auto destNode = getNode(memsetInst->getDest());
         memCpyds.insert(destNode);
       }
@@ -80,12 +79,11 @@ void DSAWrapper::countGlobalRefs() {
   for (auto &g : DG->globals()) {
     auto &cellRef = g.second;
     auto *node = cellRef->getNode();
-    if (node) {
-      if (!globalRefCount.count(node))
-        globalRefCount[node] = 1;
-      else
-        globalRefCount[node]++;
-    }
+    assert(node && "Global values should have DSNodes.");
+    if (!globalRefCount.count(node))
+      globalRefCount[node] = 1;
+    else
+      globalRefCount[node]++;
   }
 }
 
@@ -121,6 +119,7 @@ int DSAWrapper::getOffset(const Value *v) {
   if (DG->hasCell(*v)) {
     auto cell = DG->getCell(*v);
     auto node = cell.getNode();
+    assert(node && "Values should have DSNodes.");
     // Be consistent with the old implementation.
     if (node->isOffsetCollapsed())
       return -1;
@@ -134,12 +133,9 @@ int DSAWrapper::getOffset(const Value *v) {
 
 const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
   // For sea-dsa, a node is obtained by getting the cell first.
-  if (DG->hasCell(*v)) {
-    auto node = DG->getCell(*v).getNode();
-    assert(node && "DSNode should not be NULL.");
-    return node;
-  }
-  llvm_unreachable("Values should have cells.");
+  auto node = DG->getCell(*v).getNode();
+  assert(node && "DSNode should not be NULL.");
+  return node;
 }
 
 bool DSAWrapper::isTypeSafe(const Value *v) {
@@ -192,15 +188,12 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 
       // Check if the current field overlaps with the next *fields*
       for (auto oi = ++offsetIterator; oi != offsets.end(); ++oi) {
-        bool overlap = false;
         unsigned next_offset = *oi;
         if (offset + fieldLength > next_offset) {
           // Overlaps; mark the current field and the next unsafe
           fieldMap[offset] = false;
           fieldMap[next_offset] = false;
-          overlap = true;
-        }
-        if (!overlap)
+        } else
           // If the current field doesn't overlap with the next one,
           // it certainly won't overlap with the rest.
           break;
