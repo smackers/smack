@@ -48,7 +48,7 @@ public:
   bool isExternal(const llvm::Value *v);
   bool isSingletonGlobal(const llvm::Value *V);
   unsigned getPointedTypeSize(const llvm::Value *v);
-  int getOffset(const llvm::Value *v);
+  unsigned getOffset(const llvm::Value *v);
   const sea_dsa::Node *getNode(const llvm::Value *v);
   bool isTypeSafe(const llvm::Value *v);
   unsigned getNumGlobals(const sea_dsa::Node *n);
