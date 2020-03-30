@@ -24,7 +24,7 @@ bool Region::isSingleton(const Value *v, unsigned length) {
   auto node = DSA->getNode(v);
 
   return DSA->getNumGlobals(node) == 1 && !node->isArray() &&
-         DSA->isTypeSafe(v) && !DSA->isMemCpyd(node);
+         DSA->isTypeSafe(v) && !DSA->isMemOpd(node);
 }
 
 bool Region::isAllocated(const sea_dsa::Node *N) {

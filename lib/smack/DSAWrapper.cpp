@@ -37,7 +37,7 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
          "Currently we only want the context-insensitive sea-dsa.");
   DG = &SD->getGraph(*M.begin());
   collectStaticInits(M);
-  collectMemCpyds(M);
+  collectMemOpds(M);
   countGlobalRefs();
   module = &M;
   return false;
@@ -53,7 +53,7 @@ void DSAWrapper::collectStaticInits(llvm::Module &M) {
   }
 }
 
-void DSAWrapper::collectMemCpyds(llvm::Module &M) {
+void DSAWrapper::collectMemOpds(llvm::Module &M) {
   for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
@@ -85,7 +85,7 @@ bool DSAWrapper::isStaticInitd(const sea_dsa::Node *n) {
   return staticInits.count(n) > 0;
 }
 
-bool DSAWrapper::isMemCpyd(const sea_dsa::Node *n) {
+bool DSAWrapper::isMemOpd(const sea_dsa::Node *n) {
   return memCpyds.count(n) > 0;
 }
 

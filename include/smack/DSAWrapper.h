@@ -31,7 +31,7 @@ private:
   const llvm::DataLayout *dataLayout;
 
   void collectStaticInits(llvm::Module &M);
-  void collectMemCpyds(llvm::Module &M);
+  void collectMemOpds(llvm::Module &M);
   void countGlobalRefs();
 
 public:
@@ -42,7 +42,7 @@ public:
   virtual bool runOnModule(llvm::Module &M);
 
   bool isStaticInitd(const sea_dsa::Node *n);
-  bool isMemCpyd(const sea_dsa::Node *n);
+  bool isMemOpd(const sea_dsa::Node *n);
   bool isRead(const llvm::Value *V);
   bool isAlloced(const llvm::Value *v);
   bool isExternal(const llvm::Value *v);
