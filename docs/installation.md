@@ -87,6 +87,7 @@ SMACK depends on the following projects:
 * [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
+* [sea-dsa][]
 
 See [here](https://github.com/smackers/smack/blob/master/bin/versions) for
 compatible version numbers of [Boogie][] and [Corral][]. See the appropriate
@@ -153,9 +154,9 @@ installed via the Microsoft Store.
 
 ### Installing SMACK Itself
 
-The prerequisite step for building SMACK is to fetch its submodule. Then, it is
-built using [CMake][]. Both steps can be done via the following sequence
-of shell commands from SMACK's root directory:
+The prerequisite step for building SMACK is to fetch its submodule
+(i.e., [sea-dsa][]). Then, it is built using [CMake][]. Both steps can be done
+via the following sequence of shell commands from SMACK's root directory:
 ```Shell
 # fetch the submodule
 git submodule init
@@ -223,3 +224,4 @@ shell in the `test` directory by executing
 [Homebrew Cask]: https://formulae.brew.sh/cask/
 [Docker]: https://www.docker.com
 [Ninja]: https://ninja-build.org
+[sea-dsa]: https://github.com/seahorn/sea-dsa
