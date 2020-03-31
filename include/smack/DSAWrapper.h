@@ -24,7 +24,7 @@ private:
   // results in one graph for the whole module.
   sea_dsa::Graph *DG;
   std::unordered_set<const sea_dsa::Node *> staticInits;
-  std::unordered_set<const sea_dsa::Node *> memCpyds;
+  std::unordered_set<const sea_dsa::Node *> memOpds;
   // Mapping from the DSNodes associated with globals to the numbers of
   // globals associated with them.
   std::unordered_map<const sea_dsa::Node *, unsigned> globalRefCount;

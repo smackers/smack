@@ -50,7 +50,8 @@ void Region::init(const Value *V, unsigned length) {
   singleton = DL && representative && isSingleton(V, length);
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
-             (SmackOptions::NoByteAccessInference || !DSA->isTypeSafe(V) ||
+             (SmackOptions::NoByteAccessInference ||
+             (!representative || !DSA->isTypeSafe(V)) ||
               T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);

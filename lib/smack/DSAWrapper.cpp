@@ -57,10 +57,10 @@ void DSAWrapper::collectMemOpds(llvm::Module &M) {
   for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
-        memCpyds.insert(getNode(memcpyInst->getSource()));
-        memCpyds.insert(getNode(memcpyInst->getDest()));
+        memOpds.insert(getNode(memcpyInst->getSource()));
+        memOpds.insert(getNode(memcpyInst->getDest()));
       } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I))
-        memCpyds.insert(getNode(memsetInst->getDest()));
+        memOpds.insert(getNode(memsetInst->getDest()));
     }
   }
 }
@@ -82,7 +82,7 @@ bool DSAWrapper::isStaticInitd(const sea_dsa::Node *n) {
 }
 
 bool DSAWrapper::isMemOpd(const sea_dsa::Node *n) {
-  return memCpyds.count(n) > 0;
+  return memOpds.count(n) > 0;
 }
 
 bool DSAWrapper::isRead(const Value *V) {

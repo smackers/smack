@@ -41,8 +41,6 @@ namespace llvm {
   class Devirtualize : public ModulePass, public InstVisitor<Devirtualize> {
     private:
       // Access to analysis pass which finds targets of indirect function calls
-      //dsa::CallTargetFinder<EQTDDataStructures> *CTF;
-
       sea_dsa::CompleteCallGraph *CCG;
 
       // Access to the target data analysis pass
