@@ -51,8 +51,7 @@ void Region::init(const Value *V, unsigned length) {
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
              (SmackOptions::NoByteAccessInference ||
-             (!representative || !DSA->isTypeSafe(V)) ||
-              T->isIntegerTy(8));
+              (!representative || !DSA->isTypeSafe(V)) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isOffsetCollapsed();
