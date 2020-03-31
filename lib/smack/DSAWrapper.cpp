@@ -5,6 +5,7 @@
 // the University of Illinois Open Source License. See LICENSE for details.
 //
 #include "smack/DSAWrapper.h"
+#include "smack/Debug.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -36,6 +37,8 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
   assert(SD->kind() == sea_dsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
          "Currently we only want the context-insensitive sea-dsa.");
   DG = &SD->getGraph(*M.begin());
+  // Print the graph in dot format when debugging
+  SDEBUG(DG->writeGraph("main.mem.dot"));
   collectStaticInits(M);
   collectMemOpds(M);
   countGlobalRefs();
