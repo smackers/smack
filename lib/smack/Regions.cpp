@@ -23,8 +23,8 @@ bool Region::isSingleton(const Value *v, unsigned length) {
   // TODO can we do something for non-global nodes?
   auto node = DSA->getNode(v);
 
-  return DSA->getNumGlobals(node) == 1 && !node->isArray() &&
-         DSA->isTypeSafe(v) && !DSA->isMemOpd(node);
+  return !isAllocated(node) && DSA->getNumGlobals(node) == 1 &&
+         !node->isArray() && DSA->isTypeSafe(v) && !DSA->isMemOpd(node);
 }
 
 bool Region::isAllocated(const sea_dsa::Node *N) {
