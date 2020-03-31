@@ -47,6 +47,7 @@ void DSAWrapper::collectStaticInits(llvm::Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer()) {
       if (auto *N = getNode(&GV)) {
+        assert(N && "Global values should have nodes.");
         staticInits.insert(N);
       }
     }
