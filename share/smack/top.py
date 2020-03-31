@@ -340,7 +340,7 @@ def llvm_to_bpl(args):
   cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
   cmd += ['-warn-type', args.warn]
   cmd += ['-sea-dsa=ci']
-  cmd += ['-sea-dsa-type-aware']
+  #cmd += ['-sea-dsa-type-aware']
   if sys.stdout.isatty(): cmd += ['-colored-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:
