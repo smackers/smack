@@ -99,7 +99,7 @@ void Region::print(raw_ostream &O) {
   else
     O << "*";
   O << ">[" << offset << "," << (offset + length) << "]{";
-  if (isSingleton())
+  if (singleton)
     O << "S";
   if (bytewise)
     O << "B";
@@ -109,7 +109,7 @@ void Region::print(raw_ostream &O) {
     O << "I";
   if (collapsed)
     O << "L";
-  if (isAllocated())
+  if (allocated)
     O << "A";
   O << "}";
 }

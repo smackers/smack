@@ -57,14 +57,10 @@ void DSAWrapper::collectMemOpds(llvm::Module &M) {
   for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
-        auto srcNode = getNode(memcpyInst->getSource());
-        auto destNode = getNode(memcpyInst->getDest());
-        memCpyds.insert(srcNode);
-        memCpyds.insert(destNode);
-      } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I)) {
-        auto destNode = getNode(memsetInst->getDest());
-        memCpyds.insert(destNode);
-      }
+        memCpyds.insert(getNode(memcpyInst->getSource()));
+        memCpyds.insert(getNode(memcpyInst->getDest()));
+      } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I))
+        memCpyds.insert(getNode(memsetInst->getDest()));
     }
   }
 }
@@ -89,14 +85,11 @@ bool DSAWrapper::isMemOpd(const sea_dsa::Node *n) {
   return memCpyds.count(n) > 0;
 }
 
-bool DSAWrapper::isAlloced(const Value *v) {
-  auto N = getNode(v);
-  return N->isHeap() || N->isAlloca();
+bool DSAWrapper::isRead(const Value *V) {
+  auto node = getNode(V);
+  assert(node && "Global values should have nodes.");
+  return node->isRead();
 }
-
-bool DSAWrapper::isExternal(const Value *v) { return getNode(v)->isExternal(); }
-
-bool DSAWrapper::isRead(const Value *V) { return getNode(V)->isRead(); }
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
   if (llvm::PointerType *t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
@@ -110,13 +103,18 @@ unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
 }
 
 unsigned DSAWrapper::getOffset(const Value *v) {
+  if (!DG->hasCell(*v))
+    return 0;
   return DG->getCell(*v).getOffset();
 }
 
 const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
   // For sea-dsa, a node is obtained by getting the cell first.
+  // It's possible that a value doesn't have a cell, e.g., undef.
+  if (!DG->hasCell(*v))
+    return nullptr;
   auto node = DG->getCell(*v).getNode();
-  assert(node && "DSNode should not be NULL.");
+  assert(node && "Values should have nodes if they have cells.");
   return node;
 }
 
