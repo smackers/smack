@@ -18,14 +18,6 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
-  # sea-dsa requires this variable to be set
-  execute_process(
-    COMMAND ${LLVM_CONFIG_EXECUTABLE} --prefix
-    OUTPUT_VARIABLE LLVM_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  string(APPEND LLVM_DIR "/share/llvm/cmake")
-
   # TODO: explain why these are required.
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
@@ -168,9 +160,14 @@ add_executable(llvm2bpl
   tools/llvm2bpl/llvm2bpl.cpp
 )
 
+# We need to include Boost header files at least for macOS
+find_package (Boost 1.55)
+if (Boost_FOUND)
+  include_directories (${Boost_INCLUDE_DIRS})
+endif ()
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
-find_package (LLVM 8.0.1 EXACT CONFIG NO_DEFAULT_PATH)
+find_package (LLVM 8.0.1 EXACT CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
