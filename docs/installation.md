@@ -82,6 +82,7 @@ SMACK depends on the following projects:
 
 * [LLVM][] version [8.0.1][LLVM-8.0.1]
 * [Clang][] version [8.0.1][Clang-8.0.1]
+* [Boost][] version 1.55 or greater
 * [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
 * [Mono][] version 5.0.0 or greater (except on Windows)
@@ -225,3 +226,4 @@ shell in the `test` directory by executing
 [Docker]: https://www.docker.com
 [Ninja]: https://ninja-build.org
 [sea-dsa]: https://github.com/seahorn/sea-dsa
+[Boost]: https://beta.boost.org/
