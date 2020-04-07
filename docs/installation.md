@@ -226,4 +226,4 @@ shell in the `test` directory by executing
 [Docker]: https://www.docker.com
 [Ninja]: https://ninja-build.org
 [sea-dsa]: https://github.com/seahorn/sea-dsa
-[Boost]: https://beta.boost.org/
+[Boost]: http://boost.org/
