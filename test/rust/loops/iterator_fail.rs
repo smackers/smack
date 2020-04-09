@@ -2,7 +2,7 @@
 mod smack;
 use smack::*;
 
-// @flag --no-memory-splitting --unroll=10
+// @flag --unroll=10
 // @expect error
 
 fn fac(n: u64) -> u64 {

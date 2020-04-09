@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "dsa/CallTargets.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/Transforms/IPO.h"
@@ -23,6 +22,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
+
+#include "sea_dsa/CompleteCallGraph.hh"
+
+#include <set>
 
 using namespace llvm;
 
@@ -38,7 +41,7 @@ namespace llvm {
   class Devirtualize : public ModulePass, public InstVisitor<Devirtualize> {
     private:
       // Access to analysis pass which finds targets of indirect function calls
-      dsa::CallTargetFinder<EQTDDataStructures> *CTF;
+      sea_dsa::CompleteCallGraph *CCG;
 
       // Access to the target data analysis pass
       const DataLayout * TD;
@@ -57,12 +60,12 @@ namespace llvm {
 
     public:
       static char ID;
-      Devirtualize() : ModulePass(ID), CTF(0) {}
+      Devirtualize() : ModulePass(ID) {}
 
       virtual bool runOnModule(Module & M);
 
       virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-        AU.addRequired<dsa::CallTargetFinder<EQTDDataStructures> >();
+        AU.addRequired<sea_dsa::CompleteCallGraph>();
       }
 
       // Visitor methods for analyzing instructions

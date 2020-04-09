@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "merge-gep"
 
-#include "assistDS/MergeGEP.h"
+#include "utils/MergeGEP.h"
 #include "llvm/Pass.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"

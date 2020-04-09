@@ -2,7 +2,7 @@
 mod smack;
 use smack::*;
 
-// @flag --no-memory-splitting --unroll=3
+// @flag --unroll=3
 // @expect error
 
 fn main() {

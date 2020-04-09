@@ -8,6 +8,7 @@
 
 // @expect verified
 
+// see: https://github.com/smackers/smack/issues/555
 int x = 1;
 
 typedef struct pair {
