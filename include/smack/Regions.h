@@ -4,6 +4,7 @@
 #ifndef REGIONS_H
 #define REGIONS_H
 
+#include "sea_dsa/Graph.hh"
 #include "llvm/IR/InstVisitor.h"
 
 using namespace llvm;
@@ -19,7 +20,7 @@ class DSAWrapper;
 class Region {
 private:
   LLVMContext *context;
-  const DSNode *representative;
+  const sea_dsa::Node *representative;
   const Type *type;
   unsigned offset;
   unsigned length;
@@ -33,12 +34,10 @@ private:
 
   static const DataLayout *DL;
   static DSAWrapper *DSA;
-  // static DSNodeEquivs* NEQS;
 
-  static bool isSingleton(const DSNode *N, unsigned offset, unsigned length);
-  static bool isAllocated(const DSNode *N);
-  static bool bytewiseAccess(const DSNode *N);
-  static bool isComplicated(const DSNode *N);
+  static bool isSingleton(const llvm::Value *v, unsigned length);
+  static bool isAllocated(const sea_dsa::Node *N);
+  static bool isComplicated(const sea_dsa::Node *N);
 
   void init(const Value *V, unsigned length);
   bool isDisjoint(unsigned offset, unsigned length);
@@ -89,7 +88,8 @@ public:
   void visitStoreInst(StoreInst &);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &);
   void visitAtomicRMWInst(AtomicRMWInst &);
-  void visitMemIntrinsic(MemIntrinsic &);
+  void visitMemSetInst(MemSetInst &);
+  void visitMemTransferInst(MemTransferInst &);
   void visitCallInst(CallInst &);
 };
 } // namespace smack

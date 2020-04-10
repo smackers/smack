@@ -24,11 +24,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
-#include "assistDS/Devirt.h"
-#include "assistDS/MergeGEP.h"
-#include "assistDS/SimplifyExtractValue.h"
-#include "assistDS/SimplifyInsertValue.h"
-#include "assistDS/StructReturnToPointer.h"
+#include "utils/Devirt.h"
+#include "utils/MergeGEP.h"
+#include "utils/SimplifyExtractValue.h"
+#include "utils/SimplifyInsertValue.h"
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
@@ -153,7 +152,8 @@ int main(int argc, char **argv) {
 
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
-  pass_manager.add(llvm::createInternalizePass());
+  // Shaobo: sea-dsa is inconsistent with the pass below.
+  //pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
   if (StaticUnroll) {

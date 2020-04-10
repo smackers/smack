@@ -11,6 +11,7 @@ addons:
       - python3-psutil
       - unzip
       - ninja-build
+      - libboost-all-dev
 
 env:
   global:

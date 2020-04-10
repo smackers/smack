@@ -82,11 +82,13 @@ SMACK depends on the following projects:
 
 * [LLVM][] version [8.0.1][LLVM-8.0.1]
 * [Clang][] version [8.0.1][Clang-8.0.1]
+* [Boost][] version 1.55 or greater
 * [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
 * [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
+* [sea-dsa][]
 
 See [here](https://github.com/smackers/smack/blob/master/bin/versions) for
 compatible version numbers of [Boogie][] and [Corral][]. See the appropriate
@@ -153,9 +155,14 @@ installed via the Microsoft Store.
 
 ### Installing SMACK Itself
 
-SMACK is built using [CMake][] via the following sequence of shell commands
-from SMACK's root directory:
-````Shell
+The prerequisite step for building SMACK is to fetch its submodule
+(i.e., [sea-dsa][]). Then, it is built using [CMake][]. Both steps can be done
+via the following sequence of shell commands from SMACK's root directory:
+```Shell
+# fetch the submodule
+git submodule init
+git submodule update
+# build SMACK
 mkdir build
 cd build
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
@@ -218,3 +225,5 @@ shell in the `test` directory by executing
 [Homebrew Cask]: https://formulae.brew.sh/cask/
 [Docker]: https://www.docker.com
 [Ninja]: https://ninja-build.org
+[sea-dsa]: https://github.com/seahorn/sea-dsa
+[Boost]: http://boost.org/

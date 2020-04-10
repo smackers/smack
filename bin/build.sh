@@ -12,6 +12,7 @@
 # - LLVM
 # - Clang
 # - Mono
+# - Boost
 # - Z3
 # - Boogie
 # - Corral
@@ -60,7 +61,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build apt-transport-https dotnet-sdk-3.1"
+DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
 
 shopt -s extglob
 
@@ -430,6 +431,10 @@ fi
 
 if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
+
+  cd ${SMACK_DIR}
+  git submodule init
+  git submodule update
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build

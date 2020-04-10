@@ -9,5 +9,7 @@ int main(void) {
   int *a = &x;
   int *b = malloc(4);
   int c = a[0];
-  return c;
+  // We have to use `b` otherwise the call to malloc will be removed.
+  // This is only observable after sea-dsa is used.
+  return *b;
 }

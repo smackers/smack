@@ -15,7 +15,7 @@ from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '2.4.0'
+VERSION = '2.4.1'
 
 def results(args):
   """A dictionary of the result output messages."""
@@ -339,6 +339,9 @@ def llvm_to_bpl(args):
 
   cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
   cmd += ['-warn-type', args.warn]
+  cmd += ['-sea-dsa=ci']
+  # This flag can lead to unsoundness in Rust regressions.
+  #cmd += ['-sea-dsa-type-aware']
   if sys.stdout.isatty(): cmd += ['-colored-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:

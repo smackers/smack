@@ -354,7 +354,7 @@ long double fdiml(long double x, long double y) {
   if (__isnanl(x) || __isnanl(y)) {
     return nanl(0);
   }
-  double val = __VERIFIER_nondet_long_double();
+  long double val = __VERIFIER_nondet_long_double();
   __SMACK_code("@ := $fsub.bvlongdouble($rmode, @, @);", val, x, y);
   return fmaxl(0.0l, val);
 }
