@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 // @expect verified
+// see: https://github.com/smackers/smack/issues/555
 // https://github.com/smackers/smack/issues/525
 
 pthread_t tid1;
