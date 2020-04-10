@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 from os import path
 from multiprocessing.pool import ThreadPool
@@ -19,6 +19,10 @@ import shlex
 
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
+
+LANGUAGES = {'c': {'*.c'},
+             'cplusplus': {'*.cpp'},
+             'rust': {'*.rs'}}
 
 def bold(text):
   return '\033[1m' + text + '\033[0m'
@@ -94,11 +98,11 @@ def metadata(file):
 
   if not m['skip']:
     if not 'expect' in m:
-      print red("WARNING: @expect MISSING IN %s" % file, None)
+      print(red("WARNING: @expect MISSING IN %s" % file, None))
       m['expect'] = 'verified'
 
     if not m['expect'] in ['verified', 'error', 'timeout', 'unknown']:
-      print red("WARNING: unexpected @expect annotation '%s'" % m['expect'], None)
+      print(red("WARNING: unexpected @expect annotation '%s'" % m['expect'], None))
 
   return m
 
@@ -115,7 +119,8 @@ def process_test(cmd, test, memory, verifier, expect, checkbpl, checkout, log_fi
   str_result += "{0:>20} {1:>10}    :".format(memory, verifier)
 
   t0 = time.time()
-  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    universal_newlines=True)
   out, err  = p.communicate()
   elapsed = time.time() - t0
   status = 0
@@ -165,6 +170,21 @@ def tally_result(result):
   elif "UNKNOWN" in result:
     unknowns += 1
 
+def get_extensions(languages):
+  languages = list(languages.split(','))
+  extensions = set()
+  for language in languages:
+    extensions |= LANGUAGES[language]
+  return extensions
+
+def get_tests(folder, extensions):
+  tests = []
+  for ext in extensions:
+    tests_path = path.dirname(__file__)
+    tests.extend(glob.glob(path.join(tests_path, folder, ext)))
+  tests.sort()
+  return tests
+
 def main():
   """
   Main entry point for the test suite.
@@ -178,7 +198,7 @@ def main():
   parser.add_argument("--exhaustive", help="check all configurations on all examples", action="store_true")
   parser.add_argument("--all-configs", help="check all configurations per example", action="store_true")
   parser.add_argument("--all-examples", help="check all examples", action="store_true")
-  parser.add_argument("--folder", action="store", default="**", type=str,
+  parser.add_argument("--folder", action="store", default="**/**", type=str,
                       help="sets the regressions folder to run")
   parser.add_argument("--threads", action="store", dest="n_threads", default=num_cpus, type=int,
                       help="execute regressions using the selected number of threads in parallel")
@@ -186,11 +206,16 @@ def main():
                       help="sets the logging level (DEBUG, INFO, WARNING)")
   parser.add_argument("--output-log", action="store", dest="log_path", type=str,
                       help="sets the output log path. (std out by default)")
+  parser.add_argument("--languages", action="store", default="c", choices=list(LANGUAGES.keys()),
+                      help="Comma separated list of langauges to test. C[c],C++[cplusplus],Rust[rust]")
   args = parser.parse_args()
 
   if args.exhaustive:
     args.all_examples = True;
     args.all_configs = True;
+
+  extensions = get_extensions(args.languages)
+  tests = get_tests(args.folder, extensions)
 
   # configure the logging
   log_format = ''
@@ -217,8 +242,9 @@ def main():
     logging.info("Running regression tests...")
 
     # start processing the tests.
+
     results = []
-    for test in sorted(glob.glob("./" + args.folder + "/*.c")):
+    for test in tests:
       # get the meta data for this test
       meta = metadata(test)
 

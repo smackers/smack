@@ -16,7 +16,6 @@
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 
-#include "dsa/DSNode.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 
@@ -539,7 +538,8 @@ void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &i) {
   const Expr *cmp = rep->expr(i.getOperand(1));
   const Expr *swp = rep->expr(i.getOperand(2));
   emit(Stmt::assign(res, mem));
-  emit(rep->store(i.getOperand(0), Expr::cond(Expr::eq(mem, cmp), swp, mem)));
+  emit(rep->store(i.getOperand(0),
+                  Expr::ifThenElse(Expr::eq(mem, cmp), swp, mem)));
 }
 
 void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst &i) {
@@ -623,7 +623,7 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst &i) {
          "Vector condition is not supported.");
   emit(Stmt::assign(
       Expr::id(x),
-      Expr::if_then_else(Expr::eq(c, rep->integerLit(1LL, 1)), v1, v2)));
+      Expr::ifThenElse(Expr::eq(c, rep->integerLit(1LL, 1)), v1, v2)));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
@@ -645,10 +645,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
     // Set the entry point for Rust programs
     auto castExpr = ci.getArgOperand(0);
-    if (auto CE = dyn_cast<const Constant>(castExpr)) {
-      auto mainFunc = CE->getOperand(0);
-      emit(Stmt::call(mainFunc->getName(), {}, {}));
-    }
+    auto mainFunction = cast<const Function>(castExpr);
+    emit(Stmt::call(mainFunction->getName(), {}, {}));
 
   } else if (name.find(Naming::RUST_PANIC1) != std::string::npos ||
              name.find(Naming::RUST_PANIC2) != std::string::npos) {
@@ -718,7 +716,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     //   args.push_back(Expr::id(m.first));
     // auto E = Expr::fn(F->getName(), args);
     // emit(Stmt::assign(rep->expr(&ci),
-    //   Expr::cond(Expr::forall(binding, "int", E),
+    //   Expr::ifThenElse(Expr::forall(binding, "int", E),
     //     rep->integerLit(1U,1), rep->integerLit(0U,1))));
 
   } else if (name == Naming::CONTRACT_REQUIRES ||
@@ -799,9 +797,9 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     emit(rep->call(f, ci));
   }
 
-  if (f->isDeclaration() && rep->isExternal(&ci)) {
+  if (f->isDeclaration()) {
     std::string name = naming->get(*f);
-    if (!EXTERNAL_PROC_IGNORE.match(name))
+    if (!EXTERNAL_PROC_IGNORE.match(name) && rep->isExternal(&ci))
       emit(Stmt::assume(Expr::fn(Naming::EXTERNAL_ADDR, rep->expr(&ci))));
   }
 
@@ -902,6 +900,28 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         };
       };
 
+  // Optionally generate a boogie assume statement from assume statements in
+  // LLVM. Currently this behavior is experimental and must be enabled by
+  // passing the -llvm-assumes flag. The default behavior of this
+  // function is to ignore the assume statement, specified by the "none"
+  // argument. If the check argument is given, an additional assertion is
+  // generated to check the validity of the assumption.
+  static const auto assume = [this](CallInst *ci) {
+    if (SmackOptions::LLVMAssumes != LLVMAssumeType::none) {
+      auto arg = rep->expr(ci->getArgOperand(0));
+      auto llvmTrue =
+          SmackOptions::BitPrecise ? Expr::lit(1, 1) : Expr::lit(1LL);
+      auto chkStmt = Expr::eq(arg, llvmTrue);
+      if (SmackOptions::LLVMAssumes == LLVMAssumeType::check)
+        emit(Stmt::assert_(chkStmt));
+      else
+        emit(Stmt::assume(chkStmt));
+    } else {
+      // Skip assume statements
+      return;
+    }
+  };
+
   static const auto f16UpCast = conditionalModel(
       [this](CallInst *ci) {
         // translation: $f := $fpext.bvhalf.*($rmode, $bitcast.bv16.bvhalf($i));
@@ -999,7 +1019,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         // ... else if v[1:0] == 1 then 31bv32 else 32bv32
         const Expr *body = Expr::lit(width, width);
         for (unsigned i = 0; i < width; ++i) {
-          body = Expr::if_then_else(
+          body = Expr::ifThenElse(
               Expr::eq(Expr::bvExtract(var, i + 1, i), Expr::lit(1, 1)),
               Expr::lit(width - i - 1, width), body);
         }
@@ -1008,11 +1028,11 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         // argument
         // is zero, then the result is undefined.
         auto isZeroUndef = rep->expr(ci->getArgOperand(1));
-        body = Expr::if_then_else(
-            Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
-                       Expr::eq(var, Expr::lit(0, width))),
-            rep->expr(ci), // The result is undefined
-            body);
+        body =
+            Expr::ifThenElse(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
+                                        Expr::eq(var, Expr::lit(0, width))),
+                             rep->expr(ci), // The result is undefined
+                             body);
         emit(Stmt::havoc(rep->expr(ci)));
         emit(Stmt::assign(rep->expr(ci), body));
       },
@@ -1028,7 +1048,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         // ... else if v[32:31] == 1 then 31bv32 else 32bv32
         const Expr *body = Expr::lit(width, width);
         for (unsigned i = width; i > 0; --i) {
-          body = Expr::if_then_else(
+          body = Expr::ifThenElse(
               Expr::eq(Expr::bvExtract(arg, i, i - 1), Expr::lit(1, 1)),
               Expr::lit(i - 1, width), body);
         }
@@ -1037,11 +1057,11 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         // argument
         // is zero, then the result is undefined.
         auto isZeroUndef = rep->expr(ci->getArgOperand(1));
-        body = Expr::if_then_else(
-            Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
-                       Expr::eq(arg, Expr::lit(0, width))),
-            rep->expr(ci), // The result is undefined
-            body);
+        body =
+            Expr::ifThenElse(Expr::and_(Expr::eq(isZeroUndef, Expr::lit(1, 1)),
+                                        Expr::eq(arg, Expr::lit(0, width))),
+                             rep->expr(ci), // The result is undefined
+                             body);
         emit(Stmt::havoc(rep->expr(ci)));
         emit(Stmt::assign(rep->expr(ci), body));
       },
@@ -1130,6 +1150,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
 
   static const std::map<llvm::Intrinsic::ID, std::function<void(CallInst *)>>
       stmtMap{
+          {llvm::Intrinsic::assume, assume},
           {llvm::Intrinsic::bitreverse, assignBvExpr(bitreverse)},
           {llvm::Intrinsic::bswap, assignBvExpr(bswap)},
           {llvm::Intrinsic::convert_from_fp16, f16UpCast},

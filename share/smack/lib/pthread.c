@@ -4,31 +4,33 @@
 #include "pthread.h"
 #include "smack.h"
 
+void __SMACK_init_tidtype() {
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("type $tidtype = bv32;");
+#else
+  __SMACK_top_decl("type $tidtype = i32;");
+#endif
+}
+
 void __SMACK_init_func_corral_primitives() {
   // Declare these, so bpl parsing doesn't complain
-  __SMACK_top_decl("procedure corral_getThreadID() returns (x:int);");
-  __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:int);");
-  __SMACK_top_decl("procedure corral_atomic_begin();");
-  __SMACK_top_decl("procedure corral_atomic_end();");
+  __SMACK_top_decl("procedure corral_getThreadID() returns (x:$tidtype);");
+  __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:$tidtype);");
 }
 
 void __SMACK_init_func_thread() {
   // Array and possible statuses for tracking pthreads
   __SMACK_top_decl("//dim0=tid, dim1= idx 0 gets status, 1 gets return value");
-  __SMACK_top_decl("var $pthreadStatus: [int][int]int;");
+  __SMACK_top_decl("var $pthreadStatus: [$tidtype][int]int;");
   __SMACK_top_decl("const unique $pthread_uninitialized: int;");
   __SMACK_top_decl("const unique $pthread_initialized: int;");
   __SMACK_top_decl("const unique $pthread_waiting: int;");
   __SMACK_top_decl("const unique $pthread_running: int;");
   __SMACK_top_decl("const unique $pthread_stopped: int;");
   // Initialize this array so all threads begin as uninitialized
-  __SMACK_code("assume (forall i:int :: $pthreadStatus[i][0] == "
+  __SMACK_code("assume (forall i:$tidtype :: $pthreadStatus[i][0] == "
                "$pthread_uninitialized);");
 }
-
-void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
-
-void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
 
 pthread_t pthread_self(void) {
   int tmp_tid = __VERIFIER_nondet_int();
@@ -61,10 +63,13 @@ int pthread_join(pthread_t __th, void **__thread_return) {
   // Get the thread's return value
   void *tmp_thread_return_pointer = (void *)__VERIFIER_nondet_long();
   __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
-  *__thread_return = tmp_thread_return_pointer;
 
-  // Print return pointer value to SMACK traces
-  void *actual_thread_return_pointer = *__thread_return;
+  if (__thread_return) {
+    *__thread_return = tmp_thread_return_pointer;
+
+    // Print return pointer value to SMACK traces
+    void *actual_thread_return_pointer = *__thread_return;
+  }
 
   return 0;
 }

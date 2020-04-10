@@ -82,11 +82,13 @@ SMACK depends on the following projects:
 
 * [LLVM][] version [8.0.1][LLVM-8.0.1]
 * [Clang][] version [8.0.1][Clang-8.0.1]
-* [Python][] version 2.7 or greater
+* [Boost][] version 1.55 or greater
+* [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
 * [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
+* [sea-dsa][]
 
 See [here](https://github.com/smackers/smack/blob/master/bin/versions) for
 compatible version numbers of [Boogie][] and [Corral][]. See the appropriate
@@ -153,9 +155,14 @@ installed via the Microsoft Store.
 
 ### Installing SMACK Itself
 
-SMACK is built using [CMake][] via the following sequence of shell commands
-from SMACK's root directory:
-````Shell
+The prerequisite step for building SMACK is to fetch its submodule
+(i.e., [sea-dsa][]). Then, it is built using [CMake][]. Both steps can be done
+via the following sequence of shell commands from SMACK's root directory:
+```Shell
+# fetch the submodule
+git submodule init
+git submodule update
+# build SMACK
 mkdir build
 cd build
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
@@ -169,17 +176,17 @@ prefix, add the additional flag:
 ````
 substituting the string `PREFIX` for the desired location.
 
-Actually running SMACK relies on the environment variables `BOOGIE` and
-`CORRAL` targeting the `Boogie.exe` and `corral.exe` executables, for instance
-residing in paths prefixed by `XXX` and `YYY`:
-````Shell
-export BOOGIE="mono /XXX/Boogie/Binaries/Boogie.exe"
-export CORRAL="mono /YYY/Corral/bin/Release/corral.exe"
+Actually running SMACK relies on `boogie` and `corral` being in the executable
+path. For instance, if you have built Boogie and Corral from source at paths
+at `$BOOGIE_SOURCE` and `$CORRAL_SOURCE`:
+````bash
+export PATH="$BOOGIE_SOURCE/Binaries:$PATH"
+export PATH="$CORRAL_SOURCE/bin:$PATH"
 ````
 Source the preceding lines in your shell's `.profile`, and ensure they invoke
 Boogie/Corral correctly. For example, running
-````Shell
-BOOGIE
+````console
+$ boogie
 ````
 should result in
 ````
@@ -215,6 +222,8 @@ shell in the `test` directory by executing
 [build.sh]: https://github.com/smackers/smack/blob/master/bin/build.sh
 [Xcode]: https://developer.apple.com/xcode/
 [Homebrew]: http://brew.sh/
-[Homebrew Cask]: http://caskroom.io
+[Homebrew Cask]: https://formulae.brew.sh/cask/
 [Docker]: https://www.docker.com
 [Ninja]: https://ninja-build.org
+[sea-dsa]: https://github.com/seahorn/sea-dsa
+[Boost]: http://boost.org/

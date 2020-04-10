@@ -2,7 +2,7 @@
 # This file is distributed under the MIT License. See LICENSE for details.
 #
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.4.3)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
@@ -18,6 +18,7 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
+  # TODO: explain why these are required.
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
@@ -26,9 +27,27 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
   string(REPLACE "-Wl," "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REPLACE "-gsplit-dwarf" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
   string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
+
+  # TODO: append these one at a time; give rationale.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -Wno-undefined-var-template")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+
+  # Apparently avoids a problem with inconsistent visibility settings from LLVM:
+  #
+  # > ld: warning: direct access in function 'llvm::_'
+  # >   from file '/usr/local/opt/llvm@8/lib/_'
+  # >   to global weak symbol 'llvm::_'
+  # >   from file 'libsmackTranslator.a(_.cpp.o)'
+  # >   means the weak symbol cannot be overridden at runtime.
+  # >   This was likely caused by different translation units being compiled
+  # >   with different visibility settings.
+  #
+  # Solution found on Stack Overflow:
+  # https://stackoverflow.com/questions/8685045/xcode-with-boost-linkerid-warning-about-visibility-settings
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fvisibility=hidden")
+
+  # TODO: explain why these are required.
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -O0")
+  string(APPEND CMAKE_C_FLAGS_DEBUG " -O0")
 
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
@@ -74,87 +93,17 @@ else()
 endif()
 
 include_directories(include)
+include_directories(sea-dsa/include)
 
-add_library(assistDS STATIC
-  include/assistDS/ArgCast.h
-  include/assistDS/FuncSimplify.h
-  include/assistDS/Int2PtrCmp.h
-  include/assistDS/SimplifyExtractValue.h
-  include/assistDS/StructReturnToPointer.h
-  include/assistDS/DSNodeEquivs.h
-  include/assistDS/FuncSpec.h
-  include/assistDS/SimplifyGEP.h
-  include/assistDS/TypeChecks.h
-  include/assistDS/DataStructureCallGraph.h
-  include/assistDS/GEPExprArgs.h
-  include/assistDS/LoadArgs.h
-  include/assistDS/SimplifyInsertValue.h
-  include/assistDS/TypeChecksOpt.h
-  include/assistDS/Devirt.h
-  include/assistDS/IndCloner.h
-  include/assistDS/MergeGEP.h
-  include/assistDS/SimplifyLoad.h
-  lib/AssistDS/ArgCast.cpp
-  lib/AssistDS/Devirt.cpp
-  lib/AssistDS/GEPExprArgs.cpp
-  lib/AssistDS/LoadArgs.cpp
-  lib/AssistDS/SimplifyExtractValue.cpp
-  lib/AssistDS/StructReturnToPointer.cpp
-  lib/AssistDS/ArgSimplify.cpp
-  lib/AssistDS/DynCount.cpp
-  lib/AssistDS/IndCloner.cpp
-  lib/AssistDS/SimplifyGEP.cpp
-  lib/AssistDS/TypeChecks.cpp
-  lib/AssistDS/DSNodeEquivs.cpp
-  lib/AssistDS/FuncSimplify.cpp
-  lib/AssistDS/Int2PtrCmp.cpp
-  lib/AssistDS/MergeGEP.cpp
-  lib/AssistDS/SimplifyInsertValue.cpp
-  lib/AssistDS/TypeChecksOpt.cpp
-  lib/AssistDS/DataStructureCallGraph.cpp
-  lib/AssistDS/FuncSpec.cpp
-  lib/AssistDS/SVADevirt.cpp
-  lib/AssistDS/SimplifyLoad.cpp
-)
-
-add_library(dsa STATIC
-  include/dsa/AddressTakenAnalysis.h
-  include/dsa/DSCallGraph.h
-  include/dsa/DSNode.h
-  include/dsa/EntryPointAnalysis.h
-  include/dsa/keyiterator.h
-  include/dsa/svset.h
-  include/dsa/AllocatorIdentification.h
-  include/dsa/DSGraph.h
-  include/dsa/DSSupport.h
-  include/dsa/stl_util.h
-  include/dsa/CallTargets.h
-  include/dsa/DSGraphTraits.h
-  include/dsa/DataStructure.h
-  include/dsa/TypeSafety.h
-  include/dsa/super_set.h
-  include/dsa/DSMonitor.h
-  lib/DSA/AddressTakenAnalysis.cpp
-  lib/DSA/CallTargets.cpp
-  lib/DSA/DSTest.cpp
-  lib/DSA/EquivClassGraphs.cpp
-  lib/DSA/StdLibPass.cpp
-  lib/DSA/AllocatorIdentification.cpp
-  lib/DSA/CompleteBottomUp.cpp
-  lib/DSA/DataStructure.cpp
-  lib/DSA/GraphChecker.cpp
-  lib/DSA/Printer.cpp
-  lib/DSA/TopDownClosure.cpp
-  lib/DSA/Basic.cpp
-  lib/DSA/DSCallGraph.cpp
-  lib/DSA/DataStructureStats.cpp
-  lib/DSA/TypeSafety.cpp
-  lib/DSA/BottomUpClosure.cpp
-  lib/DSA/DSGraph.cpp
-  lib/DSA/EntryPointAnalysis.cpp
-  lib/DSA/DSMonitor.cpp
-  lib/DSA/Local.cpp
-  lib/DSA/SanityCheck.cpp
+add_library(utils STATIC
+  include/utils/Devirt.h
+  include/utils/MergeGEP.h
+  include/utils/SimplifyInsertValue.h
+  include/utils/SimplifyExtractValue.h
+  lib/utils/Devirt.cpp
+  lib/utils/MergeGEP.cpp
+  lib/utils/SimplifyInsertValue.cpp
+  lib/utils/SimplifyExtractValue.cpp
 )
 
 add_library(smackTranslator STATIC
@@ -211,18 +160,33 @@ add_executable(llvm2bpl
   tools/llvm2bpl/llvm2bpl.cpp
 )
 
+# We need to include Boost header files at least for macOS
+find_package (Boost 1.55)
+if (Boost_FOUND)
+  include_directories (${Boost_INCLUDE_DIRS})
+endif ()
+# We have to import LLVM's cmake definitions to build sea-dsa
+# Borrowed from sea-dsa's CMakeLists.txt
+find_package (LLVM 8.0.1 EXACT CONFIG)
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+include(AddLLVM)
+include(HandleLLVMOptions)
+# We need the release build of sea-dsa otherwise we'll see a lot of crashes in
+# sv-comp benchmarks.
+# The following solution is from: https://stackoverflow.com/questions/30985215/passing-variables-down-to-subdirectory-only
+set(SMACK_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
+set(CMAKE_BUILD_TYPE "Release")
+add_subdirectory(sea-dsa/src)
+set(CMAKE_BUILD_TYPE ${SMACK_BUILD_TYPE})
+
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
-target_link_libraries(llvm2bpl smackTranslator assistDS dsa)
+target_link_libraries(llvm2bpl smackTranslator utils SeaDsaAnalysis)
 
 INSTALL(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
 )
 
 INSTALL(FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/boogie
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/corral
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/symbooglix
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin/lockpwn
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-svcomp-wrapper.sh

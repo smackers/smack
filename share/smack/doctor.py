@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # This file is distributed under the MIT License. See LICENSE for details.
 #
@@ -21,9 +21,9 @@ def check(text, condition):
   global count
   if condition:
     if not args.quiet:
-      print green("[X] " + text)
+      print(green("[X] " + text))
   else:
-    print >> sys.stderr, red("[-] " + text)
+    print(red("[-] " + text), file=sys.stderr)
     count += 1
 
 def full_path(program):
@@ -88,19 +88,19 @@ def main():
   count = 0
 
   if not args.quiet:
-    print "Checking front-end dependencies..."
+    print("Checking front-end dependencies...")
   check_command("clang")
   check_command("clang++")
   check_command("llvm-config")
   check_command("llvm-link")
 
   if not args.quiet:
-    print "Checking back-end dependencies..."
+    print("Checking back-end dependencies...")
   check_verifier("boogie")
   check_verifier("corral")
 
   if not args.quiet:
-    print "Checking SMACK itself..."
+    print("Checking SMACK itself...")
   check_command("llvm2bpl")
   check_command("smack")
 

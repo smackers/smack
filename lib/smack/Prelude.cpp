@@ -343,7 +343,7 @@ struct IntOpGen::IntArithOp : public IntOp {
   static const Expr *bvMinMaxExpr(unsigned size) {
     std::string signLetter = SIGN ? "s" : "u";
     std::string pred = MIN ? "lt" : "gt";
-    return Expr::if_then_else(
+    return Expr::ifThenElse(
         Expr::fn(indexedName("$" + signLetter + pred,
                              {getBvTypeName(size), Naming::BOOL_TYPE}),
                  makeIntVarExprs(2)),
@@ -356,7 +356,45 @@ struct IntOpGen::IntArithOp : public IntOp {
     const Expr *a1 = makeIntVarExpr(1);
     const Expr *a2 = makeIntVarExpr(2);
     auto pred = MIN ? Expr::lt(a1, a2) : Expr::lt(a2, a1);
-    return Expr::if_then_else(pred, a1, a2);
+    return Expr::ifThenElse(pred, a1, a2);
+  }
+
+  // generate inlined `srem(i1, i2)` function body like
+  // if (mod(i1,i2) != 0 && i1 < 0)
+  // then mod(i1,i2) - abs(i2) else mod(i1,i2), where
+  // `i1` is the dividend and `i2` is the divisor
+  // `mod` is the Euclidean function defined in the SMT lib
+  // therefore its result is always positive
+  // the `srem` operation defined by LLVM follows the same
+  // definition as modern C standards
+  // (https://en.wikipedia.org/wiki/Modulo_operation#In_programming_languages)
+  // its result has the same sign as i1 because the division rounds to 0
+  // therefore, the only case `mod` and `srem` differ is when i1 is negative
+  // and the remainder is not 0
+  // for this case, the result of `srem` is the result of `mod` minus |i2|
+  static const Expr *sremExpr(unsigned size) {
+    std::string type = getIntTypeName(size);
+    const Expr *dividend = makeIntVarExpr(1);
+    const Expr *divisor = makeIntVarExpr(2);
+    const Expr *zero = Expr::lit((unsigned long long)0);
+    const Expr *mod = Expr::fn(indexedName("$smod", {type}), dividend, divisor);
+    const Expr *modNeZero =
+        Expr::fn(indexedName("$ne", {type, "bool"}), mod, zero);
+    const Expr *dividendLtZero =
+        Expr::fn(indexedName("$slt", {type, "bool"}), dividend, zero);
+    const Expr *negRemainder = Expr::fn(
+        indexedName("$sub", {type}), mod,
+        Expr::fn(indexedName("$smax", {type}), divisor,
+                 Expr::fn(indexedName("$sub", {type}), zero, divisor)));
+    return Expr::ifThenElse(Expr::and_(modNeZero, dividendLtZero), negRemainder,
+                            mod);
+  }
+
+  // generate inlined `urem` function body like
+  // $smod.i32(i1,i2), where `$smod` is a wrapper to SMT's `mod` function
+  static const Expr *uremExpr(unsigned size) {
+    return Expr::fn(indexedName("$smod", {getIntTypeName(size)}),
+                    makeIntVarExpr(1), makeIntVarExpr(2));
   }
 };
 
@@ -381,9 +419,11 @@ void IntOpGen::generateArithOps(std::stringstream &s) const {
        bvBuiltinOp, true},
       {"sdiv", 2, intBuiltinOp, bvBuiltinOp, false},
       {"smod", 2, intBuiltinOp, bvBuiltinOp, false},
-      {"srem", 2, intBuiltinOp, bvBuiltinOp, false},
       {"udiv", 2, intBuiltinOp, bvBuiltinOp, false},
-      {"urem", 2, intBuiltinOp, bvBuiltinOp, false},
+      {"srem", 2, new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::sremExpr),
+       bvBuiltinOp, false},
+      {"urem", 2, new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::uremExpr),
+       bvBuiltinOp, false},
       {"shl", 2, uninterpretedOp, bvBuiltinOp, false},
       {"lshr", 2, uninterpretedOp, bvBuiltinOp, false},
       {"ashr", 2, uninterpretedOp, bvBuiltinOp, false},
@@ -465,12 +505,11 @@ struct IntOpGen::IntPred : public IntOp {
                   Naming::BOOL_TYPE, ((IntOp::exprT)iop->func)(size));
     // e.g.: function {:inline} $ule.i1(i1: i1, i2: i1) returns (i1)
     //        { if $ule.i1.bool(i1, i2) then 1 else 0 }
-    auto predFunc =
-        inlinedOp(name, {type}, makeIntVars(2, type), getIntTypeName(1),
-                  Expr::if_then_else(
-                      Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
-                               makeIntVarExprs(2)),
-                      Expr::lit(1ll), Expr::lit(0ll)));
+    auto predFunc = inlinedOp(
+        name, {type}, makeIntVars(2, type), getIntTypeName(1),
+        Expr::ifThenElse(Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
+                                  makeIntVarExprs(2)),
+                         Expr::lit(1ll), Expr::lit(0ll)));
     return {compFunc, predFunc};
   }
 
@@ -494,12 +533,11 @@ struct IntOpGen::IntPred : public IntOp {
       llvm_unreachable("no uninterpreted bv predicates");
     // e.g.: function {:inline} $ule.bv1(i1: bv1, i2: bv1) returns (bv1)
     //        { if $ule.bv1.bool(i1, i2) then 1bv1 else 0bv1 }
-    predFunc =
-        inlinedOp(name, {type}, makeIntVars(2, type), getBvTypeName(1),
-                  Expr::if_then_else(
-                      Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
-                               makeIntVarExpr(1), makeIntVarExpr(2)),
-                      Expr::lit(1, 1), Expr::lit(0, 1)));
+    predFunc = inlinedOp(
+        name, {type}, makeIntVars(2, type), getBvTypeName(1),
+        Expr::ifThenElse(Expr::fn(indexedName(name, {type, Naming::BOOL_TYPE}),
+                                  makeIntVarExpr(1), makeIntVarExpr(2)),
+                         Expr::lit(1, 1), Expr::lit(0, 1)));
     return {compFunc, predFunc};
   }
 
@@ -731,7 +769,7 @@ void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
     << "\n";
   if (SmackOptions::BitPrecise && !SmackOptions::BitPrecisePointers) {
     s << Decl::function(indexedName("$bv2uint", {ptrSize}), {{"i", bt}}, it,
-                        nullptr, {makeBuiltinAttr("bv2int")})
+                        nullptr, {makeBuiltinAttr("bv2nat")})
       << "\n";
     const Expr *arg = Expr::id("i");
     const Expr *uint = Expr::fn(indexedName("$bv2uint", {ptrSize}), arg);
@@ -744,16 +782,17 @@ void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
       llvm_unreachable("Unexpected pointer bit width.");
     s << Decl::function(
              indexedName("$bv2int", {ptrSize}), {{"i", bt}}, it,
-             Expr::cond(Expr::fn(indexedName("$slt", {bt, Naming::BOOL_TYPE}),
-                                 {arg, Expr::lit(0ULL, ptrSize)}),
-                        Expr::fn(indexedName("$sub", {it}),
-                                 {uint, Expr::lit(offset, 0U)}),
-                        uint),
+             Expr::ifThenElse(
+                 Expr::fn(indexedName("$slt", {bt, Naming::BOOL_TYPE}),
+                          {arg, Expr::lit(0ULL, ptrSize)}),
+                 Expr::fn(indexedName("$sub", {it}),
+                          {uint, Expr::lit(offset, 0U)}),
+                 uint),
              {makeInlineAttr()})
       << "\n";
   } else
     s << Decl::function(indexedName("$bv2int", {ptrSize}), {{"i", bt}}, it,
-                        nullptr, {makeBuiltinAttr("bv2int")})
+                        nullptr, {makeBuiltinAttr("bv2nat")})
       << "\n";
   s << "\n";
 }
@@ -866,7 +905,8 @@ void MemDeclGen::generateAddrBoundsAndPred(std::stringstream &s) const {
   s << Decl::function(
            Naming::EXTERNAL_ADDR, makePtrVars(1), Naming::BOOL_TYPE,
            Expr::fn(indexedName("$slt", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
-                    makePtrVarExpr(0), Expr::id(Naming::EXTERNS_BOTTOM)))
+                    makePtrVarExpr(0), Expr::id(Naming::EXTERNS_BOTTOM)),
+           {makeInlineAttr()})
     << "\n";
   s << "\n";
 }
@@ -927,11 +967,12 @@ void PtrOpGen::generatePreds(std::stringstream &s) const {
              indexedName(pred, {Naming::PTR_TYPE}),
              {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
              prelude.rep.intType(1),
-             Expr::cond(Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
-                                                    Naming::BOOL_TYPE}),
-                                 {Expr::id("p1"), Expr::id("p2")}),
-                        prelude.rep.integerLit(1LL, 1),
-                        prelude.rep.integerLit(0LL, 1)),
+             Expr::ifThenElse(
+                 Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
+                                             Naming::BOOL_TYPE}),
+                          {Expr::id("p1"), Expr::id("p2")}),
+                 prelude.rep.integerLit(1LL, 1),
+                 prelude.rep.integerLit(0LL, 1)),
              {makeInlineAttr()})
       << "\n";
     s << Decl::function(

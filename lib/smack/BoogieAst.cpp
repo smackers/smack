@@ -28,16 +28,16 @@ const Expr *Expr::or_(const Expr *l, const Expr *r) {
   return new BinExpr(BinExpr::Or, l, r);
 }
 
-const Expr *Expr::cond(const Expr *c, const Expr *t, const Expr *e) {
-  return new CondExpr(c, t, e);
-}
-
 const Expr *Expr::eq(const Expr *l, const Expr *r) {
   return new BinExpr(BinExpr::Eq, l, r);
 }
 
 const Expr *Expr::lt(const Expr *l, const Expr *r) {
   return new BinExpr(BinExpr::Lt, l, r);
+}
+
+const Expr *Expr::ifThenElse(const Expr *c, const Expr *t, const Expr *e) {
+  return new IfThenElseExpr(c, t, e);
 }
 
 const Expr *Expr::fn(std::string f, std::list<const Expr *> args) {
@@ -113,10 +113,6 @@ const Expr *Expr::sel(std::string b, std::string i) {
 
 const Expr *Expr::upd(const Expr *b, const Expr *i, const Expr *v) {
   return new UpdExpr(b, i, v);
-}
-
-const Expr *Expr::if_then_else(const Expr *c, const Expr *t, const Expr *e) {
-  return new IfThenElseExpr(c, t, e);
 }
 
 const Expr *Expr::bvExtract(const Expr *v, const Expr *u, const Expr *l) {
@@ -424,10 +420,6 @@ void BinExpr::print(std::ostream &os) const {
   os << " " << rhs << ")";
 }
 
-void CondExpr::print(std::ostream &os) const {
-  os << "(if " << cond << " then " << then << " else " << else_ << ")";
-}
-
 void FunExpr::print(std::ostream &os) const {
   os << fun;
   print_seq<const Expr *>(os, args, "(", ", ", ")");
@@ -510,7 +502,8 @@ void CodeExpr::print(std::ostream &os) const {
 }
 
 void IfThenElseExpr::print(std::ostream &os) const {
-  os << "if " << cond << " then " << true_value << " else " << false_value;
+  os << "(if " << cond << " then " << trueValue << " else " << falseValue
+     << ")";
 }
 
 void BvExtract::print(std::ostream &os) const {

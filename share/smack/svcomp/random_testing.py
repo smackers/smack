@@ -12,7 +12,7 @@ def random_test(args, result):
     s = fi.read()
 
   l = s.split('\n')
-  if not (len(l) < 20 and len(filter(lambda x: re.search(r'=\s*__VERIFIER_nondet_uint', x), l)) == 1):
+  if not (len(l) < 20 and len([x for x in l if re.search(r'=\s*__VERIFIER_nondet_uint', x)]) == 1):
     return 'abort'
 
   UMAX_INT = 2**32 - 1
@@ -47,8 +47,8 @@ def compile_and_run(f, s, n, args):
   rc = proc.returncode
 
   if rc:
-    print 'Compiling error'
-    print err
+    print('Compiling error')
+    print(err)
     return 'unknown'
   else:
     cmd = [r'./' + tmp2]
@@ -59,8 +59,8 @@ def compile_and_run(f, s, n, args):
       if re.search(r'Assertion.*failed', err):
         return 'false'
       else:
-        print 'Execution error'
-        print err
+        print('Execution error')
+        print(err)
         return 'unknown'
     else:
       return 'true'

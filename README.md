@@ -1,4 +1,4 @@
-| **master** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=master)](https://travis-ci.org/smackers/smack) | **develop** | [![Build Status](https://travis-ci.org/smackers/smack.svg?branch=develop)](https://travis-ci.org/smackers/smack) |
+| **master** | [![Build Status](https://travis-ci.com/smackers/smack.svg?branch=master)](https://travis-ci.com/smackers/smack) | **develop** | [![Build Status](https://travis-ci.com/smackers/smack.svg?branch=develop)](https://travis-ci.com/smackers/smack) |
 | --- | --- | --- | --- |
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">

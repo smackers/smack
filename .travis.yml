@@ -1,18 +1,18 @@
 language: generic
-dist: xenial
-sudo: required
-compiler: clang
+os: linux
+dist: bionic
 
 addons:
   apt:
     packages:
       - git
       - cmake
-      - python-yaml
-      - python-psutil
+      - python3-yaml
+      - python3-psutil
       - unzip
       - libz-dev
       - libedit-dev
+      - libboost-all-dev
 
 cache:
   directories:
@@ -24,30 +24,37 @@ cache:
 env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
-  matrix:
-    - TRAVIS_ENV="--exhaustive --folder=basic"
-    - TRAVIS_ENV="--exhaustive --folder=data"
-    - TRAVIS_ENV="--exhaustive --folder=ntdrivers-simplified"
-    - TRAVIS_ENV="--exhaustive --folder=bits"
-    - TRAVIS_ENV="--exhaustive --folder=float"
-    - TRAVIS_ENV="--exhaustive --folder=locks"
-    - TRAVIS_ENV="--exhaustive --folder=contracts"
-    - TRAVIS_ENV="--exhaustive --folder=simd"
-    - TRAVIS_ENV="--exhaustive --folder=memory-safety"
-    - TRAVIS_ENV="--exhaustive --folder=pthread"
-    - TRAVIS_ENV="--exhaustive --folder=strings"
+  jobs:
+    - TRAVIS_ENV="--exhaustive --folder=c/basic"
+    - TRAVIS_ENV="--exhaustive --folder=c/data"
+    - TRAVIS_ENV="--exhaustive --folder=c/ntdrivers-simplified"
+    - TRAVIS_ENV="--exhaustive --folder=c/bits"
+    - TRAVIS_ENV="--exhaustive --folder=c/float"
+    - TRAVIS_ENV="--exhaustive --folder=c/locks"
+    - TRAVIS_ENV="--exhaustive --folder=c/contracts"
+    - TRAVIS_ENV="--exhaustive --folder=c/simd"
+    - TRAVIS_ENV="--exhaustive --folder=c/memory-safety"
+    - TRAVIS_ENV="--exhaustive --folder=c/pthread"
+    - TRAVIS_ENV="--exhaustive --folder=c/strings"
+    - TRAVIS_ENV="--exhaustive --folder=c/special"
+    - TRAVIS_ENV="--exhaustive --folder=rust/basic --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/functions --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/generics --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/loops --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/recursion --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/structures --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/vector --languages=rust"
 
 before_install:
-  - sudo rm -rf /usr/local/clang-7.0.0
-  - sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
   - sudo apt-get install -y apt-transport-https
-  - echo "deb https://download.mono-project.com/repo/ubuntu stable-xenial main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+  - echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
   - sudo apt-get update
 
 install:
-  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev mono-complete ninja-build
+  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev mono-complete ca-certificates-mono ninja-build
   - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 20
   - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-8 20
   - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-8 20
@@ -58,11 +65,12 @@ install:
 
 script:
   - python --version
+  - python3 --version
   - $CXX --version
   - $CC --version
   - clang --version
   - clang++ --version
   - llvm-link --version
   - llvm-config --version
-  - ./format/run-clang-format.py -e test/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
-  - ./bin/build.sh
+  - ./format/run-clang-format.py -e test/c/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
+  - INSTALL_RUST=1 ./bin/build.sh

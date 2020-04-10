@@ -6,9 +6,9 @@ import time
 from shutil import copyfile
 import smack.top
 import smack.frontend
-import filters
-from toSVCOMPformat import smackJsonToXmlGraph
-from random_testing import random_test
+from . import filters
+from .toSVCOMPformat import smackJsonToXmlGraph
+from .random_testing import random_test
 
 def svcomp_frontend(input_file, args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
@@ -254,7 +254,7 @@ def verify_bpl_svcomp(args):
   if args.pthread and "strcpy" in bpl:
     heurTrace += "We are not modeling strcpy - aborting\n"
     if not args.quiet:
-      print(heurTrace + "\n")
+      print((heurTrace + "\n"))
     sys.exit(smack.top.results(args)['unknown'])
 
   # Setting good loop unroll bound based on benchmark class
@@ -356,7 +356,7 @@ def verify_bpl_svcomp(args):
 
     if not args.quiet:
       error = smack.top.error_trace(verifier_output, args)
-      print error
+      print(error)
     if args.memory_safety:
       heurTrace += (args.prop_to_check + "has errors\n")
       if args.prop_to_check == 'valid-free':
@@ -392,16 +392,16 @@ def verify_bpl_svcomp(args):
         if execution_result != 'true':
           heurTrace += "Oops, execution result says {0}.\n".format(execution_result)
           if not args.quiet:
-            print(heurTrace + "\n")
+            print((heurTrace + "\n"))
           sys.exit(smack.top.results(args)['unknown'])
       random_test_result = random_test(args, result)
       if random_test_result == 'false' or random_test_result == 'unknown':
         heurTrace += "Oops, random testing says {0}.\n".format(random_test_result)
         if not args.quiet:
-          print(heurTrace + "\n")
+          print((heurTrace + "\n"))
         sys.exit(smack.top.results(args)['unknown'])
       if not args.quiet:
-        print(heurTrace + "\n")
+        print((heurTrace + "\n"))
       if args.memory_safety:
         heurTrace += (args.prop_to_check + "is verified\n")
         if args.prop_to_check == 'valid-deref':
@@ -422,7 +422,7 @@ def verify_bpl_svcomp(args):
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
       heurTrace += "Reporting 'timeout'.\n"
       if not args.quiet:
-        print(heurTrace + "\n")
+        print((heurTrace + "\n"))
         sys.stdout.flush()
       if args.memory_safety:
         heurTrace += (args.prop_to_check + " times out\n")
@@ -444,7 +444,7 @@ def verify_bpl_svcomp(args):
   else: #normal inlining
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
-    print(heurTrace + "\n")
+    print((heurTrace + "\n"))
   if args.memory_safety and result == 'verified':
     heurTrace += (args.prop_to_check + " is verified\n")
     if args.prop_to_check == 'valid-deref':
@@ -479,7 +479,7 @@ def write_error_file(args, status, verifier_output):
       error = smack.top.error_trace(verifier_output, args)
     if error is not None:
       with open(args.error_file, 'w') as f:
-        f.write(error)
+        f.write(error.decode('utf-8'))
 
 def run_binary(args):
   #process the file to make it runnable
@@ -510,8 +510,8 @@ def run_binary(args):
   rc = proc.returncode
 
   if rc:
-    print 'Compiling error'
-    print err
+    print('Compiling error')
+    print(err)
     return 'unknown'
   else:
     cmd = [r'./' + tmp2]
@@ -522,8 +522,8 @@ def run_binary(args):
       if re.search(r'Assertion.*failed', err):
         return 'false'
       else:
-        print 'Execution error'
-        print err
+        print('Execution error')
+        print(err)
         return 'unknown'
     else:
       return 'true'

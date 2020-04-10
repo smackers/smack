@@ -23,6 +23,7 @@
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
 INSTALL_Z3=1
+INSTALL_CVC4=1
 BUILD_BOOGIE=1
 BUILD_CORRAL=1
 BUILD_SYMBOOGLIX=1
@@ -34,12 +35,13 @@ BUILD_MONO=0 # mono is typically installed from packages (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=0
-INSTALL_RUST=0
+INSTALL_RUST=${INSTALL_RUST:-0}
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 Z3_DIR="${ROOT}/z3"
+CVC4_DIR="${ROOT}/cvc4"
 BOOGIE_DIR="${ROOT}/boogie"
 CORRAL_DIR="${ROOT}/corral"
 SYMBOOGLIX_DIR="${ROOT}/symbooglix"
@@ -58,7 +60,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python-yaml python-psutil unzip wget ninja-build"
+DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build libboost-all-dev"
 
 shopt -s extglob
 
@@ -182,23 +184,23 @@ puts "Detected distribution: $distro"
 case "$distro" in
 linux-opensuse*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-debian-8.10.zip"
-  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete make"
+  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete ca-certificates-mono make"
   DEPENDENCIES+=" ncurses-devel zlib-devel"
   ;;
 
 linux-@(ubuntu|neon)-14*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
   ;;
 
 linux-@(ubuntu|neon)-16*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
   ;;
 
 linux-@(ubuntu|neon)-18*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete libz-dev libedit-dev"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
   ;;
 
 linux-ubuntu-12*)
@@ -377,7 +379,7 @@ if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
   echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
 
   puts "Installed Objective-C"
-fi 
+fi
 
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
@@ -385,9 +387,10 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
   tar xf rust.tar.gz
   cd rust-nightly-x86_64-unknown-linux-gnu
-  sudo ./install.sh
+  sudo ./install.sh --without=rust-docs
   cd ..
-  
+  rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
+
   puts "Installed Rust"
 fi
 
@@ -405,6 +408,17 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
   fi
 fi
 
+if [ ${INSTALL_CVC4} -eq 1 ] ; then
+  if [ ! -d "$CVC4_DIR" ] ; then
+    puts "Installing CVC4"
+    mkdir -p ${CVC4_DIR}
+    ${WGET} https://github.com/CVC4/CVC4/releases/download/${CVC4_VERSION}/cvc4-${CVC4_VERSION}-x86_64-linux-opt -O ${CVC4_DIR}/cvc4
+    chmod +x ${CVC4_DIR}/cvc4
+    puts "Installed CVC4"
+  else
+    puts "CVC4 already installed"
+  fi
+fi
 
 if [ ${BUILD_BOOGIE} -eq 1 ] ; then
   if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
@@ -420,10 +434,12 @@ if [ ${BUILD_BOOGIE} -eq 1 ] ; then
     rm -rf /tmp/nuget/
     msbuild Boogie.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
+    ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
     puts "Built Boogie"
   else
     puts "Boogie already built"
   fi
+  echo export PATH=\"${BOOGIE_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 
@@ -439,10 +455,13 @@ if [ ${BUILD_CORRAL} -eq 1 ] ; then
     git submodule update
     msbuild cba.sln /p:Configuration=Release
     ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
+    ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
+    sed -i.debug -e's/Debug/Release/' ${CORRAL_DIR}/bin/corral
     puts "Built Corral"
   else
     puts "Corral already built"
   fi
+  echo export PATH=\"${CORRAL_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
@@ -459,10 +478,12 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
     xbuild Symbooglix.sln /p:Configuration=Release
     ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
     ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
+    sed -i.debug -e's/Debug/Release/' ${SYMBOOGLIX_DIR}/bin/symbooglix
     puts "Built Symbooglix"
   else
     puts "Symbooglix already built"
   fi
+  echo export PATH=\"${SYMBOOGLIX_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
@@ -479,10 +500,15 @@ if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   else
     puts "Lockpwn already built"
   fi
+  echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
+
+  cd ${SMACK_DIR}
+  git submodule init
+  git submodule update
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
@@ -491,10 +517,6 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   sudo ninja install
 
   puts "Configuring shell environment"
-  echo export BOOGIE=\"mono ${BOOGIE_DIR}/Binaries/Boogie.exe\" >> ${SMACKENV}
-  echo export CORRAL=\"mono ${CORRAL_DIR}/bin/Release/corral.exe\" >> ${SMACKENV}
-  echo export SYMBOOGLIX=\"mono ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/sbx.exe\" >> ${SMACKENV}
-  echo export LOCKPWN=\"mono ${LOCKPWN_DIR}/Binaries/lockpwn.exe\" >> ${SMACKENV}
   source ${SMACKENV}
   puts "The required environment variables have been set in ${SMACKENV}"
   puts "You should source ${SMACKENV} in your .bashrc"

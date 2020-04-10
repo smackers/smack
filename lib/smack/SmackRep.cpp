@@ -937,8 +937,8 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
   const Expr *e1 = expr(lhs, isUnsigned);
   const Expr *e2 = expr(rhs, isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
-    return Expr::if_then_else(Expr::fn(fn + ".bool", e1, e2),
-                              integerLit(1ULL, 1), integerLit(0ULL, 1));
+    return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
+                            integerLit(0ULL, 1));
   else
     return Expr::fn(fn, e1, e2);
 }

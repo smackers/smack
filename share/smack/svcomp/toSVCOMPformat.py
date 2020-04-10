@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 import xml.etree as etree
 import xml.etree.ElementTree as ET
@@ -118,7 +118,7 @@ def buildEmptyXmlGraph(args, hasBug):
     programfile = os.path.abspath(args.orig_files[0])
     addKey(graph, "programfile", programfile)
     with open(programfile, 'r') as pgf:
-      addKey(graph, "programhash", hashlib.sha256(pgf.read()).hexdigest())
+      addKey(graph, "programhash", hashlib.sha256(pgf.read().encode('utf-8')).hexdigest())
     addKey(graph, "architecture",
             re.search(r'-m(32|64)', args.clang_options).group(1) + 'bit')
     addKey(graph, "creationtime", datetime.datetime.now().replace(microsecond=0).isoformat())
@@ -189,7 +189,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
             # Add function to call stack
             calledFunc = str(jsonTrace["description"][len("CALL "):]).strip()
             if calledFunc.startswith("devirtbounce"):
-              print "Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              print("Warning: calling function pointer dispatch procedure at line {0}".format(jsonTrace["line"]))
               continue
             if isSMACKInitFunc(calledFunc):
               continue
@@ -197,15 +197,15 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
           if "RETURN from" in desc:
             returnedFunc = str(desc[len("RETURN from "):]).strip()
             if returnedFunc.startswith("devirtbounce"):
-              print "Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"])
+              print("Warning: returning from function pointer dispatch procedure at line {0}".format(jsonTrace["line"]))
               continue
             if isSMACKInitFunc(returnedFunc):
               continue
             if returnedFunc != callStack[-1][0]:
               raise RuntimeError('Procedure Call/Return dismatch at line {0}. Call stack head: {1}, returning from: {2}'.format(jsonTrace["line"], callStack[-1][0], returnedFunc))
             callStack.pop()
-    print
-    print
+    print()
+    print()
     return prettify(tree.getroot())
 
 
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
        jsonStr = open(sys.argv[1], "r").read()
 
-    print(smackJsonToXmlGraph(jsonStr))
+    print((smackJsonToXmlGraph(jsonStr)))
 
 
 '''print(prettify(tree.getroot()))
