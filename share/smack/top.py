@@ -470,7 +470,7 @@ def verify_bpl(args):
   elif args.verifier == 'boogie' or args.modular:
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
+    command += ["/nologo", "/doModSetAnalysis"]
     command += ["/proverOpt:O:AUTO_CONFIG=false"]
     command += ["/proverOpt:O:pp.bv_literals=false"]
     if not (args.bit_precise or args.float):
