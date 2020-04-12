@@ -470,7 +470,21 @@ def verify_bpl(args):
   elif args.verifier == 'boogie' or args.modular:
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/nologo", "/noinfer", "/doModSetAnalysis", "/useArrayTheory"]
+    command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
+    command += ["/proverOpt:O:AUTO_CONFIG=false"]
+    command += ["/proverOpt:O:pp.bv_literals=false"]
+    if not (args.bit_precise or args.float):
+      command += ["/proverOpt:O:smt.PHASE_SELECTION=0"]
+      command += ["/proverOpt:O:smt.RESTART_STRATEGY=0"]
+      command += ["/proverOpt:O:smt.RESTART_FACTOR=1.5"]
+      command += ["/proverOpt:O:smt.ARITH.RANDOM_INITIAL_VALUE=true"]
+      command += ["/proverOpt:O:smt.CASE_SPLIT=3"]
+      command += ["/proverOpt:O:smt.DELAY_UNITS=true"]
+    command += ["/proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]
+    command += ["/proverOpt:O:TYPE_CHECK=true"]
+    command += ["/proverOpt:O:smt.BV.REFLECT=true"]
+#    command += ["/proverOpt:O:smt.array.extensional=false"]
+#    command += ["/proverOpt:O:smt.array.weak=true"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
