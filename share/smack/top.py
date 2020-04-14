@@ -472,7 +472,6 @@ def verify_bpl(args):
     command += [args.bpl_file]
     command += ["/nologo", "/doModSetAnalysis"]
     command += ["/proverOpt:O:AUTO_CONFIG=false"]
-    command += ["/proverOpt:O:pp.bv_literals=false"]
     if not (args.bit_precise or args.float):
       command += ["/proverOpt:O:smt.PHASE_SELECTION=0"]
       command += ["/proverOpt:O:smt.RESTART_STRATEGY=0"]
