@@ -3,7 +3,7 @@
 
 SMACK software verifier is run using the `smack` tool in the bin directory.
 For a given input C/C++ program, the tool checks for violations of user-provided
-assertions. SMACK has a number of command line options that can be used
+assertions (MENTION GENERATED ASSERTIONS IN MEMORY SAFETY/OVERFLOW CHECKING). SMACK has a number of command line options that can be used
 to fine-tune the toolchain. Type `smack -h` for a full list of supported command
 line options.
 
@@ -99,6 +99,8 @@ directory. SMACK defines a number of functions (one for each basic type)
 for introducing nondeterministic (i.e., unconstrained) values, such as
 `__VERIFIER_nondet_int` used in this example.
 
+MENTION ASSERT/ASSUME
+
 Simply run the SMACK verifier on your input C file:
 ```Shell
 smack simple.c
@@ -113,6 +115,10 @@ We use the `-g` flag to compile with debug information enabled, which the SMACK
 verifier leverages to generate more informative error traces. Then, the generated bitcode
 file is translated into Boogie code, which is in turn passed to the chosen back-end
 verifier.
+
+EXAMPLE ON MEMORY SAFETY
+EXAMPLE ON INTEGER OVERFLOW CHECKING
+EXAMPLE ON USING WHOLE-PROGRAM-LLVM
 
 For mode advanced usage scenarios, please refer to our [usage notes](usage-notes.md).
 
