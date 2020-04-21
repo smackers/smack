@@ -924,21 +924,31 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
+const Expr *SmackRep::getWrappedExpr(const llvm::Value *V, bool isUnsigned) {
+  auto rawExpr = expr(V, isUnsigned);
+  if (SmackOptions::WrappedIntegerEncoding && V->getType()->isIntegerTy())
+    return Expr::fn(opName(Naming::getIntWrapFunc(isUnsigned), {V->getType()}),
+                    rawExpr);
+  else
+    return rawExpr;
+}
+
 const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
-  bool isUnsigned = I->isUnsigned();
-  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1), isUnsigned);
+  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1),
+             I->isUnsigned());
 }
 
 const Expr *SmackRep::cmp(const llvm::ConstantExpr *CE) {
   return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1), false);
+  //           llvm::CmpInst::isUnsigned(CE->getPredicate()));
 }
 
 const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
                           const llvm::Value *rhs, bool isUnsigned) {
   std::string fn =
       opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
-  const Expr *e1 = expr(lhs, isUnsigned);
-  const Expr *e2 = expr(rhs, isUnsigned);
+  const Expr *e1 = getWrappedExpr(lhs, isUnsigned);
+  const Expr *e2 = getWrappedExpr(rhs, isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
     return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
                             integerLit(0ULL, 1));

@@ -85,6 +85,8 @@ const std::string Naming::CONTRACT_EXPR = "$expr";
 const std::string Naming::MEMORY_SAFETY_FUNCTION =
     "__SMACK_check_memory_safety";
 const std::string Naming::MEMORY_LEAK_FUNCTION = "__SMACK_check_memory_leak";
+const std::pair<std::string, std::string> Naming::INT_WRAP_FUNCTIONS = {"$tos",
+                                                                        "$tou"};
 
 using namespace llvm;
 
@@ -269,5 +271,10 @@ std::string Naming::freshVarName(const Value &V) {
 
   s << varNum++;
   return s.str();
+}
+
+std::string Naming::getIntWrapFunc(bool isUnsigned) {
+  return isUnsigned ? std::get<1>(INT_WRAP_FUNCTIONS)
+                    : std::get<0>(INT_WRAP_FUNCTIONS);
 }
 } // namespace smack
