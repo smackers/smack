@@ -305,6 +305,13 @@ def arguments():
                 valid-free, memleak)''')
 
     translate_group.add_argument(
+        '--wrapped-integer-encoding',
+        action='store_true',
+        default=False,
+        help='''enable wrapped integer arithmetic and signedness-aware
+                comparison''')
+
+    translate_group.add_argument(
         '--llvm-assumes',
         choices=[
             'none',
@@ -551,6 +558,8 @@ def llvm_to_bpl(args):
         cmd += ['-integer-overflow']
     if 'rust-panics' in args.check:
         cmd += ['-rust-panics']
+    if args.wrapped_integer_encoding:
+        cmd += ['-wrapped-integer-encoding']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:

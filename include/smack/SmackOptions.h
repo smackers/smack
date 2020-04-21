@@ -33,6 +33,7 @@ public:
   static const llvm::cl::opt<LLVMAssumeType> LLVMAssumes;
   static const llvm::cl::opt<bool> RustPanics;
   static const llvm::cl::opt<bool> AddTiming;
+  static const llvm::cl::opt<bool> WrappedIntegerEncoding;
 
   static bool isEntryPoint(std::string);
 };
