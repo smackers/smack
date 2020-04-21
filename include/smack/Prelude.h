@@ -121,6 +121,7 @@ struct IntOpGen : public TypeGen {
   IntOpGen(Prelude &prelude) : TypeGen(prelude) {}
 
   static const std::vector<unsigned> INTEGER_SIZES;
+  static const std::map<unsigned, std::string> INT_LIMITS;
 
   void generateArithOps(std::stringstream &s) const;
   void generatePreds(std::stringstream &s) const;
