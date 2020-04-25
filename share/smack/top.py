@@ -245,7 +245,7 @@ def arguments():
     help='enable contracts-based modular deductive verification (uses Boogie)')
 
   verifier_group.add_argument('--replay', action="store_true", default=False,
-    help='enable reply of error trace with test harness.')
+    help='enable replay of error trace with test harness.')
 
   plugins_group = parser.add_argument_group('plugins')
 
