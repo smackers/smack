@@ -87,6 +87,8 @@ private:
                   const llvm::Value *rhs, const llvm::Type *t);
   const Expr *cmp(unsigned predicate, const llvm::Value *lhs,
                   const llvm::Value *rhs, bool isUnsigned);
+  const Expr *select(const llvm::Value *condVal, const llvm::Value *trueVal,
+                     const llvm::Value *falseVal);
 
   std::string procName(const llvm::User &U);
   std::string procName(llvm::Function *F, const llvm::User &U);
@@ -147,6 +149,9 @@ public:
 
   const Expr *cmp(const llvm::CmpInst *I);
   const Expr *cmp(const llvm::ConstantExpr *CE);
+
+  const Expr *select(const llvm::SelectInst *I);
+  const Expr *select(const llvm::ConstantExpr *CE);
 
   const Expr *arg(llvm::Function *f, unsigned pos, llvm::Value *v);
   const Stmt *call(llvm::Function *f, const llvm::User &u);
