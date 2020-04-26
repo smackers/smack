@@ -8,7 +8,7 @@ use smack::*;
 fn main() {
   let mut sum = 0;
   let b = 7u64.nondet();
-  assume!(b < 5 && b > 1);
+  assume!(b > 2);
   for i in 0..b as u64 {
     sum += i;
   }
