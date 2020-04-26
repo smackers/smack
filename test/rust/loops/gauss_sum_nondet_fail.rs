@@ -2,7 +2,7 @@
 mod smack;
 use smack::*;
 
-// @flag --unroll=4
+// @flag --unroll=4 --time-limit=480
 // @expect error
 
 fn main() {
