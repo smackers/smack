@@ -257,8 +257,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
 
     # Adding .NET repository
-    wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    ${WGET} -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
     sudo dpkg -i packages-microsoft-prod.deb
+    rm -f packages-microsoft-prod.deb
     sudo apt-get update
 
     sudo apt-get install -y ${DEPENDENCIES}
@@ -327,7 +328,7 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   cd rust-nightly-x86_64-unknown-linux-gnu
   sudo ./install.sh --without=rust-docs
   cd ..
-  rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
+  rm -rf rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
   puts "Installed Rust"
 fi
 
