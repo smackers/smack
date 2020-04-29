@@ -471,19 +471,9 @@ def verify_bpl(args):
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/nologo", "/doModSetAnalysis"]
-    command += ["/proverOpt:O:AUTO_CONFIG=false"]
-    if not (args.bit_precise or args.float):
-      command += ["/proverOpt:O:smt.PHASE_SELECTION=0"]
-      command += ["/proverOpt:O:smt.RESTART_STRATEGY=0"]
-      command += ["/proverOpt:O:smt.RESTART_FACTOR=1.5"]
-      command += ["/proverOpt:O:smt.ARITH.RANDOM_INITIAL_VALUE=true"]
-      command += ["/proverOpt:O:smt.CASE_SPLIT=3"]
-      command += ["/proverOpt:O:smt.DELAY_UNITS=true"]
-    command += ["/proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]
-    command += ["/proverOpt:O:TYPE_CHECK=true"]
-    command += ["/proverOpt:O:smt.BV.REFLECT=true"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
+    command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
     if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
     if args.solver == 'cvc4':
@@ -499,19 +489,7 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
-    if args.memory_safety and not 'impls' in args.mem_mod:
-      command += ["/bopt:proverOpt:O:AUTO_CONFIG=false"]
-      if not (args.bit_precise or args.float):
-        command += ["/bopt:proverOpt:O:smt.PHASE_SELECTION=0"]
-        command += ["/bopt:proverOpt:O:smt.RESTART_STRATEGY=0"]
-        command += ["/bopt:proverOpt:O:smt.RESTART_FACTOR=1.5"]
-        command += ["/bopt:proverOpt:O:smt.ARITH.RANDOM_INITIAL_VALUE=true"]
-        command += ["/bopt:proverOpt:O:smt.CASE_SPLIT=3"]
-        command += ["/bopt:proverOpt:O:smt.DELAY_UNITS=true"]
-      command += ["/bopt:proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]
-      command += ["/bopt:proverOpt:O:TYPE_CHECK=true"]
-      command += ["/bopt:proverOpt:O:smt.BV.REFLECT=true"]
-
+    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
     if args.solver == 'cvc4':
       command += ["/bopt:proverOpt:SOLVER=cvc4"]
 
