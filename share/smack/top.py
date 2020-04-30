@@ -213,7 +213,7 @@ def arguments():
     help='back-end verification engine')
 
   verifier_group.add_argument('--solver',
-    choices=['z3', 'cvc4'], default='z3',
+    choices=['z3', 'cvc4', "yices2"], default='z3',
     help='back-end SMT solver')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -478,6 +478,8 @@ def verify_bpl(args):
       command += ["/loopUnroll:%d" % args.unroll]
     if args.solver == 'cvc4':
       command += ["/proverOpt:SOLVER=cvc4"]
+    if args.solver == 'yices2':
+      command += ["/proverOpt:SOLVER=Yices2", "/useArrayTheory"]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -492,6 +494,8 @@ def verify_bpl(args):
     command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
     if args.solver == 'cvc4':
       command += ["/bopt:proverOpt:SOLVER=cvc4"]
+    if args.solver == 'yices2':
+      command += ["/bopt:proverOpt:SOLVER=Yices2", "/bopt:useArrayTheory"]
 
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
