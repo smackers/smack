@@ -44,6 +44,8 @@ ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 DEPS_DIR="${ROOT_DIR}/smack-deps"
 Z3_DIR="${DEPS_DIR}/z3"
 CVC4_DIR="${DEPS_DIR}/cvc4"
+BOOGIE_DIR="${DEPS_DIR}/boogie"
+CORRAL_DIR="${DEPS_DIR}/corral"
 SYMBOOGLIX_DIR="${DEPS_DIR}/symbooglix"
 LOCKPWN_DIR="${DEPS_DIR}/lockpwn"
 LLVM_DIR="${DEPS_DIR}/llvm"
@@ -364,18 +366,26 @@ fi
 
 
 if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
-  puts "Installing Boogie"
-  dotnet tool install Boogie --global --version ${BOOGIE_VERSION}
-  puts "Installed Boogie"
-  echo export PATH=\"\$HOME/.dotnet/tools:\$PATH\" >> ${SMACKENV}
+  if [ ! -d "$BOOGIE_DIR" ] ; then
+    puts "Installing Boogie"
+    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION}
+    puts "Installed Boogie"
+  else
+    puts "Boogie already installed"
+  fi
+  echo export PATH=\"${BOOGIE_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
 
 if [ ${INSTALL_CORRAL} -eq 1 ] ; then
-  puts "Installing Corral"
-  dotnet tool install Corral --global --version ${CORRAL_VERSION}
-  puts "Installed Corral"
-  echo export PATH=\"\$HOME/.dotnet/tools:\$PATH\" >> ${SMACKENV}
+  if [ ! -d "$CORRAL_DIR" ] ; then
+    puts "Installing Corral"
+    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION}
+    puts "Installed Corral"
+  else
+    puts "Corral already installed"
+  fi
+  echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
 
