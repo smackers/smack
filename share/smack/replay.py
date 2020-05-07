@@ -41,7 +41,7 @@ def replay_error_trace(verifier_output, args):
       print("Error-trace replay failed.")
 
   except Exception as err:
-    print("Error-trace replay caught", err.message)
+    print("Error-trace replay caught", err)
 
   return False
 
@@ -51,7 +51,8 @@ def detect_missing_definitions(bc_file):
   try:
     try_command(['clang', bc_file])
   except Exception as err:
-    for line in err.message.split("\n"):
+    msg = repr(err).replace("\\n", "\n")
+    for line in msg.split("\n"):
       m = re.search(r'\"_(.*)\", referenced from:', line) or re.search(r'undefined reference to `(.*)\'', line)
       if m:
         missing.append(m.group(1))

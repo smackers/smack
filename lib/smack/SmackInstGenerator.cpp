@@ -16,7 +16,6 @@
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
 
-#include "dsa/DSNode.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 
@@ -616,15 +615,7 @@ void SmackInstGenerator::visitPHINode(llvm::PHINode &phi) {
 void SmackInstGenerator::visitSelectInst(llvm::SelectInst &i) {
   processInstruction(i);
   std::string x = naming->get(i);
-  const Expr *c = rep->expr(i.getCondition()),
-             *v1 = rep->expr(i.getTrueValue()),
-             *v2 = rep->expr(i.getFalseValue());
-
-  assert(!i.getCondition()->getType()->isVectorTy() &&
-         "Vector condition is not supported.");
-  emit(Stmt::assign(
-      Expr::id(x),
-      Expr::ifThenElse(Expr::eq(c, rep->integerLit(1LL, 1)), v1, v2)));
+  emit(Stmt::assign(Expr::id(x), rep->select(&i)));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {

@@ -818,6 +818,9 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
       else if (CE->isCompare())
         return cmp(CE);
 
+      else if (CE->getOpcode() == Instruction::Select)
+        return select(CE);
+
       else {
         SDEBUG(errs() << "VALUE : " << *constant << "\n");
         llvm_unreachable("Constant expression of this type not supported.");
@@ -941,6 +944,24 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
                             integerLit(0ULL, 1));
   else
     return Expr::fn(fn, e1, e2);
+}
+
+const Expr *SmackRep::select(const llvm::SelectInst *I) {
+  return select(I->getCondition(), I->getTrueValue(), I->getFalseValue());
+}
+
+const Expr *SmackRep::select(const llvm::ConstantExpr *CE) {
+  return select(CE->getOperand(0), CE->getOperand(1), CE->getOperand(2));
+}
+
+const Expr *SmackRep::select(const llvm::Value *condVal,
+                             const llvm::Value *trueVal,
+                             const llvm::Value *falseVal) {
+  const Expr *c = expr(condVal), *v1 = expr(trueVal), *v2 = expr(falseVal);
+
+  assert(!condVal->getType()->isVectorTy() &&
+         "Vector condition is not supported.");
+  return Expr::ifThenElse(Expr::eq(c, integerLit(1LL, 1)), v1, v2);
 }
 
 bool SmackRep::isContractExpr(const llvm::Value *V) const {

@@ -4,6 +4,8 @@
 #include "pthread.h"
 #include "smack.h"
 
+void *__SMACK_PthreadReturn[SMACK_MAX_THREADS];
+
 void __SMACK_init_tidtype() {
 #ifdef BIT_PRECISE
   __SMACK_top_decl("type $tidtype = bv32;");
@@ -16,31 +18,25 @@ void __SMACK_init_func_corral_primitives() {
   // Declare these, so bpl parsing doesn't complain
   __SMACK_top_decl("procedure corral_getThreadID() returns (x:$tidtype);");
   __SMACK_top_decl("procedure corral_getChildThreadID() returns (x:$tidtype);");
-  __SMACK_top_decl("procedure corral_atomic_begin();");
-  __SMACK_top_decl("procedure corral_atomic_end();");
 }
 
 void __SMACK_init_func_thread() {
   // Array and possible statuses for tracking pthreads
-  __SMACK_top_decl("//dim0=tid, dim1= idx 0 gets status, 1 gets return value");
-  __SMACK_top_decl("var $pthreadStatus: [$tidtype][int]int;");
+  __SMACK_top_decl("var $pthreadStatus: [$tidtype]int;");
   __SMACK_top_decl("const unique $pthread_uninitialized: int;");
   __SMACK_top_decl("const unique $pthread_initialized: int;");
   __SMACK_top_decl("const unique $pthread_waiting: int;");
   __SMACK_top_decl("const unique $pthread_running: int;");
   __SMACK_top_decl("const unique $pthread_stopped: int;");
   // Initialize this array so all threads begin as uninitialized
-  __SMACK_code("assume (forall i:$tidtype :: $pthreadStatus[i][0] == "
+  __SMACK_code("assume (forall i:$tidtype :: $pthreadStatus[i] == "
                "$pthread_uninitialized);");
 }
-
-void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
-
-void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
 
 pthread_t pthread_self(void) {
   int tmp_tid = __VERIFIER_nondet_int();
   __SMACK_code("call @ := corral_getThreadID();", tmp_tid);
+  __VERIFIER_assume(tmp_tid < SMACK_MAX_THREADS);
 
   // Print actual tid to SMACK traces
   int actual_tid = tmp_tid;
@@ -64,14 +60,10 @@ int pthread_join(pthread_t __th, void **__thread_return) {
     return 35; // This is EDEADLK
 
   // Wait for the thread to terminate
-  __SMACK_code("assume $pthreadStatus[@][0] == $pthread_stopped;", __th);
-
-  // Get the thread's return value
-  void *tmp_thread_return_pointer = (void *)__VERIFIER_nondet_long();
-  __SMACK_code("@ := $pthreadStatus[@][1];", tmp_thread_return_pointer, __th);
+  __SMACK_code("assume $pthreadStatus[@] == $pthread_stopped;", __th);
 
   if (__thread_return) {
-    *__thread_return = tmp_thread_return_pointer;
+    *__thread_return = __SMACK_PthreadReturn[__th];
 
     // Print return pointer value to SMACK traces
     void *actual_thread_return_pointer = *__thread_return;
@@ -91,9 +83,9 @@ void pthread_exit(void *retval) {
 
 // Ensure exit hasn't already been called
 #ifndef DISABLE_PTHREAD_ASSERTS
-  __SMACK_code("assert $pthreadStatus[@][0] == $pthread_running;", tid);
+  __SMACK_code("assert $pthreadStatus[@] == $pthread_running;", tid);
 #endif
-  __SMACK_code("$pthreadStatus[@][1] := @;", tid, retval);
+  __SMACK_PthreadReturn[tid] = retval;
 
   // Set return pointer value for display in SMACK traces
   void *pthread_return_pointer = retval;
@@ -267,18 +259,16 @@ void __call_wrapper(pthread_t *__newthread, void *(*__start_routine)(void *),
 
   // Cycle through thread statuses properly, as thread is started, run,
   // and stopped.
-  __SMACK_code("$pthreadStatus[@][0] := $pthread_waiting;", ctid);
-  __SMACK_code("$pthreadStatus[@][0] := $pthread_running;", ctid);
+  __SMACK_code("$pthreadStatus[@] := $pthread_waiting;", ctid);
+  __SMACK_code("$pthreadStatus[@] := $pthread_running;", ctid);
   __start_routine(__arg);
-  __SMACK_code("$pthreadStatus[@][0] := $pthread_stopped;", ctid);
+  __SMACK_code("$pthreadStatus[@] := $pthread_stopped;", ctid);
 }
 
 int pthread_create(pthread_t *__newthread, __const pthread_attr_t *__attr,
                    void *(*__start_routine)(void *), void *__arg) {
 
-  pthread_t tmp = __VERIFIER_nondet_int();
-
-  // Add unreachable C-level call to __call_wrapper, so llvm sees
+  // Add unreachable C-level call to __call_wrapper, so LLVM sees
   // the call to __call_wrapper and performs DSA on it.
   int x = __VERIFIER_nondet_int();
   __VERIFIER_assume(x == 0);
@@ -287,7 +277,9 @@ int pthread_create(pthread_t *__newthread, __const pthread_attr_t *__attr,
 
   __SMACK_code("async call @(@, @, @);", __call_wrapper, __newthread,
                __start_routine, __arg);
+  pthread_t tmp = __VERIFIER_nondet_int();
   __SMACK_code("call @ := corral_getChildThreadID();", tmp);
+  __VERIFIER_assume(tmp < SMACK_MAX_THREADS);
   *__newthread = tmp;
 
   return 0;

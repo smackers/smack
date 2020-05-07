@@ -12,6 +12,7 @@
 # - LLVM
 # - Clang
 # - Mono
+# - Boost
 # - Z3
 # - Boogie
 # - Corral
@@ -22,16 +23,17 @@
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=1
+INSTALL_MONO=0 # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=1
 INSTALL_CVC4=1
-BUILD_BOOGIE=1
-BUILD_CORRAL=1
-BUILD_SYMBOOGLIX=1
-BUILD_LOCKPWN=1
+INSTALL_YICES2=1
+INSTALL_BOOGIE=1
+INSTALL_CORRAL=1
+BUILD_SYMBOOGLIX=0
+BUILD_LOCKPWN=0
 BUILD_SMACK=1
 TEST_SMACK=1
 BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
-BUILD_MONO=0 # mono is typically installed from packages (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=0
@@ -39,19 +41,20 @@ INSTALL_RUST=${INSTALL_RUST:-0}
 
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-ROOT="$( cd "${SMACK_DIR}" && cd .. && pwd )"
-Z3_DIR="${ROOT}/z3"
-CVC4_DIR="${ROOT}/cvc4"
-BOOGIE_DIR="${ROOT}/boogie"
-CORRAL_DIR="${ROOT}/corral"
-SYMBOOGLIX_DIR="${ROOT}/symbooglix"
-LOCKPWN_DIR="${ROOT}/lockpwn"
-MONO_DIR="${ROOT}/mono"
-LLVM_DIR="${ROOT}/llvm"
+ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
+DEPS_DIR="${ROOT_DIR}/smack-deps"
+Z3_DIR="${DEPS_DIR}/z3"
+CVC4_DIR="${DEPS_DIR}/cvc4"
+YICES2_DIR="${DEPS_DIR}/yices2"
+BOOGIE_DIR="${DEPS_DIR}/boogie"
+CORRAL_DIR="${DEPS_DIR}/corral"
+SYMBOOGLIX_DIR="${DEPS_DIR}/symbooglix"
+LOCKPWN_DIR="${DEPS_DIR}/lockpwn"
+LLVM_DIR="${DEPS_DIR}/llvm"
 
 source ${SMACK_DIR}/bin/versions
 
-SMACKENV=${ROOT}/smack.environment
+SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 
 # Install prefix -- system default is used if left unspecified
@@ -60,7 +63,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build"
+DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
 
 shopt -s extglob
 
@@ -183,43 +186,19 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-debian-8.10.zip"
-  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ mono-complete ca-certificates-mono make"
-  DEPENDENCIES+=" ncurses-devel zlib-devel"
-  ;;
-
-linux-@(ubuntu|neon)-14*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.10.zip"
+  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ make"
+  DEPENDENCIES+=" ncurses-devel"
   ;;
 
 linux-@(ubuntu|neon)-16*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
 linux-@(ubuntu|neon)-18*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev mono-complete ca-certificates-mono libz-dev libedit-dev"
-  ;;
-
-linux-ubuntu-12*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/Z3-${Z3_SHORT_VERSION}/z3-${Z3_FULL_VERSION}-x64-ubuntu-14.04.zip"
-  DEPENDENCIES+=" g++-4.8 autoconf automake bison flex libtool gettext gdb"
-  DEPENDENCIES+=" libglib2.0-dev libfontconfig1-dev libfreetype6-dev libxrender-dev"
-  DEPENDENCIES+=" libtiff-dev libjpeg-dev libgif-dev libpng-dev libcairo2-dev"
-  BUILD_LLVM=1
-  BUILD_MONO=1
-  INSTALL_PREFIX="/usr/local"
-  CONFIGURE_INSTALL_PREFIX="--prefix=${INSTALL_PREFIX}"
-  CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}"
-  ;;
-
-linux-cygwin*)
-  BUILD_LLVM=1
-  INSTALL_Z3=0
-  BUILD_BOOGIE=0
-  BUILD_CORRAL=0
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
 *)
@@ -258,12 +237,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-1[468]*)
+  linux-@(ubuntu|neon)-1[68]*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
-    14*)
-      UBUNTU_CODENAME="trusty"
-      ;;
     16*)
       UBUNTU_CODENAME="xenial"
       ;;
@@ -283,31 +259,19 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     # Adding LLVM repository
     ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
-    # Adding MONO repository
-    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-    sudo apt-get install -y apt-transport-https
-    echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+
+    # Adding .NET repository
+    ${WGET} -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    sudo dpkg -i packages-microsoft-prod.deb
+    rm -f packages-microsoft-prod.deb
     sudo apt-get update
+
     sudo apt-get install -y ${DEPENDENCIES}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 30
     sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 30
-    ;;
-
-  linux-ubuntu-12*)
-    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-    sudo add-apt-repository -y ppa:andykimpe/cmake
-    sudo apt-get update
-    sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
-    sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
-    sudo update-alternatives --config gcc
-    sudo update-alternatives --config g++
-    ;;
-
-  linux-cygwin*)
     ;;
 
   *)
@@ -320,37 +284,19 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
 fi
 
 
-if [ ${BUILD_MONO} -eq 1 ] ; then
-  puts "Building mono"
-
-  git clone git://github.com/mono/mono.git ${MONO_DIR}
-  cd ${MONO_DIR}
-  git checkout mono-${MONO_VERSION}
-  ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
-  make get-monolite-latest
-  make EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
-  sudo make install
-
-  # Install libgdiplus
-  cd ${MONO_DIR}
-  git clone git://github.com/mono/libgdiplus.git
-  cd libgdiplus
-  ./autogen.sh ${CONFIGURE_INSTALL_PREFIX}
-  make
-  sudo make install
-
-  if [[ ${INSTALL_PREFIX} ]] ; then
-    echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${INSTALL_PREFIX}/lib >> ${SMACKENV}
-    source ${SMACKENV}
-  fi
-
-  puts "Built mono"
+if [ ${INSTALL_MONO} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+  puts "Installing mono"
+  # Adding Mono repository
+  sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+  echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+  sudo apt-get update
+  sudo apt-get install -y mono-complete ca-certificates-mono
+  puts "Installed mono"
 fi
 
 
 if [ ${BUILD_LLVM} -eq 1 ] ; then
   puts "Building LLVM"
-
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
 
@@ -366,33 +312,30 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
   sudo make install
-
   puts "Built LLVM"
 fi
 
 
 if [ ${INSTALL_OBJECTIVEC} -eq 1 ] ; then
   puts "Installing Objective-C"
-
   # The version numbers here will have to change by OS
   sudo ln -s /usr/lib/gcc/x86_64-linux-gnu/4.8/include/objc /usr/local/include/objc
   echo ". /usr/share/GNUstep/Makefiles/GNUstep.sh" >> ${SMACKENV}
-
   puts "Installed Objective-C"
 fi
 
+
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
-
   ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
   tar xf rust.tar.gz
   cd rust-nightly-x86_64-unknown-linux-gnu
   sudo ./install.sh --without=rust-docs
   cd ..
-  rm -r rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
-
+  rm -rf rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
   puts "Installed Rust"
 fi
+
 
 if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
@@ -406,7 +349,9 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
   else
     puts "Z3 already installed"
   fi
+  echo export PATH=\"${Z3_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
+
 
 if [ ${INSTALL_CVC4} -eq 1 ] ; then
   if [ ! -d "$CVC4_DIR" ] ; then
@@ -418,51 +363,52 @@ if [ ${INSTALL_CVC4} -eq 1 ] ; then
   else
     puts "CVC4 already installed"
   fi
+  echo export PATH=\"${CVC4_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
-if [ ${BUILD_BOOGIE} -eq 1 ] ; then
-  if ! upToDate $BOOGIE_DIR $BOOGIE_COMMIT ; then
-    puts "Building Boogie"
-    if [ ! -d "$BOOGIE_DIR/.git" ] ; then
-      git clone https://github.com/boogie-org/boogie.git ${BOOGIE_DIR}
-    fi
-    cd ${BOOGIE_DIR}
-    git reset --hard ${BOOGIE_COMMIT}
-    cd ${BOOGIE_DIR}/Source
-    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-    mono ./nuget.exe restore Boogie.sln
-    rm -rf /tmp/nuget/
-    msbuild Boogie.sln /p:Configuration=Release
-    ln -sf ${Z3_DIR}/bin/z3 ${BOOGIE_DIR}/Binaries/z3.exe
-    ln -sf ${CVC4_DIR}/cvc4 ${BOOGIE_DIR}/Binaries/cvc4.exe
-    puts "Built Boogie"
+
+if [ ${INSTALL_YICES2} -eq 1 ] ; then
+  if [ ! -d "$YICES2_DIR" ] ; then
+    puts "Installing Yices2"
+    mkdir -p ${YICES2_DIR}
+    ${WGET} https://yices.csl.sri.com/releases/${YICES2_VERSION}/yices-${YICES2_VERSION}-x86_64-pc-linux-gnu-static-gmp.tar.gz -O yices2-downloaded.tgz
+    tar xf yices2-downloaded.tgz
+    cd yices-${YICES2_VERSION}
+    ./install-yices ${YICES2_DIR}
+    cd ..
+    rm -rf yices2-downloaded.tgz yices-${YICES2_VERSION}
+    ln -s ${YICES2_DIR}/bin/yices-smt2 ${YICES2_DIR}/bin/yices2
+    puts "Installed Yices2"
   else
-    puts "Boogie already built"
+    puts "Yices2 already installed"
   fi
-  echo export PATH=\"${BOOGIE_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
+  echo export PATH=\"${YICES2_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 
-if [ ${BUILD_CORRAL} -eq 1 ] ; then
-  if ! upToDate $CORRAL_DIR $CORRAL_COMMIT ; then
-    puts "Building Corral"
-    if [ ! -d "$CORRAL_DIR/.git" ] ; then
-      git clone https://github.com/boogie-org/corral.git ${CORRAL_DIR}
-    fi
-    cd ${CORRAL_DIR}
-    git reset --hard ${CORRAL_COMMIT}
-    git submodule init
-    git submodule update
-    msbuild cba.sln /p:Configuration=Release
-    ln -sf ${Z3_DIR}/bin/z3 ${CORRAL_DIR}/bin/Release/z3.exe
-    ln -sf ${CVC4_DIR}/cvc4 ${CORRAL_DIR}/bin/Release/cvc4.exe
-    sed -i.debug -e's/Debug/Release/' ${CORRAL_DIR}/bin/corral
-    puts "Built Corral"
+if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
+  if [ ! -d "$BOOGIE_DIR" ] ; then
+    puts "Installing Boogie"
+    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION}
+    puts "Installed Boogie"
   else
-    puts "Corral already built"
+    puts "Boogie already installed"
   fi
-  echo export PATH=\"${CORRAL_DIR}/bin:\$PATH\" >> ${SMACKENV}
+  echo export PATH=\"${BOOGIE_DIR}:\$PATH\" >> ${SMACKENV}
 fi
+
+
+if [ ${INSTALL_CORRAL} -eq 1 ] ; then
+  if [ ! -d "$CORRAL_DIR" ] ; then
+    puts "Installing Corral"
+    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION}
+    puts "Installed Corral"
+  else
+    puts "Corral already installed"
+  fi
+  echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
+fi
+
 
 if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
@@ -486,6 +432,7 @@ if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
   echo export PATH=\"${SYMBOOGLIX_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
+
 if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
     puts "Building lockpwn"
@@ -503,8 +450,13 @@ if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
   echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
+
 if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
+
+  cd ${SMACK_DIR}
+  git submodule init
+  git submodule update
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build

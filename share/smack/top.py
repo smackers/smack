@@ -15,7 +15,7 @@ from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs 
 
-VERSION = '2.4.0'
+VERSION = '2.4.1'
 
 def results(args):
   """A dictionary of the result output messages."""
@@ -167,6 +167,9 @@ def arguments():
   translate_group.add_argument('--pthread', action='store_true', default=False,
     help='enable support for pthread programs')
 
+  translate_group.add_argument('--max-threads', default='32', type=int,
+    help='bound on the number of threads [default: %(default)s]')
+
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='model non-pointer values as bit vectors')
 
@@ -213,7 +216,7 @@ def arguments():
     help='back-end verification engine')
 
   verifier_group.add_argument('--solver',
-    choices=['z3', 'cvc4'], default='z3',
+    choices=['z3', 'cvc4', "yices2"], default='z3',
     help='back-end SMT solver')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -245,7 +248,7 @@ def arguments():
     help='enable contracts-based modular deductive verification (uses Boogie)')
 
   verifier_group.add_argument('--replay', action="store_true", default=False,
-    help='enable reply of error trace with test harness.')
+    help='enable replay of error trace with test harness.')
 
   plugins_group = parser.add_argument_group('plugins')
 
@@ -339,6 +342,9 @@ def llvm_to_bpl(args):
 
   cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
   cmd += ['-warn-type', args.warn]
+  cmd += ['-sea-dsa=ci']
+  # This flag can lead to unsoundness in Rust regressions.
+  #cmd += ['-sea-dsa-type-aware']
   if sys.stdout.isatty(): cmd += ['-colored-warnings']
   cmd += ['-source-loc-syms']
   for ep in args.entry_points:
@@ -467,13 +473,16 @@ def verify_bpl(args):
   elif args.verifier == 'boogie' or args.modular:
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/nologo", "/noinfer", "/doModSetAnalysis"]
+    command += ["/nologo", "/doModSetAnalysis"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
+    command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
     if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
     if args.solver == 'cvc4':
       command += ["/proverOpt:SOLVER=cvc4"]
+    if args.solver == 'yices2':
+      command += ["/proverOpt:SOLVER=Yices2", "/useArrayTheory"]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -485,8 +494,11 @@ def verify_bpl(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
+    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
     if args.solver == 'cvc4':
       command += ["/bopt:proverOpt:SOLVER=cvc4"]
+    if args.solver == 'yices2':
+      command += ["/bopt:proverOpt:SOLVER=Yices2", "/bopt:useArrayTheory"]
 
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
@@ -495,11 +507,6 @@ def verify_bpl(args):
     command += ["--entry-points=%s" % ",".join(args.entry_points)]
     command += ["--timeout=%d" % args.time_limit]
     command += ["--max-loop-depth=%d" % args.unroll]
-
-  if (args.bit_precise or args.float) and args.verifier != 'symbooglix':
-    x = "bopt:" if args.verifier != 'boogie' else ""
-    command += ["/%sproverOpt:OPTIMIZE_FOR_BV=true" % x]
-    command += ["/%sboolControlVC" % x]
 
   if args.verifier_options:
     command += args.verifier_options.split()

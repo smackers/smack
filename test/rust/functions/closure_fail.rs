@@ -2,7 +2,6 @@
 mod smack;
 use smack::*;
 
-// @flag --no-memory-splitting
 // @expect error
 
 fn call_with_one<F>(mut some_closure: F) -> ()

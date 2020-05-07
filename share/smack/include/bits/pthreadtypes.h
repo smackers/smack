@@ -39,5 +39,13 @@ typedef struct {
 } pthread_cond_t;
 
 typedef int pthread_condattr_t;
+typedef int pthread_once_t;
+typedef int pthread_key_t;
+typedef int pthread_rwlock_t;
+typedef int pthread_rwlockattr_t;
+
+struct sched_param {
+  int dummy;
+};
 
 #endif

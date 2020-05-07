@@ -216,6 +216,7 @@ def verify_bpl_svcomp(args):
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
+  corral_command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
 
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
@@ -320,12 +321,7 @@ def verify_bpl_svcomp(args):
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
-    corral_command += ["/bopt:z3opt:smt.relevancy=0"]
-
-  if args.bit_precise:
-    heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
-    corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
-    corral_command += ["/bopt:boolControlVC"]
+    corral_command += ["/bopt:proverOpt:O:smt.relevancy=0"]
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
