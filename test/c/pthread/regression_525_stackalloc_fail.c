@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// @expect verified
+// @expect error
 
 // see: https://github.com/smackers/smack/issues/525
 
@@ -43,6 +43,6 @@ int main(void) {
   uint64_t v = (size_t)s.x.value;
   atomic_store_ptr(&s.y, NULL);
   uint64_t w = (size_t)s.x.value;
-  assert(v == w);
+  assert(v != w);
   return 0;
 }

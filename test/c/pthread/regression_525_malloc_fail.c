@@ -2,9 +2,9 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-// @expect verified
-// see: https://github.com/smackers/smack/issues/555
-// https://github.com/smackers/smack/issues/525
+// @expect error
+
+// see: https://github.com/smackers/smack/issues/525
 
 pthread_t tid1;
 pthread_t tid2;
@@ -34,8 +34,8 @@ int main(void) {
   int *tid2_retval;
   pthread_join(tid1, (void **)&tid1_retval);
   pthread_join(tid2, (void **)&tid2_retval);
-  assert(!tid1_retval || *tid1_retval == 1);
-  assert(!tid2_retval || *tid2_retval == 2);
+  assert(!tid1_retval && *tid1_retval == 1);
+  assert(!tid2_retval && *tid2_retval == 2);
   if (tid1_retval)
     free(tid1_retval);
   if (tid2_retval)

@@ -8,7 +8,6 @@
 
 // @expect verified
 
-// see: https://github.com/smackers/smack/issues/555
 int x = 1;
 
 typedef struct pair {
@@ -30,7 +29,7 @@ int main(void) {
   pair *ret;
 
   pthread_create(&t, 0, t1, 0);
-  pthread_join(t, &ret);
+  pthread_join(t, (void **)&ret);
   assert(x == 2);
   assert(ret->x == 3);
   assert(ret->y == 4);

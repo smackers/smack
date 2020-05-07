@@ -13,13 +13,11 @@ void *t1(void *arg) {
 
   // Should never run this line, since called pthread_exit
   pthread_exit((void *)6);
+  return 0;
 }
 
-int main() {
-
+int main(void) {
   pthread_t t;
-
-  int a;
   void *ret;
 
   pthread_create(&t, 0, t1, 0);

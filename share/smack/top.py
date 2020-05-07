@@ -167,6 +167,9 @@ def arguments():
   translate_group.add_argument('--pthread', action='store_true', default=False,
     help='enable support for pthread programs')
 
+  translate_group.add_argument('--max-threads', default='32', type=int,
+    help='bound on the number of threads [default: %(default)s]')
+
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='model non-pointer values as bit vectors')
 
