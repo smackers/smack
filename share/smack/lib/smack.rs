@@ -16,13 +16,18 @@ extern {
 }
 
 
-#[cfg(verifier = "smack")]
 #[macro_export]
-macro_rules! assert {
+macro_rules! verifier_assert {
   ( $cond:expr ) =>
     (
       unsafe { __VERIFIER_assert($cond as i32); };
     )
+}
+
+#[cfg(verifier = "smack")]
+#[macro_export]
+macro_rules! assert {
+  ( $cond:expr ) => ( verifier_assert!($cond); )
 }
 
 #[cfg(verifier = "smack")]
@@ -38,7 +43,7 @@ macro_rules! assert_neq {
 }
 
 #[macro_export]
-macro_rules! assume {
+macro_rules! verifier_assume {
   ( $cond:expr ) =>
     (
       #[cfg(verifier = "smack")]
@@ -50,33 +55,38 @@ macro_rules! assume {
 }
 
 #[macro_export]
-macro_rules! nondet {
+macro_rules! assume {
+  ( $cond:expr ) => ( verifier_assume!($cond); )
+}
+
+#[macro_export]
+macro_rules! verifier_nondet {
   ($e:expr) =>
     (
       #[cfg(verifier = "smack")]
-      $e.nondet()
+      $e.verifier_nondet()
 
       #[cfg(not(verifier = "smack"))]
       $e
     )
 }
 
-pub trait NonDet {
-  fn nondet(self) -> Self;
+pub trait VerifierNonDet {
+  fn verifier_nondet(self) -> Self;
 }
 
 #[macro_export]
-macro_rules! make_nondet {
+macro_rules! make_verifier_nondet {
   ($typ:ident, $nondet:ident) =>
     (
-      impl NonDet for $typ {
+      impl VerifierNonDet for $typ {
         #[cfg(verifier = "smack")]
-        fn nondet(self) -> Self {
+        fn verifier_nondet(self) -> Self {
           unsafe { $nondet() as Self }
         }
 
         #[cfg(not(verifier = "smack"))]
-        fn nondet(self) -> Self {
+        fn verifier_nondet(self) -> Self {
           self
         }
       }
@@ -84,16 +94,16 @@ macro_rules! make_nondet {
 }
 
 /* Instantiate nondet for all integer types. */
-make_nondet!(i8, __VERIFIER_nondet_signed_char);
-make_nondet!(u8, __VERIFIER_nondet_unsigned_char);
-make_nondet!(i16, __VERIFIER_nondet_signed_short);
-make_nondet!(u16, __VERIFIER_nondet_unsigned_short);
-make_nondet!(i32, __VERIFIER_nondet_signed_int);
-make_nondet!(u32, __VERIFIER_nondet_unsigned_int);
-make_nondet!(i64, __VERIFIER_nondet_signed_long_long);
-make_nondet!(u64, __VERIFIER_nondet_unsigned_long_long);
-make_nondet!(isize, __VERIFIER_nondet_signed_long_long);
-make_nondet!(usize, __VERIFIER_nondet_unsigned_long_long);
+make_verifier_nondet!(i8, __VERIFIER_nondet_signed_char);
+make_verifier_nondet!(u8, __VERIFIER_nondet_unsigned_char);
+make_verifier_nondet!(i16, __VERIFIER_nondet_signed_short);
+make_verifier_nondet!(u16, __VERIFIER_nondet_unsigned_short);
+make_verifier_nondet!(i32, __VERIFIER_nondet_signed_int);
+make_verifier_nondet!(u32, __VERIFIER_nondet_unsigned_int);
+make_verifier_nondet!(i64, __VERIFIER_nondet_signed_long_long);
+make_verifier_nondet!(u64, __VERIFIER_nondet_unsigned_long_long);
+make_verifier_nondet!(isize, __VERIFIER_nondet_signed_long_long);
+make_verifier_nondet!(usize, __VERIFIER_nondet_unsigned_long_long);
 
 
 #[cfg(not(verifier = "smack"))]

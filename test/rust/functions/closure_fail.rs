@@ -11,7 +11,7 @@ fn call_with_one<F>(mut some_closure: F) -> ()
 }
 
 fn main() {
-  let mut num = 5i32.nondet();
+  let mut num = 5i32.verifier_nondet();
   let old_num = num;
   {
     let mut add_num = |x: i32| num += x;
