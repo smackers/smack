@@ -1,8 +1,8 @@
+skip: false
+time-limit: 180
+memory-limit: 450
 verifiers: [corral, boogie]
 memory: [no-reuse-impls, no-reuse, reuse]
-time-limit: 120
-memory-limit: 450
 flags: [--unroll=2]
 checkbpl: []
 checkout: []
-skip: false
