@@ -474,8 +474,10 @@ def verify_bpl(args):
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/nologo", "/doModSetAnalysis"]
+    command += ["/useArrayTheory"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
+    command += ["/proverOpt:O:smt.array.extensional=false"]
     command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
     if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
