@@ -1,1 +1,1 @@
-verifiers: [corral]
+flags: [--unroll=6]

@@ -2,7 +2,6 @@
 mod smack;
 use smack::*;
 
-// @flag --unroll=10
 // @expect error
 
 fn fac(n: u64, acc: u64) -> u64 {

@@ -2,7 +2,6 @@
 mod smack;
 use smack::*;
 
-// @flag --unroll=10
 // @expect verified
 
 fn fib(x: u64) -> u64 {
