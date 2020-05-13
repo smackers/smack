@@ -483,8 +483,8 @@ def verify_bpl(args):
       command += ["/loopUnroll:%d" % args.unroll]
     if args.solver == 'cvc4':
       command += ["/proverOpt:SOLVER=cvc4"]
-    if args.solver == 'yices2':
-      command += ["/proverOpt:SOLVER=Yices2", "/useArrayTheory"]
+    elif args.solver == 'yices2':
+      command += ["/proverOpt:SOLVER=Yices2"]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -499,8 +499,8 @@ def verify_bpl(args):
     command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
     if args.solver == 'cvc4':
       command += ["/bopt:proverOpt:SOLVER=cvc4"]
-    if args.solver == 'yices2':
-      command += ["/bopt:proverOpt:SOLVER=Yices2", "/bopt:useArrayTheory"]
+    elif args.solver == 'yices2':
+      command += ["/bopt:proverOpt:SOLVER=Yices2"]
 
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
