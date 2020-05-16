@@ -47,10 +47,10 @@ See below for system requirements, installation, usage, and everything else.
 
 ### Acknowledgements
 
-SMACK project is partially supported by NSF award CCF 1346756 and Microsoft
-Research SEIF award. We also rely on University of Utah's
-[Emulab](http://www.emulab.net/) infrastructure for extensive benchmarking of
-SMACK.
+SMACK project has been partially supported by funding from the National Science
+Foundation, VMware, and Microsoft Research. We also rely on University of
+Utah's [Emulab](http://www.emulab.net/) infrastructure for extensive
+benchmarking of SMACK.
 
 
 ### Table of Contents
