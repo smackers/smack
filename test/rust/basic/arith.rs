@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect verified
@@ -11,27 +11,27 @@ fn main() {
     let b: u32 = 3;
     {
       let c = a + b;
-      assert!(c == 5);
+      smack::assert!(c == 5);
     }
     {
       let c = a * b;
-      assert!(c == 6);
+      smack::assert!(c == 6);
     }
     {
       let c = b - a;
-      assert!(c == 1);
+      smack::assert!(c == 1);
     }
     {
       let c = a % b;
-      assert!(c == 2);
+      smack::assert!(c == 2);
       let d = b % a;
-      assert!(d == 1);
+      smack::assert!(d == 1);
     }
     {
       let c = a / b;
-      assert!(c == 0);
+      smack::assert!(c == 0);
       let d = b / a;
-      assert!(d == 1);
+      smack::assert!(d == 1);
     }
   }
   // signed
@@ -40,15 +40,15 @@ fn main() {
     let b: i32 = 5;
     {
       let c = a + b;
-      assert!(c == 2);
+      smack::assert!(c == 2);
     }
     {
       let c = a * b;
-      assert!(c == -15);
+      smack::assert!(c == -15);
     }
     {
       let c = b - a;
-      assert!(c == 8);
+      smack::assert!(c == 8);
     }
   }
 }

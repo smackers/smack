@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error

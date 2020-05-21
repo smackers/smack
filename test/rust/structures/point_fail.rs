@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -47,5 +47,5 @@ fn main() {
   let a = Point::new(w,x);
   let b = Point::new(y,z);
   let c = a + b;
-  assert!(c != Point::new(w+y,x+z));
+  smack::assert!(c != Point::new(w+y,x+z));
 }

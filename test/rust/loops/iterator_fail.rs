@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @flag --unroll=10
@@ -18,5 +18,5 @@ fn main() {
   for i in 1..n+1 as u64 {
     a *= i;
   }
-  assert!(a != fac(n)); // a should equal 6!
+  smack::assert!(a != fac(n)); // a should equal 6!
 }
