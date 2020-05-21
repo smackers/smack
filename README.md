@@ -1,5 +1,5 @@
 
-[![License][https://img.shields.io/github/license/smackers/smack?color=blue]](LICENSE)
+[![License](https://img.shields.io/github/license/smackers/smack?color=blue)](LICENSE)
 [![Build Status](https://travis-ci.com/smackers/smack.svg?branch=master)](https://travis-ci.com/smackers/smack)
 [![Build Status](https://travis-ci.com/smackers/smack.svg?branch=develop)](https://travis-ci.com/smackers/smack)
 
