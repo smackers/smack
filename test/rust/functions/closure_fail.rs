@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -19,5 +19,5 @@ fn main() {
     add_num(5);
     call_with_one(&mut add_num);
   }
-  assert!(old_num + 6 != num); // Should be old_num + 6
+  smack::assert!(old_num + 6 != num); // Should be old_num + 6
 }

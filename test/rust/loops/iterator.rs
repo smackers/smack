@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @flag --unroll=4
@@ -16,9 +16,9 @@ fn fac(n: u64) -> u64 {
 fn main() {
   let mut a = 1; 
   let n = 6u64.verifier_nondet();
-  assume!(n < 5);
+  smack::assume!(n < 5);
   for i in 1..n+1 as u64 {
     a *= i;
   }
-  assert!(a == fac(n)); // a == 6!
+  smack::assert!(a == fac(n)); // a == 6!
 }

@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -13,5 +13,5 @@ fn fac(n: u64, acc: u64) -> u64 {
 
 fn main() {
    let x = fac(5, 1);
-   assert!(x != 120);
+   smack::assert!(x != 120);
 }

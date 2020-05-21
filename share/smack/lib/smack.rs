@@ -1,3 +1,5 @@
+#![crate_type = "staticlib"]
+
 #[cfg(verifier = "smack")]
 extern {
   pub fn __VERIFIER_assert(x: i32);
@@ -33,13 +35,13 @@ macro_rules! assert {
 #[cfg(verifier = "smack")]
 #[macro_export]
 macro_rules! assert_eq {
-  ( $lhs:expr, $rhs:expr ) => ( assert!($lhs == $rhs); )
+  ( $lhs:expr, $rhs:expr ) => ( smack::assert!($lhs == $rhs); )
 }
 
 #[cfg(verifier = "smack")]
 #[macro_export]
 macro_rules! assert_neq {
-  ( $lhs:expr, $rhs:expr ) => ( assert!($lhs != $rhs); )
+  ( $lhs:expr, $rhs:expr ) => ( smack::assert!($lhs != $rhs); )
 }
 
 #[macro_export]
