@@ -44,10 +44,7 @@ licenses, and/or restrictions:
 
 Program             Directories           License
 -------             -----------           -------
-poolalloc           include/assistDS      lib/DSA/LICENSE
-                    include/dsa
-                    lib/AssistDS
-                    lib/DSA
+sea-dsa             sea-dsa               sea-dsa/license.txt
 run-clang-format    format                format/LICENSE
 
 In addition, a binary distribution of SMACK contains at least the following
