@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -36,19 +36,19 @@ fn swapem<T, U: S<T>>(s: U) -> U {
 }
 
 fn main() {
-  let x2 = 7i64.nondet();
-  let y2 = 8i64.nondet();
-  let x3 = 1i64.nondet();
-  let y3 = 2i64.nondet();
-  let z3 = 3i64.nondet();
+  let x2 = 7i64.verifier_nondet();
+  let y2 = 8i64.verifier_nondet();
+  let x3 = 1i64.verifier_nondet();
+  let y3 = 2i64.verifier_nondet();
+  let z3 = 3i64.verifier_nondet();
   let p2 = Point::<i64>{x: x2, y: y2};
   let p3 = Point3::<i64>{x: x3, y: y3, z: z3};
 
   let q2 = swapem(p2);
   let q3 = swapem(p3);
-  assert!(q2.x == y2);
-  assert!(q2.y == x2);
-  assert!(q3.x == y3);
-  assert!(q3.y == z3);
-  assert!(q3.z != x3);
+  smack::assert!(q2.x == y2);
+  smack::assert!(q2.y == x2);
+  smack::assert!(q3.x == y3);
+  smack::assert!(q3.y == z3);
+  smack::assert!(q3.z != x3);
 }

@@ -19,7 +19,7 @@ might have some expertise in Objective-C and/or Swift. And you could
 even base the project around verifying your own iPhone app's code.
 
 3. Try to use and extend SMACK to verify some of the example from the
-annual [Verified Software Competition (VSCOMP)](http://vscomp.org/).
+annual [VerifyThis Competition](http://verifythis.ethz.ch).
 SMACK already has a rudimentary support for writing program contracts,
 but that would probably have to be extended.
 

@@ -25,7 +25,8 @@
 INSTALL_DEPENDENCIES=1
 INSTALL_MONO=0 # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=1
-INSTALL_CVC4=1
+INSTALL_CVC4=0
+INSTALL_YICES2=0
 INSTALL_BOOGIE=1
 INSTALL_CORRAL=1
 BUILD_SYMBOOGLIX=0
@@ -44,6 +45,7 @@ ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 DEPS_DIR="${ROOT_DIR}/smack-deps"
 Z3_DIR="${DEPS_DIR}/z3"
 CVC4_DIR="${DEPS_DIR}/cvc4"
+YICES2_DIR="${DEPS_DIR}/yices2"
 BOOGIE_DIR="${DEPS_DIR}/boogie"
 CORRAL_DIR="${DEPS_DIR}/corral"
 SYMBOOGLIX_DIR="${DEPS_DIR}/symbooglix"
@@ -362,6 +364,25 @@ if [ ${INSTALL_CVC4} -eq 1 ] ; then
     puts "CVC4 already installed"
   fi
   echo export PATH=\"${CVC4_DIR}:\$PATH\" >> ${SMACKENV}
+fi
+
+
+if [ ${INSTALL_YICES2} -eq 1 ] ; then
+  if [ ! -d "$YICES2_DIR" ] ; then
+    puts "Installing Yices2"
+    mkdir -p ${YICES2_DIR}
+    ${WGET} https://yices.csl.sri.com/releases/${YICES2_VERSION}/yices-${YICES2_VERSION}-x86_64-pc-linux-gnu-static-gmp.tar.gz -O yices2-downloaded.tgz
+    tar xf yices2-downloaded.tgz
+    cd yices-${YICES2_VERSION}
+    ./install-yices ${YICES2_DIR}
+    cd ..
+    rm -rf yices2-downloaded.tgz yices-${YICES2_VERSION}
+    ln -s ${YICES2_DIR}/bin/yices-smt2 ${YICES2_DIR}/bin/yices2
+    puts "Installed Yices2"
+  else
+    puts "Yices2 already installed"
+  fi
+  echo export PATH=\"${YICES2_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 

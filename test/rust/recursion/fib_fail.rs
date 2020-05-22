@@ -1,8 +1,7 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
-// @flag --unroll=10
 // @expect error
 
 fn fib(x: u64) -> u64 {
@@ -15,5 +14,5 @@ fn fib(x: u64) -> u64 {
 
 fn main() {
   let x = fib(6);
-  assert!(x != 13);
+  smack::assert!(x != 13);
 }

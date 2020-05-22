@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -7,5 +7,5 @@ use smack::*;
 fn main() {
   let a = 2;
   let b = 3;
-  assert!(b*a != 6);
+  smack::assert!(b*a != 6);
 }

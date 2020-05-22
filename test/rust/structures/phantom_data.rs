@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect verified
@@ -19,5 +19,5 @@ struct S<T> {
 fn main() {
   let mut x = S::<u64>{ phantom: X { x: 7, phantom: PhantomData }, data: 4 };
   x.data += 1;
-  assert!(x.data == 5);
+  smack::assert!(x.data == 5);
 }

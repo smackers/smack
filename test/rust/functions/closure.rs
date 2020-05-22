@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect verified
@@ -11,7 +11,7 @@ fn call_with_one<F>(mut some_closure: F) -> ()
 }
 
 fn main() {
-  let mut num = 5i32.nondet();
+  let mut num = 5i32.verifier_nondet();
   let original_num = num;
   {
     let mut add_num = |x: i32| num += x;
@@ -19,5 +19,5 @@ fn main() {
     add_num(5);
     call_with_one(&mut add_num);
   }
-  assert_eq!(original_num + 6, num);
+  smack::assert_eq!(original_num + 6, num);
 }

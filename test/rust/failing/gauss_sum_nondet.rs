@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @flag --unroll=4 --time-limit=480
@@ -7,10 +7,10 @@ use smack::*;
 
 fn main() {
   let mut sum = 0;
-  let b = 7u64.nondet();
-  assume!(b > 2);
+  let b = 7u64.verifier_nondet();
+  smack::assume!(b > 2);
   for i in 0..b as u64 {
     sum += i;
   }
-  assert!(2*sum == b*(b-1));
+  smack::assert!(2*sum == b*(b-1));
 }

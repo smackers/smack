@@ -1,1 +1,2 @@
+skip: ok
 verifiers: [boogie]

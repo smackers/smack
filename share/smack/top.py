@@ -167,6 +167,9 @@ def arguments():
   translate_group.add_argument('--pthread', action='store_true', default=False,
     help='enable support for pthread programs')
 
+  translate_group.add_argument('--max-threads', default='32', type=int,
+    help='bound on the number of threads [default: %(default)s]')
+
   translate_group.add_argument('--bit-precise', action="store_true", default=False,
     help='model non-pointer values as bit vectors')
 
@@ -213,7 +216,7 @@ def arguments():
     help='back-end verification engine')
 
   verifier_group.add_argument('--solver',
-    choices=['z3', 'cvc4'], default='z3',
+    choices=['z3', 'cvc4', "yices2"], default='z3',
     help='back-end SMT solver')
 
   verifier_group.add_argument('--unroll', metavar='N', default='1',
@@ -471,13 +474,17 @@ def verify_bpl(args):
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/nologo", "/doModSetAnalysis"]
+    command += ["/useArrayTheory"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
+    command += ["/proverOpt:O:smt.array.extensional=false"]
     command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
     if not args.modular:
       command += ["/loopUnroll:%d" % args.unroll]
     if args.solver == 'cvc4':
       command += ["/proverOpt:SOLVER=cvc4"]
+    elif args.solver == 'yices2':
+      command += ["/proverOpt:SOLVER=Yices2"]
 
   elif args.verifier == 'corral':
     command = ["corral"]
@@ -492,6 +499,8 @@ def verify_bpl(args):
     command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
     if args.solver == 'cvc4':
       command += ["/bopt:proverOpt:SOLVER=cvc4"]
+    elif args.solver == 'yices2':
+      command += ["/bopt:proverOpt:SOLVER=Yices2"]
 
   elif args.verifier == 'symbooglix':
     command = ['symbooglix']
