@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -10,7 +10,7 @@ enum Heist {
 }
 
 fn main() {
-  let w = 1u8.nondet();
+  let w = 1u8.verifier_nondet();
   let h = if w == 0 {
     Heist::GetAway
   } else {
@@ -18,6 +18,6 @@ fn main() {
   };
   match h {
     Heist::GetAway => (),
-    Heist::LeaveWitnesses(_) => assert!(0),
+    Heist::LeaveWitnesses(_) => smack::assert!(0),
   };
 }

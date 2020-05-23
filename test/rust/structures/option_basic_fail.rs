@@ -1,5 +1,5 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect error
@@ -14,10 +14,10 @@ fn checked_addition(l: u8, r: u8) -> Option<u8> {
 }
 
 fn main() {
-  let a = 1u8.nondet();
-  let b = 2u8.nondet();
-  assume!(a < 128);
-  assume!(b < 127);
+  let a = 1u8.verifier_nondet();
+  let b = 2u8.verifier_nondet();
+  smack::assume!(a < 128);
+  smack::assume!(b < 127);
   let r = checked_addition(a, b);
-  assert!(r.is_none()); 
+  smack::assert!(r.is_none()); 
 }

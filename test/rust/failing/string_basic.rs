@@ -1,10 +1,10 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
 // @expect verified
 
 fn main() {
   let s = String::from("Hello, world!");
-  assert!(s.capacity() >= 5);
+  smack::assert!(s.capacity() >= 5);
 }
