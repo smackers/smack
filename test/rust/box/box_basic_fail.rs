@@ -2,7 +2,7 @@
 extern crate smack;
 use smack::*;
 
-// @expect verified
+// @expect error
 
 fn main() {
   let b1: Box<i32> = Box::new(1);
