@@ -28,6 +28,31 @@ macro_rules! verifier_assert {
 
 #[cfg(verifier = "smack")]
 #[macro_export]
+macro_rules! print {
+  ($fmt:expr) => ();
+  ($fmt:expr, $($arg:expr),*) => ( $($arg);* )
+}
+
+#[cfg(verifier = "smack")]
+#[macro_export]
+macro_rules! println {
+  ($($arg:tt)*) => ( print!($($arg)*) )
+}
+
+#[cfg(verifier = "smack")]
+#[macro_export]
+macro_rules! eprint {
+  ($($arg:tt)*) => ( print!($($arg)*) )
+}
+
+#[cfg(verifier = "smack")]
+#[macro_export]
+macro_rules! eprintln {
+  ($($arg:tt)*) => ( print!($($arg)*) )
+}
+
+#[cfg(verifier = "smack")]
+#[macro_export]
 macro_rules! assert {
   ( $cond:expr ) => ( verifier_assert!($cond); )
 }
