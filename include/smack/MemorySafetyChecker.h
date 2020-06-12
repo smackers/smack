@@ -14,9 +14,6 @@ namespace smack {
 class MemorySafetyChecker : public llvm::FunctionPass,
                             public llvm::InstVisitor<MemorySafetyChecker> {
 private:
-  std::map<llvm::Module *, llvm::Function *> leakCheckFunction;
-  std::map<llvm::Module *, llvm::Function *> safetyCheckFunction;
-
   llvm::Function *getLeakCheckFunction(llvm::Module &M);
   llvm::Function *getSafetyCheckFunction(llvm::Module &M);
 
