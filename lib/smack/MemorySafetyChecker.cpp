@@ -17,27 +17,17 @@ namespace smack {
 using namespace llvm;
 
 Function *MemorySafetyChecker::getLeakCheckFunction(Module &M) {
-  if (!leakCheckFunction.count(&M)) {
-    auto F = M.getFunction(Naming::MEMORY_LEAK_FUNCTION);
-    assert(F && "Memory leak check function must be present.");
-    leakCheckFunction[&M] = F;
-  }
-  return leakCheckFunction[&M];
+  auto F = M.getFunction(Naming::MEMORY_LEAK_FUNCTION);
+  assert(F && "Memory leak check function must be present.");
+  return F;
 }
 
 Function *MemorySafetyChecker::getSafetyCheckFunction(Module &M) {
-  if (!safetyCheckFunction.count(&M)) {
-    auto &C = M.getContext();
-    auto T = PointerType::getUnqual(Type::getInt8Ty(C));
-    auto F = dyn_cast<Function>(M.getOrInsertFunction(
-        Naming::MEMORY_SAFETY_FUNCTION,
-        FunctionType::get(Type::getVoidTy(C), {T, T}, false)));
-    assert(F && "Memory safety function must be present.");
-    F->addFnAttr(Attribute::AttrKind::ReadNone);
-    F->addFnAttr(Attribute::AttrKind::NoUnwind);
-    safetyCheckFunction[&M] = F;
-  }
-  return safetyCheckFunction[&M];
+  auto F = M.getFunction(Naming::MEMORY_SAFETY_FUNCTION);
+  assert(F && "Memory safety check function must be present.");
+  F->setDoesNotAccessMemory();
+  F->setDoesNotThrow();
+  return F;
 }
 
 void MemorySafetyChecker::insertMemoryLeakCheck(Instruction *I) {
