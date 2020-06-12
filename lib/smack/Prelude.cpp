@@ -140,6 +140,8 @@ const Attr *makeBvbuiltinAttr(std::string arg) {
 
 const Attr *makeInlineAttr() { return Attr::attr("inline"); }
 
+const Attr *makeDefineAttr() { return Attr::attr("define"); }
+
 // declare an uninterpreted function
 FuncDecl *uninterpretedOp(std::string baseName,
                           std::initializer_list<std::string> nameArgs,
@@ -154,7 +156,7 @@ FuncDecl *inlinedOp(std::string baseName,
                     std::list<Binding> args, std::string retType,
                     const Expr *body) {
   return Decl::function(indexedName(baseName, nameArgs), args, retType, body,
-                        {makeInlineAttr()});
+                        {makeDefineAttr()});
 }
 
 // declare a function with an attribute indicating it's a built-in function
@@ -788,7 +790,7 @@ void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
                  Expr::fn(indexedName("$sub", {it}),
                           {uint, Expr::lit(offset, 0U)}),
                  uint),
-             {makeInlineAttr()})
+             {makeDefineAttr()})
       << "\n";
   } else
     s << Decl::function(indexedName("$bv2int", {ptrSize}), {{"i", bt}}, it,
@@ -906,7 +908,7 @@ void MemDeclGen::generateAddrBoundsAndPred(std::stringstream &s) const {
            Naming::EXTERNAL_ADDR, makePtrVars(1), Naming::BOOL_TYPE,
            Expr::fn(indexedName("$slt", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
                     makePtrVarExpr(0), Expr::id(Naming::EXTERNS_BOTTOM)),
-           {makeInlineAttr()})
+           {makeDefineAttr()})
     << "\n";
   s << "\n";
 }
@@ -942,12 +944,12 @@ void PtrOpGen::generatePtrNumConvs(std::stringstream &s) const {
     s << Decl::function(
              indexedName("$p2i", {Naming::PTR_TYPE, prelude.rep.intType(i)}),
              {{"p", Naming::PTR_TYPE}}, prelude.rep.intType(i),
-             prelude.rep.pointerToInteger(Expr::id("p"), i), {makeInlineAttr()})
+             prelude.rep.pointerToInteger(Expr::id("p"), i), {makeDefineAttr()})
       << "\n";
     s << Decl::function(
              indexedName("$i2p", {prelude.rep.intType(i), Naming::PTR_TYPE}),
              {{"i", prelude.rep.intType(i)}}, Naming::PTR_TYPE,
-             prelude.rep.integerToPointer(Expr::id("i"), i), {makeInlineAttr()})
+             prelude.rep.integerToPointer(Expr::id("i"), i), {makeDefineAttr()})
       << "\n";
   }
   s << "\n";
@@ -973,7 +975,7 @@ void PtrOpGen::generatePreds(std::stringstream &s) const {
                           {Expr::id("p1"), Expr::id("p2")}),
                  prelude.rep.integerLit(1LL, 1),
                  prelude.rep.integerLit(0LL, 1)),
-             {makeInlineAttr()})
+             {makeDefineAttr()})
       << "\n";
     s << Decl::function(
              indexedName(pred, {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
@@ -982,7 +984,7 @@ void PtrOpGen::generatePreds(std::stringstream &s) const {
              Expr::fn(indexedName(
                           pred, {prelude.rep.pointerType(), Naming::BOOL_TYPE}),
                       {Expr::id("p1"), Expr::id("p2")}),
-             {makeInlineAttr()})
+             {makeDefineAttr()})
       << "\n";
   }
   s << "\n";
@@ -1001,7 +1003,7 @@ void PtrOpGen::generateArithOps(std::stringstream &s) const {
                         Naming::PTR_TYPE,
                         Expr::fn(indexedName(op, {prelude.rep.pointerType()}),
                                  {Expr::id("p1"), Expr::id("p2")}),
-                        {makeInlineAttr()})
+                        {makeDefineAttr()})
       << "\n";
   }
   s << "\n";
