@@ -112,6 +112,7 @@ add_library(smackTranslator STATIC
   include/smack/BplFilePrinter.h
   include/smack/BplPrinter.h
   include/smack/DSAWrapper.h
+  include/smack/InitializePasses.h
   include/smack/Naming.h
   include/smack/Regions.h
   include/smack/SmackInstGenerator.h
@@ -167,7 +168,7 @@ if (Boost_FOUND)
 endif ()
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
-find_package (LLVM 8.0.1 EXACT CONFIG)
+find_package (LLVM 9 CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
@@ -176,7 +177,7 @@ include(HandleLLVMOptions)
 # The following solution is from: https://stackoverflow.com/questions/30985215/passing-variables-down-to-subdirectory-only
 set(SMACK_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
 set(CMAKE_BUILD_TYPE "Release")
-add_subdirectory(sea-dsa/src)
+add_subdirectory(sea-dsa/lib/seadsa)
 set(CMAKE_BUILD_TYPE ${SMACK_BUILD_TYPE})
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})

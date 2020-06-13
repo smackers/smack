@@ -20,4 +20,7 @@ public:
   virtual bool runOnModule(llvm::Module &M);
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
+
+llvm::Pass* createCodifyStaticInitsPass();
+
 } // namespace smack

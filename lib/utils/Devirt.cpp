@@ -449,14 +449,14 @@ Devirtualize::makeDirectCall (CallSite & CS) {
 }
 
 //
-// Method: visitCallSite()
+// Method: processCallSite()
 //
 // Description:
 //  Examine the specified call site.  If it is an indirect call, mark it for
 //  transformation into a direct call.
 //
 void
-Devirtualize::visitCallSite (CallSite &CS) {
+Devirtualize::processCallSite (CallSite &CS) {
   //
   // First, determine if this is a direct call.  If so, then just ignore it.
   //
@@ -491,7 +491,7 @@ Devirtualize::runOnModule (Module & M) {
   //
   // Get the targets of indirect function calls.
   //
-  CCG = &getAnalysis<sea_dsa::CompleteCallGraph>();
+  CCG = &getAnalysis<seadsa::CompleteCallGraph>();
 
   //
   // Get information on the target system.

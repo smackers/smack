@@ -6,35 +6,31 @@
 //
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
+#include "smack/InitializePasses.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-
 #include "llvm/Support/FileSystem.h"
+#include "seadsa/InitializePasses.hh"
 
 #include <set>
 #include <unordered_map>
 
-#define DEBUG_TYPE "dsa-wrapper"
+#define DEBUG_TYPE "smack-dsa-wrapper"
 
 namespace smack {
 
 using namespace llvm;
 
-char DSAWrapper::ID;
-RegisterPass<DSAWrapper>
-    DSAWrapperPass("dsa-wrapper",
-                   "SMACK Data Structure Graph Based Alias Analysis Wrapper");
-
 void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequiredTransitive<sea_dsa::DsaAnalysis>();
+  AU.addRequiredTransitive<seadsa::DsaAnalysis>();
 }
 
 bool DSAWrapper::runOnModule(llvm::Module &M) {
   dataLayout = &M.getDataLayout();
-  SD = &getAnalysis<sea_dsa::DsaAnalysis>().getDsaAnalysis();
-  assert(SD->kind() == sea_dsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
+  SD = &getAnalysis<seadsa::DsaAnalysis>().getDsaAnalysis();
+  assert(SD->kind() == seadsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
          "Currently we only want the context-insensitive sea-dsa.");
   DG = &SD->getGraph(*M.begin());
   // Print the graph in dot format when debugging
@@ -81,11 +77,11 @@ void DSAWrapper::countGlobalRefs() {
   }
 }
 
-bool DSAWrapper::isStaticInitd(const sea_dsa::Node *n) {
+bool DSAWrapper::isStaticInitd(const seadsa::Node *n) {
   return staticInits.count(n) > 0;
 }
 
-bool DSAWrapper::isMemOpd(const sea_dsa::Node *n) {
+bool DSAWrapper::isMemOpd(const seadsa::Node *n) {
   return memOpds.count(n) > 0;
 }
 
@@ -112,7 +108,7 @@ unsigned DSAWrapper::getOffset(const Value *v) {
   return DG->getCell(*v).getOffset();
 }
 
-const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
+const seadsa::Node *DSAWrapper::getNode(const Value *v) {
   // For sea-dsa, a node is obtained by getting the cell first.
   // It's possible that a value doesn't have a cell, e.g., undef.
   if (!DG->hasCell(*v))
@@ -124,7 +120,7 @@ const sea_dsa::Node *DSAWrapper::getNode(const Value *v) {
 
 bool DSAWrapper::isTypeSafe(const Value *v) {
   typedef std::unordered_map<unsigned, bool> FieldMap;
-  typedef std::unordered_map<const sea_dsa::Node *, FieldMap> NodeMap;
+  typedef std::unordered_map<const seadsa::Node *, FieldMap> NodeMap;
   static NodeMap nodeMap;
 
   auto node = getNode(v);
@@ -199,7 +195,7 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
     return false;
 }
 
-unsigned DSAWrapper::getNumGlobals(const sea_dsa::Node *n) {
+unsigned DSAWrapper::getNumGlobals(const seadsa::Node *n) {
   if (globalRefCount.count(n))
     return globalRefCount[n];
   else
@@ -207,3 +203,11 @@ unsigned DSAWrapper::getNumGlobals(const sea_dsa::Node *n) {
 }
 
 } // namespace smack
+
+char smack::DSAWrapper::ID = 0;
+
+using namespace smack;
+using namespace seadsa;
+INITIALIZE_PASS_BEGIN(DSAWrapper, "smack-dsa-wrapper", "SMACK Data Structure Graph Based Alias Analysis Wrapper", false, false)
+INITIALIZE_PASS_DEPENDENCY(DsaAnalysis)
+INITIALIZE_PASS_END(DSAWrapper, "smack-dsa-wrapper", "SMACK Data Structure Graph Based Alias Analysis Wrapper", false, false)

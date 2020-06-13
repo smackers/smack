@@ -4,7 +4,7 @@
 #ifndef REGIONS_H
 #define REGIONS_H
 
-#include "sea_dsa/Graph.hh"
+#include "seadsa/Graph.hh"
 #include "llvm/IR/InstVisitor.h"
 
 using namespace llvm;
@@ -20,7 +20,7 @@ class DSAWrapper;
 class Region {
 private:
   LLVMContext *context;
-  const sea_dsa::Node *representative;
+  const seadsa::Node *representative;
   const Type *type;
   unsigned offset;
   unsigned length;
@@ -36,8 +36,8 @@ private:
   static DSAWrapper *DSA;
 
   static bool isSingleton(const llvm::Value *v, unsigned length);
-  static bool isAllocated(const sea_dsa::Node *N);
-  static bool isComplicated(const sea_dsa::Node *N);
+  static bool isAllocated(const seadsa::Node *N);
+  static bool isComplicated(const seadsa::Node *N);
 
   void init(const Value *V, unsigned length);
   bool isDisjoint(unsigned offset, unsigned length);
