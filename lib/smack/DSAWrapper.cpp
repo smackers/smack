@@ -5,13 +5,13 @@
 // the University of Illinois Open Source License. See LICENSE for details.
 //
 #include "smack/DSAWrapper.h"
+#include "seadsa/InitializePasses.hh"
 #include "smack/Debug.h"
 #include "smack/InitializePasses.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/FileSystem.h"
-#include "seadsa/InitializePasses.hh"
 
 #include <set>
 #include <unordered_map>
@@ -208,6 +208,10 @@ char smack::DSAWrapper::ID = 0;
 
 using namespace smack;
 using namespace seadsa;
-INITIALIZE_PASS_BEGIN(DSAWrapper, "smack-dsa-wrapper", "SMACK Data Structure Graph Based Alias Analysis Wrapper", false, false)
+INITIALIZE_PASS_BEGIN(DSAWrapper, "smack-dsa-wrapper",
+                      "SMACK Data Structure Graph Based Alias Analysis Wrapper",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(DsaAnalysis)
-INITIALIZE_PASS_END(DSAWrapper, "smack-dsa-wrapper", "SMACK Data Structure Graph Based Alias Analysis Wrapper", false, false)
+INITIALIZE_PASS_END(DSAWrapper, "smack-dsa-wrapper",
+                    "SMACK Data Structure Graph Based Alias Analysis Wrapper",
+                    false, false)

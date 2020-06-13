@@ -30,7 +30,8 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   DSAWrapper *DSA = &getAnalysis<DSAWrapper>();
 
   Function *F = cast<Function>(
-      M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C)).getCallee());
+      M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C))
+          .getCallee());
 
   BasicBlock *B = BasicBlock::Create(C, "entry", F);
   IRBuilder<> IRB(B);
@@ -96,15 +97,15 @@ void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.addRequired<DSAWrapper>();
 }
 
-Pass *createCodifyStaticInitsPass() {
-  return new CodifyStaticInits();
-}
+Pass *createCodifyStaticInitsPass() { return new CodifyStaticInits(); }
 
 } // namespace smack
 
 char smack::CodifyStaticInits::ID = 0;
 
 using namespace smack;
-INITIALIZE_PASS_BEGIN(CodifyStaticInits, "codify-static-inits", "Codify Static Initializers", false, false)
+INITIALIZE_PASS_BEGIN(CodifyStaticInits, "codify-static-inits",
+                      "Codify Static Initializers", false, false)
 INITIALIZE_PASS_DEPENDENCY(DSAWrapper)
-INITIALIZE_PASS_END(CodifyStaticInits, "codify-static-inits", "Codify Static Initializers", false, false)
+INITIALIZE_PASS_END(CodifyStaticInits, "codify-static-inits",
+                    "Codify Static Initializers", false, false)

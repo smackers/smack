@@ -21,6 +21,6 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
 
-llvm::Pass* createCodifyStaticInitsPass();
+llvm::Pass *createCodifyStaticInitsPass();
 
 } // namespace smack

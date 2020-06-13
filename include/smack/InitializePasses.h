@@ -7,8 +7,8 @@
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
-  void initializeDSAWrapperPass(PassRegistry &Registry);
-  void initializeCodifyStaticInitsPass(PassRegistry &Registry);
+void initializeDSAWrapperPass(PassRegistry &Registry);
+void initializeCodifyStaticInitsPass(PassRegistry &Registry);
 } // end namespace llvm
 
 #endif // INITIALIZEPASSES_H
