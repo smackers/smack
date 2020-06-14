@@ -16,6 +16,7 @@ addons:
 env:
   global:
     - COMPILER_NAME=clang COMPILER=clang++ CXX=clang++ CC=clang
+    - LLVM_SHORT_VERSION=9
   jobs:
     - TRAVIS_ENV="--exhaustive --folder=c/basic"
     - TRAVIS_ENV="--exhaustive --folder=c/data"
@@ -42,20 +43,20 @@ env:
 before_install:
   - sudo rm -rf /usr/local/clang-7.0.0
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
+  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_SHORT_VERSION} main"
   - wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
   - sudo dpkg -i packages-microsoft-prod.deb
   - sudo apt-get install -y apt-transport-https
   - sudo apt-get update
  
 install:
-  - sudo apt-get install -y clang-9 clang-format-9 llvm-9-dev dotnet-sdk-3.1
-  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 20
-  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 20
-  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-9 20
-  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-9 20
-  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-9 20
-  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-9 20
+  - sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
+  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 20
   - sudo pip install pyyaml psutil
 
 script:
