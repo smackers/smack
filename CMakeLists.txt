@@ -6,7 +6,11 @@ cmake_minimum_required(VERSION 3.4.3)
 project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-8 llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+
+  file(STRINGS "bin/versions" LLVM_VERSION_STR REGEX "LLVM_SHORT_VERSION=[0-9]+")
+  string(REGEX MATCH "[0-9]+" LLVM_SHORT_VERSION "${LLVM_VERSION_STR}")
+
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-${LLVM_SHORT_VERSION} llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
   if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
@@ -168,7 +172,7 @@ if (Boost_FOUND)
 endif ()
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
-find_package (LLVM 9 CONFIG)
+find_package (LLVM ${LLVM_SHORT_VERSION} CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
