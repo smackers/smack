@@ -27,11 +27,11 @@ bool Region::isSingleton(const Value *v, unsigned length) {
          !node->isArray() && DSA->isTypeSafe(v) && !DSA->isMemOpd(node);
 }
 
-bool Region::isAllocated(const sea_dsa::Node *N) {
+bool Region::isAllocated(const seadsa::Node *N) {
   return N->isHeap() || N->isAlloca();
 }
 
-bool Region::isComplicated(const sea_dsa::Node *N) {
+bool Region::isComplicated(const seadsa::Node *N) {
   return N->isIntToPtr() || N->isPtrToInt() || N->isExternal() ||
          N->isUnknown();
 }

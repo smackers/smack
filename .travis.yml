@@ -42,24 +42,25 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=rust/vector --languages=rust"
 
 before_install:
+  - sudo rm -rf /usr/local/clang-7.0.0
+
+install:
+  - source ./bin/versions
   - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
+  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_SHORT_VERSION} main"
   - wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
   - sudo dpkg -i packages-microsoft-prod.deb
   - sudo apt-get install -y apt-transport-https
   - sudo apt-get update
- 
-install:
-  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev dotnet-sdk-3.1
-  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 20
-  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-8 20
-  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-8 20
-  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-8 20
-  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-8 20
-  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-8 20
-  - sudo pip install pyyaml psutil
+  - sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
+  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 20
 
-script:
+before_script:
   - python3 --version
   - $CXX --version
   - $CC --version
@@ -67,5 +68,7 @@ script:
   - clang++ --version
   - llvm-link --version
   - llvm-config --version
+
+script:
   - ./format/run-clang-format.py -e test/c/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
   - INSTALL_RUST=1 ./bin/build.sh

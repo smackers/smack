@@ -32,6 +32,7 @@
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/ExtractContracts.h"
+#include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/NormalizeLoops.h"
@@ -148,6 +149,8 @@ int main(int argc, char **argv) {
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
 
+  llvm::initializeCodifyStaticInitsPass(Registry);
+
   llvm::legacy::PassManager pass_manager;
 
   pass_manager.add(llvm::createLowerSwitchPass());
@@ -170,7 +173,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(new smack::VerifierCodeMetadata());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
-  pass_manager.add(new smack::CodifyStaticInits());
+  pass_manager.add(smack::createCodifyStaticInitsPass());
   if (!Modular) {
     pass_manager.add(new smack::RemoveDeadDefs());
   }

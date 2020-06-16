@@ -1151,6 +1151,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           {llvm::Intrinsic::ctpop, assignBvExpr(ctpop)},
           {llvm::Intrinsic::cttz, cttz},
           {llvm::Intrinsic::dbg_declare, ignore},
+          {llvm::Intrinsic::dbg_label, ignore},
           {llvm::Intrinsic::expect, identity},
           {llvm::Intrinsic::fabs, assignUnFPFuncApp("$abs")},
           {llvm::Intrinsic::fma, fma},
