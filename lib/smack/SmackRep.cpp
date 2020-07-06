@@ -947,6 +947,35 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
                           const llvm::Value *rhs, bool isUnsigned) {
   std::string fn =
       opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
+  // SHAOBO: we apply modulo operations to the operands.
+  // Here is the reasoning: let's assume the cmp operation is unsigned,
+  // and there's a sequence of arithmetic operations which only contain
+  // addition, substraction, multiplication. The inputs to such a computation
+  // f is from i_1 to i_n. The hypothesis we want to prove here is
+  // f(i_1,...,i_n) % B = f'(i_1 % B,...,i_n % B) where f' is the two's
+  // complement counterpart of f, and B is 2^m where m is the bitwidth of the
+  // operands. For certain operation o, its two's complement counterpart o' is
+  // equivalent to o(i_1,i_2) % B. The axioms we used for the proof is as
+  // follows, (X%B + Y%B)%B = (X+Y)%B, (X%B - Y%B)%B = (X-Y)%B,
+  // (X%B * Y%B)%B = (X*Y)%B.
+  // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
+  // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-multiplication
+  // so let's prove it inductively, for a computation f and its two
+  // subcomputation, f_1 and f_2 connected by o, by definition, we have,
+  // f(i_1,...,i_n) = o(f_1(i_1,...,i_n), f_2(i_1,...,i_n))
+  // then, f(i_1,...,i_n)%B = o(f_1(i_1,...,i_n), f_2(i_1,...,i_n))%B
+  // following the axioms, we have,
+  // f(i_1,...,i_n)%B = o(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)%B
+  // by the definition of two's complement arithmetic,
+  // o(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)%B =
+  // 	o'(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)
+  // by induction, f_i(i_1,...,i_n)%B = f'_i(i_1%B,...,i_n%B)
+  // therefore, o'(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B) =
+  // 	o'(f'_1(i_1%B,...,i_n%B), f_2'(i_1%B,...,i_n%B))
+  // the rhs is exactly f' therefore we complete the proof.
+  //
+  // For signed comparison, the proof is trivial since we can get the precise
+  // two's complement representation following the proof above.
   const Expr *e1 = getWrappedExpr(lhs, isUnsigned);
   const Expr *e2 = getWrappedExpr(rhs, isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
