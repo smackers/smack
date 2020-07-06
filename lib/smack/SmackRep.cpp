@@ -939,8 +939,8 @@ const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
 }
 
 const Expr *SmackRep::cmp(const llvm::ConstantExpr *CE) {
-  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1), false);
-  //           llvm::CmpInst::isUnsigned(CE->getPredicate()));
+  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1),
+             llvm::CmpInst::isUnsigned((CmpInst::Predicate)CE->getPredicate()));
 }
 
 const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
