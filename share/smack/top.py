@@ -10,6 +10,7 @@ import sys
 import shlex
 import subprocess
 import signal
+import functools
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
@@ -584,15 +585,36 @@ def reformat_assignment(line):
   # expSize = digit {digit}
   return re.sub('((\d+)bv\d+|(-?)0x([0-9a-fA-F]+\.[0-9a-fA-F]+)e(-?)(\d+)f(\d+)e(\d+))', repl, line.strip())
 
+def demangle(func):
+    def demangle_with(func, tool):
+        if shutil.which(tool):
+            p = subprocess.Popen(tool, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, _ = p.communicate(input=func.encode())
+            return out.decode()
+        return func
+    return functools.reduce(demangle_with, ['cxxfilt', 'rustfilt'], func)
+
 def transform(info):
-  return ','.join(map(reformat_assignment, [x for x in info.split(',') if not re.search('((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x)]))
+    info = info.strip()
+    if info.startswith('CALL') or info.startswith('RETURN from'):
+        tokens = info.split()
+        tokens[-1] = demangle(tokens[-1])
+        return ' '.join(tokens)
+    elif '=' in info:
+        tokens = info.split('=')
+        lhs = tokens[0].strip()
+        rhs = tokens[1].strip()
+        return demangle(lhs) + ' = ' + reformat_assignment(rhs)
+    else:
+        return info
 
 def corral_error_step(step):
   m = re.match('([^\s]*)\s+Trace:\s+(Thread=\d+)\s+\((.*)[\)|;]', step)
   if m:
     path = m.group(1)
     tid = m.group(2)
-    info = transform(m.group(3))
+    info = ','.join(map(transform,
+        [x for x in m.group(3).split(',') if not re.search('((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x)]))
     return '{0}\t{1}  {2}'.format(path,tid,info)
   else:
     return step
