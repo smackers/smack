@@ -14,6 +14,13 @@ void exit(int x) {
     ;
 }
 
+void abort(void) {
+#if MEMORY_SAFETY
+  __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
+#endif
+  __SMACK_code("assume false;");
+}
+
 void *calloc(size_t num, size_t size) {
   void *ret;
   if (__VERIFIER_nondet_int()) {
