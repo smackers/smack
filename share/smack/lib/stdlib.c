@@ -7,7 +7,16 @@
 
 void exit(int x) {
 #if MEMORY_SAFETY
-  __SMACK_code("assert $allocatedCounter == 0;");
+  __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
+#endif
+  __SMACK_code("assume false;");
+  while (1)
+    ;
+}
+
+void abort(void) {
+#if MEMORY_SAFETY
+  __SMACK_code("assert {:valid_memtrack} $allocatedCounter == 0;");
 #endif
   __SMACK_code("assume false;");
   while (1)

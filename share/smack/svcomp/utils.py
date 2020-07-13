@@ -82,7 +82,7 @@ def svcomp_check_property(args):
       args.only_check_memcleanup = True
     elif "overflow" in prop:
       args.integer_overflow = True
-    elif not "__VERIFIER_error" in prop:
+    elif not "reach_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
 def svcomp_process_file(args, name, ext):
@@ -169,9 +169,19 @@ def is_stack_benchmark(args, csource):
       print("Stumbled upon a stack-based memory safety benchmark\n")
     sys.exit(smack.top.results(args)['unknown'])
 
+def inject_assert_false(args):
+    with open(args.bpl_file, 'r') as bf:
+      content = bf.read()
+    content = content.replace('call reach_error();', 'assert false; call reach_error();')
+    with open(args.bpl_file, 'w') as bf:
+      bf.write(content)
+
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
+
+  if not args.memory_safety and not args.only_check_memcleanup and not args.integer_overflow:
+    inject_assert_false(args)
 
   if args.memory_safety:
     if not (args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak):
@@ -482,8 +492,8 @@ def run_binary(args):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
 
-  s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
-  s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
+  s = re.sub(r'(extern )?void reach_error()', '//', s)
+  s = re.sub(r'reach_error\(\)', 'assert(0)', s)
   s = '#include<assert.h>\n' + s
 
   name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
