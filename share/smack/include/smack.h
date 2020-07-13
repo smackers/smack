@@ -55,7 +55,6 @@ void __VERIFIER_assume(int);
 #ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int);
 #endif
-void __VERIFIER_error(void);
 
 #ifndef AVOID_NAME_CONFLICTS
 #define assert(EX)                                                             \
