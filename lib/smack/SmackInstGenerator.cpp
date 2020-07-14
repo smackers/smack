@@ -137,6 +137,17 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
   }
 }
 
+bool isRustPanic(const std::string &name) {
+  for (const auto &panic : Naming::RUST_PANICS) {
+    // We are interested in exact functional matches.
+    // Rust mangled names include a 17 byte hash at the end.
+    if (name.find(panic) == 0 && name.size() == panic.size() + 17) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void SmackInstGenerator::processInstruction(llvm::Instruction &inst) {
   SDEBUG(errs() << "Inst: " << inst << "\n");
   annotate(inst, currBlock);
@@ -640,8 +651,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     auto mainFunction = cast<const Function>(castExpr);
     emit(Stmt::call(mainFunction->getName(), {}, {}));
 
-  } else if (name.find(Naming::RUST_PANIC1) != std::string::npos ||
-             name.find(Naming::RUST_PANIC2) != std::string::npos) {
+  } else if (SmackOptions::RustPanics && isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
