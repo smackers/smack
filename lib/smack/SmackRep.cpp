@@ -307,20 +307,56 @@ const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
 
   unsigned r1 = regions->idx(mci.getRawDest(), length);
   unsigned r2 = regions->idx(mci.getRawSource(), length);
+  const Value *dst = mci.getRawDest(), *src = mci.getRawSource();
+  auto m1 = Expr::id(memReg(r1));
+  auto m2 = Expr::id(memReg(r2));
 
-  const Type *T = regions->get(r1).getType();
-  Decl *P = memcpyProc(T ? type(T) : intType(8), length);
-  auxDecls[P->getName()] = P;
+  if (length <= MEMORY_INTRINSIC_THRESHOLD) {
+    // turn memcpy into a series of assignment
+    SmackWarnings::warnIfUnsound(
+        std::string("unsoundly approximate memcpy operations"),
+        SmackOptions::BitPrecise, nullptr, &mci);
+    auto rhs = m1;
+    for (auto offset = 0; offset < length; ++offset) {
+      auto o1 = Expr::fn(indexedName("$add", {Naming::PTR_TYPE}),
+                         {expr(dst), pointerLit((unsigned long long)offset)});
+      auto o2 = Expr::fn(indexedName("$add", {Naming::PTR_TYPE}),
+                         {expr(src), pointerLit((unsigned long long)offset)});
+      rhs = Expr::upd(rhs, o1, Expr::sel(m2, o2));
+    }
+    return Stmt::assign(m1, rhs);
+  }
 
-  const Value *dst = mci.getRawDest(), *src = mci.getRawSource(),
-              *len = mci.getLength();
+  SmackWarnings::warnInfo(
+      "warning: memory intrinsic length exceeds threshold (" +
+      std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
 
-  return Stmt::call(
-      P->getName(),
-      {Expr::id(memReg(r1)), Expr::id(memReg(r2)), expr(dst), expr(src),
-       integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
-       Expr::lit(mci.isVolatile())},
-      {memReg(r1)});
+  // turn memcpy into an assignment where the lhs is the destination region
+  // and the rhs is a lambda expression following the encoding in
+  // https://cs.stanford.edu/people/preiner/files/publications/PreinerNiemetzBiere-FMCAD15.pdf.
+  // Note that we do not model overlapped memcpy like stdlib does since it's
+  // undefined behavior.
+  const Value *len = mci.getLength();
+  std::string bindedVar = "x";
+  auto bindedVarExpr = Expr::id(bindedVar);
+  auto cond = Expr::and_(
+      Expr::fn(indexedName("$sle", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
+               {expr(dst), bindedVarExpr}),
+      Expr::fn(
+          indexedName("$slt", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
+          {bindedVarExpr,
+           Expr::fn(indexedName("$add", {Naming::PTR_TYPE}),
+                    {expr(dst),
+                     integerToPointer(
+                         expr(len), len->getType()->getIntegerBitWidth())})}));
+  auto body = Expr::ifThenElse(
+      cond,
+      Expr::sel(m2, Expr::fn(indexedName("$add", {Naming::PTR_TYPE}),
+                             {Expr::fn(indexedName("$sub", {Naming::PTR_TYPE}),
+                                       {expr(src), expr(dst)}),
+                              bindedVarExpr})),
+      Expr::sel(m1, bindedVarExpr));
+  return Stmt::assign(m1, Expr::lambda({{bindedVar, Naming::PTR_TYPE}}, body));
 }
 
 const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
@@ -331,20 +367,46 @@ const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
     length = std::numeric_limits<unsigned>::max();
 
   unsigned r = regions->idx(msi.getRawDest(), length);
+  const Value *dst = msi.getRawDest(), *val = msi.getValue();
+  auto lhs = Expr::id(memReg(r));
 
-  const Type *T = regions->get(r).getType();
-  Decl *P = memsetProc(T ? type(T) : intType(8), length);
-  auxDecls[P->getName()] = P;
+  if (length <= MEMORY_INTRINSIC_THRESHOLD) {
+    // turn memset into a series of assignment
+    SmackWarnings::warnIfUnsound(
+        std::string("unsoundly approximate memset operations"),
+        SmackOptions::BitPrecise, nullptr, &msi);
+    auto rhs = lhs;
+    for (auto offset = 0; offset < length; ++offset)
+      rhs = Expr::upd(
+          rhs,
+          Expr::fn(indexedName("$add", {Naming::PTR_TYPE}),
+                   {expr(dst), pointerLit((unsigned long long)offset)}),
+          expr(val));
+    return Stmt::assign(lhs, rhs);
+  }
 
-  const Value *dst = msi.getRawDest(), *val = msi.getValue(),
-              *len = msi.getLength();
+  SmackWarnings::warnInfo(
+      "warning: memory intrinsic length exceeds threshold (" +
+      std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
 
-  return Stmt::call(
-      P->getName(),
-      {Expr::id(memReg(r)), expr(dst), expr(val),
-       integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
-       Expr::lit(msi.isVolatile())},
-      {memReg(r)});
+  // turn memset into an assignment where the lhs is the destination region
+  // and the rhs is a lambda expression following the encoding in
+  // https://cs.stanford.edu/people/preiner/files/publications/PreinerNiemetzBiere-FMCAD15.pdf.
+  const Value *len = msi.getLength();
+  std::string bindedVar = "x";
+  auto bindedVarExpr = Expr::id(bindedVar);
+  auto cond = Expr::and_(
+      Expr::fn(indexedName("$sle", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
+               {expr(dst), bindedVarExpr}),
+      Expr::fn(
+          indexedName("$slt", {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
+          {bindedVarExpr,
+           Expr::fn(indexedName("$add", {Naming::PTR_TYPE}),
+                    {expr(dst),
+                     integerToPointer(
+                         expr(len), len->getType()->getIntegerBitWidth())})}));
+  auto body = Expr::ifThenElse(cond, expr(val), Expr::sel(lhs, bindedVarExpr));
+  return Stmt::assign(lhs, Expr::lambda({{bindedVar, Naming::PTR_TYPE}}, body));
 }
 
 const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
@@ -1274,153 +1336,4 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
 const Expr *SmackRep::declareIsExternal(const Expr *e) {
   return Expr::fn(Naming::EXTERNAL_ADDR, e);
 }
-
-Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
-  std::stringstream s;
-
-  std::string name = Naming::MEMCPY + "." + type;
-  bool no_quantifiers = length <= MEMORY_INTRINSIC_THRESHOLD;
-
-  if (no_quantifiers)
-    name = name + "." + std::to_string(length);
-  SmackWarnings::warnInfo(
-      "warning: memory intrinsic length exceeds threshold (" +
-      std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
-
-  s << "procedure " << name << "("
-    << "M.dst: [ref] " << type << ", "
-    << "M.src: [ref] " << type << ", "
-    << "dst: ref, "
-    << "src: ref, "
-    << "len: ref, "
-    << "isvolatile: bool"
-    << ") returns ("
-    << "M.ret: [ref] " << type << ")";
-
-  if (no_quantifiers) {
-    s << "\n"
-      << "{"
-      << "\n";
-    s << "  M.ret := M.dst;"
-      << "\n";
-    for (unsigned offset = 0; offset < length; ++offset)
-      s << "  M.ret[$add.ref(dst," << offset << ")] := "
-        << "M.src[$add.ref(src," << offset << ")];"
-        << "\n";
-    s << "}"
-      << "\n";
-
-  } else if (SmackOptions::MemoryModelImpls) {
-    s << "\n"
-      << "{"
-      << "\n";
-    s << "  assume (forall x: ref :: "
-      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
-      << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
-      << ");"
-      << "\n";
-    s << "  assume (forall x: ref :: "
-      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
-      << ");"
-      << "\n";
-    s << "  assume (forall x: ref :: "
-      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
-      << ");"
-      << "\n";
-    s << "}"
-      << "\n";
-
-  } else {
-    s << ";"
-      << "\n";
-    s << "ensures (forall x: ref :: "
-      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
-      << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
-      << ");"
-      << "\n";
-    s << "ensures (forall x: ref :: "
-      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
-      << ");"
-      << "\n";
-    s << "ensures (forall x: ref :: "
-      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
-      << ");"
-      << "\n";
-  }
-  return Decl::code(name, s.str());
-}
-
-Decl *SmackRep::memsetProc(std::string type, unsigned length) {
-  std::stringstream s;
-
-  std::string name = Naming::MEMSET + "." + type;
-  bool no_quantifiers = length <= MEMORY_INTRINSIC_THRESHOLD;
-
-  if (no_quantifiers)
-    name = name + "." + std::to_string(length);
-  SmackWarnings::warnInfo(
-      "warning: memory intrinsic length exceeds threshold (" +
-      std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
-
-  s << "procedure " << name << "("
-    << "M: [ref] " << type << ", "
-    << "dst: ref, "
-    << "val: " << intType(8) << ", "
-    << "len: ref, "
-    << "isvolatile: bool"
-    << ") returns ("
-    << "M.ret: [ref] " << type << ")";
-
-  if (no_quantifiers) {
-    s << "\n"
-      << "{"
-      << "\n";
-    s << "M.ret := M;"
-      << "\n";
-    for (unsigned offset = 0; offset < length; ++offset)
-      s << "  M.ret[$add.ref(dst," << offset << ")] := val;"
-        << "\n";
-    s << "}"
-      << "\n";
-
-  } else if (SmackOptions::MemoryModelImpls) {
-    s << "\n"
-      << "{"
-      << "\n";
-    s << "  assume (forall x: ref :: "
-      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
-      << "M.ret[x] == val"
-      << ");"
-      << "\n";
-    s << "  assume (forall x: ref :: "
-      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
-      << ");"
-      << "\n";
-    s << "  assume (forall x: ref :: "
-      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
-      << ");"
-      << "\n";
-    s << "}"
-      << "\n";
-
-  } else {
-    s << ";"
-      << "\n";
-    s << "ensures (forall x: ref :: "
-      << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
-      << "M.ret[x] == val"
-      << ");"
-      << "\n";
-    s << "ensures (forall x: ref :: "
-      << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
-      << ");"
-      << "\n";
-    s << "ensures (forall x: ref :: "
-      << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
-      << ");"
-      << "\n";
-  }
-  return Decl::code(name, s.str());
-}
-
 } // namespace smack

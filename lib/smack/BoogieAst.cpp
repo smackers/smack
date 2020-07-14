@@ -131,6 +131,10 @@ const Expr *Expr::bvConcat(const Expr *left, const Expr *right) {
   return new BvConcat(left, right);
 }
 
+const Expr *Expr::lambda(std::list<Binding> args, const Expr *body) {
+  return new LambdaExpr(args, body);
+}
+
 const Attr *Attr::attr(std::string s, std::initializer_list<const Expr *> vs) {
   return new Attr(s, vs);
 }
@@ -476,6 +480,13 @@ void QuantExpr::print(std::ostream &os) const {
   }
   print_seq<Binding>(os, vars, ", ");
   os << " :: " << expr << ")";
+}
+
+void LambdaExpr::print(std::ostream &os) const {
+  os << "(";
+  os << "lambda ";
+  print_seq<Binding>(os, args, ", ");
+  os << " :: " << body << ")";
 }
 
 void SelExpr::print(std::ostream &os) const {

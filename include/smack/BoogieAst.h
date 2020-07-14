@@ -53,6 +53,7 @@ public:
   static const Expr *bvExtract(std::string v, unsigned upper, unsigned lower);
   static const Expr *bvExtract(const Expr *v, unsigned upper, unsigned lower);
   static const Expr *bvConcat(const Expr *left, const Expr *right);
+  static const Expr *lambda(std::list<Binding> args, const Expr *body);
 };
 
 class BinExpr : public Expr {
@@ -197,6 +198,16 @@ private:
 public:
   QuantExpr(Quantifier q, std::list<Binding> vs, const Expr *e)
       : quant(q), vars(vs), expr(e) {}
+  void print(std::ostream &os) const;
+};
+
+class LambdaExpr : public Expr {
+  std::list<Binding> args;
+  const Expr *body;
+
+public:
+  LambdaExpr(std::list<Binding> args, const Expr *body)
+      : args(args), body(body) {}
   void print(std::ostream &os) const;
 };
 
