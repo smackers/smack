@@ -13,7 +13,8 @@ SPECIAL_NAMES = [
 def replay_error_trace(verifier_output, args):
 
     if args.verifier != 'corral':
-        print("Replay for verifiers other than 'corral' currently unsupported; skipping replay")
+        print(("Replay for verifiers other than 'corral' currently unsupported"
+               "; skipping replay"))
         return
 
     print("Attempting to replay error trace.")
