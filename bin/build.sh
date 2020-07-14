@@ -333,6 +333,7 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   sudo ./install.sh --without=rust-docs
   cd ..
   rm -rf rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
+  cargo install rustfilt
   puts "Installed Rust"
 fi
 
