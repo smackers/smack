@@ -145,7 +145,10 @@ def fortran_compile_to_bc(input_file, compile_command, args):
     # change the throw level of 'Debug Info Version' from error to warning in
     # the IR
     try_command(
-        ['sed', '-i', 's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g', ll])
+        ['sed',
+         '-i',
+         's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g',
+         ll])
     try_command(['llvm-as', ll])
     try_command(['rm', ll])
     bc = '.'.join(ll.split('.')[:-1] + ['bc'])
