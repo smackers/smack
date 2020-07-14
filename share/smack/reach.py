@@ -68,8 +68,10 @@ def GetSourceLineInfo(bplFile):
 
 def UpdateWithClangInfo(clangOuptut, sourceInfo):
     FILENAME = r'[\w#$~%.\/-]+'
-    regex = '(' + FILENAME + \
-        r'):(\d+):(\d+): warning: will never be executed \[-Wunreachable-code\]'
+    regex = ('('
+             + FILENAME
+             + (r'):(\d+):(\d+): warning: will never be executed '
+                r'\[-Wunreachable-code\]'))
     clangFilter = re.compile(regex)
 
     for line in clangOutput.splitlines(True):
@@ -204,8 +206,10 @@ def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
             for sourceLine in sourceInfo:
                 if ((not sourceLine['isReachable']) and
                         reachedLine['filename'] == sourceLine['filename'] and
-                        reachedLine['sourceLineNo'] == sourceLine['sourceLineNo'] and
-                        reachedLine['sourceColNo'] == sourceLine['sourceColNo']):
+                        (reachedLine['sourceLineNo'] ==
+                         sourceLine['sourceLineNo']) and
+                        (reachedLine['sourceColNo'] ==
+                         sourceLine['sourceColNo'])):
                     sourceLine['isReachable'] = True
 
 
@@ -216,7 +220,7 @@ def main():
             reachParser()])
     parser.parse_args()  # just check if arguments are looking good
 
-    #!!!!!!START COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
+    # !!!!!!START COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
     #  Probably should pull into subroutine or something
     # remove arguments not recognized by lower scripts
     # not sure of a better way to do this
@@ -239,7 +243,7 @@ def main():
     # write final output
     args.outfile.write(bpl)
     args.outfile.close()
-    #!!!!!!END COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
+    # !!!!!!END COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
 
     GetCodeCoverage(
         args.verifier,
