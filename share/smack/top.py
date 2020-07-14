@@ -22,7 +22,9 @@ VERSION = '2.4.1'
 def results(args):
     """A dictionary of the result output messages."""
     return {
-        'verified': 'SMACK found no errors.' if args.modular else 'SMACK found no errors with unroll bound %s.' % args.unroll,
+        'verified': 'SMACK found no errors'
+                    + ('' if args.modular else
+                       ' with unroll bound %s' % args.unroll) + '.',
         'error': 'SMACK found an error.',
         'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
         'invalid-free': 'SMACK found an error: invalid memory deallocation.',
@@ -67,7 +69,9 @@ def exit_with_error(error):
 
 def validate_input_files(files):
     def validate_input_file(file):
-        """Check whether the given input file is valid, returning a reason if not."""
+        """
+        Check whether the given input file is valid, returning a reason if not.
+        """
 
         file_extension = os.path.splitext(file)[1][1:]
         if not os.path.isfile(file):
@@ -147,7 +151,8 @@ def arguments():
                              help='''enable certain type of warning messages
             (silent: no warning messages;
             unsound: warnings about unsoundness;
-            info: warnings about unsoundness and translation information) [default: %(default)s]''')
+            info: warnings about unsoundness and translation information)
+            [default: %(default)s]''')
 
     parser.add_argument(
         '-t',
@@ -234,7 +239,9 @@ def arguments():
             'no-reuse-impls',
             'reuse'],
         default='no-reuse-impls',
-        help='select memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
+        help='''select memory model
+                (no-reuse=never reallocate the same address,
+                reuse=reallocate freed addresses) [default: %(default)s]''')
 
     translate_group.add_argument(
         '--static-unroll',
@@ -322,8 +329,10 @@ def arguments():
             'use',
             'check'],
         default='none',
-        help='optionally enable generation of Boogie assume statements from LLVM assume statements ' +
-        '(none=no generation [default], use=generate assume statements, check=check assume statements)')
+        help='''optionally enable generation of Boogie assume statements from
+                LLVM assume statements (none=no generation [default],
+                use=generate assume statements,
+                check=check assume statements)''')
 
     translate_group.add_argument(
         '--float',
@@ -357,7 +366,8 @@ def arguments():
         '--unroll',
         metavar='N',
         default='1',
-        type=lambda x: int(x) if int(x) > 0 else parser.error('Unroll bound has to be positive.'),
+        type=lambda x: (int(x) if int(x) > 0 else
+                        parser.error('Unroll bound has to be positive.')),
         help='loop/recursion unroll bound [default: %(default)s]')
 
     verifier_group.add_argument(
@@ -372,13 +382,15 @@ def arguments():
         metavar='K',
         default='1',
         type=int,
-        help='bound on the number of thread contexts in Corral [default: %(default)s]')
+        help='''bound on the number of thread contexts in Corral
+                [default: %(default)s]''')
 
     verifier_group.add_argument(
         '--verifier-options',
         metavar='OPTIONS',
         default='',
-        help='additional verifier arguments (e.g., --verifier-options="/trackAllVars /staticInlining")')
+        help='''additional verifier arguments
+                (e.g., --verifier-options="/trackAllVars /staticInlining")''')
 
     verifier_group.add_argument(
         '--time-limit',
@@ -408,7 +420,8 @@ def arguments():
         '--modular',
         action="store_true",
         default=False,
-        help='enable contracts-based modular deductive verification (uses Boogie)')
+        help='''enable contracts-based modular deductive verification
+                (uses Boogie)''')
 
     verifier_group.add_argument(
         '--replay',
@@ -444,7 +457,8 @@ def arguments():
         args.bpl_file = 'a.bpl' if args.no_verify else temporary_file(
             'a', '.bpl', args)
 
-    if args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak:
+    if (args.only_check_valid_deref or args.only_check_valid_free or
+            args.only_check_memleak):
         args.memory_safety = True
 
     if args.bit_precise_pointers:
@@ -526,7 +540,7 @@ def llvm_to_bpl(args):
     cmd += ['-warn-type', args.warn]
     cmd += ['-sea-dsa=ci']
     # This flag can lead to unsoundness in Rust regressions.
-    #cmd += ['-sea-dsa-type-aware']
+    # cmd += ['-sea-dsa-type-aware']
     if sys.stdout.isatty():
         cmd += ['-colored-warnings']
     cmd += ['-source-loc-syms']
@@ -571,7 +585,8 @@ def llvm_to_bpl(args):
 def procedure_annotation(name, args):
     if name in args.entry_points:
         return "{:entrypoint}"
-    elif args.modular and re.match("|".join(inlined_procedures()).replace("$", r"\$"), name):
+    elif (args.modular and
+          re.match("|".join(inlined_procedures()).replace("$", r"\$"), name)):
         return "{:inline 1}"
     elif (not args.modular) and args.verifier == 'boogie':
         return ("{:inline %s}" % args.unroll)
@@ -658,16 +673,20 @@ def verification_result(verifier_output):
         r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
             verifier_output):
         return 'timeout'
-    elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs|NO_ERRORS_NO_TIMEOUT', verifier_output):
+    elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
+                    r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
         return 'verified'
-    elif re.search(r'\d* verified, [1-9]\d* errors?|can fail|ERRORS_NO_TIMEOUT', verifier_output):
+    elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
+                    r'ERRORS_NO_TIMEOUT'), verifier_output):
         if re.search(
             r'ASSERTION FAILS assert {:valid_deref}',
                 verifier_output):
             return 'invalid-deref'
-        elif re.search(r'ASSERTION FAILS assert {:valid_free}', verifier_output):
+        elif re.search(r'ASSERTION FAILS assert {:valid_free}',
+                       verifier_output):
             return 'invalid-free'
-        elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}', verifier_output):
+        elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}',
+                       verifier_output):
             return 'invalid-memtrack'
         elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
             return 'overflow'
@@ -743,7 +762,9 @@ def verify_bpl(args):
         print(results(args)[result])
 
     else:
-        if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow':
+        if (result == 'error' or result == 'invalid-deref' or
+                result == 'invalid-free' or result == 'invalid-memtrack' or
+                result == 'overflow'):
             error = error_trace(verifier_output, args)
 
             if args.error_file:
@@ -807,7 +828,8 @@ def reformat_assignment(line):
     # sigSize = digit {digit}
     # expSize = digit {digit}
     return re.sub(
-        r'((\d+)bv\d+|(-?)0x([0-9a-fA-F]+\.[0-9a-fA-F]+)e(-?)(\d+)f(\d+)e(\d+))',
+        (r'((\d+)bv\d+|(-?)0x([0-9a-fA-F]+\.[0-9a-fA-F]+)e(-?)'
+         r'(\d+)f(\d+)e(\d+))'),
         repl,
         line.strip())
 
@@ -846,8 +868,11 @@ def corral_error_step(step):
     if m:
         path = m.group(1)
         tid = m.group(2)
-        info = ','.join(map(transform, [x for x in m.group(3).split(',') if not re.search(
-            '((CALL|RETURN from)\s+(\$|__SMACK))|Done|ASSERTION', x)]))
+        info = ','.join(map(transform,
+                            [x for x in m.group(3).split(',') if not
+                                re.search(
+                                    (r'((CALL|RETURN from)\s+(\$|__SMACK))|'
+                                     r'Done|ASSERTION'), x)]))
         return '{0}\t{1}  {2}'.format(path, tid, info)
     else:
         return step
@@ -871,7 +896,9 @@ def error_trace(verifier_output, args):
 def smackdOutput(corralOutput):
     FILENAME = r'[\w#$~%.\/-]+'
     traceP = re.compile(
-        '(' + FILENAME + r')\((\d+),(\d+)\): Trace: Thread=(\d+)  (\((.*)[\);])?$')
+        ('('
+         + FILENAME
+         + r')\((\d+),(\d+)\): Trace: Thread=(\d+)(\((.*)[\);])?$'))
     errorP = re.compile('(' + FILENAME + r')\((\d+),(\d+)\): (error .*)$')
 
     passedMatch = re.search('Program has no bugs', corralOutput)
