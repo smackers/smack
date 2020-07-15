@@ -126,7 +126,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
   auto node = getNode(v);
 
   if (node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete() ||
-      node->isUnknown() || node->isIntToPtr() || node->isPtrToInt())
+      node->isUnknown() || node->isIntToPtr() || node->isPtrToInt() ||
+      isMemOpd(node))
     // We consider it type-unsafe to be safe for these cases
     return false;
 
