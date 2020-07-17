@@ -5,7 +5,7 @@ use smack::*;
 // @expect error
 
 fn main() {
-  let a = 2;
-  let b = 3;
-  smack::assert!(b%a != 1);
+    let a = 2;
+    let b = 3;
+    smack::assert!(b % a != 1);
 }
