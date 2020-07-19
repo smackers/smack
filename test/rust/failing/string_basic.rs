@@ -5,6 +5,6 @@ use smack::*;
 // @expect verified
 
 fn main() {
-  let s = String::from("Hello, world!");
-  smack::assert!(s.capacity() >= 5);
+    let s = String::from("Hello, world!");
+    smack::assert!(s.capacity() >= 5);
 }

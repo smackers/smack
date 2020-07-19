@@ -6,7 +6,7 @@ use smack::*;
 // @expect error
 
 fn main() {
-  let a = 32u8.verifier_nondet();
-  let b = 8u8.verifier_nondet();
-  let c = a * b;
+    let a = 32u8.verifier_nondet();
+    let b = 8u8.verifier_nondet();
+    let c = a * b;
 }
