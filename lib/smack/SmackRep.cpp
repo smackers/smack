@@ -883,7 +883,45 @@ const Expr *SmackRep::cast(unsigned opcode, const llvm::Value *v,
     } else {
       return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
     }
-  }
+  } else if (opcode == Instruction::Trunc)
+    // SHAOBO: from Ben,
+    // Let F be a computation with inputs i_1, ..., i_n and let T be a
+    // truncation operation from 2^A to 2^B where A > B. We want show that the
+    // truncation of a two's complement number with a bitwidth of A to a
+    // bitwidth of B is equivalent to modding that number by the base 2^B. In
+    // other words, we want to prove the hypothesis that
+    //
+    // T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
+    //
+    // To do this, we use two equivalencies. First, notice that we proved
+    // earlier that
+    //
+    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
+    //
+    // Also, by definition,
+    //
+    // trunc_A->B(x) = x % B
+    //
+    // This means that
+    //
+    // T(F'(i_1 % 2^A, ..., i_n % 2^A)) = T(F(i_1, ..., i_n) % 2^A)
+    //	                                = (F(i_1, ..., i_n) % 2^A) % 2^B
+    //
+    // Next notice that F(i_1, ..., i_n) % 2^A = F(i_1, ..., i_n) - c * 2^A by
+    // definition for some integer c. Because of this, we can use the following
+    // axiom of modularity to simplify it: (X%M - Y%M)%M = (X-Y)%M
+    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
+    //
+    // (F(i_1, ..., i_n) - c * 2^A) % 2^B
+    //    = ((F(i_1, ..., i_n) % 2^B) - (c * 2^A % 2^B)) % 2^B
+    //
+    // Since the second number is a multiple of 2^B, it goes to 0 and we're left
+    // with
+    //
+    // (F(i_1, ..., i_n) % 2^B - 0) % 2^B = F(i_1, ..., i_n) % 2^B
+    //
+    // Therefore, T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
+    return getWrappedExpr(v, t, true);
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
@@ -924,11 +962,11 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
-const Expr *SmackRep::getWrappedExpr(const llvm::Value *V, bool isUnsigned) {
+const Expr *SmackRep::getWrappedExpr(const llvm::Value *V, const Type *t,
+                                     bool isUnsigned) {
   auto rawExpr = expr(V, isUnsigned);
-  if (SmackOptions::WrappedIntegerEncoding && V->getType()->isIntegerTy())
-    return Expr::fn(opName(Naming::getIntWrapFunc(isUnsigned), {V->getType()}),
-                    rawExpr);
+  if (SmackOptions::WrappedIntegerEncoding && t->isIntegerTy())
+    return Expr::fn(opName(Naming::getIntWrapFunc(isUnsigned), {t}), rawExpr);
   else
     return rawExpr;
 }
@@ -976,8 +1014,8 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
   //
   // For signed comparison, the proof is trivial since we can get the precise
   // two's complement representation following the proof above.
-  const Expr *e1 = getWrappedExpr(lhs, isUnsigned);
-  const Expr *e2 = getWrappedExpr(rhs, isUnsigned);
+  const Expr *e1 = getWrappedExpr(lhs, lhs->getType(), isUnsigned);
+  const Expr *e2 = getWrappedExpr(rhs, rhs->getType(), isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
     return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
                             integerLit(0ULL, 1));
