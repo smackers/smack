@@ -922,6 +922,33 @@ const Expr *SmackRep::cast(unsigned opcode, const llvm::Value *v,
     //
     // Therefore, T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
     return getWrappedExpr(v, t, true);
+  else if (opcode == Instruction::ZExt)
+    // SHAOBO: from Ben
+    // Let F be a computation with inputs i_1, ..., i_n and let Z be an unsigned
+    // extension operation from 2^A to 2^B where A < B. We want show that the
+    // unsigned extension of a two's complement number with a bitwidth of A to a
+    // bitwidth of B is equivalent to modding that number by the base 2^A. In
+    // other words, we want to prove the hypothesis that
+    //
+    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
+    //
+    // To do this, we use two equivalencies. First, notice that we proved
+    // earlier that
+    //
+    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
+    //
+    // Also, by definition,
+    //
+    // zext_A->B(x) = x % A
+    //
+    // This means that
+    //
+    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = Z(F(i_1, ..., i_n) % 2^A)
+    //                                  = (F(i_1, ..., i_n) % 2^A) % 2^A
+    //                                  = F(i_1, ..., i_n) % 2^A
+    //
+    // Therefore, Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
+    return getWrappedExpr(v, v->getType(), true);
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
