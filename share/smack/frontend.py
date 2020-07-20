@@ -254,7 +254,6 @@ def json_compilation_database_frontend(input_file, args):
                              args.bc_file] + default_build_libs(args))
 
             else:
-                # out_file = output_flags.findall(cc['command'])[0] + '.bc'
                 command = cc['command']
                 command = output_flags.sub(r"-o \1.bc", command)
                 command = optimization_flags.sub("-O0", command)

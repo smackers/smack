@@ -128,7 +128,7 @@ def main():
     check_command("llvm2bpl")
     check_command("smack")
 
-    if args.prefix != '':
+    if not args.prefix:
         check_headers(args.prefix)
 
     exit(count)
