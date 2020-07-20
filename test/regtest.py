@@ -4,12 +4,10 @@ from os import path
 from multiprocessing.pool import ThreadPool
 import multiprocessing
 import os
-import signal
 import logging
 import yaml
 import psutil
 import argparse
-from os import path
 import subprocess
 import re
 import glob

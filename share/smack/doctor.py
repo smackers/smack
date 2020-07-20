@@ -8,7 +8,6 @@ from subprocess import Popen, PIPE
 import sys
 import re
 import argparse
-import platform
 
 
 def red(text):
@@ -129,7 +128,7 @@ def main():
     check_command("llvm2bpl")
     check_command("smack")
 
-    if args.prefix is not '':
+    if args.prefix != '':
         check_headers(args.prefix)
 
     exit(count)
