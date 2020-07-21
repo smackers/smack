@@ -949,6 +949,48 @@ const Expr *SmackRep::cast(unsigned opcode, const llvm::Value *v,
     //
     // Therefore, Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
     return getWrappedExpr(v, v->getType(), true);
+  else if (opcode == Instruction::SExt)
+    // SHAOBO: from Ben
+    // Let F be a computation with inputs i_1, ..., i_n and let S be a signed
+    // extension operation from 2^A to 2^B where A < B. We want show that the
+    // signed extension of a two's complement number with a bitwidth of A to a
+    // bitwidth of B is equivalent to converting that number to unsigned,
+    // modding the result by the base 2^A, and then converting back to signed.
+    // In other words, we want to prove the hypothesis that
+    //
+    // S(F'(i_1 % 2^A, ..., i_n % 2^A) - 2^(A-1))
+    //    = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // To do this, we use two equivalencies. First, notice that we proved
+    // earlier that
+    //
+    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
+    //
+    // Also, by definition,
+    //
+    // sext_A->B(x) = (x + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // This means that
+    //
+    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = Z(F(i_1, ..., i_n) % 2^A)
+    //    = (F(i_1, ..., i_n) % 2^A + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // Because 2^(A-1) < 2^A, 2^(A-1) % 2^A = 2^(A-1). Lets rewrite this using
+    // that fact.
+    //
+    // (F(i_1, ..., i_n) % 2^A + 2^(A-1)) % 2^A - 2^(A-1)
+    //	  = (F(i_1, ..., i_n) % 2^A + 2^(A-1) % 2^A) % 2^A - 2^(A-1)
+    //
+    // Next, we can use the following axiom of modularity to simplify it:
+    // (X%M + Y%M)%M = (X+Y)%M
+    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
+    //
+    // (F(i_1, ..., i_n) % 2^A + 2^(A-1) % 2^A) % 2^A - 2^(A-1)
+    //	  = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // Therefore, S(F'(i_1 % 2^A, ..., i_n % 2^A) - 2^(A-1))
+    //	  = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
+    return getWrappedExpr(v, v->getType(), false);
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
