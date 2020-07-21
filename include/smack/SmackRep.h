@@ -150,9 +150,6 @@ public:
   const Expr *cmp(const llvm::CmpInst *I);
   const Expr *cmp(const llvm::ConstantExpr *CE);
 
-  const Expr *getWrappedExpr(const llvm::Value *V, const llvm::Type *t,
-                             bool isUnsigned);
-
   const Expr *select(const llvm::SelectInst *I);
   const Expr *select(const llvm::ConstantExpr *CE);
 

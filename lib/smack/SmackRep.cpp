@@ -883,114 +883,7 @@ const Expr *SmackRep::cast(unsigned opcode, const llvm::Value *v,
     } else {
       return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
     }
-  } else if (opcode == Instruction::Trunc)
-    // SHAOBO: from Ben,
-    // Let F be a computation with inputs i_1, ..., i_n and let T be a
-    // truncation operation from 2^A to 2^B where A > B. We want show that the
-    // truncation of a two's complement number with a bitwidth of A to a
-    // bitwidth of B is equivalent to modding that number by the base 2^B. In
-    // other words, we want to prove the hypothesis that
-    //
-    // T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
-    //
-    // To do this, we use two equivalencies. First, notice that we proved
-    // earlier that
-    //
-    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
-    //
-    // Also, by definition,
-    //
-    // trunc_A->B(x) = x % B
-    //
-    // This means that
-    //
-    // T(F'(i_1 % 2^A, ..., i_n % 2^A)) = T(F(i_1, ..., i_n) % 2^A)
-    //	                                = (F(i_1, ..., i_n) % 2^A) % 2^B
-    //
-    // Next notice that F(i_1, ..., i_n) % 2^A = F(i_1, ..., i_n) - c * 2^A by
-    // definition for some integer c. Because of this, we can use the following
-    // axiom of modularity to simplify it: (X%M - Y%M)%M = (X-Y)%M
-    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
-    //
-    // (F(i_1, ..., i_n) - c * 2^A) % 2^B
-    //    = ((F(i_1, ..., i_n) % 2^B) - (c * 2^A % 2^B)) % 2^B
-    //
-    // Since the second number is a multiple of 2^B, it goes to 0 and we're left
-    // with
-    //
-    // (F(i_1, ..., i_n) % 2^B - 0) % 2^B = F(i_1, ..., i_n) % 2^B
-    //
-    // Therefore, T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
-    return getWrappedExpr(v, t, true);
-  else if (opcode == Instruction::ZExt)
-    // SHAOBO: from Ben
-    // Let F be a computation with inputs i_1, ..., i_n and let Z be an unsigned
-    // extension operation from 2^A to 2^B where A < B. We want show that the
-    // unsigned extension of a two's complement number with a bitwidth of A to a
-    // bitwidth of B is equivalent to modding that number by the base 2^A. In
-    // other words, we want to prove the hypothesis that
-    //
-    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
-    //
-    // To do this, we use two equivalencies. First, notice that we proved
-    // earlier that
-    //
-    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
-    //
-    // Also, by definition,
-    //
-    // zext_A->B(x) = x % A
-    //
-    // This means that
-    //
-    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = Z(F(i_1, ..., i_n) % 2^A)
-    //                                  = (F(i_1, ..., i_n) % 2^A) % 2^A
-    //                                  = F(i_1, ..., i_n) % 2^A
-    //
-    // Therefore, Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
-    return getWrappedExpr(v, v->getType(), true);
-  else if (opcode == Instruction::SExt)
-    // SHAOBO: from Ben
-    // Let F be a computation with inputs i_1, ..., i_n and let S be a signed
-    // extension operation from 2^A to 2^B where A < B. We want show that the
-    // signed extension of a two's complement number with a bitwidth of A to a
-    // bitwidth of B is equivalent to converting that number to unsigned,
-    // modding the result by the base 2^A, and then converting back to signed.
-    // In other words, we want to prove the hypothesis that
-    //
-    // S(F'(i_1 % 2^A, ..., i_n % 2^A) - 2^(A-1))
-    //    = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
-    //
-    // To do this, we use two equivalencies. First, notice that we proved
-    // earlier that
-    //
-    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
-    //
-    // Also, by definition,
-    //
-    // sext_A->B(x) = (x + 2^(A-1)) % 2^A - 2^(A-1)
-    //
-    // This means that
-    //
-    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = Z(F(i_1, ..., i_n) % 2^A)
-    //    = (F(i_1, ..., i_n) % 2^A + 2^(A-1)) % 2^A - 2^(A-1)
-    //
-    // Because 2^(A-1) < 2^A, 2^(A-1) % 2^A = 2^(A-1). Lets rewrite this using
-    // that fact.
-    //
-    // (F(i_1, ..., i_n) % 2^A + 2^(A-1)) % 2^A - 2^(A-1)
-    //	  = (F(i_1, ..., i_n) % 2^A + 2^(A-1) % 2^A) % 2^A - 2^(A-1)
-    //
-    // Next, we can use the following axiom of modularity to simplify it:
-    // (X%M + Y%M)%M = (X+Y)%M
-    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
-    //
-    // (F(i_1, ..., i_n) % 2^A + 2^(A-1) % 2^A) % 2^A - 2^(A-1)
-    //	  = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
-    //
-    // Therefore, S(F'(i_1 % 2^A, ..., i_n % 2^A) - 2^(A-1))
-    //	  = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
-    return getWrappedExpr(v, v->getType(), false);
+  }
   return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
@@ -1031,15 +924,6 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
-const Expr *SmackRep::getWrappedExpr(const llvm::Value *V, const Type *t,
-                                     bool isUnsigned) {
-  auto rawExpr = expr(V, isUnsigned);
-  if (SmackOptions::WrappedIntegerEncoding && t->isIntegerTy())
-    return Expr::fn(opName(Naming::getIntWrapFunc(isUnsigned), {t}), rawExpr);
-  else
-    return rawExpr;
-}
-
 const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
   return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1),
              I->isUnsigned());
@@ -1054,37 +938,8 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
                           const llvm::Value *rhs, bool isUnsigned) {
   std::string fn =
       opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
-  // SHAOBO: we apply modulo operations to the operands.
-  // Here is the reasoning: let's assume the cmp operation is unsigned,
-  // and there's a sequence of arithmetic operations which only contain
-  // addition, substraction, multiplication. The inputs to such a computation
-  // f is from i_1 to i_n. The hypothesis we want to prove here is
-  // f(i_1,...,i_n) % B = f'(i_1 % B,...,i_n % B) where f' is the two's
-  // complement counterpart of f, and B is 2^m where m is the bitwidth of the
-  // operands. For certain operation o, its two's complement counterpart o' is
-  // equivalent to o(i_1,i_2) % B. The axioms we used for the proof is as
-  // follows, (X%B + Y%B)%B = (X+Y)%B, (X%B - Y%B)%B = (X-Y)%B,
-  // (X%B * Y%B)%B = (X*Y)%B.
-  // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
-  // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-multiplication
-  // so let's prove it inductively, for a computation f and its two
-  // subcomputation, f_1 and f_2 connected by o, by definition, we have,
-  // f(i_1,...,i_n) = o(f_1(i_1,...,i_n), f_2(i_1,...,i_n))
-  // then, f(i_1,...,i_n)%B = o(f_1(i_1,...,i_n), f_2(i_1,...,i_n))%B
-  // following the axioms, we have,
-  // f(i_1,...,i_n)%B = o(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)%B
-  // by the definition of two's complement arithmetic,
-  // o(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)%B =
-  // 	o'(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)
-  // by induction, f_i(i_1,...,i_n)%B = f'_i(i_1%B,...,i_n%B)
-  // therefore, o'(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B) =
-  // 	o'(f'_1(i_1%B,...,i_n%B), f_2'(i_1%B,...,i_n%B))
-  // the rhs is exactly f' therefore we complete the proof.
-  //
-  // For signed comparison, the proof is trivial since we can get the precise
-  // two's complement representation following the proof above.
-  const Expr *e1 = getWrappedExpr(lhs, lhs->getType(), isUnsigned);
-  const Expr *e2 = getWrappedExpr(rhs, rhs->getType(), isUnsigned);
+  const Expr *e1 = expr(lhs, isUnsigned);
+  const Expr *e2 = expr(rhs, isUnsigned);
   if (lhs->getType()->isFloatingPointTy())
     return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
                             integerLit(0ULL, 1));
