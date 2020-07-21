@@ -1,9 +1,6 @@
 import argparse
-import errno
-import io
 import json
 import os
-import platform
 import re
 import shutil
 import sys
@@ -90,7 +87,7 @@ def validate_input_files(files):
 def validate_output_file(file):
     dir_name = os.path.dirname(os.path.abspath(file))
     if not os.path.isdir(dir_name):
-        exit_with_error("directory %s doesn't exist" % dirname)
+        exit_with_error("directory %s doesn't exist" % dir_name)
     if not os.access(dir_name, os.W_OK):
         exit_with_error("file %s may not be writeable" % file)
     # try:

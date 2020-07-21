@@ -1,5 +1,7 @@
 import os
 import sys
+import re
+import json
 from .utils import temporary_file, try_command
 
 
@@ -249,16 +251,16 @@ def json_compilation_database_frontend(input_file, args):
                 bit_codes = [re.sub('[.]o$', '.bc', f) for f in cc['objects']]
                 try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
                 try_command(['llvm-link', '-o', args.linked_bc_file,
-                             args.bc_file] + build_libs(args))
+                             args.bc_file] + default_build_libs(args))
 
             else:
-                out_file = output_flags.findall(cc['command'])[0] + '.bc'
                 command = cc['command']
                 command = output_flags.sub(r"-o \1.bc", command)
                 command = optimization_flags.sub("-O0", command)
                 command = command + " -emit-llvm"
                 try_command(command.split(), cc['directory'], console=True)
-
+    # import here to avoid a circular import
+    from .top import llvm_to_bpl
     llvm_to_bpl(args)
 
 

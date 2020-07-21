@@ -1,7 +1,4 @@
-import os
 import re
-import subprocess
-import sys
 from .utils import temporary_file, try_command
 
 SPECIAL_NAMES = [
