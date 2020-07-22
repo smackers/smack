@@ -285,39 +285,21 @@ def arguments():
     translate_group.add_argument(
         '--entry-points',
         metavar='PROC',
-        nargs='+',
+        nargs='*',
         default=['main'],
         help='specify top-level procedures [default: %(default)s]')
 
     translate_group.add_argument(
-        '--memory-safety',
-        action='store_true',
-        default=False,
-        help='enable memory safety checks')
-
-    translate_group.add_argument(
-        '--only-check-valid-deref',
-        action='store_true',
-        default=False,
-        help='only enable valid dereference checks')
-
-    translate_group.add_argument(
-        '--only-check-valid-free',
-        action='store_true',
-        default=False,
-        help='only enable valid free checks')
-
-    translate_group.add_argument(
-        '--only-check-memleak',
-        action='store_true',
-        default=False,
-        help='only enable memory leak checks')
-
-    translate_group.add_argument(
-        '--integer-overflow',
-        action='store_true',
-        default=False,
-        help='enable integer overflow checks')
+        '--check',
+        metavar='PROPERTY',
+        nargs='*',
+        choices=['assertions', 'memory-safety', 'valid-deref', 'valid-free',
+                 'memleak', 'integer-overflow'],
+        default=['assertions'],
+        help='''select properties to check
+                [choices: %(choices)s; default: %(default)s]
+                (note that memory-safety is the union of valid-deref,
+                valid-free, memleak)''')
 
     translate_group.add_argument(
         '--llvm-assumes',
@@ -454,10 +436,6 @@ def arguments():
         args.bpl_file = 'a.bpl' if args.no_verify else temporary_file(
             'a', '.bpl', args)
 
-    if (args.only_check_valid_deref or args.only_check_valid_free or
-            args.only_check_memleak):
-        args.memory_safety = True
-
     if args.bit_precise_pointers:
         args.bit_precise = True
 
@@ -563,9 +541,10 @@ def llvm_to_bpl(args):
         cmd += ['-no-byte-access-inference']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
-    if args.memory_safety:
+    if ('memory-safety' in args.check or 'valid-deref' in args.check or
+            'valid-free' in args.check or 'memleak' in args.check):
         cmd += ['-memory-safety']
-    if args.integer_overflow:
+    if 'integer-overflow' in args.check:
         cmd += ['-integer-overflow']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
@@ -610,13 +589,15 @@ def annotate_bpl(args):
 
 
 def property_selection(args):
-    selected_props = []
-    if args.only_check_valid_deref:
-        selected_props.append('valid_deref')
-    elif args.only_check_valid_free:
-        selected_props.append('valid_free')
-    elif args.only_check_memleak:
-        selected_props.append('valid_memtrack')
+    selected_props = {}
+    if 'memory-safety' in args.check:
+        selected_props.update(['valid_deref', 'valid_free', 'valid_memtrack'])
+    if 'valid-deref' in args.check:
+        selected_props.add('valid_deref')
+    if 'valid-free' in args.check:
+        selected_props.add('valid_free')
+    if 'memleak' in args.check:
+        selected_props.add('valid_memtrack')
 
     def replace_assertion(m):
         if len(selected_props) > 0:

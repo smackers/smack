@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 // @expect verified
-// @flag --memory-safety
+// @flag --check=memory-safety
 
 void *t1(void *arg) { return NULL; }
 

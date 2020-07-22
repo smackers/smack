@@ -85,9 +85,10 @@ def default_clang_compile_command(args, lib=False):
     cmd += ['-I' + path for path in smack_headers(args)]
     cmd += args.clang_options.split()
     cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-', '_')]
-    if args.memory_safety:
+    if ('memory-safety' in args.check or 'valid-deref' in args.check or
+            'valid-free' in args.check or 'memleak' in args.check):
         cmd += ['-DMEMORY_SAFETY']
-    if args.integer_overflow:
+    if 'integer-overflow' in args.check:
         cmd += (['-fsanitize=signed-integer-overflow,shift']
                 if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
     if args.float:
@@ -313,7 +314,7 @@ def default_build_libs(args):
     if args.pthread:
         libs += ['pthread.c']
 
-    if args.strings or args.memory_safety or args.integer_overflow:
+    if args.strings:
         libs += ['string.c']
 
     if args.float:
