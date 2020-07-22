@@ -554,7 +554,7 @@ def llvm_to_bpl(args):
         cmd += ['-modular']
     try_command(cmd, console=True)
     annotate_bpl(args)
-    property_selection(args)
+    memsafety_subproperty_selection(args)
     transform_bpl(args)
 
 
@@ -588,10 +588,10 @@ def annotate_bpl(args):
         f.write(bpl)
 
 
-def property_selection(args):
+def memsafety_subproperty_selection(args):
     selected_props = {}
     if 'memory-safety' in args.check:
-        selected_props.update(['valid_deref', 'valid_free', 'valid_memtrack'])
+        return
     if 'valid-deref' in args.check:
         selected_props.add('valid_deref')
     if 'valid-free' in args.check:
