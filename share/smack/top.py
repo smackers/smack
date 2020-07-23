@@ -285,14 +285,14 @@ def arguments():
     translate_group.add_argument(
         '--entry-points',
         metavar='PROC',
-        nargs='*',
+        nargs='+',
         default=['main'],
         help='specify top-level procedures [default: %(default)s]')
 
     translate_group.add_argument(
         '--check',
         metavar='PROPERTY',
-        nargs='*',
+        nargs='+',
         choices=['assertions', 'memory-safety', 'valid-deref', 'valid-free',
                  'memleak', 'integer-overflow'],
         default=['assertions'],
