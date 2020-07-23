@@ -1,7 +1,7 @@
 #include "smack.h"
 
 // @expect verified
-// @flag --integer-overflow
+// @flag --check=integer-overflow
 
 int main(void) {
   unsigned int x = __VERIFIER_nondet_unsigned_int();

@@ -2,7 +2,7 @@
 extern crate smack;
 use smack::*;
 
-// @flag --integer-overflow
+// @flag --check=integer-overflow
 // @expect error
 
 fn main() {

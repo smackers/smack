@@ -1,7 +1,7 @@
 #include "smack.h"
 #include <string.h>
 
-// @flag --memory-safety
+// @flag --check=memory-safety
 // @expect error
 
 int main(void) {
