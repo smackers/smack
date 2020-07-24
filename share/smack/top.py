@@ -19,16 +19,16 @@ VERSION = '2.4.1'
 def results(args):
     """A dictionary of the result output messages."""
     return {
-        'verified': 'SMACK found no errors'
+        'verified': ('SMACK found no errors'
                     + ('' if args.modular else
-                       ' with unroll bound %s' % args.unroll) + '.',
-        'error': 'SMACK found an error.',
-        'invalid-deref': 'SMACK found an error: invalid pointer dereference.',
-        'invalid-free': 'SMACK found an error: invalid memory deallocation.',
-        'invalid-memtrack': 'SMACK found an error: memory leak.',
-        'overflow': 'SMACK found an error: integer overflow.',
-        'timeout': 'SMACK timed out.',
-        'unknown': 'SMACK result is unknown.'}
+                       ' with unroll bound %s' % args.unroll) + '.', 0),
+        'error': ('SMACK found an error.', 1),
+        'invalid-deref': ('SMACK found an error: invalid pointer dereference.', 2),
+        'invalid-free': ('SMACK found an error: invalid memory deallocation.', 3),
+        'invalid-memtrack': ('SMACK found an error: memory leak.', 4),
+        'overflow': ('SMACK found an error: integer overflow.', 5),
+        'timeout': ('SMACK timed out.', 126),
+        'unknown': ('SMACK result is unknown.', 127)}
 
 
 def inlined_procedures():
@@ -737,10 +737,6 @@ def verify_bpl(args):
 
     if args.smackd:
         print(smackdOutput(verifier_output))
-
-    elif result == 'verified':
-        print(results(args)[result])
-
     else:
         if (result == 'error' or result == 'invalid-deref' or
                 result == 'invalid-free' or result == 'invalid-memtrack' or
@@ -756,8 +752,8 @@ def verify_bpl(args):
 
             if args.replay:
                 replay_error_trace(verifier_output, args)
-
-        sys.exit(results(args)[result])
+        print(results(args)[result][0])
+        sys.exit(results(args)[result][1])
 
 
 def error_step(step):

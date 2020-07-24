@@ -159,7 +159,7 @@ def process_test(
                 stdin=subprocess.PIPE,
                 stdout=devnull,
                 stderr=devnull)
-            checker.communicate(input=out)
+            checker.communicate(input=out.encode())
             status = status or checker.returncode
 
     # get the test results
