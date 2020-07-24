@@ -20,11 +20,13 @@ def results(args):
     """A dictionary of the result output messages."""
     return {
         'verified': ('SMACK found no errors'
-                    + ('' if args.modular else
-                       ' with unroll bound %s' % args.unroll) + '.', 0),
+                     + ('' if args.modular else
+                        ' with unroll bound %s' % args.unroll) + '.', 0),
         'error': ('SMACK found an error.', 1),
-        'invalid-deref': ('SMACK found an error: invalid pointer dereference.', 2),
-        'invalid-free': ('SMACK found an error: invalid memory deallocation.', 3),
+        'invalid-deref':('SMACK found an error: invalid pointer dereference.',
+                         2),
+        'invalid-free': ('SMACK found an error: invalid memory deallocation.',
+                         3),
         'invalid-memtrack': ('SMACK found an error: memory leak.', 4),
         'overflow': ('SMACK found an error: integer overflow.', 5),
         'rust-panic': ('SMACK found an error: Rust panic.', 6),
