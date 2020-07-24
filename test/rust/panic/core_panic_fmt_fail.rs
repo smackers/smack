@@ -5,6 +5,7 @@ use core::panic::PanicInfo;
 
 // @flag --check=rust-panics
 // @expect error
+// @checkout grep "SMACK found an error: Rust panic."
 
 #[start]
 fn main(_x: isize, _y: *const *const u8) -> isize {
