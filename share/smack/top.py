@@ -23,8 +23,8 @@ def results(args):
                      + ('' if args.modular else
                         ' with unroll bound %s' % args.unroll) + '.', 0),
         'error': ('SMACK found an error.', 1),
-        'invalid-deref':('SMACK found an error: invalid pointer dereference.',
-                         2),
+        'invalid-deref': ('SMACK found an error: invalid pointer dereference.',
+                          2),
         'invalid-free': ('SMACK found an error: invalid memory deallocation.',
                          3),
         'invalid-memtrack': ('SMACK found an error: memory leak.', 4),
