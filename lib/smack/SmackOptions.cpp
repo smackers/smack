@@ -77,6 +77,10 @@ const llvm::cl::opt<LLVMAssumeType> SmackOptions::LLVMAssumes(
                      clEnumValN(LLVMAssumeType::check, "check",
                                 "enable checking of assume statements")));
 
+const llvm::cl::opt<bool>
+    SmackOptions::RustPanics("rust-panics",
+                             llvm::cl::desc("Enable Rust panic checking"));
+
 bool SmackOptions::isEntryPoint(std::string name) {
   for (auto EP : EntryPoints)
     if (name == EP)

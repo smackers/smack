@@ -27,6 +27,7 @@ def results(args):
         'invalid-free': ('SMACK found an error: invalid memory deallocation.', 3),
         'invalid-memtrack': ('SMACK found an error: memory leak.', 4),
         'overflow': ('SMACK found an error: integer overflow.', 5),
+        'rust-panic': ('SMACK found an error: Rust panic.', 6),
         'timeout': ('SMACK timed out.', 126),
         'unknown': ('SMACK result is unknown.', 127)}
 
@@ -294,7 +295,7 @@ def arguments():
         metavar='PROPERTY',
         nargs='+',
         choices=['assertions', 'memory-safety', 'valid-deref', 'valid-free',
-                 'memleak', 'integer-overflow'],
+                 'memleak', 'integer-overflow', 'rust-panics'],
         default=['assertions'],
         help='''select properties to check
                 [choices: %(choices)s; default: %(default)s]
@@ -546,6 +547,8 @@ def llvm_to_bpl(args):
         cmd += ['-memory-safety']
     if 'integer-overflow' in args.check:
         cmd += ['-integer-overflow']
+    if 'rust-panics' in args.check:
+        cmd += ['-rust-panics']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:
@@ -670,6 +673,9 @@ def verification_result(verifier_output):
             return 'invalid-memtrack'
         elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
             return 'overflow'
+        elif re.search(r'ASSERTION FAILS assert {:rust_panic}',
+                       verifier_output):
+            return 'rust-panic'
         else:
             listCall = re.findall(r'\(CALL .+\)', verifier_output)
             if len(listCall) > 0 and re.search(
@@ -740,7 +746,7 @@ def verify_bpl(args):
     else:
         if (result == 'error' or result == 'invalid-deref' or
                 result == 'invalid-free' or result == 'invalid-memtrack' or
-                result == 'overflow'):
+                result == 'overflow' or result == 'rust-panic'):
             error = error_trace(verifier_output, args)
 
             if args.error_file:
