@@ -62,8 +62,10 @@ const std::string Naming::REC_MEM_OP = "boogie_si_record_mop";
 const std::string Naming::MEM_OP_VAL = "$MOP";
 
 const std::string Naming::RUST_ENTRY = "_ZN3std2rt10lang_start";
-const std::string Naming::RUST_PANIC1 = "_ZN4core9panicking5panic";
-const std::string Naming::RUST_PANIC2 = "_ZN3std9panicking11begin_panic";
+const std::vector<std::string> Naming::RUST_PANICS = {
+    "_ZN3std9panicking15begin_panic_fmt17h", "_ZN4core9panicking5panic17h",
+    "_ZN3std9panicking11begin_panic17h", "_ZN4core9panicking9panic_fmt17h"};
+
 const std::string Naming::RUST_PANIC_ANNOTATION = "rust_panic";
 
 const std::string Naming::BLOCK_LBL = "$bb";

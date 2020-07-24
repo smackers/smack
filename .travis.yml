@@ -38,6 +38,7 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=rust/functions --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/generics --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/loops --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/panic --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/recursion --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/structures --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/vector --languages=rust"
