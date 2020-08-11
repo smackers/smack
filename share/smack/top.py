@@ -439,9 +439,6 @@ def arguments():
         args.bpl_file = 'a.bpl' if args.no_verify else temporary_file(
             'a', '.bpl', args)
 
-    if args.bit_precise_pointers:
-        args.bit_precise = True
-
     # TODO are we (still) using this?
     # with open(args.input_file, 'r') as f:
     #   for line in f.readlines():
