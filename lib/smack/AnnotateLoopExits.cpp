@@ -8,8 +8,10 @@
 // is added between a branching block and the loop header.
 //
 
-#include "smack/AnnotateLoopEnds.h"
+#define DEBUG_TYPE "smack-loop-unroll"
+#include "smack/AnnotateLoopExits.h"
 #include "smack/Naming.h"
+#include "smack/Debug.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/IR/Constants.h"
@@ -29,11 +31,12 @@ namespace smack {
 using namespace llvm;
 
 // Register LoopInfo
-void AnnotateLoopEnds::getAnalysisUsage(AnalysisUsage &AU) const {
+void AnnotateLoopExits::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredID(LoopSimplifyID);
   AU.addRequired<LoopInfoWrapperPass>();
 }
 
+// This method is for clarity and self-documentingness
 void insertLoopEndAssertion(Function *le, Instruction *insertBefore) {
   CallInst::Create(le, "", insertBefore);
 }
@@ -41,7 +44,7 @@ void insertLoopEndAssertion(Function *le, Instruction *insertBefore) {
 void processExitBlock(BasicBlock *block, Function *le) {
   // print exit block found!!
 
-  errs() << "    Exit block found! \n";
+  SDEBUG(errs() << "Processing an Exit Block\n");
 
   Instruction& front = block->front();
   insertLoopEndAssertion(le,&front);
@@ -51,7 +54,8 @@ void annotateLoopEnd(Loop *loop, Function *le) {
   //BasicBlock *headerBlock = loop->getHeader();
 
   // I imagine that it is very uncommon for a loop to have
-  //   more than 5 exit points.
+  //   more than 5 exit points. This is a complete guess
+  //   and we could probably have a better heuristic
   SmallVector<BasicBlock *, 5> exitBlocks; 
 
   loop->getExitBlocks(exitBlocks);
@@ -59,31 +63,23 @@ void annotateLoopEnd(Loop *loop, Function *le) {
   for (BasicBlock *b : exitBlocks) {
     processExitBlock(b,le);
   } 
-
-  // Handle subloops
-  //for (Loop *subloop : loop->getSubLoops()) {
-  //  processLoop(subloop);
-  //}
 }
 
-bool AnnotateLoopEnds::runOnModule(Module &m) {
+bool AnnotateLoopExits::runOnModule(Module &m) {
 
   Function *le = m.getFunction("__SMACK_loop_end");
   assert(le != NULL && "Function __SMACK_loop_end shoudl be present.");
 
-  errs() << "Module Start\n";
   for (auto F = m.begin(), FEnd = m.end(); F != FEnd; ++F) {
     if (F->isIntrinsic() || F->empty()) {
       continue;
     }
 
-    errs() << "Hello " << F->getName() << "\n";
-
     LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
     for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
          LI != LIEnd; ++LI) {
 
-      errs() << "  Loop Found in " << F->getName() << "\n";
+      SDEBUG(errs() << "Processing Loop in " << F->getName() << "\n");
       annotateLoopEnd(*LI, le);
     }
   }
@@ -92,7 +88,7 @@ bool AnnotateLoopEnds::runOnModule(Module &m) {
 }
 
 // Pass ID variable
-char AnnotateLoopEnds::ID = 0;
+char AnnotateLoopExits::ID = 0;
 
-StringRef AnnotateLoopEnds::getPassName() const { return "Annotate Loop Ends with assert(false)"; }
+StringRef AnnotateLoopExits::getPassName() const { return "Annotate Loop Ends with assert(false)"; }
 } // namespace smack

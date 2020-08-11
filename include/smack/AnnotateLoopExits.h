@@ -1,8 +1,8 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef ANNOTATELOOPENDS_H
-#define ANNOTATELOOPENDS_H
+#ifndef ANNOTATELOOPEXITS_H
+#define ANNOTATELOOPEXITS_H
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -11,14 +11,14 @@
 
 namespace smack {
 
-class AnnotateLoopEnds : public llvm::ModulePass {
+class AnnotateLoopExits : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  AnnotateLoopEnds() : llvm::ModulePass(ID) {}
+  AnnotateLoopExits() : llvm::ModulePass(ID) {}
   virtual llvm::StringRef getPassName() const override;
   virtual bool runOnModule(llvm::Module &m) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage &) const override;
 };
 } // namespace smack
 
-#endif // ANNOTATELOOPENDS_H
+#endif // ANNOTATELOOPEXITS_H
