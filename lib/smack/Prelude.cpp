@@ -2,6 +2,7 @@
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/SmackOptions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/Casting.h"
 
 #include <functional>
@@ -165,46 +166,14 @@ FuncDecl *builtinOp(std::string baseName, const Attr *attr,
                         {attr});
 }
 
+std::string getIntLimit(unsigned size) {
+  auto n = APInt(size + 1, 0);
+  n.setBit(size);
+  return n.toString(10, false);
+}
+
 const std::vector<unsigned> IntOpGen::INTEGER_SIZES{
     1, 5, 6, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128, 160, 256};
-
-const std::map<unsigned, std::string> IntOpGen::INT_LIMITS{
-    {0, "1"},
-    {1, "2"},
-    {4, "16"},
-    {5, "32"},
-    {5, "32"},
-    {6, "64"},
-    {7, "128"},
-    {8, "256"},
-    {15, "32768"},
-    {16, "65536"},
-    {23, "8388608"},
-    {24, "16777216"},
-    {31, "2147483648"},
-    {32, "4294967296"},
-    {39, "549755813888"},
-    {40, "1099511627776"},
-    {47, "140737488355328"},
-    {48, "281474976710656"},
-    {55, "36028797018963968"},
-    {56, "72057594037927936"},
-    {63, "9223372036854775808"},
-    {64, "18446744073709551616"},
-    {79, "604462909807314587353088"},
-    {80, "1208925819614629174706176"},
-    {87, "154742504910672534362390528"},
-    {88, "309485009821345068724781056"},
-    {95, "39614081257132168796771975168"},
-    {96, "79228162514264337593543950336"},
-    {127, "170141183460469231731687303715884105728"},
-    {128, "340282366920938463463374607431768211456"},
-    {159, "730750818665451459101842416358141509827966271488"},
-    {160, "1461501637330902918203684832716283019655932542976"},
-    {255, "57896044618658097711785492504343953926634992332820282019728792003956"
-          "564819968"},
-    {256, "11579208923731619542357098500868790785326998466564056403945758400791"
-          "3129639936"}};
 
 // floating-point layout map: bit-width -> (exponent bit-width, significand
 // bit-width)
@@ -457,10 +426,9 @@ struct IntOpGen::IntArithOp : public IntOp {
   // `if i >= -128 && i < 128 then i else $smod(i + 128, 256) - 128`
   static const Expr *tosExpr(unsigned size) {
     auto i = makeIntVarExpr(0);
-    auto limitMinusOne = Expr::lit(IntOpGen::INT_LIMITS.at(size - 1), 0);
+    auto limitMinusOne = Expr::lit(getIntLimit(size - 1), 0);
     auto c = Expr::and_(
-        new BinExpr(BinExpr::Gte, i,
-                    Expr::lit("-" + IntOpGen::INT_LIMITS.at(size - 1), 0)),
+        new BinExpr(BinExpr::Gte, i, Expr::lit("-" + getIntLimit(size - 1), 0)),
         new BinExpr(BinExpr::Lt, i, limitMinusOne));
     auto type = getIntTypeName(size);
     return Expr::ifThenElse(
@@ -469,7 +437,7 @@ struct IntOpGen::IntArithOp : public IntOp {
             indexedName("$sub", {type}),
             Expr::fn(indexedName("$smod", {type}),
                      Expr::fn(indexedName("$add", {type}), i, limitMinusOne),
-                     Expr::lit(IntOpGen::INT_LIMITS.at(size), 0)),
+                     Expr::lit(getIntLimit(size), 0)),
             limitMinusOne));
   }
 
@@ -477,7 +445,7 @@ struct IntOpGen::IntArithOp : public IntOp {
   // `if i >= 0 && i < 256 then i else $smod.i8(i, 256)`
   static const Expr *touExpr(unsigned size) {
     auto i = makeIntVarExpr(0);
-    auto limit = Expr::lit(IntOpGen::INT_LIMITS.at(size), 0);
+    auto limit = Expr::lit(getIntLimit(size), 0);
     auto c = Expr::and_(new BinExpr(BinExpr::Gte, i, Expr::lit(0ULL)),
                         new BinExpr(BinExpr::Lt, i, limit));
     auto type = getIntTypeName(size);
