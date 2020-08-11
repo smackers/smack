@@ -11,6 +11,7 @@
 #include "smack/AnnotateLoopEnds.h"
 #include "smack/Naming.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -29,27 +30,34 @@ using namespace llvm;
 
 // Register LoopInfo
 void AnnotateLoopEnds::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequiredID(LoopSimplifyID);
   AU.addRequired<LoopInfoWrapperPass>();
 }
 
-void processExitingBlock(BasicBlock *block) {
+void insertLoopEndAssertion(Function *le, Instruction *insertBefore) {
+  CallInst::Create(le, "", insertBefore);
+}
+
+void processExitBlock(BasicBlock *block, Function *le) {
   // print exit block found!!
 
   errs() << "    Exit block found! \n";
 
+  Instruction& front = block->front();
+  insertLoopEndAssertion(le,&front);
 }
 
-void annotateLoopEnd(Loop *loop) {
+void annotateLoopEnd(Loop *loop, Function *le) {
   //BasicBlock *headerBlock = loop->getHeader();
 
   // I imagine that it is very uncommon for a loop to have
   //   more than 5 exit points.
-  SmallVector<BasicBlock *, 5> exitingBlocks; 
+  SmallVector<BasicBlock *, 5> exitBlocks; 
 
-  loop->getExitingBlocks(exitingBlocks);
+  loop->getExitBlocks(exitBlocks);
   
-  for (BasicBlock *b : exitingBlocks) {
-    processExitingBlock(b);
+  for (BasicBlock *b : exitBlocks) {
+    processExitBlock(b,le);
   } 
 
   // Handle subloops
@@ -58,16 +66,26 @@ void annotateLoopEnd(Loop *loop) {
   //}
 }
 
-bool AnnotateLoopEnds::runOnFunction(Function &F) {
-  if (F.isIntrinsic() || F.empty()) {
-    return false;
-  }
-  errs() << "Hello " << F.getName() << "\n";
-  LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
-       LI != LIEnd; ++LI) {
-    errs() << "  Loop Found in " << F.getName() << "\n";
-    annotateLoopEnd(*LI);
+bool AnnotateLoopEnds::runOnModule(Module &m) {
+
+  Function *le = m.getFunction("__SMACK_loop_end");
+  assert(le != NULL && "Function __SMACK_loop_end shoudl be present.");
+
+  errs() << "Module Start\n";
+  for (auto F = m.begin(), FEnd = m.end(); F != FEnd; ++F) {
+    if (F->isIntrinsic() || F->empty()) {
+      continue;
+    }
+
+    errs() << "Hello " << F->getName() << "\n";
+
+    LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
+    for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
+         LI != LIEnd; ++LI) {
+
+      errs() << "  Loop Found in " << F->getName() << "\n";
+      annotateLoopEnd(*LI, le);
+    }
   }
 
   return true;

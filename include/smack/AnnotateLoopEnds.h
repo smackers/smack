@@ -11,12 +11,12 @@
 
 namespace smack {
 
-class AnnotateLoopEnds : public llvm::FunctionPass {
+class AnnotateLoopEnds : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  AnnotateLoopEnds() : llvm::FunctionPass(ID) {}
+  AnnotateLoopEnds() : llvm::ModulePass(ID) {}
   virtual llvm::StringRef getPassName() const override;
-  virtual bool runOnFunction(llvm::Function &F) override;
+  virtual bool runOnModule(llvm::Module &m) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage &) const override;
 };
 } // namespace smack
