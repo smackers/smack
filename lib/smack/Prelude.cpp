@@ -651,7 +651,7 @@ struct IntOpGen::IntPred : public IntOp {
     // SHAOBO: we apply modulo operations to the operands.
     // Here is the reasoning: let's assume the cmp operation is unsigned,
     // and there's a sequence of arithmetic operations which only contain
-    // addition, substraction, multiplication. The inputs to such a computation
+    // addition, subtraction, multiplication. The inputs to such a computation
     // f is from i_1 to i_n. The hypothesis we want to prove here is
     // f(i_1,...,i_n) % B = f'(i_1 % B,...,i_n % B) where f' is the two's
     // complement counterpart of f, and B is 2^m where m is the bitwidth of the
