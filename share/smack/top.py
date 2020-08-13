@@ -518,6 +518,12 @@ def arguments():
         default=False,
         help='enable support for string')
 
+    translate_group.add_argument(
+        '--fail-on-loop-exit',
+        action='store_true',
+        default=False,
+        help='Add assert false to the end of each loop (useful for deciding how much unroll to use)')
+
     verifier_group = parser.add_argument_group('verifier options')
 
     verifier_group.add_argument(
@@ -746,6 +752,8 @@ def llvm_to_bpl(args):
         cmd += ['-integer-overflow']
     if VProperty.RUST_PANICS in args.check:
         cmd += ['-rust-panics']
+    if args.fail_on_loop_exit:
+        cmd += ['-fail-on-loop-exit']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:

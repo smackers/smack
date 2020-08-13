@@ -28,6 +28,7 @@
 #include "seadsa/support/Debug.h"
 #include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
+#include "smack/AnnotateLoopExits.h"
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/ExtractContracts.h"
@@ -36,7 +37,6 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
-#include "smack/AnnotateLoopExits.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
@@ -197,7 +197,9 @@ int main(int argc, char **argv) {
 
   // pass_manager.add(new llvm::StructRet());
   pass_manager.add(new smack::NormalizeLoops());
-  pass_manager.add(new smack::AnnotateLoopExits());
+  if (smack::SmackOptions::FailOnLoopExit) {
+    pass_manager.add(new smack::AnnotateLoopExits());
+  }
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
   pass_manager.add(new smack::ExtractContracts());

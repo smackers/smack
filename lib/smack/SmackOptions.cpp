@@ -77,6 +77,9 @@ const llvm::cl::opt<bool>
 const llvm::cl::opt<bool> SmackOptions::IntegerOverflow(
     "integer-overflow", llvm::cl::desc("Enable integer overflow checks"));
 
+const llvm::cl::opt<bool> SmackOptions::FailOnLoopExit("fail-on-loop-exit",
+    llvm::cl::desc("Add assert(false) to the end of each loop"));
+
 const llvm::cl::opt<LLVMAssumeType> SmackOptions::LLVMAssumes(
     "llvm-assumes",
     llvm::cl::desc(

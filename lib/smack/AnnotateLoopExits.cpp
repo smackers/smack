@@ -46,23 +46,22 @@ void processExitBlock(BasicBlock *block, Function *le) {
 
   SDEBUG(errs() << "Processing an Exit Block\n");
 
-  Instruction& front = block->front();
-  insertLoopEndAssertion(le,&front);
+  Instruction &front = block->front();
+  insertLoopEndAssertion(le, &front);
 }
 
 void annotateLoopEnd(Loop *loop, Function *le) {
-  //BasicBlock *headerBlock = loop->getHeader();
 
   // I imagine that it is very uncommon for a loop to have
   //   more than 5 exit points. This is a complete guess
   //   and we could probably have a better heuristic
-  SmallVector<BasicBlock *, 5> exitBlocks; 
+  SmallVector<BasicBlock *, 5> exitBlocks;
 
   loop->getExitBlocks(exitBlocks);
-  
+
   for (BasicBlock *b : exitBlocks) {
-    processExitBlock(b,le);
-  } 
+    processExitBlock(b, le);
+  }
 }
 
 bool AnnotateLoopExits::runOnModule(Module &m) {
@@ -90,5 +89,8 @@ bool AnnotateLoopExits::runOnModule(Module &m) {
 // Pass ID variable
 char AnnotateLoopExits::ID = 0;
 
-StringRef AnnotateLoopExits::getPassName() const { return "Annotate Loop Ends with assert(false)"; }
+StringRef AnnotateLoopExits::getPassName() const {
+  return "Annotate Loop Ends with assert(false)";
+}
+
 } // namespace smack
