@@ -925,12 +925,13 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
 }
 
 const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
-  bool isUnsigned = I->isUnsigned();
-  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1), isUnsigned);
+  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1),
+             I->isUnsigned());
 }
 
 const Expr *SmackRep::cmp(const llvm::ConstantExpr *CE) {
-  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1), false);
+  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1),
+             llvm::CmpInst::isUnsigned((CmpInst::Predicate)CE->getPredicate()));
 }
 
 const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
