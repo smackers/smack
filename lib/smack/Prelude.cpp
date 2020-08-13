@@ -328,7 +328,7 @@ struct IntOpGen::IntArithOp : public IntOp {
         (!SmackOptions::BitPrecisePointers && alsoUsedByPtr))
       funcs.push_back(getIntFunc(size));
     if (SmackOptions::BitPrecise ||
-        SmackOptions::BitPrecisePointers && alsoUsedByPtr)
+        (SmackOptions::BitPrecisePointers && alsoUsedByPtr))
       funcs.push_back(getBvFunc(size));
     return funcs;
   }
