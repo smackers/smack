@@ -1203,33 +1203,42 @@ void PtrOpGen::generatePtrNumConvs(std::stringstream &s) const {
 void PtrOpGen::generatePreds(std::stringstream &s) const {
   describe("Pointer predicates", s);
 
-  const std::vector<std::string> predicates{"$eq",  "$ne",  "$ugt", "$uge",
-                                            "$ult", "$ule", "$sgt", "$sge",
-                                            "$slt", "$sle"};
+  using PredInfo = std::pair<std::string, BinExpr::Binary>;
+  const std::vector<PredInfo> predicates{
+      {"$eq", BinExpr::Eq},   {"$ne", BinExpr::Neq},  {"$ugt", BinExpr::Gt},
+      {"$uge", BinExpr::Gte}, {"$ult", BinExpr::Lt},  {"$ule", BinExpr::Lte},
+      {"$sgt", BinExpr::Gt},  {"$sge", BinExpr::Gte}, {"$slt", BinExpr::Lt},
+      {"$sle", BinExpr::Lte}};
 
   // e.g., function {:inline} $eq.ref(p1: ref, p2: ref)
   // returns (i1) { (if $eq.i64.bool(p1, p2) then 1 else 0) }
-  for (auto pred : predicates) {
+  for (auto info : predicates) {
+    auto predName = info.first;
+    auto binPred = info.second;
+    auto condExpr = Expr::fn(
+        indexedName(predName, {prelude.rep.pointerType(), Naming::BOOL_TYPE}),
+        {makePtrVarExpr(1), makePtrVarExpr(2)});
+    const Expr *predExpr =
+        SmackOptions::BitPrecisePointers
+            ? condExpr
+            : new BinExpr(binPred, makePtrVarExpr(1), makePtrVarExpr(2));
+
     s << Decl::function(
-             indexedName(pred, {Naming::PTR_TYPE}),
+             indexedName(predName, {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
              {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
-             prelude.rep.intType(1),
-             Expr::ifThenElse(
-                 Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
-                                             Naming::BOOL_TYPE}),
-                          {Expr::id("p1"), Expr::id("p2")}),
-                 prelude.rep.integerLit(1LL, 1),
-                 prelude.rep.integerLit(0LL, 1)),
-             {makeInlineAttr()})
+             Naming::BOOL_TYPE, predExpr, {makeInlineAttr()})
       << "\n";
-    s << Decl::function(
-             indexedName(pred, {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
-             {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
-             Naming::BOOL_TYPE,
-             Expr::fn(indexedName(
-                          pred, {prelude.rep.pointerType(), Naming::BOOL_TYPE}),
-                      {Expr::id("p1"), Expr::id("p2")}),
-             {makeInlineAttr()})
+
+    s << Decl::function(indexedName(predName, {Naming::PTR_TYPE}),
+                        {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
+                        prelude.rep.intType(1),
+                        Expr::ifThenElse(
+                            Expr::fn(indexedName(predName, {Naming::PTR_TYPE,
+                                                            Naming::BOOL_TYPE}),
+                                     {makePtrVarExpr(1), makePtrVarExpr(2)}),
+                            prelude.rep.integerLit(1LL, 1),
+                            prelude.rep.integerLit(0LL, 1)),
+                        {makeInlineAttr()})
       << "\n";
   }
   s << "\n";
