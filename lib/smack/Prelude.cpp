@@ -341,7 +341,8 @@ struct IntOpGen::IntArithOp : public IntOp {
     if (!SmackOptions::BitPrecise ||
         (!SmackOptions::BitPrecisePointers && alsoUsedByPtr))
       funcs.push_back(getIntFunc(size));
-    if (SmackOptions::BitPrecise)
+    if (SmackOptions::BitPrecise ||
+        (SmackOptions::BitPrecisePointers && alsoUsedByPtr))
       funcs.push_back(getBvFunc(size));
     return funcs;
   }
@@ -638,7 +639,7 @@ struct IntOpGen::IntPred : public IntOp {
       funcs.push_back(compFunc);
       funcs.push_back(predFunc);
     }
-    if (SmackOptions::BitPrecise) {
+    if (SmackOptions::BitPrecise || SmackOptions::BitPrecisePointers) {
       std::tie(compFunc, predFunc) = getBvFuncs(size);
       funcs.push_back(compFunc);
       funcs.push_back(predFunc);
