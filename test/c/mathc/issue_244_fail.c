@@ -2,6 +2,6 @@
 #include <math.h>
 
 // @expect error
-// @flag --bit-precise
+// @flag --integer-encoding=bit-vector
 
 int main(void) { assert(__signbit(remainder(0.0, 1.0))); }

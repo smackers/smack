@@ -1,6 +1,6 @@
 #include "smack.h"
 
-// @flag --bit-precise
+// @flag --integer-encoding=bit-vector
 // @expect error
 
 union mix {

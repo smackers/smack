@@ -1,7 +1,7 @@
 #include "smack.h"
 #include <stdlib.h>
 
-// @flag --bit-precise-pointers
+// @flag --pointer-encoding=bit-vector
 // @expect verified
 
 int main(void) {

@@ -2,7 +2,7 @@
 #include <limits.h>
 
 // @expect verified
-// @flag --wrapped-integer-encoding
+// @flag --integer-encoding=wrapped-integer
 
 int main(void) {
   unsigned xs = UINT_MAX;

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 // @expect error
-// @flag --bit-precise-pointers
+// @flag --pointer-encoding=bit-vector
 
 int main() {
   int *a = (int *)malloc(sizeof(int));

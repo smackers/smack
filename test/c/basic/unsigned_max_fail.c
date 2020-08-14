@@ -2,7 +2,7 @@
 #include <limits.h>
 
 // @expect error
-// @flag --wrapped-integer-encoding
+// @flag --integer-encoding=wrapped-integer
 
 int main(void) {
   unsigned x = __VERIFIER_nondet_unsigned();

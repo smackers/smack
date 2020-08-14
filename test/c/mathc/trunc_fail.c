@@ -2,7 +2,7 @@
 #include <math.h>
 
 // @expect error
-// @flag --bit-precise
+// @flag --integer-encoding=bit-vector
 
 int main(void) {
   double NaN = 0.0 / 0.0;
