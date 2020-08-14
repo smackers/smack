@@ -29,22 +29,22 @@ def svcomp_frontend(input_file, args):
     # test bv and executable benchmarks
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
-      args.bit_precise = True
-      args.bit_precise_pointers = True
+      args.integer_encoding = 'bit-vector'
+      args.pointer_encoding = 'bit-vector'
     if file_type == 'float' and not args.integer_overflow:
       args.float = True
-      args.bit_precise = True
+      args.integer_encoding = 'bit-vector'
       with open(input_file, "r") as sf:
         sc = sf.read()
       if 'copysign(1' in sc:
-        args.bit_precise_pointers = True
+        args.pointer_encoding = 'bit-vector'
     args.execute = executable
   else:
     with open(input_file, "r") as sf:
       sc = sf.read()
     if "unsigned char b:2" in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
-      args.bit_precise = True
-      #args.bit_precise_pointers = True
+      args.integer_encoding = 'bit-vector'
+      #args.pointer_encoding = 'bit-vector'
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -82,7 +82,7 @@ def svcomp_check_property(args):
       args.only_check_memcleanup = True
     elif "overflow" in prop:
       args.integer_overflow = True
-    elif not "__VERIFIER_error" in prop:
+    elif not "reach_error" in prop:
       sys.exit(smack.top.results(args)['unknown'])
 
 def svcomp_process_file(args, name, ext):
@@ -112,10 +112,10 @@ def svcomp_process_file(args, name, ext):
         pass
 
     if 'argv=malloc' in s:
-#      args.bit_precise = True
+#      args.integer_encoding = 'bit-vector'
       if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
-        args.bit_precise = True
-        args.bit_precise_pointers = True
+        args.integer_encoding = 'bit-vector'
+        args.pointer_encoding = 'bit-vector'
 
     length = len(s.split('\n'))
     if length < 60:
@@ -169,9 +169,19 @@ def is_stack_benchmark(args, csource):
       print("Stumbled upon a stack-based memory safety benchmark\n")
     sys.exit(smack.top.results(args)['unknown'])
 
+def inject_assert_false(args):
+    with open(args.bpl_file, 'r') as bf:
+      content = bf.read()
+    content = content.replace('call reach_error();', 'assert false; call reach_error();')
+    with open(args.bpl_file, 'w') as bf:
+      bf.write(content)
+
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
+
+  if not args.memory_safety and not args.only_check_memcleanup and not args.integer_overflow:
+    inject_assert_false(args)
 
   if args.memory_safety:
     if not (args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak):
@@ -216,6 +226,7 @@ def verify_bpl_svcomp(args):
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
+  corral_command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
 
   with open(args.bpl_file, "r") as f:
     bpl = f.read()
@@ -246,7 +257,7 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    if not (args.memory_safety or args.bit_precise or args.only_check_memcleanup):
+    if not (args.memory_safety or args.integer_encoding == 'bit-vector' or args.only_check_memcleanup):
       if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
         corral_command += ["/di"]
 
@@ -260,7 +271,7 @@ def verify_bpl_svcomp(args):
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
   staticLoopBound = 65536
-  if not args.bit_precise and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
+  if not args.integer_encoding == 'bit-vector' and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
     loopUnrollBar = 23
   elif "s3_srvr.blast.10_false-unreach-call" in bpl or "s3_srvr.blast.15_false-unreach-call" in bpl:
@@ -320,12 +331,7 @@ def verify_bpl_svcomp(args):
 
   if not "forall" in bpl:
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
-    corral_command += ["/bopt:z3opt:smt.relevancy=0"]
-
-  if args.bit_precise:
-    heurTrace += "--bit-precise flag passed - enabling bit vectors mode.\n"
-    corral_command += ["/bopt:proverOpt:OPTIMIZE_FOR_BV=true"]
-    corral_command += ["/bopt:boolControlVC"]
+    corral_command += ["/bopt:proverOpt:O:smt.relevancy=0"]
 
   if args.memory_safety:
     if args.prop_to_check == 'valid-deref':
@@ -486,8 +492,8 @@ def run_binary(args):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
 
-  s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
-  s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
+  s = re.sub(r'(extern )?void reach_error()', '//', s)
+  s = re.sub(r'reach_error\(\)', 'assert(0)', s)
   s = '#include<assert.h>\n' + s
 
   name = os.path.splitext(os.path.basename(args.input_files[0]))[0]

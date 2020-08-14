@@ -1,2 +1,2 @@
-flags: [--bit-precise]
-time-limit: 120
+skip: ok
+flags: [--integer-encoding=bit-vector]

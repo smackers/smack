@@ -137,6 +137,17 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
   }
 }
 
+bool isRustPanic(const std::string &name) {
+  for (const auto &panic : Naming::RUST_PANICS) {
+    // We are interested in exact functional matches.
+    // Rust mangled names include a 17 byte hash at the end.
+    if (name.find(panic) == 0 && name.size() == panic.size() + 17) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void SmackInstGenerator::processInstruction(llvm::Instruction &inst) {
   SDEBUG(errs() << "Inst: " << inst << "\n");
   annotate(inst, currBlock);
@@ -615,15 +626,7 @@ void SmackInstGenerator::visitPHINode(llvm::PHINode &phi) {
 void SmackInstGenerator::visitSelectInst(llvm::SelectInst &i) {
   processInstruction(i);
   std::string x = naming->get(i);
-  const Expr *c = rep->expr(i.getCondition()),
-             *v1 = rep->expr(i.getTrueValue()),
-             *v2 = rep->expr(i.getFalseValue());
-
-  assert(!i.getCondition()->getType()->isVectorTy() &&
-         "Vector condition is not supported.");
-  emit(Stmt::assign(
-      Expr::id(x),
-      Expr::ifThenElse(Expr::eq(c, rep->integerLit(1LL, 1)), v1, v2)));
+  emit(Stmt::assign(Expr::id(x), rep->select(&i)));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
@@ -648,8 +651,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     auto mainFunction = cast<const Function>(castExpr);
     emit(Stmt::call(mainFunction->getName(), {}, {}));
 
-  } else if (name.find(Naming::RUST_PANIC1) != std::string::npos ||
-             name.find(Naming::RUST_PANIC2) != std::string::npos) {
+  } else if (SmackOptions::RustPanics && isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
@@ -1159,6 +1161,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           {llvm::Intrinsic::ctpop, assignBvExpr(ctpop)},
           {llvm::Intrinsic::cttz, cttz},
           {llvm::Intrinsic::dbg_declare, ignore},
+          {llvm::Intrinsic::dbg_label, ignore},
           {llvm::Intrinsic::expect, identity},
           {llvm::Intrinsic::fabs, assignUnFPFuncApp("$abs")},
           {llvm::Intrinsic::fma, fma},

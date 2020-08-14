@@ -23,7 +23,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
 
-#include "sea_dsa/CompleteCallGraph.hh"
+#include "seadsa/CompleteCallGraph.hh"
 
 #include <set>
 
@@ -41,7 +41,7 @@ namespace llvm {
   class Devirtualize : public ModulePass, public InstVisitor<Devirtualize> {
     private:
       // Access to analysis pass which finds targets of indirect function calls
-      sea_dsa::CompleteCallGraph *CCG;
+      seadsa::CompleteCallGraph *CCG;
 
       // Access to the target data analysis pass
       const DataLayout * TD;
@@ -65,19 +65,19 @@ namespace llvm {
       virtual bool runOnModule(Module & M);
 
       virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-        AU.addRequired<sea_dsa::CompleteCallGraph>();
+        AU.addRequired<seadsa::CompleteCallGraph>();
       }
 
       // Visitor methods for analyzing instructions
       //void visitInstruction(Instruction &I);
-      void visitCallSite(CallSite &CS);
+      void processCallSite(CallSite &CS);
       void visitCallInst(CallInst &CI) {
         CallSite CS(&CI);
-        visitCallSite(CS);
+        processCallSite(CS);
       }
       void visitInvokeInst(InvokeInst &II) {
         CallSite CS(&II);
-        visitCallSite(CS);
+        processCallSite(CS);
       }
   };
 }

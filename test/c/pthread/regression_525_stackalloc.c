@@ -4,7 +4,8 @@
 #include <stdlib.h>
 
 // @expect verified
-// https://github.com/smackers/smack/issues/525
+
+// see: https://github.com/smackers/smack/issues/525
 
 struct atomic_var {
   void *value;

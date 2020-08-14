@@ -10,7 +10,7 @@ struct S {
 
 // Clang packs each argument as a 64-bit integer,
 // which introduces false alarms without
-// the `--bit-precise` flag
+// the `--integer-encoding=bit-vector` flag
 bool eq(struct S p1, struct S p2) { return p1.y == p2.y; }
 
 int main(void) {

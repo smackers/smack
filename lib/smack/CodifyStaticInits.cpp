@@ -7,6 +7,7 @@
 #include "smack/CodifyStaticInits.h"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
+#include "smack/InitializePasses.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/DataLayout.h"
@@ -28,8 +29,9 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   LLVMContext &C = M.getContext();
   DSAWrapper *DSA = &getAnalysis<DSAWrapper>();
 
-  Function *F = dyn_cast<Function>(
-      M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C)));
+  Function *F = cast<Function>(
+      M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C))
+          .getCallee());
 
   BasicBlock *B = BasicBlock::Create(C, "entry", F);
   IRBuilder<> IRB(B);
@@ -95,10 +97,15 @@ void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.addRequired<DSAWrapper>();
 }
 
-// Pass ID variable
-char CodifyStaticInits::ID = 0;
+Pass *createCodifyStaticInitsPass() { return new CodifyStaticInits(); }
 
-// Register the pass
-static RegisterPass<CodifyStaticInits> X("codify-static-inits",
-                                         "Codify Static Initializers");
 } // namespace smack
+
+char smack::CodifyStaticInits::ID = 0;
+
+using namespace smack;
+INITIALIZE_PASS_BEGIN(CodifyStaticInits, "codify-static-inits",
+                      "Codify Static Initializers", false, false)
+INITIALIZE_PASS_DEPENDENCY(DSAWrapper)
+INITIALIZE_PASS_END(CodifyStaticInits, "codify-static-inits",
+                    "Codify Static Initializers", false, false)

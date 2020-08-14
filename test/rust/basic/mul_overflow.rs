@@ -1,12 +1,12 @@
 #[macro_use]
-mod smack;
+extern crate smack;
 use smack::*;
 
-// @flag --integer-overflow
+// @flag --check=integer-overflow
 // @expect error
 
 fn main() {
-  let a: u8 = 128;
-  let b: u8 = 2;
-  let c = a * b;
+    let a = 32u8.verifier_nondet();
+    let b = 8u8.verifier_nondet();
+    let c = a * b;
 }

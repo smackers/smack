@@ -1,7 +1,7 @@
 #include "math.h"
 #include "smack.h"
 
-// @flag --bit-precise
+// @flag --integer-encoding=bit-vector
 // @expect verified
 
 int main(void) {

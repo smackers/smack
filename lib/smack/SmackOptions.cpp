@@ -38,11 +38,11 @@ const llvm::cl::opt<bool> SmackOptions::SourceLocSymbols(
     llvm::cl::desc("Include source locations in generated code."));
 
 llvm::cl::opt<bool> SmackOptions::BitPrecise(
-    "bit-precise", llvm::cl::desc("Model non-pointer values as bit vectors."));
+    "bit-precise", llvm::cl::desc("Model integer values as bit-vectors."));
 
 const llvm::cl::opt<bool> SmackOptions::BitPrecisePointers(
     "bit-precise-pointers",
-    llvm::cl::desc("Model pointers and non-pointer values as bit vectors."));
+    llvm::cl::desc("Model pointer values as bit-vectors."));
 
 const llvm::cl::opt<bool>
     SmackOptions::AddTiming("timing-annotations",
@@ -76,6 +76,15 @@ const llvm::cl::opt<LLVMAssumeType> SmackOptions::LLVMAssumes(
                                 "enable generation of assume statements"),
                      clEnumValN(LLVMAssumeType::check, "check",
                                 "enable checking of assume statements")));
+
+const llvm::cl::opt<bool>
+    SmackOptions::RustPanics("rust-panics",
+                             llvm::cl::desc("Enable Rust panic checking"));
+
+const llvm::cl::opt<bool> SmackOptions::WrappedIntegerEncoding(
+    "wrapped-integer-encoding",
+    llvm::cl::desc(
+        "Enable wrapped integer arithmetic and signedness-aware comparison"));
 
 bool SmackOptions::isEntryPoint(std::string name) {
   for (auto EP : EntryPoints)

@@ -32,6 +32,7 @@
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/ExtractContracts.h"
+#include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/NormalizeLoops.h"
@@ -116,10 +117,6 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(
       argc, argv, "llvm2bpl - LLVM bitcode to Boogie transformation\n");
 
-  if (smack::SmackOptions::BitPrecisePointers) {
-    smack::SmackOptions::BitPrecise = true;
-  }
-
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram PSTP(argc, argv);
   llvm::EnableDebugBuffering = true;
@@ -148,6 +145,8 @@ int main(int argc, char **argv) {
   llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
   llvm::initializeAnalysis(Registry);
 
+  llvm::initializeCodifyStaticInitsPass(Registry);
+
   llvm::legacy::PassManager pass_manager;
 
   pass_manager.add(llvm::createLowerSwitchPass());
@@ -170,7 +169,7 @@ int main(int argc, char **argv) {
   pass_manager.add(new smack::ExtractContracts());
   pass_manager.add(new smack::VerifierCodeMetadata());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
-  pass_manager.add(new smack::CodifyStaticInits());
+  pass_manager.add(smack::createCodifyStaticInitsPass());
   if (!Modular) {
     pass_manager.add(new smack::RemoveDeadDefs());
   }

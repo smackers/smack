@@ -26,9 +26,9 @@ def random_test(args, result):
 def compile_and_run(f, s, n, args):
   s = re.sub("=\s*(__VERIFIER_nondet_uint\(\))", "="+str(n), s)
   s = re.sub("__VERIFIER_assert\((.+)\);", "assert(\\1);", s)
-  s = re.sub(r'(extern )?void __VERIFIER_error()', '//', s)
+  s = re.sub(r'(extern )?void reach_error()', '//', s)
   s = re.sub(r'(extern )?void __VERIFIER_assume()', '//', s)
-  s = re.sub(r'__VERIFIER_error\(\)', 'assert(0)', s)
+  s = re.sub(r'reach_error\(\)', 'assert(0)', s)
   s = '#include<assert.h>\n' + s
 
   name = os.path.splitext(os.path.basename(f))[0]

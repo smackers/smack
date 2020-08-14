@@ -32,11 +32,11 @@ of `x`, in the 3rd iteration) for the assertion to be reachable.
 
 ## Bitwise Operations and Integer Casts
 If the program to verify contains bitwise operations or integer casts, then the
-flag `--bit-precise` may be required. The reason is that SMACK uses the SMT
-theory of integers to encode machine integers by default, where bitwise
-operations are encoded using uninterpreted functions returning arbitrary values.
-Furthermore, precise encoding is required to handle integer signedness casts,
-which is not also enabled automatically.
+flag `--integer-encoding=bit-vector` may be required. The reason is that SMACK
+uses the SMT theory of integers to encode machine integers by default, where
+bitwise operations are encoded using uninterpreted functions returning
+arbitrary values.  Furthermore, precise encoding is required to handle integer
+signedness casts, which is not also enabled automatically.
 
 The following program demonstrate the problems in the presence of bitwise
 operations.
@@ -72,11 +72,11 @@ Some steps in the error trace are omitted. As you can see, the concrete values
 of `y` in the error trace before and after the bitwise right shift operation do
 not follow its semantics because it is modeled as an uninterpreted function.
 
-In this case, we need the `--bit-precise` flag that, as its name indicates,
-enables bit-precise modeling of machine integers.
+In this case, we need the `--integer-encoding=bit-vector` flag that, as its
+name indicates, enables bit-precise modeling of machine integers.
 
 ```
-$ smack a.c --bit-precise
+$ smack a.c --integer-encoding=bit-vector
 SMACK program verifier version 1.9.0
 SMACK found no errors with unroll bound 1.
 ```
@@ -91,11 +91,11 @@ Similar to machine integers, floating-point numbers and arithmetic are modeled
 using the theory of integers and uninterpreted functions, respectively.
 Therefore, if the assertions to verify depend on precise modeling of
 floating-point representations, the flag `--float` is needed. Note that
-occasionally `--bit-precise` has to be used in addition to `--float`, in
-particular when casts between floating-point numbers and integers are present.
-Moreover, reasoning about floating-point numbers is often very slow. Please let
-us know if you encounter any performance issues. We can share some experiences
-that may ease the situation.
+occasionally `--integer-encoding=bit-vector` has to be used in addition to
+`--float`, in particular when casts between floating-point numbers and integers
+are present.  Moreover, reasoning about floating-point numbers is often very
+slow. Please let us know if you encounter any performance issues. We can share
+some experiences that may ease the situation.
 
 ## Concurrency
 Reasoning about pthreads is supported by SMACK with the flag `--pthread`. Please

@@ -62,8 +62,11 @@ const std::string Naming::REC_MEM_OP = "boogie_si_record_mop";
 const std::string Naming::MEM_OP_VAL = "$MOP";
 
 const std::string Naming::RUST_ENTRY = "_ZN3std2rt10lang_start";
-const std::string Naming::RUST_PANIC1 = "_ZN4core9panicking5panic";
-const std::string Naming::RUST_PANIC2 = "_ZN3std9panicking11begin_panic";
+const std::vector<std::string> Naming::RUST_PANICS = {
+    "_ZN3std9panicking15begin_panic_fmt17h", "_ZN4core9panicking5panic17h",
+    "_ZN3std9panicking11begin_panic17h", "_ZN4core9panicking9panic_fmt17h",
+    "_ZN4core9panicking18panic_bounds_check17h"};
+
 const std::string Naming::RUST_PANIC_ANNOTATION = "rust_panic";
 
 const std::string Naming::BLOCK_LBL = "$bb";
@@ -82,6 +85,8 @@ const std::string Naming::CONTRACT_EXPR = "$expr";
 const std::string Naming::MEMORY_SAFETY_FUNCTION =
     "__SMACK_check_memory_safety";
 const std::string Naming::MEMORY_LEAK_FUNCTION = "__SMACK_check_memory_leak";
+const std::string Naming::INT_WRAP_SIGNED_FUNCTION = "$tos";
+const std::string Naming::INT_WRAP_UNSIGNED_FUNCTION = "$tou";
 
 using namespace llvm;
 
@@ -266,5 +271,9 @@ std::string Naming::freshVarName(const Value &V) {
 
   s << varNum++;
   return s.str();
+}
+
+std::string Naming::getIntWrapFunc(bool isUnsigned) {
+  return isUnsigned ? INT_WRAP_UNSIGNED_FUNCTION : INT_WRAP_SIGNED_FUNCTION;
 }
 } // namespace smack

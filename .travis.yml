@@ -9,17 +9,10 @@ addons:
       - cmake
       - python3-yaml
       - python3-psutil
+      - python3-pip
       - unzip
-      - libz-dev
-      - libedit-dev
+      - ninja-build
       - libboost-all-dev
-
-cache:
-  directories:
-    - $HOME/build/smackers/boogie
-    - $HOME/build/smackers/corral
-    - $HOME/build/smackers/symbooglix
-    - $HOME/build/smackers/lockpwn
 
 env:
   global:
@@ -28,6 +21,7 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=c/basic"
     - TRAVIS_ENV="--exhaustive --folder=c/data"
     - TRAVIS_ENV="--exhaustive --folder=c/ntdrivers-simplified"
+    - TRAVIS_ENV="--exhaustive --folder=c/ntdrivers"
     - TRAVIS_ENV="--exhaustive --folder=c/bits"
     - TRAVIS_ENV="--exhaustive --folder=c/float"
     - TRAVIS_ENV="--exhaustive --folder=c/locks"
@@ -35,36 +29,41 @@ env:
     - TRAVIS_ENV="--exhaustive --folder=c/simd"
     - TRAVIS_ENV="--exhaustive --folder=c/memory-safety"
     - TRAVIS_ENV="--exhaustive --folder=c/pthread"
+    - TRAVIS_ENV="--exhaustive --folder=c/pthread_extras"
     - TRAVIS_ENV="--exhaustive --folder=c/strings"
     - TRAVIS_ENV="--exhaustive --folder=c/special"
+    - TRAVIS_ENV="--exhaustive --folder=rust/array --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/basic --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/box --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/functions --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/generics --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/loops --languages=rust"
+    - TRAVIS_ENV="--exhaustive --folder=rust/panic --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/recursion --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/structures --languages=rust"
     - TRAVIS_ENV="--exhaustive --folder=rust/vector --languages=rust"
 
 before_install:
-  - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
-  - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-  - sudo apt-get install -y apt-transport-https
-  - echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
-  - sudo apt-get update
+  - sudo rm -rf /usr/local/clang-7.0.0
 
 install:
-  - sudo apt-get install -y clang-8 clang-format-8 llvm-8-dev mono-complete ca-certificates-mono ninja-build
-  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 20
-  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-8 20
-  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-8 20
-  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-8 20
-  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-8 20
-  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-8 20
-  - sudo pip install pyyaml psutil
+  - source ./bin/versions
+  - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_SHORT_VERSION} main"
+  - wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+  - sudo dpkg -i packages-microsoft-prod.deb
+  - sudo apt-get install -y apt-transport-https
+  - sudo apt-get update
+  - sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
+  - pip3 install -U flake8
+  - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 20
+  - sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 20
 
-script:
-  - python --version
+before_script:
   - python3 --version
   - $CXX --version
   - $CC --version
@@ -72,5 +71,8 @@ script:
   - clang++ --version
   - llvm-link --version
   - llvm-config --version
+
+script:
   - ./format/run-clang-format.py -e test/c/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
+  - flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
   - INSTALL_RUST=1 ./bin/build.sh

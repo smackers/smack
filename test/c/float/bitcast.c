@@ -1,6 +1,6 @@
 #include "smack.h"
 
-// @flag --bit-precise --clang-options="-fno-strict-aliasing"
+// @flag --integer-encoding=bit-vector --clang-options="-fno-strict-aliasing"
 // @expect verified
 
 int main(void) {

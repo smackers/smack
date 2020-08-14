@@ -1,5 +1,6 @@
-| **master** | [![Build Status](https://travis-ci.com/smackers/smack.svg?branch=master)](https://travis-ci.com/smackers/smack) | **develop** | [![Build Status](https://travis-ci.com/smackers/smack.svg?branch=develop)](https://travis-ci.com/smackers/smack) |
-| --- | --- | --- | --- |
+
+[![Build Status](https://travis-ci.com/smackers/smack.svg?branch=master)](https://travis-ci.com/smackers/smack)
+[![Build Status](https://travis-ci.com/smackers/smack.svg?branch=develop)](https://travis-ci.com/smackers/smack)
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 
@@ -47,10 +48,10 @@ See below for system requirements, installation, usage, and everything else.
 
 ### Acknowledgements
 
-SMACK project is partially supported by NSF award CCF 1346756 and Microsoft
-Research SEIF award. We also rely on University of Utah's
-[Emulab](http://www.emulab.net/) infrastructure for extensive benchmarking of
-SMACK.
+SMACK project has been partially supported by funding from the National Science
+Foundation, VMware, and Microsoft Research. We also rely on University of
+Utah's [Emulab](http://www.emulab.net/) infrastructure for extensive
+benchmarking of SMACK.
 
 
 ### Table of Contents

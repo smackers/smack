@@ -2,6 +2,7 @@
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/SmackOptions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/Casting.h"
 
 #include <functional>
@@ -165,6 +166,12 @@ FuncDecl *builtinOp(std::string baseName, const Attr *attr,
                         {attr});
 }
 
+std::string getIntLimit(unsigned size) {
+  auto n = APInt(size + 1, 0);
+  n.setBit(size);
+  return n.toString(10, false);
+}
+
 const std::vector<unsigned> IntOpGen::INTEGER_SIZES{
     1, 5, 6, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128, 160, 256};
 
@@ -257,7 +264,8 @@ FuncDecl *extractValue(unsigned width) {
 
 void printFuncs(FuncsT funcs, std::stringstream &s) {
   for (auto &f : funcs)
-    s << f << "\n";
+    if (f)
+      s << f << "\n";
 }
 
 void describe(std::string comment, std::stringstream &s) {
@@ -280,6 +288,9 @@ struct IntOpGen::IntArithOp : public IntOp {
       : IntOp(opName, arity, intOp, bvOp, alsoUsedByPtr) {}
 
   FuncDecl *getIntFunc(unsigned size) const {
+    if (!intOp)
+      return nullptr;
+
     std::string type = getIntTypeName(size);
     std::string name = "$" + opName;
 
@@ -302,6 +313,9 @@ struct IntOpGen::IntArithOp : public IntOp {
   }
 
   FuncDecl *getBvFunc(unsigned size) const {
+    if (!bvOp)
+      return nullptr;
+
     std::string type = getBvTypeName(size);
     std::string name = "$" + opName;
 
@@ -327,7 +341,8 @@ struct IntOpGen::IntArithOp : public IntOp {
     if (!SmackOptions::BitPrecise ||
         (!SmackOptions::BitPrecisePointers && alsoUsedByPtr))
       funcs.push_back(getIntFunc(size));
-    if (SmackOptions::BitPrecise)
+    if (SmackOptions::BitPrecise ||
+        (SmackOptions::BitPrecisePointers && alsoUsedByPtr))
       funcs.push_back(getBvFunc(size));
     return funcs;
   }
@@ -352,10 +367,15 @@ struct IntOpGen::IntArithOp : public IntOp {
 
   // generate inlined int min/max function body such as `if (i1 < i2) then i1
   // else i2`
-  template <bool MIN> static const Expr *intMinMaxExpr(unsigned size) {
+  template <bool MIN, bool SIGN>
+  static const Expr *intMinMaxExpr(unsigned size) {
     const Expr *a1 = makeIntVarExpr(1);
     const Expr *a2 = makeIntVarExpr(2);
-    auto pred = MIN ? Expr::lt(a1, a2) : Expr::lt(a2, a1);
+    std::string predName =
+        std::string("$") + (SIGN ? "s" : "u") + (MIN ? "lt" : "gt");
+    auto pred = Expr::fn(
+        indexedName(predName, {getIntTypeName(size), Naming::BOOL_TYPE}), a1,
+        a2);
     return Expr::ifThenElse(pred, a1, a2);
   }
 
@@ -374,8 +394,10 @@ struct IntOpGen::IntArithOp : public IntOp {
   // for this case, the result of `srem` is the result of `mod` minus |i2|
   static const Expr *sremExpr(unsigned size) {
     std::string type = getIntTypeName(size);
-    const Expr *dividend = makeIntVarExpr(1);
-    const Expr *divisor = makeIntVarExpr(2);
+    const Expr *dividend =
+        IntOpGen::IntArithOp::wrappedExpr(size, makeIntVarExpr(1), false);
+    const Expr *divisor =
+        IntOpGen::IntArithOp::wrappedExpr(size, makeIntVarExpr(2), false);
     const Expr *zero = Expr::lit((unsigned long long)0);
     const Expr *mod = Expr::fn(indexedName("$smod", {type}), dividend, divisor);
     const Expr *modNeZero =
@@ -393,8 +415,57 @@ struct IntOpGen::IntArithOp : public IntOp {
   // generate inlined `urem` function body like
   // $smod.i32(i1,i2), where `$smod` is a wrapper to SMT's `mod` function
   static const Expr *uremExpr(unsigned size) {
-    return Expr::fn(indexedName("$smod", {getIntTypeName(size)}),
-                    makeIntVarExpr(1), makeIntVarExpr(2));
+    const Expr *dividend =
+        IntOpGen::IntArithOp::wrappedExpr(size, makeIntVarExpr(1), true);
+    const Expr *divisor =
+        IntOpGen::IntArithOp::wrappedExpr(size, makeIntVarExpr(2), true);
+    return Expr::fn(indexedName("$smod", {getIntTypeName(size)}), dividend,
+                    divisor);
+  }
+
+  // generate inlined `tos` function body like
+  // `if i >= -128 && i < 128 then i else $smod(i + 128, 256) - 128`
+  static const Expr *tosExpr(unsigned size) {
+    auto i = makeIntVarExpr(0);
+    auto limitMinusOne = Expr::lit(getIntLimit(size - 1), 0);
+    auto c = Expr::and_(
+        new BinExpr(BinExpr::Gte, i, Expr::lit("-" + getIntLimit(size - 1), 0)),
+        new BinExpr(BinExpr::Lt, i, limitMinusOne));
+    auto type = getIntTypeName(size);
+    return Expr::ifThenElse(
+        c, i,
+        Expr::fn(
+            indexedName("$sub", {type}),
+            Expr::fn(indexedName("$smod", {type}),
+                     Expr::fn(indexedName("$add", {type}), i, limitMinusOne),
+                     Expr::lit(getIntLimit(size), 0)),
+            limitMinusOne));
+  }
+
+  // generate inlined `tou` function body like
+  // `if i >= 0 && i < 256 then i else $smod.i8(i, 256)`
+  static const Expr *touExpr(unsigned size) {
+    auto i = makeIntVarExpr(0);
+    auto limit = Expr::lit(getIntLimit(size), 0);
+    auto c = Expr::and_(new BinExpr(BinExpr::Gte, i, Expr::lit(0ULL)),
+                        new BinExpr(BinExpr::Lt, i, limit));
+    auto type = getIntTypeName(size);
+    return Expr::ifThenElse(c, i,
+                            Expr::fn(indexedName("$smod", {type}), i, limit));
+  }
+
+  static const Expr *wrappedExpr(unsigned size, const Expr *e,
+                                 bool isUnsigned) {
+    return SmackOptions::WrappedIntegerEncoding
+               ? Expr::fn(indexedName(Naming::getIntWrapFunc(isUnsigned),
+                                      {getIntTypeName(size)}),
+                          e)
+               : e;
+  }
+  template <bool SIGN> static const Expr *divExpr(unsigned size) {
+    const Expr *a1 = wrappedExpr(size, makeIntVarExpr(1), !SIGN);
+    const Expr *a2 = wrappedExpr(size, makeIntVarExpr(2), !SIGN);
+    return Expr::fn(indexedName("$idiv", {getIntTypeName(size)}), a1, a2);
   }
 };
 
@@ -417,9 +488,14 @@ void IntOpGen::generateArithOps(std::stringstream &s) const {
        new InlinedOp<IntOp::exprT>(
            IntOpGen::IntArithOp::intArithExpr<BinExpr::Times>),
        bvBuiltinOp, true},
-      {"sdiv", 2, intBuiltinOp, bvBuiltinOp, false},
+      {"idiv", 2, intBuiltinOp, bvBuiltinOp, false},
+      {"sdiv", 2,
+       new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::divExpr<true>),
+       bvBuiltinOp, false},
+      {"udiv", 2,
+       new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::divExpr<false>),
+       bvBuiltinOp, false},
       {"smod", 2, intBuiltinOp, bvBuiltinOp, false},
-      {"udiv", 2, intBuiltinOp, bvBuiltinOp, false},
       {"srem", 2, new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::sremExpr),
        bvBuiltinOp, false},
       {"urem", 2, new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::uremExpr),
@@ -432,23 +508,37 @@ void IntOpGen::generateArithOps(std::stringstream &s) const {
       {"xor", 2, uninterpretedOp, bvBuiltinOp, false},
       {"nand", 2, uninterpretedOp, bvBuiltinOp, false},
       {"not", 1, uninterpretedOp, bvBuiltinOp, false},
+      {"tos", 1,
+       SmackOptions::WrappedIntegerEncoding
+           ? new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::tosExpr)
+           : nullptr,
+       nullptr, true},
+      {"tou", 1,
+       SmackOptions::WrappedIntegerEncoding
+           ? new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::touExpr)
+           : nullptr,
+       nullptr, true},
       {"smin", 2,
-       new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::intMinMaxExpr<true>),
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intMinMaxExpr<true, true>),
        new InlinedOp<IntOp::exprT>(
            IntOpGen::IntArithOp::bvMinMaxExpr<true, true>),
        false},
       {"smax", 2,
-       new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::intMinMaxExpr<false>),
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intMinMaxExpr<false, true>),
        new InlinedOp<IntOp::exprT>(
            IntOpGen::IntArithOp::bvMinMaxExpr<true, false>),
        false},
       {"umin", 2,
-       new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::intMinMaxExpr<true>),
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intMinMaxExpr<true, false>),
        new InlinedOp<IntOp::exprT>(
            IntOpGen::IntArithOp::bvMinMaxExpr<false, true>),
        false},
       {"umax", 2,
-       new InlinedOp<IntOp::exprT>(IntOpGen::IntArithOp::intMinMaxExpr<false>),
+       new InlinedOp<IntOp::exprT>(
+           IntOpGen::IntArithOp::intMinMaxExpr<false, false>),
        new InlinedOp<IntOp::exprT>(
            IntOpGen::IntArithOp::bvMinMaxExpr<false, false>),
        false}};
@@ -549,12 +639,48 @@ struct IntOpGen::IntPred : public IntOp {
       funcs.push_back(compFunc);
       funcs.push_back(predFunc);
     }
-    if (SmackOptions::BitPrecise) {
+    if (SmackOptions::BitPrecise || SmackOptions::BitPrecisePointers) {
       std::tie(compFunc, predFunc) = getBvFuncs(size);
       funcs.push_back(compFunc);
       funcs.push_back(predFunc);
     }
     return funcs;
+  }
+
+  template <BinExpr::Binary OP, bool SIGN>
+  static const Expr *intPredExpr(unsigned size) {
+    // SHAOBO: we apply modulo operations to the operands.
+    // Here is the reasoning: let's assume the cmp operation is unsigned,
+    // and there's a sequence of arithmetic operations which only contain
+    // addition, subtraction, multiplication. The inputs to such a computation
+    // f is from i_1 to i_n. The hypothesis we want to prove here is
+    // f(i_1,...,i_n) % B = f'(i_1 % B,...,i_n % B) where f' is the two's
+    // complement counterpart of f, and B is 2^m where m is the bitwidth of the
+    // operands. For certain operation o, its two's complement counterpart o' is
+    // equivalent to o(i_1,i_2) % B. The axioms we used for the proof is as
+    // follows, (X%B + Y%B)%B = (X+Y)%B, (X%B - Y%B)%B = (X-Y)%B,
+    // (X%B * Y%B)%B = (X*Y)%B.
+    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
+    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-multiplication
+    // so let's prove it inductively, for a computation f and its two
+    // subcomputation, f_1 and f_2 connected by o, by definition, we have,
+    // f(i_1,...,i_n) = o(f_1(i_1,...,i_n), f_2(i_1,...,i_n))
+    // then, f(i_1,...,i_n)%B = o(f_1(i_1,...,i_n), f_2(i_1,...,i_n))%B
+    // following the axioms, we have,
+    // f(i_1,...,i_n)%B = o(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)%B
+    // by the definition of two's complement arithmetic,
+    // o(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)%B =
+    // 	o'(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B)
+    // by induction, f_i(i_1,...,i_n)%B = f'_i(i_1%B,...,i_n%B)
+    // therefore, o'(f_1(i_1,...,i_n)%B, f_2(i_1,...,i_n)%B) =
+    // 	o'(f'_1(i_1%B,...,i_n%B), f_2'(i_1%B,...,i_n%B))
+    // the rhs is exactly f' therefore we complete the proof.
+    //
+    // For signed comparison, the proof is trivial since we can get the precise
+    // two's complement representation following the proof above.
+    return new BinExpr(
+        OP, IntOpGen::IntArithOp::wrappedExpr(size, makeIntVarExpr(1), !SIGN),
+        IntOpGen::IntArithOp::wrappedExpr(size, makeIntVarExpr(2), !SIGN));
   }
 };
 
@@ -562,24 +688,33 @@ void IntOpGen::generatePreds(std::stringstream &s) const {
   describe("Integer predicates", s);
 
   const auto bvBuiltinOp = new BuiltinOp<IntOp::attrT>(IntOp::bvAttrFunc);
-  const auto leInlinedOp = new InlinedOp<IntOp::exprT>(
-      IntOpGen::IntArithOp::intArithExpr<BinExpr::Lte>);
-  const auto ltInlinedOp = new InlinedOp<IntOp::exprT>(
-      IntOpGen::IntArithOp::intArithExpr<BinExpr::Lt>);
-  const auto geInlinedOp = new InlinedOp<IntOp::exprT>(
-      IntOpGen::IntArithOp::intArithExpr<BinExpr::Gte>);
-  const auto gtInlinedOp = new InlinedOp<IntOp::exprT>(
-      IntOpGen::IntArithOp::intArithExpr<BinExpr::Gt>);
+  const auto uleInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Lte, false>);
+  const auto ultInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Lt, false>);
+  const auto ugeInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Gte, false>);
+  const auto ugtInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Gt, false>);
+  const auto sleInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Lte, true>);
+  const auto sltInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Lt, true>);
+  const auto sgeInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Gte, true>);
+  const auto sgtInlinedOp = new InlinedOp<IntOp::exprT>(
+      IntOpGen::IntPred::intPredExpr<BinExpr::Gt, true>);
+  // normalize operands into 2's complement
   const auto eqInlinedOp = new InlinedOp<IntOp::exprT>(
-      IntOpGen::IntArithOp::intArithExpr<BinExpr::Eq>);
+      IntOpGen::IntPred::intPredExpr<BinExpr::Eq, false>);
   const auto neInlinedOp = new InlinedOp<IntOp::exprT>(
-      IntOpGen::IntArithOp::intArithExpr<BinExpr::Neq>);
+      IntOpGen::IntPred::intPredExpr<BinExpr::Neq, false>);
   const std::vector<IntPred> intPredTable{
-      {"ule", leInlinedOp, bvBuiltinOp}, {"ult", ltInlinedOp, bvBuiltinOp},
-      {"uge", geInlinedOp, bvBuiltinOp}, {"ugt", gtInlinedOp, bvBuiltinOp},
-      {"sle", leInlinedOp, bvBuiltinOp}, {"slt", ltInlinedOp, bvBuiltinOp},
-      {"sge", geInlinedOp, bvBuiltinOp}, {"sgt", gtInlinedOp, bvBuiltinOp},
-      {"eq", eqInlinedOp, eqInlinedOp},  {"ne", neInlinedOp, neInlinedOp}};
+      {"ule", uleInlinedOp, bvBuiltinOp}, {"ult", ultInlinedOp, bvBuiltinOp},
+      {"uge", ugeInlinedOp, bvBuiltinOp}, {"ugt", ugtInlinedOp, bvBuiltinOp},
+      {"sle", sleInlinedOp, bvBuiltinOp}, {"slt", sltInlinedOp, bvBuiltinOp},
+      {"sge", sgeInlinedOp, bvBuiltinOp}, {"sgt", sgtInlinedOp, bvBuiltinOp},
+      {"eq", eqInlinedOp, eqInlinedOp},   {"ne", neInlinedOp, neInlinedOp}};
 
   for (auto &pred : intPredTable)
     for (auto size : INTEGER_SIZES)
@@ -588,7 +723,7 @@ void IntOpGen::generatePreds(std::stringstream &s) const {
 
 struct IntOpGen::IntConv {
   typedef const Attr *(*attrT)(unsigned, unsigned);
-  typedef const Expr *(*idExprT)();
+  typedef const Expr *(*castExprT)(unsigned, unsigned);
   typedef const Expr *(*truncExprT)(unsigned);
   std::string opName;
   bool upCast;
@@ -596,14 +731,14 @@ struct IntOpGen::IntConv {
   Op *bvOp;
 
   FuncDecl *getIntFunc(unsigned size1, unsigned size2) const {
-    assert(isa<InlinedOp<idExprT>>(intOp));
-    auto iop = llvm::cast<InlinedOp<idExprT>>(intOp);
+    assert(isa<InlinedOp<castExprT>>(intOp));
+    auto iop = llvm::cast<InlinedOp<castExprT>>(intOp);
     std::string type1 = getIntTypeName(size1);
     std::string type2 = getIntTypeName(size2);
 
     // e.g.: function {:inline} $zext.i1.i5(i: i1) returns (i5) { i }
     return inlinedOp("$" + opName, {type1, type2}, makeIntVars(1, type1), type2,
-                     ((idExprT)iop->func)());
+                     ((castExprT)iop->func)(size1, size2));
   }
 
   FuncDecl *getBvFunc(unsigned size1, unsigned size2) const {
@@ -632,10 +767,120 @@ struct IntOpGen::IntConv {
   }
 
   // generate identity expression such as `i1`
-  static const Expr *intIdentityExpr() { return makeIntVarExpr(0); }
+  static const Expr *intTruncExpr(unsigned size1, unsigned size2) {
+    // SHAOBO: from Ben,
+    // Let F be a computation with inputs i_1, ..., i_n and let T be a
+    // truncation operation from 2^A to 2^B where A > B. We want show that the
+    // truncation of a two's complement number with a bitwidth of A to a
+    // bitwidth of B is equivalent to modding that number by the base 2^B. In
+    // other words, we want to prove the hypothesis that
+    //
+    // T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
+    //
+    // To do this, we use two equivalencies. First, notice that we proved
+    // earlier that
+    //
+    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
+    //
+    // Also, by definition,
+    //
+    // trunc_A->B(x) = x % B
+    //
+    // This means that
+    //
+    // T(F'(i_1 % 2^A, ..., i_n % 2^A)) = T(F(i_1, ..., i_n) % 2^A)
+    //	                                = (F(i_1, ..., i_n) % 2^A) % 2^B
+    //
+    // Next notice that F(i_1, ..., i_n) % 2^A = F(i_1, ..., i_n) - c * 2^A by
+    // definition for some integer c. Because of this, we can use the following
+    // axiom of modularity to simplify it: (X%M - Y%M)%M = (X-Y)%M
+    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
+    //
+    // (F(i_1, ..., i_n) - c * 2^A) % 2^B
+    //    = ((F(i_1, ..., i_n) % 2^B) - (c * 2^A % 2^B)) % 2^B
+    //
+    // Since the second number is a multiple of 2^B, it goes to 0 and we're left
+    // with
+    //
+    // (F(i_1, ..., i_n) % 2^B - 0) % 2^B = F(i_1, ..., i_n) % 2^B
+    //
+    // Therefore, T(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^B
+    return IntOpGen::IntArithOp::wrappedExpr(size2, makeIntVarExpr(0), true);
+  }
+
+  template <bool SIGN>
+  static const Expr *intExtExpr(unsigned size1, unsigned size2) {
+    // SHAOBO: from Ben
+    // Let F be a computation with inputs i_1, ..., i_n and let Z be an unsigned
+    // extension operation from 2^A to 2^B where A < B. We want show that the
+    // unsigned extension of a two's complement number with a bitwidth of A to a
+    // bitwidth of B is equivalent to modding that number by the base 2^A. In
+    // other words, we want to prove the hypothesis that
+    //
+    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
+    //
+    // To do this, we use two equivalencies. First, notice that we proved
+    // earlier that
+    //
+    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
+    //
+    // Also, by definition,
+    //
+    // zext_A->B(x) = x % A
+    //
+    // This means that
+    //
+    // Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = Z(F(i_1, ..., i_n) % 2^A)
+    //                                  = (F(i_1, ..., i_n) % 2^A) % 2^A
+    //                                  = F(i_1, ..., i_n) % 2^A
+    //
+    // Therefore, Z(F'(i_1 % 2^A, ..., i_n % 2^A)) = F(i_1, ..., i_n) % 2^A
+    //
+    //
+    // Let F be a computation with inputs i_1, ..., i_n and let S be a signed
+    // extension operation from 2^A to 2^B where A < B. We want show that the
+    // signed extension of a two's complement number with a bitwidth of A to a
+    // bitwidth of B is equivalent to converting that number to unsigned,
+    // modding the result by the base 2^A, and then converting back to signed.
+    // In other words, we want to prove the hypothesis that
+    //
+    // S(F'(i_1 % 2^A, ..., i_n % 2^A) - 2^(A-1))
+    //    = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // To do this, we use two equivalencies. First, notice that we proved
+    // earlier that
+    //
+    // F'(i_1 % A, ..., i_n % A) = F(i_1, ..., i_n) % A
+    //
+    // Also, by definition,
+    //
+    // sext_A->B(x) = (x + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // This means that
+    //
+    // S(F'(i_1 % 2^A, ..., i_n % 2^A)) = S(F(i_1, ..., i_n) % 2^A)
+    //    = (F(i_1, ..., i_n) % 2^A + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // Because 2^(A-1) < 2^A, 2^(A-1) % 2^A = 2^(A-1). Lets rewrite this using
+    // that fact.
+    //
+    // (F(i_1, ..., i_n) % 2^A + 2^(A-1)) % 2^A - 2^(A-1)
+    //	  = (F(i_1, ..., i_n) % 2^A + 2^(A-1) % 2^A) % 2^A - 2^(A-1)
+    //
+    // Next, we can use the following axiom of modularity to simplify it:
+    // (X%M + Y%M)%M = (X+Y)%M
+    // https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/modular-addition-and-subtraction
+    //
+    // (F(i_1, ..., i_n) % 2^A + 2^(A-1) % 2^A) % 2^A - 2^(A-1)
+    //	  = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
+    //
+    // Therefore, S(F'(i_1 % 2^A, ..., i_n % 2^A) - 2^(A-1))
+    //	  = (F(i_1, ..., i_n) + 2^(A-1)) % 2^A - 2^(A-1)
+    return IntOpGen::IntArithOp::wrappedExpr(size1, makeIntVarExpr(0), !SIGN);
+  }
 
   // generate bv truncation function body such as `i[1:0]`
-  static const Expr *truncExpr(unsigned size) {
+  static const Expr *bvTruncExpr(unsigned size) {
     return Expr::bvExtract(makeIntVarName(0), size, 0);
   }
 
@@ -653,18 +898,20 @@ struct IntOpGen::IntConv {
 void IntOpGen::generateConvOps(std::stringstream &s) const {
   describe("Conversion between integer types", s);
 
-  const auto inlinedIdentity =
-      new InlinedOp<IntConv::idExprT>(IntConv::intIdentityExpr);
-  const auto inlinedTrunc =
-      new InlinedOp<IntConv::truncExprT>(IntConv::truncExpr);
+  const auto intTrunc =
+      new InlinedOp<IntConv::castExprT>(IntConv::intTruncExpr);
+  const auto intSext =
+      new InlinedOp<IntConv::castExprT>(IntConv::intExtExpr<true>);
+  const auto intZext =
+      new InlinedOp<IntConv::castExprT>(IntConv::intExtExpr<false>);
+  const auto bvTrunc = new InlinedOp<IntConv::truncExprT>(IntConv::bvTruncExpr);
   const auto builtinSext =
       new BuiltinOp<IntConv::attrT>(IntConv::extAttr<true>);
   const auto builtinZext =
       new BuiltinOp<IntConv::attrT>(IntConv::extAttr<false>);
-  const std::vector<IntConv> intConvTable{
-      {"trunc", false, inlinedIdentity, inlinedTrunc},
-      {"sext", true, inlinedIdentity, builtinSext},
-      {"zext", true, inlinedIdentity, builtinZext}};
+  const std::vector<IntConv> intConvTable{{"trunc", false, intTrunc, bvTrunc},
+                                          {"sext", true, intSext, builtinSext},
+                                          {"zext", true, intZext, builtinZext}};
 
   for (auto &conv : intConvTable) {
     for (size_t s1 = 0; s1 < INTEGER_SIZES.size(); ++s1) {
@@ -956,33 +1203,42 @@ void PtrOpGen::generatePtrNumConvs(std::stringstream &s) const {
 void PtrOpGen::generatePreds(std::stringstream &s) const {
   describe("Pointer predicates", s);
 
-  const std::vector<std::string> predicates{"$eq",  "$ne",  "$ugt", "$uge",
-                                            "$ult", "$ule", "$sgt", "$sge",
-                                            "$slt", "$sle"};
+  using PredInfo = std::pair<std::string, BinExpr::Binary>;
+  const std::vector<PredInfo> predicates{
+      {"$eq", BinExpr::Eq},   {"$ne", BinExpr::Neq},  {"$ugt", BinExpr::Gt},
+      {"$uge", BinExpr::Gte}, {"$ult", BinExpr::Lt},  {"$ule", BinExpr::Lte},
+      {"$sgt", BinExpr::Gt},  {"$sge", BinExpr::Gte}, {"$slt", BinExpr::Lt},
+      {"$sle", BinExpr::Lte}};
 
   // e.g., function {:inline} $eq.ref(p1: ref, p2: ref)
   // returns (i1) { (if $eq.i64.bool(p1, p2) then 1 else 0) }
-  for (auto pred : predicates) {
+  for (auto info : predicates) {
+    auto predName = info.first;
+    auto binPred = info.second;
+    auto condExpr = Expr::fn(
+        indexedName(predName, {prelude.rep.pointerType(), Naming::BOOL_TYPE}),
+        {makePtrVarExpr(1), makePtrVarExpr(2)});
+    const Expr *predExpr =
+        SmackOptions::BitPrecisePointers
+            ? condExpr
+            : new BinExpr(binPred, makePtrVarExpr(1), makePtrVarExpr(2));
+
     s << Decl::function(
-             indexedName(pred, {Naming::PTR_TYPE}),
+             indexedName(predName, {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
              {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
-             prelude.rep.intType(1),
-             Expr::ifThenElse(
-                 Expr::fn(indexedName(pred, {prelude.rep.pointerType(),
-                                             Naming::BOOL_TYPE}),
-                          {Expr::id("p1"), Expr::id("p2")}),
-                 prelude.rep.integerLit(1LL, 1),
-                 prelude.rep.integerLit(0LL, 1)),
-             {makeInlineAttr()})
+             Naming::BOOL_TYPE, predExpr, {makeInlineAttr()})
       << "\n";
-    s << Decl::function(
-             indexedName(pred, {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
-             {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
-             Naming::BOOL_TYPE,
-             Expr::fn(indexedName(
-                          pred, {prelude.rep.pointerType(), Naming::BOOL_TYPE}),
-                      {Expr::id("p1"), Expr::id("p2")}),
-             {makeInlineAttr()})
+
+    s << Decl::function(indexedName(predName, {Naming::PTR_TYPE}),
+                        {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
+                        prelude.rep.intType(1),
+                        Expr::ifThenElse(
+                            Expr::fn(indexedName(predName, {Naming::PTR_TYPE,
+                                                            Naming::BOOL_TYPE}),
+                                     {makePtrVarExpr(1), makePtrVarExpr(2)}),
+                            prelude.rep.integerLit(1LL, 1),
+                            prelude.rep.integerLit(0LL, 1)),
+                        {makeInlineAttr()})
       << "\n";
   }
   s << "\n";

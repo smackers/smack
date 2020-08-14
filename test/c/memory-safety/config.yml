@@ -1,2 +1,3 @@
-flags: [--memory-safety]
-time-limit: 180
+skip: ok
+time-limit: 240
+flags: [--check=memory-safety]
