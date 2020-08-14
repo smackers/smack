@@ -262,10 +262,14 @@ def arguments():
         help='bound on the number of threads [default: %(default)s]')
 
     translate_group.add_argument(
-        '--bit-precise',
-        action="store_true",
-        default=False,
-        help='model non-pointer values as bit vectors')
+        '--integer-encoding',
+        choices=['bit-vector', 'unbounded-integer', 'wrapped-integer'],
+        default='unbounded-integer',
+        help='''machine integer encoding
+                (bit-vector=use SMT bit-vector theory,
+                unbounded-integer=use SMT integer theory,
+                wrapped-integer=use SMT integer theory but model wrap-around
+                behavior) [default: %(default)s]''')
 
     translate_group.add_argument(
         '--timing-annotations',
@@ -274,10 +278,13 @@ def arguments():
         help='enable timing annotations')
 
     translate_group.add_argument(
-        '--bit-precise-pointers',
-        action="store_true",
-        default=False,
-        help='model pointers and non-pointer values as bit vectors')
+        '--pointer-encoding',
+        choices=['bit-vector', 'unbounded-integer'],
+        default='unbounded-integer',
+        help='''pointer encoding
+                (bit-vector=use SMT bit-vector theory,
+                ubounded-integer=use SMT integer theory)
+                [default: %(default)s]''')
 
     translate_group.add_argument(
         '--no-byte-access-inference',
@@ -303,13 +310,6 @@ def arguments():
                 [choices: %(choices)s; default: %(default)s]
                 (note that memory-safety is the union of valid-deref,
                 valid-free, memleak)''')
-
-    translate_group.add_argument(
-        '--wrapped-integer-encoding',
-        action='store_true',
-        default=False,
-        help='''enable wrapped integer arithmetic and signedness-aware
-                comparison''')
 
     translate_group.add_argument(
         '--llvm-assumes',
@@ -538,11 +538,13 @@ def llvm_to_bpl(args):
         cmd += ['-mem-mod-impls']
     if args.static_unroll:
         cmd += ['-static-unroll']
-    if args.bit_precise:
+    if args.integer_encoding == 'bit-vector':
         cmd += ['-bit-precise']
+    if args.integer_encoding == 'wrapped-integer':
+        cmd += ['-wrapped-integer-encoding']
     if args.timing_annotations:
         cmd += ['-timing-annotations']
-    if args.bit_precise_pointers:
+    if args.pointer_encoding == 'bit-vector':
         cmd += ['-bit-precise-pointers']
     if args.no_byte_access_inference:
         cmd += ['-no-byte-access-inference']
@@ -555,8 +557,6 @@ def llvm_to_bpl(args):
         cmd += ['-integer-overflow']
     if 'rust-panics' in args.check:
         cmd += ['-rust-panics']
-    if args.wrapped_integer_encoding:
-        cmd += ['-wrapped-integer-encoding']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:

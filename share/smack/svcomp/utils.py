@@ -29,22 +29,22 @@ def svcomp_frontend(input_file, args):
     # test bv and executable benchmarks
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
-      args.bit_precise = True
-      args.bit_precise_pointers = True
+      args.integer_encoding = 'bit-vector'
+      args.pointer_encoding = 'bit-vector'
     if file_type == 'float' and not args.integer_overflow:
       args.float = True
-      args.bit_precise = True
+      args.integer_encoding = 'bit-vector'
       with open(input_file, "r") as sf:
         sc = sf.read()
       if 'copysign(1' in sc:
-        args.bit_precise_pointers = True
+        args.pointer_encoding = 'bit-vector'
     args.execute = executable
   else:
     with open(input_file, "r") as sf:
       sc = sf.read()
     if "unsigned char b:2" in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
-      args.bit_precise = True
-      #args.bit_precise_pointers = True
+      args.integer_encoding = 'bit-vector'
+      #args.pointer_encoding = 'bit-vector'
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -112,10 +112,10 @@ def svcomp_process_file(args, name, ext):
         pass
 
     if 'argv=malloc' in s:
-#      args.bit_precise = True
+#      args.integer_encoding = 'bit-vector'
       if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
-        args.bit_precise = True
-        args.bit_precise_pointers = True
+        args.integer_encoding = 'bit-vector'
+        args.pointer_encoding = 'bit-vector'
 
     length = len(s.split('\n'))
     if length < 60:
@@ -257,7 +257,7 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    if not (args.memory_safety or args.bit_precise or args.only_check_memcleanup):
+    if not (args.memory_safety or args.integer_encoding == 'bit-vector' or args.only_check_memcleanup):
       if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
         corral_command += ["/di"]
 
@@ -271,7 +271,7 @@ def verify_bpl_svcomp(args):
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
   staticLoopBound = 65536
-  if not args.bit_precise and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
+  if not args.integer_encoding == 'bit-vector' and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
     heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
     loopUnrollBar = 23
   elif "s3_srvr.blast.10_false-unreach-call" in bpl or "s3_srvr.blast.15_false-unreach-call" in bpl:

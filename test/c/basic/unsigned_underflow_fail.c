@@ -1,7 +1,7 @@
 #include <smack.h>
 
 // @expect error
-// @flag --wrapped-integer-encoding
+// @flag --integer-encoding=wrapped-integer
 
 int main() {
   unsigned x = 2;
