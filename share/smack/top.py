@@ -13,7 +13,7 @@ from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 
-VERSION = '2.4.1'
+VERSION = '2.5.0'
 
 
 def results(args):
