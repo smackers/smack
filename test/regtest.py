@@ -315,10 +315,10 @@ def main():
             if meta['memory-limit'] > mem_total:
                 continue
 
-            if meta['skip'] == True:
+            if meta['skip'] is True:
                 continue
 
-            if meta['skip'] != False and not args.all_examples:
+            if meta['skip'] is not False and not args.all_examples:
                 continue
 
             # build up the subprocess command
