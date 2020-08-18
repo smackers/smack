@@ -980,7 +980,7 @@ void IntOpGen::generateMemOps(std::stringstream &s) const {
       } else {
         auto loadBody = prelude.mapSelExpr(0);
         auto storeBody = prelude.mapUpdExpr(0, Expr::bvExtract(valExpr, 8, 0));
-        for (unsigned i = 1; i<size> > 3; ++i) {
+        for (unsigned i = 1; i < (size >> 3); ++i) {
           unsigned lowerIdx = i << 3;
           unsigned upperIdx = lowerIdx + 8;
           loadBody = Expr::bvConcat(prelude.mapSelExpr(i), loadBody);
