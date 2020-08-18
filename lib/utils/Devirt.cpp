@@ -168,7 +168,7 @@ Devirtualize::findInCache (const CallSite & CS,
     // Check the type of the function pointer and the argumentsa
     PointerType* PT = dyn_cast<PointerType>(bounceFunc->arg_begin()->getType());
     assert(PT);
-    if (CS.getCalledValue()->stripPointerCasts()->getType() != PT)
+    if (CS.getCalledValue()->stripPointerCastsAndAliases()->getType() != PT)
       continue;
 
     FunctionType* FT = dyn_cast<FunctionType>(PT->getElementType());
@@ -456,7 +456,7 @@ Devirtualize::processCallSite (CallSite &CS) {
   // First, determine if this is a direct call.  If so, then just ignore it.
   //
   Value * CalledValue = CS.getCalledValue();
-  if (isa<Function>(CalledValue->stripPointerCasts()))
+  if (isa<Function>(CalledValue->stripPointerCastsAndAliases()))
     return;
 
   //

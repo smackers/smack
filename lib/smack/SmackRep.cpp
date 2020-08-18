@@ -355,7 +355,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
 
   assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
   assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
-  const Value *V = CI.getArgOperand(0)->stripPointerCasts();
+  const Value *V = CI.getArgOperand(0)->stripPointerCastsAndAliases();
 
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
@@ -788,7 +788,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
-    v = v->stripPointerCasts();
+    v = v->stripPointerCastsAndAliases();
   }
 
   if (isa<GlobalValue>(v)) {

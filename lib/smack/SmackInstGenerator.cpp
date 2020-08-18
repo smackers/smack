@@ -200,7 +200,7 @@ void SmackInstGenerator::generatePhiAssigns(llvm::Instruction &ti) {
 
       llvm::PHINode *phi = llvm::cast<llvm::PHINode>(s);
       if (llvm::Value *v = phi->getIncomingValueForBlock(block)) {
-        v = v->stripPointerCasts();
+        v = v->stripPointerCastsAndAliases();
         lhs.push_back(rep->expr(phi));
         rhs.push_back(rep->expr(v));
       }
@@ -519,7 +519,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   processInstruction(si);
   const llvm::Value *P = si.getPointerOperand();
-  const llvm::Value *V = si.getValueOperand()->stripPointerCasts();
+  const llvm::Value *V = si.getValueOperand()->stripPointerCastsAndAliases();
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
   if (isa<VectorType>(V->getType())) {
@@ -649,7 +649,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   Function *f = ci.getCalledFunction();
   if (!f) {
     assert(ci.getCalledValue() && "Called value is null");
-    f = cast<Function>(ci.getCalledValue()->stripPointerCasts());
+    f = cast<Function>(ci.getCalledValue()->stripPointerCastsAndAliases());
   }
 
   std::string name = f->hasName() ? f->getName() : "";
@@ -848,7 +848,7 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
       auto currInst = std::prev(nextInst);
       if (currInst != dvi.getParent()->begin()) {
         const Instruction &pi = *std::prev(currInst);
-        V = V->stripPointerCasts();
+        V = V->stripPointerCastsAndAliases();
         if (!llvm::isa<const PHINode>(&pi) &&
             V == llvm::dyn_cast<const Value>(&pi))
           emit(recordProcedureCall(
