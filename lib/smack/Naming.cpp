@@ -121,6 +121,7 @@ const std::map<unsigned, std::string> Naming::INSTRUCTION_TABLE{
     {Instruction::FMul, "$fmul"},
     {Instruction::FDiv, "$fdiv"},
     {Instruction::FRem, "$frem"},
+    {Instruction::FNeg, "$fneg"},
     {Instruction::ShuffleVector, "$shufflevector"},
     {Instruction::InsertElement, "$insertelement"},
     {Instruction::ExtractElement, "$extractelement"}};

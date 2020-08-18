@@ -373,6 +373,20 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
 }
 
 /******************************************************************************/
+/*                   UNARY                    OPERATIONS                     */
+/******************************************************************************/
+
+void SmackInstGenerator::visitUnaryOperator(llvm::UnaryOperator &I) {
+  assert(I.getOpcode() == Instruction::FNeg && !isa<VectorType>(I.getType()) &&
+         "Unsupported unary operation!");
+  processInstruction(I);
+  SmackWarnings::warnIfUnsound(std::string("floating-point arithmetic ") +
+                                   I.getOpcodeName(),
+                               SmackOptions::FloatEnabled, currBlock, &I);
+  emit(Stmt::assign(rep->expr(&I), rep->uop(&I)));
+}
+
+/******************************************************************************/
 /*                   VECTOR                    OPERATIONS                     */
 /******************************************************************************/
 

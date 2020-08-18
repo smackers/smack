@@ -924,6 +924,19 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
+const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
+  return uop(CE->getOperand(0));
+}
+
+const Expr *SmackRep::uop(const llvm::UnaryOperator *UO) {
+  return uop(UO->getOperand(0));
+}
+
+const Expr *SmackRep::uop(const llvm::Value *op) {
+  std::string fn = Naming::INSTRUCTION_TABLE.at(Instruction::FNeg);
+  return Expr::fn(opName(fn, {op->getType()}), expr(op));
+}
+
 const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
   return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1),
              I->isUnsigned());
