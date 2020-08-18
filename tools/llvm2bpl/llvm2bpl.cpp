@@ -42,6 +42,7 @@
 #include "utils/MergeGEP.h"
 #include "utils/SimplifyExtractValue.h"
 #include "utils/SimplifyInsertValue.h"
+#include "utils/InitializePasses.h"
 
 static llvm::cl::opt<std::string>
     InputFilename(llvm::cl::Positional,
@@ -146,6 +147,7 @@ int main(int argc, char **argv) {
   llvm::initializeAnalysis(Registry);
 
   llvm::initializeCodifyStaticInitsPass(Registry);
+  llvm::initializeDevirtualizePass(Registry);
 
   llvm::legacy::PassManager pass_manager;
 

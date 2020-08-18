@@ -12,6 +12,8 @@
 #include "utils/Devirt.h"
 
 #include "smack/Debug.h"
+#include "seadsa/InitializePasses.hh"
+#include "utils/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
 
@@ -21,16 +23,9 @@
 
 using namespace llvm;
 
-// Pass ID variable
-char Devirtualize::ID = 0;
-
 // Pass statistics
 STATISTIC(FuncAdded, "Number of bounce functions added");
 STATISTIC(CSConvert, "Number of call sites converted");
-
-// Pass registration
-RegisterPass<Devirtualize>
-Z ("devirt", "Devirtualize indirect function calls");
 
 const bool SKIP_INCOMPLETE_NODES = false;
 
@@ -519,3 +514,12 @@ Devirtualize::runOnModule (Module & M) {
   //
   return true;
 }
+
+// Pass ID variable
+char Devirtualize::ID = 0;
+
+using namespace seadsa;
+// Pass registration
+INITIALIZE_PASS_BEGIN(Devirtualize, "devirt", "Devirtualize indirect function calls", false, false)
+INITIALIZE_PASS_DEPENDENCY(CompleteCallGraph)
+INITIALIZE_PASS_END(Devirtualize, "devirt", "Devirtualize indirect function calls", false, false)

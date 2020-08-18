@@ -22,50 +22,52 @@ std::vector<unsigned> getSeconds(SplitAggregateValue::IndexT lst) {
   return ret;
 }
 
-bool SplitAggregateValue::runOnBasicBlock(BasicBlock &BB) {
-  std::vector<Instruction *> toRemove;
-  LLVMContext &C = BB.getContext();
-  for (Instruction &I : BB) {
-    IndexT idx;
-    std::vector<InfoT> info;
-    if (LoadInst *li = dyn_cast<LoadInst>(&I)) {
-      if (li->getType()->isAggregateType()) {
-        visitAggregateValue(nullptr, li->getType(), idx, info, C);
-        IRBuilder<> irb(li);
-        li->replaceAllUsesWith(splitAggregateLoad(li, info, irb));
-        toRemove.push_back(li);
-      }
-    } else if (StoreInst *si = dyn_cast<StoreInst>(&I)) {
-      Value *V = si->getValueOperand();
-      if (V->getType()->isAggregateType()) {
-        visitAggregateValue(dyn_cast_or_null<Constant>(V), V->getType(), idx,
-                            info, C);
-        IRBuilder<> irb(si);
-        splitAggregateStore(si, info, irb);
-        toRemove.push_back(si);
-      }
-    } else if (ReturnInst *ri = dyn_cast<ReturnInst>(&I)) {
-      Value *V = ri->getReturnValue();
-      if (isConstantAggregate(V)) {
-        visitAggregateValue(cast<Constant>(V), V->getType(), idx, info, C);
-        splitConstantReturn(ri, info);
-      }
-    } else if (CallInst *ci = dyn_cast<CallInst>(&I)) {
-      for (unsigned i = 0; i < ci->getNumArgOperands(); ++i) {
-        Value *arg = ci->getArgOperand(i);
-        if (isConstantAggregate(arg)) {
-          info.clear();
-          idx.clear();
-          visitAggregateValue(cast<Constant>(arg), arg->getType(), idx, info,
-                              C);
-          splitConstantArg(ci, i, info);
+bool SplitAggregateValue::runOnFunction(Function &F) {
+  for (auto &BB : F) {
+    std::vector<Instruction *> toRemove;
+    LLVMContext &C = BB.getContext();
+    for (Instruction &I : BB) {
+      IndexT idx;
+      std::vector<InfoT> info;
+      if (LoadInst *li = dyn_cast<LoadInst>(&I)) {
+        if (li->getType()->isAggregateType()) {
+          visitAggregateValue(nullptr, li->getType(), idx, info, C);
+          IRBuilder<> irb(li);
+          li->replaceAllUsesWith(splitAggregateLoad(li, info, irb));
+          toRemove.push_back(li);
+        }
+      } else if (StoreInst *si = dyn_cast<StoreInst>(&I)) {
+        Value *V = si->getValueOperand();
+        if (V->getType()->isAggregateType()) {
+          visitAggregateValue(dyn_cast_or_null<Constant>(V), V->getType(), idx,
+                              info, C);
+          IRBuilder<> irb(si);
+          splitAggregateStore(si, info, irb);
+          toRemove.push_back(si);
+        }
+      } else if (ReturnInst *ri = dyn_cast<ReturnInst>(&I)) {
+        Value *V = ri->getReturnValue();
+        if (isConstantAggregate(V)) {
+          visitAggregateValue(cast<Constant>(V), V->getType(), idx, info, C);
+          splitConstantReturn(ri, info);
+        }
+      } else if (CallInst *ci = dyn_cast<CallInst>(&I)) {
+        for (unsigned i = 0; i < ci->getNumArgOperands(); ++i) {
+          Value *arg = ci->getArgOperand(i);
+          if (isConstantAggregate(arg)) {
+            info.clear();
+            idx.clear();
+            visitAggregateValue(cast<Constant>(arg), arg->getType(), idx, info,
+                                C);
+            splitConstantArg(ci, i, info);
+          }
         }
       }
     }
-  }
 
-  for (auto &i : toRemove)
-    i->eraseFromParent();
+    for (auto &i : toRemove)
+      i->eraseFromParent();
+  }
   return true;
 }
 

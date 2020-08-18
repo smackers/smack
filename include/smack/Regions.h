@@ -6,6 +6,7 @@
 
 #include "seadsa/Graph.hh"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 

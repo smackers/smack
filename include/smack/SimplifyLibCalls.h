@@ -12,7 +12,7 @@ namespace smack {
 
 using namespace llvm;
 
-class SimplifyLibCalls : public ModulePass,
+class SimplifyLibCalls : public FunctionPass,
                          public InstVisitor<SimplifyLibCalls> {
 private:
   bool modified;
@@ -20,9 +20,9 @@ private:
 
 public:
   static char ID;
-  SimplifyLibCalls() : ModulePass(ID) {}
+  SimplifyLibCalls() : FunctionPass(ID) {}
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
-  virtual bool runOnModule(Module &M);
+  virtual bool runOnFunction(Function &F);
   void visitCallInst(CallInst &);
 };
 } // namespace smack
