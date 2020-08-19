@@ -43,6 +43,8 @@
 #include "utils/SimplifyExtractValue.h"
 #include "utils/SimplifyInsertValue.h"
 #include "utils/InitializePasses.h"
+#include "seadsa/InitializePasses.hh"
+#include "seadsa/support/RemovePtrToInt.hh"
 
 static llvm::cl::opt<std::string>
     InputFilename(llvm::cl::Positional,
@@ -148,9 +150,11 @@ int main(int argc, char **argv) {
 
   llvm::initializeCodifyStaticInitsPass(Registry);
   llvm::initializeDevirtualizePass(Registry);
+  llvm::initializeRemovePtrToIntPass(Registry);
 
   llvm::legacy::PassManager pass_manager;
 
+  pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
   // Shaobo: sea-dsa is inconsistent with the pass below.
