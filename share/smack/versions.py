@@ -1,0 +1,1 @@
+VERSIONS={'RUST_VERSION': 'nightly-2020-05-15'}

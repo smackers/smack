@@ -3,6 +3,7 @@ import sys
 import re
 import json
 from .utils import temporary_file, try_command
+from .versions import VERSIONS
 
 
 def languages():
@@ -268,6 +269,7 @@ def json_compilation_database_frontend(input_file, args):
 def default_rust_compile_command(args):
     compile_command = [
         'rustc',
+        '+'+VERSIONS['RUST_VERSION'],
         '-A',
         'unused-imports',
         '-C',
