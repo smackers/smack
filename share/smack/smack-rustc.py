@@ -4,7 +4,7 @@ import sys
 import os
 import subprocess
 
-# rustc --help -v
+# $ rustc --help -v
 #
 # Usage: rustc [OPTIONS] INPUT
 #
@@ -70,108 +70,78 @@ import subprocess
 #     -W help             Print 'lint' options and default settings
 #     -Z help             Print unstable compiler options
 
-class Arguments:
-  def __init__(self):
-    self.crate_type = set()
-    self.emit = set()
-    self.codegen = dict()
-    self.others = []
+def smack_overrides(args):
+  args['codegen_opts'].update({'debuginfo': '2',
+                               'opt-level': '0',
+                               'no-prepopulate-passes': None,
+                               'passes':'name-anon-globals'})
 
-  def __str__(self):
-    return " ".join(self.str_list())
 
-  def str_list(self):
-    res = []
-    if len(self.emit):
-      res.append('--emit='+','.join(self.emit))
-    if len(self.crate_type):
-      res.extend(['--crate-type', ','.join(self.crate_type)])
-    for opt in self.codegen.items():
-      if opt[1] is not None:
-        res.extend(['-C', "{}={}".format(opt[0],opt[1])])
-      else:
-        res.extend(['-C', "{}".format(opt[0],opt[1])])
-    res.extend(self.others)
-    return res
-  
-  def get_codegen_opts(self):
-    res = dict()
-    for opt in self.codegen:
-      k,v = opt.split('=')
-      res[k] = v
-    return res
-
-  def get_smack_form(self):
-    crate_type = self.crate_type
-    emit = self.emit
-    codegen = self.codegen
-    others = self.others
-    codegen['opt-level'] = '0'
-    others.aappend('-g')
-  
-def has_equals(arg):
-  if '=' in arg:
-    s = arg.split('=')
-    return s[-1]
-  return None
-    
+def process_equals_arg(argv, i):
+  if '=' in argv[i]:
+    arg = argv[i].split('=')[-1]
+  else:
+    assert(len(argv) > i+1)
+    i += 1
+    arg = argv[i]
+  return set(arg.split(',')), i
+      
 def parse_args(argv = sys.argv):
+  crate_types = set()
+  emit_types = {'llvm-bc'}
+  other_args = []
+  codegen_opts = dict()  
   i = 0
-  args = Arguments()
   while i < len(argv):
     arg = argv[i]
     # --crate-type [bin|lib|rlib|dylib|cdylib|staticlib|proc-macro]
-    if arg.startswith('--crate-type'):
-      opt = has_equals(arg)
-      if not opt:
-        i += 1
-        opt = argv[i]
-      for op in opt.split(','):
-        args.crate_type.add(op)
+    if False and arg.startswith('--crate-type'):
+      args, i = process_equals_arg(argv,i)
+      crate_types |= args
     # --emit [asm|llvm-bc|llvm-ir|obj|metadata|link|dep-info|mir]
     elif arg.startswith('--emit'):
-      opt = has_equals(arg)
-      if not opt:
+      args, i = process_equals_arg(argv,i)
+      emit_types |= args
+    # codegen options -C opt, -C opt=opt -Copt  
+    elif arg.startswith('-C'):
+      if arg == '-C':
         i += 1
-        opt = argv[i]
-      for op in opt.split(','):
-        args.emit.add(op)
-    elif arg in ('-g', '-O'):
-      # Ignore
-      pass
-    elif arg == '-C':
-      i += 1
-      if '=' in argv[i]:
-        k,v = argv[i].split('=')
+        arg = argv[i]
       else:
-        k = argv[i]
-        v = None
-      args.codegen[k] = v
+        arg = arg[2:]
+        
+      if len(arg.split('=')) == 2:
+        a, v = arg.split('=')
+      else:
+        a, v = arg, None
+      codegen_opts[a] = v
     else:
-      args.others.append(arg)
+      other_args.append(argv[i])
     i += 1
-  return args
-  
+  return {'crate_types': crate_types,
+          'other_args' : other_args,
+          'emit_types': emit_types,
+          'codegen_opts': codegen_opts}
+    
 args = parse_args(sys.argv[1:])
-  
-#print(args.get_codegen_opts())
 
-#print(args.str_list())
+smack_overrides(args)
 
-autocfg=False
-for i in args.str_list():
-  if 'autocfg' in i:
-    autocfg=True
-    break
+argv = []
+for x in args['crate_types']:
+  argv.extend(['--crate-type', x])
+argv.append('--emit='+','.join(args['emit_types']))
+for a,v in args['codegen_opts'].items():
+  argv.extend(['-C', a+'='+v if v else a])
+argv.extend(args['other_args'])
 
-if autocfg:
-  with open('/Users/marksb/src/smack/half-rs/newlog.txt', 'a') as f:
-    f.write('original: rustc ' + ' '.join(sys.argv[1:]) + '\n')
-    f.write('rewrite:  rustc ' + ' '.join(args.str_list()) + '\n')
-    f.write('-'*80 + '\n')
-
-
-proc = subprocess.run(['rustc'] + args.str_list(), env=os.environ)
+with open('/Users/marksb/src/smack/half-rs/newlog.txt', 'a') as f:
+  f.write('original: rustc ' + ' '.join(sys.argv[1:]) + '\n')
+  f.write('rewrite:  rustc ' + ' '.join(argv) + '\n')
+  f.write('-'*80 + '\n')
+    
+#proc = subprocess.run(['rustc'] + args.str_list(), env=os.environ)
 #proc = subprocess.run(['rustc'] + sys.argv[1:], env=os.environ)
+proc = subprocess.run(['rustc'] + argv, env=os.environ)
 
 exit(proc.returncode)
