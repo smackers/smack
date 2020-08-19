@@ -73,6 +73,6 @@ before_script:
   - llvm-config --version
 
 script:
-  - ./format/run-clang-format.py -e test/c/basic/transform-out.c -r lib/smack include/smack share/smack/include share/smack/lib test examples
+  - ./format/run-clang-format.py -r lib/smack include/smack share/smack/include share/smack/lib test examples
   - flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
   - INSTALL_RUST=1 ./bin/build.sh
