@@ -337,6 +337,7 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
   if ! [ -x "$(command -v rustup)" ]; then
       ${WGET} -O - --secure-protocol=TLSv1_2 https://sh.rustup.rs | bash -s -- -y
+      source $HOME/.cargo/env
   fi
   rustup toolchain install ${RUST_VERSION}
   puts "Installed Rust"
