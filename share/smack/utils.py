@@ -29,13 +29,16 @@ def timeout_killer(proc, timed_out):
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 
-def try_command(cmd, cwd=None, console=False, timeout=None):
+def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
     args = top.args
     console = (console or args.verbose or args.debug) and not args.quiet
     filelog = args.debug
     output = ''
     proc = None
     timer = None
+    if env is not None:
+        for k, v in env.items():
+            os.putenv(k, v)
     try:
         if args.debug:
             print("Running %s" % " ".join(cmd))
