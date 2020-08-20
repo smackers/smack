@@ -201,11 +201,6 @@ linux-@(ubuntu|neon)-18*)
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
-linux-@(ubuntu|neon)-20*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
-  ;;
-
 *)
   puts "Distribution ${distro} not supported. Manual installation required."
   exit 1
@@ -242,7 +237,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20)*)
+  linux-@(ubuntu|neon)-1[68]*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     16*)
@@ -250,9 +245,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
       ;;
     18*)
       UBUNTU_CODENAME="bionic"
-      ;;
-    20*)
-      UBUNTU_CODENAME="focal"
       ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
