@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import tempfile
 import subprocess
 import signal
@@ -17,10 +18,19 @@ def temporary_file(prefix, extension, args):
     return name
 
 
+def temporary_directory(prefix, extension, args):
+    name = tempfile.mkdtemp(extension, prefix + '-', os.getcwd())
+    if not args.debug:
+        temporary_files.append(name)
+    return name
+
+
 def remove_temp_files():
     for f in temporary_files:
         if os.path.isfile(f):
             os.unlink(f)
+        elif os.path.isdir(f):
+            shutil.rmtree(f)
 
 
 def timeout_killer(proc, timed_out):
