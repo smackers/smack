@@ -25,13 +25,13 @@ def svcomp_frontend(input_file, args):
   svcomp_check_property(args)
 
   # fix: disable float filter for memory safety benchmarks
-  if not (args.memory_safety or args.only_check_memcleanup):
+  if not ('memory-safety' in args.check or 'memleak' in args.check):
     # test bv and executable benchmarks
     file_type, executable = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.integer_encoding = 'bit-vector'
       args.pointer_encoding = 'bit-vector'
-    if file_type == 'float' and not args.integer_overflow:
+    if file_type == 'float' and not 'integer-overflow' in args.check:
       args.float = True
       args.integer_encoding = 'bit-vector'
       with open(input_file, "r") as sf:
@@ -45,6 +45,9 @@ def svcomp_frontend(input_file, args):
     if "unsigned char b:2" in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
       args.integer_encoding = 'bit-vector'
       #args.pointer_encoding = 'bit-vector'
+
+  if 'memory-safety' in args.check or 'memleak' in args.check or 'integer-overflow' in args.check:
+      args.strings = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -66,24 +69,21 @@ def svcomp_frontend(input_file, args):
   libs = set()
 
   smack.top.link_bc_files([bc],libs,args)
-  if args.only_check_memcleanup:
-    args.memory_safety = False
 
 def svcomp_check_property(args):
-  args.only_check_memcleanup = False
   # Check if property is vanilla reachability, and return unknown otherwise
   if args.svcomp_property:
     with open(args.svcomp_property, "r") as f:
       prop = f.read()
     if "valid-deref" in prop:
-      args.memory_safety = True
+      args.check = ['memory-safety']
     elif "valid-memcleanup" in prop:
-      args.memory_safety = True
-      args.only_check_memcleanup = True
+      args.check = ['memleak']
     elif "overflow" in prop:
-      args.integer_overflow = True
+      args.check = ['integer-overflow']
     elif not "reach_error" in prop:
-      sys.exit(smack.top.results(args)['unknown'])
+      print(smack.top.results(args)['unknown'][0])
+      sys.exit(smack.top.results(args)['unknown'][1])
 
 def svcomp_process_file(args, name, ext):
   args.orig_files = list(args.input_files)
@@ -98,14 +98,14 @@ def svcomp_process_file(args, name, ext):
     s = re.sub(r'static\s+char\s+dir\[42\];\s+for\(int\s+i=0;\s+i<42;\s+\+\+i\)\s+dir\[i\]\s+=\s+__VERIFIER_nondet_char\(\);\s+dir\[41\]\s+=\s+\'\\0\';', r'static char dir[3];\n  dir[0] = __VERIFIER_nondet_char();\n  dir[1] = __VERIFIER_nondet_char();\n  dir[2] = 0;', s)
     s = re.sub(r'__VERIFIER_assume\(i < 16\);', r'__VERIFIER_assume(i >= 0 && i < 16);', s)
 
-    if args.memory_safety and not 'argv=malloc' in s:
+    if 'memory-safety' in args.check and not 'argv=malloc' in s:
       s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
-    elif args.memory_safety and re.search(r'getopt32\([^,)]+,[^,)]+,[^.)]+\);', s):
+    elif 'memory-safety' in args.check and re.search(r'getopt32\([^,)]+,[^,)]+,[^.)]+\);', s):
       if not args.quiet:
         print("Stumbled upon a benchmark that requires precise handling of vararg\n")
       while (True):
         pass
-    elif args.memory_safety and ('count is too big' in s or 'pdRfilsLHarPv' in s or 'rnugG' in s):
+    elif 'memory-safety' in args.check and ('count is too big' in s or 'pdRfilsLHarPv' in s or 'rnugG' in s):
       if not args.quiet:
         print("Stumbled upon a benchmark that contains undefined behavior\n")
       while (True):
@@ -113,7 +113,7 @@ def svcomp_process_file(args, name, ext):
 
     if 'argv=malloc' in s:
 #      args.integer_encoding = 'bit-vector'
-      if args.integer_overflow and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
+      if 'integer-overflow' in args.check and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
         args.integer_encoding = 'bit-vector'
         args.pointer_encoding = 'bit-vector'
 
@@ -167,7 +167,8 @@ def is_stack_benchmark(args, csource):
       "arr[194]" in csource or "if(1)" in csource or "alloca(10" in csource or "p[0] = 2;" in csource):
     if not args.quiet:
       print("Stumbled upon a stack-based memory safety benchmark\n")
-    sys.exit(smack.top.results(args)['unknown'])
+    print(smack.top.results(args)['unknown'][0])
+    sys.exit(smack.top.results(args)['unknown'][1])
 
 def inject_assert_false(args):
     with open(args.bpl_file, 'r') as bf:
@@ -180,38 +181,42 @@ def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
 
-  if not args.memory_safety and not args.only_check_memcleanup and not args.integer_overflow:
+  if not 'memory-safety' in args.check and not 'memleak' in args.check and not 'integer-overflow' in args.check:
     inject_assert_false(args)
 
-  if args.memory_safety:
-    if not (args.only_check_valid_deref or args.only_check_valid_free or args.only_check_memleak):
+  if 'memory-safety' in args.check:
+    if len(args.check) == 1:
       heurTrace = "engage valid deference checks.\n"
-      args.only_check_valid_deref = True
+      args.check.pop()
+      args.check.append('valid-deref')
       args.prop_to_check = 'valid-deref'
       args.bpl_with_all_props = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
       copyfile(args.bpl_file, args.bpl_with_all_props)
-      smack.top.property_selection(args)
-    elif args.only_check_valid_deref:
+      smack.top.memsafety_subproperty_selection(args)
+      args.check.append('memory-safety')
+    elif 'valid-deref' in args.check:
       heurTrace = "engage valid free checks.\n"
-      args.only_check_valid_free = True
+      args.check.pop()
+      args.check.pop()
       args.prop_to_check = 'valid-free'
-      args.only_check_valid_deref = False
+      args.check.append('valid-free')
       args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
       copyfile(args.bpl_with_all_props, args.bpl_file)
-      smack.top.property_selection(args)
-    elif args.only_check_valid_free:
+      smack.top.memsafety_subproperty_selection(args)
+      args.check.append('memory-safety')
+    elif 'valid-free' in args.check:
       heurTrace = "engage memleak checks.\n"
-      args.only_check_memleak = True
+      args.check.pop()
+      args.check.pop()
       args.prop_to_check = 'memleak'
-      args.only_check_valid_free = False
+      args.check.append('memleak')
       args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
       copyfile(args.bpl_with_all_props, args.bpl_file)
-      smack.top.property_selection(args)
-  elif args.only_check_memcleanup:
+      smack.top.memsafety_subproperty_selection(args)
+      args.check.append('memory-safety')
+  elif 'memleak' in args.check:
     heurTrace = "engage memcleanup checks.\n"
-    args.only_check_memleak = True
-    smack.top.property_selection(args)
-    args.only_check_memleak = False
+    smack.top.memsafety_subproperty_selection(args)
 
   # If pthreads found, perform lock set analysis
   if args.pthread:
@@ -234,17 +239,19 @@ def verify_bpl_svcomp(args):
   with open(args.input_files[0], "r") as f:
     csource = f.read()
 
-  if args.memory_safety:
+  if 'memory-safety' in args.check:
     is_stack_benchmark(args, csource)
   else:
     if "angleInRadian" in csource:
       if not args.quiet:
         print("Stumbled upon trigonometric function is float benchmark\n")
-      sys.exit(smack.top.results(args)['unknown'])
+      print(smack.top.results(args)['unknown'][0])
+      sys.exit(smack.top.results(args)['unknown'][1])
     elif "copysign(1" in csource:
       if not args.quiet:
         print("Stumbled upon tricky float benchmark\n")
-      sys.exit(smack.top.results(args)['unknown'])
+      print(smack.top.results(args)['unknown'][0])
+      sys.exit(smack.top.results(args)['unknown'][1])
     is_buggy_driver_benchmark(args, bpl)
 
   if args.pthread:
@@ -257,7 +264,7 @@ def verify_bpl_svcomp(args):
       corral_command += ["/cooperative"]
   else:
     corral_command += ["/k:1"]
-    if not (args.memory_safety or args.integer_encoding == 'bit-vector' or args.only_check_memcleanup):
+    if not ('memory-safety' in args.check or args.integer_encoding == 'bit-vector' or 'memleak' in args.check):
       if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
         corral_command += ["/di"]
 
@@ -266,7 +273,8 @@ def verify_bpl_svcomp(args):
     heurTrace += "We are not modeling strcpy - aborting\n"
     if not args.quiet:
       print((heurTrace + "\n"))
-    sys.exit(smack.top.results(args)['unknown'])
+    print(smack.top.results(args)['unknown'][0])
+    sys.exit(smack.top.results(args)['unknown'][1])
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 8
@@ -309,16 +317,16 @@ def verify_bpl_svcomp(args):
   elif "printf_false-unreach-call" in bpl or "echo_true-no-overflow" in bpl:
     heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 11.\n"
     loopUnrollBar = 11
-  elif args.memory_safety and "__main($i0" in bpl:
+  elif 'memory-safety' in args.check and "__main($i0" in bpl:
     heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
     loopUnrollBar = 4
-  elif args.integer_overflow and "__main($i0" in bpl:
+  elif 'integer-overflow' in args.check and "__main($i0" in bpl:
     heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 40.\n"
     loopUnrollBar = 40
-  elif args.integer_overflow and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
+  elif 'integer-overflow' in args.check and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
     heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
-  elif args.integer_overflow and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or
+  elif 'integer-overflow' in args.check and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or
                                   "(k < N)" in csource or "partial_sum" in csource):
     heurTrace += "Large overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
     loopUnrollBar = 2**31 - 1
@@ -333,7 +341,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
     corral_command += ["/bopt:proverOpt:O:smt.relevancy=0"]
 
-  if args.memory_safety:
+  if 'memory-safety' in args.check:
     if args.prop_to_check == 'valid-deref':
       if "memleaks_test12_false-valid-free" in bpl:
         time_limit = 10
@@ -363,7 +371,7 @@ def verify_bpl_svcomp(args):
     if not args.quiet:
       error = smack.top.error_trace(verifier_output, args)
       print(error)
-    if args.memory_safety:
+    if 'memory-safety' in args.check:
       heurTrace += (args.prop_to_check + "has errors\n")
       if args.prop_to_check == 'valid-free':
         if args.valid_deref_check_result != 'verified':
@@ -399,16 +407,18 @@ def verify_bpl_svcomp(args):
           heurTrace += "Oops, execution result says {0}.\n".format(execution_result)
           if not args.quiet:
             print((heurTrace + "\n"))
-          sys.exit(smack.top.results(args)['unknown'])
+          print(smack.top.results(args)['unknown'][0])
+          sys.exit(smack.top.results(args)['unknown'][1])
       random_test_result = random_test(args, result)
       if random_test_result == 'false' or random_test_result == 'unknown':
         heurTrace += "Oops, random testing says {0}.\n".format(random_test_result)
         if not args.quiet:
           print((heurTrace + "\n"))
-        sys.exit(smack.top.results(args)['unknown'])
+        print(smack.top.results(args)['unknown'][0])
+        sys.exit(smack.top.results(args)['unknown'][1])
       if not args.quiet:
         print((heurTrace + "\n"))
-      if args.memory_safety:
+      if 'memory-safety' in args.check:
         heurTrace += (args.prop_to_check + "is verified\n")
         if args.prop_to_check == 'valid-deref':
           args.valid_deref_check_result = 'verified'
@@ -418,11 +428,13 @@ def verify_bpl_svcomp(args):
           if args.valid_deref_check_result == 'timeout':
             force_timeout()
           else:
-            sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+            print(smack.top.results(args)[args.valid_deref_check_result][0])
+            sys.exit(smack.top.results(args)[args.valid_deref_check_result][1])
         verify_bpl_svcomp(args)
       else:
         write_error_file(args, 'verified', verifier_output)
-        sys.exit(smack.top.results(args)['verified'])
+        print(smack.top.results(args)['verified'][0])
+        sys.exit(smack.top.results(args)['verified'][1])
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
@@ -430,7 +442,7 @@ def verify_bpl_svcomp(args):
       if not args.quiet:
         print((heurTrace + "\n"))
         sys.stdout.flush()
-      if args.memory_safety:
+      if 'memory-safety' in args.check:
         heurTrace += (args.prop_to_check + " times out\n")
         if args.prop_to_check == 'valid-deref':
           args.valid_deref_check_result = 'timeout'
@@ -441,7 +453,8 @@ def verify_bpl_svcomp(args):
           if args.valid_deref_check_result == 'timeout':
             force_timeout()
           else:
-            sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+            print(smack.top.results(args)[args.valid_deref_check_result][0])
+            sys.exit(smack.top.results(args)[args.valid_deref_check_result][1])
         verify_bpl_svcomp(args)
       else:
         force_timeout()
@@ -451,7 +464,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print((heurTrace + "\n"))
-  if args.memory_safety and result == 'verified':
+  if 'memory-safety' in args.check and result == 'verified':
     heurTrace += (args.prop_to_check + " is verified\n")
     if args.prop_to_check == 'valid-deref':
       args.valid_deref_check_result = 'verified'
@@ -461,14 +474,16 @@ def verify_bpl_svcomp(args):
       if args.valid_deref_check_result == 'timeout':
         force_timeout()
       else:
-        sys.exit(smack.top.results(args)[args.valid_deref_check_result])
+        print(smack.top.results(args)[args.valid_deref_check_result][0])
+        sys.exit(smack.top.results(args)[args.valid_deref_check_result][1])
     verify_bpl_svcomp(args)
   else:
     write_error_file(args, result, verifier_output)
-    if args.only_check_memcleanup and result == 'invalid-memtrack':
+    if 'memleak' in args.check and result == 'invalid-memtrack':
       sys.exit('SMACK found an error: memory cleanup.')
     else:
-      sys.exit(smack.top.results(args)[result])
+      print(smack.top.results(args)[result][0])
+      sys.exit(smack.top.results(args)[result][1])
 
 def write_error_file(args, status, verifier_output):
   #return
