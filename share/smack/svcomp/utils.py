@@ -46,6 +46,9 @@ def svcomp_frontend(input_file, args):
       args.integer_encoding = 'bit-vector'
       #args.pointer_encoding = 'bit-vector'
 
+  if 'memory-safety' in args.check or 'memleak' in args.check or 'integer-overflow' in args.check:
+      args.strings = True
+
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
 
