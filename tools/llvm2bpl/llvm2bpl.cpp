@@ -24,6 +24,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "seadsa/InitializePasses.hh"
+#include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
@@ -39,12 +41,10 @@
 #include "smack/SplitAggregateValue.h"
 #include "smack/VerifierCodeMetadata.h"
 #include "utils/Devirt.h"
+#include "utils/InitializePasses.h"
 #include "utils/MergeGEP.h"
 #include "utils/SimplifyExtractValue.h"
 #include "utils/SimplifyInsertValue.h"
-#include "utils/InitializePasses.h"
-#include "seadsa/InitializePasses.hh"
-#include "seadsa/support/RemovePtrToInt.hh"
 
 static llvm::cl::opt<std::string>
     InputFilename(llvm::cl::Positional,
