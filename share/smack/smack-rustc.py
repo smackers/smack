@@ -10,6 +10,7 @@ def smack_overrides(args):
                                  'opt-level': '0',
                                  'no-prepopulate-passes': None,
                                  'passes': 'name-anon-globals'})
+    args['other_args'].extend(['--cfg', 'verifier="smack"'])
 
 
 def process_equals_arg(argv, i):
@@ -23,19 +24,14 @@ def process_equals_arg(argv, i):
 
 
 def parse_args(argv=sys.argv):
-    crate_types = set()
     emit_types = {'llvm-bc'}
     other_args = []
     codegen_opts = dict()
     i = 0
     while i < len(argv):
         arg = argv[i]
-        # --crate-type [bin|lib|rlib|dylib|cdylib|staticlib|proc-macro]
-        if False and arg.startswith('--crate-type'):
-            args, i = process_equals_arg(argv, i)
-            crate_types |= args
         # --emit [asm|llvm-bc|llvm-ir|obj|metadata|link|dep-info|mir]
-        elif arg.startswith('--emit'):
+        if arg.startswith('--emit'):
             args, i = process_equals_arg(argv, i)
             emit_types |= args
         # codegen options -C opt, -C opt=opt -Copt
@@ -54,8 +50,7 @@ def parse_args(argv=sys.argv):
         else:
             other_args.append(argv[i])
         i += 1
-    return {'crate_types': crate_types,
-            'other_args': other_args,
+    return {'other_args': other_args,
             'emit_types': emit_types,
             'codegen_opts': codegen_opts}
 
@@ -65,9 +60,6 @@ args = parse_args(sys.argv[1:])
 smack_overrides(args)
 
 argv = []
-
-for x in args['crate_types']:
-    argv.extend(['--crate-type', x])
 
 argv.append('--emit='+','.join(args['emit_types']))
 

@@ -2,7 +2,7 @@ import os
 import sys
 import re
 import json
-from .utils import temporary_file, try_command
+from .utils import temporary_file, try_command, temporary_directory
 from .versions import VERSIONS
 
 
@@ -26,6 +26,7 @@ def languages():
         'f95': 'fortran',
         'f03': 'fortran',
         'rs': 'rust',
+        'toml': 'cargo',
     }
 
 
@@ -46,6 +47,7 @@ def frontends():
         'boogie': boogie_frontend,
         'fortran': fortran_frontend,
         'rust': rust_frontend,
+        'cargo': cargo_frontend,
     }
 
 
@@ -75,6 +77,10 @@ def smack_headers(args):
 
 def smack_lib():
     return os.path.join(smack_root(), 'share', 'smack', 'lib')
+
+
+def smack_bin():
+    return os.path.join(smack_root(), 'share', 'smack')
 
 
 def default_clang_compile_command(args, lib=False):
@@ -264,6 +270,67 @@ def json_compilation_database_frontend(input_file, args):
     # import here to avoid a circular import
     from .top import llvm_to_bpl
     llvm_to_bpl(args)
+
+
+def is_cargo_included_bc(name, args):
+    if not (len(name) > 3 and name[-3:] == '.bc'):
+        return False
+
+    if name.startswith('smack-'):
+        # This is an artifact of the build process
+        return True
+
+    if ',' in args.crates:
+        crates = set(args.crates.split(','))
+
+    else:
+        crates = args.crates
+
+    for crate in crates:
+        if name.startswith(crate + '-'):
+            return True
+
+    return False
+
+
+def default_cargo_compile_command(args):
+    compile_command = [
+        'cargo',
+        '+'+VERSIONS['RUST_VERSION'],
+        'build']
+    return compile_command + args
+
+
+def cargo_frontend(input_file, args):
+    """Generate LLVM bitcode from a cargo build."""
+    targetdir = temporary_directory(
+        os.path.splitext(
+            os.path.basename(input_file))[0],
+        None,
+        args)
+    rustc = smack_bin() + '/smack-rustc.py'
+    compile_command = default_cargo_compile_command(
+        ['--target-dir', targetdir, '--manifest-path', input_file])
+    try_command(compile_command, console=True,
+                env={'RUSTC': rustc})
+
+    # Get crate bc files
+    bcbase = targetdir+'/debug/deps/'
+    entries = os.listdir(bcbase)
+    print(entries)
+    bcs = []
+
+    for entry in entries:
+        if is_cargo_included_bc(entry, args):
+            bcs.append(bcbase + entry)
+
+    bc_file = temporary_file(
+        os.path.splitext(
+            os.path.basename(input_file))[0],
+        '.bc',
+        args)
+    try_command(['llvm-link'] + bcs + ['-o', bc_file])
+    return bc_file
 
 
 def default_rust_compile_command(args):
