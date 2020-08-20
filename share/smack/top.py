@@ -600,7 +600,7 @@ def annotate_bpl(args):
 
 
 def memsafety_subproperty_selection(args):
-    selected_props = {}
+    selected_props = set()
     if 'memory-safety' in args.check:
         return
     if 'valid-deref' in args.check:
