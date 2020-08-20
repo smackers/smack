@@ -332,6 +332,7 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
       source $HOME/.cargo/env
   fi
   rustup toolchain install ${RUST_VERSION}
+  cargo install rustfilt
   puts "Installed Rust"
 fi
 
