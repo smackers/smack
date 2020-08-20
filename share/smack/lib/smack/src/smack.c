@@ -103,9 +103,12 @@ unsigned short int __VERIFIER_nondet_unsigned_short_int(void) {
 }
 
 int __VERIFIER_nondet_int(void) {
+#if !RUST_EXEC
   int x = __SMACK_nondet_int();
   __VERIFIER_assume(x >= INT_MIN && x <= INT_MAX);
   return x;
+#endif
+  return 0;
 }
 
 signed int __VERIFIER_nondet_signed_int(void) {
@@ -124,12 +127,15 @@ unsigned __VERIFIER_nondet_unsigned(void) {
 }
 
 unsigned int __VERIFIER_nondet_unsigned_int(void) {
+#if !RUST_EXEC
   unsigned int x = __SMACK_nondet_unsigned_int();
   unsigned int min = __SMACK_nondet_unsigned_int();
   unsigned int max = __SMACK_nondet_unsigned_int();
   __VERIFIER_assume(min == 0 && max >= UINT_MAX && max <= UINT_MAX);
   __VERIFIER_assume(x >= min && x <= max);
   return x;
+#endif
+  return 0;
 }
 
 long __VERIFIER_nondet_long(void) {
