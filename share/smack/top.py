@@ -215,6 +215,12 @@ def arguments():
         default='',
         help='additional compiler arguments (e.g., --clang-options="-w -g")')
 
+    frontend_group.add_argument(
+        '--crates',
+        default='*',
+        type=str,
+        help='Cargo crates to include in the analysis (comma separated)')
+
     translate_group = parser.add_argument_group('translation options')
 
     translate_group.add_argument(
