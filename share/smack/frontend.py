@@ -320,7 +320,6 @@ def cargo_frontend(input_file, args):
     # Get crate bc files
     bcbase = targetdir+'/debug/deps/'
     entries = os.listdir(bcbase)
-    print(entries)
     bcs = []
 
     for entry in entries:
