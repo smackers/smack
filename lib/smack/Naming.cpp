@@ -38,6 +38,7 @@ const std::string Naming::VALUE_PROC = "__SMACK_value";
 const std::string Naming::RETURN_VALUE_PROC = "__SMACK_return_value";
 const std::string Naming::INITIALIZE_PROC = "$initialize";
 const std::string Naming::STATIC_INIT_PROC = "__SMACK_static_init";
+const std::string Naming::LOOP_EXIT = "__SMACK_loop_exit";
 
 const std::string Naming::MEMORY = "$M";
 const std::string Naming::ALLOC = "$alloc";

@@ -3,9 +3,9 @@
 //
 
 //
-// This pass normalizes loop structures to allow easier generation of Boogie
-// code when a loop edge comes from a branch. Specifically, a forwarding block
-// is added between a branching block and the loop header.
+// This pass adds an annotation to the exit of any loop, with the purpose
+// of debugging instances where the unroll bound does not unroll enough
+// to reach the loop exit. 
 //
 
 #define DEBUG_TYPE "smack-loop-unroll"
@@ -37,25 +37,21 @@ void AnnotateLoopExits::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 // This method is for clarity and self-documentingness
-void insertLoopEndAssertion(Function *le, Instruction *insertBefore) {
+void insertLoopExitAssertion(Function *le, Instruction *insertBefore) {
   CallInst::Create(le, "", insertBefore);
 }
 
 void processExitBlock(BasicBlock *block, Function *le) {
-  // print exit block found!!
 
   SDEBUG(errs() << "Processing an Exit Block\n");
 
   Instruction &front = block->front();
-  insertLoopEndAssertion(le, &front);
+  insertLoopExitAssertion(le, &front);
 }
 
-void annotateLoopEnd(Loop *loop, Function *le) {
+void annotateLoopExit(Loop *loop, Function *le) {
 
-  // I imagine that it is very uncommon for a loop to have
-  //   more than 5 exit points. This is a complete guess
-  //   and we could probably have a better heuristic
-  SmallVector<BasicBlock *, 5> exitBlocks;
+  SmallVector<BasicBlock *, 0> exitBlocks;
 
   loop->getExitBlocks(exitBlocks);
 
@@ -65,9 +61,8 @@ void annotateLoopEnd(Loop *loop, Function *le) {
 }
 
 bool AnnotateLoopExits::runOnModule(Module &m) {
-
-  Function *le = m.getFunction("__SMACK_loop_end");
-  assert(le != NULL && "Function __SMACK_loop_end shoudl be present.");
+  Function *le = m.getFunction(Naming::LOOP_EXIT);
+  assert(le != NULL && "Function __SMACK_loop_exit should be present.");
 
   for (auto F = m.begin(), FEnd = m.end(); F != FEnd; ++F) {
     if (F->isIntrinsic() || F->empty()) {
@@ -79,7 +74,7 @@ bool AnnotateLoopExits::runOnModule(Module &m) {
          LI != LIEnd; ++LI) {
 
       SDEBUG(errs() << "Processing Loop in " << F->getName() << "\n");
-      annotateLoopEnd(*LI, le);
+      annotateLoopExit(*LI, le);
     }
   }
 
@@ -90,7 +85,7 @@ bool AnnotateLoopExits::runOnModule(Module &m) {
 char AnnotateLoopExits::ID = 0;
 
 StringRef AnnotateLoopExits::getPassName() const {
-  return "Annotate Loop Ends with assert(false)";
+  return "Annotate Loop Exits with assert(false)";
 }
 
 } // namespace smack

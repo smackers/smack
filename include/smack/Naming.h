@@ -54,6 +54,7 @@ public:
   static const std::string RETURN_VALUE_PROC;
   static const std::string INITIALIZE_PROC;
   static const std::string STATIC_INIT_PROC;
+  static const std::string LOOP_EXIT;
 
   static const std::string MEMORY;
   static const std::string ALLOC;

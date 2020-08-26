@@ -1409,7 +1409,7 @@ void __SMACK_check_overflow(int flag) {
   __SMACK_code("assert {:overflow} @ == $0;", flag);
 }
 
-void __SMACK_loop_end(void) {
+void __SMACK_loop_exit(void) {
   __SMACK_code("assert {:loopexit} false;");
 }
 
