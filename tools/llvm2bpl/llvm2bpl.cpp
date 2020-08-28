@@ -24,6 +24,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "seadsa/InitializePasses.hh"
+#include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
@@ -39,6 +41,7 @@
 #include "smack/SplitAggregateValue.h"
 #include "smack/VerifierCodeMetadata.h"
 #include "utils/Devirt.h"
+#include "utils/InitializePasses.h"
 #include "utils/MergeGEP.h"
 #include "utils/SimplifyExtractValue.h"
 #include "utils/SimplifyInsertValue.h"
@@ -146,9 +149,12 @@ int main(int argc, char **argv) {
   llvm::initializeAnalysis(Registry);
 
   llvm::initializeCodifyStaticInitsPass(Registry);
+  llvm::initializeDevirtualizePass(Registry);
+  llvm::initializeRemovePtrToIntPass(Registry);
 
   llvm::legacy::PassManager pass_manager;
 
+  pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
   // Shaobo: sea-dsa is inconsistent with the pass below.

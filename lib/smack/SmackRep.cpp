@@ -355,7 +355,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
 
   assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
   assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
-  const Value *V = CI.getArgOperand(0)->stripPointerCasts();
+  const Value *V = CI.getArgOperand(0)->stripPointerCastsAndAliases();
 
   if (CI.getNumArgOperands() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
@@ -788,7 +788,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
-    v = v->stripPointerCasts();
+    v = v->stripPointerCastsAndAliases();
   }
 
   if (isa<GlobalValue>(v)) {
@@ -922,6 +922,19 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
     }
   }
   return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
+}
+
+const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
+  return uop(CE->getOperand(0));
+}
+
+const Expr *SmackRep::uop(const llvm::UnaryOperator *UO) {
+  return uop(UO->getOperand(0));
+}
+
+const Expr *SmackRep::uop(const llvm::Value *op) {
+  std::string fn = Naming::INSTRUCTION_TABLE.at(Instruction::FNeg);
+  return Expr::fn(opName(fn, {op->getType()}), expr(op));
 }
 
 const Expr *SmackRep::cmp(const llvm::CmpInst *I) {

@@ -85,6 +85,7 @@ private:
   bool isFpArithOp(unsigned opcode);
   const Expr *bop(unsigned opcode, const llvm::Value *lhs,
                   const llvm::Value *rhs, const llvm::Type *t);
+  const Expr *uop(const llvm::Value *op);
   const Expr *cmp(unsigned predicate, const llvm::Value *lhs,
                   const llvm::Value *rhs, bool isUnsigned);
   const Expr *select(const llvm::Value *condVal, const llvm::Value *trueVal,
@@ -146,6 +147,9 @@ public:
 
   const Expr *bop(const llvm::BinaryOperator *BO);
   const Expr *bop(const llvm::ConstantExpr *CE);
+
+  const Expr *uop(const llvm::UnaryOperator *UO);
+  const Expr *uop(const llvm::ConstantExpr *CE);
 
   const Expr *cmp(const llvm::CmpInst *I);
   const Expr *cmp(const llvm::ConstantExpr *CE);

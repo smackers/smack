@@ -42,7 +42,8 @@ void setCurrentDebugTypes(const char **Types, unsigned Count) {
 
 static ::llvm::cl::opt<bool, true> Debug("debug",
                                          cl::desc("Enable debug output"),
-                                         cl::Hidden, cl::location(DebugFlag));
+                                         cl::Hidden,
+                                         cl::location(smack::DebugFlag));
 
 namespace {
 
@@ -50,7 +51,7 @@ struct DebugOnlyOpt {
   void operator=(const std::string &Val) const {
     if (Val.empty())
       return;
-    DebugFlag = true;
+    smack::DebugFlag = true;
     SmallVector<StringRef, 8> dbgTypes;
     StringRef(Val).split(dbgTypes, ',', -1, false);
     for (auto dbgType : dbgTypes)

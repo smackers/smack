@@ -68,6 +68,7 @@ public:
   void visitUnreachableInst(llvm::UnreachableInst &i);
 
   void visitBinaryOperator(llvm::BinaryOperator &I);
+  void visitUnaryOperator(llvm::UnaryOperator &I);
 
   void visitExtractElementInst(llvm::ExtractElementInst &I);
   void visitInsertElementInst(llvm::InsertElementInst &I);
