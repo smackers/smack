@@ -131,6 +131,7 @@ add_library(smackTranslator STATIC
   include/smack/VectorOperations.h
   include/smack/MemorySafetyChecker.h
   include/smack/IntegerOverflowChecker.h
+  include/smack/RustFixes.h
   include/smack/NormalizeLoops.h
   include/smack/SplitAggregateValue.h
   include/smack/Prelude.h
@@ -155,6 +156,7 @@ add_library(smackTranslator STATIC
   lib/smack/VectorOperations.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/IntegerOverflowChecker.cpp
+  lib/smack/RustFixes.cpp
   lib/smack/NormalizeLoops.cpp
   lib/smack/SplitAggregateValue.cpp
   lib/smack/Prelude.cpp
