@@ -229,7 +229,8 @@ bool ExtractContracts::runOnModule(Module &M) {
     }
 
     if (!contractBlocks.empty()) {
-      auto *newF = CodeExtractor(contractBlocks).extractCodeRegion();
+      auto *newF = CodeExtractor(contractBlocks)
+                       .extractCodeRegion(CodeExtractorAnalysisCache(*F));
 
       std::vector<CallInst *> Is;
       for (auto V : newF->users())
@@ -258,7 +259,8 @@ bool ExtractContracts::runOnModule(Module &M) {
 
     for (auto const &entry : invariantBlocks) {
       auto BBs = entry.second;
-      auto *newF = CodeExtractor(BBs).extractCodeRegion();
+      auto *newF =
+          CodeExtractor(BBs).extractCodeRegion(CodeExtractorAnalysisCache(*F));
 
       std::vector<CallInst *> Is;
       for (auto V : newF->users())
