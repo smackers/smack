@@ -311,11 +311,12 @@ def cargo_frontend(input_file, args):
             os.path.basename(input_file))[0],
         None,
         args)
-    rustc = smack_bin() + '/smack-rustc.py'
+    rustargs = (default_rust_compile_args(args) +
+                ['--emit=llvm-bc', '-Clto', '-Cembed-bitcode=yes'])
     compile_command = default_cargo_compile_command(
         ['--target-dir', targetdir, '--manifest-path', input_file])
     try_command(compile_command, console=True,
-                env={'RUSTC': rustc})
+                env={'RUSTFLAGS': " ".join(rustargs)})
 
     # Get crate bc files
     bcbase = targetdir+'/debug/deps/'
@@ -334,22 +335,22 @@ def cargo_frontend(input_file, args):
     try_command(['llvm-link'] + bcs + ['-o', bc_file])
     return bc_file
 
+def default_rust_compile_args(args):
+    return ['-A',
+            'unused-imports',
+            '-C',
+            'opt-level=0',
+            '-C',
+            'no-prepopulate-passes',
+            '-g',
+            '--cfg',
+            'verifier="smack"',
+            '-C',
+            'passes=name-anon-globals']
 
 def default_rust_compile_command(args):
-    compile_command = [
-        'rustc',
-        '+'+VERSIONS['RUST_VERSION'],
-        '-A',
-        'unused-imports',
-        '-C',
-        'opt-level=0',
-        '-C',
-        'no-prepopulate-passes',
-        '-g',
-        '--cfg',
-        'verifier="smack"',
-        '-C',
-        'passes=name-anon-globals']
+    compile_command = (['rustc', '+'+VERSIONS['RUST_VERSION']] +
+                       default_rust_compile_args(args))
     return compile_command + args
 
 
