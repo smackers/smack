@@ -38,8 +38,12 @@ SmackWarnings::getUnsetFlags(RequiredFlagsT requiredFlags) {
 
 std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
   std::string ret = "";
-  for (auto f : flags)
-    ret += ("--" + f->ArgStr.str() + " ");
+  for (auto f : flags) {
+    if (f->ArgStr.str() == "bit-precise")
+      ret += ("--integer-encoding=bit-vector ");
+    else
+      ret += ("--" + f->ArgStr.str() + " ");
+  }
   return ret;
 }
 
