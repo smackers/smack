@@ -14,13 +14,13 @@
 
 namespace smack {
 
-class SplitAggregateValue : public llvm::BasicBlockPass {
+class SplitAggregateValue : public llvm::FunctionPass {
 public:
   typedef std::vector<std::pair<llvm::Value *, unsigned>> IndexT;
   typedef std::pair<IndexT, llvm::Constant *> InfoT;
   static char ID;
-  SplitAggregateValue() : llvm::BasicBlockPass(ID) {}
-  virtual bool runOnBasicBlock(llvm::BasicBlock &BB);
+  SplitAggregateValue() : llvm::FunctionPass(ID) {}
+  virtual bool runOnFunction(llvm::Function &F);
 
 private:
   llvm::Value *splitAggregateLoad(llvm::LoadInst *li, std::vector<InfoT> &info,

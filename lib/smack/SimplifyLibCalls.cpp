@@ -28,15 +28,16 @@ void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
-bool SimplifyLibCalls::runOnModule(Module &M) {
+bool SimplifyLibCalls::runOnFunction(Function &F) {
   modified = false;
   simplifier = new LibCallSimplifier(
-      M.getDataLayout(), &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+      F.getParent()->getDataLayout(),
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
       getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
       &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI(),
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
   if (simplifier)
-    visit(M);
+    visit(F);
   return modified;
 }
 

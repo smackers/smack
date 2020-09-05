@@ -980,7 +980,7 @@ void IntOpGen::generateMemOps(std::stringstream &s) const {
       } else {
         auto loadBody = prelude.mapSelExpr(0);
         auto storeBody = prelude.mapUpdExpr(0, Expr::bvExtract(valExpr, 8, 0));
-        for (unsigned i = 1; i<size>> 3; ++i) {
+        for (unsigned i = 1; i < (size >> 3); ++i) {
           unsigned lowerIdx = i << 3;
           unsigned upperIdx = lowerIdx + 8;
           loadBody = Expr::bvConcat(prelude.mapSelExpr(i), loadBody);
@@ -1333,6 +1333,7 @@ const Attr *FpOp::fpAttrFunc(std::string opName) {
       {"fdiv", "fp.div"},
       {"frem", "fp.rem"},
       {"fma", "fp.fma"},
+      {"fneg", "fp.neg"},
       {"isnormal", "fp.isNormal"},
       {"issubnormal", "fp.isSubnormal"},
       {"iszero", "fp.isZero"},
@@ -1388,7 +1389,7 @@ void FpOpGen::generateArithOps(std::stringstream &s) const {
       {"abs", 1, false}, {"round", 1, true}, {"sqrt", 1, true},
       {"fadd", 2, true}, {"fsub", 2, true},  {"fmul", 2, true},
       {"fdiv", 2, true}, {"frem", 2, false}, {"min", 2, false},
-      {"max", 2, false}, {"fma", 3, true}};
+      {"max", 2, false}, {"fma", 3, true},   {"fneg", 1, false}};
 
   for (auto &f : fpArithOps) {
     if (SmackOptions::FloatEnabled)

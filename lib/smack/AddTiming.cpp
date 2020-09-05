@@ -28,6 +28,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -186,7 +187,8 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
     Type *ValTy = SI->getValueOperand()->getType();
     assert(!ValTy->isStructTy() &&
            "Timing annotations do not currently work for struct sized stores");
-    return TTI->getMemoryOpCost(I->getOpcode(), ValTy, SI->getAlignment(),
+    return TTI->getMemoryOpCost(I->getOpcode(), ValTy,
+                                MaybeAlign(SI->getAlignment()),
                                 SI->getPointerAddressSpace());
   }
   case Instruction::Load: {
@@ -194,7 +196,7 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
     assert(!I->getType()->isStructTy() &&
            "Timing annotations do not currently work for struct sized loads");
     return TTI->getMemoryOpCost(I->getOpcode(), I->getType(),
-                                LI->getAlignment(),
+                                MaybeAlign(LI->getAlignment()),
                                 LI->getPointerAddressSpace());
   }
   case Instruction::ZExt:
