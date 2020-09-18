@@ -284,7 +284,7 @@ def is_cargo_included_bc(name, args):
         crates = list(args.crates.split(','))
 
     else:
-        crates = args.crates
+        crates = [args.crates]
     # Cargo replaces '-' in crate names with '_'. This is for
     # convenience.
     crates = set(map(lambda x: x.replace('-', '_'), crates))

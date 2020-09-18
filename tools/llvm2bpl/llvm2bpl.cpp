@@ -155,6 +155,9 @@ int main(int argc, char **argv) {
 
   llvm::legacy::PassManager pass_manager;
 
+  pass_manager.add(new smack::RustFixes());
+  pass_manager.add(llvm::createDeadCodeEliminationPass());
+  pass_manager.add(llvm::createPrintModulePass(errs()));
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
@@ -170,7 +173,6 @@ int main(int argc, char **argv) {
   }
 
   // pass_manager.add(new llvm::StructRet());
-  pass_manager.add(new smack::RustFixes());
   pass_manager.add(new smack::NormalizeLoops());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
