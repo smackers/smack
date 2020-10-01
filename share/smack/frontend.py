@@ -3,7 +3,7 @@ import sys
 import re
 import json
 from .utils import temporary_file, try_command
-
+from .versions import RUST_VERSION
 
 def languages():
     """A dictionary of languages per file extension."""
@@ -268,6 +268,7 @@ def json_compilation_database_frontend(input_file, args):
 def default_rust_compile_command(args):
     compile_command = [
         'rustc',
+        '+'+RUST_VERSION,
         '-A',
         'unused-imports',
         '-C',
