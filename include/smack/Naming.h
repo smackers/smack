@@ -93,6 +93,7 @@ public:
   static const std::string MEMORY_LEAK_FUNCTION;
 
   static const std::string RUST_ENTRY;
+  static const std::string RUST_LANG_START_INTERNAL;
   static const std::vector<std::string> RUST_PANICS;
   static const std::string RUST_PANIC_ANNOTATION;
 
