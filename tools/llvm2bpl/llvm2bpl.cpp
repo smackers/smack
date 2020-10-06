@@ -35,6 +35,7 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/RemoveUnusedFunctions.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/SmackModuleGenerator.h"
 #include "smack/SmackOptions.h"
@@ -153,6 +154,8 @@ int main(int argc, char **argv) {
   llvm::initializeRemovePtrToIntPass(Registry);
 
   llvm::legacy::PassManager pass_manager;
+  pass_manager.add(new smack::RemoveUnusedFunctions());
+  pass_manager.add(llvm::createDeadCodeEliminationPass());
 
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());

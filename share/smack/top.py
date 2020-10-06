@@ -330,6 +330,12 @@ def arguments():
         help='enable bit-precise floating-point functions')
 
     translate_group.add_argument(
+        '--keep-unused-functions',
+        action="store_true",
+        default=False,
+        help='disable removal of functions not reachable from the entry points')
+
+    translate_group.add_argument(
         '--strings',
         action='store_true',
         default=False,
@@ -561,6 +567,8 @@ def llvm_to_bpl(args):
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:
         cmd += ['-float']
+    if not args.keep_unused_functions:
+        cmd += ['-remove-unused-functions']
     if args.modular:
         cmd += ['-modular']
     try_command(cmd, console=True)

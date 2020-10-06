@@ -81,6 +81,10 @@ const llvm::cl::opt<bool>
     SmackOptions::RustPanics("rust-panics",
                              llvm::cl::desc("Enable Rust panic checking"));
 
+const llvm::cl::opt<bool>
+    SmackOptions::RemoveUnused("remove-unused-functions",
+                             llvm::cl::desc("Enable removal of unused functions"));
+
 const llvm::cl::opt<bool> SmackOptions::WrappedIntegerEncoding(
     "wrapped-integer-encoding",
     llvm::cl::desc(
