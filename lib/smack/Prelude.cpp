@@ -173,7 +173,7 @@ std::string getIntLimit(unsigned size) {
 }
 
 const std::vector<unsigned> IntOpGen::INTEGER_SIZES{
-    1, 5, 6, 8, 16, 24, 32, 40, 48, 56, 64, 80, 88, 96, 128, 160, 256};
+    1, 5, 6, 8, 16, 24, 32, 33, 40, 48, 56, 64, 80, 88, 96, 128, 160, 256};
 
 // floating-point layout map: bit-width -> (exponent bit-width, significand
 // bit-width)
