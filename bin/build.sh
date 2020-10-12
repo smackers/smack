@@ -335,12 +335,11 @@ fi
 
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
-  ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
-  tar xf rust.tar.gz
-  cd rust-nightly-x86_64-unknown-linux-gnu
-  sudo ./install.sh --without=rust-docs
-  cd ..
-  rm -rf rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
+  if ! [ -x "$(command -v rustup)" ]; then
+      ${WGET} -O - --secure-protocol=TLSv1_2 https://sh.rustup.rs | bash -s -- -y
+      source $HOME/.cargo/env
+  fi
+  rustup toolchain install ${RUST_VERSION}
   cargo install rustfilt
   puts "Installed Rust"
 fi
