@@ -659,12 +659,6 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
                                ci.getType()->isVoidTy());
     emit(Stmt::skip());
 
-  } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
-    // Set the entry point for Rust programs
-    auto castExpr = ci.getArgOperand(0);
-    auto mainFunction = cast<const Function>(castExpr);
-    emit(Stmt::call(mainFunction->getName(), {}, {}));
-
   } else if (SmackOptions::RustPanics && isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
