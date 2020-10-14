@@ -8,6 +8,7 @@ import shlex
 import subprocess
 import signal
 import functools
+from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
@@ -16,22 +17,71 @@ from .frontend import link_bc_files, frontends, languages, extra_libs
 VERSION = '2.6.0'
 
 
-def results(args):
-    """A dictionary of the result output messages."""
-    return {
-        'verified': ('SMACK found no errors'
-                     + ('' if args.modular else
-                        ' with unroll bound %s' % args.unroll) + '.', 0),
-        'error': ('SMACK found an error.', 1),
-        'invalid-deref': ('SMACK found an error: invalid pointer dereference.',
-                          2),
-        'invalid-free': ('SMACK found an error: invalid memory deallocation.',
-                         3),
-        'invalid-memtrack': ('SMACK found an error: memory leak.', 4),
-        'overflow': ('SMACK found an error: integer overflow.', 5),
-        'rust-panic': ('SMACK found an error: Rust panic.', 6),
-        'timeout': ('SMACK timed out.', 126),
-        'unknown': ('SMACK result is unknown.', 127)}
+class VResult(Flag):
+    VERIFIED = auto()
+    ASSERTION_FAILURE = auto()
+    INVALID_DEREF = auto()
+    INVALID_FREE = auto()
+    INVALID_MEMTRACK = auto()
+    OVERFLOW = auto()
+    RUST_PANIC = auto()
+    TIMEOUT = auto()
+    UNKNOWN = auto()
+    MEMSAFETY_ERROR = INVALID_DEREF | INVALID_FREE | INVALID_MEMTRACK
+    ERROR = (ASSERTION_FAILURE | INVALID_DEREF | INVALID_FREE
+             | INVALID_MEMTRACK | OVERFLOW | RUST_PANIC)
+
+    def __str__(self):
+        return self.name.lower().replace('_', '-')
+
+    def description(self):
+        descriptions = {
+            VResult.ASSERTION_FAILURE: '',
+            VResult.INVALID_DEREF: 'invalid pointer dereference',
+            VResult.INVALID_FREE: 'invalid memory deallocation',
+            VResult.INVALID_MEMTRACK: 'memory leak',
+            VResult.OVERFLOW: 'integer overflow',
+            VResult.RUST_PANIC: 'Rust panic'}
+
+        if self in descriptions:
+            return descriptions[self]
+        else:
+            raise RuntimeError('No description associated with result: %s'
+                               % self)
+
+    def return_code(self):
+        return_codes = {
+            VResult.VERIFIED: 0,
+            VResult.ASSERTION_FAILURE: 1,
+            VResult.INVALID_DEREF: 2,
+            VResult.INVALID_FREE: 3,
+            VResult.INVALID_MEMTRACK: 4,
+            VResult.OVERFLOW: 5,
+            VResult.RUST_PANIC: 6,
+            VResult.TIMEOUT: 126,
+            VResult.UNKNOWN: 127}
+
+        if self in return_codes:
+            return return_codes[self]
+        else:
+            raise RuntimeError('No return code associated with result: %s'
+                               % self)
+
+    def message(self, args):
+        if self is VResult.VERIFIED:
+            return ('SMACK found no errors'
+                    + ('' if args.modular else ' with unroll bound %s'
+                        % args.unroll) + '.')
+        elif self in VResult.ERROR:
+            description = self.description()
+            return ('SMACK found an error'
+                    + (': %s' % description if description else '') + '.')
+        elif self is VResult.TIMEOUT:
+            return 'SMACK timed out.'
+        elif self is VResult.UNKNOWN:
+            return 'SMACK result is unknown.'
+        else:
+            raise RuntimeError('No message associated with result: %s' % self)
 
 
 def inlined_procedures():
@@ -663,36 +713,36 @@ def verification_result(verifier_output):
     if re.search(
         r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
             verifier_output):
-        return 'timeout'
+        return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
                     r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
-        return 'verified'
+        return VResult.VERIFIED
     elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
         if re.search(
             r'ASSERTION FAILS assert {:valid_deref}',
                 verifier_output):
-            return 'invalid-deref'
+            return VResult.INVALID_DEREF
         elif re.search(r'ASSERTION FAILS assert {:valid_free}',
                        verifier_output):
-            return 'invalid-free'
+            return VResult.INVALID_FREE
         elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}',
                        verifier_output):
-            return 'invalid-memtrack'
+            return VResult.INVALID_MEMTRACK
         elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
-            return 'overflow'
+            return VResult.OVERFLOW
         elif re.search(r'ASSERTION FAILS assert {:rust_panic}',
                        verifier_output):
-            return 'rust-panic'
+            return VResult.RUST_PANIC
         else:
             listCall = re.findall(r'\(CALL .+\)', verifier_output)
             if len(listCall) > 0 and re.search(
                     r'free_', listCall[len(listCall) - 1]):
-                return 'invalid-free'
+                return VResult.INVALID_FREE
             else:
-                return 'error'
+                return VResult.ASSERTION_FAILURE
     else:
-        return 'unknown'
+        return VResult.UNKNOWN
 
 
 def verify_bpl(args):
@@ -754,9 +804,7 @@ def verify_bpl(args):
     if args.smackd:
         print(smackdOutput(verifier_output))
     else:
-        if (result == 'error' or result == 'invalid-deref' or
-                result == 'invalid-free' or result == 'invalid-memtrack' or
-                result == 'overflow' or result == 'rust-panic'):
+        if result in VResult.ERROR:
             error = error_trace(verifier_output, args)
 
             if args.error_file:
@@ -768,8 +816,8 @@ def verify_bpl(args):
 
             if args.replay:
                 replay_error_trace(verifier_output, args)
-        print(results(args)[result][0])
-        sys.exit(results(args)[result][1])
+        print(result.message(args))
+        sys.exit(result.return_code())
 
 
 def error_step(step):
