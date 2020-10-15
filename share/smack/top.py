@@ -102,7 +102,7 @@ class VProperty(Flag):
     MEMLEAK = auto()
     MEMORY_SAFETY = VALID_DEREF | VALID_FREE | MEMLEAK
     INTEGER_OVERFLOW = auto()
-    RUST_PANIC = auto()
+    RUST_PANICS = auto()
 
     def __str__(self):
         return self.name.lower().replace('_', '-')
@@ -125,15 +125,18 @@ class VProperty(Flag):
         return bool(self & VProperty.MEMORY_SAFETY)
 
     def boogie_attr(self):
-        def lower_name(x):
-            return x.name.lower()
+        def get_attr_from_result(x):
+            if x in VProperty.mem_safe_subprops():
+                return x.name.lower()[2:]
+            else:
+                return x.name.lower()
 
         attrs = {
-            VProperty.VALID_DEREF: lower_name(VProperty.VALID_DEREF),
-            VProperty.VALID_FREE: lower_name(VProperty.VALID_FREE),
-            VProperty.MEMLEAK: 'valid_memtrack',
-            VProperty.INTEGER_OVERFLOW: 'overflow',
-            VProperty.RUST_PANIC: lower_name(VProperty.RUST_PANIC)}
+            VProperty.VALID_DEREF: get_attr_from_result(VResult.INVALID_DEREF),
+            VProperty.VALID_FREE: get_attr_from_result(VResult.INVALID_FREE),
+            VProperty.MEMLEAK: get_attr_from_result(VResult.INVALID_MEMTRACK),
+            VProperty.INTEGER_OVERFLOW: get_attr_from_result(VResult.OVERFLOW),
+            VProperty.RUST_PANICS: get_attr_from_result(VResult.RUST_PANIC)}
 
         if self in attrs:
             return attrs[self]
@@ -147,7 +150,7 @@ class VProperty(Flag):
             VProperty.VALID_FREE: VResult.INVALID_FREE,
             VProperty.MEMLEAK: VResult.INVALID_MEMTRACK,
             VProperty.INTEGER_OVERFLOW: VResult.OVERFLOW,
-            VProperty.RUST_PANIC: VResult.RUST_PANIC}
+            VProperty.RUST_PANICS: VResult.RUST_PANIC}
 
         if self in res:
             return res[self]
@@ -677,7 +680,7 @@ def llvm_to_bpl(args):
         cmd += ['-memory-safety']
     if VProperty.INTEGER_OVERFLOW in args.check:
         cmd += ['-integer-overflow']
-    if VProperty.RUST_PANIC in args.check:
+    if VProperty.RUST_PANICS in args.check:
         cmd += ['-rust-panics']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
@@ -788,7 +791,7 @@ def verification_result(verifier_output):
     elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
         for p in (VProperty.mem_safe_subprops() + [VProperty.INTEGER_OVERFLOW]
-                  + [VProperty.RUST_PANIC]):
+                  + [VProperty.RUST_PANICS]):
             if re.search(r'ASSERTION FAILS assert {:%s}' % p.boogie_attr(),
                          verifier_output):
                 return p.result()
