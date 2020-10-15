@@ -86,10 +86,12 @@ def default_clang_compile_command(args, lib=False):
     cmd += ['-I' + path for path in smack_headers(args)]
     cmd += args.clang_options.split()
     cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-', '_')]
-    if ('memory-safety' in args.check or 'valid-deref' in args.check or
-            'valid-free' in args.check or 'memleak' in args.check):
+
+    from .top import VProperty
+
+    if args.check.contains_mem_safe_props():
         cmd += ['-DMEMORY_SAFETY']
-    if 'integer-overflow' in args.check:
+    if VProperty.INTEGER_OVERFLOW in args.check:
         cmd += (['-fsanitize=signed-integer-overflow,shift']
                 if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
     if args.float:

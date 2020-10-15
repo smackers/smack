@@ -84,6 +84,78 @@ class VResult(Flag):
             raise RuntimeError('No message associated with result: %s' % self)
 
 
+class PropertyAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super(PropertyAction, self).__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest,
+                functools.reduce(lambda x, y: x | y, values,
+                                 getattr(namespace, self.dest)))
+
+
+# Shaobo: shamelessly borrowed it from https://stackoverflow.com/a/55500795
+class VProperty(Flag):
+    ASSERTIONS = auto()
+    VALID_DEREF = auto()
+    VALID_FREE = auto()
+    MEMLEAK = auto()
+    MEMORY_SAFETY = VALID_DEREF | VALID_FREE | MEMLEAK
+    INTEGER_OVERFLOW = auto()
+    RUST_PANIC = auto()
+
+    def __str__(self):
+        return self.name.lower().replace('_', '-')
+
+    def __repr__(self):
+        return str(self)
+
+    @staticmethod
+    def argparse(s):
+        try:
+            return VProperty[s.upper().replace('-', '_')]
+        except KeyError:
+            return s
+
+    @staticmethod
+    def mem_safe_subprops():
+        return [VProperty.VALID_DEREF, VProperty.VALID_FREE, VProperty.MEMLEAK]
+
+    def contains_mem_safe_props(self):
+        return bool(self & VProperty.MEMORY_SAFETY)
+
+    def boogie_attr(self):
+        def lower_name(x):
+            return x.name.lower()
+
+        attrs = {
+            VProperty.VALID_DEREF: lower_name(VProperty.VALID_DEREF),
+            VProperty.VALID_FREE: lower_name(VProperty.VALID_FREE),
+            VProperty.MEMLEAK: 'valid_memtrack',
+            VProperty.INTEGER_OVERFLOW: 'overflow',
+            VProperty.RUST_PANIC: lower_name(VProperty.RUST_PANIC)}
+
+        if self in attrs:
+            return attrs[self]
+        else:
+            raise RuntimeError('No assertion Boogie attribute associated with'
+                               'property: %s' % self)
+
+    def result(self):
+        res = {
+            VProperty.VALID_DEREF: VResult.INVALID_DEREF,
+            VProperty.VALID_FREE: VResult.INVALID_FREE,
+            VProperty.MEMLEAK: VResult.INVALID_MEMTRACK,
+            VProperty.INTEGER_OVERFLOW: VResult.OVERFLOW,
+            VProperty.RUST_PANIC: VResult.RUST_PANIC}
+
+        if self in res:
+            return res[self]
+        else:
+            raise RuntimeError(('No SMACK result associated with property: %s'
+                                % self))
+
+
 def inlined_procedures():
     return [
         '$galloc',
@@ -353,9 +425,10 @@ def arguments():
         '--check',
         metavar='PROPERTY',
         nargs='+',
-        choices=['assertions', 'memory-safety', 'valid-deref', 'valid-free',
-                 'memleak', 'integer-overflow', 'rust-panics'],
-        default=['assertions'],
+        choices=list(VProperty),
+        default=VProperty.ASSERTIONS,
+        type=VProperty.argparse,
+        action=PropertyAction,
         help='''select properties to check
                 [choices: %(choices)s; default: %(default)s]
                 (note that memory-safety is the union of valid-deref,
@@ -600,12 +673,11 @@ def llvm_to_bpl(args):
         cmd += ['-no-byte-access-inference']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
-    if ('memory-safety' in args.check or 'valid-deref' in args.check or
-            'valid-free' in args.check or 'memleak' in args.check):
+    if args.check.contains_mem_safe_props():
         cmd += ['-memory-safety']
-    if 'integer-overflow' in args.check:
+    if VProperty.INTEGER_OVERFLOW in args.check:
         cmd += ['-integer-overflow']
-    if 'rust-panics' in args.check:
+    if VProperty.RUST_PANIC in args.check:
         cmd += ['-rust-panics']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
@@ -650,15 +722,11 @@ def annotate_bpl(args):
 
 
 def memsafety_subproperty_selection(args):
-    selected_props = set()
-    if 'memory-safety' in args.check:
+    if VProperty.MEMORY_SAFETY in args.check:
         return
-    if 'valid-deref' in args.check:
-        selected_props.add('valid_deref')
-    if 'valid-free' in args.check:
-        selected_props.add('valid_free')
-    if 'memleak' in args.check:
-        selected_props.add('valid_memtrack')
+
+    selected_props = [p.boogie_attr() for p in VProperty.mem_safe_subprops()
+                      if p in args.check]
 
     def replace_assertion(m):
         if len(selected_props) > 0:
@@ -719,28 +787,18 @@ def verification_result(verifier_output):
         return VResult.VERIFIED
     elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
-        if re.search(
-            r'ASSERTION FAILS assert {:valid_deref}',
-                verifier_output):
-            return VResult.INVALID_DEREF
-        elif re.search(r'ASSERTION FAILS assert {:valid_free}',
-                       verifier_output):
+        for p in (VProperty.mem_safe_subprops() + [VProperty.INTEGER_OVERFLOW]
+                  + [VProperty.RUST_PANIC]):
+            if re.search(r'ASSERTION FAILS assert {:%s}' % p.boogie_attr(),
+                         verifier_output):
+                return p.result()
+
+        listCall = re.findall(r'\(CALL .+\)', verifier_output)
+        if len(listCall) > 0 and re.search(
+                r'free_', listCall[len(listCall) - 1]):
             return VResult.INVALID_FREE
-        elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}',
-                       verifier_output):
-            return VResult.INVALID_MEMTRACK
-        elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
-            return VResult.OVERFLOW
-        elif re.search(r'ASSERTION FAILS assert {:rust_panic}',
-                       verifier_output):
-            return VResult.RUST_PANIC
         else:
-            listCall = re.findall(r'\(CALL .+\)', verifier_output)
-            if len(listCall) > 0 and re.search(
-                    r'free_', listCall[len(listCall) - 1]):
-                return VResult.INVALID_FREE
-            else:
-                return VResult.ASSERTION_FAILURE
+            return VResult.ASSERTION_FAILURE
     else:
         return VResult.UNKNOWN
 
