@@ -38,14 +38,12 @@ void __VERIFIER_assume(int x) {
   __SMACK_code("assume @ != $0;", x);
 }
 
-#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
 #if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK
   __SMACK_dummy(x);
   __SMACK_code("assert @ != $0;", x);
 #endif
 }
-#endif
 
 void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag);

@@ -1,5 +1,6 @@
 // This test shows why we need parallel assignment when translating Phi nodes
 #include "smack.h"
+#include <assert.h>
 
 // @expect verified
 

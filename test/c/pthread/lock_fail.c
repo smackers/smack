@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 
 // Tests failure on use of uninitialized mutex
 // @expect error

@@ -55,8 +55,6 @@ def svcomp_frontend(input_file, args):
   args.clang_options += " -fbracket-depth=2048"
   args.clang_options += " -Wno-unknown-attributes"
   args.clang_options += " -DSVCOMP"
-  args.clang_options += " -DAVOID_NAME_CONFLICTS"
-  args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DDISABLE_PTHREAD_ASSERTS"
   args.clang_options += " -include smack.h"
 
