@@ -8,7 +8,6 @@ import smack.top
 import smack.frontend
 from . import filters
 from .toSVCOMPformat import smackJsonToXmlGraph
-from .random_testing import random_test
 
 def svcomp_frontend(input_file, args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
@@ -249,23 +248,6 @@ def verify_bpl_svcomp(args):
       heurTrace += "Unrolling made it to a recursion bound of "
       heurTrace += str(unrollMax) + ".\n"
       heurTrace += "Reporting benchmark as 'verified'.\n"
-      if args.execute and not args.pthread:
-        heurTrace += "Hold on, let's see the execution result.\n"
-        execution_result = run_binary(args)
-        heurTrace += "Excecution result is " + execution_result + '\n'
-        if execution_result != 'true':
-          heurTrace += "Oops, execution result says {0}.\n".format(execution_result)
-          if not args.quiet:
-            print((heurTrace + "\n"))
-          print(smack.top.results(args)['unknown'][0])
-          sys.exit(smack.top.results(args)['unknown'][1])
-      random_test_result = random_test(args, result)
-      if random_test_result == 'false' or random_test_result == 'unknown':
-        heurTrace += "Oops, random testing says {0}.\n".format(random_test_result)
-        if not args.quiet:
-          print((heurTrace + "\n"))
-        print(smack.top.results(args)['unknown'][0])
-        sys.exit(smack.top.results(args)['unknown'][1])
       if not args.quiet:
         print((heurTrace + "\n"))
       if 'memory-safety' in args.check:
@@ -352,49 +334,3 @@ def write_error_file(args, status, verifier_output):
       with open(args.error_file, 'w') as f:
         f.write(error.decode('utf-8'))
 
-def run_binary(args):
-  #process the file to make it runnable
-  with open(args.input_files[0], 'r') as fi:
-    s = fi.read()
-
-  s = re.sub(r'(extern )?void reach_error()', '//', s)
-  s = re.sub(r'reach_error\(\)', 'assert(0)', s)
-  s = '#include<assert.h>\n' + s
-
-  name = os.path.splitext(os.path.basename(args.input_files[0]))[0]
-  tmp1 = smack.top.temporary_file(name, '.c', args)
-  with open(tmp1, 'w') as fo:
-    fo.write(s)
-
-  tmp2 = smack.top.temporary_file(name, '.bin', args)
-  tmp2 = tmp2.split('/')[-1]
-  #compile and run
-  cmd = ['clang', tmp1, '-o', tmp2]
-  #cmd += args.clang_options.split()
-  #if '-m32' in args.clang_options.split():
-    #cmd += ['-m32']
-
-
-  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-  out, err = proc.communicate()
-  rc = proc.returncode
-
-  if rc:
-    print('Compiling error')
-    print(err)
-    return 'unknown'
-  else:
-    cmd = [r'./' + tmp2]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    rc = proc.returncode
-    if rc:
-      if re.search(r'Assertion.*failed', err):
-        return 'false'
-      else:
-        print('Execution error')
-        print(err)
-        return 'unknown'
-    else:
-      return 'true'
