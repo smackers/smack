@@ -90,43 +90,6 @@ def svcomp_process_file(args, name, ext):
   with open(args.input_files[0], 'r') as fi:
     s = fi.read()
     args.input_files[0] = smack.top.temporary_file(name, ext, args)
-    # replace exit definition with exit_
-    s = re.sub(r'void\s+exit\s*\(int s\)', r'void exit_(int s)', s)
-    if not ('direc_start' in s or 'just_echo' in s):
-      s = re.sub(r'argv\[i\]=malloc\(11\);\s+argv\[i\]\[10\]\s+=\s+0;\s+for\(int\s+j=0;\s+j<10;\s+\+\+j\)\s+argv\[i\]\[j\]=__VERIFIER_nondet_char\(\);', r'argv[i] = malloc(3);\n    argv[i][0] = __VERIFIER_nondet_char();\n    argv[i][1] = __VERIFIER_nondet_char();\n    argv[i][2] = 0;', s)
-      s = re.sub(r'char\s+\*a\s+=\s+malloc\(11\);\s+a\[10\]\s+=\s+0;\s+for\(int\s+i=0;\s+i<10;\s+\+\+i\)\s+a\[i\]=__VERIFIER_nondet_char\(\);', r'char *a = malloc(3);\n  a[0] = __VERIFIER_nondet_char();\n  a[1] = __VERIFIER_nondet_char();\n  a[2] = 0;', s)
-    s = re.sub(r'static\s+char\s+dir\[42\];\s+for\(int\s+i=0;\s+i<42;\s+\+\+i\)\s+dir\[i\]\s+=\s+__VERIFIER_nondet_char\(\);\s+dir\[41\]\s+=\s+\'\\0\';', r'static char dir[3];\n  dir[0] = __VERIFIER_nondet_char();\n  dir[1] = __VERIFIER_nondet_char();\n  dir[2] = 0;', s)
-    s = re.sub(r'__VERIFIER_assume\(i < 16\);', r'__VERIFIER_assume(i >= 0 && i < 16);', s)
-
-    if 'memory-safety' in args.check and not 'argv=malloc' in s:
-      s = re.sub(r'typedef long unsigned int size_t', r'typedef unsigned int size_t', s)
-    elif 'memory-safety' in args.check and re.search(r'getopt32\([^,)]+,[^,)]+,[^.)]+\);', s):
-      if not args.quiet:
-        print("Stumbled upon a benchmark that requires precise handling of vararg\n")
-      while (True):
-        pass
-    elif 'memory-safety' in args.check and ('count is too big' in s or 'pdRfilsLHarPv' in s or 'rnugG' in s):
-      if not args.quiet:
-        print("Stumbled upon a benchmark that contains undefined behavior\n")
-      while (True):
-        pass
-
-    if 'argv=malloc' in s:
-#      args.integer_encoding = 'bit-vector'
-      if 'integer-overflow' in args.check and ('unsigned int d = (unsigned int)((signed int)(unsigned char)((signed int)*q | (signed int)(char)32) - 48);' in s or 'bb_ascii_isalnum' in s or 'ptm=localtime' in s or '0123456789.' in s):
-        args.integer_encoding = 'bit-vector'
-        args.pointer_encoding = 'bit-vector'
-
-    length = len(s.split('\n'))
-    if length < 60:
-      # replace all occurrences of 100000 with 10 and 15000 with 5
-      # Only target at small examples
-      s = re.sub(r'100000', r'10', s)
-      s = re.sub(r'15000', r'5', s)
-      s = re.sub(r'i<=10000', r'i<=1', s)
-      s = re.sub(r'500000', r'50', s)
-    elif length < 710 and 'dll_create_master' in s:
-      args.no_memory_splitting = True
 
     #Remove any preprocessed declarations of pthread types
     #Also, if file contains 'pthread', set pthread mode
@@ -139,36 +102,6 @@ def svcomp_process_file(args, name, ext):
 def force_timeout():
   sys.stdout.flush()
   time.sleep(1000)
-
-def is_buggy_driver_benchmark(args, bpl):
-  if ("205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--usb--rtl8150.ko-entry_point_true-unreach-call" in bpl or
-      "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--gpu--drm--ttm--ttm.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
-      "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-drivers--media--dvb-core--dvb-core.ko-ldv_main5_sequence_infinite_withcheck_stateful" in bpl or
-      "32_7a_cilled_true-unreach-call_linux-3.8-rc1-32_7a-sound--core--seq--snd-seq.ko-ldv_main2_sequence_infinite_withcheck_stateful" in bpl or
-      "43_2a_bitvector_linux-3.16-rc1.tar.xz-43_2a-drivers--net--xen-netfront.ko-entry_point_true-unreach-call" in bpl or
-      "linux-3.14__complex_emg__linux-drivers-clk1__drivers-net-ethernet-ethoc_true-unreach-call" in bpl or
-      "linux-3.14__linux-usb-dev__drivers-media-usb-hdpvr-hdpvr_true-unreach-call" in bpl or
-      "linux-4.2-rc1.tar.xz-32_7a-drivers--net--usb--r8152.ko-entry_point_true-unreach-call" in bpl or
-      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-ethernet-smsc-smsc911x_true-unreach-call" in bpl or
-      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-wan-lmc-lmc_true-unreach-call" in bpl or
-      "linux-4.2-rc1.tar.xz-32_7a-drivers--usb--gadget--libcomposite.ko-entry_point_true-unreach-call" in bpl or
-      "linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-media-platform-marvell-ccic-cafe_ccic_true-unreach-call" in bpl or
-      "linux-4.0-rc1---drivers--media--usb--uvc--uvcvideo.ko_false-unreach-call" in bpl or
-      "linux-4.0-rc1---drivers--char--ipmi--ipmi_msghandler.ko_true-unreach-call" in bpl or
-      "205_9a_array_safes_linux-3.16-rc1.tar.xz-205_9a-drivers--net--wireless--libertas_tf--libertas_tf.ko-entry_point_true-unreach-call" in bpl or
-      "linux-4.2-rc1.tar.xz-32_7a-drivers--md--dm-raid.ko-entry_point_false-unreach-call" in bpl or
-      "linux-4.2-rc1.tar.xz-43_2a-drivers--net--ppp--ppp_generic.ko-entry_point_true-unreach-call" in bpl):
-    if not args.quiet:
-      print("Stumbled upon a buggy device driver benchmark\n")
-    force_timeout()
-
-def is_stack_benchmark(args, csource):
-  if ("getNumbers" in csource or "areNatural" in csource or "myPointerA" in csource or "if(i == 0) {" in csource or
-      "arr[194]" in csource or "if(1)" in csource or "alloca(10" in csource or "p[0] = 2;" in csource):
-    if not args.quiet:
-      print("Stumbled upon a stack-based memory safety benchmark\n")
-    print(smack.top.results(args)['unknown'][0])
-    sys.exit(smack.top.results(args)['unknown'][1])
 
 def inject_assert_false(args):
     with open(args.bpl_file, 'r') as bf:
@@ -240,21 +173,6 @@ def verify_bpl_svcomp(args):
   with open(args.input_files[0], "r") as f:
     csource = f.read()
 
-  if 'memory-safety' in args.check:
-    is_stack_benchmark(args, csource)
-  else:
-    if "angleInRadian" in csource:
-      if not args.quiet:
-        print("Stumbled upon trigonometric function is float benchmark\n")
-      print(smack.top.results(args)['unknown'][0])
-      sys.exit(smack.top.results(args)['unknown'][1])
-    elif "copysign(1" in csource:
-      if not args.quiet:
-        print("Stumbled upon tricky float benchmark\n")
-      print(smack.top.results(args)['unknown'][0])
-      sys.exit(smack.top.results(args)['unknown'][1])
-    is_buggy_driver_benchmark(args, bpl)
-
   if args.pthread:
     if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl or "k < 5;" in csource or "k < 10;" in csource or "k < 20;" in csource:
       heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
@@ -269,78 +187,9 @@ def verify_bpl_svcomp(args):
       if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
         corral_command += ["/di"]
 
-  # we are not modeling strcpy
-  if args.pthread and "strcpy" in bpl:
-    heurTrace += "We are not modeling strcpy - aborting\n"
-    if not args.quiet:
-      print((heurTrace + "\n"))
-    print(smack.top.results(args)['unknown'][0])
-    sys.exit(smack.top.results(args)['unknown'][1])
-
   # Setting good loop unroll bound based on benchmark class
-  loopUnrollBar = 8
-  staticLoopBound = 65536
-  if not args.integer_encoding == 'bit-vector' and "ssl3_accept" in bpl and "s__s3__tmp__new_cipher__algorithms" in bpl:
-    heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
-    loopUnrollBar = 23
-  elif "s3_srvr.blast.10_false-unreach-call" in bpl or "s3_srvr.blast.15_false-unreach-call" in bpl:
-    heurTrace += "ControlFlow benchmark detected. Setting loop unroll bar to 23.\n"
-    loopUnrollBar = 23
-  elif "NonTerminationSimple4_false-no-overflow" in bpl:
-    heurTrace += "Overflow benchmark detected. Setting loop unroll bar to 1024.\n"
-    loopUnrollBar = 1024
-  elif " node3" in bpl:
-    heurTrace += "Sequentialized benchmark detected. Setting loop unroll bar to 100.\n"
-    loopUnrollBar = 100
-  elif "calculate_output" in bpl or "psyco" in bpl:
-    heurTrace += "ECA benchmark detected. Setting loop unroll bar to 15.\n"
-    loopUnrollBar = 15
-  elif "ldv" in bpl:
-    if "linux-4.2-rc1.tar.xz-08_1a-drivers--staging--lustre--lustre--llite--llite_lloop.ko-entry_point" in bpl or "linux-3.14__complex_emg__linux-usb-dev__drivers-media-usb-hdpvr-hdpvr" in bpl:
-      heurTrace += "Special LDV benchmark detected. Setting loop unroll bar to 32.\n"
-      loopUnrollBar = 32
-    else:
-      heurTrace += "LDV benchmark detected. Setting loop unroll bar to 13.\n"
-      loopUnrollBar = 13
-    staticLoopBound = 64
-  elif "standard_strcpy_false-valid-deref_ground_true-termination" in bpl or "960521-1_false-valid-free" in bpl or "960521-1_false-valid-deref" in bpl or "lockfree-3.3" in bpl or "list-ext_false-unreach-call_false-valid-deref" in bpl:
-    heurTrace += "Memory safety benchmark detected. Setting loop unroll bar to 129.\n"
-    loopUnrollBar = 129
-  elif "is_relaxed_prefix" in bpl:
-    heurTrace += "Benchmark relax_* detected. Setting loop unroll bar to 15.\n"
-    loopUnrollBar = 15
-  elif "id_o1000_false-unreach-call" in bpl:
-    heurTrace += "Recursive benchmark detected. Setting loop unroll bar to 1024.\n"
-    loopUnrollBar = 1024
-  elif "n.c24" in bpl or "array_false-unreach-call3" in bpl:
-    heurTrace += "Loops benchmark detected. Setting loop unroll bar to 1024.\n"
-    loopUnrollBar = 1024
-  elif "printf_false-unreach-call" in bpl or "echo_true-no-overflow" in bpl:
-    heurTrace += "BusyBox benchmark detected. Setting loop unroll bar to 11.\n"
-    loopUnrollBar = 11
-  elif 'memory-safety' in args.check and "__main($i0" in bpl:
-    heurTrace += "BusyBox memory safety benchmark detected. Setting loop unroll bar to 4.\n"
-    loopUnrollBar = 4
-  elif 'integer-overflow' in args.check and "__main($i0" in bpl:
-    heurTrace += "BusyBox overflows benchmark detected. Setting loop unroll bar to 40.\n"
-    loopUnrollBar = 40
-  elif 'integer-overflow' in args.check and ("jain" in bpl or "TerminatorRec02" in bpl or "NonTerminationSimple" in bpl):
-    heurTrace += "Infinite loop in overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
-    loopUnrollBar = 2**31 - 1
-  elif 'integer-overflow' in args.check and ("(x != 0)" in csource or "(z > 0)" in csource or "(max > 0)" in csource or
-                                  "(k < N)" in csource or "partial_sum" in csource):
-    heurTrace += "Large overflow benchmark. Setting loop unroll bar to INT_MAX.\n"
-    loopUnrollBar = 2**31 - 1
-  elif "i>>16" in csource:
-    heurTrace += "Large array reach benchmark. Setting loop unroll bar to INT_MAX.\n"
-    loopUnrollBar = 2**31 - 1
-  elif "whoop_poll_table" in csource:
-    heurTrace += "Large concurrency benchmark. Setting loop unroll bar to INT_MAX.\n"
-    loopUnrollBar = 2**31 - 1
-
-  if not "forall" in bpl:
-    heurTrace += "No quantifiers detected. Setting z3 relevancy to 0.\n"
-    corral_command += ["/bopt:proverOpt:O:smt.relevancy=0"]
+  loopUnrollBar = 13
+  staticLoopBound = 64
 
   if 'memory-safety' in args.check:
     if args.prop_to_check == 'valid-deref':
