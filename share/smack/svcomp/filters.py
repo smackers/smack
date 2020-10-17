@@ -34,17 +34,13 @@ def svcomp_filter(f):
   pruned_lines = raw_file_line_count(lines)
   raw_lines = len(lines.split('\n'))
 
-  executable = False
-  if raw_lines < 50 and len(linecount(r'__VERIFIER_nondet|fopen', r'void\s+|extern', lines)) == 0 and not ('while(1)' in lines):
-      executable = True
-
   if bv_filter(lines, raw_lines, pruned_lines):
-    return 'bitvector', executable 
+    return 'bitvector'
 
   if float_filter(lines, raw_lines, pruned_lines):
-    return 'float', executable 
+    return 'float'
 
-  return 'normal', executable 
+  return 'normal'
     
 def bv_filter(lines, raw_line_count, pruned_line_count):
   if ("bugBrokenOut" in lines or "returnsStructure" in lines or "__VERIFIER_nondet_double" in lines or

@@ -14,8 +14,6 @@ def svcomp_frontend(input_file, args):
 
   # enable static LLVM unroll pass
   args.static_unroll = True
-  # disable dynamic execution
-  args.execute = False
 
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
@@ -25,19 +23,15 @@ def svcomp_frontend(input_file, args):
 
   # fix: disable float filter for memory safety benchmarks
   if not ('memory-safety' in args.check or 'memleak' in args.check):
-    # test bv and executable benchmarks
-    file_type, executable = filters.svcomp_filter(args.input_files[0])
+    # figure out category
+    file_type = filters.svcomp_filter(args.input_files[0])
     if file_type == 'bitvector':
       args.integer_encoding = 'bit-vector'
       args.pointer_encoding = 'bit-vector'
     if file_type == 'float' and not 'integer-overflow' in args.check:
       args.float = True
       args.integer_encoding = 'bit-vector'
-      with open(input_file, "r") as sf:
-        sc = sf.read()
-      if 'copysign(1' in sc:
-        args.pointer_encoding = 'bit-vector'
-    args.execute = executable
+      args.pointer_encoding = 'bit-vector'
   else:
     with open(input_file, "r") as sf:
       sc = sf.read()
@@ -46,7 +40,7 @@ def svcomp_frontend(input_file, args):
       #args.pointer_encoding = 'bit-vector'
 
   if 'memory-safety' in args.check or 'memleak' in args.check or 'integer-overflow' in args.check:
-      args.strings = True
+    args.strings = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   svcomp_process_file(args, name, ext)
@@ -70,7 +64,6 @@ def svcomp_frontend(input_file, args):
   smack.top.link_bc_files([bc],libs,args)
 
 def svcomp_check_property(args):
-  # Check if property is vanilla reachability, and return unknown otherwise
   if args.svcomp_property:
     with open(args.svcomp_property, "r") as f:
       prop = f.read()
