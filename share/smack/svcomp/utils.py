@@ -6,7 +6,6 @@ import time
 from shutil import copyfile
 import smack.top
 import smack.frontend
-from . import filters
 from .toSVCOMPformat import smackJsonToXmlGraph
 
 def svcomp_frontend(input_file, args):
@@ -20,18 +19,6 @@ def svcomp_frontend(input_file, args):
 
   # check svcomp properties and set flags accordingly
   svcomp_check_property(args)
-
-  # fix: disable float filter for memory safety benchmarks
-  if not ('memory-safety' in args.check or 'memleak' in args.check):
-    # figure out category
-    file_type = filters.svcomp_filter(args.input_files[0])
-    if file_type == 'bitvector':
-      args.integer_encoding = 'bit-vector'
-      args.pointer_encoding = 'bit-vector'
-    if file_type == 'float' and not 'integer-overflow' in args.check:
-      args.float = True
-      args.integer_encoding = 'bit-vector'
-      args.pointer_encoding = 'bit-vector'
 
   if 'memory-safety' in args.check or 'memleak' in args.check or 'integer-overflow' in args.check:
     args.strings = True
@@ -75,11 +62,11 @@ def force_timeout():
   time.sleep(1000)
 
 def inject_assert_false(args):
-    with open(args.bpl_file, 'r') as bf:
-      content = bf.read()
-    content = content.replace('call reach_error();', 'assert false; call reach_error();')
-    with open(args.bpl_file, 'w') as bf:
-      bf.write(content)
+  with open(args.bpl_file, 'r') as bf:
+    content = bf.read()
+  content = content.replace('call reach_error();', 'assert false; call reach_error();')
+  with open(args.bpl_file, 'w') as bf:
+    bf.write(content)
 
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
