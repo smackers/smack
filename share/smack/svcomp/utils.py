@@ -37,7 +37,6 @@ def svcomp_frontend(input_file, args):
     args.strings = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
-  svcomp_process_file(args, name, ext)
 
   args.clang_options += " -fbracket-depth=2048"
   args.clang_options += " -Wno-unknown-attributes"
@@ -71,20 +70,6 @@ def svcomp_check_property(args):
       print(smack.top.results(args)['unknown'][0])
       sys.exit(smack.top.results(args)['unknown'][1])
 
-def svcomp_process_file(args, name, ext):
-  args.orig_files = list(args.input_files)
-  with open(args.input_files[0], 'r') as fi:
-    s = fi.read()
-    args.input_files[0] = smack.top.temporary_file(name, ext, args)
-
-    #Remove any preprocessed declarations of pthread types
-    #Also, if file contains 'pthread', set pthread mode
-    s,args.pthread = filters.scrub_pthreads(s)
-    if args.pthread:
-      s = "#include <pthread.h>\n" + s
-    with open(args.input_files[0], 'w') as fo:
-      fo.write(s)
-
 def force_timeout():
   sys.stdout.flush()
   time.sleep(1000)
@@ -103,15 +88,6 @@ def verify_bpl_svcomp(args):
   if not 'memory-safety' in args.check and not 'memleak' in args.check and not 'integer-overflow' in args.check:
     inject_assert_false(args)
 
-  # If pthreads found, perform lock set analysis
-  if args.pthread:
-    lockpwn_command = ["lockpwn"]
-    lockpwn_command += [args.bpl_file]
-    lockpwn_command += ["/corral"]
-    args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
-    lockpwn_command += ["/o:%s" % args.bpl_file]
-    lockpwn_output = smack.top.try_command(lockpwn_command);
-
   corral_command = ["corral"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
@@ -125,19 +101,10 @@ def verify_bpl_svcomp(args):
   with open(args.input_files[0], "r") as f:
     csource = f.read()
 
-  if args.pthread:
-    if "fib_bench" in bpl or "27_Boop_simple_vf_false-unreach-call" in bpl or "k < 5;" in csource or "k < 10;" in csource or "k < 20;" in csource:
-      heurTrace += "Increasing context switch bound for certain pthread benchmarks.\n"
-      corral_command += ["/k:30"]
-    else:
-      corral_command += ["/k:3"]
-    if not "qrcu_reader2" in bpl and not "__VERIFIER_atomic_take_write_lock" in bpl and not "fib_bench" in bpl:
-      corral_command += ["/cooperative"]
-  else:
-    corral_command += ["/k:1"]
-    if not ('memory-safety' in args.check or args.integer_encoding == 'bit-vector' or 'memleak' in args.check):
-      if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
-        corral_command += ["/di"]
+  corral_command += ["/k:1"]
+  if not ('memory-safety' in args.check or args.integer_encoding == 'bit-vector' or 'memleak' in args.check):
+    if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
+      corral_command += ["/di"]
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 13
