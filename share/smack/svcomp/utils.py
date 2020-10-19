@@ -32,12 +32,6 @@ def svcomp_frontend(input_file, args):
       args.float = True
       args.integer_encoding = 'bit-vector'
       args.pointer_encoding = 'bit-vector'
-  else:
-    with open(input_file, "r") as sf:
-      sc = sf.read()
-    if "unsigned char b:2" in sc or "4294967294u" in sc or "_ddv_module_init" in sc or "bb_process_escape_sequence" in sc:
-      args.integer_encoding = 'bit-vector'
-      #args.pointer_encoding = 'bit-vector'
 
   if 'memory-safety' in args.check or 'memleak' in args.check or 'integer-overflow' in args.check:
     args.strings = True
