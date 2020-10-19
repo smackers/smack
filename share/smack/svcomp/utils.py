@@ -103,40 +103,6 @@ def verify_bpl_svcomp(args):
   if not 'memory-safety' in args.check and not 'memleak' in args.check and not 'integer-overflow' in args.check:
     inject_assert_false(args)
 
-  if 'memory-safety' in args.check:
-    if len(args.check) == 1:
-      heurTrace = "engage valid deference checks.\n"
-      args.check.pop()
-      args.check.append('valid-deref')
-      args.prop_to_check = 'valid-deref'
-      args.bpl_with_all_props = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
-      copyfile(args.bpl_file, args.bpl_with_all_props)
-      smack.top.memsafety_subproperty_selection(args)
-      args.check.append('memory-safety')
-    elif 'valid-deref' in args.check:
-      heurTrace = "engage valid free checks.\n"
-      args.check.pop()
-      args.check.pop()
-      args.prop_to_check = 'valid-free'
-      args.check.append('valid-free')
-      args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
-      copyfile(args.bpl_with_all_props, args.bpl_file)
-      smack.top.memsafety_subproperty_selection(args)
-      args.check.append('memory-safety')
-    elif 'valid-free' in args.check:
-      heurTrace = "engage memleak checks.\n"
-      args.check.pop()
-      args.check.pop()
-      args.prop_to_check = 'memleak'
-      args.check.append('memleak')
-      args.bpl_file = smack.top.temporary_file(os.path.splitext(os.path.basename(args.bpl_file))[0], '.bpl', args)
-      copyfile(args.bpl_with_all_props, args.bpl_file)
-      smack.top.memsafety_subproperty_selection(args)
-      args.check.append('memory-safety')
-  elif 'memleak' in args.check:
-    heurTrace = "engage memcleanup checks.\n"
-    smack.top.memsafety_subproperty_selection(args)
-
   # If pthreads found, perform lock set analysis
   if args.pthread:
     lockpwn_command = ["lockpwn"]
@@ -176,19 +142,7 @@ def verify_bpl_svcomp(args):
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 13
   staticLoopBound = 64
-
-  if 'memory-safety' in args.check:
-    if args.prop_to_check == 'valid-deref':
-      if "memleaks_test12_false-valid-free" in bpl:
-        time_limit = 10
-      else:
-        time_limit = 750
-    elif args.prop_to_check == 'valid-free':
-      time_limit = 80
-    elif args.prop_to_check == 'memleak':
-      time_limit = 50
-  else:
-    time_limit = 880
+  time_limit = 880
 
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
@@ -207,14 +161,6 @@ def verify_bpl_svcomp(args):
     if not args.quiet:
       error = smack.top.error_trace(verifier_output, args)
       print(error)
-    if 'memory-safety' in args.check:
-      heurTrace += (args.prop_to_check + "has errors\n")
-      if args.prop_to_check == 'valid-free':
-        if args.valid_deref_check_result != 'verified':
-          force_timeout()
-      elif args.prop_to_check == 'memleak':
-        if args.valid_free_check_result == 'timeout':
-          force_timeout()
 
   elif result == 'timeout': #normal inlining
     heurTrace += "Timed out during normal inlining.\n"
@@ -237,23 +183,9 @@ def verify_bpl_svcomp(args):
       heurTrace += "Reporting benchmark as 'verified'.\n"
       if not args.quiet:
         print((heurTrace + "\n"))
-      if 'memory-safety' in args.check:
-        heurTrace += (args.prop_to_check + "is verified\n")
-        if args.prop_to_check == 'valid-deref':
-          args.valid_deref_check_result = 'verified'
-        elif args.prop_to_check == 'valid-free':
-          args.valid_free_check_result = 'verified'
-        elif args.prop_to_check == 'memleak':
-          if args.valid_deref_check_result == 'timeout':
-            force_timeout()
-          else:
-            print(smack.top.results(args)[args.valid_deref_check_result][0])
-            sys.exit(smack.top.results(args)[args.valid_deref_check_result][1])
-        verify_bpl_svcomp(args)
-      else:
-        write_error_file(args, 'verified', verifier_output)
-        print(smack.top.results(args)['verified'][0])
-        sys.exit(smack.top.results(args)['verified'][1])
+      write_error_file(args, 'verified', verifier_output)
+      print(smack.top.results(args)['verified'][0])
+      sys.exit(smack.top.results(args)['verified'][1])
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
@@ -261,48 +193,16 @@ def verify_bpl_svcomp(args):
       if not args.quiet:
         print((heurTrace + "\n"))
         sys.stdout.flush()
-      if 'memory-safety' in args.check:
-        heurTrace += (args.prop_to_check + " times out\n")
-        if args.prop_to_check == 'valid-deref':
-          args.valid_deref_check_result = 'timeout'
-          force_timeout()
-        elif args.prop_to_check == 'valid-free':
-          args.valid_free_check_result = 'timeout'
-        elif args.prop_to_check == 'memleak':
-          if args.valid_deref_check_result == 'timeout':
-            force_timeout()
-          else:
-            print(smack.top.results(args)[args.valid_deref_check_result][0])
-            sys.exit(smack.top.results(args)[args.valid_deref_check_result][1])
-        verify_bpl_svcomp(args)
-      else:
-        force_timeout()
+      force_timeout()
   elif result == 'verified': #normal inlining
     heurTrace += "Normal inlining terminated and found no bugs.\n"
   else: #normal inlining
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print((heurTrace + "\n"))
-  if 'memory-safety' in args.check and result == 'verified':
-    heurTrace += (args.prop_to_check + " is verified\n")
-    if args.prop_to_check == 'valid-deref':
-      args.valid_deref_check_result = 'verified'
-    elif args.prop_to_check == 'valid-free':
-      args.valid_free_check_result = 'verified'
-    elif args.prop_to_check == 'memleak':
-      if args.valid_deref_check_result == 'timeout':
-        force_timeout()
-      else:
-        print(smack.top.results(args)[args.valid_deref_check_result][0])
-        sys.exit(smack.top.results(args)[args.valid_deref_check_result][1])
-    verify_bpl_svcomp(args)
-  else:
-    write_error_file(args, result, verifier_output)
-    if 'memleak' in args.check and result == 'invalid-memtrack':
-      sys.exit('SMACK found an error: memory cleanup.')
-    else:
-      print(smack.top.results(args)[result][0])
-      sys.exit(smack.top.results(args)[result][1])
+  write_error_file(args, result, verifier_output)
+  print(smack.top.results(args)[result][0])
+  sys.exit(smack.top.results(args)[result][1])
 
 def write_error_file(args, status, verifier_output):
   #return
