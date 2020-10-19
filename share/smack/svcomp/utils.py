@@ -82,9 +82,6 @@ def verify_bpl_svcomp(args):
   corral_command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
   corral_command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
 
-  with open(args.bpl_file, "r") as f:
-    bpl = f.read()
-
   with open(args.input_files[0], "r") as f:
     csource = f.read()
 
