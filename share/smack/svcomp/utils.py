@@ -24,6 +24,7 @@ def svcomp_frontend(input_file, args):
     args.strings = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
+  args.orig_files = list(args.input_files)
 
   args.clang_options += " -fbracket-depth=2048"
   args.clang_options += " -Wno-unknown-attributes"
