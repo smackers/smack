@@ -213,3 +213,9 @@ INSTALL(FILES
   DESTINATION share/smack
   RENAME versions.py
 )
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.c
+  DESTINATION share/smack/smack/src
+)
