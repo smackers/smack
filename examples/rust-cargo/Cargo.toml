@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-smack = { path = "../../smack"}
+smack = { path = "/usr/local/share/smack/lib/smack" }
 
 [profile.dev]
 incremental=false

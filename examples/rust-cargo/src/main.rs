@@ -5,7 +5,7 @@ use smack::*;
 // @expect error
 
 fn main() {
-    let a = 2;
-    let b = 3;
+    let a: u32 = 2.verifier_nondet();
+    let b: u32 = 3.verifier_nondet();
     smack::assert!(a + b != 5);
 }
