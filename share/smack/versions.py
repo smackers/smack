@@ -1,1 +1,0 @@
-VERSIONS = {'RUST_VERSION': 'nightly-2020-08-23'}
