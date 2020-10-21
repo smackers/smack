@@ -155,9 +155,10 @@ int main(int argc, char **argv) {
 
   llvm::legacy::PassManager pass_manager;
 
-  pass_manager.add(new smack::RustFixes());
+  // This runs before DSA because some Rust functions cause problems.
+  pass_manager.add(new smack::RustFixes);
   pass_manager.add(llvm::createDeadCodeEliminationPass());
-  pass_manager.add(llvm::createPrintModulePass(errs()));
+
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());

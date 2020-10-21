@@ -3,7 +3,7 @@ import sys
 import re
 import json
 from .utils import temporary_file, try_command, temporary_directory
-from .versions import VERSIONS
+from .versions import RUST_VERSION
 
 
 def languages():
@@ -77,10 +77,6 @@ def smack_headers(args):
 
 def smack_lib():
     return os.path.join(smack_root(), 'share', 'smack', 'lib')
-
-
-def smack_bin():
-    return os.path.join(smack_root(), 'share', 'smack')
 
 
 def default_clang_compile_command(args, lib=False):
@@ -299,7 +295,7 @@ def is_cargo_included_bc(name, args):
 def default_cargo_compile_command(args):
     compile_command = [
         'cargo',
-        '+'+VERSIONS['RUST_VERSION'],
+        '+' + RUST_VERSION,
         'build']
     return compile_command + args
 
@@ -349,7 +345,7 @@ def default_rust_compile_args(args):
             'passes=name-anon-globals']
 
 def default_rust_compile_command(args):
-    compile_command = (['rustc', '+'+VERSIONS['RUST_VERSION']] +
+    compile_command = (['rustc', '+' + RUST_VERSION] +
                        default_rust_compile_args(args))
     return compile_command + args
 
