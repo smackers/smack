@@ -8,8 +8,9 @@ from .versions import RUST_VERSION
 # Needed for cargo operations
 try:
     import toml
-except:
+except ImportError:
     pass
+
 
 def languages():
     """A dictionary of languages per file extension."""
@@ -296,7 +297,7 @@ def cargo_frontend(input_file, args):
                 env={'RUSTFLAGS': " ".join(rustargs)})
 
     crate_name = toml.load(input_file)['package']['name'].replace('-', '_')
-    
+
     # Find the name of the crate's bc file
     bcbase = targetdir + '/debug/deps/'
     entries = os.listdir(bcbase)
@@ -314,6 +315,7 @@ def cargo_frontend(input_file, args):
     try_command(['llvm-link'] + bcs + ['-o', bc_file])
     return bc_file
 
+
 def default_rust_compile_args(args):
     return ['-A',
             'unused-imports',
@@ -326,6 +328,7 @@ def default_rust_compile_args(args):
             'verifier="smack"',
             '-C',
             'passes=name-anon-globals']
+
 
 def default_rust_compile_command(args):
     compile_command = (['rustc', '+' + RUST_VERSION] +
