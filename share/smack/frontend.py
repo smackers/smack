@@ -5,6 +5,11 @@ import json
 from .utils import temporary_file, try_command, temporary_directory
 from .versions import RUST_VERSION
 
+# Needed for cargo operations
+try:
+    import toml
+except:
+    pass
 
 def languages():
     """A dictionary of languages per file extension."""
@@ -268,30 +273,6 @@ def json_compilation_database_frontend(input_file, args):
     llvm_to_bpl(args)
 
 
-def is_cargo_included_bc(name, args):
-    if not (len(name) > 3 and name[-3:] == '.bc'):
-        return False
-
-    if name.startswith('smack-'):
-        # This is an artifact of the build process
-        return True
-
-    if ',' in args.crates:
-        crates = list(args.crates.split(','))
-
-    else:
-        crates = [args.crates]
-    # Cargo replaces '-' in crate names with '_'. This is for
-    # convenience.
-    crates = set(map(lambda x: x.replace('-', '_'), crates))
-
-    for crate in crates:
-        if name.startswith(crate + '-'):
-            return True
-
-    return False
-
-
 def default_cargo_compile_command(args):
     compile_command = [
         'cargo',
@@ -314,13 +295,15 @@ def cargo_frontend(input_file, args):
     try_command(compile_command, console=True,
                 env={'RUSTFLAGS': " ".join(rustargs)})
 
-    # Get crate bc files
-    bcbase = targetdir+'/debug/deps/'
+    crate_name = toml.load(input_file)['package']['name'].replace('-', '_')
+    
+    # Find the name of the crate's bc file
+    bcbase = targetdir + '/debug/deps/'
     entries = os.listdir(bcbase)
     bcs = []
 
     for entry in entries:
-        if is_cargo_included_bc(entry, args):
+        if entry.startswith(crate_name + '-') and entry.endswith('.bc'):
             bcs.append(bcbase + entry)
 
     bc_file = temporary_file(
