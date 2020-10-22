@@ -219,3 +219,9 @@ INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.c
   DESTINATION share/smack/smack/src
 )
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.rs
+  DESTINATION share/smack/smack/src
+  RENAME lib.rs
+)
