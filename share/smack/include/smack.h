@@ -84,10 +84,11 @@ void __VERIFIER_assert(int);
 #define U(...) TY(__VA_ARGS__, U4, U3, U2, U1)(__VA_ARGS__)
 
 #define NONDET_DECL(P, ty...) S(ty) U(P, U(ty))(void)
-#define EMPTY_NONDET_DEFN(P, ty...) S(ty) U(P, U(ty))(void) {                  \
-  ty x;                                                                        \
-  return x;                                                                    \
-}
+#define EMPTY_NONDET_DEFN(P, ty...)                                            \
+  S(ty) U(P, U(ty))(void) {                                                    \
+    ty x;                                                                      \
+    return x;                                                                  \
+  }
 
 void *__VERIFIER_nondet(void);
 NONDET_DECL(__SMACK_nondet, char);
