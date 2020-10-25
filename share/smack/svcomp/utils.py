@@ -14,14 +14,14 @@ def svcomp_frontend(input_file, args):
   # enable static LLVM unroll pass
   args.static_unroll = True
 
+  # Modeling of strings must be turned on by default
+  args.strings = True
+
   if len(args.input_files) > 1:
     raise RuntimeError("Expected a single SVCOMP input file.")
 
   # check svcomp properties and set flags accordingly
   svcomp_check_property(args)
-
-  if 'memory-safety' in args.check or 'memleak' in args.check or 'integer-overflow' in args.check:
-    args.strings = True
 
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   args.orig_files = list(args.input_files)
