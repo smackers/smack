@@ -18,6 +18,12 @@ VERSION = '2.6.0'
 
 
 class VResult(Flag):
+    '''
+    This class represents verification results.
+    `MEMSAFETY_ERROR` and `ERROR` do not correspond to any results. They are
+    used to group certain results.
+    '''
+
     VERIFIED = auto()
     ASSERTION_FAILURE = auto()
     INVALID_DEREF = auto()
@@ -35,6 +41,8 @@ class VResult(Flag):
         return self.name.lower().replace('_', '-')
 
     def description(self):
+        '''Return the description for certain result.'''
+
         descriptions = {
             VResult.ASSERTION_FAILURE: '',
             VResult.INVALID_DEREF: 'invalid pointer dereference',
@@ -50,6 +58,8 @@ class VResult(Flag):
                                % self)
 
     def return_code(self):
+        '''Return the exit code for each result.'''
+
         return_codes = {
             VResult.VERIFIED: 0,
             VResult.ASSERTION_FAILURE: 1,
@@ -68,6 +78,8 @@ class VResult(Flag):
                                % self)
 
     def message(self, args):
+        '''Return SMACK's output for each result.'''
+
         if self is VResult.VERIFIED:
             return ('SMACK found no errors'
                     + ('' if args.modular else ' with unroll bound %s'
@@ -85,10 +97,20 @@ class VResult(Flag):
 
 
 class PropertyAction(argparse.Action):
+    '''
+    This class defines the argparse action when the arguments of the `--check`
+    option are consumed.
+    '''
+
     def __init__(self, option_strings, dest, **kwargs):
         super(PropertyAction, self).__init__(option_strings, dest, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
+        '''
+        Fold the provided arguments with bitwise or. This is equivalent to
+        extending the property list with the arguments.
+        '''
+
         setattr(namespace, self.dest,
                 functools.reduce(lambda x, y: x | y, values,
                                  getattr(namespace, self.dest)))
@@ -96,6 +118,12 @@ class PropertyAction(argparse.Action):
 
 # Shaobo: shamelessly borrowed it from https://stackoverflow.com/a/55500795
 class VProperty(Flag):
+    '''
+    This class defines the properties that SMACK verifies. `NONE` is a special
+    value that does not correspond to any property. It's used simply to get
+    around the default value issue when the action similar to `extend`.
+    '''
+
     NONE = 0
     ASSERTIONS = auto()
     VALID_DEREF = auto()
@@ -123,9 +151,17 @@ class VProperty(Flag):
         return [VProperty.VALID_DEREF, VProperty.VALID_FREE, VProperty.MEMLEAK]
 
     def contains_mem_safe_props(self):
+        '''
+        Test if a property is either memory-safety or any of its subproperties.
+        '''
+
         return bool(self & VProperty.MEMORY_SAFETY)
 
     def boogie_attr(self):
+        '''
+        Return the attribute of Boogie assert command for certain property.
+        '''
+
         def get_attr_from_result(x):
             if x in VResult.MEMSAFETY_ERROR:
                 return x.name.lower()[2:]
@@ -146,6 +182,8 @@ class VProperty(Flag):
                                'property: %s' % self)
 
     def result(self):
+        '''Link SMACK properties with results'''
+
         res = {
             VProperty.VALID_DEREF: VResult.INVALID_DEREF,
             VProperty.VALID_FREE: VResult.INVALID_FREE,
