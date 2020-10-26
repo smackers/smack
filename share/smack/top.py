@@ -96,6 +96,7 @@ class PropertyAction(argparse.Action):
 
 # Shaobo: shamelessly borrowed it from https://stackoverflow.com/a/55500795
 class VProperty(Flag):
+    NONE = 0
     ASSERTIONS = auto()
     VALID_DEREF = auto()
     VALID_FREE = auto()
@@ -429,7 +430,7 @@ def arguments():
         metavar='PROPERTY',
         nargs='+',
         choices=list(VProperty),
-        default=VProperty.ASSERTIONS,
+        default=VProperty.NONE,
         type=VProperty.argparse,
         action=PropertyAction,
         help='''select properties to check
@@ -572,10 +573,8 @@ def arguments():
         args.bpl_file = 'a.bpl' if args.no_verify else temporary_file(
             'a', '.bpl', args)
 
-    if not args.check:
-        args.check = {'assertions'}
-    else:
-        args.check = set([val for sublist in args.check for val in sublist])
+    if args.check == VProperty.NONE:
+        args.check = VProperty.ASSERTIONS
 
     # TODO are we (still) using this?
     # with open(args.input_file, 'r') as f:

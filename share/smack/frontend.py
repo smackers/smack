@@ -94,7 +94,7 @@ def default_clang_compile_command(args, lib=False):
     if VProperty.INTEGER_OVERFLOW in args.check:
         cmd += (['-fsanitize=signed-integer-overflow,shift']
                 if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
-    if 'assertions' not in args.check:
+    if VProperty.ASSERTIONS not in args.check:
         cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:
         cmd += ['-DFLOAT_ENABLED']
