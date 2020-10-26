@@ -127,7 +127,7 @@ class VProperty(Flag):
 
     def boogie_attr(self):
         def get_attr_from_result(x):
-            if x in VProperty.mem_safe_subprops():
+            if x in VResult.MEMSAFETY_ERROR:
                 return x.name.lower()[2:]
             else:
                 return x.name.lower()

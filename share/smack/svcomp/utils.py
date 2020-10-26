@@ -48,15 +48,18 @@ def svcomp_check_property(args):
   if args.svcomp_property:
     with open(args.svcomp_property, "r") as f:
       prop = f.read()
+    from smack.top import VProperty
+    from smack.top import VResult
     if "valid-deref" in prop:
-      args.check = ['memory-safety']
+      args.check = VProperty.MEMORY_SAFETY
     elif "valid-memcleanup" in prop:
-      args.check = ['memleak']
+      args.check = VProperty.MEMLEAK
     elif "overflow" in prop:
-      args.check = ['integer-overflow']
+      args.check = VProperty.INTEGER_OVERFLOW
     elif not "reach_error" in prop:
-      print(smack.top.results(args)['unknown'][0])
-      sys.exit(smack.top.results(args)['unknown'][1])
+      result = VResult.UNKNOWN
+      print(result.message(args))
+      sys.exit(result.return_code())
 
 def force_timeout():
   sys.stdout.flush()
@@ -73,7 +76,12 @@ def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
 
-  if not 'memory-safety' in args.check and not 'memleak' in args.check and not 'integer-overflow' in args.check:
+  from smack.top import VProperty
+  from smack.top import VResult
+
+  if (VProperty.MEMORY_SAFETY not in args.check
+      and VProperty.MEMLEAK not in args.check
+      and VProperty.INTEGER_OVERFLOW not in args.check):
     inject_assert_false(args)
 
   corral_command = ["corral"]
@@ -87,7 +95,9 @@ def verify_bpl_svcomp(args):
     csource = f.read()
 
   corral_command += ["/k:1"]
-  if not ('memory-safety' in args.check or args.integer_encoding == 'bit-vector' or 'memleak' in args.check):
+  if not (VProperty.MEMORY_SAFETY in args.check
+          or args.integer_encoding == 'bit-vector'
+          or VProperty.MEMLEAK in args.check):
     if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
       corral_command += ["/di"]
 
@@ -107,14 +117,14 @@ def verify_bpl_svcomp(args):
   verifier_output = smack.top.try_command(command, timeout=time_limit)
   result = smack.top.verification_result(verifier_output)
 
-  if result == 'error' or result == 'invalid-deref' or result == 'invalid-free' or result == 'invalid-memtrack' or result == 'overflow': #normal inlining
+  if result in VResult.ERROR: #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
 
     if not args.quiet:
       error = smack.top.error_trace(verifier_output, args)
       print(error)
 
-  elif result == 'timeout': #normal inlining
+  elif result is VResult.TIMEOUT: #normal inlining
     heurTrace += "Timed out during normal inlining.\n"
     heurTrace += "Determining result based on how far we unrolled.\n"
     # If we managed to unroll more than loopUnrollBar times, then return verified
@@ -135,9 +145,9 @@ def verify_bpl_svcomp(args):
       heurTrace += "Reporting benchmark as 'verified'.\n"
       if not args.quiet:
         print((heurTrace + "\n"))
-      write_error_file(args, 'verified', verifier_output)
-      print(smack.top.results(args)['verified'][0])
-      sys.exit(smack.top.results(args)['verified'][1])
+      write_error_file(args, VResult.VERIFIED, verifier_output)
+      print(VResult.VERIFIED.message(args))
+      sys.exit(VResult.VERIFIED.return_code())
     else:
       heurTrace += "Only unrolled " + str(unrollMax) + " times.\n"
       heurTrace += "Insufficient unrolls to consider 'verified'.  "
@@ -146,21 +156,23 @@ def verify_bpl_svcomp(args):
         print((heurTrace + "\n"))
         sys.stdout.flush()
       force_timeout()
-  elif result == 'verified': #normal inlining
+  elif result is VResult.VERIFIED: #normal inlining
     heurTrace += "Normal inlining terminated and found no bugs.\n"
   else: #normal inlining
     heurTrace += "Normal inlining returned 'unknown'.  See errors above.\n"
   if not args.quiet:
     print((heurTrace + "\n"))
   write_error_file(args, result, verifier_output)
-  print(smack.top.results(args)[result][0])
-  sys.exit(smack.top.results(args)[result][1])
+  print(result.message(args))
+  sys.exit(result.return_code())
 
 def write_error_file(args, status, verifier_output):
+  from smack.top import VProperty
+  from smack.top import VResult
   #return
-  if status == 'timeout' or status == 'unknown':
+  if status is VResult.VERIFIED or status is VResult.UNKNOWN:
     return
-  hasBug = (status != 'verified')
+  hasBug = (status is not VResult.VERIFIED)
   #if not hasBug:
   #  return
   if args.error_file:
