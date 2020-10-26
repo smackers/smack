@@ -92,6 +92,8 @@ def default_clang_compile_command(args, lib=False):
     if 'integer-overflow' in args.check:
         cmd += (['-fsanitize=signed-integer-overflow,shift']
                 if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+    if not 'assertions' in args.check:
+        cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:
         cmd += ['-DFLOAT_ENABLED']
     if args.pthread:
