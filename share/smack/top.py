@@ -303,6 +303,7 @@ def arguments():
         '--check',
         metavar='PROPERTY',
         nargs='+',
+        action='append',
         choices=['assertions', 'memory-safety', 'valid-deref', 'valid-free',
                  'memleak', 'integer-overflow', 'rust-panics'],
         default=['assertions'],
