@@ -433,7 +433,7 @@ def arguments():
         type=VProperty.argparse,
         action=PropertyAction,
         help='''select properties to check
-                [choices: %(choices)s; default: %(default)s]
+                [choices: %(choices)s; default: assertions]
                 (note that memory-safety is the union of valid-deref,
                 valid-free, memleak)''')
 
@@ -571,6 +571,11 @@ def arguments():
     if not args.bpl_file:
         args.bpl_file = 'a.bpl' if args.no_verify else temporary_file(
             'a', '.bpl', args)
+
+    if not args.check:
+        args.check = {'assertions'}
+    else:
+        args.check = set([val for sublist in args.check for val in sublist])
 
     # TODO are we (still) using this?
     # with open(args.input_file, 'r') as f:
