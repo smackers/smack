@@ -42,7 +42,7 @@ void __VERIFIER_assume(int x) {
 
 #ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
-#if !MEMORY_SAFETY && !SIGNED_INTEGER_OVERFLOW_CHECK && !RUST_EXEC
+#if !DISABLE_SMACK_ASSERTIONS && !RUST_EXEC
   __SMACK_dummy(x);
   __SMACK_code("assert @ != $0;", x);
 #endif

@@ -5,6 +5,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+int memcmp(const void *str1, const void *str2, size_t n) {
+  const unsigned char *s1 = (const unsigned char *)str1;
+  const unsigned char *s2 = (const unsigned char *)str2;
+
+  while (n--) {
+    if (*s1 != *s2) {
+      int result = __VERIFIER_nondet_int();
+      if (*s1 < *s2) {
+        __VERIFIER_assume(result < 0);
+      } else {
+        __VERIFIER_assume(result > 0);
+      }
+      return result;
+    }
+    s1++;
+    s2++;
+  }
+
+  return 0;
+}
+
 char *strcpy(char *dest, const char *src) {
   char *save = dest;
   while ((*dest++ = *src++))
