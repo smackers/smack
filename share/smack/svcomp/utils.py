@@ -79,9 +79,9 @@ def verify_bpl_svcomp(args):
   from smack.top import VProperty
   from smack.top import VResult
 
-  if (VProperty.MEMORY_SAFETY not in args.check
-      and VProperty.MEMLEAK not in args.check
-      and VProperty.INTEGER_OVERFLOW not in args.check):
+  if not (VProperty.MEMORY_SAFETY in args.check
+          or VProperty.MEMLEAK in args.check
+          or VProperty.INTEGER_OVERFLOW in args.check):
     inject_assert_false(args)
 
   corral_command = ["corral"]
