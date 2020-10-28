@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import tempfile
 import subprocess
 import signal
@@ -17,10 +18,19 @@ def temporary_file(prefix, extension, args):
     return name
 
 
+def temporary_directory(prefix, extension, args):
+    name = tempfile.mkdtemp(extension, prefix + '-', os.getcwd())
+    if not args.debug:
+        temporary_files.append(name)
+    return name
+
+
 def remove_temp_files():
     for f in temporary_files:
         if os.path.isfile(f):
             os.unlink(f)
+        elif os.path.isdir(f):
+            shutil.rmtree(f)
 
 
 def timeout_killer(proc, timed_out):
@@ -29,13 +39,16 @@ def timeout_killer(proc, timed_out):
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 
-def try_command(cmd, cwd=None, console=False, timeout=None):
+def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
     args = top.args
     console = (console or args.verbose or args.debug) and not args.quiet
     filelog = args.debug
     output = ''
     proc = None
     timer = None
+    if env is not None:
+        for k, v in env.items():
+            os.putenv(k, v)
     try:
         if args.debug:
             print("Running %s" % " ".join(cmd))

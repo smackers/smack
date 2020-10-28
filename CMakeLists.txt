@@ -205,11 +205,23 @@ INSTALL(FILES
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   DESTINATION share
   USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di"
+  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di" PATTERN "*.toml"
 )
 
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/versions
   DESTINATION share/smack
   RENAME versions.py
+)
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/include/smack.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.c
+  DESTINATION share/smack/smack/src
+)
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.rs
+  DESTINATION share/smack/smack/src
+  RENAME lib.rs
 )

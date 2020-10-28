@@ -2,8 +2,14 @@ import os
 import sys
 import re
 import json
-from .utils import temporary_file, try_command
+from .utils import temporary_file, try_command, temporary_directory
 from .versions import RUST_VERSION
+
+# Needed for cargo operations
+try:
+    import toml
+except ImportError:
+    pass
 
 
 def languages():
@@ -26,6 +32,7 @@ def languages():
         'f95': 'fortran',
         'f03': 'fortran',
         'rs': 'rust',
+        'toml': 'cargo',
     }
 
 
@@ -46,6 +53,7 @@ def frontends():
         'boogie': boogie_frontend,
         'fortran': fortran_frontend,
         'rust': rust_frontend,
+        'cargo': cargo_frontend,
     }
 
 
@@ -268,21 +276,65 @@ def json_compilation_database_frontend(input_file, args):
     llvm_to_bpl(args)
 
 
-def default_rust_compile_command(args):
+def default_cargo_compile_command(args):
     compile_command = [
-        'rustc',
+        'cargo',
         '+' + RUST_VERSION,
-        '-A',
-        'unused-imports',
-        '-C',
-        'opt-level=0',
-        '-C',
-        'no-prepopulate-passes',
-        '-g',
-        '--cfg',
-        'verifier="smack"',
-        '-C',
-        'passes=name-anon-globals']
+        'build']
+    return compile_command + args
+
+
+def cargo_frontend(input_file, args):
+    """Generate LLVM bitcode from a cargo build."""
+    targetdir = temporary_directory(
+        os.path.splitext(
+            os.path.basename(input_file))[0],
+        None,
+        args)
+    rustargs = (default_rust_compile_args(args) +
+                ['--emit=llvm-bc', '-Clto', '-Cembed-bitcode=yes'])
+    compile_command = default_cargo_compile_command(
+        ['--target-dir', targetdir, '--manifest-path', input_file])
+    try_command(compile_command, console=True,
+                env={'RUSTFLAGS': " ".join(rustargs)})
+
+    crate_name = toml.load(input_file)['package']['name'].replace('-', '_')
+
+    # Find the name of the crate's bc file
+    bcbase = targetdir + '/debug/deps/'
+    entries = os.listdir(bcbase)
+    bcs = []
+
+    for entry in entries:
+        if entry.startswith(crate_name + '-') and entry.endswith('.bc'):
+            bcs.append(bcbase + entry)
+
+    bc_file = temporary_file(
+        os.path.splitext(
+            os.path.basename(input_file))[0],
+        '.bc',
+        args)
+    try_command(['llvm-link'] + bcs + ['-o', bc_file])
+    return bc_file
+
+
+def default_rust_compile_args(args):
+    return ['-A',
+            'unused-imports',
+            '-C',
+            'opt-level=0',
+            '-C',
+            'no-prepopulate-passes',
+            '-g',
+            '--cfg',
+            'verifier="smack"',
+            '-C',
+            'passes=name-anon-globals']
+
+
+def default_rust_compile_command(args):
+    compile_command = (['rustc', '+' + RUST_VERSION] +
+                       default_rust_compile_args(args))
     return compile_command + args
 
 
