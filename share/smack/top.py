@@ -8,6 +8,7 @@ import shlex
 import subprocess
 import signal
 import functools
+from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
@@ -16,22 +17,185 @@ from .frontend import link_bc_files, frontends, languages, extra_libs
 VERSION = '2.6.0'
 
 
-def results(args):
-    """A dictionary of the result output messages."""
-    return {
-        'verified': ('SMACK found no errors'
-                     + ('' if args.modular else
-                        ' with unroll bound %s' % args.unroll) + '.', 0),
-        'error': ('SMACK found an error.', 1),
-        'invalid-deref': ('SMACK found an error: invalid pointer dereference.',
-                          2),
-        'invalid-free': ('SMACK found an error: invalid memory deallocation.',
-                         3),
-        'invalid-memtrack': ('SMACK found an error: memory leak.', 4),
-        'overflow': ('SMACK found an error: integer overflow.', 5),
-        'rust-panic': ('SMACK found an error: Rust panic.', 6),
-        'timeout': ('SMACK timed out.', 126),
-        'unknown': ('SMACK result is unknown.', 127)}
+class VResult(Flag):
+    '''
+    This class represents verification results.
+    `MEMSAFETY_ERROR` and `ERROR` do not correspond to any results. They are
+    used to group certain results.
+    '''
+
+    VERIFIED = auto()
+    ASSERTION_FAILURE = auto()
+    INVALID_DEREF = auto()
+    INVALID_FREE = auto()
+    INVALID_MEMTRACK = auto()
+    OVERFLOW = auto()
+    RUST_PANIC = auto()
+    TIMEOUT = auto()
+    UNKNOWN = auto()
+    MEMSAFETY_ERROR = INVALID_DEREF | INVALID_FREE | INVALID_MEMTRACK
+    ERROR = (ASSERTION_FAILURE | INVALID_DEREF | INVALID_FREE
+             | INVALID_MEMTRACK | OVERFLOW | RUST_PANIC)
+
+    def __str__(self):
+        return self.name.lower().replace('_', '-')
+
+    def description(self):
+        '''Return the description for certain result.'''
+
+        descriptions = {
+            VResult.ASSERTION_FAILURE: '',
+            VResult.INVALID_DEREF: 'invalid pointer dereference',
+            VResult.INVALID_FREE: 'invalid memory deallocation',
+            VResult.INVALID_MEMTRACK: 'memory leak',
+            VResult.OVERFLOW: 'integer overflow',
+            VResult.RUST_PANIC: 'Rust panic'}
+
+        if self in descriptions:
+            return descriptions[self]
+        else:
+            raise RuntimeError('No description associated with result: %s'
+                               % self)
+
+    def return_code(self):
+        '''Return the exit code for each result.'''
+
+        return_codes = {
+            VResult.VERIFIED: 0,
+            VResult.ASSERTION_FAILURE: 1,
+            VResult.INVALID_DEREF: 2,
+            VResult.INVALID_FREE: 3,
+            VResult.INVALID_MEMTRACK: 4,
+            VResult.OVERFLOW: 5,
+            VResult.RUST_PANIC: 6,
+            VResult.TIMEOUT: 126,
+            VResult.UNKNOWN: 127}
+
+        if self in return_codes:
+            return return_codes[self]
+        else:
+            raise RuntimeError('No return code associated with result: %s'
+                               % self)
+
+    def message(self, args):
+        '''Return SMACK's output for each result.'''
+
+        if self is VResult.VERIFIED:
+            return ('SMACK found no errors'
+                    + ('' if args.modular else ' with unroll bound %s'
+                        % args.unroll) + '.')
+        elif self in VResult.ERROR:
+            description = self.description()
+            return ('SMACK found an error'
+                    + (': %s' % description if description else '') + '.')
+        elif self is VResult.TIMEOUT:
+            return 'SMACK timed out.'
+        elif self is VResult.UNKNOWN:
+            return 'SMACK result is unknown.'
+        else:
+            raise RuntimeError('No message associated with result: %s' % self)
+
+
+class PropertyAction(argparse.Action):
+    '''
+    This class defines the argparse action when the arguments of the `--check`
+    option are consumed.
+    '''
+
+    def __init__(self, option_strings, dest, **kwargs):
+        super(PropertyAction, self).__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        '''
+        Fold the provided arguments with bitwise or. This is equivalent to
+        extending the property list with the arguments.
+        '''
+
+        setattr(namespace, self.dest,
+                functools.reduce(lambda x, y: x | y, values,
+                                 getattr(namespace, self.dest)))
+
+
+# Shaobo: shamelessly borrowed it from https://stackoverflow.com/a/55500795
+class VProperty(Flag):
+    '''
+    This class defines the properties that SMACK verifies. `NONE` is a special
+    value that does not correspond to any property. It's used simply to get
+    around the default value issue when the action similar to `extend`.
+    '''
+
+    NONE = 0
+    ASSERTIONS = auto()
+    VALID_DEREF = auto()
+    VALID_FREE = auto()
+    MEMLEAK = auto()
+    MEMORY_SAFETY = VALID_DEREF | VALID_FREE | MEMLEAK
+    INTEGER_OVERFLOW = auto()
+    RUST_PANICS = auto()
+
+    def __str__(self):
+        return self.name.lower().replace('_', '-')
+
+    def __repr__(self):
+        return str(self)
+
+    @staticmethod
+    def argparse(s):
+        try:
+            return VProperty[s.upper().replace('-', '_')]
+        except KeyError:
+            return s
+
+    @staticmethod
+    def mem_safe_subprops():
+        return [VProperty.VALID_DEREF, VProperty.VALID_FREE, VProperty.MEMLEAK]
+
+    def contains_mem_safe_props(self):
+        '''
+        Test if a property is either memory-safety or any of its subproperties.
+        '''
+
+        return bool(self & VProperty.MEMORY_SAFETY)
+
+    def boogie_attr(self):
+        '''
+        Return the attribute of Boogie assert command for certain property.
+        '''
+
+        def get_attr_from_result(x):
+            if x in VResult.MEMSAFETY_ERROR:
+                return x.name.lower()[2:]
+            else:
+                return x.name.lower()
+
+        attrs = {
+            VProperty.VALID_DEREF: get_attr_from_result(VResult.INVALID_DEREF),
+            VProperty.VALID_FREE: get_attr_from_result(VResult.INVALID_FREE),
+            VProperty.MEMLEAK: get_attr_from_result(VResult.INVALID_MEMTRACK),
+            VProperty.INTEGER_OVERFLOW: get_attr_from_result(VResult.OVERFLOW),
+            VProperty.RUST_PANICS: get_attr_from_result(VResult.RUST_PANIC)}
+
+        if self in attrs:
+            return attrs[self]
+        else:
+            raise RuntimeError('No assertion Boogie attribute associated with'
+                               'property: %s' % self)
+
+    def result(self):
+        '''Link SMACK properties with results'''
+
+        res = {
+            VProperty.VALID_DEREF: VResult.INVALID_DEREF,
+            VProperty.VALID_FREE: VResult.INVALID_FREE,
+            VProperty.MEMLEAK: VResult.INVALID_MEMTRACK,
+            VProperty.INTEGER_OVERFLOW: VResult.OVERFLOW,
+            VProperty.RUST_PANICS: VResult.RUST_PANIC}
+
+        if self in res:
+            return res[self]
+        else:
+            raise RuntimeError(('No SMACK result associated with property: %s'
+                                % self))
 
 
 def inlined_procedures():
@@ -303,9 +467,10 @@ def arguments():
         '--check',
         metavar='PROPERTY',
         nargs='+',
-        action='append',
-        choices=['assertions', 'memory-safety', 'valid-deref', 'valid-free',
-                 'memleak', 'integer-overflow', 'rust-panics'],
+        choices=list(VProperty),
+        default=VProperty.NONE,
+        type=VProperty.argparse,
+        action=PropertyAction,
         help='''select properties to check
                 [choices: %(choices)s; default: assertions]
                 (note that memory-safety is the union of valid-deref,
@@ -446,10 +611,8 @@ def arguments():
         args.bpl_file = 'a.bpl' if args.no_verify else temporary_file(
             'a', '.bpl', args)
 
-    if not args.check:
-        args.check = {'assertions'}
-    else:
-        args.check = set([val for sublist in args.check for val in sublist])
+    if args.check == VProperty.NONE:
+        args.check = VProperty.ASSERTIONS
 
     # TODO are we (still) using this?
     # with open(args.input_file, 'r') as f:
@@ -555,12 +718,11 @@ def llvm_to_bpl(args):
         cmd += ['-no-byte-access-inference']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
-    if ('memory-safety' in args.check or 'valid-deref' in args.check or
-            'valid-free' in args.check or 'memleak' in args.check):
+    if args.check.contains_mem_safe_props():
         cmd += ['-memory-safety']
-    if 'integer-overflow' in args.check:
+    if VProperty.INTEGER_OVERFLOW in args.check:
         cmd += ['-integer-overflow']
-    if 'rust-panics' in args.check:
+    if VProperty.RUST_PANICS in args.check:
         cmd += ['-rust-panics']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
@@ -605,15 +767,11 @@ def annotate_bpl(args):
 
 
 def memsafety_subproperty_selection(args):
-    selected_props = set()
-    if 'memory-safety' in args.check:
+    if VProperty.MEMORY_SAFETY in args.check:
         return
-    if 'valid-deref' in args.check:
-        selected_props.add('valid_deref')
-    if 'valid-free' in args.check:
-        selected_props.add('valid_free')
-    if 'memleak' in args.check:
-        selected_props.add('valid_memtrack')
+
+    selected_props = [p.boogie_attr() for p in VProperty.mem_safe_subprops()
+                      if p in args.check]
 
     def replace_assertion(m):
         if len(selected_props) > 0:
@@ -668,36 +826,26 @@ def verification_result(verifier_output):
     if re.search(
         r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
             verifier_output):
-        return 'timeout'
+        return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
                     r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
-        return 'verified'
+        return VResult.VERIFIED
     elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
-        if re.search(
-            r'ASSERTION FAILS assert {:valid_deref}',
-                verifier_output):
-            return 'invalid-deref'
-        elif re.search(r'ASSERTION FAILS assert {:valid_free}',
-                       verifier_output):
-            return 'invalid-free'
-        elif re.search(r'ASSERTION FAILS assert {:valid_memtrack}',
-                       verifier_output):
-            return 'invalid-memtrack'
-        elif re.search(r'ASSERTION FAILS assert {:overflow}', verifier_output):
-            return 'overflow'
-        elif re.search(r'ASSERTION FAILS assert {:rust_panic}',
-                       verifier_output):
-            return 'rust-panic'
+        for p in (VProperty.mem_safe_subprops() + [VProperty.INTEGER_OVERFLOW]
+                  + [VProperty.RUST_PANICS]):
+            if re.search(r'ASSERTION FAILS assert {:%s}' % p.boogie_attr(),
+                         verifier_output):
+                return p.result()
+
+        listCall = re.findall(r'\(CALL .+\)', verifier_output)
+        if len(listCall) > 0 and re.search(
+                r'free_', listCall[len(listCall) - 1]):
+            return VResult.INVALID_FREE
         else:
-            listCall = re.findall(r'\(CALL .+\)', verifier_output)
-            if len(listCall) > 0 and re.search(
-                    r'free_', listCall[len(listCall) - 1]):
-                return 'invalid-free'
-            else:
-                return 'error'
+            return VResult.ASSERTION_FAILURE
     else:
-        return 'unknown'
+        return VResult.UNKNOWN
 
 
 def verify_bpl(args):
@@ -759,9 +907,7 @@ def verify_bpl(args):
     if args.smackd:
         print(smackdOutput(verifier_output))
     else:
-        if (result == 'error' or result == 'invalid-deref' or
-                result == 'invalid-free' or result == 'invalid-memtrack' or
-                result == 'overflow' or result == 'rust-panic'):
+        if result in VResult.ERROR:
             error = error_trace(verifier_output, args)
 
             if args.error_file:
@@ -773,8 +919,8 @@ def verify_bpl(args):
 
             if args.replay:
                 replay_error_trace(verifier_output, args)
-        print(results(args)[result][0])
-        sys.exit(results(args)[result][1])
+        print(result.message(args))
+        sys.exit(result.return_code())
 
 
 def error_step(step):
