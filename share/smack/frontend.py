@@ -331,7 +331,8 @@ def default_rust_compile_args(args):
             '--cfg',
             'verifier="smack"',
             '-C',
-            'passes=name-anon-globals']
+            'passes=name-anon-globals',
+            '--color=always']
 
 
 def default_rust_compile_command(args):
