@@ -470,7 +470,12 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   cd ${SMACK_DIR}/build
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ninja
-  sudo ninja install
+
+  if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then
+    ninja install
+  else
+    sudo ninja install
+  fi
 
   puts "Configuring shell environment"
   source ${SMACKENV}
