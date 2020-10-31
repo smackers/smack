@@ -23,6 +23,9 @@ def svcomp_frontend(input_file, args):
   # check svcomp properties and set flags accordingly
   svcomp_check_property(args)
 
+  if smack.top.VProperty.INTEGER_OVERFLOW in args.check:
+    args.integer_encoding = 'bit-vector'
+
   name, ext = os.path.splitext(os.path.basename(args.input_files[0]))
   args.orig_files = list(args.input_files)
 
