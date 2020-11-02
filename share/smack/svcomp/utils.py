@@ -54,7 +54,7 @@ def svcomp_check_property(args):
     from smack.top import VProperty
     from smack.top import VResult
     if "valid-deref" in prop:
-      args.check = VProperty.MEMORY_SAFETY
+      args.check = VProperty.VALID_DEREF
     elif "valid-memcleanup" in prop:
       args.check = VProperty.MEMLEAK
     elif "overflow" in prop:
