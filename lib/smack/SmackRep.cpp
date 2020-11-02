@@ -907,21 +907,31 @@ const Expr *SmackRep::bop(const llvm::ConstantExpr *CE) {
 
 const Expr *SmackRep::bop(const llvm::BinaryOperator *BO) {
   return bop(BO->getOpcode(), BO->getOperand(0), BO->getOperand(1),
-             BO->getType());
+             BO->getType(), !BO->hasNoSignedWrap());
 }
 
 const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
-                          const llvm::Value *rhs, const llvm::Type *t) {
+                          const llvm::Value *rhs, const llvm::Type *t,
+                          bool isUnsigned) {
+  if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
+    isUnsigned = false;
+  } else if (opcode == llvm::Instruction::UDiv ||
+             opcode == llvm::Instruction::URem) {
+    isUnsigned = true;
+  }
+
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (isFpArithOp(opcode)) {
     if (SmackOptions::FloatEnabled) {
-      return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR), expr(lhs),
-                      expr(rhs));
+      return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR),
+                      expr(lhs, isUnsigned), expr(rhs, isUnsigned));
     } else {
-      return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
+      return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned),
+                      expr(rhs, isUnsigned));
     }
   }
-  return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
+  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned),
+                  expr(rhs, isUnsigned));
 }
 
 const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
