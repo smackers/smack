@@ -128,7 +128,7 @@ public:
   std::string type(const llvm::Type *t);
   std::string type(const llvm::Value *v);
 
-  const Expr *lit(const llvm::Value *v, bool isUnsigned = false);
+  const Expr *lit(const llvm::Value *v, bool isUnsigned = true);
   const Expr *lit(const llvm::Value *v, unsigned flag);
 
   const Expr *ptrArith(const llvm::GetElementPtrInst *I);
@@ -137,7 +137,7 @@ public:
   ptrArith(const llvm::Value *p,
            std::vector<std::pair<llvm::Value *, llvm::gep_type_iterator>> args);
 
-  const Expr *expr(const llvm::Value *v, bool isConstIntUnsigned = false);
+  const Expr *expr(const llvm::Value *v, bool isConstIntUnsigned = true);
 
   const Expr *cast(const llvm::Instruction *I);
   const Expr *cast(const llvm::ConstantExpr *CE);
