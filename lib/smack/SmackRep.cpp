@@ -631,6 +631,12 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
   if (const ConstantInt *ci = llvm::dyn_cast<const ConstantInt>(v)) {
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
+
+    // This is heuristics for choosing between generating an unsigned vs
+    // signed constant (since LLVM does not keep track of that).
+    // Signed values -1 is special since it appears often because i--
+    // gets translated into i + (-1), and so in that context it should
+    // be a signed integer.
     bool neg = width > 1 &&
                (isUnsigned ? (isCmpInst ? false : API.getSExtValue() == -1)
                            : ci->isNegative());
