@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 num-traits = "0.2.12"
-smack = { path = "/usr/local/share/smack/lib/smack" }
+smack = { path = "/usr/local/share/smack/lib" }

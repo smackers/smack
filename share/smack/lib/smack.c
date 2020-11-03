@@ -41,49 +41,18 @@ void *__builtinx_va_arg(char *x) {
 long __builtinx_expect(long exp, long c) { return exp; }
 
 void __VERIFIER_assume(int x) {
-#if !RUST_EXEC
   __SMACK_dummy(x);
   __SMACK_code("assume @ != $0;", x);
-#endif
 }
 
 #ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
-#if !DISABLE_SMACK_ASSERTIONS && !RUST_EXEC
+#if !DISABLE_SMACK_ASSERTIONS
   __SMACK_dummy(x);
   __SMACK_code("assert @ != $0;", x);
 #endif
 }
 #endif
-
-#if RUST_EXEC
-// Enable compatibility with Cargo compilation.
-EMPTY_NONDET_DEFN(__SMACK_nondet, char);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, char);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, char);
-EMPTY_NONDET_DEFN(__SMACK_nondet, short);
-EMPTY_NONDET_DEFN(__SMACK_nondet, short, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, short);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, short, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, short);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, short, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, long);
-EMPTY_NONDET_DEFN(__SMACK_nondet, long, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, long);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, long, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, long, long);
-EMPTY_NONDET_DEFN(__SMACK_nondet, long, long, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, long, long);
-EMPTY_NONDET_DEFN(__SMACK_nondet, signed, long, long, int);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long);
-EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long, int);
-#endif // RUST_EXEC
 
 int __SMACK_and32(int a, int b) {
   int c = 0;

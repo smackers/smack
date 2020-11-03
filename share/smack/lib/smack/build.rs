@@ -2,11 +2,11 @@
 
 fn main() {
     cc::Build::new()
-        .file("src/smack.c")
-        .define("RUST_EXEC", None)
+        .file("src/smack-rust.c")
+        .define("CARGO_BUILD", None)
         .include("src")
         .compiler("clang")
         .compile("libsmack.a");
-    println!("cargo:rerun-if-changed=src/smack.c");
+    println!("cargo:rerun-if-changed=src/smack-rust.c");
 }
 

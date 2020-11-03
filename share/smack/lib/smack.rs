@@ -4,14 +4,14 @@
 extern "C" {
     pub fn __VERIFIER_assert(x: i32);
     pub fn __VERIFIER_assume(x: i32);
-    pub fn __VERIFIER_nondet_signed_char() -> i8;
-    pub fn __VERIFIER_nondet_unsigned_char() -> u8;
-    pub fn __VERIFIER_nondet_signed_short() -> i16;
-    pub fn __VERIFIER_nondet_unsigned_short() -> u16;
-    pub fn __VERIFIER_nondet_signed_int() -> i32;
-    pub fn __VERIFIER_nondet_unsigned_int() -> u32;
-    pub fn __VERIFIER_nondet_signed_long_long() -> i64;
-    pub fn __VERIFIER_nondet_unsigned_long_long() -> u64;
+    pub fn __VERIFIER_nondet_i8() -> i8;
+    pub fn __VERIFIER_nondet_u8() -> u8;
+    pub fn __VERIFIER_nondet_i16() -> i16;
+    pub fn __VERIFIER_nondet_u16() -> u16;
+    pub fn __VERIFIER_nondet_i32() -> i32;
+    pub fn __VERIFIER_nondet_u32() -> u32;
+    pub fn __VERIFIER_nondet_i64() -> i64;
+    pub fn __VERIFIER_nondet_u64() -> u64;
     pub fn malloc(size: usize) -> *mut u8;
     pub fn __VERIFIER_memcpy(dest: *mut u8, src: *mut u8, count: usize) -> *mut u8;
     pub fn free(ptr: *mut u8);
@@ -129,16 +129,16 @@ macro_rules! make_verifier_nondet {
 }
 
 /* Instantiate nondet for all integer types. */
-make_verifier_nondet!(i8, __VERIFIER_nondet_signed_char);
-make_verifier_nondet!(u8, __VERIFIER_nondet_unsigned_char);
-make_verifier_nondet!(i16, __VERIFIER_nondet_signed_short);
-make_verifier_nondet!(u16, __VERIFIER_nondet_unsigned_short);
-make_verifier_nondet!(i32, __VERIFIER_nondet_signed_int);
-make_verifier_nondet!(u32, __VERIFIER_nondet_unsigned_int);
-make_verifier_nondet!(i64, __VERIFIER_nondet_signed_long_long);
-make_verifier_nondet!(u64, __VERIFIER_nondet_unsigned_long_long);
-make_verifier_nondet!(isize, __VERIFIER_nondet_signed_long_long);
-make_verifier_nondet!(usize, __VERIFIER_nondet_unsigned_long_long);
+make_verifier_nondet!(i8, __VERIFIER_nondet_i8);
+make_verifier_nondet!(u8, __VERIFIER_nondet_u8);
+make_verifier_nondet!(i16, __VERIFIER_nondet_i16);
+make_verifier_nondet!(u16, __VERIFIER_nondet_u16);
+make_verifier_nondet!(i32, __VERIFIER_nondet_i32);
+make_verifier_nondet!(u32, __VERIFIER_nondet_u32);
+make_verifier_nondet!(i64, __VERIFIER_nondet_i64);
+make_verifier_nondet!(u64, __VERIFIER_nondet_u64);
+make_verifier_nondet!(isize, __VERIFIER_nondet_i64);
+make_verifier_nondet!(usize, __VERIFIER_nondet_u64);
 
 #[cfg(not(verifier = "smack"))]
 #[cfg(feature = "std")]
