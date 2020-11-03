@@ -624,14 +624,16 @@ const Expr *SmackRep::integerLit(long long v, unsigned width) {
   }
 }
 
-const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned) {
+const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
+                          bool isCmpInst) {
   using namespace llvm;
 
   if (const ConstantInt *ci = llvm::dyn_cast<const ConstantInt>(v)) {
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
     bool neg = width > 1 &&
-        (isUnsigned ? API.getSExtValue() == -1 : ci->isNegative());
+               (isUnsigned ? (isCmpInst ? false : API.getSExtValue() == -1)
+                           : ci->isNegative());
     std::string str = (neg ? API.abs() : API).toString(10, false);
     const Expr *e =
         SmackOptions::BitPrecise ? Expr::lit(str, width) : Expr::lit(str, 0);
@@ -785,7 +787,8 @@ const Expr *SmackRep::ptrArith(
   return e;
 }
 
-const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
+const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
+                           bool isCmpInst) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
@@ -828,7 +831,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned) {
       }
 
     } else if (const ConstantInt *ci = dyn_cast<const ConstantInt>(constant)) {
-      return lit(ci, isConstIntUnsigned);
+      return lit(ci, isConstIntUnsigned, isCmpInst);
 
     } else if (const ConstantFP *cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -924,11 +927,10 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (isFpArithOp(opcode)) {
     if (SmackOptions::FloatEnabled) {
-      return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR),
-                      expr(lhs, isUnsigned), expr(rhs, isUnsigned));
+      return Expr::fn(opName(fn, {t}), Expr::id(Naming::RMODE_VAR), expr(lhs),
+                      expr(rhs));
     } else {
-      return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned),
-                      expr(rhs, isUnsigned));
+      return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
     }
   }
   return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned),
@@ -962,8 +964,8 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
                           const llvm::Value *rhs, bool isUnsigned) {
   std::string fn =
       opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
-  const Expr *e1 = expr(lhs, isUnsigned);
-  const Expr *e2 = expr(rhs, isUnsigned);
+  const Expr *e1 = expr(lhs, isUnsigned, true);
+  const Expr *e2 = expr(rhs, isUnsigned, true);
   if (lhs->getType()->isFloatingPointTy())
     return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
                             integerLit(0ULL, 1));
