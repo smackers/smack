@@ -630,7 +630,8 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned) {
   if (const ConstantInt *ci = llvm::dyn_cast<const ConstantInt>(v)) {
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
-    bool neg = isUnsigned ? API.getSExtValue() == -1 : width > 1 && ci->isNegative();
+    bool neg = width > 1 &&
+        (isUnsigned ? API.getSExtValue() == -1 : ci->isNegative());
     std::string str = (neg ? API.abs() : API).toString(10, false);
     const Expr *e =
         SmackOptions::BitPrecise ? Expr::lit(str, width) : Expr::lit(str, 0);
