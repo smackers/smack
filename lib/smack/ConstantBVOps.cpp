@@ -59,7 +59,19 @@ bool ConstantBVOps::runOnFunction(Function &f) {
     if (I->isBitwiseLogicOp()) {
       BinaryOperator* bi = dyn_cast<BinaryOperator>(&*I);
       Value* mask = bi->getOperand(1);
-      
+      if (ConstantInt* ci = dyn_cast<ConstantInt>(mask)) {
+	const APInt& value = ci->getValue();
+	unsigned opcode = bi->getOpcode();
+	if (opcode == Instruction::And) {
+	  if ((value + 1).isPowerOf2()) {
+	    auto lhs = bi->getOperand(0);
+            Value* rhs = ConstantInt::get(ci->getType(), (value+1));
+	    Instruction* replacement = BinaryOperator::Create(Instruction::URem, lhs, rhs, "", (Instruction*) nullptr);
+	    instsFrom.push_back(&*I);
+	    instsTo.push_back(replacement);
+	  }
+	}
+      }
     }
   }
 
