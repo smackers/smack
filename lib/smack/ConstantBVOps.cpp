@@ -48,7 +48,8 @@ bool ConstantBVOps::runOnFunction(Function &f) {
 	}
 	auto lhs = bi->getOperand(0);
 	unsigned bw = getOpWidth(lhs);
-	APInt rhsVal = APInt(bw, "2", 10);
+	APInt rhsVal = APInt(bw, "1", 10);
+	rhsVal <<= value;
 	Value* rhs = ConstantInt::get(ci->getType(), rhsVal);
         Instruction* replacement = BinaryOperator::Create(op, lhs, rhs, "", (Instruction*) nullptr);
 	instsFrom.push_back(&*I);
@@ -56,7 +57,9 @@ bool ConstantBVOps::runOnFunction(Function &f) {
       }
     }
     if (I->isBitwiseLogicOp()) {
-
+      BinaryOperator* bi = dyn_cast<BinaryOperator>(&*I);
+      Value* mask = bi->getOperand(1);
+      
     }
   }
 
