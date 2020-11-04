@@ -28,6 +28,7 @@
 #include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
+#include "smack/ConstantBVOps.h"
 #include "smack/CodifyStaticInits.h"
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
@@ -194,6 +195,7 @@ int main(int argc, char **argv) {
   }
 
   pass_manager.add(new smack::IntegerOverflowChecker());
+  pass_manager.add(new smack::ConstantBVOps());
 
   if (smack::SmackOptions::AddTiming) {
     Triple ModuleTriple(module->getTargetTriple());
