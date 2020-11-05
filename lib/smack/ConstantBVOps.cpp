@@ -21,9 +21,9 @@ namespace smack {
 
 using namespace llvm;
 
-unsigned getOpWidth(const Value* t) {
-  Type* type = t->getType();
-  IntegerType* iType = dyn_cast<IntegerType>(type);
+unsigned getOpWidth(const Value *t) {
+  Type *type = t->getType();
+  IntegerType *iType = dyn_cast<IntegerType>(type);
   return iType->getBitWidth();
 }
 
@@ -34,43 +34,44 @@ bool ConstantBVOps::runOnFunction(Function &f) {
     return false;
   for (inst_iterator I = inst_begin(f), E = inst_end(f); I != E; ++I) {
     if (I->isShift()) {
-      BinaryOperator* bi = dyn_cast<BinaryOperator>(&*I);
-      Value* amt = bi->getOperand(1);
-      if (ConstantInt* ci = dyn_cast<ConstantInt>(amt)) {
-	const APInt& value = ci->getValue();
-	unsigned opcode = bi->getOpcode();
-	Instruction::BinaryOps op;
-	if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
-	  op = Instruction::SDiv;
-	}
-	else if (opcode == Instruction::Shl) {
-	  op = Instruction::Mul;
-	}
-	auto lhs = bi->getOperand(0);
-	unsigned bw = getOpWidth(lhs);
-	APInt rhsVal = APInt(bw, "1", 10);
-	rhsVal <<= value;
-	Value* rhs = ConstantInt::get(ci->getType(), rhsVal);
-        Instruction* replacement = BinaryOperator::Create(op, lhs, rhs, "", (Instruction*) nullptr);
-	instsFrom.push_back(&*I);
-	instsTo.push_back(replacement);
+      BinaryOperator *bi = dyn_cast<BinaryOperator>(&*I);
+      Value *amt = bi->getOperand(1);
+      if (ConstantInt *ci = dyn_cast<ConstantInt>(amt)) {
+        const APInt &value = ci->getValue();
+        unsigned opcode = bi->getOpcode();
+        Instruction::BinaryOps op;
+        if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
+          op = Instruction::SDiv;
+        } else if (opcode == Instruction::Shl) {
+          op = Instruction::Mul;
+        }
+        auto lhs = bi->getOperand(0);
+        unsigned bw = getOpWidth(lhs);
+        APInt rhsVal = APInt(bw, "1", 10);
+        rhsVal <<= value;
+        Value *rhs = ConstantInt::get(ci->getType(), rhsVal);
+        Instruction *replacement =
+            BinaryOperator::Create(op, lhs, rhs, "", (Instruction *)nullptr);
+        instsFrom.push_back(&*I);
+        instsTo.push_back(replacement);
       }
     }
     if (I->isBitwiseLogicOp()) {
-      BinaryOperator* bi = dyn_cast<BinaryOperator>(&*I);
-      Value* mask = bi->getOperand(1);
-      if (ConstantInt* ci = dyn_cast<ConstantInt>(mask)) {
-	const APInt& value = ci->getValue();
-	unsigned opcode = bi->getOpcode();
-	if (opcode == Instruction::And) {
-	  if ((value + 1).isPowerOf2()) {
-	    auto lhs = bi->getOperand(0);
-            Value* rhs = ConstantInt::get(ci->getType(), (value+1));
-	    Instruction* replacement = BinaryOperator::Create(Instruction::URem, lhs, rhs, "", (Instruction*) nullptr);
-	    instsFrom.push_back(&*I);
-	    instsTo.push_back(replacement);
-	  }
-	}
+      BinaryOperator *bi = dyn_cast<BinaryOperator>(&*I);
+      Value *mask = bi->getOperand(1);
+      if (ConstantInt *ci = dyn_cast<ConstantInt>(mask)) {
+        const APInt &value = ci->getValue();
+        unsigned opcode = bi->getOpcode();
+        if (opcode == Instruction::And) {
+          if ((value + 1).isPowerOf2()) {
+            auto lhs = bi->getOperand(0);
+            Value *rhs = ConstantInt::get(ci->getType(), (value + 1));
+            Instruction *replacement = BinaryOperator::Create(
+                Instruction::URem, lhs, rhs, "", (Instruction *)nullptr);
+            instsFrom.push_back(&*I);
+            instsTo.push_back(replacement);
+          }
+        }
       }
     }
   }
@@ -78,7 +79,7 @@ bool ConstantBVOps::runOnFunction(Function &f) {
   for (size_t i = 0; i < instsFrom.size(); i++) {
     ReplaceInstWithInst(instsFrom[i], instsTo[i]);
   }
-  
+
   return true;
 }
 

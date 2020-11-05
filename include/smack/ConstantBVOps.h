@@ -4,8 +4,8 @@
 #ifndef CONSTANTBVOPS_H
 #define CONSTANTBVOPS_H
 
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include <map>
 
@@ -17,7 +17,6 @@ public:
   ConstantBVOps() : llvm::FunctionPass(ID) {}
   virtual llvm::StringRef getPassName() const;
   virtual bool runOnFunction(llvm::Function &f);
-
 };
 } // namespace smack
 
