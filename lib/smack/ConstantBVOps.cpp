@@ -31,7 +31,7 @@ unsigned getOpWidth(const Value *t) {
 }
 
 bool ConstantBVOps::runOnFunction(Function &f) {
-  if (!(SmackOptions::BitPrecise || SmackOptions::BitPrecisePointers))
+  if (SmackOptions::BitPrecise || SmackOptions::BitPrecisePointers)
     // Do not run this pass in bitvector mode.
     return false;
   std::vector<Instruction *> instsFrom;
