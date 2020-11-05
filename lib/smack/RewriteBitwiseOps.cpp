@@ -31,9 +31,6 @@ unsigned getOpBitWidth(const Value *V) {
 }
 
 bool RewriteBitwiseOps::runOnFunction(Function &f) {
-  if (SmackOptions::BitPrecise || SmackOptions::BitPrecisePointers)
-    // Do not run this pass in bitvector mode.
-    return false;
   if (Naming::isSmackName(f.getName()))
     return false;
 
@@ -81,8 +78,8 @@ bool RewriteBitwiseOps::runOnFunction(Function &f) {
       if (ConstantInt *ci = dyn_cast<ConstantInt>(mask)) {
         unsigned opcode = bi->getOpcode();
         if (opcode == Instruction::And) {
-	    const APInt &value = ci->getValue();
-	    if ((value + 1).isPowerOf2()) {
+          const APInt &value = ci->getValue();
+          if ((value + 1).isPowerOf2()) {
             auto lhs = bi->getOperand(0);
             Value *rhs = ConstantInt::get(ci->getType(), (value + 1));
             Instruction *replacement = BinaryOperator::Create(
@@ -106,6 +103,7 @@ bool RewriteBitwiseOps::runOnFunction(Function &f) {
 char RewriteBitwiseOps::ID = 0;
 
 StringRef RewriteBitwiseOps::getPassName() const {
-  return "Translate bitwise operations with constant arguments to integer operations";
+  return "Translate bitwise operations with constant arguments to integer "
+         "operations";
 }
 } // namespace smack

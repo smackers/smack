@@ -29,13 +29,13 @@
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
 #include "smack/CodifyStaticInits.h"
-#include "smack/RewriteBitwiseOps.h"
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/SmackModuleGenerator.h"
@@ -195,7 +195,11 @@ int main(int argc, char **argv) {
   }
 
   pass_manager.add(new smack::IntegerOverflowChecker());
-  pass_manager.add(new smack::RewriteBitwiseOps());
+
+  if (!(smack::SmackOptions::BitPrecise ||
+        smack::SmackOptions::BitPrecisePointers)) {
+    pass_manager.add(new smack::RewriteBitwiseOps());
+  }
 
   if (smack::SmackOptions::AddTiming) {
     Triple ModuleTriple(module->getTargetTriple());
