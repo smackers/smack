@@ -2,6 +2,9 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
+// This pass converts bitwise operations with certain constant operands
+// into equivalent integer operations.
+
 #include "smack/ConstantBVOps.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
@@ -41,8 +44,12 @@ bool ConstantBVOps::runOnFunction(Function &f) {
         unsigned opcode = bi->getOpcode();
         Instruction::BinaryOps op;
         if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
+          // Shifting right by a constant amount is equivalent to dividing by
+          // 2^amt
           op = Instruction::SDiv;
         } else if (opcode == Instruction::Shl) {
+          // Shifting left by a constant amount is equivalent to dividing by
+          // 2^amt
           op = Instruction::Mul;
         }
         auto lhs = bi->getOperand(0);
@@ -57,6 +64,11 @@ bool ConstantBVOps::runOnFunction(Function &f) {
       }
     }
     if (I->isBitwiseLogicOp()) {
+      // If the operation is a bit-wise `and' and the mask variable is constant,
+      // it may be possible to replace this operation with a remainder
+      // operation. If the rhs has only ones, and they're only in the least
+      // significant bit, then the mask is 2^(number of ones) - 1. This is
+      // equivalent to the remainder when dividing by 2^(number of ones).
       BinaryOperator *bi = dyn_cast<BinaryOperator>(&*I);
       Value *mask = bi->getOperand(1);
       if (ConstantInt *ci = dyn_cast<ConstantInt>(mask)) {
