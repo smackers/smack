@@ -5,7 +5,7 @@
 // This pass converts bitwise operations with certain constant operands
 // into equivalent integer operations.
 
-#include "smack/ConstantBVOps.h"
+#include "smack/RewriteBitwiseOps.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
@@ -24,40 +24,44 @@ namespace smack {
 
 using namespace llvm;
 
-unsigned getOpWidth(const Value *t) {
-  Type *type = t->getType();
-  IntegerType *iType = dyn_cast<IntegerType>(type);
+unsigned getOpBitWidth(const Value *V) {
+  const Type *T = V->getType();
+  const IntegerType *iType = cast<IntegerType>(T);
   return iType->getBitWidth();
 }
 
-bool ConstantBVOps::runOnFunction(Function &f) {
+bool RewriteBitwiseOps::runOnFunction(Function &f) {
   if (SmackOptions::BitPrecise || SmackOptions::BitPrecisePointers)
     // Do not run this pass in bitvector mode.
     return false;
-  std::vector<Instruction *> instsFrom;
-  std::vector<Instruction *> instsTo;
   if (Naming::isSmackName(f.getName()))
     return false;
+
+  std::vector<Instruction *> instsFrom;
+  std::vector<Instruction *> instsTo;
+
   for (inst_iterator I = inst_begin(f), E = inst_end(f); I != E; ++I) {
     if (I->isShift()) {
-      BinaryOperator *bi = dyn_cast<BinaryOperator>(&*I);
-      Value *amt = bi->getOperand(1);
-      if (ConstantInt *ci = dyn_cast<ConstantInt>(amt)) {
-        const APInt &value = ci->getValue();
+      BinaryOperator *bi = cast<BinaryOperator>(&*I);
+      Value *amount = bi->getOperand(1);
+
+      if (ConstantInt *ci = dyn_cast<ConstantInt>(amount)) {
         unsigned opcode = bi->getOpcode();
         Instruction::BinaryOps op;
         if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
           // Shifting right by a constant amount is equivalent to dividing by
-          // 2^amt
+          // 2^amount
           op = Instruction::SDiv;
         } else if (opcode == Instruction::Shl) {
           // Shifting left by a constant amount is equivalent to dividing by
-          // 2^amt
+          // 2^amount
           op = Instruction::Mul;
         }
+
         auto lhs = bi->getOperand(0);
-        unsigned bw = getOpWidth(lhs);
-        APInt rhsVal = APInt(bw, "1", 10);
+        unsigned bitWidth = getOpBitWidth(lhs);
+        APInt rhsVal = APInt(bitWidth, "1", 10);
+        const APInt &value = ci->getValue();
         rhsVal <<= value;
         Value *rhs = ConstantInt::get(ci->getType(), rhsVal);
         Instruction *replacement =
@@ -72,13 +76,13 @@ bool ConstantBVOps::runOnFunction(Function &f) {
       // operation. If the rhs has only ones, and they're only in the least
       // significant bit, then the mask is 2^(number of ones) - 1. This is
       // equivalent to the remainder when dividing by 2^(number of ones).
-      BinaryOperator *bi = dyn_cast<BinaryOperator>(&*I);
+      BinaryOperator *bi = cast<BinaryOperator>(&*I);
       Value *mask = bi->getOperand(1);
       if (ConstantInt *ci = dyn_cast<ConstantInt>(mask)) {
-        const APInt &value = ci->getValue();
         unsigned opcode = bi->getOpcode();
         if (opcode == Instruction::And) {
-          if ((value + 1).isPowerOf2()) {
+	    const APInt &value = ci->getValue();
+	    if ((value + 1).isPowerOf2()) {
             auto lhs = bi->getOperand(0);
             Value *rhs = ConstantInt::get(ci->getType(), (value + 1));
             Instruction *replacement = BinaryOperator::Create(
@@ -91,7 +95,7 @@ bool ConstantBVOps::runOnFunction(Function &f) {
     }
   }
 
-  for (size_t i = 0; i < instsFrom.size(); i++) {
+  for (size_t i = 0; i < instsFrom.size(); ++i) {
     ReplaceInstWithInst(instsFrom[i], instsTo[i]);
   }
 
@@ -99,9 +103,9 @@ bool ConstantBVOps::runOnFunction(Function &f) {
 }
 
 // Pass ID variable
-char ConstantBVOps::ID = 0;
+char RewriteBitwiseOps::ID = 0;
 
-StringRef ConstantBVOps::getPassName() const {
-  return "Translate BV ops with constant arguments to integer operations";
+StringRef RewriteBitwiseOps::getPassName() const {
+  return "Translate bitwise operations with constant arguments to integer operations";
 }
 } // namespace smack
