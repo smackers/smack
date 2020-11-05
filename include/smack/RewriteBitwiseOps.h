@@ -1,8 +1,8 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#ifndef CONSTANTBVOPS_H
-#define CONSTANTBVOPS_H
+#ifndef REWRITEBITWISEOPS_H
+#define REWRITEBITWISEOPS_H
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -19,4 +19,4 @@ public:
 };
 } // namespace smack
 
-#endif // CONSTANTBVOPS_H
+#endif // REWRITEBITWISEOPS_H
