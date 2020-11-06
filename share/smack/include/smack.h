@@ -19,10 +19,12 @@ extern "C" {
 #define __builtin_expect __builtinx_expect
 #define __builtin_memcpy __builtinx_memcpy
 #define __builtin_va_start __builtinx_va_start
+#define __builtin_va_arg(ap, t) __builtinx_va_arg(ap)
 #define __builtin_object_size __builtinx_object_size
 
-// For handling of va_start macro
+// For handling of va macros
 void __builtinx_va_start(char *, char *);
+void *__builtinx_va_arg(char *);
 #endif
 
 void __SMACK_code(const char *fmt, ...);
