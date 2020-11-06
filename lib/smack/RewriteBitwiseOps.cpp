@@ -30,6 +30,20 @@ unsigned getOpBitWidth(const Value *V) {
   return iType->getBitWidth();
 }
 
+Optional<APInt> getConstantIntValue(const Value *V) {
+  if (const ConstantInt *ci = dyn_cast<ConstantInt>(V)) {
+    const APInt &value = ci->getValue();
+    return Optional<APInt>(value);
+  } else {
+    return Optional<APInt>();
+  }
+}
+
+bool isConstantInt(const Value *V) {
+  Optional<APInt> constantValue = getConstantIntValue(V);
+  return constantValue.hasValue() && (*constantValue + 1).isPowerOf2();
+}
+
 bool RewriteBitwiseOps::runOnFunction(Function &f) {
   if (Naming::isSmackName(f.getName()))
     return false;
@@ -70,24 +84,30 @@ bool RewriteBitwiseOps::runOnFunction(Function &f) {
     if (I->isBitwiseLogicOp()) {
       // If the operation is a bit-wise `and' and the mask variable is constant,
       // it may be possible to replace this operation with a remainder
-      // operation. If the rhs has only ones, and they're only in the least
+      // operation. If one argument has only ones, and they're only in the least
       // significant bit, then the mask is 2^(number of ones) - 1. This is
       // equivalent to the remainder when dividing by 2^(number of ones).
       BinaryOperator *bi = cast<BinaryOperator>(&*I);
-      Value *mask = bi->getOperand(1);
-      if (ConstantInt *ci = dyn_cast<ConstantInt>(mask)) {
-        unsigned opcode = bi->getOpcode();
-        if (opcode == Instruction::And) {
-          const APInt &value = ci->getValue();
-          if ((value + 1).isPowerOf2()) {
-            auto lhs = bi->getOperand(0);
-            Value *rhs = ConstantInt::get(ci->getType(), (value + 1));
-            Instruction *replacement = BinaryOperator::Create(
-                Instruction::URem, lhs, rhs, "", (Instruction *)nullptr);
-            instsFrom.push_back(&*I);
-            instsTo.push_back(replacement);
-          }
+      unsigned opcode = bi->getOpcode();
+      if (opcode == Instruction::And) {
+        Value *args[] = {bi->getOperand(0), bi->getOperand(1)};
+        int maskOperand = -1;
+
+        if (isConstantInt(args[0])) {
+          maskOperand = 0;
+        } else if (isConstantInt(args[1])) {
+          maskOperand = 1;
+        } else {
+          continue;
         }
+
+        auto lhs = args[1 - maskOperand];
+        Value *rhs = ConstantInt::get(
+            f.getContext(), *getConstantIntValue(args[maskOperand]) + 1);
+        Instruction *replacement = BinaryOperator::Create(
+            Instruction::URem, lhs, rhs, "", (Instruction *)nullptr);
+        instsFrom.push_back(&*I);
+        instsTo.push_back(replacement);
       }
     }
   }
