@@ -650,6 +650,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
                                ci.getType()->isVoidTy());
     emit(Stmt::skip());
+    return;
   }
 
   Function *f = ci.getCalledFunction();
