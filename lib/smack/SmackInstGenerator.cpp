@@ -646,6 +646,12 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst &i) {
 void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   processInstruction(ci);
 
+  if (ci.isInlineAsm()) {
+    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
+                               ci.getType()->isVoidTy());
+    emit(Stmt::skip());
+  }
+
   Function *f = ci.getCalledFunction();
   if (!f) {
     assert(ci.getCalledValue() && "Called value is null");
@@ -654,12 +660,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   std::string name = f->hasName() ? f->getName() : "";
 
-  if (ci.isInlineAsm()) {
-    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
-                               ci.getType()->isVoidTy());
-    emit(Stmt::skip());
-
-  } else if (SmackOptions::RustPanics && isRustPanic(name)) {
+  if (SmackOptions::RustPanics && isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
