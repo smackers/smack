@@ -1,6 +1,6 @@
 #include "smack.h"
 
-// @expect verified
+// @expect error
 
 int main(void) {
   unsigned char x = (unsigned char)__VERIFIER_nondet_unsigned_char();
