@@ -13,7 +13,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,70 +43,89 @@ bool isConstantInt(const Value *V) {
   return constantValue.hasValue() && (*constantValue + 1).isPowerOf2();
 }
 
-bool RewriteBitwiseOps::runOnFunction(Function &f) {
-  if (Naming::isSmackName(f.getName()))
-    return false;
-
+bool RewriteBitwiseOps::runOnModule(Module &m) {
   std::vector<Instruction *> instsFrom;
   std::vector<Instruction *> instsTo;
 
-  for (inst_iterator I = inst_begin(f), E = inst_end(f); I != E; ++I) {
-    if (I->isShift()) {
-      BinaryOperator *bi = cast<BinaryOperator>(&*I);
-      Value *amount = bi->getOperand(1);
+  for (auto &F : m) {
+    if (Naming::isSmackName(F.getName()))
+      continue;
+    for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+      if (I->isShift()) {
+        BinaryOperator *bi = cast<BinaryOperator>(&*I);
+        Value *amount = bi->getOperand(1);
 
-      if (ConstantInt *ci = dyn_cast<ConstantInt>(amount)) {
-        unsigned opcode = bi->getOpcode();
-        Instruction::BinaryOps op;
-        if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
-          // Shifting right by a constant amount is equivalent to dividing by
-          // 2^amount
-          op = Instruction::SDiv;
-        } else if (opcode == Instruction::Shl) {
-          // Shifting left by a constant amount is equivalent to dividing by
-          // 2^amount
-          op = Instruction::Mul;
+        if (ConstantInt *ci = dyn_cast<ConstantInt>(amount)) {
+          unsigned opcode = bi->getOpcode();
+          Instruction::BinaryOps op;
+          if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
+            // Shifting right by a constant amount is equivalent to dividing by
+            // 2^amount
+            op = Instruction::SDiv;
+          } else if (opcode == Instruction::Shl) {
+            // Shifting left by a constant amount is equivalent to dividing by
+            // 2^amount
+            op = Instruction::Mul;
+          }
+
+          auto lhs = bi->getOperand(0);
+          unsigned bitWidth = getOpBitWidth(lhs);
+          APInt rhsVal = APInt(bitWidth, "1", 10);
+          const APInt &value = ci->getValue();
+          rhsVal <<= value;
+          Value *rhs = ConstantInt::get(ci->getType(), rhsVal);
+          Instruction *replacement = BinaryOperator::Create(op, lhs, rhs, "");
+          instsFrom.push_back(&*I);
+          instsTo.push_back(replacement);
         }
-
-        auto lhs = bi->getOperand(0);
-        unsigned bitWidth = getOpBitWidth(lhs);
-        APInt rhsVal = APInt(bitWidth, "1", 10);
-        const APInt &value = ci->getValue();
-        rhsVal <<= value;
-        Value *rhs = ConstantInt::get(ci->getType(), rhsVal);
-        Instruction *replacement =
-            BinaryOperator::Create(op, lhs, rhs, "", (Instruction *)nullptr);
-        instsFrom.push_back(&*I);
-        instsTo.push_back(replacement);
       }
-    }
-    if (I->isBitwiseLogicOp()) {
-      // If the operation is a bit-wise `and' and the mask variable is constant,
-      // it may be possible to replace this operation with a remainder
-      // operation. If one argument has only ones, and they're only in the least
-      // significant bit, then the mask is 2^(number of ones) - 1. This is
-      // equivalent to the remainder when dividing by 2^(number of ones).
-      BinaryOperator *bi = cast<BinaryOperator>(&*I);
-      unsigned opcode = bi->getOpcode();
-      if (opcode == Instruction::And) {
-        Value *args[] = {bi->getOperand(0), bi->getOperand(1)};
-        int maskOperand = -1;
+      if (I->isBitwiseLogicOp()) {
+        // If the operation is a bit-wise `and' and the mask variable is
+        // constant, it may be possible to replace this operation with a
+        // remainder operation. If one argument has only ones, and they're only
+        // in the least significant bit, then the mask is 2^(number of ones)
+        // - 1. This is equivalent to the remainder when dividing by 2^(number
+        // of ones).
+        BinaryOperator *bi = cast<BinaryOperator>(&*I);
+        unsigned opcode = bi->getOpcode();
+        if (opcode == Instruction::And) {
+          Value *args[] = {bi->getOperand(0), bi->getOperand(1)};
+          int maskOperand = -1;
 
-        if (isConstantInt(args[0])) {
-          maskOperand = 0;
-        } else if (isConstantInt(args[1])) {
-          maskOperand = 1;
-        } else {
-          continue;
+          if (isConstantInt(args[0])) {
+            maskOperand = 0;
+          }
+          // Zvonimir: Right-side constants do not work well on SVCOMP
+          // } else if (isConstantInt(args[1])) {
+          //   maskOperand = 1;
+          // }
+
+          if (maskOperand == -1) {
+            Function *co = m.getFunction("__SMACK_and");
+            assert(co != NULL && "Function __SMACK_and should be present.");
+            std::vector<Value *> args;
+            args.push_back(bi->getOperand(0));
+            args.push_back(bi->getOperand(1));
+            instsFrom.push_back(&*I);
+            instsTo.push_back(CallInst::Create(co, args, ""));
+          } else {
+            auto lhs = args[1 - maskOperand];
+            Value *rhs = ConstantInt::get(
+                m.getContext(), *getConstantIntValue(args[maskOperand]) + 1);
+            Instruction *replacement =
+                BinaryOperator::Create(Instruction::URem, lhs, rhs, "");
+            instsFrom.push_back(&*I);
+            instsTo.push_back(replacement);
+          }
+        } else if (opcode == Instruction::Or) {
+          Function *co = m.getFunction("__SMACK_or");
+          assert(co != NULL && "Function __SMACK_or should be present.");
+          std::vector<Value *> args;
+          args.push_back(bi->getOperand(0));
+          args.push_back(bi->getOperand(1));
+          instsFrom.push_back(&*I);
+          instsTo.push_back(CallInst::Create(co, args, ""));
         }
-
-        auto lhs = args[1 - maskOperand];
-        Value *rhs = ConstantInt::get(
-            f.getContext(), *getConstantIntValue(args[maskOperand]) + 1);
-        Instruction *replacement = BinaryOperator::Create(
-            Instruction::URem, lhs, rhs, "", (Instruction *)nullptr);
-        instsFrom.push_back(&*I);
-        instsTo.push_back(replacement);
       }
     }
   }
