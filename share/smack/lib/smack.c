@@ -33,6 +33,11 @@
  *
  */
 
+void *__builtinx_va_arg(char *x) {
+  __SMACK_code("assume false;");
+  return 0;
+}
+
 void __VERIFIER_assume(int x) {
 #if !RUST_EXEC
   __SMACK_dummy(x);
