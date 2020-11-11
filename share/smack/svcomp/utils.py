@@ -14,6 +14,9 @@ def svcomp_frontend(input_file, args):
   # enable static LLVM unroll pass
   args.static_unroll = True
 
+  # attempt to rewrite bitwise ops into provided models
+  args.rewrite_bitwise_ops = True
+
   # Modeling of strings must be turned on by default
   args.strings = True
 

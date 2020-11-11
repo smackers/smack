@@ -391,6 +391,13 @@ def arguments():
         help='save (intermediate) Boogie code to FILE')
 
     translate_group.add_argument(
+        '--rewrite-bitwise-ops',
+        action="store_true",
+        default=False,
+        help='''attempts to provide models for bitwise operations
+                when integer encoding is used''')
+
+    translate_group.add_argument(
         '--no-memory-splitting',
         action="store_true",
         default=False,
@@ -716,6 +723,8 @@ def llvm_to_bpl(args):
         cmd += ['-bit-precise-pointers']
     if args.no_byte_access_inference:
         cmd += ['-no-byte-access-inference']
+    if args.rewrite_bitwise_ops:
+        cmd += ['-rewrite-bitwise-ops']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
     if args.check.contains_mem_safe_props():

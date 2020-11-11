@@ -1,6 +1,7 @@
 #include "smack.h"
 
 // @expect verified
+// @flag --rewrite-bitwise-ops
 
 int main(void) {
   unsigned char x = __VERIFIER_nondet_unsigned_char();
