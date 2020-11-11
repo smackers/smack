@@ -83,8 +83,8 @@ EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long);
 EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long, int);
 #endif // RUST_EXEC
 
-int __SMACK_and(int a, int b) {
-  int c = 0;
+long __SMACK_and64(long a, long b) {
+  long c = 0;
 
   __VERIFIER_assume(a != 0 && b != 0);
 
@@ -267,8 +267,10 @@ int __SMACK_and(int a, int b) {
   return c;
 }
 
-int __SMACK_or(int a, int b) {
-  int c = 0;
+int __SMACK_and32(int a, int b) { return (int)__SMACK_and64(a, b); }
+
+long __SMACK_or64(long a, long b) {
+  long c = 0;
 
   __VERIFIER_assume(a != 0 && b != 0);
 
@@ -450,6 +452,8 @@ int __SMACK_or(int a, int b) {
 
   return c;
 }
+
+int __SMACK_or32(int a, int b) { return (int)__SMACK_or64(a, b); }
 
 void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag);
