@@ -83,10 +83,186 @@ EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long);
 EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long, int);
 #endif // RUST_EXEC
 
-long __SMACK_and64(long a, long b) {
-  long c = 0;
+int __SMACK_and32(int a, int b) {
+  int c = 0;
 
   __VERIFIER_assume(a != 0 && b != 0);
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    if (b < 0) {
+      c += 1;
+    }
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
 
   c += c;
   if (a < 0) {
@@ -267,12 +443,188 @@ long __SMACK_and64(long a, long b) {
   return c;
 }
 
-int __SMACK_and32(int a, int b) { return (int)__SMACK_and64(a, b); }
+long __SMACK_and64(long a, long b) { return (long)__SMACK_and32(a, b); }
 
-long __SMACK_or64(long a, long b) {
-  long c = 0;
+int __SMACK_or32(int a, int b) {
+  int c = 0;
 
   __VERIFIER_assume(a != 0 && b != 0);
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
+
+  c += c;
+  if (a < 0) {
+    c += 1;
+  } else if (b < 0) {
+    c += 1;
+  }
+  a += a;
+  a = a % 2147483648;
+  b += b;
+  b = b % 2147483648;
 
   c += c;
   if (a < 0) {
@@ -453,7 +805,7 @@ long __SMACK_or64(long a, long b) {
   return c;
 }
 
-int __SMACK_or32(int a, int b) { return (int)__SMACK_or64(a, b); }
+long __SMACK_or64(long a, long b) { return (long)__SMACK_or32(a, b); }
 
 void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag);
