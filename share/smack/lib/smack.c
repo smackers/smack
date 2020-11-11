@@ -444,6 +444,8 @@ int __SMACK_and32(int a, int b) {
 }
 
 long __SMACK_and64(long a, long b) { return (long)__SMACK_and32(a, b); }
+short __SMACK_and16(short a, short b) { return (short)__SMACK_and32(a, b); }
+char __SMACK_and8(char a, char b) { return (char)__SMACK_and32(a, b); }
 
 int __SMACK_or32(int a, int b) {
   int c = 0;
@@ -806,6 +808,8 @@ int __SMACK_or32(int a, int b) {
 }
 
 long __SMACK_or64(long a, long b) { return (long)__SMACK_or32(a, b); }
+short __SMACK_or16(short a, short b) { return (short)__SMACK_or32(a, b); }
+char __SMACK_or8(char a, char b) { return (char)__SMACK_or32(a, b); }
 
 void __SMACK_check_overflow(int flag) {
   __SMACK_dummy(flag);

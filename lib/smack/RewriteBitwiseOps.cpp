@@ -105,6 +105,10 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
             Function *co;
             if (bitWidth == 64) {
               co = m.getFunction("__SMACK_and64");
+            } else if (bitWidth == 16) {
+              co = m.getFunction("__SMACK_and16");
+            } else if (bitWidth == 8) {
+              co = m.getFunction("__SMACK_and8");
             } else {
               co = m.getFunction("__SMACK_and32");
             }
@@ -128,6 +132,10 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
           Function *co;
           if (bitWidth == 64) {
             co = m.getFunction("__SMACK_or64");
+          } else if (bitWidth == 16) {
+            co = m.getFunction("__SMACK_or16");
+          } else if (bitWidth == 8) {
+            co = m.getFunction("__SMACK_or8");
           } else {
             co = m.getFunction("__SMACK_or32");
           }
