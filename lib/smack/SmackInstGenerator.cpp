@@ -1103,9 +1103,9 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           body = Expr::lit(0ull);
           for (unsigned i = 0; i < width; ++i) {
             auto quotient =
-                Expr::fn(indexedName("$sdiv", {type}), var,
+                Expr::fn(indexedName("$udiv", {type}), var,
                          Expr::lit((unsigned long long)(1ull << i)));
-            auto remainder = Expr::fn(indexedName("$srem", {type}), quotient,
+            auto remainder = Expr::fn(indexedName("$urem", {type}), quotient,
                                       Expr::lit(2ull));
             body = Expr::fn(indexedName("$add", {type}), remainder, body);
           }
