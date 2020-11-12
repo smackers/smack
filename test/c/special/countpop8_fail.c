@@ -1,6 +1,7 @@
 #include "smack.h"
 #include <stdint.h>
 
+// @flag --rewrite-bitwise-ops
 // @expect error
 
 uint8_t ctpop8(uint8_t x) {
