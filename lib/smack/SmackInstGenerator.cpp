@@ -898,15 +898,18 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   //(CallInst -> Void) -> [Flags] -> (CallInst -> Void)
   static const auto conditionalModel =
       [this](std::function<void(CallInst *)> modelGenFunc,
-             std::initializer_list<const cl::opt<bool> *> requiredFlags) {
+             std::initializer_list<const cl::opt<bool> *> requiredFlags,
+             SmackWarnings::FlagRelation rel =
+                 SmackWarnings::FlagRelation::And) {
         auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
-        return [this, unsetFlags, modelGenFunc](CallInst *ci) {
-          if (unsetFlags.empty())
+        auto satisfied = SmackWarnings::isSatisfied(requiredFlags, rel);
+        return [this, unsetFlags, modelGenFunc, satisfied, rel](CallInst *ci) {
+          if (satisfied)
             modelGenFunc(ci);
           else {
             SmackWarnings::warnUnsound(
                 "call to " + ci->getCalledFunction()->getName().str(),
-                unsetFlags, currBlock, ci);
+                unsetFlags, currBlock, ci, false, rel);
             emit(rep->call(ci->getCalledFunction(), *ci));
           }
         };
@@ -1080,33 +1083,37 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
       {&SmackOptions::BitPrecise});
 
   // Count the population of 1s in a bv
-  static const auto ctpop = [this](CallInst *ci) {
-    Value *arg = ci->getArgOperand(0);
-    auto width = arg->getType()->getIntegerBitWidth();
-    auto var = rep->expr(arg);
-    const Expr *body = nullptr;
-    auto type = rep->type(arg->getType());
+  static const auto ctpop = conditionalModel(
+      [this](CallInst *ci) {
+        Value *arg = ci->getArgOperand(0);
+        auto width = arg->getType()->getIntegerBitWidth();
+        auto var = rep->expr(arg);
+        const Expr *body = nullptr;
+        auto type = rep->type(arg->getType());
 
-    if (SmackOptions::BitPrecise) { // Bitvector mode
-      body = Expr::lit(0, width);
-      for (unsigned i = 0; i < width; ++i) {
-        body = Expr::fn(indexedName("$add", {type}),
-                        Expr::fn(indexedName("$zext", {"bv1", type}),
-                                 Expr::bvExtract(var, i + 1, i)),
-                        body);
-      }
-    } else { // Otherwise, try with the integer encoding
-      body = Expr::lit(0ull);
-      for (unsigned i = 0; i < width; ++i) {
-        auto quotient = Expr::fn(indexedName("$udiv", {type}), var,
-                                 Expr::lit((unsigned long long)(1ull << i)));
-        auto remainder =
-            Expr::fn(indexedName("$urem", {type}), quotient, Expr::lit(2ull));
-        body = Expr::fn(indexedName("$add", {type}), remainder, body);
-      }
-    }
-    emit(Stmt::assign(rep->expr(ci), body));
-  };
+        if (SmackOptions::BitPrecise) { // Bitvector mode
+          body = Expr::lit(0, width);
+          for (unsigned i = 0; i < width; ++i) {
+            body = Expr::fn(indexedName("$add", {type}),
+                            Expr::fn(indexedName("$zext", {"bv1", type}),
+                                     Expr::bvExtract(var, i + 1, i)),
+                            body);
+          }
+        } else { // Otherwise, try with the integer encoding
+          body = Expr::lit(0ull);
+          for (unsigned i = 0; i < width; ++i) {
+            auto quotient =
+                Expr::fn(indexedName("$udiv", {type}), var,
+                         Expr::lit((unsigned long long)(1ull << i)));
+            auto remainder = Expr::fn(indexedName("$urem", {type}), quotient,
+                                      Expr::lit(2ull));
+            body = Expr::fn(indexedName("$add", {type}), remainder, body);
+          }
+        }
+        emit(Stmt::assign(rep->expr(ci), body));
+      },
+      {&SmackOptions::BitPrecise, &SmackOptions::RewriteBitwiseOps},
+      SmackWarnings::FlagRelation::Or);
 
   static const auto assignBvExpr =
       [this](std::function<const Expr *(Value *)> exprGenFunc) {

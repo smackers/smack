@@ -36,35 +36,42 @@ SmackWarnings::getUnsetFlags(RequiredFlagsT requiredFlags) {
   return ret;
 }
 
+bool SmackWarnings::isSatisfied(RequiredFlagsT requiredFlags,
+                                FlagRelation rel) {
+  auto unsetFlags = getUnsetFlags(requiredFlags);
+  return rel == FlagRelation::And ? unsetFlags.empty()
+                                  : unsetFlags.size() < requiredFlags.size();
+}
+
 std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
-  std::string ret = "";
+  std::string ret = "{ ";
   for (auto f : flags) {
     if (f->ArgStr.str() == "bit-precise")
       ret += ("--integer-encoding=bit-vector ");
     else
       ret += ("--" + f->ArgStr.str() + " ");
   }
-  return ret;
+  return ret + "}";
 }
 
 void SmackWarnings::warnIfUnsound(std::string name,
                                   RequiredFlagsT requiredFlags,
                                   Block *currBlock, const Instruction *i,
-                                  bool ignore) {
-  auto unsetFlags = getUnsetFlags(requiredFlags);
-  if (unsetFlags.size())
-    warnUnsound(name, unsetFlags, currBlock, i, ignore);
+                                  bool ignore, FlagRelation rel) {
+  if (!isSatisfied(requiredFlags, rel))
+    warnUnsound(name, getUnsetFlags(requiredFlags), currBlock, i, ignore);
 }
 
 void SmackWarnings::warnUnsound(std::string unmodeledOpName, Block *currBlock,
-                                const Instruction *i, bool ignore) {
+                                const Instruction *i, bool ignore,
+                                FlagRelation rel) {
   warnUnsound("unmodeled operation " + unmodeledOpName, UnsetFlagsT(),
-              currBlock, i, ignore);
+              currBlock, i, ignore, rel);
 }
 
 void SmackWarnings::warnUnsound(std::string name, UnsetFlagsT unsetFlags,
                                 Block *currBlock, const Instruction *i,
-                                bool ignore) {
+                                bool ignore, FlagRelation rel) {
   if (!isSufficientWarningLevel(WarningLevel::Unsound))
     return;
   std::string beginning = std::string("llvm2bpl: ") + buildDebugInfo(i);
@@ -73,8 +80,9 @@ void SmackWarnings::warnUnsound(std::string name, UnsetFlagsT unsetFlags,
   if (currBlock)
     currBlock->addStmt(Stmt::comment(beginning + "warning: " + end));
   std::string hint = "";
-  if (unsetFlags.size())
-    hint = (" try adding flag(s): " + getFlagStr(unsetFlags));
+  if (!unsetFlags.empty())
+    hint = (" try adding " + ((rel == FlagRelation::And ? "all the " : "any ") +
+                              ("flag(s) in: " + getFlagStr(unsetFlags))));
   errs() << beginning;
   (SmackOptions::ColoredWarnings ? errs().changeColor(raw_ostream::MAGENTA)
                                  : errs())
@@ -84,14 +92,16 @@ void SmackWarnings::warnUnsound(std::string name, UnsetFlagsT unsetFlags,
 }
 
 void SmackWarnings::warnIfUnsound(std::string name, FlagT &requiredFlag,
-                                  Block *currBlock, const Instruction *i) {
-  warnIfUnsound(name, {&requiredFlag}, currBlock, i);
+                                  Block *currBlock, const Instruction *i,
+                                  FlagRelation rel) {
+  warnIfUnsound(name, {&requiredFlag}, currBlock, i, false, rel);
 }
 
 void SmackWarnings::warnIfUnsound(std::string name, FlagT &requiredFlag1,
                                   FlagT &requiredFlag2, Block *currBlock,
-                                  const Instruction *i) {
-  warnIfUnsound(name, {&requiredFlag1, &requiredFlag2}, currBlock, i);
+                                  const Instruction *i, FlagRelation rel) {
+  warnIfUnsound(name, {&requiredFlag1, &requiredFlag2}, currBlock, i, false,
+                rel);
 }
 
 void SmackWarnings::warnInfo(std::string info) {
