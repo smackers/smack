@@ -25,6 +25,7 @@ public:
   static const llvm::cl::opt<bool> SourceLocSymbols;
   static llvm::cl::opt<bool> BitPrecise;
   static const llvm::cl::opt<bool> BitPrecisePointers;
+  static const llvm::cl::opt<bool> RewriteBitwiseOps;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
   static const llvm::cl::opt<bool> NoByteAccessInference;
   static const llvm::cl::opt<bool> FloatEnabled;

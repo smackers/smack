@@ -196,7 +196,8 @@ int main(int argc, char **argv) {
 
   pass_manager.add(new smack::IntegerOverflowChecker());
 
-  if (!(smack::SmackOptions::BitPrecise ||
+  if (smack::SmackOptions::RewriteBitwiseOps &&
+      !(smack::SmackOptions::BitPrecise ||
         smack::SmackOptions::BitPrecisePointers)) {
     pass_manager.add(new smack::RewriteBitwiseOps());
   }
