@@ -48,6 +48,11 @@ const llvm::cl::opt<bool>
     SmackOptions::AddTiming("timing-annotations",
                             llvm::cl::desc("Add timing annotations."));
 
+const llvm::cl::opt<bool> SmackOptions::RewriteBitwiseOps(
+    "rewrite-bitwise-ops",
+    llvm::cl::desc(
+        "Provides models for bitwise operations in integer encoding."));
+
 const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
     "no-memory-splitting",
     llvm::cl::desc("Disable splitting memory into regions."));

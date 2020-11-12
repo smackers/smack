@@ -4,18 +4,17 @@
 #ifndef REWRITEBITWISEOPS_H
 #define REWRITEBITWISEOPS_H
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 namespace smack {
 
-class RewriteBitwiseOps : public llvm::FunctionPass {
+class RewriteBitwiseOps : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  RewriteBitwiseOps() : llvm::FunctionPass(ID) {}
+  RewriteBitwiseOps() : llvm::ModulePass(ID) {}
   virtual llvm::StringRef getPassName() const;
-  virtual bool runOnFunction(llvm::Function &f);
+  virtual bool runOnModule(llvm::Module &m);
 };
 } // namespace smack
 
