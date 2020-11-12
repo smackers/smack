@@ -1,7 +1,7 @@
 #include "smack.h"
 #include <stdint.h>
 
-// @expect verified
+// @expect error
 
 uint8_t ctpop8(uint8_t x) {
   uint8_t result = 0;
