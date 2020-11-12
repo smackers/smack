@@ -1078,19 +1078,32 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
       {&SmackOptions::BitPrecise});
 
   // Count the population of 1s in a bv
-  static const auto ctpop = [this](Value *arg) {
+  static const auto ctpop = [this](CallInst *ci) {
+    Value *arg = ci->getArgOperand(0);
     auto width = arg->getType()->getIntegerBitWidth();
     auto var = rep->expr(arg);
-    auto body = Expr::lit(0, width);
+    const Expr *body = nullptr;
     auto type = rep->type(arg->getType());
 
-    for (unsigned i = 0; i < width; ++i) {
-      body = Expr::fn(indexedName("$add", {type}),
-                      Expr::fn(indexedName("$zext", {"bv1", type}),
-                               Expr::bvExtract(var, i + 1, i)),
-                      body);
+    if (type.rfind("bv", 0) == 0) { // Bitvector mode
+      body = Expr::lit(0, width);
+      for (unsigned i = 0; i < width; ++i) {
+        body = Expr::fn(indexedName("$add", {type}),
+                        Expr::fn(indexedName("$zext", {"bv1", type}),
+                                 Expr::bvExtract(var, i + 1, i)),
+                        body);
+      }
+    } else {
+      body = Expr::lit(0ull);
+      for (unsigned i = 0; i < width; ++i) {
+        auto quotient = Expr::fn(indexedName("$udiv", {type}), var,
+                                 Expr::lit((unsigned long long)(1ull << i)));
+        auto remainder =
+            Expr::fn(indexedName("$urem", {type}), quotient, Expr::lit(2ull));
+        body = Expr::fn(indexedName("$add", {type}), remainder, body);
+      }
     }
-    return body;
+    emit(Stmt::assign(rep->expr(ci), body));
   };
 
   static const auto assignBvExpr =
@@ -1166,7 +1179,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           {llvm::Intrinsic::convert_from_fp16, f16UpCast},
           {llvm::Intrinsic::convert_to_fp16, f16DownCast},
           {llvm::Intrinsic::ctlz, ctlz},
-          {llvm::Intrinsic::ctpop, assignBvExpr(ctpop)},
+          {llvm::Intrinsic::ctpop, ctpop},
           {llvm::Intrinsic::cttz, cttz},
           {llvm::Intrinsic::dbg_declare, ignore},
           {llvm::Intrinsic::dbg_label, ignore},
