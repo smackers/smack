@@ -1087,7 +1087,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
     const Expr *body = nullptr;
     auto type = rep->type(arg->getType());
 
-    if (type.rfind("bv", 0) == 0) { // Bitvector mode
+    if (SmackOptions::BitPrecise) { // Bitvector mode
       body = Expr::lit(0, width);
       for (unsigned i = 0; i < width; ++i) {
         body = Expr::fn(indexedName("$add", {type}),
@@ -1095,7 +1095,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
                                  Expr::bvExtract(var, i + 1, i)),
                         body);
       }
-    } else {
+    } else { // Otherwise, try with the integer encoding
       body = Expr::lit(0ull);
       for (unsigned i = 0; i < width; ++i) {
         auto quotient = Expr::fn(indexedName("$udiv", {type}), var,
