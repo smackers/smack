@@ -41,5 +41,6 @@ int main(void) {
     cond = cond || ((x & 255) != x);
     cond = cond || ((255 & x) != x);
   }
-  __VERIFIER_assert(cond);
+  assert(cond);
+  return 0;
 }

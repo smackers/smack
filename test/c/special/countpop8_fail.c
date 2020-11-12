@@ -21,7 +21,7 @@ uint8_t ctpop8(uint8_t x) { return results[x]; }
 
 int main(void) {
   uint8_t x = __VERIFIER_nondet_unsigned_char();
-  __VERIFIER_assume(x > 251 && x <= 255);
+  assume(x > 251 && x <= 255);
   assert(__builtin_popcount(x) != ctpop8(x));
   return 0;
 }

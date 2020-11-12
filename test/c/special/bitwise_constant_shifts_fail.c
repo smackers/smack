@@ -39,5 +39,6 @@ int main(void) {
     // This may not be possible to handle correctly.
     cond = cond || ((x << 8) != x * 128 + x * 128);
   }
-  __VERIFIER_assert(cond);
+  assert(cond);
+  return 0;
 }
