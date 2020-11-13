@@ -926,7 +926,8 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
   if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
     isUnsigned = false;
   } else if (opcode == llvm::Instruction::UDiv ||
-             opcode == llvm::Instruction::URem) {
+             opcode == llvm::Instruction::URem ||
+             opcode == llvm::Instruction::Sub) {
     isUnsigned = true;
   }
 
@@ -939,8 +940,8 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
       return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
     }
   }
-  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned),
-                  expr(rhs, isUnsigned));
+  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned, opcode == llvm::Instruction::Sub),
+                  expr(rhs, isUnsigned, opcode == llvm::Instruction::Sub));
 }
 
 const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
