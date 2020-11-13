@@ -52,15 +52,12 @@ std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
  */
 Value *IntegerOverflowChecker::extendBitWidth(Value *v, int bits, bool isSigned,
                                               Instruction *i) {
-  if (SmackOptions::IntegerOverflow) {
-    if (isSigned)
-      return CastInst::CreateSExtOrBitCast(
-          v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
-    else
-      return CastInst::CreateZExtOrBitCast(
-          v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
-  } else
-    return v;
+  if (isSigned)
+    return CastInst::CreateSExtOrBitCast(
+        v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
+  else
+    return CastInst::CreateZExtOrBitCast(
+        v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
 }
 
 /*
@@ -70,24 +67,19 @@ Value *IntegerOverflowChecker::extendBitWidth(Value *v, int bits, bool isSigned,
 BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
                                                    bool isSigned,
                                                    Instruction *i) {
-  if (SmackOptions::IntegerOverflow) {
-    ConstantInt *max = ConstantInt::get(
-        IntegerType::get(i->getFunction()->getContext(), bits * 2),
-        getMax(bits, isSigned), 10);
-    ConstantInt *min = ConstantInt::get(
-        IntegerType::get(i->getFunction()->getContext(), bits * 2),
-        getMin(bits, isSigned), 10);
-    CmpInst::Predicate maxCmpPred =
-        (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-    CmpInst::Predicate minCmpPred =
-        (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
-    ICmpInst *gt = new ICmpInst(i, maxCmpPred, v, max, "");
-    ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
-    return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
-  } else {
-    ConstantInt *a = ConstantInt::getFalse(i->getFunction()->getContext());
-    return BinaryOperator::Create(Instruction::And, a, a, "", i);
-  }
+  ConstantInt *max = ConstantInt::get(
+      IntegerType::get(i->getFunction()->getContext(), bits * 2),
+      getMax(bits, isSigned), 10);
+  ConstantInt *min = ConstantInt::get(
+      IntegerType::get(i->getFunction()->getContext(), bits * 2),
+      getMin(bits, isSigned), 10);
+  CmpInst::Predicate maxCmpPred =
+      (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
+  CmpInst::Predicate minCmpPred =
+      (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+  ICmpInst *gt = new ICmpInst(i, maxCmpPred, v, max, "");
+  ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
+  return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
 }
 
 /*
@@ -95,11 +87,8 @@ BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
  */
 Value *IntegerOverflowChecker::createResult(Value *v, int bits,
                                             Instruction *i) {
-  if (SmackOptions::IntegerOverflow)
-    return CastInst::CreateTruncOrBitCast(
-        v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
-  else
-    return v;
+  return CastInst::CreateTruncOrBitCast(
+      v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
 }
 
 /*
@@ -196,7 +185,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                     ei->replaceAllUsesWith(r);
                   else if (ei->getIndices()[0] == 1) {
                     // flag part
-                    addBlockingAssume(va, flag, ei);
+                    // addBlockingAssume(va, flag, ei);
                     ei->replaceAllUsesWith(flag);
                   } else
                     llvm_unreachable("Unexpected extractvalue inst!");
