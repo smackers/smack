@@ -78,8 +78,7 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
           instsFrom.push_back(&*I);
           instsTo.push_back(replacement);
         }
-      }
-      if (I->isBitwiseLogicOp()) {
+      } else if (I->isBitwiseLogicOp()) {
         // If the operation is a bit-wise `and' and the mask variable is
         // constant, it may be possible to replace this operation with a
         // remainder operation. If one argument has only ones, and they're only
@@ -109,6 +108,8 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
               co = m.getFunction("__SMACK_and16");
             } else if (bitWidth == 8) {
               co = m.getFunction("__SMACK_and8");
+            } else if (bitWidth == 1) {
+              continue;
             } else {
               co = m.getFunction("__SMACK_and32");
             }
@@ -136,6 +137,8 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
             co = m.getFunction("__SMACK_or16");
           } else if (bitWidth == 8) {
             co = m.getFunction("__SMACK_or8");
+          } else if (bitWidth == 1) {
+            continue;
           } else {
             co = m.getFunction("__SMACK_or32");
           }
