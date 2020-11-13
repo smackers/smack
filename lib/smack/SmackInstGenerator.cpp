@@ -351,7 +351,7 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst &ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
   processInstruction(I);
-  if (rep->isBitwiseOp(&I))
+  if (rep->isBitwiseOp(&I) && I.getType()->getIntegerBitWidth() > 1)
     SmackWarnings::warnIfUnsound(std::string("bitwise operation ") +
                                      I.getOpcodeName(),
                                  SmackOptions::BitPrecise, currBlock, &I);
