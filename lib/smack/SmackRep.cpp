@@ -923,14 +923,6 @@ const Expr *SmackRep::bop(const llvm::BinaryOperator *BO) {
 const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
                           const llvm::Value *rhs, const llvm::Type *t,
                           bool isUnsigned) {
-  if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
-    isUnsigned = false;
-  } else if (opcode == llvm::Instruction::UDiv ||
-             opcode == llvm::Instruction::URem ||
-             opcode == llvm::Instruction::Sub) {
-    isUnsigned = true;
-  }
-
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (isFpArithOp(opcode)) {
     if (SmackOptions::FloatEnabled) {
@@ -940,9 +932,20 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
       return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
     }
   }
+
+  bool isUnsignedInst = false;
+  if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
+    isUnsigned = false;
+  } else if (opcode == llvm::Instruction::UDiv ||
+             opcode == llvm::Instruction::URem ||
+             opcode == llvm::Instruction::Sub) {
+    isUnsignedInst = true;
+    isUnsigned = true;
+  }
+
   return Expr::fn(opName(fn, {t}),
-                  expr(lhs, isUnsigned, opcode == llvm::Instruction::Sub),
-                  expr(rhs, isUnsigned, opcode == llvm::Instruction::Sub));
+                  expr(lhs, isUnsigned, isUnsignedInst),
+                  expr(rhs, isUnsigned, isUnsignedInst));
 }
 
 const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
