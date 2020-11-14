@@ -153,7 +153,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
 
       lastNode = start
       lastEdge = None
-      pat = re.compile(".*smack\.[c|h]$")
+      pat = re.compile(".*/smack/lib/.+\.[c|h]$")
       prevLineNo = -1
       prevColNo = -1
       callStack = [('main', '0')]
@@ -167,7 +167,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
           for vNode in vNodes:
             if vNode.attrib["id"] == newNode:
               addKey(vNode, "violation", "true")
-          attribs = {"startline":str(callStack[-1][1])}
+          attribs = {"startline":str(jsonViolation['line'])}
           addGraphEdge(tree, lastNode, newNode, attribs)
           break
         if not pat.match(jsonTrace["file"]):
