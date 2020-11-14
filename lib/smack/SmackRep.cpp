@@ -625,7 +625,7 @@ const Expr *SmackRep::integerLit(long long v, unsigned width) {
 }
 
 const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
-                          bool isCmpInst) {
+                          bool isUnsignedInst) {
   using namespace llvm;
 
   if (const ConstantInt *ci = llvm::dyn_cast<const ConstantInt>(v)) {
@@ -638,7 +638,7 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
     // gets translated into i + (-1), and so in that context it should
     // be a signed integer.
     bool neg = width > 1 &&
-               (isUnsigned ? (isCmpInst ? false : API.getSExtValue() == -1)
+               (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
                            : ci->isNegative());
     std::string str = (neg ? API.abs() : API).toString(10, false);
     const Expr *e =
@@ -794,7 +794,7 @@ const Expr *SmackRep::ptrArith(
 }
 
 const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
-                           bool isCmpInst) {
+                           bool isUnsignedInst) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
@@ -837,7 +837,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
       }
 
     } else if (const ConstantInt *ci = dyn_cast<const ConstantInt>(constant)) {
-      return lit(ci, isConstIntUnsigned, isCmpInst);
+      return lit(ci, isConstIntUnsigned, isUnsignedInst);
 
     } else if (const ConstantFP *cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -923,13 +923,6 @@ const Expr *SmackRep::bop(const llvm::BinaryOperator *BO) {
 const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
                           const llvm::Value *rhs, const llvm::Type *t,
                           bool isUnsigned) {
-  if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
-    isUnsigned = false;
-  } else if (opcode == llvm::Instruction::UDiv ||
-             opcode == llvm::Instruction::URem) {
-    isUnsigned = true;
-  }
-
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (isFpArithOp(opcode)) {
     if (SmackOptions::FloatEnabled) {
@@ -939,8 +932,19 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
       return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
     }
   }
-  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned),
-                  expr(rhs, isUnsigned));
+
+  bool isUnsignedInst = false;
+  if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
+    isUnsigned = false;
+  } else if (opcode == llvm::Instruction::UDiv ||
+             opcode == llvm::Instruction::URem ||
+             opcode == llvm::Instruction::Sub) {
+    isUnsignedInst = true;
+    isUnsigned = true;
+  }
+
+  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned, isUnsignedInst),
+                  expr(rhs, isUnsigned, isUnsignedInst));
 }
 
 const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
@@ -990,7 +994,9 @@ const Expr *SmackRep::select(const llvm::ConstantExpr *CE) {
 const Expr *SmackRep::select(const llvm::Value *condVal,
                              const llvm::Value *trueVal,
                              const llvm::Value *falseVal) {
-  const Expr *c = expr(condVal), *v1 = expr(trueVal), *v2 = expr(falseVal);
+  const Expr *c = expr(condVal);
+  const Expr *v1 = expr(trueVal, true, true);
+  const Expr *v2 = expr(falseVal, true, true);
 
   assert(!condVal->getType()->isVectorTy() &&
          "Vector condition is not supported.");

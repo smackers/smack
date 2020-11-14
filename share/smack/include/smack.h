@@ -21,6 +21,7 @@ extern "C" {
 #define __builtin_va_start __builtinx_va_start
 #define __builtin_va_arg(ap, t) __builtinx_va_arg(ap)
 #define __builtin_object_size __builtinx_object_size
+#define __builtin_expect __builtinx_expect
 
 // For handling of va macros
 void __builtinx_va_start(char *, char *);
