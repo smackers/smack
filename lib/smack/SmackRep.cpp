@@ -940,7 +940,8 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
       return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
     }
   }
-  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned, opcode == llvm::Instruction::Sub),
+  return Expr::fn(opName(fn, {t}),
+                  expr(lhs, isUnsigned, opcode == llvm::Instruction::Sub),
                   expr(rhs, isUnsigned, opcode == llvm::Instruction::Sub));
 }
 
@@ -991,7 +992,9 @@ const Expr *SmackRep::select(const llvm::ConstantExpr *CE) {
 const Expr *SmackRep::select(const llvm::Value *condVal,
                              const llvm::Value *trueVal,
                              const llvm::Value *falseVal) {
-  const Expr *c = expr(condVal), *v1 = expr(trueVal), *v2 = expr(falseVal);
+  const Expr *c = expr(condVal);
+  const Expr *v1 = expr(trueVal, true, true);
+  const Expr *v2 = expr(falseVal, true, true);
 
   assert(!condVal->getType()->isVectorTy() &&
          "Vector condition is not supported.");
