@@ -137,8 +137,8 @@ def smackdOutput(corralOutput):
     traceP = re.compile(
         ('('
          + FILENAME
-         + r')\((\d+),(\d+)\): Trace: Thread=(\d+)(\((.*)[\);])?$'))
-    errorP = re.compile('(' + FILENAME + r')\((\d+),(\d+)\): (error .*)$')
+         + r')\((\d+),(\d+)\): Trace: Thread=(\d+)\s+\((.*(;\n)?.*)\)'))
+    errorP = re.compile('(' + FILENAME + r')\((\d+),(\d+)\): (error .*)')
 
     passedMatch = re.search('Program has no bugs', corralOutput)
     if passedMatch:
@@ -149,7 +149,23 @@ def smackdOutput(corralOutput):
 
     else:
         traces = []
-        filename = ''
+        raw_data = re.findall(traceP, corralOutput)
+        for t in raw_data:
+            file_name = t[0]
+            line_num = t[1]
+            col_num = t[2]
+            thread_id = t[3]
+            description = t[4]
+            for token in description.split(','):
+                traces.append(
+                    {'threadid': thread_id,
+                     'file': file_name,
+                     'line': line_num,
+                     'column': col_num,
+                     'description': token,
+                     'assumption': transform(token) if '=' in token else ''})
+
+        r"""filename = ''
         lineno = 0
         colno = 0
         threadid = 0
@@ -181,7 +197,13 @@ def smackdOutput(corralOutput):
                     filename = str(errorMatch.group(1))
                     lineno = int(errorMatch.group(2))
                     colno = int(errorMatch.group(3))
-                    desc = str(errorMatch.group(4))
+                    desc = str(errorMatch.group(4))"""
+        errorMatch = errorP.search(corralOutput)
+        assert(errorMatch)
+        filename = str(errorMatch.group(1))
+        lineno = int(errorMatch.group(2))
+        colno = int(errorMatch.group(3))
+        desc = str(errorMatch.group(4))
 
         failsAt = {
             'file': filename,

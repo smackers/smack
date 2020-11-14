@@ -177,7 +177,7 @@ def write_error_file(args, status, verifier_output):
   from smack.top import VResult
   from smack.errtrace import smackdOutput
   #return
-  if status is VResult.VERIFIED or status is VResult.UNKNOWN:
+  if status is VResult.UNKNOWN:
     return
   hasBug = (status is not VResult.VERIFIED)
   #if not hasBug:
