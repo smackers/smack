@@ -625,7 +625,7 @@ const Expr *SmackRep::integerLit(long long v, unsigned width) {
 }
 
 const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
-                          bool isCmpInst) {
+                          bool isUnsignedInst) {
   using namespace llvm;
 
   if (const ConstantInt *ci = llvm::dyn_cast<const ConstantInt>(v)) {
@@ -638,7 +638,7 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
     // gets translated into i + (-1), and so in that context it should
     // be a signed integer.
     bool neg = width > 1 &&
-               (isUnsigned ? (isCmpInst ? false : API.getSExtValue() == -1)
+               (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
                            : ci->isNegative());
     std::string str = (neg ? API.abs() : API).toString(10, false);
     const Expr *e =
@@ -794,7 +794,7 @@ const Expr *SmackRep::ptrArith(
 }
 
 const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
-                           bool isCmpInst) {
+                           bool isUnsignedInst) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
@@ -837,7 +837,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
       }
 
     } else if (const ConstantInt *ci = dyn_cast<const ConstantInt>(constant)) {
-      return lit(ci, isConstIntUnsigned, isCmpInst);
+      return lit(ci, isConstIntUnsigned, isUnsignedInst);
 
     } else if (const ConstantFP *cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -943,8 +943,7 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
     isUnsigned = true;
   }
 
-  return Expr::fn(opName(fn, {t}),
-                  expr(lhs, isUnsigned, isUnsignedInst),
+  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned, isUnsignedInst),
                   expr(rhs, isUnsigned, isUnsignedInst));
 }
 
