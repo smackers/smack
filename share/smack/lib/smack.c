@@ -38,7 +38,7 @@ void *__builtinx_va_arg(char *x) {
   return 0;
 }
 
-long __builtin_expect(long exp, long c) { return exp; }
+long __builtinx_expect(long exp, long c) { return exp; }
 
 void __VERIFIER_assume(int x) {
 #if !RUST_EXEC
