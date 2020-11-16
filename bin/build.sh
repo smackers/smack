@@ -63,7 +63,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
+DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
 
 shopt -s extglob
 
