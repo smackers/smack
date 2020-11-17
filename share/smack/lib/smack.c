@@ -88,8 +88,6 @@ EMPTY_NONDET_DEFN(__SMACK_nondet, unsigned, long, long, int);
 int __SMACK_and32(int a, int b) {
   int c = 0;
 
-  __VERIFIER_assume(a != 0 && b != 0);
-
   c += c;
   if (a < 0) {
     if (b < 0) {
@@ -451,8 +449,6 @@ char __SMACK_and8(char a, char b) { return (char)__SMACK_and32(a, b); }
 
 int __SMACK_or32(int a, int b) {
   int c = 0;
-
-  __VERIFIER_assume(a != 0 && b != 0);
 
   c += c;
   if (a < 0) {
