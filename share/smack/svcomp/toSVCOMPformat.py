@@ -30,6 +30,7 @@ def addKeyDefs(root):
     #keys are [attr.name, attr.type, for, id, hasDefault, defaultVal]
     keys.append(["assumption",         "string",  "edge",  "assumption",     False])
     keys.append(["assumption.scope",         "string",  "edge",  "assumption.scope",     False])
+    keys.append(["assumption.resultfunction",         "string",  "edge",  "assumption.resultfunction",     False])
     keys.append(["sourcecode",         "string",  "edge",  "sourcecode",     False])
     keys.append(["witness-type", "string",  "graph", "witness-type", False])
     keys.append(["sourcecodeLanguage", "string",  "graph", "sourcecodelang", False])
@@ -174,12 +175,18 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
           desc = jsonTrace["description"]
           formattedAssign = formatAssign(desc)
           # Make sure it is not return value
-          if formattedAssign and not ":" in formattedAssign:
+          if formattedAssign and formattedAssign.startswith('smack:ext:__VERIFIER_nondet'):
+            tokens = formattedAssign.split('==')
+            nondet_func = tokens[0].strip()[len('smack:ext:'):]
+            val = tokens[1].strip()
+            new_assumption = '\\result == %s;' % val
           # Create new node and edge
             newNode = addGraphNode(tree)
             attribs = {"startline":str(jsonTrace["line"])}
-            attribs["assumption"] = formattedAssign + ";"
-            attribs["assumption.scope"] = callStack[-1][0]
+            attribs["assumption"] = new_assumption
+            attribs['assumption.resultfunction'] = nondet_func
+            scope_func = callStack[-1][0]
+            attribs["assumption.scope"] = scope_func.split('.')[0] if '.' in scope_func else scope_func
             newEdge = addGraphEdge(tree, lastNode, newNode, attribs)
             prevLineNo = jsonTrace["line"]
             prevColNo = jsonTrace["column"]
