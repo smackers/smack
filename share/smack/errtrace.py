@@ -130,23 +130,30 @@ def error_trace(verifier_output, args):
     return trace
 
 
-def smackdOutput(corralOutput):
+def smackdOutput(result, corralOutput):
     '''Convert error traces into JSON format'''
+
+    from .top import VResult
+
+    if not (result is VResult.VERIFIED or result in VResult.ERROR):
+        return
 
     FILENAME = r'[\w#$~%.\/-]+'
     traceP = re.compile(
         ('('
          + FILENAME
          + r')\((\d+),(\d+)\): Trace: Thread=(\d+)\s+\((.*(;\n)?.*)\)'))
-    errorP = re.compile('(' + FILENAME + r')\((\d+),(\d+)\): (error .*)')
+    # test1.i(223,16): Trace: Thread=1  (ASSERTION FAILS assert false;
+    errorP = re.compile(
+        ('('
+         + FILENAME
+         + r')\((\d+),(\d+)\): Trace: Thread=\d+\s+\(ASSERTION FAILS'))
 
-    passedMatch = re.search('Program has no bugs', corralOutput)
-    if passedMatch:
+    if result is VResult.VERIFIED:
         json_data = {
             'verifier': 'corral',
             'passed?': True
         }
-
     else:
         traces = []
         raw_data = re.findall(traceP, corralOutput)
@@ -199,17 +206,16 @@ def smackdOutput(corralOutput):
                     colno = int(errorMatch.group(3))
                     desc = str(errorMatch.group(4))"""
         errorMatch = errorP.search(corralOutput)
-        assert(errorMatch)
+        assert errorMatch, 'Failed to obtain assertion failure info!'
         filename = str(errorMatch.group(1))
         lineno = int(errorMatch.group(2))
         colno = int(errorMatch.group(3))
-        desc = str(errorMatch.group(4))
 
         failsAt = {
             'file': filename,
             'line': lineno,
             'column': colno,
-            'description': desc}
+            'description': result.description()}
 
         json_data = {
             'verifier': 'corral',
