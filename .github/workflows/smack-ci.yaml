@@ -1,0 +1,53 @@
+name: SMACK CI
+
+on: [push]
+
+jobs:
+  check-regressions:
+    env:
+      COMPILER_NAME: clang
+      COMPILER: clang++
+      CXX: clang++
+      CC: clang
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        travis_env:
+          [
+            "--exhaustive --folder=c/basic",
+            "--exhaustive --folder=c/data"
+          ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        env: TRAVIS_ENV: ${{matrix.travis_env}}
+
+      # before_install:
+      - run: sudo rm -rf /usr/local/clang-7.0.0
+      # install
+      - run: source ./bin/versions
+      - run: wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      - run: sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_SHORT_VERSION} main"
+      - run: wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+      - run: sudo dpkg -i packages-microsoft-prod.deb
+      - run: sudo apt-get install -y apt-transport-https
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
+      - run: sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
+      - run: sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
+      - run: sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
+      - run: sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 20
+      - run: sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 20
+      - run: sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 20
+      # before_script:
+      - run: python3 --version
+      - run: $CXX --version
+      - run: $CC --version
+      - run: clang --version
+      - run: clang++ --version
+      - run: llvm-link --version
+      - run: llvm-config --version
+      # script:
+      - run: ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
+      - run: flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
+      - run: INSTALL_RUST=1 ./bin/build.sh
