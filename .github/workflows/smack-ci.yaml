@@ -28,7 +28,7 @@ jobs:
       # install
       - run: cat ./bin/versions | sed 's/\"//'g >> $GITHUB_ENV
       - run: wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-      - run: sudo add-apt-repository "deb http://apt.llvm.org/focal/llvm-toolchain-focal-${LLVM_SHORT_VERSION} main"
+      - run: sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_SHORT_VERSION} main"
       - run: wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
       - run: sudo dpkg -i packages-microsoft-prod.deb
       - run: sudo apt-get install -y apt-transport-https
