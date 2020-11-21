@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        env: TRAVIS_ENV: ${{matrix.travis_env}}
+        env: TRAVIS_ENV: ${{ matrix.travis_env }}
 
       # before_install:
       - run: sudo rm -rf /usr/local/clang-7.0.0
