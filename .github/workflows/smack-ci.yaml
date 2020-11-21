@@ -23,6 +23,8 @@ jobs:
         env:
           TRAVIS_ENV: ${{ matrix.travis_env }}
 
+      # add-ons
+      - run: sudo apt-get install -y cmake python3-yaml python3-psutils python3-pip unzip ninja-build libboost-all-dev 
       # before_install:
       - run: sudo rm -rf /usr/local/clang-7.0.0
       # install
@@ -34,6 +36,7 @@ jobs:
       - run: sudo apt-get install -y apt-transport-https
       - run: sudo apt-get update
       - run: sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
+      - run: sudo pip3 install -U flake8
       - run: sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
       - run: sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
       - run: sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
