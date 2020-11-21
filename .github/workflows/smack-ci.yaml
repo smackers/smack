@@ -24,7 +24,7 @@ jobs:
           TRAVIS_ENV: ${{ matrix.travis_env }}
 
       # add-ons
-      - run: sudo apt-get install -y cmake python3-yaml python3-psutils python3-pip unzip ninja-build libboost-all-dev 
+      - run: sudo apt-get install -y cmake python3-yaml python3-psutil python3-pip unzip ninja-build libboost-all-dev 
       # before_install:
       - run: sudo rm -rf /usr/local/clang-7.0.0
       # install
