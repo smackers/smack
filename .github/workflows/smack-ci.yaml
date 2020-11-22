@@ -44,7 +44,7 @@ jobs:
           #]
     steps:
       - uses: actions/checkout@v2
-      - env:
+        env:
           TRAVIS_ENV: ${{ matrix.travis_env }}
 
       ## add-ons
