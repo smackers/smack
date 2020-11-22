@@ -1366,6 +1366,8 @@ void __SMACK_decls(void) {
     "    assume (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && "
     "$slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
     "    $Alloc[p] := true;\n"
+    "  } else {\n"
+    "    assume $sle.ref.bool(p, $0.ref);\n"
     "  }\n"
     "}\n");
 
@@ -1373,7 +1375,7 @@ void __SMACK_decls(void) {
     "modifies $Alloc, $allocatedCounter;\n"
     "{\n"
     "  call corral_atomic_begin();\n"
-    "  if ($ne.ref.bool(p, $0.ref)) {\n"
+    "  if ($sgt.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
     "    assert {:valid_free} $Alloc[p];\n"
     "    assert {:valid_free} $slt.ref.bool($0.ref, p);\n"
@@ -1498,6 +1500,8 @@ void __SMACK_decls(void) {
     "    assume $sge.ref.bool($sub.ref($CurrAddr, n), p);\n"
     "    assume $sgt.ref.bool($CurrAddr, $0.ref) && $slt.ref.bool($CurrAddr, "
     "$MALLOC_TOP);\n"
+    "  } else {\n"
+    "    assume $sle.ref.bool(p, $0.ref);\n"
     "  }\n"
     "}\n");
 
