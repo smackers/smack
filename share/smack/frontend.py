@@ -367,7 +367,7 @@ def rust_frontend(input_file, args):
 def default_build_libs(args):
     """Generate LLVM bitcodes for SMACK libraries."""
     bitcodes = []
-    libs = ['smack.c', 'stdlib.c', 'errno.c']
+    libs = ['smack.c', 'stdlib.c', 'errno.c', 'smack-rust.c']
 
     if args.pthread:
         libs += ['pthread.c']
