@@ -95,12 +95,6 @@ class VResult(Flag):
             raise RuntimeError('No message associated with result: %s' % self)
 
 
-
-
-
-
-
-
 class PropertyAction(argparse.Action):
     '''
     This class defines the argparse action when the arguments of the `--check`
