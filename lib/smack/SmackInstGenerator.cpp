@@ -26,7 +26,7 @@ namespace smack {
 using llvm::errs;
 using namespace llvm;
 
-const bool SHOW_ORIG = false
+const bool SHOW_ORIG = false;
 
 #define ORIG(ins)                                                              \
   if (SHOW_ORIG)                                                               \
