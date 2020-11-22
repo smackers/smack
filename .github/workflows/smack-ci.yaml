@@ -46,6 +46,7 @@ jobs:
       - uses: actions/checkout@v2
         env:
           TRAVIS_ENV: ${{ matrix.travis_env }}
+          WHAT: "what"
 
       ## add-ons
       #- run: sudo apt-get install -y cmake python3-yaml python3-psutil python3-pip unzip ninja-build libboost-all-dev 
@@ -76,6 +77,7 @@ jobs:
       #- run: llvm-link --version
       #- run: llvm-config --version
       - run: echo $TRAVIS_ENV
+      - run: echo $WHAT
       ## script:
       #- run: ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
       #- run: flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
