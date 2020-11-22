@@ -15,7 +15,29 @@ jobs:
         travis_env:
           [
             "--exhaustive --folder=c/basic",
-            "--exhaustive --folder=c/data"
+            "--exhaustive --folder=c/data",
+            "--exhaustive --folder=c/ntdrivers-simplified",
+            "--exhaustive --folder=c/ntdrivers",
+            "--exhaustive --folder=c/bits",
+            "--exhaustive --folder=c/float",
+            "--exhaustive --folder=c/locks",
+            "--exhaustive --folder=c/contracts",
+            "--exhaustive --folder=c/simd",
+            "--exhaustive --folder=c/memory-safety",
+            "--exhaustive --folder=c/pthread",
+            "--exhaustive --folder=c/pthread_extras",
+            "--exhaustive --folder=c/strings",
+            "--exhaustive --folder=c/special",
+            "--exhaustive --folder=rust/array --languages=rust",
+            "--exhaustive --folder=rust/basic --languages=rust",
+            "--exhaustive --folder=rust/box --languages=rust",
+            "--exhaustive --folder=rust/functions --languages=rust",
+            "--exhaustive --folder=rust/generics --languages=rust",
+            "--exhaustive --folder=rust/loops --languages=rust",
+            "--exhaustive --folder=rust/panic --languages=rust",
+            "--exhaustive --folder=rust/recursion --languages=rust",
+            "--exhaustive --folder=rust/structures --languages=rust",
+            "--exhaustive --folder=rust/vector --languages=rust"
           ]
     steps:
       - name: Checkout code
