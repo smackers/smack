@@ -1,6 +1,6 @@
 name: SMACK CI
 
-on: [push]
+on: [push, pull-request]
 
 jobs:
   check-regressions:
