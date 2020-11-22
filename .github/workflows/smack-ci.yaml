@@ -12,74 +12,76 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        include:
-          - travis_env: "--exhaustive --folder=c/basic"
-          - travis_env: "--exhaustive --folder=c/data"
-        #travis_env:
-          #[
-          #  "--exhaustive --folder=c/basic",
-          #  "--exhaustive --folder=c/data",
-          #  "--exhaustive --folder=c/ntdrivers-simplified",
-          #  "--exhaustive --folder=c/ntdrivers",
-          #  "--exhaustive --folder=c/bits",
-          #  "--exhaustive --folder=c/float",
-          #  "--exhaustive --folder=c/locks",
-          #  "--exhaustive --folder=c/contracts",
-          #  "--exhaustive --folder=c/simd",
-          #  "--exhaustive --folder=c/memory-safety",
-          #  "--exhaustive --folder=c/pthread",
-          #  "--exhaustive --folder=c/pthread_extras",
-          #  "--exhaustive --folder=c/strings",
-          #  "--exhaustive --folder=c/special",
-          #  "--exhaustive --folder=rust/array --languages=rust",
-          #  "--exhaustive --folder=rust/basic --languages=rust",
-          #  "--exhaustive --folder=rust/box --languages=rust",
-          #  "--exhaustive --folder=rust/functions --languages=rust",
-          #  "--exhaustive --folder=rust/generics --languages=rust",
-          #  "--exhaustive --folder=rust/loops --languages=rust",
-          #  "--exhaustive --folder=rust/panic --languages=rust",
-          #  "--exhaustive --folder=rust/recursion --languages=rust",
-          #  "--exhaustive --folder=rust/structures --languages=rust",
-          #  "--exhaustive --folder=rust/vector --languages=rust"
-          #]
+        travis_env:
+          [
+            "--exhaustive --folder=c/basic",
+            "--exhaustive --folder=c/data",
+            "--exhaustive --folder=c/ntdrivers-simplified",
+            "--exhaustive --folder=c/ntdrivers",
+            "--exhaustive --folder=c/bits",
+            "--exhaustive --folder=c/float",
+            "--exhaustive --folder=c/locks",
+            "--exhaustive --folder=c/contracts",
+            "--exhaustive --folder=c/simd",
+            "--exhaustive --folder=c/memory-safety",
+            "--exhaustive --folder=c/pthread",
+            "--exhaustive --folder=c/pthread_extras",
+            "--exhaustive --folder=c/strings",
+            "--exhaustive --folder=c/special",
+            "--exhaustive --folder=rust/array --languages=rust",
+            "--exhaustive --folder=rust/basic --languages=rust",
+            "--exhaustive --folder=rust/box --languages=rust",
+            "--exhaustive --folder=rust/functions --languages=rust",
+            "--exhaustive --folder=rust/generics --languages=rust",
+            "--exhaustive --folder=rust/loops --languages=rust",
+            "--exhaustive --folder=rust/panic --languages=rust",
+            "--exhaustive --folder=rust/recursion --languages=rust",
+            "--exhaustive --folder=rust/structures --languages=rust",
+            "--exhaustive --folder=rust/vector --languages=rust"
+          ]
     steps:
       - uses: actions/checkout@v2
 
-      # add-ons
-      - run: sudo apt-get install -y cmake python3-yaml python3-psutil python3-pip unzip ninja-build libboost-all-dev 
-      # before_install:
-      - run: sudo rm -rf /usr/local/clang-7.0.0
-      # install
-      - run: cat ./bin/versions | sed 's/\"//'g >> $GITHUB_ENV
-      - run: wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-      - run: sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_SHORT_VERSION} main"
-      - run: wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-      - run: sudo dpkg -i packages-microsoft-prod.deb
-      - run: sudo apt-get install -y apt-transport-https
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
-      - run: sudo pip3 install -U flake8
-      - run: sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
-      - run: sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
-      - run: sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
-      - run: sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 20
-      - run: sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 20
-      - run: sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 20
-      # before_script:
-      - run: python3 --version
-      - run: $CXX --version
-      - run: $CC --version
-      - run: clang --version
-      - run: clang++ --version
-      - run: llvm-link --version
-      - run: llvm-config --version
-      
-      - name: test
-      ## script:
-        env:
-          TRAVIS_ENV: ${{ matrix.travis_env }}
+      - name: install dependencies
         run: |
-          echo $TRAVIS_ENV 
+          # add-ons
+          sudo apt-get install -y cmake python3-yaml python3-psutil python3-pip unzip ninja-build libboost-all-dev 
+          # before_install:
+          sudo rm -rf /usr/local/clang-7.0.0
+          # install
+          cat ./bin/versions | sed 's/\"//'g >> $GITHUB_ENV
+          wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_SHORT_VERSION} main"
+          wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get install -y apt-transport-https
+          sudo apt-get update
+          sudo apt-get install -y clang-${LLVM_SHORT_VERSION} clang-format-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev dotnet-sdk-3.1
+          sudo pip3 install -U flake8
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 20
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 20
+          sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 20
+          sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 20
+          sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 20
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 20
+
+      - name: version check
+        run: |
+          # before_script:
+          python3 --version
+          $CXX --version
+          $CC --version
+          clang --version
+          clang++ --version
+          llvm-link --version
+          llvm-config --version
+
+      - name: format checking
+        run: |
           ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
           flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
-          INSTALL_RUST=1 ./bin/build.sh
+      
+      - name: compile and test
+        env:
+          TRAVIS_ENV: ${{ matrix.travis_env }}
+        run: INSTALL_RUST=1 ./bin/build.sh
