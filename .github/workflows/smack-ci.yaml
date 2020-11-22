@@ -73,6 +73,7 @@ jobs:
       - run: clang++ --version
       - run: llvm-link --version
       - run: llvm-config --version
+      - run: echo $TRAVIS_ENV
       # script:
       - run: ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
       - run: flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
