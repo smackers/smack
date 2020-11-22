@@ -76,10 +76,10 @@ jobs:
       
       - name: test
       ## script:
-      #- run: ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
-      #- run: flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
-      #- run: INSTALL_RUST=1 ./bin/build.sh
         env:
           TRAVIS_ENV: ${{ matrix.travis_env }}
-          WHAT: "what"
-        run: echo $TRAVIS_ENV
+        run: |
+          echo $TRAVIS_ENV 
+          ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
+          flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
+          INSTALL_RUST=1 ./bin/build.sh
