@@ -979,7 +979,7 @@ short __SMACK_and16(short a, short b) {
   return c;
 }
 
-char __SMACK_and8(char a, char b) { 
+char __SMACK_and8(char a, char b) {
   char c = 0;
 
   c += c;
