@@ -43,6 +43,8 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: install dependencies
+        env:
+          GITHUB_ACTIONS: true
         run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=1 ./bin/build.sh
 
       - run: python3 --version
