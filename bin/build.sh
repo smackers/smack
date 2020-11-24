@@ -466,7 +466,7 @@ if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip
   sudo pip3 install -U flake8
   sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 30
-  if [ "${GITHUB_ACTIONS}" -eq "true" ] ; then
+  if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
   fi
 fi
