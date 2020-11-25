@@ -33,6 +33,7 @@
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
+#include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/RewriteBitwiseOps.h"
@@ -158,7 +159,21 @@ int main(int argc, char **argv) {
 
   // This runs before DSA because some Rust functions cause problems.
   pass_manager.add(new smack::RustFixes);
-  pass_manager.add(llvm::createDeadCodeEliminationPass());
+
+  if (!Modular) {
+    auto PreserveKeyGlobals = [=](const llvm::GlobalValue &GV) {
+      std::string name = GV.getName();
+      return smack::SmackOptions::isEntryPoint(name) ||
+             smack::Naming::isSmackName(name) ||
+             name.find("__VERIFIER_assume") != std::string::npos;
+    };
+    pass_manager.add(llvm::createInternalizePass(PreserveKeyGlobals));
+    pass_manager.add(llvm::createGlobalDCEPass());
+    pass_manager.add(llvm::createDeadCodeEliminationPass());
+    pass_manager.add(llvm::createGlobalDCEPass());
+    pass_manager.add(llvm::createDeadCodeEliminationPass());
+    pass_manager.add(new smack::RemoveDeadDefs());
+  }
 
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
