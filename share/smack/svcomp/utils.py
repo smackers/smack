@@ -109,13 +109,11 @@ def verify_bpl_svcomp(args):
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 13
-  staticLoopBound = 64
   time_limit = 880
 
   command = list(corral_command)
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
-  command += ["/maxStaticLoopBound:%d" % staticLoopBound]
   command += ["/recursionBound:65536"]
   command += ["/irreducibleLoopUnroll:12"]
   command += ["/trackAllVars"]
