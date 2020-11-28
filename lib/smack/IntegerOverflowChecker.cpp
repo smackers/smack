@@ -52,15 +52,12 @@ std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
  */
 Value *IntegerOverflowChecker::extendBitWidth(Value *v, int bits, bool isSigned,
                                               Instruction *i) {
-  if (SmackOptions::IntegerOverflow) {
-    if (isSigned)
-      return CastInst::CreateSExtOrBitCast(
-          v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
-    else
-      return CastInst::CreateZExtOrBitCast(
-          v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
-  } else
-    return v;
+  if (isSigned)
+    return CastInst::CreateSExtOrBitCast(
+        v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
+  else
+    return CastInst::CreateZExtOrBitCast(
+        v, IntegerType::get(i->getFunction()->getContext(), bits * 2), "", i);
 }
 
 /*
@@ -70,24 +67,19 @@ Value *IntegerOverflowChecker::extendBitWidth(Value *v, int bits, bool isSigned,
 BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
                                                    bool isSigned,
                                                    Instruction *i) {
-  if (SmackOptions::IntegerOverflow) {
-    ConstantInt *max = ConstantInt::get(
-        IntegerType::get(i->getFunction()->getContext(), bits * 2),
-        getMax(bits, isSigned), 10);
-    ConstantInt *min = ConstantInt::get(
-        IntegerType::get(i->getFunction()->getContext(), bits * 2),
-        getMin(bits, isSigned), 10);
-    CmpInst::Predicate maxCmpPred =
-        (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
-    CmpInst::Predicate minCmpPred =
-        (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
-    ICmpInst *gt = new ICmpInst(i, maxCmpPred, v, max, "");
-    ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
-    return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
-  } else {
-    ConstantInt *a = ConstantInt::getFalse(i->getFunction()->getContext());
-    return BinaryOperator::Create(Instruction::And, a, a, "", i);
-  }
+  ConstantInt *max = ConstantInt::get(
+      IntegerType::get(i->getFunction()->getContext(), bits * 2),
+      getMax(bits, isSigned), 10);
+  ConstantInt *min = ConstantInt::get(
+      IntegerType::get(i->getFunction()->getContext(), bits * 2),
+      getMin(bits, isSigned), 10);
+  CmpInst::Predicate maxCmpPred =
+      (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
+  CmpInst::Predicate minCmpPred =
+      (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+  ICmpInst *gt = new ICmpInst(i, maxCmpPred, v, max, "");
+  ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
+  return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
 }
 
 /*
@@ -95,11 +87,8 @@ BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
  */
 Value *IntegerOverflowChecker::createResult(Value *v, int bits,
                                             Instruction *i) {
-  if (SmackOptions::IntegerOverflow)
-    return CastInst::CreateTruncOrBitCast(
-        v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
-  else
-    return v;
+  return CastInst::CreateTruncOrBitCast(
+      v, IntegerType::get(i->getFunction()->getContext(), bits), "", i);
 }
 
 /*
@@ -135,33 +124,27 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
     if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-      // Add check for UBSan left shift/signed division when needed
-      if (SmackOptions::IntegerOverflow) {
-        if (auto chkshft = dyn_cast<CallInst>(&*I)) {
-          Function *chkfn = chkshft->getCalledFunction();
-          if (chkfn && chkfn->hasName() &&
-              (chkfn->getName().find("__ubsan_handle_shift_out_of_bounds") !=
-                   std::string::npos ||
-               chkfn->getName().find("__ubsan_handle_divrem_overflow") !=
-                   std::string::npos)) {
+      if (auto ci = dyn_cast<CallInst>(&*I)) {
+        Function *f = ci->getCalledFunction();
+        if (f && f->hasName()) {
+          std::string fn = f->getName();
+          if (fn.find("__ubsan_handle_shift_out_of_bounds") !=
+                  std::string::npos ||
+              fn.find("__ubsan_handle_divrem_overflow") != std::string::npos) {
             // If the call to __ubsan_handle_* is reachable,
             // then an overflow is possible.
-            ConstantInt *flag =
-                ConstantInt::getTrue(chkshft->getFunction()->getContext());
-            addCheck(co, flag, &*I);
-            addBlockingAssume(va, flag, &*I);
-            I->replaceAllUsesWith(flag);
-            instToErase.push_back(&*I);
+            if (SmackOptions::IntegerOverflow) {
+              // Add check for UBSan left shift/signed division when needed
+              ConstantInt *flag =
+                  ConstantInt::getTrue(ci->getFunction()->getContext());
+              addCheck(co, flag, ci);
+              addBlockingAssume(va, flag, ci);
+              ci->replaceAllUsesWith(flag);
+              instToErase.push_back(ci);
+            }
           }
-        }
-      }
-      if (auto ei = dyn_cast<ExtractValueInst>(&*I)) {
-        if (auto ci = dyn_cast<CallInst>(ei->getAggregateOperand())) {
-          Function *f = ci->getCalledFunction();
           SmallVector<StringRef, 4> info;
-          if (f && f->hasName() &&
-              OVERFLOW_INTRINSICS.match(f->getName(), &info) &&
-              ei->getIndices()[0] == 1) {
+          if (OVERFLOW_INTRINSICS.match(f->getName(), &info)) {
             /*
              * If ei is an ExtractValueInst whose value flows from an LLVM
              * checked value intrinsic f, then we do the following:
@@ -181,29 +164,35 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
             bool isSigned = (info[1] == "s");
             std::string op = info[2];
             int bits = std::stoi(info[3]);
-            Instruction *prev = &*std::prev(I);
             Value *eo1 =
-                extendBitWidth(ci->getArgOperand(0), bits, isSigned, &*I);
+                extendBitWidth(ci->getArgOperand(0), bits, isSigned, ci);
             Value *eo2 =
-                extendBitWidth(ci->getArgOperand(1), bits, isSigned, &*I);
+                extendBitWidth(ci->getArgOperand(1), bits, isSigned, ci);
             SDEBUG(errs() << "Processing operator: " << op << "\n");
             assert(INSTRUCTION_TABLE.count(op) != 0 &&
                    "Operator must be present in our instruction table.");
             BinaryOperator *ai = BinaryOperator::Create(
-                INSTRUCTION_TABLE.at(op), eo1, eo2, "", &*I);
-            if (auto pei = dyn_cast_or_null<ExtractValueInst>(prev)) {
-              if (ci == dyn_cast<CallInst>(pei->getAggregateOperand())) {
-                Value *r = createResult(ai, bits, &*I);
-                prev->replaceAllUsesWith(r);
-                instToErase.push_back(prev);
+                INSTRUCTION_TABLE.at(op), eo1, eo2, "", ci);
+            Value *r = createResult(ai, bits, &*I);
+            BinaryOperator *flag = createFlag(ai, bits, isSigned, ci);
+            if (SmackOptions::IntegerOverflow)
+              addCheck(co, flag, ci);
+            for (auto U : ci->users()) {
+              if (ExtractValueInst *ei = dyn_cast<ExtractValueInst>(U)) {
+                if (ei->getNumIndices() == 1) {
+                  if (ei->getIndices()[0] == 0)
+                    // value part
+                    ei->replaceAllUsesWith(r);
+                  else if (ei->getIndices()[0] == 1) {
+                    // flag part
+                    // addBlockingAssume(va, flag, ei);
+                    ei->replaceAllUsesWith(flag);
+                  } else
+                    llvm_unreachable("Unexpected extractvalue inst!");
+                  instToErase.push_back(ei);
+                }
               }
             }
-            BinaryOperator *flag = createFlag(ai, bits, isSigned, &*I);
-            if (SmackOptions::IntegerOverflow)
-              addCheck(co, flag, &*I);
-            addBlockingAssume(va, flag, &*I);
-            I->replaceAllUsesWith(flag);
-            instToErase.push_back(&*I);
             instToErase.push_back(ci);
           }
         }

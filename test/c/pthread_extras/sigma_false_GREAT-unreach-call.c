@@ -36,8 +36,8 @@ int main() {
   t = (pthread_t *)malloc(sizeof(pthread_t) * SIGMA);
   array = (int *)malloc(sizeof(int) * SIGMA);
 
-  //__VERIFIER_assume(t);
-  //__VERIFIER_assume(array);
+  // assume(t);
+  // assume(array);
 
   for (tid = 0; tid < SIGMA; tid++) {
     pthread_mutex_lock(&lock);

@@ -63,7 +63,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
+DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
 
 shopt -s extglob
 
@@ -201,6 +201,11 @@ linux-@(ubuntu|neon)-18*)
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
+linux-@(ubuntu|neon)-20*)
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
+  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  ;;
+
 *)
   puts "Distribution ${distro} not supported. Manual installation required."
   exit 1
@@ -237,7 +242,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-1[68]*)
+  linux-@(ubuntu|neon)-@(1[68]|20)*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     16*)
@@ -245,6 +250,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
       ;;
     18*)
       UBUNTU_CODENAME="bionic"
+      ;;
+    20*)
+      UBUNTU_CODENAME="focal"
       ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
@@ -261,7 +269,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
 
     # Adding .NET repository
-    ${WGET} -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
     sudo dpkg -i packages-microsoft-prod.deb
     rm -f packages-microsoft-prod.deb
     sudo apt-get update
@@ -327,12 +335,11 @@ fi
 
 if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installing Rust"
-  ${WGET} https://static.rust-lang.org/dist/${RUST_VERSION}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz -O rust.tar.gz
-  tar xf rust.tar.gz
-  cd rust-nightly-x86_64-unknown-linux-gnu
-  sudo ./install.sh --without=rust-docs
-  cd ..
-  rm -rf rust-nightly-x86_64-unknown-linux-gnu rust.tar.gz
+  if ! [ -x "$(command -v rustup)" ]; then
+      ${WGET} -O - --secure-protocol=TLSv1_2 https://sh.rustup.rs | bash -s -- -y
+      source $HOME/.cargo/env
+  fi
+  rustup toolchain install ${RUST_VERSION}
   cargo install rustfilt
   puts "Installed Rust"
 fi
@@ -463,7 +470,12 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   cd ${SMACK_DIR}/build
   cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ninja
-  sudo ninja install
+
+  if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then
+    ninja install
+  else
+    sudo ninja install
+  fi
 
   puts "Configuring shell environment"
   source ${SMACKENV}

@@ -456,7 +456,7 @@ Devirtualize::processCallSite (CallSite &CS) {
   // First, determine if this is a direct call.  If so, then just ignore it.
   //
   Value * CalledValue = CS.getCalledValue();
-  if (isa<Function>(CalledValue->stripPointerCastsAndAliases()))
+  if (!CS.isIndirectCall())
     return;
 
   //

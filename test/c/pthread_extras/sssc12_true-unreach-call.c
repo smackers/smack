@@ -34,7 +34,7 @@ void main() {
   pthread_t t;
   next = 0;
   len = __VERIFIER_nondet_int();
-  __VERIFIER_assume(len > 0);
+  assume(len > 0);
   data = malloc(sizeof(int) * len);
   while (1) {
     pthread_create(&t, 0, thr, 0);

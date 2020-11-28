@@ -131,7 +131,9 @@ add_library(smackTranslator STATIC
   include/smack/VectorOperations.h
   include/smack/MemorySafetyChecker.h
   include/smack/IntegerOverflowChecker.h
+  include/smack/RewriteBitwiseOps.h
   include/smack/NormalizeLoops.h
+  include/smack/RustFixes.h
   include/smack/SplitAggregateValue.h
   include/smack/Prelude.h
   include/smack/SmackWarnings.h
@@ -155,7 +157,9 @@ add_library(smackTranslator STATIC
   lib/smack/VectorOperations.cpp
   lib/smack/MemorySafetyChecker.cpp
   lib/smack/IntegerOverflowChecker.cpp
+  lib/smack/RewriteBitwiseOps.cpp
   lib/smack/NormalizeLoops.cpp
+  lib/smack/RustFixes.cpp
   lib/smack/SplitAggregateValue.cpp
   lib/smack/Prelude.cpp
   lib/smack/SmackWarnings.cpp
@@ -203,5 +207,28 @@ INSTALL(FILES
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   DESTINATION share
   USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di"
+  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di" PATTERN "*.toml"
+)
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/bin/versions
+  DESTINATION share/smack
+  RENAME versions.py
+)
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack/Cargo.toml
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack/build.rs
+  DESTINATION share/smack/lib
+)
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack-rust.c
+  DESTINATION share/smack/lib/src
+)
+
+INSTALL(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.rs
+  DESTINATION share/smack/lib/src
+  RENAME lib.rs
 )

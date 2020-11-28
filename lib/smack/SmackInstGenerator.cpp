@@ -351,7 +351,7 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst &ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
   processInstruction(I);
-  if (rep->isBitwiseOp(&I))
+  if (rep->isBitwiseOp(&I) && I.getType()->getIntegerBitWidth() > 1)
     SmackWarnings::warnIfUnsound(std::string("bitwise operation ") +
                                      I.getOpcodeName(),
                                  SmackOptions::BitPrecise, currBlock, &I);
@@ -646,6 +646,13 @@ void SmackInstGenerator::visitSelectInst(llvm::SelectInst &i) {
 void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   processInstruction(ci);
 
+  if (ci.isInlineAsm()) {
+    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
+                               ci.getType()->isVoidTy());
+    emit(Stmt::skip());
+    return;
+  }
+
   Function *f = ci.getCalledFunction();
   if (!f) {
     assert(ci.getCalledValue() && "Called value is null");
@@ -654,18 +661,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   std::string name = f->hasName() ? f->getName() : "";
 
-  if (ci.isInlineAsm()) {
-    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
-                               ci.getType()->isVoidTy());
-    emit(Stmt::skip());
-
-  } else if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
-    // Set the entry point for Rust programs
-    auto castExpr = ci.getArgOperand(0);
-    auto mainFunction = cast<const Function>(castExpr);
-    emit(Stmt::call(mainFunction->getName(), {}, {}));
-
-  } else if (SmackOptions::RustPanics && isRustPanic(name)) {
+  if (SmackOptions::RustPanics && isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
@@ -902,15 +898,18 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   //(CallInst -> Void) -> [Flags] -> (CallInst -> Void)
   static const auto conditionalModel =
       [this](std::function<void(CallInst *)> modelGenFunc,
-             std::initializer_list<const cl::opt<bool> *> requiredFlags) {
+             std::initializer_list<const cl::opt<bool> *> requiredFlags,
+             SmackWarnings::FlagRelation rel =
+                 SmackWarnings::FlagRelation::And) {
         auto unsetFlags = SmackWarnings::getUnsetFlags(requiredFlags);
-        return [this, unsetFlags, modelGenFunc](CallInst *ci) {
-          if (unsetFlags.empty())
+        auto satisfied = SmackWarnings::isSatisfied(requiredFlags, rel);
+        return [this, unsetFlags, modelGenFunc, satisfied, rel](CallInst *ci) {
+          if (satisfied)
             modelGenFunc(ci);
           else {
             SmackWarnings::warnUnsound(
                 "call to " + ci->getCalledFunction()->getName().str(),
-                unsetFlags, currBlock, ci);
+                unsetFlags, currBlock, ci, false, rel);
             emit(rep->call(ci->getCalledFunction(), *ci));
           }
         };
@@ -1084,20 +1083,37 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
       {&SmackOptions::BitPrecise});
 
   // Count the population of 1s in a bv
-  static const auto ctpop = [this](Value *arg) {
-    auto width = arg->getType()->getIntegerBitWidth();
-    auto var = rep->expr(arg);
-    auto body = Expr::lit(0, width);
-    auto type = rep->type(arg->getType());
+  static const auto ctpop = conditionalModel(
+      [this](CallInst *ci) {
+        Value *arg = ci->getArgOperand(0);
+        auto width = arg->getType()->getIntegerBitWidth();
+        auto var = rep->expr(arg);
+        const Expr *body = nullptr;
+        auto type = rep->type(arg->getType());
 
-    for (unsigned i = 0; i < width; ++i) {
-      body = Expr::fn(indexedName("$add", {type}),
-                      Expr::fn(indexedName("$zext", {"bv1", type}),
-                               Expr::bvExtract(var, i + 1, i)),
-                      body);
-    }
-    return body;
-  };
+        if (SmackOptions::BitPrecise) { // Bitvector mode
+          body = Expr::lit(0, width);
+          for (unsigned i = 0; i < width; ++i) {
+            body = Expr::fn(indexedName("$add", {type}),
+                            Expr::fn(indexedName("$zext", {"bv1", type}),
+                                     Expr::bvExtract(var, i + 1, i)),
+                            body);
+          }
+        } else { // Otherwise, try with the integer encoding
+          body = Expr::lit(0ull);
+          for (unsigned i = 0; i < width; ++i) {
+            auto quotient =
+                Expr::fn(indexedName("$udiv", {type}), var,
+                         Expr::lit((unsigned long long)(1ull << i)));
+            auto remainder = Expr::fn(indexedName("$urem", {type}), quotient,
+                                      Expr::lit(2ull));
+            body = Expr::fn(indexedName("$add", {type}), remainder, body);
+          }
+        }
+        emit(Stmt::assign(rep->expr(ci), body));
+      },
+      {&SmackOptions::BitPrecise, &SmackOptions::RewriteBitwiseOps},
+      SmackWarnings::FlagRelation::Or);
 
   static const auto assignBvExpr =
       [this](std::function<const Expr *(Value *)> exprGenFunc) {
@@ -1172,7 +1188,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           {llvm::Intrinsic::convert_from_fp16, f16UpCast},
           {llvm::Intrinsic::convert_to_fp16, f16DownCast},
           {llvm::Intrinsic::ctlz, ctlz},
-          {llvm::Intrinsic::ctpop, assignBvExpr(ctpop)},
+          {llvm::Intrinsic::ctpop, ctpop},
           {llvm::Intrinsic::cttz, cttz},
           {llvm::Intrinsic::dbg_declare, ignore},
           {llvm::Intrinsic::dbg_label, ignore},

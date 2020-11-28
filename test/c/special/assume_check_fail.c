@@ -5,10 +5,12 @@
 // @flag --integer-encoding=bit-vector
 
 int main(void) {
-  unsigned int y = (2 * (unsigned int)__VERIFIER_nondet_unsigned_short()) + 1;
+  unsigned int x = __VERIFIER_nondet_unsigned_int();
+  unsigned int y = __VERIFIER_nondet_unsigned_int();
   // This assumption is checked at verification time, and since
-  // integer-encoding=bit-vector is enabled, and y is clearly odd, the
-  // assumption should be shown false.
-  __builtin_assume((y & 1) == 0);
-  assert((y & 1) == 0);
+  // integer-encoding=bit-vector is enabled, the assumption should
+  // be shown false.
+  __builtin_assume((x ^ y) != (y ^ x));
+  assert((x ^ y) != (y ^ x));
+  return 0;
 }

@@ -4,9 +4,10 @@
 // @flag --llvm-assumes=use
 
 int main(void) {
-  unsigned int y = (2 * (unsigned int)__VERIFIER_nondet_unsigned_short()) + 1;
+  unsigned int x = __VERIFIER_nondet_unsigned_int();
   // This assumption is used for verification, even though the assumption
   // is false, the assertion will pass.
-  __builtin_assume((y & 1) == 0);
-  assert((y & 1) == 0);
+  __builtin_assume((x ^ x) == 1);
+  assert((x ^ x) == 1);
+  return 0;
 }

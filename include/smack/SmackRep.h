@@ -84,7 +84,8 @@ private:
   const Expr *cast(unsigned opcode, const llvm::Value *v, const llvm::Type *t);
   bool isFpArithOp(unsigned opcode);
   const Expr *bop(unsigned opcode, const llvm::Value *lhs,
-                  const llvm::Value *rhs, const llvm::Type *t);
+                  const llvm::Value *rhs, const llvm::Type *t,
+                  bool isUnsigned = false);
   const Expr *uop(const llvm::Value *op);
   const Expr *cmp(unsigned predicate, const llvm::Value *lhs,
                   const llvm::Value *rhs, bool isUnsigned);
@@ -128,7 +129,8 @@ public:
   std::string type(const llvm::Type *t);
   std::string type(const llvm::Value *v);
 
-  const Expr *lit(const llvm::Value *v, bool isUnsigned = false);
+  const Expr *lit(const llvm::Value *v, bool isUnsigned = false,
+                  bool isUnsignedInst = false);
   const Expr *lit(const llvm::Value *v, unsigned flag);
 
   const Expr *ptrArith(const llvm::GetElementPtrInst *I);
@@ -137,7 +139,8 @@ public:
   ptrArith(const llvm::Value *p,
            std::vector<std::pair<llvm::Value *, llvm::gep_type_iterator>> args);
 
-  const Expr *expr(const llvm::Value *v, bool isConstIntUnsigned = false);
+  const Expr *expr(const llvm::Value *v, bool isConstIntUnsigned = false,
+                   bool isUnsignedInst = false);
 
   const Expr *cast(const llvm::Instruction *I);
   const Expr *cast(const llvm::ConstantExpr *CE);

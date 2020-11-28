@@ -33,8 +33,11 @@
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
+#include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/RewriteBitwiseOps.h"
+#include "smack/RustFixes.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/SmackModuleGenerator.h"
 #include "smack/SmackOptions.h"
@@ -154,6 +157,24 @@ int main(int argc, char **argv) {
 
   llvm::legacy::PassManager pass_manager;
 
+  // This runs before DSA because some Rust functions cause problems.
+  pass_manager.add(new smack::RustFixes);
+
+  if (!Modular) {
+    auto PreserveKeyGlobals = [=](const llvm::GlobalValue &GV) {
+      std::string name = GV.getName();
+      return smack::SmackOptions::isEntryPoint(name) ||
+             smack::Naming::isSmackName(name) ||
+             name.find("__VERIFIER_assume") != std::string::npos;
+    };
+    pass_manager.add(llvm::createInternalizePass(PreserveKeyGlobals));
+    pass_manager.add(llvm::createGlobalDCEPass());
+    pass_manager.add(llvm::createDeadCodeEliminationPass());
+    pass_manager.add(llvm::createGlobalDCEPass());
+    pass_manager.add(llvm::createDeadCodeEliminationPass());
+    pass_manager.add(new smack::RemoveDeadDefs());
+  }
+
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
@@ -189,6 +210,12 @@ int main(int argc, char **argv) {
   }
 
   pass_manager.add(new smack::IntegerOverflowChecker());
+
+  if (smack::SmackOptions::RewriteBitwiseOps &&
+      !(smack::SmackOptions::BitPrecise ||
+        smack::SmackOptions::BitPrecisePointers)) {
+    pass_manager.add(new smack::RewriteBitwiseOps());
+  }
 
   if (smack::SmackOptions::AddTiming) {
     Triple ModuleTriple(module->getTargetTriple());

@@ -1,0 +1,14 @@
+[package]
+name = "rust-cargo"
+version = "0.1.0"
+authors = ["Shaobo He <polarishehn@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+smack = { path = "/usr/local/share/smack/lib" }
+
+[profile.dev]
+incremental=false
+
