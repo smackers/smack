@@ -13,7 +13,7 @@ from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, smackdOutput
 
-VERSION = '2.6.0'
+VERSION = '2.6.1'
 
 
 class VResult(Flag):
