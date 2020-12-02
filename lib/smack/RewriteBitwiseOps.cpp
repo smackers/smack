@@ -104,14 +104,14 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
             Function *co;
             if (bitWidth == 64) {
               co = m.getFunction("__SMACK_and64");
+            } else if (bitWidth == 32) {
+              co = m.getFunction("__SMACK_and32");
             } else if (bitWidth == 16) {
               co = m.getFunction("__SMACK_and16");
             } else if (bitWidth == 8) {
               co = m.getFunction("__SMACK_and8");
-            } else if (bitWidth == 1) {
-              continue;
             } else {
-              co = m.getFunction("__SMACK_and32");
+              continue;
             }
             assert(co != NULL && "Function __SMACK_and should be present.");
             std::vector<Value *> args;
@@ -133,14 +133,14 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
           Function *co;
           if (bitWidth == 64) {
             co = m.getFunction("__SMACK_or64");
+          } else if (bitWidth == 32) {
+            co = m.getFunction("__SMACK_or32");
           } else if (bitWidth == 16) {
             co = m.getFunction("__SMACK_or16");
           } else if (bitWidth == 8) {
             co = m.getFunction("__SMACK_or8");
-          } else if (bitWidth == 1) {
-            continue;
           } else {
-            co = m.getFunction("__SMACK_or32");
+            continue;
           }
           assert(co != NULL && "Function __SMACK_or should be present.");
           std::vector<Value *> args;
