@@ -29,7 +29,7 @@
     return ret;                                                                \
   }
 
-#define mk_dummy_nondet_def(size)                                              \
+#define mk_dummy_int_nondet_def(size)                                          \
   mk_signed_type(size) __VERIFIER_nondet_i##size(void) {                       \
     return *((mk_signed_type(size) *)malloc(sizeof(mk_signed_type(size))));    \
   }                                                                            \
@@ -38,9 +38,14 @@
         (mk_unsigned_type(size) *)malloc(sizeof(mk_unsigned_type(size))));     \
   }
 
+#define mk_dummy_fp_nondet_def(ty)                                             \
+  ty __VERIFIER_nondet_##ty(void) { return *((ty *)malloc(sizeof(ty))); }
+
 #if CARGO_BUILD
-mk_dummy_nondet_def(8) mk_dummy_nondet_def(16) mk_dummy_nondet_def(32)
-    mk_dummy_nondet_def(64) void __VERIFIER_assert(int x) {}
+mk_dummy_int_nondet_def(8) mk_dummy_int_nondet_def(16)
+    mk_dummy_int_nondet_def(32) mk_dummy_int_nondet_def(64)
+        mk_dummy_fp_nondet_def(float)
+            mk_dummy_fp_nondet_def(double) void __VERIFIER_assert(int x) {}
 void __VERIFIER_assume(int x) {}
 #else
 mk_smack_nondet_decl(8) mk_smack_nondet_decl(16) mk_smack_nondet_decl(32)
