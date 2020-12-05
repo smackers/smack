@@ -115,7 +115,6 @@ def verify_bpl_svcomp(args):
   command += ["/timeLimit:%s" % time_limit]
   command += ["/v:1"]
   command += ["/recursionBound:65536"]
-  command += ["/irreducibleLoopUnroll:12"]
   command += ["/trackAllVars"]
 
   verifier_output = smack.top.try_command(command, timeout=time_limit)
