@@ -2,6 +2,10 @@ language: generic
 os: linux
 dist: focal
 
+branches:
+  except:
+    - github-actions
+
 addons:
   apt:
     packages:

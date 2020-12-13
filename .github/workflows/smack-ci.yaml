@@ -1,0 +1,66 @@
+name: SMACK CI
+
+on: [push, pull_request]
+
+jobs:
+  check-regressions:
+    env:
+      COMPILER_NAME: clang
+      COMPILER: clang++
+      CXX: clang++
+      CC: clang
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        travis_env:
+          [
+            "--exhaustive --folder=c/basic",
+            "--exhaustive --folder=c/data",
+            "--exhaustive --folder=c/ntdrivers-simplified",
+            "--exhaustive --folder=c/ntdrivers",
+            "--exhaustive --folder=c/bits",
+            "--exhaustive --folder=c/float",
+            "--exhaustive --folder=c/locks",
+            "--exhaustive --folder=c/contracts",
+            "--exhaustive --folder=c/simd",
+            "--exhaustive --folder=c/memory-safety",
+            "--exhaustive --folder=c/pthread",
+            "--exhaustive --folder=c/pthread_extras",
+            "--exhaustive --folder=c/strings",
+            "--exhaustive --folder=c/special",
+            "--exhaustive --folder=rust/array --languages=rust",
+            "--exhaustive --folder=rust/basic --languages=rust",
+            "--exhaustive --folder=rust/box --languages=rust",
+            "--exhaustive --folder=rust/functions --languages=rust",
+            "--exhaustive --folder=rust/generics --languages=rust",
+            "--exhaustive --folder=rust/loops --languages=rust",
+            "--exhaustive --folder=rust/panic --languages=rust",
+            "--exhaustive --folder=rust/recursion --languages=rust",
+            "--exhaustive --folder=rust/structures --languages=rust",
+            "--exhaustive --folder=rust/vector --languages=rust"
+          ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install dependencies
+        env:
+          GITHUB_ACTIONS: true
+        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=1 ./bin/build.sh
+
+      - run: python3 --version
+      - run: $CXX --version
+      - run: $CC --version
+      - run: clang --version
+      - run: clang++ --version
+      - run: llvm-link --version
+      - run: llvm-config --version
+
+      - name: format checking
+        run: |
+          ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
+          flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
+      
+      - name: compile and test
+        env:
+          TRAVIS_ENV: ${{ matrix.travis_env }}
+        run: ./bin/build.sh

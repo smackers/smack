@@ -7,7 +7,7 @@ project(smack)
 
 if (NOT WIN32 OR MSYS OR CYGWIN)
 
-  file(STRINGS "bin/versions" LLVM_VERSION_STR REGEX "LLVM_SHORT_VERSION=[0-9]+")
+  file(STRINGS "bin/versions" LLVM_VERSION_STR REGEX "LLVM_SHORT_VERSION=\"[0-9]+\"")
   string(REGEX MATCH "[0-9]+" LLVM_SHORT_VERSION "${LLVM_VERSION_STR}")
 
   find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-${LLVM_SHORT_VERSION} llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")

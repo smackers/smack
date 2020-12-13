@@ -39,6 +39,9 @@ BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
 INSTALL_OBJECTIVEC=0
 INSTALL_RUST=${INSTALL_RUST:-0}
 
+# Development dependencies
+INSTALL_DEV_DEPENDENCIES=${INSTALL_DEV_DEPENDENCIES:-0}
+
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
@@ -456,6 +459,16 @@ if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
     puts "Lockpwn already built"
   fi
   echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
+fi
+
+
+if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
+  sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
+  sudo pip3 install -U flake8
+  sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 30
+  if [ "${GITHUB_ACTIONS}" = "true" ] ; then
+    exit 0
+  fi
 fi
 
 
