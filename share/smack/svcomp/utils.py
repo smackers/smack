@@ -90,34 +90,22 @@ def verify_bpl_svcomp(args):
           or VProperty.INTEGER_OVERFLOW in args.check):
     inject_assert_false(args)
 
+  # Setting good loop unroll bound based on benchmark class
+  loopUnrollBar = 13
+  time_limit = 880
+
   corral_command = ["corral"]
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
   corral_command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
   corral_command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
+  corral_command += ["/timeLimit:%s" % time_limit]
+  corral_command += ["/v:1"]
+  corral_command += ["/recursionBound:65536"]
+  corral_command += ["/trackAllVars"]
 
-  with open(args.input_files[0], "r") as f:
-    csource = f.read()
-
-  corral_command += ["/k:1"]
-  if not (VProperty.MEMORY_SAFETY in args.check
-          or args.integer_encoding == 'bit-vector'
-          or VProperty.MEMLEAK in args.check):
-    if not ("dll_create" in csource or "sll_create" in csource or "changeMethaneLevel" in csource):
-      corral_command += ["/di"]
-
-  # Setting good loop unroll bound based on benchmark class
-  loopUnrollBar = 13
-  time_limit = 880
-
-  command = list(corral_command)
-  command += ["/timeLimit:%s" % time_limit]
-  command += ["/v:1"]
-  command += ["/recursionBound:65536"]
-  command += ["/trackAllVars"]
-
-  verifier_output = smack.top.try_command(command, timeout=time_limit)
+  verifier_output = smack.top.try_command(corral_command, timeout=time_limit)
   result = smack.top.verification_result(verifier_output)
 
   if result in VResult.ERROR: #normal inlining
