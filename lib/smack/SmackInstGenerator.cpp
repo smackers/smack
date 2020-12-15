@@ -823,6 +823,13 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   }
 }
 
+void SmackInstGenerator::visitCallBrInst(llvm::CallBrInst &cbi) {
+  processInstruction(cbi);
+  SmackWarnings::warnUnsound("callbr instruction " + i2s(cbi), currBlock, &cbi,
+                             cbi.getType()->isVoidTy());
+  emit(Stmt::skip());
+}
+
 bool isSourceLoc(const Stmt *stmt) {
   return (stmt->getKind() == Stmt::ASSUME &&
           (llvm::cast<const AssumeStmt>(stmt))->hasAttr("sourceloc")) ||

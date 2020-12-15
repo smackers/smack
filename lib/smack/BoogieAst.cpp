@@ -555,7 +555,7 @@ void CallStmt::print(std::ostream &os) const {
   os << ";";
 }
 
-void Comment::print(std::ostream &os) const { os << "// " << str; }
+void Comment::print(std::ostream &os) const { os << "/* " << str << " */"; }
 
 void GotoStmt::print(std::ostream &os) const {
   os << "goto ";

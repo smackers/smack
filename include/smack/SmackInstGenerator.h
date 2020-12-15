@@ -91,6 +91,7 @@ public:
   void visitPHINode(llvm::PHINode &i);
   void visitSelectInst(llvm::SelectInst &i);
   void visitCallInst(llvm::CallInst &i);
+  void visitCallBrInst(llvm::CallBrInst &i);
   void visitDbgValueInst(llvm::DbgValueInst &i);
   // TODO implement va_arg
   void visitLandingPadInst(llvm::LandingPadInst &i);
