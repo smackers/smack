@@ -4,7 +4,7 @@
 // @expect error
 // @checkout grep -v "test_sourceloc_fail.c(16,9)"
 
-int main() {
+int main(void) {
   int *a;
   int ret;
 

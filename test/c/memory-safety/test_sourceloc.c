@@ -3,7 +3,7 @@
 
 // @expect verified
 
-int main() {
+int main(void) {
   int *a;
   int ret;
 
