@@ -39,19 +39,9 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   std::deque<std::tuple<Constant *, Constant *, std::vector<Value *>>> worklist;
 
   for (auto &G : M.globals())
-    if (G.hasInitializer())
-
-      // HACK: Normally only isRead should be necessary here. However, there
-      // seems to be a bug in the DSA code which fails to mark some globals that
-      // are read as read. Currently this has only been observed with globals
-      // that have named addresses, e.g., excluding string constants. Thus the
-      // second predicate here is a messy hack that has little to do with the
-      // intended property of being read.
-      // if (DSA->isRead(&G) || !G.hasGlobalUnnamedAddr())
-      if (DSA->isRead(&G))
-
-        worklist.push_back(
-            std::make_tuple(G.getInitializer(), &G, std::vector<Value *>()));
+    if (G.hasInitializer() && DSA->isRead(&G))
+      worklist.push_back(
+          std::make_tuple(G.getInitializer(), &G, std::vector<Value *>()));
 
   while (worklist.size()) {
     Constant *V = std::get<0>(worklist.front());
