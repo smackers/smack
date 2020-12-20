@@ -1742,14 +1742,15 @@ void __SMACK_decls(void) {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
-    "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && "
-    "$Alloc[p]);\n"
-    "requires $slt.ref.bool($0.ref, p);\n"
+    "requires $eq.ref.bool(p, $0.ref) || ($slt.ref.bool($0.ref, p) && "
+    "$eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p "
     "==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == "
-    "old($allocatedCounter) - 1;\n");
+    "old($allocatedCounter) - 1;\n"
+    "ensures $eq.ref.bool(p, $0.ref) ==> $allocatedCounter == "
+    "old($allocatedCounter);\n");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
   D("var $Alloc: [ref] bool;");
@@ -1788,14 +1789,15 @@ void __SMACK_decls(void) {
 
   D("procedure $free(p: ref);\n"
     "modifies $Alloc, $allocatedCounter;\n"
-    "requires $eq.ref.bool(p, $0.ref) || ($eq.ref.bool($base(p), p) && "
-    "$Alloc[p]);\n"
-    "requires $slt.ref.bool($0.ref, p);\n"
+    "requires $eq.ref.bool(p, $0.ref) || ($slt.ref.bool($0.ref, p) && "
+    "$eq.ref.bool($base(p), p) && $Alloc[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p "
     "==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == "
-    "old($allocatedCounter) - 1;\n");
+    "old($allocatedCounter) - 1;\n"
+    "ensures $eq.ref.bool(p, $0.ref) ==> $allocatedCounter == "
+    "old($allocatedCounter);\n");
 #endif
 
 #else
