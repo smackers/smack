@@ -30,9 +30,14 @@ Function *MemorySafetyChecker::getSafetyCheckFunction(Module &M) {
   return F;
 }
 
+void MemorySafetyChecker::copyDbgMetadata(Instruction *src, Instruction *dst) {
+  dst->setMetadata("dbg", src->getMetadata("dbg"));
+}
+
 void MemorySafetyChecker::insertMemoryLeakCheck(Instruction *I) {
   auto &M = *I->getParent()->getParent()->getParent();
-  CallInst::Create(getLeakCheckFunction(M), "", I);
+  auto ci = CallInst::Create(getLeakCheckFunction(M), "", I);
+  copyDbgMetadata(I, ci);
 }
 
 void MemorySafetyChecker::insertMemoryAccessCheck(Value *addr, Value *size,
@@ -40,10 +45,13 @@ void MemorySafetyChecker::insertMemoryAccessCheck(Value *addr, Value *size,
   auto &M = *I->getParent()->getParent()->getParent();
   auto &C = M.getContext();
   auto T = PointerType::getUnqual(Type::getInt8Ty(C));
-  CallInst::Create(getSafetyCheckFunction(M),
-                   {CastInst::Create(Instruction::BitCast, addr, T, "", I),
-                    CastInst::CreateBitOrPointerCast(size, T, "", I)},
-                   "", I);
+  auto ptrArg = CastInst::Create(Instruction::BitCast, addr, T, "", I);
+  auto sizeArg = CastInst::CreateBitOrPointerCast(size, T, "", I);
+  auto ci =
+      CallInst::Create(getSafetyCheckFunction(M), {ptrArg, sizeArg}, "", I);
+  copyDbgMetadata(I, ptrArg);
+  copyDbgMetadata(I, sizeArg);
+  copyDbgMetadata(I, ci);
 }
 
 bool MemorySafetyChecker::runOnFunction(Function &F) {
