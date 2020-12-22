@@ -1305,7 +1305,9 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
     decls.push_back(Decl::axiom(Expr::eq(
         Expr::id(name), pointerLit(globalsOffset -= (size + globalsPadding)))));
   }
-  globalAllocations[v] = size;
+
+  if (!llvm::isa<Function>(v))
+    globalAllocations[v] = size;
 
   return decls;
 }

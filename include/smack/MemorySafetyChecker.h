@@ -17,6 +17,7 @@ private:
   llvm::Function *getLeakCheckFunction(llvm::Module &M);
   llvm::Function *getSafetyCheckFunction(llvm::Module &M);
 
+  void copyDbgMetadata(llvm::Instruction *src, llvm::Instruction *dst);
   void insertMemoryLeakCheck(llvm::Instruction *I);
   void insertMemoryAccessCheck(llvm::Value *addr, llvm::Value *size,
                                llvm::Instruction *I);

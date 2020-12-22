@@ -1,6 +1,5 @@
-
-[![Build Status](https://travis-ci.com/smackers/smack.svg?branch=master)](https://travis-ci.com/smackers/smack)
-[![Build Status](https://travis-ci.com/smackers/smack.svg?branch=develop)](https://travis-ci.com/smackers/smack)
+[![master branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=master)](https://github.com/smackers/smack/actions)
+[![develop branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=develop)](https://github.com/smackers/smack/actions)
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 

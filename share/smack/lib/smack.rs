@@ -12,6 +12,8 @@ extern "C" {
     pub fn __VERIFIER_nondet_u32() -> u32;
     pub fn __VERIFIER_nondet_i64() -> i64;
     pub fn __VERIFIER_nondet_u64() -> u64;
+    pub fn __VERIFIER_nondet_float() -> f32;
+    pub fn __VERIFIER_nondet_double() -> f64;
     pub fn malloc(size: usize) -> *mut u8;
     pub fn __VERIFIER_memcpy(dest: *mut u8, src: *mut u8, count: usize) -> *mut u8;
     pub fn free(ptr: *mut u8);
@@ -139,6 +141,8 @@ make_verifier_nondet!(i64, __VERIFIER_nondet_i64);
 make_verifier_nondet!(u64, __VERIFIER_nondet_u64);
 make_verifier_nondet!(isize, __VERIFIER_nondet_i64);
 make_verifier_nondet!(usize, __VERIFIER_nondet_u64);
+make_verifier_nondet!(f32, __VERIFIER_nondet_float);
+make_verifier_nondet!(f64, __VERIFIER_nondet_double);
 
 #[cfg(not(verifier = "smack"))]
 #[cfg(feature = "std")]
