@@ -54,29 +54,32 @@ std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
   return ret + "}";
 }
 
-void SmackWarnings::warnIfUnsound(std::string name,
-                                  RequiredFlagsT requiredFlags,
-                                  Block *currBlock, const Instruction *i,
-                                  bool ignore, FlagRelation rel) {
+void SmackWarnings::warnUnModeled(std::string unmodeledOpName, Block *currBlock,
+                                  const Instruction *i) {
+  warnImprecise("unmodeled operation " + unmodeledOpName, "", {}, currBlock, i);
+}
+
+void SmackWarnings::warnIfIncomplete(std::string name, UnsetFlagsT unsetFlags,
+                                     Block *currBlock, const Instruction *i,
+                                     FlagRelation rel) {
+  warnImprecise(name, "over-approximating", unsetFlags, currBlock, i, rel);
+}
+
+void SmackWarnings::warnIfIncomplete(std::string name,
+                                     RequiredFlagsT requiredFlags,
+                                     Block *currBlock, const Instruction *i,
+                                     FlagRelation rel) {
   if (!isSatisfied(requiredFlags, rel))
-    warnUnsound(name, getUnsetFlags(requiredFlags), currBlock, i, ignore);
+    warnIfIncomplete(name, getUnsetFlags(requiredFlags), currBlock, i, rel);
 }
 
-void SmackWarnings::warnUnsound(std::string unmodeledOpName, Block *currBlock,
-                                const Instruction *i, bool ignore,
-                                FlagRelation rel) {
-  warnUnsound("unmodeled operation " + unmodeledOpName, UnsetFlagsT(),
-              currBlock, i, ignore, rel);
-}
-
-void SmackWarnings::warnUnsound(std::string name, UnsetFlagsT unsetFlags,
-                                Block *currBlock, const Instruction *i,
-                                bool ignore, FlagRelation rel) {
-  if (!isSufficientWarningLevel(WarningLevel::Unsound))
+void SmackWarnings::warnImprecise(std::string name, std::string description,
+                                  UnsetFlagsT unsetFlags, Block *currBlock,
+                                  const Instruction *i, FlagRelation rel) {
+  if (!isSufficientWarningLevel(WarningLevel::Imprecise))
     return;
   std::string beginning = std::string("llvm2bpl: ") + buildDebugInfo(i);
-  std::string end =
-      (ignore ? "unsoundly ignoring " : "over-approximating ") + name + ";";
+  std::string end = description + " " + name + ";";
   if (currBlock)
     currBlock->addStmt(Stmt::comment(beginning + "warning: " + end));
   std::string hint = "";
@@ -89,19 +92,6 @@ void SmackWarnings::warnUnsound(std::string name, UnsetFlagsT unsetFlags,
       << "warning: ";
   (SmackOptions::ColoredWarnings ? errs().resetColor() : errs())
       << end << hint << "\n";
-}
-
-void SmackWarnings::warnIfUnsound(std::string name, FlagT &requiredFlag,
-                                  Block *currBlock, const Instruction *i,
-                                  FlagRelation rel) {
-  warnIfUnsound(name, {&requiredFlag}, currBlock, i, false, rel);
-}
-
-void SmackWarnings::warnIfUnsound(std::string name, FlagT &requiredFlag1,
-                                  FlagT &requiredFlag2, Block *currBlock,
-                                  const Instruction *i, FlagRelation rel) {
-  warnIfUnsound(name, {&requiredFlag1, &requiredFlag2}, currBlock, i, false,
-                rel);
 }
 
 void SmackWarnings::warnInfo(std::string info) {

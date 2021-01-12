@@ -319,9 +319,9 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst &ii) {
   if (f) {
     emit(rep->call(f, ii));
   } else {
-    // llvm_unreachable("Unexpected invoke instruction.");
-    SmackWarnings::warnUnsound("invoke instruction", currBlock, &ii,
-                               ii.getType()->isVoidTy());
+    llvm_unreachable("Unexpected invoke instruction.");
+    // SmackWarnings::warnUnsound("invoke instruction", currBlock, &ii,
+    //                           ii.getType()->isVoidTy());
   }
   std::vector<std::pair<const Expr *, llvm::BasicBlock *>> targets;
   targets.push_back(
@@ -352,13 +352,13 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst &ii) {
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
   processInstruction(I);
   if (rep->isBitwiseOp(&I) && I.getType()->getIntegerBitWidth() > 1)
-    SmackWarnings::warnIfUnsound(std::string("bitwise operation ") +
-                                     I.getOpcodeName(),
-                                 SmackOptions::BitPrecise, currBlock, &I);
+    SmackWarnings::warnIfIncomplete(std::string("bitwise operation ") +
+                                        I.getOpcodeName(),
+                                    {&SmackOptions::BitPrecise}, currBlock, &I);
   if (rep->isFpArithOp(&I))
-    SmackWarnings::warnIfUnsound(std::string("floating-point arithmetic ") +
-                                     I.getOpcodeName(),
-                                 SmackOptions::FloatEnabled, currBlock, &I);
+    SmackWarnings::warnIfIncomplete(
+        std::string("floating-point arithmetic ") + I.getOpcodeName(),
+        {&SmackOptions::FloatEnabled}, currBlock, &I);
 
   const Expr *E;
   if (isa<VectorType>(I.getType())) {
@@ -380,9 +380,9 @@ void SmackInstGenerator::visitUnaryOperator(llvm::UnaryOperator &I) {
   assert(I.getOpcode() == Instruction::FNeg && !isa<VectorType>(I.getType()) &&
          "Unsupported unary operation!");
   processInstruction(I);
-  SmackWarnings::warnIfUnsound(std::string("floating-point arithmetic ") +
-                                   I.getOpcodeName(),
-                               SmackOptions::FloatEnabled, currBlock, &I);
+  SmackWarnings::warnIfIncomplete(std::string("floating-point arithmetic ") +
+                                      I.getOpcodeName(),
+                                  {&SmackOptions::FloatEnabled}, currBlock, &I);
   emit(Stmt::assign(rep->expr(&I), rep->uop(&I)));
 }
 
@@ -647,8 +647,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   processInstruction(ci);
 
   if (ci.isInlineAsm()) {
-    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
-                               ci.getType()->isVoidTy());
+    SmackWarnings::warnUnModeled("inline asm call " + i2s(ci), currBlock, &ci);
     emit(Stmt::skip());
     return;
   }
@@ -825,8 +824,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
 void SmackInstGenerator::visitCallBrInst(llvm::CallBrInst &cbi) {
   processInstruction(cbi);
-  SmackWarnings::warnUnsound("callbr instruction " + i2s(cbi), currBlock, &cbi,
-                             cbi.getType()->isVoidTy());
+  SmackWarnings::warnUnModeled("callbr instruction " + i2s(cbi), currBlock,
+                               &cbi);
   emit(Stmt::skip());
 }
 
@@ -876,7 +875,7 @@ void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst &lpi) {
   emit(Stmt::assign(rep->expr(&lpi), Expr::id(Naming::EXN_VAL_VAR)));
   if (lpi.isCleanup())
     emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
-  SmackWarnings::warnUnsound("landingpad clauses", currBlock, &lpi, true);
+  SmackWarnings::warnUnModeled("landingpad clauses", currBlock, &lpi);
 }
 
 /******************************************************************************/
@@ -891,12 +890,6 @@ void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst &mci) {
 void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst &msi) {
   processInstruction(msi);
   emit(rep->memset(msi));
-}
-
-void SmackInstGenerator::generateUnModeledCall(llvm::CallInst *ci) {
-  SmackWarnings::warnUnsound(ci->getCalledFunction()->getName(), currBlock, ci,
-                             ci->getType()->isVoidTy());
-  emit(rep->call(ci->getCalledFunction(), *ci));
 }
 
 void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
@@ -914,9 +907,9 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           if (satisfied)
             modelGenFunc(ci);
           else {
-            SmackWarnings::warnUnsound(
+            SmackWarnings::warnIfIncomplete(
                 "call to " + ci->getCalledFunction()->getName().str(),
-                unsetFlags, currBlock, ci, false, rel);
+                unsetFlags, currBlock, ci, rel);
             emit(rep->call(ci->getCalledFunction(), *ci));
           }
         };
@@ -1229,8 +1222,11 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   auto it = stmtMap.find(ii.getIntrinsicID());
   if (it != stmtMap.end())
     it->second(&ii);
-  else
-    generateUnModeledCall(&ii);
+  else {
+    SmackWarnings::warnUnModeled(ii.getCalledFunction()->getName(), currBlock,
+                                 &ii);
+    emit(rep->call(ii.getCalledFunction(), ii));
+  }
 }
 
 } // namespace smack
