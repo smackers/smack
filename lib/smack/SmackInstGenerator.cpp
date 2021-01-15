@@ -316,13 +316,11 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst &si) {
 void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst &ii) {
   processInstruction(ii);
   llvm::Function *f = ii.getCalledFunction();
-  if (f) {
+  if (f)
     emit(rep->call(f, ii));
-  } else {
+  else
     llvm_unreachable("Unexpected invoke instruction.");
-    // SmackWarnings::warnUnsound("invoke instruction", currBlock, &ii,
-    //                           ii.getType()->isVoidTy());
-  }
+
   std::vector<std::pair<const Expr *, llvm::BasicBlock *>> targets;
   targets.push_back(
       {Expr::not_(Expr::id(Naming::EXN_VAR)), ii.getNormalDest()});
