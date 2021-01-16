@@ -18,143 +18,149 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <string>
+#include <unordered_map>
+#include <utility>
 
 namespace smack {
 
 using namespace llvm;
+using SC = RewriteBitwiseOps::SpecialCase;
 
 unsigned getOpBitWidth(const Value *V) {
   const Type *T = V->getType();
-  const IntegerType *iType = cast<IntegerType>(T);
+  const IntegerType *iType = cast<const IntegerType>(T);
   return iType->getBitWidth();
 }
 
-Optional<APInt> getConstantIntValue(const Value *V) {
-  if (const ConstantInt *ci = dyn_cast<ConstantInt>(V)) {
-    const APInt &value = ci->getValue();
-    return Optional<APInt>(value);
-  } else {
-    return Optional<APInt>();
-  }
+int getConstOpId(const Instruction *i) {
+  return llvm::isa<ConstantInt>(i->getOperand(1))
+             ? 1
+             : (llvm::isa<ConstantInt>(i->getOperand(0)) ? 0 : -1);
 }
 
-bool isConstantInt(const Value *V) {
-  Optional<APInt> constantValue = getConstantIntValue(V);
-  return constantValue.hasValue() && (*constantValue + 1).isPowerOf2();
+Instruction *RewriteBitwiseOps::rewriteShift(Instruction::BinaryOps newOp,
+                                             Instruction *i) {
+  auto ci = llvm::cast<ConstantInt>(i->getOperand(1));
+  auto lhs = i->getOperand(0);
+  unsigned bitWidth = getOpBitWidth(lhs);
+  APInt rhsVal = APInt(bitWidth, "1", 10);
+  const APInt &value = ci->getValue();
+  rhsVal <<= value;
+  Value *rhs = ConstantInt::get(ci->getType(), rhsVal);
+  return BinaryOperator::Create(newOp, lhs, rhs, "", i);
+}
+
+Instruction *RewriteBitwiseOps::rewriteShr(Instruction *i) {
+  // Shifting right by a constant amount is equivalent to dividing by
+  // 2^amount
+  return rewriteShift(Instruction::SDiv, i);
+}
+
+Instruction *RewriteBitwiseOps::rewriteShl(Instruction *i) {
+  // Shifting left by a constant amount is equivalent to dividing by
+  // 2^amount
+  return rewriteShift(Instruction::Mul, i);
+}
+
+Instruction *RewriteBitwiseOps::rewriteAndPoTMO(Instruction *i) {
+  // If the operation is a bit-wise `and' and the mask variable is
+  // constant, it may be possible to replace this operation with a
+  // remainder operation. If one argument has only ones, and they're only
+  // in the least significant bit, then the mask is 2^(number of ones)
+  // - 1. This is equivalent to the remainder when dividing by 2^(number
+  // of ones).
+  // Zvonimir: Right-side constants do not work well on SVCOMP
+  // } else if (isConstantInt(args[1])) {
+  //   maskOperand = 1;
+  // }
+  auto constOpId = getConstOpId(i);
+  auto constVal =
+      (llvm::cast<ConstantInt>(i->getOperand(constOpId)))->getValue();
+  auto lhs = i->getOperand(1 - constOpId);
+  Value *rhs = ConstantInt::get(i->getContext(), constVal + 1);
+  return BinaryOperator::Create(Instruction::URem, lhs, rhs, "", i);
+}
+
+Instruction *RewriteBitwiseOps::rewriteAndNPot(Instruction *i) {
+  // E.g., rewrite ``x && -32'' into ``x - x % 32''
+  auto constOpId = getConstOpId(i);
+  auto constVal =
+      (llvm::cast<ConstantInt>(i->getOperand(constOpId)))->getValue();
+  auto lhs = i->getOperand(1 - constOpId);
+  auto rem = BinaryOperator::Create(
+      Instruction::URem, lhs, ConstantInt::get(i->getContext(), 0 - constVal),
+      "", i);
+  return BinaryOperator::Create(Instruction::Sub, lhs, rem, "", i);
+}
+
+boost::optional<SC> RewriteBitwiseOps::getSpecialCase(Instruction *i) {
+  if (auto bi = dyn_cast<BinaryOperator>(i)) {
+    auto opcode = bi->getOpcode();
+    if (bi->isShift() && llvm::isa<ConstantInt>(bi->getOperand(1))) {
+      if (opcode == Instruction::AShr || opcode == Instruction::LShr)
+        return SC::Shr;
+      else if (opcode == Instruction::Shl)
+        return SC::Shl;
+    } else if (opcode == Instruction::And) {
+      auto constOpId = getConstOpId(i);
+      if (constOpId >= 0) {
+        auto val =
+            (llvm::cast<ConstantInt>(i->getOperand(constOpId)))->getValue();
+        if ((val + 1).isPowerOf2())
+          return SC::AndPoTMO;
+        else if ((0 - val).isPowerOf2())
+          return SC::AndNPoT;
+      }
+    }
+  }
+  return boost::none;
+}
+
+Instruction *RewriteBitwiseOps::rewriteSpecialCase(SC sc, Instruction *i) {
+  static std::unordered_map<SC, Instruction *(*)(Instruction *)> table{
+      {SC::Shr, &rewriteShr},
+      {SC::Shl, &rewriteShl},
+      {SC::AndPoTMO, &rewriteAndPoTMO},
+      {SC::AndNPoT, &rewriteAndNPot}};
+  return table[sc](i);
+}
+
+boost::optional<Instruction *>
+RewriteBitwiseOps::rewriteGeneralCase(Instruction *i) {
+  auto opCode = i->getOpcode();
+  if (opCode != Instruction::And && opCode != Instruction::Or)
+    return boost::none;
+  unsigned bitWidth = getOpBitWidth(i);
+  if (bitWidth > 64 || bitWidth < 8 || (bitWidth & (bitWidth - 1)))
+    return boost::none;
+  std::string func =
+      std::string("__SMACK_") + i->getOpcodeName() + std::to_string(bitWidth);
+  Function *co = i->getModule()->getFunction(func);
+  assert(co != NULL && "Function __SMACK_[and|or] should be present.");
+  std::vector<Value *> args;
+  args.push_back(i->getOperand(0));
+  args.push_back(i->getOperand(1));
+  return CallInst::Create(co, args, "", i);
 }
 
 bool RewriteBitwiseOps::runOnModule(Module &m) {
-  std::vector<Instruction *> instsFrom;
-  std::vector<Instruction *> instsTo;
+  std::vector<std::pair<Instruction *, Instruction *>> insts;
 
   for (auto &F : m) {
     if (Naming::isSmackName(F.getName()))
       continue;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-      if (I->isShift()) {
-        BinaryOperator *bi = cast<BinaryOperator>(&*I);
-        Value *amount = bi->getOperand(1);
-
-        if (ConstantInt *ci = dyn_cast<ConstantInt>(amount)) {
-          unsigned opcode = bi->getOpcode();
-          Instruction::BinaryOps op;
-          if (opcode == Instruction::AShr || opcode == Instruction::LShr) {
-            // Shifting right by a constant amount is equivalent to dividing by
-            // 2^amount
-            op = Instruction::SDiv;
-          } else if (opcode == Instruction::Shl) {
-            // Shifting left by a constant amount is equivalent to dividing by
-            // 2^amount
-            op = Instruction::Mul;
-          }
-
-          auto lhs = bi->getOperand(0);
-          unsigned bitWidth = getOpBitWidth(lhs);
-          APInt rhsVal = APInt(bitWidth, "1", 10);
-          const APInt &value = ci->getValue();
-          rhsVal <<= value;
-          Value *rhs = ConstantInt::get(ci->getType(), rhsVal);
-          Instruction *replacement = BinaryOperator::Create(op, lhs, rhs, "");
-          instsFrom.push_back(&*I);
-          instsTo.push_back(replacement);
-        }
-      } else if (I->isBitwiseLogicOp()) {
-        // If the operation is a bit-wise `and' and the mask variable is
-        // constant, it may be possible to replace this operation with a
-        // remainder operation. If one argument has only ones, and they're only
-        // in the least significant bit, then the mask is 2^(number of ones)
-        // - 1. This is equivalent to the remainder when dividing by 2^(number
-        // of ones).
-        BinaryOperator *bi = cast<BinaryOperator>(&*I);
-        unsigned opcode = bi->getOpcode();
-        if (opcode == Instruction::And) {
-          Value *args[] = {bi->getOperand(0), bi->getOperand(1)};
-          int maskOperand = -1;
-
-          if (isConstantInt(args[0])) {
-            maskOperand = 0;
-          }
-          // Zvonimir: Right-side constants do not work well on SVCOMP
-          // } else if (isConstantInt(args[1])) {
-          //   maskOperand = 1;
-          // }
-
-          if (maskOperand == -1) {
-            unsigned bitWidth = getOpBitWidth(&*I);
-            Function *co;
-            if (bitWidth == 64) {
-              co = m.getFunction("__SMACK_and64");
-            } else if (bitWidth == 32) {
-              co = m.getFunction("__SMACK_and32");
-            } else if (bitWidth == 16) {
-              co = m.getFunction("__SMACK_and16");
-            } else if (bitWidth == 8) {
-              co = m.getFunction("__SMACK_and8");
-            } else {
-              continue;
-            }
-            assert(co != NULL && "Function __SMACK_and should be present.");
-            std::vector<Value *> args;
-            args.push_back(bi->getOperand(0));
-            args.push_back(bi->getOperand(1));
-            instsFrom.push_back(&*I);
-            instsTo.push_back(CallInst::Create(co, args, ""));
-          } else {
-            auto lhs = args[1 - maskOperand];
-            Value *rhs = ConstantInt::get(
-                m.getContext(), *getConstantIntValue(args[maskOperand]) + 1);
-            Instruction *replacement =
-                BinaryOperator::Create(Instruction::URem, lhs, rhs, "");
-            instsFrom.push_back(&*I);
-            instsTo.push_back(replacement);
-          }
-        } else if (opcode == Instruction::Or) {
-          unsigned bitWidth = getOpBitWidth(&*I);
-          Function *co;
-          if (bitWidth == 64) {
-            co = m.getFunction("__SMACK_or64");
-          } else if (bitWidth == 32) {
-            co = m.getFunction("__SMACK_or32");
-          } else if (bitWidth == 16) {
-            co = m.getFunction("__SMACK_or16");
-          } else if (bitWidth == 8) {
-            co = m.getFunction("__SMACK_or8");
-          } else {
-            continue;
-          }
-          assert(co != NULL && "Function __SMACK_or should be present.");
-          std::vector<Value *> args;
-          args.push_back(bi->getOperand(0));
-          args.push_back(bi->getOperand(1));
-          instsFrom.push_back(&*I);
-          instsTo.push_back(CallInst::Create(co, args, ""));
-        }
-      }
+      Instruction *i = &*I;
+      if (auto sc = getSpecialCase(i))
+        insts.push_back(std::make_pair(i, rewriteSpecialCase(*sc, i)));
+      else if (auto oi = rewriteGeneralCase(i))
+        insts.push_back(std::make_pair(i, *oi));
     }
   }
 
-  for (size_t i = 0; i < instsFrom.size(); ++i) {
-    ReplaceInstWithInst(instsFrom[i], instsTo[i]);
+  for (auto &p : insts) {
+    p.first->replaceAllUsesWith(p.second);
+    p.first->removeFromParent();
   }
 
   return true;
