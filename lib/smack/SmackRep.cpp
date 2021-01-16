@@ -857,8 +857,8 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
     }
 
   } else if (isa<InlineAsm>(v)) {
-    SmackWarnings::warnUnsound("inline asm passed as argument", nullptr,
-                               nullptr);
+    SmackWarnings::warnUnModeled("inline asm passed as argument", nullptr,
+                                 nullptr);
     return pointerLit(0ULL);
 
   } else {
