@@ -38,6 +38,10 @@ int getConstOpId(const Instruction *i) {
              : (llvm::isa<ConstantInt>(i->getOperand(0)) ? 0 : -1);
 }
 
+void copyDbgMetadata(const Instruction *src, Instruction *dest) {
+  dest->setMetadata("dbg", src->getMetadata("dbg"));
+}
+
 Instruction *RewriteBitwiseOps::rewriteShift(Instruction::BinaryOps newOp,
                                              Instruction *i) {
   auto ci = llvm::cast<ConstantInt>(i->getOperand(1));
@@ -90,6 +94,7 @@ Instruction *RewriteBitwiseOps::rewriteAndNPot(Instruction *i) {
   auto rem = BinaryOperator::Create(
       Instruction::URem, lhs, ConstantInt::get(i->getContext(), 0 - constVal),
       "", i);
+  copyDbgMetadata(i, rem);
   return BinaryOperator::Create(Instruction::Sub, lhs, rem, "", i);
 }
 
@@ -159,6 +164,7 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
   }
 
   for (auto &p : insts) {
+    copyDbgMetadata(p.first, p.second);
     p.first->replaceAllUsesWith(p.second);
     p.first->removeFromParent();
   }
