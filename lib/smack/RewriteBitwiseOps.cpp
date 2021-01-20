@@ -85,7 +85,7 @@ Instruction *RewriteBitwiseOps::rewriteAndPoTMO(Instruction *i) {
   return BinaryOperator::Create(Instruction::URem, lhs, rhs, "", i);
 }
 
-Instruction *RewriteBitwiseOps::rewriteAndNPot(Instruction *i) {
+Instruction *RewriteBitwiseOps::rewriteAndNPoT(Instruction *i) {
   // E.g., rewrite ``x && -32'' into ``x - x % 32''
   auto constOpId = getConstOpId(i);
   auto constVal =
@@ -126,7 +126,7 @@ Instruction *RewriteBitwiseOps::rewriteSpecialCase(SC sc, Instruction *i) {
       {SC::Shr, &rewriteShr},
       {SC::Shl, &rewriteShl},
       {SC::AndPoTMO, &rewriteAndPoTMO},
-      {SC::AndNPoT, &rewriteAndNPot}};
+      {SC::AndNPoT, &rewriteAndNPoT}};
   return table[sc](i);
 }
 

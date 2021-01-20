@@ -30,7 +30,7 @@ private:
   static llvm::Instruction *rewriteShr(llvm::Instruction *);
   static llvm::Instruction *rewriteShl(llvm::Instruction *);
   static llvm::Instruction *rewriteAndPoTMO(llvm::Instruction *);
-  static llvm::Instruction *rewriteAndNPot(llvm::Instruction *);
+  static llvm::Instruction *rewriteAndNPoT(llvm::Instruction *);
   llvm::Instruction *rewriteSpecialCase(SpecialCase, llvm::Instruction *);
   boost::optional<llvm::Instruction *> rewriteGeneralCase(llvm::Instruction *);
 };
