@@ -434,7 +434,7 @@ def arguments():
     translate_group.add_argument(
         '--integer-encoding',
         choices=['bit-vector', 'unbounded-integer', 'wrapped-integer'],
-        default='unbounded-integer',
+        default='wrapped-integer',
         help='''machine integer encoding
                 (bit-vector=use SMT bit-vector theory,
                 unbounded-integer=use SMT integer theory,
