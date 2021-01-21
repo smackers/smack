@@ -1,0 +1,3 @@
+skip: ok
+verifiers: [boogie]
+flags: [--modular, --integer-encoding=unbounded-integer]
