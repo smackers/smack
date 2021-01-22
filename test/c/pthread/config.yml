@@ -1,4 +1,4 @@
 skip: ok
 verifiers: [corral]
 memory: [no-reuse-impls]
-flags: [--pthread, --context-bound=2]
+flags: [--pthread, --context-bound=2, --integer-encoding=unbounded-integer]
