@@ -872,7 +872,7 @@ def verify_bpl(args):
         command += ["/errorLimit:%s" % args.max_violations]
         command += ["/proverOpt:O:smt.array.extensional=false"]
         command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
-        #command += ["/proverOpt:O:smt.arith.solver=2"]
+        # command += ["/proverOpt:O:smt.arith.solver=2"]
         if not args.modular:
             command += ["/loopUnroll:%d" % args.unroll]
         if args.solver == 'cvc4':
@@ -891,7 +891,7 @@ def verify_bpl(args):
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
         command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-        #command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
+        # command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
         if args.solver == 'cvc4':
             command += ["/bopt:proverOpt:SOLVER=cvc4"]
         elif args.solver == 'yices2':
