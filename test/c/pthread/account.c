@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 // @expect verified
+// @flag --verifier-options=/bopt:proverOpt:O:smt.arith.solver=2
 
 #define TRUE 1
 #define FALSE 0
