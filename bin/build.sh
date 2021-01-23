@@ -310,13 +310,12 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   puts "Building LLVM"
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
-
-  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz
-  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/cfe-${LLVM_FULL_VERSION}.src.tar.xz
-  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/clang-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz
 
   tar -C ${LLVM_DIR}/src -xvf llvm-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf clang-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
   tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
