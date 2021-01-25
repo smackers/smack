@@ -1252,12 +1252,16 @@ void PtrOpGen::generateArithOps(std::stringstream &s) const {
   // e.g., function {:inline} $add.ref(p1: ref, p2: ref) returns (ref) {
   // $add.i64(p1, p2) }
   for (auto op : operations) {
-    s << Decl::function(indexedName(op, {Naming::PTR_TYPE}),
-                        {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
-                        Naming::PTR_TYPE,
-                        Expr::fn(indexedName(op, {prelude.rep.pointerType()}),
-                                 {Expr::id("p1"), Expr::id("p2")}),
-                        {makeInlineAttr()})
+    s << Decl::function(
+             indexedName(op, {Naming::PTR_TYPE}),
+             {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
+             Naming::PTR_TYPE,
+             IntOpGen::IntArithOp::wrappedExpr(
+                 prelude.rep.ptrSizeInBits,
+                 Expr::fn(indexedName(op, {prelude.rep.pointerType()}),
+                          {Expr::id("p1"), Expr::id("p2")}),
+                 false),
+             {makeInlineAttr()})
       << "\n";
   }
   s << "\n";
