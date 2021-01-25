@@ -1221,7 +1221,12 @@ void PtrOpGen::generatePreds(std::stringstream &s) const {
     const Expr *predExpr =
         SmackOptions::BitPrecisePointers
             ? condExpr
-            : new BinExpr(binPred, makePtrVarExpr(1), makePtrVarExpr(2));
+            : new BinExpr(
+                  binPred,
+                  IntOpGen::IntArithOp::wrappedExpr(prelude.rep.ptrSizeInBits,
+                                                    makePtrVarExpr(1), false),
+                  IntOpGen::IntArithOp::wrappedExpr(prelude.rep.ptrSizeInBits,
+                                                    makePtrVarExpr(2), false));
 
     s << Decl::function(
              indexedName(predName, {Naming::PTR_TYPE, Naming::BOOL_TYPE}),
