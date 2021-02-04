@@ -747,8 +747,12 @@ def llvm_to_bpl(args):
 def procedure_annotation(name, args):
     if name in args.entry_points:
         return "{:entrypoint}"
-    elif (args.modular and
-          re.match("|".join(inlined_procedures()).replace("$", r"\$"), name)):
+    elif ((args.verifier == 'corral' and args.max_violations > 1 and
+           re.match("__SMACK_check|__VERIFIER_assert", name)) or
+          (args.modular and
+           re.match("|".join(
+                             inlined_procedures()).replace("$", r"\$"),
+                    name))):
         return "{:inline 1}"
     elif (not args.modular) and args.verifier == 'boogie':
         return ("{:inline %s}" % args.unroll)
@@ -856,6 +860,29 @@ def verification_result(verifier_output):
         return VResult.UNKNOWN
 
 
+def inline_check_procedures(args):
+    if args.max_violations < 2:
+        return
+    try:
+        p = subprocess.Popen(
+                             ['boogie',
+                              '/nologo',
+                              '/doModSetAnalysis',
+                              '/noVerify',
+                              '/printInstrumented',
+                              args.bpl_file],
+                             stdout=subprocess.PIPE)
+        output, _ = p.communicate()
+        if p.returncode:
+            raise RuntimeError("Can't inline procedures containing assertions")
+    except (RuntimeError, OSError):
+        print('Warning: verification may be unsound due to failure of'
+              ' inlining procedures containing assertions.')
+    else:
+        with open(args.bpl_file, 'w') as f:
+            f.write('\n'.join(output.decode().splitlines()[:-1]))
+
+
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
 
@@ -881,6 +908,7 @@ def verify_bpl(args):
             command += ["/proverOpt:SOLVER=Yices2"]
 
     elif args.verifier == 'corral':
+        inline_check_procedures(args)
         command = ["corral"]
         command += [args.bpl_file]
         command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
