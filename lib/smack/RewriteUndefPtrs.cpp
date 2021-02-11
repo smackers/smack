@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-#include "smack/RemoveUndefPtrs.h"
+#include "smack/RewriteUndefPtrs.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -16,11 +16,11 @@ using namespace llvm;
 
 namespace smack {
 
-char RemoveUndefPtrs::ID = 0;
-static RegisterPass<RemoveUndefPtrs>
-    X("remove-undef-ptrs", "Transform undef pointers into null pointers");
+char RewriteUndefPtrs::ID = 0;
+static RegisterPass<RewriteUndefPtrs>
+    X("rewrite-undef-ptrs", "Transform undef pointers into null pointers");
 
-bool RemoveUndefPtrs::runOnFunction(Function &F) {
+bool RewriteUndefPtrs::runOnFunction(Function &F) {
   bool changed = false;
   for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
     for (auto OI = I->op_begin(), OE = I->op_end(); OI != OE; ++OI) {

@@ -506,6 +506,14 @@ def arguments():
         default=False,
         help='enable support for string')
 
+    translate_group.add_argument(
+        '--rewrite-undef-pointers',
+        action="store_true",
+        default=False,
+        help='''optionally rewrite pointers to undef values to null
+                pointers''')
+
+
     verifier_group = parser.add_argument_group('verifier options')
 
     verifier_group.add_argument(
@@ -738,6 +746,8 @@ def llvm_to_bpl(args):
         cmd += ['-float']
     if args.modular:
         cmd += ['-modular']
+    if args.rewrite_undef_pointers:
+        cmd += ['-rewrite-undef-ptrs']
     try_command(cmd, console=True)
     annotate_bpl(args)
     memsafety_subproperty_selection(args)
