@@ -37,6 +37,7 @@
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/RemoveUndefPtrs.h"
 #include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
 #include "smack/SimplifyLibCalls.h"
@@ -164,7 +165,6 @@ int main(int argc, char **argv) {
 
   // This runs before DSA because some Rust functions cause problems.
   pass_manager.add(new smack::RustFixes);
-
   if (!Modular) {
     auto PreserveKeyGlobals = [=](const llvm::GlobalValue &GV) {
       std::string name = GV.getName();
@@ -207,8 +207,10 @@ int main(int argc, char **argv) {
   }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
+  pass_manager.add(new smack::RemoveUndefPtrs());
   pass_manager.add(new llvm::Devirtualize());
   pass_manager.add(new smack::SplitAggregateValue());
+  pass_manager.add(new smack::RemoveUndefPtrs());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
