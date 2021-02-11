@@ -513,7 +513,6 @@ def arguments():
         help='''optionally rewrite pointers to undef values to null
                 pointers''')
 
-
     verifier_group = parser.add_argument_group('verifier options')
 
     verifier_group.add_argument(

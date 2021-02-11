@@ -53,6 +53,10 @@ const llvm::cl::opt<bool> SmackOptions::RewriteBitwiseOps(
     llvm::cl::desc(
         "Provides models for bitwise operations in integer encoding."));
 
+const llvm::cl::opt<bool> SmackOptions::RewriteUndefPtrs(
+    "rewrite-undef-ptrs",
+    llvm::cl::desc("Rewrites pointers to undef values to null pointers."));
+
 const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
     "no-memory-splitting",
     llvm::cl::desc("Disable splitting memory into regions."));
