@@ -25,6 +25,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 #include "seadsa/InitializePasses.hh"
+#include "seadsa/support/Debug.h"
 #include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
@@ -143,6 +144,10 @@ int main(int argc, char **argv) {
   auto &L = module.get()->getDataLayoutStr();
   if (L.empty())
     module.get()->setDataLayout(DefaultDataLayout);
+
+  if (smack::SmackOptions::WarningLevel ==
+      smack::SmackWarnings::WarningLevel::Info)
+    seadsa::SeaDsaEnableLog("dsa-warn");
 
   ///////////////////////////////
   // initialise and run passes //
