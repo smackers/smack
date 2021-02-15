@@ -866,7 +866,7 @@ def verify_bpl(args):
     elif args.verifier == 'boogie' or args.modular:
         command = ["boogie"]
         command += [args.bpl_file]
-        command += ["/nologo", "/doModSetAnalysis"]
+        command += ["/doModSetAnalysis"]
         command += ["/useArrayTheory"]
         command += ["/timeLimit:%s" % args.time_limit]
         command += ["/errorLimit:%s" % args.max_violations]
