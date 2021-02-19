@@ -80,6 +80,7 @@ bool RustFixes::runOnFunction(Function &F) {
                name.find(Naming::RUST_ENTRY) != std::string::npos ||
                Naming::isRustPanic(name)) {
       F.dropAllReferences();
+      return true;
     }
   }
 
