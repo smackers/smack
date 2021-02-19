@@ -7,12 +7,9 @@
 
 #include "smack/RustFixes.h"
 #include "smack/Naming.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
-#include <set>
 #include <string>
 
 namespace smack {
@@ -30,8 +27,11 @@ This patches the main function to:
 %r = 0
 call void @real_main(...)
 ...
+
+Returns true if this is a Rust program entry point, false
+otherwise.
 */
-void fixEntry(Function &main) {
+bool fixEntry(Function &main) {
   std::vector<Instruction *> instToErase;
 
   for (inst_iterator I = inst_begin(main), E = inst_end(main); I != E; ++I) {
@@ -64,31 +64,26 @@ void fixEntry(Function &main) {
   for (auto I : instToErase) {
     I->eraseFromParent();
   }
+
+  return instToErase.size();
 }
 
-bool RustFixes::runOnModule(Module &m) {
-  std::set<Function *> funcToErase;
-
-  for (auto &F : m) {
-    if (F.hasName()) {
-      auto name = F.getName();
-      if (Naming::isSmackName(name))
-        continue;
-      if (name == "main") {
-        fixEntry(F);
-      } else if (name.find(Naming::RUST_LANG_START_INTERNAL) !=
-                     std::string::npos ||
-                 name.find(Naming::RUST_ENTRY) != std::string::npos) {
-        funcToErase.insert(&F);
-      }
+bool RustFixes::runOnFunction(Function &F) {
+  if (F.hasName()) {
+    auto name = F.getName();
+    if (Naming::isSmackName(name))
+      return false;
+    if (name == "main") {
+      return fixEntry(F);
+    } else if (name.find(Naming::RUST_LANG_START_INTERNAL) !=
+                   std::string::npos ||
+               name.find(Naming::RUST_ENTRY) != std::string::npos ||
+               Naming::isRustPanic(name)) {
+      F.dropAllReferences();
     }
   }
 
-  for (auto F : funcToErase) {
-    F->dropAllReferences();
-  }
-
-  return true;
+  return false;
 }
 
 // Pass ID variable

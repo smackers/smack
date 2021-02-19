@@ -118,6 +118,7 @@ public:
   static bool isBplKeyword(std::string s);
   static bool isSmackName(std::string s);
   static bool isSmackGeneratedName(std::string s);
+  static bool isRustPanic(const std::string &s);
   static std::string escape(std::string s);
 };
 } // namespace smack

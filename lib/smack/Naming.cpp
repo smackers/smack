@@ -167,6 +167,17 @@ bool Naming::isSmackGeneratedName(std::string n) {
   return n.size() > 0 && n[0] == '$';
 }
 
+bool Naming::isRustPanic(const std::string &name) {
+  for (const auto &panic : Naming::RUST_PANICS) {
+    // We are interested in exact functional matches.
+    // Rust mangled names include a 17 byte hash at the end.
+    if (name.find(panic) == 0 && name.size() == panic.size() + 17) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::string Naming::escape(std::string s) {
   std::string Str(s);
   for (unsigned i = 0; i != Str.length(); ++i)
