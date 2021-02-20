@@ -4,35 +4,40 @@
 
 #define DEBUG_TYPE "simplify-libcalls"
 
-#include "smack/SmackOptions.h"
-#include "smack/Naming.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/Debug.h"
+#include "smack/Naming.h"
+#include "smack/SmackOptions.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-#include <vector>
-#include <stack>
 #include <map>
 #include <set>
+#include <stack>
+#include <vector>
 
 namespace smack {
 
 using namespace llvm;
 
-void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage& AU) const {
+void SimplifyLibCalls::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
-bool SimplifyLibCalls::runOnModule(Module& M) {
+bool SimplifyLibCalls::runOnFunction(Function &F) {
   modified = false;
   simplifier = new LibCallSimplifier(
-    M.getDataLayout(),
-    &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()
-  );
+      F.getParent()->getDataLayout(),
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
+      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
+      &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI(),
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
   if (simplifier)
-    visit(M);
+    visit(F);
   return modified;
 }
 
@@ -46,7 +51,6 @@ void SimplifyLibCalls::visitCallInst(CallInst &I) {
 char SimplifyLibCalls::ID = 0;
 
 // Register the pass
-static RegisterPass<SimplifyLibCalls>
-X("simplify-libcalls", "Simplify Library Calls");
-
-}
+static RegisterPass<SimplifyLibCalls> X("simplify-libcalls",
+                                        "Simplify Library Calls");
+} // namespace smack

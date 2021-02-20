@@ -5,9 +5,10 @@
 #ifndef NAMING_H
 #define NAMING_H
 
-#include "llvm/Support/Regex.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Regex.h"
 #include <map>
+#include <vector>
 
 namespace smack {
 
@@ -18,7 +19,7 @@ class Naming {
   static Regex BPL_KW;
   static Regex SMACK_NAME;
 
-  std::map<const Value*, std::string> names;
+  std::map<const Value *, std::string> names;
   unsigned blockNum;
   unsigned varNum;
   unsigned undefNum;
@@ -91,27 +92,35 @@ public:
   static const std::string MEMORY_SAFETY_FUNCTION;
   static const std::string MEMORY_LEAK_FUNCTION;
 
-  static const std::map<unsigned,std::string> INSTRUCTION_TABLE;
-  static const std::map<unsigned,std::string> CMPINST_TABLE;
-  static const std::map<unsigned,std::string> ATOMICRMWINST_TABLE;
+  static const std::string RUST_ENTRY;
+  static const std::string RUST_LANG_START_INTERNAL;
+  static const std::vector<std::string> RUST_PANICS;
+  static const std::string RUST_PANIC_ANNOTATION;
 
-  Naming() : blockNum(0), varNum(0), undefNum(0), globalNum(0) { }
-  Naming(Naming& n) : blockNum(n.blockNum), varNum(n.varNum) { }
+  static const std::string INT_WRAP_SIGNED_FUNCTION;
+  static const std::string INT_WRAP_UNSIGNED_FUNCTION;
+  static const std::map<unsigned, std::string> INSTRUCTION_TABLE;
+  static const std::map<unsigned, std::string> CMPINST_TABLE;
+  static const std::map<unsigned, std::string> ATOMICRMWINST_TABLE;
+
+  Naming() : blockNum(0), varNum(0), undefNum(0), globalNum(0) {}
+  Naming(Naming &n) : blockNum(n.blockNum), varNum(n.varNum) {}
 
   void reset();
-  std::string get(const Value& V);
+  std::string get(const Value &V);
 
   std::string freshGlobalName();
   std::string freshBlockName();
   std::string freshUndefName();
-  std::string freshVarName(const Value& V);
+  std::string freshVarName(const Value &V);
+  static std::string getIntWrapFunc(bool isUnsigned);
 
   static bool isBplKeyword(std::string s);
   static bool isSmackName(std::string s);
   static bool isSmackGeneratedName(std::string s);
+  static bool isRustPanic(const std::string &s);
   static std::string escape(std::string s);
 };
-
-}
+} // namespace smack
 
 #endif

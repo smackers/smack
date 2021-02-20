@@ -7,55 +7,32 @@
 #ifndef DSAWRAPPER_H
 #define DSAWRAPPER_H
 
-#include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/InstVisitor.h"
+#include <unordered_map>
 #include <unordered_set>
 
-namespace llvm {
-class DSNode;
-class DSGraph;
-class TDDataStructures;
-class BUDataStructures;
-class DSNodeEquivs;
-}
-
-namespace dsa {
-template<class dsa>
-struct TypeSafety;
-}
+#include "seadsa/DsaAnalysis.hh"
+#include "seadsa/Global.hh"
+#include "seadsa/Graph.hh"
 
 namespace smack {
-
-
-class MemcpyCollector : public llvm::InstVisitor<MemcpyCollector> {
-private:
-  llvm::DSNodeEquivs *nodeEqs;
-  std::vector<const llvm::DSNode*> memcpys;
-
-public:
-  MemcpyCollector(llvm::DSNodeEquivs *neqs) : nodeEqs(neqs) { }
-  void visitMemCpyInst(llvm::MemCpyInst& mci);
-  std::vector<const llvm::DSNode*> getMemcpys() {
-    return memcpys;
-  }
-};
 
 class DSAWrapper : public llvm::ModulePass {
 private:
   llvm::Module *module;
-  llvm::TDDataStructures *TD;
-  llvm::BUDataStructures *BU;
-  llvm::DSNodeEquivs *nodeEqs;
-  dsa::TypeSafety<llvm::TDDataStructures> *TS;
-  std::vector<const llvm::DSNode*> staticInits;
-  std::vector<const llvm::DSNode*> memcpys;
-  std::unordered_set<const llvm::DSNode*> intConversions;
-  const llvm::DataLayout* dataLayout;
+  seadsa::GlobalAnalysis *SD;
+  // The ds graph since we're using the context-insensitive version which
+  // results in one graph for the whole module.
+  seadsa::Graph *DG;
+  std::unordered_set<const seadsa::Node *> staticInits;
+  std::unordered_set<const seadsa::Node *> memOpds;
+  // Mapping from the DSNodes associated with globals to the numbers of
+  // globals associated with them.
+  std::unordered_map<const seadsa::Node *, unsigned> globalRefCount;
+  const llvm::DataLayout *dataLayout;
 
-  std::vector<const llvm::DSNode*> collectMemcpys(llvm::Module &M, MemcpyCollector* mcc);
-  std::vector<const llvm::DSNode*> collectStaticInits(llvm::Module &M);
-  llvm::DSGraph *getGraphForValue(const llvm::Value *V);
-  int getOffset(const llvm::MemoryLocation* l);
+  void collectStaticInits(llvm::Module &M);
+  void collectMemOpds(llvm::Module &M);
+  void countGlobalRefs();
 
 public:
   static char ID;
@@ -64,19 +41,16 @@ public:
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
   virtual bool runOnModule(llvm::Module &M);
 
-  bool isMemcpyd(const llvm::DSNode* n);
-  bool isStaticInitd(const llvm::DSNode* n);
-  bool isFieldDisjoint(const llvm::Value* V, const llvm::Function* F);
-  bool isFieldDisjoint(const llvm::GlobalValue* V, unsigned offset);
-  bool isRead(const llvm::Value* V);
-  bool isAlloced(const llvm::Value* v);
-  bool isExternal(const llvm::Value* v);
+  bool isStaticInitd(const seadsa::Node *n);
+  bool isMemOpd(const seadsa::Node *n);
+  bool isRead(const llvm::Value *V);
   bool isSingletonGlobal(const llvm::Value *V);
-  unsigned getPointedTypeSize(const llvm::Value* v);
-  int getOffset(const llvm::Value* v);
-  const llvm::DSNode *getNode(const llvm::Value* v);
-  void printDSAGraphs(const char* Filename);
+  unsigned getPointedTypeSize(const llvm::Value *v);
+  unsigned getOffset(const llvm::Value *v);
+  const seadsa::Node *getNode(const llvm::Value *v);
+  bool isTypeSafe(const llvm::Value *v);
+  unsigned getNumGlobals(const seadsa::Node *n);
 };
-}
+} // namespace smack
 
 #endif // DSAWRAPPER_H

@@ -4,10 +4,10 @@
 
 #define DEBUG_TYPE "verifier-code-metadata"
 
-#include "smack/SmackOptions.h"
 #include "smack/VerifierCodeMetadata.h"
-#include "llvm/IR/DataLayout.h"
 #include "smack/Debug.h"
+#include "smack/SmackOptions.h"
+#include "llvm/IR/DataLayout.h"
 
 #include <set>
 
@@ -16,59 +16,59 @@ namespace smack {
 using namespace llvm;
 
 namespace {
-  void mark(Instruction &I, bool V = true) {
-    auto& C = I.getContext();
-    I.setMetadata("verifier.code",
-      MDNode::get(C, ConstantAsMetadata::get(
-        V ? ConstantInt::getTrue(C) : ConstantInt::getFalse(C)
-      )));
-  }
-
-  bool isVerifierFunctionCall(CallInst &I) {
-    if (auto F = I.getCalledFunction()) {
-      auto N = F->getName();
-
-      if (N.find("__VERIFIER_") == 0)
-        return true;
-
-      if (N.find("__SMACK_") == 0)
-        return true;
-
-      if (N.find("__CONTRACT_") == 0)
-        return true;
-    }
-    return false;
-  }
-
-  bool onlyVerifierUsers(Instruction &I) {
-    std::queue<User*> users;
-    std::set<User*> known;
-
-    for (auto U : I.users()) {
-      users.push(U);
-      known.insert(U);
-    }
-
-    while (!users.empty()) {
-      if (auto K = dyn_cast<Instruction>(users.front())) {
-        if (!VerifierCodeMetadata::isMarked(*K))
-          return false;
-
-      } else {
-        for (auto UU : users.front()->users()) {
-          if (known.count(UU) == 0) {
-            users.push(UU);
-            known.insert(UU);
-          }
-        }
-      }
-      users.pop();
-    }
-    return true;
-  }
+void mark(Instruction &I, bool V = true) {
+  auto &C = I.getContext();
+  I.setMetadata(
+      "verifier.code",
+      MDNode::get(C, ConstantAsMetadata::get(V ? ConstantInt::getTrue(C)
+                                               : ConstantInt::getFalse(C))));
 }
 
-bool VerifierCodeMetadata::isMarked(const Instruction& I) {
+bool isVerifierFunctionCall(CallInst &I) {
+  if (auto F = I.getCalledFunction()) {
+    auto N = F->getName();
+
+    if (N.find("__VERIFIER_") == 0)
+      return true;
+
+    if (N.find("__SMACK_") == 0)
+      return true;
+
+    if (N.find("__CONTRACT_") == 0)
+      return true;
+  }
+  return false;
+}
+
+bool onlyVerifierUsers(Instruction &I) {
+  std::queue<User *> users;
+  std::set<User *> known;
+
+  for (auto U : I.users()) {
+    users.push(U);
+    known.insert(U);
+  }
+
+  while (!users.empty()) {
+    if (auto K = dyn_cast<Instruction>(users.front())) {
+      if (!VerifierCodeMetadata::isMarked(*K))
+        return false;
+
+    } else {
+      for (auto UU : users.front()->users()) {
+        if (known.count(UU) == 0) {
+          users.push(UU);
+          known.insert(UU);
+        }
+      }
+    }
+    users.pop();
+  }
+  return true;
+}
+} // namespace
+
+bool VerifierCodeMetadata::isMarked(const Instruction &I) {
   auto *N = I.getMetadata("verifier.code");
   assert(N && "expected metadata");
   assert(N->getNumOperands() == 1);
@@ -79,8 +79,7 @@ bool VerifierCodeMetadata::isMarked(const Instruction& I) {
   return C->isOne();
 }
 
-void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {
-}
+void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {}
 
 bool VerifierCodeMetadata::runOnModule(Module &M) {
 
@@ -117,15 +116,12 @@ void VerifierCodeMetadata::visitCallInst(CallInst &I) {
   mark(I, marked);
 }
 
-void VerifierCodeMetadata::visitInstruction(Instruction &I) {
-  mark(I, false);
-}
+void VerifierCodeMetadata::visitInstruction(Instruction &I) { mark(I, false); }
 
 // Pass ID variable
 char VerifierCodeMetadata::ID = 0;
 
 // Register the pass
-static RegisterPass<VerifierCodeMetadata>
-X("verifier-code-metadata", "Verifier Code Metadata");
-
-}
+static RegisterPass<VerifierCodeMetadata> X("verifier-code-metadata",
+                                            "Verifier Code Metadata");
+} // namespace smack

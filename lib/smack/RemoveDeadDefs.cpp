@@ -4,11 +4,11 @@
 
 #define DEBUG_TYPE "remove-dead-defs"
 
-#include "smack/SmackOptions.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "smack/SmackOptions.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <vector>
 
@@ -16,9 +16,9 @@ namespace smack {
 
 using namespace llvm;
 
-bool RemoveDeadDefs::runOnModule(Module& M) {
+bool RemoveDeadDefs::runOnModule(Module &M) {
   TD = &M.getDataLayout();
-  std::vector<Function*> dead;
+  std::vector<Function *> dead;
 
   do {
     dead.clear();
@@ -32,12 +32,12 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
         continue;
 
       if (name.find("__VERIFIER_assume") != std::string::npos)
-	continue;
+        continue;
 
       if (SmackOptions::isEntryPoint(name))
         continue;
 
-      DEBUG(errs() << "removing dead definition: " << name << "\n");
+      SDEBUG(errs() << "removing dead definition: " << name << "\n");
       dead.push_back(&F);
     }
 
@@ -52,7 +52,6 @@ bool RemoveDeadDefs::runOnModule(Module& M) {
 char RemoveDeadDefs::ID = 0;
 
 // Register the pass
-static RegisterPass<RemoveDeadDefs>
-X("remove-dead-defs", "Remove Dead Definitions");
-
-}
+static RegisterPass<RemoveDeadDefs> X("remove-dead-defs",
+                                      "Remove Dead Definitions");
+} // namespace smack

@@ -8,4 +8,3 @@ int incr(int x) {
   assume(y > 0 && y < 10000); // prevents overflow when bit-precise
   return x + y;
 }
-

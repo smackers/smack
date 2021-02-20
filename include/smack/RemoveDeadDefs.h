@@ -11,11 +11,11 @@ namespace smack {
 
 class RemoveDeadDefs : public llvm::ModulePass {
 private:
-  const llvm::DataLayout * TD;
+  const llvm::DataLayout *TD;
+
 public:
   static char ID;
   RemoveDeadDefs() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& M);
+  virtual bool runOnModule(llvm::Module &M);
 };
-}
-
+} // namespace smack

@@ -16,21 +16,21 @@ typedef struct {
 
 // Create and initialize account
 PACCOUNT create(int limit) {
-  if (limit <= 0 || limit > MAX_LIMIT) return 0;
-  PACCOUNT acc = (PACCOUNT) malloc(sizeof(ACCOUNT));
+  if (limit <= 0 || limit > MAX_LIMIT)
+    return 0;
+  PACCOUNT acc = (PACCOUNT)malloc(sizeof(ACCOUNT));
   acc->balance = 0;
   acc->limit = limit;
   return acc;
 }
 
 // Get account balance
-int get_balance(PACCOUNT acc) {
-  return acc->balance;
-}
+int get_balance(PACCOUNT acc) { return acc->balance; }
 
 // Deposit funds if not exceeding the account limit
 int deposit(PACCOUNT acc, int n) {
-  if (n <= 0) return FALSE;
+  if (n <= 0)
+    return FALSE;
   if (acc->balance > acc->limit - n) {
     return FALSE;
   }
@@ -40,7 +40,8 @@ int deposit(PACCOUNT acc, int n) {
 
 // Withdraw if there is enough funds in the account
 int withdraw(PACCOUNT acc, int n) {
-  if (n <= 0) return FALSE;
+  if (n <= 0)
+    return FALSE;
   if (acc->balance >= n) {
     acc->balance = acc->balance - n;
     return TRUE;
@@ -59,11 +60,11 @@ void test_account(int x, int y, int z) {
     return;
   }
   ops += deposit(acc, y);
-  assert(get_balance(acc) >=0 && get_balance(acc) <= MAX_LIMIT);
+  assert(get_balance(acc) >= 0 && get_balance(acc) <= MAX_LIMIT);
   ops += deposit(acc, z);
-  assert(get_balance(acc) >=0 && get_balance(acc) <= MAX_LIMIT);
+  assert(get_balance(acc) >= 0 && get_balance(acc) <= MAX_LIMIT);
   ops += withdraw(acc, z);
-  assert(get_balance(acc) >=0 && get_balance(acc) <= MAX_LIMIT);
+  assert(get_balance(acc) >= 0 && get_balance(acc) <= MAX_LIMIT);
   assert(ops < 3 || get_balance(acc) == y);
   free(acc);
   return;
@@ -78,4 +79,3 @@ int main(void) {
   test_account(x, y, z);
   return 0;
 }
-

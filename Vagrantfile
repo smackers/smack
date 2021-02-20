@@ -10,7 +10,7 @@ Vagrant.configure(2) do |config|
   config.vm.synced_folder ".", "/home/vagrant/#{project_name}"
 
   config.vm.define :ubuntu do |ubuntu_config|
-    ubuntu_config.vm.box = "minimal/trusty64"
+    ubuntu_config.vm.box = "bento/ubuntu-20.04"
   end
 
   # This provision, 'fix-no-tty', gets rid of an error during build
@@ -25,7 +25,7 @@ Vagrant.configure(2) do |config|
   #   opensuse_config.vm.box = "chef/opensuse-13.1"
   # end
 
-  config.vm.provision "shell", binary: true, inline: <<-SHELL
+  config.vm.provision "shell", binary: true, privileged: false, inline: <<-SHELL
     apt-get update
     apt-get install -y software-properties-common
     cd /home/vagrant

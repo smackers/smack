@@ -14,9 +14,9 @@ public:
   static char ID; // Pass identification, replacement for typeid
 
   BplPrinter() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& m);
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const;
+  virtual bool runOnModule(llvm::Module &m);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
-}
+} // namespace smack
 
 #endif // BPLPRINTER_H

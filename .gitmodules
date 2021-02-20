@@ -1,0 +1,3 @@
+[submodule "sea-dsa"]
+  path = sea-dsa
+  url = https://github.com/seahorn/sea-dsa.git

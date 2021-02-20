@@ -4,4 +4,3 @@
 
 // Empty header file to prevent various pthread types from being redefined
 // when the standard header is included.
-

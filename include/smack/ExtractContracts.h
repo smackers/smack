@@ -13,7 +13,7 @@ class ExtractContracts : public ModulePass {
 public:
   static char ID;
   ExtractContracts() : ModulePass(ID) {}
-  virtual bool runOnModule(Module& M);
+  virtual bool runOnModule(Module &M);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
 };
-}
+} // namespace smack
