@@ -37,7 +37,7 @@ jobs:
             "--exhaustive --folder=rust/panic --languages=rust",
             "--exhaustive --folder=rust/recursion --languages=rust",
             "--exhaustive --folder=rust/structures --languages=rust",
-            "--exhaustive --folder=rust/vector --languages=rust"
+            "--exhaustive --folder=rust/vector --languages=rust",
             "--exhaustive --folder=llvm --languages=llvm-ir"
           ]
     steps:
