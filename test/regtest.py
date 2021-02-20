@@ -20,7 +20,8 @@ APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
 
 LANGUAGES = {'c': {'*.c'},
              'cplusplus': {'*.cpp'},
-             'rust': {'*.rs'}}
+             'rust': {'*.rs'},
+             'llvm-ir': {"*.ll"}}
 
 
 def bold(text):
