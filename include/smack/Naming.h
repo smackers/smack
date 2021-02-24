@@ -5,6 +5,7 @@
 #ifndef NAMING_H
 #define NAMING_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Regex.h"
 #include <map>
@@ -116,9 +117,9 @@ public:
   static std::string getIntWrapFunc(bool isUnsigned);
 
   static bool isBplKeyword(std::string s);
-  static bool isSmackName(std::string s);
+  static bool isSmackName(llvm::StringRef s);
   static bool isSmackGeneratedName(std::string s);
-  static bool isRustPanic(const std::string &s);
+  static bool isRustPanic(llvm::StringRef s);
   static std::string escape(std::string s);
 };
 } // namespace smack

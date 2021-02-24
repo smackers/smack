@@ -117,7 +117,7 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
 
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst) {
-    std::string name = Names[II.first];
+    StringRef name = Names[II.first];
     if (name.find("smack.") == 0 || name.find("verifier.") == 0) {
       std::list<const Expr *> attrs;
       for (auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE;
@@ -127,12 +127,12 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
           attrs.push_back(Expr::lit((long long)value));
         } else if (auto *CI = dyn_cast<MDString>(*AI)) {
           auto value = CI->getString();
-          attrs.push_back(Expr::lit(value));
+          attrs.push_back(Expr::lit(value.str()));
         } else {
           llvm_unreachable("unexpected attribute type in smack metadata");
         }
       }
-      B->addStmt(Stmt::annot(Attr::attr(name, attrs)));
+      B->addStmt(Stmt::annot(Attr::attr(name.str(), attrs)));
     }
   }
 }
@@ -645,30 +645,30 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     f = cast<Function>(ci.getCalledValue()->stripPointerCastsAndAliases());
   }
 
-  std::string name = f->hasName() ? f->getName() : "";
+  StringRef name = f->hasName() ? f->getName() : "";
 
   if (SmackOptions::RustPanics && Naming::isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
 
-  } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
+  } else if (name.find(Naming::VALUE_PROC) != StringRef::npos) {
     emit(rep->valueAnnotation(ci));
 
-  } else if (name.find(Naming::RETURN_VALUE_PROC) != std::string::npos) {
+  } else if (name.find(Naming::RETURN_VALUE_PROC) != StringRef::npos) {
     emit(rep->returnValueAnnotation(ci));
 
-  } else if (name.find(Naming::MOD_PROC) != std::string::npos) {
+  } else if (name.find(Naming::MOD_PROC) != StringRef::npos) {
     proc->getModifies().push_back(rep->code(ci));
 
-  } else if (name.find(Naming::CODE_PROC) != std::string::npos) {
+  } else if (name.find(Naming::CODE_PROC) != StringRef::npos) {
     emit(Stmt::code(rep->code(ci)));
 
-  } else if (name.find(Naming::DECL_PROC) != std::string::npos) {
+  } else if (name.find(Naming::DECL_PROC) != StringRef::npos) {
     std::string code = rep->code(ci);
     proc->getDeclarations().push_back(Decl::code(code, code));
 
-  } else if (name.find(Naming::TOP_DECL_PROC) != std::string::npos) {
+  } else if (name.find(Naming::TOP_DECL_PROC) != StringRef::npos) {
     std::string decl = rep->code(ci);
     rep->getProgram()->getDeclarations().push_back(Decl::code(decl, decl));
     if (VAR_DECL.match(decl)) {
@@ -734,7 +734,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
       args.push_back(rep->expr(V));
     for (auto m : rep->memoryMaps())
       args.push_back(Expr::id(m.first));
-    auto E = Expr::fn(F->getName(), args);
+    auto E = Expr::fn(F->getName().str(), args);
     if (name == Naming::CONTRACT_REQUIRES)
       proc->getRequires().push_back(E);
     else if (name == Naming::CONTRACT_ENSURES)
@@ -1210,8 +1210,8 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   if (it != stmtMap.end())
     it->second(&ii);
   else {
-    SmackWarnings::warnUnModeled(ii.getCalledFunction()->getName(), currBlock,
-                                 &ii);
+    SmackWarnings::warnUnModeled(ii.getCalledFunction()->getName().str(),
+                                 currBlock, &ii);
     emit(rep->call(ii.getCalledFunction(), ii));
   }
 }

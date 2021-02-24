@@ -91,7 +91,7 @@ const llvm::cl::opt<bool> SmackOptions::WrappedIntegerEncoding(
     llvm::cl::desc(
         "Enable wrapped integer arithmetic and signedness-aware comparison"));
 
-bool SmackOptions::isEntryPoint(std::string name) {
+bool SmackOptions::isEntryPoint(llvm::StringRef name) {
   for (auto EP : EntryPoints)
     if (name == EP)
       return true;

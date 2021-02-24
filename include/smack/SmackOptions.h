@@ -36,7 +36,7 @@ public:
   static const llvm::cl::opt<bool> AddTiming;
   static const llvm::cl::opt<bool> WrappedIntegerEncoding;
 
-  static bool isEntryPoint(std::string);
+  static bool isEntryPoint(llvm::StringRef);
 };
 } // namespace smack
 
