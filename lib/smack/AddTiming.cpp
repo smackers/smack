@@ -52,8 +52,7 @@ const std::string AddTiming::INT_TIMING_COST_METADATA =
 const std::string AddTiming::INSTRUCTION_NAME_METADATA =
     "smack.LLVMInstructionName";
 
-static bool begins_with(const std::string &possible_prefix,
-                        const std::string &the_string) {
+static bool begins_with(StringRef possible_prefix, StringRef the_string) {
   return (0 == the_string.find(possible_prefix));
 }
 
