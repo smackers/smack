@@ -641,8 +641,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   Function *f = ci.getCalledFunction();
   if (!f) {
-    assert(ci.getCalledValue() && "Called value is null");
-    f = cast<Function>(ci.getCalledValue()->stripPointerCastsAndAliases());
+    assert(ci.getCalledOperand() && "Called value is null");
+    f = cast<Function>(ci.getCalledOperand()->stripPointerCastsAndAliases());
   }
 
   StringRef name = f->hasName() ? f->getName() : "";

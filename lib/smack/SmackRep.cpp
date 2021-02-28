@@ -130,7 +130,7 @@ std::string SmackRep::getString(const llvm::Value *v) {
         if (const llvm::ConstantDataSequential *cds =
                 llvm::dyn_cast<const llvm::ConstantDataSequential>(
                     cc->getOperand(0)))
-          return cds->getAsCString();
+          return cds->getAsCString().str();
   return "";
 }
 

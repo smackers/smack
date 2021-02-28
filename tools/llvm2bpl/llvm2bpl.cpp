@@ -102,7 +102,7 @@ static TargetMachine *GetTargetMachine(Triple TheTriple, StringRef CPUStr,
                                        const TargetOptions &Options) {
   std::string Error;
 
-  StringRef MArch;
+  const std::string MArch;
 
   const Target *TheTarget =
       TargetRegistry::lookupTarget(MArch, TheTriple, Error);
@@ -167,10 +167,10 @@ int main(int argc, char **argv) {
 
   if (!Modular) {
     auto PreserveKeyGlobals = [=](const llvm::GlobalValue &GV) {
-      std::string name = GV.getName();
+      auto name = GV.getName();
       return smack::SmackOptions::isEntryPoint(name) ||
              smack::Naming::isSmackName(name) ||
-             name.find("__VERIFIER_assume") != std::string::npos;
+             name.find("__VERIFIER_assume") != llvm::StringRef::npos;
     };
     pass_manager.add(llvm::createInternalizePass(PreserveKeyGlobals));
     pass_manager.add(llvm::createGlobalDCEPass());
