@@ -4,11 +4,6 @@ on: [push, pull_request]
 
 jobs:
   check-regressions:
-    env:
-      COMPILER_NAME: clang
-      COMPILER: clang++
-      CXX: clang++
-      CC: clang
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -47,14 +42,6 @@ jobs:
         env:
           GITHUB_ACTIONS: true
         run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=1 ./bin/build.sh
-
-      - run: python3 --version
-      - run: $CXX --version
-      - run: $CC --version
-      - run: clang --version
-      - run: clang++ --version
-      - run: llvm-link --version
-      - run: llvm-config --version
 
       - name: format checking
         run: |
