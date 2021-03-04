@@ -19,6 +19,7 @@ OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
 
 LANGUAGES = {'c': {'*.c'},
+             'cargo': {'Cargo.toml'},
              'cplusplus': {'*.cpp'},
              'rust': {'*.rs'},
              'llvm-ir': {"*.ll"}}
