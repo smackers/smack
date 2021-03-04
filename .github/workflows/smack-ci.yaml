@@ -33,6 +33,7 @@ jobs:
             "--exhaustive --folder=rust/recursion --languages=rust",
             "--exhaustive --folder=rust/structures --languages=rust",
             "--exhaustive --folder=rust/vector --languages=rust",
+            "--exhaustive --folder=rust/cargo/** --languages=cargo --threads=1",
             "--exhaustive --folder=llvm --languages=llvm-ir"
           ]
     steps:
