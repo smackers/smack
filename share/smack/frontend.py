@@ -308,6 +308,16 @@ def default_cargo_compile_command(args):
 
 def cargo_frontend(input_file, args):
     """Generate LLVM bitcode from a cargo build."""
+
+    def find_target(config, options=None):
+        target_name = config['package']['name']
+        # TODO: Shaobo: target selection can be done via Cargo options.
+        # But we don't capture Cargo options for now.
+        if options is None:
+            if 'lib' in config and 'name' in config['lib']:
+                target_name = config['lib']['name']
+        return target_name.replace('-', '_')
+
     targetdir = temporary_directory(
         os.path.splitext(
             os.path.basename(input_file))[0],
@@ -320,7 +330,7 @@ def cargo_frontend(input_file, args):
     try_command(compile_command, console=True,
                 env={'RUSTFLAGS': " ".join(rustargs)})
 
-    crate_name = toml.load(input_file)['package']['name'].replace('-', '_')
+    target_name = find_target(toml.load(input_file))
 
     # Find the name of the crate's bc file
     bcbase = targetdir + '/debug/deps/'
@@ -328,7 +338,7 @@ def cargo_frontend(input_file, args):
     bcs = []
 
     for entry in entries:
-        if entry.startswith(crate_name + '-') and entry.endswith('.bc'):
+        if entry.startswith(target_name + '-') and entry.endswith('.bc'):
             bcs.append(bcbase + entry)
 
     bc_file = temporary_file(
