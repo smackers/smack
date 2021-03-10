@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 MAINTAINER Shaobo He <shaobo@cs.utah.edu>
 
 ENV SMACKDIR /home/user/smack
@@ -7,7 +7,8 @@ RUN apt-get update && \
       apt-get -y install \
       software-properties-common \
       wget \
-      sudo
+      sudo \
+      g++
 
 # Borrowed from JFS
 # Create `user` user for container with password `user`.  and give it
@@ -26,7 +27,7 @@ ADD --chown=user . $SMACKDIR
 WORKDIR $SMACKDIR
 
 # Build SMACK
-RUN sudo bin/build.sh
+RUN bin/build.sh
 
 # Add envinronment
 RUN echo "source /home/user/smack.environment" >> ~/.bashrc
