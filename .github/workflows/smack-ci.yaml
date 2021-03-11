@@ -53,3 +53,10 @@ jobs:
         env:
           TRAVIS_ENV: ${{ matrix.travis_env }}
         run: ./bin/build.sh
+
+  build-and-push-docker:
+    runs-on: ubuntu-20.04
+    needs: check-regressions (--exhaustive --folder=c/contracts)
+    steps:
+      - name: test dependency
+        run: echo "running, bro!"
