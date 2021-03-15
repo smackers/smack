@@ -5,14 +5,16 @@
 cmake_minimum_required(VERSION 3.4.3)
 project(smack)
 
-if (NOT WIN32 OR MSYS OR CYGWIN)
+if(NOT WIN32 OR MSYS OR CYGWIN)
 
-  file(STRINGS "bin/versions" LLVM_VERSION_STR REGEX "LLVM_SHORT_VERSION=\"[0-9]+\"")
+  file(STRINGS "bin/versions" LLVM_VERSION_STR
+    REGEX "LLVM_SHORT_VERSION=\"[0-9]+\"")
   string(REGEX MATCH "[0-9]+" LLVM_SHORT_VERSION "${LLVM_VERSION_STR}")
 
-  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-${LLVM_SHORT_VERSION} llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
+  find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-${LLVM_SHORT_VERSION}
+    llvm-config PATHS ${LLVM_CONFIG} DOC "llvm-config")
 
-  if (LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
+  if(LLVM_CONFIG_EXECUTABLE STREQUAL "LLVM_CONFIG_EXECUTABLE-NOTFOUND")
     message(FATAL_ERROR "llvm-config could not be found!")
   endif()
 
@@ -22,18 +24,16 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
-  # TODO: explain why these are required.
+  # Shaobo: I think we may want this flag gone because we want to enable
+  # assertions.
   string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REPLACE "-Wno-maybe-uninitialized" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REPLACE "-fuse-ld=gold" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REPLACE "--no-keep-files-mapped" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REPLACE "--no-map-whole-files" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REPLACE "-Wl," "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REPLACE "-gsplit-dwarf" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-  string(REGEX REPLACE "-O[0-9]" "" CMAKE_CXX_FLAGS "${LLVM_CXXFLAGS}")
 
-  # TODO: append these one at a time; give rationale.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -Wno-undefined-var-template")
+  set(CMAKE_CXX_FLAGS
+    # SMACK doesn't catch or throw exceptions, so -fno-exceptions is justified.
+    # SMACK doesn't use C++ runtime type identification features, so -fno-rtti
+    # is justified.
+    # Shaobo: enable O3 so SMACK can save some time.
+    "${LLVM_CXXFLAGS} -fno-exceptions -fno-rtti -O3")
 
   # Apparently avoids a problem with inconsistent visibility settings from LLVM:
   #
@@ -48,10 +48,6 @@ if (NOT WIN32 OR MSYS OR CYGWIN)
   # Solution found on Stack Overflow:
   # https://stackoverflow.com/questions/8685045/xcode-with-boost-linkerid-warning-about-visibility-settings
   string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fvisibility=hidden")
-
-  # TODO: explain why these are required.
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -O0")
-  string(APPEND CMAKE_C_FLAGS_DEBUG " -O0")
 
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
@@ -76,12 +72,12 @@ else()
   set(LLVM_BUILD "" CACHE PATH "LLVM build directory")
   set(LLVM_BUILD_TYPE "" CACHE STRING "LLVM build type")
 
-  if (NOT EXISTS "${LLVM_SRC}/include/llvm")
+  if(NOT EXISTS "${LLVM_SRC}/include/llvm")
     message(FATAL_ERROR "Invalid LLVM source directory: ${LLVM_SRC}")
   endif()
 
   set(LLVM_LIBDIR "${LLVM_BUILD}/lib/${LLVM_BUILD_TYPE}")
-  if (NOT EXISTS "${LLVM_LIBDIR}")
+  if(NOT EXISTS "${LLVM_LIBDIR}")
     message(FATAL_ERROR "Invalid LLVM build directory: ${LLVM_BUILD}")
   endif()
 
@@ -92,7 +88,11 @@ else()
   set(CMAKE_CXX_FLAGS "\"/I${LLVM_SRC}/include\" \"/I${LLVM_BUILD}/include\" -D_SCL_SECURE_NO_WARNINGS -wd4146 -wd4244 -wd4355 -wd4482 -wd4800")
 
   set(LLVM_LDFLAGS "")
-  set(LLVM_LIBS "${LLVM_LIBDIR}/LLVMTransformUtils.lib" "${LLVM_LIBDIR}/LLVMipa.lib" "${LLVM_LIBDIR}/LLVMAnalysis.lib" "${LLVM_LIBDIR}/LLVMTarget.lib" "${LLVM_LIBDIR}/LLVMMC.lib" "${LLVM_LIBDIR}/LLVMObject.lib" "${LLVM_LIBDIR}/LLVMBitReader.lib" "${LLVM_LIBDIR}/LLVMCore.lib" "${LLVM_LIBDIR}/LLVMSupport.lib")
+  set(LLVM_LIBS "${LLVM_LIBDIR}/LLVMTransformUtils.lib"
+    "${LLVM_LIBDIR}/LLVMipa.lib" "${LLVM_LIBDIR}/LLVMAnalysis.lib"
+    "${LLVM_LIBDIR}/LLVMTarget.lib" "${LLVM_LIBDIR}/LLVMMC.lib"
+    "${LLVM_LIBDIR}/LLVMObject.lib" "${LLVM_LIBDIR}/LLVMBitReader.lib"
+    "${LLVM_LIBDIR}/LLVMCore.lib" "${LLVM_LIBDIR}/LLVMSupport.lib")
 
 endif()
 
@@ -170,13 +170,13 @@ add_executable(llvm2bpl
 )
 
 # We need to include Boost header files at least for macOS
-find_package (Boost 1.55)
-if (Boost_FOUND)
-  include_directories (${Boost_INCLUDE_DIRS})
-endif ()
+find_package(Boost 1.55)
+if(Boost_FOUND)
+  include_directories(${Boost_INCLUDE_DIRS})
+endif()
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
-find_package (LLVM ${LLVM_SHORT_VERSION} CONFIG)
+find_package(LLVM ${LLVM_SHORT_VERSION} CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
@@ -188,14 +188,15 @@ set(CMAKE_BUILD_TYPE "Release")
 add_subdirectory(sea-dsa/lib/seadsa)
 set(CMAKE_BUILD_TYPE ${SMACK_BUILD_TYPE})
 
-target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS} ${LLVM_LDFLAGS})
+target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS}
+  ${LLVM_LDFLAGS})
 target_link_libraries(llvm2bpl smackTranslator utils SeaDsaAnalysis)
 
-INSTALL(TARGETS llvm2bpl
+install(TARGETS llvm2bpl
   RUNTIME DESTINATION bin
 )
 
-INSTALL(FILES
+install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-doctor
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/smack-svcomp-wrapper.sh
@@ -204,30 +205,31 @@ INSTALL(FILES
   DESTINATION bin
 )
 
-INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   DESTINATION share
   USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile" PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di" PATTERN "*.toml"
+  FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile"
+    PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di" PATTERN "*.toml"
 )
 
-INSTALL(FILES
+install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bin/versions
   DESTINATION share/smack
   RENAME versions.py
 )
 
-INSTALL(FILES
+install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack/Cargo.toml
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack/build.rs
   DESTINATION share/smack/lib
 )
 
-INSTALL(FILES
+install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack-rust.c
   DESTINATION share/smack/lib/src
 )
 
-INSTALL(FILES
+install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/share/smack/lib/smack.rs
   DESTINATION share/smack/lib/src
   RENAME lib.rs
