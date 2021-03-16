@@ -278,11 +278,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo apt-get update
 
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 30
     ;;
 
   *)
@@ -464,7 +459,6 @@ fi
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
   sudo pip3 install -U flake8
-  sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 30
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
   fi
@@ -480,7 +474,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ninja
 
   if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then

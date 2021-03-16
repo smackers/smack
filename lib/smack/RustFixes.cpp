@@ -71,8 +71,8 @@ bool fixEntry(Function &main) {
   for (inst_iterator I = inst_begin(main), E = inst_end(main); I != E; ++I) {
     if (auto ci = dyn_cast<CallInst>(&*I)) {
       if (Function *f = ci->getCalledFunction()) {
-        std::string name = f->hasName() ? f->getName() : "";
-        if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
+        StringRef name = f->hasName() ? f->getName() : "";
+        if (name.find(Naming::RUST_ENTRY) != StringRef::npos) {
           // Get real Rust main
           auto castExpr = ci->getArgOperand(0);
           auto mainFunction = cast<Function>(castExpr);
