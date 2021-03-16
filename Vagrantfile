@@ -27,7 +27,7 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision "shell", binary: true, privileged: false, inline: <<-SHELL
     apt-get update
-    apt-get install -y software-properties-common
+    apt-get install -y software-properties-common g++
     cd /home/vagrant
     ./#{project_name}/bin/build.sh
     echo source smack.environment >> .bashrc
