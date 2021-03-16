@@ -156,7 +156,7 @@ pub unsafe fn __smack_rust_std_alloc(layout: Layout) -> *mut u8 {
 
 #[no_mangle]
 pub unsafe fn __smack_rust_std_alloc_zeroed(layout: Layout) -> *mut u8 {
-   __smack_rust_prim_alloc(layout.size(), layout.align())
+    __smack_rust_prim_alloc(layout.size(), layout.align())
 }
 
 #[no_mangle]
@@ -190,7 +190,12 @@ pub unsafe fn __smack_rust_prim_dealloc(ptr: *mut u8, _size: usize, _align: usiz
 }
 
 #[no_mangle]
-pub unsafe fn __smack_rust_prim_realloc(ptr: *mut u8, _old_size: usize, _align: usize, new_size: usize) -> *mut u8 {
+pub unsafe fn __smack_rust_prim_realloc(
+    ptr: *mut u8,
+    _old_size: usize,
+    _align: usize,
+    new_size: usize,
+) -> *mut u8 {
     // Needs proper implementation of realloc
     // Ignores size and alignment
     realloc(ptr, new_size)
