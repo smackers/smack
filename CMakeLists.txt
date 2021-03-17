@@ -24,30 +24,12 @@ if(NOT WIN32 OR MSYS OR CYGWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
-  # Shaobo: I think we may want this flag gone because we want to enable
-  # assertions.
-  string(REPLACE "-DNDEBUG" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-
+  # SMACK doesn't catch or throw exceptions, so -fno-exceptions is justified.
+  # SMACK doesn't use C++ runtime type identification features, so -fno-rtti
+  # is justified.
+  # Shaobo: enable O3 so SMACK can save some time.
   set(CMAKE_CXX_FLAGS
-    # SMACK doesn't catch or throw exceptions, so -fno-exceptions is justified.
-    # SMACK doesn't use C++ runtime type identification features, so -fno-rtti
-    # is justified.
-    # Shaobo: enable O3 so SMACK can save some time.
     "${LLVM_CXXFLAGS} -fno-exceptions -fno-rtti -O3")
-
-  # Apparently avoids a problem with inconsistent visibility settings from LLVM:
-  #
-  # > ld: warning: direct access in function 'llvm::_'
-  # >   from file '/usr/local/opt/llvm@8/lib/_'
-  # >   to global weak symbol 'llvm::_'
-  # >   from file 'libsmackTranslator.a(_.cpp.o)'
-  # >   means the weak symbol cannot be overridden at runtime.
-  # >   This was likely caused by different translation units being compiled
-  # >   with different visibility settings.
-  #
-  # Solution found on Stack Overflow:
-  # https://stackoverflow.com/questions/8685045/xcode-with-boost-linkerid-warning-about-visibility-settings
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fvisibility=hidden")
 
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
