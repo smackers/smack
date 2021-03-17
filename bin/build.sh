@@ -162,7 +162,7 @@ function upToDate {
   else
     cd $1
     hash=$(git rev-parse --short=10 HEAD)
-    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+    if [ $hash == $2 ] ; then
       return 0
     else
       return 1
@@ -237,7 +237,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
   puts "Installing required packages"
 
   case "$distro" in
