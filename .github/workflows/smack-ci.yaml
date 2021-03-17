@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        travis_env:
+        regtest_env:
           [
             "--exhaustive --folder=c/basic",
             "--exhaustive --folder=c/data",
@@ -51,5 +51,5 @@ jobs:
       
       - name: compile and test
         env:
-          TRAVIS_ENV: ${{ matrix.travis_env }}
+          REGTEST_ENV: ${{ matrix.regtest_env }}
         run: ./bin/build.sh

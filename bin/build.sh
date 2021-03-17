@@ -162,7 +162,7 @@ function upToDate {
   else
     cd $1
     hash=$(git rev-parse --short=10 HEAD)
-    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+    if [ $hash == $2 ] ; then
       return 0
     else
       return 1
@@ -237,7 +237,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
   puts "Installing required packages"
 
   case "$distro" in
@@ -290,7 +290,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
 fi
 
 
-if [ ${INSTALL_MONO} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+if [ ${INSTALL_MONO} -eq 1 ] ; then
   puts "Installing mono"
   # Adding Mono repository
   sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
@@ -496,7 +496,7 @@ if [ ${TEST_SMACK} -eq 1 ] ; then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
-  ./regtest.py ${TRAVIS_ENV}
+  ./regtest.py ${REGTEST_ENV}
   res=$?
 
   puts "Regression tests complete"
