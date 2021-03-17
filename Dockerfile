@@ -1,5 +1,5 @@
 FROM ubuntu:20.04
-MAINTAINER Shaobo He <shaobo@cs.utah.edu>
+MAINTAINER Shaobo He <polarishehn@gmail.com>
 
 ENV SMACKDIR /home/user/smack
 

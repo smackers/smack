@@ -57,7 +57,7 @@ vagrant destroy
 
 ### Quick Setup 2: Docker
 SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
-the following configuration:
+the following configurations:
 
 * Ubuntu 18.04, Docker version 19.03.6
 * Windows WSL Ubuntu 20.04, Docker Desktop with Docker engine version 20.10.2
