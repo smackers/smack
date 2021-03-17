@@ -59,9 +59,20 @@ vagrant destroy
 SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
 the following configurations:
 
-* Ubuntu 16.04, docker-ce version 18.09.7
-* OS X 10.14.5, Docker Desktop with Docker engine version 18.09.2
-* Windows 10, Docker Desktop with Docker engine version 18.09.2
+* Ubuntu 18.04, Docker version 19.03.6
+* Windows WSL Ubuntu 20.04, Docker Desktop with Docker engine version 20.10.2
+
+
+#### Docker Hub
+
+SMACK's Docker container images can be pulled from Docker Hub directly:
+
+```shell
+docker pull smackers/smack:stable # built from the master branch
+docker pull smackers/smack:latest # built from the develop branch
+```
+
+#### Local Build
 
 Once Docker is successfully installed, build the Docker image by running the
 following command in SMACK's root directory that contains `Dockerfile`:
