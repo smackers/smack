@@ -3387,9 +3387,7 @@ NTSTATUS CdAudioStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
         { tmp___7 = memcmp(inquiryDataPtr + 16, "CDR-3650/1650S  ", 16); }
         if (tmp___7) {
-          {
-            tmp___8 = memcmp(inquiryDataPtr + 16, "CDR-1750S       ", 16);
-          }
+          { tmp___8 = memcmp(inquiryDataPtr + 16, "CDR-1750S       ", 16); }
           if (tmp___8) {
 
           } else {
@@ -3580,9 +3578,7 @@ NTSTATUS CdAudioPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
             return (status);
           switch_2_22: /* CIL Label */;
             if ((int)irpSp->Parameters.UsageNotification.Type != 1) {
-              {
-                tmp = CdAudioSendToNextDriver(DeviceObject, Irp);
-              }
+              { tmp = CdAudioSendToNextDriver(DeviceObject, Irp); }
               return (tmp);
             } else {
             }
@@ -3607,9 +3603,7 @@ NTSTATUS CdAudioPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
             { status = CdAudioForwardIrpSynchronous(DeviceObject, Irp); }
             if (status >= 0L) {
               if (irpSp->Parameters.UsageNotification.InPath) {
-                {
-                  InterlockedIncrement(&deviceExtension->PagingPathCount);
-                }
+                { InterlockedIncrement(&deviceExtension->PagingPathCount); }
               } else {
                 { InterlockedDecrement(&deviceExtension->PagingPathCount); }
               }
@@ -8065,14 +8059,10 @@ NTSTATUS CdAudioHPCdrDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         nextIrpSp->Control = 0;
       }
       if (s != NP) {
-        {
-          errorFn();
-        }
+        { errorFn(); }
       } else {
         if (compRegistered != 0) {
-          {
-            errorFn();
-          }
+          { errorFn(); }
         } else {
           compRegistered = 1;
           routine = 0;
@@ -8122,14 +8112,10 @@ NTSTATUS CdAudioForwardIrpSynchronous(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       nextIrpSp->Control = 0;
     }
     if (s != NP) {
-      {
-        errorFn();
-      }
+      { errorFn(); }
     } else {
       if (compRegistered != 0) {
-        {
-          errorFn();
-        }
+        { errorFn(); }
       } else {
         compRegistered = 1;
         routine = 1;
@@ -8334,9 +8320,7 @@ int main(void) {
             if (s != SKIP2) {
               if (s != IPC) {
                 if (s != DC) {
-                  {
-                    errorFn();
-                  }
+                  { errorFn(); }
                 } else {
                   goto _L___0;
                 }
@@ -8347,24 +8331,18 @@ int main(void) {
             _L___0: /* CIL Label */
               if (pended == 1) {
                 if (status != 259L) {
-                  {
-                    errorFn();
-                  }
+                  { errorFn(); }
                 } else {
                 }
               } else {
                 if (s == DC) {
                   if (status == 259L) {
-                    {
-                      errorFn();
-                    }
+                    { errorFn(); }
                   } else {
                   }
                 } else {
                   if (status != (NTSTATUS)lowerDriverReturn) {
-                    {
-                      errorFn();
-                    }
+                    { errorFn(); }
                   } else {
                   }
                 }
@@ -8820,9 +8798,7 @@ NTSTATUS IofCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        {
-          stubMoreProcessingRequired();
-        }
+        { stubMoreProcessingRequired(); }
       } else {
       }
     } else {
@@ -8980,9 +8956,7 @@ NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason,
         customIrp = 0;
       } else {
         if (s == MPR3) {
-          {
-            errorFn();
-          }
+          { errorFn(); }
         } else {
         }
       }
@@ -9128,9 +9102,7 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        {
-          stubMoreProcessingRequired();
-        }
+        { stubMoreProcessingRequired(); }
       } else {
       }
     } else {

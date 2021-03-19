@@ -158,7 +158,11 @@ if(Boost_FOUND)
 endif()
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
-find_package(LLVM ${LLVM_SHORT_VERSION} CONFIG)
+# Borrowed from https://github.com/banach-space/llvm-tutor/commit/72cb20d058b9b3f51717c7a17607f7a4c7398642
+find_package (LLVM 11.1 REQUIRED CONFIG)
+if (NOT ${LLVM_SHORT_VERSION} VERSION_EQUAL "${LLVM_VERSION_MAJOR}")
+  message(FATAL_ERROR "Found LLVM ${LLVM_VERSION_MAJOR}, but need ${LLVM_SHORT_VERSION}")
+endif ()
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
