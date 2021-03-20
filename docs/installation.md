@@ -91,8 +91,8 @@ to Docker's official documentation.
 
 SMACK depends on the following projects:
 
-* [LLVM][] version [10.0.1][LLVM-10.0.1]
-* [Clang][] version [10.0.1][Clang-10.0.1]
+* [LLVM][] version [11.1.0][LLVM-11.1.0]
+* [Clang][] version [11.1.0][Clang-11.1.0]
 * [Boost][] version 1.55 or greater
 * [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
@@ -221,9 +221,9 @@ shell in the `test` directory by executing
 [CMake]: http://www.cmake.org
 [Python]: http://www.python.org
 [LLVM]: http://llvm.org
-[LLVM-10.0.1]: http://llvm.org/releases/download.html#10.0.1
+[LLVM-11.1.0]: http://llvm.org/releases/download.html#11.1.0
 [Clang]: http://clang.llvm.org
-[Clang-10.0.1]: http://llvm.org/releases/download.html#10.0.1
+[Clang-11.1.0]: http://llvm.org/releases/download.html#11.1.0
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://github.com/boogie-org/corral
 [Z3]: https://github.com/Z3Prover/z3/
