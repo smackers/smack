@@ -8,7 +8,11 @@ project(smack)
 if(NOT WIN32 OR MSYS OR CYGWIN)
 
   file(STRINGS "bin/versions" LLVM_VERSION_STR
-    REGEX "LLVM_SHORT_VERSION=\"[0-9]+\"")
+    REGEX "LLVM_FULL_VERSION=\"[0-9]+\.[0-9]+\.[0-9]+")
+  string(REGEX MATCH "[0-9]+\.[0-9]+" LLVM_EXTENDED_VERSION "${LLVM_VERSION_STR}")
+
+  file(STRINGS "bin/versions" LLVM_VERSION_STR
+    REGEX "LLVM_SHORT_VERSION=\"[0-9]+")
   string(REGEX MATCH "[0-9]+" LLVM_SHORT_VERSION "${LLVM_VERSION_STR}")
 
   find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config-${LLVM_SHORT_VERSION}
@@ -159,7 +163,7 @@ endif()
 # We have to import LLVM's cmake definitions to build sea-dsa
 # Borrowed from sea-dsa's CMakeLists.txt
 # Borrowed from https://github.com/banach-space/llvm-tutor/commit/72cb20d058b9b3f51717c7a17607f7a4c7398642
-find_package (LLVM 11.1 REQUIRED CONFIG)
+find_package (LLVM ${LLVM_EXTENDED_VERSION} REQUIRED CONFIG)
 if (NOT ${LLVM_SHORT_VERSION} VERSION_EQUAL "${LLVM_VERSION_MAJOR}")
   message(FATAL_ERROR "Found LLVM ${LLVM_VERSION_MAJOR}, but need ${LLVM_SHORT_VERSION}")
 endif ()
