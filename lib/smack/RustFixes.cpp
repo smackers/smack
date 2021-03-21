@@ -20,7 +20,7 @@ using namespace llvm;
 
 bool replaceRustMemoryFunctions(Function &f) {
   bool changed = false;
-  static const std::map<std::string, std::string> alloc_fns = {
+  static const std::map<StringRef, StringRef> alloc_fns = {
       {"_ZN5alloc5alloc5alloc17h", "__smack_rust_std_alloc"},
       {"_ZN5alloc5alloc12alloc_zeroed17h", "__smack_rust_std_alloc_zeroed"},
       {"_ZN5alloc5alloc7dealloc17h", "__smack_rust_std_dealloc"},
@@ -34,9 +34,9 @@ bool replaceRustMemoryFunctions(Function &f) {
   for (inst_iterator I = inst_begin(f), E = inst_end(f); I != E; ++I) {
     if (auto ci = dyn_cast<CallInst>(&*I)) {
       if (Function *f = ci->getCalledFunction()) {
-        std::string name = f->hasName() ? f->getName() : "";
+        auto name = f->hasName() ? f->getName() : "";
         for (auto &kv : alloc_fns) {
-          if (name.find(std::get<0>(kv)) != std::string::npos) {
+          if (name.find(std::get<0>(kv)) != StringRef::npos) {
             Function *replacement =
                 f->getParent()->getFunction(std::get<1>(kv));
             assert(replacement != NULL && "Function should be present.");
@@ -105,12 +105,11 @@ bool fixEntry(Function &main) {
 bool RustFixes::runOnFunction(Function &F) {
   bool result = false;
   if (F.hasName()) {
-    auto name = F.getName();
+    StringRef name = F.getName();
     if (Naming::isSmackName(name)) {
       return false;
-    } else if (name.find(Naming::RUST_LANG_START_INTERNAL) !=
-                   std::string::npos ||
-               name.find(Naming::RUST_ENTRY) != std::string::npos ||
+    } else if (name.find(Naming::RUST_LANG_START_INTERNAL) != StringRef::npos ||
+               name.find(Naming::RUST_ENTRY) != StringRef::npos ||
                Naming::isRustPanic(name)) {
       F.dropAllReferences();
       return true;
