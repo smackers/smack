@@ -18,6 +18,15 @@ namespace smack {
 
 using namespace llvm;
 
+bool isRustNameMatch(StringRef search, StringRef name) {
+  // Check if we are looking for a Rust mangled name with a 17 character hash
+  // suffix, denoted by `17h'
+  bool hashed_match = search.endswith("17h") && name.startswith(search) &&
+                      search.size() + 17 == name.size();
+  bool exact_match = search == name;
+  return hashed_match || exact_match;
+}
+
 bool replaceRustMemoryFunctions(Function &f) {
   bool changed = false;
   static const std::map<StringRef, StringRef> alloc_fns = {
@@ -36,7 +45,7 @@ bool replaceRustMemoryFunctions(Function &f) {
       if (Function *f = ci->getCalledFunction()) {
         auto name = f->hasName() ? f->getName() : "";
         for (auto &kv : alloc_fns) {
-          if (name.find(std::get<0>(kv)) != StringRef::npos) {
+          if (isRustNameMatch(std::get<0>(kv), name)) {
             Function *replacement =
                 f->getParent()->getFunction(std::get<1>(kv));
             assert(replacement != NULL && "Function should be present.");
