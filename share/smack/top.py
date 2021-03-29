@@ -513,6 +513,7 @@ def arguments():
         choices=[
             'boogie',
             'corral',
+            'portfolio',
             'symbooglix',
             'svcomp'],
         default='corral',
@@ -858,6 +859,10 @@ def verification_result(verifier_output):
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
+
+# inserted as first test of new flag
+    if args.verifier == 'portfolio':
+        print("portfolio recognized")
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
