@@ -470,6 +470,13 @@ def arguments():
         help='specify top-level procedures [default: %(default)s]')
 
     translate_group.add_argument(
+        '--checked-functions',
+        metavar='PROC',
+        nargs='+',
+        default=[],
+        help='specify functions to do property checking [default: everything]')
+
+    translate_group.add_argument(
         '--check',
         metavar='PROPERTY',
         nargs='+',
@@ -702,6 +709,8 @@ def llvm_to_bpl(args):
     cmd += ['-source-loc-syms']
     for ep in args.entry_points:
         cmd += ['-entry-points', ep]
+    for cf in args.checked_functions:
+        cmd += ['-checked-functions', cf]
     if args.debug:
         cmd += ['-debug']
     if args.debug_only:

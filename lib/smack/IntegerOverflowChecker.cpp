@@ -137,7 +137,8 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
               // Add check for UBSan left shift/signed division when needed
               ConstantInt *flag =
                   ConstantInt::getTrue(ci->getFunction()->getContext());
-              addCheck(co, flag, ci);
+              if (SmackOptions::shouldCheckFunction(F.getName()))
+                addCheck(co, flag, ci);
               addBlockingAssume(va, flag, ci);
               ci->replaceAllUsesWith(flag);
               instToErase.push_back(ci);
@@ -176,7 +177,8 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                 INSTRUCTION_TABLE.at(op), eo1, eo2, "", ci);
             Value *r = createResult(ai, bits, &*I);
             BinaryOperator *flag = createFlag(ai, bits, isSigned, ci);
-            if (SmackOptions::IntegerOverflow)
+            if (SmackOptions::IntegerOverflow &&
+                SmackOptions::shouldCheckFunction(F.getName()))
               addCheck(co, flag, ci);
             for (auto U : ci->users()) {
               if (ExtractValueInst *ei = dyn_cast<ExtractValueInst>(U)) {

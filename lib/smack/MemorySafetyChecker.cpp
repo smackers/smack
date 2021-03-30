@@ -55,7 +55,8 @@ void MemorySafetyChecker::insertMemoryAccessCheck(Value *addr, Value *size,
 }
 
 bool MemorySafetyChecker::runOnFunction(Function &F) {
-  if (Naming::isSmackName(F.getName()))
+  if (Naming::isSmackName(F.getName()) ||
+      !SmackOptions::shouldCheckFunction(F.getName()))
     return false;
 
   this->visit(F);
