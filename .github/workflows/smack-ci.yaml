@@ -4,15 +4,10 @@ on: [push, pull_request]
 
 jobs:
   check-regressions:
-    env:
-      COMPILER_NAME: clang
-      COMPILER: clang++
-      CXX: clang++
-      CC: clang
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        travis_env:
+        regtest_env:
           [
             "--exhaustive --folder=c/basic",
             "--exhaustive --folder=c/data",
@@ -37,7 +32,9 @@ jobs:
             "--exhaustive --folder=rust/panic --languages=rust",
             "--exhaustive --folder=rust/recursion --languages=rust",
             "--exhaustive --folder=rust/structures --languages=rust",
-            "--exhaustive --folder=rust/vector --languages=rust"
+            "--exhaustive --folder=rust/vector --languages=rust",
+            "--exhaustive --folder=rust/cargo/** --languages=cargo --threads=1",
+            "--exhaustive --folder=llvm --languages=llvm-ir"
           ]
     steps:
       - uses: actions/checkout@v2
@@ -47,20 +44,58 @@ jobs:
           GITHUB_ACTIONS: true
         run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=1 ./bin/build.sh
 
-      - run: python3 --version
-      - run: $CXX --version
-      - run: $CC --version
-      - run: clang --version
-      - run: clang++ --version
-      - run: llvm-link --version
-      - run: llvm-config --version
-
       - name: format checking
         run: |
           ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
           flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
-      
+
       - name: compile and test
         env:
-          TRAVIS_ENV: ${{ matrix.travis_env }}
+          REGTEST_ENV: ${{ matrix.regtest_env }}
         run: ./bin/build.sh
+
+  build-and-push-docker:
+    runs-on: ubuntu-20.04
+    needs: check-regressions
+
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      # borrowed from:
+      # https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions/58035262
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Set tag name
+        shell: bash
+        id: set_tag
+        run: |
+          if [ ${{ steps.extract_branch.outputs.branch }} == 'master' ]; then echo "##[set-output name=docker_tag;]$(echo stable)" && exit 0; fi
+          if [ ${{ steps.extract_branch.outputs.branch }} == 'develop' ]; then echo "##[set-output name=docker_tag;]$(echo latest)" && exit 0; fi
+          echo "##[set-output name=docker_tag;]$(echo none)"
+
+      - name: Build and push
+        if: ${{ steps.set_tag.outputs.docker_tag != 'none' }}
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./Dockerfile
+          push: true
+          tags: smackers/smack:${{ steps.set_tag.outputs.docker_tag }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}

@@ -130,7 +130,7 @@ std::string SmackRep::getString(const llvm::Value *v) {
         if (const llvm::ConstantDataSequential *cds =
                 llvm::dyn_cast<const llvm::ConstantDataSequential>(
                     cc->getOperand(0)))
-          return cds->getAsCString();
+          return cds->getAsCString().str();
   return "";
 }
 
@@ -857,8 +857,8 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
     }
 
   } else if (isa<InlineAsm>(v)) {
-    SmackWarnings::warnUnsound("inline asm passed as argument", nullptr,
-                               nullptr);
+    SmackWarnings::warnUnModeled("inline asm passed as argument", nullptr,
+                                 nullptr);
     return pointerLit(0ULL);
 
   } else {

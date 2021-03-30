@@ -12,6 +12,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include <map>
@@ -42,9 +43,11 @@ bool SimplifyLibCalls::runOnFunction(Function &F) {
 }
 
 void SimplifyLibCalls::visitCallInst(CallInst &I) {
-  if (I.getCalledFunction())
-    if (simplifier->optimizeCall(&I))
+  if (I.getCalledFunction()) {
+    IRBuilder<> B(I.getContext());
+    if (simplifier->optimizeCall(&I, B))
       I.eraseFromParent();
+  }
 }
 
 // Pass ID variable

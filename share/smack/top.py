@@ -13,7 +13,7 @@ from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, smackdOutput
 
-VERSION = '2.6.3'
+VERSION = '2.7.0'
 
 
 class VResult(Flag):
@@ -309,12 +309,12 @@ def arguments():
         type=str,
         help='limit debugging output to given MODULES')
 
-    noise_group.add_argument('--warn', default="unsound",
-                             choices=['silent', 'unsound', 'info'],
+    noise_group.add_argument('--warn', default="imprecise",
+                             choices=['silent', 'imprecise', 'info'],
                              help='''enable certain type of warning messages
             (silent: no warning messages;
-            unsound: warnings about unsoundness;
-            info: warnings about unsoundness and translation information)
+            unsound: warnings about imprecise modeling;
+            info: warnings about imprecise modeling/translation information)
             [default: %(default)s]''')
 
     parser.add_argument(
@@ -866,7 +866,7 @@ def verify_bpl(args):
     elif args.verifier == 'boogie' or args.modular:
         command = ["boogie"]
         command += [args.bpl_file]
-        command += ["/nologo", "/doModSetAnalysis"]
+        command += ["/doModSetAnalysis"]
         command += ["/useArrayTheory"]
         command += ["/timeLimit:%s" % args.time_limit]
         command += ["/errorLimit:%s" % args.max_violations]

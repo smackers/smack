@@ -11,7 +11,7 @@ import json
 from smackgen import *
 from smackverify import *
 
-VERSION = '2.6.3'
+VERSION = '2.7.0'
 
 
 def reachParser():

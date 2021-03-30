@@ -2768,9 +2768,7 @@ int main(void) {
                 }
               } else {
                 if (status != 259) {
-                  {
-                    errorFn();
-                  }
+                  { errorFn(); }
                 } else {
                 }
               }
