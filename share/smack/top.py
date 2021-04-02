@@ -870,7 +870,8 @@ def verify_bpl(args):
         args1 = args
         args.verifier = 'corral'
         args2 = args
-        results = [p.apply_async(verify_bpl, [args1, args2])] # attempting to async run this method w/ 2 hard-coded verifiers
+	threads = [args1, args2]
+        results = [p.apply_async(verify_bpl, threads)for thread in threads] # attempting to async run this method w/ 2 hard-coded verifiers
         print(results)
         for async_result in results:
             try:
