@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import signal
 import functools
+import copy # for making copies of args to pass to threads
 import multiprocessing  # added import for threads
 from multiprocessing.pool import ThreadPool    # added import for threads
 from enum import Flag, auto
@@ -861,34 +862,47 @@ def verification_result(verifier_output):
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
-    
+
 # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
-        print("portfolio recognized")
         p = ThreadPool(processes=2)
-        args.verifier = 'boogie'
-        args1 = args
-        args.verifier = 'corral'
-        args2 = args
-	threads = [args1, args2]
-        results = [p.apply_async(verify_bpl, threads)for thread in threads] # attempting to async run this method w/ 2 hard-coded verifiers
-        print(results)
+        args1 = copy.deepcopy(args)
+
+        args1.verifier = 'boogie'
+        print(args1)
+        print("args1: "+args1.verifier)
+        args2 = copy.deepcopy(args)
+        args2.verifier = 'corral'
+        print(args2)
+        print("args2: "+args2.verifier)
+        threads = [args1, args2] # a list with verifiers changed to boogie and corral
+        results = [p.apply_async(verify_bpl, [thread])for thread in threads] # attempting to async run this method w/ 2 hard-coded verifiers
+
         for async_result in results:
-            try:
+           try:
+                print("results for this thread are:")
                 print(async_result.get())
-            except ValueError as e:
+           except ValueError as e:
                 print(e)
+# seems as though threads are not terminating, we are not getting past this
+        p.terminate()
+        p.join()
+        print("threads closed")
+        return
         # call this method recursively replacing args.verifier w/ corral and Boogie
         # then get results from ThreadPool finished first and return
+
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
         return
 
     elif args.verifier == 'boogie' or args.modular:
+        print("using boogie for this thread")
         command = ["boogie"]
         command += [args.bpl_file]
-        command += ["/nologo", "/doModSetAnalysis"]
+#        command += ["/nologo", "/doModSetAnalysis"] # had to remove nologo to make boogie work
+        command += ["/doModSetAnalysis"]
         command += ["/useArrayTheory"]
         command += ["/timeLimit:%s" % args.time_limit]
         command += ["/errorLimit:%s" % args.max_violations]
@@ -903,6 +917,7 @@ def verify_bpl(args):
             command += ["/proverOpt:SOLVER=Yices2"]
 
     elif args.verifier == 'corral':
+        print("using corral for this thread")
         command = ["corral"]
         command += [args.bpl_file]
         command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
@@ -951,7 +966,7 @@ def verify_bpl(args):
                 replay_error_trace(verifier_output, args)
         print(result.message(args))
         sys.exit(result.return_code())
-
+# tried inserting a return to make sure recursion comes back
 
 def clean_up_upon_sigterm(main):
     def handler(signum, frame):
@@ -979,7 +994,7 @@ def main():
                 print("SMACK generated %s" % args.bpl_file)
         else:
             verify_bpl(args)
-
+            print("returned from threads")
     except KeyboardInterrupt:
         sys.exit("SMACK aborted by keyboard interrupt.")
 
