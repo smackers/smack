@@ -871,11 +871,11 @@ def verify_bpl(args):
         args.verifier = 'corral'
         args2 = args
         results = p.apply_async(verify_bpl, [args1, args2]) # attempting to async run this method w/ 2 hard-coded verifiers
-            for async_result in results:
-                try:
-                    print(async_result.get())
-                except ValueError as e:
-                    print(e)
+        for async_result in results:
+            try:
+                print(async_result.get())
+            except ValueError as e:
+                print(e)
         # call this method recursively replacing args.verifier w/ corral and Boogie
         # then get results from ThreadPool finished first and return
 
