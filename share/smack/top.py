@@ -6,6 +6,8 @@ import shlex
 import subprocess
 import signal
 import functools
+import multiprocessing  # added import for threads
+from multiprocessing.pool import ThreadPool    # added import for threads
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files
@@ -513,11 +515,11 @@ def arguments():
         choices=[
             'boogie',
             'corral',
-            'portfolio',
+            'portfolio', 
             'symbooglix',
             'svcomp'],
         default='corral',
-        help='back-end verification engine')
+        help='back-end verification engine')    # portfolio added as an option
 
     verifier_group.add_argument('--solver',
                                 choices=['z3', 'cvc4', "yices2"], default='z3',
@@ -859,10 +861,23 @@ def verification_result(verifier_output):
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
-    print("verify is running")
-# inserted as first test of new flag
+    
+# inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
         print("portfolio recognized")
+        p = ThreadPool(processes=2)
+        args.verifier = 'boogie'
+        args1 = args
+        args.verifier = 'corral'
+        args2 = args
+        results = p.apply_async(verify_bpl, [args1, args2]) # attempting to async run this method w/ 2 hard-coded verifiers
+            for async_result in results:
+                try:
+                    print(async_result.get())
+                except ValueError as e:
+                    print(e)
+        # call this method recursively replacing args.verifier w/ corral and Boogie
+        # then get results from ThreadPool finished first and return
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
