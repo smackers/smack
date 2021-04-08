@@ -44,6 +44,7 @@ public:
   bool isStaticInitd(const seadsa::Node *n);
   bool isMemOpd(const seadsa::Node *n);
   bool isRead(const llvm::Value *V);
+  bool isModified(const llvm::Value *V);
   bool isSingletonGlobal(const llvm::Value *V);
   unsigned getPointedTypeSize(const llvm::Value *v);
   unsigned getOffset(const llvm::Value *v);

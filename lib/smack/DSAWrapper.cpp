@@ -91,6 +91,12 @@ bool DSAWrapper::isRead(const Value *V) {
   return node->isRead();
 }
 
+bool DSAWrapper::isModified(const Value *V) {
+  auto node = getNode(V);
+  assert(node && "Global values should have nodes.");
+  return node->isModified();
+}
+
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
   if (llvm::PointerType *t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
     llvm::Type *pointedType = t->getElementType();

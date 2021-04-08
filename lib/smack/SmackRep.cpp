@@ -1306,7 +1306,9 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
         Expr::id(name), pointerLit(globalsOffset -= (size + globalsPadding)))));
   }
 
-  if (!llvm::isa<Function>(v))
+  if (!llvm::isa<Function>(v) &&
+      (!llvm::isa<GlobalVariable>(v) ||
+       !llvm::cast<GlobalVariable>(v)->hasAttribute("smack-unused-global")))
     globalAllocations[v] = size;
 
   return decls;

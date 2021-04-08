@@ -38,10 +38,13 @@ bool CodifyStaticInits::runOnModule(Module &M) {
 
   std::deque<std::tuple<Constant *, Constant *, std::vector<Value *>>> worklist;
 
-  for (auto &G : M.globals())
+  for (auto &G : M.globals()) {
+    if (!DSA->isRead(&G) && !DSA->isModified(&G))
+      G.addAttribute("smack-unused-global");
     if (G.hasInitializer() && DSA->isRead(&G))
       worklist.push_back(
           std::make_tuple(G.getInitializer(), &G, std::vector<Value *>()));
+  }
 
   while (worklist.size()) {
     Constant *V = std::get<0>(worklist.front());
