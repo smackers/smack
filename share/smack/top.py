@@ -474,7 +474,10 @@ def arguments():
         metavar='PROC',
         nargs='+',
         default=[],
-        help='specify functions to do property checking [default: everything]')
+        help='''specify functions on which to do property checking.
+                These can be specified as extended regular expressions.
+                NOTE: a regular expression must match the entire
+                function name. [default: everything]''')
 
     translate_group.add_argument(
         '--check',

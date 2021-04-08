@@ -4,6 +4,7 @@
 
 #include "smack/SmackOptions.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Regex.h"
 
 namespace smack {
 
@@ -104,8 +105,15 @@ bool SmackOptions::isEntryPoint(llvm::StringRef name) {
 }
 
 bool SmackOptions::shouldCheckFunction(llvm::StringRef name) {
-  return CheckedFunctions.size() == 0 || // If empty, check everything
-         std::find(CheckedFunctions.begin(), CheckedFunctions.end(), name) !=
-             CheckedFunctions.end();
+  if (CheckedFunctions.size() == 0) {
+    return false;
+  }
+  for (llvm::StringRef s : CheckedFunctions) {
+    llvm::SmallVector<llvm::StringRef, 10> matches;
+    if (llvm::Regex(s).match(name, &matches) && matches[0] == name) {
+      return true;
+    }
+  }
+  return false;
 }
 } // namespace smack
