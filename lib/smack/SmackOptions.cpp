@@ -106,7 +106,7 @@ bool SmackOptions::isEntryPoint(llvm::StringRef name) {
 
 bool SmackOptions::shouldCheckFunction(llvm::StringRef name) {
   if (CheckedFunctions.size() == 0) {
-    return false;
+    return true;
   }
   for (llvm::StringRef s : CheckedFunctions) {
     llvm::SmallVector<llvm::StringRef, 10> matches;
