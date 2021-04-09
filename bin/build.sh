@@ -346,7 +346,7 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
     puts "Installing Z3"
     mkdir -p ${Z3_DIR}
-    ${WGET} ${Z3_DOWNLOAD_LINK} -O z3-downloaded.zip
+    ${WGET} https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.11-x64-glibc-2.31.zip -O z3-downloaded.zip
     unzip -o z3-downloaded.zip -d z3-extracted
     mv -f --backup=numbered z3-extracted/z3-*/* ${Z3_DIR}
     rm -rf z3-downloaded.zip z3-extracted
