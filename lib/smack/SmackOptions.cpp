@@ -4,6 +4,7 @@
 
 #include "smack/SmackOptions.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Regex.h"
 
 namespace smack {
 
@@ -11,6 +12,11 @@ const llvm::cl::list<std::string>
     SmackOptions::EntryPoints("entry-points", llvm::cl::ZeroOrMore,
                               llvm::cl::desc("Entry point procedure names"),
                               llvm::cl::value_desc("PROCS"));
+
+const llvm::cl::list<std::string> SmackOptions::CheckedFunctions(
+    "checked-functions", llvm::cl::ZeroOrMore,
+    llvm::cl::desc("Functions in which to check properties"),
+    llvm::cl::value_desc("PROCS"));
 
 const llvm::cl::opt<SmackWarnings::WarningLevel> SmackOptions::WarningLevel(
     "warn-type", llvm::cl::desc("Enable certain type of warning messages."),
@@ -95,6 +101,19 @@ bool SmackOptions::isEntryPoint(llvm::StringRef name) {
   for (auto EP : EntryPoints)
     if (name == EP)
       return true;
+  return false;
+}
+
+bool SmackOptions::shouldCheckFunction(llvm::StringRef name) {
+  if (CheckedFunctions.size() == 0) {
+    return true;
+  }
+  for (llvm::StringRef s : CheckedFunctions) {
+    llvm::SmallVector<llvm::StringRef, 10> matches;
+    if (llvm::Regex(s).match(name, &matches) && matches[0] == name) {
+      return true;
+    }
+  }
   return false;
 }
 } // namespace smack

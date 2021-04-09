@@ -647,10 +647,17 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   StringRef name = f->hasName() ? f->getName() : "";
 
-  if (SmackOptions::RustPanics && Naming::isRustPanic(name)) {
+  if (SmackOptions::RustPanics && Naming::isRustPanic(name) &&
+      SmackOptions::shouldCheckFunction(
+          ci.getParent()->getParent()->getName())) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
+  } else if (name == "__VERIFIER_assert" &&
+             !SmackOptions::shouldCheckFunction(
+                 ci.getParent()->getParent()->getName())) {
+    // Skip this assertion if we shouldn't check in the parent function
+    return;
 
   } else if (name.find(Naming::VALUE_PROC) != StringRef::npos) {
     emit(rep->valueAnnotation(ci));
@@ -914,7 +921,8 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
       auto llvmTrue =
           SmackOptions::BitPrecise ? Expr::lit(1, 1) : Expr::lit(1LL);
       auto chkStmt = Expr::eq(arg, llvmTrue);
-      if (SmackOptions::LLVMAssumes == LLVMAssumeType::check)
+      if (SmackOptions::LLVMAssumes == LLVMAssumeType::check &&
+          SmackOptions::shouldCheckFunction(ci->getFunction()->getName()))
         emit(Stmt::assert_(chkStmt));
       else
         emit(Stmt::assume(chkStmt));
