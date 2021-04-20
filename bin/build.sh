@@ -375,14 +375,17 @@ fi
 if [ ${INSTALL_YICES2} -eq 1 ] ; then
   if [ ! -d "$YICES2_DIR" ] ; then
     puts "Installing Yices2"
-    mkdir -p ${YICES2_DIR}
-    ${WGET} https://yices.csl.sri.com/releases/${YICES2_VERSION}/yices-${YICES2_VERSION}-x86_64-pc-linux-gnu-static-gmp.tar.gz -O yices2-downloaded.tgz
-    tar xf yices2-downloaded.tgz
-    cd yices-${YICES2_VERSION}
-    ./install-yices ${YICES2_DIR}
-    cd ..
-    rm -rf yices2-downloaded.tgz yices-${YICES2_VERSION}
+    sudo apt-get install -y gperf libgmp-dev
+    cd ${DEPS_DIR}
+    git clone -b Yices-${YICES2_VERSION} https://github.com/SRI-CSL/yices2 yices2-src
+    cd yices2-src
+    autoconf
+    ./configure --prefix=${YICES2_DIR}
+    make -j
+    make install
     ln -s ${YICES2_DIR}/bin/yices-smt2 ${YICES2_DIR}/bin/yices2
+    cd ${DEPS_DIR}
+    rm -rf yices2-src
     puts "Installed Yices2"
   else
     puts "Yices2 already installed"
