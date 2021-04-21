@@ -30,10 +30,11 @@ jobs:
             "--exhaustive --folder=rust/functions --languages=rust",
             "--exhaustive --folder=rust/generics --languages=rust",
             "--exhaustive --folder=rust/loops --languages=rust",
+            "--exhaustive --folder=rust/memory-safety --languages=rust",
             "--exhaustive --folder=rust/panic --languages=rust",
             "--exhaustive --folder=rust/recursion --languages=rust",
             "--exhaustive --folder=rust/structures --languages=rust",
-            "--exhaustive --folder=rust/targeted-checks",
+            "--exhaustive --folder=rust/targeted-checks --languages=rust",
             "--exhaustive --folder=rust/vector --languages=rust",
             "--exhaustive --folder=rust/cargo/** --languages=cargo --threads=1",
             "--exhaustive --folder=llvm --languages=llvm-ir"
