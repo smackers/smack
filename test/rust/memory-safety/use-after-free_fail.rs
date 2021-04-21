@@ -1,3 +1,6 @@
+// @flag --check memory-safety
+// @expect error
+
 use std::ptr;
 
 // Simplified from Qin et al. fig. 7

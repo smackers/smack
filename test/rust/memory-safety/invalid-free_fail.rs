@@ -1,3 +1,7 @@
+// @flag --check=valid-free
+// @expect error
+
+
 use std::alloc::{alloc, Layout, System};
 use std::ptr;
 

@@ -1,5 +1,5 @@
 // @flag --check=memory-safety --unroll=2
-// @expect errro
+// @expect error
 
 
 fn sum_to(slice: &[u8], to: usize) -> u64 {

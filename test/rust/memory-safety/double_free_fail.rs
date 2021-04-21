@@ -1,5 +1,5 @@
 use std::alloc::{alloc, dealloc, Layout};
-
+// @flag --check=valid-free
 // @expect error
 
 fn main() {
