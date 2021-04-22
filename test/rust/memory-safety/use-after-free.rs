@@ -1,5 +1,5 @@
 // @flag --check memory-safety
-// @expect error
+// @expect verified
 
 use std::ptr;
 
