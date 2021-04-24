@@ -314,7 +314,8 @@ def arguments():
                              help='''enable certain type of warning messages
             (silent: no warning messages;
             approximate: warnings about introduced approximations;
-            info: warnings about introduced approximations/translation information)
+            info: warnings about introduced approximations and
+            translation information)
             [default: %(default)s]''')
 
     parser.add_argument(
