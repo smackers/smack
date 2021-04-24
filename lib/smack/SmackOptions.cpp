@@ -20,14 +20,14 @@ const llvm::cl::list<std::string> SmackOptions::CheckedFunctions(
 
 const llvm::cl::opt<SmackWarnings::WarningLevel> SmackOptions::WarningLevel(
     "warn-type", llvm::cl::desc("Enable certain type of warning messages."),
-    llvm::cl::values(clEnumValN(SmackWarnings::WarningLevel::Silent, "silent",
-                                "No warning messages"),
-                     clEnumValN(SmackWarnings::WarningLevel::Imprecise,
-                                "imprecise",
-                                "Enable warnings about imprecise modeling"),
-                     clEnumValN(SmackWarnings::WarningLevel::Info, "info",
-                                "Enable warnings about imprecise modeling and "
-                                "translation information")));
+    llvm::cl::values(
+        clEnumValN(SmackWarnings::WarningLevel::Silent, "silent",
+                   "No warning messages"),
+        clEnumValN(SmackWarnings::WarningLevel::Approximate, "approximate",
+                   "Enable warnings about introduced approximations"),
+        clEnumValN(SmackWarnings::WarningLevel::Info, "info",
+                   "Enable warnings about introduced approximations and "
+                   "translation information")));
 
 const llvm::cl::opt<bool> SmackOptions::ColoredWarnings(
     "colored-warnings", llvm::cl::desc("Enable colored warning messages."));

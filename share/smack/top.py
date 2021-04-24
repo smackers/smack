@@ -309,12 +309,13 @@ def arguments():
         type=str,
         help='limit debugging output to given MODULES')
 
-    noise_group.add_argument('--warn', default="imprecise",
-                             choices=['silent', 'imprecise', 'info'],
+    noise_group.add_argument('--warn', default="approximate",
+                             choices=['silent', 'approximate', 'info'],
                              help='''enable certain type of warning messages
             (silent: no warning messages;
-            unsound: warnings about imprecise modeling;
-            info: warnings about imprecise modeling/translation information)
+            approximate: warnings about introduced approximations;
+            info: warnings about introduced approximations and
+            translation information)
             [default: %(default)s]''')
 
     parser.add_argument(
