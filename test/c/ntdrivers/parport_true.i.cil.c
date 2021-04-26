@@ -4881,8 +4881,9 @@ NTSTATUS PptDetectChipFilter(PDEVICE_EXTENSION Extension) {
     if (Extension_FilterMode) {
       if (Extension->PnpInfo.HardwareCapabilities & 1UL) {
         {} {
-          Status = (*(Extension->ChipInfo.ParChipSetMode))(
-              Extension->ChipInfo.Context, 96);
+          Status = (*(
+              Extension->ChipInfo.ParChipSetMode))(Extension->ChipInfo.Context,
+                                                   96);
         }
         if (Status >= 0L) {
           {} {
@@ -4891,8 +4892,9 @@ NTSTATUS PptDetectChipFilter(PDEVICE_EXTENSION Extension) {
             PptDetermineFifoWidth(Extension);
             PptDetermineFifoDepth(Extension);
             WRITE_PORT_UCHAR(wPortECR, ecrLast);
-            Status = (*(Extension->ChipInfo.ParChipClearMode))(
-                Extension->ChipInfo.Context, 96);
+            Status =
+                (*(Extension->ChipInfo
+                       .ParChipClearMode))(Extension->ChipInfo.Context, 96);
           }
         } else {
         }
@@ -5337,8 +5339,9 @@ NTSTATUS PptSetChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
     }
     if (Extension_FilterMode) {
       {} {
-        Status = (*(Extension->ChipInfo.ParChipSetMode))(
-            Extension->ChipInfo.Context, ChipMode);
+        Status =
+            (*(Extension->ChipInfo.ParChipSetMode))(Extension->ChipInfo.Context,
+                                                    ChipMode);
       }
     } else {
       {}
@@ -5400,8 +5403,9 @@ NTSTATUS PptClearChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
     }
     if (Extension_FilterMode) {
       {} {
-        Status = (*(Extension->ChipInfo.ParChipClearMode))(
-            Extension->ChipInfo.Context, ChipMode);
+        Status = (*(
+            Extension->ChipInfo.ParChipClearMode))(Extension->ChipInfo.Context,
+                                                   ChipMode);
       }
     } else {
       {}

@@ -1913,8 +1913,8 @@ NTSTATUS KbFilter_InternIoCtl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                 BOOLEAN WaitForACK),
                             NTSTATUS(*WritePort)(PVOID Context, UCHAR Value,
                                                  BOOLEAN WaitForACK),
-                            PBOOLEAN TurnTranslationOn))(
-                            &KbFilter_InitializationRoutine);
+                            PBOOLEAN
+                                TurnTranslationOn))(&KbFilter_InitializationRoutine);
                         if (hookKeyboard->IsrRoutine) {
                           devExt->UpperIsrHook = hookKeyboard->IsrRoutine;
                         } else {
@@ -2136,10 +2136,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation = (CHAR)(
-                                                        (int)Irp
-                                                            ->CurrentLocation +
-                                                        1);
+                                                    Irp->CurrentLocation =
+                                                        (CHAR)((int)Irp
+                                                                   ->CurrentLocation +
+                                                               1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2158,10 +2158,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation = (CHAR)(
-                                                        (int)Irp
-                                                            ->CurrentLocation +
-                                                        1);
+                                                    Irp->CurrentLocation =
+                                                        (CHAR)((int)Irp
+                                                                   ->CurrentLocation +
+                                                               1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2203,10 +2203,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation = (CHAR)(
-                                                        (int)Irp
-                                                            ->CurrentLocation +
-                                                        1);
+                                                    Irp->CurrentLocation =
+                                                        (CHAR)((int)Irp
+                                                                   ->CurrentLocation +
+                                                               1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2320,9 +2320,10 @@ NTSTATUS KbFilter_InitializationRoutine(
     devExt = DeviceObject->DeviceExtension;
     if (devExt->UpperInitializationRoutine) {
       {
-        status = (*(devExt->UpperInitializationRoutine))(
-            devExt->UpperContext, SynchFuncContext, ReadPort, WritePort,
-            TurnTranslationOn);
+        status = (*(devExt->UpperInitializationRoutine))(devExt->UpperContext,
+                                                         SynchFuncContext,
+                                                         ReadPort, WritePort,
+                                                         TurnTranslationOn);
       }
       if (!(status >= 0L)) {
         return (status);

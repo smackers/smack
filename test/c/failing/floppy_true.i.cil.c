@@ -2847,9 +2847,9 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     disketteExtension->DeviceName.Length;
                                 if (irpSp->Parameters.DeviceIoControl
                                         .OutputBufferLength <
-                                    (ULONG)(
-                                        sizeof(USHORT) +
-                                        (unsigned int)mountName->NameLength)) {
+                                    (ULONG)(sizeof(USHORT) +
+                                            (unsigned int)
+                                                mountName->NameLength)) {
                                   ntStatus = -2147483643L;
                                   Irp->IoStatus.Information =
                                       sizeof(MOUNTDEV_NAME);
@@ -3004,21 +3004,21 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 ntStatus = 0L;
                                 if (outputBufferLength <
-                                    (ULONG)(
-                                        sizeof(DISK_GEOMETRY) *
-                                        (unsigned int)(((int)
-                                                            highestDriveMediaType -
-                                                        (int)
-                                                            lowestDriveMediaType) +
-                                                       1))) {
+                                    (ULONG)(sizeof(DISK_GEOMETRY) *
+                                            (unsigned int)(((int)
+                                                                highestDriveMediaType -
+                                                            (int)
+                                                                lowestDriveMediaType) +
+                                                           1))) {
                                   {}
                                   ntStatus = -2147483643L;
                                   highestDriveMediaType =
-                                      (enum _DRIVE_MEDIA_TYPE)(
-                                          (ULONG)((int)lowestDriveMediaType -
-                                                  1) +
-                                          outputBufferLength /
-                                              (ULONG)sizeof(DISK_GEOMETRY));
+                                      (enum _DRIVE_MEDIA_TYPE)((ULONG)((int)
+                                                                           lowestDriveMediaType -
+                                                                       1) +
+                                                               outputBufferLength /
+                                                                   (ULONG)sizeof(
+                                                                       DISK_GEOMETRY));
                                 } else {
                                 }
                                 outputBuffer =
@@ -4687,8 +4687,9 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                         _L : /* CIL Label */
                         {}
                           DisketteExtension->DriveMediaType =
-                              (DRIVE_MEDIA_TYPE)(
-                                  (int)DisketteExtension->DriveMediaType - 1);
+                              (DRIVE_MEDIA_TYPE)((int)DisketteExtension
+                                                     ->DriveMediaType -
+                                                 1);
                           DisketteExtension->DriveMediaConstants =
                               *(DriveMediaConstants +
                                 DisketteExtension->DriveMediaType);
@@ -4781,8 +4782,9 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                           if (!(ntStatus >= 0L)) {
                             {}
                             DisketteExtension->DriveMediaType =
-                                (DRIVE_MEDIA_TYPE)(
-                                    (int)DisketteExtension->DriveMediaType - 1);
+                                (DRIVE_MEDIA_TYPE)((int)DisketteExtension
+                                                       ->DriveMediaType -
+                                                   1);
                             DisketteExtension->DriveMediaConstants =
                                 *(DriveMediaConstants +
                                   DisketteExtension->DriveMediaType);
