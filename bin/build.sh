@@ -22,21 +22,22 @@
 ################################################################################
 
 # Set these flags to control various installation options
-INSTALL_DEPENDENCIES=1
-INSTALL_MONO=0 # Mono is needed only for lockpwn and symbooglix
-INSTALL_Z3=1
-INSTALL_CVC4=0
-INSTALL_YICES2=0
-INSTALL_BOOGIE=1
-INSTALL_CORRAL=1
-BUILD_SYMBOOGLIX=0
-BUILD_LOCKPWN=0
-BUILD_SMACK=1
-TEST_SMACK=1
-BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
+INSTALL_DEPENDENCIES=${INSTALL_DEPENDENCIES:-1}
+INSTALL_MONO=${INSTALL_MONO:-0} # Mono is needed only for lockpwn and symbooglix
+INSTALL_Z3=${INSTALL_Z3:-1}
+INSTALL_CVC4=${INSTALL_CVC4:-0}
+INSTALL_YICES2=${INSTALL_YICES2:-0}
+INSTALL_BOOGIE=${INSTALL_BOOGIE:-1}
+INSTALL_CORRAL=${INSTALL_CORRAL:-1}
+BUILD_SYMBOOGLIX=${BUILD_SYMBOOGLIX:-0}
+BUILD_LOCKPWN=${BUILD_LOCKPWN:-0}
+BUILD_SMACK=${BUILD_SMACK:-1}
+TEST_SMACK=${TEST_SMACK:-1}
+INSTALL_LLVM=${INSTALL_LLVM:-1}
+BUILD_LLVM=${BUILD_LLVM:-0} # LLVM is typically installed from packages (see below)
 
 # Support for more programming languages
-INSTALL_OBJECTIVEC=0
+INSTALL_OBJECTIVEC=${INSTALL_OBJECTIVEC:-0}
 INSTALL_RUST=${INSTALL_RUST:-0}
 
 # Development dependencies
@@ -190,23 +191,32 @@ puts "Detected distribution: $distro"
 case "$distro" in
 linux-opensuse*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.10.zip"
-  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ make"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" llvm-clang llvm-devel"
+  fi
+  DEPENDENCIES+=" gcc-c++ make"
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
 linux-@(ubuntu|neon)-16*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
   ;;
 
 linux-@(ubuntu|neon)-18*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
   ;;
 
 linux-@(ubuntu|neon)-20*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
   ;;
 
 *)
@@ -268,8 +278,10 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     fi
 
     # Adding LLVM repository
-    ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-    sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
+    if [ ${INSTALL_LLVM} -eq 1 ] ; then
+      ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
+    fi
 
     # Adding .NET repository
     ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
