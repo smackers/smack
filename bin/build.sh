@@ -234,7 +234,7 @@ do
     INSTALL_PREFIX="${2%/}"
     CONFIGURE_INSTALL_PREFIX="--prefix=$2"
     CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=${INSTALL_PREFIX}/bin:$PATH >> ${SMACKENV}
+    echo export PATH=\"${INSTALL_PREFIX}/bin:\$PATH\" >> ${SMACKENV}
     shift
     shift
     ;;
