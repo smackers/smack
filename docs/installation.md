@@ -12,16 +12,17 @@ our prepackaged Vagrant box.
 
 ### Super-Quick Setup: Virtual Smack
 
-Just download [vsmack](bin/vsmack) and put it in your executable path, ensure
+Just download [vsmack](https://github.com/smackers/smack/blob/master/bin/vsmack)
+and put it in your executable path, ensure
 [Vagrant][] and [VirtualBox][] are installed, and run `vsmack` directly on
 your source files. For example,
 ````Shell
 # fetch vsmack and set executable permission
-wget -O ~/bin/vsmack https://raw.githubusercontent.com/smackers/smack/develop/bin/vsmack
+wget -O ~/bin/vsmack https://raw.githubusercontent.com/smackers/smack/master/bin/vsmack
 chmod u+x ~/bin/vsmack
 
 # fetch a source file
-wget https://raw.githubusercontent.com/smackers/smack/develop/test/basic/simple.c
+wget https://raw.githubusercontent.com/smackers/smack/master/test/basic/simple.c
 
 # run vsmack
 vsmack simple.c
