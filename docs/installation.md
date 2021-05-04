@@ -10,24 +10,6 @@ installation, however, is to launch our reproducible and portable development
 environment using [Vagrant][]. An even quicker way to get started is to use
 our prepackaged Vagrant box.
 
-### Super-Quick Setup: Virtual Smack
-
-Just download [vsmack](https://github.com/smackers/smack/blob/master/bin/vsmack)
-and put it in your executable path, ensure
-[Vagrant][] and [VirtualBox][] are installed, and run `vsmack` directly on
-your source files. For example,
-````Shell
-# fetch vsmack and set executable permission
-wget -O ~/bin/vsmack https://raw.githubusercontent.com/smackers/smack/master/bin/vsmack
-chmod u+x ~/bin/vsmack
-
-# fetch a source file
-wget https://raw.githubusercontent.com/smackers/smack/master/test/basic/simple.c
-
-# run vsmack
-vsmack simple.c
-````
-
 ### Quick Setup 1: Vagrant Development Environment
 
 SMACK can be run in a preconfigured virtual environment using [Vagrant][] and
@@ -57,12 +39,12 @@ vagrant destroy
 ````
 
 ### Quick Setup 2: Docker
+
 SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
 the following configurations:
 
 * Ubuntu 18.04, Docker version 19.03.6
 * Windows WSL Ubuntu 20.04, Docker Desktop with Docker engine version 20.10.2
-
 
 #### Docker Hub
 
