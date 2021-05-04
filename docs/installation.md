@@ -3,12 +3,12 @@
 
 In principle SMACK can be run on any platform on which [LLVM][] and [Boogie][]
 can run. In practice we have run SMACK on standard Ubuntu and openSUSE Linux
-distributions, OS X, and Windows via Cygwin. Below we outline system
+distributions, OS X, and Windows. Below we outline system
 requirements and installation instructions for typical system configurations.
 A quick way to get started without worrying about system requirements and
 installation, however, is to launch our reproducible and portable development
 environment using [Vagrant][]. An even quicker way to get started is to use
-our prepackaged Vagrant box.
+our prepackaged Docker container.
 
 ### Quick Setup 1: Vagrant Development Environment
 
@@ -79,7 +79,6 @@ SMACK depends on the following projects:
 * [Boost][] version 1.55 or greater
 * [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
-* [Mono][] version 5.0.0 or greater (except on Windows)
 * [Z3][] or compatible SMT-format theorem prover
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
 * [sea-dsa][]
@@ -117,7 +116,7 @@ script.  Alternatively, you can read how to accomplish this below.
 
 The general instructions for installation on OS X mainly follow those above for
 Linux, and are outlined in our automated [build.sh][] script in `bin/build.sh`.
-Note however that `bin/build.sh` does not run on OS X . it can only be used as
+Note however that `bin/build.sh` does not run on OS X . It can only be used as
 reference guidelines.
 
 In addition to the requirements above, installing SMACK and its dependencies
@@ -127,20 +126,6 @@ the [Homebrew][] package manager. [Mono][] can be installed from binaries
 either from the [Mono][] download page, or via [Homebrew Cask][].
 
 ### Installation on Windows
-#### Cygwin (Deprecated)
-
-The general instructions for installation on Windows using [Cygwin][] mainly
-follow those above for Linux, and are outlined in our automated [build.sh][]
-script in `bin/build.sh`. Note however that an actual [.NET][] Framework and
-SDK should be present in place of the [Mono][] emulator, and that prebuilt
-[Z3][], [Boogie][], and [Corral][] may be installed via their Windows
-installers rather than built from source.
-
-**NOTE** Although we have not pinpointed the problem exactly, building [LLVM][]
-and [Clang][] is problematic on some [Cygwin][] configurations. Please consult
-[LLVM][] documentation in case of any issues.
-
-#### Windows Subsystem for Linux (Recommended)
 
 SMACK can be installed on the Windows Subsystem for Linux (WSL) by following the
 same procedure as the Linux installation (i.e., via the build script [build.sh][]).
