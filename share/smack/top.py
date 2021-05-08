@@ -863,7 +863,7 @@ def print_result(result):
     if "PASSED" in result:
         print("thread was successful at "+time)
 
-def verify_bpl(args, thread_num=None):
+def verify_bpl(args, commands_to_add=None):
     """Verify the Boogie source file with a back-end verifier."""
 
 # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
@@ -879,7 +879,8 @@ def verify_bpl(args, thread_num=None):
        # print(args2)
        # print("args2: "+args2.verifier)
        # threads should be 4 different combos of corral settings
-        threads = [(args2, 1), (args2, 2), (args2, 3), (args2, 4)] # a list with verifiers changed to boogie and corral
+        commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100","/bopt:proverOpt:O:smt.arith.solver=2"], ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"], []]
+        threads = [(args2, commands_to_add[0]), (args2, commands_to_add[1]), (args2, commands_to_add[2]), (args2, commands_to_add[3])] # a list with verifiers changed to boogie and corral
         results = [p.apply_async(verify_bpl, [settings, thread], callback=print_result)for settings, thread in threads] # attempting to async run this method w/ 2 hard-coded verifiers
         print("there are "+str(len(results))+" threads")
         p.terminate()
@@ -938,10 +939,12 @@ def verify_bpl(args, thread_num=None):
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
         print(str(thread_num))
-        if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
-            command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-        if (thread_num == 2) or (thread_num == 3): # thread 2 is both, 3 is just this, 4 is none
-            command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
+        for commands in commands_to_add:
+            command += [commands]
+        #if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
+        #    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
+        #if (thread_num == 2) or (thread_num == 3): # thread 2 is both, 3 is just this, 4 is none
+        #    command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
         if args.solver == 'cvc4':
             command += ["/bopt:proverOpt:SOLVER=cvc4"]
         elif args.solver == 'yices2':
