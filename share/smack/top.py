@@ -885,14 +885,14 @@ def verify_bpl(args, commands_to_add=None):
         print("there are "+str(len(results))+" threads")
         p.terminate()
         p.join()
-        #for async_result in results:
-        #   try:
-        #        print("results for this thread are:")
-        #        print(async_result.get())
-        #        break
-        #   except ValueError as e:
-        #        print(e)
-        #   break
+        for async_result in results:
+           try:
+                print("results for this thread are:")
+                print(async_result.get())
+                break
+           except ValueError as e:
+                print(e)
+           break
 # seems as though threads are not terminating, we are not getting past this
         #print("loop ended")
         #p.close()
@@ -938,9 +938,11 @@ def verify_bpl(args, commands_to_add=None):
         command += ["/cex:%s" % args.max_violations]
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
-        print(str(thread_num))
-        for commands in commands_to_add:
+        
+        print("this thread is using: " + str(commands_to_add))
+        for commands in commands_to_add:          
             command += [commands]
+
         #if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
         #    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
         #if (thread_num == 2) or (thread_num == 3): # thread 2 is both, 3 is just this, 4 is none
