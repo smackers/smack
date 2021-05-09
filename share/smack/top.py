@@ -862,6 +862,7 @@ def verification_result(verifier_output):
 def print_result(result):
     if "PASSED" in result:
         print("thread was successful at "+time)
+        sys.exit(0)
 
 def verify_bpl(args, commands_to_add=None):
     """Verify the Boogie source file with a back-end verifier."""
@@ -879,20 +880,20 @@ def verify_bpl(args, commands_to_add=None):
        # print(args2)
        # print("args2: "+args2.verifier)
        # threads should be 4 different combos of corral settings
-        commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100","/bopt:proverOpt:O:smt.arith.solver=2"], ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"], []]
+        commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100","/bopt:proverOpt:O:smt.arith.solver=2"], ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"], [""]]
         threads = [(args2, commands_to_add[0]), (args2, commands_to_add[1]), (args2, commands_to_add[2]), (args2, commands_to_add[3])] # a list with verifiers changed to boogie and corral
         results = [p.apply_async(verify_bpl, [settings, thread], callback=print_result)for settings, thread in threads] # attempting to async run this method w/ 2 hard-coded verifiers
         print("there are "+str(len(results))+" threads")
         p.terminate()
         p.join()
-        for async_result in results:
-           try:
-                print("results for this thread are:")
-                print(async_result.get())
-                break
-           except ValueError as e:
-                print(e)
-           break
+#        for async_result in results:
+#           try:
+#                print("results for this thread are:")
+#                print(async_result.get())
+#                break
+#           except ValueError as e:
+#                print(e)
+#           break
 # seems as though threads are not terminating, we are not getting past this
         #print("loop ended")
         #p.close()
