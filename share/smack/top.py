@@ -860,16 +860,20 @@ def verification_result(verifier_output):
         return VResult.UNKNOWN
 
 def print_result(result):
-    if "PASSED" in result:
-        print("thread was successful at "+time)
-        sys.exit(0)
+    sys.exit(0)
+    #print("gettings results: "+str(result))
+    #if "PASSED" in result:
+    #    print("thread was successful at "+time)
+    #    sys.exit(0)
 
-def verify_bpl(args, commands_to_add=None):
+def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
+    if isinstance(args, tuple):
+        args, commands_to_add = args
 
 # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
-        p = ThreadPool(processes=4)
+        p = multiprocessing.Pool(4)
        # args1 = copy.deepcopy(args)
 
        # args1.verifier = 'boogie'
@@ -881,23 +885,27 @@ def verify_bpl(args, commands_to_add=None):
        # print("args2: "+args2.verifier)
        # threads should be 4 different combos of corral settings
         commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100","/bopt:proverOpt:O:smt.arith.solver=2"], ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"], [""]]
-        threads = [(args2, commands_to_add[0]), (args2, commands_to_add[1]), (args2, commands_to_add[2]), (args2, commands_to_add[3])] # a list with verifiers changed to boogie and corral
-        results = [p.apply_async(verify_bpl, [settings, thread], callback=print_result)for settings, thread in threads] # attempting to async run this method w/ 2 hard-coded verifiers
-        print("there are "+str(len(results))+" threads")
-        p.terminate()
+        threads = [(args2, commands) for commands in commands_to_add] # a list with verifiers changed to boogie and corral
+#        print(threads)
+#        results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
+        results = list(p.imap_unordered(verify_bpl, threads))
+        print(results[0])
+#            break
+        #print("there are "+str(len(results))+" threads")
+        p.close()
         p.join()
 #        for async_result in results:
 #           try:
 #                print("results for this thread are:")
-#                print(async_result.get())
+#            print(async_result.get())
 #                break
 #           except ValueError as e:
 #                print(e)
 #           break
 # seems as though threads are not terminating, we are not getting past this
         #print("loop ended")
-        #p.close()
-        p.terminate()
+#        p.close()
+#        p.terminate()
         #p.join()
         print("threads closed")
         return
@@ -910,7 +918,7 @@ def verify_bpl(args, commands_to_add=None):
         return
 
     elif args.verifier == 'boogie' or args.modular:
-        print("using boogie for this thread")
+    #    print("using boogie for this thread")
         command = ["boogie"]
         command += [args.bpl_file]
 #        command += ["/nologo", "/doModSetAnalysis"] # had to remove nologo to make boogie work
@@ -939,10 +947,13 @@ def verify_bpl(args, commands_to_add=None):
         command += ["/cex:%s" % args.max_violations]
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
-        
-        print("this thread is using: " + str(commands_to_add))
-        for commands in commands_to_add:          
-            command += [commands]
+
+        try:
+            print("this thread is using: " + str(commands_to_add))
+            for commands in commands_to_add:
+                command += [commands]
+        except NameError:
+            pass
 
         #if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
         #    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
