@@ -213,40 +213,54 @@ def inlined_procedures():
     ]
 
 
-class FileAction(argparse.Action):
-    def __init__(self, option_strings, dest, **kwargs):
-        super(FileAction, self).__init__(option_strings, dest, **kwargs)
+def check_file(checker):
+    """
+    Generate an Action class
+    (https://docs.python.org/3/library/argparse.html#action-classes)
+    that checks the file based on the `checker` argument.
+    """
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        if option_string is None:
-            validate_input_files(values)
-        else:
-            # presumably output files (e.g., .bc, .ll, etc)
-            validate_output_file(values)
-        setattr(namespace, self.dest, values)
+    def set_file_checker(func):
+        def dec(cls):
+            def methodize(self, arg):
+                return func(arg)
+            setattr(cls, 'file_checker', methodize)
+            return cls
+        return dec
+
+    @set_file_checker(checker)
+    class FileAction(argparse.Action):
+        def __init__(self, option_strings, dest, **kwargs):
+            super(FileAction, self).__init__(option_strings, dest, **kwargs)
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            self.file_checker(values)
+            setattr(namespace, self.dest, values)
+    return FileAction
 
 
 def exit_with_error(error):
     sys.exit('Error: %s.' % error)
 
 
+def validate_input_file(file):
+    """
+    Check whether the given input file is valid, returning a reason if not.
+    """
+
+    file_extension = os.path.splitext(file)[1][1:]
+    if not os.path.isfile(file):
+        exit_with_error("Cannot find file %s" % file)
+
+    if not os.access(file, os.R_OK):
+        exit_with_error("Cannot read file %s" % file)
+
+    elif file_extension not in languages():
+        exit_with_error(
+            "Unexpected source file extension '%s'" % file_extension)
+
+
 def validate_input_files(files):
-    def validate_input_file(file):
-        """
-        Check whether the given input file is valid, returning a reason if not.
-        """
-
-        file_extension = os.path.splitext(file)[1][1:]
-        if not os.path.isfile(file):
-            exit_with_error("Cannot find file %s" % file)
-
-        if not os.access(file, os.R_OK):
-            exit_with_error("Cannot read file %s" % file)
-
-        elif file_extension not in languages():
-            exit_with_error(
-                "Unexpected source file extension '%s'" %
-                file_extension)
     list(map(validate_input_file, files))
 
 
@@ -272,7 +286,7 @@ def arguments():
         'input_files',
         metavar='input-files',
         nargs='+',
-        action=FileAction,
+        action=check_file(validate_input_files),
         type=str,
         help='source file to be translated/verified')
 
@@ -325,8 +339,14 @@ def arguments():
         default=False,
         help='perform only translation, without verification.')
 
-    parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
-                        type=str, help='save error trace/witness to FILE')
+    parser.add_argument(
+        '-w',
+        '--error-file',
+        metavar='FILE',
+        default=None,
+        action=check_file(validate_output_file),
+        type=str,
+        help='save error trace/witness to FILE')
 
     frontend_group = parser.add_argument_group('front-end options')
 
@@ -339,7 +359,7 @@ def arguments():
         '--bc-file',
         metavar='FILE',
         default=None,
-        action=FileAction,
+        action=check_file(validate_output_file),
         type=str,
         help='save initial LLVM bitcode to FILE')
 
@@ -369,7 +389,7 @@ def arguments():
         '--ll-file',
         metavar='FILE',
         default=None,
-        action=FileAction,
+        action=check_file(validate_output_file),
         type=str,
         help='save final LLVM IR to FILE')
 
@@ -386,7 +406,7 @@ def arguments():
         '--bpl-file',
         metavar='FILE',
         default=None,
-        action=FileAction,
+        action=check_file(validate_output_file),
         type=str,
         help='save (intermediate) Boogie code to FILE')
 
