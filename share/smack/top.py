@@ -604,6 +604,7 @@ def arguments():
         '--svcomp-property',
         metavar='FILE',
         default=None,
+        action=check_file(validate_input_file),
         type=str,
         help='load SVCOMP property to check from FILE')
 
