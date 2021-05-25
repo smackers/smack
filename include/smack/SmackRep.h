@@ -22,6 +22,7 @@ class ProcDecl;
 class Stmt;
 class Expr;
 class Regions;
+class Attr;
 
 using llvm::Regex;
 using llvm::SmallVector;
@@ -113,6 +114,8 @@ private:
 
   bool isUnsafeFloatAccess(const llvm::Type *elemTy,
                            const llvm::Type *resultTy);
+  void addAllocSizeAttr(const llvm::GlobalVariable *,
+                        std::list<const Attr *> &);
 
 public:
   const Expr *pointerLit(unsigned v) {
