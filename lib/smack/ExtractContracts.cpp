@@ -92,10 +92,12 @@ std::tuple<BlockList, LoopMap> splitContractBlocks(Function &F, LoopInfo &LI) {
                           << "\n");
             BasicBlock *B = CI->getParent();
             auto NewBB = B->splitBasicBlock(++CI->getIterator());
-            LI.getLoopFor(B)->addBasicBlockToLoop(NewBB, LI);
+            auto L = LI.getLoopFor(B);
+            if (L)
+              L->addBasicBlockToLoop(NewBB, LI);
             blocks.push_front(NewBB);
 
-            if (auto L = LI[B])
+            if (L)
               invariantBlocks[L].push_back(B);
             else
               contractBlocks.push_back(B);
