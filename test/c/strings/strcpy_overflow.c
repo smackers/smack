@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 #include <string.h>
 
 // @flag --check=memory-safety

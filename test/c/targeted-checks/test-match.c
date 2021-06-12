@@ -1,4 +1,5 @@
 #include "smack.h"
+#include <assert.h>
 
 // @flag --checked-functions should_match1
 // @expect verified

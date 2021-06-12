@@ -10,10 +10,5 @@
     if (!(EX))                                                                 \
       __VERIFIER_assert(0);                                                    \
   } while (0)
-#define assume(EX)                                                             \
-  do {                                                                         \
-    if (!(EX))                                                                 \
-      __VERIFIER_assume(0);                                                    \
-  } while (0)
 
 #endif

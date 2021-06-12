@@ -54,8 +54,14 @@ void __SMACK_check_memory_leak(void);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-void __VERIFIER_assume(int);
 void __VERIFIER_assert(int);
+void __VERIFIER_assume(int);
+
+#define assume(EX)                                                             \
+  do {                                                                         \
+    if (!(EX))                                                                 \
+      __VERIFIER_assume(0);                                                    \
+  } while (0)
 
 #define S4(a, b, c, d) a b c d
 #define S3(a, b, c) a b c
