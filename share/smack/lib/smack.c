@@ -45,14 +45,12 @@ void __VERIFIER_assume(int x) {
   __SMACK_code("assume @ != $0;", x);
 }
 
-#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
 #if !DISABLE_SMACK_ASSERTIONS
   __SMACK_dummy(x);
   __SMACK_code("assert @ != $0;", x);
 #endif
 }
-#endif
 
 int __SMACK_and32(int a, int b) {
   int c = 0;

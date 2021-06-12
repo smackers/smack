@@ -3,6 +3,7 @@
 //
 #include "pthread.h"
 #include "smack.h"
+#include <assert.h>
 
 void *__SMACK_PthreadReturn[SMACK_MAX_THREADS];
 

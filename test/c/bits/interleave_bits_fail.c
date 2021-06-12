@@ -1,6 +1,7 @@
 /* https://graphics.stanford.edu/~seander/bithacks.html#InterleaveTableObvious
  */
 #include "smack.h"
+#include <assert.h>
 
 // @flag --loop-limit=17
 // @flag --unroll=17

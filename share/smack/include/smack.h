@@ -55,22 +55,7 @@ void __SMACK_check_memory_leak(void);
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
 void __VERIFIER_assume(int);
-#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int);
-#endif
-
-#ifndef AVOID_NAME_CONFLICTS
-#define assert(EX)                                                             \
-  do {                                                                         \
-    if (!(EX))                                                                 \
-      __VERIFIER_assert(0);                                                    \
-  } while (0)
-#define assume(EX)                                                             \
-  do {                                                                         \
-    if (!(EX))                                                                 \
-      __VERIFIER_assume(0);                                                    \
-  } while (0)
-#endif
 
 #define S4(a, b, c, d) a b c d
 #define S3(a, b, c) a b c
