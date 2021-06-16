@@ -104,7 +104,7 @@ def verify_bpl_svcomp(args):
   corral_command += ["/trackAllVars"]
 
   verifier_output = smack.top.try_command(corral_command, timeout=time_limit)
-  result = smack.top.verification_result(verifier_output)
+  result = smack.top.verification_result(verifier_output, 'corral')
 
   if result in VResult.ERROR: #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"

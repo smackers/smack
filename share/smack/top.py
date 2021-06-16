@@ -843,7 +843,7 @@ def transform_out(args, old):
     return out
 
 
-def verification_result(verifier_output):
+def verification_result(verifier_output, verifier):
     if re.search(
         r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
             verifier_output):
@@ -856,24 +856,27 @@ def verification_result(verifier_output):
         attr = None
         attr_pat = r'assert {:(.+)}'
 
-        corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
-                                  verifier_output)
-        if corral_af_msg:
-            attr = corral_af_msg.group(1)
+        if args.verifier == 'corral':
+            corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
+                                      verifier_output)
+            if corral_af_msg:
+                attr = corral_af_msg.group(1)
 
-        boogie_af_msg = re.search(
-            r'([\w#$~%.\/-]+)\((\d+),\d+\): Error: This assertion might not',
-            verifier_output)
-
-        if boogie_af_msg:
-            if re.match('.*[.]bpl$', boogie_af_msg.group(1)):
-                line_no = int(boogie_af_msg.group(2))
-                with open(boogie_af_msg.group(1), 'r') as f:
-                    assert_line = re.search(
+        elif args.verifier == 'boogie':
+            boogie_af_msg = re.search(
+                r'([\w#$~%.\/-]+)\((\d+),\d+\): '
+                r'Error: This assertion might not hold', verifier_output)
+            if boogie_af_msg:
+                if re.match('.*[.]bpl$', boogie_af_msg.group(1)):
+                    line_no = int(boogie_af_msg.group(2))
+                    with open(boogie_af_msg.group(1), 'r') as f:
+                        assert_line = re.search(
                                       attr_pat,
                                       f.read().splitlines(True)[line_no - 1])
-                    if assert_line:
-                        attr = assert_line.group(1)
+                        if assert_line:
+                            attr = assert_line.group(1)
+        else:
+            print('Warning: Unable to decide error type.')
 
         if attr is not None:
             for p in (VProperty.mem_safe_subprops()
@@ -941,7 +944,7 @@ def verify_bpl(args):
 
     verifier_output = try_command(command, timeout=args.time_limit)
     verifier_output = transform_out(args, verifier_output)
-    result = verification_result(verifier_output)
+    result = verification_result(verifier_output, args.verifier)
 
     if args.smackd:
         print(smackdOutput(result, verifier_output))
