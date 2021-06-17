@@ -93,7 +93,7 @@ def error_trace(verifier_output, verifier):
     traces = json_output(VResult.ERROR, verifier_output, verifier)['traces']
     output = '\n'.join(
         map(
-            lambda trace: '{0}({1}:{2}): {3}'.format(
+            lambda trace: '{0}({1},{2}): {3}'.format(
                 trace['file'],
                 trace['line'],
                 trace['column'],
