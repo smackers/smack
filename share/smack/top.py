@@ -856,13 +856,13 @@ def verification_result(verifier_output, verifier):
         attr = None
         attr_pat = r'assert {:(.+)}'
 
-        if args.verifier == 'corral':
+        if verifier == 'corral':
             corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
                                       verifier_output)
             if corral_af_msg:
                 attr = corral_af_msg.group(1)
 
-        elif args.verifier == 'boogie':
+        elif verifier == 'boogie':
             boogie_af_msg = re.search(
                 r'([\w#$~%.\/-]+)\((\d+),\d+\): '
                 r'Error: This assertion might not hold', verifier_output)
