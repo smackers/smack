@@ -947,10 +947,10 @@ def verify_bpl(args):
     result = verification_result(verifier_output, args.verifier)
 
     if args.smackd:
-        print(smackdOutput(result, verifier_output))
+        print(smackdOutput(result, verifier_output, args.verifier))
     else:
         if result in VResult.ERROR:
-            error = error_trace(verifier_output, args)
+            error = error_trace(verifier_output, args.verifier)
 
             if args.error_file:
                 with open(args.error_file, 'w') as f:

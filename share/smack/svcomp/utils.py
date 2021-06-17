@@ -110,7 +110,7 @@ def verify_bpl_svcomp(args):
     heurTrace += "Found a bug during normal inlining.\n"
 
     if not args.quiet:
-      error = smack.top.error_trace(verifier_output, args)
+      error = smack.top.error_trace(verifier_output, 'corral')
       print(error)
 
   elif result is VResult.TIMEOUT: #normal inlining
@@ -170,7 +170,7 @@ def write_error_file(args, status, verifier_output):
     if args.language == 'svcomp':
       error = smackJsonToXmlGraph(smackdOutput(status, verifier_output), args, hasBug, status)
     elif hasBug:
-      error = smack.top.error_trace(verifier_output, args)
+      error = smack.top.error_trace(verifier_output, 'corral')
     if error is not None:
       with open(args.error_file, 'w') as f:
         f.write(error.decode('utf-8'))
