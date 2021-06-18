@@ -3,6 +3,7 @@ import functools
 import shutil
 import subprocess
 import json
+from .frontend import llvm_exact_bin
 
 
 def reformat_assignment(line):
@@ -49,9 +50,11 @@ def demangle(func):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
             out, _ = p.communicate(input=func.encode())
-            return out.decode()
+            return out.decode().strip()
         return func
-    return functools.reduce(demangle_with, ['cxxfilt', 'rustfilt'], func)
+    return functools.reduce(demangle_with,
+                            [llvm_exact_bin('llvm-cxxfilt'), 'rustfilt'],
+                            func)
 
 
 def transform(info):
@@ -167,13 +170,14 @@ def json_output(result, output, verifier):
                   (r'((CALL|RETURN from)\s+(\$|__SMACK))|'
                    r'Done|ASSERTION'), token) is not None:
                     continue
+                token = transform(token)
                 traces.append(
                     {'threadid': thread_id,
                      'file': file_name,
                      'line': line_num,
                      'column': col_num,
                      'description': token,
-                     'assumption': transform(token) if '=' in token else ''})
+                     'assumption': token if '=' in token else ''})
     json_data = {
             'verifier': verifier,
             'passed?': False,
