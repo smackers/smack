@@ -2,9 +2,9 @@ import os
 import sys
 import re
 import json
-from .utils import temporary_file, try_command, temporary_directory
+from .utils import temporary_file, try_command, temporary_directory,\
+    llvm_exact_bin
 from .versions import RUST_VERSION
-from .versions import LLVM_SHORT_VERSION
 
 # Needed for cargo operations
 try:
@@ -84,10 +84,6 @@ def smack_headers(args):
 
 def smack_lib():
     return os.path.join(smack_root(), 'share', 'smack', 'lib')
-
-
-def llvm_exact_bin(name):
-    return name + '-' + LLVM_SHORT_VERSION
 
 
 def default_clang_compile_command(args, lib=False):

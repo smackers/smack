@@ -8,7 +8,8 @@ import signal
 import functools
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files
+from .utils import temporary_file, try_command, remove_temp_files,\
+    llvm_exact_bin
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, smackdOutput
@@ -652,7 +653,7 @@ def target_selection(args):
                     os.path.basename(src))[0],
                 '.ll',
                 args)
-            try_command(['llvm-dis', '-o', ll, src])
+            try_command([llvm_exact_bin('llvm-dis'), '-o', ll, src])
             src = ll
         if os.path.splitext(src)[1] == '.ll':
             with open(src, 'r') as f:
