@@ -1253,8 +1253,10 @@ void SmackRep::addAllocSizeAttr(const llvm::GlobalVariable *G,
                                 std::list<const Attr *> &ax) {
   auto T = dyn_cast<const PointerType>(G->getType());
   assert(T && "Global variables should have pointer types!");
-  auto allocSize = targetData->getTypeAllocSize(T->getElementType());
-  ax.push_back(Attr::attr("allocSize", allocSize));
+  if (T->getElementType()->isSized()) {
+    auto allocSize = targetData->getTypeAllocSize(T->getElementType());
+    ax.push_back(Attr::attr("allocSize", allocSize));
+  }
 }
 
 std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
