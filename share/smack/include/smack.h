@@ -54,7 +54,9 @@ void __SMACK_check_memory_leak(void);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
+#ifndef SVCOMP
 void __VERIFIER_assert(int);
+#endif
 void __VERIFIER_assume(int);
 
 #define assume(EX)                                                             \
