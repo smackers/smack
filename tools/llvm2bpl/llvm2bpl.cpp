@@ -32,6 +32,7 @@
 #include "smack/CodifyStaticInits.h"
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
+#include "smack/InsertDummyMain.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
@@ -161,6 +162,8 @@ int main(int argc, char **argv) {
   llvm::initializeRemovePtrToIntPass(Registry);
 
   llvm::legacy::PassManager pass_manager;
+
+  pass_manager.add(new smack::InsertDummyMain);
 
   // This runs before DSA because some Rust functions cause problems.
   pass_manager.add(new smack::RustFixes);
