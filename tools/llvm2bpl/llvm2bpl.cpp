@@ -36,6 +36,7 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
+#include "smack/PromoteMemcpy.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
@@ -207,8 +208,9 @@ int main(int argc, char **argv) {
   }
   pass_manager.add(new llvm::MergeArrayGEP());
   // pass_manager.add(new smack::SimplifyLibCalls());
-  pass_manager.add(new llvm::Devirtualize());
+  pass_manager.add(new smack::PromoteMemcpy());
   pass_manager.add(new smack::SplitAggregateValue());
+  pass_manager.add(new llvm::Devirtualize());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
