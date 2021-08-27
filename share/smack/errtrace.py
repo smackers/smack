@@ -77,6 +77,26 @@ def error_trace(verifier_output, verifier):
     '''Generate string error trace.'''
     from .top import VResult
 
+    traces = json_output(VResult.ERROR, verifier_output, verifier)['traces']
+    output = '\n'.join(
+        map(
+            lambda trace: '{0}({1},{2}): {3}'.format(
+                trace['file'],
+                trace['line'],
+                trace['column'],
+                trace['description']), traces))
+    return output
+
+
+def smackdOutput(result, output, verifier):
+    return json.dumps(json_output(result, output, verifier))
+
+
+def json_output(result, output, verifier):
+    '''Convert error traces into JSON format'''
+
+    from .top import VResult
+
     def merger(traces, trace):
         if len(traces) == 0:
             return [trace]
@@ -92,26 +112,6 @@ def error_trace(verifier_output, verifier):
             return traces
         else:
             return traces + [trace]
-
-    traces = json_output(VResult.ERROR, verifier_output, verifier)['traces']
-    output = '\n'.join(
-        map(
-            lambda trace: '{0}({1},{2}): {3}'.format(
-                trace['file'],
-                trace['line'],
-                trace['column'],
-                trace['description']), functools.reduce(merger, traces, [])))
-    return output
-
-
-def smackdOutput(result, output, verifier):
-    return json.dumps(json_output(result, output, verifier))
-
-
-def json_output(result, output, verifier):
-    '''Convert error traces into JSON format'''
-
-    from .top import VResult
 
     if not (result is VResult.VERIFIED or result in VResult.ERROR):
         return
@@ -183,6 +183,6 @@ def json_output(result, output, verifier):
             'passed?': False,
             'failsAt': failsAt,
             'threadCount': 1,
-            'traces': traces
+            'traces': functools.reduce(merger, traces, [])
     }
     return json_data
