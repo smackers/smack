@@ -71,7 +71,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
                 line = proc.stdout.readline()
                 if line:
                     output += line
-                    print(line, end=' ')
+                    print(line, end='')
                 elif proc.poll() is not None:
                     break
             proc.wait

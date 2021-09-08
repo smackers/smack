@@ -2617,9 +2617,7 @@ void PptLogError(PDRIVER_OBJECT DriverObject, PDEVICE_OBJECT DeviceObject,
     ErrorLogEntry->FinalStatus = FinalStatus;
     ErrorLogEntry->DumpDataSize = DumpToAllocate;
     if (DumpToAllocate) {
-      {
-        memcpy(ErrorLogEntry->DumpData, &P1, sizeof(PHYSICAL_ADDRESS));
-      }
+      { memcpy(ErrorLogEntry->DumpData, &P1, sizeof(PHYSICAL_ADDRESS)); }
       if ((unsigned int)DumpToAllocate > sizeof(PHYSICAL_ADDRESS)) {
         {
           memcpy((UCHAR *)(ErrorLogEntry->DumpData) + sizeof(PHYSICAL_ADDRESS),
@@ -2672,8 +2670,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
           ExAllocatePoolWithTag(1, pRegistryPath->MaximumLength, 1349673296UL);
     }
     if ((unsigned int)((void *)0) == (unsigned int)Buffer) {
-      {
-      }
+      {}
       return (-1073741670L);
     } else {
       {
@@ -2721,9 +2718,7 @@ void PptUnload(PDRIVER_OBJECT DriverObject) {
         }
         Extension = CurrentDevice->DeviceExtension;
         if (Extension->InterruptRefCount) {
-          {
-            PptDisconnectInterrupt(Extension);
-          }
+          { PptDisconnectInterrupt(Extension); }
         } else {
         }
         {
@@ -2860,8 +2855,7 @@ PptAddPptRemovalRelation(PDEVICE_EXTENSION Extension,
     }
     {}
     if (!node) {
-      {
-      }
+      {}
       return (-1073741670L);
     } else {
     }
@@ -2957,19 +2951,16 @@ PptRemovePptRemovalRelation(PDEVICE_EXTENSION Extension,
                        (unsigned long)(&((REMOVAL_RELATIONS_LIST_ENTRY *)0)
                                             ->ListEntry));
         if ((unsigned int)node->DeviceObject == (unsigned int)callerDevObj) {
-          {
-          }
+          {}
           found = 1;
           done = 1;
         } else {
           if ((unsigned int)firstListEntry == (unsigned int)thisListEntry) {
-            {
-            }
+            {}
             done = 1;
           } else {
             if (!firstListEntry) {
-              {
-              }
+              {}
               firstListEntry = thisListEntry;
             } else {
             }
@@ -3126,8 +3117,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
     }
     { Status = PptAcquireRemoveLockOrFailIrp(DeviceObject, Irp); }
     if (!(Status >= 0L)) {
-      {
-      }
+      {}
       return (Status);
     } else {
     }
@@ -3206,8 +3196,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                               .InputBufferLength <
                                           (ULONG)sizeof(
                                               PARPORT_REMOVAL_RELATIONS)) {
-                                        {
-                                        }
+                                        {}
                                         Status = -1073741789L;
                                       } else {
                                         {
@@ -3240,8 +3229,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                               .InputBufferLength <
                                           (ULONG)sizeof(
                                               PARPORT_REMOVAL_RELATIONS)) {
-                                        {
-                                        }
+                                        {}
                                         Status = -1073741789L;
                                       } else {
                                         {
@@ -3415,8 +3403,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                       EnableConnectInterruptIoctl = 0;
                                       {}
                                       if (0UL == EnableConnectInterruptIoctl) {
-                                        {
-                                        }
+                                        {}
                                         Status = -1073741823L;
                                         goto targetExit;
                                       } else {
@@ -3578,9 +3565,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                           }
                                         }
                                         if (DisconnectInterrupt) {
-                                          {
-                                            PptDisconnectInterrupt(Extension);
-                                          }
+                                          { PptDisconnectInterrupt(Extension); }
                                         } else {
                                         }
                                       }
@@ -3631,8 +3616,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                               .InputBufferLength <
                                           (ULONG)sizeof(
                                               PARALLEL_1284_COMMAND)) {
-                                        {
-                                        }
+                                        {}
                                         Status = -1073741789L;
                                       } else {
                                         if (Irp->Cancel) {
@@ -3700,8 +3684,7 @@ NTSTATUS PptDispatchInternalDeviceControl(PDEVICE_OBJECT DeviceObject,
                                               .InputBufferLength <
                                           (ULONG)sizeof(
                                               PARALLEL_1284_COMMAND)) {
-                                        {
-                                        }
+                                        {}
                                         Status = -1073741789L;
                                       } else {
                                         {
@@ -3882,8 +3865,7 @@ NTSTATUS PptDispatchCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     }
     { status = PptAcquireRemoveLockOrFailIrp(DeviceObject, Irp); }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
       return (status);
     } else {
     }
@@ -3933,13 +3915,9 @@ NTSTATUS PptDispatchClose(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     { /*   ExAcquireFastMutex(& extension->OpenCloseMutex); */ /* INLINED */
     }
     if (extension->OpenCloseRefCount > 0L) {
-      {
-        tmp = InterlockedDecrement(&extension->OpenCloseRefCount);
-      }
+      { tmp = InterlockedDecrement(&extension->OpenCloseRefCount); }
       if (tmp < 0L) {
-        {
-          InterlockedIncrement(&extension->OpenCloseRefCount);
-        }
+        { InterlockedIncrement(&extension->OpenCloseRefCount); }
       } else {
       }
       {
@@ -4050,15 +4028,11 @@ NTSTATUS PptTrySelectDevice(PVOID Context, PVOID TrySelectCommand) {
     success = 0;
     {}
     if (Command->CommandFlags & 4UL) {
-      {
-        tmp = PptTrySelectLegacyZip(Context, TrySelectCommand);
-      }
+      { tmp = PptTrySelectLegacyZip(Context, TrySelectCommand); }
       return (tmp);
     } else {
       if ((int)Command->ID == 5) {
-        {
-          tmp = PptTrySelectLegacyZip(Context, TrySelectCommand);
-        }
+        { tmp = PptTrySelectLegacyZip(Context, TrySelectCommand); }
         return (tmp);
       } else {
       }
@@ -4066,8 +4040,7 @@ NTSTATUS PptTrySelectDevice(PVOID Context, PVOID TrySelectCommand) {
     DeviceID = Command->ID;
     if (!(Command->CommandFlags & 1UL)) {
       if ((ULONG)DeviceID > Extension->PnpInfo.Ieee1284_3DeviceCount) {
-        {
-        }
+        {}
         Status = -1073741811L;
       } else {
         goto _L___1;
@@ -4100,8 +4073,7 @@ NTSTATUS PptTrySelectDevice(PVOID Context, PVOID TrySelectCommand) {
             while_79_break: /* CIL Label */;
             }
             if (success) {
-              {
-              }
+              {}
               Status = 0L;
             } else {
               {}
@@ -4163,8 +4135,7 @@ NTSTATUS PptTrySelectDevice(PVOID Context, PVOID TrySelectCommand) {
               while_85_break: /* CIL Label */;
               }
               if (success) {
-                {
-                }
+                {}
                 Status = 0L;
               } else {
                 {}
@@ -4200,15 +4171,11 @@ NTSTATUS PptDeselectDevice(PVOID Context, PVOID DeselectCommand) {
     success = 0;
     {}
     if (Command->CommandFlags & 4UL) {
-      {
-        tmp = PptDeselectLegacyZip(Context, DeselectCommand);
-      }
+      { tmp = PptDeselectLegacyZip(Context, DeselectCommand); }
       return (tmp);
     } else {
       if ((int)Command->ID == 5) {
-        {
-          tmp = PptDeselectLegacyZip(Context, DeselectCommand);
-        }
+        { tmp = PptDeselectLegacyZip(Context, DeselectCommand); }
         return (tmp);
       } else {
       }
@@ -4216,8 +4183,7 @@ NTSTATUS PptDeselectDevice(PVOID Context, PVOID DeselectCommand) {
     DeviceID = Command->ID;
     if (!(Command->CommandFlags & 1UL)) {
       if ((ULONG)DeviceID > Extension->PnpInfo.Ieee1284_3DeviceCount) {
-        {
-        }
+        {}
         Status = -1073741811L;
       } else {
         goto _L___0;
@@ -4248,12 +4214,9 @@ NTSTATUS PptDeselectDevice(PVOID Context, PVOID DeselectCommand) {
           while_91_break: /* CIL Label */;
           }
           if (success) {
-            {
-            }
+            {}
             if (!(Command->CommandFlags & 2UL)) {
-              {
-                PptFreePort(Extension);
-              }
+              { PptFreePort(Extension); }
             } else {
             }
             Status = 0L;
@@ -4268,9 +4231,7 @@ NTSTATUS PptDeselectDevice(PVOID Context, PVOID DeselectCommand) {
       _L : /* CIL Label */
       {}
         if (!(Command->CommandFlags & 2UL)) {
-          {
-            PptFreePort(Extension);
-          }
+          { PptFreePort(Extension); }
         } else {
         }
         Status = 0L;
@@ -4327,9 +4288,7 @@ ULONG Ppt1284_3AssignAddress(PDEVICE_EXTENSION DeviceExtension) {
           status = READ_PORT_UCHAR(CurrentStatus);
         }
         if (((int)status & 48) == 48) {
-          {
-            KeStallExecutionProcessor(Delay);
-          }
+          { KeStallExecutionProcessor(Delay); }
           {
             while (1) {
             while_95_continue: /* CIL Label */;
@@ -4389,9 +4348,7 @@ ULONG Ppt1284_3AssignAddress(PDEVICE_EXTENSION DeviceExtension) {
                 } else {
                 }
                 if (1 == (int)bStlNon1284_3Found) {
-                  {
-                    tmp___1 = PptCheckIfStlProductId(DeviceExtension, idx);
-                  }
+                  { tmp___1 = PptCheckIfStlProductId(DeviceExtension, idx); }
                   if (1 == (int)tmp___1) {
                     bStlNon1284_3Valid = 1;
                     goto __Cont;
@@ -4812,8 +4769,7 @@ BOOLEAN PptSend1284_3Command(PDEVICE_EXTENSION DeviceExtension, UCHAR Command) {
                   } else {
                   }
                   if (!success) {
-                    {
-                    }
+                    {}
                   } else {
                   }
                   goto switch_99_break;
@@ -4827,8 +4783,7 @@ BOOLEAN PptSend1284_3Command(PDEVICE_EXTENSION DeviceExtension, UCHAR Command) {
                   } else {
                   }
                   if (!success) {
-                    {
-                    }
+                    {}
                   } else {
                   }
                   goto switch_99_break;
@@ -5016,9 +4971,7 @@ NTSTATUS PptDetectPortCapabilities(PDEVICE_EXTENSION Extension) {
           if (!Extension->NationalChipFound) {
             {} {} { PptDetectEppPortIfDot3DevicePresent(Extension); }
             if (!Extension->CheckedForGenericEpp) {
-              {
-                PptDetectEppPortIfUserRequested(Extension);
-              }
+              { PptDetectEppPortIfUserRequested(Extension); }
             } else {
             }
           } else {
@@ -5037,8 +4990,7 @@ NTSTATUS PptDetectPortCapabilities(PDEVICE_EXTENSION Extension) {
     }
     {} { PptDetectBytePort(Extension); }
     if (Extension->PnpInfo.HardwareCapabilities & 11UL) {
-      {
-      }
+      {}
       return (0L);
     } else {
     }
@@ -5059,8 +5011,7 @@ void PptDetectEcpPort(PDEVICE_EXTENSION Extension) {
     wPortDCR = Controller + 2;
     if ((unsigned int)((PUCHAR)0) ==
         (unsigned int)Extension->PnpInfo.EcpController) {
-      {
-      }
+      {}
       return;
     } else {
     }
@@ -5151,8 +5102,7 @@ void PptDetectEppPortIfDot3DevicePresent(PDEVICE_EXTENSION Extension) {
     Forward = (unsigned char)6;
     daisyChainDevicePresent = 0;
     if (0UL == Extension->PnpInfo.Ieee1284_3DeviceCount) {
-      {
-      }
+      {}
       return;
     } else {
     }
@@ -5163,8 +5113,7 @@ void PptDetectEppPortIfDot3DevicePresent(PDEVICE_EXTENSION Extension) {
       status = PptTrySelectDevice(Extension, &Command);
     }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
       return;
     } else {
     }
@@ -5176,8 +5125,7 @@ void PptDetectEppPortIfDot3DevicePresent(PDEVICE_EXTENSION Extension) {
       status = PptDeselectDevice(Extension, &Command);
     }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
     } else {
       {}
     }
@@ -5190,9 +5138,7 @@ void PptDetectEppPortIfUserRequested(PDEVICE_EXTENSION Extension) {
   {
     RequestEppTest = 0;
     if (RequestEppTest) {
-      {
-        PptDetectEppPort(Extension);
-      }
+      { PptDetectEppPort(Extension); }
     } else {
     }
     return;
@@ -5237,8 +5183,7 @@ void PptDetectEppPort(PDEVICE_EXTENSION Extension) {
       Extension->CheckedForGenericEpp = 1;
     }
     if (Extension->PnpInfo.HardwareCapabilities & 2UL) {
-      {
-      }
+      {}
     } else {
       {}
     }
@@ -5252,8 +5197,7 @@ void PptDetectBytePort(PDEVICE_EXTENSION Extension) {
     Status = 0L;
     {} { Status = PptSetByteMode(Extension, 52); }
     if (Status >= 0L) {
-      {
-      }
+      {}
       Extension->PnpInfo.HardwareCapabilities |= 8UL;
     } else {
       {}
@@ -5329,9 +5273,7 @@ void PptDetermineFifoDepth(PDEVICE_EXTENSION Extension) {
           }
           { testData = READ_PORT_UCHAR(wPortDFIFO); }
           if ((int)testData != ((int)readFifoDepth & 255)) {
-            {
-              WRITE_PORT_UCHAR(wPortECR, ecrLast);
-            }
+            { WRITE_PORT_UCHAR(wPortECR, ecrLast); }
             {}
             return;
           } else {
@@ -5387,8 +5329,7 @@ NTSTATUS PptSetChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
     EcrMode = (unsigned char)((int)ChipMode & -32);
     {}
     if (Extension->PnpInfo.CurrentMode != 0UL) {
-      {
-      }
+      {}
       Status = -1073741436L;
       goto ExitSetChipModeNoChange;
     } else {
@@ -5402,8 +5343,7 @@ NTSTATUS PptSetChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
       {}
       if ((int)EcrMode == 96) {
         if ((Extension->PnpInfo.HardwareCapabilities & 1UL) ^ 1UL) {
-          {
-          }
+          {}
           return (-1073741810L);
         } else {
         }
@@ -5413,8 +5353,7 @@ NTSTATUS PptSetChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
       }
       if ((int)EcrMode == 128) {
         if ((Extension->PnpInfo.HardwareCapabilities & 2UL) ^ 2UL) {
-          {
-          }
+          {}
           return (-1073741810L);
         } else {
         }
@@ -5424,8 +5363,7 @@ NTSTATUS PptSetChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
       }
       if ((int)EcrMode == 32) {
         if ((Extension->PnpInfo.HardwareCapabilities & 8UL) ^ 8UL) {
-          {
-          }
+          {}
           return (-1073741810L);
         } else {
         }
@@ -5436,8 +5374,7 @@ NTSTATUS PptSetChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
     }
   ExitSetChipModeWithChanges:
     if (Status >= 0L) {
-      {
-      }
+      {}
       Extension->PnpInfo.CurrentMode = EcrMode;
     } else {
       {}
@@ -5455,8 +5392,7 @@ NTSTATUS PptClearChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
     EcrMode = (int)ChipMode & -32;
     {}
     if (EcrMode != Extension->PnpInfo.CurrentMode) {
-      {
-      }
+      {}
       Status = -1073741436L;
       goto ExitClearChipModeNoChange;
     } else {
@@ -5469,31 +5405,24 @@ NTSTATUS PptClearChipMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
     } else {
       {}
       if (EcrMode == 96UL) {
-        {
-          Status = PptEcrClearMode(Extension);
-        }
+        { Status = PptEcrClearMode(Extension); }
         goto ExitClearChipModeWithChanges;
       } else {
       }
       if (EcrMode == 128UL) {
-        {
-          Status = PptEcrClearMode(Extension);
-        }
+        { Status = PptEcrClearMode(Extension); }
         goto ExitClearChipModeWithChanges;
       } else {
       }
       if (EcrMode == 32UL) {
-        {
-          Status = PptClearByteMode(Extension);
-        }
+        { Status = PptClearByteMode(Extension); }
         goto ExitClearChipModeWithChanges;
       } else {
       }
     }
   ExitClearChipModeWithChanges:
     if (Status >= 0L) {
-      {
-      }
+      {}
       Extension->PnpInfo.CurrentMode = 0;
     } else {
     }
@@ -5526,9 +5455,7 @@ NTSTATUS PptSetByteMode(PDEVICE_EXTENSION Extension, UCHAR ChipMode) {
 
   {
     if (Extension->PnpInfo.HardwareCapabilities & 1UL) {
-      {
-        Status = PptEcrSetMode(Extension, ChipMode);
-      }
+      { Status = PptEcrSetMode(Extension, ChipMode); }
     } else {
     }
     { Status = PptCheckByteMode(Extension); }
@@ -5541,9 +5468,7 @@ NTSTATUS PptClearByteMode(PDEVICE_EXTENSION Extension) {
   {
     Status = 0L;
     if (Extension->PnpInfo.HardwareCapabilities & 1UL) {
-      {
-        Status = PptEcrClearMode(Extension);
-      }
+      { Status = PptEcrClearMode(Extension); }
     } else {
     }
     return (Status);
@@ -5637,8 +5562,7 @@ NTSTATUS PptFindNatChip(PDEVICE_EXTENSION Extension) {
     NationalChecked = 0;
     NationalChipFound = 0;
     if ((int)Extension->NationalChecked == 1) {
-      {
-      }
+      {}
       return (0L);
     } else {
     }
@@ -5661,8 +5585,7 @@ NTSTATUS PptFindNatChip(PDEVICE_EXTENSION Extension) {
       Resources = (struct _CM_RESOURCE_LIST *)tmp;
     }
     if ((unsigned int)Resources == (unsigned int)((void *)0)) {
-      {
-      }
+      {}
       return (-1073741823L);
     } else {
     }
@@ -5684,14 +5607,12 @@ NTSTATUS PptFindNatChip(PDEVICE_EXTENSION Extension) {
       /*   ExFreePool(Resources); */ /* INLINED */
     }
     if (!(Status >= 0L)) {
-      {
-      }
+      {}
       return (Status);
     } else {
     }
     if (Conflict) {
-      {
-      }
+      {}
       return (-1073741823L);
     } else {
     }
@@ -5713,9 +5634,7 @@ NTSTATUS PptFindNatChip(PDEVICE_EXTENSION Extension) {
           tmp___1 = READ_PORT_UCHAR(PortAddr);
         }
         if ((int)tmp___1 == 136) {
-          {
-            tmp___2 = READ_PORT_UCHAR(PortAddr);
-          }
+          { tmp___2 = READ_PORT_UCHAR(PortAddr); }
           if ((int)tmp___2 < 32) {
             OkToLook = 1;
           } else {
@@ -5728,9 +5647,7 @@ NTSTATUS PptFindNatChip(PDEVICE_EXTENSION Extension) {
           cr = READ_PORT_UCHAR(PortAddr);
         }
           if ((int)cr != 255) {
-            {
-              tmp___0 = READ_PORT_UCHAR(PortAddr);
-            }
+            { tmp___0 = READ_PORT_UCHAR(PortAddr); }
             if ((int)tmp___0 == (int)cr) {
               OkToLook = 1;
             } else {
@@ -6022,8 +5939,7 @@ PDEVICE_RELATIONS PptPnpBuildRemovalRelations(PDEVICE_EXTENSION Extension) {
       /*   ExAcquireFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED */
     }
     if ((unsigned int)listHead->Flink == (unsigned int)listHead) {
-      {
-      }
+      {}
       goto targetExit;
     } else {
     }
@@ -6065,8 +5981,7 @@ PDEVICE_RELATIONS PptPnpBuildRemovalRelations(PDEVICE_EXTENSION Extension) {
           count += 1UL;
         }
         if (!firstListEntry) {
-          {
-          }
+          {}
           firstListEntry = thisListEntry;
         } else {
         }
@@ -6082,8 +5997,7 @@ PDEVICE_RELATIONS PptPnpBuildRemovalRelations(PDEVICE_EXTENSION Extension) {
       relations = tmp;
     }
     if (!relations) {
-      {
-      }
+      {}
       goto targetExit;
     } else {
     }
@@ -6293,15 +6207,13 @@ BOOLEAN PptIsPci(PDEVICE_EXTENSION Extension, PIRP Irp) {
     ResourceList =
         irpStack->Parameters.StartDevice.AllocatedResourcesTranslated;
     if ((unsigned int)ResourceList == (unsigned int)((void *)0)) {
-      {
-      }
+      {}
       return (0);
     } else {
     }
     FullResourceDescriptor = &ResourceList->List[0];
     if (FullResourceDescriptor) {
-      {
-      }
+      {}
       PartialResourceList = &FullResourceDescriptor->PartialResourceList;
       i = 0;
       {
@@ -6325,8 +6237,7 @@ BOOLEAN PptIsPci(PDEVICE_EXTENSION Extension, PIRP Irp) {
                 {}
                 portResourceDescriptorCount += 1UL;
                 if (rangeLength > 8UL) {
-                  {
-                  }
+                  {}
                   largePortRangeFound = 1;
                 } else {
                 }
@@ -6399,8 +6310,7 @@ NTSTATUS PptPnpAddDevice(PDRIVER_OBJECT pDriverObject,
           PptBuildDeviceObject(pDriverObject, pPhysicalDeviceObject);
     }
     if ((unsigned int)((void *)0) == (unsigned int)pDeviceObject) {
-      {
-      }
+      {}
       return (-1073741823L);
     } else {
     }
@@ -6452,9 +6362,7 @@ NTSTATUS PptDispatchPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                      .CurrentStackLocation;
       minorFunction = irpStack->MinorFunction;
       if ((int)minorFunction > 24) {
-        {
-          status = PptPnpUnhandledIrp(DeviceObject, Irp);
-        }
+        { status = PptPnpUnhandledIrp(DeviceObject, Irp); }
       } else {
         if (__BLAST_NONDET == 0) {
           goto switch_214_0;
@@ -6614,9 +6522,7 @@ NTSTATUS PptPnpStartDevice(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       status = PptDetectChipFilter(extension);
     }
     if (!(status >= 0L)) {
-      {
-        PptDetectPortType(extension);
-      }
+      { PptDetectPortType(extension); }
     } else {
     }
     { status = PptWmiInitWmi(DeviceObject); }
@@ -6678,17 +6584,14 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
     ResourceList =
         irpStack->Parameters.StartDevice.AllocatedResourcesTranslated;
     if ((unsigned int)ResourceList == (unsigned int)((void *)0)) {
-      {
-      }
+      {}
       status = -1073741670L;
       goto targetExit;
     } else {
     }
     if ((int)((KUSER_SHARED_DATA *const)4292804608U)->AlternativeArchitecture !=
         1) {
-      {
-        tmp = PptIsPci(Extension, Irp);
-      }
+      { tmp = PptIsPci(Extension, Irp); }
       if (1 == (int)tmp) {
         {} {
           status = PptPnpStartScanPciCardCmResourceList(
@@ -6738,8 +6641,7 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
                               .__annonCompField1.LowPart == 0UL) {
                         if (Extension->PortInfo.OriginalController
                                 .__annonCompField1.HighPart == 0L) {
-                          {
-                          }
+                          {}
                           Extension->PortInfo.OriginalController =
                               PartialResourceDescriptor->u.Port.Start;
                           Extension->PortInfo.SpanOfController =
@@ -6750,9 +6652,7 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
                           Extension->AddressSpace =
                               PartialResourceDescriptor->Flags;
                           if (Extension->PortInfo.SpanOfController == 4096UL) {
-                            {
-                              tmp___0 = PptIsNecR98Machine();
-                            }
+                            { tmp___0 = PptIsNecR98Machine(); }
                             if (tmp___0) {
                               Extension->PortInfo.SpanOfController = 8;
                             } else {
@@ -6778,8 +6678,7 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
                                         .__annonCompField1.HighPart <
                                     Extension->PortInfo.OriginalController
                                         .__annonCompField1.HighPart) {
-                                  {
-                                  }
+                                  {}
                                   Extension->PnpInfo.OriginalEcpController =
                                       Extension->PortInfo.OriginalController;
                                   Extension->PnpInfo.SpanOfEcpController =
@@ -6800,9 +6699,7 @@ NTSTATUS PptPnpStartScanCmResourceList(PDEVICE_EXTENSION Extension, PIRP Irp,
                                       PartialResourceDescriptor->Flags;
                                   if (Extension->PortInfo.SpanOfController ==
                                       4096UL) {
-                                    {
-                                      tmp___1 = PptIsNecR98Machine();
-                                    }
+                                    { tmp___1 = PptIsNecR98Machine(); }
                                     if (tmp___1) {
                                       Extension->PortInfo.SpanOfController = 8;
                                     } else {
@@ -7055,8 +6952,7 @@ BOOLEAN PptPnpFilterExistsNonIrqResourceList(
             }
             {}
             if ((int)curDesc->Type == 2) {
-              {
-              }
+              {}
               foundIrq = 1;
               goto while_243_break;
             } else {
@@ -7067,8 +6963,7 @@ BOOLEAN PptPnpFilterExistsNonIrqResourceList(
         while_243_break: /* CIL Label */;
         }
         if ((int)foundIrq == 0) {
-          {
-          }
+          {}
           return (1);
         } else {
         }
@@ -7112,8 +7007,7 @@ void PptPnpFilterRemoveIrqResourceLists(
         }
         {} {} { tmp___0 = PptPnpListContainsIrqResourceDescriptor(curList); }
         if (tmp___0) {
-          {
-          }
+          {}
           nextList = (struct _IO_RESOURCE_LIST *)(curList->Descriptors +
                                                   curList->Count);
           bytesToMove =
@@ -7259,15 +7153,13 @@ NTSTATUS PptPnpQueryDeviceRelations(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                 switch_261_3: /* CIL Label */;
                   {} { PptDumpRemovalRelationsList(extension); }
                   if (Irp->IoStatus.Information) {
-                    {
-                    }
+                    {}
                   } else {
                     {
                       removalRelations = PptPnpBuildRemovalRelations(extension);
                     }
                     if (removalRelations) {
-                      {
-                      }
+                      {}
                       Irp->IoStatus.__annonCompField4.Status = 0L;
                       myStatus = 0L;
                       Irp->IoStatus.Information =
@@ -7535,14 +7427,10 @@ NTSTATUS PptPnpBounceAndCatchPnpIrp(PDEVICE_EXTENSION Extension, PIRP Irp) {
       nextIrpSp->Control = 0;
     }
     if (s != NP) {
-      {
-        errorFn();
-      }
+      { errorFn(); }
     } else {
       if (compRegistered != 0) {
-        {
-          errorFn();
-        }
+        { errorFn(); }
       } else {
         compRegistered = 1;
         compFptr = &PptSynchCompletionRoutine;
@@ -7805,9 +7693,7 @@ NTSTATUS PptDispatchPower(PDEVICE_OBJECT pDeviceObject, PIRP pIrp) {
                       hookit = 1;
                       if ((int)((KUSER_SHARED_DATA *const)4292804608U)
                               ->AlternativeArchitecture == 1) {
-                        {
-                          InitNEC_98(Extension);
-                        }
+                        { InitNEC_98(Extension); }
                       } else {
                       }
                     } else {
@@ -7868,14 +7754,10 @@ NTSTATUS PptDispatchPower(PDEVICE_OBJECT pDeviceObject, PIRP pIrp) {
     } else {
       if (hookit) {
         if (s != NP) {
-          {
-            errorFn();
-          }
+          { errorFn(); }
         } else {
           if (compRegistered != 0) {
-            {
-              errorFn();
-            }
+            { errorFn(); }
           } else {
             compRegistered = 1;
             compFptr = &PptPowerComplete;
@@ -8034,22 +7916,17 @@ NTSTATUS PptTrySelectLegacyZip(PVOID Context, PVOID TrySelectCommand) {
     if (Status >= 0L) {
       if (Status != 259L) {
         if (Command->CommandFlags & 32UL) {
-          {
-            PptLegacyZipSetDiskMode(Controller, (unsigned char)207);
-          }
+          { PptLegacyZipSetDiskMode(Controller, (unsigned char)207); }
         } else {
           { PptLegacyZipSetDiskMode(Controller, (unsigned char)143); }
         }
         { tmp = PptLegacyZipCheckDevice(Controller); }
         if (tmp) {
-          {
-          }
+          {}
           if (!Extension->CheckedForGenericEpp) {
             if (Extension->PnpInfo.HardwareCapabilities & 1UL) {
               if (!Extension->NationalChipFound) {
-                {
-                  PptDetectEppPort(Extension);
-                }
+                { PptDetectEppPort(Extension); }
               } else {
               }
             } else {
@@ -8085,9 +7962,7 @@ NTSTATUS PptDeselectLegacyZip(PVOID Context, PVOID DeselectCommand) {
       PptLegacyZipClockPrtModeByte(Controller, (unsigned char)15);
     }
     if (!(Command->CommandFlags & 2UL)) {
-      {
-        PptFreePort(Extension);
-      }
+      { PptFreePort(Extension); }
     } else {
     }
     return (0L);
@@ -8214,8 +8089,7 @@ NTSTATUS PptRegSetDeviceParameterDword(PDEVICE_OBJECT Pdo, PWSTR ParameterName,
   {
     { status = IoOpenDeviceRegistryKey(Pdo, 1, 131078L, &hKey); }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
       return (status);
     } else {
     }
@@ -8225,8 +8099,7 @@ NTSTATUS PptRegSetDeviceParameterDword(PDEVICE_OBJECT Pdo, PWSTR ParameterName,
           ZwSetValueKey(hKey, &valueName, 0, 4, ParameterValue, sizeof(ULONG));
     }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
     } else {
     }
     { ZwClose(hKey); }
@@ -8288,9 +8161,7 @@ NTSTATUS PptAcquireRemoveLockOrFailIrp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       status = tmp;
     }
     if (!(status >= 0L)) {
-      {
-        PptFailRequest(Irp, status);
-      }
+      { PptFailRequest(Irp, status); }
     } else {
     }
     return (status);
@@ -8350,8 +8221,7 @@ PWSTR PptGetPortNameFromPhysicalDeviceObject(
           IoOpenDeviceRegistryKey(PhysicalDeviceObject, 1, 2031616L, &hKey);
     }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
       return ((void *)0);
     } else {
     }
@@ -8891,8 +8761,7 @@ NTSTATUS PptBuildParallelPortDeviceName(ULONG Number,
       status = RtlIntegerToUnicodeString(Number, 10, &uniPortNumberString);
     }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
       return (status);
     } else {
     }
@@ -8906,8 +8775,7 @@ NTSTATUS PptBuildParallelPortDeviceName(ULONG Number,
       DeviceName->Buffer = tmp;
     }
     if ((unsigned int)((void *)0) == (unsigned int)DeviceName->Buffer) {
-      {
-      }
+      {}
       return (-1073741670L);
     } else {
     }
@@ -9000,8 +8868,7 @@ NTSTATUS PptGetPortNumberFromLptName(PWSTR PortName, PULONG PortNumber) {
 
   {
     if (__BLAST_NONDET) {
-      {
-      }
+      {}
       return (-1073741823L);
     } else {
     }
@@ -9010,14 +8877,12 @@ NTSTATUS PptGetPortNumberFromLptName(PWSTR PortName, PULONG PortNumber) {
       status = RtlUnicodeStringToInteger(&str, 10, PortNumber);
     }
     if (!(status >= 0L)) {
-      {
-      }
+      {}
       return (-1073741823L);
     } else {
     }
     if (*PortNumber == 0UL) {
-      {
-      }
+      {}
       return (-1073741823L);
     } else {
     }
@@ -9045,8 +8910,7 @@ PDEVICE_OBJECT PptBuildDeviceObject(PDRIVER_OBJECT DriverObject,
       portName = PptGetPortNameFromPhysicalDeviceObject(PhysicalDeviceObject);
     }
     if ((unsigned int)((void *)0) == (unsigned int)portName) {
-      {
-      }
+      {}
       goto targetExit;
     } else {
     }
@@ -9070,8 +8934,7 @@ PDEVICE_OBJECT PptBuildDeviceObject(PDRIVER_OBJECT DriverObject,
                               &uniNameString, 22, 256, 0, &deviceObject);
     }
     if (-1073741771L == status) {
-      {
-      }
+      {}
       portNumber = 7;
       {
         while (1) {
@@ -9509,9 +9372,7 @@ int main(void) {
         }
       }
       if (we_should_unload) {
-        {
-          PptUnload(&d);
-        }
+        { PptUnload(&d); }
       } else {
       }
     } else {
@@ -9541,9 +9402,7 @@ int main(void) {
             if (s != SKIP2) {
               if (s != IPC) {
                 if (s != DC) {
-                  {
-                    errorFn();
-                  }
+                  { errorFn(); }
                 } else {
                   goto _L___0;
                 }
@@ -9554,24 +9413,18 @@ int main(void) {
             _L___0: /* CIL Label */
               if (pended == 1) {
                 if (status != 259L) {
-                  {
-                    errorFn();
-                  }
+                  { errorFn(); }
                 } else {
                 }
               } else {
                 if (s == DC) {
                   if (status == 259L) {
-                    {
-                      errorFn();
-                    }
+                    { errorFn(); }
                   } else {
                   }
                 } else {
                   if (status != (NTSTATUS)lowerDriverReturn) {
-                    {
-                      errorFn();
-                    }
+                    { errorFn(); }
                   } else {
                   }
                 }
@@ -10015,9 +9868,7 @@ NTSTATUS IofCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        {
-          stubMoreProcessingRequired();
-        }
+        { stubMoreProcessingRequired(); }
       } else {
       }
     } else {
@@ -10171,9 +10022,7 @@ NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason,
         customIrp = 0;
       } else {
         if (s == MPR3) {
-          {
-            errorFn();
-          }
+          { errorFn(); }
         } else {
         }
       }
@@ -10319,9 +10168,7 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        {
-          stubMoreProcessingRequired();
-        }
+        { stubMoreProcessingRequired(); }
       } else {
       }
     } else {

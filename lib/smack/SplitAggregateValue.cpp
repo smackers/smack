@@ -33,7 +33,8 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
         if (li->getType()->isAggregateType()) {
           visitAggregateValue(nullptr, li->getType(), idx, info, C);
           IRBuilder<> irb(li);
-          li->replaceAllUsesWith(splitAggregateLoad(li, info, irb));
+          li->replaceAllUsesWith(splitAggregateLoad(
+              li->getType(), li->getPointerOperand(), info, irb));
           toRemove.push_back(li);
         }
       } else if (StoreInst *si = dyn_cast<StoreInst>(&I)) {
@@ -42,7 +43,8 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
           visitAggregateValue(dyn_cast_or_null<Constant>(V), V->getType(), idx,
                               info, C);
           IRBuilder<> irb(si);
-          splitAggregateStore(si, info, irb);
+          splitAggregateStore(si->getPointerOperand(), si->getValueOperand(),
+                              info, irb);
           toRemove.push_back(si);
         }
       } else if (ReturnInst *ri = dyn_cast<ReturnInst>(&I)) {
@@ -80,11 +82,10 @@ bool SplitAggregateValue::isConstantAggregate(Value *V) {
     return false;
 }
 
-Value *SplitAggregateValue::splitAggregateLoad(LoadInst *li,
+Value *SplitAggregateValue::splitAggregateLoad(Type *T, Value *P,
                                                std::vector<InfoT> &info,
                                                IRBuilder<> &irb) {
-  Value *V = UndefValue::get(li->getType());
-  Value *P = li->getPointerOperand();
+  Value *V = UndefValue::get(T);
   for (auto &e : info) {
     IndexT idxs = std::get<0>(e);
     V = irb.CreateInsertValue(
@@ -94,11 +95,9 @@ Value *SplitAggregateValue::splitAggregateLoad(LoadInst *li,
   return V;
 }
 
-void SplitAggregateValue::splitAggregateStore(StoreInst *si,
+void SplitAggregateValue::splitAggregateStore(Value *P, Value *V,
                                               std::vector<InfoT> &info,
                                               IRBuilder<> &irb) {
-  Value *P = si->getPointerOperand();
-  Value *V = si->getValueOperand();
   for (auto &e : info) {
     IndexT idxs = std::get<0>(e);
     Constant *c = std::get<1>(e);
@@ -116,10 +115,8 @@ Value *SplitAggregateValue::createInsertedValue(IRBuilder<> &irb, Type *T,
                                                 std::vector<InfoT> &info,
                                                 Value *V) {
   Value *box = irb.CreateAlloca(T);
-  StoreInst *si = new StoreInst(V, box);
-  LoadInst *li = new LoadInst(box);
-  splitAggregateStore(si, info, irb);
-  return splitAggregateLoad(li, info, irb);
+  splitAggregateStore(box, V, info, irb);
+  return splitAggregateLoad(T, box, info, irb);
 }
 
 void SplitAggregateValue::splitConstantReturn(ReturnInst *ri,

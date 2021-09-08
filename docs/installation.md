@@ -59,9 +59,20 @@ vagrant destroy
 SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
 the following configurations:
 
-* Ubuntu 16.04, docker-ce version 18.09.7
-* OS X 10.14.5, Docker Desktop with Docker engine version 18.09.2
-* Windows 10, Docker Desktop with Docker engine version 18.09.2
+* Ubuntu 18.04, Docker version 19.03.6
+* Windows WSL Ubuntu 20.04, Docker Desktop with Docker engine version 20.10.2
+
+
+#### Docker Hub
+
+SMACK's Docker container images can be pulled from Docker Hub directly:
+
+```shell
+docker pull smackers/smack:stable # built from the master branch
+docker pull smackers/smack:latest # built from the develop branch
+```
+
+#### Local Build
 
 Once Docker is successfully installed, build the Docker image by running the
 following command in SMACK's root directory that contains `Dockerfile`:
@@ -80,8 +91,8 @@ to Docker's official documentation.
 
 SMACK depends on the following projects:
 
-* [LLVM][] version [10.0.1][LLVM-10.0.1]
-* [Clang][] version [10.0.1][Clang-10.0.1]
+* [LLVM][] version [11.1.0][LLVM-11.1.0]
+* [Clang][] version [11.1.0][Clang-11.1.0]
 * [Boost][] version 1.55 or greater
 * [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
@@ -210,9 +221,9 @@ shell in the `test` directory by executing
 [CMake]: http://www.cmake.org
 [Python]: http://www.python.org
 [LLVM]: http://llvm.org
-[LLVM-10.0.1]: http://llvm.org/releases/download.html#10.0.1
+[LLVM-11.1.0]: http://llvm.org/releases/download.html#11.1.0
 [Clang]: http://clang.llvm.org
-[Clang-10.0.1]: http://llvm.org/releases/download.html#10.0.1
+[Clang-11.1.0]: http://llvm.org/releases/download.html#11.1.0
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://github.com/boogie-org/corral
 [Z3]: https://github.com/Z3Prover/z3/

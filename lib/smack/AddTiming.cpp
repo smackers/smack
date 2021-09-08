@@ -52,8 +52,7 @@ const std::string AddTiming::INT_TIMING_COST_METADATA =
 const std::string AddTiming::INSTRUCTION_NAME_METADATA =
     "smack.LLVMInstructionName";
 
-static bool begins_with(const std::string &possible_prefix,
-                        const std::string &the_string) {
+static bool begins_with(StringRef possible_prefix, StringRef the_string) {
   return (0 == the_string.find(possible_prefix));
 }
 
@@ -169,8 +168,9 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
         getOperandInfo(I->getOperand(0));
     TargetTransformInfo::OperandValueKind Op2VK =
         getOperandInfo(I->getOperand(1));
-    return TTI->getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK,
-                                       Op2VK);
+    return TTI->getArithmeticInstrCost(
+        I->getOpcode(), I->getType(),
+        TargetTransformInfo::TargetCostKind::TCK_Latency, Op1VK, Op2VK);
   }
   case Instruction::Select: {
     const SelectInst *SI = cast<SelectInst>(I);
@@ -188,7 +188,7 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
     assert(!ValTy->isStructTy() &&
            "Timing annotations do not currently work for struct sized stores");
     return TTI->getMemoryOpCost(I->getOpcode(), ValTy,
-                                MaybeAlign(SI->getAlignment()),
+                                Align(SI->getAlignment()),
                                 SI->getPointerAddressSpace());
   }
   case Instruction::Load: {
@@ -196,7 +196,7 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
     assert(!I->getType()->isStructTy() &&
            "Timing annotations do not currently work for struct sized loads");
     return TTI->getMemoryOpCost(I->getOpcode(), I->getType(),
-                                MaybeAlign(LI->getAlignment()),
+                                Align(LI->getAlignment()),
                                 LI->getPointerAddressSpace());
   }
   case Instruction::ZExt:
@@ -234,8 +234,10 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
       if (auto *FPMO = dyn_cast<FPMathOperator>(II)) {
         FMF = FPMO->getFastMathFlags();
       }
-      return TTI->getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Tys, FMF);
+      return TTI->getIntrinsicInstrCost(
+          IntrinsicCostAttributes(II->getIntrinsicID(), II->getType(), Tys,
+                                  FMF),
+          TargetTransformInfo::TargetCostKind::TCK_Latency);
     }
 
     return NO_TIMING_INFO;

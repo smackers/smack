@@ -48,7 +48,7 @@ See below for system requirements, installation, usage, and everything else.
 ### Acknowledgements
 
 SMACK project has been partially supported by funding from the National Science
-Foundation, VMware, and Microsoft Research. We also rely on University of
+Foundation, VMware, Amazon, and Microsoft Research. We also rely on University of
 Utah's [Emulab](http://www.emulab.net/) infrastructure for extensive
 benchmarking of SMACK.
 

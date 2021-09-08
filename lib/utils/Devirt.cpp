@@ -91,12 +91,12 @@ static inline bool isZExtOrBitCastable(Value* V, Type* T) {
   }
 }
 
-static inline bool match(CallSite &CS, const Function &F) {
-  auto N = CS.arg_size();
+static inline bool match(CallBase *CS, const Function &F) {
+  auto N = CS->arg_size();
   auto T = F.getFunctionType();
   auto M = T->getNumParams();
   auto RT = T->getReturnType();
-  auto IT = CS.getInstruction()->getType();
+  auto IT = CS->getType();
 
   if (RT != IT && !CastInst::isBitCastable(RT, IT))
     return false;
@@ -108,7 +108,7 @@ static inline bool match(CallSite &CS, const Function &F) {
     return false;
 
   for (unsigned i=0; i<M; i++) {
-    auto A = CS.getArgument(i);
+    auto A = CS->getArgOperand(i);
     auto PT = T->getParamType(i);
     if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
       return false;
@@ -117,8 +117,8 @@ static inline bool match(CallSite &CS, const Function &F) {
   return true;
 }
 
-static inline bool checkArgs(const CallSite &CS, const Function *F) {
-  auto N = CS.arg_size();
+static inline bool checkArgs(const CallBase *CS, const Function *F) {
+  auto N = CS->arg_size();
   auto T = F->getFunctionType();
   auto M = T->getNumParams();
 
@@ -126,7 +126,7 @@ static inline bool checkArgs(const CallSite &CS, const Function *F) {
     return false;
 
   for (unsigned i=0; i<N; i++) {
-    auto A = CS.getArgument(i);
+    auto A = CS->getArgOperand(i);
     auto PT = T->getParamType(i+1);
     if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
       return false;
@@ -147,7 +147,7 @@ static inline bool checkArgs(const CallSite &CS, const Function *F) {
 //  returned.
 //
 const Function *
-Devirtualize::findInCache (const CallSite & CS,
+Devirtualize::findInCache (const CallBase *CS,
                            std::set<const Function*>& Targets) {
   //
   // Iterate through all of the existing bounce functions to see if one of them
@@ -162,13 +162,13 @@ Devirtualize::findInCache (const CallSite & CS,
     const Function * bounceFunc = I->first;
 
     // Check the return type
-    if (CS.getType() != bounceFunc->getReturnType())
+    if (CS->getType() != bounceFunc->getReturnType())
       continue;
 
     // Check the type of the function pointer and the argumentsa
     PointerType* PT = dyn_cast<PointerType>(bounceFunc->arg_begin()->getType());
     assert(PT);
-    if (CS.getCalledValue()->stripPointerCastsAndAliases()->getType() != PT)
+    if (CS->getCalledOperand()->stripPointerCastsAndAliases()->getType() != PT)
       continue;
 
     FunctionType* FT = dyn_cast<FunctionType>(PT->getElementType());
@@ -200,7 +200,7 @@ Devirtualize::findInCache (const CallSite & CS,
 //  matches.
 //
 Function*
-Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
+Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) {
   //
   // Update the statistics on the number of bounce functions added to the
   // module.
@@ -212,17 +212,17 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
   // an additional pointer argument at the beginning of its argument list that
   // will be the function to call.
   //
-  Value* ptr = CS.getCalledValue();
+  Value* ptr = CS->getCalledOperand();
   std::vector<Type *> TP;
   TP.insert (TP.begin(), ptr->getType());
-  for (CallSite::arg_iterator i = CS.arg_begin();
-       i != CS.arg_end();
+  for (auto i = CS->arg_begin();
+       i != CS->arg_end();
        ++i) {
     TP.push_back ((*i)->getType());
   }
 
-  FunctionType* NewTy = FunctionType::get(CS.getType(), TP, false);
-  Module * M = CS.getInstruction()->getParent()->getParent()->getParent();
+  FunctionType* NewTy = FunctionType::get(CS->getType(), TP, false);
+  Module * M = CS->getParent()->getParent()->getParent();
   Function* F = Function::Create (NewTy,
                                   GlobalValue::InternalLinkage,
                                   "devirtbounce",
@@ -269,7 +269,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
                                           BL);
 
     // Add the return instruction for the basic block
-    if (CS.getType()->isVoidTy())
+    if (CS->getType()->isVoidTy())
       ReturnInst::Create (M->getContext(), BL);
     else
       ReturnInst::Create (M->getContext(), directCall, BL);
@@ -362,7 +362,7 @@ Devirtualize::buildBounce (CallSite CS, std::vector<const Function*>& Targets) {
 //     already been acquired by the class.
 //
 void
-Devirtualize::makeDirectCall (CallSite & CS) {
+Devirtualize::makeDirectCall (CallBase *CS) {
   //
   // Find the targets of the indirect function call.
   //
@@ -371,12 +371,12 @@ Devirtualize::makeDirectCall (CallSite & CS) {
 
   // TODO should we allow non-matching targets?
   // TODO non-matching targets leads to crashes in bounce creation
-  if (CCG->isComplete(CS)) {
-    for (auto F = CCG->begin(CS); F != CCG->end(CS); ++F)
+  if (CCG->isComplete(*CS)) {
+    for (auto F = CCG->begin(*CS); F != CCG->end(*CS); ++F)
       if (match(CS, **F))
         Targets.push_back(*F);
   } else {
-    for (auto &F : *CS.getInstruction()->getParent()->getParent()->getParent())
+    for (auto &F : *CS->getParent()->getParent()->getParent())
       if (F.hasAddressTaken() && match(CS, F))
         Targets.push_back(&F);
   }
@@ -401,12 +401,12 @@ Devirtualize::makeDirectCall (CallSite & CS) {
   //
   // Replace the original call with a call to the bounce function.
   //
-  if (CallInst* CI = dyn_cast<CallInst>(CS.getInstruction())) {
+  if (CallInst* CI = dyn_cast<CallInst>(CS)) {
     std::vector<Value*> Params;
-    Params.push_back(CI->getCalledValue());
+    Params.push_back(CI->getCalledOperand());
     for (unsigned i=0; i<CI->getNumArgOperands(); i++) {
       Params.push_back(
-        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS)
       );
     }
 
@@ -417,12 +417,12 @@ Devirtualize::makeDirectCall (CallSite & CS) {
                                        CI);
     CI->replaceAllUsesWith(CN);
     CI->eraseFromParent();
-  } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS.getInstruction())) {
+  } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS)) {
     std::vector<Value*> Params;
-    Params.push_back(CI->getCalledValue());
+    Params.push_back(CI->getCalledOperand());
     for (unsigned i=0; i<CI->getNumArgOperands(); i++)
       Params.push_back(
-        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS.getInstruction())
+        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS)
       );
     std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
     InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
@@ -451,26 +451,25 @@ Devirtualize::makeDirectCall (CallSite & CS) {
 //  transformation into a direct call.
 //
 void
-Devirtualize::processCallSite (CallSite &CS) {
+Devirtualize::processCallSite (CallBase *CS) {
   //
   // First, determine if this is a direct call.  If so, then just ignore it.
   //
-  Value * CalledValue = CS.getCalledValue();
-  if (!CS.isIndirectCall())
+  if (!CS->isIndirectCall())
     return;
 
   //
   // Second, we will only transform those call sites which are complete (i.e.,
   // for which we know all of the call targets).
   //
-  if (SKIP_INCOMPLETE_NODES && !CCG->isComplete(CS))
+  if (SKIP_INCOMPLETE_NODES && !CCG->isComplete(*CS))
     return;
 
   //
   // This is an indirect call site.  Put it in the worklist of call sites to
   // transforms.
   //
-  Worklist.push_back (CS.getInstruction());
+  Worklist.push_back(CS);
   return;
 }
 
@@ -505,8 +504,7 @@ Devirtualize::runOnModule (Module & M) {
   //
   for (unsigned index = 0; index < Worklist.size(); ++index) {
     // Autobots, transform (the call site)!
-    CallSite CS (Worklist[index]);
-    makeDirectCall (CS);
+    makeDirectCall (Worklist[index]);
   }
 
   //
