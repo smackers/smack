@@ -22,8 +22,8 @@ class SmackWarnings {
 public:
   enum class WarningLevel : unsigned {
     Silent = 0,
-    Unsound = 10, // Unhandled intrinsics, asm, etc
-    Info = 20     // Memory length, etc.
+    Imprecise = 10, // Unhandled intrinsics, asm, etc
+    Info = 20       // Memory length, etc.
   };
 
   enum class FlagRelation : unsigned { And = 0, Or = 1 };
@@ -31,23 +31,19 @@ public:
   static UnsetFlagsT getUnsetFlags(RequiredFlagsT flags);
   static bool isSatisfied(RequiredFlagsT flags, FlagRelation rel);
 
-  // generate warnings about unsoundness
-  static void warnUnsound(std::string unmodeledOpName, Block *currBlock,
-                          const llvm::Instruction *i, bool ignore = false,
-                          FlagRelation rel = FlagRelation::And);
-  static void warnUnsound(std::string name, UnsetFlagsT unsetFlags,
-                          Block *currBlock, const llvm::Instruction *i,
-                          bool ignore = false,
-                          FlagRelation rel = FlagRelation::And);
-  static void warnIfUnsound(std::string name, RequiredFlagsT requiredFlags,
-                            Block *currBlock, const llvm::Instruction *i,
-                            bool ignore = false,
-                            FlagRelation rel = FlagRelation::And);
-  static void warnIfUnsound(std::string name, FlagT &requiredFlag,
-                            Block *currBlock, const llvm::Instruction *i,
-                            FlagRelation rel = FlagRelation::And);
-  static void warnIfUnsound(std::string name, FlagT &requiredFlag1,
-                            FlagT &requiredFlag2, Block *currBlock,
+  static void warnUnModeled(std::string unmodeledOpName, Block *currBlock,
+                            const llvm::Instruction *i);
+
+  static void warnIfIncomplete(std::string name, RequiredFlagsT requiredFlags,
+                               Block *currBlock, const llvm::Instruction *i,
+                               FlagRelation rel = FlagRelation::And);
+
+  static void warnIfIncomplete(std::string name, UnsetFlagsT unsetFlags,
+                               Block *currBlock, const llvm::Instruction *i,
+                               FlagRelation rel);
+
+  static void warnImprecise(std::string name, std::string description,
+                            UnsetFlagsT unsetFlags, Block *currBlock,
                             const llvm::Instruction *i,
                             FlagRelation rel = FlagRelation::And);
 

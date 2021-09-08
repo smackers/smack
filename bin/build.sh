@@ -162,7 +162,7 @@ function upToDate {
   else
     cd $1
     hash=$(git rev-parse --short=10 HEAD)
-    if [ "$TRAVIS" != "true" ] || [ $hash == $2 ] ; then
+    if [ $hash == $2 ] ; then
       return 0
     else
       return 1
@@ -195,17 +195,17 @@ linux-opensuse*)
   ;;
 
 linux-@(ubuntu|neon)-16*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
 linux-@(ubuntu|neon)-18*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
 linux-@(ubuntu|neon)-20*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-16.04.zip"
+  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
   DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   ;;
 
@@ -237,7 +237,7 @@ do
 done
 
 
-if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
   puts "Installing required packages"
 
   case "$distro" in
@@ -278,11 +278,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
     sudo apt-get update
 
     sudo apt-get install -y ${DEPENDENCIES}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-${LLVM_SHORT_VERSION} 30
-    sudo update-alternatives --install /usr/bin/llvm-dis llvm-dis /usr/bin/llvm-dis-${LLVM_SHORT_VERSION} 30
     ;;
 
   *)
@@ -295,7 +290,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
 fi
 
 
-if [ ${INSTALL_MONO} -eq 1 ] && [ "$TRAVIS" != "true" ] ; then
+if [ ${INSTALL_MONO} -eq 1 ] ; then
   puts "Installing mono"
   # Adding Mono repository
   sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
@@ -310,13 +305,12 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   puts "Building LLVM"
   mkdir -p ${LLVM_DIR}/src/{tools/clang,projects/compiler-rt}
   mkdir -p ${LLVM_DIR}/build
-
-  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz
-  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/cfe-${LLVM_FULL_VERSION}.src.tar.xz
-  ${WGET} http://llvm.org/releases/${LLVM_FULL_VERSION}/compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/clang-${LLVM_FULL_VERSION}.src.tar.xz
+  ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz
 
   tar -C ${LLVM_DIR}/src -xvf llvm-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
-  tar -C ${LLVM_DIR}/src/tools/clang -xvf cfe-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
+  tar -C ${LLVM_DIR}/src/tools/clang -xvf clang-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
   tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
@@ -465,7 +459,6 @@ fi
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
   sudo pip3 install -U flake8
-  sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_SHORT_VERSION} 30
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
   fi
@@ -481,7 +474,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
+  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ninja
 
   if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then
@@ -503,7 +496,7 @@ if [ ${TEST_SMACK} -eq 1 ] ; then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
-  ./regtest.py ${TRAVIS_ENV}
+  ./regtest.py ${REGTEST_ENV}
   res=$?
 
   puts "Regression tests complete"
