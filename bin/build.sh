@@ -22,21 +22,22 @@
 ################################################################################
 
 # Set these flags to control various installation options
-INSTALL_DEPENDENCIES=1
-INSTALL_MONO=0 # Mono is needed only for lockpwn and symbooglix
-INSTALL_Z3=1
-INSTALL_CVC4=0
-INSTALL_YICES2=0
-INSTALL_BOOGIE=1
-INSTALL_CORRAL=1
-BUILD_SYMBOOGLIX=0
-BUILD_LOCKPWN=0
-BUILD_SMACK=1
-TEST_SMACK=1
-BUILD_LLVM=0 # LLVM is typically installed from packages (see below)
+INSTALL_DEPENDENCIES=${INSTALL_DEPENDENCIES:-1}
+INSTALL_MONO=${INSTALL_MONO:-0} # Mono is needed only for lockpwn and symbooglix
+INSTALL_Z3=${INSTALL_Z3:-1}
+INSTALL_CVC4=${INSTALL_CVC4:-0}
+INSTALL_YICES2=${INSTALL_YICES2:-0}
+INSTALL_BOOGIE=${INSTALL_BOOGIE:-1}
+INSTALL_CORRAL=${INSTALL_CORRAL:-1}
+BUILD_SYMBOOGLIX=${BUILD_SYMBOOGLIX:-0}
+BUILD_LOCKPWN=${BUILD_LOCKPWN:-0}
+BUILD_SMACK=${BUILD_SMACK:-1}
+TEST_SMACK=${TEST_SMACK:-1}
+INSTALL_LLVM=${INSTALL_LLVM:-1}
+BUILD_LLVM=${BUILD_LLVM:-0} # LLVM is typically installed from packages (see below)
 
 # Support for more programming languages
-INSTALL_OBJECTIVEC=0
+INSTALL_OBJECTIVEC=${INSTALL_OBJECTIVEC:-0}
 INSTALL_RUST=${INSTALL_RUST:-0}
 
 # Development dependencies
@@ -66,7 +67,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-3.1 libboost-all-dev"
+DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-5.0 libboost-all-dev"
 
 shopt -s extglob
 
@@ -190,23 +191,32 @@ puts "Detected distribution: $distro"
 case "$distro" in
 linux-opensuse*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.10.zip"
-  DEPENDENCIES+=" llvm-clang llvm-devel gcc-c++ make"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" llvm-clang llvm-devel"
+  fi
+  DEPENDENCIES+=" gcc-c++ make"
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
 linux-@(ubuntu|neon)-16*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
   ;;
 
 linux-@(ubuntu|neon)-18*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
   ;;
 
 linux-@(ubuntu|neon)-20*)
   Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
   ;;
 
 *)
@@ -224,7 +234,7 @@ do
     INSTALL_PREFIX="${2%/}"
     CONFIGURE_INSTALL_PREFIX="--prefix=$2"
     CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$2"
-    echo export PATH=${INSTALL_PREFIX}/bin:$PATH >> ${SMACKENV}
+    echo export PATH=\"${INSTALL_PREFIX}/bin:\$PATH\" >> ${SMACKENV}
     shift
     shift
     ;;
@@ -268,8 +278,10 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     fi
 
     # Adding LLVM repository
-    ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-    sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
+    if [ ${INSTALL_LLVM} -eq 1 ] ; then
+      ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
+    fi
 
     # Adding .NET repository
     ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
@@ -375,14 +387,17 @@ fi
 if [ ${INSTALL_YICES2} -eq 1 ] ; then
   if [ ! -d "$YICES2_DIR" ] ; then
     puts "Installing Yices2"
-    mkdir -p ${YICES2_DIR}
-    ${WGET} https://yices.csl.sri.com/releases/${YICES2_VERSION}/yices-${YICES2_VERSION}-x86_64-pc-linux-gnu-static-gmp.tar.gz -O yices2-downloaded.tgz
-    tar xf yices2-downloaded.tgz
-    cd yices-${YICES2_VERSION}
-    ./install-yices ${YICES2_DIR}
-    cd ..
-    rm -rf yices2-downloaded.tgz yices-${YICES2_VERSION}
+    sudo apt-get install -y gperf libgmp-dev
+    cd ${DEPS_DIR}
+    git clone -b Yices-${YICES2_VERSION} https://github.com/SRI-CSL/yices2 yices2-src
+    cd yices2-src
+    autoconf
+    ./configure --prefix=${YICES2_DIR}
+    make -j
+    make install
     ln -s ${YICES2_DIR}/bin/yices-smt2 ${YICES2_DIR}/bin/yices2
+    cd ${DEPS_DIR}
+    rm -rf yices2-src
     puts "Installed Yices2"
   else
     puts "Yices2 already installed"

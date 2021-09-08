@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 
 // Shows pthread_join effectively blocks until child thread done
 // @expect verified

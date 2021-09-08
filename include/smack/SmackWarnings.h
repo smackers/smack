@@ -22,8 +22,8 @@ class SmackWarnings {
 public:
   enum class WarningLevel : unsigned {
     Silent = 0,
-    Imprecise = 10, // Unhandled intrinsics, asm, etc
-    Info = 20       // Memory length, etc.
+    Approximate = 10, // Unhandled intrinsics, asm, etc.
+    Info = 20         // Memory length, etc.
   };
 
   enum class FlagRelation : unsigned { And = 0, Or = 1 };
@@ -31,26 +31,26 @@ public:
   static UnsetFlagsT getUnsetFlags(RequiredFlagsT flags);
   static bool isSatisfied(RequiredFlagsT flags, FlagRelation rel);
 
-  static void warnUnModeled(std::string unmodeledOpName, Block *currBlock,
-                            const llvm::Instruction *i);
+  static void warnApproximate(std::string name, Block *currBlock,
+                              const llvm::Instruction *i);
 
-  static void warnIfIncomplete(std::string name, RequiredFlagsT requiredFlags,
-                               Block *currBlock, const llvm::Instruction *i,
-                               FlagRelation rel = FlagRelation::And);
+  static void warnOverApproximate(std::string name, UnsetFlagsT unsetFlags,
+                                  Block *currBlock, const llvm::Instruction *i,
+                                  FlagRelation rel);
 
-  static void warnIfIncomplete(std::string name, UnsetFlagsT unsetFlags,
-                               Block *currBlock, const llvm::Instruction *i,
-                               FlagRelation rel);
-
-  static void warnImprecise(std::string name, std::string description,
-                            UnsetFlagsT unsetFlags, Block *currBlock,
-                            const llvm::Instruction *i,
-                            FlagRelation rel = FlagRelation::And);
+  static void warnOverApproximate(std::string name,
+                                  RequiredFlagsT requiredFlags,
+                                  Block *currBlock, const llvm::Instruction *i,
+                                  FlagRelation rel = FlagRelation::And);
 
   // generate warnings about memcpy/memset length/DSA
   static void warnInfo(std::string info);
 
 private:
+  static void processApproximate(std::string description,
+                                 UnsetFlagsT unsetFlags, Block *currBlock,
+                                 const llvm::Instruction *i,
+                                 FlagRelation rel = FlagRelation::And);
   static bool isSufficientWarningLevel(WarningLevel level);
   static std::string getFlagStr(UnsetFlagsT flags);
 };

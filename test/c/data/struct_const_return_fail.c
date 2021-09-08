@@ -1,4 +1,5 @@
 #include "smack.h"
+#include <assert.h>
 
 // @flag --clang-options=-O1
 // @expect error

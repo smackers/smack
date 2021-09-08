@@ -1,4 +1,5 @@
-#include <smack.h>
+#include "smack.h"
+#include <assert.h>
 
 // @expect error
 // @flag --integer-encoding=wrapped-integer
