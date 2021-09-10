@@ -54,34 +54,40 @@ std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
   return ret + "}";
 }
 
-void SmackWarnings::warnUnModeled(std::string unmodeledOpName, Block *currBlock,
-                                  const Instruction *i) {
-  warnImprecise("unmodeled operation " + unmodeledOpName, "", {}, currBlock, i);
+void SmackWarnings::warnApproximate(std::string name, Block *currBlock,
+                                    const Instruction *i) {
+  processApproximate(
+      "approximating " + name +
+          " (can lead to both false alarms and missed detections)",
+      {}, currBlock, i);
 }
 
-void SmackWarnings::warnIfIncomplete(std::string name, UnsetFlagsT unsetFlags,
-                                     Block *currBlock, const Instruction *i,
-                                     FlagRelation rel) {
-  warnImprecise(name, "over-approximating", unsetFlags, currBlock, i, rel);
+void SmackWarnings::warnOverApproximate(std::string name,
+                                        UnsetFlagsT unsetFlags,
+                                        Block *currBlock, const Instruction *i,
+                                        FlagRelation rel) {
+  processApproximate("overapproximating " + name +
+                         " (can lead to false alarms)",
+                     unsetFlags, currBlock, i, rel);
 }
 
-void SmackWarnings::warnIfIncomplete(std::string name,
-                                     RequiredFlagsT requiredFlags,
-                                     Block *currBlock, const Instruction *i,
-                                     FlagRelation rel) {
+void SmackWarnings::warnOverApproximate(std::string name,
+                                        RequiredFlagsT requiredFlags,
+                                        Block *currBlock, const Instruction *i,
+                                        FlagRelation rel) {
   if (!isSatisfied(requiredFlags, rel))
-    warnIfIncomplete(name, getUnsetFlags(requiredFlags), currBlock, i, rel);
+    warnOverApproximate(name, getUnsetFlags(requiredFlags), currBlock, i, rel);
 }
 
-void SmackWarnings::warnImprecise(std::string name, std::string description,
-                                  UnsetFlagsT unsetFlags, Block *currBlock,
-                                  const Instruction *i, FlagRelation rel) {
-  if (!isSufficientWarningLevel(WarningLevel::Imprecise))
+void SmackWarnings::processApproximate(std::string description,
+                                       UnsetFlagsT unsetFlags, Block *currBlock,
+                                       const Instruction *i, FlagRelation rel) {
+  if (!isSufficientWarningLevel(WarningLevel::Approximate))
     return;
-  std::string beginning = std::string("llvm2bpl: ") + buildDebugInfo(i);
-  std::string end = description + " " + name + ";";
+  std::string beginning = buildDebugInfo(i);
+  std::string end = description + ";";
   if (currBlock)
-    currBlock->addStmt(Stmt::comment(beginning + "warning: " + end));
+    currBlock->addStmt(Stmt::comment(beginning + "SMACK warning: " + end));
   std::string hint = "";
   if (!unsetFlags.empty())
     hint = (" try adding " + ((rel == FlagRelation::And ? "all the " : "any ") +
@@ -89,7 +95,7 @@ void SmackWarnings::warnImprecise(std::string name, std::string description,
   errs() << beginning;
   (SmackOptions::ColoredWarnings ? errs().changeColor(raw_ostream::MAGENTA)
                                  : errs())
-      << "warning: ";
+      << "SMACK warning: ";
   (SmackOptions::ColoredWarnings ? errs().resetColor() : errs())
       << end << hint << "\n";
 }

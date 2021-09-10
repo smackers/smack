@@ -39,10 +39,7 @@ See below for system requirements, installation, usage, and everything else.
 * As a last resort, send mail to 
   [Michael](mailto:michael.emmi@gmail.com), [Zvonimir](mailto:zvonimir@cs.utah.edu), or both.
 
-* To stay informed about updates, you can either watch SMACK's Github page,
-  or you can join [SMACK's Google Group](http://groups.google.com/group/smack-dev)
-  mailing list.  Even without a Google account, you may join by sending mail to
-  [smack-dev+subscribe@googlegroups.com](mailto:smack-dev+subscribe@googlegroups.com).
+* To stay informed about updates, you can watch SMACK's Github page.
 
 
 ### Acknowledgements

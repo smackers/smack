@@ -35,8 +35,6 @@ def svcomp_frontend(input_file, args):
   args.clang_options += " -fbracket-depth=2048"
   args.clang_options += " -Wno-unknown-attributes"
   args.clang_options += " -DSVCOMP"
-  args.clang_options += " -DAVOID_NAME_CONFLICTS"
-  args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DDISABLE_PTHREAD_ASSERTS"
   args.clang_options += " -include smack.h"
 
@@ -106,7 +104,7 @@ def verify_bpl_svcomp(args):
   corral_command += ["/trackAllVars"]
 
   verifier_output = smack.top.try_command(corral_command, timeout=time_limit)
-  result = smack.top.verification_result(verifier_output)
+  result = smack.top.verification_result(verifier_output, 'corral')
 
   if result in VResult.ERROR: #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"

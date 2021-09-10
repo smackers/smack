@@ -2,9 +2,9 @@ import os
 import sys
 import re
 import json
-from .utils import temporary_file, try_command, temporary_directory
+from .utils import temporary_file, try_command, temporary_directory,\
+    llvm_exact_bin
 from .versions import RUST_VERSION
-from .versions import LLVM_SHORT_VERSION
 
 # Needed for cargo operations
 try:
@@ -86,8 +86,21 @@ def smack_lib():
     return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
 
-def llvm_exact_bin(name):
-    return name + '-' + LLVM_SHORT_VERSION
+def extern_entry_points(args, bcs):
+    new_bcs = []
+    for bc in bcs:
+        new_bc = temporary_file(
+            os.path.splitext(
+                os.path.basename(bc))[0],
+            '.bc',
+            args)
+        cmd = ['-in', bc, '-out', new_bc]
+        for ep in args.entry_points:
+            cmd += ['-entry-points', ep]
+
+        try_command(['extern-statics'] + cmd, console=True)
+        new_bcs.append(new_bc)
+    return new_bcs
 
 
 def default_clang_compile_command(args, lib=False):
@@ -473,6 +486,7 @@ def link_bc_files(bitcodes, libs, args):
     for build_lib in libs:
         smack_libs += build_lib(args)
 
+    bitcodes = extern_entry_points(args, bitcodes)
     try_command([llvm_exact_bin('llvm-link'), '-o', args.bc_file] + bitcodes)
     try_command([llvm_exact_bin('llvm-link'), '-o', args.linked_bc_file,
                  args.bc_file] + smack_libs)

@@ -155,6 +155,15 @@ add_executable(llvm2bpl
   tools/llvm2bpl/llvm2bpl.cpp
 )
 
+add_library(externalizePass STATIC
+  tools/externalizer/ExternalizePass.h
+  tools/externalizer/ExternalizePass.cpp
+)
+
+add_executable(extern-statics
+  tools/externalizer/extern-statics.cpp
+)
+
 # We need to include Boost header files at least for macOS
 find_package(Boost 1.55)
 if(Boost_FOUND)
@@ -182,7 +191,15 @@ target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS}
   ${LLVM_LDFLAGS})
 target_link_libraries(llvm2bpl smackTranslator utils SeaDsaAnalysis)
 
+target_link_libraries(externalizePass ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS}
+  ${LLVM_LDFLAGS})
+target_link_libraries(extern-statics externalizePass)
+
 install(TARGETS llvm2bpl
+  RUNTIME DESTINATION bin
+)
+
+install(TARGETS extern-statics
   RUNTIME DESTINATION bin
 )
 
@@ -200,6 +217,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile"
     PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di" PATTERN "*.toml"
+    PATTERN "*.cpp" PATTERN "cassert"
 )
 
 install(FILES

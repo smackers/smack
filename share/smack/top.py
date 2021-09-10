@@ -11,12 +11,13 @@ import multiprocessing  # added import for threads
 from multiprocessing.pool import ThreadPool    # added import for threads
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files
+from .utils import temporary_file, try_command, remove_temp_files,\
+    llvm_exact_bin
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, smackdOutput
 
-VERSION = '2.7.0'
+VERSION = '2.7.1'
 
 
 class VResult(Flag):
@@ -312,12 +313,13 @@ def arguments():
         type=str,
         help='limit debugging output to given MODULES')
 
-    noise_group.add_argument('--warn', default="imprecise",
-                             choices=['silent', 'imprecise', 'info'],
+    noise_group.add_argument('--warn', default="approximate",
+                             choices=['silent', 'approximate', 'info'],
                              help='''enable certain type of warning messages
             (silent: no warning messages;
-            unsound: warnings about imprecise modeling;
-            info: warnings about imprecise modeling/translation information)
+            approximate: warnings about introduced approximations;
+            info: warnings about introduced approximations and
+            translation information)
             [default: %(default)s]''')
 
     parser.add_argument(
@@ -471,6 +473,16 @@ def arguments():
         nargs='+',
         default=['main'],
         help='specify top-level procedures [default: %(default)s]')
+
+    translate_group.add_argument(
+        '--checked-functions',
+        metavar='PROC',
+        nargs='+',
+        default=[],
+        help='''specify functions on which to do property checking.
+                These can be specified as extended regular expressions.
+                NOTE: a regular expression must match the entire
+                function name. [default: everything]''')
 
     translate_group.add_argument(
         '--check',
@@ -645,7 +657,7 @@ def target_selection(args):
                     os.path.basename(src))[0],
                 '.ll',
                 args)
-            try_command(['llvm-dis', '-o', ll, src])
+            try_command([llvm_exact_bin('llvm-dis'), '-o', ll, src])
             src = ll
         if os.path.splitext(src)[1] == '.ll':
             with open(src, 'r') as f:
@@ -706,6 +718,8 @@ def llvm_to_bpl(args):
     cmd += ['-source-loc-syms']
     for ep in args.entry_points:
         cmd += ['-entry-points', ep]
+    for cf in args.checked_functions:
+        cmd += ['-checked-functions', cf]
     if args.debug:
         cmd += ['-debug']
     if args.debug_only:
@@ -834,7 +848,7 @@ def transform_out(args, old):
     return out
 
 
-def verification_result(verifier_output):
+def verification_result(verifier_output, verifier):
     if re.search(
         r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
             verifier_output):
@@ -844,18 +858,39 @@ def verification_result(verifier_output):
         return VResult.VERIFIED
     elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
-        for p in (VProperty.mem_safe_subprops() + [VProperty.INTEGER_OVERFLOW]
-                  + [VProperty.RUST_PANICS]):
-            if re.search(r'ASSERTION FAILS assert {:%s}' % p.boogie_attr(),
-                         verifier_output):
-                return p.result()
+        attr = None
+        attr_pat = r'assert {:(.+)}'
 
-        listCall = re.findall(r'\(CALL .+\)', verifier_output)
-        if len(listCall) > 0 and re.search(
-                r'free_', listCall[len(listCall) - 1]):
-            return VResult.INVALID_FREE
+        if verifier == 'corral':
+            corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
+                                      verifier_output)
+            if corral_af_msg:
+                attr = corral_af_msg.group(1)
+
+        elif verifier == 'boogie':
+            boogie_af_msg = re.search(
+                r'([\w#$~%.\/-]+)\((\d+),\d+\): '
+                r'Error: This assertion might not hold', verifier_output)
+            if boogie_af_msg:
+                if re.match('.*[.]bpl$', boogie_af_msg.group(1)):
+                    line_no = int(boogie_af_msg.group(2))
+                    with open(boogie_af_msg.group(1), 'r') as f:
+                        assert_line = re.search(
+                                      attr_pat,
+                                      f.read().splitlines(True)[line_no - 1])
+                        if assert_line:
+                            attr = assert_line.group(1)
         else:
-            return VResult.ASSERTION_FAILURE
+            print('Warning: Unable to decide error type.')
+
+        if attr is not None:
+            for p in (VProperty.mem_safe_subprops()
+                      + [VProperty.INTEGER_OVERFLOW]
+                      + [VProperty.RUST_PANICS]):
+                if p.boogie_attr() == attr:
+                    return p.result()
+
+        return VResult.ASSERTION_FAILURE
     else:
         return VResult.UNKNOWN
 
@@ -978,7 +1013,7 @@ def verify_bpl(args):
 
     verifier_output = try_command(command, timeout=args.time_limit)
     verifier_output = transform_out(args, verifier_output)
-    result = verification_result(verifier_output)
+    result = verification_result(verifier_output, args.verifier)
 
     if args.smackd:
         print(smackdOutput(result, verifier_output))

@@ -1,8 +1,8 @@
+#include "smack.h"
+#include <assert.h>
+#include <pthread.h>
 
 // @expect verified
-
-#include <pthread.h>
-#include <smack.h>
 
 int x = 1;
 
