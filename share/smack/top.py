@@ -922,9 +922,15 @@ def verify_bpl(args):
         commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100","/bopt:proverOpt:O:smt.arith.solver=2"], ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"], [""]]
         threads = [(args2, commands) for commands in commands_to_add] # a list with verifiers changed to boogie and corral
 #        print(threads)
-#        results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
-        results = list(p.imap_unordered(verify_bpl, threads))
-        print(results[0])
+        results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
+        # results = list(p.imap_unordered(verify_bpl, threads))
+        term = None
+        while term is None:  # continue this loop through results to see if something done
+            for result in results:
+                if not result.isalive():  # see if anything is done
+                    term = result
+                    break
+        print(term)
 #            break
         #print("there are "+str(len(results))+" threads")
         p.close()
