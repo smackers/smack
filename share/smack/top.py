@@ -6,12 +6,12 @@ import shlex
 import subprocess
 import signal
 import functools
-import copy # for making copies of args to pass to threads
+import copy  # for making copies of args to pass to threads
 import multiprocessing  # added import for threads
-from multiprocessing.pool import ThreadPool    # added import for threads
+from multiprocessing.pool import ThreadPool  # added import for threads
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files,\
+from .utils import temporary_file, try_command, remove_temp_files, \
     llvm_exact_bin
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
@@ -86,7 +86,7 @@ class VResult(Flag):
         if self is VResult.VERIFIED:
             return ('SMACK found no errors'
                     + ('' if args.modular else ' with unroll bound %s'
-                        % args.unroll) + '.')
+                                               % args.unroll) + '.')
         elif self in VResult.ERROR:
             description = self.description()
             return ('SMACK found an error'
@@ -251,6 +251,7 @@ def validate_input_files(files):
             exit_with_error(
                 "Unexpected source file extension '%s'" %
                 file_extension)
+
     list(map(validate_input_file, files))
 
 
@@ -528,11 +529,11 @@ def arguments():
         choices=[
             'boogie',
             'corral',
-            'portfolio', 
+            'portfolio',
             'symbooglix',
             'svcomp'],
         default='corral',
-        help='back-end verification engine')    # portfolio added as an option
+        help='back-end verification engine')  # portfolio added as an option
 
     verifier_group.add_argument('--solver',
                                 choices=['z3', 'cvc4', "yices2"], default='z3',
@@ -850,7 +851,7 @@ def transform_out(args, old):
 
 def verification_result(verifier_output, verifier):
     if re.search(
-        r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
+            r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
             verifier_output):
         return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
@@ -876,8 +877,8 @@ def verification_result(verifier_output, verifier):
                     line_no = int(boogie_af_msg.group(2))
                     with open(boogie_af_msg.group(1), 'r') as f:
                         assert_line = re.search(
-                                      attr_pat,
-                                      f.read().splitlines(True)[line_no - 1])
+                            attr_pat,
+                            f.read().splitlines(True)[line_no - 1])
                         if assert_line:
                             attr = assert_line.group(1)
         else:
@@ -894,75 +895,64 @@ def verification_result(verifier_output, verifier):
     else:
         return VResult.UNKNOWN
 
+
 def print_result(result):
-    sys.exit(0)
-    #print("gettings results: "+str(result))
-    #if "PASSED" in result:
-    #    print("thread was successful at "+time)
-    #    sys.exit(0)
+    print(result)
+    return result
+
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
     if isinstance(args, tuple):
         args, commands_to_add = args
 
-# inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
+    # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
-        p = multiprocessing.Pool(4)
-       # args1 = copy.deepcopy(args)
+        p = multiprocessing.Pool()
 
-       # args1.verifier = 'boogie'
-       # print(args1)
-       # print("args1: "+args1.verifier)
         args2 = copy.deepcopy(args)
         args2.verifier = 'corral'
-       # print(args2)
-       # print("args2: "+args2.verifier)
-       # threads should be 4 different combos of corral settings
-        commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100","/bopt:proverOpt:O:smt.arith.solver=2"], ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"], [""]]
-        threads = [(args2, commands) for commands in commands_to_add] # a list with verifiers changed to boogie and corral
-#        print(threads)
-        results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
+        # print(args2)
+        # print("args2: "+args2.verifier)
+        # threads should be 4 different combos of corral settings
+        commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100", "/bopt:proverOpt:O:smt.arith.solver=2"],
+                           ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"],
+                           [""]]
+        threads = [(args2, commands) for commands in commands_to_add]
+        # a list with verifiers changed to boogie and corral
+
+        results = {}
+        for thread in threads:
+            results[p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)] = thread[1]
+        # results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)
+        # for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
         # results = list(p.imap_unordered(verify_bpl, threads))
         term = None
         while term is None:  # continue this loop through results to see if something done
-            for result in results:
-                if not result.isalive():  # see if anything is done
-                    term = result
+            for result in list(results.keys()):
+                if result.ready():
+                    term = result.get()
+                    args_for_thread = results[result]
+                    p.close()
+                    p.terminate()
                     break
-        print(term)
-#            break
-        #print("there are "+str(len(results))+" threads")
-        p.close()
-        p.join()
-#        for async_result in results:
-#           try:
-#                print("results for this thread are:")
-#            print(async_result.get())
-#                break
-#           except ValueError as e:
-#                print(e)
-#           break
-# seems as though threads are not terminating, we are not getting past this
-        #print("loop ended")
-#        p.close()
-#        p.terminate()
-        #p.join()
+
+        print("call back function returned: "+str(term))
+        print("args for this thread wer: "+str(args_for_thread))
         print("threads closed")
-        return
+        return term
         # call this method recursively replacing args.verifier w/ corral and Boogie
         # then get results from ThreadPool finished first and return
-
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
         return
 
     elif args.verifier == 'boogie' or args.modular:
-    #   print("using boogie for this thread")
+        #   print("using boogie for this thread")
         command = ["boogie"]
         command += [args.bpl_file]
-    #   command += ["/nologo", "/doModSetAnalysis"] # had to remove nologo to make boogie work
+        #   command += ["/nologo", "/doModSetAnalysis"] # had to remove nologo to make boogie work
 
         command += ["/doModSetAnalysis"]
         command += ["/useArrayTheory"]
@@ -997,9 +987,9 @@ def verify_bpl(args):
         except NameError:
             pass
 
-        #if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
+        # if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
         #    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-        #if (thread_num == 2) or (thread_num == 3): # thread 2 is both, 3 is just this, 4 is none
+        # if (thread_num == 2) or (thread_num == 3): # thread 2 is both, 3 is just this, 4 is none
         #    command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
         if args.solver == 'cvc4':
             command += ["/bopt:proverOpt:SOLVER=cvc4"]
@@ -1038,12 +1028,15 @@ def verify_bpl(args):
                 replay_error_trace(verifier_output, args)
         print(result.message(args))
         sys.exit(result.return_code())
+
+
 # tried inserting a return to make sure recursion comes back
 
 def clean_up_upon_sigterm(main):
     def handler(signum, frame):
         remove_temp_files()
         sys.exit(0)
+
     signal.signal(signal.SIGTERM, handler)
     return main
 
