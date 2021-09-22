@@ -923,7 +923,7 @@ def verify_bpl(args):
 
         results = {}
         for thread in threads:
-            results[p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)] = thread[1]
+            results[p.apply_async(verify_bpl, args=thread, callback=print_result)] = thread[1]
         # results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)
         # for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
         # results = list(p.imap_unordered(verify_bpl, threads))
