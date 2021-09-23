@@ -24,5 +24,3 @@ int main(void) {
 
   return i + j;
 }
-
-

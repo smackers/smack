@@ -5,21 +5,21 @@
 //
 // This pass adds an annotation to the exit of any loop, with the purpose
 // of debugging instances where the unroll bound does not unroll enough
-// to reach the loop exit. 
+// to reach the loop exit.
 //
 
 #define DEBUG_TYPE "smack-loop-unroll"
 #include "smack/AnnotateLoopExits.h"
-#include "smack/Naming.h"
 #include "smack/Debug.h"
+#include "smack/Naming.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Transforms/Utils.h"
 #include <map>
 #include <set>
 #include <vector>

@@ -6,7 +6,8 @@
 int func(int p) {
   int a = 0;
   while (a < 10) {
-    if (a == p) break;
+    if (a == p)
+      break;
     a++;
   }
   return a;

@@ -1409,9 +1409,7 @@ void __SMACK_check_overflow(int flag) {
   __SMACK_code("assert {:overflow} @ == $0;", flag);
 }
 
-void __SMACK_loop_exit(void) {
-  __SMACK_code("assert {:loopexit} false;");
-}
+void __SMACK_loop_exit(void) { __SMACK_code("assert {:loopexit} false;"); }
 
 char __VERIFIER_nondet_char(void) {
   char x = __SMACK_nondet_char();

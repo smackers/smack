@@ -6,7 +6,8 @@
 int main(void) {
   int a = 1;
   while (a < 10) {
-    if (a == 5) break;
+    if (a == 5)
+      break;
     a++;
   }
 
