@@ -522,7 +522,8 @@ def arguments():
         '--fail-on-loop-exit',
         action='store_true',
         default=False,
-        help='Add assert false to the end of each loop (useful for deciding how much unroll to use)')
+        help='''Add assert false to the end of each loop
+                (useful for deciding how much unroll to use)''')
 
     verifier_group = parser.add_argument_group('verifier options')
 
