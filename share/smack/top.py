@@ -1,3 +1,4 @@
+# import pdb # for debuging, remember to remove
 import argparse
 import os
 import re
@@ -903,27 +904,35 @@ def print_result(result):
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
+    # print(args.verifier-options)
+    # print(args.verifier_options)
     if isinstance(args, tuple):
         args, commands_to_add = args
+        args.verifier_options = commands_to_add
+        print(args)
 
     # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
         p = multiprocessing.Pool()
 
-        args2 = copy.deepcopy(args)
-        args2.verifier = 'corral'
+        thread_args = copy.deepcopy(args)
+        thread_args.verifier = 'corral'
         # print(args2)
         # print("args2: "+args2.verifier)
         # threads should be 4 different combos of corral settings
-        commands_to_add = [["/bopt:proverOpt:O:smt.qi.eager_threshold=100", "/bopt:proverOpt:O:smt.arith.solver=2"],
-                           ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"], ["/bopt:proverOpt:O:smt.arith.solver=2"],
-                           [""]]
-        threads = [(args2, commands) for commands in commands_to_add]
+        thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 /bopt:proverOpt:O:smt.arith.solver=2",
+                           "/bopt:proverOpt:O:smt.qi.eager_threshold=100",
+                           "/bopt:proverOpt:O:smt.arith.solver=2",
+                           ""]
+        # threads = [commands for commands in commands_to_add]
         # a list with verifiers changed to boogie and corral
 
         results = {}
-        for thread in threads:
-            results[p.apply_async(verify_bpl, args=thread, callback=print_result)] = thread[1]
+        # pdb.set_trace()
+        for thread in thread_settings:
+            # arg = args2.verifier_options = thread
+            # thread_args.verifier-options = thread
+            results[p.apply_async(verify_bpl, args=((thread_args, thread),), callback=print_result)] = thread
         # results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)
         # for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
         # results = list(p.imap_unordered(verify_bpl, threads))
@@ -969,7 +978,7 @@ def verify_bpl(args):
             command += ["/proverOpt:SOLVER=Yices2"]
 
     elif args.verifier == 'corral':
-        print("using corral for this thread")
+        # print("using corral for this thread")
         command = ["corral"]
         command += [args.bpl_file]
         command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
