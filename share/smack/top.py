@@ -989,12 +989,12 @@ def verify_bpl(args):
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
 
-        try:
-            print("this thread is using: " + str(commands_to_add))
-            for commands in commands_to_add:
-                command += [commands]
-        except NameError:
-            pass
+        #try:
+        print("this thread is using: " + str(commands_to_add))
+            # for commands in commands_to_add:
+            #    command += [commands]
+        #except NameError:
+        #    pass
 
         # if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
         #    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
