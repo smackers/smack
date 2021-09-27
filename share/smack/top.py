@@ -909,7 +909,7 @@ def verify_bpl(args):
     if isinstance(args, tuple):
         args, commands_to_add = args
         args.verifier_options = commands_to_add
-        print(args)
+    print(args)
 
     # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
