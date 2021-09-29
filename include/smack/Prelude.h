@@ -70,7 +70,7 @@ struct FpOp {
 // builtin functions templated by a function type. A function
 // of such type, when applied, returns an attribute
 template <typename ATTRT> struct BuiltinOp : public Op {
-  typedef const Attr *(*attrT)();
+  typedef const Attr *(*attrT)(...);
   attrT func;
   BuiltinOp(ATTRT func) : Op(Builtin), func((attrT)func) {}
   static bool classof(const Op *op) { return op->getOpType() == Builtin; }
@@ -79,7 +79,7 @@ template <typename ATTRT> struct BuiltinOp : public Op {
 // inlined functions templated by a function type. A function
 // of such type, when applied, returns an expression as the function body
 template <typename EXPRT> struct InlinedOp : public Op {
-  typedef const Expr *(*exprT)();
+  typedef const Expr *(*exprT)(...);
   exprT func;
   InlinedOp(EXPRT func) : Op(Inlined), func((exprT)func) {}
   static bool classof(const Op *op) { return op->getOpType() == Inlined; }
