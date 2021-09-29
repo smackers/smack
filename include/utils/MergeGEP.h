@@ -24,7 +24,7 @@ namespace llvm {
   public:
     static char ID;
     MergeArrayGEP() : ModulePass(ID) {}
-    virtual bool runOnModule(Module& M);
+    virtual bool runOnModule(Module& M) override;
   };
 }
 

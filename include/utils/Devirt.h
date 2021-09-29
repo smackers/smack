@@ -62,9 +62,9 @@ namespace llvm {
       static char ID;
       Devirtualize() : ModulePass(ID) {}
 
-      virtual bool runOnModule(Module & M);
+      virtual bool runOnModule(Module & M) override;
 
-      virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      virtual void getAnalysisUsage(AnalysisUsage &AU) const override{
         AU.addRequired<seadsa::CompleteCallGraph>();
       }
 

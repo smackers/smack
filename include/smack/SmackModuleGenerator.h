@@ -18,8 +18,8 @@ public:
   static char ID; // Pass identification, replacement for typeid
 
   SmackModuleGenerator();
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
-  virtual bool runOnModule(llvm::Module &m);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+  virtual bool runOnModule(llvm::Module &m) override;
   void generateProgram(llvm::Module &m);
   Program *getProgram() { return program; }
 };
