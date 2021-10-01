@@ -898,67 +898,57 @@ def verification_result(verifier_output, verifier):
 
 
 def print_result(result):
-    print(result)
+#    print(result)
     return result
 
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
-    # print(args.verifier-options)
-    # print(args.verifier_options)
+
+    # ugly way of adding additional params to the verifier options
     if isinstance(args, tuple):
         args, commands_to_add = args
         args.verifier_options = commands_to_add
-    print(args)
 
-    # inserted as first test of new flag, this test passed (now set up threadpool and run 2 threads)
     if args.verifier == 'portfolio':
         p = multiprocessing.Pool()
 
         thread_args = copy.deepcopy(args)
         thread_args.verifier = 'corral'
-        # print(args2)
-        # print("args2: "+args2.verifier)
-        # threads should be 4 different combos of corral settings
+
+        # threads are 4 different combos of corral settings
         thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 /bopt:proverOpt:O:smt.arith.solver=2",
                            "/bopt:proverOpt:O:smt.qi.eager_threshold=100",
                            "/bopt:proverOpt:O:smt.arith.solver=2",
                            ""]
-        # threads = [commands for commands in commands_to_add]
-        # a list with verifiers changed to boogie and corral
 
-        results = {}
-        # pdb.set_trace()
+        results = {}  # set up a dict from AsyncResult object to params used (get the paramaters back out after receiving result)
         for thread in thread_settings:
-            # arg = args2.verifier_options = thread
-            # thread_args.verifier-options = thread
             results[p.apply_async(verify_bpl, args=((thread_args, thread),), callback=print_result)] = thread
-        # results = [p.apply_async(verify_bpl, args=(args2, thread), callback=print_result)
-        # for thread in commands_to_add] # attempting to async run this method w/ 2 hard-coded verifiers
-        # results = list(p.imap_unordered(verify_bpl, threads))
+
         term = None
-        while term is None:  # continue this loop through results to see if something done
-            for result in list(results.keys()):
-                if result.ready():
+        while term is None:  # continue this loop through results to see if something done, maybe want to sleep every so often?
+             for result in list(results.keys()):  # look through each process
+                if result.ready():  # is this process finished?
                     term = result.get()
                     args_for_thread = results[result]
+                    print("Thread with params "+str(args_for_thread)+" returned: "+str(term))
                     p.close()
                     p.terminate()
+                    sys.exit(0)
                     break
 
-        print("call back function returned: "+str(term))
-        print("args for this thread wer: "+str(args_for_thread))
-        print("threads closed")
-        return term
-        # call this method recursively replacing args.verifier w/ corral and Boogie
-        # then get results from ThreadPool finished first and return
+        # print("call back function returned: "+str(term))
+        # print("args for this thread were: "+str(args_for_thread))
+        # print("threads closed")
+        # sys.exit(0)
+        return
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
         return
 
     elif args.verifier == 'boogie' or args.modular:
-        #   print("using boogie for this thread")
         command = ["boogie"]
         command += [args.bpl_file]
         #   command += ["/nologo", "/doModSetAnalysis"] # had to remove nologo to make boogie work
@@ -978,7 +968,6 @@ def verify_bpl(args):
             command += ["/proverOpt:SOLVER=Yices2"]
 
     elif args.verifier == 'corral':
-        # print("using corral for this thread")
         command = ["corral"]
         command += [args.bpl_file]
         command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
@@ -988,18 +977,6 @@ def verify_bpl(args):
         command += ["/cex:%s" % args.max_violations]
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
-
-        #try:
-        print("this thread is using: " + str(commands_to_add))
-            # for commands in commands_to_add:
-            #    command += [commands]
-        #except NameError:
-        #    pass
-
-        # if (thread_num == 1) or (thread_num == 2): # thread 1 is just this, 2 is both
-        #    command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-        # if (thread_num == 2) or (thread_num == 3): # thread 2 is both, 3 is just this, 4 is none
-        #    command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
         if args.solver == 'cvc4':
             command += ["/bopt:proverOpt:SOLVER=cvc4"]
         elif args.solver == 'yices2':
@@ -1022,6 +999,8 @@ def verify_bpl(args):
 
     if args.smackd:
         print(smackdOutput(result, verifier_output))
+        # TODO: determine how to encompass all of the possible cases of things that can happen in verification and return any of them smoothly
+        return smackdOutput(result, verifier_output)
     else:
         if result in VResult.ERROR:
             error = error_trace(verifier_output, args)
@@ -1036,10 +1015,9 @@ def verify_bpl(args):
             if args.replay:
                 replay_error_trace(verifier_output, args)
         print(result.message(args))
-        sys.exit(result.return_code())
+        # sys.exit(result.return_code())  # address whether this sys.exit needs to remain
+        return result.message(args)  # added return to make sure processes can come back
 
-
-# tried inserting a return to make sure recursion comes back
 
 def clean_up_upon_sigterm(main):
     def handler(signum, frame):
@@ -1068,7 +1046,7 @@ def main():
                 print("SMACK generated %s" % args.bpl_file)
         else:
             verify_bpl(args)
-            print("returned from threads")
+
     except KeyboardInterrupt:
         sys.exit("SMACK aborted by keyboard interrupt.")
 
