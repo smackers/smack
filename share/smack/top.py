@@ -1,4 +1,3 @@
-# import pdb # for debuging, remember to remove
 import argparse
 import os
 import re
@@ -9,7 +8,6 @@ import signal
 import functools
 import copy  # for making copies of args to pass to threads
 import multiprocessing  # added import for threads
-from multiprocessing.pool import ThreadPool  # added import for threads
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files, \
@@ -897,8 +895,8 @@ def verification_result(verifier_output, verifier):
         return VResult.UNKNOWN
 
 
-def print_result(result):
-#    print(result)
+def get_result(result):
+    # print(result)
     return result
 
 
@@ -908,13 +906,13 @@ def verify_bpl(args):
     # ugly way of adding additional params to the verifier options
     if isinstance(args, tuple):
         args, commands_to_add = args
-        args.verifier_options = commands_to_add
+        args.verifier_options = commands_to_add  # add this threads' commands to the args
 
     if args.verifier == 'portfolio':
         p = multiprocessing.Pool()
 
         thread_args = copy.deepcopy(args)
-        thread_args.verifier = 'corral'
+        thread_args.verifier = 'corral'  # until we annotate files, use only corral
 
         # threads are 4 different combos of corral settings
         thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 /bopt:proverOpt:O:smt.arith.solver=2",
@@ -924,25 +922,22 @@ def verify_bpl(args):
 
         results = {}  # set up a dict from AsyncResult object to params used (get the paramaters back out after receiving result)
         for thread in thread_settings:
-            results[p.apply_async(verify_bpl, args=((thread_args, thread),), callback=print_result)] = thread
+            results[p.apply_async(verify_bpl, args=((thread_args, thread),), callback=get_result)] = thread
 
         term = None
         while term is None:  # continue this loop through results to see if something done, maybe want to sleep every so often?
              for result in list(results.keys()):  # look through each process
                 if result.ready():  # is this process finished?
-                    term = result.get()
+                    term = result.get()  # get actual result of first finished
                     args_for_thread = results[result]
                     print("Thread with params "+str(args_for_thread)+" returned: "+str(term))
                     p.close()
                     p.terminate()
-                    sys.exit(0)
-                    break
+                    sys.exit(0)  # can handle this other ways than exiting
 
         # print("call back function returned: "+str(term))
         # print("args for this thread were: "+str(args_for_thread))
         # print("threads closed")
-        # sys.exit(0)
-        return
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
