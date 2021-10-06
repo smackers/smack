@@ -337,20 +337,27 @@ def cargo_frontend(input_file, args):
         None,
         args)
     rustargs = (default_rust_compile_args(args) +
-                ['--emit=llvm-bc', '-Clto', '-Cembed-bitcode=yes'])
+                ['--emit=llvm-bc', '-Clto', '-Cembed-bitcode=yes',
+                 '-Clinker-plugin-lto', '-Clinker=clang-11',
+                 '-Clink-arg=-fuse-ld=lld-11',
+                 '-Cno-vectorize-loops',
+                 '-Cno-vectorize-slp'])
     compile_command = default_cargo_compile_command(
-        ['--target-dir', targetdir, '--manifest-path', input_file])
+        ['--target-dir', targetdir, '--manifest-path', input_file,
+         '-Zbuild-std', '--target', 'x86_64-unknown-linux-gnu'])
     try_command(compile_command, console=True,
-                env={'RUSTFLAGS': " ".join(rustargs)})
+                env={'RUSTFLAGS': " ".join(rustargs),
+                     '__CARGO_TESTS_ONLY_SRC_ROOT': '/home/vagrant/smack-rust-std/rust-src-test'})
 
     target_name = find_target(toml.load(input_file))
 
     # Find the name of the crate's bc file
-    bcbase = targetdir + '/debug/deps/'
+    bcbase = targetdir + '/x86_64-unknown-linux-gnu/debug/deps/'
     entries = os.listdir(bcbase)
     bcs = []
 
     for entry in entries:
+        print(entry)
         if entry.startswith(target_name + '-') and entry.endswith('.bc'):
             bcs.append(bcbase + entry)
 
