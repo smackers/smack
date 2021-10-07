@@ -850,8 +850,8 @@ def transform_out(args, old):
 
 def verification_result(verifier_output, verifier):
     if re.search(
-            r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
-            verifier_output):
+            r'[1-9]\d* time out|Z3 ran out of resources|timed out|'
+            r'ERRORS_TIMEOUT', verifier_output):
         return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
                     r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
@@ -906,38 +906,39 @@ def verify_bpl(args):
     # ugly way of adding additional params to the verifier options
     if isinstance(args, tuple):
         args, commands_to_add = args
-        args.verifier_options = commands_to_add  # add this threads' commands to the args
+        args.verifier_options = commands_to_add  # add verifier options
 
     if args.verifier == 'portfolio':
         p = multiprocessing.Pool()
 
         thread_args = copy.deepcopy(args)
-        thread_args.verifier = 'corral'  # until we annotate files, use only corral
+        thread_args.verifier = 'corral'
 
         # threads are 4 different combos of corral settings
-        thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 /bopt:proverOpt:O:smt.arith.solver=2",
+        thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 "
+                           "/bopt:proverOpt:O:smt.arith.solver=2",
                            "/bopt:proverOpt:O:smt.qi.eager_threshold=100",
                            "/bopt:proverOpt:O:smt.arith.solver=2",
                            ""]
 
-        results = {}  # set up a dict from AsyncResult object to params used (get the paramaters back out after receiving result)
+        results = {}  # map of result -> params
         for thread in thread_settings:
-            results[p.apply_async(verify_bpl, args=((thread_args, thread),), callback=get_result)] = thread
+            results[p.apply_async(verify_bpl,
+                                  args=((thread_args, thread),),
+                                  callback=get_result)] = thread
 
         term = None
-        while term is None:  # continue this loop through results to see if something done, maybe want to sleep every so often?
-             for result in list(results.keys()):  # look through each process
+        while term is None:  # sleep?
+            for result in list(results.keys()):  # look through each process
                 if result.ready():  # is this process finished?
-                    term = result.get()  # get actual result of first finished
+                    term = result.get()
                     args_for_thread = results[result]
-                    print("Thread with params "+str(args_for_thread)+" returned: "+str(term))
+                    print(f'Thread with params {args_for_thread}'
+                          f' returned: {term}')
                     p.close()
                     p.terminate()
-                    sys.exit(0)  # can handle this other ways than exiting
-
-        # print("call back function returned: "+str(term))
-        # print("args for this thread were: "+str(args_for_thread))
-        # print("threads closed")
+                    # return the error code that is now held in term
+                    return term
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
@@ -946,7 +947,7 @@ def verify_bpl(args):
     elif args.verifier == 'boogie' or args.modular:
         command = ["boogie"]
         command += [args.bpl_file]
-        #   command += ["/nologo", "/doModSetAnalysis"] # had to remove nologo to make boogie work
+        #  command += ["/nologo", "/doModSetAnalysis"]
 
         command += ["/doModSetAnalysis"]
         command += ["/useArrayTheory"]
@@ -994,7 +995,10 @@ def verify_bpl(args):
 
     if args.smackd:
         print(smackdOutput(result, verifier_output))
-        # TODO: determine how to encompass all of the possible cases of things that can happen in verification and return any of them smoothly
+        # TODO: determine how to encompass all
+        #  of the possible cases of things that
+        #  can happen in verification and return
+        #  any of them smoothly
         return smackdOutput(result, verifier_output)
     else:
         if result in VResult.ERROR:
@@ -1010,8 +1014,7 @@ def verify_bpl(args):
             if args.replay:
                 replay_error_trace(verifier_output, args)
         print(result.message(args))
-        # sys.exit(result.return_code())  # address whether this sys.exit needs to remain
-        return result.message(args)  # added return to make sure processes can come back
+        return result.message(args)
 
 
 def clean_up_upon_sigterm(main):
