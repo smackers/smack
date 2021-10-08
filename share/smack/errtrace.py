@@ -88,11 +88,11 @@ def error_trace(verifier_output, verifier):
     return output
 
 
-def json_output_str(result, output, verifier):
-    return json.dumps(json_output(result, output, verifier))
+def json_output_str(result, output, verifier, prettify=True):
+    return json.dumps(json_output(result, output, verifier, prettify))
 
 
-def json_output(result, output, verifier):
+def json_output(result, output, verifier, prettify=True):
     '''Convert error traces into JSON format'''
 
     from .top import VResult
@@ -185,6 +185,7 @@ def json_output(result, output, verifier):
             'passed?': False,
             'failsAt': failsAt,
             'threadCount': 1,
-            'traces': functools.reduce(merger, traces, [])
+            'traces': (functools.reduce(merger, traces, []) if prettify
+                       else traces)
     }
     return json_data
