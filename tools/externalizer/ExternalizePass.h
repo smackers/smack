@@ -12,8 +12,8 @@ namespace externalize {
 struct ExternalizePass : public llvm::ModulePass {
   static char ID;
   ExternalizePass() : llvm::ModulePass(ID) {}
-  virtual llvm::StringRef getPassName() const;
-  virtual bool runOnModule(llvm::Module &M);
+  virtual llvm::StringRef getPassName() const override;
+  virtual bool runOnModule(llvm::Module &M) override;
 };
 } // namespace externalize
 #endif // EXTERNALIZEPASS_H
