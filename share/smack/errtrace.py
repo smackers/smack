@@ -88,7 +88,7 @@ def error_trace(verifier_output, verifier):
     return output
 
 
-def smackdOutput(result, output, verifier):
+def json_output_str(result, output, verifier):
     return json.dumps(json_output(result, output, verifier))
 
 
@@ -124,7 +124,9 @@ def json_output(result, output, verifier):
             'verifier': verifier,
             'passed?': True
         }
-    elif verifier == 'boogie':
+        return json_data
+
+    if verifier == 'boogie':
         traces = []
         traceP = re.compile(r"(\s*)(%s)\((\d+),\d+\):" % FILENAME)
         steps = re.findall(traceP, output)
