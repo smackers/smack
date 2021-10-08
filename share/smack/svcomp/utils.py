@@ -158,7 +158,7 @@ def verify_bpl_svcomp(args):
 def write_error_file(args, status, verifier_output):
   from smack.top import VProperty
   from smack.top import VResult
-  from smack.errtrace import smackdOutput
+  from smack.errtrace import json_output_str
   #return
   if status is VResult.UNKNOWN:
     return
@@ -168,7 +168,7 @@ def write_error_file(args, status, verifier_output):
   if args.error_file:
     error = None
     if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(smackdOutput(status, verifier_output), args, hasBug, status)
+      error = smackJsonToXmlGraph(json_output_str(status, verifier_output), args, hasBug, status)
     elif hasBug:
       error = smack.top.error_trace(verifier_output, 'corral')
     if error is not None:
