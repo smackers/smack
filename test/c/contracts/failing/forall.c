@@ -1,5 +1,5 @@
-#include "smack-contracts.h"
-#include "smack.h"
+#include <smack-contracts.h>
+#include <smack.h>
 #include <stdio.h>
 #include <stdlib.h>
 

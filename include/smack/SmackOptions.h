@@ -15,7 +15,6 @@ enum class LLVMAssumeType { none, use, check };
 class SmackOptions {
 public:
   static const llvm::cl::list<std::string> EntryPoints;
-  static const llvm::cl::list<std::string> CheckedFunctions;
 
   static const llvm::cl::opt<SmackWarnings::WarningLevel> WarningLevel;
   static const llvm::cl::opt<bool> ColoredWarnings;
@@ -37,8 +36,7 @@ public:
   static const llvm::cl::opt<bool> AddTiming;
   static const llvm::cl::opt<bool> WrappedIntegerEncoding;
 
-  static bool isEntryPoint(llvm::StringRef);
-  static bool shouldCheckFunction(llvm::StringRef);
+  static bool isEntryPoint(std::string);
 };
 } // namespace smack
 

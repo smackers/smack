@@ -35,6 +35,8 @@ def svcomp_frontend(input_file, args):
   args.clang_options += " -fbracket-depth=2048"
   args.clang_options += " -Wno-unknown-attributes"
   args.clang_options += " -DSVCOMP"
+  args.clang_options += " -DAVOID_NAME_CONFLICTS"
+  args.clang_options += " -DCUSTOM_VERIFIER_ASSERT"
   args.clang_options += " -DDISABLE_PTHREAD_ASSERTS"
   args.clang_options += " -include smack.h"
 
@@ -104,13 +106,13 @@ def verify_bpl_svcomp(args):
   corral_command += ["/trackAllVars"]
 
   verifier_output = smack.top.try_command(corral_command, timeout=time_limit)
-  result = smack.top.verification_result(verifier_output, 'corral')
+  result = smack.top.verification_result(verifier_output)
 
   if result in VResult.ERROR: #normal inlining
     heurTrace += "Found a bug during normal inlining.\n"
 
     if not args.quiet:
-      error = smack.top.error_trace(verifier_output, 'corral')
+      error = smack.top.error_trace(verifier_output, args)
       print(error)
 
   elif result is VResult.TIMEOUT: #normal inlining
@@ -158,7 +160,7 @@ def verify_bpl_svcomp(args):
 def write_error_file(args, status, verifier_output):
   from smack.top import VProperty
   from smack.top import VResult
-  from smack.errtrace import json_output_str
+  from smack.errtrace import smackdOutput
   #return
   if status is VResult.UNKNOWN:
     return
@@ -168,9 +170,9 @@ def write_error_file(args, status, verifier_output):
   if args.error_file:
     error = None
     if args.language == 'svcomp':
-      error = smackJsonToXmlGraph(json_output_str(status, verifier_output, 'corral', False), args, hasBug, status)
+      error = smackJsonToXmlGraph(smackdOutput(status, verifier_output), args, hasBug, status)
     elif hasBug:
-      error = smack.top.error_trace(verifier_output, 'corral')
+      error = smack.top.error_trace(verifier_output, args)
     if error is not None:
       with open(args.error_file, 'w') as f:
         f.write(error.decode('utf-8'))

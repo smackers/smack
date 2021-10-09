@@ -55,7 +55,7 @@ struct DebugOnlyOpt {
     SmallVector<StringRef, 8> dbgTypes;
     StringRef(Val).split(dbgTypes, ',', -1, false);
     for (auto dbgType : dbgTypes)
-      CurrentDebugType->push_back(dbgType.str());
+      CurrentDebugType->push_back(dbgType);
   }
 };
 } // namespace

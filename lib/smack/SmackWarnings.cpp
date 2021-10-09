@@ -54,40 +54,31 @@ std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
   return ret + "}";
 }
 
-void SmackWarnings::warnApproximate(std::string name, Block *currBlock,
-                                    const Instruction *i) {
-  processApproximate(
-      "approximating " + name +
-          " (can lead to both false alarms and missed detections)",
-      {}, currBlock, i);
-}
-
-void SmackWarnings::warnOverApproximate(std::string name,
-                                        UnsetFlagsT unsetFlags,
-                                        Block *currBlock, const Instruction *i,
-                                        FlagRelation rel) {
-  processApproximate("overapproximating " + name +
-                         " (can lead to false alarms)",
-                     unsetFlags, currBlock, i, rel);
-}
-
-void SmackWarnings::warnOverApproximate(std::string name,
-                                        RequiredFlagsT requiredFlags,
-                                        Block *currBlock, const Instruction *i,
-                                        FlagRelation rel) {
+void SmackWarnings::warnIfUnsound(std::string name,
+                                  RequiredFlagsT requiredFlags,
+                                  Block *currBlock, const Instruction *i,
+                                  bool ignore, FlagRelation rel) {
   if (!isSatisfied(requiredFlags, rel))
-    warnOverApproximate(name, getUnsetFlags(requiredFlags), currBlock, i, rel);
+    warnUnsound(name, getUnsetFlags(requiredFlags), currBlock, i, ignore);
 }
 
-void SmackWarnings::processApproximate(std::string description,
-                                       UnsetFlagsT unsetFlags, Block *currBlock,
-                                       const Instruction *i, FlagRelation rel) {
-  if (!isSufficientWarningLevel(WarningLevel::Approximate))
+void SmackWarnings::warnUnsound(std::string unmodeledOpName, Block *currBlock,
+                                const Instruction *i, bool ignore,
+                                FlagRelation rel) {
+  warnUnsound("unmodeled operation " + unmodeledOpName, UnsetFlagsT(),
+              currBlock, i, ignore, rel);
+}
+
+void SmackWarnings::warnUnsound(std::string name, UnsetFlagsT unsetFlags,
+                                Block *currBlock, const Instruction *i,
+                                bool ignore, FlagRelation rel) {
+  if (!isSufficientWarningLevel(WarningLevel::Unsound))
     return;
-  std::string beginning = buildDebugInfo(i);
-  std::string end = description + ";";
+  std::string beginning = std::string("llvm2bpl: ") + buildDebugInfo(i);
+  std::string end =
+      (ignore ? "unsoundly ignoring " : "over-approximating ") + name + ";";
   if (currBlock)
-    currBlock->addStmt(Stmt::comment(beginning + "SMACK warning: " + end));
+    currBlock->addStmt(Stmt::comment(beginning + "warning: " + end));
   std::string hint = "";
   if (!unsetFlags.empty())
     hint = (" try adding " + ((rel == FlagRelation::And ? "all the " : "any ") +
@@ -95,9 +86,22 @@ void SmackWarnings::processApproximate(std::string description,
   errs() << beginning;
   (SmackOptions::ColoredWarnings ? errs().changeColor(raw_ostream::MAGENTA)
                                  : errs())
-      << "SMACK warning: ";
+      << "warning: ";
   (SmackOptions::ColoredWarnings ? errs().resetColor() : errs())
       << end << hint << "\n";
+}
+
+void SmackWarnings::warnIfUnsound(std::string name, FlagT &requiredFlag,
+                                  Block *currBlock, const Instruction *i,
+                                  FlagRelation rel) {
+  warnIfUnsound(name, {&requiredFlag}, currBlock, i, false, rel);
+}
+
+void SmackWarnings::warnIfUnsound(std::string name, FlagT &requiredFlag1,
+                                  FlagT &requiredFlag2, Block *currBlock,
+                                  const Instruction *i, FlagRelation rel) {
+  warnIfUnsound(name, {&requiredFlag1, &requiredFlag2}, currBlock, i, false,
+                rel);
 }
 
 void SmackWarnings::warnInfo(std::string info) {

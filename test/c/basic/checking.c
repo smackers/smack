@@ -1,11 +1,10 @@
 #include "smack.h"
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 // @expect error
 // @checkbpl grep "call foo"
-// @checkout grep "checking.c(13,3)"
+// @checkout grep "checking.c(12,3)"
 
 void foo(void) {}
 

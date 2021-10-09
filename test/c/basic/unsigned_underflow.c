@@ -1,5 +1,4 @@
-#include "smack.h"
-#include <assert.h>
+#include <smack.h>
 
 // @expect verified
 // @flag --integer-encoding=wrapped-integer

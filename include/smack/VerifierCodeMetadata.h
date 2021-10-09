@@ -20,8 +20,8 @@ private:
 public:
   static char ID;
   VerifierCodeMetadata() : ModulePass(ID) {}
-  virtual bool runOnModule(Module &M) override;
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
+  virtual bool runOnModule(Module &M);
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
   void visitCallInst(CallInst &);
   void visitInstruction(Instruction &);
   static bool isMarked(const Instruction &I);

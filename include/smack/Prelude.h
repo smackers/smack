@@ -70,7 +70,7 @@ struct FpOp {
 // builtin functions templated by a function type. A function
 // of such type, when applied, returns an attribute
 template <typename ATTRT> struct BuiltinOp : public Op {
-  typedef const Attr *(*attrT)(...);
+  typedef const Attr *(*attrT)();
   attrT func;
   BuiltinOp(ATTRT func) : Op(Builtin), func((attrT)func) {}
   static bool classof(const Op *op) { return op->getOpType() == Builtin; }
@@ -79,7 +79,7 @@ template <typename ATTRT> struct BuiltinOp : public Op {
 // inlined functions templated by a function type. A function
 // of such type, when applied, returns an expression as the function body
 template <typename EXPRT> struct InlinedOp : public Op {
-  typedef const Expr *(*exprT)(...);
+  typedef const Expr *(*exprT)();
   exprT func;
   InlinedOp(EXPRT func) : Op(Inlined), func((exprT)func) {}
   static bool classof(const Op *op) { return op->getOpType() == Inlined; }
@@ -122,26 +122,26 @@ struct IntOpGen : public TypeGen {
 
   static const std::vector<unsigned> INTEGER_SIZES;
 
-  void generateArithOps(std::stringstream &s) const override;
-  void generatePreds(std::stringstream &s) const override;
-  void generateMemOps(std::stringstream &s) const override;
-  void generateConvOps(std::stringstream &s) const override;
-  void generateExtractValueFuncs(std::stringstream &s) const override;
+  void generateArithOps(std::stringstream &s) const;
+  void generatePreds(std::stringstream &s) const;
+  void generateMemOps(std::stringstream &s) const;
+  void generateConvOps(std::stringstream &s) const;
+  void generateExtractValueFuncs(std::stringstream &s) const;
   void generateBvIntConvs(std::stringstream &s) const;
-  void generate(std::stringstream &s) const override;
+  void generate(std::stringstream &s) const;
 };
 
 // generator class for pointers
 struct PtrOpGen : public TypeGen {
   PtrOpGen(Prelude &prelude) : TypeGen(prelude) {}
 
-  void generateArithOps(std::stringstream &s) const override;
-  void generatePreds(std::stringstream &s) const override;
-  void generateMemOps(std::stringstream &s) const override;
-  void generateConvOps(std::stringstream &s) const override;
-  void generateExtractValueFuncs(std::stringstream &s) const override;
+  void generateArithOps(std::stringstream &s) const;
+  void generatePreds(std::stringstream &s) const;
+  void generateMemOps(std::stringstream &s) const;
+  void generateConvOps(std::stringstream &s) const;
+  void generateExtractValueFuncs(std::stringstream &s) const;
   void generatePtrNumConvs(std::stringstream &s) const;
-  void generate(std::stringstream &s) const override;
+  void generate(std::stringstream &s) const;
 };
 
 // generator class for floats
@@ -155,25 +155,25 @@ struct FpOpGen : public TypeGen {
   static const std::map<unsigned, std::pair<unsigned, unsigned>> FP_LAYOUT;
   static const std::vector<unsigned> FP_BIT_WIDTHS;
 
-  void generateArithOps(std::stringstream &s) const override;
-  void generatePreds(std::stringstream &s) const override;
-  void generateMemOps(std::stringstream &s) const override;
-  void generateConvOps(std::stringstream &s) const override;
-  void generateExtractValueFuncs(std::stringstream &s) const override;
+  void generateArithOps(std::stringstream &s) const;
+  void generatePreds(std::stringstream &s) const;
+  void generateMemOps(std::stringstream &s) const;
+  void generateConvOps(std::stringstream &s) const;
+  void generateExtractValueFuncs(std::stringstream &s) const;
   void generateFpIntConv(std::stringstream &s) const;
-  void generate(std::stringstream &s) const override;
+  void generate(std::stringstream &s) const;
 };
 
 struct TypeDeclGen : public Gen {
   TypeDeclGen(Prelude &prelude) : Gen(prelude) {}
-  void generate(std::stringstream &s) const override;
+  void generate(std::stringstream &s) const;
 };
 
 struct ConstDeclGen : public Gen {
   ConstDeclGen(Prelude &prelude) : Gen(prelude) {}
   void generatePtrConstant(unsigned val, std::stringstream &s) const;
   void generateIntConstant(unsigned val, std::stringstream &s) const;
-  void generate(std::stringstream &s) const override;
+  void generate(std::stringstream &s) const;
 };
 
 struct MemDeclGen : public Gen {
@@ -181,7 +181,7 @@ struct MemDeclGen : public Gen {
   void generateMemoryMaps(std::stringstream &s) const;
   void generateAddrBoundsAndPred(std::stringstream &s) const;
   void generateGlobalAllocations(std::stringstream &s) const;
-  void generate(std::stringstream &s) const override;
+  void generate(std::stringstream &s) const;
 };
 
 class Prelude {

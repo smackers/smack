@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 
 // @expect error
 
@@ -2403,10 +2402,14 @@ NTSTATUS DiskPerfForwardIrpSynchronous(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       nextIrpSp->Control = 0;
     }
     if (s != NP) {
-      { errorFn(); }
+      {
+        errorFn();
+      }
     } else {
       if (compRegistered != 0) {
-        { errorFn(); }
+        {
+          errorFn();
+        }
       } else {
         compRegistered = 1;
         compFptr = &DiskPerfIrpCompletion;
@@ -2481,15 +2484,21 @@ NTSTATUS DiskPerfReadWrite(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     } else {
     }
     if (deviceExtension->CountersEnabled <= 0L) {
-      { tmp___0 = DiskPerfSendToNextDriver(DeviceObject, Irp); }
+      {
+        tmp___0 = DiskPerfSendToNextDriver(DeviceObject, Irp);
+      }
       return (tmp___0);
     } else {
       if ((int)deviceExtension->PhysicalDeviceNameBuffer[0] == 0) {
-        { tmp___0 = DiskPerfSendToNextDriver(DeviceObject, Irp); }
+        {
+          tmp___0 = DiskPerfSendToNextDriver(DeviceObject, Irp);
+        }
         return (tmp___0);
       } else {
         if ((unsigned int)partitionCounters == (unsigned int)((void *)0)) {
-          { tmp___0 = DiskPerfSendToNextDriver(DeviceObject, Irp); }
+          {
+            tmp___0 = DiskPerfSendToNextDriver(DeviceObject, Irp);
+          }
           return (tmp___0);
         } else {
         }
@@ -2508,10 +2517,14 @@ NTSTATUS DiskPerfReadWrite(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     } else {
     }
     if (s != NP) {
-      { errorFn(); }
+      {
+        errorFn();
+      }
     } else {
       if (compRegistered != 0) {
-        { errorFn(); }
+        {
+          errorFn();
+        }
       } else {
         compRegistered = 1;
         compFptr = &DiskPerfIoCompletion;
@@ -2566,7 +2579,9 @@ NTSTATUS DiskPerfIoCompletion(PDEVICE_OBJECT DeviceObject, PIRP Irp,
       queueLen = InterlockedDecrement(&deviceExtension->QueueDepth);
     }
     if (queueLen < 0L) {
-      { queueLen = InterlockedIncrement(&deviceExtension->QueueDepth); }
+      {
+        queueLen = InterlockedIncrement(&deviceExtension->QueueDepth);
+      }
     } else {
     }
     if (queueLen == 0L) {
@@ -2713,7 +2728,9 @@ NTSTATUS DiskPerfWmi(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
     deviceExtension = DeviceObject->DeviceExtension;
     wmilibContext = &deviceExtension->WmilibContext;
     if (wmilibContext->GuidCount == 0UL) {
-      { tmp = DiskPerfSendToNextDriver(DeviceObject, Irp); }
+      {
+        tmp = DiskPerfSendToNextDriver(DeviceObject, Irp);
+      }
       return (tmp);
     } else {
     }
@@ -2796,7 +2813,9 @@ NTSTATUS DiskPerfRegisterDevice(PDEVICE_OBJECT DeviceObject) {
           (void *)0, 0, &number, sizeof(number), 0, &event, &ioStatus);
     }
     if (!irp) {
-      { DiskPerfLogError(DeviceObject, 256, 0L, -1073479678L); }
+      {
+        DiskPerfLogError(DeviceObject, 256, 0L, -1073479678L);
+      }
       return (-1073741670L);
     } else {
     }
@@ -2829,7 +2848,9 @@ NTSTATUS DiskPerfRegisterDevice(PDEVICE_OBJECT DeviceObject) {
         output = tmp;
       }
       if (!output) {
-        { DiskPerfLogError(DeviceObject, 257, 0L, -1073479678L); }
+        {
+          DiskPerfLogError(DeviceObject, 257, 0L, -1073479678L);
+        }
         return (-1073741670L);
       } else {
       }
@@ -2864,7 +2885,9 @@ NTSTATUS DiskPerfRegisterDevice(PDEVICE_OBJECT DeviceObject) {
           output = tmp___0;
         }
         if (!output) {
-          { DiskPerfLogError(DeviceObject, 258, 0L, -1073479678L); }
+          {
+            DiskPerfLogError(DeviceObject, 258, 0L, -1073479678L);
+          }
           return (-1073741670L);
         } else {
         }
@@ -2921,7 +2944,9 @@ NTSTATUS DiskPerfRegisterDevice(PDEVICE_OBJECT DeviceObject) {
             sizeof(VOLUME_NUMBER), 0, &event, &ioStatus);
       }
       if (!irp) {
-        { DiskPerfLogError(DeviceObject, 265, 0L, -1073479678L); }
+        {
+          DiskPerfLogError(DeviceObject, 265, 0L, -1073479678L);
+        }
         return (-1073741670L);
       } else {
       }
@@ -2958,7 +2983,9 @@ NTSTATUS DiskPerfRegisterDevice(PDEVICE_OBJECT DeviceObject) {
     }
     { status = IoWMIRegistrationControl(DeviceObject, 1UL | registrationFlag); }
     if (!(status >= 0L)) {
-      { DiskPerfLogError(DeviceObject, 261, 0L, -1073479668L); }
+      {
+        DiskPerfLogError(DeviceObject, 261, 0L, -1073479668L);
+      }
     } else {
     }
     return (status);
@@ -3129,7 +3156,9 @@ NTSTATUS DiskperfWmiFunctionControl(PDEVICE_OBJECT DeviceObject, PIRP Irp,
     if (GuidIndex == 0UL) {
       if ((int)Function == 1) {
         if (Enable) {
-          { tmp = InterlockedIncrement(&deviceExtension->CountersEnabled); }
+          {
+            tmp = InterlockedIncrement(&deviceExtension->CountersEnabled);
+          }
           if (tmp == 1L) {
             if ((unsigned int)deviceExtension->DiskCounters !=
                 (unsigned int)((void *)0)) {
@@ -3352,7 +3381,9 @@ int main(void) {
             if (s != SKIP2) {
               if (s != IPC) {
                 if (s != DC) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                   goto _L___0;
                 }
@@ -3363,15 +3394,21 @@ int main(void) {
             _L___0: /* CIL Label */
               if (pended == 1) {
                 if (status != 259L) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                 }
               } else {
                 if (s == DC) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                   if (status != (NTSTATUS)lowerDriverReturn) {
-                    { errorFn(); }
+                    {
+                      errorFn();
+                    }
                   } else {
                   }
                 }
@@ -3811,7 +3848,9 @@ NTSTATUS IofCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {
@@ -3965,7 +4004,9 @@ NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason,
         customIrp = 0;
       } else {
         if (s == MPR3) {
-          { errorFn(); }
+          {
+            errorFn();
+          }
         } else {
         }
       }
@@ -4111,7 +4152,9 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         }
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {

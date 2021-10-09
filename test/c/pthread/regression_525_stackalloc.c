@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>

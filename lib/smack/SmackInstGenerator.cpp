@@ -117,7 +117,7 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
 
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst) {
-    StringRef name = Names[II.first];
+    std::string name = Names[II.first];
     if (name.find("smack.") == 0 || name.find("verifier.") == 0) {
       std::list<const Expr *> attrs;
       for (auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE;
@@ -127,14 +127,25 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
           attrs.push_back(Expr::lit((long long)value));
         } else if (auto *CI = dyn_cast<MDString>(*AI)) {
           auto value = CI->getString();
-          attrs.push_back(Expr::lit(value.str()));
+          attrs.push_back(Expr::lit(value));
         } else {
           llvm_unreachable("unexpected attribute type in smack metadata");
         }
       }
-      B->addStmt(Stmt::annot(Attr::attr(name.str(), attrs)));
+      B->addStmt(Stmt::annot(Attr::attr(name, attrs)));
     }
   }
+}
+
+bool isRustPanic(const std::string &name) {
+  for (const auto &panic : Naming::RUST_PANICS) {
+    // We are interested in exact functional matches.
+    // Rust mangled names include a 17 byte hash at the end.
+    if (name.find(panic) == 0 && name.size() == panic.size() + 17) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void SmackInstGenerator::processInstruction(llvm::Instruction &inst) {
@@ -305,11 +316,13 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst &si) {
 void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst &ii) {
   processInstruction(ii);
   llvm::Function *f = ii.getCalledFunction();
-  if (f)
+  if (f) {
     emit(rep->call(f, ii));
-  else
-    llvm_unreachable("Unexpected invoke instruction.");
-
+  } else {
+    // llvm_unreachable("Unexpected invoke instruction.");
+    SmackWarnings::warnUnsound("invoke instruction", currBlock, &ii,
+                               ii.getType()->isVoidTy());
+  }
   std::vector<std::pair<const Expr *, llvm::BasicBlock *>> targets;
   targets.push_back(
       {Expr::not_(Expr::id(Naming::EXN_VAR)), ii.getNormalDest()});
@@ -339,16 +352,16 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst &ii) {
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
   processInstruction(I);
   if (rep->isBitwiseOp(&I) && I.getType()->getIntegerBitWidth() > 1)
-    SmackWarnings::warnOverApproximate(
-        std::string("bitwise operation ") + I.getOpcodeName(),
-        {&SmackOptions::BitPrecise}, currBlock, &I);
+    SmackWarnings::warnIfUnsound(std::string("bitwise operation ") +
+                                     I.getOpcodeName(),
+                                 SmackOptions::BitPrecise, currBlock, &I);
   if (rep->isFpArithOp(&I))
-    SmackWarnings::warnOverApproximate(
-        std::string("floating-point operation ") + I.getOpcodeName(),
-        {&SmackOptions::FloatEnabled}, currBlock, &I);
+    SmackWarnings::warnIfUnsound(std::string("floating-point arithmetic ") +
+                                     I.getOpcodeName(),
+                                 SmackOptions::FloatEnabled, currBlock, &I);
 
   const Expr *E;
-  if (isa<FixedVectorType>(I.getType())) {
+  if (isa<VectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto Y = I.getOperand(1);
     auto D = VectorOperations(rep).binary(&I);
@@ -364,12 +377,12 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
 /******************************************************************************/
 
 void SmackInstGenerator::visitUnaryOperator(llvm::UnaryOperator &I) {
-  assert(I.getOpcode() == Instruction::FNeg &&
-         !isa<FixedVectorType>(I.getType()) && "Unsupported unary operation!");
+  assert(I.getOpcode() == Instruction::FNeg && !isa<VectorType>(I.getType()) &&
+         "Unsupported unary operation!");
   processInstruction(I);
-  SmackWarnings::warnOverApproximate(
-      std::string("floating-point operation ") + I.getOpcodeName(),
-      {&SmackOptions::FloatEnabled}, currBlock, &I);
+  SmackWarnings::warnIfUnsound(std::string("floating-point arithmetic ") +
+                                   I.getOpcodeName(),
+                               SmackOptions::FloatEnabled, currBlock, &I);
   emit(Stmt::assign(rep->expr(&I), rep->uop(&I)));
 }
 
@@ -485,7 +498,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
   const Expr *E;
-  if (isa<FixedVectorType>(T->getElementType())) {
+  if (isa<VectorType>(T->getElementType())) {
     auto D = VectorOperations(rep).load(P);
     E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
   } else {
@@ -509,7 +522,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   const llvm::Value *V = si.getValueOperand()->stripPointerCastsAndAliases();
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
-  if (isa<FixedVectorType>(V->getType())) {
+  if (isa<VectorType>(V->getType())) {
     auto D = VectorOperations(rep).store(P);
     auto M = Expr::id(rep->memPath(P));
     auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
@@ -583,7 +596,7 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
 void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
   processInstruction(I);
   const Expr *E;
-  if (isa<FixedVectorType>(I.getType())) {
+  if (isa<VectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto D = VectorOperations(rep).cast(&I);
     E = Expr::fn(D->getName(), rep->expr(X));
@@ -607,7 +620,7 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
 void SmackInstGenerator::visitCmpInst(llvm::CmpInst &I) {
   processInstruction(I);
   const Expr *E;
-  if (isa<FixedVectorType>(I.getType())) {
+  if (isa<VectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto Y = I.getOperand(1);
     auto D = VectorOperations(rep).cmp(&I);
@@ -634,49 +647,42 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
   processInstruction(ci);
 
   if (ci.isInlineAsm()) {
-    SmackWarnings::warnApproximate("inline asm call " + i2s(ci), currBlock,
-                                   &ci);
+    SmackWarnings::warnUnsound("inline asm call " + i2s(ci), currBlock, &ci,
+                               ci.getType()->isVoidTy());
     emit(Stmt::skip());
     return;
   }
 
   Function *f = ci.getCalledFunction();
   if (!f) {
-    assert(ci.getCalledOperand() && "Called value is null");
-    f = cast<Function>(ci.getCalledOperand()->stripPointerCastsAndAliases());
+    assert(ci.getCalledValue() && "Called value is null");
+    f = cast<Function>(ci.getCalledValue()->stripPointerCastsAndAliases());
   }
 
-  StringRef name = f->hasName() ? f->getName() : "";
+  std::string name = f->hasName() ? f->getName() : "";
 
-  if (SmackOptions::RustPanics && Naming::isRustPanic(name) &&
-      SmackOptions::shouldCheckFunction(
-          ci.getParent()->getParent()->getName())) {
+  if (SmackOptions::RustPanics && isRustPanic(name)) {
     // Convert Rust's panic functions into assertion violations
     emit(Stmt::assert_(Expr::lit(false),
                        {Attr::attr(Naming::RUST_PANIC_ANNOTATION)}));
-  } else if (name == "__VERIFIER_assert" &&
-             !SmackOptions::shouldCheckFunction(
-                 ci.getParent()->getParent()->getName())) {
-    // Skip this assertion if we shouldn't check in the parent function
-    return;
 
-  } else if (name.find(Naming::VALUE_PROC) != StringRef::npos) {
+  } else if (name.find(Naming::VALUE_PROC) != std::string::npos) {
     emit(rep->valueAnnotation(ci));
 
-  } else if (name.find(Naming::RETURN_VALUE_PROC) != StringRef::npos) {
+  } else if (name.find(Naming::RETURN_VALUE_PROC) != std::string::npos) {
     emit(rep->returnValueAnnotation(ci));
 
-  } else if (name.find(Naming::MOD_PROC) != StringRef::npos) {
+  } else if (name.find(Naming::MOD_PROC) != std::string::npos) {
     proc->getModifies().push_back(rep->code(ci));
 
-  } else if (name.find(Naming::CODE_PROC) != StringRef::npos) {
+  } else if (name.find(Naming::CODE_PROC) != std::string::npos) {
     emit(Stmt::code(rep->code(ci)));
 
-  } else if (name.find(Naming::DECL_PROC) != StringRef::npos) {
+  } else if (name.find(Naming::DECL_PROC) != std::string::npos) {
     std::string code = rep->code(ci);
     proc->getDeclarations().push_back(Decl::code(code, code));
 
-  } else if (name.find(Naming::TOP_DECL_PROC) != StringRef::npos) {
+  } else if (name.find(Naming::TOP_DECL_PROC) != std::string::npos) {
     std::string decl = rep->code(ci);
     rep->getProgram()->getDeclarations().push_back(Decl::code(decl, decl));
     if (VAR_DECL.match(decl)) {
@@ -742,7 +748,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
       args.push_back(rep->expr(V));
     for (auto m : rep->memoryMaps())
       args.push_back(Expr::id(m.first));
-    auto E = Expr::fn(F->getName().str(), args);
+    auto E = Expr::fn(F->getName(), args);
     if (name == Naming::CONTRACT_REQUIRES)
       proc->getRequires().push_back(E);
     else if (name == Naming::CONTRACT_ENSURES)
@@ -819,8 +825,8 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
 void SmackInstGenerator::visitCallBrInst(llvm::CallBrInst &cbi) {
   processInstruction(cbi);
-  SmackWarnings::warnApproximate("callbr instruction " + i2s(cbi), currBlock,
-                                 &cbi);
+  SmackWarnings::warnUnsound("callbr instruction " + i2s(cbi), currBlock, &cbi,
+                             cbi.getType()->isVoidTy());
   emit(Stmt::skip());
 }
 
@@ -870,7 +876,7 @@ void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst &lpi) {
   emit(Stmt::assign(rep->expr(&lpi), Expr::id(Naming::EXN_VAL_VAR)));
   if (lpi.isCleanup())
     emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
-  SmackWarnings::warnApproximate("landingpad clauses", currBlock, &lpi);
+  SmackWarnings::warnUnsound("landingpad clauses", currBlock, &lpi, true);
 }
 
 /******************************************************************************/
@@ -885,6 +891,12 @@ void SmackInstGenerator::visitMemCpyInst(llvm::MemCpyInst &mci) {
 void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst &msi) {
   processInstruction(msi);
   emit(rep->memset(msi));
+}
+
+void SmackInstGenerator::generateUnModeledCall(llvm::CallInst *ci) {
+  SmackWarnings::warnUnsound(ci->getCalledFunction()->getName(), currBlock, ci,
+                             ci->getType()->isVoidTy());
+  emit(rep->call(ci->getCalledFunction(), *ci));
 }
 
 void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
@@ -902,9 +914,9 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           if (satisfied)
             modelGenFunc(ci);
           else {
-            SmackWarnings::warnOverApproximate(
+            SmackWarnings::warnUnsound(
                 "call to " + ci->getCalledFunction()->getName().str(),
-                unsetFlags, currBlock, ci, rel);
+                unsetFlags, currBlock, ci, false, rel);
             emit(rep->call(ci->getCalledFunction(), *ci));
           }
         };
@@ -922,8 +934,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
       auto llvmTrue =
           SmackOptions::BitPrecise ? Expr::lit(1, 1) : Expr::lit(1LL);
       auto chkStmt = Expr::eq(arg, llvmTrue);
-      if (SmackOptions::LLVMAssumes == LLVMAssumeType::check &&
-          SmackOptions::shouldCheckFunction(ci->getFunction()->getName()))
+      if (SmackOptions::LLVMAssumes == LLVMAssumeType::check)
         emit(Stmt::assert_(chkStmt));
       else
         emit(Stmt::assume(chkStmt));
@@ -1218,11 +1229,8 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   auto it = stmtMap.find(ii.getIntrinsicID());
   if (it != stmtMap.end())
     it->second(&ii);
-  else {
-    SmackWarnings::warnApproximate(ii.getCalledFunction()->getName().str(),
-                                   currBlock, &ii);
-    emit(rep->call(ii.getCalledFunction(), ii));
-  }
+  else
+    generateUnModeledCall(&ii);
 }
 
 } // namespace smack

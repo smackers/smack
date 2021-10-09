@@ -1,6 +1,5 @@
-#include "smack.h"
-#include <assert.h>
 #include <pthread.h>
+#include <smack.h>
 
 // Ensures return values from multiple threads can be
 // held simultaneously.

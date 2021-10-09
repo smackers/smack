@@ -47,6 +47,8 @@ private:
   const Stmt *recordProcedureCall(const llvm::Value *V,
                                   std::list<const Attr *> attrs);
 
+  void generateUnModeledCall(llvm::CallInst *ci);
+
 public:
   void emit(const Stmt *s);
 

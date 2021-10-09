@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 
 // @expect error
 
@@ -2065,10 +2064,14 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                    * event, 0, 0); */ /* INLINED */
                                                 }
                                                   if (s != NP) {
-                                                    { errorFn(); }
+                                                    {
+                                                      errorFn();
+                                                    }
                                                   } else {
                                                     if (compRegistered != 0) {
-                                                      { errorFn(); }
+                                                      {
+                                                        errorFn();
+                                                      }
                                                     } else {
                                                       compRegistered = 1;
                                                       compFptr =
@@ -2136,10 +2139,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation =
-                                                        (CHAR)((int)Irp
-                                                                   ->CurrentLocation +
-                                                               1);
+                                                    Irp->CurrentLocation = (CHAR)(
+                                                        (int)Irp
+                                                            ->CurrentLocation +
+                                                        1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2158,10 +2161,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation =
-                                                        (CHAR)((int)Irp
-                                                                   ->CurrentLocation +
-                                                               1);
+                                                    Irp->CurrentLocation = (CHAR)(
+                                                        (int)Irp
+                                                            ->CurrentLocation +
+                                                        1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2203,10 +2206,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation =
-                                                        (CHAR)((int)Irp
-                                                                   ->CurrentLocation +
-                                                               1);
+                                                    Irp->CurrentLocation = (CHAR)(
+                                                        (int)Irp
+                                                            ->CurrentLocation +
+                                                        1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2573,13 +2576,17 @@ int main(void) {
             _L___0: /* CIL Label */
               if (pended == 1) {
                 if (status != 259L) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                 }
               } else {
                 if (s == DC) {
                   if (status == 259L) {
-                    { errorFn(); }
+                    {
+                      errorFn();
+                    }
                   } else {
                   }
                 } else {
@@ -3016,7 +3023,9 @@ NTSTATUS IofCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         compRetStatus = tmp;
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {
@@ -3170,7 +3179,9 @@ NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason,
         customIrp = 0;
       } else {
         if (s == MPR3) {
-          { errorFn(); }
+          {
+            errorFn();
+          }
         } else {
         }
       }
@@ -3305,7 +3316,9 @@ NTSTATUS PoCallDriver(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
         compRetStatus = tmp;
       }
       if ((long)compRetStatus == -1073741802L) {
-        { stubMoreProcessingRequired(); }
+        {
+          stubMoreProcessingRequired();
+        }
       } else {
       }
     } else {

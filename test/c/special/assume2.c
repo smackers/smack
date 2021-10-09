@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 
 // @expect verified
 // @flag --llvm-assumes=use

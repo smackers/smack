@@ -15,8 +15,8 @@ class IntegerOverflowChecker : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
   IntegerOverflowChecker() : llvm::ModulePass(ID) {}
-  virtual llvm::StringRef getPassName() const override;
-  virtual bool runOnModule(llvm::Module &m) override;
+  virtual llvm::StringRef getPassName() const;
+  virtual bool runOnModule(llvm::Module &m);
 
 private:
   static const std::map<std::string, llvm::Instruction::BinaryOps>

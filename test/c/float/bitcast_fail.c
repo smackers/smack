@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 
 // @flag --integer-encoding=bit-vector --clang-options="-fno-strict-aliasing"
 // @expect error

@@ -1,6 +1,5 @@
-#include "smack.h"
-#include <assert.h>
 #include <pthread.h>
+#include <smack.h>
 
 // Shows join.c fails when parent doesn't wait for child before x++ call
 // @expect error

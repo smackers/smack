@@ -45,7 +45,7 @@ void __VERIFIER_assume(int x) {
   __SMACK_code("assume @ != $0;", x);
 }
 
-#ifndef SVCOMP
+#ifndef CUSTOM_VERIFIER_ASSERT
 void __VERIFIER_assert(int x) {
 #if !DISABLE_SMACK_ASSERTIONS
   __SMACK_dummy(x);

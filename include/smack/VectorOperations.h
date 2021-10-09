@@ -23,8 +23,8 @@ class VectorOperations {
 
   FuncDecl *cast(unsigned OpCode, Type *SrcTy, Type *DstTy);
   Decl *inverseAxiom(unsigned OpCode, Type *SrcTy, Type *DstTy);
-  FuncDecl *binary(unsigned OpCode, FixedVectorType *T);
-  FuncDecl *cmp(CmpInst::Predicate P, FixedVectorType *T);
+  FuncDecl *binary(unsigned OpCode, VectorType *T);
+  FuncDecl *cmp(CmpInst::Predicate P, VectorType *T);
 
 public:
   VectorOperations(SmackRep *rep) : rep(rep) {}

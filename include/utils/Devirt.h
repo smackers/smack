@@ -47,35 +47,37 @@ namespace llvm {
       const DataLayout * TD;
 
       // Worklist of call sites to transform
-      std::vector<CallBase *> Worklist;
+      std::vector<Instruction *> Worklist;
 
       // A cache of indirect call targets that have been converted already
       std::map<const Function *, std::set<const Function *> > bounceCache;
 
     protected:
-      void makeDirectCall (CallBase *CS);
-      Function* buildBounce (CallBase *CS,std::vector<const Function*>& Targets);
-      const Function* findInCache (const CallBase *CS,
+      void makeDirectCall (CallSite & CS);
+      Function* buildBounce (CallSite cs,std::vector<const Function*>& Targets);
+      const Function* findInCache (const CallSite & CS,
                                    std::set<const Function*>& Targets);
 
     public:
       static char ID;
       Devirtualize() : ModulePass(ID) {}
 
-      virtual bool runOnModule(Module & M) override;
+      virtual bool runOnModule(Module & M);
 
-      virtual void getAnalysisUsage(AnalysisUsage &AU) const override{
+      virtual void getAnalysisUsage(AnalysisUsage &AU) const {
         AU.addRequired<seadsa::CompleteCallGraph>();
       }
 
       // Visitor methods for analyzing instructions
       //void visitInstruction(Instruction &I);
-      void processCallSite(CallBase *CS);
+      void processCallSite(CallSite &CS);
       void visitCallInst(CallInst &CI) {
-        processCallSite(&CI);
+        CallSite CS(&CI);
+        processCallSite(CS);
       }
       void visitInvokeInst(InvokeInst &II) {
-        processCallSite(&II);
+        CallSite CS(&II);
+        processCallSite(CS);
       }
   };
 }

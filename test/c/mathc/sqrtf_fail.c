@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 #include <math.h>
 
 // @expect error

@@ -127,25 +127,24 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
       if (auto ci = dyn_cast<CallInst>(&*I)) {
         Function *f = ci->getCalledFunction();
         if (f && f->hasName()) {
-          auto fn = f->getName();
+          std::string fn = f->getName();
           if (fn.find("__ubsan_handle_shift_out_of_bounds") !=
-                  StringRef::npos ||
-              fn.find("__ubsan_handle_divrem_overflow") != StringRef::npos) {
+                  std::string::npos ||
+              fn.find("__ubsan_handle_divrem_overflow") != std::string::npos) {
             // If the call to __ubsan_handle_* is reachable,
             // then an overflow is possible.
             if (SmackOptions::IntegerOverflow) {
               // Add check for UBSan left shift/signed division when needed
               ConstantInt *flag =
                   ConstantInt::getTrue(ci->getFunction()->getContext());
-              if (SmackOptions::shouldCheckFunction(F.getName()))
-                addCheck(co, flag, ci);
+              addCheck(co, flag, ci);
               addBlockingAssume(va, flag, ci);
               ci->replaceAllUsesWith(flag);
               instToErase.push_back(ci);
             }
           }
           SmallVector<StringRef, 4> info;
-          if (OVERFLOW_INTRINSICS.match(fn, &info)) {
+          if (OVERFLOW_INTRINSICS.match(f->getName(), &info)) {
             /*
              * If ei is an ExtractValueInst whose value flows from an LLVM
              * checked value intrinsic f, then we do the following:
@@ -159,13 +158,12 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
              * - Finally, an assumption about the value of the flag is created
              *   to block erroneous checking of paths after the overflow check.
              */
-            SDEBUG(errs() << "Processing intrinsic: " << fn << "\n");
+            SDEBUG(errs() << "Processing intrinsic: " << f->getName().str()
+                          << "\n");
             assert(info.size() == 4 && "Must capture three matched strings.");
             bool isSigned = (info[1] == "s");
-            std::string op = info[2].str();
-            unsigned bits = 0;
-            auto res = info[3].getAsInteger(10, bits);
-            assert(!res && "Invalid bit widths.");
+            std::string op = info[2];
+            int bits = std::stoi(info[3]);
             Value *eo1 =
                 extendBitWidth(ci->getArgOperand(0), bits, isSigned, ci);
             Value *eo2 =
@@ -177,8 +175,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                 INSTRUCTION_TABLE.at(op), eo1, eo2, "", ci);
             Value *r = createResult(ai, bits, &*I);
             BinaryOperator *flag = createFlag(ai, bits, isSigned, ci);
-            if (SmackOptions::IntegerOverflow &&
-                SmackOptions::shouldCheckFunction(F.getName()))
+            if (SmackOptions::IntegerOverflow)
               addCheck(co, flag, ci);
             for (auto U : ci->users()) {
               if (ExtractValueInst *ei = dyn_cast<ExtractValueInst>(U)) {

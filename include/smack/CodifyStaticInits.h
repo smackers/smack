@@ -17,8 +17,8 @@ public:
   static char ID;
 
   CodifyStaticInits() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module &M) override;
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+  virtual bool runOnModule(llvm::Module &M);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
 
 llvm::Pass *createCodifyStaticInitsPass();

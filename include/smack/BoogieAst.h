@@ -85,7 +85,7 @@ private:
 public:
   BinExpr(const Binary b, const Expr *l, const Expr *r)
       : op(b), lhs(l), rhs(r) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class FunExpr : public Expr {
@@ -94,7 +94,7 @@ class FunExpr : public Expr {
 
 public:
   FunExpr(std::string f, std::list<const Expr *> xs) : fun(f), args(xs) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class BoolLit : public Expr {
@@ -102,7 +102,7 @@ class BoolLit : public Expr {
 
 public:
   BoolLit(bool b) : val(b) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class RModeLit : public Expr {
@@ -110,7 +110,7 @@ class RModeLit : public Expr {
 
 public:
   RModeLit(RModeKind v) : val(v) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class IntLit : public Expr {
@@ -128,7 +128,7 @@ public:
     s << v;
     val = s.str();
   }
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class BvLit : public Expr {
@@ -142,7 +142,7 @@ public:
     s << v;
     val = s.str();
   }
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class FPLit : public Expr {
@@ -158,7 +158,7 @@ public:
       : neg(n), sig(s), expo(e), sigSize(ss), expSize(es) {}
   FPLit(std::string v, unsigned ss, unsigned es)
       : specialValue(v), sigSize(ss), expSize(es) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class StringLit : public Expr {
@@ -166,7 +166,7 @@ class StringLit : public Expr {
 
 public:
   StringLit(std::string v) : val(v) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class NegExpr : public Expr {
@@ -174,7 +174,7 @@ class NegExpr : public Expr {
 
 public:
   NegExpr(const Expr *e) : expr(e) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class NotExpr : public Expr {
@@ -182,7 +182,7 @@ class NotExpr : public Expr {
 
 public:
   NotExpr(const Expr *e) : expr(e) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class QuantExpr : public Expr {
@@ -197,7 +197,7 @@ private:
 public:
   QuantExpr(Quantifier q, std::list<Binding> vs, const Expr *e)
       : quant(q), vars(vs), expr(e) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class SelExpr : public Expr {
@@ -208,7 +208,7 @@ public:
   SelExpr(const Expr *a, std::list<const Expr *> i) : base(a), idxs(i) {}
   SelExpr(const Expr *a, const Expr *i)
       : base(a), idxs(std::list<const Expr *>(1, i)) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class UpdExpr : public Expr {
@@ -221,7 +221,7 @@ public:
       : base(a), idxs(i), val(v) {}
   UpdExpr(const Expr *a, const Expr *i, const Expr *v)
       : base(a), idxs(std::list<const Expr *>(1, i)), val(v) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class VarExpr : public Expr {
@@ -230,7 +230,7 @@ class VarExpr : public Expr {
 public:
   VarExpr(std::string v) : var(v) {}
   std::string name() const { return var; }
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class IfThenElseExpr : public Expr {
@@ -241,7 +241,7 @@ class IfThenElseExpr : public Expr {
 public:
   IfThenElseExpr(const Expr *c, const Expr *t, const Expr *e)
       : cond(c), trueValue(t), falseValue(e) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class BvExtract : public Expr {
@@ -252,7 +252,7 @@ class BvExtract : public Expr {
 public:
   BvExtract(const Expr *var, const Expr *upper, const Expr *lower)
       : var(var), upper(upper), lower(lower) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class BvConcat : public Expr {
@@ -261,7 +261,7 @@ class BvConcat : public Expr {
 
 public:
   BvConcat(const Expr *left, const Expr *right) : left(left), right(right) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class Attr {
@@ -343,7 +343,7 @@ class AssertStmt : public Stmt {
 public:
   AssertStmt(const Expr *e, std::list<const Attr *> ax)
       : Stmt(ASSERT), expr(e), attrs(ax) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == ASSERT; }
 };
 
@@ -354,7 +354,7 @@ class AssignStmt : public Stmt {
 public:
   AssignStmt(std::list<const Expr *> lhs, std::list<const Expr *> rhs)
       : Stmt(ASSIGN), lhs(lhs), rhs(rhs) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == ASSIGN; }
 };
 
@@ -372,7 +372,7 @@ public:
     }
     return false;
   }
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == ASSUME; }
 };
 
@@ -387,7 +387,7 @@ public:
            std::list<const Expr *> args, std::list<std::string> rets)
       : Stmt(CALL), proc(p), attrs(attrs), params(args), returns(rets) {}
 
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == CALL; }
 };
 
@@ -396,7 +396,7 @@ class Comment : public Stmt {
 
 public:
   Comment(std::string s) : Stmt(COMMENT), str(s) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == COMMENT; }
 };
 
@@ -405,7 +405,7 @@ class GotoStmt : public Stmt {
 
 public:
   GotoStmt(std::list<std::string> ts) : Stmt(GOTO), targets(ts) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == GOTO; }
 };
 
@@ -414,7 +414,7 @@ class HavocStmt : public Stmt {
 
 public:
   HavocStmt(std::list<std::string> vs) : Stmt(HAVOC), vars(vs) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == HAVOC; }
 };
 
@@ -423,7 +423,7 @@ class ReturnStmt : public Stmt {
 
 public:
   ReturnStmt(const Expr *e = nullptr) : Stmt(RETURN), expr(e) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == RETURN; }
 };
 
@@ -432,7 +432,7 @@ class CodeStmt : public Stmt {
 
 public:
   CodeStmt(std::string s) : Stmt(CODE), code(s) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Stmt *S) { return S->getKind() == CODE; }
 };
 
@@ -494,7 +494,7 @@ class TypeDecl : public Decl {
 public:
   TypeDecl(std::string n, std::string t, std::list<const Attr *> ax)
       : Decl(TYPE, n, ax), alias(t) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == TYPE; }
 };
 
@@ -504,7 +504,7 @@ class AxiomDecl : public Decl {
 
 public:
   AxiomDecl(std::string n, const Expr *e) : Decl(AXIOM, n, {}), expr(e) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == AXIOM; }
 };
 
@@ -515,7 +515,7 @@ class ConstDecl : public Decl {
 public:
   ConstDecl(std::string n, std::string t, std::list<const Attr *> ax, bool u)
       : Decl(CONSTANT, n, ax), type(t), unique(u) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == CONSTANT; }
 };
 
@@ -528,7 +528,7 @@ public:
   FuncDecl(std::string n, std::list<const Attr *> ax, std::list<Binding> ps,
            std::string t, const Expr *b)
       : Decl(FUNCTION, n, ax), params(ps), type(t), body(b) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == FUNCTION; }
 };
 
@@ -537,7 +537,7 @@ class VarDecl : public Decl {
 
 public:
   VarDecl(std::string n, std::string t) : Decl(VARIABLE, n, {}), type(t) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == VARIABLE; }
 };
 
@@ -595,7 +595,7 @@ public:
 class CodeExpr : public Expr, public CodeContainer {
 public:
   CodeExpr(DeclarationList ds, BlockList bs) : CodeContainer(ds, bs) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
 };
 
 class ProcDecl : public Decl, public CodeContainer {
@@ -630,7 +630,7 @@ public:
   spec_iterator ensures_end() { return ensures.end(); }
   SpecificationList &getEnsures() { return ensures; }
 
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == PROCEDURE; }
 };
 
@@ -639,7 +639,7 @@ class CodeDecl : public Decl {
 
 public:
   CodeDecl(std::string name, std::string s) : Decl(CODE, name, {}), code(s) {}
-  void print(std::ostream &os) const override;
+  void print(std::ostream &os) const;
   static bool classof(const Decl *D) { return D->getKind() == CODE; }
 };
 

@@ -1,7 +1,5 @@
 #![crate_type = "staticlib"]
 
-use std::alloc::Layout;
-
 #[cfg(verifier = "smack")]
 extern "C" {
     pub fn __VERIFIER_assert(x: i32);
@@ -19,8 +17,6 @@ extern "C" {
     pub fn malloc(size: usize) -> *mut u8;
     pub fn __VERIFIER_memcpy(dest: *mut u8, src: *mut u8, count: usize) -> *mut u8;
     pub fn free(ptr: *mut u8);
-    pub fn memset(ptr: *mut u8, ch: i32, count: usize);
-    pub fn realloc(ptr: *mut u8, new_size: usize) -> *mut u8;
 }
 
 #[macro_export]
@@ -147,59 +143,6 @@ make_verifier_nondet!(isize, __VERIFIER_nondet_i64);
 make_verifier_nondet!(usize, __VERIFIER_nondet_u64);
 make_verifier_nondet!(f32, __VERIFIER_nondet_float);
 make_verifier_nondet!(f64, __VERIFIER_nondet_double);
-
-/* Rust memory function models. */
-#[no_mangle]
-pub unsafe fn __smack_rust_std_alloc(layout: Layout) -> *mut u8 {
-    __smack_rust_prim_alloc(layout.size(), layout.align())
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_std_alloc_zeroed(layout: Layout) -> *mut u8 {
-    __smack_rust_prim_alloc(layout.size(), layout.align())
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_std_dealloc(ptr: *mut u8, layout: Layout) {
-    __smack_rust_prim_dealloc(ptr, layout.size(), layout.align())
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_std_realloc(ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-    __smack_rust_prim_realloc(ptr, layout.size(), layout.align(), new_size)
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_prim_alloc(size: usize, _align: usize) -> *mut u8 {
-    // Currently ignores alignment
-    malloc(size)
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_prim_alloc_zeroed(size: usize, _align: usize) -> *mut u8 {
-    // Currently ignores alignment
-    let result = malloc(size);
-    memset(result, 0, size);
-    result
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_prim_dealloc(ptr: *mut u8, _size: usize, _align: usize) {
-    // Currently ignoring size and alignment
-    free(ptr);
-}
-
-#[no_mangle]
-pub unsafe fn __smack_rust_prim_realloc(
-    ptr: *mut u8,
-    _old_size: usize,
-    _align: usize,
-    new_size: usize,
-) -> *mut u8 {
-    // Needs proper implementation of realloc
-    // Ignores size and alignment
-    realloc(ptr, new_size)
-}
 
 #[cfg(not(verifier = "smack"))]
 #[cfg(feature = "std")]

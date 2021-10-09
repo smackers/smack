@@ -21,8 +21,8 @@ private:
 public:
   static char ID;
   SimplifyLibCalls() : FunctionPass(ID) {}
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
-  virtual bool runOnFunction(Function &F) override;
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+  virtual bool runOnFunction(Function &F);
   void visitCallInst(CallInst &);
 };
 } // namespace smack

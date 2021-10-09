@@ -6,17 +6,14 @@ import shlex
 import subprocess
 import signal
 import functools
-import copy  # for making copies of args to pass to threads
-import multiprocessing  # added import for threads
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files, \
-    llvm_exact_bin
+from .utils import temporary_file, try_command, remove_temp_files
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
-from .errtrace import error_trace, json_output_str
+from .errtrace import error_trace, smackdOutput
 
-VERSION = '2.7.1'
+VERSION = '2.6.3'
 
 
 class VResult(Flag):
@@ -85,7 +82,7 @@ class VResult(Flag):
         if self is VResult.VERIFIED:
             return ('SMACK found no errors'
                     + ('' if args.modular else ' with unroll bound %s'
-                                               % args.unroll) + '.')
+                        % args.unroll) + '.')
         elif self in VResult.ERROR:
             description = self.description()
             return ('SMACK found an error'
@@ -250,7 +247,6 @@ def validate_input_files(files):
             exit_with_error(
                 "Unexpected source file extension '%s'" %
                 file_extension)
-
     list(map(validate_input_file, files))
 
 
@@ -313,13 +309,12 @@ def arguments():
         type=str,
         help='limit debugging output to given MODULES')
 
-    noise_group.add_argument('--warn', default="approximate",
-                             choices=['silent', 'approximate', 'info'],
+    noise_group.add_argument('--warn', default="unsound",
+                             choices=['silent', 'unsound', 'info'],
                              help='''enable certain type of warning messages
             (silent: no warning messages;
-            approximate: warnings about introduced approximations;
-            info: warnings about introduced approximations and
-            translation information)
+            unsound: warnings about unsoundness;
+            info: warnings about unsoundness and translation information)
             [default: %(default)s]''')
 
     parser.add_argument(
@@ -331,9 +326,6 @@ def arguments():
 
     parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
                         type=str, help='save error trace/witness to FILE')
-
-    parser.add_argument('--json-file', metavar='FILE', default=None,
-                        type=str, help='generate JSON output to FILE')
 
     frontend_group = parser.add_argument_group('front-end options')
 
@@ -478,16 +470,6 @@ def arguments():
         help='specify top-level procedures [default: %(default)s]')
 
     translate_group.add_argument(
-        '--checked-functions',
-        metavar='PROC',
-        nargs='+',
-        default=[],
-        help='''specify functions on which to do property checking.
-                These can be specified as extended regular expressions.
-                NOTE: a regular expression must match the entire
-                function name. [default: everything]''')
-
-    translate_group.add_argument(
         '--check',
         metavar='PROPERTY',
         nargs='+',
@@ -535,7 +517,7 @@ def arguments():
             'symbooglix',
             'svcomp'],
         default='corral',
-        help='back-end verification engine')  # portfolio added as an option
+        help='back-end verification engine')
 
     verifier_group.add_argument('--solver',
                                 choices=['z3', 'cvc4', "yices2"], default='z3',
@@ -584,6 +566,9 @@ def arguments():
         default='1',
         type=int,
         help='maximum reported assertion violations [default: %(default)s]')
+
+    verifier_group.add_argument('--smackd', action="store_true", default=False,
+                                help='generate JSON-format output for SMACKd')
 
     verifier_group.add_argument(
         '--svcomp-property',
@@ -657,7 +642,7 @@ def target_selection(args):
                     os.path.basename(src))[0],
                 '.ll',
                 args)
-            try_command([llvm_exact_bin('llvm-dis'), '-o', ll, src])
+            try_command(['llvm-dis', '-o', ll, src])
             src = ll
         if os.path.splitext(src)[1] == '.ll':
             with open(src, 'r') as f:
@@ -718,8 +703,6 @@ def llvm_to_bpl(args):
     cmd += ['-source-loc-syms']
     for ep in args.entry_points:
         cmd += ['-entry-points', ep]
-    for cf in args.checked_functions:
-        cmd += ['-checked-functions', cf]
     if args.debug:
         cmd += ['-debug']
     if args.debug_only:
@@ -848,97 +831,38 @@ def transform_out(args, old):
     return out
 
 
-def verification_result(verifier_output, verifier):
+def verification_result(verifier_output):
     if re.search(
-            r'[1-9]\d* time out|Z3 ran out of resources|timed out|'
-            r'ERRORS_TIMEOUT', verifier_output):
+        r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
+            verifier_output):
         return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
                     r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
         return VResult.VERIFIED
     elif re.search((r'\d* verified, [1-9]\d* errors?|can fail|'
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
-        attr = None
-        attr_pat = r'assert {:(.+)}'
+        for p in (VProperty.mem_safe_subprops() + [VProperty.INTEGER_OVERFLOW]
+                  + [VProperty.RUST_PANICS]):
+            if re.search(r'ASSERTION FAILS assert {:%s}' % p.boogie_attr(),
+                         verifier_output):
+                return p.result()
 
-        if verifier == 'corral':
-            corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
-                                      verifier_output)
-            if corral_af_msg:
-                attr = corral_af_msg.group(1)
-
-        elif verifier == 'boogie':
-            boogie_af_msg = re.search(
-                r'([\w#$~%.\/-]+)\((\d+),\d+\): '
-                r'Error: This assertion might not hold', verifier_output)
-            if boogie_af_msg:
-                if re.match('.*[.]bpl$', boogie_af_msg.group(1)):
-                    line_no = int(boogie_af_msg.group(2))
-                    with open(boogie_af_msg.group(1), 'r') as f:
-                        assert_line = re.search(
-                            attr_pat,
-                            f.read().splitlines(True)[line_no - 1])
-                        if assert_line:
-                            attr = assert_line.group(1)
+        listCall = re.findall(r'\(CALL .+\)', verifier_output)
+        if len(listCall) > 0 and re.search(
+                r'free_', listCall[len(listCall) - 1]):
+            return VResult.INVALID_FREE
         else:
-            print('Warning: Unable to decide error type.')
-
-        if attr is not None:
-            for p in (VProperty.mem_safe_subprops()
-                      + [VProperty.INTEGER_OVERFLOW]
-                      + [VProperty.RUST_PANICS]):
-                if p.boogie_attr() == attr:
-                    return p.result()
-
-        return VResult.ASSERTION_FAILURE
+            return VResult.ASSERTION_FAILURE
     else:
         return VResult.UNKNOWN
-
-
-def get_result(result):
-    # print(result)
-    return result
 
 
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
 
-    # ugly way of adding additional params to the verifier options
-    if isinstance(args, tuple):
-        args, commands_to_add = args
-        args.verifier_options = commands_to_add  # add verifier options
-
+# inserted as first test of new flag
     if args.verifier == 'portfolio':
-        p = multiprocessing.Pool()
-
-        thread_args = copy.deepcopy(args)
-        thread_args.verifier = 'corral'
-
-        # threads are 4 different combos of corral settings
-        thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 "
-                           "/bopt:proverOpt:O:smt.arith.solver=2",
-                           "/bopt:proverOpt:O:smt.qi.eager_threshold=100",
-                           "/bopt:proverOpt:O:smt.arith.solver=2",
-                           ""]
-
-        results = {}  # map of result -> params
-        for thread in thread_settings:
-            results[p.apply_async(verify_bpl,
-                                  args=((thread_args, thread),),
-                                  callback=get_result)] = thread
-
-        term = None
-        while term is None:  # sleep?
-            for result in list(results.keys()):  # look through each process
-                if result.ready():  # is this process finished?
-                    term = result.get()
-                    args_for_thread = results[result]
-                    print(f'Thread with params {args_for_thread}'
-                          f' returned: {term}')
-                    p.close()
-                    p.terminate()
-                    # return the error code that is now held in term
-                    return term
+        print("portfolio recognized")
 
     if args.verifier == 'svcomp':
         verify_bpl_svcomp(args)
@@ -947,9 +871,7 @@ def verify_bpl(args):
     elif args.verifier == 'boogie' or args.modular:
         command = ["boogie"]
         command += [args.bpl_file]
-        #  command += ["/nologo", "/doModSetAnalysis"]
-
-        command += ["/doModSetAnalysis"]
+        command += ["/nologo", "/doModSetAnalysis"]
         command += ["/useArrayTheory"]
         command += ["/timeLimit:%s" % args.time_limit]
         command += ["/errorLimit:%s" % args.max_violations]
@@ -973,6 +895,8 @@ def verify_bpl(args):
         command += ["/cex:%s" % args.max_violations]
         command += ["/maxStaticLoopBound:%d" % args.loop_limit]
         command += ["/recursionBound:%d" % args.unroll]
+        command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
+        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
         if args.solver == 'cvc4':
             command += ["/bopt:proverOpt:SOLVER=cvc4"]
         elif args.solver == 'yices2':
@@ -991,33 +915,31 @@ def verify_bpl(args):
 
     verifier_output = try_command(command, timeout=args.time_limit)
     verifier_output = transform_out(args, verifier_output)
-    result = verification_result(verifier_output, args.verifier)
+    result = verification_result(verifier_output)
 
-    if args.json_file:
-        with open(args.json_file, 'w') as f:
-            f.write(json_output_str(result, verifier_output, args.verifier))
+    if args.smackd:
+        print(smackdOutput(result, verifier_output))
+    else:
+        if result in VResult.ERROR:
+            error = error_trace(verifier_output, args)
 
-    if result in VResult.ERROR:
-        error = error_trace(verifier_output, args.verifier)
+            if args.error_file:
+                with open(args.error_file, 'w') as f:
+                    f.write(error)
 
-        if args.error_file:
-            with open(args.error_file, 'w') as f:
-                f.write(error)
+            if not args.quiet:
+                print(error)
 
-        if not args.quiet:
-            print(error)
-
-        if args.replay:
-            replay_error_trace(verifier_output, args)
-    print(result.message(args))
-    return result.return_code()
+            if args.replay:
+                replay_error_trace(verifier_output, args)
+        print(result.message(args))
+        sys.exit(result.return_code())
 
 
 def clean_up_upon_sigterm(main):
     def handler(signum, frame):
         remove_temp_files()
         sys.exit(0)
-
     signal.signal(signal.SIGTERM, handler)
     return main
 
@@ -1039,8 +961,7 @@ def main():
             if not args.quiet:
                 print("SMACK generated %s" % args.bpl_file)
         else:
-            return_code = verify_bpl(args)
-            sys.exit(return_code)
+            verify_bpl(args)
 
     except KeyboardInterrupt:
         sys.exit("SMACK aborted by keyboard interrupt.")

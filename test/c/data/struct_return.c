@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 #include <inttypes.h>
 
 // @expect verified

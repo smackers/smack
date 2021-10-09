@@ -1,6 +1,5 @@
-#include "smack.h"
-#include <assert.h>
 #include <pthread.h>
+#include <smack.h>
 
 // Tests that using mutex fails after being destroyed
 // @expect error

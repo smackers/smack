@@ -1,6 +1,5 @@
-#include "smack.h"
-#include <assert.h>
 #include <pthread.h>
+#include <smack.h>
 
 // Tests deadlock detection when join on self
 // @expect error

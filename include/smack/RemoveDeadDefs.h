@@ -16,6 +16,6 @@ private:
 public:
   static char ID;
   RemoveDeadDefs() : llvm::ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module &M) override;
+  virtual bool runOnModule(llvm::Module &M);
 };
 } // namespace smack

@@ -66,8 +66,7 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
             // Shifting left by a constant amount is equivalent to dividing by
             // 2^amount
             op = Instruction::Mul;
-          } else
-            llvm_unreachable("Unexpected shift operation!");
+          }
 
           auto lhs = bi->getOperand(0);
           unsigned bitWidth = getOpBitWidth(lhs);

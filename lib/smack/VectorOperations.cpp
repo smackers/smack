@@ -27,7 +27,7 @@ std::string VectorOperations::selector(Type *T, unsigned idx) {
 }
 
 std::list<Decl *> VectorOperations::type(Type *T) {
-  auto VT = dyn_cast<FixedVectorType>(T);
+  auto VT = dyn_cast<VectorType>(T);
   assert(VT && "expected vector type");
   std::list<Decl *> decls;
 
@@ -61,8 +61,8 @@ const Expr *VectorOperations::constant(const ConstantAggregateZero *C) {
 }
 
 FuncDecl *VectorOperations::cast(unsigned OpCode, Type *SrcTy, Type *DstTy) {
-  auto SrcVecTy = dyn_cast<FixedVectorType>(SrcTy);
-  auto DstVecTy = dyn_cast<FixedVectorType>(DstTy);
+  auto SrcVecTy = dyn_cast<VectorType>(SrcTy);
+  auto DstVecTy = dyn_cast<VectorType>(DstTy);
   assert((SrcVecTy || DstVecTy) && "Expected a vector type");
 
   auto FnName =
@@ -91,7 +91,7 @@ Decl *VectorOperations::inverseAxiom(unsigned OpCode, Type *SrcTy,
       Fn + "inverse");
 }
 
-FuncDecl *VectorOperations::binary(unsigned OpCode, FixedVectorType *T) {
+FuncDecl *VectorOperations::binary(unsigned OpCode, VectorType *T) {
   auto FnName = rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {T});
   auto FnBase =
       rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {T->getElementType()});
@@ -105,7 +105,7 @@ FuncDecl *VectorOperations::binary(unsigned OpCode, FixedVectorType *T) {
                         rep->type(T), Expr::fn(constructor(T), Args));
 }
 
-FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, FixedVectorType *T) {
+FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, VectorType *T) {
   auto FnName = rep->opName(Naming::CMPINST_TABLE.at(P), {T});
   auto FnBase = rep->opName(Naming::CMPINST_TABLE.at(P), {T->getElementType()});
   std::list<const Expr *> Args;
@@ -116,8 +116,8 @@ FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, FixedVectorType *T) {
   }
   return Decl::function(
       FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
-      rep->type(FixedVectorType::get(IntegerType::get(T->getContext(), 1),
-                                     T->getNumElements())),
+      rep->type(VectorType::get(IntegerType::get(T->getContext(), 1),
+                                T->getNumElements())),
       Expr::fn(constructor(T), Args));
 }
 
@@ -127,9 +127,9 @@ FuncDecl *VectorOperations::cast(CastInst *I) {
   auto G = cast(I->getOpcode(), I->getDestTy(), I->getSrcTy());
   auto A = inverseAxiom(I->getOpcode(), I->getSrcTy(), I->getDestTy());
   auto B = inverseAxiom(I->getOpcode(), I->getDestTy(), I->getSrcTy());
-  if (isa<FixedVectorType>(I->getSrcTy()))
+  if (isa<VectorType>(I->getSrcTy()))
     type(I->getSrcTy());
-  if (isa<FixedVectorType>(I->getDestTy()))
+  if (isa<VectorType>(I->getDestTy()))
     type(I->getDestTy());
   rep->addAuxiliaryDeclaration(F);
   rep->addAuxiliaryDeclaration(G);
@@ -140,7 +140,7 @@ FuncDecl *VectorOperations::cast(CastInst *I) {
 
 FuncDecl *VectorOperations::binary(BinaryOperator *I) {
   SDEBUG(errs() << "simd-binary: " << *I << "\n");
-  auto T = dyn_cast<FixedVectorType>(I->getType());
+  auto T = dyn_cast<VectorType>(I->getType());
   assert(T && T == I->getOperand(0)->getType() &&
          "expected equal vector types");
   auto F = binary(I->getOpcode(), T);
@@ -151,20 +151,20 @@ FuncDecl *VectorOperations::binary(BinaryOperator *I) {
 
 FuncDecl *VectorOperations::cmp(CmpInst *I) {
   SDEBUG(errs() << "simd-binary: " << *I << "\n");
-  auto T = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+  auto T = dyn_cast<VectorType>(I->getOperand(0)->getType());
   assert(T && "expected vector type");
   auto F = cmp(I->getPredicate(), T);
   type(T);
-  type(FixedVectorType::get(IntegerType::get(T->getContext(), 1),
-                            T->getNumElements()));
+  type(VectorType::get(IntegerType::get(T->getContext(), 1),
+                       T->getNumElements()));
   rep->addAuxiliaryDeclaration(F);
   return F;
 }
 
 FuncDecl *VectorOperations::shuffle(Type *T, Type *U, std::vector<int> mask) {
-  auto VT = dyn_cast<FixedVectorType>(T);
+  auto VT = dyn_cast<VectorType>(T);
   assert(VT && "expected vector type");
-  assert(isa<FixedVectorType>(U) && "expected vector type");
+  assert(isa<VectorType>(U) && "expected vector type");
   type(T);
   type(U);
 
@@ -195,7 +195,7 @@ FuncDecl *VectorOperations::shuffle(Type *T, Type *U, std::vector<int> mask) {
 }
 
 FuncDecl *VectorOperations::insert(Type *T, Type *IT) {
-  auto VT = dyn_cast<FixedVectorType>(T);
+  auto VT = dyn_cast<VectorType>(T);
   assert(VT && "expected vector type");
   type(T);
 
@@ -236,7 +236,7 @@ FuncDecl *VectorOperations::insert(Type *T, Type *IT) {
 }
 
 FuncDecl *VectorOperations::extract(Type *T, Type *IT) {
-  auto VT = dyn_cast<FixedVectorType>(T);
+  auto VT = dyn_cast<VectorType>(T);
   assert(VT && "expected vector type");
   type(T);
 

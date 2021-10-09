@@ -1,6 +1,5 @@
-#include "smack.h"
-#include <assert.h>
 #include <immintrin.h>
+#include <smack.h>
 
 // @expect verified
 // @flag --clang-options=-mavx2

@@ -68,8 +68,8 @@ private:
 public:
   static char ID;
   Regions() : ModulePass(ID) {}
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
-  virtual bool runOnModule(llvm::Module &M) override;
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+  virtual bool runOnModule(llvm::Module &M);
 
   unsigned size() const;
   unsigned idx(const llvm::Value *v);

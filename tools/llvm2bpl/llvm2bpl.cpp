@@ -25,7 +25,6 @@
 #include "llvm/Target/TargetMachine.h"
 
 #include "seadsa/InitializePasses.hh"
-#include "seadsa/support/Debug.h"
 #include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
 #include "smack/BplFilePrinter.h"
@@ -102,7 +101,7 @@ static TargetMachine *GetTargetMachine(Triple TheTriple, StringRef CPUStr,
                                        const TargetOptions &Options) {
   std::string Error;
 
-  const std::string MArch;
+  StringRef MArch;
 
   const Target *TheTarget =
       TargetRegistry::lookupTarget(MArch, TheTriple, Error);
@@ -145,10 +144,6 @@ int main(int argc, char **argv) {
   if (L.empty())
     module.get()->setDataLayout(DefaultDataLayout);
 
-  if (smack::SmackOptions::WarningLevel ==
-      smack::SmackWarnings::WarningLevel::Info)
-    seadsa::SeaDsaEnableLog("dsa-warn");
-
   ///////////////////////////////
   // initialise and run passes //
   ///////////////////////////////
@@ -167,10 +162,10 @@ int main(int argc, char **argv) {
 
   if (!Modular) {
     auto PreserveKeyGlobals = [=](const llvm::GlobalValue &GV) {
-      auto name = GV.getName();
+      std::string name = GV.getName();
       return smack::SmackOptions::isEntryPoint(name) ||
              smack::Naming::isSmackName(name) ||
-             name.find("__VERIFIER_assume") != llvm::StringRef::npos;
+             name.find("__VERIFIER_assume") != std::string::npos;
     };
     pass_manager.add(llvm::createInternalizePass(PreserveKeyGlobals));
     pass_manager.add(llvm::createGlobalDCEPass());

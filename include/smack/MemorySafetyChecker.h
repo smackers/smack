@@ -25,7 +25,7 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid
   MemorySafetyChecker() : llvm::FunctionPass(ID) {}
-  virtual bool runOnFunction(llvm::Function &F) override;
+  virtual bool runOnFunction(llvm::Function &F);
 
   void visitReturnInst(llvm::ReturnInst &I);
   void visitLoadInst(llvm::LoadInst &I);

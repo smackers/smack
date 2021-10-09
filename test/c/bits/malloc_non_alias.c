@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 #include <stdlib.h>
 
 // @flag --pointer-encoding=bit-vector

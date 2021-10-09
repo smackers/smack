@@ -1,5 +1,4 @@
 #include "smack.h"
-#include <assert.h>
 
 // @expect error
 
@@ -2769,7 +2768,9 @@ int main(void) {
                 }
               } else {
                 if (status != 259) {
-                  { errorFn(); }
+                  {
+                    errorFn();
+                  }
                 } else {
                 }
               }

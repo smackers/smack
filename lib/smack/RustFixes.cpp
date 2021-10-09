@@ -7,57 +7,17 @@
 
 #include "smack/RustFixes.h"
 #include "smack/Naming.h"
+#include "llvm/Analysis/CallGraph.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
+#include <set>
 #include <string>
 
 namespace smack {
 
 using namespace llvm;
-
-bool isRustNameMatch(StringRef search, StringRef name) {
-  // Check if we are looking for a Rust mangled name with a 17 character hash
-  // suffix, denoted by `17h'
-  bool hashed_match = search.endswith("17h") && name.startswith(search) &&
-                      search.size() + 17 == name.size();
-  bool exact_match = search == name;
-  return hashed_match || exact_match;
-}
-
-bool replaceRustMemoryFunctions(Function &f) {
-  bool changed = false;
-  static const std::map<StringRef, StringRef> alloc_fns = {
-      {"_ZN5alloc5alloc5alloc17h", "__smack_rust_std_alloc"},
-      {"_ZN5alloc5alloc12alloc_zeroed17h", "__smack_rust_std_alloc_zeroed"},
-      {"_ZN5alloc5alloc7dealloc17h", "__smack_rust_std_dealloc"},
-      {"_ZN5alloc5alloc7realloc17h", "__smack_rust_std_realloc"},
-      {"__rust_alloc", "__smack_rust_prim_alloc"},
-      {"__rust_alloc_zeroed", "__smack_rust_prim_alloc_zeroed"},
-      {"__rust_dealloc", "__smack_rust_prim_dealloc"},
-      {"__rust_realloc", "__smack_rust_prim_realloc"},
-  };
-
-  for (inst_iterator I = inst_begin(f), E = inst_end(f); I != E; ++I) {
-    if (auto ci = dyn_cast<CallInst>(&*I)) {
-      if (Function *f = ci->getCalledFunction()) {
-        auto name = f->hasName() ? f->getName() : "";
-        for (auto &kv : alloc_fns) {
-          if (isRustNameMatch(std::get<0>(kv), name)) {
-            Function *replacement =
-                f->getParent()->getFunction(std::get<1>(kv));
-            assert(replacement != NULL && "Function should be present.");
-            changed = true;
-            ci->setCalledFunction(replacement);
-          }
-        }
-      }
-    }
-  }
-  return changed;
-}
 
 /*
 The main function of rust programs looks like this:
@@ -70,18 +30,15 @@ This patches the main function to:
 %r = 0
 call void @real_main(...)
 ...
-
-Returns true if this is a Rust program entry point, false
-otherwise.
 */
-bool fixEntry(Function &main) {
+void fixEntry(Function &main) {
   std::vector<Instruction *> instToErase;
 
   for (inst_iterator I = inst_begin(main), E = inst_end(main); I != E; ++I) {
     if (auto ci = dyn_cast<CallInst>(&*I)) {
       if (Function *f = ci->getCalledFunction()) {
-        StringRef name = f->hasName() ? f->getName() : "";
-        if (name.find(Naming::RUST_ENTRY) != StringRef::npos) {
+        std::string name = f->hasName() ? f->getName() : "";
+        if (name.find(Naming::RUST_ENTRY) != std::string::npos) {
           // Get real Rust main
           auto castExpr = ci->getArgOperand(0);
           auto mainFunction = cast<Function>(castExpr);
@@ -107,30 +64,31 @@ bool fixEntry(Function &main) {
   for (auto I : instToErase) {
     I->eraseFromParent();
   }
-
-  return instToErase.size();
 }
 
-bool RustFixes::runOnFunction(Function &F) {
-  bool result = false;
-  if (F.hasName()) {
-    StringRef name = F.getName();
-    if (Naming::isSmackName(name)) {
-      return false;
-    } else if (name.find(Naming::RUST_LANG_START_INTERNAL) != StringRef::npos ||
-               name.find(Naming::RUST_ENTRY) != StringRef::npos ||
-               Naming::isRustPanic(name)) {
-      F.dropAllReferences();
-      return true;
-    }
+bool RustFixes::runOnModule(Module &m) {
+  std::set<Function *> funcToErase;
 
-    if (name == "main") {
-      result |= fixEntry(F);
+  for (auto &F : m) {
+    if (F.hasName()) {
+      auto name = F.getName();
+      if (Naming::isSmackName(name))
+        continue;
+      if (name == "main") {
+        fixEntry(F);
+      } else if (name.find(Naming::RUST_LANG_START_INTERNAL) !=
+                     std::string::npos ||
+                 name.find(Naming::RUST_ENTRY) != std::string::npos) {
+        funcToErase.insert(&F);
+      }
     }
-    result |= replaceRustMemoryFunctions(F);
   }
 
-  return result;
+  for (auto F : funcToErase) {
+    F->dropAllReferences();
+  }
+
+  return true;
 }
 
 // Pass ID variable
