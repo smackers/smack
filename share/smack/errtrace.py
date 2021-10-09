@@ -1,9 +1,6 @@
 import re
 import functools
-import shutil
-import subprocess
 import json
-from .frontend import llvm_exact_bin
 
 
 def reformat_assignment(line):
@@ -39,36 +36,14 @@ def reformat_assignment(line):
         line.strip())
 
 
-def demangle(func):
-    '''Demangle C++/Rust function names'''
-
-    def demangle_with(func, tool):
-        if shutil.which(tool):
-            p = subprocess.Popen(
-                tool,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-            out, _ = p.communicate(input=func.encode())
-            return out.decode().strip()
-        return func
-    return functools.reduce(demangle_with,
-                            [llvm_exact_bin('llvm-cxxfilt'), 'rustfilt'],
-                            func)
-
-
 def transform(info):
     '''Transform an error trace line'''
 
-    if info.startswith('CALL') or info.startswith('RETURN from'):
-        tokens = info.split()
-        tokens[-1] = demangle(tokens[-1])
-        return ' '.join(tokens)
-    elif '=' in info:
+    if '=' in info:
         tokens = info.split('=')
         lhs = tokens[0].strip()
         rhs = tokens[1].strip()
-        return demangle(lhs) + ' = ' + reformat_assignment(rhs)
+        return lhs + ' = ' + reformat_assignment(rhs)
     else:
         return info
 
@@ -88,11 +63,11 @@ def error_trace(verifier_output, verifier):
     return output
 
 
-def json_output_str(result, output, verifier):
-    return json.dumps(json_output(result, output, verifier))
+def json_output_str(result, output, verifier, prettify=True):
+    return json.dumps(json_output(result, output, verifier, prettify))
 
 
-def json_output(result, output, verifier):
+def json_output(result, output, verifier, prettify=True):
     '''Convert error traces into JSON format'''
 
     from .top import VResult
@@ -185,6 +160,7 @@ def json_output(result, output, verifier):
             'passed?': False,
             'failsAt': failsAt,
             'threadCount': 1,
-            'traces': functools.reduce(merger, traces, [])
+            'traces': (functools.reduce(merger, traces, []) if prettify
+                       else traces)
     }
     return json_data

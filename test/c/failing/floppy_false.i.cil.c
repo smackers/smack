@@ -2291,7 +2291,8 @@ NTSTATUS FloppyAddDevice(PDRIVER_OBJECT DriverObject,
           disketteExtension->TargetObject =
               IoAttachDeviceToDeviceStack(deviceObject, PhysicalDeviceObject);
         }
-        {} {
+        {}
+        {
           /*       KeInitializeSemaphore(& disketteExtension->RequestSemaphore,
            * 0L, 2147483647); */ /* INLINED */
           disketteExtension->PowerDownMutex.Count = 1;
@@ -2614,9 +2615,11 @@ NTSTATUS FlQueueIrpToThread(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
     } else {
     }
     {
-        /*   ExReleaseFastMutex(& DisketteExtension->PowerDownMutex); */ /* INLINED
-                                                                          */
-    } {} {
+      /*   ExReleaseFastMutex(& DisketteExtension->PowerDownMutex); */ /* INLINED
+                                                                        */
+    }
+    {}
+    {
       /*   ExAcquireFastMutex(& DisketteExtension->ThreadReferenceMutex); */ /* INLINED */
       DisketteExtension->ThreadReferenceCount += 1L;
     }
@@ -2847,9 +2850,9 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     disketteExtension->DeviceName.Length;
                                 if (irpSp->Parameters.DeviceIoControl
                                         .OutputBufferLength <
-                                    (ULONG)(
-                                        sizeof(USHORT) +
-                                        (unsigned int)mountName->NameLength)) {
+                                    (ULONG)(sizeof(USHORT) +
+                                            (unsigned int)
+                                                mountName->NameLength)) {
                                   ntStatus = -2147483643L;
                                   Irp->IoStatus.Information =
                                       sizeof(MOUNTDEV_NAME);
@@ -3004,13 +3007,12 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                 }
                                 ntStatus = 0L;
                                 if (outputBufferLength <
-                                    (ULONG)(
-                                        sizeof(DISK_GEOMETRY) *
-                                        (unsigned int)(((int)
-                                                            highestDriveMediaType -
-                                                        (int)
-                                                            lowestDriveMediaType) +
-                                                       1))) {
+                                    (ULONG)(sizeof(DISK_GEOMETRY) *
+                                            (unsigned int)(((int)
+                                                                highestDriveMediaType -
+                                                            (int)
+                                                                lowestDriveMediaType) +
+                                                           1))) {
                                   {}
                                   ntStatus = -2147483643L;
                                   highestDriveMediaType =
@@ -3219,7 +3221,8 @@ NTSTATUS FloppyDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                     goto switch_16_break;
                                   } else {
                                   }
-                                  {} {
+                                  {}
+                                  {
                                     ntStatus = FlQueueIrpToThread(
                                         Irp, disketteExtension);
                                   }
@@ -4169,7 +4172,9 @@ void FlFinishOperation(PIRP Irp, PDISKETTE_EXTENSION DisketteExtension) {
     _L___0 : /* CIL Label */
     {}
     }
-    {} {} { IofCompleteRequest(Irp, 1); }
+    {}
+    {}
+    { IofCompleteRequest(Irp, 1); }
     return;
   }
 }
@@ -4687,8 +4692,9 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                         _L : /* CIL Label */
                         {}
                           DisketteExtension->DriveMediaType =
-                              (DRIVE_MEDIA_TYPE)(
-                                  (int)DisketteExtension->DriveMediaType - 1);
+                              (DRIVE_MEDIA_TYPE)((int)DisketteExtension
+                                                     ->DriveMediaType -
+                                                 1);
                           DisketteExtension->DriveMediaConstants =
                               *(DriveMediaConstants +
                                 DisketteExtension->DriveMediaType);
@@ -4769,7 +4775,8 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                                 .__annonCompField16.CurrentStackLocation -= 1;
                             ntStatus = FlReadWrite(DisketteExtension, irp, 1);
                           }
-                          {} {
+                          {}
+                          {
                             /*                     MmUnlockPages(irp->MdlAddress);
                              */ /* INLINED */
                             /*                     IoFreeMdl(irp->MdlAddress);
@@ -4781,8 +4788,9 @@ NTSTATUS FlDetermineMediaType(PDISKETTE_EXTENSION DisketteExtension) {
                           if (!(ntStatus >= 0L)) {
                             {}
                             DisketteExtension->DriveMediaType =
-                                (DRIVE_MEDIA_TYPE)(
-                                    (int)DisketteExtension->DriveMediaType - 1);
+                                (DRIVE_MEDIA_TYPE)((int)DisketteExtension
+                                                       ->DriveMediaType -
+                                                   1);
                             DisketteExtension->DriveMediaConstants =
                                 *(DriveMediaConstants +
                                   DisketteExtension->DriveMediaType);
@@ -5051,11 +5059,10 @@ void FloppyThread(PVOID Context) {
               }
             } else {
             }
-            {
-                /*         ExReleaseFastMutex(PagingMutex); */ /* INLINED */
-            } {} {
-              PsTerminateSystemThread(0L);
+            { /*         ExReleaseFastMutex(PagingMutex); */ /* INLINED */
             }
+            {}
+            { PsTerminateSystemThread(0L); }
           } else {
           }
           {
@@ -5110,8 +5117,10 @@ void FloppyThread(PVOID Context) {
             } else {
             }
             {
-                /*       ExReleaseFastMutex(& disketteExtension->PowerDownMutex); */ /* INLINED */
-            } {}
+              /*       ExReleaseFastMutex(& disketteExtension->PowerDownMutex);
+               */ /* INLINED */
+            }
+            {}
             irpSp = irp->Tail.Overlay.__annonCompField17.__annonCompField16
                         .CurrentStackLocation;
             {}
@@ -5657,7 +5666,8 @@ void FlConsolidateMediaTypeWithBootSector(PDISKETTE_EXTENSION DisketteExtension,
       }
     } else {
     }
-    {} {}
+    {}
+    {}
     if ((int)bpbMediaType == (int)DisketteExtension->MediaType) {
       changeToBpbMedia = 0;
       {}

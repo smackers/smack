@@ -489,7 +489,9 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
-  cmake ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
+  cmake -DCMAKE_CXX_COMPILER=clang++-${LLVM_SHORT_VERSION} \
+        -DCMAKE_C_COMPILER=clang-${LLVM_SHORT_VERSION} ${CMAKE_INSTALL_PREFIX} \
+        -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ninja
 
   if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then

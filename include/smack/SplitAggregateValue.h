@@ -20,7 +20,7 @@ public:
   typedef std::pair<IndexT, llvm::Constant *> InfoT;
   static char ID;
   SplitAggregateValue() : llvm::FunctionPass(ID) {}
-  virtual bool runOnFunction(llvm::Function &F);
+  virtual bool runOnFunction(llvm::Function &F) override;
 
 private:
   llvm::Value *splitAggregateLoad(llvm::Type *T, llvm::Value *P,
