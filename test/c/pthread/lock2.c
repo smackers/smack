@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 
 // Tests PTHREAD_MUTEX_INITIALIZER macro
 // @expect verified

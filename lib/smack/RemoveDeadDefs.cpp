@@ -23,15 +23,15 @@ bool RemoveDeadDefs::runOnModule(Module &M) {
   do {
     dead.clear();
     for (Function &F : M) {
-      std::string name = F.getName();
+      auto name = F.getName();
 
       if (!(F.isDefTriviallyDead() || F.getNumUses() == 0))
         continue;
 
-      if (name.find("__SMACK_") != std::string::npos)
+      if (name.find("__SMACK_") != StringRef::npos)
         continue;
 
-      if (name.find("__VERIFIER_assume") != std::string::npos)
+      if (name.find("__VERIFIER_assume") != StringRef::npos)
         continue;
 
       if (SmackOptions::isEntryPoint(name))

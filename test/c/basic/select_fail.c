@@ -1,4 +1,5 @@
 #include "smack.h"
+#include <assert.h>
 
 // @expect error
 // @checkbpl grep -E ":= \(if.+then.+else.+\)"

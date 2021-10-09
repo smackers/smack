@@ -20,13 +20,14 @@ public:
   typedef std::pair<IndexT, llvm::Constant *> InfoT;
   static char ID;
   SplitAggregateValue() : llvm::FunctionPass(ID) {}
-  virtual bool runOnFunction(llvm::Function &F);
+  virtual bool runOnFunction(llvm::Function &F) override;
 
 private:
-  llvm::Value *splitAggregateLoad(llvm::LoadInst *li, std::vector<InfoT> &info,
+  llvm::Value *splitAggregateLoad(llvm::Type *T, llvm::Value *P,
+                                  std::vector<InfoT> &info,
                                   llvm::IRBuilder<> &irb);
-  void splitAggregateStore(llvm::StoreInst *si, std::vector<InfoT> &info,
-                           llvm::IRBuilder<> &irb);
+  void splitAggregateStore(llvm::Value *P, llvm::Value *V,
+                           std::vector<InfoT> &info, llvm::IRBuilder<> &irb);
   void splitConstantReturn(llvm::ReturnInst *ri, std::vector<InfoT> &info);
   void splitConstantArg(llvm::CallInst *ci, unsigned i,
                         std::vector<InfoT> &info);

@@ -1,0 +1,18 @@
+[package]
+name = "simple-static-lib"
+version = "0.1.0"
+authors = ["Shaobo He <polarishehn@gmail.com>"]
+edition = "2018"
+
+# @expect error
+# @flag --entry-point=helloworld
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "toylib"
+crate-type = ["staticlib"]
+
+
+[dependencies]
+smack = { path = "/usr/local/share/smack/lib" }

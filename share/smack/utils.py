@@ -6,6 +6,7 @@ import subprocess
 import signal
 from threading import Timer
 from . import top
+from .versions import LLVM_SHORT_VERSION
 
 temporary_files = []
 
@@ -71,7 +72,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
                 line = proc.stdout.readline()
                 if line:
                     output += line
-                    print(line, end=' ')
+                    print(line, end='')
                 elif proc.poll() is not None:
                     break
             proc.wait
@@ -104,3 +105,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
         if filelog:
             with open(temporary_file(cmd[0], '.log', args), 'w') as f:
                 f.write(output)
+
+
+def llvm_exact_bin(name):
+    return name + '-' + LLVM_SHORT_VERSION

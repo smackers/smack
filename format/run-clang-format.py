@@ -203,12 +203,19 @@ def print_trouble(prog, message, use_colors):
 
 
 def main():
+
+    with open(os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), 'bin', 'versions'), 'r') as f:
+        for line in f.readlines():
+            if line.startswith('LLVM_SHORT_VERSION='):
+                llvm_version = line.strip()[len('LLVM_SHORT_VERSION='):].replace('"', '')
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         '--clang-format-executable',
         metavar='EXECUTABLE',
-        help='path to the clang-format executable',
-        default='clang-format')
+        help='path to the clang-format executable (default: %(default)s)',
+        default='clang-format-' + llvm_version)
     parser.add_argument(
         '--extensions',
         help='comma separated list of file extensions (default: {})'.format(

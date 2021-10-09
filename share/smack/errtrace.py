@@ -1,7 +1,5 @@
 import re
 import functools
-import shutil
-import subprocess
 import json
 
 
@@ -38,191 +36,131 @@ def reformat_assignment(line):
         line.strip())
 
 
-def demangle(func):
-    '''Demangle C++/Rust function names'''
-
-    def demangle_with(func, tool):
-        if shutil.which(tool):
-            p = subprocess.Popen(
-                tool,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-            out, _ = p.communicate(input=func.encode())
-            return out.decode()
-        return func
-    return functools.reduce(demangle_with, ['cxxfilt', 'rustfilt'], func)
-
-
 def transform(info):
     '''Transform an error trace line'''
 
-    info = info.strip()
-    if info.startswith('CALL') or info.startswith('RETURN from'):
-        tokens = info.split()
-        tokens[-1] = demangle(tokens[-1])
-        return ' '.join(tokens)
-    elif '=' in info:
+    if '=' in info:
         tokens = info.split('=')
         lhs = tokens[0].strip()
         rhs = tokens[1].strip()
-        return demangle(lhs) + ' = ' + reformat_assignment(rhs)
+        return lhs + ' = ' + reformat_assignment(rhs)
     else:
         return info
 
 
-def corral_error_step(step):
-    '''Produce an error trace step based on a line of Corral error trace'''
-
-    m = re.match(r'([^\s]*)\s+Trace:\s+(Thread=\d+)\s+\((.*)[\)|;]', step)
-    if m:
-        path = m.group(1)
-        tid = m.group(2)
-        info = ','.join(map(transform,
-                            [x for x in m.group(3).split(',') if not
-                                re.search(
-                                    (r'((CALL|RETURN from)\s+(\$|__SMACK))|'
-                                     r'Done|ASSERTION'), x)]))
-        return '{0}\t{1}  {2}'.format(path, tid, info)
-    else:
-        return step
-
-
-def error_step(step):
-    '''Produce an error trace step based on a line of verifier output'''
-
-    FILENAME = r'[\w#$~%.\/-]*'
-    step = re.match(r"(\s*)(%s)\((\d+),\d+\): (.*)" % FILENAME, step)
-    if step:
-        if re.match('.*[.]bpl$', step.group(2)):
-            line_no = int(step.group(3))
-            message = step.group(4)
-            if re.match(r'.*\$bb\d+.*', message):
-                message = ""
-            with open(step.group(2)) as f:
-                for line in f.read().splitlines(True)[line_no:line_no + 10]:
-                    src = re.match(
-                        r".*{:sourceloc \"(%s)\", (\d+), (\d+)}" %
-                        FILENAME, line)
-                    if src:
-                        return "%s%s(%s,%s): %s" % (step.group(1), src.group(
-                            1), src.group(2), src.group(3), message)
-        else:
-            return corral_error_step(step.group(0))
-    else:
-        return None
-
-
-def error_trace(verifier_output, args):
+def error_trace(verifier_output, verifier):
     '''Generate string error trace.'''
+    from .top import VResult
 
-    trace = ""
-    for line in verifier_output.splitlines(True):
-        step = error_step(line)
-        if step:
-            m = re.match('(.*): [Ee]rror [A-Z0-9]+: (.*)', step)
-            if m:
-                trace += "%s: %s\nExecution trace:\n" % (
-                    m.group(1), m.group(2))
-            else:
-                trace += ('' if step[0] == ' ' else '    ') + step + "\n"
-
-    return trace
+    traces = json_output(VResult.ERROR, verifier_output, verifier)['traces']
+    output = '\n'.join(
+        map(
+            lambda trace: '{0}({1},{2}): {3}'.format(
+                trace['file'],
+                trace['line'],
+                trace['column'],
+                trace['description']), traces))
+    return output
 
 
-def smackdOutput(result, corralOutput):
+def json_output_str(result, output, verifier, prettify=True):
+    return json.dumps(json_output(result, output, verifier, prettify))
+
+
+def json_output(result, output, verifier, prettify=True):
     '''Convert error traces into JSON format'''
 
     from .top import VResult
+
+    def merger(traces, trace):
+        if len(traces) == 0:
+            return [trace]
+        last_trace = traces[-1]
+        if (last_trace['file'] == trace['file']
+            and last_trace['line'] == trace['line']
+                and last_trace['column'] == trace['column']):
+            if len(trace['description']) != 0:
+                if len(last_trace['description']) == 0:
+                    last_trace['description'] = trace['description']
+                else:
+                    last_trace['description'] += (', ' + trace['description'])
+            return traces
+        else:
+            return traces + [trace]
 
     if not (result is VResult.VERIFIED or result in VResult.ERROR):
         return
 
     FILENAME = r'[\w#$~%.\/-]+'
-    traceP = re.compile(
-        ('('
-         + FILENAME
-         + r')\((\d+),(\d+)\): Trace: Thread=(\d+)\s+\((.*(;\n)?.*)\)'))
-    # test1.i(223,16): Trace: Thread=1  (ASSERTION FAILS assert false;
-    errorP = re.compile(
-        ('('
-         + FILENAME
-         + r')\((\d+),(\d+)\): Trace: Thread=\d+\s+\(ASSERTION FAILS'))
+    failsAt = None
 
     if result is VResult.VERIFIED:
         json_data = {
-            'verifier': 'corral',
+            'verifier': verifier,
             'passed?': True
         }
-    else:
+        return json_data
+
+    if verifier == 'boogie':
         traces = []
-        raw_data = re.findall(traceP, corralOutput)
-        for t in raw_data:
-            file_name = t[0]
-            line_num = t[1]
-            col_num = t[2]
-            thread_id = t[3]
-            description = t[4]
+        traceP = re.compile(r"(\s*)(%s)\((\d+),\d+\):" % FILENAME)
+        steps = re.findall(traceP, output)
+        for step in steps:
+            if re.match('.*[.]bpl$', step[1]):
+                line_no = int(step[2])
+                with open(step[1]) as f:
+                    for ln in f.read().splitlines(True)[line_no:line_no + 10]:
+                        src = re.match(
+                            r".*{:sourceloc \"(%s)\", (\d+), (\d+)}" %
+                            FILENAME, ln)
+                        if src:
+                            traces.append(
+                                {'file': src.group(1),
+                                 'line': src.group(2),
+                                 'column': src.group(3),
+                                 'description': ''})
+                            break
+    elif verifier == 'corral':
+        traces = []
+        traceP = re.compile(
+            ('('
+             + FILENAME
+             + r')\((\d+),(\d+)\): Trace: Thread=(\d+)\s+\((.*(;\n)?.*)\)'))
+        raw_data = re.findall(traceP, output)
+        for step in raw_data:
+            file_name = step[0]
+            line_num = step[1]
+            col_num = step[2]
+            thread_id = step[3]
+            description = step[4]
+            if 'ASSERTION FAILS' in description:
+                description = re.sub('ASSERTION FAILS.*;\n', '', description)
+                failsAt = {
+                    'file': file_name,
+                    'line': line_num,
+                    'column': col_num,
+                    'description': ''}
+
             for token in description.split(','):
+                token = token.strip()
+                if re.search(
+                  (r'((CALL|RETURN from)\s+(\$|__SMACK))|'
+                   r'Done|ASSERTION'), token) is not None:
+                    continue
+                token = transform(token)
                 traces.append(
                     {'threadid': thread_id,
                      'file': file_name,
                      'line': line_num,
                      'column': col_num,
                      'description': token,
-                     'assumption': transform(token) if '=' in token else ''})
-
-        r"""filename = ''
-        lineno = 0
-        colno = 0
-        threadid = 0
-        desc = ''
-        for traceLine in corralOutput.splitlines(True):
-            traceMatch = traceP.match(traceLine)
-            if traceMatch:
-                filename = str(traceMatch.group(1))
-                lineno = int(traceMatch.group(2))
-                colno = int(traceMatch.group(3))
-                threadid = int(traceMatch.group(4))
-                desc = str(traceMatch.group(6))
-                for e in desc.split(','):
-                    e = e.strip()
-                    assm = re.sub(
-                        r'=(\s*\d+)bv\d+',
-                        r'=\1',
-                        e) if '=' in e else ''
-                    trace = {'threadid': threadid,
-                             'file': filename,
-                             'line': lineno,
-                             'column': colno,
-                             'description': e,
-                             'assumption': assm}
-                    traces.append(trace)
-            else:
-                errorMatch = errorP.match(traceLine)
-                if errorMatch:
-                    filename = str(errorMatch.group(1))
-                    lineno = int(errorMatch.group(2))
-                    colno = int(errorMatch.group(3))
-                    desc = str(errorMatch.group(4))"""
-        errorMatch = errorP.search(corralOutput)
-        assert errorMatch, 'Failed to obtain assertion failure info!'
-        filename = str(errorMatch.group(1))
-        lineno = int(errorMatch.group(2))
-        colno = int(errorMatch.group(3))
-
-        failsAt = {
-            'file': filename,
-            'line': lineno,
-            'column': colno,
-            'description': result.description()}
-
-        json_data = {
-            'verifier': 'corral',
+                     'assumption': token if '=' in token else ''})
+    json_data = {
+            'verifier': verifier,
             'passed?': False,
             'failsAt': failsAt,
             'threadCount': 1,
-            'traces': traces
-        }
-    json_string = json.dumps(json_data)
-    return json_string
+            'traces': (functools.reduce(merger, traces, []) if prettify
+                       else traces)
+    }
+    return json_data

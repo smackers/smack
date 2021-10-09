@@ -13,8 +13,8 @@ class RewriteBitwiseOps : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
   RewriteBitwiseOps() : llvm::ModulePass(ID) {}
-  virtual llvm::StringRef getPassName() const;
-  virtual bool runOnModule(llvm::Module &m);
+  virtual llvm::StringRef getPassName() const override;
+  virtual bool runOnModule(llvm::Module &m) override;
 };
 } // namespace smack
 

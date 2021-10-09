@@ -1,0 +1,13 @@
+[package]
+name = "cargo-test"
+version = "0.1.0"
+authors = ["smackers"]
+edition = "2018"
+
+# @expect error
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num-traits = "0.2.12"
+smack = { path = "/usr/local/share/smack/lib" }

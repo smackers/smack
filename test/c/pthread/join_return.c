@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 #include <stdlib.h>
 
 // Tests join & return in general - would fail if join doesn't block.

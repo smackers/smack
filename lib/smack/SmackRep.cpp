@@ -130,7 +130,7 @@ std::string SmackRep::getString(const llvm::Value *v) {
         if (const llvm::ConstantDataSequential *cds =
                 llvm::dyn_cast<const llvm::ConstantDataSequential>(
                     cc->getOperand(0)))
-          return cds->getAsCString();
+          return cds->getAsCString().str();
   return "";
 }
 
@@ -236,7 +236,7 @@ std::string SmackRep::type(const llvm::Type *t) {
   else if (t->isPointerTy())
     return Naming::PTR_TYPE;
 
-  else if (auto VT = dyn_cast<VectorType>(t))
+  else if (auto VT = dyn_cast<FixedVectorType>(t))
     return vectorType(VT->getNumElements(), VT->getElementType());
 
   else
@@ -857,8 +857,8 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
     }
 
   } else if (isa<InlineAsm>(v)) {
-    SmackWarnings::warnUnsound("inline asm passed as argument", nullptr,
-                               nullptr);
+    SmackWarnings::warnApproximate("inline asm passed as argument", nullptr,
+                                   nullptr);
     return pointerLit(0ULL);
 
   } else {
@@ -1249,6 +1249,16 @@ Decl *SmackRep::getInitFuncs() {
   return proc;
 }
 
+void SmackRep::addAllocSizeAttr(const llvm::GlobalVariable *G,
+                                std::list<const Attr *> &ax) {
+  auto T = dyn_cast<const PointerType>(G->getType());
+  assert(T && "Global variables should have pointer types!");
+  if (T->getElementType()->isSized()) {
+    auto allocSize = targetData->getTypeAllocSize(T->getElementType());
+    ax.push_back(Attr::attr("allocSize", allocSize));
+  }
+}
+
 std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
   using namespace llvm;
   std::list<Decl *> decls;
@@ -1262,6 +1272,7 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
   bool external = false;
 
   if (const GlobalVariable *g = dyn_cast<const GlobalVariable>(v)) {
+    addAllocSizeAttr(g, ax);
     if (g->hasInitializer()) {
       const Constant *init = g->getInitializer();
       unsigned numElems = numElements(init);
