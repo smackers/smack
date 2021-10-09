@@ -161,10 +161,21 @@ Regex Naming::SMACK_NAME(".*__SMACK_.*");
 
 bool Naming::isBplKeyword(std::string s) { return BPL_KW.match(s); }
 
-bool Naming::isSmackName(std::string n) { return SMACK_NAME.match(n); }
+bool Naming::isSmackName(llvm::StringRef n) { return SMACK_NAME.match(n); }
 
 bool Naming::isSmackGeneratedName(std::string n) {
   return n.size() > 0 && n[0] == '$';
+}
+
+bool Naming::isRustPanic(llvm::StringRef name) {
+  for (const auto &panic : Naming::RUST_PANICS) {
+    // We are interested in exact functional matches.
+    // Rust mangled names include a 17 byte hash at the end.
+    if (name.find(panic) == 0 && name.size() == panic.size() + 17) {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::string Naming::escape(std::string s) {

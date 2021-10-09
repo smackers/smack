@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 
 // Uses error handling from error checking mutex
 // to avoid what would otherwise be deadlock or permitted error

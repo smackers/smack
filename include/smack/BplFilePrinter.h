@@ -17,11 +17,13 @@ public:
 
   BplFilePrinter(llvm::raw_ostream &out) : llvm::ModulePass(ID), out(out) {}
 
-  virtual bool runOnModule(llvm::Module &m);
+  virtual bool runOnModule(llvm::Module &m) override;
 
-  virtual llvm::StringRef getPassName() const { return "Boogie file printing"; }
+  virtual llvm::StringRef getPassName() const override {
+    return "Boogie file printing";
+  }
 
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 };
 } // namespace smack
 

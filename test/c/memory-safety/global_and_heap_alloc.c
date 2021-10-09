@@ -1,4 +1,4 @@
-#include <smack.h>
+#include "smack.h"
 #include <stdio.h>
 #include <stdlib.h>
 

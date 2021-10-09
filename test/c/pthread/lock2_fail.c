@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 
 // Tests failure when trying to acquire an owned lock
 // @expect error

@@ -1,4 +1,5 @@
 #include "smack.h"
+#include <assert.h>
 
 // @expect verified
 // @flag --clang-options=-O1

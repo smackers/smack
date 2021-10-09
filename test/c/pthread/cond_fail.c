@@ -1,5 +1,6 @@
+#include "smack.h"
+#include <assert.h>
 #include <pthread.h>
-#include <smack.h>
 
 // Generally tests pthread_cond_wait, pthread_cond_signal,
 // pthread_cond_init

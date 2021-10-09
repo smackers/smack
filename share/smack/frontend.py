@@ -2,7 +2,8 @@ import os
 import sys
 import re
 import json
-from .utils import temporary_file, try_command, temporary_directory
+from .utils import temporary_file, try_command, temporary_directory,\
+    llvm_exact_bin
 from .versions import RUST_VERSION
 
 # Needed for cargo operations
@@ -85,8 +86,32 @@ def smack_lib():
     return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
 
+def extern_entry_points(args, bcs):
+    new_bcs = []
+    for bc in bcs:
+        new_bc = temporary_file(
+            os.path.splitext(
+                os.path.basename(bc))[0],
+            '.bc',
+            args)
+        cmd = ['-in', bc, '-out', new_bc]
+        for ep in args.entry_points:
+            cmd += ['-entry-points', ep]
+
+        try_command(['extern-statics'] + cmd, console=True)
+        new_bcs.append(new_bc)
+    return new_bcs
+
+
 def default_clang_compile_command(args, lib=False):
-    cmd = ['clang', '-c', '-emit-llvm', '-O0', '-g', '-gcolumn-info']
+    cmd = [
+           llvm_exact_bin('clang'),
+           '-c',
+           '-emit-llvm',
+           '-O0',
+           '-g',
+           '-gcolumn-info'
+          ]
     # Starting from LLVM 5.0, we need the following two options
     # in order to enable optimization passes.
     # See: https://stackoverflow.com/a/46753969.
@@ -165,7 +190,7 @@ def fortran_compile_to_bc(input_file, compile_command, args):
          '-i',
          's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g',
          ll])
-    try_command(['llvm-as', ll])
+    try_command([llvm_exact_bin('llvm-as'), ll])
     try_command(['rm', ll])
     bc = '.'.join(ll.split('.')[:-1] + ['bc'])
     return bc
@@ -189,7 +214,7 @@ def clang_frontend(input_file, args):
 def clang_plusplus_frontend(input_file, args):
     """Generate LLVM IR from C++ language source(s)."""
     compile_command = default_clang_compile_command(args)
-    compile_command[0] = 'clang++'
+    compile_command[0] = llvm_exact_bin('clang++')
     return compile_to_bc(input_file, compile_command, args)
 
 
@@ -263,9 +288,17 @@ def json_compilation_database_frontend(input_file, args):
             if 'objects' in cc:
                 # TODO what to do when there are multiple linkings?
                 bit_codes = [re.sub('[.]o$', '.bc', f) for f in cc['objects']]
-                try_command(['llvm-link', '-o', args.bc_file] + bit_codes)
-                try_command(['llvm-link', '-o', args.linked_bc_file,
-                             args.bc_file] + default_build_libs(args))
+                try_command([
+                             llvm_exact_bin('llvm-link'),
+                             '-o',
+                             args.bc_file
+                            ] + bit_codes)
+                try_command([
+                             llvm_exact_bin('llvm-link'),
+                             '-o',
+                             args.linked_bc_file,
+                             args.bc_file
+                            ] + default_build_libs(args))
 
             else:
                 command = cc['command']
@@ -288,6 +321,16 @@ def default_cargo_compile_command(args):
 
 def cargo_frontend(input_file, args):
     """Generate LLVM bitcode from a cargo build."""
+
+    def find_target(config, options=None):
+        target_name = config['package']['name']
+        # TODO: Shaobo: target selection can be done via Cargo options.
+        # But we don't capture Cargo options for now.
+        if options is None:
+            if 'lib' in config and 'name' in config['lib']:
+                target_name = config['lib']['name']
+        return target_name.replace('-', '_')
+
     targetdir = temporary_directory(
         os.path.splitext(
             os.path.basename(input_file))[0],
@@ -300,7 +343,7 @@ def cargo_frontend(input_file, args):
     try_command(compile_command, console=True,
                 env={'RUSTFLAGS': " ".join(rustargs)})
 
-    crate_name = toml.load(input_file)['package']['name'].replace('-', '_')
+    target_name = find_target(toml.load(input_file))
 
     # Find the name of the crate's bc file
     bcbase = targetdir + '/debug/deps/'
@@ -308,7 +351,7 @@ def cargo_frontend(input_file, args):
     bcs = []
 
     for entry in entries:
-        if entry.startswith(crate_name + '-') and entry.endswith('.bc'):
+        if entry.startswith(target_name + '-') and entry.endswith('.bc'):
             bcs.append(bcbase + entry)
 
     bc_file = temporary_file(
@@ -316,7 +359,7 @@ def cargo_frontend(input_file, args):
             os.path.basename(input_file))[0],
         '.bc',
         args)
-    try_command(['llvm-link'] + bcs + ['-o', bc_file])
+    try_command([llvm_exact_bin('llvm-link')] + bcs + ['-o', bc_file])
     return bc_file
 
 
@@ -410,7 +453,7 @@ def cplusplus_build_libs(args):
     libs = ['smack.cpp']
 
     compile_command = default_clang_compile_command(args, True)
-    compile_command[0] = 'clang++'
+    compile_command[0] = llvm_exact_bin('clang++')
 
     for c in [os.path.join(smack_lib(), c) for c in libs]:
         bc = compile_to_bc(c, compile_command, args)
@@ -443,8 +486,9 @@ def link_bc_files(bitcodes, libs, args):
     for build_lib in libs:
         smack_libs += build_lib(args)
 
-    try_command(['llvm-link', '-o', args.bc_file] + bitcodes)
-    try_command(['llvm-link', '-o', args.linked_bc_file,
+    bitcodes = extern_entry_points(args, bitcodes)
+    try_command([llvm_exact_bin('llvm-link'), '-o', args.bc_file] + bitcodes)
+    try_command([llvm_exact_bin('llvm-link'), '-o', args.linked_bc_file,
                  args.bc_file] + smack_libs)
 
     # import here to avoid a circular import

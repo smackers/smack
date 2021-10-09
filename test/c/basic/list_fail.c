@@ -1,4 +1,5 @@
 #include "smack.h"
+#include <assert.h>
 #include <stdlib.h>
 
 // @flag --unroll=4

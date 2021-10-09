@@ -136,7 +136,7 @@ bool SimplifyEV::runOnModule(Module& M) {
 
             GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(LI->getOperand(0), Indices,
                                                                        LI->getName(), LI) ;
-            LoadInst *LINew = new LoadInst(GEP, "", LI);
+            LoadInst *LINew = new LoadInst(GEP->getResultElementType(), GEP, "", LI);
             EV->replaceAllUsesWith(LINew);
             EV->eraseFromParent();
             changed = true;
