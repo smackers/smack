@@ -139,7 +139,7 @@ def isSMACKInitFunc(funcName):
   return funcName == '$initialize' or funcName == '__SMACK_static_init' or funcName == '__SMACK_init_func_memory_model'
 
 def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
-    """Converts output from SMACK (in the smackd json format) to a graphml
+    """Converts output from SMACK (in the json format) to a graphml
        format that conforms to the SVCOMP witness file format"""
     # Build tree & start node
     tree = buildEmptyXmlGraph(args, hasBug)

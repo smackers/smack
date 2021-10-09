@@ -79,16 +79,8 @@ castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
 }
 
 static inline bool isZExtOrBitCastable(Value* V, Type* T) {
-  if (!CastInst::isCastable(V->getType(), T))
-    return false;
-
-  switch(CastInst::getCastOpcode(V, false, T, false)) {
-    case Instruction::ZExt:
-    case Instruction::BitCast:
-      return true;
-    default:
-      return false;
-  }
+  return CastInst::castIsValid(Instruction::ZExt, V->getType(), T) ||
+         CastInst::castIsValid(Instruction::BitCast, V->getType(), T);
 }
 
 static inline bool match(CallBase *CS, const Function &F) {

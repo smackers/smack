@@ -2136,10 +2136,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation = (CHAR)(
-                                                        (int)Irp
-                                                            ->CurrentLocation +
-                                                        1);
+                                                    Irp->CurrentLocation =
+                                                        (CHAR)((int)Irp
+                                                                   ->CurrentLocation +
+                                                               1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2158,10 +2158,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation = (CHAR)(
-                                                        (int)Irp
-                                                            ->CurrentLocation +
-                                                        1);
+                                                    Irp->CurrentLocation =
+                                                        (CHAR)((int)Irp
+                                                                   ->CurrentLocation +
+                                                               1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16
@@ -2203,10 +2203,10 @@ NTSTATUS KbFilter_PnP(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
                                                     { errorFn(); }
                                                   }
                                                   {
-                                                    Irp->CurrentLocation = (CHAR)(
-                                                        (int)Irp
-                                                            ->CurrentLocation +
-                                                        1);
+                                                    Irp->CurrentLocation =
+                                                        (CHAR)((int)Irp
+                                                                   ->CurrentLocation +
+                                                               1);
                                                     Irp->Tail.Overlay
                                                         .__annonCompField17
                                                         .__annonCompField16

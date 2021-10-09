@@ -14,7 +14,7 @@ from .utils import temporary_file, try_command, remove_temp_files, \
     llvm_exact_bin
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
-from .errtrace import error_trace, smackdOutput
+from .errtrace import error_trace, json_output_str
 
 VERSION = '2.7.1'
 
@@ -332,6 +332,9 @@ def arguments():
     parser.add_argument('-w', '--error-file', metavar='FILE', default=None,
                         type=str, help='save error trace/witness to FILE')
 
+    parser.add_argument('--json-file', metavar='FILE', default=None,
+                        type=str, help='generate JSON output to FILE')
+
     frontend_group = parser.add_argument_group('front-end options')
 
     frontend_group.add_argument('-x', '--language', metavar='LANG',
@@ -581,9 +584,6 @@ def arguments():
         default='1',
         type=int,
         help='maximum reported assertion violations [default: %(default)s]')
-
-    verifier_group.add_argument('--smackd', action="store_true", default=False,
-                                help='generate JSON-format output for SMACKd')
 
     verifier_group.add_argument(
         '--svcomp-property',
@@ -993,28 +993,24 @@ def verify_bpl(args):
     verifier_output = transform_out(args, verifier_output)
     result = verification_result(verifier_output, args.verifier)
 
-    if args.smackd:
-        print(smackdOutput(result, verifier_output))
-        # TODO: determine how to encompass all
-        #  of the possible cases of things that
-        #  can happen in verification and return
-        #  any of them smoothly
-        return smackdOutput(result, verifier_output)
-    else:
-        if result in VResult.ERROR:
-            error = error_trace(verifier_output, args)
+    if args.json_file:
+        with open(args.json_file, 'w') as f:
+            f.write(json_output_str(result, verifier_output, args.verifier))
 
-            if args.error_file:
-                with open(args.error_file, 'w') as f:
-                    f.write(error)
+    if result in VResult.ERROR:
+        error = error_trace(verifier_output, args.verifier)
 
-            if not args.quiet:
-                print(error)
+        if args.error_file:
+            with open(args.error_file, 'w') as f:
+                f.write(error)
 
-            if args.replay:
-                replay_error_trace(verifier_output, args)
-        print(result.message(args))
-        return result.message(args)
+        if not args.quiet:
+            print(error)
+
+        if args.replay:
+            replay_error_trace(verifier_output, args)
+    print(result.message(args))
+    return result.return_code()
 
 
 def clean_up_upon_sigterm(main):
@@ -1043,7 +1039,8 @@ def main():
             if not args.quiet:
                 print("SMACK generated %s" % args.bpl_file)
         else:
-            verify_bpl(args)
+            return_code = verify_bpl(args)
+            sys.exit(return_code)
 
     except KeyboardInterrupt:
         sys.exit("SMACK aborted by keyboard interrupt.")

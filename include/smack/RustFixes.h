@@ -13,8 +13,8 @@ class RustFixes : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
   RustFixes() : llvm::FunctionPass(ID) {}
-  virtual llvm::StringRef getPassName() const;
-  virtual bool runOnFunction(llvm::Function &F);
+  virtual llvm::StringRef getPassName() const override;
+  virtual bool runOnFunction(llvm::Function &F) override;
 };
 } // namespace smack
 
