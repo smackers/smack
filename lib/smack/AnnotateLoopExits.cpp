@@ -15,6 +15,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -29,6 +30,13 @@
 namespace smack {
 
 using namespace llvm;
+
+bool AnnotateLoopExits::doInitialization(Module &M) {
+  LoopExitFunction = M.getFunction(Naming::LOOP_EXIT);
+  assert(LoopExitFunction != NULL &&
+         "Function __SMACK_loop_exit should be present.");
+  return true;
+}
 
 // Register LoopInfo
 void AnnotateLoopExits::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -60,22 +68,17 @@ void annotateLoopExit(Loop *loop, Function *le) {
   }
 }
 
-bool AnnotateLoopExits::runOnModule(Module &m) {
-  Function *le = m.getFunction(Naming::LOOP_EXIT);
-  assert(le != NULL && "Function __SMACK_loop_exit should be present.");
+bool AnnotateLoopExits::runOnFunction(Function &F) {
+  if (F.isIntrinsic() || F.empty()) {
+    return false;
+  }
 
-  for (auto F = m.begin(), FEnd = m.end(); F != FEnd; ++F) {
-    if (F->isIntrinsic() || F->empty()) {
-      continue;
-    }
+  LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
+       LI != LIEnd; ++LI) {
 
-    LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
-    for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
-         LI != LIEnd; ++LI) {
-
-      SDEBUG(errs() << "Processing Loop in " << F->getName() << "\n");
-      annotateLoopExit(*LI, le);
-    }
+    SDEBUG(errs() << "Processing Loop in " << F.getName() << "\n");
+    annotateLoopExit(*LI, LoopExitFunction);
   }
 
   return true;

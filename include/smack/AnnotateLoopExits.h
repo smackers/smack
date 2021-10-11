@@ -4,6 +4,7 @@
 #ifndef ANNOTATELOOPEXITS_H
 #define ANNOTATELOOPEXITS_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -11,12 +12,16 @@
 
 namespace smack {
 
-class AnnotateLoopExits : public llvm::ModulePass {
+class AnnotateLoopExits : public llvm::FunctionPass {
+private:
+  llvm::Function *LoopExitFunction;
+
 public:
   static char ID; // Pass identification, replacement for typeid
-  AnnotateLoopExits() : llvm::ModulePass(ID) {}
+  AnnotateLoopExits() : llvm::FunctionPass(ID) {}
+  bool doInitialization(llvm::Module &M);
   virtual llvm::StringRef getPassName() const override;
-  virtual bool runOnModule(llvm::Module &m) override;
+  virtual bool runOnFunction(llvm::Function &F) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage &) const override;
 };
 } // namespace smack
