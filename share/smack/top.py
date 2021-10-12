@@ -210,6 +210,7 @@ def inlined_procedures():
         '$initialize',
         '__SMACK_static_init',
         '__SMACK_init_func_memory_model',
+        '__SMACK_loop_exit',
         '__SMACK_check_overflow'
     ]
 
