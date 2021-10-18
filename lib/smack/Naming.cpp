@@ -71,6 +71,8 @@ const std::vector<std::string> Naming::RUST_PANICS = {
 
 const std::string Naming::RUST_PANIC_ANNOTATION = "rust_panic";
 
+const std::string Naming::RUST_PANIC_MARKER = "__SMACK_RUST_PANIC_MARKER";
+
 const std::string Naming::BLOCK_LBL = "$bb";
 const std::string Naming::RET_VAR = "$r";
 const std::string Naming::EXN_VAR = "$exn";

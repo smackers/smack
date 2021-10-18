@@ -97,6 +97,7 @@ public:
   static const std::string RUST_LANG_START_INTERNAL;
   static const std::vector<std::string> RUST_PANICS;
   static const std::string RUST_PANIC_ANNOTATION;
+  static const std::string RUST_PANIC_MARKER;
 
   static const std::string INT_WRAP_SIGNED_FUNCTION;
   static const std::string INT_WRAP_UNSIGNED_FUNCTION;

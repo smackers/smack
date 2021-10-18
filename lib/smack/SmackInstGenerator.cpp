@@ -648,7 +648,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   StringRef name = f->hasName() ? f->getName() : "";
 
-  if (SmackOptions::RustPanics && Naming::isRustPanic(name) &&
+  if (SmackOptions::RustPanics && name == Naming::RUST_PANIC_MARKER &&
       SmackOptions::shouldCheckFunction(
           ci.getParent()->getParent()->getName())) {
     // Convert Rust's panic functions into assertion violations
