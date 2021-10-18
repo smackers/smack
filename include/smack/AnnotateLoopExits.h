@@ -19,7 +19,7 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid
   AnnotateLoopExits() : llvm::FunctionPass(ID) {}
-  bool doInitialization(llvm::Module &M);
+  bool doInitialization(llvm::Module &M) override;
   virtual llvm::StringRef getPassName() const override;
   virtual bool runOnFunction(llvm::Function &F) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage &) const override;
