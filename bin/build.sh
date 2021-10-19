@@ -60,6 +60,7 @@ source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
+Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.31.zip"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -190,7 +191,6 @@ puts "Detected distribution: $distro"
 # Set platform-dependent flags
 case "$distro" in
 linux-opensuse*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-debian-8.10.zip"
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" llvm-clang llvm-devel"
   fi
@@ -198,22 +198,7 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
-linux-@(ubuntu|neon)-16*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  if [ ${INSTALL_LLVM} -eq 1 ] ; then
-    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
-  fi
-  ;;
-
-linux-@(ubuntu|neon)-18*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
-  if [ ${INSTALL_LLVM} -eq 1 ] ; then
-    DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
-  fi
-  ;;
-
-linux-@(ubuntu|neon)-20*)
-  Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-ubuntu-18.04.zip"
+linux-@(ubuntu|neon)-@(16|18|20)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   fi
