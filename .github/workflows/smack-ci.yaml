@@ -24,6 +24,7 @@ jobs:
             "--exhaustive --folder=c/strings",
             "--exhaustive --folder=c/special",
             "--exhaustive --folder=c/targeted-checks",
+            "--exhaustive --folder=c/unroll",
             "--exhaustive --folder=rust/array --languages=rust",
             "--exhaustive --folder=rust/basic --languages=rust",
             "--exhaustive --folder=rust/box --languages=rust",
