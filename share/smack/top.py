@@ -6,8 +6,9 @@ import shlex
 import subprocess
 import signal
 import functools
-import copy  # for making copies of args to pass to threads
-import multiprocessing  # added import for threads
+import copy
+import multiprocessing
+import yaml
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files, \
@@ -542,6 +543,14 @@ def arguments():
                                 help='back-end SMT solver')
 
     verifier_group.add_argument(
+        '--portfolio-config',
+        metavar='FILE',
+        default=None,
+        action=FileAction,
+        type=str,
+        help='read portfolio thread specs from a .yaml')
+
+    verifier_group.add_argument(
         '--unroll',
         metavar='N',
         default='1',
@@ -896,7 +905,6 @@ def verification_result(verifier_output, verifier):
 
 
 def get_result(result):
-    # print(result)
     return result
 
 
@@ -906,38 +914,61 @@ def verify_bpl(args):
     # ugly way of adding additional params to the verifier options
     if isinstance(args, tuple):
         args, commands_to_add = args
-        args.verifier_options = commands_to_add  # add verifier options
+        args.verifier = commands_to_add['verifier']
+        args.verifier_options = commands_to_add['verifier-options']
 
     if args.verifier == 'portfolio':
+        if args.portfolio_config is None:
+            yaml_info = {'thread1':
+                            {'verifier': 'corral',
+                             'verifier-options': ""},
+                         'thread2':
+                            {'verifier': 'corral',
+                             'verifier-options':
+                                 "/bopt:proverOpt:O:smt.arith.solver=2"},
+                         'thread3':
+                            {'verifier': 'corral',
+                             'verifier-options':
+                                 "/bopt:proverOpt:O:smt.qi.eager_threshold=100"},
+                         'thread4':
+                            {'verifier': 'corral',
+                             'verifier-options':
+                                 ("/bopt:proverOpt:O:smt.qi.eager_threshold=100"
+                                  " /bopt:proverOpt:O:smt.arith.solver=2")}}
+        else:
+            yaml_info = yaml.load(open(args.portfolio_config, 'r'))
         p = multiprocessing.Pool()
-
         thread_args = copy.deepcopy(args)
-        thread_args.verifier = 'corral'
 
-        # threads are 4 different combos of corral settings
-        thread_settings = ["/bopt:proverOpt:O:smt.qi.eager_threshold=100 "
-                           "/bopt:proverOpt:O:smt.arith.solver=2",
-                           "/bopt:proverOpt:O:smt.qi.eager_threshold=100",
-                           "/bopt:proverOpt:O:smt.arith.solver=2",
-                           ""]
-
-        results = {}  # map of result -> params
-        for thread in thread_settings:
+        results = {}  # map of result -> thread name
+        for thread in list(yaml_info.keys()):
             results[p.apply_async(verify_bpl,
-                                  args=((thread_args, thread),),
+                                  args=((thread_args, yaml_info[thread]),),
                                   callback=get_result)] = thread
 
         term = None
         while term is None:  # sleep?
-            for result in list(results.keys()):  # look through each process
-                if result.ready():  # is this process finished?
+            for result in list(results.keys()):
+                if result.ready():
+                    #p.terminate()
+                    #p.close()
+                    codes = {0 : 'verified',
+                             1 : "assertion failure",
+                             2 : "invalid deref",
+                             3 : "invalid free",
+                             4 : "invalid memtrack",
+                             5 : "overflow",
+                             6 : "rust panic",
+                             126 : "timeout",
+                             127 : "unknown"}
                     term = result.get()
+                    term_meaning = codes[term]
                     args_for_thread = results[result]
-                    print(f'Thread with params {args_for_thread}'
-                          f' returned: {term}')
+                    print(f'SMACK PORTFOLIO: {args_for_thread}'
+                          f' returned result code {term},'
+                          f' corresponding to: {term_meaning}')
                     p.close()
                     p.terminate()
-                    # return the error code that is now held in term
                     return term
 
     if args.verifier == 'svcomp':
