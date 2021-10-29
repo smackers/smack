@@ -17,7 +17,6 @@ from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, json_output_str
 
-
 VERSION = '2.7.1'
 
 
