@@ -17,6 +17,7 @@ from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, json_output_str
 
+
 VERSION = '2.7.1'
 
 
@@ -86,7 +87,7 @@ class VResult(Flag):
         if self is VResult.VERIFIED:
             return ('SMACK found no errors'
                     + ('' if args.modular else ' with unroll bound %s'
-                                               % args.unroll) + '.')
+                        % args.unroll) + '.')
         elif self in VResult.ERROR:
             description = self.description()
             return ('SMACK found an error'
@@ -536,7 +537,7 @@ def arguments():
             'symbooglix',
             'svcomp'],
         default='corral',
-        help='back-end verification engine')  # portfolio added as an option
+        help='back-end verification engine')
 
     verifier_group.add_argument('--solver',
                                 choices=['z3', 'cvc4', "yices2"], default='z3',
@@ -859,8 +860,8 @@ def transform_out(args, old):
 
 def verification_result(verifier_output, verifier):
     if re.search(
-            r'[1-9]\d* time out|Z3 ran out of resources|timed out|'
-            r'ERRORS_TIMEOUT', verifier_output):
+            r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
+                verifier_output):
         return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
                     r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
@@ -904,123 +905,50 @@ def verification_result(verifier_output, verifier):
         return VResult.UNKNOWN
 
 
-def get_result(result):
-    return result
+def invoke_boogie(args):
+    command = ["boogie"]
+    command += [args.bpl_file]
+    command += ["/doModSetAnalysis"]
+    command += ["/useArrayTheory"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/errorLimit:%s" % args.max_violations]
+    if not args.modular:
+        command += ["/loopUnroll:%d" % args.unroll]
+    if args.solver == 'cvc4':
+        command += ["/proverOpt:SOLVER=cvc4"]
+    elif args.solver == 'yices2':
+        command += ["/proverOpt:SOLVER=Yices2"]
+    return command
 
 
-def verify_bpl(args):
-    """Verify the Boogie source file with a back-end verifier."""
+def invoke_corral(args):
+    command = ["corral"]
+    command += [args.bpl_file]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/k:%d" % args.context_bound]
+    command += ["/useProverEvaluate"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/cex:%s" % args.max_violations]
+    command += ["/maxStaticLoopBound:%d" % args.loop_limit]
+    command += ["/recursionBound:%d" % args.unroll]
+    if args.solver == 'cvc4':
+        command += ["/bopt:proverOpt:SOLVER=cvc4"]
+    elif args.solver == 'yices2':
+        command += ["/bopt:proverOpt:SOLVER=Yices2"]
+    return command
 
-    # ugly way of adding additional params to the verifier options
-    if isinstance(args, tuple):
-        args, commands_to_add = args
-        args.verifier = commands_to_add['verifier']
-        args.verifier_options = commands_to_add['verifier-options']
 
-    if args.verifier == 'portfolio':
-        if args.portfolio_config is None:
-            yaml_info = {'thread1':
-                            {'verifier': 'corral',
-                             'verifier-options': ""},
-                         'thread2':
-                            {'verifier': 'corral',
-                             'verifier-options':
-                                 "/bopt:proverOpt:O:smt.arith.solver=2"},
-                         'thread3':
-                            {'verifier': 'corral',
-                             'verifier-options':
-                                 "/bopt:proverOpt:O:smt.qi.eager_threshold=100"},
-                         'thread4':
-                            {'verifier': 'corral',
-                             'verifier-options':
-                                 ("/bopt:proverOpt:O:smt.qi.eager_threshold=100"
-                                  " /bopt:proverOpt:O:smt.arith.solver=2")}}
-        else:
-            yaml_info = yaml.load(open(args.portfolio_config, 'r'))
-        p = multiprocessing.Pool()
-        thread_args = copy.deepcopy(args)
+def invoke_symbooglix(args):
+    command = ['symbooglix']
+    command += [args.bpl_file]
+    command += ["--file-logging=0"]
+    command += ["--entry-points=%s" % ",".join(args.entry_points)]
+    command += ["--timeout=%d" % args.time_limit]
+    command += ["--max-loop-depth=%d" % args.unroll]
+    return command
 
-        results = {}  # map of result -> thread name
-        for thread in list(yaml_info.keys()):
-            results[p.apply_async(verify_bpl,
-                                  args=((thread_args, yaml_info[thread]),),
-                                  callback=get_result)] = thread
 
-        term = None
-        while term is None:  # sleep?
-            for result in list(results.keys()):
-                if result.ready():
-                    #p.terminate()
-                    #p.close()
-                    codes = {0 : 'verified',
-                             1 : "assertion failure",
-                             2 : "invalid deref",
-                             3 : "invalid free",
-                             4 : "invalid memtrack",
-                             5 : "overflow",
-                             6 : "rust panic",
-                             126 : "timeout",
-                             127 : "unknown"}
-                    term = result.get()
-                    term_meaning = codes[term]
-                    args_for_thread = results[result]
-                    print(f'SMACK PORTFOLIO: {args_for_thread}'
-                          f' returned result code {term},'
-                          f' corresponding to: {term_meaning}')
-                    p.close()
-                    p.terminate()
-                    return term
-
-    if args.verifier == 'svcomp':
-        verify_bpl_svcomp(args)
-        return
-
-    elif args.verifier == 'boogie' or args.modular:
-        command = ["boogie"]
-        command += [args.bpl_file]
-        #  command += ["/nologo", "/doModSetAnalysis"]
-
-        command += ["/doModSetAnalysis"]
-        command += ["/useArrayTheory"]
-        command += ["/timeLimit:%s" % args.time_limit]
-        command += ["/errorLimit:%s" % args.max_violations]
-        command += ["/proverOpt:O:smt.array.extensional=false"]
-        command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
-        command += ["/proverOpt:O:smt.arith.solver=2"]
-        if not args.modular:
-            command += ["/loopUnroll:%d" % args.unroll]
-        if args.solver == 'cvc4':
-            command += ["/proverOpt:SOLVER=cvc4"]
-        elif args.solver == 'yices2':
-            command += ["/proverOpt:SOLVER=Yices2"]
-
-    elif args.verifier == 'corral':
-        command = ["corral"]
-        command += [args.bpl_file]
-        command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
-        command += ["/k:%d" % args.context_bound]
-        command += ["/useProverEvaluate"]
-        command += ["/timeLimit:%s" % args.time_limit]
-        command += ["/cex:%s" % args.max_violations]
-        command += ["/maxStaticLoopBound:%d" % args.loop_limit]
-        command += ["/recursionBound:%d" % args.unroll]
-        if args.solver == 'cvc4':
-            command += ["/bopt:proverOpt:SOLVER=cvc4"]
-        elif args.solver == 'yices2':
-            command += ["/bopt:proverOpt:SOLVER=Yices2"]
-
-    elif args.verifier == 'symbooglix':
-        command = ['symbooglix']
-        command += [args.bpl_file]
-        command += ["--file-logging=0"]
-        command += ["--entry-points=%s" % ",".join(args.entry_points)]
-        command += ["--timeout=%d" % args.time_limit]
-        command += ["--max-loop-depth=%d" % args.unroll]
-
-    if args.verifier_options:
-        command += args.verifier_options.split()
-
-    verifier_output = try_command(command, timeout=args.time_limit)
+def process_verifier_output(args, verifier_output):
     verifier_output = transform_out(args, verifier_output)
     result = verification_result(verifier_output, args.verifier)
 
@@ -1044,9 +972,129 @@ def verify_bpl(args):
     return result.return_code()
 
 
+def verify_bpl(args):
+    """Verify the Boogie source file with a back-end verifier."""
+
+    if args.verifier == 'svcomp':
+        verify_bpl_svcomp(args)
+        return
+
+    elif args.verifier == 'boogie' or args.modular:
+        command = invoke_boogie(args)
+        command += ["/proverOpt:O:smt.array.extensional=false"]
+        command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
+        command += ["/proverOpt:O:smt.arith.solver=2"]
+
+    elif args.verifier == 'corral':
+        command = invoke_corral(args)
+
+    elif args.verifier == 'symbooglix':
+        command = invoke_symbooglix(args)
+
+    if args.verifier_options:
+        command += args.verifier_options.split()
+
+    verifier_output = try_command(command, timeout=args.time_limit)
+    return process_verifier_output(args, verifier_output)
+
+
+def get_result(result):
+    return result
+
+
+def thread_verify_bpl(args, commands_to_add):
+    args.modular = False
+
+    if 'verifier' in commands_to_add:
+        args.verifier = commands_to_add['verifier']
+    else:
+        args.verifier = 'corral'
+
+    if 'modular' in commands_to_add:
+        args.modular = commands_to_add['modular']
+
+    if 'verifier-options' in commands_to_add:
+        args.verifier_options = commands_to_add['verifier-options']
+
+    if 'solver' in commands_to_add:
+        args.solver = commands_to_add['solver']
+
+    if args.verifier == 'boogie' or args.modular:
+        command = invoke_boogie(args)
+
+    elif args.verifier == 'corral':
+        command = invoke_corral(args)
+
+    elif args.verifier == 'symbooglix':
+        command = invoke_symbooglix(args)
+
+    if args.verifier_options:
+        command += args.verifier_options.split()
+
+    return args, try_command(command, timeout=args.time_limit)
+
+
+def verify_bpl_portfolio(args):
+    if args.portfolio_config is None:
+        portfolio_config = {'thread1':
+                               {'verifier': 'corral',
+                                'verifier-options': ""},
+                            'thread2':
+                               {'verifier': 'corral',
+                                'verifier-options':
+                                    "/bopt:proverOpt:O:smt.arith.solver=2"},
+                            'thread3':
+                               {'verifier': 'corral',
+                                'verifier-options':
+                                    "/bopt:proverOpt:O:smt.qi.eager_threshold=100"},
+                            'thread4':
+                               {'verifier': 'corral',
+                                'verifier-options':
+                                   ("/bopt:proverOpt:O:smt.qi.eager_threshold=100"
+                                    " /bopt:proverOpt:O:smt.arith.solver=2")}}
+    else:
+        portfolio_config = yaml.load(open(args.portfolio_config, 'r'))
+
+    p = multiprocessing.Pool()
+    thread_args = copy.deepcopy(args)
+    results = {}  # map of process -> thread name
+
+    for thread in list(portfolio_config.keys()):
+        results[p.apply_async(thread_verify_bpl,
+                              args=(thread_args, portfolio_config[thread]),
+                              callback=get_result)] = thread
+
+    while True:  # sleep?
+        for result in list(results.keys()):
+            if result.ready():
+                p.terminate()
+                args, verifier_output = result.get()
+                verifier_output = process_verifier_output(args, verifier_output)
+
+                codes = {0 : 'verified',
+                         1 : "assertion failure",
+                         2 : "invalid deref",
+                         3 : "invalid free",
+                         4 : "invalid memtrack",
+                         5 : "overflow",
+                         6 : "rust panic",
+                         126 : "timeout",
+                         127 : "unknown"}
+
+                code_meaning = codes[verifier_output]
+                thread_name = results[result]
+                print(f'SMACK PORTFOLIO: {thread_name}'
+                      f' returned result code {verifier_output},'
+                      f' corresponding to: {code_meaning}')
+
+                return verifier_output
+
+
 def clean_up_upon_sigterm(main):
     def handler(signum, frame):
+        remove_temp_files_lock.acquire()
         remove_temp_files()
+        remove_temp_files_lock.release()
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, handler)
@@ -1056,6 +1104,9 @@ def clean_up_upon_sigterm(main):
 @clean_up_upon_sigterm
 def main():
     try:
+        global remove_temp_files_lock
+        remove_temp_files_lock = multiprocessing.Lock()
+
         global args
         args = arguments()
 
@@ -1070,7 +1121,10 @@ def main():
             if not args.quiet:
                 print("SMACK generated %s" % args.bpl_file)
         else:
-            return_code = verify_bpl(args)
+            if args.verifier == 'portfolio':
+                return_code = verify_bpl_portfolio(args)
+            else:
+                return_code = verify_bpl(args)
             sys.exit(return_code)
 
     except KeyboardInterrupt:
