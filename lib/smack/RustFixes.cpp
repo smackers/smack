@@ -27,7 +27,9 @@ bool isRustNameMatch(StringRef search, StringRef name) {
   return hashed_match || exact_match;
 }
 
-bool replaceRustMemoryFunctions(Function &f) {
+bool replaceSpecialRustFunctions(Function &f) {
+  std::vector<Instruction *> to_remove;
+
   bool changed = false;
   static const std::map<StringRef, StringRef> alloc_fns = {
       {"_ZN5alloc5alloc5alloc17h", "__smack_rust_std_alloc"},
@@ -53,9 +55,27 @@ bool replaceRustMemoryFunctions(Function &f) {
             ci->setCalledFunction(replacement);
           }
         }
+
+        if (Naming::isRustPanic(name)) {
+          // Remove the calls rust panic functions
+          changed = true;
+          // Keep track of the panic call
+          Module *m = f->getParent();
+          FunctionCallee marker = m->getOrInsertFunction(
+              Naming::RUST_PANIC_MARKER, Type::getVoidTy(m->getContext()));
+          CallInst *panic_marker = CallInst::Create(marker);
+          panic_marker->setDebugLoc(ci->getDebugLoc());
+          panic_marker->insertBefore(ci);
+          to_remove.push_back(ci);
+        }
       }
     }
   }
+
+  for (auto ci : to_remove) {
+    ci->eraseFromParent();
+  }
+
   return changed;
 }
 
@@ -127,7 +147,7 @@ bool RustFixes::runOnFunction(Function &F) {
     if (name == "main") {
       result |= fixEntry(F);
     }
-    result |= replaceRustMemoryFunctions(F);
+    result |= replaceSpecialRustFunctions(F);
   }
 
   return result;

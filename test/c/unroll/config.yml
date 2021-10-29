@@ -1,0 +1,3 @@
+skip: false
+verifiers: [corral]
+flags: [--fail-on-loop-exit]

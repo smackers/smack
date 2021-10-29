@@ -348,7 +348,7 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
         {&SmackOptions::FloatEnabled}, currBlock, &I);
 
   const Expr *E;
-  if (isa<VectorType>(I.getType())) {
+  if (isa<FixedVectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto Y = I.getOperand(1);
     auto D = VectorOperations(rep).binary(&I);
@@ -364,8 +364,8 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
 /******************************************************************************/
 
 void SmackInstGenerator::visitUnaryOperator(llvm::UnaryOperator &I) {
-  assert(I.getOpcode() == Instruction::FNeg && !isa<VectorType>(I.getType()) &&
-         "Unsupported unary operation!");
+  assert(I.getOpcode() == Instruction::FNeg &&
+         !isa<FixedVectorType>(I.getType()) && "Unsupported unary operation!");
   processInstruction(I);
   SmackWarnings::warnOverApproximate(
       std::string("floating-point operation ") + I.getOpcodeName(),
@@ -485,7 +485,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
   const Expr *E;
-  if (isa<VectorType>(T->getElementType())) {
+  if (isa<FixedVectorType>(T->getElementType())) {
     auto D = VectorOperations(rep).load(P);
     E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
   } else {
@@ -509,7 +509,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   const llvm::Value *V = si.getValueOperand()->stripPointerCastsAndAliases();
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
-  if (isa<VectorType>(V->getType())) {
+  if (isa<FixedVectorType>(V->getType())) {
     auto D = VectorOperations(rep).store(P);
     auto M = Expr::id(rep->memPath(P));
     auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
@@ -583,7 +583,7 @@ void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
 void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
   processInstruction(I);
   const Expr *E;
-  if (isa<VectorType>(I.getType())) {
+  if (isa<FixedVectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto D = VectorOperations(rep).cast(&I);
     E = Expr::fn(D->getName(), rep->expr(X));
@@ -607,7 +607,7 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
 void SmackInstGenerator::visitCmpInst(llvm::CmpInst &I) {
   processInstruction(I);
   const Expr *E;
-  if (isa<VectorType>(I.getType())) {
+  if (isa<FixedVectorType>(I.getType())) {
     auto X = I.getOperand(0);
     auto Y = I.getOperand(1);
     auto D = VectorOperations(rep).cmp(&I);
@@ -648,7 +648,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   StringRef name = f->hasName() ? f->getName() : "";
 
-  if (SmackOptions::RustPanics && Naming::isRustPanic(name) &&
+  if (SmackOptions::RustPanics && name == Naming::RUST_PANIC_MARKER &&
       SmackOptions::shouldCheckFunction(
           ci.getParent()->getParent()->getName())) {
     // Convert Rust's panic functions into assertion violations

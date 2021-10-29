@@ -213,7 +213,8 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast: {
     Type *SrcTy = I->getOperand(0)->getType();
-    return TTI->getCastInstrCost(I->getOpcode(), I->getType(), SrcTy);
+    return TTI->getCastInstrCost(I->getOpcode(), I->getType(), SrcTy,
+                                 TTI->getCastContextHint(I));
   }
   case Instruction::ExtractElement: {
     return NO_TIMING_INFO;

@@ -38,8 +38,8 @@ public:
   static char ID;
   DSAWrapper() : ModulePass(ID) {}
 
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
-  virtual bool runOnModule(llvm::Module &M);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+  virtual bool runOnModule(llvm::Module &M) override;
 
   bool isStaticInitd(const seadsa::Node *n);
   bool isMemOpd(const seadsa::Node *n);

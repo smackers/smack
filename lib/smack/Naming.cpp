@@ -38,6 +38,7 @@ const std::string Naming::VALUE_PROC = "__SMACK_value";
 const std::string Naming::RETURN_VALUE_PROC = "__SMACK_return_value";
 const std::string Naming::INITIALIZE_PROC = "$initialize";
 const std::string Naming::STATIC_INIT_PROC = "__SMACK_static_init";
+const std::string Naming::LOOP_EXIT = "__SMACK_loop_exit";
 
 const std::string Naming::MEMORY = "$M";
 const std::string Naming::ALLOC = "$alloc";
@@ -70,6 +71,8 @@ const std::vector<std::string> Naming::RUST_PANICS = {
     "_ZN4core9panicking18panic_bounds_check17h"};
 
 const std::string Naming::RUST_PANIC_ANNOTATION = "rust_panic";
+
+const std::string Naming::RUST_PANIC_MARKER = "__SMACK_RUST_PANIC_MARKER";
 
 const std::string Naming::BLOCK_LBL = "$bb";
 const std::string Naming::RET_VAR = "$r";

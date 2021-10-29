@@ -236,7 +236,7 @@ std::string SmackRep::type(const llvm::Type *t) {
   else if (t->isPointerTy())
     return Naming::PTR_TYPE;
 
-  else if (auto VT = dyn_cast<VectorType>(t))
+  else if (auto VT = dyn_cast<FixedVectorType>(t))
     return vectorType(VT->getNumElements(), VT->getElementType());
 
   else

@@ -51,7 +51,7 @@ the following configurations:
 SMACK's Docker container images can be pulled from Docker Hub directly:
 
 ```shell
-docker pull smackers/smack:stable # built from the master branch
+docker pull smackers/smack:stable # built from the main branch
 docker pull smackers/smack:latest # built from the develop branch
 ```
 
@@ -74,8 +74,8 @@ to Docker's official documentation.
 
 SMACK depends on the following projects:
 
-* [LLVM][] version [11.1.0][LLVM-11.1.0]
-* [Clang][] version [11.1.0][Clang-11.1.0]
+* [LLVM][] version [12.0.1][LLVM-12.0.1]
+* [Clang][] version [12.0.1][Clang-12.0.1]
 * [Boost][] version 1.55 or greater
 * [Python][] version 3.6.8 or greater
 * [Ninja][] version 1.5.1 or greater
@@ -83,7 +83,7 @@ SMACK depends on the following projects:
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
 * [sea-dsa][]
 
-See [here](https://github.com/smackers/smack/blob/master/bin/versions) for
+See [here](https://github.com/smackers/smack/blob/main/bin/versions) for
 compatible version numbers of [Boogie][] and [Corral][]. See the appropriate
 installation instructions below for installing these requirements.
 
@@ -189,16 +189,16 @@ shell in the `test` directory by executing
 [CMake]: http://www.cmake.org
 [Python]: http://www.python.org
 [LLVM]: http://llvm.org
-[LLVM-11.1.0]: http://llvm.org/releases/download.html#11.1.0
+[LLVM-12.0.1]: http://llvm.org/releases/download.html#12.0.1
 [Clang]: http://clang.llvm.org
-[Clang-11.1.0]: http://llvm.org/releases/download.html#11.1.0
+[Clang-12.0.1]: http://llvm.org/releases/download.html#12.0.1
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://github.com/boogie-org/corral
 [Z3]: https://github.com/Z3Prover/z3/
 [Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com
 [.NET]: https://msdn.microsoft.com/en-us/vstudio/aa496123.aspx
-[build.sh]: https://github.com/smackers/smack/blob/master/bin/build.sh
+[build.sh]: https://github.com/smackers/smack/blob/main/bin/build.sh
 [Xcode]: https://developer.apple.com/xcode/
 [Homebrew]: http://brew.sh/
 [Homebrew Cask]: https://formulae.brew.sh/cask/
