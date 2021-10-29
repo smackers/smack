@@ -1,4 +1,4 @@
-[![master branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=master)](https://github.com/smackers/smack/actions)
+[![main branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=main)](https://github.com/smackers/smack/actions)
 [![develop branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=develop)](https://github.com/smackers/smack/actions)
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">

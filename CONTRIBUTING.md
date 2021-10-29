@@ -8,7 +8,7 @@ items before you start contributing:
   By participating, you are expected to honor this code.
 * We use this [git branching
   model](http://nvie.com/posts/a-successful-git-branching-model/). Please avoid
-  working directly on the `master` branch.
+  working directly on the `main` branch.
 * We follow guidelines for [good git commit
   practice](https://wiki.openstack.org/wiki/GitCommitMessages)
 * We follow the [LLVM Coding

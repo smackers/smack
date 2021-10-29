@@ -51,7 +51,7 @@ the following configurations:
 SMACK's Docker container images can be pulled from Docker Hub directly:
 
 ```shell
-docker pull smackers/smack:stable # built from the master branch
+docker pull smackers/smack:stable # built from the main branch
 docker pull smackers/smack:latest # built from the develop branch
 ```
 
@@ -83,7 +83,7 @@ SMACK depends on the following projects:
 * [Boogie][] or [Corral][] or compatible Boogie-format verifier
 * [sea-dsa][]
 
-See [here](https://github.com/smackers/smack/blob/master/bin/versions) for
+See [here](https://github.com/smackers/smack/blob/main/bin/versions) for
 compatible version numbers of [Boogie][] and [Corral][]. See the appropriate
 installation instructions below for installing these requirements.
 
@@ -198,7 +198,7 @@ shell in the `test` directory by executing
 [Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com
 [.NET]: https://msdn.microsoft.com/en-us/vstudio/aa496123.aspx
-[build.sh]: https://github.com/smackers/smack/blob/master/bin/build.sh
+[build.sh]: https://github.com/smackers/smack/blob/main/bin/build.sh
 [Xcode]: https://developer.apple.com/xcode/
 [Homebrew]: http://brew.sh/
 [Homebrew Cask]: https://formulae.brew.sh/cask/
