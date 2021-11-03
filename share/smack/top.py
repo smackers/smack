@@ -868,6 +868,7 @@ def verification_result(verifier_output, verifier):
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
         attr = None
         attr_pat = r'assert {:(.+)}'
+
         if verifier == 'corral':
             corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
                                       verifier_output)
