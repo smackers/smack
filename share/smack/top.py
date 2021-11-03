@@ -11,7 +11,7 @@ import multiprocessing
 import yaml
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files, \
+from .utils import temporary_file, try_command, remove_temp_files,\
     llvm_exact_bin
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
@@ -251,7 +251,6 @@ def validate_input_files(files):
             exit_with_error(
                 "Unexpected source file extension '%s'" %
                 file_extension)
-
     list(map(validate_input_file, files))
 
 
@@ -548,7 +547,7 @@ def arguments():
         default=None,
         action=FileAction,
         type=str,
-        help='read portfolio thread specs from a .yaml')
+        help='read portfolio configuration in YAML format from FILE')
 
     verifier_group.add_argument(
         '--unroll',
@@ -859,8 +858,8 @@ def transform_out(args, old):
 
 def verification_result(verifier_output, verifier):
     if re.search(
-            r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
-                verifier_output):
+        r'[1-9]\d* time out|Z3 ran out of resources|timed out|ERRORS_TIMEOUT',
+            verifier_output):
         return VResult.TIMEOUT
     elif re.search((r'[1-9]\d* verified, 0 errors?|no bugs|'
                     r'NO_ERRORS_NO_TIMEOUT'), verifier_output):
@@ -869,7 +868,6 @@ def verification_result(verifier_output, verifier):
                     r'ERRORS_NO_TIMEOUT'), verifier_output):
         attr = None
         attr_pat = r'assert {:(.+)}'
-
         if verifier == 'corral':
             corral_af_msg = re.search(r'ASSERTION FAILS %s' % attr_pat,
                                       verifier_output)
@@ -986,6 +984,8 @@ def verify_bpl(args):
 
     elif args.verifier == 'corral':
         command = invoke_corral(args)
+        command += ["/bopt:proverOpt:O:smt:qi.eager_threshold=100"]
+        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
 
     elif args.verifier == 'symbooglix':
         command = invoke_symbooglix(args)
@@ -997,26 +997,50 @@ def verify_bpl(args):
     return process_verifier_output(args, verifier_output)
 
 
-def get_result(result):
-    return result
+def thread_verify_bpl(args, args_to_add):
 
-
-def thread_verify_bpl(args, commands_to_add):
-    args.modular = False
-
-    if 'verifier' in commands_to_add:
-        args.verifier = commands_to_add['verifier']
+    if 'verifier' in args_to_add:
+        if args_to_add['verifier'] is 'portfolio':
+            raise RuntimeError("portfolio is not a valid verifier"
+                               " specification within the portfolio configuration")
+        else:
+            print("Warning: SMACK is using argument verifier from"
+                  " the chosen portfolio configuration")
+            args.verifier = args_to_add['verifier']
     else:
-        args.verifier = 'corral'
+        raise RuntimeError("verifier is a required argument"
+                           " in the portfolio configuration file")
 
-    if 'modular' in commands_to_add:
-        args.modular = commands_to_add['modular']
+    if 'modular' in args_to_add:
+        if args.modular:
+            raise RuntimeError("argument modular specified in both command"
+                               " line and portfolio configuration")
+        else:
+            print("Warning: SMACK is using argument modular from"
+                  " the chosen portfolio configuration")
+            args.modular = args_to_add['modular']
 
-    if 'verifier-options' in commands_to_add:
-        args.verifier_options = commands_to_add['verifier-options']
+    if (args.verifier is not 'boogie') and args.modular:
+        raise RuntimeError("Incompatible arguments modular"
+                           " and non-boogie verifier were specified")
 
-    if 'solver' in commands_to_add:
-        args.solver = commands_to_add['solver']
+    if 'verifier-options' in args_to_add:
+        if args.verifier_options is not '':
+            raise RuntimeError("argument verifier-options specified in both"
+                               " command line and portfolio configuration")
+        else:
+            print("Warning: SMACK is using argument verifier-options from"
+                  " the chosen portfolio configuration")
+            args.verifier_options = args_to_add['verifier-options']
+
+    if 'solver' in args_to_add:
+        if args.solver is not 'z3': # is there a better check than not default?
+            raise RuntimeError("argument solver specified in both command"
+                               " line and portfolio configuration")
+        else:
+            print("Warning: SMACK is using argument solver from"
+                  " the chosen portfolio configuration")
+            args.solver = args_to_add['solver']
 
     if args.verifier == 'boogie' or args.modular:
         command = invoke_boogie(args)
@@ -1030,7 +1054,8 @@ def thread_verify_bpl(args, commands_to_add):
     if args.verifier_options:
         command += args.verifier_options.split()
 
-    return args, try_command(command, timeout=args.time_limit)
+    verifier_output = try_command(command, timeout=args.time_limit)
+    return args, verifier_output
 
 
 def verify_bpl_portfolio(args):
@@ -1055,37 +1080,22 @@ def verify_bpl_portfolio(args):
         portfolio_config = yaml.load(open(args.portfolio_config, 'r'))
 
     p = multiprocessing.Pool()
-    thread_args = copy.deepcopy(args)
     results = {}  # map of process -> thread name
 
     for thread in list(portfolio_config.keys()):
         results[p.apply_async(thread_verify_bpl,
-                              args=(thread_args, portfolio_config[thread]),
-                              callback=get_result)] = thread
+                              args=(copy.deepcopy(args),
+                              portfolio_config[thread]))] = thread
 
-    while True:  # sleep?
+    #TODO: revisit this loop to improve efficiency
+    while True:
         for result in list(results.keys()):
             if result.ready():
                 p.terminate()
                 args, verifier_output = result.get()
                 verifier_output = process_verifier_output(args, verifier_output)
-
-                codes = {0 : 'verified',
-                         1 : "assertion failure",
-                         2 : "invalid deref",
-                         3 : "invalid free",
-                         4 : "invalid memtrack",
-                         5 : "overflow",
-                         6 : "rust panic",
-                         126 : "timeout",
-                         127 : "unknown"}
-
-                code_meaning = codes[verifier_output]
                 thread_name = results[result]
-                print(f'SMACK PORTFOLIO: {thread_name}'
-                      f' returned result code {verifier_output},'
-                      f' corresponding to: {code_meaning}')
-
+                print(f'SMACK portfolio {thread_name} terminated')
                 return verifier_output
 
 
