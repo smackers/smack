@@ -14,7 +14,6 @@ This method requires running part of the Rust compiler build script in order to 
 # Example modification
 In Smack it is desirable to allocate memory upfront in order to avoid a `realloc` later.
 For the `Vec` struct we can modify the `new` function in `library/alloc/src/raw_vec.rs` to use a static, non-zero sized allocation.
-(Currently located at: https://github.com/keram88/rust-src-test)
 Specifically, we change this:
 ```rust
 pub const fn new() -> Self {
