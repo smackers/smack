@@ -109,3 +109,26 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
 
 def llvm_exact_bin(name):
     return name + '-' + LLVM_SHORT_VERSION
+
+
+def smack_root():
+    return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+
+def smack_header_path():
+    return os.path.join(smack_root(), 'share', 'smack', 'include')
+
+
+def smack_headers(args):
+    paths = []
+    paths.append(smack_header_path())
+    return paths
+
+def smack_lib():
+    return os.path.join(smack_root(), 'share', 'smack', 'lib')
+
+
+def smack_portfolio_path():
+    return os.path.join(smack_root(), 'share', 'smack',\
+                        'default-portfolio.yaml')
+

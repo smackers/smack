@@ -12,7 +12,7 @@ import yaml
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
 from .utils import temporary_file, try_command, remove_temp_files,\
-    llvm_exact_bin
+    llvm_exact_bin, smack_portfolio_path
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, json_output_str
@@ -544,7 +544,7 @@ def arguments():
     verifier_group.add_argument(
         '--portfolio-config',
         metavar='FILE',
-        default=None,
+        default=smack_portfolio_path(),
         action=FileAction,
         type=str,
         help='read portfolio configuration in YAML format from FILE')
@@ -985,8 +985,9 @@ def verify_bpl(args):
 
     elif args.verifier == 'corral':
         command = invoke_corral(args)
-        command += ["/bopt:proverOpt:O:smt:qi.eager_threshold=100"]
-        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
+        args.verifier_options += (
+            " /bopt:proverOpt:O:smt.qi.eager_threshold=100"
+            " /bopt:proverOpt:O:smt.arith.solver=2")
 
     elif args.verifier == 'symbooglix':
         command = invoke_symbooglix(args)
@@ -1001,46 +1002,56 @@ def verify_bpl(args):
 def thread_verify_bpl(args, args_to_add):
 
     if 'verifier' in args_to_add:
-        if args_to_add['verifier'] is 'portfolio':
-            raise RuntimeError("portfolio is not a valid verifier"
-                               " specification within the portfolio configuration")
+        if args_to_add['verifier'] == 'portfolio':
+            raise RuntimeError(
+                "portfolio is not a valid verifier specification"
+                " within the portfolio configuration")
         else:
-            print("Warning: SMACK is using argument verifier from"
-                  " the chosen portfolio configuration")
+            print(
+                "Warning: SMACK is using argument verifier from"
+                " the chosen portfolio configuration")
             args.verifier = args_to_add['verifier']
     else:
-        raise RuntimeError("verifier is a required argument"
-                           " in the portfolio configuration file")
+        raise RuntimeError(
+            "verifier is a required argument"
+            " in the portfolio configuration file")
 
     if 'modular' in args_to_add:
         if args.modular:
-            raise RuntimeError("argument modular specified in both command"
-                               " line and portfolio configuration")
+            raise RuntimeError(
+                "argument modular specified in both"
+                " command line and portfolio configuration")
         else:
-            print("Warning: SMACK is using argument modular from"
-                  " the chosen portfolio configuration")
+            print(
+                "Warning: SMACK is using argument modular from"
+                " the chosen portfolio configuration")
             args.modular = args_to_add['modular']
 
-    if (args.verifier is not 'boogie') and args.modular:
-        raise RuntimeError("Incompatible arguments modular"
-                           " and non-boogie verifier were specified")
+    if (args.verifier != 'boogie') and args.modular:
+        raise RuntimeError(
+            "Incompatible arguments modular"
+            " and non-boogie verifier were specified")
 
     if 'verifier-options' in args_to_add:
-        if args.verifier_options is not '':
-            raise RuntimeError("argument verifier-options specified in both"
-                               " command line and portfolio configuration")
+        if args.verifier_options:
+            raise RuntimeError(
+                "argument verifier-options specified in both"
+                " command line and portfolio configuration")
         else:
-            print("Warning: SMACK is using argument verifier-options from"
-                  " the chosen portfolio configuration")
+            print(
+                "Warning: SMACK is using argument verifier-"
+                "options from the chosen portfolio configuration")
             args.verifier_options = args_to_add['verifier-options']
 
     if 'solver' in args_to_add:
-        if args.solver is not 'z3': # is there a better check than not default?
-            raise RuntimeError("argument solver specified in both command"
-                               " line and portfolio configuration")
+        if args.solver != 'z3':  # better check than not default?
+            raise RuntimeError(
+                "argument solver specified in both command"
+                " line and portfolio configuration")
         else:
-            print("Warning: SMACK is using argument solver from"
-                  " the chosen portfolio configuration")
+            print(
+                "Warning: SMACK is using argument solver from"
+                " the chosen portfolio configuration")
             args.solver = args_to_add['solver']
 
     if args.verifier == 'boogie' or args.modular:
@@ -1060,41 +1071,25 @@ def thread_verify_bpl(args, args_to_add):
 
 
 def verify_bpl_portfolio(args):
-    if args.portfolio_config is None:
-        portfolio_config = {'thread1':
-                               {'verifier': 'corral',
-                                'verifier-options': ""},
-                            'thread2':
-                               {'verifier': 'corral',
-                                'verifier-options':
-                                    "/bopt:proverOpt:O:smt.arith.solver=2"},
-                            'thread3':
-                               {'verifier': 'corral',
-                                'verifier-options':
-                                    "/bopt:proverOpt:O:smt.qi.eager_threshold=100"},
-                            'thread4':
-                               {'verifier': 'corral',
-                                'verifier-options':
-                                   ("/bopt:proverOpt:O:smt.qi.eager_threshold=100"
-                                    " /bopt:proverOpt:O:smt.arith.solver=2")}}
-    else:
-        portfolio_config = yaml.load(open(args.portfolio_config, 'r'))
 
+    portfolio_config = yaml.load(open(args.portfolio_config, 'r'))
     p = multiprocessing.Pool()
     results = {}  # map of process -> thread name
 
     for thread in list(portfolio_config.keys()):
-        results[p.apply_async(thread_verify_bpl,
-                              args=(copy.deepcopy(args),
-                              portfolio_config[thread]))] = thread
+        async_result = p.apply_async(thread_verify_bpl,
+                                     args=(copy.deepcopy(args),
+                                     portfolio_config[thread]))
+        results[async_result] = thread
 
-    #TODO: revisit this loop to improve efficiency
+    # TODO: revisit this loop to improve efficiency
     while True:
         for result in list(results.keys()):
             if result.ready():
                 p.terminate()
                 args, verifier_output = result.get()
-                verifier_output = process_verifier_output(args, verifier_output)
+                verifier_output = process_verifier_output(
+                    args, verifier_output)
                 thread_name = results[result]
                 print(f'SMACK portfolio {thread_name} terminated')
                 return verifier_output
