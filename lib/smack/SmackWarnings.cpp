@@ -54,6 +54,12 @@ std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
   return ret + "}";
 }
 
+void SmackWarnings::warnLoop(std::string description) {
+  processApproximate(description + "; please check loop unrolling bound "
+                                   "otherwise there may be missed bugs",
+                     {}, nullptr, nullptr, FlagRelation::And);
+}
+
 void SmackWarnings::warnApproximate(std::string name, Block *currBlock,
                                     const Instruction *i) {
   processApproximate(
