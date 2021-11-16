@@ -913,7 +913,7 @@ def verification_result(verifier_output, verifier):
         return VResult.UNKNOWN
 
 
-def invoke_boogie(args):
+def boogie_command(args):
     command = ["boogie"]
     command += [args.bpl_file]
     command += ["/doModSetAnalysis"]
@@ -929,7 +929,7 @@ def invoke_boogie(args):
     return command
 
 
-def invoke_corral(args):
+def corral_command(args):
     command = ["corral"]
     command += [args.bpl_file]
     command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
@@ -946,7 +946,7 @@ def invoke_corral(args):
     return command
 
 
-def invoke_symbooglix(args):
+def symbooglix_command(args):
     command = ['symbooglix']
     command += [args.bpl_file]
     command += ["--file-logging=0"]
@@ -983,24 +983,20 @@ def process_verifier_output(args, verifier_output):
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
 
-    if args.verifier == 'svcomp':
-        verify_bpl_svcomp(args)
-        return
-
-    elif args.verifier == 'boogie' or args.modular:
-        command = invoke_boogie(args)
+    if args.verifier == 'boogie' or args.modular:
+        command = boogie_command(args)
         command += ["/proverOpt:O:smt.array.extensional=false"]
         command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
         command += ["/proverOpt:O:smt.arith.solver=2"]
 
     elif args.verifier == 'corral':
-        command = invoke_corral(args)
+        command = corral_command(args)
         args.verifier_options += (
             " /bopt:proverOpt:O:smt.qi.eager_threshold=100"
             " /bopt:proverOpt:O:smt.arith.solver=2")
 
     elif args.verifier == 'symbooglix':
-        command = invoke_symbooglix(args)
+        command = symbooglix_command(args)
 
     if args.verifier_options:
         command += args.verifier_options.split()
@@ -1065,13 +1061,13 @@ def thread_verify_bpl(args, args_to_add):
             args.solver = args_to_add['solver']
 
     if args.verifier == 'boogie' or args.modular:
-        command = invoke_boogie(args)
+        command = boogie_command(args)
 
     elif args.verifier == 'corral':
-        command = invoke_corral(args)
+        command = corral_command(args)
 
     elif args.verifier == 'symbooglix':
-        command = invoke_symbooglix(args)
+        command = symbooglix_command(args)
 
     if args.verifier_options:
         command += args.verifier_options.split()
@@ -1135,7 +1131,10 @@ def main():
             if not args.quiet:
                 print("SMACK generated %s" % args.bpl_file)
         else:
-            if args.verifier == 'portfolio':
+            if args.verifier == 'svcomp':
+                verify_bpl_svcomp(args)
+                return
+            elif args.verifier == 'portfolio':
                 return_code = verify_bpl_portfolio(args)
             else:
                 return_code = verify_bpl(args)
