@@ -34,6 +34,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
+#include "smack/LoopInfo.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
@@ -213,6 +214,8 @@ int main(int argc, char **argv) {
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
   pass_manager.add(new smack::SplitAggregateValue());
+  pass_manager.add(llvm::createLoopSimplifyPass());
+  pass_manager.add(new smack::LoopInfo());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
