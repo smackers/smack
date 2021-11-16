@@ -3,8 +3,7 @@ import sys
 import re
 import json
 from .utils import temporary_file, try_command, temporary_directory,\
-    llvm_exact_bin, smack_root, smack_header_path, smack_headers,\
-    smack_lib
+    llvm_exact_bin, smack_headers, smack_lib
 from .versions import RUST_VERSION
 
 # Needed for cargo operations

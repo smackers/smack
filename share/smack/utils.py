@@ -124,11 +124,11 @@ def smack_headers(args):
     paths.append(smack_header_path())
     return paths
 
+
 def smack_lib():
     return os.path.join(smack_root(), 'share', 'smack', 'lib')
 
 
 def smack_portfolio_path():
-    return os.path.join(smack_root(), 'share', 'smack',\
+    return os.path.join(smack_root(), 'share', 'smack',
                         'default-portfolio.yaml')
-
