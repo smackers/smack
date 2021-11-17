@@ -1084,7 +1084,8 @@ def verify_bpl_portfolio(args):
 
     for thread in list(portfolio_config.keys()):
         async_result = p.apply_async(thread_verify_bpl,
-            args=(copy.deepcopy(args), portfolio_config[thread]))
+                                     args=(copy.deepcopy(args),
+                                           portfolio_config[thread]))
         results[async_result] = thread
 
     # TODO: revisit this loop to improve efficiency
