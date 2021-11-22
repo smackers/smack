@@ -17,8 +17,21 @@ pub trait VerifierNonDet {
     fn nondet_where<F: FnOnce(&Self) -> bool>(f: F) -> Self;
 }
 ```
+
 It is currently expected that all types should implement this trait manually.
 
+Alternatively, we could implement a more straight-forward specification for nondet functions, where we have one function for each primitive type:
+```rust
+pub fn __VERIFIER_nondet_bool() -> bool { ... }
+pub fn __VERIFIER_nondet_i8() -> i8 { ... }
+pub fn __VERIFIER_nondet_u8() -> u8 { ... }
+...
+pub fn __VERIFIER_nondet_i32() -> i32 { ... }
+...
+```
+This is more like what is done in SVComp and is potentially more compatible with more verifiers.
+
+# Example
 ```rust
 use crate::verifier::*;
 
