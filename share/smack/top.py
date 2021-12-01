@@ -1078,7 +1078,7 @@ def thread_verify_bpl(args, args_to_add):
 
 def verify_bpl_portfolio(args):
 
-    portfolio_config = yaml.load(open(args.portfolio_config, 'r'))
+    portfolio_config = yaml.safe_load(open(args.portfolio_config, 'r'))
     p = multiprocessing.Pool()
     results = {}  # map of process -> thread name
 
