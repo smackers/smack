@@ -26,8 +26,8 @@ verifiers.
 See below for system requirements, installation, usage, and everything else.
 
 *We are very interested in your experience using SMACK. Please do contact
-[Zvonimir](mailto:zvonimir@cs.utah.edu) or
-[Michael](mailto:michael.emmi@gmail.com) with any possible feedback.*
+[Zvonimir](mailto:zvonimir@cs.utah.edu), [Michael](mailto:michael.emmi@gmail.com), or
+[Shaobo](mailto:shaobohe@baidu.com) with any possible feedback.*
 
 
 ### Support
@@ -37,7 +37,8 @@ See below for system requirements, installation, usage, and everything else.
 * If something is otherwise broken or missing, open an [issue](https://github.com/smackers/smack/issues).
 
 * As a last resort, send mail to 
-  [Michael](mailto:michael.emmi@gmail.com), [Zvonimir](mailto:zvonimir@cs.utah.edu), or both.
+  [Michael](mailto:michael.emmi@gmail.com), [Zvonimir](mailto:zvonimir@cs.utah.edu),
+  and [Shaobo](mailto:shaobohe@baidu.com).
 
 * To stay informed about updates, you can watch SMACK's Github page.
 
