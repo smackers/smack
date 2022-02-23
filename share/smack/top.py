@@ -848,15 +848,15 @@ def replace_reach_error(args):
     if args.language != 'svcomp':
         return
 
-    if VProperty.MEMORY_SAFETY in args.check or
-       VProperty.MEMLEAK in args.check or
-       VProperty.INTEGER_OVERFLOW in args.check:
+    if (VProperty.MEMORY_SAFETY in args.check or
+            VProperty.MEMLEAK in args.check or
+            VProperty.INTEGER_OVERFLOW in args.check):
         return
 
     with open(args.bpl_file, 'r') as bf:
         content = bf.read()
     content = content.replace('call reach_error();',
-        'assert false; call reach_error();')
+                              'assert false; call reach_error();')
     with open(args.bpl_file, 'w') as bf:
         bf.write(content)
 
