@@ -777,6 +777,7 @@ def llvm_to_bpl(args):
     try_command(cmd, console=True)
     annotate_bpl(args)
     memsafety_subproperty_selection(args)
+    replace_reach_error(args)
     transform_bpl(args)
 
 
@@ -839,6 +840,23 @@ def memsafety_subproperty_selection(args):
                 replace_assertion,
                 line)
             f.write(line)
+
+
+def replace_reach_error(args):
+    """Replaces a call to reach_error in SVCOMP benchmarks with assert false."""
+
+    if args.language != 'svcomp':
+        return
+
+    if (VProperty.MEMORY_SAFETY in args.check or VProperty.MEMLEAK in args.check
+        or VProperty.INTEGER_OVERFLOW in args.check):
+        return
+
+    with open(args.bpl_file, 'r') as bf:
+        content = bf.read()
+    content = content.replace('call reach_error();', 'assert false; call reach_error();')
+    with open(args.bpl_file, 'w') as bf:
+        bf.write(content)
 
 
 def transform_bpl(args):
@@ -991,9 +1009,8 @@ def verify_bpl(args):
 
     elif args.verifier == 'corral':
         command = corral_command(args)
-        args.verifier_options += (
-            " /bopt:proverOpt:O:smt.qi.eager_threshold=100"
-            " /bopt:proverOpt:O:smt.arith.solver=2")
+        command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
+        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
 
     elif args.verifier == 'symbooglix':
         command = symbooglix_command(args)
