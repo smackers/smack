@@ -356,7 +356,9 @@ def default_rust_compile_args(args):
             '--cfg',
             'verifier="smack"',
             '-C',
-            'passes=name-anon-globals']
+            'passes=name-anon-globals',
+            '-C',
+            'panic=abort']
 
 
 def default_rust_compile_command(args):
