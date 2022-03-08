@@ -34,7 +34,8 @@ Function *externalizeFunction(Function *Fn) {
   SmallVector<ReturnInst *, 8> Returns;
 
   // Copy the body of the original function to the new one
-  CloneFunctionInto(Copied, Fn, VMap, false, Returns);
+  CloneFunctionInto(Copied, Fn, VMap, CloneFunctionChangeType::LocalChangesOnly,
+                    Returns);
 
   // Copy metadata
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;

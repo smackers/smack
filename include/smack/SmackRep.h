@@ -4,6 +4,7 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstVisitor.h"

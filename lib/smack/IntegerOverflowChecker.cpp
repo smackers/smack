@@ -33,17 +33,21 @@ const std::map<std::string, Instruction::BinaryOps>
                                               {"mul", Instruction::Mul}};
 
 std::string IntegerOverflowChecker::getMax(unsigned bits, bool isSigned) {
+  SmallString<32> ret;
   if (isSigned)
-    return APInt::getSignedMaxValue(bits).toString(10, true);
+    APInt::getSignedMaxValue(bits).toString(ret, 10, true);
   else
-    return APInt::getMaxValue(bits).toString(10, false);
+    APInt::getMaxValue(bits).toString(ret, 10, false);
+  return ret.str().str();
 }
 
 std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
+  SmallString<32> ret;
   if (isSigned)
-    return APInt::getSignedMinValue(bits).toString(10, true);
+    APInt::getSignedMinValue(bits).toString(ret, 10, true);
   else
-    return APInt::getMinValue(bits).toString(10, false);
+    APInt::getMinValue(bits).toString(ret, 10, false);
+  return ret.str().str();
 }
 
 /*
