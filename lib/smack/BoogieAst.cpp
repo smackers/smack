@@ -72,15 +72,11 @@ const Expr *Expr::impl(const Expr *l, const Expr *r) {
 
 const Expr *Expr::lit(bool b) { return new BoolLit(b); }
 
-const Expr *Expr::lit(llvm::StringRef s) { return lit(s.str()); }
-
 const Expr *Expr::lit(std::string v) { return new StringLit(v); }
 
 const Expr *Expr::lit(unsigned long long v) { return new IntLit(v); }
 
 const Expr *Expr::lit(long long v) { return new IntLit(v); }
-
-const Expr *Expr::lit(llvm::StringRef v, unsigned w) { return lit(v.str(), w); }
 
 const Expr *Expr::lit(std::string v, unsigned w) {
   return w ? (const Expr *)new BvLit(v, w) : (const Expr *)new IntLit(v);

@@ -21,8 +21,8 @@ public:
 private:
   static const std::map<std::string, llvm::Instruction::BinaryOps>
       INSTRUCTION_TABLE;
-  std::string getMax(unsigned bits, bool isSigned);
-  std::string getMin(unsigned bits, bool isSigned);
+  llvm::APInt getMax(unsigned bits, bool isSigned);
+  llvm::APInt getMin(unsigned bits, bool isSigned);
   llvm::Value *extendBitWidth(llvm::Value *v, int bits, bool isSigned,
                               llvm::Instruction *i);
   llvm::BinaryOperator *createFlag(llvm::Value *v, int bits, bool isSigned,
