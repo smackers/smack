@@ -169,7 +169,9 @@ FuncDecl *builtinOp(std::string baseName, const Attr *attr,
 std::string getIntLimit(unsigned size) {
   auto n = APInt(size + 1, 0);
   n.setBit(size);
-  return n.toString(10, false);
+  SmallString<32> rstr;
+  n.toStringUnsigned(rstr, 10);
+  return std::string(rstr);
 }
 
 const std::vector<unsigned> IntOpGen::INTEGER_SIZES{

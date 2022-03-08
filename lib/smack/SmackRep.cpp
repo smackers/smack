@@ -640,7 +640,8 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
     bool neg = width > 1 &&
                (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
                            : ci->isNegative());
-    std::string str = (neg ? API.abs() : API).toString(10, false);
+    SmallString<32> str;
+    (neg ? API.abs() : API).toString(str, 10, false);
     const Expr *e =
         SmackOptions::BitPrecise ? Expr::lit(str, width) : Expr::lit(str, 0);
     std::stringstream op;
@@ -706,10 +707,14 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
 
       sig.setBit(sig.getBitWidth() - 1);
 
-      std::string hexSig = sig.toString(16, false).substr(1);
+      SmallString<32> sigStr;
+      sig.toString(sigStr, 16, false);
+      std::string hexSig = sigStr.substr(1).str();
       hexSig.insert(leftSize / 4, ".");
 
-      return Expr::lit(API.isNegative(), hexSig, finalExp.toString(10, true),
+      SmallString<32> finalExpStr;
+      finalExp.toString(finalExpStr, 10, true);
+      return Expr::lit(API.isNegative(), hexSig, finalExpStr.str().str(),
                        sigSize, expSize);
     } else {
       const APFloat APF = CFP->getValueAPF();

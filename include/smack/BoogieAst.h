@@ -4,6 +4,7 @@
 #ifndef BOOGIEAST_H
 #define BOOGIEAST_H
 
+#include "llvm/ADT/StringRef.h"
 #include <list>
 #include <sstream>
 #include <string>
@@ -33,11 +34,13 @@ public:
   static const Expr *id(std::string x);
   static const Expr *impl(const Expr *l, const Expr *r);
   static const Expr *lit(bool b);
+  static const Expr *lit(llvm::StringRef s);
   static const Expr *lit(std::string v);
   static const Expr *lit(unsigned v) { return lit((unsigned long long)v); }
   static const Expr *lit(unsigned long long v);
   static const Expr *lit(long long v);
   static const Expr *lit(std::string v, unsigned w);
+  static const Expr *lit(llvm::StringRef v, unsigned w);
   static const Expr *lit(unsigned long long v, unsigned w);
   static const Expr *lit(bool n, std::string s, std::string e, unsigned ss,
                          unsigned es);
