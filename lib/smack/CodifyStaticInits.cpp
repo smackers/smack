@@ -52,7 +52,7 @@ bool CodifyStaticInits::runOnModule(Module &M) {
     if (V->getType()->isIntegerTy() || V->getType()->isPointerTy() ||
         V->getType()->isFloatingPointTy() || V->getType()->isVectorTy())
 
-      IRB.CreateStore(V, IRB.CreateGEP(P, ArrayRef<Value *>(I)));
+      IRB.CreateStore(V, IRB.CreateGEP(P->getType()->getScalarType()->getPointerElementType(), P, ArrayRef<Value *>(I)));
 
     else if (ArrayType *AT = dyn_cast<ArrayType>(V->getType()))
       for (unsigned i = AT->getNumElements(); i-- > 0;) {

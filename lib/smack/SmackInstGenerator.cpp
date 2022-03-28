@@ -697,7 +697,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
     llvm_unreachable("universal quantifiers not implemented.");
 
-    // assert(ci.getNumArgOperands() == 2
+    // assert(ci.arg_size() == 2
     //     && "Expected contract expression argument to contract function.");
     // CallInst* cj = dyn_cast<CallInst>(ci.getArgOperand(1));
     // assert(cj && "Expected contract expression argument to contract
@@ -710,7 +710,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     // std::list<const Expr*> args;
     //
     // auto AX = F->getAttributes();
-    // for (unsigned i = 0; i < cj->getNumArgOperands(); i++) {
+    // for (unsigned i = 0; i < cj->arg_size(); i++) {
     //   std::string var = "";
     //   if (AX.hasAttribute(i+1, "contract-var"))
     //     var = AX.getAttribute(i+1, "contract-var").getValueAsString();
@@ -729,7 +729,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
              name == Naming::CONTRACT_ENSURES ||
              name == Naming::CONTRACT_INVARIANT) {
 
-    assert(ci.getNumArgOperands() == 1 &&
+    assert(ci.arg_size() == 1 &&
            "Expected contract expression argument to contract function.");
     CallInst *cj = dyn_cast<CallInst>(ci.getArgOperand(0));
     assert(cj && "Expected contract expression argument to contract function.");
@@ -738,7 +738,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
            "Expected contract expression argument to contract function.");
 
     std::list<const Expr *> args;
-    for (auto &V : cj->arg_operands())
+    for (auto &V : cj->args())
       args.push_back(rep->expr(V));
     for (auto m : rep->memoryMaps())
       args.push_back(Expr::id(m.first));
@@ -757,16 +757,16 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     }
 
     // } else if (name == "result") {
-    //   assert(ci.getNumArgOperands() == 0 && "Unexpected operands to
+    //   assert(ci.arg_size() == 0 && "Unexpected operands to
     //   result.");
     //   emit(Stmt::assign(rep->expr(&ci),Expr::id(Naming::RET_VAR)));
     //
     // } else if (name == "qvar") {
-    //   assert(ci.getNumArgOperands() == 1 && "Unexpected operands to qvar.");
+    //   assert(ci.arg_size() == 1 && "Unexpected operands to qvar.");
     //   emit(Stmt::assign(rep->expr(&ci),Expr::id(rep->getString(ci.getArgOperand(0)))));
     //
     // } else if (name == "old") {
-    //   assert(ci.getNumArgOperands() == 1 && "Unexpected operands to old.");
+    //   assert(ci.arg_size() == 1 && "Unexpected operands to old.");
     //   llvm::LoadInst* LI =
     //   llvm::dyn_cast<llvm::LoadInst>(ci.getArgOperand(0));
     //   assert(LI && "Expected value from Load.");
@@ -774,7 +774,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     //     Expr::fn("old",rep->load(LI->getPointerOperand())) ));
 
     // } else if (name == "forall") {
-    //   assert(ci.getNumArgOperands() == 2 && "Unexpected operands to
+    //   assert(ci.arg_size() == 2 && "Unexpected operands to
     //   forall.");
     //   Value* var = ci.getArgOperand(0);
     //   Value* arg = ci.getArgOperand(1);
@@ -784,7 +784,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     //     S->getBoogieExpression(naming,rep))));
     //
     // } else if (name == "exists") {
-    //   assert(ci.getNumArgOperands() == 2 && "Unexpected operands to
+    //   assert(ci.arg_size() == 2 && "Unexpected operands to
     //   forall.");
     //   Value* var = ci.getArgOperand(0);
     //   Value* arg = ci.getArgOperand(1);
@@ -794,7 +794,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     //     S->getBoogieExpression(naming,rep))));
     //
     // } else if (name == "invariant") {
-    //   assert(ci.getNumArgOperands() == 1 && "Unexpected operands to
+    //   assert(ci.arg_size() == 1 && "Unexpected operands to
     //   invariant.");
     //   Slice* S = getSlice(ci.getArgOperand(0));
     //   emit(Stmt::assert_(S->getBoogieExpression(naming,rep)));

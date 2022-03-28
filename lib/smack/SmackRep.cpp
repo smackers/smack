@@ -353,11 +353,11 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
   std::list<std::string> rets({naming->get(CI)});
   std::list<const Attr *> attrs;
 
-  assert(CI.getNumArgOperands() > 0 && "Expected at least one argument.");
-  assert(CI.getNumArgOperands() <= 2 && "Expected at most two arguments.");
+  assert(CI.arg_size() > 0 && "Expected at least one argument.");
+  assert(CI.arg_size() <= 2 && "Expected at most two arguments.");
   const Value *V = CI.getArgOperand(0)->stripPointerCastsAndAliases();
 
-  if (CI.getNumArgOperands() == 1) {
+  if (CI.arg_size() == 1) {
     name = indexedName(Naming::VALUE_PROC, {type(V->getType())});
     if (dyn_cast<const Argument>(V)) {
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*V))}));
@@ -441,7 +441,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
 }
 
 const Stmt *SmackRep::returnValueAnnotation(const CallInst &CI) {
-  assert(CI.getNumArgOperands() == 0 && "Expected no operands.");
+  assert(CI.arg_size() == 0 && "Expected no operands.");
   Type *T = CI.getParent()->getParent()->getReturnType();
   std::string name = indexedName(Naming::VALUE_PROC, {type(T)});
   return Stmt::call(name, std::list<const Expr *>({Expr::id(Naming::RET_VAR)}),
@@ -451,7 +451,7 @@ const Stmt *SmackRep::returnValueAnnotation(const CallInst &CI) {
 
 // TODO work the following into SmackRep::returnValueAnnotation
 // const Stmt* SmackRep::returnObjectAnnotation(const CallInst& CI) {
-//   assert(CI.getNumArgOperands() == 1 && "Expected one operand.");
+//   assert(CI.arg_size() == 1 && "Expected one operand.");
 //   const Value* V = nullptr; // FIXME GET A VALUE HERE
 //   assert(V && "Unknown return value.");
 //   const Value* N = CI.getArgOperand(0);
@@ -1061,7 +1061,7 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
     } else {
       FunctionType *T = F->getFunctionType();
       name = procName(F, *CI);
-      for (unsigned i = T->getNumParams(); i < CI->getNumArgOperands(); i++) {
+      for (unsigned i = T->getNumParams(); i < CI->arg_size(); i++) {
         params.push_back(
             {indexedName("p", {i}), type(CI->getOperand(i)->getType())});
       }

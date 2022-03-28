@@ -175,12 +175,12 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
   case Instruction::Select: {
     const SelectInst *SI = cast<SelectInst>(I);
     Type *CondTy = SI->getCondition()->getType();
-    return TTI->getCmpSelInstrCost(I->getOpcode(), I->getType(), CondTy);
+    return TTI->getCmpSelInstrCost(I->getOpcode(), I->getType(), CondTy, CmpInst::BAD_ICMP_PREDICATE);
   }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
-    return TTI->getCmpSelInstrCost(I->getOpcode(), ValTy);
+    return TTI->getCmpSelInstrCost(I->getOpcode(), ValTy, nullptr, CmpInst::BAD_ICMP_PREDICATE);
   }
   case Instruction::Store: {
     const StoreInst *SI = cast<StoreInst>(I);
@@ -224,7 +224,7 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       SmallVector<Type *, 4> Tys;
-      for (unsigned J = 0, JE = II->getNumArgOperands(); J != JE; ++J)
+      for (unsigned J = 0, JE = II->arg_size(); J != JE; ++J)
         Tys.push_back(II->getArgOperand(J)->getType());
 
       FastMathFlags FMF;

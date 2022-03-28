@@ -80,7 +80,8 @@ bool SimplifyIV::runOnModule(Module& M) {
                  I != E; ++I) {
               Indices.push_back(ConstantInt::get(Int32Ty, *I));
             }
-            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(SI->getOperand(1), Indices,
+            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(SI->getOperand(1)->getType()->getScalarType()->getPointerElementType(),
+			                                               SI->getOperand(1), Indices,
                                                                        SI->getName(), SI) ;
             new StoreInst(IV->getInsertedValueOperand(), GEP, SI);
             IV = dyn_cast<InsertValueInst>(IV->getAggregateOperand());

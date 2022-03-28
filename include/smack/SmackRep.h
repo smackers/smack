@@ -12,6 +12,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
 #include <list>
+#include <map>
 #include <sstream>
 
 namespace smack {

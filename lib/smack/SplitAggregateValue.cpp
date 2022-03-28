@@ -54,7 +54,7 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
           splitConstantReturn(ri, info);
         }
       } else if (CallInst *ci = dyn_cast<CallInst>(&I)) {
-        for (unsigned i = 0; i < ci->getNumArgOperands(); ++i) {
+        for (unsigned i = 0; i < ci->arg_size(); ++i) {
           Value *arg = ci->getArgOperand(i);
           if (isConstantAggregate(arg)) {
             info.clear();
@@ -88,8 +88,9 @@ Value *SplitAggregateValue::splitAggregateLoad(Type *T, Value *P,
   Value *V = UndefValue::get(T);
   for (auto &e : info) {
     IndexT idxs = std::get<0>(e);
+    Value *p = irb.CreateGEP(T, P, ArrayRef<Value *>(getFirsts(idxs)));
     V = irb.CreateInsertValue(
-        V, irb.CreateLoad(irb.CreateGEP(P, ArrayRef<Value *>(getFirsts(idxs)))),
+        V, irb.CreateLoad(p->getType()->getScalarType()->getPointerElementType(), p),
         ArrayRef<unsigned>(getSeconds(idxs)));
   }
   return V;
@@ -102,12 +103,13 @@ void SplitAggregateValue::splitAggregateStore(Value *P, Value *V,
     IndexT idxs = std::get<0>(e);
     Constant *c = std::get<1>(e);
     std::vector<Value *> vidxs = getFirsts(idxs);
+    Type *T = P->getType()->getScalarType()->getPointerElementType();
     if (c)
-      irb.CreateStore(c, irb.CreateGEP(P, ArrayRef<Value *>(vidxs)));
+      irb.CreateStore(c, irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs)));
     else
       irb.CreateStore(
           irb.CreateExtractValue(V, ArrayRef<unsigned>(getSeconds(idxs))),
-          irb.CreateGEP(P, ArrayRef<Value *>(vidxs)));
+          irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs)));
   }
 }
 

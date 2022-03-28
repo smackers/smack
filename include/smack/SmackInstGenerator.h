@@ -6,6 +6,7 @@
 
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/InstVisitor.h"
+#include <map>
 #include <set>
 #include <unordered_set>
 

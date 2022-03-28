@@ -140,7 +140,8 @@ static void simplifyGEP(GetElementPtrInst *GEP) {
 
     if (!Indices.empty()){
       GetElementPtrInst *GEPNew =  (GEP->isInBounds() && Src->isInBounds()) ?
-        GetElementPtrInst::CreateInBounds(Src->getOperand(0), Indices,
+        GetElementPtrInst::CreateInBounds(Src->getOperand(0)->getType()->getScalarType()->getPointerElementType(),
+			                  Src->getOperand(0), Indices,
                                           GEP->getName(), GEP) :
         GetElementPtrInst::Create(nullptr, Src->getOperand(0), Indices,
                                   GEP->getName(), GEP);

@@ -281,7 +281,7 @@ void Regions::visitCallInst(CallInst &I) {
     idx(&I);
 
   if (name.find("__SMACK_values") != std::string::npos) {
-    assert(I.getNumArgOperands() == 2 && "Expected two operands.");
+    assert(I.arg_size() == 2 && "Expected two operands.");
     const Value *P = I.getArgOperand(0);
     const Value *N = I.getArgOperand(1);
 
