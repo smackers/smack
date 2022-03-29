@@ -90,7 +90,9 @@ Value *SplitAggregateValue::splitAggregateLoad(Type *T, Value *P,
     IndexT idxs = std::get<0>(e);
     Value *p = irb.CreateGEP(T, P, ArrayRef<Value *>(getFirsts(idxs)));
     V = irb.CreateInsertValue(
-        V, irb.CreateLoad(p->getType()->getScalarType()->getPointerElementType(), p),
+        V,
+        irb.CreateLoad(p->getType()->getScalarType()->getPointerElementType(),
+                       p),
         ArrayRef<unsigned>(getSeconds(idxs)));
   }
   return V;

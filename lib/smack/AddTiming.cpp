@@ -175,12 +175,14 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
   case Instruction::Select: {
     const SelectInst *SI = cast<SelectInst>(I);
     Type *CondTy = SI->getCondition()->getType();
-    return TTI->getCmpSelInstrCost(I->getOpcode(), I->getType(), CondTy, CmpInst::BAD_ICMP_PREDICATE);
+    return TTI->getCmpSelInstrCost(I->getOpcode(), I->getType(), CondTy,
+                                   CmpInst::BAD_ICMP_PREDICATE);
   }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
-    return TTI->getCmpSelInstrCost(I->getOpcode(), ValTy, nullptr, CmpInst::BAD_ICMP_PREDICATE);
+    return TTI->getCmpSelInstrCost(I->getOpcode(), ValTy, nullptr,
+                                   CmpInst::BAD_ICMP_PREDICATE);
   }
   case Instruction::Store: {
     const StoreInst *SI = cast<StoreInst>(I);
