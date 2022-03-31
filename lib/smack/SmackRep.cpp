@@ -1271,6 +1271,9 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
   unsigned size = 0;
   bool external = false;
 
+  if (v->isThreadLocal())
+    ax.push_back(Attr::attr("treadLocal"));
+
   if (const GlobalVariable *g = dyn_cast<const GlobalVariable>(v)) {
     addAllocSizeAttr(g, ax);
     if (g->hasInitializer()) {
