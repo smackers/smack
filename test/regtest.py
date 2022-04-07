@@ -14,6 +14,7 @@ import glob
 import time
 import sys
 import shlex
+import pathlib
 
 OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
 APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
@@ -70,11 +71,12 @@ def merge(metadata, yamldata):
 def metadata(file):
     m = {}
     prefix = []
+    path = pathlib.Path(file)
 
-    for d in path.dirname(file).split('/'):
+    for d in path.parent.parts:
         prefix += [d]
-        yaml_file = path.join(*(prefix + ['config.yml']))
-        if path.isfile(yaml_file):
+        yaml_file = pathlib.Path(*(prefix + ['config.yml']))
+        if yaml_file.is_file():
             with open(yaml_file, "r") as f:
                 data = yaml.safe_load(f)
                 merge(m, data)
