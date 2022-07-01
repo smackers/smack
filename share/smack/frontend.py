@@ -334,8 +334,8 @@ def cargo_frontend(input_file, args):
 
     # Matches either target_name.bc or target_name-0123456789abcdef.bc
     # depending on platform
-    target_pat = target_name + r'(-[a-f0-9]{16})?\.bc'
-    r = re.compile(target_pat)
+    target_pattern = target_name + r'(-[a-f0-9]{16})?\.bc'
+    r = re.compile(target_pattern)
     bcs = list(filter(r.match, entries))
     assert(len(bcs) == 1)
 
