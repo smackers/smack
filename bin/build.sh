@@ -60,6 +60,7 @@ source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
+NINJA="ninja"
 Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.31.zip"
 
 # Install prefix -- system default is used if left unspecified
@@ -204,6 +205,11 @@ linux-@(ubuntu|neon)-@(16|18|20)*)
   fi
   ;;
 
+linux---x86_64)
+  BUILD_LLVM=1
+  NINJA="ninja-build"
+  ;;
+
 *)
   puts "Distribution ${distro} not supported. Manual installation required."
   exit 1
@@ -277,6 +283,26 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo apt-get install -y ${DEPENDENCIES}
     ;;
 
+
+  linux---x86_64)
+    sudo yum -y install ninja-build
+    sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+    sudo yum -y install dotnet-sdk-5.0
+
+    mkdir -p ${DEPS_DIR}
+    cd ${DEPS_DIR}
+    ${WGET} https://github.com/Kitware/CMake/releases/download/v3.26.0/cmake-3.26.0-linux-x86_64.sh
+    chmod u+x cmake-3.26.0-linux-x86_64.sh
+    sudo ./cmake-3.26.0-linux-x86_64.sh --prefix=/usr/local/ --exclude-subdir
+
+    ${WGET} https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz
+    tar -xzvf boost_1_81_0.tar.gz
+    cd boost_1_81_0
+    ./bootstrap.sh
+    sudo ./b2 install --with=all
+    cd ..
+    ;;
+
   *)
     puts "Distribution ${distro} not supported. Dependencies must be installed manually."
     exit 1
@@ -314,6 +340,12 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
   make
   sudo make install
+
+  sudo update-alternatives --install /usr/local/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} /usr/local/bin/clang++ 30
+  sudo update-alternatives --install /usr/local/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-config 30
+  sudo update-alternatives --install /usr/local/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-link 30
+  sudo update-alternatives --install /usr/local/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-dis 30
+
   puts "Built LLVM"
 fi
 
@@ -474,15 +506,16 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
+
   cmake -DCMAKE_CXX_COMPILER=clang++-${LLVM_SHORT_VERSION} \
         -DCMAKE_C_COMPILER=clang-${LLVM_SHORT_VERSION} ${CMAKE_INSTALL_PREFIX} \
         -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
-  ninja
+  ${NINJA}
 
   if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then
-    ninja install
+    ${NINJA} install
   else
-    sudo ninja install
+    sudo ${NINJA} install
   fi
 
   puts "Configuring shell environment"
