@@ -73,7 +73,7 @@ def metadata(file):
     prefix = []
     path = pathlib.Path(file)
 
-    for d in path.parent.parts:
+    for d in ('./',) + path.parent.parts:
         prefix += [d]
         yaml_file = pathlib.Path(*(prefix + ['config.yml']))
         if yaml_file.is_file():
