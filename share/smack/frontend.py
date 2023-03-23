@@ -337,7 +337,7 @@ def cargo_frontend(input_file, args):
     target_pattern = target_name + r'(-[a-f0-9]{16})?\.bc'
     r = re.compile(target_pattern)
     bcs = list(filter(r.match, entries))
-    assert(len(bcs) == 1)
+    assert (len(bcs) == 1)
 
     return bcbase + bcs[0]
 
