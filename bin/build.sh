@@ -286,7 +286,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
 
   linux---x86_64)
     sudo yum -y install ninja-build
-    sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+    sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
     sudo yum -y install dotnet-sdk-5.0
 
     mkdir -p ${DEPS_DIR}
@@ -337,9 +337,9 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
-  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
-  make
-  sudo make install
+  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src -G Ninja
+  ${NINJA}
+  sudo ${NINJA} install
 
   sudo update-alternatives --install /usr/local/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} /usr/local/bin/clang++ 30
   sudo update-alternatives --install /usr/local/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-config 30
