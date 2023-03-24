@@ -35,6 +35,7 @@ BUILD_SMACK=${BUILD_SMACK:-1}
 TEST_SMACK=${TEST_SMACK:-1}
 INSTALL_LLVM=${INSTALL_LLVM:-1}
 BUILD_LLVM=${BUILD_LLVM:-0} # LLVM is typically installed from packages (see below)
+BUILD_Z3=${BUILD_Z3:-0} # Z3 is typically installed from binary (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=${INSTALL_OBJECTIVEC:-0}
@@ -207,6 +208,8 @@ linux-@(ubuntu|neon)-@(16|18|20)*)
 
 linux---x86_64)
   BUILD_LLVM=1
+  BUILD_Z3=1
+  INSTALL_Z3=0
   NINJA="ninja-build"
   ;;
 
@@ -368,6 +371,20 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   rustup toolchain install ${RUST_VERSION}
   cargo install rustfilt
   puts "Installed Rust"
+fi
+
+if [ ${BUILD_Z3} -eq 1 ] ; then
+  puts "Building Z3"
+  mkdir -p ${Z3_DIR}
+  cd ${Z3_DIR}
+  ${WGET} https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.1.zip
+  unzip z3-4.12.1.zip
+  cd z3-z3-4.12.1
+  python scripts/mk_make.py
+  cd build
+  make -j$(nproc)
+  sudo make install
+  puts "Built Z3"
 fi
 
 
