@@ -443,7 +443,8 @@ fi
 if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
   if [ ! -d "$BOOGIE_DIR" ] ; then
     puts "Installing Boogie"
-    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION}
+    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
+    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION} <<< "dummy"
     puts "Installed Boogie"
   else
     puts "Boogie already installed"
@@ -455,7 +456,8 @@ fi
 if [ ${INSTALL_CORRAL} -eq 1 ] ; then
   if [ ! -d "$CORRAL_DIR" ] ; then
     puts "Installing Corral"
-    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION}
+    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
+    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION} <<< "dummy"
     puts "Installed Corral"
   else
     puts "Corral already installed"
