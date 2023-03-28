@@ -291,6 +291,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo yum -y install ninja-build
     sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
     sudo yum -y install dotnet-sdk-5.0
+    sudo pip3 install pyyaml psutil toml
 
     mkdir -p ${DEPS_DIR}
     cd ${DEPS_DIR}
