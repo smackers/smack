@@ -207,7 +207,6 @@ linux-@(ubuntu|neon)-@(16|18|20)*)
   ;;
 
 linux---x86_64)
-  BUILD_LLVM=1
   BUILD_Z3=1
   INSTALL_Z3=0
   NINJA="ninja-build"
@@ -305,6 +304,16 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     ./bootstrap.sh
     sudo ./b2 install --with=all
     cd ..
+
+    mkdir -p ${LLVM_DIR}
+    ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+    tar -C ${LLVM_DIR} -xvf clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz --strip 1
+    sudo update-alternatives --install ${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/clang++ 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-config 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-link 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-dis 30
+    export PATH="${LLVM_DIR}/bin:$PATH"
+    echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
     ;;
 
   *)
