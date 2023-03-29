@@ -35,6 +35,7 @@ BUILD_SMACK=${BUILD_SMACK:-1}
 TEST_SMACK=${TEST_SMACK:-1}
 INSTALL_LLVM=${INSTALL_LLVM:-1}
 BUILD_LLVM=${BUILD_LLVM:-0} # LLVM is typically installed from packages (see below)
+BUILD_Z3=${BUILD_Z3:-0} # Z3 is typically installed from binary (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=${INSTALL_OBJECTIVEC:-0}
@@ -60,6 +61,7 @@ source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
+NINJA="ninja"
 Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.31.zip"
 
 # Install prefix -- system default is used if left unspecified
@@ -204,6 +206,12 @@ linux-@(ubuntu|neon)-@(16|18|20)*)
   fi
   ;;
 
+linux---x86_64)
+  BUILD_Z3=1
+  INSTALL_Z3=0
+  NINJA="ninja-build"
+  ;;
+
 *)
   puts "Distribution ${distro} not supported. Manual installation required."
   exit 1
@@ -277,6 +285,37 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo apt-get install -y ${DEPENDENCIES}
     ;;
 
+
+  linux---x86_64)
+    sudo yum -y install ninja-build
+    sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+    sudo yum -y install dotnet-sdk-5.0
+    sudo pip3 install pyyaml psutil toml
+
+    mkdir -p ${DEPS_DIR}
+    cd ${DEPS_DIR}
+    ${WGET} https://github.com/Kitware/CMake/releases/download/v3.26.0/cmake-3.26.0-linux-x86_64.sh
+    chmod u+x cmake-3.26.0-linux-x86_64.sh
+    sudo ./cmake-3.26.0-linux-x86_64.sh --prefix=/usr/local/ --exclude-subdir
+
+    ${WGET} https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz
+    tar -xzvf boost_1_81_0.tar.gz
+    cd boost_1_81_0
+    ./bootstrap.sh
+    sudo ./b2 install --with=all
+    cd ..
+
+    mkdir -p ${LLVM_DIR}
+    ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+    tar -C ${LLVM_DIR} -xvf clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz --strip 1
+    sudo update-alternatives --install ${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/clang++ 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-config 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-link 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-dis 30
+    export PATH="${LLVM_DIR}/bin:$PATH"
+    echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
+    ;;
+
   *)
     puts "Distribution ${distro} not supported. Dependencies must be installed manually."
     exit 1
@@ -311,9 +350,15 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
-  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
-  make
-  sudo make install
+  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src -G Ninja
+  ${NINJA}
+  sudo ${NINJA} install
+
+  sudo update-alternatives --install /usr/local/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} /usr/local/bin/clang++ 30
+  sudo update-alternatives --install /usr/local/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-config 30
+  sudo update-alternatives --install /usr/local/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-link 30
+  sudo update-alternatives --install /usr/local/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-dis 30
+
   puts "Built LLVM"
 fi
 
@@ -336,6 +381,20 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   rustup toolchain install ${RUST_VERSION}
   cargo install rustfilt
   puts "Installed Rust"
+fi
+
+if [ ${BUILD_Z3} -eq 1 ] ; then
+  puts "Building Z3"
+  mkdir -p ${Z3_DIR}
+  cd ${Z3_DIR}
+  ${WGET} https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.1.zip
+  unzip z3-4.12.1.zip
+  cd z3-z3-4.12.1
+  python scripts/mk_make.py
+  cd build
+  make -j$(nproc)
+  sudo make install
+  puts "Built Z3"
 fi
 
 
@@ -394,7 +453,8 @@ fi
 if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
   if [ ! -d "$BOOGIE_DIR" ] ; then
     puts "Installing Boogie"
-    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION}
+    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
+    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION} <<< "dummy"
     puts "Installed Boogie"
   else
     puts "Boogie already installed"
@@ -406,7 +466,8 @@ fi
 if [ ${INSTALL_CORRAL} -eq 1 ] ; then
   if [ ! -d "$CORRAL_DIR" ] ; then
     puts "Installing Corral"
-    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION}
+    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
+    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION} <<< "dummy"
     puts "Installed Corral"
   else
     puts "Corral already installed"
@@ -474,15 +535,16 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
+
   cmake -DCMAKE_CXX_COMPILER=clang++-${LLVM_SHORT_VERSION} \
         -DCMAKE_C_COMPILER=clang-${LLVM_SHORT_VERSION} ${CMAKE_INSTALL_PREFIX} \
         -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
-  ninja
+  ${NINJA}
 
   if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then
-    ninja install
+    ${NINJA} install
   else
-    sudo ninja install
+    sudo ${NINJA} install
   fi
 
   puts "Configuring shell environment"
