@@ -25,7 +25,7 @@
 INSTALL_DEPENDENCIES=${INSTALL_DEPENDENCIES:-1}
 INSTALL_MONO=${INSTALL_MONO:-0} # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=${INSTALL_Z3:-1}
-INSTALL_CVC4=${INSTALL_CVC4:-0}
+INSTALL_CVC5=${INSTALL_CVC5:-0}
 INSTALL_YICES2=${INSTALL_YICES2:-0}
 INSTALL_BOOGIE=${INSTALL_BOOGIE:-1}
 INSTALL_CORRAL=${INSTALL_CORRAL:-1}
@@ -49,7 +49,7 @@ SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 DEPS_DIR="${ROOT_DIR}/smack-deps"
 Z3_DIR="${DEPS_DIR}/z3"
-CVC4_DIR="${DEPS_DIR}/cvc4"
+CVC5_DIR="${DEPS_DIR}/cvc5"
 YICES2_DIR="${DEPS_DIR}/yices2"
 BOOGIE_DIR="${DEPS_DIR}/boogie"
 CORRAL_DIR="${DEPS_DIR}/corral"
@@ -414,17 +414,17 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
 fi
 
 
-if [ ${INSTALL_CVC4} -eq 1 ] ; then
-  if [ ! -d "$CVC4_DIR" ] ; then
-    puts "Installing CVC4"
-    mkdir -p ${CVC4_DIR}
-    ${WGET} https://github.com/CVC4/CVC4/releases/download/${CVC4_VERSION}/cvc4-${CVC4_VERSION}-x86_64-linux-opt -O ${CVC4_DIR}/cvc4
-    chmod +x ${CVC4_DIR}/cvc4
-    puts "Installed CVC4"
+if [ ${INSTALL_CVC5} -eq 1 ] ; then
+  if [ ! -d "$CVC5_DIR" ] ; then
+    puts "Installing CVC5"
+    mkdir -p ${CVC5_DIR}
+    ${WGET} https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux -O ${CVC5_DIR}/cvc5
+    chmod +x ${CVC5_DIR}/cvc5
+    puts "Installed CVC5"
   else
-    puts "CVC4 already installed"
+    puts "CVC5 already installed"
   fi
-  echo export PATH=\"${CVC4_DIR}:\$PATH\" >> ${SMACKENV}
+  echo export PATH=\"${CVC5_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
 
