@@ -171,4 +171,60 @@ void __VERIFIER_atomic_end();
 }
 #endif
 
+void __VERIFIER_equiv_store_char(char val, int id);
+void __VERIFIER_equiv_check_char(char val, int id);
+void __VERIFIER_equiv_assume_char(char val, int id);
+
+void __VERIFIER_equiv_store_unsigned_char(unsigned char val, int id);
+void __VERIFIER_equiv_check_unsigned_char(unsigned char val, int id);
+void __VERIFIER_equiv_assume_unsigned_char(unsigned char val, int id);
+
+void __VERIFIER_equiv_store_signed_char(signed char val, int id);
+void __VERIFIER_equiv_check_signed_char(signed char val, int id);
+void __VERIFIER_equiv_assume_signed_char(signed char val, int id);
+
+void __VERIFIER_equiv_store_short(short val, int id);
+void __VERIFIER_equiv_check_short(short val, int id);
+void __VERIFIER_equiv_assume_short(short val, int id);
+
+void __VERIFIER_equiv_store_unsigned_short(unsigned short val, int id);
+void __VERIFIER_equiv_check_unsigned_short(unsigned short val, int id);
+void __VERIFIER_equiv_assume_unsigned_short(unsigned short val, int id);
+
+void __VERIFIER_equiv_store_signed_short(signed short val, int id);
+void __VERIFIER_equiv_check_signed_short(signed short val, int id);
+void __VERIFIER_equiv_assume_signed_short(signed short val, int id);
+
+void __VERIFIER_equiv_store_int(int val, int id);
+void __VERIFIER_equiv_check_int(int val, int id);
+void __VERIFIER_equiv_assume_int(int val, int id);
+
+void __VERIFIER_equiv_store_unsigned_int(unsigned int val, int id);
+void __VERIFIER_equiv_check_unsigned_int(unsigned int val, int id);
+void __VERIFIER_equiv_assume_unsigned_int(unsigned int val, int id);
+
+void __VERIFIER_equiv_store_signed_int(signed int val, int id);
+void __VERIFIER_equiv_check_signed_int(signed int val, int id);
+void __VERIFIER_equiv_assume_signed_int(signed int val, int id);
+
+void __VERIFIER_equiv_store_long(long val, int id);
+void __VERIFIER_equiv_check_long(long val, int id);
+void __VERIFIER_equiv_assume_long(long val, int id);
+
+void __VERIFIER_equiv_store_unsigned_long(unsigned long val, int id);
+void __VERIFIER_equiv_check_unsigned_long(unsigned long val, int id);
+void __VERIFIER_equiv_assume_unsigned_long(unsigned long val, int id);
+
+void __VERIFIER_equiv_store_signed_long(signed long val, int id);
+void __VERIFIER_equiv_check_signed_long(signed long val, int id);
+void __VERIFIER_equiv_assume_signed_long(signed long val, int id);
+
+void __VERIFIER_equiv_store_float(float val, int id);
+void __VERIFIER_equiv_check_float(float val, int id);
+void __VERIFIER_equiv_assume_float(float val, int id);
+
+void __VERIFIER_equiv_store_double(double val, int id);
+void __VERIFIER_equiv_check_double(double val, int id);
+void __VERIFIER_equiv_assume_double(double val, int id);
+
 #endif /*SMACK_H_*/

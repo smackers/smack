@@ -1892,3 +1892,231 @@ void __SMACK_init_func_memory_model(void) {
 void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
 
 void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
+
+
+void __VERIFIER_equiv_store_char(char x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_char(x: bv32) returns (bv8);");
+  #else
+    __SMACK_top_decl("function equiv_store_char(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_char(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_char(char x, int id) {
+  __SMACK_code("assert @ == equiv_store_char(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_char(char x, int id) {
+  __SMACK_code("assume @ == equiv_store_char(@);", x, id);
+}
+void __VERIFIER_equiv_store_unsigned_char(unsigned char x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_unsigned_char(x: bv32) returns (bv8);");
+  #else
+    __SMACK_top_decl("function equiv_store_unsigned_char(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_unsigned_char(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_unsigned_char(unsigned char x, int id) {
+  __SMACK_code("assert @ == equiv_store_unsigned_char(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_unsigned_char(unsigned char x, int id) {
+  __SMACK_code("assume @ == equiv_store_unsigned_char(@);", x, id);
+}
+void __VERIFIER_equiv_store_signed_char(signed char x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_signed_char(x: bv32) returns (bv8);");
+  #else
+    __SMACK_top_decl("function equiv_store_signed_char(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_signed_char(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_signed_char(signed char x, int id) {
+  __SMACK_code("assert @ == equiv_store_signed_char(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_signed_char(signed char x, int id) {
+  __SMACK_code("assume @ == equiv_store_signed_char(@);", x, id);
+}
+void __VERIFIER_equiv_store_short(short x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_short(x: bv32) returns (bv16);");
+  #else
+    __SMACK_top_decl("function equiv_store_short(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_short(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_short(short x, int id) {
+  __SMACK_code("assert @ == equiv_store_short(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_short(short x, int id) {
+  __SMACK_code("assume @ == equiv_store_short(@);", x, id);
+}
+void __VERIFIER_equiv_store_unsigned_short(unsigned short x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_unsigned_short(x: bv32) returns (bv16);");
+  #else
+    __SMACK_top_decl("function equiv_store_unsigned_short(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_unsigned_short(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_unsigned_short(unsigned short x, int id) {
+  __SMACK_code("assert @ == equiv_store_unsigned_short(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_unsigned_short(unsigned short x, int id) {
+  __SMACK_code("assume @ == equiv_store_unsigned_short(@);", x, id);
+}
+void __VERIFIER_equiv_store_signed_short(signed short x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_signed_short(x: bv32) returns (bv16);");
+  #else
+    __SMACK_top_decl("function equiv_store_signed_short(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_signed_short(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_signed_short(signed short x, int id) {
+  __SMACK_code("assert @ == equiv_store_signed_short(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_signed_short(signed short x, int id) {
+  __SMACK_code("assume @ == equiv_store_signed_short(@);", x, id);
+}
+void __VERIFIER_equiv_store_int(int x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_int(x: bv32) returns (bv32);");
+  #else
+    __SMACK_top_decl("function equiv_store_int(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_int(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_int(int x, int id) {
+  __SMACK_code("assert @ == equiv_store_int(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_int(int x, int id) {
+  __SMACK_code("assume @ == equiv_store_int(@);", x, id);
+}
+void __VERIFIER_equiv_store_unsigned_int(unsigned int x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_unsigned_int(x: bv32) returns (bv32);");
+  #else
+    __SMACK_top_decl("function equiv_store_unsigned_int(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_unsigned_int(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_unsigned_int(unsigned int x, int id) {
+  __SMACK_code("assert @ == equiv_store_unsigned_int(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_unsigned_int(unsigned int x, int id) {
+  __SMACK_code("assume @ == equiv_store_unsigned_int(@);", x, id);
+}
+void __VERIFIER_equiv_store_signed_int(signed int x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_signed_int(x: bv32) returns (bv32);");
+  #else
+    __SMACK_top_decl("function equiv_store_signed_int(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_signed_int(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_signed_int(signed int x, int id) {
+  __SMACK_code("assert @ == equiv_store_signed_int(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_signed_int(signed int x, int id) {
+  __SMACK_code("assume @ == equiv_store_signed_int(@);", x, id);
+}
+void __VERIFIER_equiv_store_long(long x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_long(x: bv32) returns (bv64);");
+  #else
+    __SMACK_top_decl("function equiv_store_long(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_long(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_long(long x, int id) {
+  __SMACK_code("assert @ == equiv_store_long(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_long(long x, int id) {
+  __SMACK_code("assume @ == equiv_store_long(@);", x, id);
+}
+void __VERIFIER_equiv_store_unsigned_long(unsigned long x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_unsigned_long(x: bv32) returns (bv64);");
+  #else
+    __SMACK_top_decl("function equiv_store_unsigned_long(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_unsigned_long(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_unsigned_long(unsigned long x, int id) {
+  __SMACK_code("assert @ == equiv_store_unsigned_long(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_unsigned_long(unsigned long x, int id) {
+  __SMACK_code("assume @ == equiv_store_unsigned_long(@);", x, id);
+}
+void __VERIFIER_equiv_store_signed_long(signed long x, int id) {
+  #ifdef BIT_PRECISE
+    __SMACK_top_decl("function equiv_store_signed_long(x: bv32) returns (bv64);");
+  #else
+    __SMACK_top_decl("function equiv_store_signed_long(x: int) returns (int);");
+  #endif
+  __SMACK_code("assume equiv_store_signed_long(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_signed_long(signed long x, int id) {
+  __SMACK_code("assert @ == equiv_store_signed_long(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_signed_long(signed long x, int id) {
+  __SMACK_code("assume @ == equiv_store_signed_long(@);", x, id);
+}
+
+void __VERIFIER_equiv_store_float(float x, int id) {
+  #ifdef BIT_PRECISE
+	  __SMACK_top_decl("function equiv_store_float(x: bv32) returns (bvfloat);");
+  #else
+    __SMACK_top_decl("function equiv_store_float(x: int) returns (bvfloat);");
+  #endif
+	__SMACK_code("assume equiv_store_float(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_float(float x, int id) {
+	__SMACK_code("assert @ == equiv_store_float(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_float(float x, int id) {
+	__SMACK_code("assume @ == equiv_store_float(@);", x, id);
+}
+
+void __VERIFIER_equiv_store_double(double x, int id) {
+  #ifdef BIT_PRECISE
+	  __SMACK_top_decl("function equiv_store_double(x: bv32) returns (bvdouble);");
+  #else
+    __SMACK_top_decl("function equiv_store_double(x: int) returns (bvdouble);");
+  #endif
+	__SMACK_code("assume equiv_store_double(@) == @;", id, x);
+}
+
+void __VERIFIER_equiv_check_double(double x, int id) {
+	__SMACK_code("assert @ == equiv_store_double(@);", x, id);
+}
+
+void __VERIFIER_equiv_assume_double(double x, int id) {
+	__SMACK_code("assume @ == equiv_store_double(@);", x, id);
+}
