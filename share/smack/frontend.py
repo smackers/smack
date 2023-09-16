@@ -2,7 +2,7 @@ import os
 import sys
 import re
 import json
-from .utils import temporary_file, try_command, temporary_directory,\
+from .utils import temporary_file, try_command, temporary_directory, \
     llvm_exact_bin, smack_headers, smack_lib
 from .versions import RUST_VERSION
 

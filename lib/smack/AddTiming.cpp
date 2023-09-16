@@ -91,9 +91,9 @@ bool AddTiming::runOnFunction(Function &F) {
 }
 
 void AddTiming::addTimingMetadata(Instruction *Inst) const {
-  unsigned Cost = getInstructionCost(Inst);
-  if (Cost != (unsigned)NO_TIMING_INFO) {
-    addMetadata(Inst, "smack.InstTimingCost.Int64", Cost);
+  auto Cost = getInstructionCost(Inst);
+  if (Cost.isValid()) {
+    addMetadata(Inst, "smack.InstTimingCost.Int64", *Cost.getValue());
   }
 }
 
@@ -118,9 +118,9 @@ static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
   return OpInfo;
 }
 
-unsigned AddTiming::getInstructionCost(const Instruction *I) const {
+InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
   if (!TTI)
-    return NO_TIMING_INFO;
+    return InstructionCost::getInvalid();
 
   // When an assume statement appears in the C code
   // llvm turns it into a series of IR instructions
@@ -132,7 +132,7 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
   // return 0
 
   if (VerifierCodeMetadata::isMarked(*I)) {
-    return 0;
+    return InstructionCost(0);
   }
 
   switch (I->getOpcode()) {
@@ -216,14 +216,10 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
     return TTI->getCastInstrCost(I->getOpcode(), I->getType(), SrcTy,
                                  TTI->getCastContextHint(I));
   }
-  case Instruction::ExtractElement: {
-    return NO_TIMING_INFO;
-  }
-  case Instruction::InsertElement: {
-    return NO_TIMING_INFO;
-  }
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
   case Instruction::ShuffleVector: {
-    return NO_TIMING_INFO;
+    return InstructionCost::getInvalid();
   }
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
@@ -241,11 +237,11 @@ unsigned AddTiming::getInstructionCost(const Instruction *I) const {
           TargetTransformInfo::TargetCostKind::TCK_Latency);
     }
 
-    return NO_TIMING_INFO;
+    return InstructionCost::getInvalid();
   }
   default:
     // We don't have any information on this instruction.
-    return NO_TIMING_INFO;
+    return InstructionCost::getInvalid();
   }
 }
 
@@ -271,8 +267,8 @@ void AddTiming::print(raw_ostream &OS, const Module *) const {
   for (Function::iterator B = F->begin(), BE = F->end(); B != BE; ++B) {
     for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
       Instruction *Inst = &*it;
-      unsigned Cost = getInstructionCost(Inst);
-      if (Cost != (unsigned)NO_TIMING_INFO) {
+      auto Cost = getInstructionCost(Inst);
+      if (Cost.isValid()) {
         OS << "Cost Model: Found an estimated cost of " << Cost;
       } else {
         OS << "Cost Model: Unknown cost";
