@@ -2087,36 +2087,41 @@ void __VERIFIER_equiv_assume_signed_long(signed long x, int id) {
   __SMACK_code("assume @ == equiv_store_signed_long(@);", x, id);
 }
 
-void __VERIFIER_equiv_store_float(float x, int id) {
   #ifdef BIT_PRECISE
-	  __SMACK_top_decl("function equiv_store_float(x: bv32) returns (bvfloat);");
+    #define INTT "bv32"
   #else
-    __SMACK_top_decl("function equiv_store_float(x: int) returns (bvfloat);");
+    #define INTT "int"
   #endif
-	__SMACK_code("assume equiv_store_float(@) == @;", id, x);
+  #ifdef FLOAT_ENABLED
+    #define FLOATT "bvfloat"
+    #define DOUBLET "bvdouble"
+  #else
+    #define FLOATT "float"
+    #define DOUBLET "double"
+  #endif
+
+void __VERIFIER_equiv_store_float(float x, int id) {
+  __SMACK_top_decl("function equiv_store_float(x: "INTT") returns ("FLOATT");");
+  __SMACK_code("assume $foeq."FLOATT".bool(equiv_store_float(@),  @f);", id, x);
 }
 
 void __VERIFIER_equiv_check_float(float x, int id) {
-	__SMACK_code("assert @ == equiv_store_float(@);", x, id);
+	__SMACK_code("assert $foeq."FLOATT".bool(@f, equiv_store_float(@));", x, id);
 }
 
 void __VERIFIER_equiv_assume_float(float x, int id) {
-	__SMACK_code("assume @ == equiv_store_float(@);", x, id);
+	__SMACK_code("assume $foeq."FLOATT".bool(@f, equiv_store_float(@));", x, id);
 }
 
 void __VERIFIER_equiv_store_double(double x, int id) {
-  #ifdef BIT_PRECISE
-	  __SMACK_top_decl("function equiv_store_double(x: bv32) returns (bvdouble);");
-  #else
-    __SMACK_top_decl("function equiv_store_double(x: int) returns (bvdouble);");
-  #endif
-	__SMACK_code("assume equiv_store_double(@) == @;", id, x);
+  __SMACK_top_decl("function equiv_store_double(x: "INTT") returns ("DOUBLET");");
+	__SMACK_code("assume $foeq."DOUBLET".bool(equiv_store_double(@), @);", id, x);
 }
 
 void __VERIFIER_equiv_check_double(double x, int id) {
-	__SMACK_code("assert @ == equiv_store_double(@);", x, id);
+	__SMACK_code("assert $foeq."DOUBLET".bool(@, equiv_store_double(@));", x, id);
 }
 
 void __VERIFIER_equiv_assume_double(double x, int id) {
-	__SMACK_code("assume @ == equiv_store_double(@);", x, id);
+	__SMACK_code("assume $foeq."DOUBLET".bool(@, equiv_store_double(@));", x, id);
 }

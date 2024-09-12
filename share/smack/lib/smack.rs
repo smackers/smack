@@ -763,3 +763,62 @@ impl<T: Sized> Deref for Box<T> {
         unsafe { mem::transmute::<*mut T, &T>(self.ptr.as_ptr()) }
     }
 }
+
+// Put config here
+pub trait VerifierFloat {
+    fn verifier_is_nan(self) -> bool;
+    fn verifier_is_infinite(self) -> bool;
+    fn verifier_is_finite(self) -> bool;
+    fn verifier_is_subnormal(self) -> bool;
+    fn verifier_is_normal(self) -> bool;
+}
+
+extern "C" {
+    pub fn __isnanf(x: f32) -> i32;
+    pub fn __isinff(x: f32) -> i32;
+    pub fn __issubnormalf(x: f32) -> i32;
+    pub fn __isnormalf(x: f32) -> i32;
+}
+
+impl VerifierFloat for f32 {
+    fn verifier_is_nan(self) -> bool {
+        unsafe { __isnanf(self) != 0 }
+    }
+    fn verifier_is_infinite(self) -> bool {
+        unsafe { __isinff(self) != 0 }
+    }
+    fn verifier_is_finite(self) -> bool {
+        !self.verifier_is_infinite() && !self.is_nan()
+    }
+    fn verifier_is_subnormal(self) -> bool {
+        unsafe { __issubnormalf(self) != 0 }
+    }
+    fn verifier_is_normal(self) -> bool {
+        unsafe { __isnormalf(self) != 0 }
+    }
+}
+
+extern "C" {
+    pub fn __isnan(x: f64) -> i32;
+    pub fn __isinf(x: f64) -> i32;
+    pub fn __issubnormal(x: f64) -> i32;
+    pub fn __isnormal(x: f64) -> i32;
+}
+
+impl VerifierFloat for f64 {
+    fn verifier_is_nan(self) -> bool {
+        unsafe { __isnan(self) != 0 }
+    }
+    fn verifier_is_infinite(self) -> bool {
+        unsafe { __isinf(self) != 0 }
+    }
+    fn verifier_is_finite(self) -> bool {
+        !self.verifier_is_infinite() && !self.is_nan()
+    }
+    fn verifier_is_subnormal(self) -> bool {
+        unsafe { __issubnormal(self) != 0 }
+    }
+    fn verifier_is_normal(self) -> bool {
+        unsafe { __isnormal(self) != 0 }
+    }
+}
