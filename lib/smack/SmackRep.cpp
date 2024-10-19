@@ -1244,10 +1244,10 @@ Decl *SmackRep::getInitFuncs() {
     b->addStmt(
         Stmt::assign(Expr::id(Naming::RMODE_VAR), Expr::lit(RModeKind::RNE)));
   }
-  b->addStmt(
-      Stmt::assign(Expr::id(Naming::EQUIV_STORE_COUNTER), Expr::lit((unsigned int) 0)));
-        b->addStmt(
-      Stmt::assign(Expr::id(Naming::EQUIV_LOAD_COUNTER), Expr::lit((unsigned int) 0)));
+  b->addStmt(Stmt::assign(Expr::id(Naming::EQUIV_STORE_COUNTER),
+                          Expr::lit((unsigned int)0)));
+  b->addStmt(Stmt::assign(Expr::id(Naming::EQUIV_LOAD_COUNTER),
+                          Expr::lit((unsigned int)0)));
   b->addStmt(Stmt::return_());
   proc->getBlocks().push_back(b);
   return proc;

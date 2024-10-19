@@ -43,7 +43,6 @@ const std::string Naming::LOOP_EXIT = "__SMACK_loop_exit";
 const std::string Naming::EQUIV_STORE_COUNTER = "__SMACK_equiv_store_counter";
 const std::string Naming::EQUIV_LOAD_COUNTER = "__SMACK_equiv_load_counter";
 
-
 const std::string Naming::MEMORY = "$M";
 const std::string Naming::ALLOC = "$alloc";
 const std::string Naming::FREE = "$free";

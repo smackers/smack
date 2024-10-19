@@ -1,8 +1,10 @@
 #include "smack.h"
 
-double c_trunc(double x)
-{
-  union {double f; unsigned long i;} u = {x};
+double c_trunc(double x) {
+  union {
+    double f;
+    unsigned long i;
+  } u = {x};
   __VERIFIER_equiv_store_unsigned_long(u.i, 0);
   int e = (int)(u.i >> 52 & 0x7ff) - 0x3ff + 12;
   unsigned long m;

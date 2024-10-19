@@ -1893,15 +1893,15 @@ void __VERIFIER_atomic_begin() { __SMACK_code("call corral_atomic_begin();"); }
 
 void __VERIFIER_atomic_end() { __SMACK_code("call corral_atomic_end();"); }
 
-
 void __VERIFIER_equiv_store_char(char x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_char(x: int) returns (bv8);");
-  #else
-    __SMACK_top_decl("function equiv_store_char(x: int) returns (int);");
-  #endif
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_char(x: int) returns (bv8);");
+#else
+  __SMACK_top_decl("function equiv_store_char(x: int) returns (int);");
+#endif
   __SMACK_code("assume equiv_store_char(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_char(char x) {
@@ -1914,51 +1914,61 @@ void __VERIFIER_equiv_assume_char(char x) {
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_unsigned_char(unsigned char x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_unsigned_char(x: int) returns (bv8);");
-  #else
-    __SMACK_top_decl("function equiv_store_unsigned_char(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_unsigned_char(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_unsigned_char(x: int) returns (bv8);");
+#else
+  __SMACK_top_decl("function equiv_store_unsigned_char(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_unsigned_char(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_unsigned_char(unsigned char x) {
-  __SMACK_code("assert @ == equiv_store_unsigned_char(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_unsigned_char(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_unsigned_char(unsigned char x) {
-  __SMACK_code("assume @ == equiv_store_unsigned_char(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_unsigned_char(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_signed_char(signed char x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_signed_char(x: int) returns (bv8);");
-  #else
-    __SMACK_top_decl("function equiv_store_signed_char(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_signed_char(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_signed_char(x: int) returns (bv8);");
+#else
+  __SMACK_top_decl("function equiv_store_signed_char(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_signed_char(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_signed_char(signed char x) {
-  __SMACK_code("assert @ == equiv_store_signed_char(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_signed_char(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_signed_char(signed char x) {
-  __SMACK_code("assume @ == equiv_store_signed_char(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_signed_char(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_short(short x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_short(x: int) returns (bv16);");
-  #else
-    __SMACK_top_decl("function equiv_store_short(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_short(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_short(x: int) returns (bv16);");
+#else
+  __SMACK_top_decl("function equiv_store_short(x: int) returns (int);");
+#endif
+  __SMACK_code("assume equiv_store_short(__SMACK_equiv_store_counter) == @;",
+               x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_short(short x) {
@@ -1971,51 +1981,63 @@ void __VERIFIER_equiv_assume_short(short x) {
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_unsigned_short(unsigned short x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_unsigned_short(x: int) returns (bv16);");
-  #else
-    __SMACK_top_decl("function equiv_store_unsigned_short(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_unsigned_short(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl(
+      "function equiv_store_unsigned_short(x: int) returns (bv16);");
+#else
+  __SMACK_top_decl(
+      "function equiv_store_unsigned_short(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_unsigned_short(__SMACK_equiv_store_counter) == @;",
+      x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_unsigned_short(unsigned short x) {
-  __SMACK_code("assert @ == equiv_store_unsigned_short(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_unsigned_short(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_unsigned_short(unsigned short x) {
-  __SMACK_code("assume @ == equiv_store_unsigned_short(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_unsigned_short(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_signed_short(signed short x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_signed_short(x: int) returns (bv16);");
-  #else
-    __SMACK_top_decl("function equiv_store_signed_short(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_signed_short(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_signed_short(x: int) returns (bv16);");
+#else
+  __SMACK_top_decl("function equiv_store_signed_short(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_signed_short(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_signed_short(signed short x) {
-  __SMACK_code("assert @ == equiv_store_signed_short(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_signed_short(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_signed_short(signed short x) {
-  __SMACK_code("assume @ == equiv_store_signed_short(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_signed_short(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_int(int x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_int(x: int) returns (bv32);");
-  #else
-    __SMACK_top_decl("function equiv_store_int(x: int) returns (int);");
-  #endif
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_int(x: int) returns (bv32);");
+#else
+  __SMACK_top_decl("function equiv_store_int(x: int) returns (int);");
+#endif
   __SMACK_code("assume equiv_store_int(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_int(int x) {
@@ -2028,51 +2050,60 @@ void __VERIFIER_equiv_assume_int(int x) {
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_unsigned_int(unsigned int x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_unsigned_int(x: int) returns (bv32);");
-  #else
-    __SMACK_top_decl("function equiv_store_unsigned_int(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_unsigned_int(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_unsigned_int(x: int) returns (bv32);");
+#else
+  __SMACK_top_decl("function equiv_store_unsigned_int(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_unsigned_int(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_unsigned_int(unsigned int x) {
-  __SMACK_code("assert @ == equiv_store_unsigned_int(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_unsigned_int(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_unsigned_int(unsigned int x) {
-  __SMACK_code("assume @ == equiv_store_unsigned_int(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_unsigned_int(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_signed_int(signed int x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_signed_int(x: int) returns (bv32);");
-  #else
-    __SMACK_top_decl("function equiv_store_signed_int(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_signed_int(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_signed_int(x: int) returns (bv32);");
+#else
+  __SMACK_top_decl("function equiv_store_signed_int(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_signed_int(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_signed_int(signed int x) {
-  __SMACK_code("assert @ == equiv_store_signed_int(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_signed_int(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_signed_int(signed int x) {
-  __SMACK_code("assume @ == equiv_store_signed_int(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_signed_int(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_long(long x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_long(x: int) returns (bv64);");
-  #else
-    __SMACK_top_decl("function equiv_store_long(x: int) returns (int);");
-  #endif
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_long(x: int) returns (bv64);");
+#else
+  __SMACK_top_decl("function equiv_store_long(x: int) returns (int);");
+#endif
   __SMACK_code("assume equiv_store_long(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_long(long x) {
@@ -2085,85 +2116,109 @@ void __VERIFIER_equiv_assume_long(long x) {
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_unsigned_long(unsigned long x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_unsigned_long(x: int) returns (bv64);");
-  #else
-    __SMACK_top_decl("function equiv_store_unsigned_long(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_unsigned_long(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl(
+      "function equiv_store_unsigned_long(x: int) returns (bv64);");
+#else
+  __SMACK_top_decl("function equiv_store_unsigned_long(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_unsigned_long(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_unsigned_long(unsigned long x) {
-  __SMACK_code("assert @ == equiv_store_unsigned_long(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_unsigned_long(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_unsigned_long(unsigned long x) {
-  __SMACK_code("assume @ == equiv_store_unsigned_long(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_unsigned_long(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 void __VERIFIER_equiv_store_signed_long(signed long x) {
-  #ifdef BIT_PRECISE
-    __SMACK_top_decl("function equiv_store_signed_long(x: int) returns (bv64);");
-  #else
-    __SMACK_top_decl("function equiv_store_signed_long(x: int) returns (int);");
-  #endif
-  __SMACK_code("assume equiv_store_signed_long(__SMACK_equiv_store_counter) == @;", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+#ifdef BIT_PRECISE
+  __SMACK_top_decl("function equiv_store_signed_long(x: int) returns (bv64);");
+#else
+  __SMACK_top_decl("function equiv_store_signed_long(x: int) returns (int);");
+#endif
+  __SMACK_code(
+      "assume equiv_store_signed_long(__SMACK_equiv_store_counter) == @;", x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_signed_long(signed long x) {
-  __SMACK_code("assert @ == equiv_store_signed_long(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assert @ == equiv_store_signed_long(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_signed_long(signed long x) {
-  __SMACK_code("assume @ == equiv_store_signed_long(__SMACK_equiv_load_counter);", x);
+  __SMACK_code(
+      "assume @ == equiv_store_signed_long(__SMACK_equiv_load_counter);", x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
-  #ifdef BIT_PRECISE
-    #define INTT "bv32"
-  #else
-    #define INTT "int"
-  #endif
-  #ifdef FLOAT_ENABLED
-    #define FLOATT "bvfloat"
-    #define DOUBLET "bvdouble"
-  #else
-    #define FLOATT "float"
-    #define DOUBLET "double"
-  #endif
+#ifdef BIT_PRECISE
+#define INTT "bv32"
+#else
+#define INTT "int"
+#endif
+#ifdef FLOAT_ENABLED
+#define FLOATT "bvfloat"
+#define DOUBLET "bvdouble"
+#else
+#define FLOATT "float"
+#define DOUBLET "double"
+#endif
 
 void __VERIFIER_equiv_store_float(float x) {
-  __SMACK_top_decl("function equiv_store_float(x: int) returns ("FLOATT");");
-  __SMACK_code("assume $foeq."FLOATT".bool(equiv_store_float(__SMACK_equiv_store_counter),  @f);", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+  __SMACK_top_decl("function equiv_store_float(x: int) returns (" FLOATT ");");
+  __SMACK_code("assume $foeq." FLOATT
+               ".bool(equiv_store_float(__SMACK_equiv_store_counter),  @f);",
+               x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_float(float x) {
-	__SMACK_code("assert $foeq."FLOATT".bool(@f, equiv_store_float(__SMACK_equiv_load_counter));", x);
+  __SMACK_code("assert $foeq." FLOATT
+               ".bool(@f, equiv_store_float(__SMACK_equiv_load_counter));",
+               x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_float(float x) {
-	__SMACK_code("assume $foeq."FLOATT".bool(@f, equiv_store_float(__SMACK_equiv_load_counter));", x);
+  __SMACK_code("assume $foeq." FLOATT
+               ".bool(@f, equiv_store_float(__SMACK_equiv_load_counter));",
+               x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_store_double(double x) {
-  __SMACK_top_decl("function equiv_store_double(x: int) returns ("DOUBLET");");
-	__SMACK_code("assume $foeq."DOUBLET".bool(equiv_store_double(__SMACK_equiv_store_counter), @);", x);
-  __SMACK_code("__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
+  __SMACK_top_decl("function equiv_store_double(x: int) returns (" DOUBLET
+                   ");");
+  __SMACK_code("assume $foeq." DOUBLET
+               ".bool(equiv_store_double(__SMACK_equiv_store_counter), @);",
+               x);
+  __SMACK_code(
+      "__SMACK_equiv_store_counter := __SMACK_equiv_store_counter + 1;");
 }
 
 void __VERIFIER_equiv_check_double(double x) {
-	__SMACK_code("assert $foeq."DOUBLET".bool(@, equiv_store_double(__SMACK_equiv_load_counter));", x);
+  __SMACK_code("assert $foeq." DOUBLET
+               ".bool(@, equiv_store_double(__SMACK_equiv_load_counter));",
+               x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }
 
 void __VERIFIER_equiv_assume_double(double x) {
-	__SMACK_code("assume $foeq."DOUBLET".bool(@, equiv_store_double(__SMACK_equiv_load_counter));", x);
+  __SMACK_code("assume $foeq." DOUBLET
+               ".bool(@, equiv_store_double(__SMACK_equiv_load_counter));",
+               x);
   __SMACK_code("__SMACK_equiv_load_counter := __SMACK_equiv_load_counter + 1;");
 }

@@ -38,10 +38,12 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
   SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>());
   std::list<Decl *> &decls = program->getDeclarations();
 
-  decls.insert(decls.end(), {Decl::variable(Naming::EQUIV_STORE_COUNTER, "int"),
-                             Decl::variable(Naming::EQUIV_LOAD_COUNTER, "int")});
+  decls.insert(decls.end(),
+               {Decl::variable(Naming::EQUIV_STORE_COUNTER, "int"),
+                Decl::variable(Naming::EQUIV_LOAD_COUNTER, "int")});
 
-  decls.insert(decls.end(), {Decl::function("__SMACK_equiv_id", {{"id", "int"}}, "int")});
+  decls.insert(decls.end(),
+               {Decl::function("__SMACK_equiv_id", {{"id", "int"}}, "int")});
 
   SDEBUG(errs() << "Analyzing globals...\n");
 
