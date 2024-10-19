@@ -22,45 +22,45 @@ extern "C" {
     pub fn memset(ptr: *mut u8, ch: i32, count: usize);
     pub fn realloc(ptr: *mut u8, new_size: usize) -> *mut u8;
 
-    pub fn __VERIFIER_equiv_store_unsigned_char(val: u8, id: i32);
-    pub fn __VERIFIER_equiv_check_unsigned_char(val: u8, id: i32);
-    pub fn __VERIFIER_equiv_assume_unsigned_char(val: u8, id: i32);
+    pub fn __VERIFIER_equiv_store_unsigned_char(val: u8);
+    pub fn __VERIFIER_equiv_check_unsigned_char(val: u8);
+    pub fn __VERIFIER_equiv_assume_unsigned_char(val: u8);
 
-    pub fn __VERIFIER_equiv_store_signed_char(val: i8, id: i32);
-    pub fn __VERIFIER_equiv_check_signed_char(val: i8, id: i32);
-    pub fn __VERIFIER_equiv_assume_signed_char(val: i8, id: i32);
+    pub fn __VERIFIER_equiv_store_signed_char(val: i8);
+    pub fn __VERIFIER_equiv_check_signed_char(val: i8);
+    pub fn __VERIFIER_equiv_assume_signed_char(val: i8);
 
-    pub fn __VERIFIER_equiv_store_unsigned_short(val: u16, id: i32);
-    pub fn __VERIFIER_equiv_check_unsigned_short(val: u16, id: i32);
-    pub fn __VERIFIER_equiv_assume_unsigned_short(val: u16, id: i32);
+    pub fn __VERIFIER_equiv_store_unsigned_short(val: u16);
+    pub fn __VERIFIER_equiv_check_unsigned_short(val: u16);
+    pub fn __VERIFIER_equiv_assume_unsigned_short(val: u16);
 
-    pub fn __VERIFIER_equiv_store_signed_short(val: i16, id: i32);
-    pub fn __VERIFIER_equiv_check_signed_short(val: i16, id: i32);
-    pub fn __VERIFIER_equiv_assume_signed_short(val: i16, id: i32);
+    pub fn __VERIFIER_equiv_store_signed_short(val: i16);
+    pub fn __VERIFIER_equiv_check_signed_short(val: i16);
+    pub fn __VERIFIER_equiv_assume_signed_short(val: i16);
 
-    pub fn __VERIFIER_equiv_store_unsigned_int(val: u32, id: i32);
-    pub fn __VERIFIER_equiv_check_unsigned_int(val: u32, id: i32);
-    pub fn __VERIFIER_equiv_assume_unsigned_int(val: u32, id: i32);
+    pub fn __VERIFIER_equiv_store_unsigned_int(val: u32);
+    pub fn __VERIFIER_equiv_check_unsigned_int(val: u32);
+    pub fn __VERIFIER_equiv_assume_unsigned_int(val: u32);
 
-    pub fn __VERIFIER_equiv_store_signed_int(val: i32, id: i32);
-    pub fn __VERIFIER_equiv_check_signed_int(val: i32, id: i32);
-    pub fn __VERIFIER_equiv_assume_signed_int(val: i32, id: i32);
+    pub fn __VERIFIER_equiv_store_signed_int(val: i32);
+    pub fn __VERIFIER_equiv_check_signed_int(val: i32);
+    pub fn __VERIFIER_equiv_assume_signed_int(val: i32);
 
-    pub fn __VERIFIER_equiv_store_unsigned_long(val: u64, id: i32);
-    pub fn __VERIFIER_equiv_check_unsigned_long(val: u64, id: i32);
-    pub fn __VERIFIER_equiv_assume_unsigned_long(val: u64, id: i32);
+    pub fn __VERIFIER_equiv_store_unsigned_long(val: u64);
+    pub fn __VERIFIER_equiv_check_unsigned_long(val: u64);
+    pub fn __VERIFIER_equiv_assume_unsigned_long(val: u64);
 
-    pub fn __VERIFIER_equiv_store_signed_long(val: i64, id: i32);
-    pub fn __VERIFIER_equiv_check_signed_long(val: i64, id: i32);
-    pub fn __VERIFIER_equiv_assume_signed_long(val: i64, id: i32);
+    pub fn __VERIFIER_equiv_store_signed_long(val: i64);
+    pub fn __VERIFIER_equiv_check_signed_long(val: i64);
+    pub fn __VERIFIER_equiv_assume_signed_long(val: i64);
 
-    pub fn __VERIFIER_equiv_store_float(val: f32, id: i32);
-    pub fn __VERIFIER_equiv_check_float(val: f32, id: i32);
-    pub fn __VERIFIER_equiv_assume_float(val: f32, id: i32);
+    pub fn __VERIFIER_equiv_store_float(val: f32);
+    pub fn __VERIFIER_equiv_check_float(val: f32);
+    pub fn __VERIFIER_equiv_assume_float(val: f32);
 
-    pub fn __VERIFIER_equiv_store_double(val: f64, id: i32);
-    pub fn __VERIFIER_equiv_check_double(val: f64, id: i32);
-    pub fn __VERIFIER_equiv_assume_double(val: f64, id: i32);
+    pub fn __VERIFIER_equiv_store_double(val: f64);
+    pub fn __VERIFIER_equiv_check_double(val: f64);
+    pub fn __VERIFIER_equiv_assume_double(val: f64);
 }
 
 #[macro_export]
@@ -134,117 +134,117 @@ macro_rules! verifier_assume {
     };
 }
 
-pub fn verifier_equiv_store_u8(val: u8, id: i32) {
-    unsafe { __VERIFIER_equiv_store_unsigned_char(val, id) };
+pub fn verifier_equiv_store_u8(val: u8) {
+    unsafe { __VERIFIER_equiv_store_unsigned_char(val) };
 }
 
-pub fn verifier_equiv_assume_u8(val: u8, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_unsigned_char(val, id) };
+pub fn verifier_equiv_assume_u8(val: u8) {
+    unsafe { __VERIFIER_equiv_assume_unsigned_char(val) };
 }
 
-pub fn verifier_equiv_check_u8(val: u8, id: i32) {
-    unsafe { __VERIFIER_equiv_check_unsigned_char(val, id) };
+pub fn verifier_equiv_check_u8(val: u8) {
+    unsafe { __VERIFIER_equiv_check_unsigned_char(val) };
 }
-pub fn verifier_equiv_store_i8(val: i8, id: i32) {
-    unsafe { __VERIFIER_equiv_store_signed_char(val, id) };
-}
-
-pub fn verifier_equiv_assume_i8(val: i8, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_signed_char(val, id) };
+pub fn verifier_equiv_store_i8(val: i8) {
+    unsafe { __VERIFIER_equiv_store_signed_char(val) };
 }
 
-pub fn verifier_equiv_check_i8(val: i8, id: i32) {
-    unsafe { __VERIFIER_equiv_check_signed_char(val, id) };
-}
-pub fn verifier_equiv_store_u16(val: u16, id: i32) {
-    unsafe { __VERIFIER_equiv_store_unsigned_short(val, id) };
+pub fn verifier_equiv_assume_i8(val: i8) {
+    unsafe { __VERIFIER_equiv_assume_signed_char(val) };
 }
 
-pub fn verifier_equiv_assume_u16(val: u16, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_unsigned_short(val, id) };
+pub fn verifier_equiv_check_i8(val: i8) {
+    unsafe { __VERIFIER_equiv_check_signed_char(val) };
+}
+pub fn verifier_equiv_store_u16(val: u16) {
+    unsafe { __VERIFIER_equiv_store_unsigned_short(val) };
 }
 
-pub fn verifier_equiv_check_u16(val: u16, id: i32) {
-    unsafe { __VERIFIER_equiv_check_unsigned_short(val, id) };
-}
-pub fn verifier_equiv_store_i16(val: i16, id: i32) {
-    unsafe { __VERIFIER_equiv_store_signed_short(val, id) };
+pub fn verifier_equiv_assume_u16(val: u16) {
+    unsafe { __VERIFIER_equiv_assume_unsigned_short(val) };
 }
 
-pub fn verifier_equiv_assume_i16(val: i16, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_signed_short(val, id) };
+pub fn verifier_equiv_check_u16(val: u16) {
+    unsafe { __VERIFIER_equiv_check_unsigned_short(val) };
+}
+pub fn verifier_equiv_store_i16(val: i16) {
+    unsafe { __VERIFIER_equiv_store_signed_short(val) };
 }
 
-pub fn verifier_equiv_check_i16(val: i16, id: i32) {
-    unsafe { __VERIFIER_equiv_check_signed_short(val, id) };
-}
-pub fn verifier_equiv_store_u32(val: u32, id: i32) {
-    unsafe { __VERIFIER_equiv_store_unsigned_int(val, id) };
+pub fn verifier_equiv_assume_i16(val: i16) {
+    unsafe { __VERIFIER_equiv_assume_signed_short(val) };
 }
 
-pub fn verifier_equiv_assume_u32(val: u32, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_unsigned_int(val, id) };
+pub fn verifier_equiv_check_i16(val: i16) {
+    unsafe { __VERIFIER_equiv_check_signed_short(val) };
+}
+pub fn verifier_equiv_store_u32(val: u32) {
+    unsafe { __VERIFIER_equiv_store_unsigned_int(val) };
 }
 
-pub fn verifier_equiv_check_u32(val: u32, id: i32) {
-    unsafe { __VERIFIER_equiv_check_unsigned_int(val, id) };
-}
-pub fn verifier_equiv_store_i32(val: i32, id: i32) {
-    unsafe { __VERIFIER_equiv_store_signed_int(val, id) };
+pub fn verifier_equiv_assume_u32(val: u32) {
+    unsafe { __VERIFIER_equiv_assume_unsigned_int(val) };
 }
 
-pub fn verifier_equiv_assume_i32(val: i32, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_signed_int(val, id) };
+pub fn verifier_equiv_check_u32(val: u32) {
+    unsafe { __VERIFIER_equiv_check_unsigned_int(val) };
+}
+pub fn verifier_equiv_store_i32(val: i32) {
+    unsafe { __VERIFIER_equiv_store_signed_int(val) };
 }
 
-pub fn verifier_equiv_check_i32(val: i32, id: i32) {
-    unsafe { __VERIFIER_equiv_check_signed_int(val, id) };
-}
-pub fn verifier_equiv_store_u64(val: u64, id: i32) {
-    unsafe { __VERIFIER_equiv_store_unsigned_long(val, id) };
+pub fn verifier_equiv_assume_i32(val: i32) {
+    unsafe { __VERIFIER_equiv_assume_signed_int(val) };
 }
 
-pub fn verifier_equiv_assume_u64(val: u64, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_unsigned_long(val, id) };
+pub fn verifier_equiv_check_i32(val: i32) {
+    unsafe { __VERIFIER_equiv_check_signed_int(val) };
+}
+pub fn verifier_equiv_store_u64(val: u64) {
+    unsafe { __VERIFIER_equiv_store_unsigned_long(val) };
 }
 
-pub fn verifier_equiv_check_u64(val: u64, id: i32) {
-    unsafe { __VERIFIER_equiv_check_unsigned_long(val, id) };
-}
-pub fn verifier_equiv_store_i64(val: i64, id: i32) {
-    unsafe { __VERIFIER_equiv_store_signed_long(val, id) };
+pub fn verifier_equiv_assume_u64(val: u64) {
+    unsafe { __VERIFIER_equiv_assume_unsigned_long(val) };
 }
 
-pub fn verifier_equiv_assume_i64(val: i64, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_signed_long(val, id) };
+pub fn verifier_equiv_check_u64(val: u64) {
+    unsafe { __VERIFIER_equiv_check_unsigned_long(val) };
+}
+pub fn verifier_equiv_store_i64(val: i64) {
+    unsafe { __VERIFIER_equiv_store_signed_long(val) };
 }
 
-pub fn verifier_equiv_check_i64(val: i64, id: i32) {
-    unsafe { __VERIFIER_equiv_check_signed_long(val, id) };
+pub fn verifier_equiv_assume_i64(val: i64) {
+    unsafe { __VERIFIER_equiv_assume_signed_long(val) };
 }
 
-pub fn verifier_equiv_store_f32(val: f32, id: i32) {
-    unsafe { __VERIFIER_equiv_store_float(val, id) };
+pub fn verifier_equiv_check_i64(val: i64) {
+    unsafe { __VERIFIER_equiv_check_signed_long(val) };
 }
 
-pub fn verifier_equiv_assume_f32(val: f32, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_float(val, id) };
+pub fn verifier_equiv_store_f32(val: f32) {
+    unsafe { __VERIFIER_equiv_store_float(val) };
 }
 
-pub fn verifier_equiv_check_f32(val: f32, id: i32) {
-    unsafe { __VERIFIER_equiv_check_float(val, id) };
+pub fn verifier_equiv_assume_f32(val: f32) {
+    unsafe { __VERIFIER_equiv_assume_float(val) };
 }
 
-pub fn verifier_equiv_store_f64(val: f64, id: i32) {
-    unsafe { __VERIFIER_equiv_store_double(val, id) };
+pub fn verifier_equiv_check_f32(val: f32) {
+    unsafe { __VERIFIER_equiv_check_float(val) };
 }
 
-pub fn verifier_equiv_assume_f64(val: f64, id: i32) {
-    unsafe { __VERIFIER_equiv_assume_double(val, id) };
+pub fn verifier_equiv_store_f64(val: f64) {
+    unsafe { __VERIFIER_equiv_store_double(val) };
 }
 
-pub fn verifier_equiv_check_f64(val: f64, id: i32) {
-    unsafe { __VERIFIER_equiv_check_double(val, id) };
+pub fn verifier_equiv_assume_f64(val: f64) {
+    unsafe { __VERIFIER_equiv_assume_double(val) };
+}
+
+pub fn verifier_equiv_check_f64(val: f64) {
+    unsafe { __VERIFIER_equiv_check_double(val) };
 }
 
 #[macro_export]
