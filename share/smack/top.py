@@ -11,7 +11,7 @@ import multiprocessing
 import yaml
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files,\
+from .utils import temporary_file, try_command, remove_temp_files, \
     llvm_exact_bin, smack_portfolio_path
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
