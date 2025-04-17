@@ -227,11 +227,11 @@ std::string SmackRep::type(const llvm::Type *t) {
     else if (t->isX86_FP80Ty())
       return Naming::LONG_DOUBLE_TYPE;
     else if (t->isFP128Ty())
-      return Naming::UNINTRTERPRETED_FLOAT_TYPE;
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
     else if (t->isPPC_FP128Ty())
-      return Naming::UNINTRTERPRETED_FLOAT_TYPE;
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
     else if (t->isBFloatTy())
-      return Naming::UNINTRTERPRETED_FLOAT_TYPE;
+      return Naming::UNINTERPRETED_FLOAT_TYPE;
     else
       llvm_unreachable("Unsupported floating-point type.");
   }
