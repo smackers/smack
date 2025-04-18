@@ -32,7 +32,7 @@ std::string getFpTypeName(unsigned bitWidth) {
       {16, Naming::HALF_TYPE},
       {32, Naming::FLOAT_TYPE},
       {64, Naming::DOUBLE_TYPE},
-      {80, Naming::LONG_DOUBLE_TYPE}
+      {80, Naming::LONG_DOUBLE_TYPE},
       {128, Naming::FP128_TYPE}};
   auto it = floatNameTable.find(bitWidth);
   if (it != floatNameTable.end())
