@@ -1584,6 +1584,18 @@ void FpOpGen::generateConvOps(std::stringstream &s) const {
                          desType)
       << "\n";
   }
+  // Conversion between bv-floating types and float
+  for (auto bw : FP_BIT_WIDTHS) {
+    for (auto name : {"$fpext", "$fptrunc"}) {
+      auto exp = FP_LAYOUT.at(bw).first;
+      auto sig = FP_LAYOUT.at(bw).second;
+      std::string type = getFpTypeName(bw);
+      s << uninterpretedOp("$fpext", {type, name}, makeFpVars(1, 0), name) << "\n";
+      s << uninterpretedOp("$fptrunc", {type, name}, makeFpVars(1, 0), desType) << "\n";
+      s << uninterpretedOp("$fpext", {name, type}, makeFpVars(1, 0), type) << "\n";
+      s << uninterpretedOp("$fptrunc", {name, type}, makeFpVars(1, 0), type) << "\n";
+    }
+  }
 }
 
 struct FpOpGen::FpIntConv {
