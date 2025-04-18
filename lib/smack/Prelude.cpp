@@ -32,7 +32,8 @@ std::string getFpTypeName(unsigned bitWidth) {
       {16, Naming::HALF_TYPE},
       {32, Naming::FLOAT_TYPE},
       {64, Naming::DOUBLE_TYPE},
-      {80, Naming::LONG_DOUBLE_TYPE}};
+      {80, Naming::LONG_DOUBLE_TYPE}
+      {128, Naming::FP128_TYPE}};
   auto it = floatNameTable.find(bitWidth);
   if (it != floatNameTable.end())
     return it->second;
@@ -1064,6 +1065,7 @@ void TypeDeclGen::generate(std::stringstream &s) const {
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
+    s << Decl::typee(Naming::FP128_TYPE, "float113e15") << "\n";
   } else {
     s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   }
