@@ -1064,7 +1064,6 @@ void TypeDeclGen::generate(std::stringstream &s) const {
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
-    s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   } else {
     s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   }
@@ -1584,21 +1583,6 @@ void FpOpGen::generateConvOps(std::stringstream &s) const {
     s << uninterpretedOp("$fptrunc", {srcType, desType}, makeFpVars(1, 0),
                          desType)
       << "\n";
-  }
-  // Conversion between bv-floating types and float
-  for (auto bw : FP_BIT_WIDTHS) {
-    for (auto name : {"$fpext", "$fptrunc"}) {
-      auto exp = FP_LAYOUT.at(bw).first;
-      auto sig = FP_LAYOUT.at(bw).second;
-      std::string type = getFpTypeName(bw);
-      std::list<Binding> bs = makeFpVars(1, srcBw);
-
-      bs.insert(bs.begin(), {makeRMODEVarName(), getRMODETypeName()});
-      s << uninterpretedOp("$fpext", {type, "float"}, bs, "float") << "\n";
-      s << uninterpretedOp("$fptrunc", {type, "float"}, bs, "float") << "\n";
-      s << uninterpretedOp("$fpext", {"float", type}, bs, type) << "\n";
-      s << uninterpretedOp("$fptrunc", {"float", type}, bs, type) << "\n";
-    }
   }
 }
 
