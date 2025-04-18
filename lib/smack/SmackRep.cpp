@@ -226,6 +226,8 @@ std::string SmackRep::type(const llvm::Type *t) {
       return Naming::DOUBLE_TYPE;
     else if (t->isX86_FP80Ty())
       return Naming::LONG_DOUBLE_TYPE;
+    else if (t->isFP128Ty())
+      return Naming::FP128_TYPE;
     else
       llvm_unreachable("Unsupported floating-point type.");
   }

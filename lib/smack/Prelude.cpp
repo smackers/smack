@@ -178,9 +178,9 @@ const std::vector<unsigned> IntOpGen::INTEGER_SIZES{
 // floating-point layout map: bit-width -> (exponent bit-width, significand
 // bit-width)
 const std::map<unsigned, std::pair<unsigned, unsigned>> FpOpGen::FP_LAYOUT{
-    {16, {5, 11}}, {32, {8, 24}}, {64, {11, 53}}, {80, {15, 65}}};
+    {16, {5, 11}}, {32, {8, 24}}, {64, {11, 53}}, {80, {15, 65}}, {128 , {15, 113}}};
 
-const std::vector<unsigned> FpOpGen::FP_BIT_WIDTHS{16, 32, 64, 80};
+const std::vector<unsigned> FpOpGen::FP_BIT_WIDTHS{16, 32, 64, 80, 128};
 
 // make Boogie map selection expression such as
 // M[p], M[$add.ref(p, 1)]

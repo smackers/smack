@@ -33,6 +33,7 @@ public:
   static const std::string FLOAT_TYPE;
   static const std::string DOUBLE_TYPE;
   static const std::string LONG_DOUBLE_TYPE;
+  static const std::string FP128_TYPE;
   static const std::string PTR_TYPE;
   static const std::string VECTOR_TYPE;
   static const std::string NULL_VAL;
