@@ -17,6 +17,7 @@ const std::string Naming::HALF_TYPE = "bvhalf";
 const std::string Naming::FLOAT_TYPE = "bvfloat";
 const std::string Naming::DOUBLE_TYPE = "bvdouble";
 const std::string Naming::LONG_DOUBLE_TYPE = "bvlongdouble";
+const std::string Naming::FP128_TYPE = "bvfloat128";
 const std::string Naming::PTR_TYPE = "ref";
 const std::string Naming::VECTOR_TYPE = "vec";
 const std::string Naming::NULL_VAL = "$0.ref";
