@@ -1591,8 +1591,8 @@ void FpOpGen::generateConvOps(std::stringstream &s) const {
       auto exp = FP_LAYOUT.at(bw).first;
       auto sig = FP_LAYOUT.at(bw).second;
       std::string type = getFpTypeName(bw);
-      s << uninterpretedOp("$fpext", {type, "float"}, makeFpVars(1, 0), name) << "\n";
-      s << uninterpretedOp("$fptrunc", {type, "float"}, makeFpVars(1, 0), name) << "\n";
+      s << uninterpretedOp("$fpext", {type, "float"}, makeFpVars(1, 0), "float") << "\n";
+      s << uninterpretedOp("$fptrunc", {type, "float"}, makeFpVars(1, 0), "float") << "\n";
       s << uninterpretedOp("$fpext", {"float", type}, makeFpVars(1, 0), type) << "\n";
       s << uninterpretedOp("$fptrunc", {"float", type}, makeFpVars(1, 0), type) << "\n";
     }
