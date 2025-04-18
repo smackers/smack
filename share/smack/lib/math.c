@@ -492,7 +492,7 @@ int __isinfl(long double x) {
 
 int __isnanl(long double x) {
   int ret = __VERIFIER_nondet_int();
-  __SMACK_code("@ := if $isnan.bvlongdouble.bool(@) then $1 else $0;", ret, x);
+  __SMACK_code("@ := if $isnan.bvfloat128.bool(@) then $1 else $0;", ret, x);
   return ret;
 }
 
