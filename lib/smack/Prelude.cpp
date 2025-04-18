@@ -1064,6 +1064,7 @@ void TypeDeclGen::generate(std::stringstream &s) const {
     s << Decl::typee(Naming::FLOAT_TYPE, "float24e8") << "\n";
     s << Decl::typee(Naming::DOUBLE_TYPE, "float53e11") << "\n";
     s << Decl::typee(Naming::LONG_DOUBLE_TYPE, "float65e15") << "\n";
+    s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   } else {
     s << Decl::typee(Naming::UNINTERPRETED_FLOAT_TYPE, "") << "\n";
   }
