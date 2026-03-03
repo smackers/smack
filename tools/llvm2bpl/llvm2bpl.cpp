@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
 
   if (!FinalIrFilename.empty()) {
     std::error_code EC;
-    auto F = new ToolOutputFile(FinalIrFilename.c_str(), EC, sys::fs::F_None);
+    auto F = new ToolOutputFile(FinalIrFilename.c_str(), EC, sys::fs::OF_None);
     if (EC)
       check(EC.message());
     F->keep();
@@ -264,7 +264,7 @@ int main(int argc, char **argv) {
 
   if (!OutputFilename.empty()) {
     std::error_code EC;
-    auto F = new ToolOutputFile(OutputFilename.c_str(), EC, sys::fs::F_None);
+    auto F = new ToolOutputFile(OutputFilename.c_str(), EC, sys::fs::OF_None);
     if (EC)
       check(EC.message());
     F->keep();

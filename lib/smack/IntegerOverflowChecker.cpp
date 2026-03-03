@@ -32,18 +32,14 @@ const std::map<std::string, Instruction::BinaryOps>
                                               {"sub", Instruction::Sub},
                                               {"mul", Instruction::Mul}};
 
-std::string IntegerOverflowChecker::getMax(unsigned bits, bool isSigned) {
-  if (isSigned)
-    return APInt::getSignedMaxValue(bits).toString(10, true);
-  else
-    return APInt::getMaxValue(bits).toString(10, false);
+APInt IntegerOverflowChecker::getMax(unsigned bits, bool isSigned) {
+  return isSigned ? APInt::getSignedMaxValue(bits).sext(bits * 2)
+                  : APInt::getMaxValue(bits).zext(bits * 2);
 }
 
-std::string IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
-  if (isSigned)
-    return APInt::getSignedMinValue(bits).toString(10, true);
-  else
-    return APInt::getMinValue(bits).toString(10, false);
+APInt IntegerOverflowChecker::getMin(unsigned bits, bool isSigned) {
+  return isSigned ? APInt::getSignedMinValue(bits).sext(bits * 2)
+                  : APInt::getMinValue(bits).zext(bits * 2);
 }
 
 /*
@@ -67,12 +63,12 @@ Value *IntegerOverflowChecker::extendBitWidth(Value *v, int bits, bool isSigned,
 BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
                                                    bool isSigned,
                                                    Instruction *i) {
-  ConstantInt *max = ConstantInt::get(
+  auto *max = ConstantInt::get(
       IntegerType::get(i->getFunction()->getContext(), bits * 2),
-      getMax(bits, isSigned), 10);
-  ConstantInt *min = ConstantInt::get(
+      getMax(bits, isSigned));
+  auto *min = ConstantInt::get(
       IntegerType::get(i->getFunction()->getContext(), bits * 2),
-      getMin(bits, isSigned), 10);
+      getMin(bits, isSigned));
   CmpInst::Predicate maxCmpPred =
       (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
   CmpInst::Predicate minCmpPred =

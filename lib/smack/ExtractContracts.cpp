@@ -188,7 +188,8 @@ Function *getContractExpr(Function *F, CallInst *I) {
     DestA->setName(A.getName());
     VMap[&A] = &*DestA++;
   }
-  CloneFunctionInto(NewF, F, VMap, false, Returns);
+  CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::LocalChangesOnly,
+                    Returns);
   setReturnToArgumentValue(NewF, dyn_cast<CallInst>(VMap[I]));
   return NewF;
 }

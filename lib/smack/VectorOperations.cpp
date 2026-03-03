@@ -55,7 +55,8 @@ const Expr *VectorOperations::constant(const ConstantDataVector *C) {
 const Expr *VectorOperations::constant(const ConstantAggregateZero *C) {
   auto T = C->getType();
   std::list<const Expr *> args;
-  for (unsigned i = 0; i < C->getNumElements(); i++)
+  auto elemCount = C->getElementCount().getFixedValue();
+  for (unsigned i = 0; i < elemCount; i++)
     args.push_back(rep->expr(C->getElementValue(i)));
   return Expr::fn(constructor(T), args);
 }

@@ -2523,8 +2523,7 @@ void PptDebugDumpResourceRequirementsList(
         } else {
           goto while_12_break;
         }
-        {}
-        {
+        {} {
           PptDebugDumpResourceList(curList);
           curList = (struct _IO_RESOURCE_LIST *)(curList->Descriptors +
                                                  curList->Count);
@@ -2933,10 +2932,9 @@ PptRemovePptRemovalRelation(PDEVICE_EXTENSION Extension,
       }
     }
     {
-      /*   ExAcquireFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED
-                                                                    */
-    }
-    {
+        /*   ExAcquireFastMutex(& Extension->ExtensionFastMutex); */ /* INLINED
+                                                                      */
+    } {
       while (1) {
       while_27_continue: /* CIL Label */;
         if (!done) {
@@ -3820,8 +3818,7 @@ BOOLEAN PptIsNecR98Machine(void) {
       }
       return (0);
     }
-    {}
-    { /*   ExFreePool(identifierString.Buffer); */ /* INLINED */
+    {} { /*   ExFreePool(identifierString.Buffer); */ /* INLINED */
     }
     return (0);
   }
@@ -3878,8 +3875,7 @@ NTSTATUS PptDispatchCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       InterlockedIncrement(&extension->OpenCloseRefCount);
       /*   ExReleaseFastMutex(& extension->OpenCloseMutex); */ /* INLINED */
     }
-    {}
-    {
+    {} {
       PptReleaseRemoveLock(&extension->RemoveLock, Irp);
       Irp->IoStatus.__annonCompField4.Status = status;
       myStatus = status;
@@ -3926,10 +3922,9 @@ NTSTATUS PptDispatchClose(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
       } else {
       }
       {
-        /*     ExReleaseFastMutex(& extension->OpenCloseMutex); */ /* INLINED
-                                                                    */
-      }
-      {}
+          /*     ExReleaseFastMutex(& extension->OpenCloseMutex); */ /* INLINED
+                                                                      */
+      } {}
     } else {
       {
           /*     ExReleaseFastMutex(& extension->OpenCloseMutex); */ /* INLINED
@@ -4930,8 +4925,7 @@ NTSTATUS PptDetectPortType(PDEVICE_EXTENSION Extension) {
       Status = RtlQueryRegistryValues(1, ParportPath.Buffer, RegTable,
                                       (void *)0, (void *)0);
     }
-    {}
-    {}
+    {} {}
     if (Status >= 0L) {
       if (IdentifierHex == 0UL) {
 
@@ -4959,8 +4953,7 @@ NTSTATUS PptDetectPortType(PDEVICE_EXTENSION Extension) {
     } else {
       Status = 3221225473UL;
     }
-    {}
-    { Status = PptDetectPortCapabilities(Extension); }
+    {} { Status = PptDetectPortCapabilities(Extension); }
     {}
     Status = 0L;
     {}
@@ -4996,8 +4989,7 @@ NTSTATUS PptDetectPortCapabilities(PDEVICE_EXTENSION Extension) {
     {}
       Extension->CheckedForGenericEpp = 1;
     }
-    {}
-    { PptDetectBytePort(Extension); }
+    {} { PptDetectBytePort(Extension); }
     if (Extension->PnpInfo.HardwareCapabilities & 11UL) {
       {}
       return (0L);
@@ -5029,8 +5021,7 @@ void PptDetectEcpPort(PDEVICE_EXTENSION Extension) {
       ecr = READ_PORT_UCHAR(wPortECR);
       ecrLast = ecr;
     }
-    {}
-    {
+    {} {
       dcr = (unsigned char)14;
       WRITE_PORT_UCHAR(wPortDCR, dcr);
       ecr = READ_PORT_UCHAR(wPortECR);
@@ -5174,8 +5165,7 @@ void PptDetectEppPort(PDEVICE_EXTENSION Extension) {
       dcr = READ_PORT_UCHAR(Controller + 2);
       Extension->PnpInfo.HardwareCapabilities |= 2UL;
     }
-    {}
-    {
+    {} {
       PptEcrSetMode(Extension, 148);
       WRITE_PORT_UCHAR(Controller + 2, Reverse);
       KeStallExecutionProcessor(5);
@@ -5999,8 +5989,7 @@ PDEVICE_RELATIONS PptPnpBuildRemovalRelations(PDEVICE_EXTENSION Extension) {
       }
     while_185_break: /* CIL Label */;
     }
-    {}
-    {
+    {} {
       tmp = ExAllocatePoolWithTag(1,
                                   (ULONG)sizeof(DEVICE_RELATIONS) +
                                       (count - 1UL) *
@@ -6859,9 +6848,7 @@ NTSTATUS PptPnpFilterResourceRequirements(PDEVICE_OBJECT DeviceObject,
       pResourceRequirementsIn =
           (struct _IO_RESOURCE_REQUIREMENTS_LIST *)Irp->IoStatus.Information;
     }
-    {}
-    {}
-    { PptDebugDumpResourceRequirementsList(pResourceRequirementsIn); }
+    {} {} { PptDebugDumpResourceRequirementsList(pResourceRequirementsIn); }
     if (filterResourceMethod == 1) {
       goto switch_229_1;
     } else {
@@ -6889,8 +6876,9 @@ NTSTATUS PptPnpFilterResourceRequirements(PDEVICE_OBJECT DeviceObject,
                       pResourceRequirementsIn);
                 }
               }
-              {}
-              { PptDebugDumpResourceRequirementsList(pResourceRequirementsIn); }
+              {} {
+                PptDebugDumpResourceRequirementsList(pResourceRequirementsIn);
+              }
               goto switch_229_break;
             switch_229_0: /* CIL Label */;
               {} {
@@ -6901,8 +6889,7 @@ NTSTATUS PptPnpFilterResourceRequirements(PDEVICE_OBJECT DeviceObject,
                 {} {
                   PptPnpFilterRemoveIrqResourceLists(pResourceRequirementsIn);
                 }
-                {}
-                {
+                {} {
                   PptDebugDumpResourceRequirementsList(pResourceRequirementsIn);
                 }
               } else {
@@ -7019,9 +7006,7 @@ void PptPnpFilterRemoveIrqResourceLists(
         } else {
           goto while_249_break;
         }
-        {}
-        {}
-        { tmp___0 = PptPnpListContainsIrqResourceDescriptor(curList); }
+        {} {} { tmp___0 = PptPnpListContainsIrqResourceDescriptor(curList); }
         if (tmp___0) {
           {}
           nextList = (struct _IO_RESOURCE_LIST *)(curList->Descriptors +
@@ -7096,8 +7081,7 @@ void PptPnpFilterNukeIrqResourceDescriptorsFromAllLists(
         } else {
           goto while_257_break;
         }
-        {}
-        {
+        {} {
           PptPnpFilterNukeIrqResourceDescriptors(curList);
           curList = (struct _IO_RESOURCE_LIST *)(curList->Descriptors +
                                                  curList->Count);
@@ -8058,9 +8042,9 @@ void PptRegInitDriverSettings(PUNICODE_STRING RegistryPath___0) {
       PptBreakOn = defaultBreakOn;
     } else {
     }
-    { /*   ExFreePool(path); */ /* INLINED */
-    }
-    {}
+    {
+        /*   ExFreePool(path); */ /* INLINED */
+    } {}
     return;
   }
 }
@@ -8931,8 +8915,7 @@ PDEVICE_OBJECT PptBuildDeviceObject(PDRIVER_OBJECT DriverObject,
       goto targetExit;
     } else {
     }
-    {}
-    { status = PptGetPortNumberFromLptName(portName, &portNumber); }
+    {} { status = PptGetPortNumberFromLptName(portName, &portNumber); }
     if (!(status >= 0L)) {
       {} { /*     ExFreePool(portName); */ /* INLINED */
       }
@@ -8947,8 +8930,7 @@ PDEVICE_OBJECT PptBuildDeviceObject(PDRIVER_OBJECT DriverObject,
       goto targetExit;
     } else {
     }
-    {}
-    {
+    {} {
       status = IoCreateDevice(DriverObject, sizeof(DEVICE_EXTENSION),
                               &uniNameString, 22, 256, 0, &deviceObject);
     }
@@ -8969,8 +8951,7 @@ PDEVICE_OBJECT PptBuildDeviceObject(PDRIVER_OBJECT DriverObject,
             goto targetExit;
           } else {
           }
-          {}
-          {
+          {} {
             status = IoCreateDevice(DriverObject, sizeof(DEVICE_EXTENSION),
                                     &uniNameString, 22, 256, 0, &deviceObject);
           }
