@@ -19,7 +19,6 @@ def green(text):
 
 
 def check(text, condition):
-    global args
     global count
     if condition:
         if not args.quiet:
