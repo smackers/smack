@@ -286,14 +286,14 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       MS_REPO_VERSION="20.04"
     fi
     ${WGET} -q https://packages.microsoft.com/config/ubuntu/${MS_REPO_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-    sudo dpkg -i packages-microsoft-prod.deb
+    sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
     rm -f packages-microsoft-prod.deb
     sudo apt-get update
 
     if [[ "$RELEASE_VERSION" == 22* ]]; then
       # .NET 5.0 requires libssl1.1, which is not available in the default Ubuntu 22.04 repositories.
       ${WGET} http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O libssl1.1.deb
-      sudo dpkg -i libssl1.1.deb || true
+      sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold libssl1.1.deb || true
       rm -f libssl1.1.deb
     fi
 
