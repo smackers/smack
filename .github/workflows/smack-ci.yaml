@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   check-regressions:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         regtest_env:
@@ -58,7 +58,7 @@ jobs:
         run: ./bin/build.sh
 
   build-and-push-docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: check-regressions
 
     steps:
