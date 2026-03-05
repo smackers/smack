@@ -305,7 +305,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo yum -y install ninja-build
     sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
     sudo yum -y install dotnet-sdk-5.0
-    sudo pip3 install pyyaml psutil toml
+    sudo pip3 install pyyaml psutil toml --break-system-packages || sudo pip3 install pyyaml psutil toml
 
     mkdir -p ${DEPS_DIR}
     cd ${DEPS_DIR}
@@ -534,7 +534,7 @@ fi
 
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
-  sudo pip3 install -U flake8
+  sudo pip3 install -U flake8 --break-system-packages || sudo pip3 install -U flake8
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
   fi
