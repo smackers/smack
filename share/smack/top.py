@@ -936,8 +936,7 @@ def verification_result(verifier_output, verifier):
 def boogie_command(args):
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/doModSetAnalysis"]
-    command += ["/useArrayTheory"]
+    command += ["/inferModifies"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
