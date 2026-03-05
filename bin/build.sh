@@ -200,7 +200,7 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
-linux-@(ubuntu|neon)-@(16|18|20)*)
+linux-@(ubuntu|neon)-@(16|18|20|22)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   fi
@@ -248,7 +248,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20)*)
+  linux-@(ubuntu|neon)-@(1[68]|20|22)*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     16*)
@@ -259,6 +259,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       ;;
     20*)
       UBUNTU_CODENAME="focal"
+      ;;
+    22*)
+      UBUNTU_CODENAME="jammy"
       ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
@@ -277,10 +280,22 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     fi
 
     # Adding .NET repository
-    ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-    sudo dpkg -i packages-microsoft-prod.deb
+    # On Ubuntu 22.04, use the 20.04 package config because .NET 5.0 might not be available in the 22.04 feed.
+    MS_REPO_VERSION=${RELEASE_VERSION}
+    if [[ "$RELEASE_VERSION" == 22* ]]; then
+      MS_REPO_VERSION="20.04"
+    fi
+    ${WGET} -q https://packages.microsoft.com/config/ubuntu/${MS_REPO_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
     rm -f packages-microsoft-prod.deb
     sudo apt-get update
+
+    if [[ "$RELEASE_VERSION" == 22* ]]; then
+      # .NET 5.0 requires libssl1.1, which is not available in the default Ubuntu 22.04 repositories.
+      ${WGET} http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O libssl1.1.deb
+      sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold libssl1.1.deb || true
+      rm -f libssl1.1.deb
+    fi
 
     sudo apt-get install -y ${DEPENDENCIES}
     ;;
@@ -290,7 +305,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo yum -y install ninja-build
     sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
     sudo yum -y install dotnet-sdk-5.0
-    sudo pip3 install pyyaml psutil toml
+    sudo pip3 install pyyaml psutil toml --break-system-packages || sudo pip3 install pyyaml psutil toml
 
     mkdir -p ${DEPS_DIR}
     cd ${DEPS_DIR}
@@ -519,7 +534,7 @@ fi
 
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
-  sudo pip3 install -U flake8
+  sudo pip3 install -U flake8 --break-system-packages || sudo pip3 install -U flake8
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
   fi
