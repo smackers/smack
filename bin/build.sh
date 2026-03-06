@@ -62,7 +62,7 @@ source ${SMACK_DIR}/bin/versions
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 NINJA="ninja"
-Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.31.zip"
+Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
