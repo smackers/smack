@@ -62,7 +62,7 @@ source ${SMACK_DIR}/bin/versions
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 NINJA="ninja"
-Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.31.zip"
+Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -70,7 +70,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-5.0 libboost-all-dev"
+DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-6.0 libboost-all-dev"
 
 shopt -s extglob
 
@@ -279,22 +279,12 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     fi
 
-    # Adding .NET repository
-    # On Ubuntu 22.04, use the 20.04 package config because .NET 5.0 might not be available in the 22.04 feed.
-    MS_REPO_VERSION=${RELEASE_VERSION}
-    if [[ "$RELEASE_VERSION" == 22* ]]; then
-      MS_REPO_VERSION="20.04"
-    fi
-    ${WGET} -q https://packages.microsoft.com/config/ubuntu/${MS_REPO_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-    sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
-    rm -f packages-microsoft-prod.deb
-    sudo apt-get update
-
-    if [[ "$RELEASE_VERSION" == 22* ]]; then
-      # .NET 5.0 requires libssl1.1, which is not available in the default Ubuntu 22.04 repositories.
-      ${WGET} http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O libssl1.1.deb
-      sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold libssl1.1.deb || true
-      rm -f libssl1.1.deb
+    # Adding .NET repository (skip for 22.04+ as it provides .NET 6 natively)
+    if [[ "$RELEASE_VERSION" != 22* ]]; then
+      ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+      sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
+      rm -f packages-microsoft-prod.deb
+      sudo apt-get update
     fi
 
     sudo apt-get install -y ${DEPENDENCIES}
@@ -304,7 +294,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
   linux---x86_64)
     sudo yum -y install ninja-build
     sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
-    sudo yum -y install dotnet-sdk-5.0
+    sudo yum -y install dotnet-sdk-6.0
     sudo pip3 install pyyaml psutil toml --break-system-packages || sudo pip3 install pyyaml psutil toml
 
     mkdir -p ${DEPS_DIR}
@@ -488,6 +478,7 @@ if [ ${INSTALL_CORRAL} -eq 1 ] ; then
     puts "Corral already installed"
   fi
   echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
+  echo export DOTNET_ROLL_FORWARD=Major >> ${SMACKENV}
 fi
 
 
