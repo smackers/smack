@@ -4,6 +4,7 @@
 #define DEBUG_TYPE "smack-rep"
 #include "smack/SmackRep.h"
 #include "smack/CodifyStaticInits.h"
+#include "smack/SignAnalysis.h"
 #include "smack/SmackOptions.h"
 #include "smack/VectorOperations.h"
 
@@ -99,9 +100,10 @@ bool isCodeString(const llvm::Value *V) {
   return false;
 }
 
-SmackRep::SmackRep(const DataLayout *L, Naming *N, Program *P, Regions *R)
-    : targetData(L), naming(N), program(P), regions(R), globalsOffset(0),
-      externsOffset(-32768), uniqueFpNum(0),
+SmackRep::SmackRep(const DataLayout *L, Naming *N, Program *P, Regions *R,
+                   SignAnalysis *SA)
+    : targetData(L), naming(N), program(P), regions(R), signAnalysis(SA),
+      globalsOffset(0), externsOffset(-32768), uniqueFpNum(0),
       ptrSizeInBits(targetData->getPointerSizeInBits()) {
   if (SmackOptions::MemorySafety)
     initFuncs.push_back("$global_allocations");
@@ -632,14 +634,30 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
 
-    // This is heuristics for choosing between generating an unsigned vs
-    // signed constant (since LLVM does not keep track of that).
-    // Signed values -1 is special since it appears often because i--
-    // gets translated into i + (-1), and so in that context it should
-    // be a signed integer.
-    bool neg = width > 1 &&
-               (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
-                           : ci->isNegative());
+    // Use SignAnalysis to determine whether this constant should be
+    // rendered as negative.  Fall back to the old heuristic if
+    // SignAnalysis is not available or returns Unknown/Conflict.
+    bool neg;
+    if (signAnalysis) {
+      Sign s = signAnalysis->getSign(v);
+      if (s == Sign::Signed)
+        neg = width > 1 && ci->isNegative();
+      else if (s == Sign::Unsigned)
+        neg = false;
+      else {
+        // Unknown or Conflict: fall back to old heuristic
+        neg = width > 1 &&
+              (isUnsigned
+                   ? (isUnsignedInst ? false : API.getSExtValue() == -1)
+                   : ci->isNegative());
+      }
+    } else {
+      // No SignAnalysis available: use old heuristic
+      neg = width > 1 &&
+            (isUnsigned
+                 ? (isUnsignedInst ? false : API.getSExtValue() == -1)
+                 : ci->isNegative());
+    }
     SmallString<32> str;
     (neg ? API.abs() : API).toString(str, 10, false);
     const Expr *e = SmackOptions::BitPrecise

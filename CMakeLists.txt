@@ -123,6 +123,7 @@ add_library(smackTranslator STATIC
   include/smack/AnnotateLoopExits.h
   include/smack/SplitAggregateValue.h
   include/smack/Prelude.h
+  include/smack/SignAnalysis.h
   include/smack/SmackWarnings.h
   lib/smack/AddTiming.cpp
   lib/smack/BoogieAst.cpp
@@ -150,6 +151,7 @@ add_library(smackTranslator STATIC
   lib/smack/AnnotateLoopExits.cpp
   lib/smack/SplitAggregateValue.cpp
   lib/smack/Prelude.cpp
+  lib/smack/SignAnalysis.cpp
   lib/smack/SmackWarnings.cpp
 )
 

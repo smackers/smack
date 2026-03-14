@@ -34,6 +34,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
+#include "smack/SignAnalysis.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
@@ -269,6 +270,7 @@ int main(int argc, char **argv) {
       check(EC.message());
     F->keep();
     files.push_back(F);
+    pass_manager.add(new smack::SignAnalysis());
     pass_manager.add(new smack::SmackModuleGenerator());
     pass_manager.add(new smack::BplFilePrinter(F->os()));
   }

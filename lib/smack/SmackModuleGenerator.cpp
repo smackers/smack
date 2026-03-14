@@ -8,6 +8,7 @@
 #include "smack/Naming.h"
 #include "smack/Prelude.h"
 #include "smack/Regions.h"
+#include "smack/SignAnalysis.h"
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
 #include "smack/SmackRep.h"
@@ -25,6 +26,7 @@ void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<llvm::LoopInfoWrapperPass>();
   AU.addRequired<Regions>();
+  AU.addRequired<SignAnalysis>();
 }
 
 bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
@@ -35,7 +37,8 @@ bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
 void SmackModuleGenerator::generateProgram(llvm::Module &M) {
 
   Naming naming;
-  SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>());
+  SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>(),
+               &getAnalysis<SignAnalysis>());
   std::list<Decl *> &decls = program->getDeclarations();
 
   SDEBUG(errs() << "Analyzing globals...\n");
