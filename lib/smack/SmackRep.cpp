@@ -647,16 +647,14 @@ const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
       else {
         // Unknown or Conflict: fall back to old heuristic
         neg = width > 1 &&
-              (isUnsigned
-                   ? (isUnsignedInst ? false : API.getSExtValue() == -1)
-                   : ci->isNegative());
+              (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
+                          : ci->isNegative());
       }
     } else {
       // No SignAnalysis available: use old heuristic
       neg = width > 1 &&
-            (isUnsigned
-                 ? (isUnsignedInst ? false : API.getSExtValue() == -1)
-                 : ci->isNegative());
+            (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
+                        : ci->isNegative());
     }
     SmallString<32> str;
     (neg ? API.abs() : API).toString(str, 10, false);

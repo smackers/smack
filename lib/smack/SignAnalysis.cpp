@@ -21,9 +21,9 @@
 
 #define DEBUG_TYPE "smack-sign"
 #include "smack/SignAnalysis.h"
+#include "seadsa/Graph.hh"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
-#include "seadsa/Graph.hh"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -188,8 +188,8 @@ bool SignAnalysis::propagateForward(Instruction &I) {
 
   // Select: meet of true and false values
   case Instruction::Select:
-    changed |=
-        update(&I, meetSign(getSign(I.getOperand(1)), getSign(I.getOperand(2))));
+    changed |= update(
+        &I, meetSign(getSign(I.getOperand(1)), getSign(I.getOperand(2))));
     break;
 
   // Signed arithmetic results
@@ -419,7 +419,7 @@ bool SignAnalysis::runOnModule(Module &M) {
     ++iterations;
 
   SDEBUG(errs() << "SignAnalysis: converged after " << iterations
-                 << " iteration(s), " << SignMap.size() << " values mapped\n");
+                << " iteration(s), " << SignMap.size() << " values mapped\n");
   SDEBUG(dump());
 
   // Analysis pass — does not modify the module.
