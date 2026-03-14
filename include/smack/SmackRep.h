@@ -24,6 +24,7 @@ class Stmt;
 class Expr;
 class Regions;
 class Attr;
+class SignAnalysis;
 
 using llvm::Regex;
 using llvm::SmallVector;
@@ -47,6 +48,7 @@ protected:
   Naming *naming;
   Program *program;
   Regions *regions;
+  SignAnalysis *signAnalysis;
   std::vector<std::string> bplGlobals;
   std::map<const llvm::Value *, unsigned> globalAllocations;
 
@@ -59,7 +61,8 @@ protected:
   std::map<std::string, Decl *> auxDecls;
 
 public:
-  SmackRep(const llvm::DataLayout *L, Naming *N, Program *P, Regions *R);
+  SmackRep(const llvm::DataLayout *L, Naming *N, Program *P, Regions *R,
+           SignAnalysis *SA = nullptr);
   Program *getProgram() { return program; }
 
 private:
