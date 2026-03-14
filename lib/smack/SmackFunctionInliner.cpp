@@ -20,7 +20,7 @@
 static llvm::cl::opt<bool>
     InlineFuncs("inline-funcs",
                 llvm::cl::desc("Inline small functions before DSA analysis"),
-                llvm::cl::init(true));
+                llvm::cl::init(false));
 
 static llvm::cl::opt<unsigned>
     InlineLimit("inline-limit",
