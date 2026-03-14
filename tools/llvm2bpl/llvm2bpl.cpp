@@ -38,6 +38,7 @@
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
+#include "smack/SmackFunctionInliner.h"
 #include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
 #include "smack/SimplifyLibCalls.h"
@@ -181,6 +182,7 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::RemoveDeadDefs());
   }
 
+  pass_manager.add(new smack::SmackFunctionInliner());
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
