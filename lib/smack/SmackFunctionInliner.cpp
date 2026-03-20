@@ -34,6 +34,11 @@ static llvm::cl::opt<unsigned>
                                   "pointer-involving functions"),
                    llvm::cl::init(200));
 
+static llvm::cl::list<std::string>
+    NoInlineFuncs("no-inline",
+                  llvm::cl::desc("Functions that should not be inlined"),
+                  llvm::cl::ZeroOrMore);
+
 namespace smack {
 
 using namespace llvm;
@@ -66,6 +71,9 @@ bool SmackFunctionInliner::shouldInline(Function &F) {
     return false;
   if (name.find("__VERIFIER_") != StringRef::npos)
     return false;
+  for (const auto &NI : NoInlineFuncs)
+    if (name == NI)
+      return false;
   if (SmackOptions::isEntryPoint(name))
     return false;
 
