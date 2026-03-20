@@ -478,6 +478,13 @@ def arguments():
         help='inline small functions before DSA analysis for precision')
 
     translate_group.add_argument(
+        '--no-inline',
+        metavar='FUNC',
+        nargs='+',
+        default=[],
+        help='functions that should not be inlined')
+
+    translate_group.add_argument(
         '--entry-points',
         metavar='PROC',
         nargs='+',
@@ -764,6 +771,8 @@ def llvm_to_bpl(args):
         cmd += ['-no-byte-access-inference']
     if args.inline_funcs:
         cmd += ['-inline-funcs']
+    for func in args.no_inline:
+        cmd += ['-no-inline', func]
     if args.rewrite_bitwise_ops:
         cmd += ['-rewrite-bitwise-ops']
     if args.no_memory_splitting:
