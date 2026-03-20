@@ -287,6 +287,26 @@ bool SignAnalysis::propagateBackward(Instruction &I) {
     constrainIntegerOperands(Sign::Unsigned);
     break;
 
+  // GEP indices are signed (negative index = pointer decrement)
+  case Instruction::GetElementPtr: {
+    auto &GEP = cast<GetElementPtrInst>(I);
+    for (auto idx = GEP.idx_begin(); idx != GEP.idx_end(); ++idx) {
+      if (isInteger(*idx))
+        changed |= update(*idx, Sign::Signed);
+    }
+    break;
+  }
+
+  // Sign-agnostic arithmetic: propagate result sign to operands
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul: {
+    Sign resultSign = getSign(&I);
+    if (resultSign != Sign::Unknown)
+      constrainIntegerOperands(resultSign);
+    break;
+  }
+
   // Casts constrain the source operand
   case Instruction::SExt:
     if (isInteger(I.getOperand(0)))
