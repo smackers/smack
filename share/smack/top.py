@@ -492,7 +492,7 @@ def arguments():
         '--check',
         metavar='PROPERTY',
         nargs='+',
-        choices=list(VProperty),
+        choices=list(VProperty.__members__.values()),
         default=VProperty.NONE,
         type=VProperty.argparse,
         action=PropertyAction,
@@ -726,7 +726,7 @@ def llvm_to_bpl(args):
 
     cmd = ['llvm2bpl', args.linked_bc_file, '-bpl', args.bpl_file]
     cmd += ['-warn-type', args.warn]
-    cmd += ['-sea-dsa=ci']
+    cmd += ['-sea-dsa=cs']
     # This flag can lead to unsoundness in Rust regressions.
     # cmd += ['-sea-dsa-type-aware']
     if sys.stdout.isatty():

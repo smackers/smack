@@ -45,12 +45,31 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
     decls.insert(decls.end(), ds.begin(), ds.end());
   }
 
+  // Find the entry-point function for global memory map declarations.
+  for (auto &F : M) {
+    if (F.hasName() && SmackOptions::isEntryPoint(F.getName())) {
+      rep.entryFunction = &F;
+      break;
+    }
+  }
+
   SDEBUG(errs() << "Analyzing functions...\n");
 
   for (auto &F : M) {
 
     // Reset the counters for per-function names
     naming.reset();
+
+    // Set the current function context for SmackRep.
+    // Non-entry usesGlobalMemory functions (e.g., __SMACK_static_init) must
+    // use the entry function's region context so that their $M.R references
+    // match the global declarations (which use entry function's indices).
+    if (rep.entryFunction && F.hasName() &&
+        SmackOptions::usesGlobalMemory(F.getName()) &&
+        !SmackOptions::isEntryPoint(F.getName()))
+      rep.currentFunction = rep.entryFunction;
+    else
+      rep.currentFunction = &F;
 
     SDEBUG(errs() << "Analyzing function: " << naming.get(F) << "\n");
 
@@ -83,13 +102,31 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
 
         } else if (naming.get(F).find(Naming::INIT_FUNC_PREFIX) == 0)
           rep.addInitFunc(&F);
+
+        // Add local memory variable declarations.
+        if (F.hasName() && SmackOptions::isEntryPoint(F.getName())) {
+          // Entry points: local vars for non-global-scope regions.
+          unsigned numRegions = getAnalysis<Regions>().size(&F);
+          for (unsigned r = 0; r < numRegions; r++) {
+            if (!getAnalysis<Regions>().get(&F, r).isGlobalScope())
+              P->getDeclarations().push_back(
+                  Decl::variable(rep.memReg(r), rep.memType(&F, r)));
+          }
+        } else if (!(F.hasName() &&
+                     SmackOptions::usesGlobalMemory(F.getName()))) {
+          // Regular (non-global-memory) functions: all regions are local.
+          auto accessed = getAnalysis<Regions>().getAccessedRegions(&F);
+          for (unsigned r : accessed)
+            P->getDeclarations().push_back(
+                Decl::variable(rep.memReg(r), rep.memType(&F, r)));
+        }
       }
       SDEBUG(errs() << "Finished analyzing function: " << naming.get(F)
                     << "\n\n");
     }
 
-    // MODIFIES
-    // ... to do below, after memory splitting is determined.
+    // No explicit modifies clauses for global-memory procedures;
+    // the verifier infers them automatically.
   }
 
   auto ds = rep.auxiliaryDeclarations();

@@ -1114,13 +1114,17 @@ void ConstDeclGen::generate(std::stringstream &s) const {
 }
 
 void MemDeclGen::generateMemoryMaps(std::stringstream &s) const {
-  describe("Memory maps (" + std::to_string(prelude.rep.regions->size()) +
-               " regions)",
-           s);
+  auto *entryF = prelude.rep.entryFunction;
+  unsigned numRegions = entryF ? prelude.rep.regions->size(entryF) : 0;
+  describe("Memory maps (" + std::to_string(numRegions) + " regions)", s);
 
-  for (auto M : prelude.rep.memoryMaps())
-    s << "var " << M.first << ": " << M.second << ";"
-      << "\n";
+  if (entryF) {
+    for (unsigned i = 0; i < numRegions; i++) {
+      if (prelude.rep.regions->get(entryF, i).isGlobalScope())
+        s << "var " << prelude.rep.memReg(i) << ": "
+          << prelude.rep.memType(entryF, i) << ";\n";
+    }
+  }
 
   s << "\n";
 }

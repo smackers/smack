@@ -3,6 +3,7 @@
 //
 
 #include "smack/SmackOptions.h"
+#include "smack/Naming.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Regex.h"
 
@@ -105,6 +106,16 @@ bool SmackOptions::isEntryPoint(llvm::StringRef name) {
   for (auto EP : EntryPoints)
     if (name == EP)
       return true;
+  return false;
+}
+
+bool SmackOptions::usesGlobalMemory(llvm::StringRef name) {
+  if (isEntryPoint(name))
+    return true;
+  // Init functions operate on global state directly.
+  if (name == Naming::STATIC_INIT_PROC ||
+      name.startswith(Naming::INIT_FUNC_PREFIX))
+    return true;
   return false;
 }
 

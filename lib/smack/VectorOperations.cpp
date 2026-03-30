@@ -270,11 +270,11 @@ FuncDecl *VectorOperations::load(const Value *V) {
   auto ET = PT->getElementType();
   type(ET);
 
-  auto R = rep->regions->idx(V);
-  auto MT = rep->regions->get(R).getType();
+  auto R = rep->regions->idx(V, rep->currentFunction);
+  auto MT = rep->regions->get(rep->currentFunction, R).getType();
   MT || (MT = IntegerType::get(V->getContext(), 8));
   auto FN = rep->opName(Naming::LOAD, {ET, MT});
-  auto M = rep->memType(R);
+  auto M = rep->memType(rep->currentFunction, R);
   auto P = rep->type(PT);
   auto E = rep->type(ET);
   auto F = (MT == ET) ? Decl::function(FN, {{"M", M}, {"p", P}}, E,
@@ -290,11 +290,11 @@ FuncDecl *VectorOperations::store(const Value *V) {
   auto ET = PT->getElementType();
   type(ET);
 
-  auto R = rep->regions->idx(V);
-  auto MT = rep->regions->get(R).getType();
+  auto R = rep->regions->idx(V, rep->currentFunction);
+  auto MT = rep->regions->get(rep->currentFunction, R).getType();
   MT || (MT = IntegerType::get(V->getContext(), 8));
   auto FN = rep->opName(Naming::STORE, {ET, MT});
-  auto M = rep->memType(R);
+  auto M = rep->memType(rep->currentFunction, R);
   auto P = rep->type(PT);
   auto E = rep->type(ET);
   auto F = (MT == ET) ? Decl::function(FN, {{"M", M}, {"p", P}, {"v", E}}, M,

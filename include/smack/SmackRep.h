@@ -59,8 +59,14 @@ protected:
   std::map<std::string, Decl *> auxDecls;
 
 public:
+  // Current function being processed (set by SmackModuleGenerator).
+  const llvm::Function *currentFunction = nullptr;
+  // Entry-point function (set by SmackModuleGenerator, used for global decls).
+  const llvm::Function *entryFunction = nullptr;
+
   SmackRep(const llvm::DataLayout *L, Naming *N, Program *P, Regions *R);
   Program *getProgram() { return program; }
+  Regions *getRegions() { return regions; }
 
 private:
   unsigned storageSize(llvm::Type *T);
@@ -185,11 +191,12 @@ public:
   unsigned getElementSize(const llvm::Value *v);
 
   std::string memReg(unsigned i);
-  std::string memType(unsigned region);
+  std::string memType(const llvm::Function *F, unsigned region);
   std::string memPath(unsigned region);
-  std::string memPath(const llvm::Value *v);
+  std::string memPath(const llvm::Value *v, const llvm::Function *F);
 
-  std::list<std::pair<std::string, std::string>> memoryMaps();
+  std::list<std::pair<std::string, std::string>>
+  memoryMaps(const llvm::Function *F);
 
   // used in SmackInstGenerator
   std::string getString(const llvm::Value *v);

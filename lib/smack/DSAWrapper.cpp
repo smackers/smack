@@ -9,6 +9,7 @@
 #include "smack/Debug.h"
 #include "smack/InitializePasses.h"
 #include "smack/SmackOptions.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/FileSystem.h"
@@ -30,9 +31,28 @@ void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 bool DSAWrapper::runOnModule(llvm::Module &M) {
   dataLayout = &M.getDataLayout();
   SD = &getAnalysis<seadsa::DsaAnalysis>().getDsaAnalysis();
-  assert(SD->kind() == seadsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
-         "Currently we only want the context-insensitive sea-dsa.");
-  DG = &SD->getGraph(*M.begin());
+  // Use the entry-point function's graph as the fallback graph for
+  // globals/constants. This must match SmackModuleGenerator's entryFunction
+  // so that globalRefCount (built from DG) uses the same nodes as the
+  // entry function's region representatives.
+  Function *entryFn = nullptr;
+  for (auto &F : M) {
+    if (!F.isDeclaration() && SmackOptions::isEntryPoint(F.getName())) {
+      entryFn = &F;
+      break;
+    }
+  }
+  if (!entryFn) {
+    // Fallback: use the first defined function.
+    for (auto &F : M) {
+      if (!F.isDeclaration()) {
+        entryFn = &F;
+        break;
+      }
+    }
+  }
+  assert(entryFn && "Module must have at least one defined function.");
+  DG = &SD->getGraph(*entryFn);
   // Print the graph in dot format when debugging
   SDEBUG(DG->writeGraph("main.mem.dot"));
   collectStaticInits(M);
@@ -57,10 +77,10 @@ void DSAWrapper::collectMemOpds(llvm::Module &M) {
   for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
-        memOpds.insert(getNode(memcpyInst->getSource()));
-        memOpds.insert(getNode(memcpyInst->getDest()));
+        memOpds.insert(memcpyInst->getSource());
+        memOpds.insert(memcpyInst->getDest());
       } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I))
-        memOpds.insert(getNode(memsetInst->getDest()));
+        memOpds.insert(memsetInst->getDest());
     }
   }
 }
@@ -81,14 +101,26 @@ bool DSAWrapper::isStaticInitd(const seadsa::Node *n) {
   return staticInits.count(n) > 0;
 }
 
-bool DSAWrapper::isMemOpd(const seadsa::Node *n) {
-  return memOpds.count(n) > 0;
-}
+bool DSAWrapper::isMemOpd(const llvm::Value *v) { return memOpds.count(v) > 0; }
 
 bool DSAWrapper::isRead(const Value *V) {
+  // Check if the value is read in any function's graph (conservative).
+  // This is needed for CS-DSA where different functions have different graphs.
+  for (auto &F : *module) {
+    if (F.isDeclaration() || !SD->hasGraph(F))
+      continue;
+    auto &graph = SD->getGraph(F);
+    if (graph.hasCell(*V)) {
+      auto *node = graph.getCell(*V).getNode();
+      if (node && node->isRead())
+        return true;
+    }
+  }
+  // Fallback: check the default graph.
   auto node = getNode(V);
-  assert(node && "Global values should have nodes.");
-  return node->isRead();
+  if (node)
+    return node->isRead();
+  return false;
 }
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
@@ -102,20 +134,73 @@ unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
     llvm_unreachable("Type should be pointer.");
 }
 
+seadsa::Graph &DSAWrapper::getGraphForValue(const Value *v) {
+  if (auto *I = dyn_cast<Instruction>(v))
+    if (SD->hasGraph(*I->getParent()->getParent()))
+      return SD->getGraph(*I->getParent()->getParent());
+  if (auto *A = dyn_cast<Argument>(v))
+    if (SD->hasGraph(*A->getParent()))
+      return SD->getGraph(*A->getParent());
+  // For globals/constants or when no per-function graph, use fallback.
+  return *DG;
+}
+
+seadsa::Graph &DSAWrapper::getGraph(const Function &F) {
+  return SD->getGraph(F);
+}
+
+bool DSAWrapper::hasGraph(const Function &F) const { return SD->hasGraph(F); }
+
 unsigned DSAWrapper::getOffset(const Value *v) {
-  if (!DG->hasCell(*v))
+  auto &graph = getGraphForValue(v);
+  if (!graph.hasCell(*v))
     return 0;
-  return DG->getCell(*v).getOffset();
+  return graph.getCell(*v).getOffset();
+}
+
+unsigned DSAWrapper::getOffset(const Value *v, const Function &F) {
+  if (!SD->hasGraph(F))
+    return getOffset(v);
+  auto &graph = SD->getGraph(F);
+  if (graph.hasCell(*v))
+    return graph.getCell(*v).getOffset();
+  // V might be from a different function (e.g., a GEP in __SMACK_static_init
+  // when we're resolving in the entry function's context). Strip to the
+  // underlying object (the global variable) and look that up instead.
+  const Value *base = getUnderlyingObject(v);
+  if (base != v && graph.hasCell(*base))
+    return graph.getCell(*base).getOffset();
+  return 0;
 }
 
 const seadsa::Node *DSAWrapper::getNode(const Value *v) {
-  // For sea-dsa, a node is obtained by getting the cell first.
-  // It's possible that a value doesn't have a cell, e.g., undef.
-  if (!DG->hasCell(*v))
+  auto &graph = getGraphForValue(v);
+  if (!graph.hasCell(*v))
     return nullptr;
-  auto node = DG->getCell(*v).getNode();
+  auto node = graph.getCell(*v).getNode();
   assert(node && "Values should have nodes if they have cells.");
   return node;
+}
+
+const seadsa::Node *DSAWrapper::getNode(const Value *v, const Function &F) {
+  if (!SD->hasGraph(F))
+    return getNode(v);
+  auto &graph = SD->getGraph(F);
+  if (graph.hasCell(*v)) {
+    auto node = graph.getCell(*v).getNode();
+    assert(node && "Values should have nodes if they have cells.");
+    return node;
+  }
+  // V might be from a different function (e.g., a GEP in __SMACK_static_init
+  // when we're resolving in the entry function's context). Strip to the
+  // underlying object (the global variable) and look that up instead.
+  const Value *base = getUnderlyingObject(v);
+  if (base != v && graph.hasCell(*base)) {
+    auto node = graph.getCell(*base).getNode();
+    assert(node && "Values should have nodes if they have cells.");
+    return node;
+  }
+  return nullptr;
 }
 
 bool DSAWrapper::isTypeSafe(const Value *v) {
@@ -127,7 +212,7 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
 
   if (node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete() ||
       node->isUnknown() || node->isIntToPtr() || node->isPtrToInt() ||
-      isMemOpd(node))
+      isMemOpd(v))
     // We consider it type-unsafe to be safe for these cases
     return false;
 
@@ -193,6 +278,63 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
   else
     // Chances to hit this branch are when we visit memcpy/memset
     // pointer operands.
+    return false;
+}
+
+bool DSAWrapper::isTypeSafe(const Value *v, const Function &F) {
+  typedef std::unordered_map<unsigned, bool> FieldMap;
+  typedef std::unordered_map<const seadsa::Node *, FieldMap> NodeMap;
+  static NodeMap nodeMap;
+
+  auto node = getNode(v, F);
+  if (!node)
+    return false;
+
+  if (node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete() ||
+      node->isUnknown() || node->isIntToPtr() || node->isPtrToInt() ||
+      isMemOpd(v))
+    return false;
+
+  if (!nodeMap.count(node)) {
+    FieldMap fieldMap;
+    auto &types = node->types();
+    std::set<unsigned> offsets;
+    for (auto &t : types)
+      offsets.insert(t.first);
+    auto offsetIterator = offsets.begin();
+    while (true) {
+      if (offsetIterator == offsets.end())
+        break;
+      unsigned offset = *offsetIterator;
+      auto &typeSet = types.find(offset)->second;
+      auto ti = typeSet.begin();
+      if (++ti != typeSet.end())
+        fieldMap[offset] = false;
+      unsigned fieldLength = 0;
+      for (auto &t : typeSet) {
+        unsigned length =
+            dataLayout->getTypeStoreSize(const_cast<llvm::Type *>(t));
+        if (length > fieldLength)
+          fieldLength = length;
+      }
+      for (auto oi = ++offsetIterator; oi != offsets.end(); ++oi) {
+        unsigned next_offset = *oi;
+        if (offset + fieldLength > next_offset) {
+          fieldMap[offset] = false;
+          fieldMap[next_offset] = false;
+        } else
+          break;
+      }
+      if (!fieldMap.count(offset))
+        fieldMap[offset] = true;
+    }
+    nodeMap[node] = fieldMap;
+  }
+
+  auto offset = getOffset(v, F);
+  if (nodeMap[node].count(offset))
+    return nodeMap[node][offset];
+  else
     return false;
 }
 

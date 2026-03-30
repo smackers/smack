@@ -39,6 +39,9 @@ public:
   static const llvm::cl::opt<bool> WrappedIntegerEncoding;
 
   static bool isEntryPoint(llvm::StringRef);
+  // Returns true for functions that should use global memory (not parameterized
+  // regions) — entry points and init functions.
+  static bool usesGlobalMemory(llvm::StringRef);
   static bool shouldCheckFunction(llvm::StringRef);
 };
 } // namespace smack
