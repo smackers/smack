@@ -794,36 +794,35 @@ void Regions::propagateRegionMerges(Module &M) {
   std::vector<std::vector<const Function *>> sccs;
   int idx = 0;
 
-  std::function<void(const Function *)> strongconnect =
-      [&](const Function *F) {
-        index[F] = lowlink[F] = idx++;
-        stack.push_back(F);
-        onStack[F] = true;
+  std::function<void(const Function *)> strongconnect = [&](const Function *F) {
+    index[F] = lowlink[F] = idx++;
+    stack.push_back(F);
+    onStack[F] = true;
 
-        if (callGraph.count(F)) {
-          for (auto &edge : callGraph[F]) {
-            Function *callee = edge.second;
-            if (!index.count(callee)) {
-              strongconnect(callee);
-              lowlink[F] = std::min(lowlink[F], lowlink[callee]);
-            } else if (onStack[callee]) {
-              lowlink[F] = std::min(lowlink[F], index[callee]);
-            }
-          }
+    if (callGraph.count(F)) {
+      for (auto &edge : callGraph[F]) {
+        Function *callee = edge.second;
+        if (!index.count(callee)) {
+          strongconnect(callee);
+          lowlink[F] = std::min(lowlink[F], lowlink[callee]);
+        } else if (onStack[callee]) {
+          lowlink[F] = std::min(lowlink[F], index[callee]);
         }
+      }
+    }
 
-        if (lowlink[F] == index[F]) {
-          std::vector<const Function *> scc;
-          const Function *w;
-          do {
-            w = stack.back();
-            stack.pop_back();
-            onStack[w] = false;
-            scc.push_back(w);
-          } while (w != F);
-          sccs.push_back(scc);
-        }
-      };
+    if (lowlink[F] == index[F]) {
+      std::vector<const Function *> scc;
+      const Function *w;
+      do {
+        w = stack.back();
+        stack.pop_back();
+        onStack[w] = false;
+        scc.push_back(w);
+      } while (w != F);
+      sccs.push_back(scc);
+    }
+  };
 
   for (auto &F : M) {
     if (F.isDeclaration())

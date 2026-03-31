@@ -106,7 +106,8 @@ private:
                                  const llvm::Function *caller,
                                  llvm::Function *callee);
   void propagateRegionMerges(llvm::Module &M);
-  bool mergeCalleeRegion(const llvm::Function *F, unsigned keep, unsigned remove);
+  bool mergeCalleeRegion(const llvm::Function *F, unsigned keep,
+                         unsigned remove);
   void computeGlobalMemoryMappings(llvm::Module &M);
   void computeFunctionRegions(llvm::Module &M);
 
