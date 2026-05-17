@@ -7,4 +7,15 @@
 # Declare files that will always have LF line endings on checkout.
 *.sh         text eol=lf
 *.py         text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
 bin/*        text eol=lf
+
+# Test artifacts. Bitcode + fuzz corpora are binary; .bpl/.ll/.smt2 stay
+# diffable but linguist shouldn't count them toward language stats.
+*.bc                          binary
+unittests/fuzz/corpus/**      binary linguist-generated
+
+# Vendored / external trees — keep them out of linguist language detection.
+sea-dsa/**                    linguist-vendored
+external/**                   linguist-vendored
