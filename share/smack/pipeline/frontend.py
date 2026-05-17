@@ -6,18 +6,22 @@ Depends only on the language-frontend table in `smack.frontend` and shell
 helpers from `smack.utils` — no coupling back to `smack.top`.
 """
 
+from __future__ import annotations
+
+import argparse
 import re
 from pathlib import Path
+from typing import Optional
 
 from smack.frontend import extra_libs, frontends, languages, link_bc_files
 from smack.utils import llvm_exact_bin, temporary_file, try_command
 
 
-def target_selection(args):
+def target_selection(args: argparse.Namespace) -> None:
     """Determine the target architecture based on flags and source files."""
     # TODO more possible clang flags that determine the target?
     if not re.search("-target", args.clang_options):
-        src = args.input_files[0]
+        src: str = args.input_files[0]
         if Path(src).suffix == ".bc":
             ll = temporary_file(Path(src).stem, ".ll", args)
             try_command([llvm_exact_bin("llvm-dis"), "-o", ll, src])
@@ -31,13 +35,14 @@ def target_selection(args):
                         break
 
 
-def frontend(args):
-    """Generate the LLVM bitcode file."""
-    bitcodes = []
-    libs = set()
+def frontend(args: argparse.Namespace) -> Optional[str]:
+    """Generate the LLVM bitcode file. Returns the linked .bc path, or None
+    when the frontend short-circuits the pipeline (boogie / svcomp / json)."""
+    bitcodes: list[str] = []
+    libs: set[str] = set()
     noreturning_frontend = False
 
-    def add_libs(lang):
+    def add_libs(lang: str) -> None:
         if lang in extra_libs():
             libs.add(extra_libs()[lang])
 
@@ -65,4 +70,7 @@ def frontend(args):
                 bitcodes.append(bitcode)
 
     if not noreturning_frontend:
-        return link_bc_files(bitcodes, libs, args)
+        # link_bc_files is untyped today; coerce its result to str/None.
+        result = link_bc_files(bitcodes, libs, args)
+        return None if result is None else str(result)
+    return None

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import argparse
 import os
 import shutil
 import signal
@@ -6,13 +9,14 @@ import sys
 import tempfile
 from pathlib import Path
 from threading import Timer
+from typing import Optional
 
 from .versions import LLVM_SHORT_VERSION
 
 temporary_files: list[str] = []
 
 
-def temporary_file(prefix, extension, args):
+def temporary_file(prefix: str, extension: str, args: argparse.Namespace) -> str:
     f, name = tempfile.mkstemp(extension, prefix + '-', Path.cwd(), True)
     os.close(f)
     if not args.debug:
@@ -20,14 +24,14 @@ def temporary_file(prefix, extension, args):
     return name
 
 
-def temporary_directory(prefix, extension, args):
+def temporary_directory(prefix: str, extension: str, args: argparse.Namespace) -> str:
     name = tempfile.mkdtemp(extension, prefix + '-', Path.cwd())
     if not args.debug:
         temporary_files.append(name)
     return name
 
 
-def remove_temp_files():
+def remove_temp_files() -> None:
     for f in temporary_files:
         p = Path(f)
         if p.is_file():
@@ -36,23 +40,30 @@ def remove_temp_files():
             shutil.rmtree(f)
 
 
-def timeout_killer(proc, timed_out):
+def timeout_killer(proc: subprocess.Popen[str], timed_out: list[bool]) -> None:
     if not timed_out[0]:
         timed_out[0] = True
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 
-def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
+def try_command(
+    cmd: list[str],
+    cwd: Optional[str] = None,
+    console: bool = False,
+    timeout: Optional[float] = None,
+    env: Optional[dict[str, str]] = None,
+) -> str:
     # Lazy import to avoid a load-time cycle with top.py (which itself
     # re-exports symbols from pipeline.translate which imports utils).
     from . import top
 
-    args = top.args  # type: ignore[attr-defined]
+    args = top.args
     console = (console or args.verbose or args.debug) and not args.quiet
-    filelog = args.debug
+    filelog: bool = args.debug
     output = ''
-    proc = None
-    timer = None
+    proc: Optional[subprocess.Popen[str]] = None
+    timer: Optional[Timer] = None
+    timed_out: list[bool] = [False]
     if env is not None:
         for k, v in env.items():
             os.putenv(k, v)
@@ -70,7 +81,6 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
         )
 
         if timeout:
-            timed_out = [False]
             timer = Timer(timeout, timeout_killer, [proc, timed_out])
             timer.start()
 
@@ -115,27 +125,27 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
                 f.write(output)
 
 
-def llvm_exact_bin(name):
+def llvm_exact_bin(name: str) -> str:
     return name + '-' + LLVM_SHORT_VERSION
 
 
-def smack_root():
+def smack_root() -> str:
     return str(Path(sys.argv[0]).resolve().parent.parent)
 
 
-def smack_header_path():
+def smack_header_path() -> str:
     return str(Path(smack_root()) / 'share' / 'smack' / 'include')
 
 
-def smack_headers(args):
-    paths = []
+def smack_headers(args: argparse.Namespace) -> list[str]:
+    paths: list[str] = []
     paths.append(smack_header_path())
     return paths
 
 
-def smack_lib():
+def smack_lib() -> str:
     return str(Path(smack_root()) / 'share' / 'smack' / 'lib')
 
 
-def smack_portfolio_path():
+def smack_portfolio_path() -> str:
     return str(Path(smack_root()) / 'share' / 'smack' / 'default-portfolio.yaml')

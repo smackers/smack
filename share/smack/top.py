@@ -1,6 +1,19 @@
+from __future__ import annotations
+
+import argparse
 import multiprocessing
 import signal
 import sys
+from multiprocessing.synchronize import Lock as MpLock
+from types import FrameType
+from typing import Callable, Optional
+
+# Module-level globals populated by main(). Declared here so mypy + tooling
+# can resolve `smack.top.args` / `smack.top.remove_temp_files_lock`
+# references from other sub-modules (utils.try_command pulls top.args, the
+# SIGTERM handler reaches into remove_temp_files_lock).
+args: argparse.Namespace
+remove_temp_files_lock: MpLock
 
 # Phase B5: argparse + input/output validation moved to share/smack/cli/parser.py.
 from .cli.parser import (  # noqa: F401
@@ -69,8 +82,8 @@ from .verifier.runner import (  # noqa: F401
 )
 
 
-def clean_up_upon_sigterm(main):
-    def handler(signum, frame):
+def clean_up_upon_sigterm(main: Callable[[], None]) -> Callable[[], None]:
+    def handler(signum: int, frame: Optional[FrameType]) -> None:
         remove_temp_files_lock.acquire()
         remove_temp_files()
         remove_temp_files_lock.release()
@@ -81,7 +94,7 @@ def clean_up_upon_sigterm(main):
 
 
 @clean_up_upon_sigterm
-def main():
+def main() -> None:
     try:
         global remove_temp_files_lock
         remove_temp_files_lock = multiprocessing.Lock()
