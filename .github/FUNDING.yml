@@ -1,0 +1,5 @@
+# Funding metadata surfaced as the GitHub "Sponsor" button on the repo
+# page. Empty fields are not rendered. Update with the smackers org's
+# preferred sponsorship channel(s) when wired up.
+github: [smackers]
+custom: []
