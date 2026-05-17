@@ -32,7 +32,7 @@ records what shipped vs. what remains.
 | 3.4 C++23 default                                    | ✅ done           | `SMACK_CXX_STANDARD` default → 23; CI matrix 20+23 (was 17+20) |
 | 3.5 User-facing asserts → fatal errors               | ✅ done           | `fatalUserError` helper in `SmackRep.cpp`; 8 asserts in `valueAnnotation` converted |
 | 3.6 Sanitizer in nightly                             | ✅ done           | `cpp-sanitizers` job runs on every PR (more than nightly); `fuzz.yml` adds nightly long-pass too |
-| 4.1 Kill regtest.py                                  | 🟡 partial        | `test/python/test_regtest_folders.py` wraps `regtest.py` via parametrize + xdist. Full rewrite deferred. |
+| 4.1 Kill regtest.py                                  | 🟡 partial        | `test_regtest_folders.py` wraps `regtest.py` via parametrize + xdist; `regtest_core.py` extracted from the CLI (26 pytest cases). Full CLI retirement deferred. |
 | 4.2 print → logger                                   | ✅ done (audit)   | `utils.py` debug + error converted; `diffprod/orchestrate.py` debug converted; contract messages in `top.py` / `runner.py` / `reach.py` / `svcomp/*` intentionally kept |
 | 4.3 Type-hint top.py / utils.py / frontend.py        | ✅ done           | All three annotated; mypy `files` 10 → 12 modules; **0 errors** |
 | 4.4 Typed subprocess builders                        | ✅ done           | `share/smack/verifier/process.py` — frozen `Command` dataclass + `CommandResult`/`CommandError`/`CommandCrashed`; 12 tests |
@@ -92,17 +92,12 @@ records what shipped vs. what remains.
 ## What's left
 
 ### Phase 2 — NewPM default + sea-dsa NewPM port
-The biggest single piece of remaining work. Requires:
-- Fork `sea-dsa` to `external/sea-dsa-newpm/` (or upstream the port)
-- Port `DsaAnalysis`, `AllocWrapInfo`, `DsaLibFuncInfo`,
-  `CompleteCallGraph` from `legacy::FunctionPass` /
-  `legacy::ModulePass` to `AnalysisInfoMixin`-style NewPM analyses
-- Delete `DSAWrapperAnalysis.cpp`'s `legacy::PassManager` bridge
-- Flip `option(SMACK_NEW_PM "..." ON)` in `CMakeLists.txt:325`
-- Run the corpus-equivalence audit (extend
-  `tools/llvm_feature_audit.py` to diff Boogie outputs)
-- Delete the legacy-PM entry points in `tools/llvm2bpl/llvm2bpl.cpp` +
-  `lib/smack/SmackPipeline.cpp`
+The biggest single piece of remaining work. Full breakdown in
+**`docs/phase2-sea-dsa-newpm-port-plan.md`** — 10 sequential PRs
+covering the sea-dsa fork, per-analysis port (AllocWrapInfo,
+DsaLibFuncInfo, DsaAnalysis, CompleteCallGraph, RemovePtrToInt),
+the SMACK-side bridge replacement, legacy-PM deletion, corpus
+equivalence audit extension, and the final `SMACK_NEW_PM=ON` flip.
 
 Risk: high. Touches `lib/smack/` heavily, may surface latent ordering
 issues in sea-dsa analyses. Belongs in its own multi-PR cycle.
@@ -135,6 +130,8 @@ high-value harnesses are:
 
 ## Critical files to be aware of
 
+- `docs/phase2-sea-dsa-newpm-port-plan.md` — the 10-PR roadmap for the
+  sea-dsa NewPM fork + NewPM default flip
 - `docs/phase3-2-smackrep-split-plan.md` — the next-step roadmap for
   the SmackRep god-class decomposition
 - `tools/check_submodule_pins.sh` — runs in CI + pre-commit; will fail
