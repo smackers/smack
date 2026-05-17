@@ -5,25 +5,25 @@ from multiprocessing.pool import ThreadPool
 import multiprocessing
 import os
 import logging
-import yaml
 import psutil
 import argparse
 import subprocess
-import re
-import glob
 import time
 import sys
 import shlex
 
-OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'memory-limit', 'skip']
-APPEND_FIELDS = ['flags', 'checkbpl', 'checkout']
-TEST_ROOT = path.dirname(path.realpath(__file__))
-
-LANGUAGES = {'c': {'*.c'},
-             'cargo': {'Cargo.toml'},
-             'cplusplus': {'*.cc', '*.cpp'},
-             'rust': {'*.rs'},
-             'llvm-ir': {"*.ll"}}
+# Phase 4.1: pure-logic helpers extracted to regtest_core so pytest can
+# call them without subprocess overhead. The CLI orchestration below is
+# still here; the next 4.1 step moves it into a pytest fixture.
+sys.path.insert(0, path.dirname(path.realpath(__file__)))
+from regtest_core import (  # noqa: E402
+    LANGUAGES,
+    TEST_ROOT,
+    get_extensions,
+    get_result,
+    get_tests,
+    load_metadata,
+)
 
 
 def bold(text):
@@ -44,88 +44,15 @@ def green(text, log_file):
         return '\033[0;32m' + text + '\033[0m'
 
 
-def get_result(output):
-    if re.search(r'SMACK timed out', output):
-        return 'timeout'
-    elif re.search(r'SMACK found no errors', output):
-        return 'verified'
-    elif re.search(r'SMACK found an error', output):
-        return 'error'
-    else:
-        return 'unknown'
-
-
-def merge(metadata, yamldata):
-    for key in OVERRIDE_FIELDS:
-        if key in yamldata:
-            metadata[key] = yamldata[key]
-
-    for key in APPEND_FIELDS:
-        if key in yamldata:
-            if key in metadata:
-                metadata[key] += yamldata[key]
-            else:
-                metadata[key] = yamldata[key]
-
-
 def metadata(file):
-    m = {}
-    root_config = path.join(TEST_ROOT, 'config.yml')
-    if path.isfile(root_config):
-        with open(root_config, "r") as f:
-            data = yaml.safe_load(f) or {}
-            merge(m, data)
-
-    rel_file = path.relpath(path.realpath(file), TEST_ROOT)
-    prefix = []
-
-    for d in path.dirname(rel_file).split(os.sep):
-        if d in ['', '.']:
-            continue
-        prefix += [d]
-        yaml_file = path.join(TEST_ROOT, *(prefix + ['config.yml']))
-        if path.isfile(yaml_file):
-            with open(yaml_file, "r") as f:
-                data = yaml.safe_load(f) or {}
-                merge(m, data)
-
-    for field in OVERRIDE_FIELDS:
-        m.setdefault(field, False if field == 'skip' else [])
-    for field in APPEND_FIELDS:
-        m.setdefault(field, [])
-
-    with open(file, "r") as f:
-        for line in f.readlines():
-
-            match = re.search(r'@skip', line)
-            if match:
-                m['skip'] = True
-
-            match = re.search(r'@flag (.*)', line)
-            if match:
-                m['flags'] += shlex.split(match.group(1).strip())
-
-            match = re.search(r'@expect (.*)', line)
-            if match:
-                m['expect'] = match.group(1).strip()
-
-            match = re.search(r'@checkbpl (.*)', line)
-            if match:
-                m['checkbpl'].append(match.group(1).strip())
-
-            match = re.search(r'@checkout (.*)', line)
-            if match:
-                m['checkout'].append(match.group(1).strip())
-
+    """Backwards-compat wrapper. Prefer regtest_core.load_metadata in
+    new code; this name is what the regtest CLI body still references."""
+    m = load_metadata(file)
     if not m['skip']:
-        if 'expect' not in m:
-            print(red("WARNING: @expect MISSING IN %s" % file, None))
-            m['expect'] = 'verified'
-
-        if not m['expect'] in ['verified', 'error', 'timeout', 'unknown']:
-            print(red("WARNING: unexpected @expect annotation '%s'" %
-                      m['expect'], None))
-
+        expect = m.get('expect', 'verified')
+        if expect not in ('verified', 'error', 'timeout', 'unknown'):
+            print(red(
+                "WARNING: unexpected @expect annotation '%s'" % expect, None))
     return m
 
 
@@ -214,42 +141,6 @@ def tally_result(result):
         timeouts += 1
     elif "UNKNOWN" in result:
         unknowns += 1
-
-
-def get_extensions(languages):
-    languages = list(languages.split(','))
-    extensions = set()
-    for language in languages:
-        if language not in LANGUAGES:
-            raise KeyError(language)
-        extensions |= LANGUAGES[language]
-    return extensions
-
-
-def get_tests(folder, extensions):
-    tests = []
-    for ext in extensions:
-        tests.extend(glob.glob(path.join(TEST_ROOT, folder, ext),
-                               recursive=True))
-
-    def nested_cargo_source(test):
-        if not test.endswith('.rs'):
-            return False
-
-        current = path.dirname(path.realpath(test))
-        while current.startswith(TEST_ROOT):
-            if path.isfile(path.join(current, 'Cargo.toml')):
-                return True
-            parent = path.dirname(current)
-            if parent == current:
-                break
-            current = parent
-
-        return False
-
-    tests = [test for test in tests if not nested_cargo_source(test)]
-    tests.sort()
-    return tests
 
 
 def main():
