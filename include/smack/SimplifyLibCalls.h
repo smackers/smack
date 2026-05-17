@@ -8,6 +8,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 
+#include <memory>
+
 namespace smack {
 
 using namespace llvm;
@@ -16,7 +18,7 @@ class SimplifyLibCalls : public FunctionPass,
                          public InstVisitor<SimplifyLibCalls> {
 private:
   bool modified;
-  LibCallSimplifier *simplifier;
+  std::unique_ptr<LibCallSimplifier> simplifier;
 
 public:
   static char ID;

@@ -43,15 +43,15 @@ bool SimplifyLibCalls::runOnFunction(Function &F) {
   DomConditionCache DC;
   AssumptionCache &AC =
       getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  simplifier = new LibCallSimplifier(
+  simplifier = std::make_unique<LibCallSimplifier>(
       F.getParent()->getDataLayout(),
       &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
       &DT, &DC, &AC,
       getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
       &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI(),
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
-  if (simplifier)
-    visit(F);
+  // make_unique never returns null; the pre-existing null-check was dead.
+  visit(F);
   return modified;
 }
 
