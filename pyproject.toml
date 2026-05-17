@@ -1,0 +1,105 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "smack"
+dynamic = ["version"]
+description = "SMACK: a bounded software verifier translating C/C++/Rust to Boogie IVL."
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "The SMACK Project"}]
+dependencies = [
+  "pyyaml>=6.0,<7",
+  "toml>=0.10,<0.11",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7",
+  "pytest-cov>=4",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "pre-commit>=3",
+]
+
+[project.scripts]
+smack = "smack.top:main"
+
+[tool.hatch.version]
+# Single source of truth: share/smack/constants.py. CMakeLists.txt reads
+# the same file. Bumping the version in one place is enough.
+path = "share/smack/constants.py"
+pattern = "^VERSION\\s*=\\s*['\"](?P<version>[^'\"]+)['\"]"
+
+[tool.hatch.build.targets.wheel]
+packages = ["share/smack"]
+sources = ["share"]
+
+[tool.pytest.ini_options]
+testpaths = ["test/python"]
+addopts = "-ra --strict-markers"
+markers = [
+  "slow: tests that take noticeably longer to run (select with --runslow)",
+  "regtest: end-to-end regression tests that shell out to test/regtest.py (set SMACK_RUN_REGTEST=1)",
+]
+
+[tool.coverage.run]
+source = ["smack"]
+branch = true
+omit = [
+  "*/test/*",
+  "*/tests/*",
+  "*/__pycache__/*",
+  "*/svcomp/toSVCOMPformat.py",
+]
+
+[tool.coverage.report]
+# Risk-based modernization gate. CI measures the extracted modules explicitly
+# with --cov=<module>; top.py remains compatibility glue until further splits.
+fail_under = 85
+precision = 1
+show_missing = true
+skip_covered = false
+exclude_lines = [
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+extend-exclude = ["sea-dsa", "build", "build-*", "test/c", "test/rust", "test/llvm", "test/cplusplus"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "PTH", "LOG", "RUF"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+# Below: allow common patterns in the extracted sub-modules while we
+# incrementally tighten types. Remove these as modules gain full annotations.
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = true
+files = [
+  "share/smack/versions.py",
+  "share/smack/utils.py",
+  "share/smack/errtrace.py",
+  "share/smack/constants.py",
+  "share/smack/cli/results.py",
+  "share/smack/verifier/commands.py",
+  "share/smack/verifier/runner.py",
+  "share/smack/pipeline/frontend.py",
+  "share/smack/pipeline/transform.py",
+  "share/smack/pipeline/translate.py",
+]
