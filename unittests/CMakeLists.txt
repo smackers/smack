@@ -15,6 +15,7 @@ include(GoogleTest)
 
 add_executable(smack_unittests
   BoogieAstTest.cpp
+  BoogieAstStmtTest.cpp
   NamingTest.cpp
   NewPMSiblingsTest.cpp
   NewPMEdgeCasesTest.cpp
