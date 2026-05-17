@@ -1,0 +1,3 @@
+# Seed corpus for fuzz_bitcode_parse. Add valid .bc files here over time.
+# An empty corpus directory still works — libFuzzer just starts from zero
+# coverage, slower to converge but otherwise functional.

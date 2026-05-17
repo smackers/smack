@@ -1,0 +1,14 @@
+homepage: https://github.com/smackers/smack
+language: c++
+main_repo: https://github.com/smackers/smack
+primary_contact: maintainers@example.org
+auto_ccs:
+  - alex.m.thomasv@gmail.com
+sanitizers:
+  - address
+  - undefined
+  - memory
+fuzzing_engines:
+  - libfuzzer
+architectures:
+  - x86_64
