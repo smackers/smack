@@ -1,0 +1,51 @@
+# GitHub's "Generate release notes" categorizer. Drives the auto-grouping
+# that `gh release create --generate-notes` (and the manual UI button)
+# applies based on PR labels. release-please owns the CHANGELOG.md +
+# version bump; this file is just the GitHub-UI-side classifier.
+
+changelog:
+  exclude:
+    labels:
+      - dependencies
+      - stale
+      - duplicate
+      - wontfix
+  categories:
+    - title: ⚠ Breaking Changes
+      labels:
+        - breaking
+        - "type:breaking"
+    - title: ✨ Features
+      labels:
+        - enhancement
+        - feature
+        - "type:feat"
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+        - "type:fix"
+    - title: 🔒 Security
+      labels:
+        - security
+    - title: 🚀 Performance
+      labels:
+        - performance
+        - "type:perf"
+    - title: 🛠 Refactoring
+      labels:
+        - refactor
+        - "type:refactor"
+    - title: 📚 Documentation
+      labels:
+        - documentation
+        - docs
+    - title: 🧪 Tests
+      labels:
+        - test
+    - title: 🤖 CI / Build
+      labels:
+        - ci
+        - build
+    - title: Other
+      labels:
+        - "*"
