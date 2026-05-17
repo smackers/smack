@@ -8,6 +8,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include <map>
 #include <set>
+#include <string>
 #include <unordered_set>
 
 namespace smack {
@@ -70,6 +71,8 @@ public:
 
   void visitBasicBlock(llvm::BasicBlock &bb);
   void visitInstruction(llvm::Instruction &i);
+
+  std::string blockName(const llvm::BasicBlock *bb) const;
 
   void visitReturnInst(llvm::ReturnInst &i);
   void visitBranchInst(llvm::BranchInst &i);

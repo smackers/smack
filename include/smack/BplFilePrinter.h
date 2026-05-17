@@ -4,7 +4,9 @@
 #ifndef BPLFILEPRINTER_H
 #define BPLFILEPRINTER_H
 
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace smack {
 
@@ -24,6 +26,16 @@ public:
   }
 
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+};
+
+class BplFilePrinterNewPM : public llvm::PassInfoMixin<BplFilePrinterNewPM> {
+private:
+  llvm::raw_ostream &out;
+
+public:
+  explicit BplFilePrinterNewPM(llvm::raw_ostream &out) : out(out) {}
+  llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &);
+  static llvm::StringRef name() { return "BplFilePrinterNewPM"; }
 };
 } // namespace smack
 

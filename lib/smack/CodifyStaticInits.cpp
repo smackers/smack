@@ -11,8 +11,11 @@
 #include "smack/LlvmCompat.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -22,14 +25,20 @@
 #include <set>
 #include <vector>
 
+#include "smack/DSAWrapperAnalysis.h"
+
 namespace smack {
 
 using namespace llvm;
 
 bool CodifyStaticInits::runOnModule(Module &M) {
-  TD = &M.getDataLayout();
+  return runImpl(M, getAnalysis<DSAWrapper>());
+}
+
+bool CodifyStaticInits::runImpl(Module &M, DSAWrapper &dsaRef) {
+  const DataLayout *TD = &M.getDataLayout();
   LLVMContext &C = M.getContext();
-  DSAWrapper *DSA = &getAnalysis<DSAWrapper>();
+  DSAWrapper *DSA = &dsaRef;
 
   Function *F = cast<Function>(
       M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C))
@@ -41,10 +50,51 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   std::deque<std::tuple<Constant *, Constant *, std::vector<Value *>>> worklist;
   std::set<GlobalVariable *> queuedGlobals;
 
+  std::function<bool(Type *)> isByteZeroSafeType = [&](Type *T) -> bool {
+    if (T->isIntegerTy())
+      return true;
+    if (auto *AT = dyn_cast<ArrayType>(T))
+      return isByteZeroSafeType(AT->getElementType());
+    if (auto *ST = dyn_cast<StructType>(T)) {
+      for (Type *ElementT : ST->elements())
+        if (!isByteZeroSafeType(ElementT))
+          return false;
+      return true;
+    }
+    return false;
+  };
+
+  auto emitLargeZeroMemset = [&](GlobalVariable *G) -> bool {
+    unsigned threshold = SmackOptions::StaticInitZeroMemsetThreshold;
+    if (threshold == 0 || !G->hasInitializer())
+      return false;
+
+    Constant *Init = G->getInitializer();
+    Type *T = G->getValueType();
+    if (!Init->isNullValue() || !T->isSized() || !isByteZeroSafeType(T))
+      return false;
+
+    uint64_t byteSize = fixedTypeAllocSize(*TD, T);
+    if (byteSize < threshold)
+      return false;
+
+    Value *Dst = G;
+#if LLVM_VERSION_MAJOR < 15
+    Dst = IRB.CreateBitCast(G, Type::getInt8PtrTy(C));
+#endif
+    IRB.CreateMemSet(Dst, ConstantInt::get(Type::getInt8Ty(C), 0),
+                     ConstantInt::get(Type::getInt64Ty(C), byteSize),
+                     MaybeAlign(1), false);
+    return true;
+  };
+
   auto enqueueGlobal = [&](GlobalVariable *G) {
-    if (G->hasInitializer() && queuedGlobals.insert(G).second)
+    if (G->hasInitializer() && queuedGlobals.insert(G).second) {
+      if (emitLargeZeroMemset(G))
+        return;
       worklist.push_back(
           std::make_tuple(G->getInitializer(), G, std::vector<Value *>()));
+    }
   };
 
   std::function<void(Constant *)> enqueueReferencedGlobals =
@@ -115,6 +165,14 @@ void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 }
 
 Pass *createCodifyStaticInitsPass() { return new CodifyStaticInits(); }
+
+llvm::PreservedAnalyses
+CodifyStaticInitsNewPM::run(Module &M, llvm::ModuleAnalysisManager &MAM) {
+  auto &dsa = MAM.getResult<DSAWrapperAnalysis>(M);
+  bool changed = CodifyStaticInits::runImpl(M, *dsa.wrapper);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
+}
 
 } // namespace smack
 

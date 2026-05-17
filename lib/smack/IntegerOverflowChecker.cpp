@@ -73,6 +73,8 @@ BinaryOperator *IntegerOverflowChecker::createFlag(Value *v, int bits,
       (isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT);
   CmpInst::Predicate minCmpPred =
       (isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT);
+  // BB takes ownership at the insert-before point `i`; raw pointers are
+  // non-owning views once the constructor returns.
   ICmpInst *gt = new ICmpInst(i, maxCmpPred, v, max, "");
   ICmpInst *lt = new ICmpInst(i, minCmpPred, v, min, "");
   return BinaryOperator::Create(Instruction::Or, gt, lt, "", i);
@@ -110,11 +112,11 @@ void IntegerOverflowChecker::addBlockingAssume(Function *va, Value *flag,
   CallInst::Create(va, args, "", i);
 }
 
-bool IntegerOverflowChecker::runOnModule(Module &m) {
+bool IntegerOverflowChecker::runImpl(Module &m) {
   Function *co = m.getFunction("__SMACK_check_overflow");
-  assert(co != NULL && "Function __SMACK_check_overflow should be present.");
+  assert(co != nullptr && "Function __SMACK_check_overflow should be present.");
   Function *va = m.getFunction("__VERIFIER_assume");
-  assert(va != NULL && "Function __VERIFIER_assume should be present.");
+  assert(va != nullptr && "Function __VERIFIER_assume should be present.");
   std::vector<Instruction *> instToErase;
   for (auto &F : m) {
     if (Naming::isSmackName(F.getName()))
@@ -202,6 +204,17 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
     I->eraseFromParent();
   }
   return true;
+}
+
+bool IntegerOverflowChecker::runOnModule(Module &m) {
+  return IntegerOverflowChecker::runImpl(m);
+}
+
+llvm::PreservedAnalyses
+IntegerOverflowCheckerNewPM::run(Module &M, llvm::ModuleAnalysisManager &) {
+  bool changed = IntegerOverflowChecker::runImpl(M);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 // Pass ID variable

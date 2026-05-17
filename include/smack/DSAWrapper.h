@@ -9,6 +9,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <string>
 
 #include "seadsa/DsaAnalysis.hh"
 #include "seadsa/Global.hh"
@@ -33,6 +34,8 @@ private:
   void collectStaticInits(llvm::Module &M);
   void collectMemOpds(llvm::Module &M);
   void countGlobalRefs();
+  seadsa::Graph *getGraphForValue(const llvm::Value *v);
+  const seadsa::Graph *getGraphForValue(const llvm::Value *v) const;
 
 public:
   static char ID;
@@ -51,6 +54,7 @@ public:
   const seadsa::Node *getNode(const llvm::Value *v);
   bool isTypeSafe(const llvm::Value *v);
   unsigned getNumGlobals(const seadsa::Node *n);
+  std::string analysisKindName() const;
 };
 } // namespace smack
 

@@ -39,7 +39,9 @@ public:
   FuncDecl *insert(Type *T, Type *IT);
   FuncDecl *extract(Type *T, Type *IT);
   FuncDecl *load(const Value *V, Type *ET);
+  FuncDecl *load(unsigned R, const Value *V, Type *ET);
   FuncDecl *store(const Value *V, Type *ET);
+  FuncDecl *store(unsigned R, const Value *V, Type *ET);
 };
 } // namespace smack
 

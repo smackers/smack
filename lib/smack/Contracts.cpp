@@ -19,7 +19,7 @@ Slice *ContractsExtractor::extractSlice(Value *V) {
   stringstream name;
   name << "$expr" << uniqueSliceId++;
   Slice *S = new Slice(*I, slices, name.str());
-  if (Decl *D = (Decl *)S->getBoogieDecl(naming, rep))
+  if (Decl *D = static_cast<Decl *>(S->getBoogieDecl(naming, rep)))
     rep.getProgram().addDecl(D);
   S->remove();
   return S;

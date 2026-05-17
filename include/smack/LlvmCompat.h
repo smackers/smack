@@ -41,6 +41,8 @@ inline constexpr std::nullopt_t None = std::nullopt;
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 
+#include <utility>
+
 #if LLVM_VERSION_MAJOR >= 22 && defined(SMACK_ENABLE_SEADSA_LEGACY_LLVM_NAMES)
 #define getFixedSize getFixedValue
 #define getInt8PtrTy(C) getInt8Ty(C)->getPointerTo()
@@ -85,6 +87,14 @@ inline uint64_t fixedTypeAllocSize(const llvm::DataLayout &DL, llvm::Type *T) {
 inline uint64_t fixedTypeAllocSize(const llvm::DataLayout &DL,
                                    const llvm::Type *T) {
   return fixedTypeAllocSize(DL, const_cast<llvm::Type *>(T));
+}
+
+// Constructs a pass and hands ownership to llvm::legacy::PassManager via
+// PassManager::add(Pass*). The raw `new` is contained here so callsites in
+// SmackPipeline.cpp avoid sprinkling allocation noise. Drop this helper once
+// the NewPM migration (Phase A5) replaces LegacyPassManager.
+template <typename T, typename... Args> inline T *makePass(Args &&...args) {
+  return new T(std::forward<Args>(args)...);
 }
 
 inline llvm::Type *legacyPointerElementType(const llvm::Value *V) {

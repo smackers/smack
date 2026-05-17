@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "smack/DiffProductMatcher.h"
+#include "smack/SmackOptions.h"
 #include "smack/SmackPipeline.h"
 
 #include <memory>
@@ -169,6 +170,9 @@ int main(int argc, char **argv) {
   options.staticUnroll = StaticUnroll;
   options.modular = Modular;
   options.defaultDataLayout = DefaultDataLayout;
+  // Force-link SmackOptions so llvm-diffmatch2bpl exposes the same low-level
+  // memory partitioning flags as llvm2bpl.
+  (void)smack::SmackOptions::MemoryPartitioner.getValue();
 
   smack::runSmackPreBplPipeline(*leftModule, options);
   smack::runSmackPreBplPipeline(*rightModule, options);

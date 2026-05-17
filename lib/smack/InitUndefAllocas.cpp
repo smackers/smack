@@ -27,9 +27,10 @@ void InitUndefAllocas::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
 }
 
-bool InitUndefAllocas::runOnFunction(Function &F) {
+namespace detail {
+
+bool runInitUndefAllocas(Function &F, DominatorTree &DT) {
   Module *M = F.getParent();
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   bool changed = false;
 
   // Collect candidate allocas first; mutating the IR while iterating
@@ -105,6 +106,21 @@ bool InitUndefAllocas::runOnFunction(Function &F) {
   }
 
   return changed;
+}
+
+} // namespace detail
+
+bool InitUndefAllocas::runOnFunction(Function &F) {
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  return detail::runInitUndefAllocas(F, DT);
+}
+
+llvm::PreservedAnalyses
+InitUndefAllocasNewPM::run(Function &F, llvm::FunctionAnalysisManager &FAM) {
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  bool changed = detail::runInitUndefAllocas(F, DT);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 } // namespace smack

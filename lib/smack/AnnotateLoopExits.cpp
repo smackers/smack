@@ -34,7 +34,7 @@ using namespace llvm;
 
 bool AnnotateLoopExits::doInitialization(Module &M) {
   LoopExitFunction = M.getFunction(Naming::LOOP_EXIT);
-  assert(LoopExitFunction != NULL &&
+  assert(LoopExitFunction != nullptr &&
          "Function __SMACK_loop_exit should be present.");
   return true;
 }
@@ -69,20 +69,41 @@ void annotateLoopExit(Loop *loop, Function *le) {
   }
 }
 
-bool AnnotateLoopExits::runOnFunction(Function &F) {
+namespace detail {
+
+bool runAnnotateLoopExits(Function &F, LoopInfo &loopInfo,
+                          Function *loopExitFn) {
   if (F.isIntrinsic() || F.empty()) {
     return false;
   }
 
-  LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
        LI != LIEnd; ++LI) {
 
     SDEBUG(errs() << "Processing Loop in " << F.getName() << "\n");
-    annotateLoopExit(*LI, LoopExitFunction);
+    annotateLoopExit(*LI, loopExitFn);
   }
 
   return true;
+}
+
+} // namespace detail
+
+bool AnnotateLoopExits::runOnFunction(Function &F) {
+  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  return detail::runAnnotateLoopExits(F, LI, LoopExitFunction);
+}
+
+llvm::PreservedAnalyses
+AnnotateLoopExitsNewPM::run(Function &F, llvm::FunctionAnalysisManager &FAM) {
+  Module *M = F.getParent();
+  Function *loopExitFn = M ? M->getFunction(Naming::LOOP_EXIT) : nullptr;
+  assert(loopExitFn != nullptr &&
+         "Function __SMACK_loop_exit should be present.");
+  LoopInfo &LI = FAM.getResult<llvm::LoopAnalysis>(F);
+  bool changed = detail::runAnnotateLoopExits(F, LI, loopExitFn);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 // Pass ID variable

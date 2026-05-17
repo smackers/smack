@@ -47,16 +47,17 @@ STATISTIC(numErased, "Number of Instructions Deleted");
 // true  - The module was modified.
 // false - The module was not modified.
 //
-bool SimplifyIV::runOnModule(Module& M) {
+namespace {
+bool runSimplifyIVImpl(Module &M) {
   // Repeat till no change
   bool changed;
   do {
     changed = false;
     std::vector<StoreInst*> worklist;
-    for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-      for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {      
-        for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {
-          InsertValueInst *IV = dyn_cast<InsertValueInst>(I++);
+    for (auto &F : M) {
+      for (auto &B : F) {
+        for (BasicBlock::iterator I = B.begin(), BE = B.end(); I != BE;) {
+          InsertValueInst *IV = dyn_cast<InsertValueInst>(&*I++);
           if(!IV)
             continue;
           // Find all insert value instructions.
@@ -83,6 +84,7 @@ bool SimplifyIV::runOnModule(Module& M) {
             GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(SI->getOperand(0)->getType(),
 			                                               SI->getOperand(1), Indices,
                                                                        SI->getName(), SI) ;
+            // BB takes ownership at insert-before `SI`; result is intentionally discarded.
             new StoreInst(IV->getInsertedValueOperand(), GEP, SI);
             IV = dyn_cast<InsertValueInst>(IV->getAggregateOperand());
 
@@ -98,6 +100,14 @@ bool SimplifyIV::runOnModule(Module& M) {
     }
   } while(changed);
   return (numErased > 0);
+}
+} // namespace
+
+bool SimplifyIV::runOnModule(Module &M) { return runSimplifyIVImpl(M); }
+
+PreservedAnalyses SimplifyIVNewPM::run(Module &M, ModuleAnalysisManager &) {
+  bool changed = runSimplifyIVImpl(M);
+  return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 // Pass ID variable

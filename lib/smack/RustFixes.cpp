@@ -51,7 +51,7 @@ bool replaceSpecialRustFunctions(Function &f) {
           if (isRustNameMatch(std::get<0>(kv), name)) {
             Function *replacement =
                 f->getParent()->getFunction(std::get<1>(kv));
-            assert(replacement != NULL && "Function should be present.");
+            assert(replacement != nullptr && "Function should be present.");
             changed = true;
             ci->setCalledFunction(replacement);
           }
@@ -136,7 +136,9 @@ bool fixEntry(Function &main) {
 // remove users to enable DCE
 void handleBlockedFunction(Function &F) { F.deleteBody(); }
 
-bool RustFixes::runOnFunction(Function &F) {
+namespace detail {
+
+bool runRustFixes(Function &F) {
   // These functions either cause very large BPL files or crash in translation.
   // These functions either write to the console, or are in error paths that
   // SMACK can otherwise detect.
@@ -177,6 +179,17 @@ bool RustFixes::runOnFunction(Function &F) {
   }
 
   return result;
+}
+
+} // namespace detail
+
+bool RustFixes::runOnFunction(Function &F) { return detail::runRustFixes(F); }
+
+llvm::PreservedAnalyses
+RustFixesNewPM::run(Function &F, llvm::FunctionAnalysisManager & /*FAM*/) {
+  bool changed = detail::runRustFixes(F);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 // Pass ID variable

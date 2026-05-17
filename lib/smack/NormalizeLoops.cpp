@@ -138,12 +138,16 @@ void processLoop(Loop *loop) {
   }
 }
 
-bool NormalizeLoops::runOnModule(Module &m) {
-  for (auto F = m.begin(), FEnd = m.end(); F != FEnd; ++F) {
-    if (F->isIntrinsic() || F->empty()) {
+namespace detail {
+
+bool runNormalizeLoops(
+    Module &m,
+    llvm::function_ref<LoopInfo &(Function &)> getLoopInfo) {
+  for (auto &F : m) {
+    if (F.isIntrinsic() || F.empty()) {
       continue;
     }
-    LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
+    LoopInfo &loopInfo = getLoopInfo(F);
     for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
          LI != LIEnd; ++LI) {
       processLoop(*LI);
@@ -151,6 +155,26 @@ bool NormalizeLoops::runOnModule(Module &m) {
   }
 
   return true;
+}
+
+} // namespace detail
+
+bool NormalizeLoops::runOnModule(Module &m) {
+  return detail::runNormalizeLoops(m, [this](Function &F) -> LoopInfo & {
+    return getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  });
+}
+
+llvm::PreservedAnalyses
+NormalizeLoopsNewPM::run(Module &M, llvm::ModuleAnalysisManager &MAM) {
+  auto &FAM =
+      MAM.getResult<llvm::FunctionAnalysisManagerModuleProxy>(M).getManager();
+  bool changed =
+      detail::runNormalizeLoops(M, [&FAM](Function &F) -> LoopInfo & {
+        return FAM.getResult<llvm::LoopAnalysis>(F);
+      });
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 // Pass ID variable

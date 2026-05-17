@@ -108,6 +108,14 @@ void MemorySafetyChecker::visitMemTransferInst(MemTransferInst &I) {
   insertMemoryAccessCheck(I.getSource(), I.getLength(), &I);
 }
 
+llvm::PreservedAnalyses
+MemorySafetyCheckerNewPM::run(Function &F, llvm::FunctionAnalysisManager &) {
+  MemorySafetyChecker checker;
+  bool changed = checker.runOnFunction(F);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
+}
+
 // Pass ID variable
 char MemorySafetyChecker::ID = 0;
 } // namespace smack

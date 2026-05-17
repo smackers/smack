@@ -117,12 +117,15 @@ void SplitAggregateValue::splitAggregateStore(Value *P, Value *V,
     Constant *c = std::get<1>(e);
     std::vector<Value *> vidxs = getFirsts(idxs);
     Type *T = V->getType();
-    if (c)
-      irb.CreateStore(c, irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs)));
-    else
-      irb.CreateStore(
-          irb.CreateExtractValue(V, ArrayRef<unsigned>(getSeconds(idxs))),
-          irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs)));
+    if (c) {
+      Value *gep = irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs));
+      irb.CreateStore(c, gep);
+    } else {
+      Value *ev =
+          irb.CreateExtractValue(V, ArrayRef<unsigned>(getSeconds(idxs)));
+      Value *gep = irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs));
+      irb.CreateStore(ev, gep);
+    }
   }
 }
 
@@ -175,6 +178,13 @@ void SplitAggregateValue::visitAggregateValue(Constant *baseVal, Type *T,
     }
   } else
     llvm_unreachable("Unsupported type");
+}
+
+PreservedAnalyses
+SplitAggregateValueNewPM::run(Function &F, FunctionAnalysisManager &) {
+  SplitAggregateValue pass;
+  bool changed = pass.runOnFunction(F);
+  return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 // Pass ID variable

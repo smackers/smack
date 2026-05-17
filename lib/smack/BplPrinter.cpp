@@ -28,4 +28,14 @@ bool BplPrinter::runOnModule(llvm::Module &m) {
   DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
   return false;
 }
+
+llvm::PreservedAnalyses
+BplPrinterNewPM::run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM) {
+  auto &smgResult = MAM.getResult<SmackModuleGeneratorAnalysis>(M);
+  Program *program = smgResult.getProgram();
+  std::ostringstream s;
+  program->print(s);
+  DEBUG_WITH_TYPE("bpl", errs() << "" << s.str());
+  return llvm::PreservedAnalyses::all();
+}
 } // namespace smack

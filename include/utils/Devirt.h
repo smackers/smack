@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef SMACK_UTILS_DEVIRT_H
+#define SMACK_UTILS_DEVIRT_H
 
 #include "llvm/IR/Constants.h"
 #include "llvm/Transforms/IPO.h"
@@ -22,10 +24,15 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/PassManager.h"
 
+#include "smack/MemoryPartitionOracle.h"
 #include "seadsa/CompleteCallGraph.hh"
 
+#include <memory>
+#include <map>
 #include <set>
+#include <vector>
 
 using namespace llvm;
 
@@ -38,7 +45,9 @@ namespace llvm {
   //  them into a switch statement that selects one of several direct function
   //  calls to execute.
   //
+  class DevirtualizeNewPM;
   class Devirtualize : public ModulePass, public InstVisitor<Devirtualize> {
+    friend class DevirtualizeNewPM;
     private:
       // Access to analysis pass which finds targets of indirect function calls
       seadsa::CompleteCallGraph *CCG;
@@ -52,6 +61,8 @@ namespace llvm {
       // A cache of indirect call targets that have been converted already
       std::map<const Function *, std::set<const Function *> > bounceCache;
 
+      std::unique_ptr<smack::MemoryPartitionOracle> Oracle;
+
     protected:
       void makeDirectCall (CallBase *CS);
       Function* buildBounce (CallBase *CS,std::vector<const Function*>& Targets);
@@ -60,13 +71,17 @@ namespace llvm {
 
     public:
       static char ID;
-      Devirtualize() : ModulePass(ID) {}
+      Devirtualize() : ModulePass(ID), CCG(nullptr), TD(nullptr) {}
 
       virtual bool runOnModule(Module & M) override;
 
       virtual void getAnalysisUsage(AnalysisUsage &AU) const override{
         AU.addRequired<seadsa::CompleteCallGraph>();
       }
+
+      // Inject CCG from outside the legacy PassManager (e.g. from
+      // CompleteCallGraphAnalysis result). Used by DevirtualizeNewPM.
+      void setCCG(seadsa::CompleteCallGraph *ccg) { CCG = ccg; }
 
       // Visitor methods for analyzing instructions
       //void visitInstruction(Instruction &I);
@@ -78,5 +93,12 @@ namespace llvm {
         processCallSite(&II);
       }
   };
+
+  class DevirtualizeNewPM : public PassInfoMixin<DevirtualizeNewPM> {
+  public:
+    PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+    static StringRef name() { return "DevirtualizeNewPM"; }
+  };
 }
 
+#endif // SMACK_UTILS_DEVIRT_H

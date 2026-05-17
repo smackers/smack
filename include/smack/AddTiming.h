@@ -5,6 +5,7 @@
 #define ADDTIMING_H
 
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -15,7 +16,10 @@ class TargetTransformInfo;
 namespace smack {
 using namespace llvm;
 
+class AddTimingNewPM;
+
 class AddTiming : public FunctionPass {
+  friend class AddTimingNewPM;
 
   static const std::string INT_TIMING_COST_METADATA;
   static const std::string INSTRUCTION_NAME_METADATA;
@@ -29,6 +33,11 @@ public:
   /// Note, this method does not cache the cost calculation and it
   /// can be expensive in some cases.
   InstructionCost getInstructionCost(const Instruction *I) const;
+
+  /// Inject the TargetTransformInfo from outside the legacy PassManager
+  /// machinery. NewPM sibling uses this so it can supply FAM-fetched TTI
+  /// before calling runOnFunction (which otherwise tries getAnalysis<>).
+  void setTTI(const TargetTransformInfo *tti) { TTI = tti; }
 
 private:
   void addMetadata(Instruction *Inst, const std::string &name,
@@ -47,6 +56,12 @@ private:
   Function *F;
   /// Target information.
   const TargetTransformInfo *TTI;
+};
+
+class AddTimingNewPM : public PassInfoMixin<AddTimingNewPM> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static StringRef name() { return "AddTimingNewPM"; }
 };
 
 } // namespace smack

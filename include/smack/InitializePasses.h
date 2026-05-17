@@ -9,6 +9,9 @@
 namespace llvm {
 void initializeDSAWrapperPass(PassRegistry &Registry);
 void initializeCodifyStaticInitsPass(PassRegistry &Registry);
+void initializeRegionsPass(PassRegistry &Registry);
+void initializeSmackModuleGeneratorPass(PassRegistry &Registry);
+void initializeBplFilePrinterPass(PassRegistry &Registry);
 } // end namespace llvm
 
 #endif // INITIALIZEPASSES_H

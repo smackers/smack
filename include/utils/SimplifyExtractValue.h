@@ -15,6 +15,7 @@
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -27,5 +28,10 @@ namespace llvm {
     SimplifyEV() : ModulePass(ID) {}
     virtual bool runOnModule(Module& M) override;
   };
-}
 
+  class SimplifyEVNewPM : public PassInfoMixin<SimplifyEVNewPM> {
+  public:
+    PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+    static StringRef name() { return "SimplifyEVNewPM"; }
+  };
+}

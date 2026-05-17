@@ -7,12 +7,15 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 #include <utility>
 #include <vector>
 
 namespace smack {
+
+class SplitAggregateValueNewPM;
 
 class SplitAggregateValue : public llvm::FunctionPass {
 public:
@@ -36,5 +39,13 @@ private:
   llvm::Value *createInsertedValue(llvm::IRBuilder<> &irb, llvm::Type *T,
                                    std::vector<InfoT> &info, llvm::Value *V);
   bool isConstantAggregate(llvm::Value *V);
+};
+
+class SplitAggregateValueNewPM
+    : public llvm::PassInfoMixin<SplitAggregateValueNewPM> {
+public:
+  llvm::PreservedAnalyses run(llvm::Function &F,
+                              llvm::FunctionAnalysisManager &);
+  static llvm::StringRef name() { return "SplitAggregateValueNewPM"; }
 };
 } // namespace smack

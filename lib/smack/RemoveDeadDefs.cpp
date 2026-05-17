@@ -16,8 +16,9 @@ namespace smack {
 
 using namespace llvm;
 
-bool RemoveDeadDefs::runOnModule(Module &M) {
-  TD = &M.getDataLayout();
+namespace detail {
+
+bool runRemoveDeadDefs(Module &M) {
   std::vector<Function *> dead;
 
   do {
@@ -46,6 +47,20 @@ bool RemoveDeadDefs::runOnModule(Module &M) {
   } while (!dead.empty());
 
   return true;
+}
+
+} // namespace detail
+
+bool RemoveDeadDefs::runOnModule(Module &M) {
+  TD = &M.getDataLayout();
+  return detail::runRemoveDeadDefs(M);
+}
+
+llvm::PreservedAnalyses
+RemoveDeadDefsNewPM::run(Module &M, llvm::ModuleAnalysisManager & /*MAM*/) {
+  bool changed = detail::runRemoveDeadDefs(M);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 // Pass ID variable

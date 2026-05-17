@@ -6,6 +6,7 @@
 
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <map>
 
@@ -32,6 +33,17 @@ public:
   void visitStoreInst(llvm::StoreInst &I);
   void visitMemSetInst(llvm::MemSetInst &I);
   void visitMemTransferInst(llvm::MemTransferInst &I);
+};
+
+// NewPM sibling. The legacy class holds no cross-run state — visitor inherits
+// from InstVisitor for dispatch only — so a stack-allocated instance reuses
+// the existing body unchanged.
+class MemorySafetyCheckerNewPM
+    : public llvm::PassInfoMixin<MemorySafetyCheckerNewPM> {
+public:
+  llvm::PreservedAnalyses run(llvm::Function &F,
+                              llvm::FunctionAnalysisManager &);
+  static llvm::StringRef name() { return "MemorySafetyCheckerNewPM"; }
 };
 } // namespace smack
 

@@ -31,6 +31,28 @@ STATISTIC(numMerged, "Number of GEPs merged");
 using namespace llvm;
 
 static void simplifyGEP(GetElementPtrInst *GEP);
+
+namespace {
+// Shared body for both the legacy ModulePass wrapper and the NewPM sibling.
+bool runMergeArrayGEPImpl(Module &M) {
+  bool changed;
+  do {
+    changed = false;
+    for (auto &F : M) {
+      for (auto &B : F) {
+        for (BasicBlock::iterator I = B.begin(), BE = B.end(); I != BE;) {
+          GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&*I++);
+          if (GEP == nullptr)
+            continue;
+          simplifyGEP(GEP);
+        }
+      }
+    }
+  } while (changed);
+  return true;
+}
+} // namespace
+
 //
 // Method: runOnModule()
 //
@@ -38,32 +60,11 @@ static void simplifyGEP(GetElementPtrInst *GEP);
 //  Entry point for this LLVM pass.
 //  Merge chained GEPs into a single GEP
 //
-// Inputs:
-//  M - A reference to the LLVM module to transform
-//
-// Outputs:
-//  M - The transformed LLVM module.
-//
-// Return value:
-//  true  - The module was modified.
-//  false - The module was not modified.
-//
-bool MergeArrayGEP::runOnModule(Module& M) {
-  bool changed;
-  do {
-    changed = false;
-    for (Module::iterator F = M.begin(); F != M.end(); ++F){
-      for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {      
-        for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {
-          GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I++);
-          if(GEP == NULL)
-            continue;
-          simplifyGEP(GEP);
-        }
-      }
-    }
-  } while(changed);
-  return true;
+bool MergeArrayGEP::runOnModule(Module &M) { return runMergeArrayGEPImpl(M); }
+
+PreservedAnalyses MergeArrayGEPNewPM::run(Module &M, ModuleAnalysisManager &) {
+  bool changed = runMergeArrayGEPImpl(M);
+  return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 //

@@ -210,6 +210,13 @@ std::vector<std::tuple<Function *, Function *>> getContractExprs(Function &F) {
 } // namespace
 
 bool ExtractContracts::runOnModule(Module &M) {
+  return runImpl(M, [this](Function &F) -> LoopInfo & {
+    return getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  });
+}
+
+bool ExtractContracts::runImpl(
+    Module &M, llvm::function_ref<LoopInfo &(Function &)> getLoopInfo) {
   bool modified = false;
 
   std::vector<Function *> Fs;
@@ -222,7 +229,7 @@ bool ExtractContracts::runOnModule(Module &M) {
   for (auto F : Fs) {
     BlockList contractBlocks;
     LoopMap invariantBlocks;
-    auto &LI = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
+    auto &LI = getLoopInfo(*F);
     std::tie(contractBlocks, invariantBlocks) = splitContractBlocks(*F, LI);
 
     if (!contractBlocks.empty() || !invariantBlocks.empty()) {
@@ -300,6 +307,16 @@ bool ExtractContracts::runOnModule(Module &M) {
 void ExtractContracts::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+}
+
+PreservedAnalyses
+ExtractContractsNewPM::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  bool changed = ExtractContracts::runImpl(M, [&FAM](Function &F) -> LoopInfo & {
+    return FAM.getResult<LoopAnalysis>(F);
+  });
+  return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 // Pass ID variable

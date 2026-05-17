@@ -118,6 +118,13 @@ void VerifierCodeMetadata::visitCallInst(CallInst &I) {
 
 void VerifierCodeMetadata::visitInstruction(Instruction &I) { mark(I, false); }
 
+PreservedAnalyses
+VerifierCodeMetadataNewPM::run(Module &M, ModuleAnalysisManager &) {
+  VerifierCodeMetadata pass;
+  bool changed = pass.runOnModule(M);
+  return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
 // Pass ID variable
 char VerifierCodeMetadata::ID = 0;
 

@@ -30,18 +30,62 @@ void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 }
 
 bool DSAWrapper::runOnModule(llvm::Module &M) {
+  module = &M;
   dataLayout = &M.getDataLayout();
   SD = &getAnalysis<seadsa::DsaAnalysis>().getDsaAnalysis();
-  assert(SD->kind() == seadsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
-         "Currently we only want the context-insensitive sea-dsa.");
-  DG = &SD->getGraph(*M.begin());
+  DG = nullptr;
+  for (auto &F : M) {
+    if (SD->hasGraph(F)) {
+      DG = &SD->getGraph(F);
+      break;
+    }
+  }
   // Print the graph in dot format when debugging
-  SDEBUG(DG->writeGraph("main.mem.dot"));
+  SDEBUG(if (DG) DG->writeGraph("main.mem.dot"));
   collectStaticInits(M);
   collectMemOpds(M);
   countGlobalRefs();
-  module = &M;
   return false;
+}
+
+seadsa::Graph *DSAWrapper::getGraphForValue(const llvm::Value *v) {
+  return const_cast<seadsa::Graph *>(
+      static_cast<const DSAWrapper *>(this)->getGraphForValue(v));
+}
+
+const seadsa::Graph *DSAWrapper::getGraphForValue(const llvm::Value *v) const {
+  if (!SD || !v)
+    return nullptr;
+
+  if (SD->kind() == seadsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE ||
+      SD->kind() == seadsa::GlobalAnalysisKind::FLAT_MEMORY)
+    return DG;
+
+  if (auto *I = dyn_cast<Instruction>(v)) {
+    auto *F = I->getFunction();
+    if (F && SD->hasGraph(*F))
+      return &SD->getGraph(*F);
+  } else if (auto *A = dyn_cast<Argument>(v)) {
+    auto *F = A->getParent();
+    if (F && SD->hasGraph(*F))
+      return &SD->getGraph(*F);
+  } else if (auto *BB = dyn_cast<BasicBlock>(v)) {
+    auto *F = BB->getParent();
+    if (F && SD->hasGraph(*F))
+      return &SD->getGraph(*F);
+  }
+
+  if (module) {
+    for (auto &F : *module) {
+      if (!SD->hasGraph(F))
+        continue;
+      auto &G = SD->getGraph(F);
+      if (G.hasCell(*v))
+        return &G;
+    }
+  }
+
+  return DG;
 }
 
 void DSAWrapper::collectStaticInits(llvm::Module &M) {
@@ -59,23 +103,43 @@ void DSAWrapper::collectMemOpds(llvm::Module &M) {
   for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
-        memOpds.insert(getNode(memcpyInst->getSource()));
-        memOpds.insert(getNode(memcpyInst->getDest()));
-      } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I))
-        memOpds.insert(getNode(memsetInst->getDest()));
+        if (auto *N = getNode(memcpyInst->getSource()))
+          memOpds.insert(N);
+        if (auto *N = getNode(memcpyInst->getDest()))
+          memOpds.insert(N);
+      } else if (MemSetInst *memsetInst = dyn_cast<MemSetInst>(&*I)) {
+        if (auto *N = getNode(memsetInst->getDest()))
+          memOpds.insert(N);
+      }
     }
   }
 }
 
 void DSAWrapper::countGlobalRefs() {
-  for (auto &g : DG->globals()) {
-    auto &cellRef = g.second;
-    auto *node = cellRef->getNode();
-    assert(node && "Global values should have DSNodes.");
-    if (!globalRefCount.count(node))
-      globalRefCount[node] = 1;
-    else
+  globalRefCount.clear();
+  std::unordered_set<const seadsa::Graph *> seen;
+  if (module) {
+    for (auto &F : *module) {
+      if (!SD->hasGraph(F))
+        continue;
+      auto *G = &SD->getGraph(F);
+      if (!seen.insert(G).second)
+        continue;
+      for (auto &g : G->globals()) {
+        auto &cellRef = g.second;
+        auto *node = cellRef->getNode();
+        assert(node && "Global values should have DSNodes.");
+        globalRefCount[node]++;
+      }
+    }
+  }
+  if (globalRefCount.empty() && DG) {
+    for (auto &g : DG->globals()) {
+      auto &cellRef = g.second;
+      auto *node = cellRef->getNode();
+      assert(node && "Global values should have DSNodes.");
       globalRefCount[node]++;
+    }
   }
 }
 
@@ -144,17 +208,19 @@ unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
 }
 
 unsigned DSAWrapper::getOffset(const Value *v) {
-  if (!DG->hasCell(*v))
+  auto *G = getGraphForValue(v);
+  if (!G || !G->hasCell(*v))
     return 0;
-  return DG->getCell(*v).getOffset();
+  return G->getCell(*v).getOffset();
 }
 
 const seadsa::Node *DSAWrapper::getNode(const Value *v) {
   // For sea-dsa, a node is obtained by getting the cell first.
   // It's possible that a value doesn't have a cell, e.g., undef.
-  if (!DG->hasCell(*v))
+  auto *G = getGraphForValue(v);
+  if (!G || !G->hasCell(*v))
     return nullptr;
-  auto node = DG->getCell(*v).getNode();
+  auto node = G->getCell(*v).getNode();
   assert(node && "Values should have nodes if they have cells.");
   return node;
 }
@@ -165,6 +231,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
   static NodeMap nodeMap;
 
   auto node = getNode(v);
+  if (!node)
+    return false;
 
   if (node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete() ||
       node->isUnknown() || node->isIntToPtr() || node->isPtrToInt() ||
@@ -241,6 +309,24 @@ unsigned DSAWrapper::getNumGlobals(const seadsa::Node *n) {
     return globalRefCount[n];
   else
     return 0;
+}
+
+std::string DSAWrapper::analysisKindName() const {
+  if (!SD)
+    return "unknown";
+  switch (SD->kind()) {
+  case seadsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE:
+    return "ci";
+  case seadsa::GlobalAnalysisKind::CONTEXT_SENSITIVE:
+    return "cs";
+  case seadsa::GlobalAnalysisKind::BUTD_CONTEXT_SENSITIVE:
+    return "butd-cs";
+  case seadsa::GlobalAnalysisKind::BU:
+    return "bu";
+  case seadsa::GlobalAnalysisKind::FLAT_MEMORY:
+    return "flat";
+  }
+  return "unknown";
 }
 
 } // namespace smack

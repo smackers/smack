@@ -515,7 +515,7 @@ public:
   static Decl *axiom(const Expr *e, std::string name = "");
   static FuncDecl *
   function(std::string name, std::list<Binding> args, std::string type,
-           const Expr *e = NULL,
+           const Expr *e = nullptr,
            std::list<const Attr *> attrs = std::list<const Attr *>());
   static Decl *constant(std::string name, std::string type);
   static Decl *constant(std::string name, std::string type, bool unique);
@@ -648,7 +648,9 @@ class ProcDecl : public Decl, public CodeContainer {
 
   ParameterList params;
   ParameterList rets;
-  SpecificationList requires;
+  // Field renamed from `requires` for C++20 compatibility (reserved keyword
+  // for concepts). Public API getRequires() and requires_begin/end unchanged.
+  SpecificationList requiresList;
   SpecificationList ensures;
 
 public:
@@ -665,9 +667,9 @@ public:
   ParameterList &getReturns() { return rets; }
 
   typedef SpecificationList::iterator spec_iterator;
-  spec_iterator requires_begin() { return requires.begin(); }
-  spec_iterator requires_end() { return requires.end(); }
-  SpecificationList &getRequires() { return requires; }
+  spec_iterator requires_begin() { return requiresList.begin(); }
+  spec_iterator requires_end() { return requiresList.end(); }
+  SpecificationList &getRequires() { return requiresList; }
 
   spec_iterator ensures_begin() { return ensures.begin(); }
   spec_iterator ensures_end() { return ensures.end(); }

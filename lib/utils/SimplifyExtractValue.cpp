@@ -49,7 +49,8 @@ STATISTIC(numErased, "Number of Instructions Deleted");
 // true  - The module was modified.
 // false - The module was not modified.
 //
-bool SimplifyEV::runOnModule(Module& M) {
+namespace {
+bool runSimplifyEVImpl(Module &M) {
   // Repeat till no change
   bool changed;
   do {
@@ -137,6 +138,7 @@ bool SimplifyEV::runOnModule(Module& M) {
             GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(LI->getType(),
 			                                               LI->getOperand(0), Indices,
                                                                        LI->getName(), LI) ;
+            // BB takes ownership at insert-before `LI`; LINew is a non-owning view.
             LoadInst *LINew = new LoadInst(GEP->getResultElementType(), GEP, "", LI);
             EV->replaceAllUsesWith(LINew);
             EV->eraseFromParent();
@@ -238,6 +240,14 @@ bool SimplifyEV::runOnModule(Module& M) {
     }
   } while(changed);
   return (numErased > 0);
+}
+} // namespace
+
+bool SimplifyEV::runOnModule(Module &M) { return runSimplifyEVImpl(M); }
+
+PreservedAnalyses SimplifyEVNewPM::run(Module &M, ModuleAnalysisManager &) {
+  bool changed = runSimplifyEVImpl(M);
+  return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 // Pass ID variable

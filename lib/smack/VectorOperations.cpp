@@ -298,6 +298,13 @@ FuncDecl *VectorOperations::load(const Value *V, Type *ET) {
   type(ET);
 
   auto R = rep->regions->idx(V, ET);
+  return load(R, V, ET);
+}
+
+FuncDecl *VectorOperations::load(unsigned R, const Value *V, Type *ET) {
+  assert(V->getType()->isPointerTy() && "expected pointer type");
+  type(ET);
+
   auto MT = rep->regions->get(R).getType();
   MT || (MT = IntegerType::get(V->getContext(), 8));
   auto FN = rep->opName(Naming::LOAD, {ET, MT});
@@ -316,6 +323,13 @@ FuncDecl *VectorOperations::store(const Value *V, Type *ET) {
   type(ET);
 
   auto R = rep->regions->idx(V, ET);
+  return store(R, V, ET);
+}
+
+FuncDecl *VectorOperations::store(unsigned R, const Value *V, Type *ET) {
+  assert(V->getType()->isPointerTy() && "expected pointer type");
+  type(ET);
+
   auto MT = rep->regions->get(R).getType();
   MT || (MT = IntegerType::get(V->getContext(), 8));
   auto FN = rep->opName(Naming::STORE, {ET, MT});

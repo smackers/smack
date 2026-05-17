@@ -43,7 +43,9 @@ bool isConstantInt(const Value *V) {
   return constantValue.hasValue() && (*constantValue + 1).isPowerOf2();
 }
 
-bool RewriteBitwiseOps::runOnModule(Module &m) {
+namespace detail {
+
+bool runRewriteBitwiseOps(Module &m) {
   std::vector<Instruction *> instsFrom;
   std::vector<Instruction *> instsTo;
 
@@ -114,7 +116,7 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
             } else {
               continue;
             }
-            assert(co != NULL && "Function __SMACK_and should be present.");
+            assert(co != nullptr && "Function __SMACK_and should be present.");
             std::vector<Value *> args;
             args.push_back(bi->getOperand(0));
             args.push_back(bi->getOperand(1));
@@ -143,7 +145,7 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
           } else {
             continue;
           }
-          assert(co != NULL && "Function __SMACK_or should be present.");
+          assert(co != nullptr && "Function __SMACK_or should be present.");
           std::vector<Value *> args;
           args.push_back(bi->getOperand(0));
           args.push_back(bi->getOperand(1));
@@ -159,6 +161,19 @@ bool RewriteBitwiseOps::runOnModule(Module &m) {
   }
 
   return true;
+}
+
+} // namespace detail
+
+bool RewriteBitwiseOps::runOnModule(Module &m) {
+  return detail::runRewriteBitwiseOps(m);
+}
+
+llvm::PreservedAnalyses
+RewriteBitwiseOpsNewPM::run(Module &M, llvm::ModuleAnalysisManager & /*MAM*/) {
+  bool changed = detail::runRewriteBitwiseOps(M);
+  return changed ? llvm::PreservedAnalyses::none()
+                 : llvm::PreservedAnalyses::all();
 }
 
 // Pass ID variable

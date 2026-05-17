@@ -77,14 +77,17 @@ bool AddTiming::runOnFunction(Function &F) {
     return false;
   }
 
-  TTI = &(getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F));
-  for (Function::iterator B = F.begin(), BE = F.end(); B != BE; ++B) {
-    for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
-      Instruction *Inst = &*it;
+  // Legacy path: fetch via getAnalysis. NewPM wrapper has already stuffed TTI
+  // via setTTI(); preserve it.
+  if (!TTI) {
+    TTI = &(getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F));
+  }
+  for (auto &B : F) {
+    for (auto &Inst : B) {
       // Add the naming metadata first, so we don't get unnecessary metadata in
       // the print
-      addNamingMetadata(Inst);
-      addTimingMetadata(Inst);
+      addNamingMetadata(&Inst);
+      addTimingMetadata(&Inst);
     }
   }
 
@@ -263,6 +266,13 @@ void AddTiming::addMetadata(Instruction *Inst, const std::string &name,
   MDNode *N = MDNode::get(C, ConstantAsMetadata::get(ConstantInt::get(
                                  C, llvm::APInt(64, (uint64_t)cost, false))));
   Inst->setMetadata(name, N);
+}
+
+PreservedAnalyses AddTimingNewPM::run(Function &F, FunctionAnalysisManager &FAM) {
+  AddTiming pass;
+  pass.setTTI(&FAM.getResult<TargetIRAnalysis>(F));
+  pass.runOnFunction(F);
+  return PreservedAnalyses::all();  // metadata-only changes, no IR structure
 }
 
 void AddTiming::print(raw_ostream &OS, const Module *) const {

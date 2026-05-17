@@ -87,6 +87,11 @@ Block *SmackInstGenerator::getBlock(llvm::BasicBlock *bb) {
   return blockMap[bb];
 }
 
+std::string SmackInstGenerator::blockName(const llvm::BasicBlock *bb) const {
+  auto it = blockMap.find(bb);
+  return it == blockMap.end() ? "" : it->second->getName();
+}
+
 void SmackInstGenerator::nameInstruction(llvm::Instruction &inst) {
   if (inst.getType()->isVoidTy())
     return;
@@ -330,7 +335,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
   // instructions reference .pre instead of the PHI variables.
   llvm::Loop *L = loops.getLoopFor(&bb);
   if (L) {
-    std::string headerName = naming->get(*L->getHeader());
+    std::string headerName = getBlock(L->getHeader())->getName();
     if (L->getHeader() == &bb) {
       // Annotate as loop header
       emit(Stmt::annot(Attr::attr("loop_header", headerName)));
@@ -715,11 +720,11 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
 
   const Expr *E;
   if (isa<FixedVectorType>(li.getType())) {
-    auto D = VectorOperations(rep).load(P, li.getType());
-    E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P, li.getType())),
-                                rep->expr(P)});
+    unsigned R = rep->getRegions()->idx(li);
+    auto D = VectorOperations(rep).load(R, P, li.getType());
+    E = Expr::fn(D->getName(), {Expr::id(rep->memPath(R)), rep->expr(P)});
   } else {
-    E = rep->load(P, li.getType());
+    E = rep->load(li);
   }
 
   emit(Stmt::assign(rep->expr(&li), E));
@@ -740,12 +745,13 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
   if (isa<FixedVectorType>(V->getType())) {
-    auto D = VectorOperations(rep).store(P, V->getType());
-    auto M = Expr::id(rep->memPath(P, V->getType()));
+    unsigned R = rep->getRegions()->idx(si);
+    auto D = VectorOperations(rep).store(R, P, V->getType());
+    auto M = Expr::id(rep->memPath(R));
     auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
     emit(Stmt::assign(M, E));
   } else {
-    emit(rep->store(P, V));
+    emit(rep->store(si));
     if (const Stmt *inverseAssume = rep->inverseFPCastAssume(&si)) {
       emit(inverseAssume);
     }
