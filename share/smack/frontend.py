@@ -1,17 +1,24 @@
-import os
-import sys
-import re
+import contextlib
 import json
+import os
+import re
 import shutil
-from .utils import temporary_file, try_command, temporary_directory, \
-    llvm_exact_bin, smack_headers, smack_lib
+import sys
+from pathlib import Path
+
+from .utils import (
+    llvm_exact_bin,
+    smack_headers,
+    smack_lib,
+    temporary_directory,
+    temporary_file,
+    try_command,
+)
 from .versions import RUST_VERSION
 
 # Needed for cargo operations
-try:
+with contextlib.suppress(ImportError):
     import toml
-except ImportError:
-    pass
 
 
 def languages():
@@ -72,33 +79,29 @@ def extra_libs():
 def extern_entry_points(args, bcs):
     new_bcs = []
     for bc in bcs:
-        new_bc = temporary_file(
-            os.path.splitext(
-                os.path.basename(bc))[0],
-            '.bc',
-            args)
+        new_bc = temporary_file(Path(bc).stem, '.bc', args)
         cmd = ['-in', bc, '-out', new_bc]
         for ep in args.entry_points:
             cmd += ['-entry-points', ep]
 
-        try_command(['extern-statics'] + cmd, console=True)
+        try_command(['extern-statics', *cmd], console=True)
         new_bcs.append(new_bc)
     return new_bcs
 
 
 def default_clang_compile_command(args, lib=False):
     cmd = [
-           llvm_exact_bin('clang'),
-           '-c',
-           '-emit-llvm',
-           '-O0',
-           '-g',
-           '-gcolumn-info',
-           '-Wno-error=implicit-function-declaration',
-           '-Wno-error=implicit-int',
-           '-Wno-error=int-conversion',
-           '-Wno-error=incompatible-pointer-types'
-          ]
+        llvm_exact_bin('clang'),
+        '-c',
+        '-emit-llvm',
+        '-O0',
+        '-g',
+        '-gcolumn-info',
+        '-Wno-error=implicit-function-declaration',
+        '-Wno-error=implicit-int',
+        '-Wno-error=int-conversion',
+        '-Wno-error=incompatible-pointer-types',
+    ]
     # Starting from LLVM 5.0, we need the following two options
     # in order to enable optimization passes.
     # See: https://stackoverflow.com/a/46753969.
@@ -112,8 +115,11 @@ def default_clang_compile_command(args, lib=False):
     if args.check.contains_mem_safe_props():
         cmd += ['-DMEMORY_SAFETY']
     if VProperty.INTEGER_OVERFLOW in args.check:
-        cmd += (['-fsanitize=signed-integer-overflow,shift']
-                if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+        cmd += (
+            ['-fsanitize=signed-integer-overflow,shift']
+            if not lib
+            else ['-DSIGNED_INTEGER_OVERFLOW_CHECK']
+        )
     if VProperty.ASSERTIONS not in args.check:
         cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:
@@ -129,23 +135,15 @@ def default_clang_compile_command(args, lib=False):
 
 def compile_to_bc(input_file, compile_command, args):
     """Compile a source file to LLVM IR."""
-    bc = temporary_file(
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        '.bc',
-        args)
-    try_command(compile_command + ['-o', bc, input_file], console=True)
+    bc = temporary_file(Path(input_file).stem, '.bc', args)
+    try_command([*compile_command, '-o', bc, input_file], console=True)
     return bc
 
 
 def d_compile_to_bc(input_file, compile_command, args):
     """Compile a D source file to LLVM IR."""
-    bc = temporary_file(
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        '.bc',
-        args)
-    try_command(compile_command + ['-of=' + bc, input_file], console=True)
+    bc = temporary_file(Path(input_file).stem, '.bc', args)
+    try_command([*compile_command, '-of=' + bc, input_file], console=True)
     return bc
 
 
@@ -164,26 +162,19 @@ def fortran_compile_to_bc(input_file, compile_command, args):
 
     # compile to human-readable format in order to tweak the IR
     compile_command[1] = '-S'
-    ll = temporary_file(
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        '.ll',
-        args)
-    try_command(compile_command + ['-o', ll, input_file], console=True)
+    ll = temporary_file(Path(input_file).stem, '.ll', args)
+    try_command([*compile_command, '-o', ll, input_file], console=True)
     # change the throw level of 'Debug Info Version' from error to warning in
     # the IR
-    try_command(
-        ['sed',
-         '-i',
-         's/i32 1, !\"Debug Info Version\"/i32 2, !\"Debug Info Version\"/g',
-         ll])
+    try_command(['sed', '-i', 's/i32 1, !"Debug Info Version"/i32 2, !"Debug Info Version"/g', ll])
     try_command([llvm_exact_bin('llvm-as'), ll])
     try_command(['rm', ll])
-    bc = '.'.join(ll.split('.')[:-1] + ['bc'])
+    bc = '.'.join([*ll.split('.')[:-1], 'bc'])
     return bc
 
 
 # Frontend functions here
+
 
 def llvm_frontend(input_file, args):
     """Return LLVM IR file. Exists for symmetry with other frontends."""
@@ -256,9 +247,8 @@ def boogie_frontend(input_file, args):
     if len(args.input_files) > 1:
         raise RuntimeError("Expected a single Boogie file.")
 
-    with open(args.bpl_file, 'a+') as out:
-        with open(input_file) as f:
-            out.write(f.read())
+    with Path(args.bpl_file).open('a+') as out, Path(input_file).open() as f:
+        out.write(f.read())
 
 
 def json_compilation_database_frontend(input_file, args):
@@ -270,22 +260,21 @@ def json_compilation_database_frontend(input_file, args):
     output_flags = re.compile(r"-o ([^ ]*)[.]o\b")
     optimization_flags = re.compile(r"-O[1-9]\b")
 
-    with open(input_file) as f:
+    with Path(input_file).open() as f:
         for cc in json.load(f):
             if 'objects' in cc:
                 # TODO what to do when there are multiple linkings?
                 bit_codes = [re.sub('[.]o$', '.bc', f) for f in cc['objects']]
-                try_command([
-                             llvm_exact_bin('llvm-link'),
-                             '-o',
-                             args.bc_file
-                            ] + bit_codes)
-                try_command([
-                             llvm_exact_bin('llvm-link'),
-                             '-o',
-                             args.linked_bc_file,
-                             args.bc_file
-                            ] + default_build_libs(args))
+                try_command([llvm_exact_bin('llvm-link'), '-o', args.bc_file, *bit_codes])
+                try_command(
+                    [
+                        llvm_exact_bin('llvm-link'),
+                        '-o',
+                        args.linked_bc_file,
+                        args.bc_file,
+                        *default_build_libs(args),
+                    ]
+                )
 
             else:
                 command = cc['command']
@@ -296,16 +285,14 @@ def json_compilation_database_frontend(input_file, args):
     if not getattr(args, 'skip_llvm_to_bpl', False):
         # import here to avoid a circular import
         from .top import llvm_to_bpl
+
         llvm_to_bpl(args)
 
     return args.linked_bc_file
 
 
 def default_cargo_compile_command(args):
-    compile_command = [
-        'cargo',
-        '+' + RUST_VERSION,
-        'build']
+    compile_command = ['cargo', '+' + RUST_VERSION, 'build']
     if os.environ.get('SMACK_CARGO_ALLOW_NETWORK') != '1':
         compile_command.append('--offline')
     return compile_command + args
@@ -315,64 +302,54 @@ def cargo_frontend(input_file, args):
     """Generate LLVM bitcode from a cargo build."""
 
     def copy_cargo_package(manifest):
-        package_dir = os.path.dirname(os.path.realpath(manifest))
-        work_dir = temporary_directory(
-            os.path.splitext(os.path.basename(package_dir))[0],
-            None,
-            args)
-        package_copy = os.path.join(work_dir, 'package')
+        package_dir = Path(manifest).resolve().parent
+        work_dir = temporary_directory(package_dir.stem, None, args)
+        package_copy = str(Path(work_dir) / 'package')
         shutil.copytree(
-            package_dir,
-            package_copy,
-            ignore=shutil.ignore_patterns('target', 'Cargo.lock'))
-        return os.path.join(package_copy, os.path.basename(manifest))
+            package_dir, package_copy, ignore=shutil.ignore_patterns('target', 'Cargo.lock')
+        )
+        return str(Path(package_copy) / Path(manifest).name)
 
     def verifier_smack_crate(work_dir):
-        crate_dir = os.path.join(work_dir, 'smack')
+        crate_dir = str(Path(work_dir) / 'smack')
         shutil.copytree(
             smack_lib(),
             crate_dir,
-            ignore=shutil.ignore_patterns(
-                'target', 'Cargo.lock', '*.a', '*.bc', '*.o'))
+            ignore=shutil.ignore_patterns('target', 'Cargo.lock', '*.a', '*.bc', '*.o'),
+        )
 
-        manifest = os.path.join(crate_dir, 'Cargo.toml')
+        manifest = Path(crate_dir) / 'Cargo.toml'
         config = toml.load(manifest)
         config.setdefault('build-dependencies', {})['cc'] = '=1.0.72'
-        with open(manifest, 'w') as f:
+        with manifest.open('w') as f:
             toml.dump(config, f)
 
         return crate_dir
 
     input_file = copy_cargo_package(input_file)
     config = toml.load(input_file)
-    smack_crate = verifier_smack_crate(os.path.dirname(input_file))
+    smack_crate = verifier_smack_crate(str(Path(input_file).parent))
     if isinstance(config.get('dependencies'), dict):
         smack_dep = config['dependencies'].get('smack')
         if isinstance(smack_dep, dict) and 'path' in smack_dep:
             smack_dep['path'] = smack_crate
-            with open(input_file, 'w') as f:
+            with Path(input_file).open('w') as f:
                 toml.dump(config, f)
 
     def find_target(config, options=None):
         target_name = config['package']['name']
         # TODO: Shaobo: target selection can be done via Cargo options.
         # But we don't capture Cargo options for now.
-        if options is None:
-            if 'lib' in config and 'name' in config['lib']:
-                target_name = config['lib']['name']
+        if options is None and 'lib' in config and 'name' in config['lib']:
+            target_name = config['lib']['name']
         return target_name.replace('-', '_')
 
-    targetdir = temporary_directory(
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        None,
-        args)
-    rustargs = (default_rust_compile_args(args) +
-                ['--emit=llvm-bc', '-Clto', '-Cembed-bitcode=yes'])
+    targetdir = temporary_directory(Path(input_file).stem, None, args)
+    rustargs = [*default_rust_compile_args(args), '--emit=llvm-bc', '-Clto', '-Cembed-bitcode=yes']
     compile_command = default_cargo_compile_command(
-        ['--target-dir', targetdir, '--manifest-path', input_file])
-    try_command(compile_command, console=True,
-                env={'RUSTFLAGS': " ".join(rustargs)})
+        ['--target-dir', targetdir, '--manifest-path', input_file]
+    )
+    try_command(compile_command, console=True, env={'RUSTFLAGS': " ".join(rustargs)})
 
     target_name = find_target(config)
 
@@ -385,58 +362,49 @@ def cargo_frontend(input_file, args):
         if entry.startswith(target_name + '-') and entry.endswith('.bc'):
             bcs.append(bcbase + entry)
 
-    bc_file = temporary_file(
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        '.bc',
-        args)
-    try_command([llvm_exact_bin('llvm-link')] + bcs + ['-o', bc_file])
+    bc_file = temporary_file(Path(input_file).stem, '.bc', args)
+    try_command([llvm_exact_bin('llvm-link'), *bcs, '-o', bc_file])
     return bc_file
 
 
 def default_rust_compile_args(args):
-    return ['-A',
-            'unused-imports',
-            '-C',
-            'opt-level=0',
-            '-C',
-            'no-prepopulate-passes',
-            '-C',
-            'debuginfo=0',
-            '--cfg',
-            'verifier="smack"',
-            '-C',
-            'passes=name-anon-globals',
-            '-C',
-            'panic=abort']
+    return [
+        '-A',
+        'unused-imports',
+        '-C',
+        'opt-level=0',
+        '-C',
+        'no-prepopulate-passes',
+        '-C',
+        'debuginfo=0',
+        '--cfg',
+        'verifier="smack"',
+        '-C',
+        'passes=name-anon-globals',
+        '-C',
+        'panic=abort',
+    ]
 
 
 def default_rust_compile_command(args):
-    compile_command = (['rustc', '+' + RUST_VERSION] +
-                       default_rust_compile_args(args))
+    compile_command = ['rustc', '+' + RUST_VERSION, *default_rust_compile_args(args)]
     return compile_command + args
 
 
 def rust_build_rlib(input_file, args):
-    compile_command = default_rust_compile_command(
-        ['--crate-type', 'rlib,lib'])
-    rlib = temporary_file(
-        'lib' +
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        '.rlib',
-        args)
-    try_command(compile_command + ['-o', rlib, input_file], console=True)
+    compile_command = default_rust_compile_command(['--crate-type', 'rlib,lib'])
+    rlib = temporary_file('lib' + Path(input_file).stem, '.rlib', args)
+    try_command([*compile_command, '-o', rlib, input_file], console=True)
     return rlib
 
 
 def rust_frontend(input_file, args):
     """Generate Boogie code from Rust programming language source(s)."""
     rlib = rust_build_rlib(smack_lib() + '/smack.rs', args)
-    compile_command = default_rust_compile_command(
-        ['--emit=llvm-bc', '--extern', 'smack=' + rlib])
+    compile_command = default_rust_compile_command(['--emit=llvm-bc', '--extern', 'smack=' + rlib])
 
     return compile_to_bc(input_file, compile_command, args)
+
 
 # Build libs functions here
 
@@ -457,7 +425,7 @@ def default_build_libs(args):
         libs += ['fenv.c']
 
     compile_command = default_clang_compile_command(args, True)
-    for c in [os.path.join(smack_lib(), c) for c in libs]:
+    for c in [str(Path(smack_lib()) / c) for c in libs]:
         bc = compile_to_bc(c, compile_command, args)
         bitcodes.append(bc)
 
@@ -473,7 +441,7 @@ def fortran_build_libs(args):
     compile_command = default_clang_compile_command(args)
     compile_command[0] = 'flang'
 
-    for c in [os.path.join(smack_lib(), c) for c in libs]:
+    for c in [str(Path(smack_lib()) / c) for c in libs]:
         bc = fortran_compile_to_bc(c, compile_command, args)
         bitcodes.append(bc)
 
@@ -489,7 +457,7 @@ def cplusplus_build_libs(args):
     compile_command = default_clang_compile_command(args, True)
     compile_command[0] = llvm_exact_bin('clang++')
 
-    for c in [os.path.join(smack_lib(), c) for c in libs]:
+    for c in [str(Path(smack_lib()) / c) for c in libs]:
         bc = compile_to_bc(c, compile_command, args)
         bitcodes.append(bc)
 
@@ -501,14 +469,14 @@ def rust_build_libs(args):
     bitcodes = []
     libs = ['smack.rs']
 
-    compile_command = default_rust_compile_command(
-        ['--emit=llvm-bc', '--crate-type', 'lib'])
+    compile_command = default_rust_compile_command(['--emit=llvm-bc', '--crate-type', 'lib'])
 
-    for c in [os.path.join(smack_lib(), c) for c in libs]:
+    for c in [str(Path(smack_lib()) / c) for c in libs]:
         bc = compile_to_bc(c, compile_command, args)
         bitcodes.append(bc)
 
     return bitcodes
+
 
 # llvm link files
 
@@ -521,13 +489,13 @@ def link_bc_files(bitcodes, libs, args):
         smack_libs += build_lib(args)
 
     bitcodes = extern_entry_points(args, bitcodes)
-    try_command([llvm_exact_bin('llvm-link'), '-o', args.bc_file] + bitcodes)
-    try_command([llvm_exact_bin('llvm-link'), '-o', args.linked_bc_file,
-                 args.bc_file] + smack_libs)
+    try_command([llvm_exact_bin('llvm-link'), '-o', args.bc_file, *bitcodes])
+    try_command([llvm_exact_bin('llvm-link'), '-o', args.linked_bc_file, args.bc_file, *smack_libs])
 
     if not getattr(args, 'skip_llvm_to_bpl', False):
         # import here to avoid a circular import
         from .top import llvm_to_bpl
+
         llvm_to_bpl(args)
 
     return args.linked_bc_file

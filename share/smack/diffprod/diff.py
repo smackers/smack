@@ -32,9 +32,7 @@ class DiffHunk:
         }
 
 
-_HUNK_RE = re.compile(
-    r"^@@\s+-(?P<oa>\d+)(?:,(?P<ob>\d+))?\s+\+(?P<na>\d+)(?:,(?P<nb>\d+))?\s+@@"
-)
+_HUNK_RE = re.compile(r"^@@\s+-(?P<oa>\d+)(?:,(?P<ob>\d+))?\s+\+(?P<na>\d+)(?:,(?P<nb>\d+))?\s+@@")
 
 
 def parse_unified_diff(text: str) -> list[DiffHunk]:
@@ -125,13 +123,8 @@ def span_intersects_hunk(
     return line_ranges_intersect(start_line, end_line, hunk_start, hunk_len)
 
 
-def line_ranges_intersect(
-    start_line: int, end_line: int, hunk_start: int, hunk_len: int
-) -> bool:
-    if hunk_len == 0:
-        hunk_end = hunk_start
-    else:
-        hunk_end = hunk_start + hunk_len - 1
+def line_ranges_intersect(start_line: int, end_line: int, hunk_start: int, hunk_len: int) -> bool:
+    hunk_end = hunk_start if hunk_len == 0 else hunk_start + hunk_len - 1
     return start_line <= hunk_end and hunk_start <= end_line
 
 

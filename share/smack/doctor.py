@@ -3,11 +3,11 @@
 # This file is distributed under the MIT License. See LICENSE for details.
 #
 
-import os
-from subprocess import Popen, PIPE
-import sys
-import re
 import argparse
+import os
+import sys
+from pathlib import Path
+from subprocess import PIPE, Popen
 
 from .versions import LLVM_SHORT_VERSION
 
@@ -34,34 +34,34 @@ def check(text, condition):
 def full_path(program):
     for path in os.environ['PATH'].split(os.pathsep):
         path = path.strip('"')
-        exe = os.path.join(path, program)
-        if os.path.isfile(exe) and os.access(exe, os.X_OK):
-            return exe
+        exe = Path(path) / program
+        if exe.is_file() and os.access(exe, os.X_OK):
+            return str(exe)
     return None
 
 
 def check_command(cmd):
     exe = full_path(cmd)
 
-    check("%s is in the path" % cmd, exe is not None)
+    check(f"{cmd} is in the path", exe is not None)
     if exe is not None:
         try:
             rc = Popen(cmd, stdout=PIPE, stderr=PIPE).wait()
         except BaseException:
             rc = None
-        check("%s is executable" % cmd, rc in [0, 1, 2])
+        check(f"{cmd} is executable", rc in [0, 1, 2])
 
 
 def check_version_command(cmd, version_arg):
     exe = full_path(cmd)
 
-    check("%s is in the path" % cmd, exe is not None)
+    check(f"{cmd} is in the path", exe is not None)
     if exe is not None:
         try:
             rc = Popen([cmd, version_arg], stdout=PIPE, stderr=PIPE).wait()
         except BaseException:
             rc = None
-        check("%s reports a version" % cmd, rc == 0)
+        check(f"{cmd} reports a version", rc == 0)
 
 
 def check_verifier(cmd):
@@ -75,25 +75,20 @@ def check_verifier(cmd):
 
     if exe is not None:
         try:
-            with open(exe, encoding='utf-8') as f:
-                exe_text = f.read()
+            exe_text = Path(exe).read_text(encoding='utf-8')
         except UnicodeDecodeError:
             exe_text = None
         if exe_text is not None:
-            check("%s is a bash script" % cmd, '#!/bin/bash' in exe_text)
-            check(
-                "%s redirects to %s" %
-                (cmd, var), ("$%s \"$@\"" % var) in exe_text)
+            check(f"{cmd} is a bash script", '#!/bin/bash' in exe_text)
+            check(f"{cmd} redirects to {var}", (f"${var} \"$@\"") in exe_text)
 
     if var in os.environ:
-        check("%s environment variable is set" % var, True)
-        check("%s invokes mono" % var, re.match(r'\Amono', os.environ[var]))
-        verifier_exe = os.environ[var].split()[1]
-        check("%s verifier executable exists" %
-              var, os.path.isfile(verifier_exe))
-        solver_exe = os.path.join(os.path.dirname(verifier_exe), "z3.exe")
-        check("%s solver executable exists" % var, os.path.isfile(solver_exe))
-        check("%s solver is executable" % var, os.access(solver_exe, os.X_OK))
+        check(f"{var} environment variable is set", True)
+        # Boogie/Corral ship as .NET tools installed via `dotnet tool install`;
+        # the environment variable points directly at the executable wrapper
+        # the dotnet tool layout drops in $TOOL_PATH (no `mono ...` prefix).
+        verifier_exe = os.environ[var].split()[0]
+        check(f"{var} verifier executable exists", Path(verifier_exe).is_file())
 
     if cmd == "boogie":
         check_version_command(cmd, "/version")
@@ -104,46 +99,45 @@ def check_verifier(cmd):
 def check_headers(prefix):
     HEADERS = [
         (["share", "smack", "include", "smack.h"], "#define SMACK_H_"),
-        (["share", "smack", "lib", "smack.c"], "void __SMACK_decls(void)")
+        (["share", "smack", "lib", "smack.c"], "void __SMACK_decls(void)"),
     ]
 
-    for (path, content) in HEADERS:
-        file = os.path.join(prefix, *path)
-        check("%s exists" % file, os.path.isfile(file))
-        if os.path.isfile(file):
-            check(
-                "%s contains %s" %
-                (file, content), content in open(file).read())
+    for path, content in HEADERS:
+        file = Path(prefix, *path)
+        check(f"{file} exists", file.is_file())
+        if file.is_file():
+            check(f"{file} contains {content}", content in file.read_text())
 
 
 def main():
     global args
     global count
-    parser = argparse.ArgumentParser(
-        description='Diagnose SMACK configuration issues.')
+    parser = argparse.ArgumentParser(description='Diagnose SMACK configuration issues.')
     parser.add_argument(
         '-q',
         '--quiet',
         dest='quiet',
         action="store_true",
         default=False,
-        help='only show failed diagnostics')
+        help='only show failed diagnostics',
+    )
     parser.add_argument(
         '--prefix',
         metavar='P',
         dest='prefix',
         type=str,
         default='',
-        help='point to the installation prefix')
+        help='point to the installation prefix',
+    )
     args = parser.parse_args()
     count = 0
 
     if not args.quiet:
         print("Checking front-end dependencies...")
-    check_version_command("clang-%s" % LLVM_SHORT_VERSION, "--version")
-    check_version_command("clang++-%s" % LLVM_SHORT_VERSION, "--version")
-    check_version_command("llvm-config-%s" % LLVM_SHORT_VERSION, "--version")
-    check_version_command("llvm-link-%s" % LLVM_SHORT_VERSION, "--version")
+    check_version_command(f"clang-{LLVM_SHORT_VERSION}", "--version")
+    check_version_command(f"clang++-{LLVM_SHORT_VERSION}", "--version")
+    check_version_command(f"llvm-config-{LLVM_SHORT_VERSION}", "--version")
+    check_version_command(f"llvm-link-{LLVM_SHORT_VERSION}", "--version")
 
     if not args.quiet:
         print("Checking back-end dependencies...")

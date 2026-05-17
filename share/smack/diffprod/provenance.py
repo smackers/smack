@@ -73,7 +73,7 @@ class OriginSet:
     def add(self, record: OriginRecord) -> None:
         self.records.append(record)
 
-    def extend(self, other: "OriginSet") -> None:
+    def extend(self, other: OriginSet) -> None:
         self.records.extend(other.records)
 
     def primary_span(self) -> SourceSpan | None:
@@ -83,18 +83,10 @@ class OriginSet:
         return None
 
     def source_spans(self) -> list[SourceSpan]:
-        return [
-            record.source_span
-            for record in self.records
-            if record.source_span is not None
-        ]
+        return [record.source_span for record in self.records if record.source_span is not None]
 
     def llvm_insts(self) -> set[str]:
-        return {
-            record.llvm_inst_id
-            for record in self.records
-            if record.llvm_inst_id is not None
-        }
+        return {record.llvm_inst_id for record in self.records if record.llvm_inst_id is not None}
 
     def to_json(self) -> list[dict[str, Any]]:
         return [record.to_json() for record in self.records]
@@ -179,9 +171,7 @@ def parse_boogie_with_provenance(
         if sanitized == text:
             raise
         ast = parser.parse_boogie(sanitized)
-        diagnostics.append(
-            "normalized SMACK attribute syntax before parsing"
-        )
+        diagnostics.append("normalized SMACK attribute syntax before parsing")
     declarations = normalise_declarations(ast)
     provenance = build_provenance_index(declarations)
     return ParsedBoogieProgram(
@@ -203,15 +193,18 @@ def boogie_parser() -> Any:
 def boogie_classes() -> dict[str, Any]:
     ensure_parent_repo_on_path()
     from interpreter.parser.declaration import ProcedureDeclaration
-    from interpreter.parser.expression import Identifier, MapSelect, MapUpdate, StorageIdentifier
     from interpreter.parser.expression import (
         ArithmeticNegation,
         BinaryExpression,
         BooleanLiteral,
         FunctionApplication,
+        Identifier,
         IfExpression,
         IntegerLiteral,
         LogicalNegation,
+        MapSelect,
+        MapUpdate,
+        StorageIdentifier,
     )
     from interpreter.parser.program import Program
     from interpreter.parser.statement import (
@@ -275,10 +268,7 @@ def build_provenance_index(declarations: list[Any]) -> ProvenanceIndex:
     ProcedureDeclaration = boogie_classes()["ProcedureDeclaration"]
     index = ProvenanceIndex()
     for decl in declarations:
-        if (
-            not isinstance(decl, ProcedureDeclaration)
-            or getattr(decl, "body", None) is None
-        ):
+        if not isinstance(decl, ProcedureDeclaration) or getattr(decl, "body", None) is None:
             continue
         proc_id = proc_id_for(decl.name)
         index.add_node(
@@ -480,7 +470,7 @@ def normalize_smack_attributes(text: str) -> str:
             out.append(text[cursor:])
             break
         if name not in _SMACK_ATTRS_WITH_VALUES:
-            out.append(text[cursor:close + 1])
+            out.append(text[cursor : close + 1])
             cursor = close + 1
             continue
         payload = text[name_end:close].strip()

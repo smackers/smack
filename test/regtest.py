@@ -307,7 +307,7 @@ def main():
     parser.add_argument(
         "--verifier",
         action="store",
-        choices=["boogie", "corral", "symbooglix"],
+        choices=["boogie", "corral"],
         help="force a verifier for all non-legacy tests")
     parser.add_argument(
         "--languages",

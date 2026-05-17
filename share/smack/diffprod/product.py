@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,11 +39,34 @@ class ProductArtifact:
             "lockstep_outcomes": self.lockstep_outcomes,
             "egraph_outcomes": self.egraph_outcomes,
             "egraph_success": any(
-                outcome.get("success") and outcome.get("resolution") == "egraph"
+                outcome.get("success") and is_egraph_resolution(outcome.get("resolution"))
                 for outcome in self.egraph_outcomes
             ),
             "diagnostics": self.diagnostics,
         }
+
+
+def is_egraph_resolution(resolution: Any) -> bool:
+    return str(resolution or "").startswith("egraph")
+
+
+def _blocks_from_stmt_ids(stmt_ids: set[str]) -> set[str]:
+    """Project stmt-ids ("proc:N:block:L:stmt:I") to bare block labels ("L").
+
+    deltarel's ``StmtClassification.delta`` is keyed by stmt-id; SMACK's
+    ``delta_left_blocks`` / ``delta_right_blocks`` fields surface bare block
+    names for the regtest contract (`report["product"]["delta"]["left_blocks"]
+    == ["hot"]`). This helper bridges the contract mismatch.
+    """
+    blocks: set[str] = set()
+    for sid in stmt_ids:
+        parts = sid.split(":")
+        try:
+            i = parts.index("block")
+            blocks.add(parts[i + 1])
+        except (ValueError, IndexError):
+            pass
+    return blocks
 
 
 def build_product_artifact(
@@ -96,6 +120,8 @@ def build_product_artifact(
         text=emit_metadata_product(left, right, impact, summaries),
         actual_product_available=False,
         diagnostics=diagnostics,
+        delta_left_blocks=sorted(_blocks_from_stmt_ids(impact.left.impacted_blocks)),
+        delta_right_blocks=sorted(_blocks_from_stmt_ids(impact.right.impacted_blocks)),
     )
 
 
@@ -151,8 +177,7 @@ def try_build_generic_product(
     if left_entry or right_entry:
         if right_entry is not None and left_entry is not None and right_entry != left_entry:
             diagnostics.append(
-                "actual product construction currently requires matching "
-                "left/right entries"
+                "actual product construction currently requires matching left/right entries"
             )
             return None
         proc_name = left_entry or right_entry
@@ -195,14 +220,26 @@ def try_build_generic_product(
     diagnostics.extend(getattr(result, "diagnostics", []) or [])
     text = strip_smack_instrumentation(result.program_text)
     text = prepend_support_declarations(text, left_text, right_text)
+    # Union deltarel's classifier output with SMACK's own impacted-block set.
+    # deltarel's `classification_*.delta` is empty for SMACK's `:diff_affected`
+    # seeding pattern (upstream algorithm gap). Falling back to SMACK's
+    # `impact.{left,right}.impacted_blocks` keeps the regtest contract
+    # (`report["product"]["delta"]["left_blocks"]`) accurate without waiting
+    # on a deltarel-side change.
+    delta_left = _blocks_from_stmt_ids(result.classification_p.delta) | _blocks_from_stmt_ids(
+        impact.left.impacted_blocks
+    )
+    delta_right = _blocks_from_stmt_ids(result.classification_q.delta) | _blocks_from_stmt_ids(
+        impact.right.impacted_blocks
+    )
     return ProductArtifact(
-        text=text,
+        text=add_trace_pair_comments(text, result),
         actual_product_available=True,
         diagnostics=list(diagnostics),
         mode=alignment if alignment != "auto" else "functional-equivalence",
         actual_source="diffprod-product-v2",
-        delta_left_blocks=sorted(result.classification_p.delta),
-        delta_right_blocks=sorted(result.classification_q.delta),
+        delta_left_blocks=sorted(delta_left),
+        delta_right_blocks=sorted(delta_right),
         lockstep_outcomes=[],
         egraph_outcomes=[egraph_outcome_json(o) for o in result.align_outcomes],
         structural=None,
@@ -229,8 +266,7 @@ def product_block_marker_ids(side_impact: Any) -> set[str]:
     out: set[str] = set()
     for block_id in side_impact.impacted_blocks:
         reasons = {
-            getattr(reason, "reason", "")
-            for reason in side_impact.reasons.get(block_id, []) or []
+            getattr(reason, "reason", "") for reason in side_impact.reasons.get(block_id, []) or []
         }
         if reasons and reasons <= {"contains-diff-stmt"}:
             continue
@@ -274,8 +310,8 @@ def suffixed_global_var_decls(line: str) -> list[str]:
             continue
         if name.endswith(".P") or name.endswith(".Q"):
             continue
-        out.append("var %s.P:%s;" % (name, type_part))
-        out.append("var %s.Q:%s;" % (name, type_part))
+        out.append(f"var {name}.P:{type_part};")
+        out.append(f"var {name}.Q:{type_part};")
     return out
 
 
@@ -329,13 +365,10 @@ def mark_impacted_statements(
 
     program = parsed.ast.clone()
     for decl in getattr(program, "declarations", []) or []:
-        if (
-            not isinstance(decl, ProcedureDeclaration)
-            or getattr(decl, "body", None) is None
-        ):
+        if not isinstance(decl, ProcedureDeclaration) or getattr(decl, "body", None) is None:
             continue
         for block in decl.body.blocks:
-            block_id = "proc:%s:block:%s" % (decl.name, block.name)
+            block_id = f"proc:{decl.name}:block:{block.name}"
             block_mark_index = None
             if block_id in impacted_block_ids:
                 preferred = (WhileStatement, IfStatement, AssignStatement)
@@ -351,11 +384,7 @@ def mark_impacted_statements(
                             break
             new_stmts: list[Any] = []
             for stmt_index, stmt in enumerate(block.statements):
-                stmt_id = "proc:%s:block:%s:stmt:%s" % (
-                    decl.name,
-                    block.name,
-                    stmt_index,
-                )
+                stmt_id = f"proc:{decl.name}:block:{block.name}:stmt:{stmt_index}"
                 if stmt_id in impacted_statement_ids or stmt_index == block_mark_index:
                     new_stmts.append(marker())
                 new_stmts.append(stmt)
@@ -388,19 +417,15 @@ def impacted_blocks_from_llvm_match(
     ProcedureDeclaration = classes["ProcedureDeclaration"]
     out: set[str] = set()
     for decl in parsed.declarations:
-        if (
-            not isinstance(decl, ProcedureDeclaration)
-            or getattr(decl, "body", None) is None
-        ):
+        if not isinstance(decl, ProcedureDeclaration) or getattr(decl, "body", None) is None:
             continue
         for boogie_block in decl.body.blocks:
             text = str(boogie_block)
             for func, llvm_block in wanted:
-                if (
-                    ('{:llvm.func "%s"}' % func) in text
-                    and ('{:llvm.bb "%s"}' % llvm_block) in text
-                ):
-                    out.add("proc:%s:block:%s" % (decl.name, boogie_block.name))
+                if (f'{{:llvm.func "{func}"}}') in text and (
+                    f'{{:llvm.bb "{llvm_block}"}}'
+                ) in text:
+                    out.add(f"proc:{decl.name}:block:{boogie_block.name}")
                     break
     return out
 
@@ -424,8 +449,7 @@ def product_artifact_from_result(
         egraph_outcomes=[egraph_outcome_json(o) for o in result.align_outcomes],
         structural=structural_json(getattr(result, "structural", None)),
         selection=[
-            candidate.to_json()
-            for candidate in getattr(result, "candidate_reports", []) or []
+            candidate.to_json() for candidate in getattr(result, "candidate_reports", []) or []
         ],
     )
 
@@ -578,9 +602,7 @@ def uninterpreted_function_declarations(program: Any, ir: Any) -> list[str]:
             f"a{index}: {boogie_type(arg_ty, arg_dims, ir)}"
             for index, (arg_ty, arg_dims) in enumerate(args)
         )
-        out.append(
-            f"function {name}({arg_decls}) returns ({boogie_type(ret[0], ret[1], ir)});"
-        )
+        out.append(f"function {name}({arg_decls}) returns ({boogie_type(ret[0], ret[1], ir)});")
     return out
 
 
@@ -691,27 +713,57 @@ def boogie_type(ty: Any, dims: int, ir: Any) -> str:
 
 
 def ensure_diffprod_package_on_path() -> bool:
-    try:
-        from diffprod import product_v2  # noqa: F401
+    """Locate the relational-product library.
 
-        return True
-    except ImportError:
-        sys.modules.pop("diffprod", None)
+    The package was renamed from ``diffprod`` to ``deltarel``. Try the new
+    name first, then fall back to the legacy name. Re-exports under the
+    ``diffprod`` alias when only ``deltarel`` is present, so the rest of
+    the codebase can keep importing ``diffprod.product_v2`` unchanged.
+    """
+    explicit_root = os.environ.get("SMACK_DELTAREL_ROOT")
+    candidate_roots: list[Path] = []
+    if explicit_root:
+        candidate_roots.append(Path(explicit_root))
 
     here = Path(__file__).resolve()
     for parent in here.parents:
-        candidate = parent / "diffprod" / "diffprod" / "product_v2.py"
-        if candidate.exists():
-            package_root = str(parent / "diffprod")
+        candidate_roots.append(parent / "external" / "deltarel")
+
+    for root in candidate_roots:
+        if not (root / "deltarel" / "product_v2.py").exists():
+            continue
+        package_root = str(root)
+        if package_root not in sys.path:
+            sys.path.insert(0, package_root)
+
+    for name in ("diffprod", "deltarel"):
+        try:
+            module = __import__(name + ".product_v2", fromlist=["product_v2"])
+        except ImportError:
+            sys.modules.pop(name, None)
+            continue
+        if name == "deltarel":
+            sys.modules["diffprod"] = sys.modules["deltarel"]
+            sys.modules["diffprod.product_v2"] = module
+        return True
+
+    for parent in here.parents:
+        for pkg_name in ("diffprod", "deltarel"):
+            candidate = parent / pkg_name / pkg_name / "product_v2.py"
+            if not candidate.exists():
+                continue
+            package_root = str(parent / pkg_name)
             if package_root not in sys.path:
                 sys.path.insert(0, package_root)
             try:
-                from diffprod import product_v2  # noqa: F401
-
-                return True
+                module = __import__(pkg_name + ".product_v2", fromlist=["product_v2"])
             except ImportError:
-                sys.modules.pop("diffprod", None)
+                sys.modules.pop(pkg_name, None)
                 continue
+            if pkg_name == "deltarel":
+                sys.modules["diffprod"] = sys.modules["deltarel"]
+                sys.modules["diffprod.product_v2"] = module
+            return True
     return False
 
 

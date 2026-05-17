@@ -2,12 +2,16 @@
 #
 # This file is distributed under the MIT License. See LICENSE for details.
 #
+# ruff: noqa: F403, F405
+# Legacy entry point — references symbols from removed smackgen/smackverify
+# modules. Kept for historical CLI compatibility; not exercised by tests.
 
 import argparse
-import re
-import pprint
-import subprocess
 import json
+import pprint
+import re
+from pathlib import Path
+
 from smackgen import *
 from smackverify import *
 
@@ -19,46 +23,46 @@ def reachParser():
 
     return parser
 
+
 # File line numbers are 0-based idx
 
 
 def CopyFileWhileInserting(srcFile, dstFile, lineNumber, insertText):
-    inFile = open(srcFile, "r")
-    inContents = inFile.readlines()
-    inFile.close()
+    with Path(srcFile).open() as inFile:
+        inContents = inFile.readlines()
 
-    if(not insertText.endswith('\n')):
+    if not insertText.endswith('\n'):
         insertText += '\n'
 
     inContents.insert(lineNumber, insertText)
 
-    outFile = open(dstFile, "w")
-    outFile.write("".join(inContents))
-    outFile.close()
+    with Path(dstFile).open("w") as outFile:
+        outFile.write("".join(inContents))
+
 
 # Each item in return value is [fileName, sourceLineNo, bplLineNo, isReachable]
 
 
 def GetSourceLineInfo(bplFile):
     FILENAME = r'[\w#$~%.\/-]+'
-    regex = '.*{:sourceloc \"(' + FILENAME + r')\", (\d+), (\d+)}.*'
+    regex = '.*{:sourceloc "(' + FILENAME + r')\", (\d+), (\d+)}.*'
     sourcelocRe = re.compile(regex)
 
     sourceInfo = []
 
     bplCount = 0
 
-    with open(bplFile) as inFile:
+    with Path(bplFile).open() as inFile:
         for line in inFile.readlines():
             # Groups: 1=filename, 2=sourceLineNo, 3=sourceColNo
             match = sourcelocRe.match(line)
-            if(match):
+            if match:
                 newSource = {
                     'filename': match.group(1),
                     'sourceLineNo': int(match.group(2)),
                     'sourceColNo': int(match.group(3)),
                     'bplLineNo': bplCount,
-                    'isReachable': False
+                    'isReachable': False,
                 }
                 sourceInfo.append(newSource)
             bplCount += 1
@@ -68,46 +72,36 @@ def GetSourceLineInfo(bplFile):
 
 def UpdateWithClangInfo(clangOuptut, sourceInfo):
     FILENAME = r'[\w#$~%.\/-]+'
-    regex = ('('
-             + FILENAME
-             + (r'):(\d+):(\d+): warning: will never be executed '
-                r'\[-Wunreachable-code\]'))
+    regex = (
+        '('
+        + FILENAME
+        + (r'):(\d+):(\d+): warning: will never be executed ' r'\[-Wunreachable-code\]')
+    )
     clangFilter = re.compile(regex)
 
     for line in clangOutput.splitlines(True):
         match = clangFilter.match(line)
-        if(match):
+        if match:
             newSource = {
                 'filename': match.group(1),
                 'sourceLineNo': int(match.group(2)),
                 'sourceColNo': int(match.group(3)),
                 'bplLineNo': -1,
-                'isReachable': False
+                'isReachable': False,
             }
             sourceInfo.append(newSource)
 
 
 def GetCodeCoverage(
-        verifier,
-        bplFileName,
-        timeLimit,
-        unroll,
-        contextSwitches,
-        debug,
-        smackd,
-        clangOutput):
+    verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, smackd, clangOutput
+):
     sourceInfo = GetSourceLineInfo(bplFileName)
 
     for sourceLine in sourceInfo:
-        if(not sourceLine['isReachable']):
+        if not sourceLine['isReachable']:
             reachRes = TestReachability(
-                verifier,
-                bplFileName,
-                timeLimit,
-                unroll,
-                contextSwitches,
-                debug,
-                sourceLine)
+                verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, sourceLine
+            )
 
             # TODO - how does python handle changing lists in for loop?
             UpdateSourceInfo(reachRes, sourceInfo, verifier)
@@ -118,60 +112,36 @@ def GetCodeCoverage(
     # Extract info
     result = {}
     for sourceLine in sourceInfo:
-        if(not sourceLine["isReachable"]):
-            if(not sourceLine["filename"] in result):
+        if not sourceLine["isReachable"]:
+            if sourceLine["filename"] not in result:
                 result[sourceLine["filename"]] = set()
             resItem = sourceLine["sourceLineNo"], sourceLine["sourceColNo"]
             result[sourceLine["filename"]].add(resItem)
 
     for curfile in result:
         # secondary sort by column
-        result[curfile] = sorted(
-            result[curfile],
-            key=lambda e: e[1],
-            reverse=False)
+        result[curfile] = sorted(result[curfile], key=lambda e: e[1], reverse=False)
         # primary sort by line
-        result[curfile] = sorted(
-            result[curfile],
-            key=lambda e: e[0],
-            reverse=False)
+        result[curfile] = sorted(result[curfile], key=lambda e: e[0], reverse=False)
 
-    if(smackd):
-        print((json.dumps(result)))
+    if smackd:
+        print(json.dumps(result))
     else:
         print('\nSMACK verifier version ' + VERSION + '\n\n')
         print("Unreachable code:")
         pprint.pprint(result, width=100)
 
 
-def TestReachability(
-        verifier,
-        bplFileName,
-        timeLimit,
-        unroll,
-        contextSwitches,
-        debug,
-        lineInfo):
+def TestReachability(verifier, bplFileName, timeLimit, unroll, contextSwitches, debug, lineInfo):
     boogieText = "assert false;"
 
     bplfileBase = path.splitext(bplFileName)[0]
     bplNew = bplfileBase + "_coverage.bpl"
 
-    CopyFileWhileInserting(
-        bplFileName,
-        bplNew,
-        lineInfo['bplLineNo'] + 1,
-        boogieText)
+    CopyFileWhileInserting(bplFileName, bplNew, lineInfo['bplLineNo'] + 1, boogieText)
 
     # do not pass smackd flag as true.  Breaks parsing
-    corralOutput = verify(
-        verifier,
-        bplNew,
-        timeLimit,
-        unroll,
-        contextSwitches,
-        debug,
-        False)
+    corralOutput = verify(verifier, bplNew, timeLimit, unroll, contextSwitches, debug, False)
 
     return corralOutput
 
@@ -179,7 +149,7 @@ def TestReachability(
 def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
     FILENAME = r'[\w#$~%.\/-]+'
     regex = ""
-    if(verifier == "corral"):
+    if verifier == "corral":
         regex = '(' + FILENAME + r')\((\d+),(\d+)\): Trace:.*'
     else:
         # boogie...
@@ -195,7 +165,7 @@ def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
 
     for line in corralOutput.splitlines(True):
         match = traceFilter.match(line)
-        if(match):
+        if match:
             reachedLine = {
                 'filename': match.group(1),
                 'sourceLineNo': int(match.group(2)),
@@ -204,20 +174,19 @@ def UpdateSourceInfo(corralOutput, sourceInfo, verifier):
             }
             # run through each sourceInfo, if matches, set as reachable
             for sourceLine in sourceInfo:
-                if ((not sourceLine['isReachable']) and
-                        reachedLine['filename'] == sourceLine['filename'] and
-                        (reachedLine['sourceLineNo'] ==
-                         sourceLine['sourceLineNo']) and
-                        (reachedLine['sourceColNo'] ==
-                         sourceLine['sourceColNo'])):
+                if (
+                    (not sourceLine['isReachable'])
+                    and reachedLine['filename'] == sourceLine['filename']
+                    and (reachedLine['sourceLineNo'] == sourceLine['sourceLineNo'])
+                    and (reachedLine['sourceColNo'] == sourceLine['sourceColNo'])
+                ):
                     sourceLine['isReachable'] = True
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Checks the input LLVM file for code reachability.',
-        parents=[
-            reachParser()])
+        description='Checks the input LLVM file for code reachability.', parents=[reachParser()]
+    )
     parser.parse_args()  # just check if arguments are looking good
 
     # !!!!!!START COPY OF SECTION FROM smackverify.py!!!!!!!!!!!
@@ -228,10 +197,7 @@ def main():
     for i in reversed(list(range(len(sysArgv)))):
         if sysArgv[i] == '--smackd':
             del sysArgv[i]
-        elif sys.argv[i] == '--time-limit':
-            del sysArgv[i]
-            del sysArgv[i]
-        elif sys.argv[i] == '--context-bound':
+        elif sys.argv[i] == '--time-limit' or sys.argv[i] == '--context-bound':
             del sysArgv[i]
             del sysArgv[i]
 
@@ -253,4 +219,5 @@ def main():
         args.contextSwitches,
         args.debug,
         args.smackd,
-        clangOutput)
+        clangOutput,
+    )

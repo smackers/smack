@@ -1,18 +1,19 @@
 import os
-import sys
 import shutil
-import tempfile
-import subprocess
 import signal
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 from threading import Timer
-from . import top
+
 from .versions import LLVM_SHORT_VERSION
 
-temporary_files = []
+temporary_files: list[str] = []
 
 
 def temporary_file(prefix, extension, args):
-    f, name = tempfile.mkstemp(extension, prefix + '-', os.getcwd(), True)
+    f, name = tempfile.mkstemp(extension, prefix + '-', Path.cwd(), True)
     os.close(f)
     if not args.debug:
         temporary_files.append(name)
@@ -20,7 +21,7 @@ def temporary_file(prefix, extension, args):
 
 
 def temporary_directory(prefix, extension, args):
-    name = tempfile.mkdtemp(extension, prefix + '-', os.getcwd())
+    name = tempfile.mkdtemp(extension, prefix + '-', Path.cwd())
     if not args.debug:
         temporary_files.append(name)
     return name
@@ -28,9 +29,10 @@ def temporary_directory(prefix, extension, args):
 
 def remove_temp_files():
     for f in temporary_files:
-        if os.path.isfile(f):
-            os.unlink(f)
-        elif os.path.isdir(f):
+        p = Path(f)
+        if p.is_file():
+            p.unlink()
+        elif p.is_dir():
             shutil.rmtree(f)
 
 
@@ -41,7 +43,11 @@ def timeout_killer(proc, timed_out):
 
 
 def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
-    args = top.args
+    # Lazy import to avoid a load-time cycle with top.py (which itself
+    # re-exports symbols from pipeline.translate which imports utils).
+    from . import top
+
+    args = top.args  # type: ignore[attr-defined]
     console = (console or args.verbose or args.debug) and not args.quiet
     filelog = args.debug
     output = ''
@@ -52,7 +58,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
             os.putenv(k, v)
     try:
         if args.debug:
-            print("Running %s" % " ".join(cmd))
+            print("Running {}".format(" ".join(cmd)))
 
         proc = subprocess.Popen(
             cmd,
@@ -60,7 +66,8 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
             preexec_fn=os.setsid,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            universal_newlines=True)
+            universal_newlines=True,
+        )
 
         if timeout:
             timed_out = [False]
@@ -68,6 +75,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
             timer.start()
 
         if console:
+            assert proc.stdout is not None
             while True:
                 line = proc.stdout.readline()
                 if line:
@@ -75,27 +83,27 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
                     print(line, end='')
                 elif proc.poll() is not None:
                     break
-            proc.wait
+            proc.wait()
         else:
             output = proc.communicate()[0]
 
-        if timeout:
+        if timeout and timer is not None:
             timer.cancel()
 
         rc = proc.returncode
         proc = None
         if timeout and timed_out[0]:
-            return output + ("\n%s timed out." % cmd[0])
+            return output + (f"\n{cmd[0]} timed out.")
         elif rc == -signal.SIGSEGV:
             raise Exception("segmentation fault")
-        elif rc and args.verifier != 'symbooglix':
+        elif rc:
             raise Exception(output)
         else:
             return output
 
     except (RuntimeError, OSError) as err:
         print(output, file=sys.stderr)
-        sys.exit("Error invoking command:\n%s\n%s" % (" ".join(cmd), err))
+        sys.exit("Error invoking command:\n{}\n{}".format(" ".join(cmd), err))
 
     finally:
         if timeout and timer:
@@ -103,7 +111,7 @@ def try_command(cmd, cwd=None, console=False, timeout=None, env=None):
         if proc:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
         if filelog:
-            with open(temporary_file(cmd[0], '.log', args), 'w') as f:
+            with Path(temporary_file(cmd[0], '.log', args)).open('w') as f:
                 f.write(output)
 
 
@@ -112,11 +120,11 @@ def llvm_exact_bin(name):
 
 
 def smack_root():
-    return os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+    return str(Path(sys.argv[0]).resolve().parent.parent)
 
 
 def smack_header_path():
-    return os.path.join(smack_root(), 'share', 'smack', 'include')
+    return str(Path(smack_root()) / 'share' / 'smack' / 'include')
 
 
 def smack_headers(args):
@@ -126,9 +134,8 @@ def smack_headers(args):
 
 
 def smack_lib():
-    return os.path.join(smack_root(), 'share', 'smack', 'lib')
+    return str(Path(smack_root()) / 'share' / 'smack' / 'lib')
 
 
 def smack_portfolio_path():
-    return os.path.join(smack_root(), 'share', 'smack',
-                        'default-portfolio.yaml')
+    return str(Path(smack_root()) / 'share' / 'smack' / 'default-portfolio.yaml')

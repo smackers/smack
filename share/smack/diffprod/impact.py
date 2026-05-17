@@ -70,12 +70,8 @@ class ImpactResult:
         left_program: ParsedBoogieProgram | None = None,
         right_program: ParsedBoogieProgram | None = None,
     ) -> dict[str, Any]:
-        left_prov = (
-            left_program.provenance if left_program is not None else ProvenanceIndex()
-        )
-        right_prov = (
-            right_program.provenance if right_program is not None else ProvenanceIndex()
-        )
+        left_prov = left_program.provenance if left_program is not None else ProvenanceIndex()
+        right_prov = right_program.provenance if right_program is not None else ProvenanceIndex()
         return {
             "hunks": [hunk.to_json() for hunk in self.hunks],
             "left": self.left.to_json(left_prov),
@@ -118,10 +114,7 @@ def analyze_side_impact(
 
     for stmt_id in source_stmt_ids:
         origin = prov.origin_set(stmt_id)
-        spans = [
-            span for span in origin.source_spans()
-            if not is_synthetic_source(span)
-        ]
+        spans = [span for span in origin.source_spans() if not is_synthetic_source(span)]
         for hunk in hunks:
             if any(
                 span_intersects_hunk(
@@ -134,14 +127,16 @@ def analyze_side_impact(
                 for span in spans
             ):
                 block_id = prov.stmt_to_block[stmt_id]
-                impact.impacted_statements.add(stmt_id)
-                impact.add_reason(
-                    ImpactReason(
-                        node_id=stmt_id,
-                        reason="source-diff",
-                        hunk_id=hunk.hunk_id,
+                for seed_stmt_id in source_diff_seed_statements(parsed, stmt_id):
+                    impact.impacted_statements.add(seed_stmt_id)
+                    impact.add_reason(
+                        ImpactReason(
+                            node_id=seed_stmt_id,
+                            reason="source-diff",
+                            hunk_id=hunk.hunk_id,
+                            via=None if seed_stmt_id == stmt_id else stmt_id,
+                        )
                     )
-                )
                 mark_block(impact, prov, block_id, "contains-diff-stmt", via=stmt_id)
 
     close_impact_fixpoint(parsed, impact)
@@ -175,6 +170,54 @@ def impact_snapshot(impact: SideImpact) -> tuple[frozenset[str], frozenset[str],
     )
 
 
+def source_diff_seed_statements(parsed: ParsedBoogieProgram, stmt_id: str) -> set[str]:
+    """Include the semantic statement represented by a SMACK source marker.
+
+    SMACK commonly emits a source-location `assume true` marker immediately
+    before the real lowered Boogie command. The marker carries the C line but
+    has no uses/defs, so dependency closure needs the following semantic
+    statement as the actual seed.
+    """
+
+    prov = parsed.provenance
+    stmt = prov.nodes.get(stmt_id)
+    seeds = {stmt_id}
+    if stmt is None or stmt_defs(stmt) or stmt_uses(stmt):
+        return seeds
+
+    block_id = prov.stmt_to_block.get(stmt_id)
+    if block_id is None:
+        return seeds
+    stmt_order = prov.stmt_order.get(block_id, [])
+    try:
+        start = stmt_order.index(stmt_id) + 1
+    except ValueError:
+        return seeds
+
+    for candidate_id in stmt_order[start:]:
+        candidate = prov.nodes.get(candidate_id)
+        if candidate is None:
+            continue
+        if is_semantic_seed_statement(candidate):
+            seeds.add(candidate_id)
+            break
+        if prov.origin_set(candidate_id).primary_span() is not None:
+            break
+    return seeds
+
+
+def is_semantic_seed_statement(stmt: Any) -> bool:
+    classes = boogie_classes()
+    return bool(stmt_defs(stmt) or stmt_uses(stmt)) or isinstance(
+        stmt,
+        (
+            classes["CallStatement"],
+            classes["HavocStatement"],
+            classes["ReturnStatement"],
+        ),
+    )
+
+
 def mark_block(
     impact: SideImpact,
     prov: ProvenanceIndex,
@@ -197,8 +240,7 @@ def close_cfg(parsed: ParsedBoogieProgram, impact: SideImpact) -> None:
         cfg = cfg_for_proc(proc)
         proc_id = f"proc:{proc.name}"
         label_to_block_id = {
-            prov.block_labels[block_id]: block_id
-            for block_id in prov.proc_blocks.get(proc_id, [])
+            prov.block_labels[block_id]: block_id for block_id in prov.proc_blocks.get(proc_id, [])
         }
         seed_labels = {
             prov.block_labels[block_id]
@@ -259,8 +301,7 @@ def close_data_deps(parsed: ParsedBoogieProgram, impact: SideImpact) -> None:
     while changed:
         changed = False
         before_vars = {
-            proc_id: frozenset(variables)
-            for proc_id, variables in variables_by_proc.items()
+            proc_id: frozenset(variables) for proc_id, variables in variables_by_proc.items()
         }
         for stmt_id in list(impact.impacted_statements):
             stmt = prov.nodes.get(stmt_id)
@@ -271,8 +312,7 @@ def close_data_deps(parsed: ParsedBoogieProgram, impact: SideImpact) -> None:
                 variables.update(stmt_defs(stmt))
                 variables.update(stmt_uses(stmt))
         after_vars = {
-            proc_id: frozenset(variables)
-            for proc_id, variables in variables_by_proc.items()
+            proc_id: frozenset(variables) for proc_id, variables in variables_by_proc.items()
         }
         changed = changed or after_vars != before_vars
 

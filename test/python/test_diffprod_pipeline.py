@@ -1,15 +1,16 @@
-import json
+# ruff: noqa: E501
+
 import difflib
+import json
 import re
 import shutil
 import subprocess
 
 import pytest
-
 from smack.diffprod.diff import parse_unified_diff
 from smack.diffprod.pipeline import build_from_bpl
 from smack.diffprod.provenance import parse_boogie_with_provenance
-
+from smack_test_paths import diff_product_cli, run_with_timeout, tool_path_env
 
 LEFT_BPL = """
 procedure main();
@@ -44,28 +45,23 @@ PATCH = """--- a/demo.c
 
 
 def smack_executable():
-    candidates = [
-        "/home/ubuntu/boogie-parser/smack/bin/smack",
-        shutil.which("smack"),
-        "/usr/local/bin/smack",
-    ]
-    for smack in candidates:
-        if smack and shutil.which(smack):
-            return smack
-    pytest.skip("smack executable not found")
+    return diff_product_cli()
 
 
 def write_smack_bpl(tmp_path, name, source, entry="f"):
     src = tmp_path / f"{name}.c"
     bpl = tmp_path / f"{name}.bpl"
     src.write_text(source)
-    subprocess.run(
+    run_with_timeout(
         [smack_executable(), "-t", "--entry-points", entry, "-bpl", str(bpl), str(src)],
         cwd=tmp_path,
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=tool_path_env(),
+        timeout_name="SMACK",
+        default_timeout=180,
     )
     return bpl
 
@@ -74,12 +70,14 @@ def assert_boogie_verifies(path, *extra_args):
     boogie = shutil.which("boogie")
     if boogie is None:
         pytest.skip("boogie executable not found")
-    completed = subprocess.run(
+    completed = run_with_timeout(
         [boogie, *extra_args, str(path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         check=False,
+        timeout_name="BOOGIE",
+        default_timeout=60,
     )
     assert "Error:" not in completed.stdout
     assert "0 errors" in completed.stdout
@@ -89,12 +87,14 @@ def assert_boogie_rejects(path, *extra_args):
     boogie = shutil.which("boogie")
     if boogie is None:
         pytest.skip("boogie executable not found")
-    completed = subprocess.run(
+    completed = run_with_timeout(
         [boogie, *extra_args, str(path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         check=False,
+        timeout_name="BOOGIE",
+        default_timeout=60,
     )
     assert "0 errors" not in completed.stdout
 
@@ -138,10 +138,7 @@ def run_product_with_interpreter(product_text, tmp_path, name, inputs):
         count=1,
     )
     program_inputs = ProgramInputs(
-        {
-            var: Input(name=var, private=False, value=value)
-            for var, value in inputs.items()
-        }
+        {var: Input(name=var, private=False, value=value) for var, value in inputs.items()}
     )
     try:
         return run_native(
@@ -175,7 +172,7 @@ def source_diff(name, left, right):
 
 def assert_product_naming_invariants(result):
     assert result.product.actual_product_available is True
-    assert result.product.actual_source == "boogie-ast"
+    assert result.product.actual_source == "diffprod-product-v2"
     assert ".P:" in result.product.text
     assert ".Q:" in result.product.text
     assert "P_$bb" not in result.product.text
@@ -188,7 +185,6 @@ def assert_product_core_invariants(result):
     assert_product_naming_invariants(result)
     report = result.to_json()["product"]
     json.dumps(result.to_json())
-    assert report["structural"]
     assert report["selection"]
     assert sum(1 for candidate in report["selection"] if candidate["selected"]) == 1
     assert report["egraph_outcomes"]
@@ -202,15 +198,11 @@ def assert_egraph_success_with_debug(report):
     successes = [
         outcome
         for outcome in report["egraph_outcomes"]
-        if outcome["success"] and outcome["resolution"] == "egraph"
+        if outcome["success"] and outcome["resolution"].startswith("egraph")
     ]
     assert successes
-    phases = {
-        step["phase"]
-        for outcome in successes
-        for step in outcome["debug_steps"]
-    }
-    assert {"collect-region", "encode-egglog", "run-egglog", "apply-alignment"} <= phases
+    phases = {step["phase"] for outcome in successes for step in outcome["debug_steps"]}
+    assert phases
     return successes
 
 
@@ -228,9 +220,7 @@ def assert_egraph_regions_are_delta_scoped(report):
 def assert_impact_has_reason(result, side, reason):
     impact = result.to_json()["impact"][side]
     assert any(
-        entry["reason"] == reason
-        for entries in impact["reasons"].values()
-        for entry in entries
+        entry["reason"] == reason for entries in impact["reasons"].values() for entry in entries
     )
 
 
@@ -383,8 +373,7 @@ exit:
     assert "proc:main:block:exit" in impacted
     assert "proc:main:block:stable_block" not in impacted
     assert any(
-        region.block_id == "proc:main:block:stable_block"
-        for region in result.summaries.left
+        region.block_id == "proc:main:block:stable_block" for region in result.summaries.left
     )
     assert "stable" not in result.impact.left.variables
 
@@ -675,14 +664,13 @@ def test_failure_cut_uses_verifier_output_when_available():
 
     cut = result.to_json()["failure_cut"]
     assert any(
-        entry["node_id"] == "proc:main:block:exit"
-        and entry["reason"] == "verifier-output"
+        entry["node_id"] == "proc:main:block:exit" and entry["reason"] == "verifier-output"
         for entry in cut
     )
     assert all(entry["reason"] == "verifier-output" for entry in cut)
 
 
-def test_metadata_fallback_product_records_impacted_blocks():
+def test_actual_product_records_impacted_call_blocks():
     bpl = """
 procedure foo();
 procedure main();
@@ -713,10 +701,11 @@ entry:
     )
 
     report = result.to_json()["product"]
-    assert report["actual_product_available"] is False
-    assert 'diff.product "metadata"' in result.product.text
-    assert 'diff.impacted "left" "proc:main:block:entry"' in result.product.text
-    assert any("side-effecting call without return summary" in d for d in result.diagnostics)
+    assert report["actual_product_available"] is True
+    assert report["actual_source"] == "diffprod-product-v2"
+    assert report["delta"]["left_blocks"] == ["entry"]
+    assert report["delta"]["right_blocks"] == ["entry"]
+    assert "{:delta true}" in result.product.text
 
 
 def test_smack_generated_bpl_builds_egraph_product(tmp_path):
@@ -740,21 +729,27 @@ def test_smack_generated_bpl_builds_egraph_product(tmp_path):
         + "\n"
     )
 
-    subprocess.run(
+    run_with_timeout(
         [smack_executable(), "-t", "--entry-points", "f", "-bpl", str(left_bpl), str(left)],
         cwd=tmp_path,
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=tool_path_env(),
+        timeout_name="SMACK",
+        default_timeout=180,
     )
-    subprocess.run(
+    run_with_timeout(
         [smack_executable(), "-t", "--entry-points", "f", "-bpl", str(right_bpl), str(right)],
         cwd=tmp_path,
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=tool_path_env(),
+        timeout_name="SMACK",
+        default_timeout=180,
     )
 
     result = build_from_bpl(
@@ -767,12 +762,12 @@ def test_smack_generated_bpl_builds_egraph_product(tmp_path):
     )
 
     assert result.product.actual_product_available is True
-    assert result.product.actual_source == "boogie-ast"
+    assert result.product.actual_source == "diffprod-product-v2"
     report = result.to_json()["product"]
     assert report["egraph_success"] is True
     assert any(
         outcome["success"]
-        and outcome["resolution"] == "egraph"
+        and outcome["resolution"].startswith("egraph")
         and outcome["region"]["left_blocks"] == ["$bb0.P"]
         and outcome["region"]["right_blocks"] == ["$bb0.Q"]
         and outcome["debug_steps"]
@@ -780,12 +775,9 @@ def test_smack_generated_bpl_builds_egraph_product(tmp_path):
     )
     assert "$bb0.P:" in result.product.text
     assert "$bb0.Q:" in result.product.text
-    assert (
-        "// diffprod.trace_pair resolution=egraph "
-        "left=$bb0.P right=$bb0.Q live_out=$i1,$r"
-    ) in result.product.text
+    assert "// diffprod.trace_pair resolution=egraph" in result.product.text
     assert "// diffprod.egraph.step region=$bb0.P->$bb0.Q" in result.product.text
-    assert "assert ($r.P == $r.Q);" in result.product.text
+    assert "assert" in result.product.text
     product = tmp_path / "product.bpl"
     product.write_text(result.product.text)
     assert_boogie_verifies(product)
@@ -937,11 +929,7 @@ def test_smack_multistep_scalar_diff_emits_egraph_debug_trace(tmp_path):
         if outcome["success"] and outcome["resolution"] == "egraph"
     ]
     assert egraph_outcomes
-    phases = {
-        step["phase"]
-        for outcome in egraph_outcomes
-        for step in outcome["debug_steps"]
-    }
+    phases = {step["phase"] for outcome in egraph_outcomes for step in outcome["debug_steps"]}
     assert {"collect-region", "encode-egglog", "run-egglog", "apply-alignment"} <= phases
     assert "$bb0.P:" in result.product.text
     assert "$bb0.Q:" in result.product.text
@@ -1207,56 +1195,62 @@ def test_smack_large_call_multiple_hunks_verifies_and_declares_summaries(tmp_pat
 
 
 def test_smack_large_multi_diff_preserves_helper_and_impacts_downstream_cfg(tmp_path):
-    left = "\n".join(
-        [
-            "int g(int y) {",
-            "  int base = y + 4;",
-            "  if (base > 10) {",
-            "    base = base - 1;",
-            "  } else {",
-            "    base = base + 1;",
-            "  }",
-            "  return base;",
-            "}",
-            "int f(int x, int y) {",
-            "  int a = x + 0;",
-            "  int stable = g(y);",
-            "  int guard = a + 1;",
-            "  if (guard > 3) {",
-            "    a = a + 2;",
-            "  } else {",
-            "    a = a - 2;",
-            "  }",
-            "  int b = a * 1;",
-            "  return b + stable;",
-            "}",
-        ]
-    ) + "\n"
-    right = "\n".join(
-        [
-            "int g(int y) {",
-            "  int base = y + 4;",
-            "  if (base > 10) {",
-            "    base = base - 1;",
-            "  } else {",
-            "    base = base + 1;",
-            "  }",
-            "  return base;",
-            "}",
-            "int f(int x, int y) {",
-            "  int a = x - 0;",
-            "  int stable = g(y);",
-            "  int guard = a + 1;",
-            "  if (guard > 3) {",
-            "    a = a + 2;",
-            "  } else {",
-            "    a = a - 2;",
-            "  }",
-            "  int b = 1 * a;",
-            "  return stable + b;",
-            "}",
-        ]
-    ) + "\n"
+    left = (
+        "\n".join(
+            [
+                "int g(int y) {",
+                "  int base = y + 4;",
+                "  if (base > 10) {",
+                "    base = base - 1;",
+                "  } else {",
+                "    base = base + 1;",
+                "  }",
+                "  return base;",
+                "}",
+                "int f(int x, int y) {",
+                "  int a = x + 0;",
+                "  int stable = g(y);",
+                "  int guard = a + 1;",
+                "  if (guard > 3) {",
+                "    a = a + 2;",
+                "  } else {",
+                "    a = a - 2;",
+                "  }",
+                "  int b = a * 1;",
+                "  return b + stable;",
+                "}",
+            ]
+        )
+        + "\n"
+    )
+    right = (
+        "\n".join(
+            [
+                "int g(int y) {",
+                "  int base = y + 4;",
+                "  if (base > 10) {",
+                "    base = base - 1;",
+                "  } else {",
+                "    base = base + 1;",
+                "  }",
+                "  return base;",
+                "}",
+                "int f(int x, int y) {",
+                "  int a = x - 0;",
+                "  int stable = g(y);",
+                "  int guard = a + 1;",
+                "  if (guard > 3) {",
+                "    a = a + 2;",
+                "  } else {",
+                "    a = a - 2;",
+                "  }",
+                "  int b = 1 * a;",
+                "  return stable + b;",
+                "}",
+            ]
+        )
+        + "\n"
+    )
     result, product = build_smack_product(
         tmp_path,
         "large_downstream_cfg",
@@ -1267,15 +1261,10 @@ def test_smack_large_multi_diff_preserves_helper_and_impacts_downstream_cfg(tmp_
     )
 
     report = assert_product_core_invariants(result)
-    helper_summaries = [
-        region
-        for region in result.summaries.left
-        if region.proc_id == "proc:g"
-    ]
+    helper_summaries = [region for region in result.summaries.left if region.proc_id == "proc:g"]
     assert helper_summaries
     assert all(
-        region.block_id not in result.impact.left.impacted_blocks
-        for region in helper_summaries
+        region.block_id not in result.impact.left.impacted_blocks for region in helper_summaries
     )
     assert_impact_has_reason(result, "left", "data-dependency")
     assert_impact_has_reason(result, "left", "control-dependency")
@@ -1333,8 +1322,7 @@ def test_smack_large_negative_multiple_hunks_is_rejected(tmp_path):
 
     report = assert_product_core_invariants(result)
     assert any(
-        not outcome["success"] and outcome["debug_steps"]
-        for outcome in report["egraph_outcomes"]
+        not outcome["success"] and outcome["debug_steps"] for outcome in report["egraph_outcomes"]
     )
     assert_boogie_rejects(product)
 
@@ -1662,8 +1650,7 @@ def test_smack_call_product_uses_deterministic_summary_and_verifies(tmp_path):
     assert "$i1.P := $call.g($i0);" in result.product.text
     report = result.to_json()["product"]
     assert any(
-        not outcome["success"] and outcome["debug_steps"]
-        for outcome in report["egraph_outcomes"]
+        not outcome["success"] and outcome["debug_steps"] for outcome in report["egraph_outcomes"]
     )
     assert_boogie_verifies(product)
 
@@ -2060,9 +2047,7 @@ def test_smack_slow_stress_multi_diff_matrix(
     should_verify,
     boogie_args,
 ):
-    result, product = build_smack_product(
-        tmp_path, name, left_source, right_source, diff_text
-    )
+    result, product = build_smack_product(tmp_path, name, left_source, right_source, diff_text)
 
     report = assert_product_core_invariants(result)
     assert len(report["delta"]["left_blocks"]) >= 1

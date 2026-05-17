@@ -144,7 +144,7 @@ def match_functions(left: LlvmFunction, right: LlvmFunction) -> list[dict[str, A
     used_right: set[int] = set()
     right_by_label = {block.label: index for index, block in enumerate(right.blocks)}
 
-    for left_index, left_block in enumerate(left.blocks):
+    for _left_index, left_block in enumerate(left.blocks):
         right_index = right_by_label.get(left_block.label)
         if right_index is None or right_index in used_right:
             right_index = _best_unmatched_block(left_block, right.blocks, used_right)

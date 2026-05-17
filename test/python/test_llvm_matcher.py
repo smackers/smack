@@ -5,7 +5,6 @@ import json
 from smack.diffprod.llvm_match import build_llvm_match, parse_llvm_ir
 from smack.diffprod.pipeline import build_from_bpl
 
-
 LEFT_LL = """
 define i32 @f(i32 %x) {
 entry:
@@ -81,9 +80,7 @@ def test_llvm_matcher_classifies_stable_and_changed_blocks():
     )
 
     by_block = {
-        chunk["left"]["block"]: chunk
-        for chunk in match["chunks"]
-        if chunk["left"] is not None
+        chunk["left"]["block"]: chunk for chunk in match["chunks"] if chunk["left"] is not None
     }
     assert by_block["entry"]["kind"] == "stable"
     assert by_block["hot"]["kind"] in {"similar", "changed"}
@@ -115,6 +112,5 @@ def test_llvm_matcher_metadata_seeds_boogie_product_delta():
     assert report["product"]["delta"]["left_blocks"] == ["hot"]
     assert report["product"]["delta"]["right_blocks"] == ["hot"]
     assert not any(
-        "whole-program structural region" in diagnostic
-        for diagnostic in report["diagnostics"]
+        "whole-program structural region" in diagnostic for diagnostic in report["diagnostics"]
     )

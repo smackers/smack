@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from .impact import ImpactResult, SideImpact
+from .impact import ImpactResult
 from .provenance import ParsedBoogieProgram, ProvenanceIndex
 
 
@@ -89,11 +89,7 @@ def build_summary_plan(
             continue
         left_by_sig.setdefault(signature, []).append(block_id)
 
-    used_left = {
-        region.equivalent_to
-        for region in plan.left
-        if region.equivalent_to is not None
-    }
+    used_left = {region.equivalent_to for region in plan.left if region.equivalent_to is not None}
     for block_id, signature in sorted(right_sigs.items()):
         if block_id in impact.right.impacted_blocks:
             continue
@@ -128,19 +124,11 @@ def block_signatures(provenance: ProvenanceIndex) -> dict[str, str]:
             node = provenance.nodes.get(stmt_id)
             origin = provenance.origin_set(stmt_id)
             op = next(
-                (
-                    record.llvm_op
-                    for record in origin.records
-                    if record.llvm_op is not None
-                ),
+                (record.llvm_op for record in origin.records if record.llvm_op is not None),
                 None,
             )
             cexpr = next(
-                (
-                    record.cexpr
-                    for record in origin.records
-                    if record.cexpr is not None
-                ),
+                (record.cexpr for record in origin.records if record.cexpr is not None),
                 None,
             )
             parts.append(f"{type(node).__name__}:{op or ''}:{cexpr or ''}")

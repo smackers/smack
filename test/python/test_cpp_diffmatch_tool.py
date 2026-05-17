@@ -1,51 +1,27 @@
+import importlib.util
 import json
-import os
-import shutil
 import subprocess
+import sys
 
-import pytest
-
-
-def tool_path(name):
-    candidates = [
-        f"/home/ubuntu/boogie-parser/smack/build-llvm22c/{name}",
-        shutil.which(name),
-    ]
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            return candidate
-    pytest.skip(f"{name} not found")
+from smack_test_paths import REPO_ROOT, clang_path, llvm_link_path, run_with_timeout, tool_path
 
 
-def clang_path():
-    candidates = [
-        "/usr/lib/llvm-22/bin/clang-22",
-        shutil.which("clang-22"),
-        shutil.which("clang"),
-    ]
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            return candidate
-    pytest.skip("clang not found")
-
-
-def llvm_link_path():
-    candidates = [
-        "/usr/lib/llvm-22/bin/llvm-link-22",
-        shutil.which("llvm-link-22"),
-        shutil.which("llvm-link"),
-    ]
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            return candidate
-    pytest.skip("llvm-link not found")
+def load_svf_adapter_module():
+    module_path = REPO_ROOT / "tools" / "svf_memory_partition_adapter.py"
+    spec = importlib.util.spec_from_file_location("svf_memory_partition_adapter", module_path)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def compile_c_to_bc(tmp_path, name, source):
     src = tmp_path / f"{name}.c"
     bc = tmp_path / f"{name}.bc"
     src.write_text(source)
-    subprocess.run(
+    run_with_timeout(
         [
             clang_path(),
             "-c",
@@ -63,14 +39,16 @@ def compile_c_to_bc(tmp_path, name, source):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        timeout_name="LLVM",
+        default_timeout=60,
     )
     return bc
 
 
 def compile_support_lib_to_bc(tmp_path, lib_name):
-    source = f"/home/ubuntu/boogie-parser/smack/share/smack/lib/{lib_name}"
+    source = REPO_ROOT / "share" / "smack" / "lib" / lib_name
     bc = tmp_path / f"{lib_name}.bc"
-    subprocess.run(
+    run_with_timeout(
         [
             clang_path(),
             "-c",
@@ -84,16 +62,18 @@ def compile_support_lib_to_bc(tmp_path, lib_name):
             "-Wno-error=incompatible-pointer-types",
             "-Xclang",
             "-disable-O0-optnone",
-            "-I/home/ubuntu/boogie-parser/smack/share/smack/include",
+            f"-I{REPO_ROOT / 'share' / 'smack' / 'include'}",
             "-DMEMORY_MODEL_NO_REUSE_IMPLS",
             "-o",
             str(bc),
-            source,
+            str(source),
         ],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        timeout_name="LLVM",
+        default_timeout=60,
     )
     return bc
 
@@ -106,14 +86,67 @@ def link_with_smack_support(tmp_path, name, bc):
         compile_support_lib_to_bc(tmp_path, "errno.c"),
         compile_support_lib_to_bc(tmp_path, "smack-rust.c"),
     ]
-    subprocess.run(
+    run_with_timeout(
         [llvm_link_path(), "-o", str(linked), str(bc), *map(str, support)],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        timeout_name="LLVM",
+        default_timeout=60,
     )
     return linked
+
+
+def build_empty_svf_oracle(tmp_path, name, linked, *, sea_dsa_mode="ci"):
+    adapter = load_svf_adapter_module()
+    pre_ll = tmp_path / f"{name}.pre.ll"
+    oracle_path = tmp_path / f"{name}.oracle.json"
+    completed = run_with_timeout(
+        [
+            tool_path("llvm2bpl"),
+            str(linked),
+            f"-sea-dsa={sea_dsa_mode}",
+            "-smack-memory-partitioner=sea-dsa",
+            f"--ll={pre_ll}",
+            "-warn-type",
+            "silent",
+            "-source-loc-syms",
+            "-provenance-syms",
+            "-entry-points",
+            "f",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+        timeout_name="SMACK_TOOL",
+        default_timeout=120,
+    )
+    assert completed.returncode == 0, completed.stdout
+    oracle = adapter.build_oracle(ll_text=pre_ll.read_text(), svf_output="")
+    oracle_path.write_text(json.dumps(oracle, indent=2, sort_keys=True) + "\n")
+    return oracle
+
+
+def write_bundled_oracle(tmp_path, left_linked, right_linked):
+    left_oracle = build_empty_svf_oracle(tmp_path, "left", left_linked)
+    right_oracle = build_empty_svf_oracle(tmp_path, "right", right_linked)
+    modules = {
+        left_oracle["module_fingerprint"]: left_oracle,
+        right_oracle["module_fingerprint"]: right_oracle,
+    }
+    bundle = {
+        "schema_version": 2,
+        "producer": "svf-memory-partition-bundle",
+        "analysis": "andersen",
+        "memory_partition": "intra-disjoint",
+        "modules": modules,
+        "stats": {"module_count": len(modules)},
+    }
+    bundle_path = tmp_path / "svf-memory-partition-bundle.json"
+    bundle_path.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n")
+    return bundle_path
 
 
 def run_diffmatch(tmp_path, extra_args=None):
@@ -132,6 +165,7 @@ def run_diffmatch(tmp_path, extra_args=None):
     left_bpl = tmp_path / "left.bpl"
     right_bpl = tmp_path / "right.bpl"
     match_json = tmp_path / "match.json"
+    oracle = write_bundled_oracle(tmp_path, left_linked, right_linked)
     cmd = [
         tool_path("llvm-diffmatch2bpl"),
         "--left-bc",
@@ -151,6 +185,7 @@ def run_diffmatch(tmp_path, extra_args=None):
         "-warn-type",
         "silent",
         "-sea-dsa=ci",
+        f"-smack-memory-partition-oracle={oracle}",
         "-source-loc-syms",
         "-provenance-syms",
         "-entry-points",
@@ -158,12 +193,14 @@ def run_diffmatch(tmp_path, extra_args=None):
     ]
     if extra_args:
         cmd.extend(extra_args)
-    completed = subprocess.run(
+    completed = run_with_timeout(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         check=False,
+        timeout_name="SMACK_TOOL",
+        default_timeout=120,
     )
     assert completed.returncode == 0, completed.stdout
     assert left_bpl.exists()

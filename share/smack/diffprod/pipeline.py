@@ -145,7 +145,7 @@ def apply_llvm_match_impact(
                     side_impact,
                     parsed.provenance,
                     block_id,
-                    "llvm-match-%s" % kind,
+                    f"llvm-match-{kind}",
                 )
                 side_impact.add_reason(
                     ImpactReason(
@@ -162,10 +162,7 @@ def blocks_for_llvm_side(
 ) -> set[str]:
     func = str(side.get("function") or "")
     block = str(side.get("block") or "")
-    instructions = {
-        "%s:%s:%s" % (func, block, index)
-        for index in side.get("instructions", []) or []
-    }
+    instructions = {f"{func}:{block}:{index}" for index in side.get("instructions", []) or []}
     out: set[str] = set()
     for block_id in parsed.provenance.block_to_proc:
         origins = parsed.provenance.origin_set(block_id)
