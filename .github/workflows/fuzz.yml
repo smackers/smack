@@ -110,6 +110,20 @@ jobs:
             -timeout=30 \
             -rss_limit_mb=4096
 
+      - name: Run fuzz_naming
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          mkdir -p unittests/fuzz/corpus/naming
+          ./build-fuzz/unittests/fuzz/fuzz_naming \
+            unittests/fuzz/corpus/naming \
+            -max_total_time=${{ steps.budget.outputs.seconds }} \
+            -print_final_stats=1 \
+            -reload=1 \
+            -timeout=30 \
+            -rss_limit_mb=2048
+
       - name: Upload crash artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4

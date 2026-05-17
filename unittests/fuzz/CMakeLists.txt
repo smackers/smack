@@ -44,7 +44,14 @@ smack_add_fuzzer(fuzz_boogie_ast_print fuzz_boogie_ast_print.cpp
   smackTranslator
   utils)
 
+# smack::Naming static helpers — string predicates only; doesn't need
+# the full translator graph but the symbols still live in smackTranslator.
+smack_add_fuzzer(fuzz_naming fuzz_naming.cpp
+  smackTranslator
+  utils)
+
 # Convenience aggregate target so CI can `cmake --build build --target fuzzers`.
 add_custom_target(fuzzers DEPENDS
   fuzz_bitcode_parse
-  fuzz_boogie_ast_print)
+  fuzz_boogie_ast_print
+  fuzz_naming)
