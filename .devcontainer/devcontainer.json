@@ -1,0 +1,61 @@
+{
+  "name": "SMACK dev (LLVM 22)",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "builder"
+  },
+  "remoteUser": "user",
+  "workspaceFolder": "/home/user/smack",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/user/smack,type=bind,consistency=cached",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "twxs.cmake",
+        "ms-vscode.cmake-tools",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "C_Cpp.intelliSenseEngine": "disabled",
+        "clangd.arguments": [
+          "--background-index",
+          "--clang-tidy",
+          "--header-insertion=never",
+          "--compile-commands-dir=build"
+        ],
+        "cmake.configureSettings": {
+          "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+          "SMACK_BUILD_TESTS": "ON"
+        },
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "ruff.organizeImports": true,
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "[cpp]": {
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  },
+
+  "postCreateCommand": "pip install -e '.[dev]' && pre-commit install",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "containerEnv": {
+    "SMACK_BUILD_DIR": "/home/user/smack/build",
+    "PYTHONPATH": "/home/user/smack/share"
+  }
+}

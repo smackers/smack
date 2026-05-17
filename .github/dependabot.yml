@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    groups:
+      gh-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
+      include: scope
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    commit-message:
+      prefix: "build(deps)"
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "build(docker)"
+      include: scope

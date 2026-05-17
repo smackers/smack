@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a new SMACK capability, optimization, or DX improvement.
+title: "[feat] <short summary>"
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem does this solve? Who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Concrete design sketch. CLI shape, new pass, API change, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else was tried or ruled out, and why.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Translator (lib/smack, lib/utils)
+        - Python driver (share/smack)
+        - Build / CI / DX
+        - Documentation
+        - Other
+    validations:
+      required: true

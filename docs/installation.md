@@ -2,49 +2,16 @@
 
 
 In principle SMACK can be run on any platform on which [LLVM][] and [Boogie][]
-can run. In practice we have run SMACK on standard Ubuntu and openSUSE Linux
-distributions, OS X, and Windows. Below we outline system
-requirements and installation instructions for typical system configurations.
-A quick way to get started without worrying about system requirements and
-installation, however, is to launch our reproducible and portable development
-environment using [Vagrant][]. An even quicker way to get started is to use
-our prepackaged Docker container.
+can run. In practice we test SMACK on Ubuntu 24.04 LTS (and newer) and on
+the prepackaged Docker container. Below we outline system requirements and
+installation instructions for typical configurations.
 
-### Quick Setup 1: Vagrant Development Environment
+### Quick Setup: Docker
 
-SMACK can be run in a preconfigured virtual environment using [Vagrant][] and
-[VirtualBox][]. Both are available for a wide range of systems, with great
-installation support. The following versions are required:
-
-* [VirtualBox][] version 4.3.20 or greater
-* [Vagrant][] version 1.7.2 or greater
-
-Once both are properly installed, launch [Vagrant][] by running the following
-command in SMACK's root directory (that which contains `Vagrantfile`):
-````Shell
-vagrant up
-````
-This can take a few minutes the first time around, since it includes the
-download of a virtual machine image and the installation of several other
-packages. When this step finishes, our virtual machine should be up and
-running; verify this with the `vagrant status` command. Then open a shell to
-the running virtual machine via SSH:
-````Shell
-vagrant ssh
-````
-and proceed to using SMACK. When finished, simply close the SSH
-session, and halt, suspend, or destroy the virtual machine:
-````Shell
-vagrant destroy
-````
-
-### Quick Setup 2: Docker
-
-SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
-the following configurations:
-
-* Ubuntu 18.04, Docker version 19.03.6
-* Windows WSL Ubuntu 20.04, Docker Desktop with Docker engine version 20.10.2
+SMACK can be run in a [Docker][] container. Tested on Ubuntu 24.04 with
+Docker Engine 27+ and Windows WSL2 (Ubuntu 24.04 image) with Docker
+Desktop. The image is a multi-stage build: see `Dockerfile` for the
+runtime-only second stage.
 
 #### Docker Hub
 
@@ -122,16 +89,15 @@ reference guidelines.
 
 In addition to the requirements above, installing SMACK and its dependencies
 requires the Command Line Tools for [Xcode][]. Generally speaking, apart from
-[Mono][], [Z3][], [Boogie][], and [Corral][], dependencies can be installed via
-the [Homebrew][] package manager. [Mono][] can be installed from binaries
-either from the [Mono][] download page, or via [Homebrew Cask][].
+[Z3][], [Boogie][], and [Corral][], dependencies can be installed via the
+[Homebrew][] package manager. [Boogie][] and [Corral][] install via
+`dotnet tool install --global` once the .NET 8 SDK is on `PATH`.
 
 ### Installation on Windows
 
 SMACK can be installed on the Windows Subsystem for Linux (WSL) by following the
 same procedure as the Linux installation (i.e., via the build script [build.sh][]).
-We tested the WSL installation on Windows 10 (Build 18362) with Ubuntu 16.04
-installed via the Microsoft Store.
+WSL2 with Ubuntu 24.04 from the Microsoft Store is the supported configuration.
 
 ### Installing SMACK Itself
 
@@ -185,8 +151,6 @@ shell in the `test` directory by executing
 ./regtest.py
 ````
 
-[Vagrant]: https://www.vagrantup.com
-[VirtualBox]: https://www.virtualbox.org
 [CMake]: http://www.cmake.org
 [Python]: http://www.python.org
 [LLVM]: http://llvm.org
@@ -196,7 +160,6 @@ shell in the `test` directory by executing
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://github.com/boogie-org/corral
 [Z3]: https://github.com/Z3Prover/z3/
-[Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com
 [.NET]: https://msdn.microsoft.com/en-us/vstudio/aa496123.aspx
 [build.sh]: https://github.com/smackers/smack/blob/main/bin/build.sh

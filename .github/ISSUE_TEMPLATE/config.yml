@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/smackers/smack/security/advisories/new
+    about: Report security issues privately via GitHub Security Advisories, not public issues.
+  - name: General SMACK question
+    url: https://github.com/smackers/smack/discussions
+    about: Use Discussions for questions and how-to.

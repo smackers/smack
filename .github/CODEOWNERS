@@ -1,0 +1,44 @@
+# GitHub-native code-ownership. Reviewers in this file are auto-requested
+# on every PR that touches matching paths. The fork maintainer is Alex;
+# upstream SMACK maintainers stay on the C++ translator + sea-dsa bridge.
+#
+# Order matters — later patterns override earlier ones.
+
+# Default owner — everything not otherwise claimed.
+*                                                       @alexthomasv
+
+# Translator / Boogie codegen — upstream SMACK + Alex
+/lib/smack/                                             @alexthomasv @smackers/maintainers
+/include/smack/                                         @alexthomasv @smackers/maintainers
+/tools/llvm2bpl/                                        @alexthomasv @smackers/maintainers
+/tools/diffmatch/                                       @alexthomasv
+
+# sea-dsa bridge
+/lib/smack/DSAWrapper*.cpp                              @alexthomasv @smackers/maintainers
+/include/smack/DSAWrapper*.h                            @alexthomasv @smackers/maintainers
+
+# Build / CI / packaging
+/CMakeLists.txt                                         @alexthomasv
+/CMakePresets.json                                      @alexthomasv
+/cmake/                                                 @alexthomasv
+/bin/build.sh                                           @alexthomasv
+/bin/versions                                           @alexthomasv
+/Dockerfile                                             @alexthomasv
+/.dockerignore                                          @alexthomasv
+/.github/                                               @alexthomasv
+/.pre-commit-config.yaml                                @alexthomasv
+/pyproject.toml                                         @alexthomasv
+/codecov.yml                                            @alexthomasv
+
+# Python driver / pipeline
+/share/smack/                                           @alexthomasv
+/share/smack/pipeline/                                  @alexthomasv
+/share/smack/verifier/                                  @alexthomasv
+/share/smack/diffprod/                                  @alexthomasv
+
+# Tests
+/test/                                                  @alexthomasv
+/unittests/                                             @alexthomasv
+
+# Security
+/SECURITY.md                                            @alexthomasv

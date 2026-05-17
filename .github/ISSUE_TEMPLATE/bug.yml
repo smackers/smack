@@ -1,0 +1,89 @@
+name: Bug report
+description: A reproducible SMACK bug — incorrect translation, crash, soundness gap.
+title: "[bug] <short summary>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please give us enough context to reproduce it.
+        For security-impacting issues, follow `SECURITY.md` instead — do **not**
+        open a public issue.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: One paragraph describing the unexpected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: |
+        Minimal `.c` (or `.rs`/`.ll`) input plus the exact `smack` invocation.
+        Inline a `<details>` block for anything long.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior + output
+      description: Verifier output, error trace, or crash.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: smack-version
+    attributes:
+      label: SMACK version
+      placeholder: "2.8.0 / commit sha"
+    validations:
+      required: true
+
+  - type: input
+    id: llvm-version
+    attributes:
+      label: LLVM version
+      placeholder: "output of `llvm-config --version`"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: verifier
+    attributes:
+      label: Back-end verifier
+      options:
+        - boogie
+        - corral
+        - portfolio
+        - svcomp
+        - not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS + arch
+      placeholder: "Ubuntu 24.04 x86_64 / Ubuntu 24.04 arm64 / macOS 14 arm64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Workarounds tried, related issues, etc.
