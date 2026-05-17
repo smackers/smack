@@ -1,0 +1,33 @@
+# Keep build/test outputs and IDE state out of the Docker build context.
+build*/
+**/build*/
+.cache/
+.cache_test/
+**/__pycache__/
+**/*.pyc
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.bc
+*.ll
+*.o
+*.so
+*.a
+*.dylib
+
+# Editor + OS scratch
+.vscode/
+.idea/
+.DS_Store
+
+# Local dev wrappers
+.git/HEAD
+.git/index
+.git/logs/
+
+# Don't ship the host's smack-deps if someone built locally
+smack-deps/
+../smack-deps/
