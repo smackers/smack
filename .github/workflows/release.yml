@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build-sdist-wheel:
+    name: Build sdist + wheel
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Resolve version from constants.py
+        id: version
+        run: |
+          version=$(grep -E '^VERSION' share/smack/constants.py | sed -E 's/^VERSION[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/')
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Resolved smack version ${version}"
+
+      - name: Verify tag matches package version
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          want="${{ steps.version.outputs.version }}"
+          if [ "$tag" != "$want" ]; then
+            echo "tag $tag does not match constants.py VERSION $want" >&2
+            exit 1
+          fi
+
+      - name: Install build tooling
+        run: pip install "hatch>=1.12" "build>=1.2" "twine>=5"
+
+      - name: Build sdist + wheel
+        run: python -m build --sdist --wheel
+
+      - name: twine check
+        run: twine check dist/*
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  generate-sbom:
+    name: Generate SBOM (CycloneDX)
+    needs: build-sdist-wheel
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          output-file: smack-${{ needs.build-sdist-wheel.outputs.version }}.cdx.json
+          artifact-name: smack-sbom.cdx.json
+          dependency-snapshot: true
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: smack-${{ needs.build-sdist-wheel.outputs.version }}.cdx.json
+
+  publish-pypi:
+    name: Publish to PyPI (trusted publishing)
+    needs: [build-sdist-wheel, generate-sbom]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/smack/${{ needs.build-sdist-wheel.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # Trusted publishing — configure on PyPI:
+          # https://docs.pypi.org/trusted-publishers/
+
+  attest-provenance:
+    name: SLSA provenance + GH attestations
+    needs: [build-sdist-wheel, generate-sbom]
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Download SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+
+      - name: Attest build provenance for wheels + sdist
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: dist/*.whl
+          sbom-path: sbom/smack-${{ needs.build-sdist-wheel.outputs.version }}.cdx.json
+
+  github-release:
+    name: GitHub Release
+    needs: [build-sdist-wheel, generate-sbom, publish-pypi, attest-provenance]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: SMACK ${{ needs.build-sdist-wheel.outputs.version }}
+          generate_release_notes: true
+          files: |
+            artifacts/dist/*
+            artifacts/sbom/*

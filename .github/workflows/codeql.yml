@@ -1,0 +1,76 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Mondays 06:00 UTC. Picks up new query updates with a weekly cadence
+    # without paying for runs on every push.
+    - cron: "0 6 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: cpp
+            build-mode: manual
+          - language: python
+            build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # Use security-extended for higher signal. security-and-quality is
+          # too noisy on a translator codebase that uses lots of LLVM-style
+          # raw-pointer patterns.
+          queries: security-extended
+
+      - name: Install ccache (cpp only)
+        if: matrix.language == 'cpp'
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Cache smack-deps (cpp only)
+        if: matrix.language == 'cpp'
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: Build SMACK (cpp only)
+        if: matrix.language == 'cpp'
+        env:
+          GITHUB_ACTIONS: true
+          CCACHE_DIR: /home/runner/.ccache
+          CCACHE_COMPRESS: "true"
+          CCACHE_MAXSIZE: "2G"
+        run: |
+          INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=0 ./bin/build.sh
+          cmake -S . -B build-codeql \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build-codeql --target llvm2bpl smackTranslator utils -j$(nproc)
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}

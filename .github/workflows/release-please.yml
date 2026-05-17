@@ -1,0 +1,34 @@
+name: release-please
+
+# Maintains an open "chore(main): release X.Y.Z" PR by reading commits on
+# main and applying conventional-commits semver. Merging that PR cuts
+# the release tag, which fires .github/workflows/release.yml.
+#
+# Commit conventions:
+#   fix:    -> patch bump
+#   feat:   -> minor bump
+#   feat!:  -> major bump (or `BREAKING CHANGE:` footer)
+#   chore/docs/refactor/perf/test/ci -> no bump (changelog category)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # `python` strategy reads the version from a setup.py/pyproject.
+          # We use `simple` + manifest so the bot updates both
+          # share/smack/constants.py and the changelog without owning
+          # the build system.
+          release-type: simple
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json

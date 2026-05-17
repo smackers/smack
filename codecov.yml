@@ -1,0 +1,75 @@
+# Codecov configuration. Drives the PR comment + the required check on
+# /home/ubuntu/boogie-parser/smack/.github/workflows/smack-ci.yaml's
+# coverage upload step.
+#
+# - project: aggregate coverage across the whole repo. Soft floor at 70%;
+#   PRs may dip up to 1% under that without failing.
+# - patch: coverage *on changed lines*. Hard floor at 80% — a PR that adds
+#   poorly-tested code fails the check.
+
+coverage:
+  precision: 2
+  round: down
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 1%
+        if_ci_failed: error
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+        if_ci_failed: error
+        only_pulls: true
+
+comment:
+  layout: "header, diff, flags, components, files, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: false
+
+# pyproject.toml `[tool.coverage.run].omit` is authoritative; mirror here
+# for any path patterns Codecov should ignore at the report level.
+ignore:
+  - "sea-dsa/**"
+  - "external/**"
+  - "build*/**"
+  - "test/c/**"
+  - "test/rust/**"
+  - "test/llvm/**"
+  - "test/cplusplus/**"
+  - "share/smack/svcomp/toSVCOMPformat.py"
+
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: 70%
+      - type: patch
+        target: 80%
+  individual_flags:
+    - name: python-unittests
+      paths:
+        - share/smack/
+
+component_management:
+  individual_components:
+    - component_id: cli
+      name: CLI
+      paths:
+        - share/smack/cli/**
+    - component_id: verifier
+      name: Verifier
+      paths:
+        - share/smack/verifier/**
+    - component_id: pipeline
+      name: Pipeline
+      paths:
+        - share/smack/pipeline/**
+    - component_id: diffprod
+      name: Diff Product
+      paths:
+        - share/smack/diffprod/**

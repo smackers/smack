@@ -1,0 +1,46 @@
+name: Stale issues + PRs
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issues: 60d idle → stale; 30d more idle → close
+          days-before-issue-stale: 60
+          days-before-issue-close: 30
+          stale-issue-label: stale
+          exempt-issue-labels: "pinned,security,good first issue,help wanted,roadmap"
+          stale-issue-message: |
+            This issue has been idle for 60 days. It will close in 30 days
+            unless something happens here. Drop a comment to keep it open.
+            See `SECURITY.md` if this is a security-impacting issue.
+          close-issue-message: |
+            Closing for inactivity. Reopen with new context if it's still
+            relevant — no hard feelings on stale closes.
+
+          # PRs: 30d idle → stale; 14d more → close (tighter than issues
+          # because PRs rot faster than bug reports)
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+          stale-pr-label: stale
+          exempt-pr-labels: "pinned,wip,blocked,roadmap"
+          stale-pr-message: |
+            This PR has been idle for 30 days. It will close in 14 days
+            unless updated. Rebase + push or comment to keep it open.
+          close-pr-message: |
+            Closing for inactivity. Branch is preserved — reopen any time
+            you're ready to pick it back up.
+
+          operations-per-run: 100
+          remove-stale-when-updated: true
+          enable-statistics: true

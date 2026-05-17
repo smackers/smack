@@ -1,0 +1,166 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "relwithdebinfo",
+      "displayName": "RelWithDebInfo",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "AddressSanitizer (Debug)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SMACK_BUILD_TESTS": "ON",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_INIT": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=address",
+        "CMAKE_SHARED_LINKER_FLAGS_INIT": "-fsanitize=address"
+      }
+    },
+    {
+      "name": "ubsan",
+      "displayName": "UndefinedBehaviorSanitizer (Debug)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SMACK_BUILD_TESTS": "ON",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_INIT": "-fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=undefined",
+        "CMAKE_SHARED_LINKER_FLAGS_INIT": "-fsanitize=undefined"
+      }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan + UBSan (Debug)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SMACK_BUILD_TESTS": "ON",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_INIT": "-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=address,undefined",
+        "CMAKE_SHARED_LINKER_FLAGS_INIT": "-fsanitize=address,undefined"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer (Debug)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SMACK_BUILD_TESTS": "ON",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=thread -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_INIT": "-fsanitize=thread -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=thread",
+        "CMAKE_SHARED_LINKER_FLAGS_INIT": "-fsanitize=thread"
+      }
+    },
+    {
+      "name": "msan",
+      "displayName": "MemorySanitizer (Debug, clang-only)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SMACK_BUILD_TESTS": "ON",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_INIT": "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=memory",
+        "CMAKE_SHARED_LINKER_FLAGS_INIT": "-fsanitize=memory"
+      }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage (gcov / llvm-cov)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SMACK_BUILD_TESTS": "ON",
+        "CMAKE_C_FLAGS_INIT": "--coverage -fprofile-arcs -ftest-coverage -O0 -g",
+        "CMAKE_CXX_FLAGS_INIT": "--coverage -fprofile-arcs -ftest-coverage -O0 -g",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "--coverage",
+        "CMAKE_SHARED_LINKER_FLAGS_INIT": "--coverage"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "libFuzzer (clang-only)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer -g",
+        "CMAKE_CXX_FLAGS_INIT": "-fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=fuzzer-no-link,address,undefined"
+      }
+    }
+  ],
+  "buildPresets": [
+    {"name": "debug", "configurePreset": "debug"},
+    {"name": "release", "configurePreset": "release"},
+    {"name": "relwithdebinfo", "configurePreset": "relwithdebinfo"},
+    {"name": "asan", "configurePreset": "asan"},
+    {"name": "ubsan", "configurePreset": "ubsan"},
+    {"name": "asan-ubsan", "configurePreset": "asan-ubsan"},
+    {"name": "tsan", "configurePreset": "tsan"},
+    {"name": "msan", "configurePreset": "msan"},
+    {"name": "coverage", "configurePreset": "coverage"},
+    {"name": "fuzz", "configurePreset": "fuzz"}
+  ],
+  "testPresets": [
+    {"name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true}},
+    {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}},
+    {"name": "asan", "configurePreset": "asan", "output": {"outputOnFailure": true},
+     "environment": {"ASAN_OPTIONS": "detect_leaks=1:abort_on_error=1"}},
+    {"name": "ubsan", "configurePreset": "ubsan", "output": {"outputOnFailure": true},
+     "environment": {"UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}},
+    {"name": "asan-ubsan", "configurePreset": "asan-ubsan", "output": {"outputOnFailure": true},
+     "environment": {
+       "ASAN_OPTIONS": "detect_leaks=1:abort_on_error=1",
+       "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"
+     }},
+    {"name": "tsan", "configurePreset": "tsan", "output": {"outputOnFailure": true},
+     "environment": {"TSAN_OPTIONS": "halt_on_error=1"}},
+    {"name": "coverage", "configurePreset": "coverage", "output": {"outputOnFailure": true}}
+  ]
+}

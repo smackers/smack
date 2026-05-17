@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "tag-separator": "",
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": false,
+  "bump-patch-for-minor-pre-major": false,
+  "changelog-sections": [
+    {"type": "feat", "section": "Features"},
+    {"type": "fix", "section": "Bug Fixes"},
+    {"type": "perf", "section": "Performance"},
+    {"type": "refactor", "section": "Refactoring", "hidden": false},
+    {"type": "docs", "section": "Documentation", "hidden": false},
+    {"type": "test", "section": "Tests", "hidden": true},
+    {"type": "ci", "section": "CI", "hidden": true},
+    {"type": "chore", "section": "Chores", "hidden": true},
+    {"type": "build", "section": "Build", "hidden": true},
+    {"type": "style", "section": "Style", "hidden": true}
+  ],
+  "packages": {
+    ".": {
+      "package-name": "smack",
+      "release-type": "simple",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "share/smack/constants.py"
+        }
+      ]
+    }
+  }
+}

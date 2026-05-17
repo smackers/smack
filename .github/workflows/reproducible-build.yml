@@ -1,0 +1,104 @@
+name: Reproducible Build
+
+# Builds llvm2bpl + smackTranslator twice in clean environments and
+# compares the binaries byte-for-byte. Drift means non-determinism in
+# CMake/codegen/install paths — surface it before users see it.
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"   # Sundays 03:00 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "cmake/**"
+      - "bin/build.sh"
+      - "bin/versions"
+      - ".github/workflows/reproducible-build.yml"
+
+jobs:
+  build-twice-and-diff:
+    runs-on: ubuntu-24.04
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"  # frozen timestamp for both builds
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ccache + diffoscope
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache diffoscope
+
+      - name: Cache smack-deps
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: install dependencies
+        env:
+          GITHUB_ACTIONS: true
+        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=0 ./bin/build.sh
+
+      - name: Build #1
+        run: |
+          cmake -S . -B build-a -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS=-ffile-prefix-map=${PWD}=. \
+            -DCMAKE_CXX_FLAGS=-ffile-prefix-map=${PWD}=.
+          cmake --build build-a --target llvm2bpl smackTranslator utils -j$(nproc)
+          mkdir -p out-a
+          cp build-a/llvm2bpl out-a/
+          cp build-a/libsmackTranslator.a out-a/ || true
+          cp build-a/libutils.a out-a/ || true
+
+      - name: Clean + Build #2
+        run: |
+          rm -rf build-b
+          cmake -S . -B build-b -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS=-ffile-prefix-map=${PWD}=. \
+            -DCMAKE_CXX_FLAGS=-ffile-prefix-map=${PWD}=.
+          cmake --build build-b --target llvm2bpl smackTranslator utils -j$(nproc)
+          mkdir -p out-b
+          cp build-b/llvm2bpl out-b/
+          cp build-b/libsmackTranslator.a out-b/ || true
+          cp build-b/libutils.a out-b/ || true
+
+      - name: Diff artifacts (sha256)
+        id: sha
+        run: |
+          (cd out-a && sha256sum *) | sort > /tmp/a.sums
+          (cd out-b && sha256sum *) | sort > /tmp/b.sums
+          echo "--- build #1 ---"
+          cat /tmp/a.sums
+          echo "--- build #2 ---"
+          cat /tmp/b.sums
+          if diff -u /tmp/a.sums /tmp/b.sums; then
+            echo "drift=none" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=detected" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Upload diffoscope report on drift
+        if: failure() && steps.sha.outputs.drift == 'detected'
+        run: |
+          mkdir -p drift-report
+          for f in out-a/*; do
+            name=$(basename "$f")
+            diffoscope "$f" "out-b/$name" \
+              --html "drift-report/${name}.html" \
+              --max-report-size 5000000 || true
+          done
+
+      - name: Upload drift report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reproducible-build-diff
+          path: drift-report/
+          if-no-files-found: ignore

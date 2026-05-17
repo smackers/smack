@@ -2,8 +2,275 @@ name: SMACK CI
 
 on: [push, pull_request]
 
+# Cancel in-flight CI runs on the same ref to save runner minutes.
+concurrency:
+  group: smack-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+
+env:
+  CMAKE_GENERATOR: Ninja
+  # ccache settings shared by every C++ build step.
+  CCACHE_DIR: /home/runner/.ccache
+  CCACHE_COMPRESS: "true"
+  CCACHE_MAXSIZE: "2G"
+
 jobs:
+  python-quality:
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-14 = M1 (arm64). Catches platform-specific Python issues
+        # that ubuntu would miss (path-sep, BSD-vs-GNU sed, etc.). bin/build.sh
+        # isn't mac-native, so this job stays lint-only.
+        runner: [ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.runner }}
+    name: python-quality (${{ matrix.runner }})
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Verify submodule pins
+        run: ./tools/check_submodule_pins.sh
+
+      - name: Install pre-commit
+        run: pip install "pre-commit>=3,<5"
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit (lint + format + yaml + EOL)
+        run: pre-commit run --all-files --show-diff-on-failure
+
+  cpp-unittests:
+    needs: [python-quality]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx_standard: ["17", "20"]
+    name: cpp-unittests (C++${{ matrix.cxx_standard }})
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Cache smack-deps (LLVM/Z3/Boogie/Corral)
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-cpp-unittests-c++${{ matrix.cxx_standard }}-${{ github.sha }}
+          restore-keys: |
+            ccache-cpp-unittests-c++${{ matrix.cxx_standard }}-
+
+      - name: install dependencies
+        env:
+          GITHUB_ACTIONS: true
+        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=0 ./bin/build.sh
+
+      - name: configure with tests enabled (C++${{ matrix.cxx_standard }})
+        run: |
+          cmake -S . -B build-tests \
+            -DSMACK_BUILD_TESTS=ON \
+            -DSMACK_CXX_STANDARD=${{ matrix.cxx_standard }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: build C++ unit tests
+        run: cmake --build build-tests --target smack_unittests -j$(nproc)
+
+      - name: run C++ unit tests
+        run: ctest --test-dir build-tests --output-on-failure
+
+      - name: ccache stats
+        if: always()
+        run: ccache --show-stats
+
+  cpp-sanitizers:
+    needs: [python-quality]
+    runs-on: ubuntu-24.04
+    name: cpp-sanitizers (ASan + UBSan)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Cache smack-deps
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-sanitizers-${{ github.sha }}
+          restore-keys: ccache-sanitizers-
+
+      - name: install dependencies
+        env:
+          GITHUB_ACTIONS: true
+        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=0 ./bin/build.sh
+
+      - name: configure (asan preset + UBSan)
+        run: |
+          cmake -S . -B build-asan \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DSMACK_BUILD_TESTS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: build with sanitizers
+        run: cmake --build build-asan --target smack_unittests llvm2bpl -j$(nproc)
+
+      - name: run unit tests under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build-asan --output-on-failure
+
+      - name: smoke regtest under sanitizers (c/basic)
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          SMACK_BUILD_DIR: ${{ github.workspace }}/build-asan
+        run: |
+          source /home/runner/smack.environment 2>/dev/null || true
+          python3 test/regtest.py --exhaustive --folder=c/basic --threads=2 || \
+            { echo "::warning::sanitizer smoke regtest reported failures"; exit 1; }
+
+      - name: ccache stats
+        if: always()
+        run: ccache --show-stats
+
+  python-unittests:
+    needs: [python-quality]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Cache smack-deps
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-python-unittests-${{ github.sha }}
+          restore-keys: ccache-python-unittests-
+
+      - name: install dev deps
+        run: |
+          pip install "pytest>=7" "pytest-cov>=4" pyyaml toml
+          pip install -e external/deltarel
+
+      - name: build SMACK tools for integration tests
+        env:
+          GITHUB_ACTIONS: true
+        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=0 ./bin/build.sh
+
+      - name: build NewPM llvm2bpl for audit
+        run: |
+          cmake -S . -B build-newpm \
+            -DSMACK_NEW_PM=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build-newpm --target llvm2bpl -j$(nproc)
+
+      - name: LLVM modernization audit
+        run: |
+          python3 tools/llvm_feature_audit.py \
+            --legacy-llvm2bpl build-llvm22c/llvm2bpl \
+            --newpm-llvm2bpl build-newpm/llvm2bpl \
+            --out-dir build/llvm-audit
+
+      - name: Upload LLVM modernization audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llvm-modernization-audit
+          path: build/llvm-audit
+          if-no-files-found: warn
+
+      - name: pytest extracted-module unit tests
+        run: |
+          pytest test/python/test_cli_smoke.py \
+                 test/python/test_verifier_commands.py \
+                 test/python/test_pipeline_transform.py \
+                 test/python/test_pipeline_translate.py \
+                 test/python/test_llvm_feature_audit.py \
+                 --cov=smack.cli.results \
+                 --cov=smack.verifier.commands \
+                 --cov=smack.pipeline.transform \
+                 --cov=smack.pipeline.translate \
+                 --cov-report=term \
+                 --cov-report=xml:coverage.xml \
+                 --no-header -v
+        env:
+          PYTHONPATH: ${{ github.workspace }}/share
+
+      - name: pytest required product/integration tests
+        run: pytest test/python -q -m "not slow" --no-header
+        env:
+          PYTHONPATH: ${{ github.workspace }}/share
+          SMACK_BUILD_DIR: ${{ github.workspace }}/build-llvm22c
+          SMACK_DELTAREL_ROOT: ${{ github.workspace }}/external/deltarel
+
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          flags: python-unittests
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: ccache stats
+        if: always()
+        run: ccache --show-stats
+
   check-regressions:
+    needs: [python-quality, cpp-unittests, python-unittests, cpp-sanitizers]
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -41,21 +308,48 @@ jobs:
           ]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Cache smack-deps
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: Cache Cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            test/rust/**/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('bin/versions', '**/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-regtest-${{ github.sha }}
+          restore-keys: ccache-regtest-
 
       - name: install dependencies
         env:
           GITHUB_ACTIONS: true
         run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=1 ./bin/build.sh
 
-      - name: format checking
-        run: |
-          ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
-          flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
-
       - name: compile and test
         env:
           REGTEST_ENV: ${{ matrix.regtest_env }}
         run: ./bin/build.sh
+
+      - name: ccache stats
+        if: always()
+        run: ccache --show-stats
 
   build-and-push-docker:
     runs-on: ubuntu-24.04
@@ -64,6 +358,8 @@ jobs:
     steps:
       - name: Check Out Repo
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -99,6 +395,10 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: smackers/smack:${{ steps.set_tag.outputs.docker_tag }}
+          # Multi-stage build: cache the builder layer aggressively.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          target: runtime
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

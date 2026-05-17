@@ -1,0 +1,108 @@
+name: Fuzz
+
+# Short-pass fuzzing on PRs that touch the translator. Catches crashes
+# that unit tests miss without burning a full ClusterFuzz/OSS-Fuzz cycle.
+
+on:
+  pull_request:
+    paths:
+      - "lib/smack/**"
+      - "include/smack/**"
+      - "tools/llvm2bpl/**"
+      - "unittests/fuzz/**"
+      - ".github/workflows/fuzz.yml"
+  schedule:
+    - cron: "0 2 * * *"   # nightly long-pass
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: "Per-fuzzer wall budget (seconds)"
+        required: false
+        default: "300"
+
+jobs:
+  fuzz-short:
+    name: fuzz short-pass
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install clang + ccache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang ccache
+
+      - name: Cache smack-deps
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/smack-deps
+          key: smack-deps-${{ runner.os }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
+
+      - name: Cache fuzz corpus
+        uses: actions/cache@v4
+        with:
+          path: |
+            unittests/fuzz/corpus
+            ~/.cache/smack-fuzz
+          key: fuzz-corpus-${{ github.ref }}
+          restore-keys: |
+            fuzz-corpus-
+
+      - name: install dependencies
+        env:
+          GITHUB_ACTIONS: true
+        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=0 ./bin/build.sh
+
+      - name: configure with fuzzers
+        env:
+          CCACHE_DIR: /home/runner/.ccache
+        run: |
+          cmake -S . -B build-fuzz -GNinja \
+            -DSMACK_BUILD_FUZZERS=ON \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: build fuzzers
+        run: cmake --build build-fuzz --target fuzzers -j$(nproc)
+
+      - name: Determine budget
+        id: budget
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "seconds=1800" >> "$GITHUB_OUTPUT"   # 30 min nightly
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "seconds=${{ github.event.inputs.max_total_time }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "seconds=120" >> "$GITHUB_OUTPUT"     # PR short pass
+          fi
+
+      - name: Run fuzz_bitcode_parse
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          mkdir -p unittests/fuzz/corpus/bitcode
+          ./build-fuzz/unittests/fuzz/fuzz_bitcode_parse \
+            unittests/fuzz/corpus/bitcode \
+            -max_total_time=${{ steps.budget.outputs.seconds }} \
+            -print_final_stats=1 \
+            -reload=1 \
+            -timeout=30 \
+            -rss_limit_mb=4096
+
+      - name: Upload crash artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: |
+            crash-*
+            leak-*
+            timeout-*
+          if-no-files-found: ignore

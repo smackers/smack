@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+        exclude: ^(sea-dsa/|test/.*\.(c|cpp|rs|bpl|ll|bc)$)
+      - id: trailing-whitespace
+        exclude: ^(sea-dsa/|test/.*\.(c|cpp|rs|bpl|ll|bc)$)
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.8
+    hooks:
+      - id: clang-format
+        files: ^(lib/smack|include/smack|tools|share/smack/include|share/smack/lib|test|examples|unittests)/.*\.(c|h|cpp|hpp|cc|hh)$
+        exclude: ^(sea-dsa/|external/|share/smack/lib/.*\.c$)
+
+  - repo: local
+    hooks:
+      - id: submodule-pins
+        name: Verify submodule SHAs match tools/submodule-pins.txt
+        entry: tools/check_submodule_pins.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit, pre-push]

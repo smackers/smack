@@ -1,0 +1,30 @@
+@PACKAGE_INIT@
+
+# smack-config.cmake — installed at <prefix>/lib/cmake/smack/smack-config.cmake.
+# Lets downstream projects do:
+#   find_package(smack REQUIRED CONFIG)
+#   target_link_libraries(my_target PRIVATE smack::smackTranslator)
+#
+# Provides imported targets:
+#   smack::smackTranslator    — the core C++→Boogie translation library
+#   smack::utils              — utility LLVM passes (MergeGEP, SimplifyEV/IV)
+#   smack::SeaDsaAnalysis     — bundled sea-dsa analysis (from submodule)
+#
+# Also exposes:
+#   smack_VERSION             — package version (set from project())
+#   smack_INCLUDE_DIRS        — install include root
+#   smack_LLVM_VERSION_MAJOR  — LLVM major version this build was linked against
+
+set_and_check(smack_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+
+set(smack_LLVM_VERSION_MAJOR "@LLVM_VERSION_MAJOR@")
+
+include(CMakeFindDependencyMacro)
+
+# LLVM with the same major version this build linked against.
+find_dependency(LLVM "@LLVM_VERSION_MAJOR@" CONFIG)
+
+# Imported targets exported from the build tree.
+include("${CMAKE_CURRENT_LIST_DIR}/smack-targets.cmake")
+
+check_required_components(smack)

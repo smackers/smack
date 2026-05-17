@@ -9,28 +9,23 @@
 # - Git
 # - Python
 # - CMake
-# - LLVM
-# - Clang
-# - Mono
+# - LLVM / Clang
 # - Boost
 # - Z3
 # - Boogie
 # - Corral
-# - Symbooglix
-# - lockpwn
+#
+# Symbooglix, lockpwn, CVC4, Yices2, and Mono support were removed in the
+# Phase 1 modernization. Boogie + Corral run on dotnet (>=8.0); Z3 is the
+# only SMT solver.
 #
 ################################################################################
 
 # Set these flags to control various installation options
 INSTALL_DEPENDENCIES=${INSTALL_DEPENDENCIES:-1}
-INSTALL_MONO=${INSTALL_MONO:-0} # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=${INSTALL_Z3:-1}
-INSTALL_CVC4=${INSTALL_CVC4:-0}
-INSTALL_YICES2=${INSTALL_YICES2:-0}
 INSTALL_BOOGIE=${INSTALL_BOOGIE:-1}
 INSTALL_CORRAL=${INSTALL_CORRAL:-0}
-BUILD_SYMBOOGLIX=${BUILD_SYMBOOGLIX:-0}
-BUILD_LOCKPWN=${BUILD_LOCKPWN:-0}
 BUILD_SMACK=${BUILD_SMACK:-1}
 TEST_SMACK=${TEST_SMACK:-1}
 INSTALL_LLVM=${INSTALL_LLVM:-1}
@@ -48,12 +43,8 @@ SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 DEPS_DIR="${ROOT_DIR}/smack-deps"
 Z3_DIR="${DEPS_DIR}/z3"
-CVC4_DIR="${DEPS_DIR}/cvc4"
-YICES2_DIR="${DEPS_DIR}/yices2"
 BOOGIE_DIR="${DEPS_DIR}/boogie"
 CORRAL_DIR="${DEPS_DIR}/corral"
-SYMBOOGLIX_DIR="${DEPS_DIR}/symbooglix"
-LOCKPWN_DIR="${DEPS_DIR}/lockpwn"
 LLVM_DIR="${DEPS_DIR}/llvm"
 
 source ${SMACK_DIR}/bin/versions
@@ -198,7 +189,7 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
-linux-@(ubuntu|neon)-@(16|18|20|22|24|25)*)
+linux-@(ubuntu|neon)-@(24|25)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   fi
@@ -240,21 +231,12 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20|22|24|25)*)
+  linux-@(ubuntu|neon)-@(24|25)*)
+    # Aggressive scope: 24.04 LTS (noble) is the floor. Older Ubuntu
+    # releases ship glibc < 2.39, which breaks the pinned Z3 binary
+    # download and the LLVM 22 apt suite layout.
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
-    16*)
-      UBUNTU_CODENAME="xenial"
-      ;;
-    18*)
-      UBUNTU_CODENAME="bionic"
-      ;;
-    20*)
-      UBUNTU_CODENAME="focal"
-      ;;
-    22*)
-      UBUNTU_CODENAME="jammy"
-      ;;
     24*)
       UBUNTU_CODENAME="noble"
       ;;
@@ -265,7 +247,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       UBUNTU_CODENAME="questing"
       ;;
     *)
-      puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
+      puts "Release ${RELEASE_VERSION} for ${distro} not supported. SMACK requires Ubuntu 24.04 LTS or newer."
       exit 1
       ;;
     esac
@@ -298,17 +280,6 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
   esac
 
   puts "Installed required packages"
-fi
-
-
-if [ ${INSTALL_MONO} -eq 1 ] ; then
-  puts "Installing mono"
-  # Adding Mono repository
-  sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-  echo "deb https://download.mono-project.com/repo/ubuntu stable-${UBUNTU_CODENAME} main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
-  sudo apt-get update
-  sudo apt-get install -y mono-complete ca-certificates-mono
-  puts "Installed mono"
 fi
 
 
@@ -367,42 +338,6 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
 fi
 
 
-if [ ${INSTALL_CVC4} -eq 1 ] ; then
-  if [ ! -d "$CVC4_DIR" ] ; then
-    puts "Installing CVC4"
-    mkdir -p ${CVC4_DIR}
-    ${WGET} https://github.com/CVC4/CVC4/releases/download/${CVC4_VERSION}/cvc4-${CVC4_VERSION}-x86_64-linux-opt -O ${CVC4_DIR}/cvc4
-    chmod +x ${CVC4_DIR}/cvc4
-    puts "Installed CVC4"
-  else
-    puts "CVC4 already installed"
-  fi
-  echo export PATH=\"${CVC4_DIR}:\$PATH\" >> ${SMACKENV}
-fi
-
-
-if [ ${INSTALL_YICES2} -eq 1 ] ; then
-  if [ ! -d "$YICES2_DIR" ] ; then
-    puts "Installing Yices2"
-    sudo apt-get install -y gperf libgmp-dev
-    cd ${DEPS_DIR}
-    git clone -b Yices-${YICES2_VERSION} https://github.com/SRI-CSL/yices2 yices2-src
-    cd yices2-src
-    autoconf
-    ./configure --prefix=${YICES2_DIR}
-    make -j
-    make install
-    ln -s ${YICES2_DIR}/bin/yices-smt2 ${YICES2_DIR}/bin/yices2
-    cd ${DEPS_DIR}
-    rm -rf yices2-src
-    puts "Installed Yices2"
-  else
-    puts "Yices2 already installed"
-  fi
-  echo export PATH=\"${YICES2_DIR}/bin:\$PATH\" >> ${SMACKENV}
-fi
-
-
 if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
   if [ ! -d "$BOOGIE_DIR" ] ; then
     puts "Installing Boogie"
@@ -424,47 +359,6 @@ if [ ${INSTALL_CORRAL} -eq 1 ] ; then
     puts "Corral already installed"
   fi
   echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
-fi
-
-
-if [ ${BUILD_SYMBOOGLIX} -eq 1 ] ; then
-  if ! upToDate $SYMBOOGLIX_DIR $SYMBOOGLIX_COMMIT ; then
-    puts "Building Symbooglix"
-    if [ ! -d "$SYMBOOGLIX_DIR/.git" ] ; then
-      git clone --recursive https://github.com/boogie-org/symbooglix.git ${SYMBOOGLIX_DIR}
-    fi
-    cd ${SYMBOOGLIX_DIR}/src
-    git reset --hard ${SYMBOOGLIX_COMMIT}
-    ${WGET} https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-    mono ./nuget.exe restore Symbooglix.sln
-    rm -rf /tmp/nuget/
-    xbuild Symbooglix.sln /p:Configuration=Release
-    ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/SymbooglixDriver/bin/Release/z3.exe
-    ln -s ${Z3_DIR}/bin/z3 ${SYMBOOGLIX_DIR}/src/Symbooglix/bin/Release/z3.exe
-    sed -i.debug -e's/Debug/Release/' ${SYMBOOGLIX_DIR}/bin/symbooglix
-    puts "Built Symbooglix"
-  else
-    puts "Symbooglix already built"
-  fi
-  echo export PATH=\"${SYMBOOGLIX_DIR}/bin:\$PATH\" >> ${SMACKENV}
-fi
-
-
-if [ ${BUILD_LOCKPWN} -eq 1 ] ; then
-  if ! upToDate $LOCKPWN_DIR $LOCKPWN_COMMIT ; then
-    puts "Building lockpwn"
-    if [ ! -d "$LOCKPWN_DIR/.git" ] ; then
-      git clone https://github.com/smackers/lockpwn.git ${LOCKPWN_DIR}
-    fi
-    cd ${LOCKPWN_DIR}
-    git reset --hard ${LOCKPWN_COMMIT}
-    msbuild lockpwn.sln /p:Configuration=Release
-    ln -sf ${Z3_DIR}/bin/z3 ${LOCKPWN_DIR}/Binaries/z3.exe
-    puts "Built lockpwn"
-  else
-    puts "Lockpwn already built"
-  fi
-  echo export PATH=\"${LOCKPWN_DIR}/Binaries:\$PATH\" >> ${SMACKENV}
 fi
 
 

@@ -1,0 +1,7 @@
+---
+BasedOnStyle: LLVM
+AllowShortFunctionsOnASingleLine: All
+IndentWidth: '2'
+AllowShortBlocksOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+...
