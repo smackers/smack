@@ -35,20 +35,50 @@ checkout outside `external/deltarel`.
 For the C++ side:
 
 ```sh
-# Default C++20 build with legacy PassManager
+# Default C++23 build with legacy PassManager
 cmake -S . -B build && cmake --build build -j$(nproc)
 
 # Opt into full NewPM pipeline (Tier A+B+C+D via runSmackFullNewPM)
 cmake -S . -B build-newpm -DSMACK_NEW_PM=ON && cmake --build build-newpm -j$(nproc)
 
-# C++17 compatibility mode
-cmake -S . -B build-cxx17 -DSMACK_CXX_STANDARD=17 && cmake --build build-cxx17 -j$(nproc)
+# C++20 compatibility mode (one-cycle escape hatch for the C++23 default)
+cmake -S . -B build-cxx20 -DSMACK_CXX_STANDARD=20 && cmake --build build-cxx20 -j$(nproc)
 
 # C++ unit tests via FetchContent + gtest
 cmake -S . -B build-tests -DSMACK_BUILD_TESTS=ON
 cmake --build build-tests --target smack_unittests -j$(nproc)
 ctest --test-dir build-tests --output-on-failure
+
+# Sanitizer presets (CMakePresets.json: asan / ubsan / asan-ubsan / tsan / msan / coverage / fuzz)
+cmake --preset asan-ubsan
+cmake --build --preset asan-ubsan --target smack_unittests
+ctest --preset asan-ubsan
+
+# libFuzzer harnesses (clang only)
+cmake -S . -B build-fuzz -DSMACK_BUILD_FUZZERS=ON -DCMAKE_CXX_COMPILER=clang++
+cmake --build build-fuzz --target fuzzers -j$(nproc)
+build-fuzz/unittests/fuzz/fuzz_bitcode_parse unittests/fuzz/corpus/bitcode -max_total_time=60
 ```
+
+### Writing new tests
+
+| Surface                          | Pattern                                                     |
+|----------------------------------|-------------------------------------------------------------|
+| Pure Python helper               | `test/python/test_<module>.py`                              |
+| BoogieAst printer / Stmt / Decl  | `unittests/BoogieAst*Test.cpp` — gtest, in-process          |
+| LLVM-IR-driven pass + Naming     | Subclass `IRTestFixture` in `unittests/IRTestFixture.h`     |
+| libFuzzer harness                | `unittests/fuzz/<name>.cpp` + `smack_add_fuzzer(...)`       |
+| Boogie diff after Phase 2 work   | `python3 -m tools.boogie_normalize a.bpl b.bpl`             |
+| Regtest folder (pytest wrapper)  | Mirror entry in `test/python/test_regtest_folders.py`       |
+| Regtest core logic               | `test/regtest_core.py` (pure functions) — covered by pytest |
+
+When you add a new submodule (don't), pin its SHA in
+`tools/submodule-pins.txt` so the local + CI guard
+(`tools/check_submodule_pins.sh`) stays green.
+
+When you bump SMACK's version, edit only
+`share/smack/constants.py` — `pyproject.toml` (hatch dynamic) and
+`CMakeLists.txt` (`file(STRINGS ...)`) both read from there.
 
 
 
