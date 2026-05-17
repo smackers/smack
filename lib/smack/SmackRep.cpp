@@ -16,7 +16,10 @@
 #include "smack/SmackWarnings.h"
 
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <list>
 #include <queue>
@@ -24,6 +27,26 @@
 
 namespace {
 using namespace llvm;
+
+// Report a SMACK-user-facing error and abort. Used by valueAnnotation
+// (and similar IR-shape-validating paths) where the assertion failure
+// reflects malformed user input — not a SMACK invariant. The Boogie
+// source location, if any, is included so users can map the abort
+// back to their `__SMACK_value(...)` / `__SMACK_values(...)` callsite.
+[[noreturn]] void fatalUserError(const llvm::Instruction &I,
+                                 const llvm::Twine &msg) {
+  std::string locStr;
+  {
+    llvm::raw_string_ostream os(locStr);
+    if (auto DL = I.getDebugLoc()) {
+      DL.print(os);
+    } else {
+      os << "<no source location>";
+    }
+  }
+  llvm::report_fatal_error(llvm::Twine("SMACK error at ") + locStr + ": " + msg,
+                           /*GenCrashDiag=*/false);
+}
 
 std::list<CallInst *> findCallers(Function *F) {
   std::list<CallInst *> callers;
@@ -423,8 +446,10 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
   std::list<std::string> rets({naming->get(CI)});
   std::list<const Attr *> attrs;
 
-  assert(CI.arg_size() > 0 && "Expected at least one argument.");
-  assert(CI.arg_size() <= 2 && "Expected at most two arguments.");
+  if (CI.arg_size() == 0)
+    fatalUserError(CI, "__SMACK_value/__SMACK_values expects at least one argument");
+  if (CI.arg_size() > 2)
+    fatalUserError(CI, "__SMACK_value/__SMACK_values expects at most two arguments");
   const Value *V = CI.getArgOperand(0)->stripPointerCastsAndAliases();
 
   if (CI.arg_size() == 1) {
@@ -554,7 +579,9 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
 
     } else if (auto LI = dyn_cast<const LoadInst>(V)) {
       auto GEP = dyn_cast<const GetElementPtrInst>(LI->getPointerOperand());
-      assert(GEP && "Expected GEP argument to load instruction.");
+      if (!GEP)
+        fatalUserError(CI, "__SMACK_value: load argument must come from a "
+                           "getelementptr (struct/array field access)");
 
       const Value *PtrOp = GEP->getPointerOperand();
       while (true) {
@@ -568,8 +595,9 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       }
       BaseObj = PtrOp;
 
-      assert(V->getType()->isPointerTy() &&
-             "Expected pointer type result of load instruction.");
+      if (!V->getType()->isPointerTy())
+        fatalUserError(CI, "__SMACK_value: load argument does not produce a "
+                           "pointer-typed value");
       T = const_cast<Type *>(pointeeType(V));
       // Use the LOADED pointer value as the array base address,
       // not the struct offset where the pointer is stored.
@@ -621,16 +649,22 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
 
     } else if (auto AI = dyn_cast<const AllocaInst>(V)) {
       auto *AT = dyn_cast<llvm::ArrayType>(AI->getAllocatedType());
-      assert(AT && "expected an array type on the stack");
+      if (!AT)
+        fatalUserError(CI, "__SMACK_values: stack argument is not an array "
+                           "(only fixed-size stack arrays are supported)");
       T = AT->getElementType();
       addr = expr(AI);
       BaseObj = AI;
 
     } else {
-      llvm_unreachable("Unexpected argument type.");
+      fatalUserError(CI, "__SMACK_value/__SMACK_values: unsupported argument "
+                         "(expected an alloca, a load from a GEP, or a "
+                         "function argument)");
     }
 
-    assert(BaseObj && "Could not determine base object for annotation");
+    if (!BaseObj)
+      fatalUserError(CI, "internal: failed to determine base object for "
+                         "annotation (please report this with the input)");
     if (auto *I = dyn_cast<Instruction>(BaseObj)) {
       if (!I->hasName())
         naming->get(*I);
@@ -638,9 +672,13 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
 
     attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*BaseObj))}));
 
-    assert(T && "Unknown access type.");
+    if (!T)
+      fatalUserError(CI, "internal: failed to resolve access type for "
+                         "annotation (please report this with the input)");
     auto I = dyn_cast<ConstantInt>(CI.getArgOperand(1));
-    assert(I && "expected constant size expression.");
+    if (!I)
+      fatalUserError(CI, "__SMACK_values: second argument (count) must be a "
+                         "constant integer");
 
     const unsigned argCount = I->getZExtValue();
     const unsigned singleObjSize = this->getSize(T) / 8;
