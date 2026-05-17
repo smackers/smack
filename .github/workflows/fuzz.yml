@@ -104,6 +104,7 @@ jobs:
           mkdir -p unittests/fuzz/corpus/boogie_ast
           ./build-fuzz/unittests/fuzz/fuzz_boogie_ast_print \
             unittests/fuzz/corpus/boogie_ast \
+            -dict=unittests/fuzz/dict/boogie_ast.dict \
             -max_total_time=${{ steps.budget.outputs.seconds }} \
             -print_final_stats=1 \
             -reload=1 \
