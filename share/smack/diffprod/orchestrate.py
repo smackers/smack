@@ -16,6 +16,7 @@ import tempfile
 from pathlib import Path
 
 from smack.cli.results import VProperty, VResult
+from smack.logging_config import get_logger
 from smack.pipeline.frontend import frontend, target_selection
 from smack.pipeline.transform import transform_bpl, transform_out
 from smack.pipeline.translate import (
@@ -30,6 +31,9 @@ from smack.verifier.commands import (
     corral_command,
 )
 from smack.verifier.runner import verification_result
+
+
+_log = get_logger("diffprod")
 
 
 def _exit_with_error(error):
@@ -219,7 +223,7 @@ def run_paired_diff_product_lowering(args, left_args, right_args, tmp_dir):
     )
 
     if args.debug:
-        print("Running {}".format(" ".join(cmd)))
+        _log.debug("Running %s", " ".join(cmd))
 
     try:
         completed = subprocess.run(

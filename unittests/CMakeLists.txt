@@ -18,6 +18,7 @@ add_executable(smack_unittests
   BoogieAstStmtTest.cpp
   BoogieAstContainerTest.cpp
   NamingTest.cpp
+  NamingIRTest.cpp
   NewPMSiblingsTest.cpp
   NewPMEdgeCasesTest.cpp
 )

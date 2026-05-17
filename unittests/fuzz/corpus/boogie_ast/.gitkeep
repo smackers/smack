@@ -1,0 +1,3 @@
+# Seed corpus for fuzz_boogie_ast_print. Bytes drive the AST factory
+# selection in unittests/fuzz/fuzz_boogie_ast_print.cpp. Empty corpus
+# is fine; libFuzzer just starts from zero coverage.

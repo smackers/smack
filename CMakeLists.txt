@@ -4,8 +4,8 @@
 
 cmake_minimum_required(VERSION 3.20)
 project(smack)
-set(SMACK_CXX_STANDARD "20" CACHE STRING "C++ standard for SMACK targets (17 or 20). Default bumped to 20 after K2 validation.")
-set_property(CACHE SMACK_CXX_STANDARD PROPERTY STRINGS "17" "20")
+set(SMACK_CXX_STANDARD "23" CACHE STRING "C++ standard for SMACK targets (20 or 23). Default is 23; 20 stays in CI for one cycle.")
+set_property(CACHE SMACK_CXX_STANDARD PROPERTY STRINGS "20" "23")
 set(CMAKE_CXX_STANDARD ${SMACK_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(SMACK_ENABLE_INPROCESS_SVF "Enable in-process SVF-backed memory partitioning" OFF)

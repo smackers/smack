@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cxx_standard: ["17", "20"]
+        cxx_standard: ["20", "23"]
     name: cpp-unittests (C++${{ matrix.cxx_standard }})
     steps:
       - uses: actions/checkout@v4
