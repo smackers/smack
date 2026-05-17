@@ -1,3 +1,16 @@
+# Submodule pins are enforced by the gitlink object that git records when
+# the superproject commits a submodule. The SHAs below are the *current*
+# expected pins (recorded 2026-05-17). `tools/check_submodule_pins.sh`
+# diffs `git submodule status` against `tools/submodule-pins.txt` in CI;
+# bump both files together when intentionally moving a submodule.
+#
+# Do NOT run `git submodule update --remote` without also updating
+# tools/submodule-pins.txt — `--remote` silently follows upstream HEAD.
 [submodule "sea-dsa"]
   path = sea-dsa
   url = https://github.com/seahorn/sea-dsa.git
+  # pinned: 821d3045eec5b7b55c824c16e60b56a37215759d
+[submodule "external/deltarel"]
+  path = external/deltarel
+  url = https://github.com/alexthomasv/deltarel.git
+  # pinned: 20e3b69a906c24a9ace772e42087e1a5cc66720c

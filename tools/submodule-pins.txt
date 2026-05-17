@@ -1,0 +1,5 @@
+# Expected submodule SHAs. Format: <sha> <path>
+# Used by tools/check_submodule_pins.sh in CI. Update together with the
+# gitlink (commit the submodule bump and edit this file in the same PR).
+821d3045eec5b7b55c824c16e60b56a37215759d sea-dsa
+20e3b69a906c24a9ace772e42087e1a5cc66720c external/deltarel
