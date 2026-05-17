@@ -35,6 +35,7 @@ pattern = "^VERSION\\s*=\\s*['\"](?P<version>[^'\"]+)['\"]"
 [tool.hatch.build.targets.wheel]
 packages = ["share/smack"]
 sources = ["share"]
+include = ["share/smack/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["test/python"]
