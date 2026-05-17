@@ -11,7 +11,10 @@ from pathlib import Path
 from threading import Timer
 from typing import Optional
 
+from .logging_config import get_logger
 from .versions import LLVM_SHORT_VERSION
+
+_log = get_logger("utils")
 
 temporary_files: list[str] = []
 
@@ -68,8 +71,11 @@ def try_command(
         for k, v in env.items():
             os.putenv(k, v)
     try:
+        # smack.utils logger respects --debug via logging_config.configure.
+        # Kept the level check explicit (rather than just _log.debug(...))
+        # because the join() is non-trivial when arg lists are long.
         if args.debug:
-            print("Running {}".format(" ".join(cmd)))
+            _log.debug("Running %s", " ".join(cmd))
 
         proc = subprocess.Popen(
             cmd,
@@ -112,7 +118,7 @@ def try_command(
             return output
 
     except (RuntimeError, OSError) as err:
-        print(output, file=sys.stderr)
+        _log.error("subprocess output before failure:\n%s", output)
         sys.exit("Error invoking command:\n{}\n{}".format(" ".join(cmd), err))
 
     finally:
