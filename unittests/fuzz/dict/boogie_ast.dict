@@ -1,0 +1,53 @@
+# libFuzzer dictionary for fuzz_boogie_ast_print. Hints byte values that
+# correspond to the factory branches in unittests/fuzz/fuzz_boogie_ast_print.cpp.
+# Run with `-dict=unittests/fuzz/dict/boogie_ast.dict`.
+
+# Cursor::next() % 9 in makeExpr selects:
+#   0..2 = literals (true/false/intlit)
+#   3    = identifier
+#   4..8 = binary/unary operators
+"\x00"
+"\x01"
+"\x02"
+"\x03"
+"\x04"
+"\x05"
+"\x06"
+"\x07"
+"\x08"
+
+# Cursor::next() % 6 in makeStmt selects assert/assume/havoc/comment/goto/return.
+"\x09"
+"\x0a"
+"\x0b"
+"\x0c"
+"\x0d"
+"\x0e"
+
+# Identifier seed bytes — push the Cursor::ident alphabet into common
+# Boogie/SMACK names so the printer hits the keyword-collision paths.
+"$"
+"main"
+"alloca"
+"assume"
+"assert"
+"forall"
+"exists"
+"requires"
+"ensures"
+"modifies"
+"goto"
+"havoc"
+"return"
+"break"
+"true"
+"false"
+"$M"
+"$M.0"
+"$tmp"
+"$bb"
+"__SMACK"
+"int"
+"bool"
+"ref"
+"$0.ref"
