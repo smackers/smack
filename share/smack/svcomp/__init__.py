@@ -1,21 +1,12 @@
 """SV-COMP integration: portfolio driver + result XML emission.
 
-Lazy attribute access — utils imports smack.top which itself reaches
-back into svcomp.utils, so an eager `from .utils import ...` here
-creates a circular import. PEP 562 __getattr__ defers the lookup
-until the symbol is actually requested.
+Intentionally empty re-export surface: ``smack.svcomp.utils`` already
+does ``import smack.top`` at module scope and ``smack.top`` imports
+back into ``smack.svcomp.utils``. Adding a `verify_bpl_svcomp`
+re-export here (eager or lazy) doesn't help because the cycle is in
+the importer chain, not at this package boundary.
+
+Callers should keep using ``from smack.svcomp.utils import verify_bpl_svcomp``
+until the top.py / svcomp.utils mutual import is untangled. The
+modernization-status doc tracks this as a follow-up.
 """
-
-from __future__ import annotations
-
-from typing import Any
-
-__all__ = ["verify_bpl_svcomp"]
-
-
-def __getattr__(name: str) -> Any:
-    if name == "verify_bpl_svcomp":
-        from .utils import verify_bpl_svcomp
-
-        return verify_bpl_svcomp
-    raise AttributeError(f"module 'smack.svcomp' has no attribute {name!r}")
