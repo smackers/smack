@@ -8,6 +8,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/SmackRep.h"
 
+#include <memory>
 #include <string>
 
 namespace smack {
@@ -185,24 +186,33 @@ struct MemDeclGen : public Gen {
 };
 
 class Prelude {
-  TypeDeclGen *typeDeclGen;
-  ConstDeclGen *constDeclGen;
-  MemDeclGen *memDeclGen;
-  IntOpGen *intOpGen;
-  PtrOpGen *ptrOpGen;
-  FpOpGen *fpOpGen;
-
 public:
+  // `rep` is declared first so it initializes before the Gen members below;
+  // C++ initializes data members in declaration order regardless of the
+  // member-initializer-list order.
   SmackRep &rep;
 
-  Prelude(SmackRep &rep) : rep(rep) {
-    typeDeclGen = new TypeDeclGen(*this);
-    constDeclGen = new ConstDeclGen(*this);
-    memDeclGen = new MemDeclGen(*this);
-    intOpGen = new IntOpGen(*this);
-    ptrOpGen = new PtrOpGen(*this);
-    fpOpGen = new FpOpGen(*this);
-  }
+private:
+  // unique_ptr to the Gen-derived sub-generators. Gen has a virtual dtor
+  // so polymorphic deletion is safe. The previous raw-pointer + no-dtor
+  // layout leaked one of each per Prelude construction; SMACK builds one
+  // Prelude per pipeline so the leak was small but real.
+  std::unique_ptr<TypeDeclGen> typeDeclGen;
+  std::unique_ptr<ConstDeclGen> constDeclGen;
+  std::unique_ptr<MemDeclGen> memDeclGen;
+  std::unique_ptr<IntOpGen> intOpGen;
+  std::unique_ptr<PtrOpGen> ptrOpGen;
+  std::unique_ptr<FpOpGen> fpOpGen;
+
+public:
+  Prelude(SmackRep &rep)
+      : rep(rep),
+        typeDeclGen(std::make_unique<TypeDeclGen>(*this)),
+        constDeclGen(std::make_unique<ConstDeclGen>(*this)),
+        memDeclGen(std::make_unique<MemDeclGen>(*this)),
+        intOpGen(std::make_unique<IntOpGen>(*this)),
+        ptrOpGen(std::make_unique<PtrOpGen>(*this)),
+        fpOpGen(std::make_unique<FpOpGen>(*this)) {}
 
   std::string getPrelude();
   const Expr *mapSelExpr(unsigned idx);
