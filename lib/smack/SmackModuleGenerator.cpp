@@ -755,11 +755,10 @@ SmackModuleGenerator::SmackModuleGenerator(bool structuredBplLoops,
 SmackModuleGenerator::SmackModuleGenerator(
     bool structuredBplLoops, bool structuredBplLoopsStrict,
     SmackMemoryPartitionReport *memoryPartitionReport)
-    : ModulePass(ID), structuredBplLoops(structuredBplLoops),
+    : ModulePass(ID), program(std::make_unique<Program>()),
+      structuredBplLoops(structuredBplLoops),
       structuredBplLoopsStrict(structuredBplLoopsStrict),
-      memoryPartitionReport(memoryPartitionReport) {
-  program = new Program();
-}
+      memoryPartitionReport(memoryPartitionReport) {}
 
 void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -786,7 +785,7 @@ void SmackModuleGenerator::generateProgramImpl(
     llvm::function_ref<LoopInfo &(Function &)> getLoopInfo) {
 
   Naming naming;
-  SmackRep rep(&M.getDataLayout(), &naming, program, &regionsRef);
+  SmackRep rep(&M.getDataLayout(), &naming, program.get(), &regionsRef);
   std::list<Decl *> &decls = program->getDeclarations();
 
   SDEBUG(errs() << "Analyzing globals...\n");

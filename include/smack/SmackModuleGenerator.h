@@ -8,6 +8,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
+#include <memory>
+
 namespace llvm {
 class LoopInfo;
 }
@@ -20,7 +22,9 @@ struct SmackMemoryPartitionReport;
 
 class SmackModuleGenerator : public llvm::ModulePass {
 private:
-  Program *program;
+  // unique_ptr — the legacy raw pointer + no destructor leaked the Program
+  // (and everything it owned) every time the pass was destroyed.
+  std::unique_ptr<Program> program;
   bool structuredBplLoops;
   bool structuredBplLoopsStrict;
   SmackMemoryPartitionReport *memoryPartitionReport;
@@ -41,7 +45,9 @@ public:
   void generateProgramImpl(
       llvm::Module &M, Regions &regions,
       llvm::function_ref<llvm::LoopInfo &(llvm::Function &)> getLoopInfo);
-  Program *getProgram() { return program; }
+  // Non-owning pointer; lifetime matches this SmackModuleGenerator. Callers
+  // (BplPrinter / BplFilePrinter) only use it within the same pass run.
+  Program *getProgram() { return program.get(); }
 };
 
 // NewPM ModuleAnalysis returning the generated `Program*`. Consumed by
