@@ -1,11 +1,11 @@
 """Unit tests for smack.verifier.process — Command dataclass + runner."""
 
+import dataclasses
 import os
 import sys
 
 import pytest
 from smack.verifier.process import Command, CommandCrashed, CommandError, CommandResult
-
 
 # ---------- Command (pure dataclass behaviour) ----------
 
@@ -37,7 +37,8 @@ def test_command_with_extra_args_appends_preserving_other_fields():
 
 def test_command_is_immutable_frozen_dataclass():
     cmd = Command(executable="boogie", args=("x",))
-    with pytest.raises(Exception):
+    # @dataclass(frozen=True) raises FrozenInstanceError on attribute write.
+    with pytest.raises(dataclasses.FrozenInstanceError):
         cmd.executable = "corral"  # type: ignore[misc]
 
 

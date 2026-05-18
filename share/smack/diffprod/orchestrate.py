@@ -32,7 +32,6 @@ from smack.verifier.commands import (
 )
 from smack.verifier.runner import verification_result
 
-
 _log = get_logger("diffprod")
 
 

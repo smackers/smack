@@ -33,8 +33,8 @@ import argparse
 import difflib
 import re
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 # Match SMACK's generated variable-suffix pattern: `$<word>.<digits>`.
 # We strip the numeric suffix so `$tmp.1` and `$tmp.7` compare equal —
@@ -64,7 +64,7 @@ def _normalize_var_suffixes(text: str) -> str:
     return _VAR_SUFFIX_RE.sub(r"\1.N", text)
 
 
-def _normalize_attr_args(match: "re.Match[str]") -> str:
+def _normalize_attr_args(match: re.Match[str]) -> str:
     name = match.group(1)
     raw_args = match.group(2)
     # Split on commas + strip; sort.
@@ -78,7 +78,7 @@ def _normalize_attrs(text: str) -> str:
 
 
 def _collapse_blank_lines(text: str) -> str:
-    out: List[str] = []
+    out: list[str] = []
     blank_run = 0
     for line in text.splitlines():
         stripped = line.rstrip()
@@ -107,18 +107,14 @@ def canonicalize(text: str) -> str:
     return text
 
 
-def diff_files(left: str | Path, right: str | Path) -> List[str]:
+def diff_files(left: str | Path, right: str | Path) -> list[str]:
     """Return a list of unified-diff lines between the canonicalized
     forms of two `.bpl` files. Empty list means no drift."""
     left_path = Path(left)
     right_path = Path(right)
     a = canonicalize(left_path.read_text()).splitlines(keepends=True)
     b = canonicalize(right_path.read_text()).splitlines(keepends=True)
-    return list(
-        difflib.unified_diff(
-            a, b, fromfile=str(left_path), tofile=str(right_path), n=3
-        )
-    )
+    return list(difflib.unified_diff(a, b, fromfile=str(left_path), tofile=str(right_path), n=3))
 
 
 def main(argv: Iterable[str] | None = None) -> int:

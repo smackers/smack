@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import re
 from pathlib import Path
-from typing import Optional
 
 from smack.frontend import extra_libs, frontends, languages, link_bc_files
 from smack.utils import llvm_exact_bin, temporary_file, try_command
@@ -35,7 +34,7 @@ def target_selection(args: argparse.Namespace) -> None:
                         break
 
 
-def frontend(args: argparse.Namespace) -> Optional[str]:
+def frontend(args: argparse.Namespace) -> str | None:
     """Generate the LLVM bitcode file. Returns the linked .bc path, or None
     when the frontend short-circuits the pipeline (boogie / svcomp / json)."""
     bitcodes: list[str] = []

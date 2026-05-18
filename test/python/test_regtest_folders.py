@@ -122,13 +122,8 @@ def test_regtest_folder(spec: tuple[str, str | None, list[str]], tmp_path: Path)
 
     if proc.returncode != 0:
         pytest.fail(
-            "regtest.py failed (rc={rc}) for {cmd}\n"
-            "--- stdout ---\n{out}\n--- stderr ---\n{err}".format(
-                rc=proc.returncode,
-                cmd=shlex.join(cmd),
-                out=proc.stdout[-8000:],
-                err=proc.stderr[-4000:],
-            )
+            f"regtest.py failed (rc={proc.returncode}) for {shlex.join(cmd)}\n"
+            f"--- stdout ---\n{proc.stdout[-8000:]}\n--- stderr ---\n{proc.stderr[-4000:]}"
         )
 
 

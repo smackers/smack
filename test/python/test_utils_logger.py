@@ -49,9 +49,9 @@ def test_running_cmd_emits_debug_log_when_debug_flag_set(monkeypatch, caplog):
         for r in caplog.records
         if r.name == "smack.utils" and r.levelno == logging.DEBUG
     ]
-    assert any("Running true" in m for m in debug_msgs), (
-        f"expected a 'Running true' debug message; got {debug_msgs!r}"
-    )
+    assert any(
+        "Running true" in m for m in debug_msgs
+    ), f"expected a 'Running true' debug message; got {debug_msgs!r}"
 
 
 def test_running_cmd_silent_when_debug_flag_unset(monkeypatch, caplog):
@@ -70,9 +70,7 @@ def test_running_cmd_silent_when_debug_flag_unset(monkeypatch, caplog):
         for r in caplog.records
         if r.name == "smack.utils" and r.levelno == logging.DEBUG
     ]
-    assert not debug_msgs, (
-        f"expected no debug messages without --debug; got {debug_msgs!r}"
-    )
+    assert not debug_msgs, f"expected no debug messages without --debug; got {debug_msgs!r}"
 
 
 def test_subprocess_failure_logs_error_then_exits(monkeypatch, caplog):
@@ -83,18 +81,20 @@ def test_subprocess_failure_logs_error_then_exits(monkeypatch, caplog):
 
     _install_smack_top_args(monkeypatch, make_args(debug=False))
 
-    with caplog.at_level(logging.ERROR, logger="smack.utils"):
-        with pytest.raises(SystemExit):
-            utils.try_command(["/nonexistent-smack-binary-for-test"])
+    with (
+        caplog.at_level(logging.ERROR, logger="smack.utils"),
+        pytest.raises(SystemExit),
+    ):
+        utils.try_command(["/nonexistent-smack-binary-for-test"])
 
     error_msgs = [
         r.getMessage()
         for r in caplog.records
         if r.name == "smack.utils" and r.levelno == logging.ERROR
     ]
-    assert any("subprocess output before failure" in m for m in error_msgs), (
-        f"expected an error log on subprocess failure; got {error_msgs!r}"
-    )
+    assert any(
+        "subprocess output before failure" in m for m in error_msgs
+    ), f"expected an error log on subprocess failure; got {error_msgs!r}"
 
 
 def test_logger_name_is_under_smack_namespace():
@@ -118,8 +118,7 @@ def test_no_bare_print_imports_in_utils_module():
     # remaining bare print — count it.
     print_calls = src.count("print(")
     assert print_calls <= 1, (
-        f"expected at most one print() in utils.py (the console echo); "
-        f"found {print_calls}"
+        f"expected at most one print() in utils.py (the console echo); " f"found {print_calls}"
     )
 
 

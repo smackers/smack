@@ -17,7 +17,6 @@ sys.path.insert(0, str(_REPO_ROOT / "test"))
 
 import regtest_core as rc  # noqa: E402
 
-
 # ---------- get_result ----------
 
 

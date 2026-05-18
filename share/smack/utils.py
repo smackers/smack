@@ -9,7 +9,6 @@ import sys
 import tempfile
 from pathlib import Path
 from threading import Timer
-from typing import Optional
 
 from .logging_config import get_logger
 from .versions import LLVM_SHORT_VERSION
@@ -51,10 +50,10 @@ def timeout_killer(proc: subprocess.Popen[str], timed_out: list[bool]) -> None:
 
 def try_command(
     cmd: list[str],
-    cwd: Optional[str] = None,
+    cwd: str | None = None,
     console: bool = False,
-    timeout: Optional[float] = None,
-    env: Optional[dict[str, str]] = None,
+    timeout: float | None = None,
+    env: dict[str, str] | None = None,
 ) -> str:
     # Lazy import to avoid a load-time cycle with top.py (which itself
     # re-exports symbols from pipeline.translate which imports utils).
@@ -64,8 +63,8 @@ def try_command(
     console = (console or args.verbose or args.debug) and not args.quiet
     filelog: bool = args.debug
     output = ''
-    proc: Optional[subprocess.Popen[str]] = None
-    timer: Optional[Timer] = None
+    proc: subprocess.Popen[str] | None = None
+    timer: Timer | None = None
     timed_out: list[bool] = [False]
     if env is not None:
         for k, v in env.items():

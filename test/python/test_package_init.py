@@ -9,9 +9,9 @@ import smack
 
 def test_version_is_semver_string():
     assert isinstance(smack.__version__, str)
-    assert re.fullmatch(r"\d+\.\d+\.\d+(?:[.\-+].*)?", smack.__version__), (
-        f"__version__={smack.__version__!r} is not semver-shaped"
-    )
+    assert re.fullmatch(
+        r"\d+\.\d+\.\d+(?:[.\-+].*)?", smack.__version__
+    ), f"__version__={smack.__version__!r} is not semver-shaped"
 
 
 def test_version_matches_constants_module():

@@ -20,22 +20,21 @@ Example::
 
 from __future__ import annotations
 
+import contextlib
 import os
 import signal
 import subprocess
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Timer
-from typing import Mapping, Optional, Sequence
 
 
 class CommandError(RuntimeError):
     """Subprocess returned non-zero (and was not killed by timeout)."""
 
-    def __init__(self, command: "Command", returncode: int, output: str) -> None:
-        super().__init__(
-            f"command {command.executable!r} failed with rc={returncode}\n{output}"
-        )
+    def __init__(self, command: Command, returncode: int, output: str) -> None:
+        super().__init__(f"command {command.executable!r} failed with rc={returncode}\n{output}")
         self.command = command
         self.returncode = returncode
         self.output = output
@@ -44,10 +43,8 @@ class CommandError(RuntimeError):
 class CommandCrashed(RuntimeError):
     """Subprocess crashed (SIGSEGV or other fatal signal)."""
 
-    def __init__(self, command: "Command", signal_no: int) -> None:
-        super().__init__(
-            f"command {command.executable!r} terminated by signal {signal_no}"
-        )
+    def __init__(self, command: Command, signal_no: int) -> None:
+        super().__init__(f"command {command.executable!r} terminated by signal {signal_no}")
         self.command = command
         self.signal_no = signal_no
 
@@ -63,7 +60,7 @@ class CommandResult:
     callers depend on for verifier output parsing).
     """
 
-    command: "Command"
+    command: Command
     returncode: int
     stdout: str
     timed_out: bool
@@ -84,15 +81,15 @@ class Command:
 
     executable: str
     args: Sequence[str] = field(default_factory=tuple)
-    cwd: Optional[Path] = None
+    cwd: Path | None = None
     env: Mapping[str, str] = field(default_factory=dict)
-    timeout: Optional[float] = None
+    timeout: float | None = None
     console_echo: bool = False
 
     def to_argv(self) -> list[str]:
         return [self.executable, *self.args]
 
-    def with_extra_args(self, *extra: str) -> "Command":
+    def with_extra_args(self, *extra: str) -> Command:
         """Return a new Command with additional positional args appended."""
         return Command(
             executable=self.executable,
@@ -103,7 +100,7 @@ class Command:
             console_echo=self.console_echo,
         )
 
-    def _build_env(self) -> Optional[Mapping[str, str]]:
+    def _build_env(self) -> Mapping[str, str] | None:
         if not self.env:
             return None
         merged = dict(os.environ)
@@ -120,8 +117,8 @@ class Command:
         """
         argv = self.to_argv()
         output = ""
-        proc: Optional[subprocess.Popen[str]] = None
-        timer: Optional[Timer] = None
+        proc: subprocess.Popen[str] | None = None
+        timer: Timer | None = None
         timed_out_flag = [False]
 
         try:
@@ -136,10 +133,12 @@ class Command:
             )
 
             if self.timeout:
+
                 def _kill() -> None:
                     if not timed_out_flag[0] and proc and proc.poll() is None:
                         timed_out_flag[0] = True
                         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
                 timer = Timer(self.timeout, _kill)
                 timer.start()
 
@@ -166,14 +165,10 @@ class Command:
                 raise CommandCrashed(self, signal.SIGSEGV)
             if rc:
                 raise CommandError(self, rc, output)
-            return CommandResult(
-                command=self, returncode=rc, stdout=output, timed_out=False
-            )
+            return CommandResult(command=self, returncode=rc, stdout=output, timed_out=False)
         finally:
             if timer:
                 timer.cancel()
             if proc:
-                try:
+                with contextlib.suppress(ProcessLookupError, OSError):
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                except (ProcessLookupError, OSError):
-                    pass

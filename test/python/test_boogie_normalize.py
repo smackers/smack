@@ -15,7 +15,6 @@ sys.path.insert(0, str(_REPO_ROOT))
 
 from tools.boogie_normalize import canonicalize, diff_files, main  # noqa: E402
 
-
 # ---------- comment stripping ----------
 
 
