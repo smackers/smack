@@ -26,6 +26,14 @@ def make_args(**overrides):
     return argparse.Namespace(**defaults)
 
 
+@pytest.fixture(autouse=True)
+def _chdir_for_isolation(monkeypatch, tmp_path):
+    """try_command's filelog branch (args.debug=True) writes a temp log
+    in cwd. chdir into tmp_path so the test artifacts don't pollute the
+    repo root."""
+    monkeypatch.chdir(tmp_path)
+
+
 def _install_smack_top_args(monkeypatch, args):
     """try_command pulls smack.top.args at runtime. Plant a fake."""
     import smack.top
