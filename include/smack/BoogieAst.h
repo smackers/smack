@@ -351,6 +351,7 @@ class AssertStmt : public Stmt {
 public:
   AssertStmt(const Expr *e, std::list<const Attr *> ax)
       : Stmt(ASSERT), expr(e), attrs(ax) {}
+  const Expr *getExpr() const { return expr; }
   void print(std::ostream &os) const override;
   static bool classof(const Stmt *S) { return S->getKind() == ASSERT; }
 };
@@ -362,6 +363,8 @@ class AssignStmt : public Stmt {
 public:
   AssignStmt(std::list<const Expr *> lhs, std::list<const Expr *> rhs)
       : Stmt(ASSIGN), lhs(lhs), rhs(rhs) {}
+  const std::list<const Expr *> &getLhs() const { return lhs; }
+  const std::list<const Expr *> &getRhs() const { return rhs; }
   void print(std::ostream &os) const override;
   static bool classof(const Stmt *S) { return S->getKind() == ASSIGN; }
 };

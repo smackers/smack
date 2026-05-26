@@ -12,11 +12,13 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include <fstream>
 #include "llvm/Support/GraphWriter.h"
 #include "smack/Regions.h"
+#include <iterator>
 #include <regex>
 #include <sstream>
 
@@ -31,6 +33,7 @@ using llvm::errs;
 using namespace llvm;
 
 const bool SHOW_ORIG = false;
+const size_t MAX_PROVENANCE_ATTR_VALUE = 2048;
 
 #define ORIG(ins)                                                              \
   if (SHOW_ORIG)                                                               \
@@ -59,11 +62,641 @@ Type *getElemType(const Type *t, unsigned idx) {
     llvm_unreachable("Unexpected aggregate type.");
 }
 
-void SmackInstGenerator::emit(const Stmt *s) {
+static std::string joinStrings(const std::set<std::string> &items) {
+  std::stringstream ss;
+  bool first = true;
+  for (const auto &item : items) {
+    if (item.empty())
+      continue;
+    if (!first)
+      ss << ",";
+    ss << item;
+    first = false;
+  }
+  return ss.str();
+}
+
+static std::string joinExprStrings(const std::list<const Expr *> &exprs) {
+  std::stringstream ss;
+  bool first = true;
+  for (auto *expr : exprs) {
+    if (!first)
+      ss << ", ";
+    ss << expr;
+    first = false;
+  }
+  return ss.str();
+}
+
+static std::string capProvenanceString(const std::string &value) {
+  if (value.size() <= MAX_PROVENANCE_ATTR_VALUE)
+    return value;
+  return value.substr(0, MAX_PROVENANCE_ATTR_VALUE) + "...[truncated]";
+}
+
+static void addStringAttr(std::list<const Attr *> &attrs,
+                          const std::string &name, const std::string &value) {
+  if (!value.empty())
+    attrs.push_back(Attr::attr(name, capProvenanceString(value)));
+}
+
+static std::string sourcePath(const DIScope *scope) {
+  if (!scope)
+    return "";
+  std::string filename = scope->getFilename().str();
+  if (filename.empty())
+    return "";
+  if (filename[0] == '/')
+    return filename;
+  std::string directory = scope->getDirectory().str();
+  return directory.empty() ? filename : directory + "/" + filename;
+}
+
+static std::string cmpPredicateSymbol(CmpInst::Predicate pred) {
+  switch (pred) {
+  case CmpInst::ICMP_EQ:
+  case CmpInst::FCMP_OEQ:
+  case CmpInst::FCMP_UEQ:
+    return "==";
+  case CmpInst::ICMP_NE:
+  case CmpInst::FCMP_ONE:
+  case CmpInst::FCMP_UNE:
+    return "!=";
+  case CmpInst::ICMP_SGE:
+  case CmpInst::ICMP_UGE:
+  case CmpInst::FCMP_OGE:
+  case CmpInst::FCMP_UGE:
+    return ">=";
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_UGT:
+  case CmpInst::FCMP_OGT:
+  case CmpInst::FCMP_UGT:
+    return ">";
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_ULE:
+  case CmpInst::FCMP_OLE:
+  case CmpInst::FCMP_ULE:
+    return "<=";
+  case CmpInst::ICMP_SLT:
+  case CmpInst::ICMP_ULT:
+  case CmpInst::FCMP_OLT:
+  case CmpInst::FCMP_ULT:
+    return "<";
+  default:
+    return CmpInst::getPredicateName(pred).str();
+  }
+}
+
+static std::string binaryOperatorSymbol(unsigned opcode) {
+  switch (opcode) {
+  case Instruction::Add:
+  case Instruction::FAdd:
+    return "+";
+  case Instruction::Sub:
+  case Instruction::FSub:
+    return "-";
+  case Instruction::Mul:
+  case Instruction::FMul:
+    return "*";
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+  case Instruction::FDiv:
+    return "/";
+  case Instruction::SRem:
+  case Instruction::URem:
+  case Instruction::FRem:
+    return "%";
+  case Instruction::And:
+    return "&";
+  case Instruction::Or:
+    return "|";
+  case Instruction::Xor:
+    return "^";
+  case Instruction::Shl:
+    return "<<";
+  case Instruction::LShr:
+  case Instruction::AShr:
+    return ">>";
+  default:
+    return Instruction::getOpcodeName(opcode);
+  }
+}
+
+std::string SmackInstGenerator::exprString(const Expr *expr) const {
+  std::stringstream ss;
+  if (expr)
+    ss << expr;
+  return ss.str();
+}
+
+std::string SmackInstGenerator::stmtString(const Stmt *stmt) const {
+  std::stringstream ss;
+  if (stmt)
+    stmt->print(ss);
+  return ss.str();
+}
+
+std::string
+SmackInstGenerator::directSourceName(const llvm::Value *value) const {
+  if (!value)
+    return "";
+
+  const llvm::Value *stripped = value->stripPointerCastsAndAliases();
+  auto sourceIt = sourceNames.find(stripped);
+  if (sourceIt != sourceNames.end() && !sourceIt->second.empty())
+    return sourceIt->second;
+  sourceIt = sourceNames.find(value);
+  if (sourceIt != sourceNames.end() && !sourceIt->second.empty())
+    return sourceIt->second;
+
+  if (auto *arg = llvm::dyn_cast<llvm::Argument>(stripped)) {
+    if (arg->hasName())
+      return arg->getName().str();
+  }
+  if (auto *global = llvm::dyn_cast<llvm::GlobalValue>(stripped)) {
+    if (global->hasName())
+      return global->getName().str();
+  }
+  if (stripped->hasName() &&
+      !Naming::isSmackGeneratedName(stripped->getName().str()))
+    return stripped->getName().str();
+
+  return "";
+}
+
+std::string SmackInstGenerator::valueName(const llvm::Value *value) const {
+  if (!value)
+    return "";
+
+  const llvm::Value *stripped = value->stripPointerCastsAndAliases();
+  std::string name = directSourceName(stripped);
+  if (!name.empty())
+    return name;
+
+  auto provIt = provenance.find(stripped);
+  if (provIt != provenance.end()) {
+    if (!provIt->second.sourceLhs.empty())
+      return provIt->second.sourceLhs;
+    if (!provIt->second.sourceExpr.empty())
+      return provIt->second.sourceExpr;
+  }
+
+  return exprString(rep->expr(stripped));
+}
+
+std::string
+SmackInstGenerator::boogieValueExpr(const llvm::Value *value) const {
+  if (!value)
+    return "";
+  return exprString(rep->expr(value->stripPointerCastsAndAliases()));
+}
+
+std::string SmackInstGenerator::sourceExpr(const llvm::Value *value) const {
+  if (!value)
+    return "";
+
+  const llvm::Value *stripped = value->stripPointerCastsAndAliases();
+  auto provIt = provenance.find(stripped);
+  if (provIt != provenance.end()) {
+    if (!provIt->second.sourceExpr.empty())
+      return capProvenanceString(provIt->second.sourceExpr);
+    if (!provIt->second.boogieExpr.empty())
+      return capProvenanceString(provIt->second.boogieExpr);
+  }
+  return capProvenanceString(valueName(stripped));
+}
+
+std::set<std::string> SmackInstGenerator::sourceVars(
+    const llvm::Value *value) const {
+  std::set<std::string> vars;
+  if (!value)
+    return vars;
+
+  const llvm::Value *stripped = value->stripPointerCastsAndAliases();
+  auto provIt = provenance.find(stripped);
+  if (provIt != provenance.end())
+    vars.insert(provIt->second.sourceVars.begin(),
+                provIt->second.sourceVars.end());
+
+  auto sourceIt = sourceNames.find(stripped);
+  if (sourceIt != sourceNames.end() && !sourceIt->second.empty())
+    vars.insert(sourceIt->second);
+  else if (auto *arg = llvm::dyn_cast<llvm::Argument>(stripped)) {
+    if (arg->hasName())
+      vars.insert(arg->getName().str());
+  } else if (auto *global = llvm::dyn_cast<llvm::GlobalValue>(stripped)) {
+    if (global->hasName())
+      vars.insert(global->getName().str());
+  }
+  return vars;
+}
+
+std::string SmackInstGenerator::conditionId(const llvm::Value *value) const {
+  if (!value)
+    return "";
+
+  const llvm::Value *stripped = value->stripPointerCastsAndAliases();
+  auto provIt = provenance.find(stripped);
+  if (provIt != provenance.end() && !provIt->second.conditionId.empty())
+    return provIt->second.conditionId;
+
+  if (auto *inst = llvm::dyn_cast<llvm::Instruction>(stripped)) {
+    if (llvm::isa<llvm::CmpInst>(inst) ||
+        (inst->getType()->isIntegerTy() &&
+         inst->getType()->getIntegerBitWidth() == 1))
+      return llvmInstructionId(*inst);
+  }
+
+  return "";
+}
+
+void SmackInstGenerator::addValueUse(ProvenanceInfo &info,
+                                     const llvm::Value *value) const {
+  if (value && !llvm::isa<llvm::Constant>(value)) {
+    std::string boogie = boogieValueExpr(value);
+    if (!boogie.empty())
+      info.boogieUses.insert(boogie);
+  }
+
+  auto vars = sourceVars(value);
+  info.sourceVars.insert(vars.begin(), vars.end());
+  info.sourceUses.insert(vars.begin(), vars.end());
+}
+
+SmackInstGenerator::ProvenanceInfo SmackInstGenerator::buildValueProvenance(
+    const llvm::Instruction &inst, const Expr *boogieExpr,
+    std::string loweringKind) const {
+  ProvenanceInfo info;
+  info.loweringKind = std::move(loweringKind);
+  info.boogieExpr = capProvenanceString(exprString(boogieExpr));
+  info.sourceLhs = capProvenanceString(valueName(&inst));
+  std::string boogieDef = boogieValueExpr(&inst);
+  if (!boogieDef.empty())
+    info.boogieDefs.insert(boogieDef);
+  std::string sourceDef = directSourceName(&inst);
+  if (!sourceDef.empty())
+    info.sourceDefs.insert(sourceDef);
+
+  auto addArg = [&](const llvm::Value *value) {
+    info.sourceArgs.push_back(capProvenanceString(sourceExpr(value)));
+    info.boogieArgs.push_back(capProvenanceString(boogieValueExpr(value)));
+    addValueUse(info, value);
+  };
+
+  if (auto *cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
+    const auto *lhs = cmp->getOperand(0);
+    const auto *rhs = cmp->getOperand(1);
+    info.loweringKind = "comparison";
+    info.conditionId = llvmInstructionId(*cmp);
+    info.sourceOp = cmpPredicateSymbol(cmp->getPredicate());
+    info.sourceExpr = capProvenanceString(sourceExpr(lhs) + " " +
+                                          info.sourceOp + " " +
+                                          sourceExpr(rhs));
+    info.originCondition = info.boogieExpr;
+    addArg(lhs);
+    addArg(rhs);
+  } else if (auto *cast = llvm::dyn_cast<llvm::CastInst>(&inst)) {
+    const auto *operand = cast->getOperand(0);
+    auto operandInfo = provenance.find(operand->stripPointerCastsAndAliases());
+    const bool fromBool =
+        operand->getType()->isIntegerTy() &&
+        operand->getType()->getIntegerBitWidth() == 1;
+    info.sourceOp = cast->getOpcodeName();
+    info.conditionId = this->conditionId(operand);
+    if (fromBool && cast->getOpcode() == Instruction::ZExt)
+      info.loweringKind = "zext_bool";
+    else if (fromBool && cast->getOpcode() == Instruction::SExt)
+      info.loweringKind = "sext_bool";
+    else if (fromBool && cast->getOpcode() == Instruction::Trunc)
+      info.loweringKind = "trunc_bool";
+    else
+      info.loweringKind = "cast";
+    info.sourceExpr = capProvenanceString(sourceExpr(operand));
+    info.originCondition = capProvenanceString(
+        operandInfo != provenance.end() &&
+                !operandInfo->second.originCondition.empty()
+            ? operandInfo->second.originCondition
+            : exprString(rep->expr(operand)));
+    addArg(operand);
+  } else if (auto *select = llvm::dyn_cast<llvm::SelectInst>(&inst)) {
+    const auto *cond = select->getCondition();
+    auto condInfo = provenance.find(cond->stripPointerCastsAndAliases());
+    info.loweringKind = "ite";
+    if (auto *trueConst =
+            llvm::dyn_cast<llvm::ConstantInt>(select->getTrueValue())) {
+      if (auto *falseConst =
+              llvm::dyn_cast<llvm::ConstantInt>(select->getFalseValue())) {
+        if (trueConst->isOne() && falseConst->isZero())
+          info.loweringKind = "bool_materialization";
+      }
+    }
+    info.conditionId = this->conditionId(cond);
+    info.sourceOp =
+        info.loweringKind == "bool_materialization" ? "bool_materialization"
+                                                    : "ite";
+    info.sourceExpr = capProvenanceString(sourceExpr(cond));
+    if (info.loweringKind == "ite") {
+      info.sourceExpr = capProvenanceString(
+          info.sourceExpr + " ? " + sourceExpr(select->getTrueValue()) +
+          " : " + sourceExpr(select->getFalseValue()));
+    }
+    info.originCondition = capProvenanceString(
+        condInfo != provenance.end() && !condInfo->second.originCondition.empty()
+            ? condInfo->second.originCondition
+            : exprString(rep->expr(cond)));
+    addArg(cond);
+    addArg(select->getTrueValue());
+    addArg(select->getFalseValue());
+  } else if (auto *bin = llvm::dyn_cast<llvm::BinaryOperator>(&inst)) {
+    const auto *lhs = bin->getOperand(0);
+    const auto *rhs = bin->getOperand(1);
+    info.sourceOp = binaryOperatorSymbol(bin->getOpcode());
+    info.sourceExpr = capProvenanceString(sourceExpr(lhs) + " " +
+                                          info.sourceOp + " " +
+                                          sourceExpr(rhs));
+    addArg(lhs);
+    addArg(rhs);
+  } else if (auto *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(&inst)) {
+    info.loweringKind = "pointer_arithmetic";
+    info.sourceOp = "gep";
+    info.sourceExpr =
+        capProvenanceString(sourceExpr(gep->getPointerOperand()));
+    for (unsigned i = 0; i < gep->getNumOperands(); ++i)
+      addArg(gep->getOperand(i));
+  } else if (auto *load = llvm::dyn_cast<llvm::LoadInst>(&inst)) {
+    info.loweringKind = "load";
+    info.sourceOp = "load";
+    info.sourceExpr =
+        capProvenanceString(sourceExpr(load->getPointerOperand()));
+    addArg(load->getPointerOperand());
+  } else if (auto *phi = llvm::dyn_cast<llvm::PHINode>(&inst)) {
+    info.loweringKind = "phi";
+    info.sourceOp = "phi";
+    for (auto &incoming : phi->incoming_values())
+      addArg(incoming.get());
+  }
+
+  if (info.sourceOp.empty())
+    info.sourceOp = inst.getOpcodeName();
+  if (info.sourceArgs.empty()) {
+    for (const auto &operand : inst.operands())
+      addArg(operand.get());
+  }
+
+  if (info.sourceExpr.empty())
+    info.sourceExpr = info.boogieExpr;
+  else
+    info.sourceExpr = capProvenanceString(info.sourceExpr);
+  info.originCondition = capProvenanceString(info.originCondition);
+  return info;
+}
+
+void SmackInstGenerator::addIndexedAttrs(
+    std::list<const Attr *> &attrs, const std::string &name,
+    const std::vector<std::string> &values) const {
+  for (unsigned i = 0; i < values.size(); ++i)
+    addStringAttr(attrs, name + std::to_string(i), values[i]);
+}
+
+void SmackInstGenerator::addSetAttrs(std::list<const Attr *> &attrs,
+                                     const std::string &pluralName,
+                                     const std::string &singularName,
+                                     const std::set<std::string> &values) const {
+  addStringAttr(attrs, pluralName, joinStrings(values));
+  for (const auto &value : values)
+    addStringAttr(attrs, singularName, value);
+}
+
+void SmackInstGenerator::appendProvenanceInfoAttrs(
+    std::list<const Attr *> &attrs, const ProvenanceInfo &info) const {
+  addStringAttr(attrs, "source_expr", info.sourceExpr);
+  addStringAttr(attrs, "source_lhs", info.sourceLhs);
+  addStringAttr(attrs, "origin_condition", info.originCondition);
+  addStringAttr(attrs, "lowering_kind", info.loweringKind);
+  addStringAttr(attrs, "lowering.kind", info.loweringKind);
+  addStringAttr(attrs, "boogie.expr", info.boogieExpr);
+  addStringAttr(attrs, "condition_id", info.conditionId);
+  addStringAttr(attrs, "source_op", info.sourceOp);
+  addIndexedAttrs(attrs, "source_arg", info.sourceArgs);
+  addIndexedAttrs(attrs, "boogie_arg", info.boogieArgs);
+  addSetAttrs(attrs, "source_vars", "source_var", info.sourceVars);
+  addSetAttrs(attrs, "source_defs", "source_def", info.sourceDefs);
+  addSetAttrs(attrs, "source_uses", "source_use", info.sourceUses);
+  addSetAttrs(attrs, "boogie_defs", "boogie_def", info.boogieDefs);
+  addSetAttrs(attrs, "boogie_uses", "boogie_use", info.boogieUses);
+}
+
+std::list<const Attr *> SmackInstGenerator::loopAttrs(
+    const llvm::Loop *loop, std::string role) const {
+  std::list<const Attr *> attrs;
+  if (!loop)
+    return attrs;
+
+  auto *header = loop->getHeader();
+  std::string headerName = header ? naming->get(*header) : "";
+  std::string funcName =
+      header && header->getParent() ? naming->get(*header->getParent()) : "";
+  std::string loopId =
+      funcName.empty() ? headerName : funcName + ":" + headerName;
+
+  addStringAttr(attrs, "loop_id", loopId);
+  addStringAttr(attrs, "loop_role", role);
+  addStringAttr(attrs, "loop_header_bb", headerName);
+  attrs.push_back(Attr::attr("loop_depth", (int)loop->getLoopDepth()));
+  return attrs;
+}
+
+std::list<const Attr *> SmackInstGenerator::snapshotAttrs(
+    const llvm::Loop *loop, const llvm::PHINode *phi) const {
+  std::list<const Attr *> attrs = loopAttrs(loop, "invariant_pre");
+  if (!phi)
+    return attrs;
+
+  std::string phiName = naming->get(*phi);
+  std::string preName = phiName + ".pre";
+  addStringAttr(attrs, "snapshot_kind", "loop_entry");
+  addStringAttr(attrs, "snapshot_of", phiName);
+  addStringAttr(attrs, "snapshot_var", preName);
+
+  std::set<std::string> boogieDefs;
+  boogieDefs.insert(preName);
+  addSetAttrs(attrs, "boogie_defs", "boogie_def", boogieDefs);
+
+  std::set<std::string> boogieUses;
+  boogieUses.insert(phiName);
+  addSetAttrs(attrs, "boogie_uses", "boogie_use", boogieUses);
+
+  auto vars = sourceVars(phi);
+  addSetAttrs(attrs, "source_vars", "source_var", vars);
+  addSetAttrs(attrs, "source_uses", "source_use", vars);
+
+  return attrs;
+}
+
+std::list<const Attr *> SmackInstGenerator::branchTargetAttrs(
+    const llvm::Instruction &inst, const llvm::BasicBlock *target) const {
+  std::list<const Attr *> attrs;
+  if (auto *branch = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
+    if (branch->isConditional()) {
+      auto cAttrs = conditionAttrs(branch->getCondition(), "branch_condition");
+      attrs.insert(attrs.end(), cAttrs.begin(), cAttrs.end());
+    }
+  } else if (auto *sw = llvm::dyn_cast<llvm::SwitchInst>(&inst)) {
+    auto cAttrs = conditionAttrs(sw->getCondition(), "switch_condition");
+    attrs.insert(attrs.end(), cAttrs.begin(), cAttrs.end());
+  }
+
+  auto *loop = loops.getLoopFor(inst.getParent());
+  if (!loop || !target)
+    return attrs;
+
+  std::string role = loop->contains(target) ? "body_guard" : "exit_guard";
+  if (target == loop->getHeader())
+    role = "backedge_guard";
+  auto lAttrs = loopAttrs(loop, role);
+  attrs.insert(attrs.end(), lAttrs.begin(), lAttrs.end());
+  if (role == "exit_guard")
+    attrs.push_back(Attr::attr("loop_exit_guard"));
+  if (role == "backedge_guard")
+    attrs.push_back(Attr::attr("loop_backedge_guard"));
+  return attrs;
+}
+
+std::list<const Attr *> SmackInstGenerator::conditionAttrs(
+    const llvm::Value *condition, std::string loweringKind) const {
+  std::list<const Attr *> attrs;
+  addStringAttr(attrs, "lowering_kind", loweringKind);
+  addStringAttr(attrs, "lowering.kind", loweringKind);
+  addStringAttr(attrs, "source_expr", sourceExpr(condition));
+  auto vars = sourceVars(condition);
+  addStringAttr(attrs, "source_vars", joinStrings(vars));
+  for (const auto &var : vars)
+    addStringAttr(attrs, "source_var", var);
+
+  if (!condition)
+    return attrs;
+
+  auto provIt = provenance.find(condition->stripPointerCastsAndAliases());
+  if (provIt != provenance.end()) {
+    const auto &info = provIt->second;
+    addStringAttr(attrs, "origin_condition", info.originCondition);
+    addStringAttr(attrs, "condition_id", info.conditionId);
+    addStringAttr(attrs, "source_op", info.sourceOp);
+    addIndexedAttrs(attrs, "source_arg", info.sourceArgs);
+    addIndexedAttrs(attrs, "boogie_arg", info.boogieArgs);
+
+    auto conditionUses = info.boogieUses;
+    if (!llvm::isa<llvm::Constant>(condition)) {
+      std::string conditionExpr = boogieValueExpr(condition);
+      if (!conditionExpr.empty())
+        conditionUses.insert(conditionExpr);
+    }
+    addSetAttrs(attrs, "boogie_uses", "boogie_use", conditionUses);
+    addSetAttrs(attrs, "source_uses", "source_use", info.sourceUses);
+  }
+  return attrs;
+}
+
+std::list<const Attr *> SmackInstGenerator::provenanceAttrs(
+    const Stmt *stmt, std::list<const Attr *> extraAttrs) {
+  std::list<const Attr *> attrs;
+  if (!SmackOptions::ProvenanceSymbols) {
+    attrs.insert(attrs.end(), extraAttrs.begin(), extraAttrs.end());
+    return attrs;
+  }
+  if (!currentInstruction) {
+    attrs.insert(attrs.end(), extraAttrs.begin(), extraAttrs.end());
+    return attrs;
+  }
+
+  const auto &I = *currentInstruction;
+  std::string func = I.getFunction() ? naming->get(*I.getFunction()) : "";
+  std::string bb = I.getParent() ? naming->get(*I.getParent()) : "";
+  std::string instId = llvmInstructionId(I);
+
+  attrs.push_back(Attr::attr("prov.stmt_id",
+                             instId + ":" +
+                                 std::to_string(currentStatementOrdinal++)));
+  addStringAttr(attrs, "llvm.func", func);
+  addStringAttr(attrs, "llvm.bb", bb);
+  addStringAttr(attrs, "llvm.inst", instId);
+  addStringAttr(attrs, "llvm.op", I.getOpcodeName());
+
+  if (const DebugLoc &DL = I.getDebugLoc()) {
+    if (auto *scope = llvm::dyn_cast_or_null<DIScope>(DL.getScope())) {
+      addStringAttr(attrs, "source.file", scope->getFilename().str());
+      addStringAttr(attrs, "source.dir", scope->getDirectory().str());
+      addStringAttr(attrs, "source.path", sourcePath(scope));
+    }
+    attrs.push_back(Attr::attr("source.line", (int)DL.getLine()));
+    attrs.push_back(Attr::attr("source.col", (int)DL.getCol()));
+    if (auto *sp =
+            I.getFunction() ? I.getFunction()->getSubprogram() : nullptr)
+      addStringAttr(attrs, "source.func", sp->getName().str());
+
+    unsigned inlineDepth = 0;
+    for (auto *inlineAt = DL.getInlinedAt(); inlineAt;
+         inlineAt = inlineAt->getInlinedAt()) {
+      std::string prefix = "source.inline." + std::to_string(inlineDepth);
+      attrs.push_back(Attr::attr(prefix + ".line", (int)inlineAt->getLine()));
+      attrs.push_back(Attr::attr(prefix + ".col", (int)inlineAt->getColumn()));
+      if (auto *scope = llvm::dyn_cast_or_null<DIScope>(inlineAt->getScope()))
+        addStringAttr(attrs, prefix + ".path", sourcePath(scope));
+      inlineDepth++;
+    }
+  }
+
+  if (auto *loop = loops.getLoopFor(I.getParent())) {
+    std::string role = loop->getHeader() == I.getParent() ? "header" : "body";
+    auto lAttrs = loopAttrs(loop, role);
+    attrs.insert(attrs.end(), lAttrs.begin(), lAttrs.end());
+  }
+
+  addStringAttr(attrs, "boogie.stmt", stmtString(stmt));
+  if (auto *assign = llvm::dyn_cast<const AssignStmt>(stmt)) {
+    addStringAttr(attrs, "boogie.lhs", joinExprStrings(assign->getLhs()));
+    addStringAttr(attrs, "boogie.rhs", joinExprStrings(assign->getRhs()));
+  } else if (auto *assume = llvm::dyn_cast<const AssumeStmt>(stmt)) {
+    addStringAttr(attrs, "boogie.expr", exprString(assume->getExpr()));
+  } else if (auto *assertStmt = llvm::dyn_cast<const AssertStmt>(stmt)) {
+    addStringAttr(attrs, "boogie.expr", exprString(assertStmt->getExpr()));
+  }
+
+  auto provIt = provenance.find(&I);
+  if (provIt != provenance.end()) {
+    appendProvenanceInfoAttrs(attrs, provIt->second);
+  }
+
+  attrs.insert(attrs.end(), extraAttrs.begin(), extraAttrs.end());
+  return attrs;
+}
+
+void SmackInstGenerator::addStmt(Block *block, const Stmt *stmt,
+                                 std::list<const Attr *> extraAttrs) {
+  auto attrs = provenanceAttrs(stmt, std::move(extraAttrs));
+  if (!attrs.empty())
+    block->addStmt(Stmt::annot(attrs));
+  block->addStmt(stmt);
+}
+
+void SmackInstGenerator::insertStmt(Block *block, const Stmt *stmt,
+                                    std::list<const Attr *> extraAttrs) {
+  auto &stmts = block->getStatements();
+  auto attrs = provenanceAttrs(stmt, std::move(extraAttrs));
+  if (!attrs.empty())
+    stmts.insert(stmts.begin(), Stmt::annot(attrs));
+  stmts.insert(attrs.empty() ? stmts.begin() : std::next(stmts.begin()), stmt);
+}
+
+void SmackInstGenerator::emit(const Stmt *s, std::list<const Attr *> extraAttrs) {
   // stringstream str;
   // s->print(str);
   // SDEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
-  currBlock->addStmt(s);
+  addStmt(currBlock, s, std::move(extraAttrs));
+}
+
+void SmackInstGenerator::emit(const Stmt *s) {
+  emit(s, {});
 }
 
 const Stmt *
@@ -159,14 +792,16 @@ void SmackInstGenerator::addLoopInvariantChecks(Block *block,
   for (auto &I : *loop->getHeader()) {
     if (auto *phi = llvm::dyn_cast<llvm::PHINode>(&I)) {
       std::string phiName = naming->get(*phi);
-      block->addStmt(
-          Stmt::assign(Expr::id(phiName + ".pre"), Expr::id(phiName)));
+      addStmt(block,
+              Stmt::assign(Expr::id(phiName + ".pre"), Expr::id(phiName)),
+              snapshotAttrs(loop, phi));
     }
   }
 
   auto *attr = Attr::attr(Naming::LOOP_INVARIANT_ANNOTATION);
   for (auto *expr : loopInvariants[loop])
-    block->addStmt(Stmt::assert_(expr, {attr}));
+    addStmt(block, Stmt::assert_(expr, {attr}),
+            loopAttrs(loop, "invariant_check"));
 }
 
 std::string SmackInstGenerator::getSourceLine(const std::string &filename,
@@ -298,18 +933,86 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
 
 void SmackInstGenerator::processInstruction(llvm::Instruction &inst) {
   SDEBUG(errs() << "Inst: " << inst << "\n");
+  currentInstruction = &inst;
+  currentStatementOrdinal = 0;
   annotate(inst, currBlock);
   ORIG(inst);
   nameInstruction(inst);
+
+  for (auto &record : inst.getDbgRecordRange()) {
+    if (auto *dvr = llvm::dyn_cast<llvm::DbgVariableRecord>(&record))
+      recordDebugVariable(*dvr);
+  }
+
+  auto scan = std::next(nextInst);
+  while (scan != inst.getParent()->end() &&
+         llvm::isa<llvm::DbgInfoIntrinsic>(*scan)) {
+    if (auto *dvi = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*scan))
+      recordDebugVariable(*dvi);
+    ++scan;
+  }
+
   nextInst++;
 }
 
+void SmackInstGenerator::recordDebugVariable(
+    const llvm::DbgVariableRecord &dvr) {
+  const auto *var = dvr.getVariable();
+  if (!var)
+    return;
+
+  std::string sourceName = var->getName().str();
+  if (sourceName.empty())
+    return;
+
+  for (unsigned i = 0, n = dvr.getNumVariableLocationOps(); i < n; ++i) {
+    auto *value = dvr.getVariableLocationOp(i);
+    if (!value)
+      continue;
+    value = value->stripPointerCastsAndAliases();
+    if (llvm::isa<llvm::Constant>(value))
+      continue;
+    sourceNames[value] = sourceName;
+    provenance[value].sourceLhs = sourceName;
+    provenance[value].sourceVars.insert(sourceName);
+  }
+}
+
+void SmackInstGenerator::recordDebugVariable(
+    const llvm::DbgVariableIntrinsic &dvi) {
+  const auto *var = dvi.getVariable();
+  if (!var)
+    return;
+
+  std::string sourceName = var->getName().str();
+  if (sourceName.empty())
+    return;
+
+  for (unsigned i = 0, n = dvi.getNumVariableLocationOps(); i < n; ++i) {
+    auto *value = dvi.getVariableLocationOp(i);
+    if (!value)
+      continue;
+    value = value->stripPointerCastsAndAliases();
+    if (llvm::isa<llvm::Constant>(value))
+      continue;
+    sourceNames[value] = sourceName;
+    provenance[value].sourceLhs = sourceName;
+    provenance[value].sourceVars.insert(sourceName);
+  }
+}
+
 void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
+  currentInstruction = nullptr;
+  currentStatementOrdinal = 0;
   nextInst = bb.begin();
   currBlock = getBlock(&bb);
 
   auto *F = bb.getParent();
   if (&bb == &F->getEntryBlock()) {
+    for (auto &A : F->args()) {
+      if (A.hasName())
+        sourceNames[&A] = A.getName().str();
+    }
     for (auto &I : bb) {
       if (llvm::isa<llvm::DbgInfoIntrinsic>(I))
         continue;
@@ -338,7 +1041,9 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
     std::string headerName = getBlock(L->getHeader())->getName();
     if (L->getHeader() == &bb) {
       // Annotate as loop header
-      emit(Stmt::annot(Attr::attr("loop_header", headerName)));
+      auto attrs = loopAttrs(L, "header");
+      attrs.push_front(Attr::attr("loop_header", headerName));
+      emit(Stmt::annot(attrs));
 
       // Loop header: emit $var.pre := $var for each PHI
       rep->clearPhiPreRenames();
@@ -348,12 +1053,15 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
           std::string preName = phiName + ".pre";
           proc->getDeclarations().push_back(
               Decl::variable(preName, rep->type(phi)));
-          emit(Stmt::assign(Expr::id(preName), Expr::id(phiName)));
+          emit(Stmt::assign(Expr::id(preName), Expr::id(phiName)),
+               snapshotAttrs(L, phi));
         }
       }
     } else {
       // Annotate as loop body
-      emit(Stmt::annot(Attr::attr("loop_body", headerName)));
+      auto attrs = loopAttrs(L, "body");
+      attrs.push_front(Attr::attr("loop_body", headerName));
+      emit(Stmt::annot(attrs));
 
       // Loop body block: activate PHI-to-.pre renaming
       rep->clearPhiPreRenames();
@@ -437,21 +1145,26 @@ void SmackInstGenerator::generateGotoStmts(
       if (invariantLoop) {
         Block *b = createBlock();
         annotate(inst, b);
-        b->addStmt(Stmt::assume(condition, partitionAttr));
+        auto attrs = branchTargetAttrs(inst, target);
+        addStmt(b, Stmt::assume(condition, partitionAttr), attrs);
         addLoopInvariantChecks(b, invariantLoop);
-        b->addStmt(Stmt::goto_({getBlock(target)->getName()}));
+        addStmt(b, Stmt::goto_({getBlock(target)->getName()}),
+                branchTargetAttrs(inst, target));
         dispatch.push_back(b->getName());
 
       } else if (target->getUniquePredecessor() == inst.getParent()) {
         Block *b = getBlock(target);
-        b->insert(Stmt::assume(condition, partitionAttr));
+        insertStmt(b, Stmt::assume(condition, partitionAttr),
+                   branchTargetAttrs(inst, target));
         dispatch.push_back(b->getName());
 
       } else {
         Block *b = createBlock();
         annotate(inst, b);
-        b->addStmt(Stmt::assume(condition, partitionAttr));
-        b->addStmt(Stmt::goto_({getBlock(target)->getName()}));
+        addStmt(b, Stmt::assume(condition, partitionAttr),
+                branchTargetAttrs(inst, target));
+        addStmt(b, Stmt::goto_({getBlock(target)->getName()}),
+                branchTargetAttrs(inst, target));
         dispatch.push_back(b->getName());
       }
     }
@@ -591,6 +1304,7 @@ void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
   } else {
     E = rep->bop(&I);
   }
+  provenance[&I] = buildValueProvenance(I, E, "binary");
   emit(Stmt::assign(rep->expr(&I), E));
 }
 
@@ -605,7 +1319,9 @@ void SmackInstGenerator::visitUnaryOperator(llvm::UnaryOperator &I) {
   SmackWarnings::warnOverApproximate(
       std::string("floating-point operation ") + I.getOpcodeName(),
       {&SmackOptions::FloatEnabled}, currBlock, &I);
-  emit(Stmt::assign(rep->expr(&I), rep->uop(&I)));
+  const Expr *E = rep->uop(&I);
+  provenance[&I] = buildValueProvenance(I, E, "unary");
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 /******************************************************************************/
@@ -727,6 +1443,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
     E = rep->load(li);
   }
 
+  provenance[&li] = buildValueProvenance(li, E, "load");
   emit(Stmt::assign(rep->expr(&li), E));
 
   if (SmackOptions::MemoryModelDebug) {
@@ -744,14 +1461,54 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   const llvm::Value *V = si.getValueOperand()->stripPointerCastsAndAliases();
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
+  unsigned R = rep->getRegions()->idx(si);
+  ProvenanceInfo storeInfo;
+  storeInfo.loweringKind = "store";
+  storeInfo.sourceLhs = capProvenanceString(valueName(P));
+  storeInfo.sourceExpr = capProvenanceString(sourceExpr(V));
+  storeInfo.sourceOp = "store";
+  storeInfo.conditionId = this->conditionId(V);
+  storeInfo.sourceArgs.push_back(capProvenanceString(sourceExpr(P)));
+  storeInfo.sourceArgs.push_back(capProvenanceString(sourceExpr(V)));
+  storeInfo.boogieArgs.push_back(capProvenanceString(boogieValueExpr(P)));
+  storeInfo.boogieArgs.push_back(capProvenanceString(boogieValueExpr(V)));
+  storeInfo.boogieDefs.insert(rep->memPath(R));
+  if (!llvm::isa<llvm::Constant>(P)) {
+    std::string pointerExpr = boogieValueExpr(P);
+    if (!pointerExpr.empty())
+      storeInfo.boogieUses.insert(pointerExpr);
+  }
+  if (!llvm::isa<llvm::Constant>(V)) {
+    std::string valueExpr = boogieValueExpr(V);
+    if (!valueExpr.empty())
+      storeInfo.boogieUses.insert(valueExpr);
+  }
+
+  std::string sourceDef = directSourceName(P);
+  if (!sourceDef.empty())
+    storeInfo.sourceDefs.insert(sourceDef);
+  auto lhsVars = sourceVars(P);
+  storeInfo.sourceVars.insert(lhsVars.begin(), lhsVars.end());
+  auto valueVars = sourceVars(V);
+  storeInfo.sourceVars.insert(valueVars.begin(), valueVars.end());
+  storeInfo.sourceUses.insert(valueVars.begin(), valueVars.end());
+
+  auto valueProv = provenance.find(V->stripPointerCastsAndAliases());
+  if (valueProv != provenance.end() &&
+      !valueProv->second.originCondition.empty())
+    storeInfo.originCondition =
+        capProvenanceString(valueProv->second.originCondition);
+
+  std::list<const Attr *> storeAttrs;
+  appendProvenanceInfoAttrs(storeAttrs, storeInfo);
+
   if (isa<FixedVectorType>(V->getType())) {
-    unsigned R = rep->getRegions()->idx(si);
     auto D = VectorOperations(rep).store(R, P, V->getType());
     auto M = Expr::id(rep->memPath(R));
     auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
-    emit(Stmt::assign(M, E));
+    emit(Stmt::assign(M, E), storeAttrs);
   } else {
-    emit(rep->store(si));
+    emit(rep->store(si), storeAttrs);
     if (const Stmt *inverseAssume = rep->inverseFPCastAssume(&si)) {
       emit(inverseAssume);
     }
@@ -806,7 +1563,9 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst &i) {
 
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
   processInstruction(I);
-  emit(Stmt::assign(rep->expr(&I), rep->ptrArith(&I)));
+  const Expr *E = rep->ptrArith(&I);
+  provenance[&I] = buildValueProvenance(I, E, "pointer_arithmetic");
+  emit(Stmt::assign(rep->expr(&I), E));
 }
 
 /******************************************************************************/
@@ -827,6 +1586,7 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
   } else {
     E = rep->cast(&I);
   }
+  provenance[&I] = buildValueProvenance(I, E, "cast");
   emit(Stmt::assign(rep->expr(&I), E));
 
   if (I.getOpcode() == Instruction::BitCast) {
@@ -852,6 +1612,7 @@ void SmackInstGenerator::visitCmpInst(llvm::CmpInst &I) {
   } else {
     E = rep->cmp(&I);
   }
+  provenance[&I] = buildValueProvenance(I, E, "comparison");
   emit(Stmt::assign(rep->expr(&I), E));
 }
 
@@ -864,7 +1625,9 @@ void SmackInstGenerator::visitPHINode(llvm::PHINode &phi) {
 void SmackInstGenerator::visitSelectInst(llvm::SelectInst &i) {
   processInstruction(i);
   std::string x = naming->get(i);
-  emit(Stmt::assign(Expr::id(x), rep->select(&i)));
+  const Expr *E = rep->select(&i);
+  provenance[&i] = buildValueProvenance(i, E, "ite");
+  emit(Stmt::assign(Expr::id(x), E));
 }
 
 void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
@@ -901,8 +1664,10 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     // Emit assume directly in the caller, without inline procedure indirection.
     // This keeps the assume's variable in the caller's scope so the
     // backslice can trace constraints back to the original parameters.
-    const Expr *arg = rep->expr(ci.getArgOperand(0));
-    emit(Stmt::assume(Expr::neq(arg, Expr::id("$0"))));
+    auto *argValue = ci.getArgOperand(0);
+    const Expr *arg = rep->expr(argValue);
+    emit(Stmt::assume(Expr::neq(arg, Expr::id("$0"))),
+         conditionAttrs(argValue, "assume_condition"));
     return;
 
   } else if (name == "__VERIFIER_assert" &&
@@ -910,8 +1675,10 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
                  ci.getParent()->getParent()->getName()) &&
              ci.arg_size() == 1) {
     // Emit assert directly in the caller, same as assume but for asserts.
-    const Expr *arg = rep->expr(ci.getArgOperand(0));
-    emit(Stmt::assert_(Expr::neq(arg, Expr::id("$0"))));
+    auto *argValue = ci.getArgOperand(0);
+    const Expr *arg = rep->expr(argValue);
+    emit(Stmt::assert_(Expr::neq(arg, Expr::id("$0"))),
+         conditionAttrs(argValue, "assert_condition"));
     return;
 
   } else if (name.find(Naming::VALUE_PROC) != StringRef::npos) {
@@ -1239,6 +2006,7 @@ bool isSourceLoc(const Stmt *stmt) {
 
 void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
   processInstruction(dvi);
+  recordDebugVariable(dvi);
 
   if (SmackOptions::SourceLocSymbols) {
     Value *V = dvi.getValue();
@@ -1296,6 +2064,8 @@ void SmackInstGenerator::visitMemSetInst(llvm::MemSetInst &msi) {
 
 void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   processInstruction(ii);
+  if (auto *dvi = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&ii))
+    recordDebugVariable(*dvi);
 
   //(CallInst -> Void) -> [Flags] -> (CallInst -> Void)
   static const auto conditionalModel =
