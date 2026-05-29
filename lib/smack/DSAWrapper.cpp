@@ -86,6 +86,25 @@ void DSAWrapper::buildUnionFind(llvm::Module &M) {
           unionPts(op, isMemIntr);
       }
     }
+
+  // Realize true field-insensitivity: collapse every field/sub-object into its
+  // base object. SVF's Andersen is field-SENSITIVE, so a buffer accessed at
+  // distinct CONSTANT offsets yields distinct singleton GepObjVars that never
+  // co-occur in any one points-to set — leaving each field in its own region.
+  // The whole-buffer `__SMACK_values` annotation then binds to a single field
+  // object that the per-byte stores miss, severing the buffer's data flow
+  // (observed on aes_cbc_ct/ossl_aes_cbc; mee-cbc/aead escaped only because
+  // their variable/loop offsets already collapse to the base in SVF). Uniting
+  // each object with its base makes one buffer one region — coarser but sound,
+  // and exactly the field-insensitivity getOffset()/isCollapsed() already claim.
+  std::vector<unsigned> objs;
+  objs.reserve(ufParent.size());
+  for (auto &kv : ufParent)
+    objs.push_back(kv.first);
+  for (unsigned o : objs)
+    if (pag->hasGNode(o))
+      if (const SVF::BaseObjVar *bo = pag->getBaseObject(o))
+        ufUnite(o, bo->getId());
 }
 
 void DSAWrapper::aggregateRegions() {
