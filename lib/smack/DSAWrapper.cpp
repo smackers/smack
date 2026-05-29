@@ -235,6 +235,7 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
       }
     };
     unsigned riskyStores = 0, riskyLoads = 0;
+    unsigned riskyNoNode = 0, riskyEmptyPts = 0;
     std::map<std::string, unsigned> riskyByFunc;
     std::string riskyExample;
     auto check = [&](const llvm::Value *p, bool isStore, const llvm::Function *F) {
@@ -254,6 +255,7 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
       if (k == "null" || k == "undef" || readOnlyConstGlobal(p))
         return;
       (isStore ? riskyStores : riskyLoads)++;
+      (ms->hasValueNode(p) ? riskyEmptyPts : riskyNoNode)++;
       riskyByFunc[F->getName().str()]++;
       if (isStore && riskyExample.empty()) {
         llvm::raw_string_ostream os(riskyExample);
@@ -279,7 +281,9 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
       llvm::errs() << "[svf-audit]   " << kv.first << ": " << kv.second
                    << "   e.g. " << example[kv.first] << "\n";
     llvm::errs() << "[svf-audit] RISKY (no region, not null/undef, not read-only-const): "
-                 << "stores=" << riskyStores << " loads=" << riskyLoads << "\n";
+                 << "stores=" << riskyStores << " loads=" << riskyLoads
+                 << "  [no-SVF-node=" << riskyNoNode
+                 << " has-node-but-empty-pts=" << riskyEmptyPts << "]\n";
     for (auto &kv : riskyByFunc)
       llvm::errs() << "[svf-audit]   in fn " << kv.first << ": " << kv.second << "\n";
     if (!riskyExample.empty())
