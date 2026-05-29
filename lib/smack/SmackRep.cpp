@@ -10,7 +10,6 @@
 #include "smack/BoogieAst.h"
 #include "smack/Debug.h"
 #include "smack/LlvmCompat.h"
-#include "smack/MemoryPartitionOracle.h"
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/SmackWarnings.h"
@@ -75,53 +74,6 @@ std::list<CallInst *> findCallers(Function *F) {
   }
 
   return callers;
-}
-
-bool hasKnownEmptyMemoryMapEffect(Function *F) {
-  if (!F || !F->hasName())
-    return false;
-
-  StringRef name = F->getName();
-  return name == "malloc" || name == "free" ||
-         name.starts_with("llvm.dbg.") || name.starts_with("llvm.lifetime.") ||
-         name == "llvm.assume" || name.starts_with("__VERIFIER_nondet") ||
-         name.starts_with("__SMACK_nondet");
-}
-
-void mergeEffectRegions(smack::MemoryPartitionOracle::Effect &dst,
-                        const smack::MemoryPartitionOracle::Effect &src) {
-  dst.refRegions.insert(src.refRegions.begin(), src.refRegions.end());
-  dst.modRegions.insert(src.modRegions.begin(), src.modRegions.end());
-}
-
-bool svfCallFramesEnabled() {
-  return smack::SmackOptions::SVFCallFrames ||
-         smack::SmackOptions::MemoryPartitioner.getValue() == "svf-refined" ||
-         smack::SmackOptions::MemoryPartitioner.getValue() == "svf-native";
-}
-
-unsigned callsiteIndex(const Instruction &I) {
-  const Function *F = I.getFunction();
-  unsigned index = 0;
-  for (const auto &BB : *F)
-    for (const auto &J : BB)
-      if (isa<CallBase>(&J)) {
-        if (&J == &I)
-          return index;
-        ++index;
-      }
-  return index;
-}
-
-std::string callsiteFrameName(smack::Naming *naming, Function *F, const User &U) {
-  const auto *I = dyn_cast<Instruction>(&U);
-  std::stringstream name;
-  name << naming->get(*F) << ".svf.call";
-  if (I && I->getFunction())
-    name << "." << naming->get(*I->getFunction()) << "." << callsiteIndex(*I);
-  else
-    name << ".unknown";
-  return name.str();
 }
 } // namespace
 
@@ -1321,10 +1273,12 @@ const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
 }
 
 const Expr *SmackRep::cmp(const llvm::ConstantExpr *CE) {
-#if LLVM_VERSION_MAJOR < 22
+#if LLVM_VERSION_MAJOR < 21
   return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1),
              llvm::CmpInst::isUnsigned((CmpInst::Predicate)CE->getPredicate()));
 #else
+  // icmp/fcmp constant expressions were removed before LLVM 21, so
+  // ConstantExpr no longer exposes getPredicate().
   (void)CE;
   llvm_unreachable("Compare constant expressions are not supported.");
 #endif
@@ -1426,258 +1380,6 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
       Decl::procedure(name, params, rets, decls, blocks));
 }
 
-std::list<std::string> SmackRep::oracleModifiesForFunction(Function *F) {
-  std::list<std::string> modifies;
-  if (!regions || !F || isContractExpr(F))
-    return modifies;
-
-  const MemoryPartitionOracle *oracle = regions->getOracle();
-  if (!oracle)
-    return modifies;
-
-  const MemoryPartitionOracle::Effect *effect =
-      F->hasName() ? oracle->lookupFunctionEffect(F->getName()) : nullptr;
-  if (!effect && hasKnownEmptyMemoryMapEffect(F)) {
-    regions->recordOracleFrameDecision(true, regions->size(), 0);
-    return modifies;
-  }
-
-  const bool complete = effect && effect->complete;
-  unsigned excludedMaps = 0;
-  unsigned retainedMaps = 0;
-
-  if (!complete) {
-    for (const auto &memoryMap : memoryMaps()) {
-      modifies.push_back(memoryMap.first);
-      ++retainedMaps;
-    }
-    regions->recordOracleFrameDecision(false, excludedMaps, retainedMaps);
-    return modifies;
-  }
-
-  modifies = oracleModifiesForEffect(*effect);
-  retainedMaps = modifies.size();
-  excludedMaps = regions->size() - retainedMaps;
-  regions->recordOracleFrameDecision(true, excludedMaps, retainedMaps);
-  return modifies;
-}
-
-std::list<std::string>
-SmackRep::oracleModifiesForEffect(const MemoryPartitionOracle::Effect &effect) {
-  std::list<std::string> modifies;
-  if (!regions)
-    return modifies;
-
-  if (!effect.complete) {
-    for (const auto &memoryMap : memoryMaps())
-      modifies.push_back(memoryMap.first);
-    return modifies;
-  }
-
-  if (effect.modRegions.empty())
-    return modifies;
-
-  for (unsigned i = 0; i < regions->size(); ++i) {
-    if (regions->get(i).oracleEvidenceDisjointFrom(effect.modRegions))
-      continue;
-    modifies.push_back(memReg(i));
-  }
-
-  return modifies;
-}
-
-const Stmt *SmackRep::oracleCallsiteFrameCall(Function *F, const User &U) {
-  if (!F || !regions || !svfCallFramesEnabled())
-    return nullptr;
-  if (hasKnownEmptyMemoryMapEffect(F))
-    return nullptr;
-
-  const auto *I = dyn_cast<Instruction>(&U);
-  const auto *CB = dyn_cast<CallBase>(I);
-  if (!CB)
-    return nullptr;
-
-  const auto *oracle = regions->getOracle();
-  if (!oracle)
-    return nullptr;
-
-  const auto *effect =
-      oracle->lookupCallsiteEffect(MemoryPartitionOracle::instructionKey(*I));
-  if (!effect || !effect->complete)
-    return nullptr;
-
-  std::string frameName = callsiteFrameName(naming, F, U);
-  if (!auxDecls.count(frameName)) {
-    std::list<std::pair<std::string, std::string>> params, rets;
-    for (auto &A : F->args())
-      params.push_back({naming->get(A), type(A.getType())});
-
-    if (!F->getReturnType()->isVoidTy())
-      rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
-
-    FunctionType *T = F->getFunctionType();
-    for (unsigned i = T->getNumParams(); i < CB->arg_size(); i++)
-      params.push_back(
-          {indexedName("p", {i}), type(CB->getArgOperand(i)->getType())});
-
-    ProcDecl *frame = Decl::procedure(frameName, params, rets);
-    std::list<std::string> modifies = oracleModifiesForEffect(*effect);
-    if (regions) {
-      unsigned retainedMaps = modifies.size();
-      unsigned excludedMaps = regions->size() - retainedMaps;
-      regions->recordOracleFrameDecision(true, excludedMaps, retainedMaps);
-    }
-    for (const auto &mod : modifies)
-      frame->getModifies().push_back(mod);
-    addAuxiliaryDeclaration(frame);
-  }
-
-  std::list<const Expr *> args;
-  std::list<std::string> rets;
-
-  unsigned numArgOperands = U.getNumOperands();
-  if (isa<CallInst>(U))
-    numArgOperands -= 1;
-  else if (isa<InvokeInst>(U))
-    numArgOperands -= 3;
-
-  for (unsigned i = 0; i < numArgOperands; i++)
-    args.push_back(arg(F, i, U.getOperand(i)));
-
-  if (!U.getType()->isVoidTy())
-    rets.push_back(naming->get(U));
-
-  return Stmt::call(frameName, args, rets);
-}
-
-SmackRep::OracleFrameDecision SmackRep::analyzeOracleFrameForLoop(
-    const Loop *L) {
-  OracleFrameDecision decision;
-  auto noteFallback = [&](const std::string &reason) {
-    if (decision.fallbackReason.empty())
-      decision.fallbackReason = reason;
-  };
-
-  if (!regions) {
-    noteFallback("regions-unavailable");
-    return decision;
-  }
-  if (!L) {
-    noteFallback("loop-missing");
-    return decision;
-  }
-
-  const MemoryPartitionOracle *oracle = regions->getOracle();
-  if (!oracle) {
-    noteFallback("oracle-missing");
-    return decision;
-  }
-
-  MemoryPartitionOracle::Effect loopEffect;
-  loopEffect.complete = true;
-
-  for (auto *BB : L->blocks()) {
-    for (auto &I : *BB) {
-      if (auto *load = dyn_cast<LoadInst>(&I)) {
-        const auto *accessRegions =
-            oracle->lookup(MemoryPartitionOracle::accessKey(*load));
-        if (accessRegions)
-          loopEffect.refRegions.insert(accessRegions->begin(),
-                                       accessRegions->end());
-        continue;
-      }
-
-      if (auto *store = dyn_cast<StoreInst>(&I)) {
-        const auto *accessRegions =
-            oracle->lookup(MemoryPartitionOracle::accessKey(*store));
-        if (!accessRegions || accessRegions->empty()) {
-          loopEffect.complete = false;
-          noteFallback("missing-store-access-region");
-          continue;
-        }
-        loopEffect.modRegions.insert(accessRegions->begin(),
-                                     accessRegions->end());
-        continue;
-      }
-
-      auto *call = dyn_cast<CallBase>(&I);
-      if (!call)
-        continue;
-
-      const auto *callEffect =
-          oracle->lookupCallsiteEffect(MemoryPartitionOracle::instructionKey(I));
-      if (callEffect) {
-        mergeEffectRegions(loopEffect, *callEffect);
-        if (!callEffect->complete) {
-          loopEffect.complete = false;
-          noteFallback("incomplete-callsite-effect");
-        }
-        continue;
-      }
-
-      Function *callee = call->getCalledFunction();
-      if (hasKnownEmptyMemoryMapEffect(callee))
-        continue;
-
-      const auto *functionEffect =
-          callee && callee->hasName()
-              ? oracle->lookupFunctionEffect(callee->getName())
-              : nullptr;
-      if (functionEffect) {
-        mergeEffectRegions(loopEffect, *functionEffect);
-        if (!functionEffect->complete) {
-          loopEffect.complete = false;
-          noteFallback("incomplete-function-effect");
-        }
-        continue;
-      }
-
-      loopEffect.complete = false;
-      if (!callee)
-        noteFallback("unknown-indirect-call-effect");
-      else if (callee->isDeclaration())
-        noteFallback("unknown-external-call-effect");
-      else
-        noteFallback("missing-function-effect");
-    }
-  }
-
-  decision.refRegionCount = loopEffect.refRegions.size();
-  decision.modRegionCount = loopEffect.modRegions.size();
-  decision.complete = loopEffect.complete;
-  if (!decision.complete) {
-    decision.retainedMapCount = regions->size();
-    noteFallback("incomplete-loop-effect");
-    return decision;
-  }
-
-  for (unsigned i = 0; i < regions->size(); ++i) {
-    if (loopEffect.modRegions.empty() ||
-        regions->get(i).oracleEvidenceDisjointFrom(loopEffect.modRegions)) {
-      decision.preservedMaps.push_back(i);
-      continue;
-    }
-    ++decision.retainedMapCount;
-  }
-
-  return decision;
-}
-
-SmackRep::OracleFrameDecision SmackRep::oracleFrameForLoop(const Loop *L) {
-  OracleFrameDecision decision = analyzeOracleFrameForLoop(L);
-  if (!regions)
-    return decision;
-
-  if (!decision.complete) {
-    regions->recordSVFLoopFrameDecision(false, 0, decision.retainedMapCount);
-    return decision;
-  }
-
-  regions->recordSVFLoopFrameDecision(true, decision.preservedMaps.size(),
-                                      decision.retainedMapCount);
-  return decision;
-}
-
 std::list<ProcDecl *> SmackRep::procedure(llvm::Function *F) {
   std::list<ProcDecl *> procs;
   std::set<std::string> names;
@@ -1713,9 +1415,6 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
   using namespace llvm;
 
   assert(f && "Call encountered unresolved function.");
-
-  if (const Stmt *frameCall = oracleCallsiteFrameCall(f, ci))
-    return frameCall;
 
   std::string name = naming->get(*f);
   std::list<const Expr *> args;

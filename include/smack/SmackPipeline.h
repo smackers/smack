@@ -126,8 +126,8 @@ void runSmackTierANewPM(llvm::Module &module,
                         const SmackPipelineOptions &options);
 
 // Full NewPM pipeline: Tier A + B + C + D siblings composed into a single
-// ModulePassManager via PassBuilder. Tier C/D analyses bridge sea-dsa
-// (legacy) via DSAWrapperAnalysis / RegionsAnalysis / SmackModuleGeneratorAnalysis.
+// ModulePassManager via PassBuilder. Tier C/D analyses bridge the SVF-backed
+// DSAWrapper via DSAWrapperAnalysis / RegionsAnalysis / SmackModuleGeneratorAnalysis.
 // Emits Boogie to `out`. Gated by -DSMACK_NEW_PM=ON in tools/llvm2bpl/llvm2bpl.cpp.
 void runSmackFullNewPM(llvm::Module &module, llvm::raw_ostream &out,
                        const SmackPipelineOptions &options,

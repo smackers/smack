@@ -11,7 +11,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Regex.h"
-#include "smack/MemoryPartitionOracle.h"
 #include <list>
 #include <map>
 #include <sstream>
@@ -71,15 +70,6 @@ protected:
   std::map<std::string, std::string> annotationPtrAliases;
 
 public:
-  struct OracleFrameDecision {
-    bool complete = false;
-    std::vector<unsigned> preservedMaps;
-    unsigned retainedMapCount = 0;
-    unsigned refRegionCount = 0;
-    unsigned modRegionCount = 0;
-    std::string fallbackReason;
-  };
-
   // PHI pre-rename map: when inside a loop body, PHI variables from the
   // enclosing loop header should be referenced as .pre versions to
   // disambiguate pre/post iteration values.
@@ -215,12 +205,6 @@ public:
 
   std::list<ProcDecl *> procedure(llvm::Function *F);
   ProcDecl *procedure(llvm::Function *F, llvm::CallInst *C);
-  std::list<std::string> oracleModifiesForFunction(llvm::Function *F);
-  std::list<std::string>
-  oracleModifiesForEffect(const MemoryPartitionOracle::Effect &effect);
-  const Stmt *oracleCallsiteFrameCall(llvm::Function *F, const llvm::User &U);
-  OracleFrameDecision analyzeOracleFrameForLoop(const llvm::Loop *L);
-  OracleFrameDecision oracleFrameForLoop(const llvm::Loop *L);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value *v);

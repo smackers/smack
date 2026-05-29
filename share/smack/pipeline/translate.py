@@ -106,9 +106,8 @@ def _llvm2bpl_cmd(
     if bpl_file:
         cmd += ["-bpl", bpl_file]
     cmd += ["-warn-type", args.warn]
-    cmd += [f"-sea-dsa={args.sea_dsa_mode}"]
-    if args.sea_dsa_type_aware:
-        cmd += ["-sea-dsa-type-aware"]
+    # sea-dsa was replaced by the SVF-Andersen memory partition; its -sea-dsa*
+    # flags are gone. The region partition is now produced unconditionally.
     if sys.stdout.isatty():
         cmd += ["-colored-warnings"]
     cmd += ["-source-loc-syms"]
@@ -142,27 +141,13 @@ def _llvm2bpl_cmd(
         cmd += ["-rewrite-bitwise-ops"]
     if args.no_memory_splitting:
         cmd += ["-no-memory-splitting"]
-    cmd += ["-smack-memory-partitioner", memory_partitioner or args.memory_partitioner]
-    if memory_partition_oracle:
-        cmd += ["-smack-memory-partition-oracle", memory_partition_oracle]
-    if getattr(args, "svf_loop_frames", False):
-        cmd += ["-smack-svf-loop-frames"]
-    if getattr(args, "svf_call_frames", False):
-        cmd += ["-smack-svf-call-frames"]
-    if getattr(args, "svf_indirect_calls", False):
-        cmd += ["-smack-svf-indirect-calls"]
-    if getattr(args, "svf_analysis", None):
-        cmd += ["-smack-svf-analysis", str(args.svf_analysis)]
-    if getattr(args, "svf_mem_par", None):
-        cmd += ["-smack-svf-mem-par", str(args.svf_mem_par)]
-    if getattr(args, "svf_extapi", None):
-        cmd += ["-smack-svf-extapi", str(args.svf_extapi)]
+    # Memory partitioning is now SVF-Andersen only — the -smack-memory-partitioner
+    # selector, its external oracle, and all -smack-svf-* tuning flags were removed
+    # with sea-dsa. -smack-skip-devirt is still accepted (inert) for compatibility.
     if skip_devirt:
         cmd += ["-smack-skip-devirt"]
     if memory_partition_report:
         cmd += ["-smack-memory-partition-report", memory_partition_report]
-    if include_devirt_report and getattr(args, "devirt_report", None):
-        cmd += ["-smack-devirt-report", args.devirt_report]
     if args.static_init_zero_memset_threshold is not None:
         cmd += [
             "-static-init-zero-memset-threshold",

@@ -8,7 +8,6 @@ set(SMACK_CXX_STANDARD "23" CACHE STRING "C++ standard for SMACK targets (20 or 
 set_property(CACHE SMACK_CXX_STANDARD PROPERTY STRINGS "20" "23")
 set(CMAKE_CXX_STANDARD ${SMACK_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-option(SMACK_ENABLE_INPROCESS_SVF "Enable in-process SVF-backed memory partitioning" OFF)
 
 # LLVM discovery — uses llvm-config on every supported platform. The old
 # Windows-specific hand-rolled lib-list branch was removed in Phase 1;
@@ -74,24 +73,18 @@ endfunction()
 
 function(smack_target_setup target)
   # BUILD_INTERFACE for in-tree consumers; INSTALL_INTERFACE for downstream
-  # projects pulling via find_package(smack CONFIG). sea-dsa headers ship
-  # only at build time — not installed (they're a submodule).
+  # projects pulling via find_package(smack CONFIG).
   target_include_directories(${target} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/include>
     $<INSTALL_INTERFACE:include>
   )
   smack_force_llvm_compat(${target})
 endfunction()
 
 add_library(utils STATIC
-  include/utils/Devirt.h
-  include/smack/MemoryPartitionOracle.h
   include/utils/MergeGEP.h
   include/utils/SimplifyInsertValue.h
   include/utils/SimplifyExtractValue.h
-  lib/utils/Devirt.cpp
-  lib/smack/MemoryPartitionOracle.cpp
   lib/utils/MergeGEP.cpp
   lib/utils/SimplifyInsertValue.cpp
   lib/utils/SimplifyExtractValue.cpp
@@ -112,7 +105,6 @@ add_library(smackTranslator STATIC
   include/smack/SmackInstGenerator.h
   include/smack/SmackModuleGenerator.h
   include/smack/SmackOptions.h
-  include/smack/SVFMemoryPartition.h
   include/smack/CodifyStaticInits.h
   include/smack/RemoveDeadDefs.h
   include/smack/InitUndefAllocas.h
@@ -144,7 +136,6 @@ add_library(smackTranslator STATIC
   lib/smack/SmackInstGenerator.cpp
   lib/smack/SmackModuleGenerator.cpp
   lib/smack/SmackOptions.cpp
-  lib/smack/SVFMemoryPartition.cpp
   lib/smack/CodifyStaticInits.cpp
   lib/smack/RemoveDeadDefs.cpp
   lib/smack/InitUndefAllocas.cpp
@@ -188,17 +179,7 @@ add_executable(extern-statics
 )
 smack_target_setup(extern-statics)
 
-# Boost needed for sea-dsa headers transitively (boost::hash_combine in
-# sea-dsa/include/seadsa/Graph.hh etc.). Attach to the SMACK targets that
-# include those headers.
-find_package(Boost 1.55)
-if(Boost_FOUND)
-  foreach(_t utils smackTranslator llvm2bpl llvm-diffmatch2bpl externalizePass extern-statics)
-    target_include_directories(${_t} PRIVATE ${Boost_INCLUDE_DIRS})
-  endforeach()
-endif()
-# We have to import LLVM's cmake definitions to build sea-dsa
-# Borrowed from sea-dsa's CMakeLists.txt
+# Import LLVM's cmake definitions.
 # Borrowed from https://github.com/banach-space/llvm-tutor/commit/72cb20d058b9b3f51717c7a17607f7a4c7398642
 find_package (LLVM ${LLVM_EXTENDED_VERSION} REQUIRED CONFIG)
 if (NOT ${LLVM_SHORT_VERSION} VERSION_EQUAL "${LLVM_VERSION_MAJOR}")
@@ -207,60 +188,45 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 include(HandleLLVMOptions)
-# We need the release build of sea-dsa otherwise we'll see a lot of crashes in
-# sv-comp benchmarks.
-# The following solution is from: https://stackoverflow.com/questions/30985215/passing-variables-down-to-subdirectory-only
-set(SMACK_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
-set(CMAKE_BUILD_TYPE "Release")
-add_subdirectory(sea-dsa/lib/seadsa)
-smack_force_llvm_compat(SeaDsaAnalysis)
 
-# H4: silence the deluge of -Wdeprecated-declarations warnings emitted by
-# sea-dsa's use of boost::hash_combine (which depends on the deprecated
-# std::unary_function removed in C++17+). We don't own sea-dsa; the warnings
-# add hundreds of lines to every build. PRIVATE so SMACK's own code still
-# gets the warnings.
-target_compile_options(SeaDsaAnalysis PRIVATE -Wno-deprecated-declarations)
-# sea-dsa's submodule CMakeLists relied on the parent's global
-# include_directories(sea-dsa/include). Replaced with INTERFACE so the
-# include propagates to anything that links SeaDsaAnalysis. Also PUBLIC so
-# sea-dsa's own translation units can find their headers.
-target_include_directories(SeaDsaAnalysis PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sea-dsa/include>
-  # SMACK ships a shim `include/llvm/ADT/Optional.h` for LLVM >=16 where
-  # the real header is removed. sea-dsa still does `#include "llvm/ADT/Optional.h"`
-  # in many .cc files, so it needs to see the shim too.
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-if(Boost_FOUND)
-  target_include_directories(SeaDsaAnalysis PUBLIC ${Boost_INCLUDE_DIRS})
-endif()
-target_compile_definitions(SeaDsaAnalysis PRIVATE
-  SMACK_ENABLE_SEADSA_LEGACY_LLVM_NAMES)
-set(CMAKE_BUILD_TYPE ${SMACK_BUILD_TYPE})
+# SVF (Andersen points-to) is the memory-region partitioner, replacing sea-dsa.
+# It is a HARD, ungated dependency: DSAWrapper derives a sound disjoint region
+# partition from SVF's inclusion-based points-to via union-find.
+set(SVF_HOME "/home/ubuntu/SVF" CACHE PATH "SVF source+build root")
+find_package(SVF REQUIRED CONFIG)
+# SVF's exported targets advertise build-tree include dirs that may not exist in
+# every layout (e.g. SVF::SvfFlags carries Release-build/include/SVF which is
+# absent); filter to existing paths so target_include_directories doesn't error
+# on a stale entry. SvfFlags must be included — SvfCore/SvfLLVM depend on it
+# transitively, so its bad include would otherwise still propagate.
+foreach(_svf_target SVF::SvfFlags SVF::SvfCore SVF::SvfLLVM)
+  get_target_property(_svf_includes ${_svf_target} INTERFACE_INCLUDE_DIRECTORIES)
+  if(_svf_includes)
+    set(_svf_existing_includes "")
+    foreach(_svf_include ${_svf_includes})
+      if(EXISTS "${_svf_include}")
+        list(APPEND _svf_existing_includes "${_svf_include}")
+      endif()
+    endforeach()
+    set_target_properties(${_svf_target} PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${_svf_existing_includes}")
+  endif()
+endforeach()
 
 target_link_libraries(smackTranslator ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS}
   ${LLVM_LDFLAGS})
-if(SMACK_ENABLE_INPROCESS_SVF)
-  find_package(SVF REQUIRED CONFIG)
-  foreach(_svf_target SVF::SvfFlags)
-    get_target_property(_svf_includes ${_svf_target} INTERFACE_INCLUDE_DIRECTORIES)
-    if(_svf_includes)
-      set(_svf_existing_includes "")
-      foreach(_svf_include ${_svf_includes})
-        if(EXISTS "${_svf_include}")
-          list(APPEND _svf_existing_includes "${_svf_include}")
-        endif()
-      endforeach()
-      set_target_properties(${_svf_target} PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${_svf_existing_includes}")
-    endif()
-  endforeach()
-  target_link_libraries(smackTranslator SVF::SvfLLVM SVF::SvfCore)
-  target_compile_definitions(smackTranslator PUBLIC SMACK_ENABLE_INPROCESS_SVF)
-endif()
-target_link_libraries(llvm2bpl smackTranslator utils SeaDsaAnalysis)
-target_link_libraries(llvm-diffmatch2bpl smackTranslator utils SeaDsaAnalysis)
+target_link_libraries(smackTranslator SVF::SvfLLVM SVF::SvfCore)
+
+target_link_libraries(llvm2bpl smackTranslator utils)
+target_link_libraries(llvm-diffmatch2bpl smackTranslator utils)
+
+# SVF + its private LLVM-21 and z3 shared libs live outside the system loader
+# path; bake their dirs into the RPATH of the tools that pull them in.
+set(SMACK_SVF_RPATH
+  "/home/ubuntu/SVF/Release-build/lib;/home/ubuntu/SVF/llvm-21.1.0.obj/lib;/home/ubuntu/SVF/z3.obj/bin")
+set_target_properties(llvm2bpl llvm-diffmatch2bpl PROPERTIES
+  BUILD_RPATH "${SMACK_SVF_RPATH}"
+  INSTALL_RPATH "${SMACK_SVF_RPATH}")
 
 target_link_libraries(externalizePass ${LLVM_LIBS} ${LLVM_SYSTEM_LIBS}
   ${LLVM_LDFLAGS})

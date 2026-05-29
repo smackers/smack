@@ -27,8 +27,6 @@
 namespace smack {
 namespace {
 
-using LoopFrameMap = std::map<std::string, SmackRep::OracleFrameDecision>;
-
 bool hasAttr(const Stmt *stmt, const std::string &name) {
   if (auto *assume = llvm::dyn_cast<const AssumeStmt>(stmt))
     return assume->hasAttr(name);
@@ -483,35 +481,7 @@ void removeBlocks(ProcDecl *proc, const std::set<Block *> &removed) {
   }
 }
 
-std::string loopSnapshotName(SmackRep *rep, unsigned map,
-                             const std::string &headerName) {
-  return rep->memReg(map) + ".svf.loop." + headerName + ".pre";
-}
-
-void addSVFLoopFrameInvariants(
-    ProcDecl *proc, SmackRep *rep, const std::string &headerName,
-    const LoopFrameMap *loopFrames, std::list<const Stmt *> &preheaderStmts,
-    std::list<const Expr *> &invariants) {
-  if (!SmackOptions::SVFLoopFrames || !rep || !loopFrames)
-    return;
-
-  auto it = loopFrames->find(headerName);
-  if (it == loopFrames->end() || !it->second.complete)
-    return;
-
-  for (unsigned map : it->second.preservedMaps) {
-    std::string snapshot = loopSnapshotName(rep, map, headerName);
-    proc->getDeclarations().push_back(
-        Decl::variable(snapshot, rep->memType(map)));
-    preheaderStmts.push_back(
-        Stmt::assign(Expr::id(snapshot), Expr::id(rep->memReg(map))));
-    invariants.push_back(Expr::eq(Expr::id(rep->memReg(map)),
-                                  Expr::id(snapshot)));
-  }
-}
-
-bool structureLoopHeader(ProcDecl *proc, SmackRep *rep,
-                         const LoopFrameMap *loopFrames, Block *header,
+bool structureLoopHeader(ProcDecl *proc, SmackRep *rep, Block *header,
                          std::string &reason) {
   auto blocks = blockMap(proc);
   const std::string headerName = header->getName();
@@ -609,8 +579,6 @@ bool structureLoopHeader(ProcDecl *proc, SmackRep *rep,
   std::list<const Stmt *> newPreheader = withoutTrailingGoto(preheader);
   std::list<const Stmt *> whileBody = withoutTrailingGoto(header);
   std::list<const Expr *> invariants;
-  addSVFLoopFrameInvariants(proc, rep, headerName, loopFrames, newPreheader,
-                            invariants);
   std::list<const Stmt *> guardExit;
   guardExit.push_back(exitPartition);
   guardExit.push_back(Stmt::break_());
@@ -631,8 +599,7 @@ bool structureLoopHeader(ProcDecl *proc, SmackRep *rep,
   return true;
 }
 
-void structureBoogieLoops(ProcDecl *proc, SmackRep *rep,
-                          const LoopFrameMap *loopFrames, bool strict) {
+void structureBoogieLoops(ProcDecl *proc, SmackRep *rep, bool strict) {
   bool changed = true;
   std::vector<std::string> failures;
 
@@ -646,7 +613,7 @@ void structureBoogieLoops(ProcDecl *proc, SmackRep *rep,
 
     for (auto it = headers.rbegin(); it != headers.rend(); ++it) {
       std::string reason;
-      if (structureLoopHeader(proc, rep, loopFrames, *it, reason)) {
+      if (structureLoopHeader(proc, rep, *it, reason)) {
         changed = true;
         break;
       }
@@ -657,7 +624,7 @@ void structureBoogieLoops(ProcDecl *proc, SmackRep *rep,
     if (!isLoopHeader(block))
       continue;
     std::string reason;
-    if (!structureLoopHeader(proc, rep, loopFrames, block, reason)) {
+    if (!structureLoopHeader(proc, rep, block, reason)) {
       failures.push_back(block->getName() + ": " + reason);
     }
   }
@@ -673,63 +640,6 @@ void structureBoogieLoops(ProcDecl *proc, SmackRep *rep,
       llvm::report_fatal_error(llvm::StringRef(text), false);
     llvm::errs() << text << "\n";
   }
-}
-
-void collectSVFLoopFrames(const Loop *loop, const SmackInstGenerator *igen,
-                          SmackRep *rep, LoopFrameMap &loopFrames) {
-  if (!loop || !loop->getHeader())
-    return;
-
-  const std::string headerName = igen->blockName(loop->getHeader());
-  if (!headerName.empty())
-    loopFrames[headerName] = rep->oracleFrameForLoop(loop);
-  for (const auto *subloop : loop->getSubLoops())
-    collectSVFLoopFrames(subloop, igen, rep, loopFrames);
-}
-
-LoopFrameMap collectSVFLoopFrames(LoopInfo &LI, const SmackInstGenerator *igen,
-                                  SmackRep *rep) {
-  LoopFrameMap loopFrames;
-  if (!SmackOptions::SVFLoopFrames || !igen)
-    return loopFrames;
-
-  for (const auto *loop : LI)
-    collectSVFLoopFrames(loop, igen, rep, loopFrames);
-  return loopFrames;
-}
-
-void collectSVFLoopCandidates(
-    const Loop *loop, const SmackInstGenerator *igen, SmackRep *rep,
-    const std::string &functionName,
-    std::vector<SmackMemoryPartitionReport::SVFLoopCandidate> &candidates) {
-  if (!loop || !loop->getHeader() || !igen)
-    return;
-
-  const std::string headerName = igen->blockName(loop->getHeader());
-  if (!headerName.empty()) {
-    SmackRep::OracleFrameDecision decision =
-        rep->analyzeOracleFrameForLoop(loop);
-    SmackMemoryPartitionReport::SVFLoopCandidate candidate;
-    candidate.function = functionName;
-    candidate.header = headerName;
-    candidate.complete = decision.complete;
-    candidate.preservedMapCount = decision.preservedMaps.size();
-    candidate.retainedMapCount = decision.retainedMapCount;
-    candidate.refRegionCount = decision.refRegionCount;
-    candidate.modRegionCount = decision.modRegionCount;
-    candidate.fallbackReason = decision.fallbackReason;
-    candidates.push_back(std::move(candidate));
-  }
-  for (const auto *subloop : loop->getSubLoops())
-    collectSVFLoopCandidates(subloop, igen, rep, functionName, candidates);
-}
-
-void collectSVFLoopCandidates(
-    LoopInfo &LI, const SmackInstGenerator *igen, SmackRep *rep,
-    const std::string &functionName,
-    std::vector<SmackMemoryPartitionReport::SVFLoopCandidate> &candidates) {
-  for (const auto *loop : LI)
-    collectSVFLoopCandidates(loop, igen, rep, functionName, candidates);
 }
 
 } // namespace
@@ -798,8 +708,6 @@ void SmackModuleGenerator::generateProgramImpl(
   SDEBUG(errs() << "Analyzing functions...\n");
 
   std::vector<std::pair<Function *, std::list<ProcDecl *>>> functionProcs;
-  std::vector<SmackMemoryPartitionReport::SVFLoopCandidate> svfLoopCandidates;
-  std::set<const Function *> svfLoopCandidateFunctions;
 
   for (auto &F : M) {
 
@@ -831,14 +739,6 @@ void SmackModuleGenerator::generateProgramImpl(
         igen.visit(F);
         SDEBUG(errs() << "\n");
 
-        if (memoryPartitionReport && regionsRef.getOracle() &&
-            svfLoopCandidateFunctions.insert(&F).second) {
-          std::string functionName =
-              F.hasName() ? F.getName().str() : naming.get(F);
-          collectSVFLoopCandidates(LI, &igen, &rep, functionName,
-                                   svfLoopCandidates);
-        }
-
         // First execute static initializers, in the main procedure.
         if (F.hasName() && SmackOptions::isEntryPoint(F.getName())) {
           P->insert(Stmt::call(Naming::INITIALIZE_PROC));
@@ -847,8 +747,7 @@ void SmackModuleGenerator::generateProgramImpl(
           rep.addInitFunc(&F);
 
         if (structuredBplLoops || structuredBplLoopsStrict) {
-          LoopFrameMap loopFrames = collectSVFLoopFrames(LI, &igen, &rep);
-          structureBoogieLoops(P, &rep, &loopFrames, structuredBplLoopsStrict);
+          structureBoogieLoops(P, &rep, structuredBplLoopsStrict);
           structureBoogieIfs(P);
         }
       }
@@ -860,10 +759,20 @@ void SmackModuleGenerator::generateProgramImpl(
     // ... added below, after body generation has discovered late maps too.
   }
 
+  // MODIFIES: every procedure conservatively modifies all memory maps. (The
+  // SVF/oracle path previously narrowed this per-function; with sea-dsa removed
+  // we restore the sound default — Boogie procedures must declare every region
+  // they may touch, and SMACK inlines into entry points so the over-approx is
+  // harmless.) Build the region list once after instruction generation has
+  // discovered all regions.
+  std::list<std::string> allMemoryMaps;
+  for (const auto &memoryMap : rep.memoryMaps())
+    allMemoryMaps.push_back(memoryMap.first);
   for (const auto &entry : functionProcs) {
-    auto modifies = rep.oracleModifiesForFunction(entry.first);
+    if (rep.isContractExpr(entry.first))
+      continue;
     for (auto *proc : entry.second)
-      for (const auto &mod : modifies)
+      for (const auto &mod : allMemoryMaps)
         proc->getModifies().push_back(mod);
   }
 
@@ -888,10 +797,8 @@ void SmackModuleGenerator::generateProgramImpl(
   for (auto D : kill_list)
     decls.erase(std::remove(decls.begin(), decls.end(), D), decls.end());
 
-  if (memoryPartitionReport) {
+  if (memoryPartitionReport)
     regionsRef.snapshotReport(*memoryPartitionReport);
-    memoryPartitionReport->svfLoopCandidates = std::move(svfLoopCandidates);
-  }
 }
 
 llvm::AnalysisKey SmackModuleGeneratorAnalysis::Key;

@@ -142,9 +142,9 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
 
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr: {
-    return TTI->getAddressComputationCost(
-        I->getType(), nullptr, nullptr,
-        TargetTransformInfo::TargetCostKind::TCK_Latency);
+    // LLVM 21's getAddressComputationCost takes (Type*, ScalarEvolution*,
+    // const SCEV*); the TargetCostKind overload only exists from LLVM 22.
+    return TTI->getAddressComputationCost(I->getType(), nullptr, nullptr);
   }
 
   case Instruction::Ret:

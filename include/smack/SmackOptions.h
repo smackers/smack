@@ -29,14 +29,8 @@ public:
   static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> RewriteBitwiseOps;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
-  static const llvm::cl::opt<std::string> MemoryPartitioner;
-  static const llvm::cl::opt<std::string> MemoryPartitionOracle;
-  static const llvm::cl::opt<bool> SVFLoopFrames;
-  static const llvm::cl::opt<bool> SVFCallFrames;
-  static const llvm::cl::opt<bool> SVFIndirectCalls;
-  static const llvm::cl::opt<std::string> SVFAnalysis;
-  static const llvm::cl::opt<std::string> SVFMemoryPartitionMode;
-  static const llvm::cl::opt<std::string> SVFExtAPI;
+  // Inert: devirtualization (sea-dsa) was removed; the flag is still accepted so
+  // existing driver invocations (share/smack/pipeline/translate.py) keep working.
   static const llvm::cl::opt<bool> SkipDevirt;
   static const llvm::cl::opt<bool> NoByteAccessInference;
   static const llvm::cl::opt<bool> FloatEnabled;

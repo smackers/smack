@@ -289,7 +289,7 @@ int main(int argc, char **argv) {
 #ifdef SMACK_NEW_PM
   // Build-time opt-in to NewPM full pipeline. Runs Tier A+B+C+D NewPM
   // siblings via PassBuilder/ModulePassManager. The Tier C analyses
-  // (DSAWrapperAnalysis, CompleteCallGraphAnalysis) wrap legacy sea-dsa.
+  // (DSAWrapperAnalysis, RegionsAnalysis) wrap the SVF-backed DSAWrapper.
   if (!OutputFilename.empty()) {
     std::error_code EC;
     auto F = new ToolOutputFile(OutputFilename.c_str(), EC, sys::fs::OF_None);

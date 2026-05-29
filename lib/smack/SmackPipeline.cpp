@@ -34,13 +34,9 @@
 #include "llvm/Transforms/Utils/LowerSwitch.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 
-#include "seadsa/InitializePasses.hh"
-#include "seadsa/support/Debug.h"
-#include "seadsa/support/RemovePtrToInt.hh"
 #include "smack/AddTiming.h"
 #include "smack/DSAWrapperAnalysis.h"
 #include "smack/Regions.h"
-#include "utils/Devirt.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "smack/AnnotateLoopExits.h"
 #include "smack/BplFilePrinter.h"
@@ -62,7 +58,6 @@
 #include "smack/SmackWarnings.h"
 #include "smack/SplitAggregateValue.h"
 #include "smack/VerifierCodeMetadata.h"
-#include "utils/Devirt.h"
 #include "utils/InitializePasses.h"
 #include "utils/MergeGEP.h"
 #include "utils/SimplifyExtractValue.h"
@@ -168,38 +163,8 @@ TargetMachine *getTargetMachine(Triple TheTriple, StringRef CPUStr,
 void configureModule(Module &module, const SmackPipelineOptions &options) {
   if (module.getDataLayoutStr().empty())
     module.setDataLayout(options.defaultDataLayout);
-
-  const auto &memoryPartitioner = SmackOptions::MemoryPartitioner.getValue();
-  if (memoryPartitioner != "sea-dsa" && memoryPartitioner != "cell-refined" &&
-      memoryPartitioner != "aa-refined" && memoryPartitioner != "svf-refined" &&
-      memoryPartitioner != "svf-native") {
-    const std::string error =
-        "unsupported -smack-memory-partitioner: " + memoryPartitioner;
-    report_fatal_error(StringRef(error));
-  }
-
-  if (memoryPartitioner == "svf-refined" &&
-      !SmackOptions::NoMemoryRegionSplitting &&
-      SmackOptions::MemoryPartitionOracle.getValue().empty()) {
-    const std::string error =
-        memoryPartitioner +
-        " requires -smack-memory-partition-oracle; pass "
-        "-smack-memory-partitioner=sea-dsa to opt out";
-    report_fatal_error(
-        StringRef(error), false);
-  }
-
-  if (memoryPartitioner == "svf-native" &&
-      !SmackOptions::NoMemoryRegionSplitting) {
-#ifndef SMACK_ENABLE_INPROCESS_SVF
-    report_fatal_error(
-        "svf-native requires SMACK built with -DSMACK_ENABLE_INPROCESS_SVF=ON",
-        false);
-#endif
-  }
-
-  if (SmackOptions::WarningLevel == SmackWarnings::WarningLevel::Info)
-    seadsa::SeaDsaEnableLog("dsa-warn");
+  // The memory-region partition is now produced unconditionally by the
+  // SVF-Andersen-backed DSAWrapper; there is no partitioner selection knob.
 }
 
 } // namespace
@@ -209,8 +174,6 @@ void initializeSmackPipelinePasses() {
   initializeAnalysis(Registry);
 
   initializeCodifyStaticInitsPass(Registry);
-  initializeDevirtualizePass(Registry);
-  initializeRemovePtrToIntPass(Registry);
   initializeRegionsPass(Registry);
   initializeSmackModuleGeneratorPass(Registry);
   initializeBplFilePrinterPass(Registry);
@@ -221,25 +184,53 @@ void addSmackPreBplPasses(Module &module, legacy::PassManager &passManager,
   configureModule(module, options);
   initializeSmackPipelinePasses();
 
-  // This runs before DSA because some Rust functions cause problems.
-  passManager.add(makePass<RustFixes>());
+  // RustFixes + the non-modular internalize/GlobalDCE/DCE cleanup run here as a
+  // one-shot NewPM step rather than as legacy passes. LLVM 21 dropped the legacy
+  // createGlobalDCEPass() factory (only the NewPM GlobalDCEPass survives), so the
+  // cleanup can no longer be expressed in the legacy PassManager. Running it
+  // immediately (before the legacy PM that emits the rest of the pipeline) keeps
+  // the original ordering: RustFixes, then internalize -> GlobalDCE -> DCE ->
+  // GlobalDCE -> DCE, then RemoveDeadDefs + the remaining legacy passes.
+  {
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PassBuilder PB;
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  if (!options.modular) {
-    auto PreserveKeyGlobals = [=](const GlobalValue &GV) {
-      auto name = GV.getName();
-      return SmackOptions::isEntryPoint(name) || Naming::isSmackName(name) ||
-             name.find("__VERIFIER_assume") != StringRef::npos;
-    };
-    internalizeModule(module, PreserveKeyGlobals);
-    passManager.add(createGlobalDCEPass());
-    passManager.add(createDeadCodeEliminationPass());
-    passManager.add(createGlobalDCEPass());
-    passManager.add(createDeadCodeEliminationPass());
-    passManager.add(makePass<RemoveDeadDefs>());
+    ModulePassManager MPM;
+    {
+      // This runs before DSA because some Rust functions cause problems.
+      FunctionPassManager FPM;
+      FPM.addPass(RustFixesNewPM());
+      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    }
+
+    if (!options.modular) {
+      auto PreserveKeyGlobals = [=](const GlobalValue &GV) {
+        auto name = GV.getName();
+        return SmackOptions::isEntryPoint(name) || Naming::isSmackName(name) ||
+               name.find("__VERIFIER_assume") != StringRef::npos;
+      };
+      MPM.addPass(InternalizePass(PreserveKeyGlobals));
+      MPM.addPass(GlobalDCEPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(DCEPass()));
+      MPM.addPass(GlobalDCEPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(DCEPass()));
+    }
+
+    MPM.run(module, MAM);
   }
 
+  if (!options.modular)
+    passManager.add(makePass<RemoveDeadDefs>());
+
   passManager.add(makePass<InitUndefAllocas>());
-  passManager.add(seadsa::createRemovePtrToIntPass());
   passManager.add(createLowerSwitchPass());
   passManager.add(createPromoteMemoryToRegisterPass());
 
@@ -260,8 +251,6 @@ void addSmackPreBplPasses(Module &module, legacy::PassManager &passManager,
   if (!options.modular)
     passManager.add(makePass<RemoveDeadDefs>());
   passManager.add(makePass<MergeArrayGEP>());
-  if (!SmackOptions::SkipDevirt)
-    passManager.add(makePass<Devirtualize>());
   passManager.add(makePass<SplitAggregateValue>());
 
   if (SmackOptions::MemorySafety)
@@ -432,9 +421,8 @@ void runSmackFullNewPM(Module &module, raw_ostream &out,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  // Tier C/D analyses: bridge legacy sea-dsa pipeline via Option 2 wrap.
+  // Tier C/D analyses: SVF-backed DSAWrapper + Regions bridges.
   MAM.registerPass([&] { return DSAWrapperAnalysis(); });
-  MAM.registerPass([&] { return CompleteCallGraphAnalysis(); });
   MAM.registerPass([&] { return RegionsAnalysis(); });
   MAM.registerPass([&] {
     return SmackModuleGeneratorAnalysis(bplOptions.memoryPartitionReport);
@@ -469,18 +457,6 @@ void runSmackFullNewPM(Module &module, raw_ostream &out,
     FunctionPassManager FPM;
     FPM.addPass(InitUndefAllocasNewPM());
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  }
-
-  // J2 fix: seadsa::createRemovePtrToIntPass MUST run here (early) to match
-  // legacy. Otherwise mem2reg/NormalizeLoops/SimplifyE-IV see un-converted
-  // ptr-to-int casts → different DSA partitioning later. The pass is legacy
-  // (sea-dsa upstream isn't NewPM-ported) so we wrap a one-shot legacy PM.
-  // DSAWrapperAnalysis still calls it internally for redundancy (safe; pass
-  // is idempotent after first run because no pti casts remain).
-  {
-    llvm::legacy::PassManager removePtiPM;
-    removePtiPM.add(seadsa::createRemovePtrToIntPass());
-    removePtiPM.run(module);
   }
 
   {
@@ -523,8 +499,6 @@ void runSmackFullNewPM(Module &module, raw_ostream &out,
   if (!options.modular)
     MPM.addPass(RemoveDeadDefsNewPM());
   MPM.addPass(MergeArrayGEPNewPM());
-  if (!SmackOptions::SkipDevirt)
-    MPM.addPass(llvm::DevirtualizeNewPM());
   {
     FunctionPassManager FPM;
     FPM.addPass(SplitAggregateValueNewPM());

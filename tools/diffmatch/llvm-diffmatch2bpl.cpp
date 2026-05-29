@@ -171,8 +171,8 @@ int main(int argc, char **argv) {
   options.modular = Modular;
   options.defaultDataLayout = DefaultDataLayout;
   // Force-link SmackOptions so llvm-diffmatch2bpl exposes the same low-level
-  // memory partitioning flags as llvm2bpl.
-  (void)smack::SmackOptions::MemoryPartitioner.getValue();
+  // flags as llvm2bpl.
+  (void)smack::SmackOptions::NoMemoryRegionSplitting.getValue();
 
   smack::runSmackPreBplPipeline(*leftModule, options);
   smack::runSmackPreBplPipeline(*rightModule, options);

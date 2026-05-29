@@ -68,51 +68,10 @@ const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
     "no-memory-splitting",
     llvm::cl::desc("Disable splitting memory into regions."));
 
-const llvm::cl::opt<std::string> SmackOptions::MemoryPartitioner(
-    "smack-memory-partitioner",
-    llvm::cl::desc(
-        "Select memory partitioner (sea-dsa, cell-refined, aa-refined, "
-        "svf-refined, or svf-native)."),
-    llvm::cl::init("sea-dsa"));
-
-const llvm::cl::opt<std::string> SmackOptions::MemoryPartitionOracle(
-    "smack-memory-partition-oracle",
-    llvm::cl::desc("Read external memory partition oracle JSON"),
-    llvm::cl::init(""));
-
-const llvm::cl::opt<bool> SmackOptions::SVFLoopFrames(
-    "smack-svf-loop-frames",
-    llvm::cl::desc("Emit SVF-derived Boogie loop frame invariants when complete"),
-    llvm::cl::init(false));
-
-const llvm::cl::opt<bool> SmackOptions::SVFCallFrames(
-    "smack-svf-call-frames",
-    llvm::cl::desc("Enable SVF callsite frame facts where supported"),
-    llvm::cl::init(false));
-
-const llvm::cl::opt<bool> SmackOptions::SVFIndirectCalls(
-    "smack-svf-indirect-calls",
-    llvm::cl::desc("Enable SVF indirect-call target facts where supported"),
-    llvm::cl::init(false));
-
-const llvm::cl::opt<std::string> SmackOptions::SVFAnalysis(
-    "smack-svf-analysis",
-    llvm::cl::desc("SVF pointer analysis for in-process svf-native"),
-    llvm::cl::init("ander"));
-
-const llvm::cl::opt<std::string> SmackOptions::SVFMemoryPartitionMode(
-    "smack-svf-mem-par",
-    llvm::cl::desc("SVF MemorySSA partition mode for in-process svf-native"),
-    llvm::cl::init("intra-disjoint"));
-
-const llvm::cl::opt<std::string> SmackOptions::SVFExtAPI(
-    "smack-svf-extapi",
-    llvm::cl::desc("SVF extapi.bc path for in-process svf-native"),
-    llvm::cl::init(""));
-
 const llvm::cl::opt<bool> SmackOptions::SkipDevirt(
     "smack-skip-devirt",
-    llvm::cl::desc("Skip indirect-call devirtualization in the pre-BPL pipeline"),
+    llvm::cl::desc("Inert: devirtualization was removed with sea-dsa; flag kept "
+                   "for driver compatibility."),
     llvm::cl::init(false));
 
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
