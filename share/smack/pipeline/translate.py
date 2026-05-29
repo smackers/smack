@@ -143,9 +143,12 @@ def _llvm2bpl_cmd(
         cmd += ["-no-memory-splitting"]
     # Memory partitioning is now SVF-Andersen only — the -smack-memory-partitioner
     # selector, its external oracle, and all -smack-svf-* tuning flags were removed
-    # with sea-dsa. -smack-skip-devirt is still accepted (inert) for compatibility.
+    # with sea-dsa. Devirtualization now runs on SVF's resolved call graph and is
+    # ON by default; -smack-skip-devirt turns it off.
     if skip_devirt:
         cmd += ["-smack-skip-devirt"]
+    if include_devirt_report and getattr(args, "devirt_report", None):
+        cmd += ["-smack-devirt-report", args.devirt_report]
     if memory_partition_report:
         cmd += ["-smack-memory-partition-report", memory_partition_report]
     if args.static_init_zero_memset_threshold is not None:

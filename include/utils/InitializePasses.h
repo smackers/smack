@@ -6,7 +6,8 @@
 
 #include "llvm/InitializePasses.h"
 
-// The Devirtualize pass (sea-dsa-backed) was removed; no utils passes remain to
-// register here. Header kept as a stable include target.
+namespace llvm {
+void initializeDevirtualizePass(PassRegistry &Registry);
+} // end namespace llvm
 
 #endif // UTILS_INITIALIZEPASSES_H

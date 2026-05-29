@@ -70,8 +70,7 @@ const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
 
 const llvm::cl::opt<bool> SmackOptions::SkipDevirt(
     "smack-skip-devirt",
-    llvm::cl::desc("Inert: devirtualization was removed with sea-dsa; flag kept "
-                   "for driver compatibility."),
+    llvm::cl::desc("Skip SVF-based devirtualization of indirect function calls."),
     llvm::cl::init(false));
 
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(

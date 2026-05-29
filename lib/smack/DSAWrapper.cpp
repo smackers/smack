@@ -28,6 +28,16 @@ namespace smack {
 
 using namespace llvm;
 
+// SVF is built ONCE into these process-global handles and reused across
+// DSAWrapper re-runs AND by the SVF-based devirtualizer: SVF cannot be rebuilt
+// in-process (release()+rebuild trips SVFIRBuilder::initialiseNodes' node/sym
+// count assert — its many singletons do not fully reset). Kept at file scope (not
+// function-local statics) so DSAWrapper::cachedSVF can hand them to the devirt
+// pass, which runs after DSAWrapper and must reuse the same pre-devirt points-to.
+static SVF::LLVMModuleSet *g_svfModuleSet = nullptr;
+static SVF::SVFIR *g_svfIR = nullptr;
+static SVF::Andersen *g_svfAndersen = nullptr;
+
 unsigned DSAWrapper::ufFind(unsigned x) {
   auto it = ufParent.find(x);
   if (it == ufParent.end()) {
@@ -149,37 +159,40 @@ void DSAWrapper::aggregateRegions() {
   }
 }
 
+bool DSAWrapper::cachedSVF(SVF::LLVMModuleSet *&ms, SVF::SVFIR *&pag,
+                           SVF::Andersen *&ander) {
+  ms = g_svfModuleSet;
+  pag = g_svfIR;
+  ander = g_svfAndersen;
+  return g_svfAndersen != nullptr;
+}
+
 bool DSAWrapper::runOnModule(llvm::Module &M) {
   module = &M;
   dataLayout = &M.getDataLayout();
 
-  // SVF is built ONCE into process-global statics and reused across DSAWrapper
-  // re-runs: SVF cannot be rebuilt in-process (release()+rebuild trips
-  // SVFIRBuilder::initialiseNodes' node/sym-count assert — its many singletons do
-  // not fully reset). Caveat: the legacy PM re-runs DSAWrapper for the translation
-  // consumer after intervening transforms, so accesses those passes create are not
-  // in the (first-built) SVF and resolve to "no region" (rootPlus1==0), as do
-  // pointers SVF genuinely leaves with empty points-to. Such accesses are currently
-  // isolated in a single shared region — sound only insofar as SVF's empty-pts
-  // soundly means "points to nothing tracked" (TODO: harden unresolved accesses to
-  // be conservative by construction). Per-run maps below are rebuilt against the
-  // cached SVF (stable node ids), so they stay consistent.
-  static SVF::LLVMModuleSet *s_ms = nullptr;
-  static SVF::SVFIR *s_pag = nullptr;
-  static SVF::Andersen *s_ander = nullptr;
-  if (s_ander == nullptr) {
+  // Build SVF once (see g_svf* declarations above). Caveat: the legacy PM
+  // re-runs DSAWrapper for the translation consumer after intervening transforms,
+  // so accesses those passes create are not in the (first-built) SVF and resolve
+  // to "no region" (rootPlus1==0), as do pointers SVF genuinely leaves with empty
+  // points-to. Such accesses are currently isolated in a single shared region —
+  // sound only insofar as SVF's empty-pts soundly means "points to nothing
+  // tracked" (TODO: harden unresolved accesses to be conservative by
+  // construction). Per-run maps below are rebuilt against the cached SVF (stable
+  // node ids), so they stay consistent.
+  if (g_svfAndersen == nullptr) {
     // NOTE: SVF mutates M in place (BreakConstantGEPs + UnifyFunctionExitNodes);
     // fine for llvm2bpl's one-shot use, and it preserves llvm::Value* identity for
     // the pointer queries below.
     SVF::LLVMModuleSet::buildSVFModule(M);
-    s_ms = SVF::LLVMModuleSet::getLLVMModuleSet();
+    g_svfModuleSet = SVF::LLVMModuleSet::getLLVMModuleSet();
     SVF::SVFIRBuilder builder;
-    s_pag = builder.build();
-    s_ander = SVF::AndersenWaveDiff::createAndersenWaveDiff(s_pag);
+    g_svfIR = builder.build();
+    g_svfAndersen = SVF::AndersenWaveDiff::createAndersenWaveDiff(g_svfIR);
   }
-  ms = s_ms;
-  pag = s_pag;
-  ander = s_ander;
+  ms = g_svfModuleSet;
+  pag = g_svfIR;
+  ander = g_svfAndersen;
 
   buildUnionFind(M);
   aggregateRegions();

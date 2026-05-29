@@ -92,6 +92,15 @@ public:
   bool isRead(const llvm::Value *v);
   bool isTypeSafe(const llvm::Value *v);
 
+  // Access the process-global SVF analysis (module set / SVFIR / Andersen)
+  // that runOnModule builds once and reuses. Returns false if SVF has not been
+  // built yet (DSAWrapper has not run). The SVF-based devirtualizer uses this to
+  // reuse the same pre-devirt points-to information — it MUST run after
+  // DSAWrapper (enforced via AnalysisUsage), so by the time it calls this the
+  // handles are populated.
+  static bool cachedSVF(SVF::LLVMModuleSet *&ms, SVF::SVFIR *&pag,
+                        SVF::Andersen *&ander);
+
   // Region (node) queries.
   unsigned getNumGlobals(MemNodeRef n);
   bool isStaticInitd(MemNodeRef n);

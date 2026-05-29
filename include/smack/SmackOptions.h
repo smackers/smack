@@ -29,8 +29,8 @@ public:
   static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> RewriteBitwiseOps;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
-  // Inert: devirtualization (sea-dsa) was removed; the flag is still accepted so
-  // existing driver invocations (share/smack/pipeline/translate.py) keep working.
+  // Skip the SVF-based devirtualization pass (Devirtualize). Off by default, so
+  // indirect calls SVF resolves completely get rewritten to direct dispatch.
   static const llvm::cl::opt<bool> SkipDevirt;
   static const llvm::cl::opt<bool> NoByteAccessInference;
   static const llvm::cl::opt<bool> FloatEnabled;

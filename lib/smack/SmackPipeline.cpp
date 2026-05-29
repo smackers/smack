@@ -37,6 +37,7 @@
 #include "smack/AddTiming.h"
 #include "smack/DSAWrapperAnalysis.h"
 #include "smack/Regions.h"
+#include "utils/Devirt.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "smack/AnnotateLoopExits.h"
 #include "smack/BplFilePrinter.h"
@@ -174,6 +175,7 @@ void initializeSmackPipelinePasses() {
   initializeAnalysis(Registry);
 
   initializeCodifyStaticInitsPass(Registry);
+  initializeDevirtualizePass(Registry);
   initializeRegionsPass(Registry);
   initializeSmackModuleGeneratorPass(Registry);
   initializeBplFilePrinterPass(Registry);
@@ -251,6 +253,11 @@ void addSmackPreBplPasses(Module &module, legacy::PassManager &passManager,
   if (!options.modular)
     passManager.add(makePass<RemoveDeadDefs>());
   passManager.add(makePass<MergeArrayGEP>());
+  // Devirtualize indirect calls SVF resolves completely (must run after
+  // DSAWrapper, which builds the SVF analysis it reuses; enforced via
+  // Devirtualize::getAnalysisUsage requiring DSAWrapper).
+  if (!SmackOptions::SkipDevirt)
+    passManager.add(makePass<Devirtualize>());
   passManager.add(makePass<SplitAggregateValue>());
 
   if (SmackOptions::MemorySafety)
@@ -346,6 +353,10 @@ void runSmackTierANewPM(Module &module, const SmackPipelineOptions &options) {
     MPM.addPass(RemoveDeadDefsNewPM());
   }
   MPM.addPass(MergeArrayGEPNewPM());
+  // Devirtualize indirect calls (NewPM parity; DSAWrapperAnalysis, registered
+  // above, builds the SVF analysis it reuses).
+  if (!SmackOptions::SkipDevirt)
+    MPM.addPass(llvm::DevirtualizeNewPM());
 
   {
     FunctionPassManager FPM;

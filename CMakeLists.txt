@@ -98,6 +98,7 @@ add_library(smackTranslator STATIC
   include/smack/BplPrinter.h
   include/smack/DSAWrapper.h
   include/smack/DSAWrapperAnalysis.h
+  include/utils/Devirt.h
   include/smack/InitializePasses.h
   include/smack/LlvmCompat.h
   include/smack/Naming.h
@@ -131,6 +132,7 @@ add_library(smackTranslator STATIC
   lib/smack/Debug.cpp
   lib/smack/DSAWrapper.cpp
   lib/smack/DSAWrapperAnalysis.cpp
+  lib/utils/Devirt.cpp
   lib/smack/Naming.cpp
   lib/smack/Regions.cpp
   lib/smack/SmackInstGenerator.cpp
@@ -224,7 +226,7 @@ target_link_libraries(llvm-diffmatch2bpl smackTranslator utils)
 # path; bake their dirs into the RPATH of the tools that pull them in.
 set(SMACK_SVF_RPATH
   "/home/ubuntu/SVF/Release-build/lib;/home/ubuntu/SVF/llvm-21.1.0.obj/lib;/home/ubuntu/SVF/z3.obj/bin")
-set_target_properties(llvm2bpl llvm-diffmatch2bpl PROPERTIES
+set_target_properties(llvm2bpl llvm-diffmatch2bpl extern-statics PROPERTIES
   BUILD_RPATH "${SMACK_SVF_RPATH}"
   INSTALL_RPATH "${SMACK_SVF_RPATH}")
 
