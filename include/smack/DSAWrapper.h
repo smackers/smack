@@ -65,6 +65,21 @@ private:
   // Cache: pointer Value -> component root + 1 (0 == no region).
   std::unordered_map<const llvm::Value *, unsigned> valueRootPlus1;
 
+  // Reachable (LIVE) functions: BFS over the call graph (direct + SVF-resolved
+  // indirect edges) from the entry roots. Mem-ops in UNREACHABLE functions never
+  // execute, so their pointers cannot cause a runtime alias.
+  std::unordered_set<const llvm::Function *> reachableFuncs;
+  void computeReachable(llvm::Module &M);
+
+  // SOUND catch-all. Set when a LIVE mem-op pointer is unresolved (SVF gave it no
+  // region). Such a pointer may alias ANY object, so the split-memory invariant
+  // (may-alias => same region) can only be kept by placing everything in one
+  // region. When set, rootPlus1 returns the single universal region for every
+  // pointer. This is the only sound treatment of a live unresolved pointer; the
+  // R1/R2/R3 precise resolvers exist to keep this from triggering where possible.
+  bool collapsed = false;
+  unsigned collapsedRoot = 0;
+
   void buildUnionFind(llvm::Module &M);
   void aggregateRegions();
   // Returns component root + 1 for the region of pointer v, or 0 if none.

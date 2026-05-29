@@ -28,6 +28,7 @@
 #include "smack/InitializePasses.h"
 #include "smack/Debug.h"
 #include "smack/LlvmCompat.h"
+#include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 
 #include "llvm/ADT/Statistic.h"
@@ -59,6 +60,9 @@ using namespace llvm;
 // Pass statistics
 STATISTIC(FuncAdded, "Number of bounce functions added");
 STATISTIC(CSConvert, "Number of call sites converted");
+STATISTIC(DeadFnStubbed,
+          "Number of unreachable functions with unresolved indirect calls "
+          "stubbed with `unreachable`");
 
 static cl::opt<std::string> DevirtReportFilename(
     "smack-devirt-report",
@@ -612,6 +616,93 @@ void Devirtualize::processCallSite(CallBase *CS) {
 }
 
 //
+// Stub functions that are UNREACHABLE in SVF's (sound) call graph but still
+// contain an indirect call devirt could not resolve. Such a call would crash
+// SmackInstGenerator (`cast<Function>` on a non-Function callee), yet the
+// function is provably never called (no caller, and not a resolved target of
+// any indirect call) — so its body is dead and replacing it with `unreachable`
+// is sound. This is points-to-informed dead-code elimination: LLVM's globaldce
+// conservatively keeps such functions because they are address-taken (e.g. a
+// vtable constant lists them), but SVF proves no call edge actually reaches
+// them. Example: BearSSL's `br_gcm_aad_inject` is listed in `br_gcm_vtable` but
+// never dispatched, so its `ctx` param has empty points-to and `ctx->gh`
+// resolves to nothing.
+//
+static void stubUnreachableIndirectCallFunctions(Module &M) {
+  SVF::LLVMModuleSet *ms = nullptr;
+  SVF::SVFIR *pag = nullptr;
+  SVF::Andersen *ander = nullptr;
+  if (!smack::DSAWrapper::cachedSVF(ms, pag, ander) || !ander)
+    return;
+  SVF::CallGraph *cg = ander->getCallGraph();
+  if (!cg)
+    return;
+
+  // name -> call-graph node (one pass over the graph).
+  std::map<std::string, const SVF::CallGraphNode *> byName;
+  for (const auto &item : *cg)
+    byName[item.second->getName()] = item.second;
+
+  // Roots = the functions SMACK keeps live (same predicate as its internalize
+  // pass): entry points, smack-internal names, and the assume intrinsic.
+  std::set<const SVF::CallGraphNode *> reachable;
+  std::vector<const SVF::CallGraphNode *> work;
+  auto visit_root = [&](const SVF::CallGraphNode *n) {
+    if (n && reachable.insert(n).second)
+      work.push_back(n);
+  };
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    StringRef nm = F.getName();
+    if (smack::SmackOptions::isEntryPoint(nm) || smack::Naming::isSmackName(nm) ||
+        nm.contains("__VERIFIER_assume")) {
+      auto it = byName.find(nm.str());
+      if (it != byName.end())
+        visit_root(it->second);
+    }
+  }
+  // BFS over call edges (direct + SVF-resolved indirect) -> reachable set.
+  while (!work.empty()) {
+    const SVF::CallGraphNode *n = work.back();
+    work.pop_back();
+    for (const SVF::CallGraphEdge *e : n->getOutEdges())
+      visit_root(e->getDstNode());
+  }
+
+  for (Function &F : M) {
+    if (F.isDeclaration() || F.empty())
+      continue;
+    auto it = byName.find(F.getName().str());
+    if (it == byName.end())
+      continue; // not modeled by SVF -> conservatively leave it
+    if (reachable.count(it->second))
+      continue; // reachable from a root -> live
+    bool hasIndirect = false;
+    for (Instruction &I : instructions(F))
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->isIndirectCall()) {
+          hasIndirect = true;
+          break;
+        }
+    if (!hasIndirect)
+      continue; // dead but harmless -> leave for normal DCE
+
+    // Replace the body with a single `unreachable` (preserve linkage so any
+    // vtable constant referencing the function stays valid).
+    auto linkage = F.getLinkage();
+    for (BasicBlock &BB : F)
+      BB.dropAllReferences();
+    while (!F.empty())
+      F.begin()->eraseFromParent();
+    BasicBlock *bb = BasicBlock::Create(F.getContext(), "", &F);
+    new UnreachableInst(F.getContext(), bb);
+    F.setLinkage(linkage);
+    ++DeadFnStubbed;
+  }
+}
+
+//
 // Method: runOnModule()
 //
 // Entry point: find indirect calls and turn the completely-resolved ones into
@@ -629,6 +720,10 @@ bool Devirtualize::runOnModule(Module &M) {
   visit(M);
   for (unsigned index = 0; index < Worklist.size(); ++index)
     makeDirectCall(Worklist[index]);
+
+  // Neutralize unreachable functions whose unresolved indirect calls would
+  // otherwise crash translation (points-to-informed dead-code elimination).
+  stubUnreachableIndirectCallFunctions(M);
 
   writeDevirtReport(M);
 
