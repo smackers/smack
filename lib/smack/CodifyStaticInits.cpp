@@ -32,12 +32,13 @@ namespace smack {
 using namespace llvm;
 
 bool CodifyStaticInits::runOnModule(Module &M) {
-  return runImpl(M);
+  return runImpl(M, getAnalysis<DSAWrapper>());
 }
 
-bool CodifyStaticInits::runImpl(Module &M) {
+bool CodifyStaticInits::runImpl(Module &M, DSAWrapper &dsaRef) {
   const DataLayout *TD = &M.getDataLayout();
   LLVMContext &C = M.getContext();
+  DSAWrapper *DSA = &dsaRef;
 
   Function *F = cast<Function>(
       M.getOrInsertFunction(Naming::STATIC_INIT_PROC, Type::getVoidTy(C))
@@ -109,7 +110,7 @@ bool CodifyStaticInits::runImpl(Module &M) {
       };
 
   for (auto &G : M.globals())
-    if (G.hasInitializer()) // isRead was unconditionally true; codify all inits
+    if (G.hasInitializer() && DSA->isRead(&G))
       enqueueGlobal(&G);
 
   while (worklist.size()) {
@@ -160,13 +161,15 @@ bool CodifyStaticInits::runImpl(Module &M) {
 
 void CodifyStaticInits::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<DSAWrapper>();
 }
 
 Pass *createCodifyStaticInitsPass() { return new CodifyStaticInits(); }
 
 llvm::PreservedAnalyses
-CodifyStaticInitsNewPM::run(Module &M, llvm::ModuleAnalysisManager &) {
-  bool changed = CodifyStaticInits::runImpl(M);
+CodifyStaticInitsNewPM::run(Module &M, llvm::ModuleAnalysisManager &MAM) {
+  auto &dsa = MAM.getResult<DSAWrapperAnalysis>(M);
+  bool changed = CodifyStaticInits::runImpl(M, *dsa.wrapper);
   return changed ? llvm::PreservedAnalyses::none()
                  : llvm::PreservedAnalyses::all();
 }
@@ -178,5 +181,6 @@ char smack::CodifyStaticInits::ID = 0;
 using namespace smack;
 INITIALIZE_PASS_BEGIN(CodifyStaticInits, "codify-static-inits",
                       "Codify Static Initializers", false, false)
+INITIALIZE_PASS_DEPENDENCY(DSAWrapper)
 INITIALIZE_PASS_END(CodifyStaticInits, "codify-static-inits",
                     "Codify Static Initializers", false, false)

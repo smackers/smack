@@ -23,11 +23,8 @@ public:
   virtual bool runOnModule(llvm::Module &M) override;
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
-  // Shared body for legacy + NewPM. No longer depends on the memory-region
-  // analysis: every initialized global is codified (isRead was unconditionally
-  // true), which lets the SVF DSAWrapper build once on the final, post-transform
-  // module at translation time rather than early (avoiding stale regions).
-  static bool runImpl(llvm::Module &M);
+  // Shared body for legacy + NewPM. Caller supplies the DSAWrapper.
+  static bool runImpl(llvm::Module &M, DSAWrapper &dsa);
 };
 
 class CodifyStaticInitsNewPM

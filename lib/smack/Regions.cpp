@@ -193,14 +193,8 @@ void Region::print(raw_ostream &O) {
 char smack::Regions::ID = 0;
 
 using namespace smack;
-// Regions requires DSAWrapper (getAnalysisUsage), so it must register that
-// dependency itself — previously this was done transitively by
-// CodifyStaticInits, which no longer depends on DSAWrapper.
-INITIALIZE_PASS_BEGIN(Regions, "smack-regions", "SMACK Memory Regions Pass",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(DSAWrapper)
-INITIALIZE_PASS_END(Regions, "smack-regions", "SMACK Memory Regions Pass", false,
-                    false)
+INITIALIZE_PASS(Regions, "smack-regions", "SMACK Memory Regions Pass", false,
+                false)
 
 namespace smack {
 
