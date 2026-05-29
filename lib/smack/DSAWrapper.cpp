@@ -7,10 +7,13 @@
 #include "smack/Debug.h"
 #include "smack/InitializePasses.h"
 #include "smack/SmackOptions.h"
+#include <cstdlib>
+#include <map>
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
 
 #include "MemoryModel/PointsTo.h"
 #include "SVF-LLVM/LLVMModule.h"
@@ -150,19 +153,24 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
   module = &M;
   dataLayout = &M.getDataLayout();
 
-  // The legacy PassManager can run DSAWrapper more than once (several analysis
-  // consumers with an intervening transform that does not preserve it). SVF keeps
-  // its module set / SVFIR / Andersen result in process-global singletons that are
-  // NOT reset between runs, so rebuilding on a 2nd run trips SVF's buildMemModel()
-  // freshness assert (totalSymNum != NullPtr). Build SVF exactly once and reuse the
-  // cached singletons; only the per-instance region maps are repopulated each run.
+  // SVF is built ONCE into process-global statics and reused across DSAWrapper
+  // re-runs: SVF cannot be rebuilt in-process (release()+rebuild trips
+  // SVFIRBuilder::initialiseNodes' node/sym-count assert — its many singletons do
+  // not fully reset). Caveat: the legacy PM re-runs DSAWrapper for the translation
+  // consumer after intervening transforms, so accesses those passes create are not
+  // in the (first-built) SVF and resolve to "no region" (rootPlus1==0), as do
+  // pointers SVF genuinely leaves with empty points-to. Such accesses are currently
+  // isolated in a single shared region — sound only insofar as SVF's empty-pts
+  // soundly means "points to nothing tracked" (TODO: harden unresolved accesses to
+  // be conservative by construction). Per-run maps below are rebuilt against the
+  // cached SVF (stable node ids), so they stay consistent.
   static SVF::LLVMModuleSet *s_ms = nullptr;
   static SVF::SVFIR *s_pag = nullptr;
   static SVF::Andersen *s_ander = nullptr;
   if (s_ander == nullptr) {
     // NOTE: SVF mutates M in place (BreakConstantGEPs + UnifyFunctionExitNodes);
-    // fine for llvm2bpl's one-shot, in-place use, and it preserves llvm::Value*
-    // identity for the pointer queries below.
+    // fine for llvm2bpl's one-shot use, and it preserves llvm::Value* identity for
+    // the pointer queries below.
     SVF::LLVMModuleSet::buildSVFModule(M);
     s_ms = SVF::LLVMModuleSet::getLLVMModuleSet();
     SVF::SVFIRBuilder builder;
@@ -175,6 +183,109 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
 
   buildUnionFind(M);
   aggregateRegions();
+
+  // Soundness audit (opt-in): every load/store/mem-intrinsic pointer that gets
+  // NO region (empty SVF points-to) is isolated from all real buffers — sound
+  // ONLY if "empty pts" truly means "points to nothing" (null/undef). Classify
+  // them so we can confirm none are real accesses SVF under-approximated (e.g.
+  // unsummarized external-call results).
+  if (std::getenv("SMACK_AUDIT_UNRESOLVED")) {
+    std::map<std::string, unsigned> klass;
+    std::map<std::string, std::string> example;
+    unsigned total = 0;
+    auto classify = [](const llvm::Value *p) -> std::string {
+      const llvm::Value *s = p->stripPointerCasts();
+      if (isa<ConstantPointerNull>(s))
+        return "null";
+      if (isa<UndefValue>(s))
+        return "undef";
+      if (auto *cb = dyn_cast<CallBase>(s))
+        return cb->getCalledFunction()
+                   ? (cb->getCalledFunction()->isDeclaration()
+                          ? "extern-call-result"
+                          : "call-result")
+                   : "indirect-call-result";
+      if (isa<LoadInst>(s))
+        return "loaded-ptr";
+      if (isa<Argument>(s))
+        return "argument";
+      if (isa<GetElementPtrInst>(s))
+        return "gep";
+      if (isa<Constant>(s))
+        return "const";
+      return "other";
+    };
+    // Walk casts/GEPs to an underlying read-only global (benign: constant data).
+    auto readOnlyConstGlobal = [](const llvm::Value *p) {
+      const llvm::Value *s = p->stripPointerCasts();
+      while (true) {
+        if (auto *g = dyn_cast<GlobalVariable>(s))
+          return g->isConstant();
+        if (auto *ce = dyn_cast<ConstantExpr>(s)) {
+          if (ce->getOpcode() == Instruction::GetElementPtr) {
+            s = ce->getOperand(0)->stripPointerCasts();
+            continue;
+          }
+        }
+        if (auto *gep = dyn_cast<GEPOperator>(s)) {
+          s = gep->getPointerOperand()->stripPointerCasts();
+          continue;
+        }
+        return false;
+      }
+    };
+    unsigned riskyStores = 0, riskyLoads = 0;
+    std::map<std::string, unsigned> riskyByFunc;
+    std::string riskyExample;
+    auto check = [&](const llvm::Value *p, bool isStore, const llvm::Function *F) {
+      if (!p || !p->getType()->isPointerTy() || rootPlus1(p) != 0)
+        return;
+      std::string k = classify(p);
+      if (!klass.count(k)) {
+        std::string s;
+        llvm::raw_string_ostream os(s);
+        p->print(os);
+        example[k] = s;
+      }
+      klass[k]++;
+      total++;
+      // RISKY = a no-region access that could alias a real buffer: not null/undef,
+      // and not a read-only constant global (those are benign constant data).
+      if (k == "null" || k == "undef" || readOnlyConstGlobal(p))
+        return;
+      (isStore ? riskyStores : riskyLoads)++;
+      riskyByFunc[F->getName().str()]++;
+      if (isStore && riskyExample.empty()) {
+        llvm::raw_string_ostream os(riskyExample);
+        p->print(os);
+      }
+    };
+    for (auto &F : M)
+      for (auto &BB : F)
+        for (auto &I : BB) {
+          if (auto *L = dyn_cast<LoadInst>(&I))
+            check(L->getPointerOperand(), false, &F);
+          else if (auto *S = dyn_cast<StoreInst>(&I))
+            check(S->getPointerOperand(), true, &F);
+          else if (auto *MI = dyn_cast<MemIntrinsic>(&I)) {
+            check(MI->getRawDest(), true, &F);
+            if (auto *MT = dyn_cast<MemTransferInst>(MI))
+              check(MT->getRawSource(), false, &F);
+          }
+        }
+    llvm::errs() << "[svf-audit] mem-access pointers with NO region (empty pts): "
+                 << total << "\n";
+    for (auto &kv : klass)
+      llvm::errs() << "[svf-audit]   " << kv.first << ": " << kv.second
+                   << "   e.g. " << example[kv.first] << "\n";
+    llvm::errs() << "[svf-audit] RISKY (no region, not null/undef, not read-only-const): "
+                 << "stores=" << riskyStores << " loads=" << riskyLoads << "\n";
+    for (auto &kv : riskyByFunc)
+      llvm::errs() << "[svf-audit]   in fn " << kv.first << ": " << kv.second << "\n";
+    if (!riskyExample.empty())
+      llvm::errs() << "[svf-audit]   risky store e.g. " << riskyExample << "\n";
+  }
+
   return false; // NOTE: SVF did mutate M, but we report "unchanged" to the PM;
                 // downstream SMACK passes consume the (semantically-equivalent)
                 // mutated module.
