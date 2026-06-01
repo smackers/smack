@@ -21,6 +21,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "smack/SmackPipeline.h"
+#include "utils/Devirt.h"
+
+#include "llvm/Bitcode/BitcodeWriter.h"
 
 #include <chrono>
 #include <functional>
@@ -72,6 +75,17 @@ static cl::opt<bool> Modular(
     "modular",
     cl::desc("Enable contracts-based modular deductive verification"),
     cl::init(false));
+
+// Early-devirtualization mode: resolve indirect calls -> direct bounces and emit
+// bitcode, instead of producing Boogie. Run before the opt pipeline's
+// internalize/GlobalDCE (which destroy SVF's points-to) so devirt sees a
+// resolvable module; the rest of the pipeline then runs on direct calls.
+static cl::opt<std::string> EmitDevirtBC(
+    "emit-devirt-bc",
+    cl::desc("Devirtualize indirect calls and write the module as bitcode to "
+             "this file, then exit (no Boogie). For the build's early-devirt "
+             "step that must precede internalize/GlobalDCE."),
+    cl::init(""), cl::value_desc("filename"));
 
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -285,6 +299,25 @@ int main(int argc, char **argv) {
   options.defaultDataLayout = DefaultDataLayout;
 
   std::vector<ToolOutputFile *> files;
+
+  // Early devirtualization: resolve indirect calls into direct bounces on the
+  // still-SVF-resolvable module and write bitcode, then exit. The build runs this
+  // BEFORE the opt pipeline's internalize/GlobalDCE, which destroy SVF's points-to
+  // (the in-pipeline devirt runs dead-last, after those DCE passes, so on real
+  // vtable code it resolves almost nothing -- this is the fix).
+  if (!EmitDevirtBC.empty()) {
+    smack::initializeSmackPipelinePasses();
+    legacy::PassManager devirtPM;
+    devirtPM.add(new Devirtualize());
+    devirtPM.run(*module);
+    std::error_code DevirtEC;
+    raw_fd_ostream OS(EmitDevirtBC, DevirtEC, sys::fs::OF_None);
+    if (DevirtEC)
+      check("Cannot open " + EmitDevirtBC + ": " + DevirtEC.message());
+    WriteBitcodeToFile(*module, OS);
+    OS.flush();
+    return 0;
+  }
 
 #ifdef SMACK_NEW_PM
   // Build-time opt-in to NewPM full pipeline. Runs Tier A+B+C+D NewPM

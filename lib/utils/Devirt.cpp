@@ -32,6 +32,7 @@
 #include "smack/SmackOptions.h"
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,6 +69,21 @@ static cl::opt<std::string> DevirtReportFilename(
     "smack-devirt-report",
     cl::desc("Output SMACK devirtualization target report as JSON"),
     cl::init(""), cl::value_desc("filename"));
+
+// Type-based filtering (default ON). SVF's points-to over-approximates a vtable
+// method slot to also include signature-INCOMPATIBLE functions (e.g. a 3-arg RSA
+// fn appears as a candidate for a 2-arg hash-method slot). A well-typed indirect
+// call can never reach such a target -- calling through a signature-incompatible
+// fp is UB -- so it is an SVF false positive. Dropping it (and bodyless/unmapped
+// targets, which cannot execute here) keeps the bounce's else-`assume false`
+// sound while resolving far more sites. This is what LLVM whole-program devirt
+// does. Pass -devirt-strict-types to restore the old "decline the whole site on
+// any incompatible/unmapped target" behavior (the safety valve).
+static cl::opt<bool> DevirtStrictTypes(
+    "devirt-strict-types",
+    cl::desc("Decline a devirt site if ANY SVF target is signature-incompatible "
+             "or unmapped, instead of type-filtering it (default: filter)."),
+    cl::init(false));
 
 //===----------------------------------------------------------------------===//
 // IR-rewrite helpers (unchanged from the original devirt pass).
@@ -118,6 +134,19 @@ static inline Value *castTo(Value *V, Type *Ty, std::string Name,
 static inline bool isZExtOrBitCastable(Value *V, Type *T) {
   return CastInst::castIsValid(Instruction::ZExt, V->getType(), T) ||
          CastInst::castIsValid(Instruction::BitCast, V->getType(), T);
+}
+
+// Pick a valid DebugLoc for a devirt-created call replacing `orig`: reuse orig's
+// location, else (orig has none but its function carries debug info) a synthetic
+// line-0 location in that function's scope, so the inliner can anchor the inlined
+// debug info of the (debug-info-bearing) callees. Empty when the function has no
+// debug info -- then the verifier requires no !dbg.
+static DebugLoc devirtCallLoc(const Instruction *orig) {
+  if (const DebugLoc &DL = orig->getDebugLoc())
+    return DL;
+  if (DISubprogram *SP = orig->getFunction()->getSubprogram())
+    return DILocation::get(orig->getContext(), 0, 0, SP);
+  return DebugLoc();
 }
 
 //
@@ -260,14 +289,21 @@ SvfResolution resolveSVFTargets(CallBase *CS) {
     const std::string &name = fo->getName();
     Function *F = M.getFunction(name);
     if (!F) {
-      R.reason = "target-unmapped:" + name;
-      return R;
+      if (DevirtStrictTypes) {
+        R.reason = "target-unmapped:" + name;
+        return R;
+      }
+      continue; // bodyless/unmapped over-approx target: cannot execute here.
     }
     if (isIgnoredTarget(*F))
       continue;
     if (!match(CS, *F)) {
-      R.reason = "target-type-mismatch:" + name;
-      return R;
+      if (DevirtStrictTypes) {
+        R.reason = "target-type-mismatch:" + name;
+        return R;
+      }
+      continue; // signature-incompatible: UB to call through this fp => SVF
+                // false positive for a well-typed program. Type-filter it.
     }
     resolved.insert(F);
   }
@@ -441,6 +477,24 @@ Function *Devirtualize::buildBounce(CallBase *CS,
   Function *F =
       Function::Create(NewTy, GlobalValue::InternalLinkage, "devirtbounce", M);
 
+  // Synthetic DISubprogram for the bounce so its dispatch calls can carry a !dbg
+  // location -- the inliner requires one to anchor the inlined debug info of the
+  // (debug-info-bearing) real callees, else LLVM's verifier rejects the module
+  // once the bounce is inlined. `bounceLoc` stays empty when the module has no
+  // debug info (then F has no subprogram and no !dbg is needed).
+  DebugLoc bounceLoc;
+  if (DISubprogram *callerSP = CS->getFunction()->getSubprogram()) {
+    DIBuilder DIB(*M);
+    DISubprogram *SP = DIB.createFunction(
+        callerSP->getUnit(), F->getName(), F->getName(), callerSP->getFile(),
+        /*LineNo=*/0, DIB.createSubroutineType(DIB.getOrCreateTypeArray({})),
+        /*ScopeLine=*/0, DINode::FlagArtificial,
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagLocalToUnit);
+    F->setSubprogram(SP);
+    DIB.finalizeSubprogram(SP);
+    bounceLoc = DILocation::get(M->getContext(), 0, 0, SP);
+  }
+
   // Set the names of the arguments.
   F->arg_begin()->setName("funcPtr");
   for (auto A = std::next(F->arg_begin()), E = F->arg_end(); A != E; ++A)
@@ -468,7 +522,9 @@ Function *Devirtualize::buildBounce(CallBase *CS,
          P != PE && T != TE; ++P, ++T)
       Args.push_back(castTo(&*P, *T, "", BL));
 
-    Value *directCall = CallInst::Create(const_cast<Function *>(FL), Args, "", BL);
+    CallInst *directCall =
+        CallInst::Create(const_cast<Function *>(FL), Args, "", BL);
+    directCall->setDebugLoc(bounceLoc);
 
     // Add the return instruction for the basic block.
     if (CS->getType()->isVoidTy())
@@ -580,6 +636,7 @@ void Devirtualize::makeDirectCall(CallBase *CS) {
 
     std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
     CallInst *CN = CallInst::Create(const_cast<Function *>(NF), Params, name, CI);
+    CN->setDebugLoc(devirtCallLoc(CI));
     CI->replaceAllUsesWith(CN);
     CI->eraseFromParent();
   } else if (InvokeInst *CI = dyn_cast<InvokeInst>(CS)) {
@@ -593,6 +650,7 @@ void Devirtualize::makeDirectCall(CallBase *CS) {
     InvokeInst *CN =
         InvokeInst::Create(const_cast<Function *>(NF), CI->getNormalDest(),
                            CI->getUnwindDest(), Params, name, CI);
+    CN->setDebugLoc(devirtCallLoc(CI));
     CI->replaceAllUsesWith(CN);
     CI->eraseFromParent();
   }

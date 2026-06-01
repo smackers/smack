@@ -1642,8 +1642,29 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
 
   Function *f = ci.getCalledFunction();
   if (!f) {
-    assert(ci.getCalledOperand() && "Called value is null");
-    f = cast<Function>(ci.getCalledOperand()->stripPointerCastsAndAliases());
+    // Indirect call. Recover a direct Function through pointer casts/aliases.
+    Value *callee = ci.getCalledOperand();
+    if (callee)
+      callee = callee->stripPointerCastsAndAliases();
+    if (callee && isa<Function>(callee)) {
+      f = cast<Function>(callee);
+    } else {
+      // SVF devirt could not resolve this indirect call to a concrete Function
+      // (incomplete/black-hole points-to, so the devirt left it untouched).
+      // Block the path with `assume false` instead of crashing on cast<>. This
+      // is sound iff the site is unreachable; if it is reachable the interpreter
+      // stalls here (observable), pinpointing the devirt gap. Warn so every such
+      // site is listed in the build log.
+      SmackWarnings::warnApproximate(
+          "unresolved indirect call in " + ci.getFunction()->getName().str() +
+              ": " + i2s(ci),
+          currBlock, &ci);
+      // Tag the dead-path assume so it is grep-able in the .bpl (distinguishes
+      // these unresolved-call fallbacks from devirt-bounce/`unreachable` assumes).
+      emit(Stmt::assume(Expr::lit(false)),
+           {Attr::attr("unresolved_indirect")});
+      return;
+    }
   }
 
   StringRef name = f->hasName() ? f->getName() : "";
