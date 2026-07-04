@@ -181,6 +181,7 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::RemoveDeadDefs());
   }
 
+  pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
@@ -249,9 +250,6 @@ int main(int argc, char **argv) {
         createTargetTransformInfoWrapperPass(Machine->getTargetIRAnalysis()));
     pass_manager.add(new smack::AddTiming());
   }
-
-  // Clean up promotable stack slots introduced or exposed by SMACK passes.
-  pass_manager.add(llvm::createSROAPass());
 
   std::vector<ToolOutputFile *> files;
 
