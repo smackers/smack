@@ -276,17 +276,32 @@ function install-downloaded-llvm {
     exit 1
   fi
 
-  ln -sf clang "${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
-  ln -sf clang++ "${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION}"
-  ln -sf clang-format "${LLVM_DIR}/bin/clang-format-${LLVM_SHORT_VERSION}"
-  ln -sf llvm-config "${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION}"
-  ln -sf llvm-link "${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION}"
-  ln -sf llvm-dis "${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION}"
-  SMACK_C_COMPILER="${LLVM_DIR}/bin/clang"
+  ensure-llvm-tool-alias clang++ "clang++-${LLVM_SHORT_VERSION}"
+  ensure-llvm-tool-alias clang-format "clang-format-${LLVM_SHORT_VERSION}"
+  ensure-llvm-tool-alias llvm-config "llvm-config-${LLVM_SHORT_VERSION}"
+  ensure-llvm-tool-alias llvm-link "llvm-link-${LLVM_SHORT_VERSION}"
+  ensure-llvm-tool-alias llvm-dis "llvm-dis-${LLVM_SHORT_VERSION}"
+  SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
   SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
   SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
   export PATH="${LLVM_DIR}/bin:$PATH"
   echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
+}
+
+function ensure-llvm-tool-alias {
+  local target="$1"
+  local alias="$2"
+  local alias_path="${LLVM_DIR}/bin/${alias}"
+
+  if [ -e "${alias_path}" ] && [ ! -L "${alias_path}" ] ; then
+    return
+  fi
+
+  if [ -L "${alias_path}" ] ; then
+    rm -f "${alias_path}"
+  fi
+
+  ln -s "${target}" "${alias_path}"
 }
 
 ################################################################################
@@ -689,7 +704,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   CMAKE_UNSET_COMPILERS=
   if [ ${DOWNLOAD_LLVM} -eq 1 ] ; then
-    SMACK_C_COMPILER="${LLVM_DIR}/bin/clang"
+    SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
     SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
     SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
     CMAKE_UNSET_COMPILERS="-U CMAKE_C_COMPILER -U CMAKE_CXX_COMPILER"
