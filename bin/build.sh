@@ -264,9 +264,16 @@ function install-downloaded-llvm {
     mkdir -p "${DEPS_DIR}" "${LLVM_DIR}"
     cd "${DEPS_DIR}"
     ${WGET} "${LLVM_DOWNLOAD_LINK}" -O "${LLVM_DOWNLOAD_ARCHIVE}"
-    tar -C "${LLVM_DIR}" -xvf "${LLVM_DOWNLOAD_ARCHIVE}" --strip 1
+    puts "Extracting LLVM"
+    tar -C "${LLVM_DIR}" --strip-components=1 -xf "${LLVM_DOWNLOAD_ARCHIVE}"
     rm -f "${LLVM_DOWNLOAD_ARCHIVE}"
     puts "Downloaded LLVM"
+  fi
+
+  if [ ! -x "${LLVM_DIR}/bin/clang" ] || [ ! -x "${LLVM_DIR}/bin/clang++" ] || [ ! -x "${LLVM_DIR}/bin/llvm-config" ] ; then
+    puts "LLVM archive did not extract the expected compiler binaries into ${LLVM_DIR}/bin"
+    find "${LLVM_DIR}" -maxdepth 3 \( -name clang -o -name clang++ -o -name llvm-config \) -print
+    exit 1
   fi
 
   ln -sf clang "${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
