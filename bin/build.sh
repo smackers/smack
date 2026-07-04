@@ -282,7 +282,7 @@ function install-downloaded-llvm {
   ln -sf llvm-config "${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION}"
   ln -sf llvm-link "${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION}"
   ln -sf llvm-dis "${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION}"
-  SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
+  SMACK_C_COMPILER="${LLVM_DIR}/bin/clang"
   SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
   SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
   export PATH="${LLVM_DIR}/bin:$PATH"
@@ -689,15 +689,10 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   CMAKE_UNSET_COMPILERS=
   if [ ${DOWNLOAD_LLVM} -eq 1 ] ; then
-    SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
+    SMACK_C_COMPILER="${LLVM_DIR}/bin/clang"
     SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
     SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
     CMAKE_UNSET_COMPILERS="-U CMAKE_C_COMPILER -U CMAKE_CXX_COMPILER"
-    if [ ! -e "${SMACK_C_COMPILER}" ] || [ ! -e "${SMACK_CXX_COMPILER}" ] ; then
-      puts "Downloaded LLVM compilers not found in ${LLVM_DIR}/bin"
-      find "${LLVM_DIR}/bin" -maxdepth 1 \( -name 'clang*' -o -name 'llvm-config*' \) -print || true
-      exit 1
-    fi
     puts "Using downloaded LLVM C compiler: ${SMACK_C_COMPILER}"
     puts "Using downloaded LLVM CXX compiler: ${SMACK_CXX_COMPILER}"
   else
