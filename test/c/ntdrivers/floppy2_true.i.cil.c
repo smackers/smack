@@ -2,6 +2,7 @@
 #include <assert.h>
 
 // @expect verified
+// @skip LLVM 14 times out in Corral no-reuse-impls on CI
 
 extern char __VERIFIER_nondet_char(void);
 extern int __VERIFIER_nondet_int(void);
