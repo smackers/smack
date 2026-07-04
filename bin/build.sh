@@ -72,6 +72,7 @@ LIBTINFO5_DOWNLOAD_LINK="https://deb.debian.org/debian/pool/main/n/ncurses/${LIB
 SMACK_C_COMPILER="clang-${LLVM_SHORT_VERSION}"
 SMACK_CXX_COMPILER="clang++-${LLVM_SHORT_VERSION}"
 SMACK_LLVM_CONFIG=
+SMACK_CMAKE_FLAGS=
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -287,6 +288,7 @@ function install-downloaded-llvm {
   SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
   SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
   SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
+  SMACK_CMAKE_FLAGS="-DSMACK_FORCE_INCLUDE_SET=ON"
   export PATH="${LLVM_DIR}/bin:$PATH"
   echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
 }
@@ -731,6 +733,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
     SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
     SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
     SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
+    SMACK_CMAKE_FLAGS="-DSMACK_FORCE_INCLUDE_SET=ON"
     CMAKE_UNSET_COMPILERS="-U CMAKE_C_COMPILER -U CMAKE_CXX_COMPILER"
     puts "Using downloaded LLVM C compiler: ${SMACK_C_COMPILER}"
     puts "Using downloaded LLVM CXX compiler: ${SMACK_CXX_COMPILER}"
@@ -740,7 +743,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   fi
 
   cmake ${CMAKE_UNSET_COMPILERS} -DCMAKE_CXX_COMPILER="${SMACK_CXX_COMPILER}" \
-        -DCMAKE_C_COMPILER="${SMACK_C_COMPILER}" ${SMACK_LLVM_CONFIG} ${CMAKE_INSTALL_PREFIX} \
+        -DCMAKE_C_COMPILER="${SMACK_C_COMPILER}" ${SMACK_LLVM_CONFIG} ${SMACK_CMAKE_FLAGS} ${CMAKE_INSTALL_PREFIX} \
         -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ${NINJA}
 
