@@ -6,6 +6,7 @@
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 class TargetTransformInfo;
@@ -16,7 +17,6 @@ using namespace llvm;
 
 class AddTiming : public FunctionPass {
 
-  enum Flags { NO_TIMING_INFO = -1 };
   static const std::string INT_TIMING_COST_METADATA;
   static const std::string INSTRUCTION_NAME_METADATA;
 
@@ -25,10 +25,10 @@ public:
   AddTiming() : FunctionPass(ID), F(nullptr), TTI(nullptr) {}
 
   /// Returns the expected cost of the instruction.
-  /// Returns -1 if the cost is unknown.
+  /// Returns invalid `InstructionCost` if the cost is unknown.
   /// Note, this method does not cache the cost calculation and it
   /// can be expensive in some cases.
-  unsigned getInstructionCost(const Instruction *I) const;
+  InstructionCost getInstructionCost(const Instruction *I) const;
 
 private:
   void addMetadata(Instruction *Inst, const std::string &name,

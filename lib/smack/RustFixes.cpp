@@ -131,7 +131,26 @@ bool fixEntry(Function &main) {
   return instToErase.size();
 }
 
+// Currently deletes the body of the function. Ideally, this should
+// remove users to enable DCE
+void handleBlockedFunction(Function &F) { F.deleteBody(); }
+
 bool RustFixes::runOnFunction(Function &F) {
+  // These functions either cause very large BPL files or crash in translation.
+  // These functions either write to the console, or are in error paths that
+  // SMACK can otherwise detect.
+  static const std::vector<StringRef> blocked_fns = {
+      "_ZN4core3str16slice_error_fail",
+      "_ZN4core3fmt",
+      "__rg_oom",
+      "__rdl_oom",
+      "__alloc_error_handler",
+      "_ZN4core5slice22slice_index_order_fail",
+      "_ZN4core5slice24slice_end_index_len_fail",
+      "_ZN3std2io5Write9write_all",
+      "_ZN3std2io5Write9write_fmt",
+  };
+
   bool result = false;
   if (F.hasName()) {
     StringRef name = F.getName();
@@ -146,6 +165,12 @@ bool RustFixes::runOnFunction(Function &F) {
 
     if (name == "main") {
       result |= fixEntry(F);
+    }
+    for (auto &blocked : blocked_fns) {
+      if (name.find(blocked) != StringRef::npos) {
+        handleBlockedFunction(F);
+        result = true;
+      }
     }
     result |= replaceSpecialRustFunctions(F);
   }

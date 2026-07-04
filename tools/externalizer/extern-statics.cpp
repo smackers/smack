@@ -7,8 +7,10 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 static llvm::cl::opt<std::string>
@@ -52,7 +54,7 @@ int main(int argc, char **argv) {
 
   std::error_code EC;
   auto out = new llvm::ToolOutputFile(OutputFilename.c_str(), EC,
-                                      llvm::sys::fs::F_None);
+                                      llvm::sys::fs::OF_None);
 
   if (EC) {
     llvm::errs() << "Could not create output file: " << EC.message() << "\n";

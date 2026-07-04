@@ -1,0 +1,17 @@
+---
+thread1:
+   verifier: "corral"
+
+thread2:
+   verifier: "corral"
+   verifier-options: "/bopt:proverOpt:O:smt.qi.eager_threshold=100"
+
+thread3:
+   verifier: "corral"
+   verifier-options: "/bopt:proverOpt:O:smt.arith.solver=2"
+
+thread4:
+   verifier: "corral"
+   verifier-options: "/bopt:proverOpt:O:smt.arith.solver=2
+                      /bopt:proverOpt:O:smt.qi.eager_threshold=100"
+

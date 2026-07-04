@@ -219,7 +219,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share/smack
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.py" PATTERN "*.h" PATTERN "*.c" PATTERN "Makefile"
     PATTERN "*.rs" PATTERN "*.f90" PATTERN "*.di" PATTERN "*.toml"
-    PATTERN "*.cpp" PATTERN "cassert"
+    PATTERN "*.cpp" PATTERN "cassert" PATTERN "*.yaml"
 )
 
 install(FILES

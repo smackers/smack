@@ -6,15 +6,18 @@ import shlex
 import subprocess
 import signal
 import functools
+import copy
+import multiprocessing
+import yaml
 from enum import Flag, auto
 from .svcomp.utils import verify_bpl_svcomp
-from .utils import temporary_file, try_command, remove_temp_files,\
-    llvm_exact_bin
+from .utils import temporary_file, try_command, remove_temp_files, \
+    llvm_exact_bin, smack_portfolio_path
 from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, json_output_str
 
-VERSION = '2.8.0'
+VERSION = '2.9.0'
 
 
 class VResult(Flag):
@@ -536,14 +539,23 @@ def arguments():
         choices=[
             'boogie',
             'corral',
+            'portfolio',
             'symbooglix',
             'svcomp'],
         default='corral',
         help='back-end verification engine')
 
     verifier_group.add_argument('--solver',
-                                choices=['z3', 'cvc4', "yices2"], default='z3',
+                                choices=['z3', 'cvc5', "yices2"], default='z3',
                                 help='back-end SMT solver')
+
+    verifier_group.add_argument(
+        '--portfolio-config',
+        metavar='FILE',
+        default=smack_portfolio_path(),
+        action=FileAction,
+        type=str,
+        help='read portfolio configuration in YAML format from FILE')
 
     verifier_group.add_argument(
         '--unroll',
@@ -765,6 +777,7 @@ def llvm_to_bpl(args):
     try_command(cmd, console=True)
     annotate_bpl(args)
     memsafety_subproperty_selection(args)
+    replace_reach_error(args)
     transform_bpl(args)
 
 
@@ -829,6 +842,25 @@ def memsafety_subproperty_selection(args):
             f.write(line)
 
 
+def replace_reach_error(args):
+    """Replaces calls to reach_error in SVCOMP benchmarks with assert false."""
+
+    if args.language != 'svcomp':
+        return
+
+    if (VProperty.MEMORY_SAFETY in args.check or
+            VProperty.MEMLEAK in args.check or
+            VProperty.INTEGER_OVERFLOW in args.check):
+        return
+
+    with open(args.bpl_file, 'r') as bf:
+        content = bf.read()
+    content = content.replace('call reach_error();',
+                              'assert false; call reach_error();')
+    with open(args.bpl_file, 'w') as bf:
+        bf.write(content)
+
+
 def transform_bpl(args):
     if args.transform_bpl:
         with open(args.bpl_file, 'r+') as bpl:
@@ -882,8 +914,8 @@ def verification_result(verifier_output, verifier):
                     line_no = int(boogie_af_msg.group(2))
                     with open(boogie_af_msg.group(1), 'r') as f:
                         assert_line = re.search(
-                                      attr_pat,
-                                      f.read().splitlines(True)[line_no - 1])
+                            attr_pat,
+                            f.read().splitlines(True)[line_no - 1])
                         if assert_line:
                             attr = assert_line.group(1)
         else:
@@ -901,59 +933,50 @@ def verification_result(verifier_output, verifier):
         return VResult.UNKNOWN
 
 
-def verify_bpl(args):
-    """Verify the Boogie source file with a back-end verifier."""
+def boogie_command(args):
+    command = ["boogie"]
+    command += [args.bpl_file]
+    command += ["/doModSetAnalysis"]
+    command += ["/useArrayTheory"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/errorLimit:%s" % args.max_violations]
+    if not args.modular:
+        command += ["/loopUnroll:%d" % args.unroll]
+    if args.solver == 'cvc5':
+        command += ["/proverOpt:SOLVER=CVC5"]
+    elif args.solver == 'yices2':
+        command += ["/proverOpt:SOLVER=Yices2"]
+    return command
 
-    if args.verifier == 'svcomp':
-        verify_bpl_svcomp(args)
-        return
 
-    elif args.verifier == 'boogie' or args.modular:
-        command = ["boogie"]
-        command += [args.bpl_file]
-        command += ["/doModSetAnalysis"]
-        command += ["/useArrayTheory"]
-        command += ["/timeLimit:%s" % args.time_limit]
-        command += ["/errorLimit:%s" % args.max_violations]
-        command += ["/proverOpt:O:smt.array.extensional=false"]
-        command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
-        command += ["/proverOpt:O:smt.arith.solver=2"]
-        if not args.modular:
-            command += ["/loopUnroll:%d" % args.unroll]
-        if args.solver == 'cvc4':
-            command += ["/proverOpt:SOLVER=cvc4"]
-        elif args.solver == 'yices2':
-            command += ["/proverOpt:SOLVER=Yices2"]
+def corral_command(args):
+    command = ["corral"]
+    command += [args.bpl_file]
+    command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
+    command += ["/k:%d" % args.context_bound]
+    command += ["/useProverEvaluate"]
+    command += ["/timeLimit:%s" % args.time_limit]
+    command += ["/cex:%s" % args.max_violations]
+    command += ["/maxStaticLoopBound:%d" % args.loop_limit]
+    command += ["/recursionBound:%d" % args.unroll]
+    if args.solver == 'cvc5':
+        command += ["/bopt:proverOpt:SOLVER=CVC5"]
+    elif args.solver == 'yices2':
+        command += ["/bopt:proverOpt:SOLVER=Yices2"]
+    return command
 
-    elif args.verifier == 'corral':
-        command = ["corral"]
-        command += [args.bpl_file]
-        command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
-        command += ["/k:%d" % args.context_bound]
-        command += ["/useProverEvaluate"]
-        command += ["/timeLimit:%s" % args.time_limit]
-        command += ["/cex:%s" % args.max_violations]
-        command += ["/maxStaticLoopBound:%d" % args.loop_limit]
-        command += ["/recursionBound:%d" % args.unroll]
-        command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
-        if args.solver == 'cvc4':
-            command += ["/bopt:proverOpt:SOLVER=cvc4"]
-        elif args.solver == 'yices2':
-            command += ["/bopt:proverOpt:SOLVER=Yices2"]
 
-    elif args.verifier == 'symbooglix':
-        command = ['symbooglix']
-        command += [args.bpl_file]
-        command += ["--file-logging=0"]
-        command += ["--entry-points=%s" % ",".join(args.entry_points)]
-        command += ["--timeout=%d" % args.time_limit]
-        command += ["--max-loop-depth=%d" % args.unroll]
+def symbooglix_command(args):
+    command = ['symbooglix']
+    command += [args.bpl_file]
+    command += ["--file-logging=0"]
+    command += ["--entry-points=%s" % ",".join(args.entry_points)]
+    command += ["--timeout=%d" % args.time_limit]
+    command += ["--max-loop-depth=%d" % args.unroll]
+    return command
 
-    if args.verifier_options:
-        command += args.verifier_options.split()
 
-    verifier_output = try_command(command, timeout=args.time_limit)
+def process_verifier_output(args, verifier_output):
     verifier_output = transform_out(args, verifier_output)
     result = verification_result(verifier_output, args.verifier)
 
@@ -977,10 +1000,133 @@ def verify_bpl(args):
     return result.return_code()
 
 
+def verify_bpl(args):
+    """Verify the Boogie source file with a back-end verifier."""
+
+    if args.verifier == 'boogie' or args.modular:
+        command = boogie_command(args)
+        command += ["/proverOpt:O:smt.array.extensional=false"]
+        command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
+        command += ["/proverOpt:O:smt.arith.solver=2"]
+
+    elif args.verifier == 'corral':
+        command = corral_command(args)
+        command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
+        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
+
+    elif args.verifier == 'symbooglix':
+        command = symbooglix_command(args)
+
+    if args.verifier_options:
+        command += args.verifier_options.split()
+
+    verifier_output = try_command(command, timeout=args.time_limit)
+    return process_verifier_output(args, verifier_output)
+
+
+def thread_verify_bpl(args, args_to_add):
+
+    if 'verifier' in args_to_add:
+        if args_to_add['verifier'] == 'portfolio':
+            raise RuntimeError(
+                "portfolio is not a valid verifier specification"
+                " within the portfolio configuration")
+        else:
+            print(
+                "Warning: SMACK is using argument verifier from"
+                " the chosen portfolio configuration")
+            args.verifier = args_to_add['verifier']
+    else:
+        raise RuntimeError(
+            "verifier is a required argument"
+            " in the portfolio configuration file")
+
+    if 'modular' in args_to_add:
+        if args.modular:
+            raise RuntimeError(
+                "argument modular specified in both"
+                " command line and portfolio configuration")
+        else:
+            print(
+                "Warning: SMACK is using argument modular from"
+                " the chosen portfolio configuration")
+            args.modular = args_to_add['modular']
+
+    if (args.verifier != 'boogie') and args.modular:
+        raise RuntimeError(
+            "Incompatible arguments modular"
+            " and non-boogie verifier were specified")
+
+    if 'verifier-options' in args_to_add:
+        if args.verifier_options:
+            raise RuntimeError(
+                "argument verifier-options specified in both"
+                " command line and portfolio configuration")
+        else:
+            print(
+                "Warning: SMACK is using argument verifier-"
+                "options from the chosen portfolio configuration")
+            args.verifier_options = args_to_add['verifier-options']
+
+    if 'solver' in args_to_add:
+        if args.solver != 'z3':  # better check than not default?
+            raise RuntimeError(
+                "argument solver specified in both command"
+                " line and portfolio configuration")
+        else:
+            print(
+                "Warning: SMACK is using argument solver from"
+                " the chosen portfolio configuration")
+            args.solver = args_to_add['solver']
+
+    if args.verifier == 'boogie' or args.modular:
+        command = boogie_command(args)
+
+    elif args.verifier == 'corral':
+        command = corral_command(args)
+
+    elif args.verifier == 'symbooglix':
+        command = symbooglix_command(args)
+
+    if args.verifier_options:
+        command += args.verifier_options.split()
+
+    verifier_output = try_command(command, timeout=args.time_limit)
+    return args, verifier_output
+
+
+def verify_bpl_portfolio(args):
+
+    portfolio_config = yaml.safe_load(open(args.portfolio_config, 'r'))
+    p = multiprocessing.Pool()
+    results = {}  # map of process -> thread name
+
+    for thread in list(portfolio_config.keys()):
+        async_result = p.apply_async(thread_verify_bpl,
+                                     args=(copy.deepcopy(args),
+                                           portfolio_config[thread]))
+        results[async_result] = thread
+
+    # TODO: revisit this loop to improve efficiency
+    while True:
+        for result in list(results.keys()):
+            if result.ready():
+                p.terminate()
+                args, verifier_output = result.get()
+                verifier_output = process_verifier_output(
+                    args, verifier_output)
+                thread_name = results[result]
+                print(f'SMACK portfolio {thread_name} terminated')
+                return verifier_output
+
+
 def clean_up_upon_sigterm(main):
     def handler(signum, frame):
+        remove_temp_files_lock.acquire()
         remove_temp_files()
+        remove_temp_files_lock.release()
         sys.exit(0)
+
     signal.signal(signal.SIGTERM, handler)
     return main
 
@@ -988,6 +1134,9 @@ def clean_up_upon_sigterm(main):
 @clean_up_upon_sigterm
 def main():
     try:
+        global remove_temp_files_lock
+        remove_temp_files_lock = multiprocessing.Lock()
+
         global args
         args = arguments()
 
@@ -1002,7 +1151,13 @@ def main():
             if not args.quiet:
                 print("SMACK generated %s" % args.bpl_file)
         else:
-            return_code = verify_bpl(args)
+            if args.verifier == 'svcomp':
+                verify_bpl_svcomp(args)
+                return
+            elif args.verifier == 'portfolio':
+                return_code = verify_bpl_portfolio(args)
+            else:
+                return_code = verify_bpl(args)
             sys.exit(return_code)
 
     except KeyboardInterrupt:

@@ -5,13 +5,12 @@
 
 * [Michael Emmi](http://michael-emmi.github.io)
 * [Zvonimir Rakamaric](http://www.zvonimir.info) ([SOAR Lab](http://soarlab.org), University of Utah)
-
+* [Shaobo He](http://www.cs.utah.edu/~shaobo) (Baidu USA)
 
 ### Contributors
 
 * [Marek Baranowski](https://github.com/keram88) ([SOAR Lab](http://soarlab.org), University of Utah)
 * [Jack J. Garzella](https://www.linkedin.com/in/jack-j-garzella-7140a716) ([SOAR Lab](http://soarlab.org), University of Utah)
-* [Shaobo He](http://www.cs.utah.edu/~shaobo) (Baidu USA)
 * [Liam Machado](https://github.com/liammachado) ([SOAR Lab](http://soarlab.org), University of Utah)
 
 ### Former Contributors

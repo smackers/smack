@@ -2,7 +2,7 @@
 name = "cargo-test"
 version = "0.1.0"
 authors = ["smackers"]
-edition = "2018"
+edition = "2021"
 
 # @expect error
 

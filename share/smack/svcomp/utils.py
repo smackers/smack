@@ -69,24 +69,12 @@ def force_timeout():
   sys.stdout.flush()
   time.sleep(1000)
 
-def inject_assert_false(args):
-  with open(args.bpl_file, 'r') as bf:
-    content = bf.read()
-  content = content.replace('call reach_error();', 'assert false; call reach_error();')
-  with open(args.bpl_file, 'w') as bf:
-    bf.write(content)
-
 def verify_bpl_svcomp(args):
   """Verify the Boogie source file using SVCOMP-tuned heuristics."""
   heurTrace = "\n\nHeuristics Info:\n"
 
   from smack.top import VProperty
   from smack.top import VResult
-
-  if not (VProperty.MEMORY_SAFETY in args.check
-          or VProperty.MEMLEAK in args.check
-          or VProperty.INTEGER_OVERFLOW in args.check):
-    inject_assert_false(args)
 
   # Setting good loop unroll bound based on benchmark class
   loopUnrollBar = 13
