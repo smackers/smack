@@ -12,7 +12,7 @@ jobs:
             "--exhaustive --folder=c/basic",
             "--exhaustive --folder=c/data",
             "--exhaustive --folder=c/ntdrivers-simplified",
-            "--exhaustive --folder=c/ntdrivers",
+            "--exhaustive --folder=c/ntdrivers --threads=1",
             "--exhaustive --folder=c/bits",
             "--exhaustive --folder=c/float",
             "--exhaustive --folder=c/locks",
