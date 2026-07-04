@@ -58,9 +58,25 @@ jobs:
           REGTEST_ENV: ${{ matrix.regtest_env }}
         run: ./bin/build.sh
 
+  build-debian-13:
+    runs-on: ubuntu-22.04
+    container:
+      image: debian:13
+
+    steps:
+      - name: install container dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates git sudo wget
+
+      - uses: actions/checkout@v2
+
+      - name: build on Debian 13
+        run: TEST_SMACK=0 ./bin/build.sh --prefix "$PWD/install"
+
   build-and-push-docker:
     runs-on: ubuntu-22.04
-    needs: check-regressions
+    needs: [check-regressions, build-debian-13]
 
     steps:
       - name: Check Out Repo

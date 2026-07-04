@@ -63,6 +63,12 @@ SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 NINJA="ninja"
 Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip"
+DOWNLOAD_LLVM=0
+LLVM_DOWNLOAD_LINK=
+LLVM_DOWNLOAD_ARCHIVE=
+SMACK_C_COMPILER="clang-${LLVM_SHORT_VERSION}"
+SMACK_CXX_COMPILER="clang++-${LLVM_SHORT_VERSION}"
+SMACK_LLVM_CONFIG=
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -118,21 +124,93 @@ function get-platform-root {
 }
 
 # ================================================================
+# Get Linux distribution fields from lsb_release or /etc/os-release.
+# ================================================================
+function get-linux-distro-id {
+  local s=
+  if command -v lsb_release >/dev/null 2>&1 ; then
+    s=$(get-platform-trim "$(lsb_release -si)")
+  fi
+  if [ -z "$s" ] || [ "$s" = "n/a" ] || [ "$s" = "unknown" ] ; then
+    if [ -r /etc/os-release ] ; then
+      s=$(get-platform-trim "$(. /etc/os-release && echo "${ID:-unknown}")")
+    fi
+  fi
+  if [ -n "$s" ] ; then
+    echo "$s"
+  else
+    echo "unknown"
+  fi
+}
+
+function get-linux-release-version {
+  local s=
+  if command -v lsb_release >/dev/null 2>&1 ; then
+    s=$(get-platform-trim "$(lsb_release -sr)")
+  fi
+  if [ -z "$s" ] || [ "$s" = "n/a" ] || [ "$s" = "unknown" ] ; then
+    if [ -r /etc/os-release ] ; then
+      s=$(get-platform-trim "$(. /etc/os-release && echo "${VERSION_ID:-unknown}")")
+    fi
+  fi
+  if [ -z "$s" ] || [ "$s" = "n/a" ] || [ "$s" = "unknown" ] ; then
+    if [ -r /etc/os-release ] ; then
+      local debian_release=$(get-platform-trim "$(. /etc/os-release && echo "${VERSION_CODENAME:-unknown} ${VERSION:-unknown} ${PRETTY_NAME:-unknown}")")
+      case "$debian_release" in
+      *trixie*)
+        s=13
+        ;;
+      esac
+    fi
+  fi
+  if [ -z "$s" ] || [ "$s" = "n/a" ] || [ "$s" = "unknown" ] ; then
+    if [ -r /etc/debian_version ] ; then
+      case "$(get-platform-trim "$(cat /etc/debian_version)")" in
+      13*|trixie*)
+        s=13
+        ;;
+      esac
+    fi
+  fi
+  if [ -n "$s" ] ; then
+    echo "$s"
+  else
+    echo "unknown"
+  fi
+}
+
+function get-linux-release-codename {
+  local s=
+  if command -v lsb_release >/dev/null 2>&1 ; then
+    s=$(get-platform-trim "$(lsb_release -sc)")
+  fi
+  if [ -z "$s" ] || [ "$s" = "n/a" ] || [ "$s" = "unknown" ] ; then
+    if [ -r /etc/os-release ] ; then
+      s=$(get-platform-trim "$(. /etc/os-release && echo "${VERSION_CODENAME:-unknown}")")
+    fi
+  fi
+  if [ -n "$s" ] ; then
+    echo "$s"
+  else
+    echo "unknown"
+  fi
+}
+
+# ================================================================
 # Get the platform identifier.
 # ================================================================
 function get-platform {
   plat=$(get-platform-root)
   case "$plat" in
     "gnu/linux")
-      d=$(get-platform-trim "$(lsb_release -i)" | awk -F: '{print $2;}')
-      r=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
+      d=$(get-linux-distro-id)
+      r=$(get-linux-release-version)
       m=$(get-platform-trim "$(uname -m)")
       if [[ "$d" == "redhatenterprise"* ]] ; then
         # Need a little help for Red Hat because
         # they don't make the minor version obvious.
         d="rhel_${d:16}"  # keep the tail (e.g., es or client)
-        x=$(get-platform-trim "$(lsb_release -c)" | \
-          awk -F: '{print $2;}' | \
+        x=$(get-linux-release-codename | \
           sed -e 's/[^0-9]//g')
         r="$r.$x"
       fi
@@ -178,6 +256,32 @@ function puts {
   echo -e "\033[35m*** SMACK BUILD: ${1} ***\033[0m"
 }
 
+function install-downloaded-llvm {
+  if [ -x "${LLVM_DIR}/bin/clang" ] && [ -x "${LLVM_DIR}/bin/llvm-config" ] ; then
+    puts "LLVM already installed"
+  else
+    puts "Downloading LLVM"
+    mkdir -p "${DEPS_DIR}" "${LLVM_DIR}"
+    cd "${DEPS_DIR}"
+    ${WGET} "${LLVM_DOWNLOAD_LINK}" -O "${LLVM_DOWNLOAD_ARCHIVE}"
+    tar -C "${LLVM_DIR}" -xvf "${LLVM_DOWNLOAD_ARCHIVE}" --strip 1
+    rm -f "${LLVM_DOWNLOAD_ARCHIVE}"
+    puts "Downloaded LLVM"
+  fi
+
+  ln -sf clang "${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
+  ln -sf clang++ "${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION}"
+  ln -sf clang-format "${LLVM_DIR}/bin/clang-format-${LLVM_SHORT_VERSION}"
+  ln -sf llvm-config "${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION}"
+  ln -sf llvm-link "${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION}"
+  ln -sf llvm-dis "${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION}"
+  SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
+  SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION}"
+  SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
+  export PATH="${LLVM_DIR}/bin:$PATH"
+  echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
+}
+
 ################################################################################
 #
 # END HELPER FUNCTIONS
@@ -203,6 +307,17 @@ linux-opensuse*)
 linux-@(ubuntu|neon)-@(16|18|20|22)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
+  fi
+  ;;
+
+linux-debian-13*-x86_64)
+  DEPENDENCIES=${DEPENDENCIES/apt-transport-https /}
+  DEPENDENCIES=${DEPENDENCIES/dotnet-sdk-6.0/dotnet-sdk-8.0}
+  DEPENDENCIES+=" build-essential ca-certificates xz-utils"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DOWNLOAD_LLVM=1
+    LLVM_DOWNLOAD_ARCHIVE="clang+llvm-${LLVM_FULL_VERSION}-x86_64-linux-gnu-ubuntu-18.04.tar.xz"
+    LLVM_DOWNLOAD_LINK="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/${LLVM_DOWNLOAD_ARCHIVE}"
   fi
   ;;
 
@@ -249,7 +364,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     ;;
 
   linux-@(ubuntu|neon)-@(1[68]|20|22)*)
-    RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
+    RELEASE_VERSION=$(get-linux-release-version)
     case "$RELEASE_VERSION" in
     16*)
       UBUNTU_CODENAME="xenial"
@@ -287,6 +402,20 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       sudo apt-get update
     fi
 
+    sudo apt-get install -y ${DEPENDENCIES}
+    ;;
+
+  linux-debian-13*-x86_64)
+    RELEASE_VERSION=$(get-linux-release-version)
+    if [[ "$RELEASE_VERSION" != 13* ]]; then
+      puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
+      exit 1
+    fi
+
+    ${WGET} -q https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
+    rm -f packages-microsoft-prod.deb
+    sudo apt-get update
     sudo apt-get install -y ${DEPENDENCIES}
     ;;
 
@@ -339,6 +468,11 @@ if [ ${INSTALL_MONO} -eq 1 ] ; then
   sudo apt-get update
   sudo apt-get install -y mono-complete ca-certificates-mono
   puts "Installed mono"
+fi
+
+
+if [ ${DOWNLOAD_LLVM} -eq 1 ] ; then
+  install-downloaded-llvm
 fi
 
 
@@ -524,7 +658,11 @@ fi
 
 
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
-  sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
+  DEV_DEPENDENCIES="python3-pip"
+  if [ ${DOWNLOAD_LLVM} -eq 0 ] ; then
+    DEV_DEPENDENCIES+=" clang-format-${LLVM_SHORT_VERSION}"
+  fi
+  sudo apt-get install -y ${DEV_DEPENDENCIES}
   sudo pip3 install -U flake8 --break-system-packages || sudo pip3 install -U flake8
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
@@ -536,14 +674,31 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   puts "Building SMACK"
 
   cd ${SMACK_DIR}
-  git submodule init
-  git submodule update
+  git -c safe.directory="${SMACK_DIR}" submodule init
+  git -c safe.directory="${SMACK_DIR}" submodule update
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
 
-  cmake -DCMAKE_CXX_COMPILER=clang++-${LLVM_SHORT_VERSION} \
-        -DCMAKE_C_COMPILER=clang-${LLVM_SHORT_VERSION} ${CMAKE_INSTALL_PREFIX} \
+  CMAKE_UNSET_COMPILERS=
+  if [ ${DOWNLOAD_LLVM} -eq 1 ] ; then
+    SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
+    SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION}"
+    SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
+    CMAKE_UNSET_COMPILERS="-U CMAKE_C_COMPILER -U CMAKE_CXX_COMPILER"
+    if [ ! -x "${SMACK_C_COMPILER}" ] || [ ! -x "${SMACK_CXX_COMPILER}" ] ; then
+      puts "Downloaded LLVM compilers not found in ${LLVM_DIR}/bin"
+      exit 1
+    fi
+    puts "Using downloaded LLVM C compiler: ${SMACK_C_COMPILER}"
+    puts "Using downloaded LLVM CXX compiler: ${SMACK_CXX_COMPILER}"
+  else
+    puts "Using system LLVM C compiler: ${SMACK_C_COMPILER}"
+    puts "Using system LLVM CXX compiler: ${SMACK_CXX_COMPILER}"
+  fi
+
+  cmake ${CMAKE_UNSET_COMPILERS} -DCMAKE_CXX_COMPILER="${SMACK_CXX_COMPILER}" \
+        -DCMAKE_C_COMPILER="${SMACK_C_COMPILER}" ${SMACK_LLVM_CONFIG} ${CMAKE_INSTALL_PREFIX} \
         -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ${NINJA}
 

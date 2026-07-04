@@ -2,8 +2,8 @@
 
 
 In principle SMACK can be run on any platform on which [LLVM][] and [Boogie][]
-can run. In practice we have run SMACK on standard Ubuntu and openSUSE Linux
-distributions, OS X, and Windows. Below we outline system
+can run. In practice we have run SMACK on standard Ubuntu, Debian, and
+openSUSE Linux distributions, OS X, and Windows. Below we outline system
 requirements and installation instructions for typical system configurations.
 A quick way to get started without worrying about system requirements and
 installation, however, is to launch our reproducible and portable development
@@ -102,11 +102,13 @@ generally not indexed by Linux package managers, and must be installed manually.
 
 To facilitate the installation of SMACK and its requirements, we provide an
 automated [build.sh][] script in `bin/build.sh`. Running this script on a fresh
-installation of Ubuntu or openSUSE Linux should actually result in the full
-installation of SMACK and its requirements, apart from setting the required
-environment variables in your shell's `.profile`. However, we do not expect
-this script to work out of the box on all configurations. Instead, it can be
-used as reference guidelines for manual installation.
+installation of Ubuntu, Debian 13, or openSUSE Linux should actually result in
+the full installation of SMACK and its requirements, apart from setting the
+required environment variables in your shell's `.profile`. On Debian 13, the
+script downloads the upstream LLVM release archive instead of installing LLVM
+from an apt repository. However, we do not expect this script to work out of the
+box on all configurations. Instead, it can be used as reference guidelines for
+manual installation.
 
 **NOTE** A common omission is to forget to set the required environment
 variables after the installation process, as indicated in the end of the build
