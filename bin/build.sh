@@ -66,6 +66,9 @@ Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSI
 DOWNLOAD_LLVM=0
 LLVM_DOWNLOAD_LINK=
 LLVM_DOWNLOAD_ARCHIVE=
+INSTALL_LIBTINFO5=0
+LIBTINFO5_DEB="libtinfo5_6.4-4_amd64.deb"
+LIBTINFO5_DOWNLOAD_LINK="https://deb.debian.org/debian/pool/main/n/ncurses/${LIBTINFO5_DEB}"
 SMACK_C_COMPILER="clang-${LLVM_SHORT_VERSION}"
 SMACK_CXX_COMPILER="clang++-${LLVM_SHORT_VERSION}"
 SMACK_LLVM_CONFIG=
@@ -288,6 +291,21 @@ function install-downloaded-llvm {
   echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
 }
 
+function install-libtinfo5-compat {
+  if dpkg-query -W -f='${Status}' libtinfo5 2>/dev/null | grep -q "install ok installed" ; then
+    puts "libtinfo5 already installed"
+    return
+  fi
+
+  puts "Installing libtinfo5 compatibility package"
+  mkdir -p "${DEPS_DIR}"
+  cd "${DEPS_DIR}"
+  ${WGET} "${LIBTINFO5_DOWNLOAD_LINK}" -O "${LIBTINFO5_DEB}"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "./${LIBTINFO5_DEB}"
+  rm -f "${LIBTINFO5_DEB}"
+  puts "Installed libtinfo5 compatibility package"
+}
+
 function ensure-llvm-tool-alias {
   local target="$1"
   local alias="$2"
@@ -338,6 +356,7 @@ linux-debian-13*-x86_64)
   DEPENDENCIES+=" build-essential ca-certificates xz-utils"
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DOWNLOAD_LLVM=1
+    INSTALL_LIBTINFO5=1
     LLVM_DOWNLOAD_ARCHIVE="clang+llvm-${LLVM_FULL_VERSION}-x86_64-linux-gnu-ubuntu-18.04.tar.xz"
     LLVM_DOWNLOAD_LINK="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/${LLVM_DOWNLOAD_ARCHIVE}"
   fi
@@ -490,6 +509,11 @@ if [ ${INSTALL_MONO} -eq 1 ] ; then
   sudo apt-get update
   sudo apt-get install -y mono-complete ca-certificates-mono
   puts "Installed mono"
+fi
+
+
+if [ ${INSTALL_LIBTINFO5} -eq 1 ] ; then
+  install-libtinfo5-compat
 fi
 
 
