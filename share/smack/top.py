@@ -546,7 +546,7 @@ def arguments():
         help='back-end verification engine')
 
     verifier_group.add_argument('--solver',
-                                choices=['z3', 'cvc4', "yices2"], default='z3',
+                                choices=['z3', 'cvc5', "yices2"], default='z3',
                                 help='back-end SMT solver')
 
     verifier_group.add_argument(
@@ -942,8 +942,8 @@ def boogie_command(args):
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
         command += ["/loopUnroll:%d" % args.unroll]
-    if args.solver == 'cvc4':
-        command += ["/proverOpt:SOLVER=cvc4"]
+    if args.solver == 'cvc5':
+        command += ["/proverOpt:SOLVER=CVC5"]
     elif args.solver == 'yices2':
         command += ["/proverOpt:SOLVER=Yices2"]
     return command
@@ -959,8 +959,8 @@ def corral_command(args):
     command += ["/cex:%s" % args.max_violations]
     command += ["/maxStaticLoopBound:%d" % args.loop_limit]
     command += ["/recursionBound:%d" % args.unroll]
-    if args.solver == 'cvc4':
-        command += ["/bopt:proverOpt:SOLVER=cvc4"]
+    if args.solver == 'cvc5':
+        command += ["/bopt:proverOpt:SOLVER=CVC5"]
     elif args.solver == 'yices2':
         command += ["/bopt:proverOpt:SOLVER=Yices2"]
     return command

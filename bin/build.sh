@@ -25,7 +25,7 @@
 INSTALL_DEPENDENCIES=${INSTALL_DEPENDENCIES:-1}
 INSTALL_MONO=${INSTALL_MONO:-0} # Mono is needed only for lockpwn and symbooglix
 INSTALL_Z3=${INSTALL_Z3:-1}
-INSTALL_CVC4=${INSTALL_CVC4:-0}
+INSTALL_CVC5=${INSTALL_CVC5:-0}
 INSTALL_YICES2=${INSTALL_YICES2:-0}
 INSTALL_BOOGIE=${INSTALL_BOOGIE:-1}
 INSTALL_CORRAL=${INSTALL_CORRAL:-1}
@@ -35,6 +35,7 @@ BUILD_SMACK=${BUILD_SMACK:-1}
 TEST_SMACK=${TEST_SMACK:-1}
 INSTALL_LLVM=${INSTALL_LLVM:-1}
 BUILD_LLVM=${BUILD_LLVM:-0} # LLVM is typically installed from packages (see below)
+BUILD_Z3=${BUILD_Z3:-0} # Z3 is typically installed from binary (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=${INSTALL_OBJECTIVEC:-0}
@@ -48,7 +49,7 @@ SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
 DEPS_DIR="${ROOT_DIR}/smack-deps"
 Z3_DIR="${DEPS_DIR}/z3"
-CVC4_DIR="${DEPS_DIR}/cvc4"
+CVC5_DIR="${DEPS_DIR}/cvc5"
 YICES2_DIR="${DEPS_DIR}/yices2"
 BOOGIE_DIR="${DEPS_DIR}/boogie"
 CORRAL_DIR="${DEPS_DIR}/corral"
@@ -60,7 +61,8 @@ source ${SMACK_DIR}/bin/versions
 
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
-Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.31.zip"
+NINJA="ninja"
+Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -68,7 +70,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-5.0 libboost-all-dev"
+DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-6.0 libboost-all-dev"
 
 shopt -s extglob
 
@@ -198,10 +200,16 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
-linux-@(ubuntu|neon)-@(16|18|20)*)
+linux-@(ubuntu|neon)-@(16|18|20|22)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   fi
+  ;;
+
+linux---x86_64)
+  BUILD_Z3=1
+  INSTALL_Z3=0
+  NINJA="ninja-build"
   ;;
 
 *)
@@ -240,7 +248,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20)*)
+  linux-@(ubuntu|neon)-@(1[68]|20|22)*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     16*)
@@ -251,6 +259,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       ;;
     20*)
       UBUNTU_CODENAME="focal"
+      ;;
+    22*)
+      UBUNTU_CODENAME="jammy"
       ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
@@ -268,13 +279,46 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     fi
 
-    # Adding .NET repository
-    ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-    sudo dpkg -i packages-microsoft-prod.deb
-    rm -f packages-microsoft-prod.deb
-    sudo apt-get update
+    # Adding .NET repository (skip for 22.04+ as it provides .NET 6 natively)
+    if [[ "$RELEASE_VERSION" != 22* ]]; then
+      ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+      sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
+      rm -f packages-microsoft-prod.deb
+      sudo apt-get update
+    fi
 
     sudo apt-get install -y ${DEPENDENCIES}
+    ;;
+
+
+  linux---x86_64)
+    sudo yum -y install ninja-build
+    sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+    sudo yum -y install dotnet-sdk-6.0
+    sudo pip3 install pyyaml psutil toml --break-system-packages || sudo pip3 install pyyaml psutil toml
+
+    mkdir -p ${DEPS_DIR}
+    cd ${DEPS_DIR}
+    ${WGET} https://github.com/Kitware/CMake/releases/download/v3.26.0/cmake-3.26.0-linux-x86_64.sh
+    chmod u+x cmake-3.26.0-linux-x86_64.sh
+    sudo ./cmake-3.26.0-linux-x86_64.sh --prefix=/usr/local/ --exclude-subdir
+
+    ${WGET} https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz
+    tar -xzvf boost_1_81_0.tar.gz
+    cd boost_1_81_0
+    ./bootstrap.sh
+    sudo ./b2 install --with=all
+    cd ..
+
+    mkdir -p ${LLVM_DIR}
+    ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+    tar -C ${LLVM_DIR} -xvf clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz --strip 1
+    sudo update-alternatives --install ${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/clang++ 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-config 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-link 30
+    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-dis 30
+    export PATH="${LLVM_DIR}/bin:$PATH"
+    echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
     ;;
 
   *)
@@ -311,9 +355,15 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   tar -C ${LLVM_DIR}/src/projects/compiler-rt -xvf compiler-rt-${LLVM_FULL_VERSION}.src.tar.xz --strip 1
 
   cd ${LLVM_DIR}/build/
-  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src
-  make
-  sudo make install
+  cmake -G "Unix Makefiles" ${CMAKE_INSTALL_PREFIX} -DCMAKE_BUILD_TYPE=Release ../src -G Ninja
+  ${NINJA}
+  sudo ${NINJA} install
+
+  sudo update-alternatives --install /usr/local/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} /usr/local/bin/clang++ 30
+  sudo update-alternatives --install /usr/local/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-config 30
+  sudo update-alternatives --install /usr/local/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-link 30
+  sudo update-alternatives --install /usr/local/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-dis 30
+
   puts "Built LLVM"
 fi
 
@@ -338,6 +388,20 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
   puts "Installed Rust"
 fi
 
+if [ ${BUILD_Z3} -eq 1 ] ; then
+  puts "Building Z3"
+  mkdir -p ${Z3_DIR}
+  cd ${Z3_DIR}
+  ${WGET} https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.1.zip
+  unzip z3-4.12.1.zip
+  cd z3-z3-4.12.1
+  python scripts/mk_make.py
+  cd build
+  make -j$(nproc)
+  sudo make install
+  puts "Built Z3"
+fi
+
 
 if [ ${INSTALL_Z3} -eq 1 ] ; then
   if [ ! -d "$Z3_DIR" ] ; then
@@ -355,17 +419,17 @@ if [ ${INSTALL_Z3} -eq 1 ] ; then
 fi
 
 
-if [ ${INSTALL_CVC4} -eq 1 ] ; then
-  if [ ! -d "$CVC4_DIR" ] ; then
-    puts "Installing CVC4"
-    mkdir -p ${CVC4_DIR}
-    ${WGET} https://github.com/CVC4/CVC4/releases/download/${CVC4_VERSION}/cvc4-${CVC4_VERSION}-x86_64-linux-opt -O ${CVC4_DIR}/cvc4
-    chmod +x ${CVC4_DIR}/cvc4
-    puts "Installed CVC4"
+if [ ${INSTALL_CVC5} -eq 1 ] ; then
+  if [ ! -d "$CVC5_DIR" ] ; then
+    puts "Installing CVC5"
+    mkdir -p ${CVC5_DIR}
+    ${WGET} https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux -O ${CVC5_DIR}/cvc5
+    chmod +x ${CVC5_DIR}/cvc5
+    puts "Installed CVC5"
   else
-    puts "CVC4 already installed"
+    puts "CVC5 already installed"
   fi
-  echo export PATH=\"${CVC4_DIR}:\$PATH\" >> ${SMACKENV}
+  echo export PATH=\"${CVC5_DIR}:\$PATH\" >> ${SMACKENV}
 fi
 
 
@@ -394,7 +458,8 @@ fi
 if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
   if [ ! -d "$BOOGIE_DIR" ] ; then
     puts "Installing Boogie"
-    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION}
+    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
+    dotnet tool install Boogie --tool-path ${BOOGIE_DIR} --version ${BOOGIE_VERSION} <<< "dummy"
     puts "Installed Boogie"
   else
     puts "Boogie already installed"
@@ -406,12 +471,14 @@ fi
 if [ ${INSTALL_CORRAL} -eq 1 ] ; then
   if [ ! -d "$CORRAL_DIR" ] ; then
     puts "Installing Corral"
-    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION}
+    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
+    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION} <<< "dummy"
     puts "Installed Corral"
   else
     puts "Corral already installed"
   fi
   echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
+  echo export DOTNET_ROLL_FORWARD=Major >> ${SMACKENV}
 fi
 
 
@@ -458,7 +525,7 @@ fi
 
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
-  sudo pip3 install -U flake8
+  sudo pip3 install -U flake8 --break-system-packages || sudo pip3 install -U flake8
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0
   fi
@@ -474,15 +541,16 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 
   mkdir -p ${SMACK_DIR}/build
   cd ${SMACK_DIR}/build
+
   cmake -DCMAKE_CXX_COMPILER=clang++-${LLVM_SHORT_VERSION} \
         -DCMAKE_C_COMPILER=clang-${LLVM_SHORT_VERSION} ${CMAKE_INSTALL_PREFIX} \
         -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
-  ninja
+  ${NINJA}
 
   if [ -n "${CMAKE_INSTALL_PREFIX}" ] ; then
-    ninja install
+    ${NINJA} install
   else
-    sudo ninja install
+    sudo ${NINJA} install
   fi
 
   puts "Configuring shell environment"

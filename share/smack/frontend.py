@@ -332,17 +332,14 @@ def cargo_frontend(input_file, args):
     entries = os.listdir(bcbase)
     bcs = []
 
-    for entry in entries:
-        if entry.startswith(target_name + '-') and entry.endswith('.bc'):
-            bcs.append(bcbase + entry)
+    # Matches either target_name.bc or target_name-0123456789abcdef.bc
+    # depending on platform
+    target_pattern = target_name + r'(-[a-f0-9]{16})?\.bc'
+    r = re.compile(target_pattern)
+    bcs = list(filter(r.match, entries))
+    assert (len(bcs) == 1)
 
-    bc_file = temporary_file(
-        os.path.splitext(
-            os.path.basename(input_file))[0],
-        '.bc',
-        args)
-    try_command([llvm_exact_bin('llvm-link')] + bcs + ['-o', bc_file])
-    return bc_file
+    return bcbase + bcs[0]
 
 
 def default_rust_compile_args(args):
