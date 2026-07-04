@@ -693,7 +693,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
     SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
     SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
     CMAKE_UNSET_COMPILERS="-U CMAKE_C_COMPILER -U CMAKE_CXX_COMPILER"
-    if [ ! -x "${SMACK_C_COMPILER}" ] || [ ! -x "${SMACK_CXX_COMPILER}" ] ; then
+    if [ ! -e "${SMACK_C_COMPILER}" ] || [ ! -e "${SMACK_CXX_COMPILER}" ] ; then
       puts "Downloaded LLVM compilers not found in ${LLVM_DIR}/bin"
       find "${LLVM_DIR}/bin" -maxdepth 1 \( -name 'clang*' -o -name 'llvm-config*' \) -print || true
       exit 1
