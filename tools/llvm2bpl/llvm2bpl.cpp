@@ -250,6 +250,9 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::AddTiming());
   }
 
+  // Clean up promotable stack slots introduced or exposed by SMACK passes.
+  pass_manager.add(llvm::createSROAPass());
+
   std::vector<ToolOutputFile *> files;
 
   if (!FinalIrFilename.empty()) {
