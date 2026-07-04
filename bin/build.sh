@@ -72,7 +72,6 @@ LIBTINFO5_DOWNLOAD_LINK="https://deb.debian.org/debian/pool/main/n/ncurses/${LIB
 SMACK_C_COMPILER="clang-${LLVM_SHORT_VERSION}"
 SMACK_CXX_COMPILER="clang++-${LLVM_SHORT_VERSION}"
 SMACK_LLVM_CONFIG=
-SMACK_CMAKE_FLAGS=
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -288,7 +287,6 @@ function install-downloaded-llvm {
   SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
   SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
   SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
-  SMACK_CMAKE_FLAGS="-DSMACK_FORCE_INCLUDE_SET=ON"
   export PATH="${LLVM_DIR}/bin:$PATH"
   echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
 }
@@ -359,6 +357,9 @@ linux-debian-13*-x86_64)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DOWNLOAD_LLVM=1
     INSTALL_LIBTINFO5=1
+    # Debian 13's newer standard library exposes a SeaDsa header issue:
+    # sea-dsa/include/seadsa/CompleteCallGraph.hh uses std::set and needs
+    # to include <set>. Fix that in SeaDsa or update the submodule.
     LLVM_DOWNLOAD_ARCHIVE="clang+llvm-${LLVM_FULL_VERSION}-x86_64-linux-gnu-ubuntu-18.04.tar.xz"
     LLVM_DOWNLOAD_LINK="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/${LLVM_DOWNLOAD_ARCHIVE}"
   fi
@@ -733,7 +734,6 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
     SMACK_C_COMPILER="${LLVM_DIR}/bin/clang-${LLVM_SHORT_VERSION}"
     SMACK_CXX_COMPILER="${LLVM_DIR}/bin/clang++"
     SMACK_LLVM_CONFIG="-DLLVM_CONFIG=${LLVM_DIR}/bin"
-    SMACK_CMAKE_FLAGS="-DSMACK_FORCE_INCLUDE_SET=ON"
     CMAKE_UNSET_COMPILERS="-U CMAKE_C_COMPILER -U CMAKE_CXX_COMPILER"
     puts "Using downloaded LLVM C compiler: ${SMACK_C_COMPILER}"
     puts "Using downloaded LLVM CXX compiler: ${SMACK_CXX_COMPILER}"
@@ -743,7 +743,7 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
   fi
 
   cmake ${CMAKE_UNSET_COMPILERS} -DCMAKE_CXX_COMPILER="${SMACK_CXX_COMPILER}" \
-        -DCMAKE_C_COMPILER="${SMACK_C_COMPILER}" ${SMACK_LLVM_CONFIG} ${SMACK_CMAKE_FLAGS} ${CMAKE_INSTALL_PREFIX} \
+        -DCMAKE_C_COMPILER="${SMACK_C_COMPILER}" ${SMACK_LLVM_CONFIG} ${CMAKE_INSTALL_PREFIX} \
         -DCMAKE_BUILD_TYPE=Debug .. -G Ninja
   ${NINJA}
 

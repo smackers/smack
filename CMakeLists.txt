@@ -32,12 +32,8 @@ if(NOT WIN32 OR MSYS OR CYGWIN)
   # SMACK doesn't use C++ runtime type identification features, so -fno-rtti
   # is justified.
   # Shaobo: enable O3 so SMACK can save some time.
-  set(SMACK_FORCE_INCLUDE_SET OFF CACHE BOOL "Force-include <set> for C++ sources")
   set(CMAKE_CXX_FLAGS
     "${LLVM_CXXFLAGS} -fno-exceptions -fno-rtti -O3")
-  if(SMACK_FORCE_INCLUDE_SET)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include set")
-  endif()
 
   execute_process(
     COMMAND ${LLVM_CONFIG_EXECUTABLE} --libs
