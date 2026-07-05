@@ -25,6 +25,7 @@
 
 #include "seadsa/CompleteCallGraph.hh"
 
+#include <map>
 #include <set>
 
 using namespace llvm;
@@ -79,4 +80,3 @@ namespace llvm {
       }
   };
 }
-
