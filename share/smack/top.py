@@ -492,7 +492,11 @@ def arguments():
         '--check',
         metavar='PROPERTY',
         nargs='+',
-        choices=list(VProperty),
+        # Use __members__ rather than iterating the Flag directly: since Python
+        # 3.11 (e.g. Ubuntu 24.04's Python 3.12) iterating a Flag omits the zero
+        # member (NONE) and composite members (MEMORY_SAFETY), which would drop
+        # them from the valid choices.
+        choices=list(VProperty.__members__.values()),
         default=VProperty.NONE,
         type=VProperty.argparse,
         action=PropertyAction,
