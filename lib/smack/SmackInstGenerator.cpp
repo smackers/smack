@@ -1150,6 +1150,39 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         {&SmackOptions::FloatEnabled});
   };
 
+  static const auto copysign = conditionalModel(
+      [this](CallInst *ci) {
+        // translation:
+        //   if !$isnan.bv*($arg2) {
+        //     $res := ite($isnegative.bv*($arg1) !=
+        //                 $isnegative.bv*($arg2),
+        //                 $fneg.bv*($arg1), $arg1);
+        //   }
+        // SMT-LIB has a single NaN value, while C permits NaNs with either
+        // sign. When $arg2 is NaN, overapproximate the result sign instead
+        // of treating $isnegative.bv*($arg2) as precise.
+        auto type = rep->type(ci->getFunctionType()->getReturnType());
+        auto boolType = Naming::BOOL_TYPE;
+        auto x = rep->expr(ci->getArgOperand(0));
+        auto y = rep->expr(ci->getArgOperand(1));
+        auto result = rep->expr(ci);
+        auto isNegFn = indexedName("$isnegative", {type, boolType});
+        auto isNanFn = indexedName("$isnan", {type, boolType});
+        auto negX = Expr::fn(indexedName("$fneg", {type}), x);
+        auto signDiff = Expr::neq(Expr::fn(isNegFn, x), Expr::fn(isNegFn, y));
+        auto precise = Expr::ifThenElse(signDiff, negX, x);
+        auto isNanX = Expr::fn(isNanFn, x);
+        auto isNanY = Expr::fn(isNanFn, y);
+        auto isNanResult = Expr::fn(isNanFn, result);
+        auto nanSignResult = Expr::ifThenElse(
+            isNanX, isNanResult,
+            Expr::or_(Expr::eq(result, x), Expr::eq(result, negX)));
+        emit(Stmt::havoc(result));
+        emit(Stmt::assume(Expr::ifThenElse(isNanY, nanSignResult,
+                                           Expr::eq(result, precise))));
+      },
+      {&SmackOptions::FloatEnabled});
+
   // Expr* -> (CallInst -> Void)
   static const auto assignRoundFPFuncApp = [this](const Expr *rMode) {
     return conditionalModel(
@@ -1188,6 +1221,7 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           {llvm::Intrinsic::cttz, cttz},
           {llvm::Intrinsic::dbg_declare, ignore},
           {llvm::Intrinsic::dbg_label, ignore},
+          {llvm::Intrinsic::copysign, copysign},
           {llvm::Intrinsic::expect, identity},
           {llvm::Intrinsic::fabs, assignUnFPFuncApp("$abs")},
           {llvm::Intrinsic::fma, fma},
@@ -1206,11 +1240,6 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
            assignRoundFPFuncApp(Expr::lit(RModeKind::RNA))},
           {llvm::Intrinsic::trunc,
            assignRoundFPFuncApp(Expr::lit(RModeKind::RTZ))}
-          // TODO: we cannot properly handle copysign because our fp2bv is not
-          // carefully implemented.
-          // The current version of llvm does not have these intrinsics while
-          // the latest version does
-          // we keep the code to save work in the future
           // TODO: in future versions, there may be intrinsics that round floats
           // to integers like lround
       };
