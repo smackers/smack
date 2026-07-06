@@ -1218,8 +1218,16 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
   auto it = stmtMap.find(ii.getIntrinsicID());
   if (it != stmtMap.end())
     it->second(&ii);
-  else if (ii.getIntrinsicID() ==
-           llvm::Intrinsic::experimental_noalias_scope_decl) {
+  else if (ii.getCalledFunction()->getName().startswith(
+               "llvm.experimental.constrained.")) {
+    SmackWarnings::warnApproximate(ii.getCalledFunction()->getName().str(),
+                                   currBlock, &ii);
+    if (!ii.getType()->isVoidTy())
+      emit(Stmt::havoc(rep->expr(&ii)));
+    else
+      emit(Stmt::skip());
+  } else if (ii.getIntrinsicID() ==
+             llvm::Intrinsic::experimental_noalias_scope_decl) {
     // Ignore this function as we cannot handle arguments of metadata type.
   } else {
     SmackWarnings::warnApproximate(ii.getCalledFunction()->getName().str(),
