@@ -17,6 +17,7 @@ public:
   IntegerOverflowChecker() : llvm::ModulePass(ID) {}
   virtual llvm::StringRef getPassName() const override;
   virtual bool runOnModule(llvm::Module &m) override;
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
 private:
   static const std::map<std::string, llvm::Instruction::BinaryOps>

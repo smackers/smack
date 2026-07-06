@@ -7,25 +7,77 @@
 // operations, and optionally allows for the checking of overflow.
 //
 
-#define DEBUG_TYPE "smack-overflow"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Regex.h"
+#include <functional>
 #include <string>
+#include <vector>
+
+#define DEBUG_TYPE "smack-overflow"
 
 namespace smack {
 
 using namespace llvm;
 
 Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
+
+namespace {
+
+struct OverflowOpKey {
+  bool isSigned;
+  Instruction::BinaryOps op;
+  unsigned bits;
+  Value *lhs;
+  Value *rhs;
+
+  bool operator<(const OverflowOpKey &o) const {
+    if (isSigned != o.isSigned)
+      return isSigned < o.isSigned;
+    if (op != o.op)
+      return op < o.op;
+    if (bits != o.bits)
+      return bits < o.bits;
+
+    std::less<Value *> less;
+    if (lhs != o.lhs)
+      return less(lhs, o.lhs);
+    return less(rhs, o.rhs);
+  }
+};
+
+OverflowOpKey getOverflowOpKey(bool isSigned, Instruction::BinaryOps op,
+                               unsigned bits, Value *lhs, Value *rhs) {
+  if ((op == Instruction::Add || op == Instruction::Mul) &&
+      std::less<Value *>()(rhs, lhs))
+    std::swap(lhs, rhs);
+  return {isSigned, op, bits, lhs, rhs};
+}
+
+bool hasDominatingCheckedOp(
+    const std::map<OverflowOpKey, std::vector<Instruction *>> &checkedOps,
+    const OverflowOpKey &key, Instruction *i, DominatorTree &dt) {
+  auto it = checkedOps.find(key);
+  if (it == checkedOps.end())
+    return false;
+
+  for (auto *prev : it->second) {
+    if (dt.dominates(prev, i))
+      return true;
+  }
+  return false;
+}
+
+} // namespace
 
 const std::map<std::string, Instruction::BinaryOps>
     IntegerOverflowChecker::INSTRUCTION_TABLE{{"add", Instruction::Add},
@@ -117,8 +169,10 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
   std::vector<Instruction *> instToErase;
   for (auto &F : m) {
-    if (Naming::isSmackName(F.getName()))
+    if (F.isDeclaration() || Naming::isSmackName(F.getName()))
       continue;
+    auto &dt = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    std::map<OverflowOpKey, std::vector<Instruction *>> checkedOps;
     for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
       if (auto ci = dyn_cast<CallInst>(&*I)) {
         Function *f = ci->getCalledFunction();
@@ -169,15 +223,27 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
             SDEBUG(errs() << "Processing operator: " << op << "\n");
             assert(INSTRUCTION_TABLE.count(op) != 0 &&
                    "Operator must be present in our instruction table.");
+            auto binOp = INSTRUCTION_TABLE.at(op);
+            auto key = getOverflowOpKey(isSigned, binOp, bits,
+                                        ci->getArgOperand(0),
+                                        ci->getArgOperand(1));
+            bool checked = SmackOptions::IntegerOverflow &&
+                           SmackOptions::shouldCheckFunction(F.getName());
+            bool alreadyChecked =
+                checked && hasDominatingCheckedOp(checkedOps, key, ci, dt);
             BinaryOperator *ai = BinaryOperator::Create(
-                INSTRUCTION_TABLE.at(op), eo1, eo2, "", ci);
+                binOp, eo1, eo2, "", ci);
             Value *r = createResult(ai, bits, &*I);
-            BinaryOperator *flag = createFlag(ai, bits, isSigned, ci);
-            if (SmackOptions::IntegerOverflow &&
-                SmackOptions::shouldCheckFunction(F.getName())) {
+            Value *flag = nullptr;
+            if (alreadyChecked)
+              flag = ConstantInt::getFalse(F.getContext());
+            else
+              flag = createFlag(ai, bits, isSigned, ci);
+            if (checked && !alreadyChecked) {
               addCheck(co, flag, ci);
               // Make the proven no-overflow fact available to later checks.
               addBlockingAssume(va, flag, ci);
+              checkedOps[key].push_back(ci);
             }
             for (auto U : ci->users()) {
               if (ExtractValueInst *ei = dyn_cast<ExtractValueInst>(U)) {
@@ -205,6 +271,10 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
     I->eraseFromParent();
   }
   return true;
+}
+
+void IntegerOverflowChecker::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<DominatorTreeWrapperPass>();
 }
 
 // Pass ID variable
