@@ -174,8 +174,11 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
             Value *r = createResult(ai, bits, &*I);
             BinaryOperator *flag = createFlag(ai, bits, isSigned, ci);
             if (SmackOptions::IntegerOverflow &&
-                SmackOptions::shouldCheckFunction(F.getName()))
+                SmackOptions::shouldCheckFunction(F.getName())) {
               addCheck(co, flag, ci);
+              // Make the proven no-overflow fact available to later checks.
+              addBlockingAssume(va, flag, ci);
+            }
             for (auto U : ci->users()) {
               if (ExtractValueInst *ei = dyn_cast<ExtractValueInst>(U)) {
                 if (ei->getNumIndices() == 1) {
