@@ -1,5 +1,5 @@
-[![main branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=main)](https://github.com/smackers/smack/actions)
-[![develop branch ci status](https://github.com/smackers/smack/workflows/SMACK%20CI/badge.svg?branch=develop)](https://github.com/smackers/smack/actions)
+[![main branch ci status](https://github.com/smackers/smack/actions/workflows/smack-ci.yaml/badge.svg?branch=main)](https://github.com/smackers/smack/actions)
+[![develop branch ci status](https://github.com/smackers/smack/actions/workflows/smack-ci.yaml/badge.svg?branch=develop)](https://github.com/smackers/smack/actions)
 
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 
@@ -62,4 +62,3 @@ benchmarking of SMACK.
 1. [Projects](docs/projects.md)
 1. [Publications](docs/publications.md)
 1. [People](docs/people.md)
-
