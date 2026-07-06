@@ -1,4 +1,5 @@
 #include "smack.h"
+#include <assert.h>
 
 int main(void) {
   int x, y, z;
