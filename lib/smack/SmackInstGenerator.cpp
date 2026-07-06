@@ -338,10 +338,15 @@ void SmackInstGenerator::visitUnreachableInst(llvm::UnreachableInst &ii) {
 
 void SmackInstGenerator::visitBinaryOperator(llvm::BinaryOperator &I) {
   processInstruction(I);
-  if (rep->isBitwiseOp(&I) && I.getType()->getIntegerBitWidth() > 1)
-    SmackWarnings::warnOverApproximate(
-        std::string("bitwise operation ") + I.getOpcodeName(),
-        {&SmackOptions::BitPrecise}, currBlock, &I);
+  if (rep->isBitwiseOp(&I)) {
+    auto T = I.getType();
+    if (auto VT = dyn_cast<FixedVectorType>(T))
+      T = VT->getElementType();
+    if (T->isIntegerTy() && T->getIntegerBitWidth() > 1)
+      SmackWarnings::warnOverApproximate(
+          std::string("bitwise operation ") + I.getOpcodeName(),
+          {&SmackOptions::BitPrecise}, currBlock, &I);
+  }
   if (rep->isFpArithOp(&I))
     SmackWarnings::warnOverApproximate(
         std::string("floating-point operation ") + I.getOpcodeName(),
