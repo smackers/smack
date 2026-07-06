@@ -1246,10 +1246,6 @@ Decl *SmackRep::getInitFuncs() {
   Block *b = Block::block();
   for (auto name : initFuncs)
     b->addStmt(Stmt::call(name));
-  if (SmackOptions::FloatEnabled) {
-    b->addStmt(
-        Stmt::assign(Expr::id(Naming::RMODE_VAR), Expr::lit(RModeKind::RNE)));
-  }
   b->addStmt(Stmt::return_());
   proc->getBlocks().push_back(b);
   return proc;
