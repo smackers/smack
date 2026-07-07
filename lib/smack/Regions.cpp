@@ -2,11 +2,11 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/Regions.h"
+#include "seadsa/CallSite.hh"
+#include "seadsa/Mapper.hh"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/SmackOptions.h"
-#include "seadsa/CallSite.hh"
-#include "seadsa/Mapper.hh"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -318,7 +318,8 @@ bool Regions::runOnModule(Module &M) {
     computeFunctionRegions(M);
 
     // Phase 5: Procedure memory interfaces. Private regions stay local; only
-    // regions reachable from formals/globals/returns are threaded through calls.
+    // regions reachable from formals/globals/returns are threaded through
+    // calls.
     computeInterfaceRegions(M);
   }
 
@@ -516,8 +517,8 @@ void reachableInterfaceNodes(const Function *F, seadsa::Graph &G,
 
 std::unique_ptr<seadsa::DsaCallSite> makeDsaCallSite(CallInst *CI,
                                                      Function *callee) {
-  auto site = std::unique_ptr<seadsa::DsaCallSite>(
-      new seadsa::DsaCallSite(*CI));
+  auto site =
+      std::unique_ptr<seadsa::DsaCallSite>(new seadsa::DsaCallSite(*CI));
   if (site->getCallee() == callee)
     return site;
   return std::unique_ptr<seadsa::DsaCallSite>(
@@ -576,9 +577,8 @@ void Regions::computeOneCallSiteMapping(CallInst *CI, const Function *caller,
   auto dsaCS = makeDsaCallSite(CI, callee);
 
   seadsa::SimulationMapper simMap;
-  bool mapped =
-      seadsa::Graph::computeCalleeCallerMapping(*dsaCS, calleeG, callerG,
-                                                simMap);
+  bool mapped = seadsa::Graph::computeCalleeCallerMapping(*dsaCS, calleeG,
+                                                          callerG, simMap);
   if (!mapped)
     llvm_unreachable("SeaDsa failed to map callee regions to caller regions.");
 
