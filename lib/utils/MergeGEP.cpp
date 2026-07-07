@@ -139,11 +139,13 @@ static void simplifyGEP(GetElementPtrInst *GEP) {
     }
 
     if (!Indices.empty()){
+      Type *SourceElementType = Src->getSourceElementType();
       GetElementPtrInst *GEPNew =  (GEP->isInBounds() && Src->isInBounds()) ?
-        GetElementPtrInst::CreateInBounds(Src->getOperand(0), Indices,
+        GetElementPtrInst::CreateInBounds(SourceElementType,
+                                          Src->getOperand(0), Indices,
                                           GEP->getName(), GEP) :
-        GetElementPtrInst::Create(nullptr, Src->getOperand(0), Indices,
-                                  GEP->getName(), GEP);
+        GetElementPtrInst::Create(SourceElementType, Src->getOperand(0),
+                                  Indices, GEP->getName(), GEP);
       numMerged++;
       GEP->replaceAllUsesWith(GEPNew);
       GEP->eraseFromParent();

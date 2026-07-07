@@ -396,7 +396,7 @@ Devirtualize::makeDirectCall (CallBase *CS) {
   if (CallInst* CI = dyn_cast<CallInst>(CS)) {
     std::vector<Value*> Params;
     Params.push_back(CI->getCalledOperand());
-    for (unsigned i=0; i<CI->getNumArgOperands(); i++) {
+    for (unsigned i=0; i<CI->arg_size(); i++) {
       Params.push_back(
         castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS)
       );
@@ -412,7 +412,7 @@ Devirtualize::makeDirectCall (CallBase *CS) {
   } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS)) {
     std::vector<Value*> Params;
     Params.push_back(CI->getCalledOperand());
-    for (unsigned i=0; i<CI->getNumArgOperands(); i++)
+    for (unsigned i=0; i<CI->arg_size(); i++)
       Params.push_back(
         castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS)
       );

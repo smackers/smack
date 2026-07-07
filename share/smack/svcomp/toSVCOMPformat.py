@@ -154,7 +154,7 @@ def smackJsonToXmlGraph(strJsonOutput, args, hasBug, status):
 
       lastNode = start
       lastEdge = None
-      pat = re.compile(".*/smack/lib/.+\.[c|h]$")
+      pat = re.compile(r".*/smack/lib/.+\.[c|h]$")
       prevLineNo = -1
       prevColNo = -1
       callStack = [('main', '0')]

@@ -74,7 +74,22 @@ FuncDecl *VectorOperations::cast(unsigned OpCode, Type *SrcTy, Type *DstTy) {
     Body = Expr::fn(constructor(DstVecTy), Expr::id("v"));
   else if (SrcVecTy && SrcVecTy->getNumElements() == 1 && !DstVecTy)
     Body = Expr::fn(selector(SrcVecTy, 0), Expr::id("v"));
-  else
+  else if ((OpCode == Instruction::Trunc || OpCode == Instruction::ZExt ||
+            OpCode == Instruction::SExt) &&
+           SrcVecTy && DstVecTy &&
+           CastInst::castIsValid((Instruction::CastOps)OpCode,
+                                 SrcVecTy->getElementType(),
+                                 DstVecTy->getElementType()) &&
+           SrcVecTy->getNumElements() == DstVecTy->getNumElements()) {
+    auto FnBase =
+        rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode),
+                    {SrcVecTy->getElementType(), DstVecTy->getElementType()});
+    std::list<const Expr *> Args;
+    for (unsigned i = 0; i < SrcVecTy->getNumElements(); i++)
+      Args.push_back(
+          Expr::fn(FnBase, Expr::fn(selector(SrcVecTy, i), Expr::id("v"))));
+    Body = Expr::fn(constructor(DstVecTy), Args);
+  } else
     Body = nullptr;
 
   return Decl::function(FnName, {{"v", rep->type(SrcTy)}}, rep->type(DstTy),
@@ -109,33 +124,35 @@ FuncDecl *VectorOperations::binary(unsigned OpCode, FixedVectorType *T) {
 FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, FixedVectorType *T) {
   auto FnName = rep->opName(Naming::CMPINST_TABLE.at(P), {T});
   auto FnBase = rep->opName(Naming::CMPINST_TABLE.at(P), {T->getElementType()});
+  auto RT = FixedVectorType::get(IntegerType::get(T->getContext(), 1),
+                                 T->getNumElements());
   std::list<const Expr *> Args;
   for (unsigned i = 0; i < T->getNumElements(); i++) {
     Args.push_back(
         Expr::fn(FnBase, {Expr::fn(selector(T, i), Expr::id("v1")),
                           Expr::fn(selector(T, i), Expr::id("v2"))}));
   }
-  return Decl::function(
-      FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
-      rep->type(FixedVectorType::get(IntegerType::get(T->getContext(), 1),
-                                     T->getNumElements())),
-      Expr::fn(constructor(T), Args));
+  return Decl::function(FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
+                        rep->type(RT), Expr::fn(constructor(RT), Args));
 }
 
 FuncDecl *VectorOperations::cast(CastInst *I) {
   SDEBUG(errs() << "simd-cast: " << *I << "\n");
   auto F = cast(I->getOpcode(), I->getSrcTy(), I->getDestTy());
-  auto G = cast(I->getOpcode(), I->getDestTy(), I->getSrcTy());
-  auto A = inverseAxiom(I->getOpcode(), I->getSrcTy(), I->getDestTy());
-  auto B = inverseAxiom(I->getOpcode(), I->getDestTy(), I->getSrcTy());
   if (isa<FixedVectorType>(I->getSrcTy()))
     type(I->getSrcTy());
   if (isa<FixedVectorType>(I->getDestTy()))
     type(I->getDestTy());
   rep->addAuxiliaryDeclaration(F);
-  rep->addAuxiliaryDeclaration(G);
-  rep->addAuxiliaryDeclaration(A);
-  rep->addAuxiliaryDeclaration(B);
+
+  if (I->getOpcode() == Instruction::BitCast) {
+    auto G = cast(I->getOpcode(), I->getDestTy(), I->getSrcTy());
+    auto A = inverseAxiom(I->getOpcode(), I->getSrcTy(), I->getDestTy());
+    auto B = inverseAxiom(I->getOpcode(), I->getDestTy(), I->getSrcTy());
+    rep->addAuxiliaryDeclaration(G);
+    rep->addAuxiliaryDeclaration(A);
+    rep->addAuxiliaryDeclaration(B);
+  }
   return F;
 }
 

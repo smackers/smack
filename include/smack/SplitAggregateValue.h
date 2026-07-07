@@ -14,6 +14,11 @@
 
 namespace smack {
 
+namespace SplitAggregateValueMetadata {
+extern const char MemoryAccess[];
+extern const char WholeMemoryAccess[];
+} // namespace SplitAggregateValueMetadata
+
 class SplitAggregateValue : public llvm::FunctionPass {
 public:
   typedef std::vector<std::pair<llvm::Value *, unsigned>> IndexT;
@@ -25,9 +30,11 @@ public:
 private:
   llvm::Value *splitAggregateLoad(llvm::Type *T, llvm::Value *P,
                                   std::vector<InfoT> &info,
-                                  llvm::IRBuilder<> &irb);
+                                  llvm::IRBuilder<> &irb,
+                                  bool preserveWholeAccessCheck);
   void splitAggregateStore(llvm::Value *P, llvm::Value *V,
-                           std::vector<InfoT> &info, llvm::IRBuilder<> &irb);
+                           std::vector<InfoT> &info, llvm::IRBuilder<> &irb,
+                           bool preserveWholeAccessCheck);
   void splitConstantReturn(llvm::ReturnInst *ri, std::vector<InfoT> &info);
   void splitConstantArg(llvm::CallInst *ci, unsigned i,
                         std::vector<InfoT> &info);
