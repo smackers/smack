@@ -8,6 +8,22 @@ namespace smack {
 
 using namespace llvm;
 
+namespace SplitAggregateValueMetadata {
+const char MemoryAccess[] = "split.aggregate.memory_access";
+const char WholeMemoryAccess[] = "split.aggregate.whole_memory_access";
+} // namespace SplitAggregateValueMetadata
+
+namespace {
+void markSplitAggregateAccess(Instruction *I, bool checkWholeAccess) {
+  auto &C = I->getContext();
+  auto *Marker =
+      MDNode::get(C, ConstantAsMetadata::get(ConstantInt::getTrue(C)));
+  I->setMetadata(SplitAggregateValueMetadata::MemoryAccess, Marker);
+  if (checkWholeAccess)
+    I->setMetadata(SplitAggregateValueMetadata::WholeMemoryAccess, Marker);
+}
+} // namespace
+
 std::vector<Value *> getFirsts(SplitAggregateValue::IndexT lst) {
   std::vector<Value *> ret;
   for (auto &p : lst)
@@ -34,7 +50,7 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
           visitAggregateValue(nullptr, li->getType(), idx, info, C);
           IRBuilder<> irb(li);
           li->replaceAllUsesWith(splitAggregateLoad(
-              li->getType(), li->getPointerOperand(), info, irb));
+              li->getType(), li->getPointerOperand(), info, irb, true));
           toRemove.push_back(li);
         }
       } else if (StoreInst *si = dyn_cast<StoreInst>(&I)) {
@@ -44,7 +60,7 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
                               info, C);
           IRBuilder<> irb(si);
           splitAggregateStore(si->getPointerOperand(), si->getValueOperand(),
-                              info, irb);
+                              info, irb, true);
           toRemove.push_back(si);
         }
       } else if (ReturnInst *ri = dyn_cast<ReturnInst>(&I)) {
@@ -84,34 +100,41 @@ bool SplitAggregateValue::isConstantAggregate(Value *V) {
 
 Value *SplitAggregateValue::splitAggregateLoad(Type *T, Value *P,
                                                std::vector<InfoT> &info,
-                                               IRBuilder<> &irb) {
+                                               IRBuilder<> &irb,
+                                               bool preserveWholeAccessCheck) {
   Value *V = UndefValue::get(T);
+  bool checkWholeAccess = preserveWholeAccessCheck;
   for (auto &e : info) {
     IndexT idxs = std::get<0>(e);
     Value *p = irb.CreateGEP(T, P, ArrayRef<Value *>(getFirsts(idxs)));
-    V = irb.CreateInsertValue(
-        V,
-        irb.CreateLoad(p->getType()->getScalarType()->getPointerElementType(),
-                       p),
-        ArrayRef<unsigned>(getSeconds(idxs)));
+    auto *load = irb.CreateLoad(
+        p->getType()->getScalarType()->getPointerElementType(), p);
+    markSplitAggregateAccess(load, checkWholeAccess);
+    checkWholeAccess = false;
+    V = irb.CreateInsertValue(V, load, ArrayRef<unsigned>(getSeconds(idxs)));
   }
   return V;
 }
 
 void SplitAggregateValue::splitAggregateStore(Value *P, Value *V,
                                               std::vector<InfoT> &info,
-                                              IRBuilder<> &irb) {
+                                              IRBuilder<> &irb,
+                                              bool preserveWholeAccessCheck) {
+  bool checkWholeAccess = preserveWholeAccessCheck;
   for (auto &e : info) {
     IndexT idxs = std::get<0>(e);
     Constant *c = std::get<1>(e);
     std::vector<Value *> vidxs = getFirsts(idxs);
     Type *T = P->getType()->getScalarType()->getPointerElementType();
+    Value *p = irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs));
+    StoreInst *store;
     if (c)
-      irb.CreateStore(c, irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs)));
+      store = irb.CreateStore(c, p);
     else
-      irb.CreateStore(
-          irb.CreateExtractValue(V, ArrayRef<unsigned>(getSeconds(idxs))),
-          irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs)));
+      store = irb.CreateStore(
+          irb.CreateExtractValue(V, ArrayRef<unsigned>(getSeconds(idxs))), p);
+    markSplitAggregateAccess(store, checkWholeAccess);
+    checkWholeAccess = false;
   }
 }
 
@@ -119,8 +142,8 @@ Value *SplitAggregateValue::createInsertedValue(IRBuilder<> &irb, Type *T,
                                                 std::vector<InfoT> &info,
                                                 Value *V) {
   Value *box = irb.CreateAlloca(T);
-  splitAggregateStore(box, V, info, irb);
-  return splitAggregateLoad(T, box, info, irb);
+  splitAggregateStore(box, V, info, irb, false);
+  return splitAggregateLoad(T, box, info, irb, false);
 }
 
 void SplitAggregateValue::splitConstantReturn(ReturnInst *ri,

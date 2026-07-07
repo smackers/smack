@@ -5,11 +5,13 @@
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
+#include "smack/SplitAggregateValue.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueSymbolTable.h"
 
 namespace smack {
@@ -71,15 +73,18 @@ void MemorySafetyChecker::visitReturnInst(llvm::ReturnInst &I) {
 }
 
 namespace {
+Value *accessSizeAsPointer(Module &M, Type *T) {
+  return ConstantExpr::getIntToPtr(
+      ConstantInt::get(Type::getInt64Ty(M.getContext()),
+                       M.getDataLayout().getTypeStoreSize(T)),
+      PointerType::getUnqual(Type::getInt8Ty(M.getContext())));
+}
+
 Value *accessSizeAsPointer(Module &M, Value *V) {
   auto T = dyn_cast<PointerType>(V->getType());
   assert(T && "expected pointer type");
 
-  return ConstantExpr::getIntToPtr(
-      ConstantInt::get(
-          Type::getInt64Ty(M.getContext()),
-          M.getDataLayout().getTypeStoreSize(T->getPointerElementType())),
-      PointerType::getUnqual(Type::getInt8Ty(M.getContext())));
+  return accessSizeAsPointer(M, T->getPointerElementType());
 }
 
 Value *accessSizeAsPointer(LoadInst &I) {
@@ -93,11 +98,44 @@ Value *accessSizeAsPointer(StoreInst &I) {
 }
 } // namespace
 
+bool MemorySafetyChecker::visitSplitAggregateAccess(Value *addr,
+                                                    Instruction *I) {
+  if (!I->getMetadata(SplitAggregateValueMetadata::MemoryAccess))
+    return false;
+
+  // SplitAggregateValue lowers one aggregate access into multiple scalar
+  // accesses. Check the original aggregate access once, then skip the pieces.
+  if (I->getMetadata(SplitAggregateValueMetadata::WholeMemoryAccess)) {
+    auto &M = *I->getParent()->getParent()->getParent();
+    Value *base = addr;
+    Type *T = nullptr;
+
+    if (auto *GEP = dyn_cast<GEPOperator>(addr)) {
+      base = GEP->getPointerOperand();
+      T = GEP->getSourceElementType();
+    } else {
+      auto *PT = dyn_cast<PointerType>(addr->getType());
+      assert(PT && "expected pointer type");
+      T = PT->getPointerElementType();
+    }
+
+    insertMemoryAccessCheck(base, accessSizeAsPointer(M, T), I);
+  }
+
+  return true;
+}
+
 void MemorySafetyChecker::visitLoadInst(LoadInst &I) {
+  if (visitSplitAggregateAccess(I.getPointerOperand(), &I))
+    return;
+
   insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
 }
 
 void MemorySafetyChecker::visitStoreInst(StoreInst &I) {
+  if (visitSplitAggregateAccess(I.getPointerOperand(), &I))
+    return;
+
   insertMemoryAccessCheck(I.getPointerOperand(), accessSizeAsPointer(I), &I);
 }
 
