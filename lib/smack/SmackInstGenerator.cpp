@@ -172,8 +172,8 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
 
     // Initialize local memory shadows from input parameters.
     if (!SmackOptions::usesGlobalMemory(naming->get(*F))) {
-      auto accessed = rep->getRegions()->getAccessedRegions(F);
-      for (unsigned r : accessed)
+      auto &info = rep->getRegions()->getFunctionRegionInfo(F);
+      for (unsigned r : info.inputRegions)
         emit(Stmt::assign(Expr::id(rep->memPath(r)),
                           Expr::id(rep->memReg(r) + ".in")));
     }
@@ -257,7 +257,7 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst &ri) {
   const llvm::Function *F = ri.getParent()->getParent();
   if (!SmackOptions::usesGlobalMemory(naming->get(*F))) {
     auto &info = rep->getRegions()->getFunctionRegionInfo(F);
-    for (unsigned r : info.modifiedRegions)
+    for (unsigned r : info.outputRegions)
       emit(Stmt::assign(Expr::id(rep->memReg(r) + ".out"),
                         Expr::id(rep->memPath(r))));
   }

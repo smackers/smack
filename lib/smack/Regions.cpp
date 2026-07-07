@@ -5,9 +5,14 @@
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/SmackOptions.h"
+#include "seadsa/CallSite.hh"
+#include "seadsa/Mapper.hh"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/ErrorHandling.h"
+
+#include <memory>
 
 #define DEBUG_TYPE "regions"
 
@@ -84,12 +89,17 @@ Region::Region(const Value *V, const Function *F, unsigned length) {
   init(V, length, F);
 }
 
-Region::Region(const seadsa::Node *node, LLVMContext &ctx) {
+Region::Region(const seadsa::Node *node, LLVMContext &ctx)
+    : Region(node, 0,
+             node ? node->size() : std::numeric_limits<unsigned>::max(), ctx) {}
+
+Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
+               LLVMContext &ctx) {
   context = &ctx;
   representative = node;
   type = nullptr;
-  offset = 0;
-  length = node ? node->size() : std::numeric_limits<unsigned>::max();
+  this->offset = offset;
+  this->length = length;
   singleton = false;
   allocated = !representative || isAllocated(representative);
   bytewise = true;
@@ -186,7 +196,7 @@ bool Regions::runOnModule(Module &M) {
       for (auto &BB : F) {
         for (auto &I : BB) {
           if (auto *CI = dyn_cast<CallInst>(&I)) {
-            for (unsigned i = 0; i < CI->getNumArgOperands(); i++) {
+            for (unsigned i = 0; i < CI->arg_size(); i++) {
               Value *arg = CI->getArgOperand(i);
               if (arg->getType()->isPointerTy())
                 idx(arg, &F);
@@ -306,6 +316,10 @@ bool Regions::runOnModule(Module &M) {
 
     // Phase 4: Transitive closure of region access sets.
     computeFunctionRegions(M);
+
+    // Phase 5: Procedure memory interfaces. Private regions stay local; only
+    // regions reachable from formals/globals/returns are threaded through calls.
+    computeInterfaceRegions(M);
   }
 
   return false;
@@ -474,6 +488,55 @@ void Regions::visitCallInst(CallInst &I) {
 
 FunctionRegionInfo Regions::emptyRegionInfo;
 
+namespace {
+using NodeSet = std::set<const seadsa::Node *>;
+
+void markReachableNodes(const seadsa::Node *N, NodeSet &nodes) {
+  if (!N)
+    return;
+  if (nodes.insert(N).second) {
+    for (auto &link : N->links())
+      markReachableNodes(link.second->getNode(), nodes);
+  }
+}
+
+void reachableInterfaceNodes(const Function *F, seadsa::Graph &G,
+                             NodeSet &inputReach, NodeSet &returnReach) {
+  for (auto &A : F->args()) {
+    if (G.hasCell(A))
+      markReachableNodes(G.getCell(A).getNode(), inputReach);
+  }
+
+  for (auto &GV : G.globals())
+    markReachableNodes(GV.second->getNode(), inputReach);
+
+  if (G.hasRetCell(*F))
+    markReachableNodes(G.getRetCell(*F).getNode(), returnReach);
+}
+
+std::unique_ptr<seadsa::DsaCallSite> makeDsaCallSite(CallInst *CI,
+                                                     Function *callee) {
+  auto site = std::unique_ptr<seadsa::DsaCallSite>(
+      new seadsa::DsaCallSite(*CI));
+  if (site->getCallee() == callee)
+    return site;
+  return std::unique_ptr<seadsa::DsaCallSite>(
+      new seadsa::DsaCallSite(*CI, *callee));
+}
+
+void remapRegionSet(std::set<unsigned> &regions, unsigned keep,
+                    unsigned remove) {
+  std::set<unsigned> remapped;
+  for (unsigned r : regions) {
+    if (r == remove)
+      remapped.insert(keep);
+    else
+      remapped.insert(r > remove ? r - 1 : r);
+  }
+  regions = remapped;
+}
+} // namespace
+
 void Regions::computeCallSiteMappings(Module &M) {
   for (auto &F : M) {
     if (F.isDeclaration())
@@ -503,174 +566,37 @@ void Regions::computeOneCallSiteMapping(CallInst *CI, const Function *caller,
                                         Function *callee) {
   std::map<unsigned, unsigned> mapping;
 
-  // Map via actual/formal pointer parameter pairs.
-  unsigned argIdx = 0;
-  for (auto &formalArg : callee->args()) {
-    if (argIdx < CI->getNumArgOperands() &&
-        formalArg.getType()->isPointerTy()) {
-      Value *actualArg = CI->getArgOperand(argIdx);
-      unsigned calleeR = idx(&formalArg, callee);
-      unsigned callerR = idx(actualArg, caller);
-      mapping[calleeR] = callerR;
-    }
-    argIdx++;
+  if (!DSA->hasGraph(*callee) || !DSA->hasGraph(*caller)) {
+    callSiteMappings[CI] = mapping;
+    return;
   }
 
-  // Map via return value: if the callee returns a pointer, map the
-  // callee's return value region to the caller's region for the call result.
-  if (CI->getType()->isPointerTy() && !callee->getReturnType()->isVoidTy()) {
-    // Find a return instruction in the callee to get the return value.
-    for (auto &BB : *callee) {
-      if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
-        if (RI->getReturnValue() &&
-            RI->getReturnValue()->getType()->isPointerTy()) {
-          unsigned calleeR = idx(RI->getReturnValue(), callee);
-          unsigned callerR = idx(CI, caller);
-          if (!mapping.count(calleeR))
-            mapping[calleeR] = callerR;
-          break;
-        }
-      }
-    }
-  }
+  auto &calleeG = DSA->getGraph(*callee);
+  auto &callerG = DSA->getGraph(*caller);
+  auto dsaCS = makeDsaCallSite(CI, callee);
 
-  // Map via globals accessed by callee.
-  Module *M = CI->getModule();
-  for (auto &GV : M->globals()) {
-    if (!GV.getType()->isPointerTy())
-      continue;
-    // Only map if callee's graph has a cell for this global.
-    if (!DSA->hasGraph(*callee))
-      continue;
-    auto &calleeG = DSA->getGraph(*callee);
-    if (!calleeG.hasCell(GV))
-      continue;
-    if (!DSA->hasGraph(*caller))
-      continue;
-    auto &callerG = DSA->getGraph(*caller);
-    if (!callerG.hasCell(GV))
+  seadsa::SimulationMapper simMap;
+  bool mapped =
+      seadsa::Graph::computeCalleeCallerMapping(*dsaCS, calleeG, callerG,
+                                                simMap);
+  if (!mapped)
+    llvm_unreachable("SeaDsa failed to map callee regions to caller regions.");
+
+  auto calleeRegions = funcRegionVecs[callee];
+  for (unsigned i = 0; i < calleeRegions.size(); i++) {
+    auto *rep = calleeRegions[i].getRepresentative();
+    if (!rep)
       continue;
 
-    unsigned calleeR = idx(&GV, callee);
-    unsigned callerR = idx(&GV, caller);
-    // Don't overwrite parameter mapping — it's call-site-specific
-    // and more precise than the global mapping.
-    if (!mapping.count(calleeR))
-      mapping[calleeR] = callerR;
-  }
+    seadsa::Cell calleeCell(const_cast<seadsa::Node *>(rep),
+                            calleeRegions[i].getOffset());
+    seadsa::Cell callerCell = simMap.get(calleeCell);
+    if (callerCell.isNull())
+      continue;
 
-  // Extend mapping: for any unmapped callee region whose representative
-  // matches a mapped callee region's representative, map it to the same
-  // caller region. This handles cases like p[-1] where the callee accesses
-  // a different offset of the same DSA node as the parameter.
-  if (funcRegionVecs.count(callee)) {
-    auto &calleeRegions = funcRegionVecs[callee];
-    // Build rep -> caller region from existing mapping.
-    std::map<const seadsa::Node *, unsigned> repToCallerRegion;
-    for (auto &entry : mapping) {
-      unsigned calleeIdx = entry.first;
-      unsigned callerIdx = entry.second;
-      if (calleeIdx < calleeRegions.size()) {
-        auto *rep = calleeRegions[calleeIdx].getRepresentative();
-        if (rep)
-          repToCallerRegion[rep] = callerIdx;
-      }
-    }
-    // Map unmapped callee regions with matching representatives.
-    for (unsigned i = 0; i < calleeRegions.size(); i++) {
-      if (mapping.count(i))
-        continue;
-      auto *rep = calleeRegions[i].getRepresentative();
-      if (rep && repToCallerRegion.count(rep))
-        mapping[i] = repToCallerRegion[rep];
-    }
-  }
-
-  // Extend mapping via DSA link following: discover node correspondences
-  // by traversing pointer edges in DSA graphs. This handles heap structures
-  // reachable through globals/parameters (e.g., global head -> list struct).
-  if (funcRegionVecs.count(callee) && funcRegionVecs.count(caller) &&
-      DSA->hasGraph(*callee) && DSA->hasGraph(*caller)) {
-    auto &calleeRegions = funcRegionVecs[callee];
-    auto &callerRegions = funcRegionVecs[caller];
-
-    // Build node-to-node mapping from existing region mapping.
-    // Only use non-conflicting entries (same callee node -> same caller node).
-    std::map<const seadsa::Node *, const seadsa::Node *> calleeToCallerNode;
-    std::set<const seadsa::Node *> conflicting;
-    for (auto &entry : mapping) {
-      unsigned calleeIdx = entry.first;
-      unsigned callerIdx = entry.second;
-      if (calleeIdx < calleeRegions.size() &&
-          callerIdx < callerRegions.size()) {
-        auto *ce = calleeRegions[calleeIdx].getRepresentative();
-        auto *cr = callerRegions[callerIdx].getRepresentative();
-        if (ce && cr) {
-          auto it = calleeToCallerNode.find(ce);
-          if (it != calleeToCallerNode.end() && it->second != cr)
-            conflicting.insert(ce);
-          else
-            calleeToCallerNode[ce] = cr;
-        }
-      }
-    }
-    for (auto *n : conflicting)
-      calleeToCallerNode.erase(n);
-
-    // Follow pointer links to discover additional node correspondences.
-    bool extended = true;
-    while (extended) {
-      extended = false;
-      for (auto &nodeEntry : calleeToCallerNode) {
-        auto *calleeNode = nodeEntry.first;
-        auto *callerNode = nodeEntry.second;
-        for (auto &link : calleeNode->links()) {
-          auto &field = link.first;
-          auto *calleeTarget = link.second->getNode();
-          if (!calleeTarget || calleeToCallerNode.count(calleeTarget) ||
-              conflicting.count(calleeTarget))
-            continue;
-          if (callerNode->hasLink(field)) {
-            auto *callerTarget = callerNode->getLink(field).getNode();
-            if (callerTarget) {
-              calleeToCallerNode[calleeTarget] = callerTarget;
-              extended = true;
-            }
-          }
-        }
-      }
-    }
-
-    // Map remaining unmapped callee regions via discovered correspondences.
-    // First try to find an existing caller region; if none, create one.
-    for (unsigned i = 0; i < calleeRegions.size(); i++) {
-      if (mapping.count(i))
-        continue;
-      auto *rep = calleeRegions[i].getRepresentative();
-      if (!rep || conflicting.count(rep))
-        continue;
-      auto nodeIt = calleeToCallerNode.find(rep);
-      const seadsa::Node *callerNode =
-          (nodeIt != calleeToCallerNode.end()) ? nodeIt->second : nullptr;
-      if (!callerNode)
-        continue;
-      // Find existing caller region for this node.
-      bool found = false;
-      for (unsigned j = 0; j < callerRegions.size(); j++) {
-        if (callerRegions[j].getRepresentative() == callerNode) {
-          mapping[i] = j;
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        // Create a caller region for this node.
-        Region R(callerNode, caller->getContext());
-        mapping[i] = idx(R, caller);
-        // Re-fetch since idx may have modified the vector.
-        callerRegions = funcRegionVecs[caller];
-      }
-    }
+    Region callerRegion(callerCell.getNode(), callerCell.getOffset(),
+                        calleeRegions[i].getLength(), caller->getContext());
+    mapping[i] = idx(callerRegion, caller);
   }
 
   callSiteMappings[CI] = mapping;
@@ -694,21 +620,10 @@ bool Regions::mergeCalleeRegion(const Function *F, unsigned keep,
 
   // Shift indices in FunctionRegionInfo.
   auto &info = funcRegions[F];
-  std::set<unsigned> newRead, newMod;
-  for (unsigned r : info.readRegions) {
-    if (r == remove)
-      newRead.insert(keep);
-    else
-      newRead.insert(r > remove ? r - 1 : r);
-  }
-  for (unsigned r : info.modifiedRegions) {
-    if (r == remove)
-      newMod.insert(keep);
-    else
-      newMod.insert(r > remove ? r - 1 : r);
-  }
-  info.readRegions = newRead;
-  info.modifiedRegions = newMod;
+  remapRegionSet(info.readRegions, keep, remove);
+  remapRegionSet(info.modifiedRegions, keep, remove);
+  remapRegionSet(info.inputRegions, keep, remove);
+  remapRegionSet(info.outputRegions, keep, remove);
 
   // Update all call-site mappings that reference F.
   // Mappings are callee_idx -> caller_idx.
@@ -1030,6 +945,37 @@ void Regions::computeFunctionRegions(Module &M) {
           }
         }
       }
+    }
+  }
+}
+
+void Regions::computeInterfaceRegions(Module &M) {
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    auto &info = funcRegions[&F];
+    info.inputRegions.clear();
+    info.outputRegions.clear();
+
+    if (!DSA->hasGraph(F))
+      continue;
+
+    NodeSet inputReach, returnReach;
+    auto &graph = DSA->getGraph(F);
+    reachableInterfaceNodes(&F, graph, inputReach, returnReach);
+
+    auto accessed = getAccessedRegions(&F);
+    for (unsigned r : accessed) {
+      auto *rep = funcRegionVecs[&F][r].getRepresentative();
+      if (rep && inputReach.count(rep))
+        info.inputRegions.insert(r);
+    }
+
+    for (unsigned r : info.modifiedRegions) {
+      auto *rep = funcRegionVecs[&F][r].getRepresentative();
+      if (rep && (inputReach.count(rep) || returnReach.count(rep)))
+        info.outputRegions.insert(r);
     }
   }
 }

@@ -16,6 +16,7 @@
 
 #include <set>
 #include <unordered_map>
+#include <vector>
 
 #define DEBUG_TYPE "smack-dsa-wrapper"
 
@@ -55,25 +56,39 @@ bool DSAWrapper::runOnModule(llvm::Module &M) {
   DG = &SD->getGraph(*entryFn);
   // Print the graph in dot format when debugging
   SDEBUG(DG->writeGraph("main.mem.dot"));
+  module = &M;
   collectStaticInits(M);
   collectMemOpds(M);
   countGlobalRefs();
-  module = &M;
   return false;
 }
 
 void DSAWrapper::collectStaticInits(llvm::Module &M) {
+  staticInits.clear();
+  std::set<seadsa::Graph *> seenGraphs;
+  std::vector<seadsa::Graph *> graphs;
+
+  for (auto &F : M) {
+    if (F.isDeclaration() || !SD->hasGraph(F))
+      continue;
+    auto &graph = SD->getGraph(F);
+    if (seenGraphs.insert(&graph).second)
+      graphs.push_back(&graph);
+  }
+
   for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasInitializer()) {
-      if (auto *N = getNode(&GV)) {
-        assert(N && "Global values should have nodes.");
-        staticInits.insert(N);
-      }
+    if (!GV.hasInitializer())
+      continue;
+
+    for (auto *graph : graphs) {
+      if (graph->hasCell(GV))
+        staticInits.insert(graph->getCell(GV).getNode());
     }
   }
 }
 
 void DSAWrapper::collectMemOpds(llvm::Module &M) {
+  memOpds.clear();
   for (auto &f : M) {
     for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E; ++I) {
       if (MemCpyInst *memcpyInst = dyn_cast<MemCpyInst>(&*I)) {
@@ -86,14 +101,25 @@ void DSAWrapper::collectMemOpds(llvm::Module &M) {
 }
 
 void DSAWrapper::countGlobalRefs() {
-  for (auto &g : DG->globals()) {
-    auto &cellRef = g.second;
-    auto *node = cellRef->getNode();
-    assert(node && "Global values should have DSNodes.");
-    if (!globalRefCount.count(node))
-      globalRefCount[node] = 1;
-    else
-      globalRefCount[node]++;
+  globalRefCount.clear();
+  std::set<seadsa::Graph *> seenGraphs;
+
+  for (auto &F : *module) {
+    if (F.isDeclaration() || !SD->hasGraph(F))
+      continue;
+    auto &graph = SD->getGraph(F);
+    if (!seenGraphs.insert(&graph).second)
+      continue;
+
+    for (auto &g : graph.globals()) {
+      auto &cellRef = g.second;
+      auto *node = cellRef->getNode();
+      assert(node && "Global values should have DSNodes.");
+      if (!globalRefCount.count(node))
+        globalRefCount[node] = 1;
+      else
+        globalRefCount[node]++;
+    }
   }
 }
 
@@ -209,6 +235,8 @@ bool DSAWrapper::isTypeSafe(const Value *v) {
   static NodeMap nodeMap;
 
   auto node = getNode(v);
+  if (!node)
+    return false;
 
   if (node->isOffsetCollapsed() || node->isExternal() || node->isIncomplete() ||
       node->isUnknown() || node->isIntToPtr() || node->isPtrToInt() ||

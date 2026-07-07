@@ -12,6 +12,7 @@
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/SmackWarnings.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <list>
 #include <queue>
@@ -1074,12 +1075,11 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
   // Add memory region parameters and returns for non-entry procedures.
   if (F->hasName() && !SmackOptions::usesGlobalMemory(F->getName()) &&
       !F->isDeclaration() && !isContractExpr(F)) {
-    auto accessed = regions->getAccessedRegions(F);
-    for (unsigned r : accessed)
+    auto &info = regions->getFunctionRegionInfo(F);
+    for (unsigned r : info.inputRegions)
       params.push_back({memReg(r) + ".in", memType(F, r)});
 
-    auto &info = regions->getFunctionRegionInfo(F);
-    for (unsigned r : info.modifiedRegions)
+    for (unsigned r : info.outputRegions)
       rets.push_back({memReg(r) + ".out", memType(F, r)});
   }
 
@@ -1145,17 +1145,22 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
       !f->isDeclaration() && !isContractExpr(f)) {
     auto *callInst = dyn_cast<const CallInst>(&ci);
     auto &mapping = regions->getCallSiteMapping(callInst);
-    auto accessed = regions->getAccessedRegions(f);
-    for (unsigned calleeR : accessed) {
+
+    auto mapRegion = [&](unsigned calleeR) -> unsigned {
       auto it = mapping.find(calleeR);
-      unsigned callerR = (it != mapping.end()) ? it->second : calleeR;
+      if (it == mapping.end())
+        llvm_unreachable("Missing SeaDsa call-site memory-region mapping.");
+      return it->second;
+    };
+
+    auto &info = regions->getFunctionRegionInfo(f);
+    for (unsigned calleeR : info.inputRegions) {
+      unsigned callerR = mapRegion(calleeR);
       args.push_back(Expr::id(memPath(callerR)));
     }
 
-    auto &info = regions->getFunctionRegionInfo(f);
-    for (unsigned calleeR : info.modifiedRegions) {
-      auto it = mapping.find(calleeR);
-      unsigned callerR = (it != mapping.end()) ? it->second : calleeR;
+    for (unsigned calleeR : info.outputRegions) {
+      unsigned callerR = mapRegion(calleeR);
       rets.push_back(memPath(callerR));
     }
   }

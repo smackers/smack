@@ -54,13 +54,11 @@ For non-entry `usesGlobalMemory` functions (e.g., `__SMACK_static_init`), comput
 
 **`computeOneCallSiteMapping(CI, caller, callee)`** builds a map from callee region indices to caller region indices through:
 
-1. **Parameter pairs** -- formal pointer params mapped to actual args
-2. **Return value** -- callee's return value region mapped to caller's call result region
-3. **Global pairs** -- shared globals (parameter mappings take priority over globals to preserve call-site specificity)
-4. **Rep-matching extension** -- unmapped callee regions whose DSA node matches a mapped callee region's node
-5. **DSA link-following** -- traverse pointer edges in both callee and caller DSA graphs to discover node correspondences for heap structures reachable through globals/parameters. Creates missing caller regions via `Region(Node*, ctx)` when needed.
+1. Build the authoritative SeaDsa call-site simulation with `Graph::computeCalleeCallerMapping`.
+2. For each callee region, ask the `SimulationMapper` for the corresponding caller `Cell`.
+3. Translate the mapped caller `Cell` back into the caller's local region index, creating a caller region if the caller has no LLVM `Value*` for that reachable node.
 
-**Conflict detection:** When a callee DSA node maps to multiple different caller nodes (e.g., two globals unified in the callee), it's marked as conflicting and excluded from link-following to avoid incorrect merging.
+SMACK does not reimplement SeaDsa's mapping rules. SeaDsa owns the root matching for globals, return values, and pointer formal/actual pairs, plus recursive link following with offset/collapsed-node handling. If SeaDsa cannot map the call site, the translation fails instead of falling back to equal numeric region indices.
 
 **Iteration:** `computeCallSiteMappings` runs iteratively (up to 10 passes) because link-following may create new regions in callers, which then need mappings computed for their own callers.
 
@@ -78,15 +76,24 @@ For non-entry `usesGlobalMemory` functions (e.g., `__SMACK_static_init`), comput
 
 **`computeFunctionRegions(M)`** propagates callee region accesses to callers through call-site mappings until convergence. Only mapped regions are propagated.
 
+### Phase 5: Procedure Memory Interfaces
+
+**`computeInterfaceRegions(M)`** separates local memory from caller-visible memory:
+
+1. **Input regions** are accessed regions reachable from formal pointer parameters or globals.
+2. **Output regions** are modified regions reachable from formal pointer parameters, globals, or the function return cell.
+
+Only input regions become `$M.r.in` parameters, and only output regions become `$M.r.out` returns. Private stack/heap regions remain local Boogie variables; they are not threaded through callers.
+
 ---
 
 ## Key Design Decisions
 
-### Parameter Mapping Priority
-Global pairs must not overwrite parameter pairs in the mapping (`!mapping.count(calleeR)` guard). Parameter mappings are call-site-specific and more precise. Without this, functions called with different global arguments (e.g., `acquire_lock(&main_lock)` vs `acquire_lock(&global_lock)`) would get incorrect mappings.
+### SeaDsa-Owned Mapping
+The call-site mapping must follow SeaDsa's `SimulationMapper`; function-local region numbers are not comparable across functions. Falling back from an unmapped callee region to the same numeric caller region is unsound and is intentionally rejected.
 
-### DSA Link-Following
-DSA graphs encode pointer relationships (e.g., `head` global links to the list struct node). The link-following extension traverses these edges to discover that nodes reachable through globals/parameters in the callee correspond to specific nodes in the caller. Without this, heap structures like linked lists would have incomplete mappings.
+### Interface Reachability
+DSA graphs encode which nodes are reachable from parameters, globals, and return values. Procedure signatures expose only those regions. This avoids requiring callers to provide memory maps for callee-private allocas or heap objects that do not escape.
 
 ### Region Creation from DSA Nodes
 The `Region(const seadsa::Node*, LLVMContext&)` constructor enables creating regions for DSA nodes that have no corresponding LLVM Value in the function. This is needed when:
@@ -95,15 +102,13 @@ The `Region(const seadsa::Node*, LLVMContext&)` constructor enables creating reg
 - Phase 3 link-following creates regions during mapping computation
 
 ### Return Value Mapping
-Call-site mappings include the callee's return value (matched via the callee's `ReturnInst` and the caller's `CallInst`). This is critical for function pointer dispatch patterns like `devirtbounce`, where data flows through return values rather than parameters.
+Call-site mappings include the callee's SeaDsa return cell and the caller's call-result cell. This is critical for function pointer dispatch patterns like `devirtbounce`, where data flows through return values rather than parameters.
 
 ---
 
-## Test Results
+## Test Notes
 
-**197 total tests, 195 passed, 0 failed, 2 unknown.**
-
-The 2 unknowns (`smack_code_call`, `smack_code_call_fail`) use `__SMACK_code` to emit inline BPL calls that bypass the memory map threading. This is a pre-existing limitation of inline BPL with per-function memory maps.
+The `smack_code_call` tests use `__SMACK_code` to emit inline BPL calls that bypass the memory map threading. This is a pre-existing limitation of inline BPL with per-function memory maps.
 
 ---
 

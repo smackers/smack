@@ -52,6 +52,8 @@ public:
   Region(const Value *V, const llvm::Function *F);
   Region(const Value *V, const llvm::Function *F, unsigned length);
   Region(const seadsa::Node *node, LLVMContext &ctx);
+  Region(const seadsa::Node *node, unsigned offset, unsigned length,
+         LLVMContext &ctx);
 
   static void init(Module &M, Pass &P);
 
@@ -64,6 +66,8 @@ public:
   bool isGlobalScope() const { return globalScope; }
   const Type *getType() const { return type; }
   const seadsa::Node *getRepresentative() const { return representative; }
+  unsigned getOffset() const { return offset; }
+  unsigned getLength() const { return length; }
 
   void print(raw_ostream &);
 };
@@ -71,6 +75,8 @@ public:
 struct FunctionRegionInfo {
   std::set<unsigned> readRegions;
   std::set<unsigned> modifiedRegions;
+  std::set<unsigned> inputRegions;
+  std::set<unsigned> outputRegions;
 };
 
 class Regions : public ModulePass, public InstVisitor<Regions> {
@@ -110,6 +116,7 @@ private:
                          unsigned remove);
   void computeGlobalMemoryMappings(llvm::Module &M);
   void computeFunctionRegions(llvm::Module &M);
+  void computeInterfaceRegions(llvm::Module &M);
 
 public:
   static char ID;
