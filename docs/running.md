@@ -6,9 +6,9 @@ For a given input C/C++ program, the tool checks for violations of user-provided
 assertions, as well as automatically generated assertions for built-in property
 checks such as memory safety and integer overflow (see [Checking Memory
 Safety](#checking-memory-safety) and [Checking Integer
-Overflow](#checking-integer-overflow) below). SMACK has a number of command line
+Overflow](#checking-integer-overflow) below). SMACK has a number of command-line
 options that can be used to fine-tune the toolchain. Type `smack -h` for a full
-list of supported command line options.
+list of supported command-line options.
 
 
 ### Using The SMACK Verifier
@@ -306,6 +306,10 @@ that must be installed separately — selected with `--solver`:
 smack simple.c --solver=cvc5
 ```
 
-Run `smack -h` for the complete list of command line options. For more advanced
-usage scenarios, please refer to our [usage notes](usage-notes.md).
-
+Run `smack -h` for the complete command-line help. For explanations of the
+options users most commonly need, including `--unroll`,
+`--integer-encoding=bit-vector`, `--float`, and `--pthread`, see
+[Command-Line Options](command-line-options.md). For larger programs, see
+[Build Workflows](build-workflows.md). For custom models and inline Boogie, see
+[Advanced Modeling](advanced.md). For common failure modes, see
+[Troubleshooting](troubleshooting.md).

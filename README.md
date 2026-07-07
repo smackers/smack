@@ -54,6 +54,11 @@ benchmarking of SMACK.
 
 1. [System Requirements and Installation](docs/installation.md)
 1. [Running SMACK](docs/running.md)
+1. [Command-Line Options](docs/command-line-options.md)
+1. [Build Workflows](docs/build-workflows.md)
+1. [Advanced Modeling](docs/advanced.md)
+1. [Troubleshooting](docs/troubleshooting.md)
+1. [Usage Notes](docs/usage-notes.md)
 1. [Demos](docs/demos.md)
 1. [FAQ](docs/faq.md)
 1. [Inline Boogie Code](docs/boogie-code.md)
@@ -61,4 +66,3 @@ benchmarking of SMACK.
 1. [Projects](docs/projects.md)
 1. [Publications](docs/publications.md)
 1. [People](docs/people.md)
-

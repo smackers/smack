@@ -1,12 +1,14 @@
 This document shows several usage scenarios of SMACK that require special flags.
+For the main task-oriented option guide, start with
+[Command-Line Options](command-line-options.md).
 
-## Loops and Recusive Functions
+## Loops and Recursive Functions
 First of all, please keep in mind that SMACK is a *bounded* verifier, which
-means that in the presense of loops and recursive functions, the verification
+means that in the presence of loops and recursive functions, the verification
 process unrolls them up to the bound `N` specified by the flag `--unroll <N>`.
 Conceptually, unrolling a loop means transforming a loop into a sequence (length
-`N`) of if-else statements, the inner most of which halts the program. Recursive
-functions are handled by inlining the function `N` times and the inner most
+`N`) of if-else statements, the innermost of which halts the program. Recursive
+functions are handled by inlining the function `N` times and the innermost
 recursive call halts the program. Therefore, not unrolling a loop or a recursive
 function to a sufficient bound can lead to missed bugs. In other words, when
 SMACK reports that there are no bugs in a program, it actually means that the
@@ -38,7 +40,7 @@ bitwise operations are encoded using uninterpreted functions returning
 arbitrary values.  Furthermore, precise encoding is required to handle integer
 signedness casts, which is not also enabled automatically.
 
-The following program demonstrate the problems in the presence of bitwise
+The following program demonstrates the problems in the presence of bitwise
 operations.
 
 ### Example
@@ -52,7 +54,7 @@ int main (void) {
   assert (!y);
 }
 ```
-This program should verify. However, if the we run SMACK in its default mode, it
+This program should verify. However, if we run SMACK in its default mode, it
 reports an assertion violation.
 
 ```
