@@ -21,6 +21,7 @@ private:
   void insertMemoryLeakCheck(llvm::Instruction *I);
   void insertMemoryAccessCheck(llvm::Value *addr, llvm::Value *size,
                                llvm::Instruction *I);
+  bool visitSplitAggregateAccess(llvm::Value *addr, llvm::Instruction *I);
 
 public:
   static char ID; // Pass identification, replacement for typeid

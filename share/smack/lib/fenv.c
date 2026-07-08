@@ -4,6 +4,8 @@
 #include <fenv.h>
 #include <smack.h>
 
+__SMACK_INIT(initializeRoundingMode) { __SMACK_code("$rmode := RNE;"); }
+
 int fegetround(void) {
   const int CONST_FE_TONEAREST = FE_TONEAREST;
   const int CONST_FE_DOWNWARD = FE_DOWNWARD;

@@ -1,0 +1,6 @@
+verifiers: [boogie]
+checkbpl:
+  - >-
+    awk '/^procedure .*fun/ { in_fun=1 } in_fun && /call __SMACK_check_memory_safety/ { n++ } in_fun && /^}/ { in_fun=0 } END { exit n == 3 ? 0 : 1 }'
+  - >-
+    awk '/^procedure .*fun/ { in_fun=1 } in_fun && index($0, "i2p.i64.ref(16)") { n++ } in_fun && /^}/ { in_fun=0 } END { exit n == 1 ? 0 : 1 }'
