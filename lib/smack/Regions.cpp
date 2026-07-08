@@ -109,6 +109,22 @@ Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
   globalScope = !representative || DSA->getNumGlobals(representative) > 0;
 }
 
+Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
+               const Type *type, bool bytewise, LLVMContext &ctx) {
+  context = &ctx;
+  representative = node;
+  this->type = type;
+  this->offset = offset;
+  this->length = length;
+  singleton = false;
+  allocated = !representative || isAllocated(representative);
+  this->bytewise = bytewise;
+  incomplete = !representative || representative->isIncomplete();
+  complicated = !representative || isComplicated(representative);
+  collapsed = !representative || representative->isOffsetCollapsed();
+  globalScope = !representative || DSA->getNumGlobals(representative) > 0;
+}
+
 bool Region::isDisjoint(unsigned offset, unsigned length) {
   return this->offset + this->length <= offset ||
          offset + length <= this->offset;
@@ -610,8 +626,10 @@ void Regions::computeOneCallSiteMapping(CallInst *CI, const Function *caller,
     if (callerCell.isNull())
       continue;
 
-    Region callerRegion(callerCell.getNode(), callerCell.getOffset(),
-                        calleeRegions[i].getLength(), caller->getContext());
+    Region callerRegion(
+        callerCell.getNode(), callerCell.getOffset(),
+        calleeRegions[i].getLength(), calleeRegions[i].getType(),
+        calleeRegions[i].bytewiseAccess(), caller->getContext());
     mapping[i] = idx(callerRegion, caller);
   }
 

@@ -54,6 +54,8 @@ public:
   Region(const seadsa::Node *node, LLVMContext &ctx);
   Region(const seadsa::Node *node, unsigned offset, unsigned length,
          LLVMContext &ctx);
+  Region(const seadsa::Node *node, unsigned offset, unsigned length,
+         const llvm::Type *type, bool bytewise, LLVMContext &ctx);
 
   static void init(Module &M, Pass &P);
 
