@@ -84,6 +84,11 @@ private:
   // Per-function region vectors (each function has its own local numbering).
   std::map<const llvm::Function *, std::vector<Region>> funcRegionVecs;
 
+  // Regions that were forcibly merged because SeaDsa call-site mappings showed
+  // they alias, but whose representatives differ from the canonical region.
+  std::map<const llvm::Function *, std::vector<std::pair<Region, unsigned>>>
+      mergedRegionAliases;
+
   // Per-function read/write sets (using function-local region indices).
   std::map<const llvm::Function *, FunctionRegionInfo> funcRegions;
 

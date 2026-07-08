@@ -359,6 +359,16 @@ unsigned Regions::idx(Region &R, const Function *F) {
   SDEBUG(R.print(errs()));
   SDEBUG(errs() << "\n");
 
+  for (auto &alias : mergedRegionAliases[F]) {
+    if (alias.first.overlaps(R)) {
+      SDEBUG(errs() << "[regions]   found merged alias at index "
+                    << alias.second << ": ");
+      SDEBUG(alias.first.print(errs()));
+      SDEBUG(errs() << "\n");
+      return alias.second;
+    }
+  }
+
   for (r = 0; r < regions.size(); ++r) {
     if (regions[r].overlaps(R)) {
 
@@ -536,6 +546,12 @@ void remapRegionSet(std::set<unsigned> &regions, unsigned keep,
   }
   regions = remapped;
 }
+
+unsigned remapRegionIndex(unsigned r, unsigned keep, unsigned remove) {
+  if (r == remove)
+    return keep;
+  return r > remove ? r - 1 : r;
+}
 } // namespace
 
 void Regions::computeCallSiteMappings(Module &M) {
@@ -614,9 +630,16 @@ bool Regions::mergeCalleeRegion(const Function *F, unsigned keep,
   if (remove >= regions.size())
     return false;
 
+  Region removedRegion = regions[remove];
+
   // Merge region data.
   regions[keep].merge(regions[remove]);
   regions.erase(regions.begin() + remove);
+
+  auto &aliases = mergedRegionAliases[F];
+  for (auto &alias : aliases)
+    alias.second = remapRegionIndex(alias.second, keep, remove);
+  aliases.push_back({removedRegion, keep});
 
   // Shift indices in FunctionRegionInfo.
   auto &info = funcRegions[F];
