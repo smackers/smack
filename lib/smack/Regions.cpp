@@ -260,14 +260,14 @@ bool Regions::runOnModule(Module &M) {
             if (target && !existing.count(target)) {
               existing.insert(target);
               Region R(target, F.getContext());
+              unsigned before = regions.size();
               idx(R, &F);
-              grew = true;
+              grew = grew || regions.size() > before;
             }
           }
         }
       }
     }
-
     // Phase 2: Compute per-function read/write sets (direct accesses).
     for (auto &F : M) {
       if (F.isDeclaration())
