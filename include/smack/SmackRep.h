@@ -186,7 +186,7 @@ public:
   const Stmt *returnValueAnnotation(const llvm::CallInst &CI);
 
   std::list<ProcDecl *> procedure(llvm::Function *F);
-  ProcDecl *procedure(llvm::Function *F, llvm::CallInst *C);
+  ProcDecl *procedure(llvm::Function *F, llvm::CallBase *C);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value *v);

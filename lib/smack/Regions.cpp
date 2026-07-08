@@ -13,6 +13,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <memory>
+#include <tuple>
 
 #define DEBUG_TYPE "regions"
 
@@ -89,9 +90,15 @@ Region::Region(const Value *V, const Function *F, unsigned length) {
   init(V, length, F);
 }
 
+// A node that is never dereferenced has size 0, but a zero-length region is
+// an empty interval that overlaps nothing — not even an identical probe — so
+// idx() would create a fresh duplicate on every lookup (which also keeps the
+// Phase 3 fixpoint from converging). Clamp to at least one byte.
 Region::Region(const seadsa::Node *node, LLVMContext &ctx)
     : Region(node, 0,
-             node ? node->size() : std::numeric_limits<unsigned>::max(), ctx) {}
+             node ? std::max(node->size(), 1u)
+                  : std::numeric_limits<unsigned>::max(),
+             ctx) {}
 
 Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
                LLVMContext &ctx) {
@@ -126,16 +133,27 @@ Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
 }
 
 bool Region::isDisjoint(unsigned offset, unsigned length) {
-  return this->offset + this->length <= offset ||
-         offset + length <= this->offset;
+  // Compute in 64 bits: offset + length wraps in 32 bits for the
+  // unbounded-length regions (unknown memset/memcpy lengths, whole-node
+  // regions), which would make an engulfing region appear disjoint.
+  return (unsigned long)this->offset + this->length <= offset ||
+         (unsigned long)offset + length <= this->offset;
 }
 
-void Region::merge(Region &R) {
+bool Region::merge(Region &R) {
+  auto before =
+      std::make_tuple(offset, length, singleton, allocated, bytewise,
+                      incomplete, complicated, collapsed, globalScope, type);
   bool collapse = type != R.type;
   unsigned long low = std::min(offset, R.offset);
-  unsigned long high = std::max(offset + length, R.offset + R.length);
+  unsigned long high = std::max((unsigned long)offset + length,
+                                (unsigned long)R.offset + R.length);
   offset = low;
-  length = high - low;
+  // Saturate so that offset + length never exceeds the unsigned range:
+  // 32-bit wrap-around here makes extents non-monotonic under merging,
+  // which lets the Phase 3 fixpoint oscillate (merge, then re-create).
+  length = (unsigned)std::min(
+      high - low, (unsigned long)std::numeric_limits<unsigned>::max() - low);
   singleton = singleton && R.singleton;
   allocated = allocated || R.allocated;
   bytewise = SmackOptions::BitPrecise && (bytewise || R.bytewise || collapse);
@@ -144,6 +162,9 @@ void Region::merge(Region &R) {
   collapsed = collapsed || R.collapsed;
   globalScope = globalScope || R.globalScope;
   type = (bytewise || collapse) ? NULL : type;
+  return before != std::make_tuple(offset, length, singleton, allocated,
+                                   bytewise, incomplete, complicated, collapsed,
+                                   globalScope, type);
 }
 
 bool Region::overlaps(Region &R) {
@@ -211,9 +232,9 @@ bool Regions::runOnModule(Module &M) {
         continue;
       for (auto &BB : F) {
         for (auto &I : BB) {
-          if (auto *CI = dyn_cast<CallInst>(&I)) {
-            for (unsigned i = 0; i < CI->arg_size(); i++) {
-              Value *arg = CI->getArgOperand(i);
+          if (auto *CB = dyn_cast<CallBase>(&I)) {
+            for (unsigned i = 0; i < CB->arg_size(); i++) {
+              Value *arg = CB->getArgOperand(i);
               if (arg->getType()->isPointerTy())
                 idx(arg, &F);
             }
@@ -251,7 +272,9 @@ bool Regions::runOnModule(Module &M) {
           if (r.getRepresentative())
             existing.insert(r.getRepresentative());
         unsigned origSize = regions.size();
-        for (unsigned i = 0; i < origSize; i++) {
+        // idx() below can cascade-merge and shrink the vector; re-check the
+        // live size so regions[i] never reads out of bounds.
+        for (unsigned i = 0; i < origSize && i < regions.size(); i++) {
           auto *rep = regions[i].getRepresentative();
           if (!rep)
             continue;
@@ -311,24 +334,36 @@ bool Regions::runOnModule(Module &M) {
 
     // Phase 3: Compute call-site mappings (callee region -> caller region).
     // Iterate because link-following may create new regions in callers,
-    // which then need mappings computed for their own callers.
-    for (int iter = 0; iter < 10; iter++) {
-      unsigned prevTotal = 0;
-      for (auto &kv : funcRegionVecs)
-        prevTotal += kv.second.size();
+    // which then need mappings computed for their own callers. Convergence
+    // requires a pass with no structural change at all (no creations and no
+    // merges) so that every mapping reflects the final region numbering;
+    // comparing region counts is not enough since one merge plus one
+    // creation in the same pass cancel out.
+    const unsigned maxIters = 100;
+    unsigned iter;
+    for (iter = 0; iter < maxIters; iter++) {
+      unsigned version = structuralVersion;
       computeCallSiteMappings(M);
-      unsigned newTotal = 0;
-      for (auto &kv : funcRegionVecs)
-        newTotal += kv.second.size();
-      if (newTotal == prevTotal)
+      if (structuralVersion == version)
         break;
     }
+    if (iter == maxIters)
+      errs() << "SMACK warning: call-site region mappings did not stabilize "
+                "after "
+             << maxIters
+             << " passes; some memory-region mappings may be incomplete\n";
+    mappingsFinal = true;
 
     // Phase 3.5: Propagate region merges top-down through the call graph.
     // When a caller collapses two callee regions (maps both to the same
     // caller region), the callee must merge them to preserve the invariant
     // that regions never alias.
     propagateRegionMerges(M);
+    if (droppedMappings)
+      errs() << "SMACK warning: " << droppedMappings
+             << " call-site region mapping(s) dropped during region merge "
+                "propagation; callers may see stale memory for the affected "
+                "regions (-debug-only=regions for details)\n";
 
     // Phase 4: Transitive closure of region access sets.
     computeFunctionRegions(M);
@@ -392,6 +427,14 @@ unsigned Regions::idx(Region &R, const Function *F) {
       SDEBUG(regions[r].print(errs()));
       SDEBUG(errs() << "\n");
 
+      // NOTE: a widening-only merge (extent or attribute change without an
+      // erase) does not bump structuralVersion. Counting it would be more
+      // precise — call-site mappings probed with pre-widening attributes go
+      // stale — but in practice widening never quiesces on large inputs
+      // (Phase 3 then always runs to its pass cap, and the state at cutoff
+      // depends on pointer-keyed iteration order, making the output
+      // nondeterministic). Regions absorb attributes monotonically, so the
+      // index structure this version guards remains sound.
       regions[r].merge(R);
 
       SDEBUG(errs() << "[regions]   merged region: ");
@@ -402,12 +445,15 @@ unsigned Regions::idx(Region &R, const Function *F) {
     }
   }
 
-  if (r == regions.size())
+  if (r == regions.size()) {
     regions.emplace_back(R);
+    structuralVersion++;
 
-  else {
+  } else {
     // In case R was merged with an existing region, we must now also merge
-    // any other region which intersects with R.
+    // any other region which intersects with R. Erasing regions[q] shifts
+    // every index above q, so all index-based bookkeeping (access sets,
+    // call-site mappings, aliases) must be repaired alongside.
     unsigned q = r + 1;
     while (q < regions.size()) {
       if (regions[r].overlaps(regions[q])) {
@@ -419,6 +465,7 @@ unsigned Regions::idx(Region &R, const Function *F) {
 
         regions[r].merge(regions[q]);
         regions.erase(regions.begin() + q);
+        remapAfterMerge(F, r, q);
 
         SDEBUG(errs() << "[regions]   merged region: ");
         SDEBUG(regions[r].print(errs()));
@@ -483,7 +530,7 @@ void Regions::visitMemTransferInst(MemTransferInst &I) {
   idx(I.getDest(), currentFunction, length);
 }
 
-void Regions::visitCallInst(CallInst &I) {
+void Regions::visitCallBase(CallBase &I) {
   assert(currentFunction && "currentFunction must be set during visit");
   Function *F = I.getCalledFunction();
   std::string name = F && F->hasName() ? F->getName().str() : "";
@@ -541,14 +588,14 @@ void reachableInterfaceNodes(const Function *F, seadsa::Graph &G,
     markReachableNodes(G.getRetCell(*F).getNode(), returnReach);
 }
 
-std::unique_ptr<seadsa::DsaCallSite> makeDsaCallSite(CallInst *CI,
+std::unique_ptr<seadsa::DsaCallSite> makeDsaCallSite(CallBase *CB,
                                                      Function *callee) {
   auto site =
-      std::unique_ptr<seadsa::DsaCallSite>(new seadsa::DsaCallSite(*CI));
+      std::unique_ptr<seadsa::DsaCallSite>(new seadsa::DsaCallSite(*CB));
   if (site->getCallee() == callee)
     return site;
   return std::unique_ptr<seadsa::DsaCallSite>(
-      new seadsa::DsaCallSite(*CI, *callee));
+      new seadsa::DsaCallSite(*CB, *callee));
 }
 
 void remapRegionSet(std::set<unsigned> &regions, unsigned keep,
@@ -576,33 +623,35 @@ void Regions::computeCallSiteMappings(Module &M) {
       continue;
     for (auto &BB : F) {
       for (auto &I : BB) {
-        auto *CI = dyn_cast<CallInst>(&I);
-        if (!CI)
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
           continue;
-        Function *callee = CI->getCalledFunction();
+        Function *callee = CB->getCalledFunction();
         if (!callee)
           callee = dyn_cast<Function>(
-              CI->getCalledOperand()->stripPointerCastsAndAliases());
+              CB->getCalledOperand()->stripPointerCastsAndAliases());
         if (!callee || callee->isDeclaration())
           continue;
         if (callee->hasName() &&
             SmackOptions::usesGlobalMemory(callee->getName()))
           continue;
 
-        computeOneCallSiteMapping(CI, &F, callee);
+        computeOneCallSiteMapping(CB, &F, callee);
       }
     }
   }
 }
 
-void Regions::computeOneCallSiteMapping(CallInst *CI, const Function *caller,
+void Regions::computeOneCallSiteMapping(CallBase *CI, const Function *caller,
                                         Function *callee) {
-  std::map<unsigned, unsigned> mapping;
+  // Build the mapping in place so that any merges triggered by idx() below
+  // (which remap all registered call-site mappings) also repair the entries
+  // added so far for this call site.
+  auto &mapping = callSiteMappings[CI];
+  mapping.clear();
 
-  if (!DSA->hasGraph(*callee) || !DSA->hasGraph(*caller)) {
-    callSiteMappings[CI] = mapping;
+  if (!DSA->hasGraph(*callee) || !DSA->hasGraph(*caller))
     return;
-  }
 
   auto &calleeG = DSA->getGraph(*callee);
   auto &callerG = DSA->getGraph(*caller);
@@ -612,28 +661,33 @@ void Regions::computeOneCallSiteMapping(CallInst *CI, const Function *caller,
   bool mapped = seadsa::Graph::computeCalleeCallerMapping(*dsaCS, calleeG,
                                                           callerG, simMap);
   if (!mapped)
-    llvm_unreachable("SeaDsa failed to map callee regions to caller regions.");
+    report_fatal_error(
+        "SeaDsa failed to map callee regions to caller regions.");
 
-  auto calleeRegions = funcRegionVecs[callee];
-  for (unsigned i = 0; i < calleeRegions.size(); i++) {
-    auto *rep = calleeRegions[i].getRepresentative();
+  // Iterate by index over the live callee region vector: idx() below can
+  // merge regions (in the caller, or in the callee itself for recursive
+  // calls), which invalidates references and shifts indices. A copy of the
+  // current region is taken per iteration; if indices do shift mid-loop,
+  // the structural-version check in runOnModule forces another (eventually
+  // mutation-free) pass over all call sites.
+  for (unsigned i = 0; i < funcRegionVecs[callee].size(); i++) {
+    Region calleeRegion = funcRegionVecs[callee][i];
+    auto *rep = calleeRegion.getRepresentative();
     if (!rep)
       continue;
 
     seadsa::Cell calleeCell(const_cast<seadsa::Node *>(rep),
-                            calleeRegions[i].getOffset());
+                            calleeRegion.getOffset());
     seadsa::Cell callerCell = simMap.get(calleeCell);
     if (callerCell.isNull())
       continue;
 
-    Region callerRegion(
-        callerCell.getNode(), callerCell.getOffset(),
-        calleeRegions[i].getLength(), calleeRegions[i].getType(),
-        calleeRegions[i].bytewiseAccess(), caller->getContext());
+    Region callerRegion(callerCell.getNode(), callerCell.getOffset(),
+                        std::max(calleeRegion.getLength(), 1u),
+                        calleeRegion.getType(), calleeRegion.bytewiseAccess(),
+                        caller->getContext());
     mapping[i] = idx(callerRegion, caller);
   }
-
-  callSiteMappings[CI] = mapping;
 }
 
 bool Regions::mergeCalleeRegion(const Function *F, unsigned keep,
@@ -654,10 +708,23 @@ bool Regions::mergeCalleeRegion(const Function *F, unsigned keep,
   regions[keep].merge(regions[remove]);
   regions.erase(regions.begin() + remove);
 
+  remapAfterMerge(F, keep, remove);
+
+  // Record the removed region so later probes that only overlap it (e.g.,
+  // when its representative differs from the canonical region's) still
+  // resolve to the merged index.
+  mergedRegionAliases[F].push_back({removedRegion, keep});
+
+  return true;
+}
+
+void Regions::remapAfterMerge(const Function *F, unsigned keep,
+                              unsigned remove) {
+  structuralVersion++;
+
   auto &aliases = mergedRegionAliases[F];
   for (auto &alias : aliases)
     alias.second = remapRegionIndex(alias.second, keep, remove);
-  aliases.push_back({removedRegion, keep});
 
   // Shift indices in FunctionRegionInfo.
   auto &info = funcRegions[F];
@@ -666,56 +733,71 @@ bool Regions::mergeCalleeRegion(const Function *F, unsigned keep,
   remapRegionSet(info.inputRegions, keep, remove);
   remapRegionSet(info.outputRegions, keep, remove);
 
-  // Update all call-site mappings that reference F.
-  // Mappings are callee_idx -> caller_idx.
-  for (auto &csEntry : callSiteMappings) {
-    CallInst *CI = const_cast<CallInst *>(csEntry.first);
-    auto &mapping = csEntry.second;
-
-    // Determine if F is the callee or the caller of this call site.
-    Function *csCallee = CI->getCalledFunction();
-    if (!csCallee)
-      csCallee = dyn_cast<Function>(
-          CI->getCalledOperand()->stripPointerCastsAndAliases());
-    const Function *csCaller = CI->getParent()->getParent();
-
-    if (csCallee == F) {
-      // F is the callee: shift callee-side (keys) of the mapping.
-      // When the `remove` key collapses into `keep`, prefer the
-      // existing `keep` entry (typically from parameter mapping,
-      // which is call-site-specific and more precise than globals).
+  // Shift indices in global-memory mappings: keys are F-local indices, and
+  // values are entry-function indices.
+  {
+    auto it = globalMemoryMappings.find(F);
+    if (it != globalMemoryMappings.end()) {
       std::map<unsigned, unsigned> newMapping;
-      for (auto &m : mapping) {
-        unsigned k = m.first;
-        if (k == remove)
-          k = keep;
-        else if (k > remove)
-          k--;
-        if (!newMapping.count(k))
-          newMapping[k] = m.second;
-      }
-      mapping = newMapping;
-    } else if (csCaller == F) {
-      // F is the caller: shift caller-side (values) of the mapping.
-      std::map<unsigned, unsigned> newMapping;
-      for (auto &m : mapping) {
-        unsigned v = m.second;
-        if (v == remove)
-          v = keep;
-        else if (v > remove)
-          v--;
-        newMapping[m.first] = v;
-      }
-      mapping = newMapping;
+      for (auto &m : it->second)
+        newMapping[remapRegionIndex(m.first, keep, remove)] = m.second;
+      it->second = newMapping;
     }
+    if (F->hasName() && SmackOptions::isEntryPoint(F->getName()))
+      for (auto &gm : globalMemoryMappings)
+        for (auto &m : gm.second)
+          m.second = remapRegionIndex(m.second, keep, remove);
   }
 
-  return true;
+  // Update all call-site mappings that reference F.
+  // Mappings are callee_idx -> caller_idx; a self-recursive call site has F
+  // on both sides and needs both its keys and its values shifted.
+  for (auto &csEntry : callSiteMappings) {
+    auto *CB = const_cast<CallBase *>(csEntry.first);
+    auto &mapping = csEntry.second;
+
+    // Determine if F is the callee and/or the caller of this call site.
+    Function *csCallee = CB->getCalledFunction();
+    if (!csCallee)
+      csCallee = dyn_cast<Function>(
+          CB->getCalledOperand()->stripPointerCastsAndAliases());
+    const Function *csCaller = CB->getParent()->getParent();
+
+    if (csCallee != F && csCaller != F)
+      continue;
+
+    // When the `remove` key collapses into `keep`, prefer the existing
+    // `keep` entry (typically from parameter mapping, which is
+    // call-site-specific and more precise than globals).
+    std::map<unsigned, unsigned> newMapping;
+    for (auto &m : mapping) {
+      unsigned k = m.first;
+      unsigned v = m.second;
+      if (csCallee == F)
+        k = remapRegionIndex(k, keep, remove);
+      if (csCaller == F)
+        v = remapRegionIndex(v, keep, remove);
+      auto ins = newMapping.insert({k, v});
+      // Dropping a colliding entry whose caller region differs loses the
+      // association between the merged callee region and that caller
+      // region. During Phase 3 the next pass recomputes the mapping; after
+      // Phase 3 (propagateRegionMerges) it is not recomputed, so count the
+      // loss and report it once instead of failing silently.
+      if (!ins.second && ins.first->second != v && mappingsFinal) {
+        droppedMappings++;
+        SDEBUG(errs() << "[regions] dropped call-site mapping " << remove
+                      << " -> " << v << " (kept " << keep << " -> "
+                      << ins.first->second << ") merging regions of "
+                      << F->getName() << "\n");
+      }
+    }
+    mapping = newMapping;
+  }
 }
 
 void Regions::propagateRegionMerges(Module &M) {
-  // Build call graph: caller -> [(CallInst, callee)]
-  std::map<const Function *, std::vector<std::pair<CallInst *, Function *>>>
+  // Build call graph: caller -> [(CallBase, callee)]
+  std::map<const Function *, std::vector<std::pair<CallBase *, Function *>>>
       callGraph;
   // Reverse call graph: callee -> [caller]
   std::map<const Function *, std::set<const Function *>> callers;
@@ -725,19 +807,19 @@ void Regions::propagateRegionMerges(Module &M) {
       continue;
     for (auto &BB : F) {
       for (auto &I : BB) {
-        auto *CI = dyn_cast<CallInst>(&I);
-        if (!CI)
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
           continue;
-        Function *callee = CI->getCalledFunction();
+        Function *callee = CB->getCalledFunction();
         if (!callee)
           callee = dyn_cast<Function>(
-              CI->getCalledOperand()->stripPointerCastsAndAliases());
+              CB->getCalledOperand()->stripPointerCastsAndAliases());
         if (!callee || callee->isDeclaration())
           continue;
         if (callee->hasName() &&
             SmackOptions::usesGlobalMemory(callee->getName()))
           continue;
-        callGraph[&F].push_back({CI, callee});
+        callGraph[&F].push_back({CB, callee});
         callers[callee].insert(&F);
       }
     }
@@ -805,12 +887,12 @@ void Regions::propagateRegionMerges(Module &M) {
           if (!callGraph.count(F))
             continue;
           for (auto &edge : callGraph[F]) {
-            CallInst *CI = edge.first;
+            CallBase *CB = edge.first;
             Function *callee = edge.second;
-            if (!callSiteMappings.count(CI))
+            if (!callSiteMappings.count(CB))
               continue;
 
-            auto &mapping = callSiteMappings[CI];
+            auto &mapping = callSiteMappings[CB];
 
             // Check for collisions: multiple callee regions -> same caller
             // region.
@@ -848,7 +930,13 @@ void Regions::propagateRegionMerges(Module &M) {
     }
 
     // Bottom-up pass: merge caller regions when the callee has collapsed
-    // them.
+    // them. Merging on representative-node equality alone loses field
+    // sensitivity (disjoint offset ranges on the same node are merged too),
+    // but it is what keeps per-function region counts bounded: the
+    // link-following closure creates whole-node regions, and without this
+    // consolidation the transitive access closure blows up region counts on
+    // large inputs. Field-granular threading needs a redesign of the
+    // closure/interface computation, not just a weaker merge condition.
     for (auto it = sccs.rbegin(); it != sccs.rend(); ++it) {
       auto &scc = *it;
       bool changed = true;
@@ -859,13 +947,13 @@ void Regions::propagateRegionMerges(Module &M) {
             continue;
           bool merged = false;
           for (auto &edge : callGraph[F]) {
-            CallInst *CI = edge.first;
-            if (!callSiteMappings.count(CI))
+            CallBase *CB = edge.first;
+            if (!callSiteMappings.count(CB))
               continue;
             if (!funcRegionVecs.count(F))
               continue;
 
-            auto &mapping = callSiteMappings[CI];
+            auto &mapping = callSiteMappings[CB];
             auto &callerRegions = funcRegionVecs[F];
 
             // Build rep -> mapped caller region index.
@@ -957,19 +1045,19 @@ void Regions::computeFunctionRegions(Module &M) {
       FunctionRegionInfo &info = funcRegions[&F];
       for (auto &BB : F) {
         for (auto &I : BB) {
-          auto *CI = dyn_cast<CallInst>(&I);
-          if (!CI)
+          auto *CB = dyn_cast<CallBase>(&I);
+          if (!CB)
             continue;
-          Function *callee = CI->getCalledFunction();
+          Function *callee = CB->getCalledFunction();
           if (!callee)
             callee = dyn_cast<Function>(
-                CI->getCalledOperand()->stripPointerCastsAndAliases());
+                CB->getCalledOperand()->stripPointerCastsAndAliases());
           if (!callee || callee->isDeclaration())
             continue;
-          if (!callSiteMappings.count(CI))
+          if (!callSiteMappings.count(CB))
             continue;
 
-          auto &mapping = callSiteMappings[CI];
+          auto &mapping = callSiteMappings[CB];
           auto &calleeInfo = funcRegions[callee];
 
           for (unsigned calleeR : calleeInfo.readRegions) {
@@ -1037,9 +1125,9 @@ std::set<unsigned> Regions::getAccessedRegions(const Function *F) const {
 }
 
 const std::map<unsigned, unsigned> &
-Regions::getCallSiteMapping(const CallInst *CI) const {
+Regions::getCallSiteMapping(const CallBase *CB) const {
   static const std::map<unsigned, unsigned> emptyMapping;
-  auto it = callSiteMappings.find(CI);
+  auto it = callSiteMappings.find(CB);
   if (it != callSiteMappings.end())
     return it->second;
   return emptyMapping;

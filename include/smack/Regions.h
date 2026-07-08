@@ -59,7 +59,8 @@ public:
 
   static void init(Module &M, Pass &P);
 
-  void merge(Region &R);
+  // Returns true if the merge changed this region (extent or attributes).
+  bool merge(Region &R);
   bool overlaps(Region &R);
 
   bool isSingleton() const { return singleton; };
@@ -95,7 +96,7 @@ private:
   std::map<const llvm::Function *, FunctionRegionInfo> funcRegions;
 
   // Call-site mapping: callee region index -> caller region index.
-  std::map<const llvm::CallInst *, std::map<unsigned, unsigned>>
+  std::map<const llvm::CallBase *, std::map<unsigned, unsigned>>
       callSiteMappings;
 
   // For non-entry usesGlobalMemory functions: mapping from their region
@@ -111,16 +112,33 @@ private:
   // DSAWrapper pointer cached during runOnModule.
   DSAWrapper *DSA = nullptr;
 
+  // Bumped on every region creation or merge; used to detect when a pass
+  // over the module made structural changes that invalidate region indices.
+  unsigned structuralVersion = 0;
+
+  // Set once Phase 3 has converged: call-site mappings are no longer
+  // recomputed, so information lost in later merges cannot be recovered.
+  bool mappingsFinal = false;
+
+  // Number of callee->caller associations dropped by key collisions in
+  // remapAfterMerge after Phase 3 convergence (see the warning emitted in
+  // runOnModule).
+  unsigned droppedMappings = 0;
+
   // Per-function idx: find or create a region in F's vector.
   unsigned idx(Region &R, const llvm::Function *F);
 
   void computeCallSiteMappings(llvm::Module &M);
-  void computeOneCallSiteMapping(llvm::CallInst *CI,
+  void computeOneCallSiteMapping(llvm::CallBase *CI,
                                  const llvm::Function *caller,
                                  llvm::Function *callee);
   void propagateRegionMerges(llvm::Module &M);
   bool mergeCalleeRegion(const llvm::Function *F, unsigned keep,
                          unsigned remove);
+  // Repair all index-based bookkeeping (access sets, call-site mappings,
+  // merged-region aliases) after F's region `remove` was merged into `keep`
+  // and erased from F's region vector. Requires keep < remove.
+  void remapAfterMerge(const llvm::Function *F, unsigned keep, unsigned remove);
   void computeGlobalMemoryMappings(llvm::Module &M);
   void computeFunctionRegions(llvm::Module &M);
   void computeInterfaceRegions(llvm::Module &M);
@@ -141,7 +159,7 @@ public:
   getFunctionRegionInfo(const llvm::Function *F) const;
   std::set<unsigned> getAccessedRegions(const llvm::Function *F) const;
   const std::map<unsigned, unsigned> &
-  getCallSiteMapping(const llvm::CallInst *CI) const;
+  getCallSiteMapping(const llvm::CallBase *CI) const;
   const std::map<unsigned, unsigned> &
   getGlobalMemoryMapping(const llvm::Function *F) const;
 
@@ -151,7 +169,8 @@ public:
   void visitAtomicRMWInst(AtomicRMWInst &);
   void visitMemSetInst(MemSetInst &);
   void visitMemTransferInst(MemTransferInst &);
-  void visitCallInst(CallInst &);
+  // Covers CallInst and InvokeInst (InstVisitor delegates both here).
+  void visitCallBase(CallBase &);
 };
 } // namespace smack
 

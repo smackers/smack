@@ -324,6 +324,9 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst &si) {
 void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst &ii) {
   processInstruction(ii);
   llvm::Function *f = ii.getCalledFunction();
+  if (!f)
+    f = llvm::dyn_cast<llvm::Function>(
+        ii.getCalledOperand()->stripPointerCastsAndAliases());
   if (f)
     emit(rep->call(f, ii));
   else

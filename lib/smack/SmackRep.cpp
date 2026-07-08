@@ -23,8 +23,8 @@
 namespace {
 using namespace llvm;
 
-std::list<CallInst *> findCallers(Function *F) {
-  std::list<CallInst *> callers;
+std::list<CallBase *> findCallers(Function *F) {
+  std::list<CallBase *> callers;
 
   if (F) {
     std::queue<User *> users;
@@ -37,8 +37,8 @@ std::list<CallInst *> findCallers(Function *F) {
       auto U = users.front();
       users.pop();
 
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        callers.push_back(CI);
+      if (CallBase *CB = dyn_cast<CallBase>(U))
+        callers.push_back(CB);
 
       else
         for (auto V : U->users())
@@ -215,15 +215,20 @@ std::string SmackRep::opName(const std::string &operation,
 }
 
 std::string SmackRep::procName(const llvm::User &U) {
-  if (const llvm::CallInst *CI = llvm::dyn_cast<const llvm::CallInst>(&U))
-    return procName(CI->getCalledFunction(), U);
+  if (const llvm::CallBase *CB = llvm::dyn_cast<const llvm::CallBase>(&U))
+    return procName(CB->getCalledFunction(), U);
   else
     llvm_unreachable("Unexpected user expression.");
 }
 
 std::string SmackRep::procName(llvm::Function *F, const llvm::User &U) {
   std::list<const llvm::Type *> types;
-  for (unsigned i = 0; i < U.getNumOperands() - 1; i++)
+  // Count actual arguments only: invokes carry extra non-argument operands
+  // (destinations and callee) that must not contribute to vararg names.
+  unsigned numArgs = U.getNumOperands() - 1;
+  if (auto *CB = llvm::dyn_cast<const llvm::CallBase>(&U))
+    numArgs = CB->arg_size();
+  for (unsigned i = 0; i < numArgs; i++)
     types.push_back(U.getOperand(i)->getType());
   return procName(F, types);
 }
@@ -1046,7 +1051,7 @@ bool SmackRep::isContractExpr(const std::string S) const {
   return S.find(Naming::CONTRACT_EXPR) == 0;
 }
 
-ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
+ProcDecl *SmackRep::procedure(Function *F, CallBase *CI) {
   assert(F && "Unknown function call.");
   std::string name = naming->get(*F);
   std::list<std::pair<std::string, std::string>> params, rets;
@@ -1114,7 +1119,7 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
 std::list<ProcDecl *> SmackRep::procedure(llvm::Function *F) {
   std::list<ProcDecl *> procs;
   std::set<std::string> names;
-  std::list<CallInst *> callers = findCallers(F);
+  std::list<CallBase *> callers = findCallers(F);
 
   // Consider `return_value` calls as normal `value` calls
   if (F->hasName() && F->getName().equals(Naming::VALUE_PROC)) {
@@ -1167,13 +1172,15 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
   // Use call-site mapping to pass caller's regions for callee's params.
   if (f->hasName() && !SmackOptions::usesGlobalMemory(f->getName()) &&
       !f->isDeclaration() && !isContractExpr(f)) {
-    auto *callInst = dyn_cast<const CallInst>(&ci);
-    auto &mapping = regions->getCallSiteMapping(callInst);
+    auto *callBase = dyn_cast<const CallBase>(&ci);
+    auto &mapping = regions->getCallSiteMapping(callBase);
 
     auto mapRegion = [&](unsigned calleeR) -> unsigned {
       auto it = mapping.find(calleeR);
       if (it == mapping.end())
-        llvm_unreachable("Missing SeaDsa call-site memory-region mapping.");
+        report_fatal_error(
+            "missing SeaDsa call-site memory-region mapping for call to " +
+            f->getName());
       return it->second;
     };
 
