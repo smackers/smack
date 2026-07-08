@@ -14,9 +14,11 @@
 #include "smack/SmackWarnings.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <cctype>
 #include <list>
 #include <queue>
 #include <set>
+#include <vector>
 
 namespace {
 using namespace llvm;
@@ -48,6 +50,28 @@ std::list<CallInst *> findCallers(Function *F) {
   }
 
   return callers;
+}
+
+bool isInlineCallNameChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$' ||
+         c == '.';
+}
+
+std::string joinInlineCallArgs(const std::vector<std::string> &args) {
+  std::string result;
+  for (unsigned i = 0; i < args.size(); i++) {
+    if (i > 0)
+      result += ", ";
+    result += args[i];
+  }
+  return result;
+}
+
+bool isWhitespaceOnly(StringRef s) { return s.trim().empty(); }
+
+bool sameInlineCallArg(const Value *a, const Value *b) {
+  return a == b ||
+         a->stripPointerCastsAndAliases() == b->stripPointerCastsAndAliases();
 }
 } // namespace
 
@@ -1182,6 +1206,7 @@ std::string SmackRep::code(llvm::CallInst &ci) {
   assert(!fmt.empty() && "inline code: missing format std::string.");
 
   std::string s = fmt;
+  std::vector<Value *> inlineArgs;
   for (unsigned i = 1; i < ci.getNumOperands() - 1; i++) {
     Value *argV = ci.getOperand(i);
     std::string::size_type idx = s.find('@');
@@ -1225,7 +1250,130 @@ std::string SmackRep::code(llvm::CallInst &ci) {
 
     std::ostringstream ss;
     arg(f, i, argV)->print(ss);
+    inlineArgs.push_back(argV);
     s = s.replace(idx, (isCast ? 2 : 1), ss.str());
+  }
+
+  // Inline Boogie is normally emitted verbatim. For direct calls to SMACK
+  // procedures, however, context-sensitive region splitting adds hidden memory
+  // parameters/returns. Reuse an existing LLVM call-site mapping when one is
+  // present so legacy __SMACK_code("call foo(@);", p) calls stay well typed.
+  Function *caller = ci.getParent()->getParent();
+  if (currentFunction == caller) {
+    size_t open = s.find('(');
+    size_t close = s.rfind(')');
+    if (open != std::string::npos && close != std::string::npos &&
+        open < close) {
+      StringRef tail(s.data() + close + 1, s.size() - close - 1);
+      if (tail.trim().equals(";")) {
+        size_t nameEnd = open;
+        while (nameEnd > 0 &&
+               std::isspace(static_cast<unsigned char>(s[nameEnd - 1])))
+          nameEnd--;
+        size_t nameStart = nameEnd;
+        while (nameStart > 0 && isInlineCallNameChar(s[nameStart - 1]))
+          nameStart--;
+
+        StringRef prefix(s.data(), nameStart);
+        std::string calleeName = s.substr(nameStart, nameEnd - nameStart);
+        if (prefix.trim().startswith("call") && !calleeName.empty()) {
+          Function *callee = nullptr;
+          Module *M = caller->getParent();
+          for (auto &F : *M) {
+            if (naming->get(F) == calleeName) {
+              callee = &F;
+              break;
+            }
+          }
+
+          if (callee && !callee->isDeclaration() &&
+              !SmackOptions::usesGlobalMemory(callee->getName()) &&
+              !isContractExpr(callee)) {
+            const CallInst *mappedCall = nullptr;
+            for (auto &BB : *caller) {
+              for (auto &I : BB) {
+                auto *other = dyn_cast<CallInst>(&I);
+                if (!other || other == &ci ||
+                    other->getCalledFunction() != callee)
+                  continue;
+                if (other->arg_size() != inlineArgs.size())
+                  continue;
+
+                bool sameArgs = true;
+                for (unsigned i = 0; i < other->arg_size(); i++) {
+                  if (!sameInlineCallArg(other->getArgOperand(i),
+                                         inlineArgs[i])) {
+                    sameArgs = false;
+                    break;
+                  }
+                }
+                if (sameArgs) {
+                  mappedCall = other;
+                  break;
+                }
+              }
+              if (mappedCall)
+                break;
+            }
+
+            if (mappedCall) {
+              auto &mapping = regions->getCallSiteMapping(mappedCall);
+              auto &info = regions->getFunctionRegionInfo(callee);
+              std::vector<std::string> memArgs;
+              std::vector<std::string> memRets;
+              bool complete = true;
+
+              for (unsigned calleeR : info.inputRegions) {
+                auto it = mapping.find(calleeR);
+                if (it == mapping.end()) {
+                  complete = false;
+                  break;
+                }
+                memArgs.push_back(memPath(it->second));
+              }
+
+              if (complete) {
+                for (unsigned calleeR : info.outputRegions) {
+                  auto it = mapping.find(calleeR);
+                  if (it == mapping.end()) {
+                    complete = false;
+                    break;
+                  }
+                  memRets.push_back(memPath(it->second));
+                }
+              }
+
+              if (complete && (!memArgs.empty() || !memRets.empty())) {
+                std::string beforeName = s.substr(0, nameStart);
+                if (!memRets.empty()) {
+                  std::string memRetText = joinInlineCallArgs(memRets);
+                  size_t assign = beforeName.rfind(":=");
+                  if (assign == std::string::npos) {
+                    beforeName += memRetText + " := ";
+                  } else {
+                    size_t insertPos = assign;
+                    while (insertPos > 0 &&
+                           std::isspace(static_cast<unsigned char>(
+                               beforeName[insertPos - 1])))
+                      insertPos--;
+                    beforeName.insert(insertPos, ", " + memRetText);
+                  }
+                }
+
+                std::string argsText = s.substr(open + 1, close - open - 1);
+                if (!memArgs.empty()) {
+                  if (!isWhitespaceOnly(argsText))
+                    argsText += ", ";
+                  argsText += joinInlineCallArgs(memArgs);
+                }
+                s = beforeName + s.substr(nameStart, open - nameStart + 1) +
+                    argsText + s.substr(close);
+              }
+            }
+          }
+        }
+      }
+    }
   }
   return s;
 }
