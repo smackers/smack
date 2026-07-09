@@ -80,21 +80,14 @@ Value *accessSizeAsPointer(Module &M, Type *T) {
       PointerType::getUnqual(Type::getInt8Ty(M.getContext())));
 }
 
-Value *accessSizeAsPointer(Module &M, Value *V) {
-  auto T = dyn_cast<PointerType>(V->getType());
-  assert(T && "expected pointer type");
-
-  return accessSizeAsPointer(M, T->getPointerElementType());
-}
-
 Value *accessSizeAsPointer(LoadInst &I) {
   auto &M = *I.getParent()->getParent()->getParent();
-  return accessSizeAsPointer(M, I.getPointerOperand());
+  return accessSizeAsPointer(M, I.getType());
 }
 
 Value *accessSizeAsPointer(StoreInst &I) {
   auto &M = *I.getParent()->getParent()->getParent();
-  return accessSizeAsPointer(M, I.getPointerOperand());
+  return accessSizeAsPointer(M, I.getValueOperand()->getType());
 }
 } // namespace
 
@@ -113,10 +106,14 @@ bool MemorySafetyChecker::visitSplitAggregateAccess(Value *addr,
     if (auto *GEP = dyn_cast<GEPOperator>(addr)) {
       base = GEP->getPointerOperand();
       T = GEP->getSourceElementType();
+    } else if (auto *LI = dyn_cast<LoadInst>(I)) {
+      T = LI->getType();
+    } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+      T = SI->getValueOperand()->getType();
     } else {
       auto *PT = dyn_cast<PointerType>(addr->getType());
       assert(PT && "expected pointer type");
-      T = PT->getPointerElementType();
+      T = Type::getInt8Ty(M.getContext());
     }
 
     insertMemoryAccessCheck(base, accessSizeAsPointer(M, T), I);

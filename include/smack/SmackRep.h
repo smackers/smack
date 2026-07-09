@@ -172,8 +172,9 @@ public:
   const Stmt *alloca(llvm::AllocaInst &i);
   const Stmt *memcpy(const llvm::MemCpyInst &msi);
   const Stmt *memset(const llvm::MemSetInst &msi);
-  const Expr *load(const llvm::Value *P);
+  const Expr *load(const llvm::Value *P, const llvm::Type *T);
   const Stmt *store(const llvm::Value *P, const llvm::Value *V);
+  const Stmt *store(const llvm::Value *P, const llvm::Type *T, const Expr *V);
   const Stmt *store(const llvm::Value *P, const Expr *V);
 
   const Stmt *valueAnnotation(const llvm::CallInst &CI);

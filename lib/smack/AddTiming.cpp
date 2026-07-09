@@ -24,6 +24,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
@@ -137,7 +138,7 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
 
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr: {
-    Type *ValTy = I->getOperand(0)->getType()->getPointerElementType();
+    Type *ValTy = cast<GetElementPtrInst>(I)->getSourceElementType();
     return TTI->getAddressComputationCost(ValTy);
   }
 
@@ -190,7 +191,7 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
     assert(!ValTy->isStructTy() &&
            "Timing annotations do not currently work for struct sized stores");
     return TTI->getMemoryOpCost(I->getOpcode(), ValTy,
-                                Align(SI->getAlignment()),
+                                SI->getAlign(),
                                 SI->getPointerAddressSpace());
   }
   case Instruction::Load: {
@@ -198,7 +199,7 @@ InstructionCost AddTiming::getInstructionCost(const Instruction *I) const {
     assert(!I->getType()->isStructTy() &&
            "Timing annotations do not currently work for struct sized loads");
     return TTI->getMemoryOpCost(I->getOpcode(), I->getType(),
-                                Align(LI->getAlignment()),
+                                LI->getAlign(),
                                 LI->getPointerAddressSpace());
   }
   case Instruction::ZExt:

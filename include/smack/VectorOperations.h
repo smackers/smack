@@ -38,8 +38,8 @@ public:
   FuncDecl *shuffle(Type *T, Type *U, std::vector<int> mask);
   FuncDecl *insert(Type *T, Type *IT);
   FuncDecl *extract(Type *T, Type *IT);
-  FuncDecl *load(const Value *V);
-  FuncDecl *store(const Value *V);
+  FuncDecl *load(const Value *V, Type *ET);
+  FuncDecl *store(const Value *V, Type *ET);
 };
 } // namespace smack
 

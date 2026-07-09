@@ -11,6 +11,7 @@
 #include "smack/SmackOptions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/FileSystem.h"
 
 #include <set>
@@ -21,6 +22,43 @@
 namespace smack {
 
 using namespace llvm;
+
+namespace {
+Type *inferPointeeType(const Value *V) {
+  V = V->stripPointerCastsAndAliases();
+
+  if (const auto *AI = dyn_cast<AllocaInst>(V))
+    return AI->getAllocatedType();
+  if (const auto *GV = dyn_cast<GlobalVariable>(V))
+    return GV->getValueType();
+  if (const auto *GEP = dyn_cast<GEPOperator>(V))
+    return GEP->getResultElementType();
+
+  Type *Evidence = nullptr;
+  for (const User *U : V->users()) {
+    Type *Candidate = nullptr;
+    if (const auto *LI = dyn_cast<LoadInst>(U)) {
+      if (LI->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        Candidate = LI->getType();
+    } else if (const auto *SI = dyn_cast<StoreInst>(U)) {
+      if (SI->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        Candidate = SI->getValueOperand()->getType();
+    } else if (const auto *GEP = dyn_cast<GEPOperator>(U)) {
+      if (GEP->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        Candidate = GEP->getSourceElementType();
+    }
+
+    if (!Candidate)
+      continue;
+    if (!Evidence)
+      Evidence = Candidate;
+    else if (Evidence != Candidate)
+      return nullptr;
+  }
+
+  return Evidence;
+}
+}
 
 void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -92,8 +130,10 @@ bool DSAWrapper::isRead(const Value *V) {
 }
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
-  if (llvm::PointerType *t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
-    llvm::Type *pointedType = t->getElementType();
+  if (v->getType()->isPointerTy()) {
+    llvm::Type *pointedType = inferPointeeType(v);
+    if (!pointedType)
+      return UINT_MAX;
     if (pointedType->isSized())
       return dataLayout->getTypeStoreSize(pointedType);
     else

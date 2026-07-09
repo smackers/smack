@@ -483,18 +483,17 @@ void SmackInstGenerator::visitAllocaInst(llvm::AllocaInst &ai) {
 void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   processInstruction(li);
   auto P = li.getPointerOperand();
-  auto T = dyn_cast<PointerType>(P->getType());
-  assert(T && "expected pointer type");
+  assert(P->getType()->isPointerTy() && "expected pointer type");
 
   // TODO what happens with aggregate types?
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
   const Expr *E;
-  if (isa<FixedVectorType>(T->getElementType())) {
-    auto D = VectorOperations(rep).load(P);
+  if (isa<FixedVectorType>(li.getType())) {
+    auto D = VectorOperations(rep).load(P, li.getType());
     E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
   } else {
-    E = rep->load(P);
+    E = rep->load(P, li.getType());
   }
 
   emit(Stmt::assign(rep->expr(&li), E));
@@ -515,7 +514,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
   if (isa<FixedVectorType>(V->getType())) {
-    auto D = VectorOperations(rep).store(P);
+    auto D = VectorOperations(rep).store(P, V->getType());
     auto M = Expr::id(rep->memPath(P));
     auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
     emit(Stmt::assign(M, E));
@@ -529,12 +528,9 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable *G =
             llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
-      if (const llvm::PointerType *t =
-              llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
-        if (!t->getElementType()->isPointerTy() && G->hasName()) {
-          emit(recordProcedureCall(V,
-                                   {Attr::attr("cexpr", G->getName().str())}));
-        }
+      if (!G->getValueType()->isPointerTy() && G->hasName()) {
+        emit(recordProcedureCall(V,
+                                 {Attr::attr("cexpr", G->getName().str())}));
       }
     }
   }
@@ -551,11 +547,11 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
 void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &i) {
   processInstruction(i);
   const Expr *res = rep->expr(&i);
-  const Expr *mem = rep->load(i.getOperand(0));
+  const Expr *mem = rep->load(i.getOperand(0), i.getCompareOperand()->getType());
   const Expr *cmp = rep->expr(i.getOperand(1));
   const Expr *swp = rep->expr(i.getOperand(2));
   emit(Stmt::assign(res, mem));
-  emit(rep->store(i.getOperand(0),
+  emit(rep->store(i.getOperand(0), i.getNewValOperand()->getType(),
                   Expr::ifThenElse(Expr::eq(mem, cmp), swp, mem)));
 }
 
@@ -563,11 +559,11 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst &i) {
   using llvm::AtomicRMWInst;
   processInstruction(i);
   const Expr *res = rep->expr(&i);
-  const Expr *mem = rep->load(i.getPointerOperand());
+  const Expr *mem = rep->load(i.getPointerOperand(), i.getValOperand()->getType());
   const Expr *val = rep->expr(i.getValOperand());
   auto valT = rep->type(i.getValOperand()->getType());
   emit(Stmt::assign(res, mem));
-  emit(rep->store(i.getPointerOperand(),
+  emit(rep->store(i.getPointerOperand(), i.getValOperand()->getType(),
                   i.getOperation() == AtomicRMWInst::Xchg
                       ? val
                       : Expr::fn(indexedName(Naming::ATOMICRMWINST_TABLE.at(

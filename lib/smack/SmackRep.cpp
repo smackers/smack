@@ -12,6 +12,7 @@
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/SmackWarnings.h"
+#include "llvm/IR/Operator.h"
 
 #include <list>
 #include <queue>
@@ -47,6 +48,47 @@ std::list<CallInst *> findCallers(Function *F) {
   }
 
   return callers;
+}
+
+Type *inferPointeeType(const Value *V) {
+  V = V->stripPointerCastsAndAliases();
+
+  if (const auto *AI = dyn_cast<AllocaInst>(V))
+    return AI->getAllocatedType();
+  if (const auto *GV = dyn_cast<GlobalVariable>(V))
+    return GV->getValueType();
+  if (const auto *GEP = dyn_cast<GEPOperator>(V))
+    return GEP->getResultElementType();
+
+  Type *evidence = nullptr;
+  for (const User *U : V->users()) {
+    Type *candidate = nullptr;
+    if (const auto *LI = dyn_cast<LoadInst>(U)) {
+      if (LI->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        candidate = LI->getType();
+    } else if (const auto *SI = dyn_cast<StoreInst>(U)) {
+      if (SI->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        candidate = SI->getValueOperand()->getType();
+    } else if (const auto *GEP = dyn_cast<GEPOperator>(U)) {
+      if (GEP->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        candidate = GEP->getSourceElementType();
+    }
+
+    if (!candidate)
+      continue;
+    if (!evidence)
+      evidence = candidate;
+    else if (evidence != candidate)
+      return nullptr;
+  }
+
+  return evidence;
+}
+
+Type *inferPointeeTypeOrI8(const Value *V) {
+  if (Type *T = inferPointeeType(V))
+    return T;
+  return Type::getInt8Ty(V->getContext());
 }
 } // namespace
 
@@ -122,20 +164,21 @@ std::list<Decl *> SmackRep::auxiliaryDeclarations() {
 }
 
 std::string SmackRep::getString(const llvm::Value *v) {
-  if (const llvm::ConstantExpr *constantExpr =
-          llvm::dyn_cast<const llvm::ConstantExpr>(v))
-    if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr)
-      if (const llvm::GlobalValue *cc = llvm::dyn_cast<const llvm::GlobalValue>(
-              constantExpr->getOperand(0)))
-        if (const llvm::ConstantDataSequential *cds =
-                llvm::dyn_cast<const llvm::ConstantDataSequential>(
-                    cc->getOperand(0)))
-          return cds->getAsCString().str();
+  v = v->stripPointerCastsAndAliases();
+  if (const auto *GEP = dyn_cast<GEPOperator>(v))
+    v = GEP->getPointerOperand()->stripPointerCastsAndAliases();
+
+  if (const auto *GV = dyn_cast<GlobalVariable>(v))
+    if (GV->hasInitializer())
+      if (const auto *cds =
+              dyn_cast<ConstantDataSequential>(GV->getInitializer()))
+        return cds->getAsCString().str();
+
   return "";
 }
 
 unsigned SmackRep::getElementSize(const llvm::Value *v) {
-  return getSize(v->getType()->getPointerElementType());
+  return getSize(inferPointeeTypeOrI8(v));
 }
 
 unsigned SmackRep::getIntSize(const llvm::Value *v) {
@@ -395,7 +438,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
     if ((A = dyn_cast<const Argument>(V))) {
       auto PT = dyn_cast<const PointerType>(A->getType());
       assert(PT && "Expected pointer argument.");
-      T = PT->getElementType();
+      T = inferPointeeTypeOrI8(A);
       addr = expr(A);
 
     } else if (auto GEP = dyn_cast<const GetElementPtrInst>(V)) {
@@ -412,7 +455,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       assert(A->hasName() && "Expected named argument.");
       auto PT = dyn_cast<PointerType>(V->getType());
       assert(PT && "Expected pointer type result of load instruction.");
-      T = PT->getElementType();
+      T = inferPointeeTypeOrI8(V);
       addr = ptrArith(GEP);
 
     } else {
@@ -499,10 +542,12 @@ bool SmackRep::isUnsafeFloatAccess(const Type *elemTy, const Type *resultTy) {
   return false;
 }
 
-const Expr *SmackRep::load(const llvm::Value *P) {
-  const PointerType *T = dyn_cast<PointerType>(P->getType());
-  assert(T && "Expected pointer type.");
-  const unsigned R = regions->idx(P);
+const Expr *SmackRep::load(const llvm::Value *P, const Type *T) {
+  assert(P->getType()->isPointerTy() && "Expected pointer type.");
+  unsigned length = T && T->isSized()
+                        ? targetData->getTypeStoreSize(const_cast<Type *>(T))
+                        : std::numeric_limits<unsigned>::max();
+  const unsigned R = regions->idx(P, length);
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
   const Type *resultTy = regions->get(R).getType();
@@ -511,20 +556,27 @@ const Expr *SmackRep::load(const llvm::Value *P) {
       Naming::LOAD + "." +
       (bytewise
            ? "bytes."
-           : (isUnsafeFloatAccess(T->getElementType(), resultTy) ? "unsafe."
-                                                                 : "")) +
-      type(T->getElementType());
+           : (isUnsafeFloatAccess(T, resultTy) ? "unsafe." : "")) +
+      type(T);
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
 const Stmt *SmackRep::store(const Value *P, const Value *V) {
-  return store(P, expr(V));
+  return store(P, V->getType(), expr(V));
 }
 
 const Stmt *SmackRep::store(const Value *P, const Expr *V) {
-  const PointerType *T = dyn_cast<PointerType>(P->getType());
-  assert(T && "Expected pointer type.");
-  return store(regions->idx(P), T->getElementType(), expr(P), V);
+  return store(P, regions->get(regions->idx(P)).getType(), V);
+}
+
+const Stmt *SmackRep::store(const Value *P, const Type *T, const Expr *V) {
+  assert(P->getType()->isPointerTy() && "Expected pointer type.");
+  if (!T)
+    T = Type::getInt8Ty(P->getContext());
+  unsigned length = T->isSized()
+                        ? targetData->getTypeStoreSize(const_cast<Type *>(T))
+                        : std::numeric_limits<unsigned>::max();
+  return store(regions->idx(P, length), T, expr(P), V);
 }
 
 const Stmt *SmackRep::store(unsigned R, const Type *T, const Expr *P,
@@ -1215,7 +1267,7 @@ const Stmt *SmackRep::inverseFPCastAssume(const StoreInst *si) {
   const Value *P = si->getPointerOperand();
   const PointerType *PT = dyn_cast<PointerType>(P->getType());
   assert(PT && "Expected pointer type.");
-  const Type *T = PT->getElementType();
+  const Type *T = si->getValueOperand()->getType();
   unsigned R = regions->idx(P);
   if (!T->isFloatingPointTy() || !regions->get(R).bytewiseAccess() ||
       regions->get(R).isSingleton()) {
@@ -1253,10 +1305,9 @@ Decl *SmackRep::getInitFuncs() {
 
 void SmackRep::addAllocSizeAttr(const llvm::GlobalVariable *G,
                                 std::list<const Attr *> &ax) {
-  auto T = dyn_cast<const PointerType>(G->getType());
-  assert(T && "Global variables should have pointer types!");
-  if (T->getElementType()->isSized()) {
-    auto allocSize = targetData->getTypeAllocSize(T->getElementType());
+  auto T = G->getValueType();
+  if (T->isSized()) {
+    auto allocSize = targetData->getTypeAllocSize(T);
     ax.push_back(Attr::attr("allocSize", allocSize));
   }
 }
@@ -1282,19 +1333,11 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
       const Constant *init = g->getInitializer();
       unsigned numElems = numElements(init);
 
-      // NOTE: all global variables have pointer type in LLVM
-      if (const PointerType *t = dyn_cast<const PointerType>(g->getType())) {
-
-        // in case we can determine the size of the element type ...
-        if (t->getElementType()->isSized())
-          size = storageSize(t->getElementType());
-
-        // otherwise (e.g. for function declarations), use a default size
-        else
-          size = 1024;
-
-      } else
-        size = storageSize(g->getType());
+      auto *t = g->getValueType();
+      if (t->isSized())
+        size = storageSize(t);
+      else
+        size = 1024;
 
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
         if (numElems > 1)

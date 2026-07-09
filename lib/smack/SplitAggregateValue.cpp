@@ -107,8 +107,8 @@ Value *SplitAggregateValue::splitAggregateLoad(Type *T, Value *P,
   for (auto &e : info) {
     IndexT idxs = std::get<0>(e);
     Value *p = irb.CreateGEP(T, P, ArrayRef<Value *>(getFirsts(idxs)));
-    auto *load = irb.CreateLoad(
-        p->getType()->getScalarType()->getPointerElementType(), p);
+    auto *load =
+        irb.CreateLoad(cast<GEPOperator>(p)->getResultElementType(), p);
     markSplitAggregateAccess(load, checkWholeAccess);
     checkWholeAccess = false;
     V = irb.CreateInsertValue(V, load, ArrayRef<unsigned>(getSeconds(idxs)));
@@ -125,7 +125,7 @@ void SplitAggregateValue::splitAggregateStore(Value *P, Value *V,
     IndexT idxs = std::get<0>(e);
     Constant *c = std::get<1>(e);
     std::vector<Value *> vidxs = getFirsts(idxs);
-    Type *T = P->getType()->getScalarType()->getPointerElementType();
+    Type *T = V->getType();
     Value *p = irb.CreateGEP(T, P, ArrayRef<Value *>(vidxs));
     StoreInst *store;
     if (c)

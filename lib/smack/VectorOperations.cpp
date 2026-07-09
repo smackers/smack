@@ -281,10 +281,9 @@ FuncDecl *VectorOperations::extract(Type *T, Type *IT) {
   return F;
 }
 
-FuncDecl *VectorOperations::load(const Value *V) {
+FuncDecl *VectorOperations::load(const Value *V, Type *ET) {
   auto PT = dyn_cast<PointerType>(V->getType());
   assert(PT && "expected pointer type");
-  auto ET = PT->getElementType();
   type(ET);
 
   auto R = rep->regions->idx(V);
@@ -301,10 +300,9 @@ FuncDecl *VectorOperations::load(const Value *V) {
   return F;
 }
 
-FuncDecl *VectorOperations::store(const Value *V) {
+FuncDecl *VectorOperations::store(const Value *V, Type *ET) {
   auto PT = dyn_cast<PointerType>(V->getType());
   assert(PT && "expected pointer type");
-  auto ET = PT->getElementType();
   type(ET);
 
   auto R = rep->regions->idx(V);
