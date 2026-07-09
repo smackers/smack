@@ -529,8 +529,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
     if (const llvm::GlobalVariable *G =
             llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       if (!G->getValueType()->isPointerTy() && G->hasName()) {
-        emit(recordProcedureCall(V,
-                                 {Attr::attr("cexpr", G->getName().str())}));
+        emit(recordProcedureCall(V, {Attr::attr("cexpr", G->getName().str())}));
       }
     }
   }
@@ -547,7 +546,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
 void SmackInstGenerator::visitAtomicCmpXchgInst(llvm::AtomicCmpXchgInst &i) {
   processInstruction(i);
   const Expr *res = rep->expr(&i);
-  const Expr *mem = rep->load(i.getOperand(0), i.getCompareOperand()->getType());
+  const Expr *mem =
+      rep->load(i.getOperand(0), i.getCompareOperand()->getType());
   const Expr *cmp = rep->expr(i.getOperand(1));
   const Expr *swp = rep->expr(i.getOperand(2));
   emit(Stmt::assign(res, mem));
@@ -559,7 +559,8 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst &i) {
   using llvm::AtomicRMWInst;
   processInstruction(i);
   const Expr *res = rep->expr(&i);
-  const Expr *mem = rep->load(i.getPointerOperand(), i.getValOperand()->getType());
+  const Expr *mem =
+      rep->load(i.getPointerOperand(), i.getValOperand()->getType());
   const Expr *val = rep->expr(i.getValOperand());
   auto valT = rep->type(i.getValOperand()->getType());
   emit(Stmt::assign(res, mem));

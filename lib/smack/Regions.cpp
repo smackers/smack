@@ -57,7 +57,7 @@ Type *firstAggregateElementType(Type *T) {
       return ST->getElementType(0);
   return nullptr;
 }
-}
+} // namespace
 
 const DataLayout *Region::DL = nullptr;
 DSAWrapper *Region::DSA = nullptr;
@@ -122,7 +122,8 @@ void Region::init(const Value *V, unsigned length) {
               (!representative || !DSA->isTypeSafe(V)) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
-  collapsed = !representative || representative->isOffsetCollapsed() || variableGEP;
+  collapsed =
+      !representative || representative->isOffsetCollapsed() || variableGEP;
 }
 
 Region::Region(const Value *V) {
@@ -361,9 +362,9 @@ void Regions::visitCallInst(CallInst &I) {
     if (auto I = dyn_cast<ConstantInt>(N)) {
       const unsigned bound = I->getZExtValue();
       Type *ElemTy = inferPointeeType(P);
-      const unsigned size =
-          ElemTy && ElemTy->isIntegerTy() ? ElemTy->getIntegerBitWidth() / 8
-                                          : 1;
+      const unsigned size = ElemTy && ElemTy->isIntegerTy()
+                                ? ElemTy->getIntegerBitWidth() / 8
+                                : 1;
       const unsigned length = bound * size;
       idx(P, length);
 

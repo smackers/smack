@@ -554,9 +554,8 @@ const Expr *SmackRep::load(const llvm::Value *P, const Type *T) {
   const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
-      (bytewise
-           ? "bytes."
-           : (isUnsafeFloatAccess(T, resultTy) ? "unsafe." : "")) +
+      (bytewise ? "bytes."
+                : (isUnsafeFloatAccess(T, resultTy) ? "unsafe." : "")) +
       type(T);
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }

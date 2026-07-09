@@ -58,7 +58,7 @@ Type *inferPointeeType(const Value *V) {
 
   return Evidence;
 }
-}
+} // namespace
 
 void DSAWrapper::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();

@@ -31,12 +31,11 @@ void enqueueGlobal(GlobalVariable *G, std::deque<StaticInitItem> &worklist,
                    std::set<const GlobalVariable *> &seen) {
   if (!G || !G->hasInitializer() || !seen.insert(G).second)
     return;
-  worklist.push_back(std::make_tuple(G->getInitializer(), G,
-                                     std::vector<Value *>()));
+  worklist.push_back(
+      std::make_tuple(G->getInitializer(), G, std::vector<Value *>()));
 }
 
-void enqueueReferencedGlobals(Constant *C,
-                              std::deque<StaticInitItem> &worklist,
+void enqueueReferencedGlobals(Constant *C, std::deque<StaticInitItem> &worklist,
                               std::set<const GlobalVariable *> &seen) {
   if (auto *G = dyn_cast<GlobalVariable>(C->stripPointerCasts())) {
     enqueueGlobal(G, worklist, seen);
@@ -47,7 +46,7 @@ void enqueueReferencedGlobals(Constant *C,
     if (auto *SubC = dyn_cast<Constant>(O.get()))
       enqueueReferencedGlobals(SubC, worklist, seen);
 }
-}
+} // namespace
 
 bool CodifyStaticInits::runOnModule(Module &M) {
   TD = &M.getDataLayout();
@@ -78,11 +77,10 @@ bool CodifyStaticInits::runOnModule(Module &M) {
     if (V->getType()->isIntegerTy() || V->getType()->isPointerTy() ||
         V->getType()->isFloatingPointTy() || V->getType()->isVectorTy())
 
-      IRB.CreateStore(V,
-                      IRB.CreateGEP(cast<GlobalVariable>(
-                                        P->stripPointerCastsAndAliases())
-                                        ->getValueType(),
-                                    P, ArrayRef<Value *>(I)));
+      IRB.CreateStore(V, IRB.CreateGEP(cast<GlobalVariable>(
+                                           P->stripPointerCastsAndAliases())
+                                           ->getValueType(),
+                                       P, ArrayRef<Value *>(I)));
 
     else if (ArrayType *AT = dyn_cast<ArrayType>(V->getType()))
       for (unsigned i = AT->getNumElements(); i-- > 0;) {
