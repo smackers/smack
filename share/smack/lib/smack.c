@@ -33,7 +33,7 @@
  *
  */
 
-void *__builtinx_va_arg(char *x) {
+void *__builtinx_va_arg(__builtin_va_list x) {
   __SMACK_code("assume false;");
   return 0;
 }

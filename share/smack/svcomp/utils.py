@@ -6,7 +6,46 @@ import time
 from shutil import copyfile
 import smack.top
 import smack.frontend
+from smack.utils import temporary_file
 from .toSVCOMPformat import smackJsonToXmlGraph
+
+def rewrite_nondet_int_pointer_assignments(input_file, args):
+  pointer_vars = set()
+  pointer_decl_re = re.compile(r'\*\s*([A-Za-z_]\w*)\s*(?=[,;=])')
+  assignment_re = re.compile(
+    r'^(\s*)([A-Za-z_]\w*)(\s*=\s*)'
+    r'(__VERIFIER_nondet_(?:u?int|unsigned_int|signed_int)\s*\(\s*\))'
+    r'(\s*;)')
+
+  with open(input_file, 'r') as f:
+    lines = f.readlines()
+
+  for line in lines:
+    if ';' not in line or '(' in line.split(';', 1)[0]:
+      continue
+    for match in pointer_decl_re.finditer(line):
+      pointer_vars.add(match.group(1))
+
+  changed = False
+  rewritten = []
+  for line in lines:
+    match = assignment_re.match(line)
+    if match and match.group(2) in pointer_vars:
+      indent, lhs, assign, call, semi = match.groups()
+      line = '%s%s%s(__typeof__(%s))%s%s\n' % (
+        indent, lhs, assign, lhs, call, semi)
+      changed = True
+    rewritten.append(line)
+
+  if not changed:
+    return input_file
+
+  _, ext = os.path.splitext(input_file)
+  rewritten_file = temporary_file(os.path.basename(input_file), ext, args)
+  with open(rewritten_file, 'w') as f:
+    f.write('#line 1 "%s"\n' % input_file.replace('\\', '\\\\').replace('"', '\\"'))
+    f.writelines(rewritten)
+  return rewritten_file
 
 def svcomp_frontend(input_file, args):
   """Generate Boogie code from SVCOMP-style C-language source(s)."""
@@ -42,7 +81,8 @@ def svcomp_frontend(input_file, args):
     # Ensure clang runs the preprocessor, even with .i extension.
     args.clang_options += " -x c"
 
-  bc = smack.frontend.clang_frontend(args.input_files[0], args)
+  svcomp_input = rewrite_nondet_int_pointer_assignments(args.input_files[0], args)
+  bc = smack.frontend.clang_frontend(svcomp_input, args)
   # run with no extra smack libraries
   libs = set()
 
@@ -162,4 +202,3 @@ def write_error_file(args, status, verifier_output):
     if error is not None:
       with open(args.error_file, 'w') as f:
         f.write(error.decode('utf-8'))
-

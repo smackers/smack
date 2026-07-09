@@ -24,8 +24,8 @@ extern "C" {
 #define __builtin_expect __builtinx_expect
 
 // For handling of va macros
-void __builtinx_va_start(char *, char *);
-void *__builtinx_va_arg(char *);
+void __builtinx_va_start(__builtin_va_list, ...);
+void *__builtinx_va_arg(__builtin_va_list);
 #endif
 
 void __SMACK_code(const char *fmt, ...);

@@ -58,11 +58,12 @@ castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
   if (V->getType() == Ty)
     return V;
 
-  //
-  // If it's a constant, just create a constant expression.
-  //
+  Instruction::CastOps Op = CastInst::getCastOpcode(V, false, Ty, false);
+  if (!CastInst::castIsValid(Op, V->getType(), Ty))
+    return nullptr;
+
   if (Constant * C = dyn_cast<Constant>(V)) {
-    Constant * CE = ConstantExpr::getZExtOrBitCast (C, Ty);
+    Constant * CE = ConstantExpr::getCast(Op, C, Ty);
     return CE;
   }
 
@@ -70,17 +71,19 @@ castTo (Value * V, Type * Ty, std::string Name, Value * InsertPt) {
   // Otherwise, insert a cast instruction.
   //
   if (auto I = dyn_cast<Instruction>(InsertPt))
-    return CastInst::CreateZExtOrBitCast (V, Ty, Name, I);
+    return CastInst::Create(Op, V, Ty, Name, I);
   else if (auto B = dyn_cast<BasicBlock>(InsertPt))
-    return CastInst::CreateZExtOrBitCast (V, Ty, Name, B);
+    return CastInst::Create(Op, V, Ty, Name, B);
   else
     llvm_unreachable("Unexpected insertion point.");
 
 }
 
-static inline bool isZExtOrBitCastable(Value* V, Type* T) {
-  return CastInst::castIsValid(Instruction::ZExt, V->getType(), T) ||
-         CastInst::castIsValid(Instruction::BitCast, V->getType(), T);
+static inline bool isCastable(Value* V, Type* T) {
+  if (V->getType() == T)
+    return true;
+  Instruction::CastOps Op = CastInst::getCastOpcode(V, false, T, false);
+  return CastInst::castIsValid(Op, V->getType(), T);
 }
 
 static inline bool match(CallBase *CS, const Function &F) {
@@ -102,7 +105,7 @@ static inline bool match(CallBase *CS, const Function &F) {
   for (unsigned i=0; i<M; i++) {
     auto A = CS->getArgOperand(i);
     auto PT = T->getParamType(i);
-    if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
+    if (!isCastable(A, PT))
       return false;
   }
 
@@ -120,7 +123,7 @@ static inline bool checkArgs(const CallBase *CS, const Function *F) {
   for (unsigned i=0; i<N; i++) {
     auto A = CS->getArgOperand(i);
     auto PT = T->getParamType(i+1);
-    if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
+    if (!isCastable(A, PT))
       return false;
   }
   return true;
@@ -163,9 +166,7 @@ Devirtualize::findInCache (const CallBase *CS,
     if (CS->getCalledOperand()->stripPointerCastsAndAliases()->getType() != PT)
       continue;
 
-    FunctionType* FT = CS->getFunctionType();
-    assert(FT);
-    if (FT->isVarArg() && !checkArgs(CS, bounceFunc))
+    if (!checkArgs(CS, bounceFunc))
       continue;
 
     //
@@ -252,8 +253,14 @@ Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) 
     FunctionType::param_iterator T, TE;
     for (P = std::next(F->arg_begin()), PE = F->arg_end(),
          T = FT->param_begin(), TE = FT->param_end();
-         P != PE && T != TE; ++P, ++T)
-      Args.push_back(castTo(&*P, *T, "", BL));
+         P != PE && T != TE; ++P, ++T) {
+      Value *Arg = castTo(&*P, *T, "", BL);
+      if (!Arg) {
+        F->eraseFromParent();
+        return nullptr;
+      }
+      Args.push_back(Arg);
+    }
 
     Value* directCall = CallInst::Create (const_cast<Function*>(FL),
                                           Args,
@@ -263,8 +270,14 @@ Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) 
     // Add the return instruction for the basic block
     if (CS->getType()->isVoidTy())
       ReturnInst::Create (M->getContext(), BL);
-    else
-      ReturnInst::Create (M->getContext(), directCall, BL);
+    else {
+      Value *Ret = castTo(directCall, CS->getType(), "", BL);
+      if (!Ret) {
+        F->eraseFromParent();
+        return nullptr;
+      }
+      ReturnInst::Create (M->getContext(), Ret, BL);
+    }
   }
 
   //
@@ -293,6 +306,10 @@ Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) 
   //
   Type * VoidPtrType = getVoidPtrType (M->getContext());
   Value * FArg = castTo (&*F->arg_begin(), VoidPtrType, "", InsertPt);
+  if (!FArg) {
+    F->eraseFromParent();
+    return nullptr;
+  }
   BasicBlock * tailBB = failBB;
   for (unsigned index = 0; index < Targets.size(); ++index) {
     //
@@ -303,6 +320,10 @@ Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) 
                                 VoidPtrType,
                                 "",
                                 InsertPt);
+    if (!TargetInt) {
+      F->eraseFromParent();
+      return nullptr;
+    }
 
     //
     // Create a new basic block that compares the function pointer to the
@@ -387,6 +408,8 @@ Devirtualize::makeDirectCall (CallBase *CS) {
   if (!NF) {
     // Build the bounce function and add it to the cache
     NF = buildBounce (CS, Targets);
+    if (!NF)
+      return;
     bounceCache[NF] = targetSet;
   }
 
@@ -397,9 +420,11 @@ Devirtualize::makeDirectCall (CallBase *CS) {
     std::vector<Value*> Params;
     Params.push_back(CI->getCalledOperand());
     for (unsigned i=0; i<CI->arg_size(); i++) {
-      Params.push_back(
-        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS)
-      );
+      Value *Arg = castTo(CI->getArgOperand(i),
+                          NF->getFunctionType()->getParamType(i+1), "", CS);
+      if (!Arg)
+        return;
+      Params.push_back(Arg);
     }
 
     std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
@@ -412,10 +437,13 @@ Devirtualize::makeDirectCall (CallBase *CS) {
   } else if (InvokeInst* CI = dyn_cast<InvokeInst>(CS)) {
     std::vector<Value*> Params;
     Params.push_back(CI->getCalledOperand());
-    for (unsigned i=0; i<CI->arg_size(); i++)
-      Params.push_back(
-        castTo(CI->getArgOperand(i), NF->getFunctionType()->getParamType(i+1), "", CS)
-      );
+    for (unsigned i=0; i<CI->arg_size(); i++) {
+      Value *Arg = castTo(CI->getArgOperand(i),
+                          NF->getFunctionType()->getParamType(i+1), "", CS);
+      if (!Arg)
+        return;
+      Params.push_back(Arg);
+    }
     std::string name = CI->hasName() ? CI->getName().str() + ".dv" : "";
     InvokeInst* CN = InvokeInst::Create(const_cast<Function*>(NF),
                                         CI->getNormalDest(),
