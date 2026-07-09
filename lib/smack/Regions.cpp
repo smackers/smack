@@ -1125,119 +1125,120 @@ void Regions::unifySharedRegions(Module &M) {
   }
 
   // Union-find over (function, region index) pairs, linked by call-site
-  // mappings and global-memory mappings. Rebuilt from scratch whenever an
-  // entry-side merge shifts indices (mergeCalleeRegion repairs the
-  // mappings the union-find is derived from, so rebuilding is correct).
-  while (true) {
-    std::map<std::pair<const Function *, unsigned>, unsigned> ids;
-    std::vector<unsigned> parent;
-    auto id = [&](const Function *F, unsigned r) {
-      auto key = std::make_pair(F, r);
-      auto it = ids.find(key);
-      if (it != ids.end())
-        return it->second;
-      unsigned n = parent.size();
-      ids[key] = n;
-      parent.push_back(n);
-      return n;
-    };
-    std::function<unsigned(unsigned)> find = [&](unsigned x) {
-      while (parent[x] != x) {
-        parent[x] = parent[parent[x]];
-        x = parent[x];
-      }
-      return x;
-    };
-    auto unite = [&](unsigned a, unsigned b) { parent[find(a)] = find(b); };
-
-    for (auto &cs : callSiteMappings) {
-      auto *CB = const_cast<CallBase *>(cs.first);
-      Function *callee = CB->getCalledFunction();
-      if (!callee)
-        callee = dyn_cast<Function>(
-            CB->getCalledOperand()->stripPointerCastsAndAliases());
-      if (!callee)
-        continue;
-      const Function *caller = CB->getParent()->getParent();
-      for (auto &m : cs.second)
-        unite(id(callee, m.first), id(caller, m.second));
+  // mappings and global-memory mappings.
+  std::map<std::pair<const Function *, unsigned>, unsigned> ids;
+  std::vector<unsigned> parent;
+  auto id = [&](const Function *F, unsigned r) {
+    auto key = std::make_pair(F, r);
+    auto it = ids.find(key);
+    if (it != ids.end())
+      return it->second;
+    unsigned n = parent.size();
+    ids[key] = n;
+    parent.push_back(n);
+    return n;
+  };
+  std::function<unsigned(unsigned)> find = [&](unsigned x) {
+    while (parent[x] != x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
     }
-    if (entryF)
-      for (auto &gm : globalMemoryMappings)
-        for (auto &m : gm.second)
-          unite(id(gm.first, m.first), id(entryF, m.second));
+    return x;
+  };
+  auto unite = [&](unsigned a, unsigned b) { parent[find(a)] = find(b); };
 
-    // A class containing two entry regions means those regions alias
-    // through some call chain; merge them and rebuild.
-    bool merged = false;
-    if (entryF) {
-      std::map<unsigned, unsigned> entryRep;
-      for (auto &kv : ids) {
-        if (kv.first.first != entryF)
-          continue;
-        unsigned root = find(kv.second);
-        auto it = entryRep.find(root);
-        if (it == entryRep.end())
-          entryRep[root] = kv.first.second;
-        else if (it->second != kv.first.second) {
-          mergeCalleeRegion(entryF, it->second, kv.first.second);
-          merged = true;
-          break;
-        }
-      }
-    }
-    if (merged)
+  for (auto &cs : callSiteMappings) {
+    auto *CB = const_cast<CallBase *>(cs.first);
+    Function *callee = CB->getCalledFunction();
+    if (!callee)
+      callee = dyn_cast<Function>(
+          CB->getCalledOperand()->stripPointerCastsAndAliases());
+    if (!callee)
       continue;
+    const Function *caller = CB->getParent()->getParent();
+    for (auto &m : cs.second)
+      unite(id(callee, m.first), id(caller, m.second));
+  }
+  if (entryF)
+    for (auto &gm : globalMemoryMappings)
+      for (auto &m : gm.second)
+        unite(id(gm.first, m.first), id(entryF, m.second));
 
-    // Stable: bind every non-entry member of an entry class to the entry
-    // region, and give every entry-less multi-member class a fresh
-    // module-level shared map.
-    std::map<unsigned, unsigned> classEntry;
-    if (entryF)
-      for (auto &kv : ids)
-        if (kv.first.first == entryF)
-          classEntry[find(kv.second)] = kv.first.second;
-
-    std::map<unsigned, unsigned> classSize;
+  // A class containing exactly two distinct regions of some function keeps
+  // the per-call-site threading instead of binding to one module-level
+  // map: two regions of one function are distinct objects in that context
+  // (e.g. two arrays passed to the same callee), and folding them into one
+  // map loses separation that both the threading scheme and the
+  // context-insensitive baseline preserve (measured 4x slower on
+  // test/c/data/two_arrays1.c). Classes where some function has three or
+  // more regions are DSA-collapse artifacts spanning dozens of regions on
+  // the ntdrivers benchmarks; threading those costs far more than the
+  // separation is worth, so they still merge.
+  std::set<unsigned> classThreaded;
+  {
+    std::map<std::pair<unsigned, const Function *>, unsigned> mult;
     for (auto &kv : ids)
-      classSize[find(kv.second)]++;
-
-    std::map<unsigned, unsigned> classShared;
-    for (auto &kv : ids) {
-      const Function *F = kv.first.first;
-      unsigned r = kv.first.second;
-      if (F == entryF)
-        continue;
-      assert(r < funcRegionVecs[F].size() &&
-             "region indices must be repaired by remapAfterMerge");
-      unsigned root = find(kv.second);
-      auto ce = classEntry.find(root);
-      if (ce != classEntry.end()) {
-        globalMemoryMappings[F][r] = ce->second;
-        assert(ce->second < funcRegionVecs[entryF].size() &&
-               "region indices must be repaired by remapAfterMerge");
-        funcRegionVecs[entryF][ce->second].mergeAttributes(
-            funcRegionVecs[F][r]);
-        // Referenced from other functions: must be a module-level map,
-        // not a local of the entry procedure.
-        funcRegionVecs[entryF][ce->second].markGlobalScope();
-        continue;
-      }
-      if (classSize[root] < 2)
-        continue; // function-private: stays a procedure-local map
-      auto cs = classShared.find(root);
-      unsigned s;
-      if (cs == classShared.end()) {
-        s = sharedRegions.size();
-        sharedRegions.push_back(funcRegionVecs[F][r]);
-        classShared[root] = s;
-      } else {
-        s = cs->second;
-        sharedRegions[s].mergeAttributes(funcRegionVecs[F][r]);
-      }
-      sharedRegionIndex[{F, r}] = s;
+      mult[{find(kv.second), kv.first.first}]++;
+    std::map<unsigned, unsigned> maxMult;
+    for (auto &m : mult) {
+      auto &cur = maxMult[m.first.first];
+      cur = std::max(cur, m.second);
     }
-    break;
+    for (auto &m : maxMult)
+      if (m.second == 2)
+        classThreaded.insert(m.first);
+  }
+
+  std::map<unsigned, unsigned> classEntry;
+  if (entryF)
+    for (auto &kv : ids)
+      if (kv.first.first == entryF)
+        classEntry[find(kv.second)] = kv.first.second;
+
+  std::map<unsigned, unsigned> classSize;
+  for (auto &kv : ids)
+    classSize[find(kv.second)]++;
+
+  std::map<unsigned, unsigned> classShared;
+  for (auto &kv : ids) {
+    const Function *F = kv.first.first;
+    unsigned r = kv.first.second;
+    unsigned root = find(kv.second);
+    if (classThreaded.count(root)) {
+      // Members bound by globals identity in Phase 3.6 keep their binding
+      // (sea-dsa propagates global symbols along call chains, so a bound
+      // callee implies a bound caller and the mix stays consistent); the
+      // remaining members thread.
+      continue;
+    }
+    if (F == entryF)
+      continue;
+    assert(r < funcRegionVecs[F].size() &&
+           "region indices must be repaired by remapAfterMerge");
+    auto ce = classEntry.find(root);
+    if (ce != classEntry.end()) {
+      globalMemoryMappings[F][r] = ce->second;
+      assert(ce->second < funcRegionVecs[entryF].size() &&
+             "region indices must be repaired by remapAfterMerge");
+      funcRegionVecs[entryF][ce->second].mergeAttributes(funcRegionVecs[F][r]);
+      // Referenced from other functions: must be a module-level map,
+      // not a local of the entry procedure.
+      funcRegionVecs[entryF][ce->second].markGlobalScope();
+      continue;
+    }
+    if (classSize[root] < 2)
+      continue; // function-private: stays a procedure-local map
+    auto cs = classShared.find(root);
+    unsigned s;
+    if (cs == classShared.end()) {
+      s = sharedRegions.size();
+      sharedRegions.push_back(funcRegionVecs[F][r]);
+      classShared[root] = s;
+    } else {
+      s = cs->second;
+      sharedRegions[s].mergeAttributes(funcRegionVecs[F][r]);
+    }
+    sharedRegionIndex[{F, r}] = s;
   }
 }
 
