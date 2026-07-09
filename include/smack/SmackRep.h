@@ -23,6 +23,7 @@ class Decl;
 class ProcDecl;
 class Stmt;
 class Expr;
+class Region;
 class Regions;
 class Attr;
 
@@ -192,9 +193,23 @@ public:
   unsigned getElementSize(const llvm::Value *v);
 
   std::string memReg(unsigned i);
+  // Procedure-local shadow name for a threaded (non-global) region; a
+  // separate namespace from memReg so it cannot collide with the entry
+  // function's module-level maps.
+  std::string memLocalReg(unsigned i);
+  // Module-level map name for cross-function memory that does not reach
+  // the entry function's regions.
+  std::string memSharedReg(unsigned i);
+  std::string memTypeOf(Region &R);
   std::string memType(const llvm::Function *F, unsigned region);
+  // memType/memPath/region for the current function's region index,
+  // resolving global-backed regions to the entry function's map and other
+  // shared memory to module-level shared maps.
+  std::string memType(unsigned region);
   std::string memPath(unsigned region);
   std::string memPath(const llvm::Value *v, const llvm::Function *F);
+  std::pair<const llvm::Function *, unsigned> resolveRegion(unsigned region);
+  Region &region(unsigned region);
 
   std::list<std::pair<std::string, std::string>>
   memoryMaps(const llvm::Function *F);

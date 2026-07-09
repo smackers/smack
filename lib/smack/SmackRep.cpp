@@ -291,17 +291,76 @@ std::string SmackRep::memReg(unsigned idx) {
   return indexedName(Naming::MEMORY, {idx});
 }
 
-std::string SmackRep::memType(const Function *F, unsigned region) {
+std::string SmackRep::memTypeOf(Region &R) {
   std::stringstream s;
-  if (!regions->get(F, region).isSingleton() ||
+  if (!R.isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << Naming::PTR_TYPE << "] ";
-  const Type *T = regions->get(F, region).getType();
+  const Type *T = R.getType();
   s << (T ? type(T) : intType(8));
   return s.str();
 }
 
-std::string SmackRep::memPath(unsigned region) { return memReg(region); }
+std::string SmackRep::memType(const Function *F, unsigned region) {
+  return memTypeOf(regions->get(F, region));
+}
+
+std::string SmackRep::memLocalReg(unsigned idx) {
+  return indexedName(Naming::MEMORY + ".L", {idx});
+}
+
+std::string SmackRep::memSharedReg(unsigned idx) {
+  return indexedName(Naming::MEMORY + ".S", {idx});
+}
+
+// Resolve a region index in the current function's numbering to the owner
+// of its Boogie memory map: global-backed regions of ordinary functions
+// resolve to the entry function's module-level map, and other
+// cross-function memory resolves to a shared module-level map (first ==
+// nullptr, second indexing Regions::getShared). A nullptr first with
+// currentFunction set means shared; callers must special-case a null
+// currentFunction before resolving.
+std::pair<const llvm::Function *, unsigned>
+SmackRep::resolveRegion(unsigned region) {
+  if (currentFunction && currentFunction->hasName() &&
+      !SmackOptions::usesGlobalMemory(currentFunction->getName())) {
+    auto &gm = regions->getGlobalMemoryMapping(currentFunction);
+    auto it = gm.find(region);
+    if (it != gm.end() && entryFunction)
+      return {entryFunction, it->second};
+    int s = regions->getSharedRegionIndex(currentFunction, region);
+    if (s >= 0)
+      return {nullptr, (unsigned)s};
+  }
+  return {currentFunction, region};
+}
+
+Region &SmackRep::region(unsigned r) {
+  if (!currentFunction)
+    return regions->get(currentFunction, r);
+  auto res = resolveRegion(r);
+  if (!res.first)
+    return regions->getShared(res.second);
+  return regions->get(res.first, res.second);
+}
+
+std::string SmackRep::memType(unsigned region) {
+  return memTypeOf(this->region(region));
+}
+
+std::string SmackRep::memPath(unsigned region) {
+  if (!currentFunction)
+    return memReg(region);
+  auto res = resolveRegion(region);
+  if (!res.first)
+    return memSharedReg(res.second); // shared module-level map
+  if (res.first != currentFunction)
+    return memReg(res.second); // the entry function's module-level map
+  if (currentFunction->hasName() &&
+      !SmackOptions::usesGlobalMemory(currentFunction->getName()))
+    return memLocalReg(region); // procedure-local shadow
+  return memReg(region);
+}
 
 std::string SmackRep::memPath(const llvm::Value *v, const Function *F) {
   return memPath(regions->idx(v, F));
@@ -317,8 +376,7 @@ SmackRep::memoryMaps(const Function *F) {
 
 bool SmackRep::isExternal(const llvm::Value *v) {
   return v->getType()->isPointerTy() &&
-         !regions->get(currentFunction, regions->idx(v, currentFunction))
-              .isAllocated();
+         !region(regions->idx(v, currentFunction)).isAllocated();
 }
 
 const Stmt *SmackRep::alloca(llvm::AllocaInst &i) {
@@ -340,7 +398,7 @@ const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
   unsigned r1 = regions->idx(mci.getRawDest(), currentFunction, length);
   unsigned r2 = regions->idx(mci.getRawSource(), currentFunction, length);
 
-  const Type *T = regions->get(currentFunction, r1).getType();
+  const Type *T = region(r1).getType();
   Decl *P = memcpyProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
@@ -349,10 +407,10 @@ const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
 
   return Stmt::call(
       P->getName(),
-      {Expr::id(memReg(r1)), Expr::id(memReg(r2)), expr(dst), expr(src),
+      {Expr::id(memPath(r1)), Expr::id(memPath(r2)), expr(dst), expr(src),
        integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
        Expr::lit(mci.isVolatile())},
-      {memReg(r1)});
+      {memPath(r1)});
 }
 
 const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
@@ -364,7 +422,7 @@ const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
 
   unsigned r = regions->idx(msi.getRawDest(), currentFunction, length);
 
-  const Type *T = regions->get(currentFunction, r).getType();
+  const Type *T = region(r).getType();
   Decl *P = memsetProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
@@ -373,10 +431,10 @@ const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
 
   return Stmt::call(
       P->getName(),
-      {Expr::id(memReg(r)), expr(dst), expr(val),
+      {Expr::id(memPath(r)), expr(dst), expr(val),
        integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
        Expr::lit(msi.isVolatile())},
-      {memReg(r)});
+      {memPath(r)});
 }
 
 const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
@@ -403,7 +461,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       const unsigned bits = this->getSize(T);
       const unsigned bytes = bits / 8;
       const unsigned R = regions->idx(GEP, currentFunction);
-      bool bytewise = regions->get(currentFunction, R).bytewiseAccess();
+      bool bytewise = region(R).bytewiseAccess();
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
       attrs.push_back(Attr::attr(
           "field", {
@@ -459,7 +517,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
     const unsigned bytes = bits / 8;
     const unsigned length = count * bytes;
     const unsigned R = regions->idx(V, currentFunction, length);
-    bool bytewise = regions->get(currentFunction, R).bytewiseAccess();
+    bool bytewise = region(R).bytewiseAccess();
     args.push_back(expr(CI.getArgOperand(1)));
     attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
     attrs.push_back(Attr::attr(
@@ -535,9 +593,9 @@ const Expr *SmackRep::load(const llvm::Value *P) {
   const PointerType *T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   const unsigned R = regions->idx(P, currentFunction);
-  bool bytewise = regions->get(currentFunction, R).bytewiseAccess();
-  bool singleton = regions->get(currentFunction, R).isSingleton();
-  const Type *resultTy = regions->get(currentFunction, R).getType();
+  bool bytewise = region(R).bytewiseAccess();
+  bool singleton = region(R).isSingleton();
+  const Type *resultTy = region(R).getType();
   const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
@@ -562,9 +620,9 @@ const Stmt *SmackRep::store(const Value *P, const Expr *V) {
 
 const Stmt *SmackRep::store(unsigned R, const Type *T, const Expr *P,
                             const Expr *V) {
-  bool bytewise = regions->get(currentFunction, R).bytewiseAccess();
-  bool singleton = regions->get(currentFunction, R).isSingleton();
-  const Type *resultTy = regions->get(currentFunction, R).getType();
+  bool bytewise = region(R).bytewiseAccess();
+  bool singleton = region(R).isSingleton();
+  const Type *resultTy = region(R).getType();
   std::string N =
       Naming::STORE + "." +
       (bytewise ? "bytes."
@@ -1106,10 +1164,10 @@ ProcDecl *SmackRep::procedure(Function *F, CallBase *CI) {
       !F->isDeclaration() && !isContractExpr(F)) {
     auto &info = regions->getFunctionRegionInfo(F);
     for (unsigned r : info.inputRegions)
-      params.push_back({memReg(r) + ".in", memType(F, r)});
+      params.push_back({memLocalReg(r) + ".in", memType(F, r)});
 
     for (unsigned r : info.outputRegions)
-      rets.push_back({memReg(r) + ".out", memType(F, r)});
+      rets.push_back({memLocalReg(r) + ".out", memType(F, r)});
   }
 
   return static_cast<ProcDecl *>(
@@ -1413,9 +1471,8 @@ const Stmt *SmackRep::inverseFPCastAssume(const StoreInst *si) {
   assert(PT && "Expected pointer type.");
   const Type *T = PT->getElementType();
   unsigned R = regions->idx(P, currentFunction);
-  if (!T->isFloatingPointTy() ||
-      !regions->get(currentFunction, R).bytewiseAccess() ||
-      regions->get(currentFunction, R).isSingleton()) {
+  if (!T->isFloatingPointTy() || !region(R).bytewiseAccess() ||
+      region(R).isSingleton()) {
     return nullptr;
   }
   return inverseFPCastAssume(

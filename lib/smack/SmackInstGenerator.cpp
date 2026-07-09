@@ -175,7 +175,7 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
       auto &info = rep->getRegions()->getFunctionRegionInfo(F);
       for (unsigned r : info.inputRegions)
         emit(Stmt::assign(Expr::id(rep->memPath(r)),
-                          Expr::id(rep->memReg(r) + ".in")));
+                          Expr::id(rep->memPath(r) + ".in")));
     }
   }
 }
@@ -258,7 +258,7 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst &ri) {
   if (!SmackOptions::usesGlobalMemory(naming->get(*F))) {
     auto &info = rep->getRegions()->getFunctionRegionInfo(F);
     for (unsigned r : info.outputRegions)
-      emit(Stmt::assign(Expr::id(rep->memReg(r) + ".out"),
+      emit(Stmt::assign(Expr::id(rep->memPath(r) + ".out"),
                         Expr::id(rep->memPath(r))));
   }
 

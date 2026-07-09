@@ -1126,6 +1126,12 @@ void MemDeclGen::generateMemoryMaps(std::stringstream &s) const {
     }
   }
 
+  // Shared maps for cross-function memory outside the entry function's
+  // regions.
+  for (unsigned i = 0; i < prelude.rep.regions->numSharedRegions(); i++)
+    s << "var " << prelude.rep.memSharedReg(i) << ": "
+      << prelude.rep.memTypeOf(prelude.rep.regions->getShared(i)) << ";\n";
+
   s << "\n";
 }
 

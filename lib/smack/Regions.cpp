@@ -60,7 +60,12 @@ void Region::init(const Value *V, unsigned length, const Function *F) {
                        : nullptr;
   this->type = T;
   this->offset = DSA ? (F ? DSA->getOffset(V, *F) : DSA->getOffset(V)) : 0;
-  this->length = length;
+  // A zero-length region (opaque/extern types have storage size 0, and
+  // memset/memcpy may have constant length 0) is an empty interval that
+  // overlaps nothing — not even an identical probe — so every idx() lookup
+  // would create a fresh duplicate, and any fixpoint probing such a region
+  // diverges while the region vector grows unboundedly. Clamp to one byte.
+  this->length = std::max(length, 1u);
 
   singleton = DL && representative && isSingleton(V, length, F);
   allocated = !representative || isAllocated(representative);
@@ -167,6 +172,18 @@ bool Region::merge(Region &R) {
                                    globalScope, type);
 }
 
+void Region::mergeAttributes(const Region &R) {
+  bool collapse = type != R.type;
+  singleton = singleton && R.singleton;
+  allocated = allocated || R.allocated;
+  bytewise = SmackOptions::BitPrecise && (bytewise || R.bytewise || collapse);
+  incomplete = incomplete || R.incomplete;
+  complicated = complicated || R.complicated;
+  collapsed = collapsed || R.collapsed;
+  globalScope = globalScope || R.globalScope;
+  type = (bytewise || collapse) ? NULL : type;
+}
+
 bool Region::overlaps(Region &R) {
   return (incomplete && R.incomplete) || (complicated && R.complicated) ||
          (representative == R.representative &&
@@ -209,6 +226,21 @@ bool Regions::runOnModule(Module &M) {
   if (!SmackOptions::NoMemoryRegionSplitting) {
     Region::init(M, *this);
     DSA = &getAnalysis<DSAWrapper>();
+
+    // The unified memory model binds all shared memory to the first entry
+    // point's region numbering; a second entry point would emit its own
+    // numbering against those maps and silently verify the wrong program.
+    {
+      unsigned entryCount = 0;
+      for (auto &F : M)
+        if (!F.isDeclaration() && F.hasName() &&
+            SmackOptions::isEntryPoint(F.getName()))
+          entryCount++;
+      if (entryCount > 1)
+        report_fatal_error(
+            "context-sensitive memory regions currently support a single "
+            "entry point; use one --entry-points function at a time");
+    }
 
     // Phase 1: Build per-function regions from each function's instructions.
     // Each function gets its own region vector computed from its own CS graph.
@@ -328,10 +360,6 @@ bool Regions::runOnModule(Module &M) {
       }
     }
 
-    // Phase 2.5: Compute global-memory mappings for non-entry usesGlobalMemory
-    // functions (e.g., __SMACK_static_init) to the entry function's indices.
-    computeGlobalMemoryMappings(M);
-
     // Phase 3: Compute call-site mappings (callee region -> caller region).
     // Iterate because link-following may create new regions in callers,
     // which then need mappings computed for their own callers. Convergence
@@ -364,6 +392,21 @@ bool Regions::runOnModule(Module &M) {
              << " call-site region mapping(s) dropped during region merge "
                 "propagation; callers may see stale memory for the affected "
                 "regions (-debug-only=regions for details)\n";
+
+    // Phase 3.6: Map global-backed regions of every function to the entry
+    // function's regions. These are emitted as module-level memory maps
+    // (which Corral's variable-tracking abstraction can reason about
+    // lazily) instead of being threaded through procedure signatures.
+    computeGlobalMemoryMappings(M);
+
+    // Phase 3.7: Unify all remaining cross-function memory into
+    // module-level maps by taking the transitive closure of the call-site
+    // mappings. Threading memory maps through procedure signatures places
+    // them beyond Corral's variable-tracking abstraction and inflates
+    // every inlined instance with map parameters and copies; emitting
+    // shared memory as globals keeps the encoding within the abstraction.
+    // Only function-private regions remain procedure-local.
+    unifySharedRegions(M);
 
     // Phase 4: Transitive closure of region access sets.
     computeFunctionRegions(M);
@@ -749,6 +792,18 @@ void Regions::remapAfterMerge(const Function *F, unsigned keep,
           m.second = remapRegionIndex(m.second, keep, remove);
   }
 
+  // Shift F-local indices in the shared-region table.
+  {
+    std::map<std::pair<const Function *, unsigned>, unsigned> newIndex;
+    for (auto &m : sharedRegionIndex) {
+      auto key = m.first;
+      if (key.first == F)
+        key.second = remapRegionIndex(key.second, keep, remove);
+      newIndex.insert({key, m.second});
+    }
+    sharedRegionIndex = newIndex;
+  }
+
   // Update all call-site mappings that reference F.
   // Mappings are callee_idx -> caller_idx; a self-recursive call site has F
   // on both sides and needs both its keys and its values shifted.
@@ -997,39 +1052,192 @@ void Regions::propagateRegionMerges(Module &M) {
 void Regions::computeGlobalMemoryMappings(Module &M) {
   const Function *entryF = nullptr;
   for (auto &F : M) {
-    if (F.hasName() && SmackOptions::isEntryPoint(F.getName())) {
+    if (!F.isDeclaration() && F.hasName() &&
+        SmackOptions::isEntryPoint(F.getName())) {
       entryF = &F;
       break;
     }
   }
-  if (!entryF)
+  if (!entryF || !DSA->hasGraph(*entryF))
     return;
 
-  for (auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-    if (!F.hasName())
-      continue;
-    if (!SmackOptions::usesGlobalMemory(F.getName()))
-      continue;
-    if (SmackOptions::isEntryPoint(F.getName()))
-      continue;
-
-    std::map<unsigned, unsigned> mapping;
-    for (auto &GV : M.globals()) {
-      if (!GV.getType()->isPointerTy())
+  // Map each function's global-backed regions to the entry function's
+  // region holding the same global. When one function-level region covers
+  // globals that the entry function keeps in separate regions, those entry
+  // regions alias through this function and must be merged;
+  // mergeCalleeRegion repairs all bookkeeping (including these mappings),
+  // and merges strictly decrease the entry region count, so iterating to a
+  // fixpoint terminates.
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (auto &F : M) {
+      if (F.isDeclaration() || &F == entryF)
         continue;
-      if (!DSA->hasGraph(F) || !DSA->hasGraph(*entryF))
+      // usesGlobalMemory functions (e.g., __SMACK_static_init) are emitted
+      // in the entry function's region context and need no mapping.
+      if (F.hasName() && SmackOptions::usesGlobalMemory(F.getName()))
+        continue;
+      if (!DSA->hasGraph(F))
         continue;
       auto &fGraph = DSA->getGraph(F);
       auto &entryGraph = DSA->getGraph(*entryF);
-      if (!fGraph.hasCell(GV) || !entryGraph.hasCell(GV))
-        continue;
-      unsigned fR = idx(&GV, &F);
-      unsigned entryR = idx(&GV, entryF);
-      mapping[fR] = entryR;
+      // Build in place: entry-side merges triggered below remap the values
+      // of every registered mapping, including this one.
+      auto &mapping = globalMemoryMappings[&F];
+      for (auto &GV : M.globals()) {
+        if (!fGraph.hasCell(GV) || !entryGraph.hasCell(GV))
+          continue;
+        unsigned fR = idx(&GV, &F);
+        unsigned entryR = idx(&GV, entryF);
+        auto it = mapping.find(fR);
+        if (it == mapping.end()) {
+          mapping[fR] = entryR;
+          changed = true;
+        } else if (it->second != entryR) {
+          mergeCalleeRegion(entryF, it->second, entryR);
+          changed = true;
+        }
+      }
+      // The entry region's declared map type must cover this function's
+      // view of the memory (relevant under bit-precise encodings), and the
+      // map must be module-level since other functions reference it.
+      auto &entryRegions = funcRegionVecs[entryF];
+      auto &fRegions = funcRegionVecs[&F];
+      for (auto &m : mapping) {
+        assert(m.first < fRegions.size() && m.second < entryRegions.size() &&
+               "region indices must be repaired by remapAfterMerge");
+        entryRegions[m.second].mergeAttributes(fRegions[m.first]);
+        entryRegions[m.second].markGlobalScope();
+      }
     }
-    globalMemoryMappings[&F] = mapping;
+  }
+}
+
+void Regions::unifySharedRegions(Module &M) {
+  const Function *entryF = nullptr;
+  for (auto &F : M) {
+    if (!F.isDeclaration() && F.hasName() &&
+        SmackOptions::isEntryPoint(F.getName())) {
+      entryF = &F;
+      break;
+    }
+  }
+
+  // Union-find over (function, region index) pairs, linked by call-site
+  // mappings and global-memory mappings. Rebuilt from scratch whenever an
+  // entry-side merge shifts indices (mergeCalleeRegion repairs the
+  // mappings the union-find is derived from, so rebuilding is correct).
+  while (true) {
+    std::map<std::pair<const Function *, unsigned>, unsigned> ids;
+    std::vector<unsigned> parent;
+    auto id = [&](const Function *F, unsigned r) {
+      auto key = std::make_pair(F, r);
+      auto it = ids.find(key);
+      if (it != ids.end())
+        return it->second;
+      unsigned n = parent.size();
+      ids[key] = n;
+      parent.push_back(n);
+      return n;
+    };
+    std::function<unsigned(unsigned)> find = [&](unsigned x) {
+      while (parent[x] != x) {
+        parent[x] = parent[parent[x]];
+        x = parent[x];
+      }
+      return x;
+    };
+    auto unite = [&](unsigned a, unsigned b) { parent[find(a)] = find(b); };
+
+    for (auto &cs : callSiteMappings) {
+      auto *CB = const_cast<CallBase *>(cs.first);
+      Function *callee = CB->getCalledFunction();
+      if (!callee)
+        callee = dyn_cast<Function>(
+            CB->getCalledOperand()->stripPointerCastsAndAliases());
+      if (!callee)
+        continue;
+      const Function *caller = CB->getParent()->getParent();
+      for (auto &m : cs.second)
+        unite(id(callee, m.first), id(caller, m.second));
+    }
+    if (entryF)
+      for (auto &gm : globalMemoryMappings)
+        for (auto &m : gm.second)
+          unite(id(gm.first, m.first), id(entryF, m.second));
+
+    // A class containing two entry regions means those regions alias
+    // through some call chain; merge them and rebuild.
+    bool merged = false;
+    if (entryF) {
+      std::map<unsigned, unsigned> entryRep;
+      for (auto &kv : ids) {
+        if (kv.first.first != entryF)
+          continue;
+        unsigned root = find(kv.second);
+        auto it = entryRep.find(root);
+        if (it == entryRep.end())
+          entryRep[root] = kv.first.second;
+        else if (it->second != kv.first.second) {
+          mergeCalleeRegion(entryF, it->second, kv.first.second);
+          merged = true;
+          break;
+        }
+      }
+    }
+    if (merged)
+      continue;
+
+    // Stable: bind every non-entry member of an entry class to the entry
+    // region, and give every entry-less multi-member class a fresh
+    // module-level shared map.
+    std::map<unsigned, unsigned> classEntry;
+    if (entryF)
+      for (auto &kv : ids)
+        if (kv.first.first == entryF)
+          classEntry[find(kv.second)] = kv.first.second;
+
+    std::map<unsigned, unsigned> classSize;
+    for (auto &kv : ids)
+      classSize[find(kv.second)]++;
+
+    std::map<unsigned, unsigned> classShared;
+    for (auto &kv : ids) {
+      const Function *F = kv.first.first;
+      unsigned r = kv.first.second;
+      if (F == entryF)
+        continue;
+      assert(r < funcRegionVecs[F].size() &&
+             "region indices must be repaired by remapAfterMerge");
+      unsigned root = find(kv.second);
+      auto ce = classEntry.find(root);
+      if (ce != classEntry.end()) {
+        globalMemoryMappings[F][r] = ce->second;
+        assert(ce->second < funcRegionVecs[entryF].size() &&
+               "region indices must be repaired by remapAfterMerge");
+        funcRegionVecs[entryF][ce->second].mergeAttributes(
+            funcRegionVecs[F][r]);
+        // Referenced from other functions: must be a module-level map,
+        // not a local of the entry procedure.
+        funcRegionVecs[entryF][ce->second].markGlobalScope();
+        continue;
+      }
+      if (classSize[root] < 2)
+        continue; // function-private: stays a procedure-local map
+      auto cs = classShared.find(root);
+      unsigned s;
+      if (cs == classShared.end()) {
+        s = sharedRegions.size();
+        sharedRegions.push_back(funcRegionVecs[F][r]);
+        classShared[root] = s;
+      } else {
+        s = cs->second;
+        sharedRegions[s].mergeAttributes(funcRegionVecs[F][r]);
+      }
+      sharedRegionIndex[{F, r}] = s;
+    }
+    break;
   }
 }
 
@@ -1094,14 +1302,24 @@ void Regions::computeInterfaceRegions(Module &M) {
     auto &graph = DSA->getGraph(F);
     reachableInterfaceNodes(&F, graph, inputReach, returnReach);
 
+    // Regions mapped to module-level maps (entry or shared) are accessed
+    // directly and are not threaded through the procedure signature.
+    auto gmIt = globalMemoryMappings.find(&F);
+    const std::map<unsigned, unsigned> *gm =
+        gmIt != globalMemoryMappings.end() ? &gmIt->second : nullptr;
+
     auto accessed = getAccessedRegions(&F);
     for (unsigned r : accessed) {
+      if ((gm && gm->count(r)) || sharedRegionIndex.count({&F, r}))
+        continue;
       auto *rep = funcRegionVecs[&F][r].getRepresentative();
       if (rep && inputReach.count(rep))
         info.inputRegions.insert(r);
     }
 
     for (unsigned r : info.modifiedRegions) {
+      if ((gm && gm->count(r)) || sharedRegionIndex.count({&F, r}))
+        continue;
       auto *rep = funcRegionVecs[&F][r].getRepresentative();
       if (rep && (inputReach.count(rep) || returnReach.count(rep)))
         info.outputRegions.insert(r);
@@ -1140,6 +1358,13 @@ Regions::getGlobalMemoryMapping(const Function *F) const {
   if (it != globalMemoryMappings.end())
     return it->second;
   return emptyMapping;
+}
+
+int Regions::getSharedRegionIndex(const Function *F, unsigned r) const {
+  auto it = sharedRegionIndex.find({F, r});
+  if (it != sharedRegionIndex.end())
+    return (int)it->second;
+  return -1;
 }
 
 } // namespace smack

@@ -114,11 +114,18 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
           }
         } else if (!(F.hasName() &&
                      SmackOptions::usesGlobalMemory(F.getName()))) {
-          // Regular (non-global-memory) functions: all regions are local.
+          // Regular functions: local shadows for private regions only;
+          // memory bound to module-level maps (entry or shared) is
+          // accessed directly.
+          auto &gm = getAnalysis<Regions>().getGlobalMemoryMapping(&F);
           auto accessed = getAnalysis<Regions>().getAccessedRegions(&F);
-          for (unsigned r : accessed)
+          for (unsigned r : accessed) {
+            if (gm.count(r) ||
+                getAnalysis<Regions>().getSharedRegionIndex(&F, r) >= 0)
+              continue;
             P->getDeclarations().push_back(
-                Decl::variable(rep.memReg(r), rep.memType(&F, r)));
+                Decl::variable(rep.memPath(r), rep.memType(&F, r)));
+          }
         }
       }
       SDEBUG(errs() << "Finished analyzing function: " << naming.get(F)

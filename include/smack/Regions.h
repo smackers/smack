@@ -61,12 +61,19 @@ public:
 
   // Returns true if the merge changed this region (extent or attributes).
   bool merge(Region &R);
+  // Absorb R's attributes (type, bytewise, flags) without widening this
+  // region's extent, so that this region's declared map type covers
+  // accesses performed through R.
+  void mergeAttributes(const Region &R);
   bool overlaps(Region &R);
 
   bool isSingleton() const { return singleton; };
   bool isAllocated() const { return allocated; };
   bool bytewiseAccess() const { return bytewise; }
   bool isGlobalScope() const { return globalScope; }
+  // Force module-level emission (used when another function's region is
+  // unified with this one, so the map must be visible module-wide).
+  void markGlobalScope() { globalScope = true; }
   const Type *getType() const { return type; }
   const seadsa::Node *getRepresentative() const { return representative; }
   unsigned getOffset() const { return offset; }
@@ -99,10 +106,16 @@ private:
   std::map<const llvm::CallBase *, std::map<unsigned, unsigned>>
       callSiteMappings;
 
-  // For non-entry usesGlobalMemory functions: mapping from their region
-  // indices to the entry function's region indices (matched via globals).
+  // For non-entry functions: mapping from their region indices to the entry
+  // function's region indices (matched via globals and call-site mappings).
   std::map<const llvm::Function *, std::map<unsigned, unsigned>>
       globalMemoryMappings;
+
+  // Module-level maps for memory shared across functions without touching
+  // the entry function's regions (e.g., heap passed between siblings).
+  std::vector<Region> sharedRegions;
+  std::map<std::pair<const llvm::Function *, unsigned>, unsigned>
+      sharedRegionIndex;
 
   static FunctionRegionInfo emptyRegionInfo;
 
@@ -140,6 +153,7 @@ private:
   // and erased from F's region vector. Requires keep < remove.
   void remapAfterMerge(const llvm::Function *F, unsigned keep, unsigned remove);
   void computeGlobalMemoryMappings(llvm::Module &M);
+  void unifySharedRegions(llvm::Module &M);
   void computeFunctionRegions(llvm::Module &M);
   void computeInterfaceRegions(llvm::Module &M);
 
@@ -162,6 +176,12 @@ public:
   getCallSiteMapping(const llvm::CallBase *CI) const;
   const std::map<unsigned, unsigned> &
   getGlobalMemoryMapping(const llvm::Function *F) const;
+  // Shared (module-level) maps for cross-function memory that does not
+  // reach the entry function's regions. Returns -1 if F's region r is not
+  // backed by a shared map.
+  int getSharedRegionIndex(const llvm::Function *F, unsigned r) const;
+  unsigned numSharedRegions() const { return sharedRegions.size(); }
+  Region &getShared(unsigned i) { return sharedRegions[i]; }
 
   void visitLoadInst(LoadInst &);
   void visitStoreInst(StoreInst &);
