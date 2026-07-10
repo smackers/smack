@@ -1275,6 +1275,7 @@ void Regions::unifySharedRegions(Module &M) {
   for (auto &kv : ids)
     classSize[find(kv.second)]++;
 
+  std::set<std::pair<const Function *, unsigned>> threadedPairs;
   std::map<unsigned, unsigned> classShared;
   for (auto &kv : ids) {
     const Function *F = kv.first.first;
@@ -1285,6 +1286,7 @@ void Regions::unifySharedRegions(Module &M) {
       // (sea-dsa propagates global symbols along call chains, so a bound
       // callee implies a bound caller and the mix stays consistent); the
       // remaining members thread.
+      threadedPairs.insert({F, r});
       continue;
     }
     if (F == entryF)
@@ -1302,8 +1304,11 @@ void Regions::unifySharedRegions(Module &M) {
       funcRegionVecs[entryF][ce->second].markGlobalScope();
       continue;
     }
-    if (classSize[root] < 2)
-      continue; // function-private: stays a procedure-local map
+    // Function-private classes get module-level maps as well: Corral's
+    // variable-tracking abstraction applies to globals only, so an
+    // untracked global map is havoced for free while a procedure-local map
+    // is fully precise in every inlined instance (measured 4x slower on
+    // floppy2). Boogie/Corral infer the modifies sets.
     auto cs = classShared.find(root);
     unsigned s;
     if (cs == classShared.end()) {
@@ -1316,6 +1321,37 @@ void Regions::unifySharedRegions(Module &M) {
     }
     sharedRegionIndex[{F, r}] = s;
   }
+
+  // Regions never mentioned by any call-site or global mapping (e.g. in
+  // functions that are never called through a mapped call site) get
+  // module-level maps of their own, for the same Corral-abstraction
+  // reason as above.
+  for (auto &fr : funcRegions) {
+    const Function *F = fr.first;
+    if (F == entryF)
+      continue;
+    if (F->hasName() && SmackOptions::usesGlobalMemory(F->getName()))
+      continue;
+    for (unsigned r : getAccessedRegions(F)) {
+      if (r >= funcRegionVecs[F].size())
+        continue;
+      if (threadedPairs.count({F, r}) || sharedRegionIndex.count({F, r}))
+        continue;
+      auto gm = globalMemoryMappings.find(F);
+      if (gm != globalMemoryMappings.end() && gm->second.count(r))
+        continue;
+      unsigned s = sharedRegions.size();
+      sharedRegions.push_back(funcRegionVecs[F][r]);
+      sharedRegionIndex[{F, r}] = s;
+    }
+  }
+
+  // The entry function's own maps are all module-level too: an untracked
+  // global costs Corral nothing, while a procedure-local map is always
+  // precise.
+  if (entryF)
+    for (auto &R : funcRegionVecs[entryF])
+      R.markGlobalScope();
 }
 
 void Regions::computeFunctionRegions(Module &M) {
