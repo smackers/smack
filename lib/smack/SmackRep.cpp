@@ -376,7 +376,7 @@ SmackRep::memoryMaps(const Function *F) {
 
 bool SmackRep::isExternal(const llvm::Value *v) {
   return v->getType()->isPointerTy() &&
-         !region(regions->idx(v, currentFunction)).isAllocated();
+         !regions->isAllocatedValue(v, currentFunction);
 }
 
 const Stmt *SmackRep::alloca(llvm::AllocaInst &i) {

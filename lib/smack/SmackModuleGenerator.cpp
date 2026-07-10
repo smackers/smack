@@ -66,10 +66,15 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
     // match the global declarations (which use entry function's indices).
     if (rep.entryFunction && F.hasName() &&
         SmackOptions::usesGlobalMemory(F.getName()) &&
-        !SmackOptions::isEntryPoint(F.getName()))
+        !SmackOptions::isEntryPoint(F.getName())) {
       rep.currentFunction = rep.entryFunction;
-    else
+      // Region probes for this body's values must be translated from its
+      // own DSA graph into the entry function's graph (field-precise).
+      getAnalysis<Regions>().setTranslationSource(&F);
+    } else {
       rep.currentFunction = &F;
+      getAnalysis<Regions>().setTranslationSource(nullptr);
+    }
 
     SDEBUG(errs() << "Analyzing function: " << naming.get(F) << "\n");
 

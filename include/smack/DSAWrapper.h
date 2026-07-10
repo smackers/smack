@@ -7,12 +7,15 @@
 #ifndef DSAWRAPPER_H
 #define DSAWRAPPER_H
 
+#include <map>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "seadsa/DsaAnalysis.hh"
 #include "seadsa/Global.hh"
 #include "seadsa/Graph.hh"
+#include "seadsa/Mapper.hh"
 
 namespace smack {
 
@@ -56,6 +59,15 @@ public:
   bool isTypeSafe(const llvm::Value *v);
   bool isTypeSafe(const llvm::Value *v, const llvm::Function &F);
   unsigned getNumGlobals(const seadsa::Node *n);
+
+  // Simulation mappers between graphs, seeded on their shared globals; used
+  // to translate cells of one function's values into another function's
+  // graph (e.g., __SMACK_static_init expressions into the entry graph).
+  std::map<std::pair<const seadsa::Graph *, const seadsa::Graph *>,
+           std::unique_ptr<seadsa::SimulationMapper>>
+      globalMappers;
+  seadsa::SimulationMapper &globalMapper(seadsa::Graph &src,
+                                         seadsa::Graph &dst);
 
   // Per-function graph access for context-sensitive analysis.
   seadsa::Graph &getGraph(const llvm::Function &F);

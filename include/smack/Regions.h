@@ -122,6 +122,20 @@ private:
   // The function currently being visited (set during visit phase).
   const llvm::Function *currentFunction = nullptr;
 
+  // First defined entry point; the region context for usesGlobalMemory
+  // functions (__SMACK_static_init, __SMACK_init_func*), whose bodies are
+  // emitted against the entry function's regions.
+  const llvm::Function *entryFunction = nullptr;
+
+  // The vector that F's regions live in: usesGlobalMemory functions share
+  // the entry function's regions.
+  const llvm::Function *regionHome(const llvm::Function *F) const;
+
+  // When set, values probed through idx() belong to this function and their
+  // cells are translated into the target function's graph through shared
+  // globals (offset-precise), instead of being looked up directly.
+  const llvm::Function *translationSource = nullptr;
+
   // DSAWrapper pointer cached during runOnModule.
   DSAWrapper *DSA = nullptr;
 
@@ -140,6 +154,8 @@ private:
 
   // Per-function idx: find or create a region in F's vector.
   unsigned idx(Region &R, const llvm::Function *F);
+  int idxTranslated(const llvm::Value *V, const llvm::Function *F,
+                    unsigned length);
 
   void computeCallSiteMappings(llvm::Module &M);
   void computeOneCallSiteMapping(llvm::CallBase *CI,
@@ -152,6 +168,9 @@ private:
   // merged-region aliases) after F's region `remove` was merged into `keep`
   // and erased from F's region vector. Requires keep < remove.
   void remapAfterMerge(const llvm::Function *F, unsigned keep, unsigned remove);
+  int findRegion(const llvm::Function *F, const seadsa::Node *node,
+                 unsigned offset);
+  bool normalizeOverlaps(const llvm::Function *F);
   void computeGlobalMemoryMappings(llvm::Module &M);
   void unifySharedRegions(llvm::Module &M);
   void computeFunctionRegions(llvm::Module &M);
@@ -169,6 +188,10 @@ public:
   unsigned idx(const llvm::Value *v, const llvm::Function *F, unsigned length);
   Region &get(const llvm::Function *F, unsigned R);
 
+  // Set while translating a usesGlobalMemory function's body against the
+  // entry function's regions (see translationSource).
+  void setTranslationSource(const llvm::Function *F) { translationSource = F; }
+
   const FunctionRegionInfo &
   getFunctionRegionInfo(const llvm::Function *F) const;
   std::set<unsigned> getAccessedRegions(const llvm::Function *F) const;
@@ -180,6 +203,7 @@ public:
   // reach the entry function's regions. Returns -1 if F's region r is not
   // backed by a shared map.
   int getSharedRegionIndex(const llvm::Function *F, unsigned r) const;
+  bool isAllocatedValue(const llvm::Value *v, const llvm::Function *F);
   unsigned numSharedRegions() const { return sharedRegions.size(); }
   Region &getShared(unsigned i) { return sharedRegions[i]; }
 

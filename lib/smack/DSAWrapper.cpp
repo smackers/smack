@@ -190,9 +190,21 @@ unsigned DSAWrapper::getOffset(const Value *v, const Function &F) {
   auto &graph = SD->getGraph(F);
   if (graph.hasCell(*v))
     return graph.getCell(*v).getOffset();
-  // V might be from a different function (e.g., a GEP in __SMACK_static_init
-  // when we're resolving in the entry function's context). Strip to the
-  // underlying object (the global variable) and look that up instead.
+  // Translate through shared globals first (preserves field offsets).
+  auto &src = getGraphForValue(v);
+  if (&src != &graph && src.hasCell(*v)) {
+    seadsa::Cell srcCell = src.getCell(*v);
+    seadsa::Cell c = globalMapper(src, graph).get(*srcCell.getNode());
+    if (!c.isNull()) {
+      auto *n = c.getNode();
+      unsigned long rawOff = (unsigned long)c.getOffset() + srcCell.getOffset();
+      if (n->isOffsetCollapsed())
+        return 0;
+      if (n->isArray() && n->size() > 0)
+        return (unsigned)(rawOff % n->size());
+      return (unsigned)rawOff;
+    }
+  }
   const Value *base = getUnderlyingObject(v);
   if (base != v && graph.hasCell(*base))
     return graph.getCell(*base).getOffset();
@@ -208,6 +220,26 @@ const seadsa::Node *DSAWrapper::getNode(const Value *v) {
   return node;
 }
 
+seadsa::SimulationMapper &DSAWrapper::globalMapper(seadsa::Graph &src,
+                                                   seadsa::Graph &dst) {
+  auto key =
+      std::make_pair((const seadsa::Graph *)&src, (const seadsa::Graph *)&dst);
+  auto it = globalMappers.find(key);
+  if (it != globalMappers.end())
+    return *it->second;
+  auto &sm =
+      *(globalMappers[key] = std::make_unique<seadsa::SimulationMapper>());
+  for (auto &GV : module->globals()) {
+    if (!src.hasCell(GV) || !dst.hasCell(GV))
+      continue;
+    seadsa::Cell from = src.getCell(GV);
+    seadsa::Cell to = dst.getCell(GV);
+    // Best effort: an incompatible pair just stays untranslated.
+    sm.insert(from, to);
+  }
+  return sm;
+}
+
 const seadsa::Node *DSAWrapper::getNode(const Value *v, const Function &F) {
   if (!SD->hasGraph(F))
     return getNode(v);
@@ -218,8 +250,16 @@ const seadsa::Node *DSAWrapper::getNode(const Value *v, const Function &F) {
     return node;
   }
   // V might be from a different function (e.g., a GEP in __SMACK_static_init
-  // when we're resolving in the entry function's context). Strip to the
-  // underlying object (the global variable) and look that up instead.
+  // when we're resolving in the entry function's context). Translate its
+  // cell from its own graph through the globals the two graphs share; this
+  // preserves field offsets, unlike stripping to the underlying object.
+  auto &src = getGraphForValue(v);
+  if (&src != &graph && src.hasCell(*v)) {
+    seadsa::Cell c = globalMapper(src, graph).get(*src.getCell(*v).getNode());
+    if (!c.isNull())
+      return c.getNode();
+  }
+  // Fall back to the underlying object (the global variable) itself.
   const Value *base = getUnderlyingObject(v);
   if (base != v && graph.hasCell(*base)) {
     auto node = graph.getCell(*base).getNode();
