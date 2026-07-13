@@ -322,15 +322,19 @@ std::string SmackRep::memSharedReg(unsigned idx) {
 // currentFunction before resolving.
 std::pair<const llvm::Function *, unsigned>
 SmackRep::resolveRegion(unsigned region) {
+  if (currentFunction) {
+    int s = regions->getSharedRegionIndex(currentFunction, region);
+    if (s >= 0)
+      return {nullptr, (unsigned)s};
+  }
   if (currentFunction && currentFunction->hasName() &&
       !SmackOptions::usesGlobalMemory(currentFunction->getName())) {
     auto &gm = regions->getGlobalMemoryMapping(currentFunction);
     auto it = gm.find(region);
-    if (it != gm.end() && entryFunction)
-      return {entryFunction, it->second};
-    int s = regions->getSharedRegionIndex(currentFunction, region);
-    if (s >= 0)
-      return {nullptr, (unsigned)s};
+    if (it != gm.end() && it->second.size() == 1 && entryFunction)
+      return {entryFunction, *it->second.begin()};
+    if (it != gm.end())
+      report_fatal_error("non-unique global memory mapping was not shared");
   }
   return {currentFunction, region};
 }
@@ -1235,11 +1239,12 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
 
     auto mapRegion = [&](unsigned calleeR) -> unsigned {
       auto it = mapping.find(calleeR);
-      if (it == mapping.end())
+      if (it == mapping.end() || it->second.size() != 1)
         report_fatal_error(
-            "missing SeaDsa call-site memory-region mapping for call to " +
+            "missing or non-unique SeaDsa call-site memory-region mapping "
+            "for call to " +
             f->getName());
-      return it->second;
+      return *it->second.begin();
     };
 
     auto &info = regions->getFunctionRegionInfo(f);
@@ -1390,21 +1395,21 @@ std::string SmackRep::code(llvm::CallInst &ci) {
 
               for (unsigned calleeR : info.inputRegions) {
                 auto it = mapping.find(calleeR);
-                if (it == mapping.end()) {
+                if (it == mapping.end() || it->second.size() != 1) {
                   complete = false;
                   break;
                 }
-                memArgs.push_back(memPath(it->second));
+                memArgs.push_back(memPath(*it->second.begin()));
               }
 
               if (complete) {
                 for (unsigned calleeR : info.outputRegions) {
                   auto it = mapping.find(calleeR);
-                  if (it == mapping.end()) {
+                  if (it == mapping.end() || it->second.size() != 1) {
                     complete = false;
                     break;
                   }
-                  memRets.push_back(memPath(it->second));
+                  memRets.push_back(memPath(*it->second.begin()));
                 }
               }
 

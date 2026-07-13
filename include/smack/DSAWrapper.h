@@ -30,6 +30,8 @@ private:
   // Mapping from the DSNodes associated with globals to the numbers of
   // globals associated with them.
   std::unordered_map<const seadsa::Node *, unsigned> globalRefCount;
+  std::unordered_map<const seadsa::Node *, const llvm::GlobalValue *>
+      uniqueGlobalRefs;
   const llvm::DataLayout *dataLayout;
 
   void collectStaticInits(llvm::Module &M);
@@ -59,15 +61,13 @@ public:
   bool isTypeSafe(const llvm::Value *v);
   bool isTypeSafe(const llvm::Value *v, const llvm::Function &F);
   unsigned getNumGlobals(const seadsa::Node *n);
+  const llvm::GlobalValue *getUniqueGlobal(const seadsa::Node *n) const;
 
-  // Simulation mappers between graphs, seeded on their shared globals; used
-  // to translate cells of one function's values into another function's
-  // graph (e.g., __SMACK_static_init expressions into the entry graph).
-  std::map<std::pair<const seadsa::Graph *, const seadsa::Graph *>,
-           std::unique_ptr<seadsa::SimulationMapper>>
-      globalMappers;
-  seadsa::SimulationMapper &globalMapper(seadsa::Graph &src,
-                                         seadsa::Graph &dst);
+  // Translate one value through the identity of its underlying global.
+  // Using one mapper seeded with every global can become nonfunctional and
+  // silently lose otherwise valid translations.
+  bool translateGlobalCell(const llvm::Value *v, seadsa::Graph &src,
+                           seadsa::Graph &dst, seadsa::Cell &result) const;
 
   // Per-function graph access for context-sensitive analysis.
   seadsa::Graph &getGraph(const llvm::Function &F);

@@ -102,6 +102,7 @@ void DSAWrapper::collectMemOpds(llvm::Module &M) {
 
 void DSAWrapper::countGlobalRefs() {
   globalRefCount.clear();
+  uniqueGlobalRefs.clear();
   std::set<seadsa::Graph *> seenGraphs;
 
   for (auto &F : *module) {
@@ -115,10 +116,13 @@ void DSAWrapper::countGlobalRefs() {
       auto &cellRef = g.second;
       auto *node = cellRef->getNode();
       assert(node && "Global values should have DSNodes.");
-      if (!globalRefCount.count(node))
+      if (!globalRefCount.count(node)) {
         globalRefCount[node] = 1;
-      else
+        uniqueGlobalRefs[node] = dyn_cast<GlobalValue>(g.first);
+      } else {
         globalRefCount[node]++;
+        uniqueGlobalRefs[node] = nullptr;
+      }
     }
   }
 }
@@ -193,21 +197,19 @@ unsigned DSAWrapper::getOffset(const Value *v, const Function &F) {
   // Translate through shared globals first (preserves field offsets).
   auto &src = getGraphForValue(v);
   if (&src != &graph && src.hasCell(*v)) {
-    seadsa::Cell srcCell = src.getCell(*v);
-    seadsa::Cell c = globalMapper(src, graph).get(*srcCell.getNode());
-    if (!c.isNull()) {
+    seadsa::Cell c;
+    if (translateGlobalCell(v, src, graph, c)) {
       auto *n = c.getNode();
-      unsigned long rawOff = (unsigned long)c.getOffset() + srcCell.getOffset();
+      unsigned long rawOff = c.getOffset();
       if (n->isOffsetCollapsed())
         return 0;
       if (n->isArray() && n->size() > 0)
         return (unsigned)(rawOff % n->size());
       return (unsigned)rawOff;
     }
+    report_fatal_error(
+        "cannot translate a global memory cell between SeaDsa graphs");
   }
-  const Value *base = getUnderlyingObject(v);
-  if (base != v && graph.hasCell(*base))
-    return graph.getCell(*base).getOffset();
   return 0;
 }
 
@@ -220,24 +222,24 @@ const seadsa::Node *DSAWrapper::getNode(const Value *v) {
   return node;
 }
 
-seadsa::SimulationMapper &DSAWrapper::globalMapper(seadsa::Graph &src,
-                                                   seadsa::Graph &dst) {
-  auto key =
-      std::make_pair((const seadsa::Graph *)&src, (const seadsa::Graph *)&dst);
-  auto it = globalMappers.find(key);
-  if (it != globalMappers.end())
-    return *it->second;
-  auto &sm =
-      *(globalMappers[key] = std::make_unique<seadsa::SimulationMapper>());
-  for (auto &GV : module->globals()) {
-    if (!src.hasCell(GV) || !dst.hasCell(GV))
-      continue;
-    seadsa::Cell from = src.getCell(GV);
-    seadsa::Cell to = dst.getCell(GV);
-    // Best effort: an incompatible pair just stays untranslated.
-    sm.insert(from, to);
-  }
-  return sm;
+bool DSAWrapper::translateGlobalCell(const Value *v, seadsa::Graph &src,
+                                     seadsa::Graph &dst,
+                                     seadsa::Cell &result) const {
+  if (!src.hasCell(*v))
+    return false;
+
+  const auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(v));
+  if (!GV || !src.hasCell(*GV) || !dst.hasCell(*GV))
+    return false;
+
+  seadsa::Cell from = src.getCell(*GV);
+  seadsa::Cell to = dst.getCell(*GV);
+  seadsa::SimulationMapper mapper;
+  if (!mapper.insert(from, to) || !mapper.isFunction())
+    return false;
+
+  result = mapper.get(src.getCell(*v));
+  return !result.isNull();
 }
 
 const seadsa::Node *DSAWrapper::getNode(const Value *v, const Function &F) {
@@ -255,16 +257,11 @@ const seadsa::Node *DSAWrapper::getNode(const Value *v, const Function &F) {
   // preserves field offsets, unlike stripping to the underlying object.
   auto &src = getGraphForValue(v);
   if (&src != &graph && src.hasCell(*v)) {
-    seadsa::Cell c = globalMapper(src, graph).get(*src.getCell(*v).getNode());
-    if (!c.isNull())
+    seadsa::Cell c;
+    if (translateGlobalCell(v, src, graph, c))
       return c.getNode();
-  }
-  // Fall back to the underlying object (the global variable) itself.
-  const Value *base = getUnderlyingObject(v);
-  if (base != v && graph.hasCell(*base)) {
-    auto node = graph.getCell(*base).getNode();
-    assert(node && "Values should have nodes if they have cells.");
-    return node;
+    report_fatal_error(
+        "cannot translate a global memory cell between SeaDsa graphs");
   }
   return nullptr;
 }
@@ -411,6 +408,11 @@ unsigned DSAWrapper::getNumGlobals(const seadsa::Node *n) {
     return globalRefCount[n];
   else
     return 0;
+}
+
+const GlobalValue *DSAWrapper::getUniqueGlobal(const seadsa::Node *n) const {
+  auto it = uniqueGlobalRefs.find(n);
+  return it == uniqueGlobalRefs.end() ? nullptr : it->second;
 }
 
 } // namespace smack

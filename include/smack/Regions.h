@@ -30,6 +30,7 @@ private:
   unsigned length;
 
   bool singleton;
+  const llvm::GlobalValue *singletonGlobal;
   bool allocated;
   bool bytewise;
   bool incomplete;
@@ -55,7 +56,8 @@ public:
   Region(const seadsa::Node *node, unsigned offset, unsigned length,
          LLVMContext &ctx);
   Region(const seadsa::Node *node, unsigned offset, unsigned length,
-         const llvm::Type *type, bool bytewise, LLVMContext &ctx);
+         const llvm::Type *type, bool bytewise,
+         const llvm::GlobalValue *singletonGlobal, LLVMContext &ctx);
 
   static void init(Module &M, Pass &P);
 
@@ -74,7 +76,14 @@ public:
   // Force module-level emission (used when another function's region is
   // unified with this one, so the map must be visible module-wide).
   void markGlobalScope() { globalScope = true; }
+  void markNonSingleton() {
+    singleton = false;
+    singletonGlobal = nullptr;
+  }
   const Type *getType() const { return type; }
+  const llvm::GlobalValue *getSingletonGlobal() const {
+    return singletonGlobal;
+  }
   const seadsa::Node *getRepresentative() const { return representative; }
   unsigned getOffset() const { return offset; }
   unsigned getLength() const { return length; }
@@ -89,6 +98,12 @@ struct FunctionRegionInfo {
   std::set<unsigned> outputRegions;
 };
 
+// A callee region may correspond to more than one caller region after either
+// graph mapping or region merging. Keep the full relation: selecting one
+// target disconnects the remaining caller state from the callee.
+using RegionRelation = std::map<unsigned, std::set<unsigned>>;
+using CallSiteRegionMapping = RegionRelation;
+
 class Regions : public ModulePass, public InstVisitor<Regions> {
 private:
   // Per-function region vectors (each function has its own local numbering).
@@ -102,14 +117,12 @@ private:
   // Per-function read/write sets (using function-local region indices).
   std::map<const llvm::Function *, FunctionRegionInfo> funcRegions;
 
-  // Call-site mapping: callee region index -> caller region index.
-  std::map<const llvm::CallBase *, std::map<unsigned, unsigned>>
-      callSiteMappings;
+  // Call-site relation: callee region index -> caller region indices.
+  std::map<const llvm::CallBase *, CallSiteRegionMapping> callSiteMappings;
 
   // For non-entry functions: mapping from their region indices to the entry
   // function's region indices (matched via globals and call-site mappings).
-  std::map<const llvm::Function *, std::map<unsigned, unsigned>>
-      globalMemoryMappings;
+  std::map<const llvm::Function *, RegionRelation> globalMemoryMappings;
 
   // Module-level maps for memory shared across functions without touching
   // the entry function's regions (e.g., heap passed between siblings).
@@ -146,11 +159,6 @@ private:
   // Set once Phase 3 has converged: call-site mappings are no longer
   // recomputed, so information lost in later merges cannot be recovered.
   bool mappingsFinal = false;
-
-  // Number of callee->caller associations dropped by key collisions in
-  // remapAfterMerge after Phase 3 convergence (see the warning emitted in
-  // runOnModule).
-  unsigned droppedMappings = 0;
 
   // Per-function idx: find or create a region in F's vector.
   unsigned idx(Region &R, const llvm::Function *F);
@@ -195,10 +203,9 @@ public:
   const FunctionRegionInfo &
   getFunctionRegionInfo(const llvm::Function *F) const;
   std::set<unsigned> getAccessedRegions(const llvm::Function *F) const;
-  const std::map<unsigned, unsigned> &
+  const CallSiteRegionMapping &
   getCallSiteMapping(const llvm::CallBase *CI) const;
-  const std::map<unsigned, unsigned> &
-  getGlobalMemoryMapping(const llvm::Function *F) const;
+  const RegionRelation &getGlobalMemoryMapping(const llvm::Function *F) const;
   // Shared (module-level) maps for cross-function memory that does not
   // reach the entry function's regions. Returns -1 if F's region r is not
   // backed by a shared map.

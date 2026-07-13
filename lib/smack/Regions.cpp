@@ -7,6 +7,7 @@
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/SmackOptions.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -34,11 +35,7 @@ bool Region::isSingleton(const Value *v, unsigned length, const Function *F) {
   return node && !isAllocated(node) && DSA->getNumGlobals(node) == 1 &&
          !node->isArray() &&
          (F ? DSA->isTypeSafe(v, *F) : DSA->isTypeSafe(v)) &&
-         !DSA->isMemOpd(v) &&
-         // Statically initialized globals cannot be singletons because
-         // CodifyStaticInits generates pointer-based stores ($store) for them
-         // in __SMACK_static_init, which requires map-typed $M variables.
-         !DSA->isStaticInitd(node);
+         !DSA->isMemOpd(v) && !DSA->isStaticInitd(node);
 }
 
 bool Region::isAllocated(const seadsa::Node *N) {
@@ -68,6 +65,8 @@ void Region::init(const Value *V, unsigned length, const Function *F) {
   this->length = std::max(length, 1u);
 
   singleton = DL && representative && isSingleton(V, length, F);
+  singletonGlobal = singleton ? DSA->getUniqueGlobal(representative) : nullptr;
+  singleton = singletonGlobal != nullptr;
   allocated = !representative || isAllocated(representative);
   bytewise = DSA && SmackOptions::BitPrecise &&
              (SmackOptions::NoByteAccessInference ||
@@ -113,6 +112,7 @@ Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
   this->offset = offset;
   this->length = length;
   singleton = false;
+  singletonGlobal = nullptr;
   allocated = !representative || isAllocated(representative);
   bytewise = true;
   incomplete = !representative || representative->isIncomplete();
@@ -122,13 +122,21 @@ Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
 }
 
 Region::Region(const seadsa::Node *node, unsigned offset, unsigned length,
-               const Type *type, bool bytewise, LLVMContext &ctx) {
+               const Type *type, bool bytewise,
+               const GlobalValue *singletonGlobal, LLVMContext &ctx) {
   context = &ctx;
   representative = node;
   this->type = type;
   this->offset = offset;
   this->length = length;
-  singleton = false;
+  const GlobalValue *targetGlobal =
+      representative ? DSA->getUniqueGlobal(representative) : nullptr;
+  this->singletonGlobal = singletonGlobal && singletonGlobal == targetGlobal &&
+                                  !isAllocated(representative) &&
+                                  !representative->isArray()
+                              ? singletonGlobal
+                              : nullptr;
+  singleton = this->singletonGlobal != nullptr;
   allocated = !representative || isAllocated(representative);
   this->bytewise = bytewise;
   incomplete = !representative || representative->isIncomplete();
@@ -150,6 +158,11 @@ bool Region::merge(Region &R) {
       std::make_tuple(offset, length, singleton, allocated, bytewise,
                       incomplete, complicated, collapsed, globalScope, type);
   bool collapse = type != R.type;
+  const GlobalValue *mergedSingleton =
+      singleton && R.singleton && singletonGlobal == R.singletonGlobal &&
+              offset == R.offset
+          ? singletonGlobal
+          : nullptr;
   unsigned long low = std::min(offset, R.offset);
   unsigned long high = std::max((unsigned long)offset + length,
                                 (unsigned long)R.offset + R.length);
@@ -159,7 +172,8 @@ bool Region::merge(Region &R) {
   // which lets the Phase 3 fixpoint oscillate (merge, then re-create).
   length = (unsigned)std::min(
       high - low, (unsigned long)std::numeric_limits<unsigned>::max() - low);
-  singleton = singleton && R.singleton;
+  singletonGlobal = mergedSingleton;
+  singleton = singletonGlobal != nullptr;
   allocated = allocated || R.allocated;
   bytewise = SmackOptions::BitPrecise && (bytewise || R.bytewise || collapse);
   incomplete = incomplete || R.incomplete;
@@ -179,7 +193,11 @@ void Region::mergeAttributes(const Region &R) {
   // Region::overlaps; absorbing them from another node's region would arm
   // spurious cross-node matches after the normalization pass has run.
   bool collapse = type != R.type;
-  singleton = singleton && R.singleton;
+  singletonGlobal =
+      singleton && R.singleton && singletonGlobal == R.singletonGlobal
+          ? singletonGlobal
+          : nullptr;
+  singleton = singletonGlobal != nullptr;
   allocated = allocated || R.allocated;
   bytewise = SmackOptions::BitPrecise && (bytewise || R.bytewise || collapse);
   globalScope = globalScope || R.globalScope;
@@ -374,10 +392,8 @@ bool Regions::runOnModule(Module &M) {
         break;
     }
     if (iter == maxIters)
-      errs() << "SMACK warning: call-site region mappings did not stabilize "
-                "after "
-             << maxIters
-             << " passes; some memory-region mappings may be incomplete\n";
+      report_fatal_error(
+          "call-site region mappings did not stabilize after 100 passes");
     mappingsFinal = true;
 
     dumpPhase("3-mappings", funcRegionVecs);
@@ -386,11 +402,6 @@ bool Regions::runOnModule(Module &M) {
     // caller region), the callee must merge them to preserve the invariant
     // that regions never alias.
     propagateRegionMerges(M);
-    if (droppedMappings)
-      errs() << "SMACK warning: " << droppedMappings
-             << " call-site region mapping(s) dropped during region merge "
-                "propagation; callers may see stale memory for the affected "
-                "regions (-debug-only=regions for details)\n";
 
     dumpPhase("3.5-merges", funcRegionVecs);
     // Phase 3.6: Map global-backed regions of every function to the entry
@@ -400,13 +411,13 @@ bool Regions::runOnModule(Module &M) {
     computeGlobalMemoryMappings(M);
 
     dumpPhase("3.6-globals", funcRegionVecs);
-    // Phase 3.7: Unify all remaining cross-function memory into
-    // module-level maps by taking the transitive closure of the call-site
-    // mappings. Threading memory maps through procedure signatures places
-    // them beyond Corral's variable-tracking abstraction and inflates
-    // every inlined instance with map parameters and copies; emitting
-    // shared memory as globals keeps the encoding within the abstraction.
-    // Only function-private regions remain procedure-local.
+    // Phase 3.7: Bind cross-function equivalence classes to entry-owned or
+    // shared module-level maps, except for the small classes retained by the
+    // branch's existing procedure-interface threading policy.
+    // Threading memory maps through procedure signatures places them beyond
+    // Corral's variable-tracking abstraction and inflates every inlined
+    // instance with map parameters and copies; emitting shared memory as
+    // globals keeps the encoding within the abstraction.
     unifySharedRegions(M);
 
     // Phase 3.8: Final normalization. Merges in Phases 3.5-3.7 can widen
@@ -420,9 +431,7 @@ bool Regions::runOnModule(Module &M) {
     // Phase 4: Transitive closure of region access sets.
     computeFunctionRegions(M);
 
-    // Phase 5: Procedure memory interfaces. Private regions stay local; only
-    // regions reachable from formals/globals/returns are threaded through
-    // calls.
+    // Phase 5: Procedure memory interfaces for the retained threaded classes.
     computeInterfaceRegions(M);
   }
 
@@ -467,16 +476,27 @@ int Regions::idxTranslated(const Value *V, const Function *F, unsigned length) {
   auto sc = srcG.getCell(*V);
   if (!sc.getNode())
     return -1;
-  auto tc = DSA->globalMapper(srcG, dstG).get(*sc.getNode());
-  if (tc.isNull())
-    return -1;
-  const Type *T = V->getType()->isPointerTy()
-                      ? V->getType()->getPointerElementType()
-                      : nullptr;
-  Region R(tc.getNode(),
-           composeOffset(tc.getNode(),
-                         (unsigned long)tc.getOffset() + sc.getOffset()),
-           length, T, SmackOptions::BitPrecise, V->getContext());
+  seadsa::Cell tc;
+  if (!DSA->translateGlobalCell(V, srcG, dstG, tc)) {
+    // If field-sensitive translation is unavailable, use the entire target
+    // global node. This loses precision but makes every access through that
+    // node share one backing region instead of silently using offset zero.
+    const auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(V));
+    if (!GV || !dstG.hasCell(*GV))
+      report_fatal_error(
+          "cannot conservatively translate a global SeaDsa cell");
+    auto dst = dstG.getCell(*GV);
+    auto *node = dst.getNode();
+    if (!node)
+      report_fatal_error("global SeaDsa cell has no target node");
+    Region R(node, 0, std::max(node->size(), 1u), nullptr,
+             SmackOptions::BitPrecise, nullptr, V->getContext());
+    return (int)idx(R, F);
+  }
+  Region source(V, translationSource, length);
+  Region R(tc.getNode(), composeOffset(tc.getNode(), tc.getOffset()), length,
+           source.getType(), source.bytewiseAccess(),
+           source.getSingletonGlobal(), V->getContext());
   return (int)idx(R, F);
 }
 
@@ -783,6 +803,9 @@ void Regions::computeOneCallSiteMapping(CallBase *CI, const Function *caller,
   if (!mapped)
     report_fatal_error(
         "SeaDsa failed to map callee regions to caller regions.");
+  if (!simMap.isFunction())
+    report_fatal_error(
+        "SeaDsa produced a nonfunctional callee-to-caller memory mapping");
 
   // Iterate by index over the live callee region vector: idx() below can
   // merge regions (in the caller, or in the callee itself for recursive
@@ -805,8 +828,9 @@ void Regions::computeOneCallSiteMapping(CallBase *CI, const Function *caller,
     Region callerRegion(callerCell.getNode(), callerCell.getOffset(),
                         std::max(calleeRegion.getLength(), 1u),
                         calleeRegion.getType(), calleeRegion.bytewiseAccess(),
+                        calleeRegion.getSingletonGlobal(),
                         caller->getContext());
-    mapping[i] = idx(callerRegion, caller);
+    mapping[i].insert(idx(callerRegion, caller));
   }
 }
 
@@ -858,15 +882,21 @@ void Regions::remapAfterMerge(const Function *F, unsigned keep,
   {
     auto it = globalMemoryMappings.find(F);
     if (it != globalMemoryMappings.end()) {
-      std::map<unsigned, unsigned> newMapping;
-      for (auto &m : it->second)
-        newMapping[remapRegionIndex(m.first, keep, remove)] = m.second;
+      RegionRelation newMapping;
+      for (auto &m : it->second) {
+        unsigned key = remapRegionIndex(m.first, keep, remove);
+        newMapping[key].insert(m.second.begin(), m.second.end());
+      }
       it->second = newMapping;
     }
     if (F->hasName() && SmackOptions::isEntryPoint(F->getName()))
       for (auto &gm : globalMemoryMappings)
-        for (auto &m : gm.second)
-          m.second = remapRegionIndex(m.second, keep, remove);
+        for (auto &m : gm.second) {
+          std::set<unsigned> values;
+          for (unsigned value : m.second)
+            values.insert(remapRegionIndex(value, keep, remove));
+          m.second = values;
+        }
   }
 
   // Shift F-local indices in the shared-region table.
@@ -898,29 +928,17 @@ void Regions::remapAfterMerge(const Function *F, unsigned keep,
     if (csCallee != F && csCaller != F)
       continue;
 
-    // When the `remove` key collapses into `keep`, prefer the existing
-    // `keep` entry (typically from parameter mapping, which is
-    // call-site-specific and more precise than globals).
-    std::map<unsigned, unsigned> newMapping;
+    // When the `remove` key collapses into `keep`, union every caller target
+    // so no association is lost to the key collision.
+    CallSiteRegionMapping newMapping;
     for (auto &m : mapping) {
       unsigned k = m.first;
-      unsigned v = m.second;
       if (csCallee == F)
         k = remapRegionIndex(k, keep, remove);
-      if (csCaller == F)
-        v = remapRegionIndex(v, keep, remove);
-      auto ins = newMapping.insert({k, v});
-      // Dropping a colliding entry whose caller region differs loses the
-      // association between the merged callee region and that caller
-      // region. During Phase 3 the next pass recomputes the mapping; after
-      // Phase 3 (propagateRegionMerges) it is not recomputed, so count the
-      // loss and report it once instead of failing silently.
-      if (!ins.second && ins.first->second != v && mappingsFinal) {
-        droppedMappings++;
-        SDEBUG(errs() << "[regions] dropped call-site mapping " << remove
-                      << " -> " << v << " (kept " << keep << " -> "
-                      << ins.first->second << ") merging regions of "
-                      << F->getName() << "\n");
+      for (unsigned v : m.second) {
+        if (csCaller == F)
+          v = remapRegionIndex(v, keep, remove);
+        newMapping[k].insert(v);
       }
     }
     mapping = newMapping;
@@ -1030,7 +1048,8 @@ void Regions::propagateRegionMerges(Module &M) {
             // region.
             std::map<unsigned, std::vector<unsigned>> callerToCallees;
             for (auto &m : mapping)
-              callerToCallees[m.second].push_back(m.first);
+              for (unsigned callerR : m.second)
+                callerToCallees[callerR].push_back(m.first);
 
             for (auto &entry : callerToCallees) {
               auto &calleeIndices = entry.second;
@@ -1127,63 +1146,48 @@ void Regions::computeGlobalMemoryMappings(Module &M) {
   if (!entryF || !DSA->hasGraph(*entryF))
     return;
 
-  // Map each function's global-backed regions to the entry function's
-  // region holding the same global. When one function-level region covers
-  // globals that the entry function keeps in separate regions, those entry
-  // regions alias through this function and must be merged;
-  // mergeCalleeRegion repairs all bookkeeping (including these mappings),
-  // and merges strictly decrease the entry region count, so iterating to a
-  // fixpoint terminates.
-  bool changed = true;
-  while (changed) {
-    changed = false;
-    for (auto &F : M) {
-      if (F.isDeclaration() || &F == entryF)
+  // Map each function's global-backed regions to every entry-function region
+  // holding the same global. The relation is unified into one backing map in
+  // unifySharedRegions; selecting or physically merging one entry region here
+  // would either lose state or unnecessarily collapse field intervals.
+  for (auto &F : M) {
+    if (F.isDeclaration() || &F == entryF)
+      continue;
+    // usesGlobalMemory functions (e.g., __SMACK_static_init) are emitted
+    // in the entry function's region context and need no mapping.
+    if (F.hasName() && SmackOptions::usesGlobalMemory(F.getName()))
+      continue;
+    if (!DSA->hasGraph(F))
+      continue;
+    auto &fGraph = DSA->getGraph(F);
+    auto &entryGraph = DSA->getGraph(*entryF);
+    // Lookups must not create regions: probing a global with its whole extent
+    // would merge away the per-field regions created from actual accesses.
+    auto &mapping = globalMemoryMappings[&F];
+    for (auto &GV : M.globals()) {
+      if (!fGraph.hasCell(GV) || !entryGraph.hasCell(GV))
         continue;
-      // usesGlobalMemory functions (e.g., __SMACK_static_init) are emitted
-      // in the entry function's region context and need no mapping.
-      if (F.hasName() && SmackOptions::usesGlobalMemory(F.getName()))
+      auto fCell = fGraph.getCell(GV);
+      auto entryCell = entryGraph.getCell(GV);
+      int fR = findRegion(&F, fCell.getNode(), fCell.getOffset());
+      int entryR =
+          findRegion(entryF, entryCell.getNode(), entryCell.getOffset());
+      if (fR < 0 || entryR < 0)
         continue;
-      if (!DSA->hasGraph(F))
-        continue;
-      auto &fGraph = DSA->getGraph(F);
-      auto &entryGraph = DSA->getGraph(*entryF);
-      // Build in place: entry-side merges triggered below remap the values
-      // of every registered mapping, including this one. Lookups must not
-      // create regions: probing a global with its whole extent would merge
-      // away the per-field regions created from the actual accesses.
-      auto &mapping = globalMemoryMappings[&F];
-      for (auto &GV : M.globals()) {
-        if (!fGraph.hasCell(GV) || !entryGraph.hasCell(GV))
-          continue;
-        auto fCell = fGraph.getCell(GV);
-        auto entryCell = entryGraph.getCell(GV);
-        int fR = findRegion(&F, fCell.getNode(), fCell.getOffset());
-        int entryR =
-            findRegion(entryF, entryCell.getNode(), entryCell.getOffset());
-        if (fR < 0 || entryR < 0)
-          continue;
-        auto it = mapping.find((unsigned)fR);
-        if (it == mapping.end()) {
-          mapping[(unsigned)fR] = (unsigned)entryR;
-          changed = true;
-        } else if (it->second != (unsigned)entryR) {
-          mergeCalleeRegion(entryF, it->second, (unsigned)entryR);
-          changed = true;
-        }
-      }
-      // The entry region's declared map type must cover this function's
-      // view of the memory (relevant under bit-precise encodings), and the
-      // map must be module-level since other functions reference it.
-      auto &entryRegions = funcRegionVecs[entryF];
-      auto &fRegions = funcRegionVecs[&F];
-      for (auto &m : mapping) {
-        assert(m.first < fRegions.size() && m.second < entryRegions.size() &&
-               "region indices must be repaired by remapAfterMerge");
-        entryRegions[m.second].mergeAttributes(fRegions[m.first]);
-        entryRegions[m.second].markGlobalScope();
-      }
+      mapping[(unsigned)fR].insert((unsigned)entryR);
     }
+    // The entry region's declared map type must cover this function's
+    // view of the memory (relevant under bit-precise encodings), and the
+    // map must be module-level since other functions reference it.
+    auto &entryRegions = funcRegionVecs[entryF];
+    auto &fRegions = funcRegionVecs[&F];
+    for (auto &m : mapping)
+      for (unsigned entryR : m.second) {
+        assert(m.first < fRegions.size() && entryR < entryRegions.size() &&
+               "region indices must be repaired by remapAfterMerge");
+        entryRegions[entryR].mergeAttributes(fRegions[m.first]);
+        entryRegions[entryR].markGlobalScope();
+      }
   }
 }
 
@@ -1220,6 +1224,7 @@ void Regions::unifySharedRegions(Module &M) {
   };
   auto unite = [&](unsigned a, unsigned b) { parent[find(a)] = find(b); };
 
+  std::vector<unsigned> forceSharedIds;
   for (auto &cs : callSiteMappings) {
     auto *CB = const_cast<CallBase *>(cs.first);
     Function *callee = CB->getCalledFunction();
@@ -1229,51 +1234,69 @@ void Regions::unifySharedRegions(Module &M) {
     if (!callee)
       continue;
     const Function *caller = CB->getParent()->getParent();
-    for (auto &m : cs.second)
-      unite(id(callee, m.first), id(caller, m.second));
+    for (auto &m : cs.second) {
+      unsigned calleeId = id(callee, m.first);
+      if (m.second.size() > 1)
+        forceSharedIds.push_back(calleeId);
+      for (unsigned callerR : m.second)
+        unite(calleeId, id(caller, callerR));
+    }
   }
   if (entryF)
     for (auto &gm : globalMemoryMappings)
-      for (auto &m : gm.second)
-        unite(id(gm.first, m.first), id(entryF, m.second));
+      for (auto &m : gm.second) {
+        unsigned localId = id(gm.first, m.first);
+        if (m.second.size() > 1)
+          forceSharedIds.push_back(localId);
+        for (unsigned entryR : m.second)
+          unite(localId, id(entryF, entryR));
+      }
 
-  // A small class containing exactly two distinct regions of some function
-  // keeps the per-call-site threading instead of binding to one
-  // module-level map: two regions of one function are distinct objects in
-  // that context (e.g. two arrays passed to the same callee), and folding
-  // them into one map loses separation that both the threading scheme and
-  // the context-insensitive baseline preserve (measured 4x slower on
-  // test/c/data/two_arrays1.c). Large classes or classes where some
-  // function has three or more regions are collapse artifacts spanning
-  // dozens of regions on driver benchmarks; threading those costs far more
-  // than the separation is worth, so they still merge.
+  std::set<unsigned> forceShared;
+  for (unsigned i : forceSharedIds)
+    forceShared.insert(find(i));
+
+  // Preserve the branch's existing policy for small classes with exactly
+  // two regions in one function: keep threading those maps through calls.
+  // A relation with more than one target cannot be threaded through a single
+  // call argument and is therefore forced onto one shared backing map.
   std::set<unsigned> classThreaded;
   {
-    std::map<unsigned, unsigned> classSizePre;
+    std::map<unsigned, unsigned> classSize;
     for (auto &kv : ids)
-      classSizePre[find(kv.second)]++;
-    std::map<std::pair<unsigned, const Function *>, unsigned> mult;
+      classSize[find(kv.second)]++;
+    std::map<std::pair<unsigned, const Function *>, unsigned> multiplicity;
     for (auto &kv : ids)
-      mult[{find(kv.second), kv.first.first}]++;
-    std::map<unsigned, unsigned> maxMult;
-    for (auto &m : mult) {
-      auto &cur = maxMult[m.first.first];
-      cur = std::max(cur, m.second);
+      multiplicity[{find(kv.second), kv.first.first}]++;
+    std::map<unsigned, unsigned> maxMultiplicity;
+    for (auto &m : multiplicity) {
+      auto &current = maxMultiplicity[m.first.first];
+      current = std::max(current, m.second);
     }
-    for (auto &m : maxMult)
-      if (m.second == 2 && classSizePre.at(m.first) <= 8)
+    for (auto &m : maxMultiplicity)
+      if (m.second == 2 && classSize.at(m.first) <= 8 &&
+          !forceShared.count(m.first))
         classThreaded.insert(m.first);
   }
+
+  // Non-threaded classes with several regions from one function cannot choose
+  // one of those regions as their owner without disconnecting the others.
+  std::set<unsigned> classNeedsShared;
+  std::map<std::pair<unsigned, const Function *>, unsigned> multiplicity;
+  for (auto &kv : ids)
+    multiplicity[{find(kv.second), kv.first.first}]++;
+  for (auto &m : multiplicity)
+    if (m.second > 1 && !classThreaded.count(m.first.first))
+      classNeedsShared.insert(m.first.first);
+  classNeedsShared.insert(forceShared.begin(), forceShared.end());
 
   std::map<unsigned, unsigned> classEntry;
   if (entryF)
     for (auto &kv : ids)
-      if (kv.first.first == entryF)
+      if (kv.first.first == entryF &&
+          !classNeedsShared.count(find(kv.second)) &&
+          !classThreaded.count(find(kv.second)))
         classEntry[find(kv.second)] = kv.first.second;
-
-  std::map<unsigned, unsigned> classSize;
-  for (auto &kv : ids)
-    classSize[find(kv.second)]++;
 
   std::set<std::pair<const Function *, unsigned>> threadedPairs;
   std::map<unsigned, unsigned> classShared;
@@ -1282,20 +1305,16 @@ void Regions::unifySharedRegions(Module &M) {
     unsigned r = kv.first.second;
     unsigned root = find(kv.second);
     if (classThreaded.count(root)) {
-      // Members bound by globals identity in Phase 3.6 keep their binding
-      // (sea-dsa propagates global symbols along call chains, so a bound
-      // callee implies a bound caller and the mix stays consistent); the
-      // remaining members thread.
       threadedPairs.insert({F, r});
       continue;
     }
-    if (F == entryF)
+    if (F == entryF && !classNeedsShared.count(root))
       continue;
     assert(r < funcRegionVecs[F].size() &&
            "region indices must be repaired by remapAfterMerge");
     auto ce = classEntry.find(root);
     if (ce != classEntry.end()) {
-      globalMemoryMappings[F][r] = ce->second;
+      globalMemoryMappings[F][r] = {ce->second};
       assert(ce->second < funcRegionVecs[entryF].size() &&
              "region indices must be repaired by remapAfterMerge");
       funcRegionVecs[entryF][ce->second].mergeAttributes(funcRegionVecs[F][r]);
@@ -1314,6 +1333,8 @@ void Regions::unifySharedRegions(Module &M) {
     if (cs == classShared.end()) {
       s = sharedRegions.size();
       sharedRegions.push_back(funcRegionVecs[F][r]);
+      if (classNeedsShared.count(root))
+        sharedRegions.back().markNonSingleton();
       classShared[root] = s;
     } else {
       s = cs->second;
@@ -1322,10 +1343,8 @@ void Regions::unifySharedRegions(Module &M) {
     sharedRegionIndex[{F, r}] = s;
   }
 
-  // Regions never mentioned by any call-site or global mapping (e.g. in
-  // functions that are never called through a mapped call site) get
-  // module-level maps of their own, for the same Corral-abstraction
-  // reason as above.
+  // Regions never mentioned by any call-site or global mapping get
+  // module-level maps of their own, preserving the branch's existing policy.
   for (auto &fr : funcRegions) {
     const Function *F = fr.first;
     if (F == entryF)
@@ -1346,9 +1365,8 @@ void Regions::unifySharedRegions(Module &M) {
     }
   }
 
-  // The entry function's own maps are all module-level too: an untracked
-  // global costs Corral nothing, while a procedure-local map is always
-  // precise.
+  // Preserve the branch's declaration policy: all entry regions are
+  // module-level maps, whether or not the access closure reaches them.
   if (entryF)
     for (auto &R : funcRegionVecs[entryF])
       R.markGlobalScope();
@@ -1383,14 +1401,16 @@ void Regions::computeFunctionRegions(Module &M) {
 
           for (unsigned calleeR : calleeInfo.readRegions) {
             if (mapping.count(calleeR)) {
-              if (info.readRegions.insert(mapping.at(calleeR)).second)
-                changed = true;
+              for (unsigned callerR : mapping.at(calleeR))
+                if (info.readRegions.insert(callerR).second)
+                  changed = true;
             }
           }
           for (unsigned calleeR : calleeInfo.modifiedRegions) {
             if (mapping.count(calleeR)) {
-              if (info.modifiedRegions.insert(mapping.at(calleeR)).second)
-                changed = true;
+              for (unsigned callerR : mapping.at(calleeR))
+                if (info.modifiedRegions.insert(callerR).second)
+                  changed = true;
             }
           }
         }
@@ -1418,7 +1438,7 @@ void Regions::computeInterfaceRegions(Module &M) {
     // Regions mapped to module-level maps (entry or shared) are accessed
     // directly and are not threaded through the procedure signature.
     auto gmIt = globalMemoryMappings.find(&F);
-    const std::map<unsigned, unsigned> *gm =
+    const RegionRelation *gm =
         gmIt != globalMemoryMappings.end() ? &gmIt->second : nullptr;
 
     auto accessed = getAccessedRegions(&F);
@@ -1455,18 +1475,17 @@ std::set<unsigned> Regions::getAccessedRegions(const Function *F) const {
   return result;
 }
 
-const std::map<unsigned, unsigned> &
+const CallSiteRegionMapping &
 Regions::getCallSiteMapping(const CallBase *CB) const {
-  static const std::map<unsigned, unsigned> emptyMapping;
+  static const CallSiteRegionMapping emptyMapping;
   auto it = callSiteMappings.find(CB);
   if (it != callSiteMappings.end())
     return it->second;
   return emptyMapping;
 }
 
-const std::map<unsigned, unsigned> &
-Regions::getGlobalMemoryMapping(const Function *F) const {
-  static const std::map<unsigned, unsigned> emptyMapping;
+const RegionRelation &Regions::getGlobalMemoryMapping(const Function *F) const {
+  static const RegionRelation emptyMapping;
   auto it = globalMemoryMappings.find(F);
   if (it != globalMemoryMappings.end())
     return it->second;
