@@ -201,7 +201,8 @@ public:
   const Stmt *inverseFPCastAssume(const llvm::StoreInst *si);
 
   // used in SmackModuleGenerator
-  std::list<Decl *> globalDecl(const llvm::GlobalValue *g);
+  std::list<Decl *> globalDecl(const llvm::GlobalValue *g,
+                               bool allocate = true);
   void addInitFunc(const llvm::Function *f);
   Decl *getInitFuncs();
   const Expr *declareIsExternal(const Expr *e);
