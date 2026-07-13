@@ -64,6 +64,11 @@ const llvm::cl::opt<bool> SmackOptions::NoMemoryRegionSplitting(
     "no-memory-splitting",
     llvm::cl::desc("Disable splitting memory into regions."));
 
+const llvm::cl::opt<bool> SmackOptions::LocalPrivateMemoryMaps(
+    "local-private-memory-maps",
+    llvm::cl::desc("Keep function-private memory maps procedure-local."),
+    llvm::cl::Hidden);
+
 const llvm::cl::opt<bool> SmackOptions::NoByteAccessInference(
     "no-byte-access-inference",
     llvm::cl::desc("Optimize bit-precision with DSA."));

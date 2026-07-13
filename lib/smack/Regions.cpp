@@ -1192,6 +1192,8 @@ void Regions::computeGlobalMemoryMappings(Module &M) {
 }
 
 void Regions::unifySharedRegions(Module &M) {
+  const bool localPrivateMaps =
+      SmackOptions::LocalPrivateMemoryMaps && DSA->isContextSensitive();
   const Function *entryF = nullptr;
   for (auto &F : M) {
     if (!F.isDeclaration() && F.hasName() &&
@@ -1260,11 +1262,12 @@ void Regions::unifySharedRegions(Module &M) {
   // two regions in one function: keep threading those maps through calls.
   // A relation with more than one target cannot be threaded through a single
   // call argument and is therefore forced onto one shared backing map.
+  std::map<unsigned, unsigned> classSize;
+  for (auto &kv : ids)
+    classSize[find(kv.second)]++;
+
   std::set<unsigned> classThreaded;
   {
-    std::map<unsigned, unsigned> classSize;
-    for (auto &kv : ids)
-      classSize[find(kv.second)]++;
     std::map<std::pair<unsigned, const Function *>, unsigned> multiplicity;
     for (auto &kv : ids)
       multiplicity[{find(kv.second), kv.first.first}]++;
@@ -1323,6 +1326,13 @@ void Regions::unifySharedRegions(Module &M) {
       funcRegionVecs[entryF][ce->second].markGlobalScope();
       continue;
     }
+    // SV-COMP runs Corral with /trackAllVars, which removes the abstraction
+    // advantage of globals. Keep genuinely private classes local in that mode
+    // so they do not enlarge Corral's tracked state.
+    if (localPrivateMaps && classSize[root] == 1 &&
+        funcRegionVecs[F][r].isAllocated() &&
+        !funcRegionVecs[F][r].isGlobalScope())
+      continue;
     // Function-private classes get module-level maps as well: Corral's
     // variable-tracking abstraction applies to globals only, so an
     // untracked global map is havoced for free while a procedure-local map
@@ -1343,8 +1353,9 @@ void Regions::unifySharedRegions(Module &M) {
     sharedRegionIndex[{F, r}] = s;
   }
 
-  // Regions never mentioned by any call-site or global mapping get
-  // module-level maps of their own, preserving the branch's existing policy.
+  // Regions never mentioned by any call-site or global mapping follow the
+  // same policy: module-level normally, but procedure-local under SV-COMP
+  // when they do not contain global objects.
   for (auto &fr : funcRegions) {
     const Function *F = fr.first;
     if (F == entryF)
@@ -1359,6 +1370,9 @@ void Regions::unifySharedRegions(Module &M) {
       auto gm = globalMemoryMappings.find(F);
       if (gm != globalMemoryMappings.end() && gm->second.count(r))
         continue;
+      if (localPrivateMaps && funcRegionVecs[F][r].isAllocated() &&
+          !funcRegionVecs[F][r].isGlobalScope())
+        continue;
       unsigned s = sharedRegions.size();
       sharedRegions.push_back(funcRegionVecs[F][r]);
       sharedRegionIndex[{F, r}] = s;
@@ -1367,7 +1381,7 @@ void Regions::unifySharedRegions(Module &M) {
 
   // Preserve the branch's declaration policy: all entry regions are
   // module-level maps, whether or not the access closure reaches them.
-  if (entryF)
+  if (entryF && !localPrivateMaps)
     for (auto &R : funcRegionVecs[entryF])
       R.markGlobalScope();
 }

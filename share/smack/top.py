@@ -764,6 +764,9 @@ def llvm_to_bpl(args):
         cmd += ['-rewrite-bitwise-ops']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
+    # SV-COMP's Corral configuration tracks every global variable.
+    if args.language == 'svcomp':
+        cmd += ['-local-private-memory-maps']
     if args.check.contains_mem_safe_props():
         cmd += ['-memory-safety']
     if VProperty.INTEGER_OVERFLOW in args.check:
