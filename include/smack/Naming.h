@@ -57,6 +57,7 @@ public:
   static const std::string LOOP_EXIT;
 
   static const std::string MEMORY;
+  static const std::string ALLOC_MEMORY;
   static const std::string ALLOC;
   static const std::string FREE;
   static const std::string LOAD;

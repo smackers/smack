@@ -1620,18 +1620,29 @@ void __SMACK_decls(void) {
   D("procedure corral_atomic_begin();");
   D("procedure corral_atomic_end();");
 
+#if MEMORY_SAFETY
+  D("procedure $alloc(n: ref, A.in: [ref] bool) returns (p: ref, "
+    "A.out: [ref] bool)\n"
+    "{\n"
+    "  call corral_atomic_begin();\n"
+    "  call p, A.out := $$alloc(n, A.in);\n"
+    "  call corral_atomic_end();\n"
+    "}\n");
+#else
   D("procedure $alloc(n: ref) returns (p: ref)\n"
     "{\n"
     "  call corral_atomic_begin();\n"
     "  call p := $$alloc(n);\n"
     "  call corral_atomic_end();\n"
     "}\n");
+#endif
 
 #if MEMORY_SAFETY
   __SMACK_dummy((int)__SMACK_check_memory_safety);
-  D("implementation __SMACK_check_memory_safety(p: ref, size: ref)\n"
+  D("implementation __SMACK_check_memory_safety(p: ref, size: ref, "
+    "A: [ref] bool)\n"
     "{\n"
-    "  assert {:valid_deref} $Alloc[$base(p)];\n"
+    "  assert {:valid_deref} A[$base(p)];\n"
     "  assert {:valid_deref} $sle.ref.bool($base(p), p);\n"
 #if MEMORY_MODEL_NO_REUSE_IMPLS
     "  assert {:valid_deref} $sle.ref.bool($add.ref(p, size), "
@@ -1648,36 +1659,40 @@ void __SMACK_decls(void) {
   D("function $base(ref) returns (ref);");
   D("var $allocatedCounter: int;\n");
 
-  D("procedure $malloc(n: ref) returns (p: ref)\n"
+  D("procedure $malloc(n: ref, A.in: [ref] bool) returns (p: ref, "
+    "A.out: [ref] bool)\n"
     "modifies $allocatedCounter;\n"
     "{\n"
     "  call corral_atomic_begin();\n"
     "  if ($ne.ref.bool(n, $0.ref)) {\n"
     "    $allocatedCounter := $allocatedCounter + 1;\n"
     "  }\n"
-    "  call p := $$alloc(n);\n"
+    "  call p, A.out := $$alloc(n, A.in);\n"
     "  call corral_atomic_end();\n"
     "}\n");
 
 #if MEMORY_MODEL_NO_REUSE_IMPLS
-  D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
   // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
   // before the program starts using the $galloc procedure.
-  D("procedure $galloc(base_addr: ref, size: ref)\n"
+  D("procedure $galloc(base_addr: ref, size: ref, A.in: [ref] bool) "
+    "returns (A.out: [ref] bool)\n"
     "{\n"
+    "  A.out := A.in;\n"
     "  assume $Size(base_addr) == size;\n"
     "  assume (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, "
     "addr) && $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) "
     "== base_addr);\n"
-    "  $Alloc[base_addr] := true;\n"
+    "  A.out[base_addr] := true;\n"
     "}\n");
 
-  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref)\n"
-    "modifies $Alloc, $CurrAddr;\n"
+  D("procedure {:inline 1} $$alloc(n: ref, A.in: [ref] bool) returns "
+    "(p: ref, A.out: [ref] bool)\n"
+    "modifies $CurrAddr;\n"
     "{\n"
+    "  A.out := A.in;\n"
     "  assume $sle.ref.bool($0.ref, n);\n"
     "  if ($slt.ref.bool($0.ref, n)) {\n"
     "    p := $CurrAddr;\n"
@@ -1688,43 +1703,50 @@ void __SMACK_decls(void) {
     "    assume $Size(p) == n;\n"
     "    assume (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && "
     "$slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n"
-    "    $Alloc[p] := true;\n"
+    "    A.out[p] := true;\n"
     "  }\n"
     "}\n");
 
-  D("procedure $free(p: ref)\n"
-    "modifies $Alloc, $allocatedCounter;\n"
+  D("procedure $free(p: ref, A.in: [ref] bool) returns (A.out: [ref] "
+    "bool)\n"
+    "modifies $allocatedCounter;\n"
     "{\n"
+    "  A.out := A.in;\n"
     "  call corral_atomic_begin();\n"
     "  if ($ne.ref.bool(p, $0.ref)) {\n"
     "    assert {:valid_free} $eq.ref.bool($base(p), p);\n"
-    "    assert {:valid_free} $Alloc[p];\n"
+    "    assert {:valid_free} A.in[p];\n"
     "    assert {:valid_free} $slt.ref.bool($0.ref, p);\n"
-    "    $Alloc[p] := false;\n"
+    "    A.out[p] := false;\n"
     "    $allocatedCounter := $allocatedCounter - 1;\n"
     "  }\n"
     "  call corral_atomic_end();\n"
     "}\n");
 
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+  // A shared occupancy map prevents live allocations from different SeaDsa
+  // classes from overlapping. Class-local maps track liveness for checks.
   D("var $Alloc: [ref] bool;");
   D("var $Size: [ref] ref;\n");
 
   // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
   // before the program starts using the $galloc procedure.
-  D("procedure $galloc(base_addr: ref, size: ref);\n"
+  D("procedure $galloc(base_addr: ref, size: ref, A.in: [ref] bool) "
+    "returns (A.out: [ref] bool);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $Size[base_addr] == size;\n"
     "ensures (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) "
     "&& $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == "
     "base_addr);\n"
     "ensures $Alloc[base_addr];\n"
+    "ensures A.out == A.in[base_addr := true];\n"
     "ensures (forall q: ref :: {$Size[q]} q != base_addr ==> $Size[q] == "
     "old($Size[q]));\n"
     "ensures (forall q: ref :: {$Alloc[q]} q != base_addr ==> $Alloc[q] == "
     "old($Alloc[q]));\n");
 
-  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
+  D("procedure {:inline 1} $$alloc(n: ref, A.in: [ref] bool) returns "
+    "(p: ref, A.out: [ref] bool);\n"
     "modifies $Alloc, $Size;\n"
     "ensures $sle.ref.bool($0.ref, n);\n"
     "ensures $slt.ref.bool($0.ref, n) ==> $slt.ref.bool($0.ref, p) && "
@@ -1734,6 +1756,8 @@ void __SMACK_decls(void) {
     "ensures (forall q: ref :: old($Alloc[q]) ==> ($slt.ref.bool($add.ref(p, "
     "n), q) || $slt.ref.bool($add.ref(q, $Size[q]), p)));\n"
     "ensures $Alloc[p];\n"
+    "ensures A.out == (if $slt.ref.bool($0.ref, n) then A.in[p := true] "
+    "else A.in);\n"
     "ensures $Size[p] == n;\n"
     "ensures (forall q: ref :: {$Size[q]} q != p ==> $Size[q] == "
     "old($Size[q]));\n"
@@ -1742,11 +1766,14 @@ void __SMACK_decls(void) {
     "ensures (forall q: ref :: {$base(q)} $sle.ref.bool(p, q) && "
     "$slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == p);\n");
 
-  D("procedure $free(p: ref);\n"
+  D("procedure $free(p: ref, A.in: [ref] bool) returns (A.out: [ref] "
+    "bool);\n"
     "modifies $Alloc, $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($slt.ref.bool($0.ref, p) && "
-    "$eq.ref.bool($base(p), p) && $Alloc[p]);\n"
+    "$eq.ref.bool($base(p), p) && $Alloc[p] && A.in[p]);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
+    "ensures A.out == (if $ne.ref.bool(p, $0.ref) then A.in[p := false] "
+    "else A.in);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p "
     "==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == "
@@ -1755,24 +1782,22 @@ void __SMACK_decls(void) {
     "old($allocatedCounter);\n");
 
 #else // NO_REUSE does not reuse previously-allocated addresses
-  D("var $Alloc: [ref] bool;");
   D("function $Size(ref) returns (ref);");
   D("var $CurrAddr:ref;\n");
 
   // LLVM does not allocated globals explicitly. Hence, we do it in our prelude
   // before the program starts using the $galloc procedure.
-  D("procedure $galloc(base_addr: ref, size: ref);\n"
-    "modifies $Alloc;\n"
+  D("procedure $galloc(base_addr: ref, size: ref, A.in: [ref] bool) "
+    "returns (A.out: [ref] bool);\n"
     "ensures $Size(base_addr) == size;\n"
     "ensures (forall addr: ref :: {$base(addr)} $sle.ref.bool(base_addr, addr) "
     "&& $slt.ref.bool(addr, $add.ref(base_addr, size)) ==> $base(addr) == "
     "base_addr);\n"
-    "ensures $Alloc[base_addr];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != base_addr ==> $Alloc[q] == "
-    "old($Alloc[q]));\n");
+    "ensures A.out == A.in[base_addr := true];\n");
 
-  D("procedure {:inline 1} $$alloc(n: ref) returns (p: ref);\n"
-    "modifies $Alloc, $CurrAddr;\n"
+  D("procedure {:inline 1} $$alloc(n: ref, A.in: [ref] bool) returns "
+    "(p: ref, A.out: [ref] bool);\n"
+    "modifies $CurrAddr;\n"
     "ensures $sle.ref.bool($0.ref, n);\n"
     "ensures $slt.ref.bool($0.ref, n) ==> $sge.ref.bool($sub.ref($CurrAddr, "
     "n), old($CurrAddr)) && p == old($CurrAddr);\n"
@@ -1782,20 +1807,18 @@ void __SMACK_decls(void) {
     "ensures $slt.ref.bool($0.ref, n) ==> (forall q: ref :: {$base(q)} "
     "$sle.ref.bool(p, q) && $slt.ref.bool(q, $add.ref(p, n)) ==> $base(q) == "
     "p);\n"
-    "ensures $slt.ref.bool($0.ref, n) ==> $Alloc[p];\n"
+    "ensures A.out == (if $slt.ref.bool($0.ref, n) then A.in[p := true] "
+    "else A.in);\n"
     "ensures $eq.ref.bool(n, $0.ref) ==> old($CurrAddr) == $CurrAddr && p == "
-    "$0.ref;\n"
-    "ensures $eq.ref.bool(n, $0.ref)==> $Alloc[p] == old($Alloc)[p];\n"
-    "ensures (forall q: ref :: {$Alloc[q]} q != p ==> $Alloc[q] == "
-    "old($Alloc[q]));\n");
+    "$0.ref;\n");
 
-  D("procedure $free(p: ref);\n"
-    "modifies $Alloc, $allocatedCounter;\n"
+  D("procedure $free(p: ref, A.in: [ref] bool) returns (A.out: [ref] "
+    "bool);\n"
+    "modifies $allocatedCounter;\n"
     "requires $eq.ref.bool(p, $0.ref) || ($slt.ref.bool($0.ref, p) && "
-    "$eq.ref.bool($base(p), p) && $Alloc[p]);\n"
-    "ensures $ne.ref.bool(p, $0.ref) ==> !$Alloc[p];\n"
-    "ensures $ne.ref.bool(p, $0.ref) ==> (forall q: ref :: {$Alloc[q]} q != p "
-    "==> $Alloc[q] == old($Alloc[q]));\n"
+    "$eq.ref.bool($base(p), p) && A.in[p]);\n"
+    "ensures A.out == (if $ne.ref.bool(p, $0.ref) then A.in[p := false] "
+    "else A.in);\n"
     "ensures $ne.ref.bool(p, $0.ref) ==> $allocatedCounter == "
     "old($allocatedCounter) - 1;\n"
     "ensures $eq.ref.bool(p, $0.ref) ==> $allocatedCounter == "

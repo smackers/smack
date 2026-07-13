@@ -4,6 +4,7 @@
 #include "smack/Regions.h"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
+#include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 
@@ -91,6 +92,13 @@ bool Region::overlaps(Region &R) {
           (collapsed || !isDisjoint(R.offset, R.length)));
 }
 
+bool Region::mayShareAllocation(const Region &R) const {
+  // Memory maps may split disjoint offsets of one object, but its allocation
+  // state must remain shared across those offsets.
+  return (incomplete && R.incomplete) || (complicated && R.complicated) ||
+         representative == R.representative;
+}
+
 void Region::print(raw_ostream &O) {
   // TODO identify the representative
   O << "<Node:";
@@ -141,7 +149,8 @@ bool Regions::runOnModule(Module &M) {
   if (!SmackOptions::NoMemoryRegionSplitting) {
     Region::init(M, *this);
     visit(M);
-  }
+  } else if (SmackOptions::MemorySafety)
+    visit(M);
 
   return false;
 }
@@ -149,6 +158,49 @@ bool Regions::runOnModule(Module &M) {
 unsigned Regions::size() const { return regions.size(); }
 
 Region &Regions::get(unsigned R) { return regions[R]; }
+
+unsigned Regions::allocationCount() const { return allocations.size(); }
+
+bool Regions::findAllocation(const Value *V, unsigned &a) const {
+  Region R(V);
+  for (a = 0; a < allocations.size(); ++a) {
+    if (allocations[a].mayShareAllocation(R))
+      return true;
+  }
+  return false;
+}
+
+unsigned Regions::allocationIdx(Region &R) {
+  unsigned a;
+  for (a = 0; a < allocations.size(); ++a) {
+    if (allocations[a].mayShareAllocation(R)) {
+      allocations[a].merge(R);
+      break;
+    }
+  }
+
+  if (a == allocations.size())
+    allocations.emplace_back(R);
+  else {
+    unsigned q = a + 1;
+    while (q < allocations.size()) {
+      if (allocations[a].mayShareAllocation(allocations[q])) {
+        allocations[a].merge(allocations[q]);
+        allocations.erase(allocations.begin() + q);
+      } else {
+        ++q;
+      }
+    }
+  }
+  return a;
+}
+
+void Regions::trackAllocation(const Value *V) {
+  if (SmackOptions::MemorySafety) {
+    Region R(V);
+    allocationIdx(R);
+  }
+}
 
 unsigned Regions::idx(const Value *V) {
   SDEBUG(errs() << "[regions] for: " << *V << "\n"; auto U = V;
@@ -235,16 +287,24 @@ unsigned Regions::idx(Region &R) {
   return r;
 }
 
-void Regions::visitLoadInst(LoadInst &I) { idx(I.getPointerOperand()); }
+void Regions::visitLoadInst(LoadInst &I) {
+  idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
+}
 
-void Regions::visitStoreInst(StoreInst &I) { idx(I.getPointerOperand()); }
+void Regions::visitStoreInst(StoreInst &I) {
+  idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
+}
 
 void Regions::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
 }
 
 void Regions::visitAtomicRMWInst(AtomicRMWInst &I) {
   idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
 }
 
 void Regions::visitMemSetInst(MemSetInst &I) {
@@ -256,6 +316,7 @@ void Regions::visitMemSetInst(MemSetInst &I) {
     length = std::numeric_limits<unsigned>::max();
 
   idx(I.getDest(), length);
+  trackAllocation(I.getDest());
 }
 
 void Regions::visitMemTransferInst(MemTransferInst &I) {
@@ -271,6 +332,8 @@ void Regions::visitMemTransferInst(MemTransferInst &I) {
   // resulting in ``hanging'' regions.
   idx(I.getSource(), length);
   idx(I.getDest(), length);
+  trackAllocation(I.getSource());
+  trackAllocation(I.getDest());
 }
 
 void Regions::visitCallInst(CallInst &I) {
@@ -279,6 +342,12 @@ void Regions::visitCallInst(CallInst &I) {
 
   if (F && F->isDeclaration() && I.getType()->isPointerTy() && name != "malloc")
     idx(&I);
+
+  if (SmackOptions::MemorySafety) {
+    if ((name == "free" || name == Naming::MEMORY_SAFETY_FUNCTION) &&
+        I.arg_size() > 0)
+      trackAllocation(I.getArgOperand(0));
+  }
 
   if (name.find("__SMACK_values") != std::string::npos) {
     assert(I.arg_size() == 2 && "Expected two operands.");

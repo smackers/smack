@@ -51,6 +51,7 @@ public:
 
   void merge(Region &R);
   bool overlaps(Region &R);
+  bool mayShareAllocation(const Region &R) const;
 
   bool isSingleton() const { return singleton; };
   bool isAllocated() const { return allocated; };
@@ -63,7 +64,10 @@ public:
 class Regions : public ModulePass, public InstVisitor<Regions> {
 private:
   std::vector<Region> regions;
+  std::vector<Region> allocations;
   unsigned idx(Region &R);
+  unsigned allocationIdx(Region &R);
+  void trackAllocation(const llvm::Value *v);
 
 public:
   static char ID;
@@ -72,6 +76,8 @@ public:
   virtual bool runOnModule(llvm::Module &M) override;
 
   unsigned size() const;
+  unsigned allocationCount() const;
+  bool findAllocation(const llvm::Value *v, unsigned &a) const;
   unsigned idx(const llvm::Value *v);
   unsigned idx(const llvm::Value *v, unsigned length);
   Region &get(unsigned R);

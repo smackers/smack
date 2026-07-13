@@ -1125,6 +1125,18 @@ void MemDeclGen::generateMemoryMaps(std::stringstream &s) const {
   s << "\n";
 }
 
+void MemDeclGen::generateAllocationMaps(std::stringstream &s) const {
+  if (!SmackOptions::MemorySafety)
+    return;
+
+  describe("Allocation maps", s);
+  for (unsigned i = 0; i < prelude.rep.regions->allocationCount(); ++i)
+    s << "var " << prelude.rep.allocReg(i) << ": [ref] bool;\n";
+  // Allocations unrelated to any checked pointer share a fallback map.
+  s << "var " << Naming::ALLOC_MEMORY << ".untracked: [ref] bool;\n";
+  s << "\n";
+}
+
 void MemDeclGen::generateAddrBoundsAndPred(std::stringstream &s) const {
   describe("Memory address bounds", s);
 
@@ -1165,10 +1177,14 @@ void MemDeclGen::generateGlobalAllocations(std::stringstream &s) const {
     describe("Global allocations", s);
 
     std::list<const Stmt *> stmts;
-    for (auto E : prelude.rep.globalAllocations)
+    for (auto E : prelude.rep.globalAllocations) {
+      auto alloc = prelude.rep.allocPath(E.first);
       stmts.push_back(
-          Stmt::call("$galloc", {prelude.rep.expr(E.first),
-                                 prelude.rep.pointerLit(E.second)}));
+          Stmt::call("$galloc",
+                     {prelude.rep.expr(E.first),
+                      prelude.rep.pointerLit(E.second), Expr::id(alloc)},
+                     {alloc}));
+    }
     s << Decl::procedure("$global_allocations", {}, {}, {},
                          {Block::block("", stmts)})
       << "\n";
@@ -1178,6 +1194,7 @@ void MemDeclGen::generateGlobalAllocations(std::stringstream &s) const {
 
 void MemDeclGen::generate(std::stringstream &s) const {
   generateMemoryMaps(s);
+  generateAllocationMaps(s);
   generateAddrBoundsAndPred(s);
   generateGlobalAllocations(s);
 }

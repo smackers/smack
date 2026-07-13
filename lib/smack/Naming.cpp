@@ -41,6 +41,7 @@ const std::string Naming::STATIC_INIT_PROC = "__SMACK_static_init";
 const std::string Naming::LOOP_EXIT = "__SMACK_loop_exit";
 
 const std::string Naming::MEMORY = "$M";
+const std::string Naming::ALLOC_MEMORY = "$Alloc";
 const std::string Naming::ALLOC = "$alloc";
 const std::string Naming::FREE = "$free";
 const std::string Naming::LOAD = "$load";

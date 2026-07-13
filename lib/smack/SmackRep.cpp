@@ -261,6 +261,17 @@ std::string SmackRep::memReg(unsigned idx) {
   return indexedName(Naming::MEMORY, {idx});
 }
 
+std::string SmackRep::allocReg(unsigned idx) {
+  return indexedName(Naming::ALLOC_MEMORY, {idx});
+}
+
+std::string SmackRep::allocPath(const llvm::Value *v) {
+  unsigned allocation;
+  return regions->findAllocation(v, allocation)
+             ? allocReg(allocation)
+             : Naming::ALLOC_MEMORY + ".untracked";
+}
+
 std::string SmackRep::memType(unsigned region) {
   std::stringstream s;
   if (!regions->get(region).isSingleton() ||
@@ -295,7 +306,12 @@ const Stmt *SmackRep::alloca(llvm::AllocaInst &i) {
       integerToPointer(expr(i.getArraySize()), getIntSize(i.getArraySize())));
 
   // TODO this should not be a pointer type.
-  return Stmt::call(Naming::ALLOC, {size}, {naming->get(i)});
+  if (!SmackOptions::MemorySafety)
+    return Stmt::call(Naming::ALLOC, {size}, {naming->get(i)});
+
+  auto alloc = allocPath(&i);
+  return Stmt::call(Naming::ALLOC, {size, Expr::id(alloc)},
+                    {naming->get(i), alloc});
 }
 
 const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
@@ -1031,19 +1047,38 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
   if (!F->getReturnType()->isVoidTy())
     rets.push_back({Naming::RET_VAR, type(F->getReturnType())});
 
+  bool usesAllocMap =
+      SmackOptions::MemorySafety && (name == "malloc" || name == "free_" ||
+                                     name == Naming::MEMORY_SAFETY_FUNCTION);
+  if (usesAllocMap) {
+    params.push_back({Naming::ALLOC_MEMORY + ".in", "[ref] bool"});
+    if (name != Naming::MEMORY_SAFETY_FUNCTION)
+      rets.push_back({Naming::ALLOC_MEMORY + ".out", "[ref] bool"});
+  }
+
   if (name == "malloc") {
     Type *W = F->getFunctionType()->getParamType(0);
     assert(W->isIntegerTy() && "Expected integer argument.");
     unsigned width = W->getIntegerBitWidth();
-    blocks.push_back(Block::block(
-        "",
-        {Stmt::call(Naming::MALLOC,
-                    {integerToPointer(Expr::id(params.front().first), width)},
-                    {Naming::RET_VAR})}));
+    auto size = integerToPointer(Expr::id(params.front().first), width);
+    if (usesAllocMap)
+      blocks.push_back(Block::block(
+          "", {Stmt::call(Naming::MALLOC,
+                          {size, Expr::id(Naming::ALLOC_MEMORY + ".in")},
+                          {Naming::RET_VAR, Naming::ALLOC_MEMORY + ".out"})}));
+    else
+      blocks.push_back(Block::block(
+          "", {Stmt::call(Naming::MALLOC, {size}, {Naming::RET_VAR})}));
 
   } else if (name == "free_") {
-    blocks.push_back(Block::block(
-        "", {Stmt::call(Naming::FREE, {Expr::id(params.front().first)})}));
+    auto pointer = Expr::id(params.front().first);
+    if (usesAllocMap)
+      blocks.push_back(Block::block(
+          "", {Stmt::call(Naming::FREE,
+                          {pointer, Expr::id(Naming::ALLOC_MEMORY + ".in")},
+                          {Naming::ALLOC_MEMORY + ".out"})}));
+    else
+      blocks.push_back(Block::block("", {Stmt::call(Naming::FREE, {pointer})}));
 
   } else if (isContractExpr(F)) {
     for (auto m : memoryMaps())
@@ -1123,6 +1158,25 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
 
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming->get(ci));
+
+  if (SmackOptions::MemorySafety) {
+    const Value *pointer = nullptr;
+    bool updatesAllocMap = false;
+    if (name == "malloc") {
+      pointer = static_cast<const Value *>(&ci);
+      updatesAllocMap = true;
+    } else if (name == "free_" || name == Naming::MEMORY_SAFETY_FUNCTION) {
+      pointer = ci.getOperand(0);
+      updatesAllocMap = name == "free_";
+    }
+
+    if (pointer) {
+      auto alloc = allocPath(pointer);
+      args.push_back(Expr::id(alloc));
+      if (updatesAllocMap)
+        rets.push_back(alloc);
+    }
+  }
 
   return Stmt::call(procName(f, ci), args, rets);
 }

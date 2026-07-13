@@ -179,6 +179,7 @@ struct ConstDeclGen : public Gen {
 struct MemDeclGen : public Gen {
   MemDeclGen(Prelude &prelude) : Gen(prelude) {}
   void generateMemoryMaps(std::stringstream &s) const;
+  void generateAllocationMaps(std::stringstream &s) const;
   void generateAddrBoundsAndPred(std::stringstream &s) const;
   void generateGlobalAllocations(std::stringstream &s) const;
   void generate(std::stringstream &s) const override;
