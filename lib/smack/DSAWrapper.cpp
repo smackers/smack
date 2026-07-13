@@ -181,6 +181,10 @@ seadsa::Graph &DSAWrapper::getGraph(const Function &F) {
 
 bool DSAWrapper::hasGraph(const Function &F) const { return SD->hasGraph(F); }
 
+bool DSAWrapper::isContextSensitive() const {
+  return SD && SD->kind() == seadsa::GlobalAnalysisKind::CONTEXT_SENSITIVE;
+}
+
 unsigned DSAWrapper::getOffset(const Value *v) {
   auto &graph = getGraphForValue(v);
   if (!graph.hasCell(*v))

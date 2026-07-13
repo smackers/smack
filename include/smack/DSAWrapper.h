@@ -70,6 +70,7 @@ public:
                            seadsa::Graph &dst, seadsa::Cell &result) const;
 
   // Per-function graph access for context-sensitive analysis.
+  bool isContextSensitive() const;
   seadsa::Graph &getGraph(const llvm::Function &F);
   bool hasGraph(const llvm::Function &F) const;
 };

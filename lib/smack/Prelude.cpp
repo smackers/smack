@@ -1116,21 +1116,39 @@ void ConstDeclGen::generate(std::stringstream &s) const {
 void MemDeclGen::generateMemoryMaps(std::stringstream &s) const {
   auto *entryF = prelude.rep.entryFunction;
   unsigned numRegions = entryF ? prelude.rep.regions->size(entryF) : 0;
-  describe("Memory maps (" + std::to_string(numRegions) + " regions)", s);
+  unsigned numMemoryMaps = 0;
 
   if (entryF) {
     for (unsigned i = 0; i < numRegions; i++) {
-      if (prelude.rep.regions->get(entryF, i).isGlobalScope())
-        s << "var " << prelude.rep.memReg(i) << ": "
-          << prelude.rep.memType(entryF, i) << ";\n";
+      auto name = prelude.rep.memReg(i);
+      if (prelude.rep.regions->get(entryF, i).isGlobalScope() &&
+          !prelude.rep.isDeadMemoryMap(name))
+        numMemoryMaps++;
+    }
+  }
+  for (unsigned i = 0; i < prelude.rep.regions->numSharedRegions(); i++)
+    if (!prelude.rep.isDeadMemoryMap(prelude.rep.memSharedReg(i)))
+      numMemoryMaps++;
+
+  describe("Memory maps (" + std::to_string(numMemoryMaps) + " maps)", s);
+
+  if (entryF) {
+    for (unsigned i = 0; i < numRegions; i++) {
+      auto name = prelude.rep.memReg(i);
+      if (prelude.rep.regions->get(entryF, i).isGlobalScope() &&
+          !prelude.rep.isDeadMemoryMap(name))
+        s << "var " << name << ": " << prelude.rep.memType(entryF, i) << ";\n";
     }
   }
 
   // Shared maps for cross-function memory outside the entry function's
   // regions.
-  for (unsigned i = 0; i < prelude.rep.regions->numSharedRegions(); i++)
-    s << "var " << prelude.rep.memSharedReg(i) << ": "
-      << prelude.rep.memTypeOf(prelude.rep.regions->getShared(i)) << ";\n";
+  for (unsigned i = 0; i < prelude.rep.regions->numSharedRegions(); i++) {
+    auto name = prelude.rep.memSharedReg(i);
+    if (!prelude.rep.isDeadMemoryMap(name))
+      s << "var " << name << ": "
+        << prelude.rep.memTypeOf(prelude.rep.regions->getShared(i)) << ";\n";
+  }
 
   s << "\n";
 }
