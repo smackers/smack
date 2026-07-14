@@ -48,11 +48,12 @@ Contracts are declared in `smack-contracts.h`:
 #include "smack.h"
 #include "smack-contracts.h"
 #include <assert.h>
+#include <limits.h>
 
 int g;
 
 void inc(void) {
-  requires(g >= 0);
+  requires(g >= 0 && g < INT_MAX);
   ensures(g > 0);
   g++;
 }
@@ -64,11 +65,17 @@ Run contract-based verification with Boogie modular mode:
 smack file.c --modular
 ```
 
-The stable user-facing contract forms are:
+Contract support remains experimental. The forms currently exposed by
+`smack-contracts.h` are:
 
 - `requires(expr)` for preconditions
 - `ensures(expr)` for postconditions
 - `invariant(expr)` for loop invariants
+
+The public annotation language does not yet provide a supported expression for
+a function's return value. If a postcondition needs the result, temporarily
+write it through a global variable or output parameter and specify that value
+instead.
 
 Quantified contracts and helpers such as `old` and `result` exist in tests and
 translator internals, but they are not yet exposed as a polished documented C

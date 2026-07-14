@@ -10,6 +10,27 @@ The general form is:
 smack [options] input-files...
 ```
 
+### `--check`: Select the Properties to Verify
+
+With no `--check` option, SMACK checks user assertions. Supplying `--check`
+replaces that default; it does not add properties alongside assertions. For
+example, this checks integer overflow but not user assertions:
+
+```Shell
+smack file.c --check integer-overflow
+```
+
+List every property that you want checked. To retain assertion checking while
+also checking memory safety or integer overflow, use:
+
+```Shell
+smack file.c --check assertions memory-safety
+smack file.c --check assertions integer-overflow
+```
+
+`memory-safety` is shorthand for the `valid-deref`, `valid-free`, and `memleak`
+properties.
+
 ### `--unroll`: Look Deeper Into Loops and Recursion
 
 SMACK is bounded by default. It verifies loops and recursion only up to the
@@ -32,25 +53,40 @@ With the default bound, SMACK may not reach the failing assertion. Increase the
 bound when the behavior you care about needs more iterations:
 
 ```Shell
-smack loop.c --unroll 3
+smack loop.c --unroll 4
 ```
 
-Use `--fail-on-loop-exit` when you want to know whether the proof depended on
-cutting off a loop at the bound:
+For this loop, the fourth visit to the loop header is needed to take the exit
+after the three iterations. A bound of `3` still does not reach the assertion.
+
+`--fail-on-loop-exit` inserts a failing assertion in each normal loop exit
+block. A loop-exit report therefore says that a normal exit was reachable in
+the selected model and bound:
 
 ```Shell
-smack loop.c --unroll 3 --fail-on-loop-exit
+smack loop.c --unroll 4 --fail-on-loop-exit
 ```
+
+This sample's user assertion is also reachable at bound `4`. To exercise only
+the injected loop-exit check, remove the user assertion; a report naming
+`__SMACK_loop_exit` is from the injected check.
+
+This option does not report paths that the verifier cuts off when the unroll
+bound is exhausted. It therefore cannot, by itself, show that a successful
+result was independent of the bound.
 
 If SMACK reports:
 
 ```text
-SMACK found no errors with unroll bound 3.
+SMACK found no errors with unroll bound 4.
 ```
 
-that means no error was found within that bound. It is not a proof for
-arbitrarily many iterations unless the selected back-end and mode establish such
-a proof.
+that means no error was found in the selected translation and models within
+that bound. It is not a proof for arbitrarily many iterations unless the
+selected back-end and mode establish such a proof, and translation
+approximations are separate from bounding. In particular, a counterexample
+from an approximate integer, bitwise, or floating-point model need not be a
+concrete C execution.
 
 ### `--integer-encoding` and `--bit-precise`: Choose How Machine Integers Are Modeled
 
@@ -62,7 +98,10 @@ SMACK has to encode C machine integers into SMT formulas. The default is:
 
 This treats integer values as mathematical integers. It is often faster, but it
 cannot precisely model all machine-integer behavior, especially bitwise
-operators, narrow casts, and wraparound-sensitive code.
+operators, narrow casts, and wraparound-sensitive code. The abstraction can
+miss a real machine-integer error, so a successful result with this encoding is
+not automatically a bit-precise C-level safety result. Approximate bitwise
+models can also produce spurious counterexamples.
 
 For example:
 
@@ -89,16 +128,16 @@ Older SMACK discussions and lower-level `llvm2bpl` invocations may call this
 `--integer-encoding=bit-vector`; internally it forwards `--bit-precise` to
 `llvm2bpl`.
 
-Use wrapped integer encoding when the program intentionally relies on modular
-machine arithmetic but you do not want full bit-vector reasoning:
+Wrapped integer encoding may be useful when the only required machine behavior
+is arithmetic wraparound and full bit-vector reasoning is too expensive:
 
 ```Shell
 smack file.c --integer-encoding=wrapped-integer
 ```
 
-This is useful for code such as counters, masks, and low-level libraries where
-overflow is expected behavior. It is still an abstraction, so use
-`bit-vector` when the exact bit pattern matters.
+It models wraparound but still approximates bitwise operators. It is therefore
+not the right encoding for masks or other code whose property depends on exact
+bits; use `bit-vector` for those programs.
 
 ### `--check integer-overflow`: Turn C Undefined Overflow Into a Property
 
@@ -121,7 +160,11 @@ Ask SMACK to instrument overflow checks:
 smack overflow.c --check integer-overflow
 ```
 
-This asks whether every checked signed arithmetic operation and shift is safe.
+This selects overflow checking instead of the default assertion checking. Use
+`--check assertions integer-overflow` if both properties matter. The overflow
+property asks whether every checked signed arithmetic operation and shift is
+safe.
+
 If only some functions matter, restrict instrumentation:
 
 ```Shell
@@ -130,8 +173,10 @@ smack overflow.c --check integer-overflow --checked-functions main
 
 ### `--float`: Use Precise Floating-Point Models
 
-Without `--float`, floating-point operations are modeled approximately enough for
-many control-flow questions but not for precise IEEE-style properties.
+Without `--float`, floating-point operations are modeled with uninterpreted
+functions rather than IEEE floating-point semantics. That over-approximation
+can produce false alarms and counterexample traces that are not concrete C
+executions.
 
 ```C
 #include "smack.h"
@@ -225,6 +270,9 @@ Run:
 smack mem.c --check memory-safety
 ```
 
+This invocation selects memory safety instead of the default user-assertion
+property. Use `--check assertions memory-safety` to check both.
+
 When debugging a memory report, check the sub-properties separately:
 
 ```Shell
@@ -247,13 +295,20 @@ For library-style verification, choose a different top-level function:
 smack account.c --entry-points verify_deposit
 ```
 
-`--checked-functions` is different: it restricts where generated property checks
-are emitted. This is useful when a large program has helper code outside the
-current verification target:
+`--checked-functions` is different: it filters user assertions and many
+source-function-local generated checks, including valid-dereference and integer
+overflow checks, by the function containing the check. Assertions in functions
+that do not match are omitted, even if those functions remain reachable from an
+entry point. For example:
 
 ```Shell
-smack account.c --check memory-safety --checked-functions verify_deposit
+smack account.c --check assertions valid-deref \
+  --checked-functions verify_deposit
 ```
+
+This filter does not cover every property. In particular, `valid-free` checks
+are implemented in the shared `free` model and are not removed according to the
+calling function's name.
 
 The names are extended regular expressions, and each expression must match the
 whole function name.
@@ -317,7 +372,8 @@ LLVM passes, the LLVM-to-Boogie translation, or the back-end verifier.
   Control how LLVM `assume` intrinsics are handled.
 
 - `--modular`
-  Enable contracts-based modular deductive verification through Boogie.
+  Enable the experimental contracts-based modular deductive verification mode
+  through Boogie.
 
 - `--strings`
   Include SMACK's string library model.

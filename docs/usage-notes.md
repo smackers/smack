@@ -1,8 +1,13 @@
+## Usage Notes
+
 This document shows several usage scenarios of SMACK that require special flags.
 For the main task-oriented option guide, start with
 [Command-Line Options](command-line-options.md).
 
-## Loops and Recursive Functions
+<a id="loops-and-recusive-functions"></a>
+
+### Loops and Recursive Functions
+
 First of all, please keep in mind that SMACK is a *bounded* verifier, which
 means that in the presence of loops and recursive functions, the verification
 process unrolls them up to the bound `N` specified by the flag `--unroll <N>`.
@@ -10,13 +15,17 @@ Conceptually, unrolling a loop means transforming a loop into a sequence (length
 `N`) of if-else statements, the innermost of which halts the program. Recursive
 functions are handled by inlining the function `N` times and the innermost
 recursive call halts the program. Therefore, not unrolling a loop or a recursive
-function to a sufficient bound can lead to missed bugs. In other words, when
-SMACK reports that there are no bugs in a program, it actually means that the
-program is safe within the bound specified by the user.
+function to a sufficient bound can lead to missed bugs. A no-errors result means
+only that SMACK found no violation in the selected translation model within the
+specified bound; it is not, by itself, a proof of C-level safety. Modeling
+precision, such as the selected integer and floating-point encodings, is
+separate from the unrolling bound.
 
-### Example
+#### Example
+
 ```C
 #include "smack.h"
+#include <assert.h>
 
 int main (void) {
   long x = __VERIFIER_nondet_long();
@@ -32,7 +41,7 @@ default unrolling bound `1`, it reports no errors. This is because the loop has
 to be unrolled at least 4 times (i.e., after `y` gets value 3, the minimum value
 of `x`, in the 3rd iteration) for the assertion to be reachable.
 
-## Bitwise Operations and Integer Casts
+### Bitwise Operations and Integer Casts
 If the program to verify contains bitwise operations or integer casts, then the
 flag `--integer-encoding=bit-vector` may be required. The reason is that SMACK
 uses the SMT theory of integers to encode machine integers by default, where
@@ -43,9 +52,11 @@ signedness casts, which is not also enabled automatically.
 The following program demonstrates the problems in the presence of bitwise
 operations.
 
-### Example
+#### Example
+
 ```C
 #include "smack.h"
+#include <assert.h>
 
 int main (void) {
   unsigned y = __VERIFIER_nondet_unsigned_int();
@@ -70,7 +81,7 @@ Execution trace:
 SMACK found an error.
 ```
 
-Some steps in the error trace are omitted. As you can see, the concrete values
+Some steps in the error trace are omitted. As you can see, the model values
 of `y` in the error trace before and after the bitwise right shift operation do
 not follow its semantics because it is modeled as an uninterpreted function.
 
@@ -88,7 +99,7 @@ enabling this flag. However, note that enabling bit-precise reasoning often
 degrades the performance of SMACK, and causes for it to take much longer to
 perform the verification.
 
-## Floating-Point Arithmetic
+### Floating-Point Arithmetic
 Similar to machine integers, floating-point numbers and arithmetic are modeled
 using the theory of integers and uninterpreted functions, respectively.
 Therefore, if the assertions to verify depend on precise modeling of
@@ -99,7 +110,7 @@ are present.  Moreover, reasoning about floating-point numbers is often very
 slow. Please let us know if you encounter any performance issues. We can share
 some experiences that may ease the situation.
 
-## Concurrency
+### Concurrency
 Reasoning about pthreads is supported by SMACK with the flag `--pthread`. Please
 use this flag when you would like to verify a multi-threaded program with
 pthreads. One important flag for reasoning about concurrent programs is
