@@ -411,6 +411,15 @@ bool Regions::runOnModule(Module &M) {
     computeGlobalMemoryMappings(M);
 
     dumpPhase("3.6-globals", funcRegionVecs);
+    if (SmackOptions::LocalPrivateMemoryMaps && DSA->isContextSensitive()) {
+      // Compute a preliminary procedure interface before choosing local maps.
+      // If an interface region lacks a caller counterpart at even one call
+      // site (for example, a pointer formal receives null), it cannot be
+      // threaded through one fixed Boogie signature and must be shared.
+      computeFunctionRegions(M);
+      computeInterfaceRegions(M);
+    }
+
     // Phase 3.7: Bind cross-function equivalence classes to entry-owned or
     // shared module-level maps, except for the small classes retained by the
     // branch's existing procedure-interface threading policy.
@@ -830,7 +839,10 @@ void Regions::computeOneCallSiteMapping(CallBase *CI, const Function *caller,
                         calleeRegion.getType(), calleeRegion.bytewiseAccess(),
                         calleeRegion.getSingletonGlobal(),
                         caller->getContext());
-    mapping[i].insert(idx(callerRegion, caller));
+    // idx() can merge regions and rebuild this call-site mapping. Complete it
+    // before looking up mapping[i], or insert() may use an invalidated set.
+    unsigned callerRegionIndex = idx(callerRegion, caller);
+    mapping[i].insert(callerRegionIndex);
   }
 }
 
@@ -1243,6 +1255,20 @@ void Regions::unifySharedRegions(Module &M) {
       for (unsigned callerR : m.second)
         unite(calleeId, id(caller, callerR));
     }
+
+    if (localPrivateMaps) {
+      auto hasCallerMapping = [&](unsigned calleeR) {
+        auto it = cs.second.find(calleeR);
+        return it != cs.second.end() && !it->second.empty();
+      };
+      auto &calleeInfo = funcRegions[callee];
+      for (unsigned calleeR : calleeInfo.inputRegions)
+        if (!hasCallerMapping(calleeR))
+          forceSharedIds.push_back(id(callee, calleeR));
+      for (unsigned calleeR : calleeInfo.outputRegions)
+        if (!hasCallerMapping(calleeR))
+          forceSharedIds.push_back(id(callee, calleeR));
+    }
   }
   if (entryF)
     for (auto &gm : globalMemoryMappings)
@@ -1329,7 +1355,8 @@ void Regions::unifySharedRegions(Module &M) {
     // SV-COMP runs Corral with /trackAllVars, which removes the abstraction
     // advantage of globals. Keep genuinely private classes local in that mode
     // so they do not enlarge Corral's tracked state.
-    if (localPrivateMaps && classSize[root] == 1 &&
+    if (localPrivateMaps && !classNeedsShared.count(root) &&
+        classSize[root] == 1 &&
         funcRegionVecs[F][r].isAllocated() &&
         !funcRegionVecs[F][r].isGlobalScope())
       continue;

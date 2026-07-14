@@ -1239,11 +1239,21 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
 
     auto mapRegion = [&](unsigned calleeR) -> unsigned {
       auto it = mapping.find(calleeR);
-      if (it == mapping.end() || it->second.size() != 1)
+      if (it == mapping.end()) {
+        std::string callText;
+        raw_string_ostream callStream(callText);
+        ci.print(callStream);
+        callStream.flush();
         report_fatal_error(
-            "missing or non-unique SeaDsa call-site memory-region mapping "
-            "for call to " +
-            f->getName());
+            "missing SeaDsa call-site memory-region mapping for call to " +
+            f->getName() + " (callee region " + Twine(calleeR) + "): " +
+            callText);
+      }
+      if (it->second.size() != 1)
+        report_fatal_error(
+            "non-unique SeaDsa call-site memory-region mapping for call to " +
+            f->getName() + " (callee region " + Twine(calleeR) + ", " +
+            Twine(it->second.size()) + " caller regions)");
       return *it->second.begin();
     };
 
