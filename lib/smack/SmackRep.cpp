@@ -1246,8 +1246,8 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
         callStream.flush();
         report_fatal_error(
             "missing SeaDsa call-site memory-region mapping for call to " +
-            f->getName() + " (callee region " + Twine(calleeR) + "): " +
-            callText);
+            f->getName() + " (callee region " + Twine(calleeR) +
+            "): " + callText);
       }
       if (it->second.size() != 1)
         report_fatal_error(

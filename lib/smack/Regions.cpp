@@ -1356,8 +1356,7 @@ void Regions::unifySharedRegions(Module &M) {
     // advantage of globals. Keep genuinely private classes local in that mode
     // so they do not enlarge Corral's tracked state.
     if (localPrivateMaps && !classNeedsShared.count(root) &&
-        classSize[root] == 1 &&
-        funcRegionVecs[F][r].isAllocated() &&
+        classSize[root] == 1 && funcRegionVecs[F][r].isAllocated() &&
         !funcRegionVecs[F][r].isGlobalScope())
       continue;
     // Function-private classes get module-level maps as well: Corral's
