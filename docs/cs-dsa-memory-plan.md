@@ -9,7 +9,10 @@ they are never compared across functions without a SeaDsa mapping.
 The existing `cs` branch uses a hybrid backing policy. Entry-function regions
 and larger cross-function classes use module-level maps, while selected small
 classes are threaded through procedure inputs and outputs. The soundness fixes
-below preserve that policy and its map declarations.
+below preserve that policy for ordinary runs; under
+`-local-private-memory-maps` (enabled automatically for SV-COMP, where Corral
+runs with `/trackAllVars`), provably function-private stack/heap regions stay
+procedure-local instead (see Backing Maps).
 
 ## Soundness Invariants
 
@@ -39,7 +42,10 @@ otherwise disjoint fields.
 `__SMACK_static_init` and `__SMACK_init_func*` are emitted in the entry
 function's memory context. Their cells are translated through the identity of
 the exact underlying global. If exact field translation is unavailable, SMACK
-uses a whole-node bytewise region in the entry graph.
+uses a whole-node bytewise region in the entry graph. Values in init bodies
+that are not rooted at any global (stack arrays, call results) are not shared
+global memory; they anchor as ordinary regions in the entry context rather
+than aborting translation.
 
 ### 2. Direct Access Sets
 
@@ -62,8 +68,9 @@ callee region -> { caller region, ... }
 ```
 
 The computation runs to a structural fixpoint because mapping a reachable cell
-can create or merge caller regions. Failure to converge after 100 passes aborts
-translation.
+can create or merge caller regions. Deep pointer-passing call chains propagate
+one level per pass under adverse module order, so the iteration bound scales
+with the number of functions; exceeding it aborts translation.
 
 ### 4. Merge Propagation and Normalization
 
@@ -86,20 +93,42 @@ Statically initialized globals retain the branch's conservative map encoding.
 ### 6. Backing Maps
 
 A union-find structure links region pairs through call-site and global
-relations. The branch's existing backing policy is retained:
+relations. In the default mode:
 
 - entry regions keep their module-level declarations;
 - small classes with two same-function regions and at most eight members can
   remain threaded through procedure interfaces;
 - other cross-function classes use entry-owned or shared module-level maps;
-- accessed regions outside mapped classes use the existing shared-map
-  fallback.
+- accessed regions outside mapped classes get module-level maps of their own.
+
+Before backing maps are chosen, a preliminary procedure-interface pass runs in
+every context-sensitive mode: a callee interface region that lacks a caller
+counterpart at even one call site (for example, a pointer formal receiving
+null) cannot be threaded through one fixed Boogie signature and is forced onto
+a shared map.
 
 Classes containing a non-unique relation are excluded from threading. If a
 non-threaded class contains several regions from one function, selecting one
 of them as its owner would disconnect the others, so that class uses one shared
 map. This is a representational soundness requirement, not a memory-splitting
 or map-count optimization.
+
+Under `-local-private-memory-maps` (automatic for `-x svcomp`, where Corral's
+`/trackAllVars` removes the abstraction advantage of globals), the policy
+changes for provably private memory: singleton classes and unmapped leftover
+regions that are allocated (stack/heap) and hold no global stay
+procedure-local, and the blanket module-level promotion of entry regions is
+skipped. Global-backed, external, unknown, and cross-function regions remain
+module-level in both modes.
+
+### 6a. Dead Static-Initializer Maps
+
+After translation, `__SMACK_static_init` stores whose target map has no other
+occurrence anywhere in the printed program are removed and the map's
+declaration is suppressed. The liveness check counts every textual occurrence
+of each entry/shared map name over the whole program, so any reference outside
+the candidate stores conservatively keeps the map. This runs only under
+context-sensitive DSA.
 
 ### 7. Access Closure and Interfaces
 
@@ -115,8 +144,11 @@ SMACK aborts translation instead of continuing when:
 - SeaDsa returns a nonfunctional simulation relation that its public lookup API
   cannot enumerate;
 - call-site region construction does not converge;
-- a required global cell cannot be translated or conservatively represented;
 - a non-unique relation reaches a code path that requires one owner.
+
+Global-rooted cells whose field-sensitive translation fails degrade to a
+whole-node conservative region; cells not rooted at any global are anchored as
+ordinary regions in the target context. Neither aborts translation.
 
 These failures are preferable to proving a program against disconnected or
 incomplete memory state.
@@ -125,6 +157,11 @@ incomplete memory state.
 
 - `cs_dsa_region_threading.c`: nested heap and pointer flow across calls.
 - `strings.c` and `strings1.c`: offset-preserving static-initializer mapping.
+- `svcomp_private_maps.c`: private regions become procedure-local maps under
+  `--local-private-memory-maps`, with a checked (non-vacuous) assertion.
+- `static_init_dead_maps.c`: unused initializer field maps are eliminated.
+- `init_func_locals.c`: init-function bodies using non-global-rooted memory.
+- `deep_call_chain.c`: call-site mapping convergence beyond 100 passes.
 
 ## Main Files
 
