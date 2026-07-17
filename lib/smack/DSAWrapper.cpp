@@ -211,8 +211,10 @@ unsigned DSAWrapper::getOffset(const Value *v, const Function &F) {
         return (unsigned)(rawOff % n->size());
       return (unsigned)rawOff;
     }
-    report_fatal_error(
-        "cannot translate a global memory cell between SeaDsa graphs");
+    // Values not rooted at a global (e.g., allocas in init functions) are
+    // not shared global memory; global-rooted values whose field-sensitive
+    // translation fails fall back to the whole target node at offset zero,
+    // matching Regions::idxTranslated's conservative fallback.
   }
   return 0;
 }
@@ -264,8 +266,14 @@ const seadsa::Node *DSAWrapper::getNode(const Value *v, const Function &F) {
     seadsa::Cell c;
     if (translateGlobalCell(v, src, graph, c))
       return c.getNode();
-    report_fatal_error(
-        "cannot translate a global memory cell between SeaDsa graphs");
+    // Global-rooted values whose field-sensitive translation fails fall
+    // back to the whole target node, matching Regions::idxTranslated's
+    // conservative fallback; values not rooted at a global are not shared
+    // global memory, so report no node and let the caller treat them as an
+    // unknown region.
+    const auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(v));
+    if (GV && graph.hasCell(*GV))
+      return graph.getCell(*GV).getNode();
   }
   return nullptr;
 }

@@ -490,14 +490,17 @@ int Regions::idxTranslated(const Value *V, const Function *F, unsigned length) {
     // If field-sensitive translation is unavailable, use the entire target
     // global node. This loses precision but makes every access through that
     // node share one backing region instead of silently using offset zero.
+    // Values not rooted at a global (e.g., an alloca or a call result in an
+    // init function) are not shared global memory at all: report no
+    // translation so the caller anchors them as an ordinary (unknown)
+    // region in F's context instead of aborting.
     const auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(V));
     if (!GV || !dstG.hasCell(*GV))
-      report_fatal_error(
-          "cannot conservatively translate a global SeaDsa cell");
+      return -1;
     auto dst = dstG.getCell(*GV);
     auto *node = dst.getNode();
     if (!node)
-      report_fatal_error("global SeaDsa cell has no target node");
+      return -1;
     Region R(node, 0, std::max(node->size(), 1u), nullptr,
              SmackOptions::BitPrecise, nullptr, V->getContext());
     return (int)idx(R, F);
