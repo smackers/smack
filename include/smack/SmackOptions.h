@@ -28,6 +28,7 @@ public:
   static const llvm::cl::opt<bool> BitPrecisePointers;
   static const llvm::cl::opt<bool> RewriteBitwiseOps;
   static const llvm::cl::opt<bool> NoMemoryRegionSplitting;
+  static const llvm::cl::opt<bool> LocalPrivateMemoryMaps;
   static const llvm::cl::opt<bool> NoByteAccessInference;
   static const llvm::cl::opt<bool> FloatEnabled;
   static const llvm::cl::opt<bool> MemorySafety;

@@ -13,6 +13,7 @@
 #include "llvm/Support/Regex.h"
 #include <list>
 #include <map>
+#include <set>
 #include <sstream>
 
 namespace smack {
@@ -59,6 +60,7 @@ protected:
 
   std::vector<std::string> initFuncs;
   std::map<std::string, Decl *> auxDecls;
+  std::set<std::string> deadMemoryMaps;
 
 public:
   // Current function being processed (set by SmackModuleGenerator).
@@ -69,6 +71,12 @@ public:
   SmackRep(const llvm::DataLayout *L, Naming *N, Program *P, Regions *R);
   Program *getProgram() { return program; }
   Regions *getRegions() { return regions; }
+  void markDeadMemoryMap(const std::string &name) {
+    deadMemoryMaps.insert(name);
+  }
+  bool isDeadMemoryMap(const std::string &name) const {
+    return deadMemoryMaps.count(name) != 0;
+  }
 
 private:
   unsigned storageSize(llvm::Type *T);

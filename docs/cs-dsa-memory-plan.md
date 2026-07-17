@@ -2,125 +2,171 @@
 
 ## Overview
 
-SMACK uses **context-sensitive** sea-dsa analysis (`-sea-dsa=cs`) with **per-function memory regions**. Each function gets its own region vector computed from its CS graph, and memory maps are threaded through procedure signatures as parameters (reads) and returns (writes).
+SMACK runs SeaDsa in context-sensitive mode (`-sea-dsa=cs`) and constructs a
+region vector for each LLVM function. Region indices are local to a function;
+they are never compared across functions without a SeaDsa mapping.
 
-```boogie
-// Memory maps are local in/out parameters, not globals
-procedure foo(x: ref, $M.0.in: [ref]i8) returns ($M.0.out: [ref]i8)
-{ var $M.0: [ref]i8;
-  $M.0 := $M.0.in;
-  $M.0 := $store.i8($M.0, x, 42);
-  $M.0.out := $M.0; }
+The existing `cs` branch uses a hybrid backing policy. Entry-function regions
+and larger cross-function classes use module-level maps, while selected small
+classes are threaded through procedure inputs and outputs. The soundness fixes
+below preserve that policy for ordinary runs; under
+`-local-private-memory-maps` (enabled automatically for SV-COMP, where Corral
+runs with `/trackAllVars`), provably function-private stack/heap regions stay
+procedure-local instead (see Backing Maps).
 
-procedure main()
-  modifies $M.0;
-{ call $M.0 := foo(x, $M.0); }
+## Soundness Invariants
+
+1. A region mapping is a relation, not necessarily a function. One callee
+   region can correspond to several caller regions after DSA or region merges.
+2. Every association in that relation is preserved. Selecting one target can
+   disconnect caller state and is an unsound under-approximation.
+3. A relation with several targets cannot be represented by one threaded map
+   argument. Its complete equivalence class must use shared backing storage.
+4. Region construction and call-site mapping must converge before translation
+   continues. Hitting the iteration limit is a translation error.
+5. A nonfunctional SeaDsa `SimulationMapper` is a translation error until its
+   complete relation can be consumed through a SeaDsa API.
+6. Cross-graph global translation is either exact and offset-preserving or
+   conservative. It never silently falls back to an unrelated cell or offset
+   zero.
+
+## Analysis Phases
+
+### 1. Per-Function Regions
+
+Loads, stores, atomics, and memory intrinsics create field-granular regions in
+the DSA graph of the function containing the access. Regions are not pre-seeded
+from whole formals, actuals, or globals because whole-object probes collapse
+otherwise disjoint fields.
+
+`__SMACK_static_init` and `__SMACK_init_func*` are emitted in the entry
+function's memory context. Their cells are translated through the identity of
+the exact underlying global. If exact field translation is unavailable, SMACK
+uses a whole-node bytewise region in the entry graph. Values in init bodies
+that are not rooted at any global (stack arrays, call results) are not shared
+global memory; they anchor as ordinary regions in the entry context rather
+than aborting translation.
+
+### 2. Direct Access Sets
+
+Each function records directly read and modified regions:
+
+- load: read
+- store: modified
+- atomic read-modify-write: read and modified
+- `memset`: modified
+- `memcpy`/`memmove`: source read and destination modified
+
+### 3. Call-Site Relations
+
+`Graph::computeCalleeCallerMapping` supplies SeaDsa's authoritative mapping for
+globals, return values, formal/actual parameters, and reachable links. SMACK
+maps every callee region cell into the caller and records:
+
+```text
+callee region -> { caller region, ... }
 ```
 
-Entry points (`main`) keep globals with `modifies` clauses. Non-entry procedures use local in/out parameters.
+The computation runs to a structural fixpoint because mapping a reachable cell
+can create or merge caller regions. Deep pointer-passing call chains propagate
+one level per pass under adverse module order, so the iteration bound scales
+with the number of functions; exceeding it aborts translation.
 
----
+### 4. Merge Propagation and Normalization
 
-## Architecture
+If several callee regions map to one caller region, the callee regions are
+merged. All index-based tables are repaired after every erase. Mapping-key
+collisions union their target sets instead of discarding one mapping.
 
-### Phase 1: Per-Function Region Construction
+Normalization retains the branch's pairwise merge algorithm for incomplete,
+complicated, collapsed, and interval-overlapping regions.
 
-**Files:** `Regions.cpp` (runOnModule)
+### 5. Global Relations
 
-Each function's region vector is built from:
-1. **Formal pointer parameters** -- `idx(&formalArg, &F)`
-2. **Instructions** -- load/store/atomic/memcpy pointer operands via `visit(F)`
-3. **Call-site actual pointer arguments** -- `idx(actualArg, &F)` for each call in the function
-4. **Globals** -- `idx(&GV, &F)` for globals present in the function's DSA graph
-5. **Pointer-returning calls** -- `idx(&callInst, &F)` for calls that return pointers (both declarations and definitions)
-6. **Link-following** -- for each existing region, follow DSA pointer links to discover reachable nodes and create regions for them using `Region(Node*, ctx)`. This ensures callers have regions for data accessible through pointer indirection (e.g., `**arg`).
+For each ordinary function, global-backed regions are related to every matching
+entry-function region. This table is relational. Exact global identity is also
+tracked when preserving singleton scalar regions; merging views from different
+globals demotes the result to a map.
 
-The `Region(Node*, LLVMContext&)` constructor creates a region directly from a DSA node without needing a Value*. This is needed because callers may not have LLVM values for data they never directly access but their callees do.
+Statically initialized globals retain the branch's conservative map encoding.
 
-### Phase 2: Read/Write Sets
+### 6. Backing Maps
 
-Direct memory accesses in each function are recorded:
-- `LoadInst` -> readRegions
-- `StoreInst` -> modifiedRegions
-- `AtomicCmpXchgInst`, `AtomicRMWInst` -> both
-- `MemSetInst` -> modifiedRegions
-- `MemTransferInst` -> readRegions (source) + modifiedRegions (dest)
+A union-find structure links region pairs through call-site and global
+relations. In the default mode:
 
-### Phase 2.5: Global Memory Mappings
+- entry regions keep their module-level declarations;
+- small classes with two same-function regions and at most eight members can
+  remain threaded through procedure interfaces;
+- other cross-function classes use entry-owned or shared module-level maps;
+- accessed regions outside mapped classes get module-level maps of their own.
 
-For non-entry `usesGlobalMemory` functions (e.g., `__SMACK_static_init`), compute mappings from their region indices to the entry function's indices via shared globals.
+Before backing maps are chosen, a preliminary procedure-interface pass runs in
+every context-sensitive mode: a callee interface region that lacks a caller
+counterpart at even one call site (for example, a pointer formal receiving
+null) cannot be threaded through one fixed Boogie signature and is forced onto
+a shared map.
 
-### Phase 3: Call-Site Mappings
+Classes containing a non-unique relation are excluded from threading. If a
+non-threaded class contains several regions from one function, selecting one
+of them as its owner would disconnect the others, so that class uses one shared
+map. This is a representational soundness requirement, not a memory-splitting
+or map-count optimization.
 
-**`computeOneCallSiteMapping(CI, caller, callee)`** builds a map from callee region indices to caller region indices through:
+Under `-local-private-memory-maps` (automatic for `-x svcomp`, where Corral's
+`/trackAllVars` removes the abstraction advantage of globals), the policy
+changes for provably private memory: singleton classes and unmapped leftover
+regions that are allocated (stack/heap) and hold no global stay
+procedure-local, and the blanket module-level promotion of entry regions is
+skipped. Global-backed, external, unknown, and cross-function regions remain
+module-level in both modes.
 
-1. Build the authoritative SeaDsa call-site simulation with `Graph::computeCalleeCallerMapping`.
-2. For each callee region, ask the `SimulationMapper` for the corresponding caller `Cell`.
-3. Translate the mapped caller `Cell` back into the caller's local region index, creating a caller region if the caller has no LLVM `Value*` for that reachable node.
+### 6a. Dead Static-Initializer Maps
 
-SMACK does not reimplement SeaDsa's mapping rules. SeaDsa owns the root matching for globals, return values, and pointer formal/actual pairs, plus recursive link following with offset/collapsed-node handling. If SeaDsa cannot map the call site, the translation fails instead of falling back to equal numeric region indices.
+After translation, `__SMACK_static_init` stores whose target map has no other
+occurrence anywhere in the printed program are removed and the map's
+declaration is suppressed. The liveness check counts every textual occurrence
+of each entry/shared map name over the whole program, so any reference outside
+the candidate stores conservatively keeps the map. This runs only under
+context-sensitive DSA.
 
-**Iteration:** `computeCallSiteMappings` runs iteratively (up to 10 passes) because link-following may create new regions in callers, which then need mappings computed for their own callers.
+### 7. Access Closure and Interfaces
 
-### Phase 3.5: Region Merge Propagation
+Callee reads and modifications propagate through every caller target in the
+call-site relation until no access set changes. Procedure inputs and outputs
+are then computed for classes retained by the existing threading policy.
 
-**`propagateRegionMerges(M)`** enforces the soundness invariant: **regions must not alias**. Uses SCCs for proper ordering.
+## Failure Policy
 
-**Top-down pass:** When a caller maps two callee regions to the same caller region, the callee regions are merged (they alias from the caller's perspective). `mergeCalleeRegion` handles the merge and updates all affected call-site mappings.
+SMACK aborts translation instead of continuing when:
 
-**Bottom-up pass:** When a callee has collapsed regions that the caller keeps separate, the caller's regions are merged to match.
+- SeaDsa cannot compute a call-site mapping;
+- SeaDsa returns a nonfunctional simulation relation that its public lookup API
+  cannot enumerate;
+- call-site region construction does not converge;
+- a non-unique relation reaches a code path that requires one owner.
 
-**Key invariant in `mergeCalleeRegion`:** When shifting callee-side keys in call-site mappings, existing entries (typically from parameter mappings) take priority over entries from merged-away regions. This prevents global mapping collisions from overwriting call-site-specific parameter mappings.
+Global-rooted cells whose field-sensitive translation fails degrade to a
+whole-node conservative region; cells not rooted at any global are anchored as
+ordinary regions in the target context. Neither aborts translation.
 
-### Phase 4: Transitive Closure
+These failures are preferable to proving a program against disconnected or
+incomplete memory state.
 
-**`computeFunctionRegions(M)`** propagates callee region accesses to callers through call-site mappings until convergence. Only mapped regions are propagated.
+## Regression Coverage
 
-### Phase 5: Procedure Memory Interfaces
+- `cs_dsa_region_threading.c`: nested heap and pointer flow across calls.
+- `strings.c` and `strings1.c`: offset-preserving static-initializer mapping.
+- `svcomp_private_maps.c`: private regions become procedure-local maps under
+  `--local-private-memory-maps`, with a checked (non-vacuous) assertion.
+- `static_init_dead_maps.c`: unused initializer field maps are eliminated.
+- `init_func_locals.c`: init-function bodies using non-global-rooted memory.
+- `deep_call_chain.c`: call-site mapping convergence beyond 100 passes.
 
-**`computeInterfaceRegions(M)`** separates local memory from caller-visible memory:
+## Main Files
 
-1. **Input regions** are accessed regions reachable from formal pointer parameters or globals.
-2. **Output regions** are modified regions reachable from formal pointer parameters, globals, or the function return cell.
-
-Only input regions become `$M.r.in` parameters, and only output regions become `$M.r.out` returns. Private stack/heap regions remain local Boogie variables; they are not threaded through callers.
-
----
-
-## Key Design Decisions
-
-### SeaDsa-Owned Mapping
-The call-site mapping must follow SeaDsa's `SimulationMapper`; function-local region numbers are not comparable across functions. Falling back from an unmapped callee region to the same numeric caller region is unsound and is intentionally rejected.
-
-### Interface Reachability
-DSA graphs encode which nodes are reachable from parameters, globals, and return values. Procedure signatures expose only those regions. This avoids requiring callers to provide memory maps for callee-private allocas or heap objects that do not escape.
-
-### Region Creation from DSA Nodes
-The `Region(const seadsa::Node*, LLVMContext&)` constructor enables creating regions for DSA nodes that have no corresponding LLVM Value in the function. This is needed when:
-- A caller passes a pointer and the callee accesses through multiple levels of indirection
-- Phase 1 link-following discovers reachable nodes
-- Phase 3 link-following creates regions during mapping computation
-
-### Return Value Mapping
-Call-site mappings include the callee's SeaDsa return cell and the caller's call-result cell. This is critical for function pointer dispatch patterns like `devirtbounce`, where data flows through return values rather than parameters.
-
----
-
-## Test Notes
-
-The `smack_code_call` tests use `__SMACK_code` to emit inline BPL calls that bypass the memory map threading. This is a pre-existing limitation of inline BPL with per-function memory maps.
-
----
-
-## File Summary
-
-| File | Change |
-|------|--------|
-| `DSAWrapper.h/cpp` | Function-aware `getNode`/`getOffset`/`isTypeSafe` with per-function graph lookup |
-| `Regions.h/cpp` | Per-function region vectors, call-site mappings, link-following, merge propagation, `Region(Node*)` constructor |
-| `SmackRep.h/cpp` | Memory map params/returns in procedure signatures, call-site mapping for threading |
-| `SmackInstGenerator.cpp` | Prologue/epilogue for local memory shadows, entry block initialization |
-| `SmackModuleGenerator.cpp` | Local var declarations for non-entry functions, global-scope region handling |
-| `Prelude.cpp` | Per-function region types in prelude generation |
-| `SmackOptions.h/cpp` | `usesGlobalMemory`, `isEntryPoint` helpers |
-| `top.py` | Switch to `-sea-dsa=cs`, fix `VProperty.__members__` for `--check` flag |
+| File | Responsibility |
+|------|----------------|
+| `DSAWrapper.h/cpp` | Function graph lookup and exact global-cell translation |
+| `Regions.h/cpp` | Regions, relational mappings, merge repair, and backing classes |
+| `SmackRep.cpp` | Resolve local indices and validate threaded mappings |

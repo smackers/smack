@@ -4,6 +4,7 @@
 #define DEBUG_TYPE "smack-mod-gen"
 #include "smack/SmackModuleGenerator.h"
 #include "smack/BoogieAst.h"
+#include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/Prelude.h"
@@ -12,7 +13,117 @@
 #include "smack/SmackOptions.h"
 #include "smack/SmackRep.h"
 
+#include <cctype>
+#include <map>
+#include <set>
+#include <sstream>
+
 namespace smack {
+
+namespace {
+
+using NameCounts = std::map<std::string, unsigned>;
+
+bool isBoogieIdentifierChar(char c) {
+  unsigned char uc = static_cast<unsigned char>(c);
+  return std::isalnum(uc) || c == '_' || c == '.' || c == '$' || c == '#' ||
+         c == '\'' || c == '~' || c == '^' || c == '?';
+}
+
+NameCounts countMemoryMapNames(const std::string &text) {
+  NameCounts counts;
+  const std::string prefix = Naming::MEMORY + ".";
+
+  for (size_t pos = 0; (pos = text.find(prefix, pos)) != std::string::npos;) {
+    size_t end = pos + prefix.size();
+    if (text.compare(end, 2, "S.") == 0)
+      end += 2;
+
+    size_t digits = end;
+    while (end < text.size() &&
+           std::isdigit(static_cast<unsigned char>(text[end])))
+      end++;
+
+    if (end != digits &&
+        (end == text.size() || !isBoogieIdentifierChar(text[end])))
+      counts[text.substr(pos, end - pos)]++;
+
+    pos += prefix.size();
+  }
+  return counts;
+}
+
+NameCounts countMemoryMapNames(const Stmt *stmt) {
+  std::ostringstream os;
+  stmt->print(os);
+  return countMemoryMapNames(os.str());
+}
+
+void eliminateDeadStaticInitMaps(Program &program, SmackRep &rep) {
+  std::map<const Stmt *, std::string> candidates;
+  NameCounts initializerCounts;
+
+  for (auto *decl : program) {
+    auto *proc = dyn_cast<ProcDecl>(decl);
+    if (!proc || proc->getName() != Naming::STATIC_INIT_PROC)
+      continue;
+
+    for (auto *block : proc->getBlocks()) {
+      for (auto *stmt : block->getStatements()) {
+        auto *assign = dyn_cast<AssignStmt>(stmt);
+        if (!assign || assign->getLhs().size() != 1)
+          continue;
+
+        std::ostringstream lhs;
+        assign->getLhs().front()->print(lhs);
+
+        NameCounts names = countMemoryMapNames(stmt);
+        if (names.size() != 1 || names.begin()->first != lhs.str())
+          continue;
+
+        candidates.emplace(stmt, lhs.str());
+        initializerCounts[lhs.str()] += names.begin()->second;
+      }
+    }
+  }
+
+  if (candidates.empty())
+    return;
+
+  std::ostringstream os;
+  program.print(os);
+  NameCounts allCounts = countMemoryMapNames(os.str());
+  std::set<std::string> deadMaps;
+  for (const auto &entry : initializerCounts) {
+    if (allCounts[entry.first] == entry.second)
+      deadMaps.insert(entry.first);
+  }
+
+  if (deadMaps.empty())
+    return;
+
+  for (auto *decl : program) {
+    auto *proc = dyn_cast<ProcDecl>(decl);
+    if (!proc || proc->getName() != Naming::STATIC_INIT_PROC)
+      continue;
+
+    for (auto *block : proc->getBlocks()) {
+      auto &statements = block->getStatements();
+      statements.remove_if([&](const Stmt *stmt) {
+        auto it = candidates.find(stmt);
+        return it != candidates.end() && deadMaps.count(it->second) != 0;
+      });
+    }
+  }
+
+  for (const auto &name : deadMaps)
+    rep.markDeadMemoryMap(name);
+
+  SDEBUG(errs() << "Eliminated " << deadMaps.size()
+                << " dead static-initializer memory maps.\n");
+}
+
+} // namespace
 
 llvm::RegisterPass<SmackModuleGenerator> X("smack", "SMACK generator pass");
 char SmackModuleGenerator::ID = 0;
@@ -24,6 +135,7 @@ SmackModuleGenerator::SmackModuleGenerator() : ModulePass(ID) {
 void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<llvm::LoopInfoWrapperPass>();
+  AU.addRequired<DSAWrapper>();
   AU.addRequired<Regions>();
 }
 
@@ -144,6 +256,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
   auto ds = rep.auxiliaryDeclarations();
   decls.insert(decls.end(), ds.begin(), ds.end());
   decls.insert(decls.end(), rep.getInitFuncs());
+
+  if (getAnalysis<DSAWrapper>().isContextSensitive())
+    eliminateDeadStaticInitMaps(*program, rep);
 
   // NOTE we must do this after instruction generation, since we would not
   // otherwise know how many regions to declare.

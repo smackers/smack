@@ -354,6 +354,7 @@ class AssignStmt : public Stmt {
 public:
   AssignStmt(std::list<const Expr *> lhs, std::list<const Expr *> rhs)
       : Stmt(ASSIGN), lhs(lhs), rhs(rhs) {}
+  const std::list<const Expr *> &getLhs() const { return lhs; }
   void print(std::ostream &os) const override;
   static bool classof(const Stmt *S) { return S->getKind() == ASSIGN; }
 };
