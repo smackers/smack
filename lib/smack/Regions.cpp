@@ -416,11 +416,13 @@ bool Regions::runOnModule(Module &M) {
     computeGlobalMemoryMappings(M);
 
     dumpPhase("3.6-globals", funcRegionVecs);
-    if (SmackOptions::LocalPrivateMemoryMaps && DSA->isContextSensitive()) {
-      // Compute a preliminary procedure interface before choosing local maps.
-      // If an interface region lacks a caller counterpart at even one call
-      // site (for example, a pointer formal receives null), it cannot be
-      // threaded through one fixed Boogie signature and must be shared.
+    if (DSA->isContextSensitive()) {
+      // Compute a preliminary procedure interface before binding backing
+      // maps. If an interface region lacks a caller counterpart at even one
+      // call site (for example, a pointer formal receives null), it cannot
+      // be threaded through one fixed Boogie signature and must be shared.
+      // Threading is not specific to the private-map policy, so this guard
+      // applies in every context-sensitive mode.
       computeFunctionRegions(M);
       computeInterfaceRegions(M);
     }
@@ -1264,7 +1266,7 @@ void Regions::unifySharedRegions(Module &M) {
         unite(calleeId, id(caller, callerR));
     }
 
-    if (localPrivateMaps) {
+    if (DSA->isContextSensitive()) {
       auto hasCallerMapping = [&](unsigned calleeR) {
         auto it = cs.second.find(calleeR);
         return it != cs.second.end() && !it->second.empty();
