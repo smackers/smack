@@ -412,6 +412,13 @@ def arguments():
         help='disable region-based memory splitting')
 
     translate_group.add_argument(
+        '--local-private-memory-maps',
+        action="store_true",
+        default=False,
+        help='''keep function-private memory maps procedure-local
+                (enabled automatically for SV-COMP)''')
+
+    translate_group.add_argument(
         '--mem-mod',
         choices=[
             'no-reuse',
@@ -765,7 +772,7 @@ def llvm_to_bpl(args):
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
     # SV-COMP's Corral configuration tracks every global variable.
-    if args.language == 'svcomp':
+    if args.language == 'svcomp' or args.local_private_memory_maps:
         cmd += ['-local-private-memory-maps']
     if args.check.contains_mem_safe_props():
         cmd += ['-memory-safety']
