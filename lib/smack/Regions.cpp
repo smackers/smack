@@ -7,6 +7,7 @@
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/SmackOptions.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstIterator.h"
@@ -383,7 +384,11 @@ bool Regions::runOnModule(Module &M) {
     // merges) so that every mapping reflects the final region numbering;
     // comparing region counts is not enough since one merge plus one
     // creation in the same pass cancel out.
-    const unsigned maxIters = 100;
+    // Deep pointer-passing call chains propagate one level per pass under
+    // adverse module order, so the bound must scale with the number of
+    // functions; a fixed cap aborts on valid deep call chains.
+    const unsigned maxIters =
+        std::max(100u, (unsigned)M.getFunctionList().size() + 16);
     unsigned iter;
     for (iter = 0; iter < maxIters; iter++) {
       unsigned version = structuralVersion;
@@ -392,8 +397,8 @@ bool Regions::runOnModule(Module &M) {
         break;
     }
     if (iter == maxIters)
-      report_fatal_error(
-          "call-site region mappings did not stabilize after 100 passes");
+      report_fatal_error("call-site region mappings did not stabilize after " +
+                         Twine(maxIters) + " passes");
     mappingsFinal = true;
 
     dumpPhase("3-mappings", funcRegionVecs);
