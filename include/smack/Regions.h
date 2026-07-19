@@ -29,7 +29,6 @@ private:
   bool singleton;
   bool allocated;
   bool bytewise;
-  bool external;
   bool incomplete;
   bool complicated;
   bool collapsed;

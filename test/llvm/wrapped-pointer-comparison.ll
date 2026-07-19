@@ -21,11 +21,15 @@ define i32 @main() {
   call void @__VERIFIER_assume(i32 %assume_arg)
 
   %pointer = inttoptr i64 %value to i8*
+  %roundtrip_value = ptrtoint i8* %pointer to i64
+  %roundtrip_pointer = inttoptr i64 %roundtrip_value to i8*
+  %roundtrip_is_correct = icmp eq i8* %roundtrip_pointer, %pointer
   %is_unsigned_lt_null = icmp ult i8* %pointer, null
   %is_signed_lt_null = icmp slt i8* %pointer, null
   %is_not_unsigned_lt_null = xor i1 %is_unsigned_lt_null, true
   %comparison_is_correct = and i1 %is_not_unsigned_lt_null, %is_signed_lt_null
-  %result_is_correct = and i1 %arithmetic_is_correct, %comparison_is_correct
+  %cast_and_comparison_are_correct = and i1 %roundtrip_is_correct, %comparison_is_correct
+  %result_is_correct = and i1 %arithmetic_is_correct, %cast_and_comparison_are_correct
   %assert_arg = zext i1 %result_is_correct to i32
   call void @__VERIFIER_assert(i32 %assert_arg)
   ret i32 0
