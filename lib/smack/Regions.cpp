@@ -32,10 +32,10 @@ bool Region::isAllocated(const seadsa::Node *N) {
 }
 
 bool Region::isComplicated(const seadsa::Node *N) {
-  // Match SeaDsa's may-alias rule: either unsafe node may alias any other
-  // node, even when the other node itself is precise.
-  return N->isIntToPtr() || N->isPtrToInt() || N->isIncomplete() ||
-         N->isUnknown();
+  // Nodes involving imprecise pointer origins may alias any other node, even
+  // when that other node is precise.
+  return N->isIntToPtr() || N->isPtrToInt() || N->isExternal() ||
+         N->isIncomplete() || N->isUnknown();
 }
 
 void Region::init(const Value *V, unsigned length) {
