@@ -34,8 +34,8 @@ bool Region::isAllocated(const seadsa::Node *N) {
 bool Region::isComplicated(const seadsa::Node *N) {
   // Nodes involving imprecise pointer origins may alias any other node, even
   // when that other node is precise.
-  return N->isIntToPtr() || N->isPtrToInt() || N->isExternal() ||
-         N->isIncomplete() || N->isUnknown();
+  return N->isIntToPtr() || N->isPtrToInt() || N->isIncomplete() ||
+         N->isUnknown();
 }
 
 void Region::init(const Value *V, unsigned length) {
@@ -54,6 +54,7 @@ void Region::init(const Value *V, unsigned length) {
   bytewise = DSA && SmackOptions::BitPrecise &&
              (SmackOptions::NoByteAccessInference ||
               (!representative || !DSA->isTypeSafe(V)) || T->isIntegerTy(8));
+  external = representative && representative->isExternal();
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
   collapsed = !representative || representative->isOffsetCollapsed();
@@ -81,6 +82,7 @@ void Region::merge(Region &R) {
   singleton = singleton && R.singleton;
   allocated = allocated || R.allocated;
   bytewise = SmackOptions::BitPrecise && (bytewise || R.bytewise || collapse);
+  external = external || R.external;
   incomplete = incomplete || R.incomplete;
   complicated = complicated || R.complicated;
   collapsed = collapsed || R.collapsed;
@@ -88,7 +90,7 @@ void Region::merge(Region &R) {
 }
 
 bool Region::overlaps(Region &R) {
-  return complicated || R.complicated ||
+  return (external && R.external) || complicated || R.complicated ||
          (representative == R.representative &&
           (collapsed || !isDisjoint(R.offset, R.length)));
 }
@@ -105,6 +107,8 @@ void Region::print(raw_ostream &O) {
     O << "S";
   if (bytewise)
     O << "B";
+  if (external)
+    O << "E";
   if (complicated)
     O << "C";
   if (incomplete)
