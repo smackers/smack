@@ -32,7 +32,9 @@ bool Region::isAllocated(const seadsa::Node *N) {
 }
 
 bool Region::isComplicated(const seadsa::Node *N) {
-  return N->isIntToPtr() || N->isPtrToInt() || N->isExternal() ||
+  // Match SeaDsa's may-alias rule: either unsafe node may alias any other
+  // node, even when the other node itself is precise.
+  return N->isIntToPtr() || N->isPtrToInt() || N->isIncomplete() ||
          N->isUnknown();
 }
 
@@ -86,7 +88,7 @@ void Region::merge(Region &R) {
 }
 
 bool Region::overlaps(Region &R) {
-  return (incomplete && R.incomplete) || (complicated && R.complicated) ||
+  return complicated || R.complicated ||
          (representative == R.representative &&
           (collapsed || !isDisjoint(R.offset, R.length)));
 }
