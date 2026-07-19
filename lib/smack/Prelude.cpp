@@ -1205,23 +1205,28 @@ void PtrOpGen::generatePtrNumConvs(std::stringstream &s) const {
 void PtrOpGen::generatePreds(std::stringstream &s) const {
   describe("Pointer predicates", s);
 
-  using PredInfo = std::pair<std::string, BinExpr::Binary>;
+  // Wrapped non-bitvector pointer-producing operations use signed-canonical
+  // values. Only unsigned ordering needs the unsigned representation.
+  using PredInfo = std::tuple<std::string, BinExpr::Binary, bool>;
   const std::vector<PredInfo> predicates{
-      {"$eq", BinExpr::Eq},   {"$ne", BinExpr::Neq},  {"$ugt", BinExpr::Gt},
-      {"$uge", BinExpr::Gte}, {"$ult", BinExpr::Lt},  {"$ule", BinExpr::Lte},
-      {"$sgt", BinExpr::Gt},  {"$sge", BinExpr::Gte}, {"$slt", BinExpr::Lt},
-      {"$sle", BinExpr::Lte}};
+      {"$eq", BinExpr::Eq, false},  {"$ne", BinExpr::Neq, false},
+      {"$ugt", BinExpr::Gt, true},  {"$uge", BinExpr::Gte, true},
+      {"$ult", BinExpr::Lt, true},  {"$ule", BinExpr::Lte, true},
+      {"$sgt", BinExpr::Gt, false}, {"$sge", BinExpr::Gte, false},
+      {"$slt", BinExpr::Lt, false}, {"$sle", BinExpr::Lte, false}};
 
   // e.g., function {:inline} $eq.ref(p1: ref, p2: ref)
   // returns (i1) { (if $eq.i64.bool(p1, p2) then 1 else 0) }
   for (auto info : predicates) {
-    auto predName = info.first;
-    auto binPred = info.second;
+    auto predName = std::get<0>(info);
+    auto binPred = std::get<1>(info);
+    auto isUnsigned = std::get<2>(info);
     auto condExpr = Expr::fn(
         indexedName(predName, {prelude.rep.pointerType(), Naming::BOOL_TYPE}),
         {makePtrVarExpr(1), makePtrVarExpr(2)});
     const Expr *predExpr =
-        SmackOptions::BitPrecisePointers
+        SmackOptions::BitPrecisePointers ||
+                (SmackOptions::WrappedIntegerEncoding && isUnsigned)
             ? condExpr
             : new BinExpr(binPred, makePtrVarExpr(1), makePtrVarExpr(2));
 
@@ -1251,15 +1256,21 @@ void PtrOpGen::generateArithOps(std::stringstream &s) const {
 
   const std::vector<std::string> operations = {"$add", "$sub", "$mul"};
 
-  // e.g., function {:inline} $add.ref(p1: ref, p2: ref) returns (ref) {
-  // $add.i64(p1, p2) }
+  // Under wrapped integer encoding, for example:
+  // function {:inline} $add.ref(p1: ref, p2: ref) returns (ref) {
+  //   $tos.i64($add.i64(p1, p2))
+  // }
   for (auto op : operations) {
+    const Expr *arithExpr =
+        Expr::fn(indexedName(op, {prelude.rep.pointerType()}),
+                 {Expr::id("p1"), Expr::id("p2")});
+    if (!SmackOptions::BitPrecisePointers)
+      arithExpr = IntOpGen::IntArithOp::wrappedExpr(prelude.rep.ptrSizeInBits,
+                                                    arithExpr, false);
+
     s << Decl::function(indexedName(op, {Naming::PTR_TYPE}),
                         {{"p1", Naming::PTR_TYPE}, {"p2", Naming::PTR_TYPE}},
-                        Naming::PTR_TYPE,
-                        Expr::fn(indexedName(op, {prelude.rep.pointerType()}),
-                                 {Expr::id("p1"), Expr::id("p2")}),
-                        {makeInlineAttr()})
+                        Naming::PTR_TYPE, arithExpr, {makeInlineAttr()})
       << "\n";
   }
   s << "\n";
