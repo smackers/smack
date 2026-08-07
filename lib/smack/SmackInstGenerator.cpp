@@ -6,6 +6,7 @@
 #include "smack/BoogieAst.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
+#include "smack/Regions.h"
 #include "smack/SmackOptions.h"
 #include "smack/SmackRep.h"
 #include "smack/VectorOperations.h"
@@ -168,6 +169,14 @@ void SmackInstGenerator::visitBasicBlock(llvm::BasicBlock &bb) {
                                          naming->get(A))}));
       }
     }
+
+    // Initialize local memory shadows from input parameters.
+    if (!SmackOptions::usesGlobalMemory(naming->get(*F))) {
+      auto &info = rep->getRegions()->getFunctionRegionInfo(F);
+      for (unsigned r : info.inputRegions)
+        emit(Stmt::assign(Expr::id(rep->memPath(r)),
+                          Expr::id(rep->memPath(r) + ".in")));
+    }
   }
 }
 
@@ -243,6 +252,16 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst &ri) {
   llvm::Value *v = ri.getReturnValue();
   if (v)
     emit(Stmt::assign(Expr::id(Naming::RET_VAR), rep->expr(v)));
+
+  // Copy modified regions to output parameters.
+  const llvm::Function *F = ri.getParent()->getParent();
+  if (!SmackOptions::usesGlobalMemory(naming->get(*F))) {
+    auto &info = rep->getRegions()->getFunctionRegionInfo(F);
+    for (unsigned r : info.outputRegions)
+      emit(Stmt::assign(Expr::id(rep->memPath(r) + ".out"),
+                        Expr::id(rep->memPath(r))));
+  }
+
   emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
   emit(Stmt::return_());
 }
@@ -305,6 +324,9 @@ void SmackInstGenerator::visitSwitchInst(llvm::SwitchInst &si) {
 void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst &ii) {
   processInstruction(ii);
   llvm::Function *f = ii.getCalledFunction();
+  if (!f)
+    f = llvm::dyn_cast<llvm::Function>(
+        ii.getCalledOperand()->stripPointerCastsAndAliases());
   if (f)
     emit(rep->call(f, ii));
   else
@@ -492,7 +514,8 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   const Expr *E;
   if (isa<FixedVectorType>(T->getElementType())) {
     auto D = VectorOperations(rep).load(P);
-    E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
+    E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P, rep->currentFunction)),
+                                rep->expr(P)});
   } else {
     E = rep->load(P);
   }
@@ -516,7 +539,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
 
   if (isa<FixedVectorType>(V->getType())) {
     auto D = VectorOperations(rep).store(P);
-    auto M = Expr::id(rep->memPath(P));
+    auto M = Expr::id(rep->memPath(P, rep->currentFunction));
     auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
     emit(Stmt::assign(M, E));
   } else {
@@ -745,7 +768,7 @@ void SmackInstGenerator::visitCallInst(llvm::CallInst &ci) {
     std::list<const Expr *> args;
     for (auto &V : cj->args())
       args.push_back(rep->expr(V));
-    for (auto m : rep->memoryMaps())
+    for (auto m : rep->memoryMaps(rep->currentFunction))
       args.push_back(Expr::id(m.first));
     auto E = Expr::fn(F->getName().str(), args);
     if (name == Naming::CONTRACT_REQUIRES)

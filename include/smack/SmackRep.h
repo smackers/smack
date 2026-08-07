@@ -23,6 +23,7 @@ class Decl;
 class ProcDecl;
 class Stmt;
 class Expr;
+class Region;
 class Regions;
 class Attr;
 
@@ -60,8 +61,14 @@ protected:
   std::map<std::string, Decl *> auxDecls;
 
 public:
+  // Current function being processed (set by SmackModuleGenerator).
+  const llvm::Function *currentFunction = nullptr;
+  // Entry-point function (set by SmackModuleGenerator, used for global decls).
+  const llvm::Function *entryFunction = nullptr;
+
   SmackRep(const llvm::DataLayout *L, Naming *N, Program *P, Regions *R);
   Program *getProgram() { return program; }
+  Regions *getRegions() { return regions; }
 
 private:
   unsigned storageSize(llvm::Type *T);
@@ -180,17 +187,32 @@ public:
   const Stmt *returnValueAnnotation(const llvm::CallInst &CI);
 
   std::list<ProcDecl *> procedure(llvm::Function *F);
-  ProcDecl *procedure(llvm::Function *F, llvm::CallInst *C);
+  ProcDecl *procedure(llvm::Function *F, llvm::CallBase *C);
 
   // used in Slicing
   unsigned getElementSize(const llvm::Value *v);
 
   std::string memReg(unsigned i);
+  // Procedure-local shadow name for a threaded (non-global) region; a
+  // separate namespace from memReg so it cannot collide with the entry
+  // function's module-level maps.
+  std::string memLocalReg(unsigned i);
+  // Module-level map name for cross-function memory that does not reach
+  // the entry function's regions.
+  std::string memSharedReg(unsigned i);
+  std::string memTypeOf(Region &R);
+  std::string memType(const llvm::Function *F, unsigned region);
+  // memType/memPath/region for the current function's region index,
+  // resolving global-backed regions to the entry function's map and other
+  // shared memory to module-level shared maps.
   std::string memType(unsigned region);
   std::string memPath(unsigned region);
-  std::string memPath(const llvm::Value *v);
+  std::string memPath(const llvm::Value *v, const llvm::Function *F);
+  std::pair<const llvm::Function *, unsigned> resolveRegion(unsigned region);
+  Region &region(unsigned region);
 
-  std::list<std::pair<std::string, std::string>> memoryMaps();
+  std::list<std::pair<std::string, std::string>>
+  memoryMaps(const llvm::Function *F);
 
   // used in SmackInstGenerator
   std::string getString(const llvm::Value *v);

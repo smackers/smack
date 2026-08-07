@@ -12,16 +12,19 @@
 #include "smack/Naming.h"
 #include "smack/Regions.h"
 #include "smack/SmackWarnings.h"
+#include "llvm/Support/ErrorHandling.h"
 
+#include <cctype>
 #include <list>
 #include <queue>
 #include <set>
+#include <vector>
 
 namespace {
 using namespace llvm;
 
-std::list<CallInst *> findCallers(Function *F) {
-  std::list<CallInst *> callers;
+std::list<CallBase *> findCallers(Function *F) {
+  std::list<CallBase *> callers;
 
   if (F) {
     std::queue<User *> users;
@@ -34,8 +37,8 @@ std::list<CallInst *> findCallers(Function *F) {
       auto U = users.front();
       users.pop();
 
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        callers.push_back(CI);
+      if (CallBase *CB = dyn_cast<CallBase>(U))
+        callers.push_back(CB);
 
       else
         for (auto V : U->users())
@@ -47,6 +50,28 @@ std::list<CallInst *> findCallers(Function *F) {
   }
 
   return callers;
+}
+
+bool isInlineCallNameChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$' ||
+         c == '.';
+}
+
+std::string joinInlineCallArgs(const std::vector<std::string> &args) {
+  std::string result;
+  for (unsigned i = 0; i < args.size(); i++) {
+    if (i > 0)
+      result += ", ";
+    result += args[i];
+  }
+  return result;
+}
+
+bool isWhitespaceOnly(StringRef s) { return s.trim().empty(); }
+
+bool sameInlineCallArg(const Value *a, const Value *b) {
+  return a == b ||
+         a->stripPointerCastsAndAliases() == b->stripPointerCastsAndAliases();
 }
 } // namespace
 
@@ -190,15 +215,20 @@ std::string SmackRep::opName(const std::string &operation,
 }
 
 std::string SmackRep::procName(const llvm::User &U) {
-  if (const llvm::CallInst *CI = llvm::dyn_cast<const llvm::CallInst>(&U))
-    return procName(CI->getCalledFunction(), U);
+  if (const llvm::CallBase *CB = llvm::dyn_cast<const llvm::CallBase>(&U))
+    return procName(CB->getCalledFunction(), U);
   else
     llvm_unreachable("Unexpected user expression.");
 }
 
 std::string SmackRep::procName(llvm::Function *F, const llvm::User &U) {
   std::list<const llvm::Type *> types;
-  for (unsigned i = 0; i < U.getNumOperands() - 1; i++)
+  // Count actual arguments only: invokes carry extra non-argument operands
+  // (destinations and callee) that must not contribute to vararg names.
+  unsigned numArgs = U.getNumOperands() - 1;
+  if (auto *CB = llvm::dyn_cast<const llvm::CallBase>(&U))
+    numArgs = CB->arg_size();
+  for (unsigned i = 0; i < numArgs; i++)
     types.push_back(U.getOperand(i)->getType());
   return procName(F, types);
 }
@@ -261,32 +291,92 @@ std::string SmackRep::memReg(unsigned idx) {
   return indexedName(Naming::MEMORY, {idx});
 }
 
-std::string SmackRep::memType(unsigned region) {
+std::string SmackRep::memTypeOf(Region &R) {
   std::stringstream s;
-  if (!regions->get(region).isSingleton() ||
+  if (!R.isSingleton() ||
       (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference))
     s << "[" << Naming::PTR_TYPE << "] ";
-  const Type *T = regions->get(region).getType();
+  const Type *T = R.getType();
   s << (T ? type(T) : intType(8));
   return s.str();
 }
 
-std::string SmackRep::memPath(unsigned region) { return memReg(region); }
-
-std::string SmackRep::memPath(const llvm::Value *v) {
-  return memPath(regions->idx(v));
+std::string SmackRep::memType(const Function *F, unsigned region) {
+  return memTypeOf(regions->get(F, region));
 }
 
-std::list<std::pair<std::string, std::string>> SmackRep::memoryMaps() {
+std::string SmackRep::memLocalReg(unsigned idx) {
+  return indexedName(Naming::MEMORY + ".L", {idx});
+}
+
+std::string SmackRep::memSharedReg(unsigned idx) {
+  return indexedName(Naming::MEMORY + ".S", {idx});
+}
+
+// Resolve a region index in the current function's numbering to the owner
+// of its Boogie memory map: global-backed regions of ordinary functions
+// resolve to the entry function's module-level map, and other
+// cross-function memory resolves to a shared module-level map (first ==
+// nullptr, second indexing Regions::getShared). A nullptr first with
+// currentFunction set means shared; callers must special-case a null
+// currentFunction before resolving.
+std::pair<const llvm::Function *, unsigned>
+SmackRep::resolveRegion(unsigned region) {
+  if (currentFunction && currentFunction->hasName() &&
+      !SmackOptions::usesGlobalMemory(currentFunction->getName())) {
+    auto &gm = regions->getGlobalMemoryMapping(currentFunction);
+    auto it = gm.find(region);
+    if (it != gm.end() && entryFunction)
+      return {entryFunction, it->second};
+    int s = regions->getSharedRegionIndex(currentFunction, region);
+    if (s >= 0)
+      return {nullptr, (unsigned)s};
+  }
+  return {currentFunction, region};
+}
+
+Region &SmackRep::region(unsigned r) {
+  if (!currentFunction)
+    return regions->get(currentFunction, r);
+  auto res = resolveRegion(r);
+  if (!res.first)
+    return regions->getShared(res.second);
+  return regions->get(res.first, res.second);
+}
+
+std::string SmackRep::memType(unsigned region) {
+  return memTypeOf(this->region(region));
+}
+
+std::string SmackRep::memPath(unsigned region) {
+  if (!currentFunction)
+    return memReg(region);
+  auto res = resolveRegion(region);
+  if (!res.first)
+    return memSharedReg(res.second); // shared module-level map
+  if (res.first != currentFunction)
+    return memReg(res.second); // the entry function's module-level map
+  if (currentFunction->hasName() &&
+      !SmackOptions::usesGlobalMemory(currentFunction->getName()))
+    return memLocalReg(region); // procedure-local shadow
+  return memReg(region);
+}
+
+std::string SmackRep::memPath(const llvm::Value *v, const Function *F) {
+  return memPath(regions->idx(v, F));
+}
+
+std::list<std::pair<std::string, std::string>>
+SmackRep::memoryMaps(const Function *F) {
   std::list<std::pair<std::string, std::string>> mms;
-  for (unsigned i = 0; i < regions->size(); i++)
-    mms.push_back({memReg(i), memType(i)});
+  for (unsigned i = 0; i < regions->size(F); i++)
+    mms.push_back({memReg(i), memType(F, i)});
   return mms;
 }
 
 bool SmackRep::isExternal(const llvm::Value *v) {
   return v->getType()->isPointerTy() &&
-         !regions->get(regions->idx(v)).isAllocated();
+         !regions->isAllocatedValue(v, currentFunction);
 }
 
 const Stmt *SmackRep::alloca(llvm::AllocaInst &i) {
@@ -305,10 +395,10 @@ const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r1 = regions->idx(mci.getRawDest(), length);
-  unsigned r2 = regions->idx(mci.getRawSource(), length);
+  unsigned r1 = regions->idx(mci.getRawDest(), currentFunction, length);
+  unsigned r2 = regions->idx(mci.getRawSource(), currentFunction, length);
 
-  const Type *T = regions->get(r1).getType();
+  const Type *T = region(r1).getType();
   Decl *P = memcpyProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
@@ -317,10 +407,10 @@ const Stmt *SmackRep::memcpy(const llvm::MemCpyInst &mci) {
 
   return Stmt::call(
       P->getName(),
-      {Expr::id(memReg(r1)), Expr::id(memReg(r2)), expr(dst), expr(src),
+      {Expr::id(memPath(r1)), Expr::id(memPath(r2)), expr(dst), expr(src),
        integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
        Expr::lit(mci.isVolatile())},
-      {memReg(r1)});
+      {memPath(r1)});
 }
 
 const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
@@ -330,9 +420,9 @@ const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
   else
     length = std::numeric_limits<unsigned>::max();
 
-  unsigned r = regions->idx(msi.getRawDest(), length);
+  unsigned r = regions->idx(msi.getRawDest(), currentFunction, length);
 
-  const Type *T = regions->get(r).getType();
+  const Type *T = region(r).getType();
   Decl *P = memsetProc(T ? type(T) : intType(8), length);
   auxDecls[P->getName()] = P;
 
@@ -341,10 +431,10 @@ const Stmt *SmackRep::memset(const llvm::MemSetInst &msi) {
 
   return Stmt::call(
       P->getName(),
-      {Expr::id(memReg(r)), expr(dst), expr(val),
+      {Expr::id(memPath(r)), expr(dst), expr(val),
        integerToPointer(expr(len), len->getType()->getIntegerBitWidth()),
        Expr::lit(msi.isVolatile())},
-      {memReg(r)});
+      {memPath(r)});
 }
 
 const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
@@ -370,8 +460,8 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       auto T = GEP->getResultElementType();
       const unsigned bits = this->getSize(T);
       const unsigned bytes = bits / 8;
-      const unsigned R = regions->idx(GEP);
-      bool bytewise = regions->get(R).bytewiseAccess();
+      const unsigned R = regions->idx(GEP, currentFunction);
+      bool bytewise = region(R).bytewiseAccess();
       attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
       attrs.push_back(Attr::attr(
           "field", {
@@ -426,8 +516,8 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
     const unsigned bits = this->getSize(T);
     const unsigned bytes = bits / 8;
     const unsigned length = count * bytes;
-    const unsigned R = regions->idx(V, length);
-    bool bytewise = regions->get(R).bytewiseAccess();
+    const unsigned R = regions->idx(V, currentFunction, length);
+    bool bytewise = region(R).bytewiseAccess();
     args.push_back(expr(CI.getArgOperand(1)));
     attrs.push_back(Attr::attr("name", {Expr::id(naming->get(*A))}));
     attrs.push_back(Attr::attr(
@@ -502,10 +592,10 @@ bool SmackRep::isUnsafeFloatAccess(const Type *elemTy, const Type *resultTy) {
 const Expr *SmackRep::load(const llvm::Value *P) {
   const PointerType *T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  const unsigned R = regions->idx(P);
-  bool bytewise = regions->get(R).bytewiseAccess();
-  bool singleton = regions->get(R).isSingleton();
-  const Type *resultTy = regions->get(R).getType();
+  const unsigned R = regions->idx(P, currentFunction);
+  bool bytewise = region(R).bytewiseAccess();
+  bool singleton = region(R).isSingleton();
+  const Type *resultTy = region(R).getType();
   const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
@@ -524,14 +614,15 @@ const Stmt *SmackRep::store(const Value *P, const Value *V) {
 const Stmt *SmackRep::store(const Value *P, const Expr *V) {
   const PointerType *T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  return store(regions->idx(P), T->getElementType(), expr(P), V);
+  return store(regions->idx(P, currentFunction), T->getElementType(), expr(P),
+               V);
 }
 
 const Stmt *SmackRep::store(unsigned R, const Type *T, const Expr *P,
                             const Expr *V) {
-  bool bytewise = regions->get(R).bytewiseAccess();
-  bool singleton = regions->get(R).isSingleton();
-  const Type *resultTy = regions->get(R).getType();
+  bool bytewise = region(R).bytewiseAccess();
+  bool singleton = region(R).isSingleton();
+  const Type *resultTy = region(R).getType();
   std::string N =
       Naming::STORE + "." +
       (bytewise ? "bytes."
@@ -1018,7 +1109,7 @@ bool SmackRep::isContractExpr(const std::string S) const {
   return S.find(Naming::CONTRACT_EXPR) == 0;
 }
 
-ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
+ProcDecl *SmackRep::procedure(Function *F, CallBase *CI) {
   assert(F && "Unknown function call.");
   std::string name = naming->get(*F);
   std::list<std::pair<std::string, std::string>> params, rets;
@@ -1046,7 +1137,7 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
         "", {Stmt::call(Naming::FREE, {Expr::id(params.front().first)})}));
 
   } else if (isContractExpr(F)) {
-    for (auto m : memoryMaps())
+    for (auto m : memoryMaps(F))
       params.push_back(m);
 
   } else if (CI) {
@@ -1068,6 +1159,17 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
     }
   }
 
+  // Add memory region parameters and returns for non-entry procedures.
+  if (F->hasName() && !SmackOptions::usesGlobalMemory(F->getName()) &&
+      !F->isDeclaration() && !isContractExpr(F)) {
+    auto &info = regions->getFunctionRegionInfo(F);
+    for (unsigned r : info.inputRegions)
+      params.push_back({memLocalReg(r) + ".in", memType(F, r)});
+
+    for (unsigned r : info.outputRegions)
+      rets.push_back({memLocalReg(r) + ".out", memType(F, r)});
+  }
+
   return static_cast<ProcDecl *>(
       Decl::procedure(name, params, rets, decls, blocks));
 }
@@ -1075,7 +1177,7 @@ ProcDecl *SmackRep::procedure(Function *F, CallInst *CI) {
 std::list<ProcDecl *> SmackRep::procedure(llvm::Function *F) {
   std::list<ProcDecl *> procs;
   std::set<std::string> names;
-  std::list<CallInst *> callers = findCallers(F);
+  std::list<CallBase *> callers = findCallers(F);
 
   // Consider `return_value` calls as normal `value` calls
   if (F->hasName() && F->getName().equals(Naming::VALUE_PROC)) {
@@ -1124,6 +1226,34 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming->get(ci));
 
+  // Thread memory regions through the call for non-entry procedures.
+  // Use call-site mapping to pass caller's regions for callee's params.
+  if (f->hasName() && !SmackOptions::usesGlobalMemory(f->getName()) &&
+      !f->isDeclaration() && !isContractExpr(f)) {
+    auto *callBase = dyn_cast<const CallBase>(&ci);
+    auto &mapping = regions->getCallSiteMapping(callBase);
+
+    auto mapRegion = [&](unsigned calleeR) -> unsigned {
+      auto it = mapping.find(calleeR);
+      if (it == mapping.end())
+        report_fatal_error(
+            "missing SeaDsa call-site memory-region mapping for call to " +
+            f->getName());
+      return it->second;
+    };
+
+    auto &info = regions->getFunctionRegionInfo(f);
+    for (unsigned calleeR : info.inputRegions) {
+      unsigned callerR = mapRegion(calleeR);
+      args.push_back(Expr::id(memPath(callerR)));
+    }
+
+    for (unsigned calleeR : info.outputRegions) {
+      unsigned callerR = mapRegion(calleeR);
+      rets.push_back(memPath(callerR));
+    }
+  }
+
   return Stmt::call(procName(f, ci), args, rets);
 }
 
@@ -1141,6 +1271,7 @@ std::string SmackRep::code(llvm::CallInst &ci) {
   assert(!fmt.empty() && "inline code: missing format std::string.");
 
   std::string s = fmt;
+  std::vector<Value *> inlineArgs;
   for (unsigned i = 1; i < ci.getNumOperands() - 1; i++) {
     Value *argV = ci.getOperand(i);
     std::string::size_type idx = s.find('@');
@@ -1184,7 +1315,130 @@ std::string SmackRep::code(llvm::CallInst &ci) {
 
     std::ostringstream ss;
     arg(f, i, argV)->print(ss);
+    inlineArgs.push_back(argV);
     s = s.replace(idx, (isCast ? 2 : 1), ss.str());
+  }
+
+  // Inline Boogie is normally emitted verbatim. For direct calls to SMACK
+  // procedures, however, context-sensitive region splitting adds hidden memory
+  // parameters/returns. Reuse an existing LLVM call-site mapping when one is
+  // present so legacy __SMACK_code("call foo(@);", p) calls stay well typed.
+  Function *caller = ci.getParent()->getParent();
+  if (currentFunction == caller) {
+    size_t open = s.find('(');
+    size_t close = s.rfind(')');
+    if (open != std::string::npos && close != std::string::npos &&
+        open < close) {
+      StringRef tail(s.data() + close + 1, s.size() - close - 1);
+      if (tail.trim().equals(";")) {
+        size_t nameEnd = open;
+        while (nameEnd > 0 &&
+               std::isspace(static_cast<unsigned char>(s[nameEnd - 1])))
+          nameEnd--;
+        size_t nameStart = nameEnd;
+        while (nameStart > 0 && isInlineCallNameChar(s[nameStart - 1]))
+          nameStart--;
+
+        StringRef prefix(s.data(), nameStart);
+        std::string calleeName = s.substr(nameStart, nameEnd - nameStart);
+        if (prefix.trim().startswith("call") && !calleeName.empty()) {
+          Function *callee = nullptr;
+          Module *M = caller->getParent();
+          for (auto &F : *M) {
+            if (naming->get(F) == calleeName) {
+              callee = &F;
+              break;
+            }
+          }
+
+          if (callee && !callee->isDeclaration() &&
+              !SmackOptions::usesGlobalMemory(callee->getName()) &&
+              !isContractExpr(callee)) {
+            const CallInst *mappedCall = nullptr;
+            for (auto &BB : *caller) {
+              for (auto &I : BB) {
+                auto *other = dyn_cast<CallInst>(&I);
+                if (!other || other == &ci ||
+                    other->getCalledFunction() != callee)
+                  continue;
+                if (other->arg_size() != inlineArgs.size())
+                  continue;
+
+                bool sameArgs = true;
+                for (unsigned i = 0; i < other->arg_size(); i++) {
+                  if (!sameInlineCallArg(other->getArgOperand(i),
+                                         inlineArgs[i])) {
+                    sameArgs = false;
+                    break;
+                  }
+                }
+                if (sameArgs) {
+                  mappedCall = other;
+                  break;
+                }
+              }
+              if (mappedCall)
+                break;
+            }
+
+            if (mappedCall) {
+              auto &mapping = regions->getCallSiteMapping(mappedCall);
+              auto &info = regions->getFunctionRegionInfo(callee);
+              std::vector<std::string> memArgs;
+              std::vector<std::string> memRets;
+              bool complete = true;
+
+              for (unsigned calleeR : info.inputRegions) {
+                auto it = mapping.find(calleeR);
+                if (it == mapping.end()) {
+                  complete = false;
+                  break;
+                }
+                memArgs.push_back(memPath(it->second));
+              }
+
+              if (complete) {
+                for (unsigned calleeR : info.outputRegions) {
+                  auto it = mapping.find(calleeR);
+                  if (it == mapping.end()) {
+                    complete = false;
+                    break;
+                  }
+                  memRets.push_back(memPath(it->second));
+                }
+              }
+
+              if (complete && (!memArgs.empty() || !memRets.empty())) {
+                std::string beforeName = s.substr(0, nameStart);
+                if (!memRets.empty()) {
+                  std::string memRetText = joinInlineCallArgs(memRets);
+                  size_t assign = beforeName.rfind(":=");
+                  if (assign == std::string::npos) {
+                    beforeName += memRetText + " := ";
+                  } else {
+                    size_t insertPos = assign;
+                    while (insertPos > 0 &&
+                           std::isspace(static_cast<unsigned char>(
+                               beforeName[insertPos - 1])))
+                      insertPos--;
+                    beforeName.insert(insertPos, ", " + memRetText);
+                  }
+                }
+
+                std::string argsText = s.substr(open + 1, close - open - 1);
+                if (!memArgs.empty()) {
+                  if (!isWhitespaceOnly(argsText))
+                    argsText += ", ";
+                  argsText += joinInlineCallArgs(memArgs);
+                }
+                s = beforeName + s.substr(nameStart, open - nameStart + 1) +
+                    argsText + s.substr(close);
+              }
+            }
+          }
+        }
+      }
+    }
   }
   return s;
 }
@@ -1216,9 +1470,9 @@ const Stmt *SmackRep::inverseFPCastAssume(const StoreInst *si) {
   const PointerType *PT = dyn_cast<PointerType>(P->getType());
   assert(PT && "Expected pointer type.");
   const Type *T = PT->getElementType();
-  unsigned R = regions->idx(P);
-  if (!T->isFloatingPointTy() || !regions->get(R).bytewiseAccess() ||
-      regions->get(R).isSingleton()) {
+  unsigned R = regions->idx(P, currentFunction);
+  if (!T->isFloatingPointTy() || !region(R).bytewiseAccess() ||
+      region(R).isSingleton()) {
     return nullptr;
   }
   return inverseFPCastAssume(

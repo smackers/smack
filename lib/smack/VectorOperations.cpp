@@ -287,8 +287,8 @@ FuncDecl *VectorOperations::load(const Value *V) {
   auto ET = PT->getElementType();
   type(ET);
 
-  auto R = rep->regions->idx(V);
-  auto MT = rep->regions->get(R).getType();
+  auto R = rep->regions->idx(V, rep->currentFunction);
+  auto MT = rep->region(R).getType();
   MT || (MT = IntegerType::get(V->getContext(), 8));
   auto FN = rep->opName(Naming::LOAD, {ET, MT});
   auto M = rep->memType(R);
@@ -307,8 +307,8 @@ FuncDecl *VectorOperations::store(const Value *V) {
   auto ET = PT->getElementType();
   type(ET);
 
-  auto R = rep->regions->idx(V);
-  auto MT = rep->regions->get(R).getType();
+  auto R = rep->regions->idx(V, rep->currentFunction);
+  auto MT = rep->region(R).getType();
   MT || (MT = IntegerType::get(V->getContext(), 8));
   auto FN = rep->opName(Naming::STORE, {ET, MT});
   auto M = rep->memType(R);
