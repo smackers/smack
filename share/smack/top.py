@@ -518,6 +518,19 @@ def arguments():
                 check=check assume statements)''')
 
     translate_group.add_argument(
+        '--devirt-mode',
+        choices=[
+            'all',
+            'known'],
+        default='all',
+        help='''select which indirect calls get dispatched to their targets
+                (all=dispatch every indirect call, falling back to all
+                address-taken functions with a compatible signature when the
+                targets are unknown [default],
+                known=dispatch an indirect call only when its targets are
+                known, and turn every other indirect call into a no-op)''')
+
+    translate_group.add_argument(
         '--float',
         action="store_true",
         default=False,
@@ -774,6 +787,8 @@ def llvm_to_bpl(args):
         cmd += ['-fail-on-loop-exit']
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
+    if args.devirt_mode:
+        cmd += ['-devirt-mode=' + args.devirt_mode]
     if args.float:
         cmd += ['-float']
     if args.modular:

@@ -26,8 +26,25 @@ using namespace llvm;
 // Pass statistics
 STATISTIC(FuncAdded, "Number of bounce functions added");
 STATISTIC(CSConvert, "Number of call sites converted");
+STATISTIC(CSNoOp, "Number of call sites turned into no-ops");
 
-const bool SKIP_INCOMPLETE_NODES = false;
+// The name of the no-op stubs.  It has to start with "devirtbounce" so that the
+// trace post-processing keeps skipping the calls that this pass introduces
+// (see share/smack/svcomp/toSVCOMPformat.py).
+static const char *NOOP_STUB_NAME = "devirtbounce_noop";
+
+static llvm::cl::opt<DevirtMode> DispatchMode(
+    "devirt-mode",
+    llvm::cl::desc("Dispatch policy for indirect function calls"),
+    llvm::cl::values(
+        clEnumValN(DevirtMode::All, "all",
+                   "dispatch every indirect call, falling back to all "
+                   "address-taken functions with a compatible signature "
+                   "when the targets are unknown (default)"),
+        clEnumValN(DevirtMode::Known, "known",
+                   "dispatch an indirect call only when its targets are "
+                   "known; turn every other indirect call into a no-op")),
+    llvm::cl::init(DevirtMode::All));
 
 //
 // Function: getVoidPtrType()
@@ -123,6 +140,39 @@ static inline bool checkArgs(const CallBase *CS, const Function *F) {
     if (A->getType() != PT && !isZExtOrBitCastable(A, PT))
       return false;
   }
+  return true;
+}
+
+//
+// Function: refersOnlyToGlobals()
+//
+// Description:
+//  Determine whether every allocation site of the given node is a global
+//  value.  The allocation sites of a node over-approximate the objects that a
+//  pointer to that node may refer to, so a node whose allocation sites are all
+//  globals cannot hold the address of a stack or heap object, nor an address
+//  that was synthesized out of an integer.
+//
+static bool refersOnlyToGlobals(const seadsa::Node *N) {
+  const auto &AllocSites = N->getAllocSites();
+
+  //
+  // A node without any allocation site tells us nothing about what the pointer
+  // refers to, so it does not count as known.
+  //
+  if (AllocSites.empty())
+    return false;
+
+  for (const Value *V : AllocSites) {
+    const Value *Site = V->stripPointerCastsAndAliases();
+    //
+    // The resolver of an ifunc runs at load time, so the function it selects
+    // is not known statically.
+    //
+    if (!isa<GlobalValue>(Site) || isa<GlobalIFunc>(Site))
+      return false;
+  }
+
   return true;
 }
 
@@ -275,11 +325,11 @@ Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) 
                                             "fail",
                                             F);
 
-  // TODO what to do when there are no potential targets?
-  if (Targets.size())
-    new UnreachableInst (M->getContext(), failBB);
-  else
-    ReturnInst::Create(M->getContext(), failBB);
+  //
+  // The bounce function is only built for a call site whose targets are known,
+  // so the function pointer matching none of them cannot happen.
+  //
+  new UnreachableInst (M->getContext(), failBB);
 
   //
   // Setup the entry basic block.  For now, just have it call the failure
@@ -340,26 +390,139 @@ Devirtualize::buildBounce (CallBase *CS, std::vector<const Function*>& Targets) 
 }
 
 //
-// Method: makeDirectCall()
+// Method: getCalleeNode()
 //
 // Description:
-//  Transform the specified call site into a direct call.
+//  Return the sea-dsa node of the function pointer of the given call site, or
+//  null when the points-to analysis has nothing to say about it.
 //
-// Inputs:
-//  CS - The call site to transform.
-//
-// Preconditions:
-//  1) This method assumes that CS is an indirect call site.
-//  2) This method assumes that a pointer to the CallTarget analysis pass has
-//     already been acquired by the class.
-//
-void
-Devirtualize::makeDirectCall (CallBase *CS) {
-  //
-  // Find the targets of the indirect function call.
-  //
+const seadsa::Node *
+Devirtualize::getCalleeNode (const CallBase *CS) {
+  assert(DSA && "the points-to analysis is required in this dispatch mode");
 
-  std::vector<const Function*> Targets;
+  const Function *Caller = CS->getFunction();
+  if (!Caller || !DSA->hasGraph(*Caller))
+    return nullptr;
+
+  //
+  // Note that getCell() asserts that the value has a cell, so hasCell() has to
+  // be consulted first.
+  //
+  seadsa::Graph &G = DSA->getGraph(*Caller);
+  const Value *Callee = CS->getCalledOperand();
+  if (!Callee || !G.hasCell(*Callee))
+    return nullptr;
+
+  return G.getCell(*Callee).getNode();
+}
+
+//
+// Method: hasKnownTargets()
+//
+// Description:
+//  Determine whether the targets of the given indirect call site are known,
+//  and collect them into Targets when they are.  The targets are known when
+//  the sea-dsa node of the function pointer is complete -- no code outside of
+//  the module could have written into it -- and refers only to global values.
+//
+// Return value:
+//  true  - The call site can be dispatched; Targets holds its targets.
+//  false - The targets are unknown; Targets is left empty.
+//
+bool
+Devirtualize::hasKnownTargets (CallBase *CS,
+                               std::vector<const Function*>& Targets) {
+  SDEBUG(errs() << "[devirt] call site: " << *CS << "\n");
+
+  const seadsa::Node *N = getCalleeNode(CS);
+  if (!N) {
+    SDEBUG(errs() << "[devirt]   unknown: no node for the function pointer\n");
+    return false;
+  }
+
+  SDEBUG(errs() << "[devirt]   node marks: "
+                << N->getNodeType().toStr() << "\n");
+
+  //
+  // A node that was reached through an inttoptr holds an address that was
+  // synthesized out of an integer, so its allocation sites say nothing about
+  // what it refers to.
+  //
+  if (N->isIntToPtr()) {
+    SDEBUG(errs() << "[devirt]   unknown: the node is marked inttoptr\n");
+    return false;
+  }
+
+  //
+  // An external node came out of code that is not part of the module, which
+  // may have stored an arbitrary function pointer into it.  Its allocation
+  // sites are therefore only a lower bound on what the function pointer may
+  // refer to.  Note that this, rather than the incomplete mark, is what
+  // sea-dsa itself uses to decide that a call site is fully resolved: nothing
+  // ever sets the incomplete mark at the moment.  The mark is consulted
+  // anyway so that this stays correct if that ever changes.
+  //
+  if (N->isExternal() || N->isIncomplete()) {
+    SDEBUG(errs() << "[devirt]   unknown: the node is not complete\n");
+    return false;
+  }
+
+  if (!refersOnlyToGlobals(N)) {
+    SDEBUG(errs() << "[devirt]   unknown: the node refers to "
+                  << (N->getAllocSites().empty() ? "nothing known"
+                                                 : "a non-global")
+                  << "\n");
+    return false;
+  }
+
+  for (const Value *V : N->getAllocSites())
+    if (auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases()))
+      if (match(CS, *F))
+        Targets.push_back(F);
+
+  //
+  // The allocation sites are stored in a set ordered by address, so sort the
+  // targets to keep the generated code independent of the memory layout.
+  //
+  std::sort(Targets.begin(), Targets.end(),
+            [](const Function *A, const Function *B) {
+              if (A->getName() != B->getName())
+                return A->getName() < B->getName();
+              return A < B;
+            });
+
+  //
+  // The node may well refer to globals none of which is a function that can be
+  // called here, in which case there is nothing to dispatch to.
+  //
+  if (Targets.empty()) {
+    SDEBUG(errs() << "[devirt]   unknown: no global the node refers to is a "
+                     "function with a compatible signature\n");
+    return false;
+  }
+
+  SDEBUG(for (const Function *F : Targets) {
+    errs() << "[devirt]   target: " << F->getName() << "\n";
+  });
+  return true;
+}
+
+//
+// Method: findTargets()
+//
+// Description:
+//  Collect the targets to dispatch the given indirect call site to, following
+//  the dispatch policy that was selected on the command line.
+//
+// Return value:
+//  true  - The call site should be dispatched to Targets.
+//  false - The call site should be turned into a no-op.
+//
+bool
+Devirtualize::findTargets (CallBase *CS,
+                           std::vector<const Function*>& Targets) {
+  if (DispatchMode == DevirtMode::Known)
+    return hasKnownTargets(CS, Targets);
 
   // TODO should we allow non-matching targets?
   // TODO non-matching targets leads to crashes in bounce creation
@@ -372,6 +535,97 @@ Devirtualize::makeDirectCall (CallBase *CS) {
       if (F.hasAddressTaken() && match(CS, F))
         Targets.push_back(&F);
   }
+
+  //
+  // A bounce function without any target would fall through to its failure
+  // basic block, which cannot return a value of the expected type.  Treat such
+  // a call site as a no-op instead.
+  //
+  return !Targets.empty();
+}
+
+//
+// Method: getNoOpStub()
+//
+// Description:
+//  Return a parameterless function returning the given type, to stand in for
+//  the call sites that are not dispatched.  The stub is deliberately left
+//  undefined: SMACK translates a call to an undefined procedure into one that
+//  havocs the value it returns and modifies nothing, which is precisely the
+//  intended no-op semantics.
+//
+Function*
+Devirtualize::getNoOpStub (Type *RetTy, Module &M) {
+  auto It = noopCache.find(RetTy);
+  if (It != noopCache.end())
+    return It->second;
+
+  FunctionType *NoOpTy = FunctionType::get(RetTy, {}, false);
+  Function *F = Function::Create(NoOpTy, GlobalValue::ExternalLinkage,
+                                 NOOP_STUB_NAME, &M);
+  noopCache[RetTy] = F;
+  return F;
+}
+
+//
+// Method: makeNoOpCall()
+//
+// Description:
+//  Replace the given call site with a call to a no-op stub.  The arguments are
+//  dropped on purpose: were they passed on to the stub, the points-to analysis
+//  that SMACK runs afterwards would treat the objects they point to as escaping
+//  to external code, which would coarsen the memory model of the whole module.
+//
+// Inputs:
+//  CS - The call site to transform.
+//
+void
+Devirtualize::makeNoOpCall (CallBase *CS) {
+  Module *M = CS->getModule();
+  Function *NoOp = getNoOpStub(CS->getType(), *M);
+
+  std::string name = CS->hasName() ? CS->getName().str() + ".dv" : "";
+  Instruction *NC;
+  if (isa<CallInst>(CS)) {
+    NC = CallInst::Create(NoOp, {}, name, CS);
+  } else {
+    InvokeInst *II = cast<InvokeInst>(CS);
+    NC = InvokeInst::Create(NoOp, II->getNormalDest(), II->getUnwindDest(),
+                            {}, name, II);
+  }
+
+  //
+  // Keep the source location so that the call site is still attributed to the
+  // line it came from.
+  //
+  NC->setDebugLoc(CS->getDebugLoc());
+
+  if (!CS->getType()->isVoidTy())
+    CS->replaceAllUsesWith(NC);
+  CS->eraseFromParent();
+
+  ++CSNoOp;
+
+  return;
+}
+
+//
+// Method: makeDirectCall()
+//
+// Description:
+//  Transform the specified call site into a direct call.
+//
+// Inputs:
+//  CS      - The call site to transform.
+//  Targets - The functions to dispatch the call site to; must not be empty.
+//
+// Preconditions:
+//  1) This method assumes that CS is an indirect call site.
+//
+void
+Devirtualize::makeDirectCall (CallBase *CS,
+                              std::vector<const Function*>& Targets) {
+  assert(!Targets.empty() && "Cannot dispatch a call site without targets.");
 
   //
   // Determine if an existing bounce function can be used for this call site.
@@ -451,18 +705,26 @@ Devirtualize::processCallSite (CallBase *CS) {
     return;
 
   //
-  // Second, we will only transform those call sites which are complete (i.e.,
-  // for which we know all of the call targets).
-  //
-  if (SKIP_INCOMPLETE_NODES && !CCG->isComplete(*CS))
-    return;
-
-  //
   // This is an indirect call site.  Put it in the worklist of call sites to
   // transforms.
   //
   Worklist.push_back(CS);
   return;
+}
+
+//
+// Method: getAnalysisUsage()
+//
+// Description:
+//  Request the analysis that the selected dispatch policy relies on.  Each
+//  policy pays only for the analysis it uses.
+//
+void
+Devirtualize::getAnalysisUsage (AnalysisUsage &AU) const {
+  if (DispatchMode == DevirtMode::Known)
+    AU.addRequired<seadsa::DsaAnalysis>();
+  else
+    AU.addRequired<seadsa::CompleteCallGraph>();
 }
 
 //
@@ -475,9 +737,15 @@ Devirtualize::processCallSite (CallBase *CS) {
 bool
 Devirtualize::runOnModule (Module & M) {
   //
-  // Get the targets of indirect function calls.
+  // Get the analysis telling us the targets of indirect function calls.
   //
-  CCG = &getAnalysis<seadsa::CompleteCallGraph>();
+  if (DispatchMode == DevirtMode::Known) {
+    DSA = &getAnalysis<seadsa::DsaAnalysis>().getDsaAnalysis();
+    assert(DSA->kind() == seadsa::GlobalAnalysisKind::CONTEXT_INSENSITIVE &&
+           "Currently we only want the context-insensitive sea-dsa.");
+  } else {
+    CCG = &getAnalysis<seadsa::CompleteCallGraph>();
+  }
 
   //
   // Get information on the target system.
@@ -492,12 +760,30 @@ Devirtualize::runOnModule (Module & M) {
 
   //
   // Now go through and transform all of the indirect calls that we found that
-  // need transforming.
+  // need transforming.  A call site whose targets are unknown becomes a no-op.
   //
+  unsigned NumNoOps = 0;
   for (unsigned index = 0; index < Worklist.size(); ++index) {
     // Autobots, transform (the call site)!
-    makeDirectCall (Worklist[index]);
+    CallBase *CS = Worklist[index];
+    std::vector<const Function*> Targets;
+    if (findTargets(CS, Targets)) {
+      makeDirectCall (CS, Targets);
+    } else {
+      makeNoOpCall (CS);
+      ++NumNoOps;
+    }
   }
+  Worklist.clear();
+
+  //
+  // Dropping a call is an under-approximation, so say so rather than silently
+  // verifying less of the program than the user asked for.
+  //
+  if (NumNoOps)
+    errs() << "SMACK warning: " << NumNoOps
+           << " indirect call site(s) with unknown targets were replaced by "
+              "no-ops.\n";
 
   //
   // Conservatively assume that we've changed one or more call sites.
@@ -512,4 +798,5 @@ using namespace seadsa;
 // Pass registration
 INITIALIZE_PASS_BEGIN(Devirtualize, "devirt", "Devirtualize indirect function calls", false, false)
 INITIALIZE_PASS_DEPENDENCY(CompleteCallGraph)
+INITIALIZE_PASS_DEPENDENCY(DsaAnalysis)
 INITIALIZE_PASS_END(Devirtualize, "devirt", "Devirtualize indirect function calls", false, false)

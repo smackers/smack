@@ -24,6 +24,9 @@
 #include "llvm/IR/DataLayout.h"
 
 #include "seadsa/CompleteCallGraph.hh"
+#include "seadsa/DsaAnalysis.hh"
+#include "seadsa/Global.hh"
+#include "seadsa/Graph.hh"
 
 #include <map>
 #include <set>
@@ -31,6 +34,23 @@
 using namespace llvm;
 
 namespace llvm {
+  //
+  // Enum: DevirtMode
+  //
+  // Description:
+  //  The policy deciding which indirect call sites get dispatched.
+  //
+  enum class DevirtMode {
+    // Dispatch every indirect call site.  When the points-to analysis cannot
+    // resolve a call site, fall back to every address-taken function with a
+    // compatible signature.
+    All,
+    // Dispatch an indirect call site only when its targets are known, i.e.,
+    // when the sea-dsa node of the function pointer is complete and refers
+    // only to global values.  Every other indirect call site becomes a no-op.
+    Known
+  };
+
   //
   // Class: Devirtualize
   //
@@ -42,7 +62,11 @@ namespace llvm {
   class Devirtualize : public ModulePass, public InstVisitor<Devirtualize> {
     private:
       // Access to analysis pass which finds targets of indirect function calls
-      seadsa::CompleteCallGraph *CCG;
+      seadsa::CompleteCallGraph *CCG = nullptr;
+
+      // Access to the points-to analysis used to decide whether the targets of
+      // an indirect call are known.  Only set in the Known dispatch mode.
+      seadsa::GlobalAnalysis *DSA = nullptr;
 
       // Access to the target data analysis pass
       const DataLayout * TD;
@@ -53,8 +77,18 @@ namespace llvm {
       // A cache of indirect call targets that have been converted already
       std::map<const Function *, std::set<const Function *> > bounceCache;
 
+      // A cache of the no-op stubs, keyed by the type they return
+      std::map<Type *, Function *> noopCache;
+
     protected:
-      void makeDirectCall (CallBase *CS);
+      bool findTargets (CallBase *CS, std::vector<const Function*>& Targets);
+      bool hasKnownTargets (CallBase *CS,
+                            std::vector<const Function*>& Targets);
+      const seadsa::Node* getCalleeNode (const CallBase *CS);
+      void makeDirectCall (CallBase *CS,
+                           std::vector<const Function*>& Targets);
+      void makeNoOpCall (CallBase *CS);
+      Function* getNoOpStub (Type *RetTy, Module &M);
       Function* buildBounce (CallBase *CS,std::vector<const Function*>& Targets);
       const Function* findInCache (const CallBase *CS,
                                    std::set<const Function*>& Targets);
@@ -65,9 +99,7 @@ namespace llvm {
 
       virtual bool runOnModule(Module & M) override;
 
-      virtual void getAnalysisUsage(AnalysisUsage &AU) const override{
-        AU.addRequired<seadsa::CompleteCallGraph>();
-      }
+      virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
 
       // Visitor methods for analyzing instructions
       //void visitInstruction(Instruction &I);
