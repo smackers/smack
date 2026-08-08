@@ -144,6 +144,27 @@ static inline bool checkArgs(const CallBase *CS, const Function *F) {
 }
 
 //
+// Function: isCallThroughPointer()
+//
+// Description:
+//  Determine whether the given call site calls through a function pointer.
+//
+//  This is deliberately weaker than CallBase::isIndirectCall(), which reports
+//  false for every constant callee.  A callee that is a constant but not a
+//  function -- a null pointer, an undefined value, an address made up out of
+//  an integer -- is still a call through a pointer, and one with no target at
+//  that.  Such a call has to be transformed here rather than left alone: the
+//  translator casts the callee of every remaining call to a function.
+//
+static inline bool isCallThroughPointer(const CallBase *CS) {
+  if (CS->isInlineAsm())
+    return false;
+
+  const Value *Callee = CS->getCalledOperand();
+  return Callee && !isa<Function>(Callee->stripPointerCastsAndAliases());
+}
+
+//
 // Function: refersOnlyToGlobals()
 //
 // Description:
@@ -521,6 +542,18 @@ Devirtualize::hasKnownTargets (CallBase *CS,
 bool
 Devirtualize::findTargets (CallBase *CS,
                            std::vector<const Function*>& Targets) {
+  //
+  // A constant callee that got this far is not a function -- it is a null
+  // pointer, an undefined value, or an address made up out of an integer.
+  // There is no target to dispatch to under any policy.
+  //
+  if (isa<Constant>(CS->getCalledOperand())) {
+    SDEBUG(errs() << "[devirt] call site: " << *CS << "\n"
+                  << "[devirt]   unknown: the function pointer is a constant "
+                     "that is not a function\n");
+    return false;
+  }
+
   if (DispatchMode == DevirtMode::Known)
     return hasKnownTargets(CS, Targets);
 
@@ -701,7 +734,7 @@ Devirtualize::processCallSite (CallBase *CS) {
   //
   // First, determine if this is a direct call.  If so, then just ignore it.
   //
-  if (!CS->isIndirectCall())
+  if (!isCallThroughPointer(CS))
     return;
 
   //
