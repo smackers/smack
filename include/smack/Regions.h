@@ -67,6 +67,7 @@ private:
   std::vector<Region> allocations;
   unsigned idx(Region &R);
   unsigned allocationIdx(Region &R);
+  bool allocationsAreDisjoint() const;
   void trackAllocation(const llvm::Value *v);
 
 public:

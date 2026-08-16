@@ -152,7 +152,20 @@ bool Regions::runOnModule(Module &M) {
   } else if (SmackOptions::MemorySafety)
     visit(M);
 
+  assert(allocationsAreDisjoint() &&
+         "Allocation classes must be pairwise non-sharing.");
+
   return false;
+}
+
+// Checked once per module rather than per merge: the scan is quadratic in the
+// number of classes, and allocationIdx runs at every tracked memory access.
+bool Regions::allocationsAreDisjoint() const {
+  for (unsigned i = 0; i < allocations.size(); ++i)
+    for (unsigned j = i + 1; j < allocations.size(); ++j)
+      if (allocations[i].mayShareAllocation(allocations[j]))
+        return false;
+  return true;
 }
 
 unsigned Regions::size() const { return regions.size(); }
@@ -170,6 +183,17 @@ bool Regions::findAllocation(const Value *V, unsigned &a) const {
   return false;
 }
 
+// Invariant maintained by allocationIdx: no two entries of `allocations`
+// satisfy mayShareAllocation. `findAllocation` depends on it, since it returns
+// the first matching class and would otherwise pick an arbitrary one of
+// several.
+//
+// Establishing it takes a fixed point rather than a single pass, because
+// mayShareAllocation is reflexive and symmetric but *not* transitive: the
+// `incomplete` and `complicated` disjuncts relate classes with unrelated
+// representatives. Absorbing a region can therefore give a class a flag it did
+// not have, making it share with classes that did not match a moment earlier,
+// and absorbing those can widen it again.
 unsigned Regions::allocationIdx(Region &R) {
   unsigned a;
   for (a = 0; a < allocations.size(); ++a) {
@@ -179,19 +203,26 @@ unsigned Regions::allocationIdx(Region &R) {
     }
   }
 
-  if (a == allocations.size())
+  if (a == allocations.size()) {
     allocations.emplace_back(R);
-  else {
-    unsigned q = a + 1;
-    while (q < allocations.size()) {
-      if (allocations[a].mayShareAllocation(allocations[q])) {
-        allocations[a].merge(allocations[q]);
-        allocations.erase(allocations.begin() + q);
-      } else {
-        ++q;
-      }
+    return a;
+  }
+
+  for (bool merged = true; merged;) {
+    merged = false;
+    for (unsigned q = 0; q < allocations.size(); ++q) {
+      if (q == a || !allocations[a].mayShareAllocation(allocations[q]))
+        continue;
+      allocations[a].merge(allocations[q]);
+      allocations.erase(allocations.begin() + q);
+      // Erasing shifts everything after q down, including a itself.
+      if (q < a)
+        --a;
+      merged = true;
+      break;
     }
   }
+
   return a;
 }
 
