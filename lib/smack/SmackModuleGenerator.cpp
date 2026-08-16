@@ -4,6 +4,7 @@
 #define DEBUG_TYPE "smack-mod-gen"
 #include "smack/SmackModuleGenerator.h"
 #include "smack/BoogieAst.h"
+#include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/Prelude.h"
@@ -25,6 +26,8 @@ void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<llvm::LoopInfoWrapperPass>();
   AU.addRequired<Regions>();
+  if (SmackOptions::MemorySafety)
+    AU.addRequired<DSAWrapper>();
 }
 
 bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
@@ -37,11 +40,13 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
   Naming naming;
   SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>());
   std::list<Decl *> &decls = program->getDeclarations();
+  DSAWrapper *DSA =
+      SmackOptions::MemorySafety ? &getAnalysis<DSAWrapper>() : nullptr;
 
   SDEBUG(errs() << "Analyzing globals...\n");
 
   for (auto &G : M.globals()) {
-    auto ds = rep.globalDecl(&G);
+    auto ds = rep.globalDecl(&G, !DSA || DSA->isAccessed(&G));
     decls.insert(decls.end(), ds.begin(), ds.end());
   }
 

@@ -1261,7 +1261,8 @@ void SmackRep::addAllocSizeAttr(const llvm::GlobalVariable *G,
   }
 }
 
-std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
+std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v,
+                                       bool allocate) {
   using namespace llvm;
   std::list<Decl *> decls;
   std::list<const Attr *> ax;
@@ -1322,7 +1323,7 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v) {
         Expr::id(name), pointerLit(globalsOffset -= (size + globalsPadding)))));
   }
 
-  if (!llvm::isa<Function>(v))
+  if (!llvm::isa<Function>(v) && allocate)
     globalAllocations[v] = size;
 
   return decls;

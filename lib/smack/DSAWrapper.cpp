@@ -85,6 +85,12 @@ bool DSAWrapper::isMemOpd(const seadsa::Node *n) {
   return memOpds.count(n) > 0;
 }
 
+bool DSAWrapper::isAccessed(const Value *V) {
+  auto node = getNode(V);
+  assert(node && "Global values should have nodes.");
+  return node->isRead() || node->isModified();
+}
+
 bool DSAWrapper::isRead(const Value *V) {
   auto node = getNode(V);
   assert(node && "Global values should have nodes.");
