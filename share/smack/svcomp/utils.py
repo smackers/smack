@@ -84,8 +84,8 @@ def verify_bpl_svcomp(args):
   corral_command += [args.bpl_file]
   corral_command += ["/tryCTrace", "/noTraceOnDisk", "/printDataValues:1"]
   corral_command += ["/useProverEvaluate", "/cex:1"]
-  corral_command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-  corral_command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
+  # smt.qi.eager_threshold and smt.arith.solver overrides were dropped here for
+  # the same reasons as in smack.top.verify_bpl; see the comment there.
   corral_command += ["/timeLimit:%s" % time_limit]
   corral_command += ["/v:1"]
   corral_command += ["/recursionBound:65536"]
