@@ -772,6 +772,10 @@ def llvm_to_bpl(args):
         cmd += ['-rust-panics']
     if args.fail_on_loop_exit:
         cmd += ['-fail-on-loop-exit']
+    if not args.modular:
+        # Lets llvm2bpl warn only about the loops this bound fails to cover.
+        # Under --modular there is no such bound, so it is left unset.
+        cmd += ['-unroll-bound', str(args.unroll)]
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:

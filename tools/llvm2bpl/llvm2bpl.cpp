@@ -34,7 +34,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
-#include "smack/LoopInfo.h"
+#include "smack/LoopBoundWarnings.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
@@ -197,6 +197,12 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
+  // Report loops here rather than later in the pipeline: after StaticUnroll,
+  // so that fully unrolled loops are correctly not reported, but before
+  // NormalizeLoops, which rewrites conditional latches and in doing so orphans
+  // the `llvm.loop` metadata that carries each loop's source range.
+  pass_manager.add(new smack::LoopBoundWarnings());
+
   // pass_manager.add(new llvm::StructRet());
   pass_manager.add(new smack::NormalizeLoops());
   if (smack::SmackOptions::FailOnLoopExit) {
@@ -215,8 +221,6 @@ int main(int argc, char **argv) {
   // pass_manager.add(new smack::SimplifyLibCalls());
   pass_manager.add(new llvm::Devirtualize());
   pass_manager.add(new smack::SplitAggregateValue());
-  pass_manager.add(llvm::createLoopSimplifyPass());
-  pass_manager.add(new smack::LoopInfo());
 
   if (smack::SmackOptions::MemorySafety) {
     pass_manager.add(new smack::MemorySafetyChecker());
