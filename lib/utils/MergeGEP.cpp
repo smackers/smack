@@ -120,16 +120,14 @@ static void simplifyGEP(GetElementPtrInst *GEP) {
                                            PtrOp->getName()+".sum",GEP);
       }
 
-      // Update the GEP in place if possible.
       if (Src->getNumOperands() == 2) {
-        GEP->setOperand(0, Src->getOperand(0));
-        GEP->setOperand(1, Sum);
-        numMerged++;
-        return;
+        Indices.push_back(Sum);
+        Indices.append(GEP->op_begin()+2, GEP->op_end());
+      } else {
+        Indices.append(Src->op_begin()+1, Src->op_end()-1);
+        Indices.push_back(Sum);
+        Indices.append(GEP->op_begin()+2, GEP->op_end());
       }
-      Indices.append(Src->op_begin()+1, Src->op_end()-1);
-      Indices.push_back(Sum);
-      Indices.append(GEP->op_begin()+2, GEP->op_end());
     } else if (isa<Constant>(GEP->idx_begin()) &&
                cast<Constant>(GEP->idx_begin())->isNullValue() &&
                Src->getNumOperands() != 1) {
@@ -140,6 +138,8 @@ static void simplifyGEP(GetElementPtrInst *GEP) {
 
     if (!Indices.empty()){
       Type *SourceElementType = Src->getSourceElementType();
+      if (!GetElementPtrInst::getIndexedType(SourceElementType, Indices))
+        return;
       GetElementPtrInst *GEPNew =  (GEP->isInBounds() && Src->isInBounds()) ?
         GetElementPtrInst::CreateInBounds(SourceElementType,
                                           Src->getOperand(0), Indices,

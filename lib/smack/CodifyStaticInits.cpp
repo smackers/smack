@@ -24,6 +24,30 @@ namespace smack {
 
 using namespace llvm;
 
+namespace {
+using StaticInitItem = std::tuple<Constant *, Constant *, std::vector<Value *>>;
+
+void enqueueGlobal(GlobalVariable *G, std::deque<StaticInitItem> &worklist,
+                   std::set<const GlobalVariable *> &seen) {
+  if (!G || !G->hasInitializer() || !seen.insert(G).second)
+    return;
+  worklist.push_back(
+      std::make_tuple(G->getInitializer(), G, std::vector<Value *>()));
+}
+
+void enqueueReferencedGlobals(Constant *C, std::deque<StaticInitItem> &worklist,
+                              std::set<const GlobalVariable *> &seen) {
+  if (auto *G = dyn_cast<GlobalVariable>(C->stripPointerCasts())) {
+    enqueueGlobal(G, worklist, seen);
+    return;
+  }
+
+  for (Use &O : C->operands())
+    if (auto *SubC = dyn_cast<Constant>(O.get()))
+      enqueueReferencedGlobals(SubC, worklist, seen);
+}
+} // namespace
+
 bool CodifyStaticInits::runOnModule(Module &M) {
   TD = &M.getDataLayout();
   LLVMContext &C = M.getContext();
@@ -36,26 +60,27 @@ bool CodifyStaticInits::runOnModule(Module &M) {
   BasicBlock *B = BasicBlock::Create(C, "entry", F);
   IRBuilder<> IRB(B);
 
-  std::deque<std::tuple<Constant *, Constant *, std::vector<Value *>>> worklist;
+  std::deque<StaticInitItem> worklist;
+  std::set<const GlobalVariable *> seen;
 
   for (auto &G : M.globals())
     if (G.hasInitializer() && DSA->isRead(&G))
-      worklist.push_back(
-          std::make_tuple(G.getInitializer(), &G, std::vector<Value *>()));
+      enqueueGlobal(&G, worklist, seen);
 
   while (worklist.size()) {
     Constant *V = std::get<0>(worklist.front());
     Constant *P = std::get<1>(worklist.front());
     std::vector<Value *> I = std::get<2>(worklist.front());
     worklist.pop_front();
+    enqueueReferencedGlobals(V, worklist, seen);
 
     if (V->getType()->isIntegerTy() || V->getType()->isPointerTy() ||
         V->getType()->isFloatingPointTy() || V->getType()->isVectorTy())
 
-      IRB.CreateStore(
-          V,
-          IRB.CreateGEP(P->getType()->getScalarType()->getPointerElementType(),
-                        P, ArrayRef<Value *>(I)));
+      IRB.CreateStore(V, IRB.CreateGEP(cast<GlobalVariable>(
+                                           P->stripPointerCastsAndAliases())
+                                           ->getValueType(),
+                                       P, ArrayRef<Value *>(I)));
 
     else if (ArrayType *AT = dyn_cast<ArrayType>(V->getType()))
       for (unsigned i = AT->getNumElements(); i-- > 0;) {

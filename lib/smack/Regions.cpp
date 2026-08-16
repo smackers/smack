@@ -5,11 +5,59 @@
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
 #include "smack/SmackOptions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/Operator.h"
 
 #define DEBUG_TYPE "regions"
 
 namespace smack {
+
+namespace {
+Type *inferPointeeType(const Value *V) {
+  V = V->stripPointerCastsAndAliases();
+
+  if (const auto *AI = dyn_cast<AllocaInst>(V))
+    return AI->getAllocatedType();
+  if (const auto *GV = dyn_cast<GlobalVariable>(V))
+    return GV->getValueType();
+  if (const auto *GEP = dyn_cast<GEPOperator>(V))
+    return GEP->getResultElementType();
+
+  Type *Evidence = nullptr;
+  for (const User *U : V->users()) {
+    Type *Candidate = nullptr;
+    if (const auto *LI = dyn_cast<LoadInst>(U)) {
+      if (LI->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        Candidate = LI->getType();
+    } else if (const auto *SI = dyn_cast<StoreInst>(U)) {
+      if (SI->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        Candidate = SI->getValueOperand()->getType();
+    } else if (const auto *GEP = dyn_cast<GEPOperator>(U)) {
+      if (GEP->getPointerOperand()->stripPointerCastsAndAliases() == V)
+        Candidate = GEP->getSourceElementType();
+    }
+
+    if (!Candidate)
+      continue;
+    if (!Evidence)
+      Evidence = Candidate;
+    else if (Evidence != Candidate)
+      return nullptr;
+  }
+
+  return Evidence;
+}
+
+Type *firstAggregateElementType(Type *T) {
+  if (auto *AT = dyn_cast<ArrayType>(T))
+    return AT->getElementType();
+  if (auto *ST = dyn_cast<StructType>(T))
+    if (ST->getNumElements() > 0)
+      return ST->getElementType(0);
+  return nullptr;
+}
+} // namespace
 
 const DataLayout *Region::DL = nullptr;
 DSAWrapper *Region::DSA = nullptr;
@@ -21,6 +69,10 @@ void Region::init(Module &M, Pass &P) {
 
 bool Region::isSingleton(const Value *v, unsigned length) {
   // TODO can we do something for non-global nodes?
+  if (Type *T = inferPointeeType(v))
+    if (T->isAggregateType())
+      return false;
+
   auto node = DSA->getNode(v);
 
   return !isAllocated(node) && DSA->getNumGlobals(node) == 1 &&
@@ -39,12 +91,28 @@ bool Region::isComplicated(const seadsa::Node *N) {
 void Region::init(const Value *V, unsigned length) {
   Type *T = V->getType();
   assert(T->isPointerTy() && "Expected pointer argument.");
-  T = T->getPointerElementType();
+  T = inferPointeeType(V);
+  if (!T)
+    T = Type::getInt8Ty(V->getContext());
+  if (DL && isa<GlobalVariable>(V->stripPointerCastsAndAliases()))
+    if (Type *ElemTy = firstAggregateElementType(T))
+      if (ElemTy->isSized() && length == DL->getTypeStoreSize(ElemTy))
+        T = ElemTy;
   context = &V->getContext();
   representative =
       (DSA && !dyn_cast<ConstantPointerNull>(V)) ? DSA->getNode(V) : nullptr;
   this->type = T;
   this->offset = DSA ? DSA->getOffset(V) : 0;
+  bool variableGEP = false;
+  if (DL)
+    if (const auto *GEP = dyn_cast<GEPOperator>(V)) {
+      for (const Use &I : GEP->indices())
+        variableGEP |= !isa<ConstantInt>(I.get());
+      APInt offset(DL->getPointerSizeInBits(), 0);
+      if (!variableGEP && GEP->accumulateConstantOffset(*DL, offset) &&
+          !offset.isNegative())
+        this->offset = offset.getZExtValue();
+    }
   this->length = length;
 
   singleton = DL && representative && isSingleton(V, length);
@@ -54,7 +122,8 @@ void Region::init(const Value *V, unsigned length) {
               (!representative || !DSA->isTypeSafe(V)) || T->isIntegerTy(8));
   incomplete = !representative || representative->isIncomplete();
   complicated = !representative || isComplicated(representative);
-  collapsed = !representative || representative->isOffsetCollapsed();
+  collapsed =
+      !representative || representative->isOffsetCollapsed() || variableGEP;
 }
 
 Region::Region(const Value *V) {
@@ -292,7 +361,10 @@ void Regions::visitCallInst(CallInst &I) {
 
     if (auto I = dyn_cast<ConstantInt>(N)) {
       const unsigned bound = I->getZExtValue();
-      const unsigned size = T->getElementType()->getIntegerBitWidth() / 8;
+      Type *ElemTy = inferPointeeType(P);
+      const unsigned size = ElemTy && ElemTy->isIntegerTy()
+                                ? ElemTy->getIntegerBitWidth() / 8
+                                : 1;
       const unsigned length = bound * size;
       idx(P, length);
 

@@ -24,8 +24,8 @@ extern "C" {
 #define __builtin_expect __builtinx_expect
 
 // For handling of va macros
-void __builtinx_va_start(char *, char *);
-void *__builtinx_va_arg(char *);
+void __builtinx_va_start(__builtin_va_list, ...);
+void *__builtinx_va_arg(__builtin_va_list);
 #endif
 
 void __SMACK_code(const char *fmt, ...);
@@ -35,7 +35,7 @@ void __SMACK_top_decl(const char *fmt, ...);
 
 typedef struct smack_value {
   void *dummy;
-} * smack_value_t;
+} *smack_value_t;
 smack_value_t __SMACK_value();
 smack_value_t __SMACK_values(void *ary, unsigned count);
 smack_value_t __SMACK_return_value(void);

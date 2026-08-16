@@ -644,9 +644,10 @@ void ProcDecl::print(std::ostream &os) const {
     os << "\n";
     print_seq<std::string>(os, mods, "  modifies ", ", ", ";");
   }
-  if (requires.size() > 0) {
+  if (requires_.size() > 0) {
     os << "\n";
-    print_seq<const Expr *>(os, requires, "  requires ", ";\n  requires ", ";");
+    print_seq<const Expr *>(os, requires_, "  requires ", ";\n  requires ",
+                            ";");
   }
   if (ensures.size() > 0) {
     os << "\n";

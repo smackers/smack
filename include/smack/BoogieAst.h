@@ -605,7 +605,7 @@ class ProcDecl : public Decl, public CodeContainer {
 
   ParameterList params;
   ParameterList rets;
-  SpecificationList requires;
+  SpecificationList requires_;
   SpecificationList ensures;
 
 public:
@@ -622,9 +622,9 @@ public:
   ParameterList &getReturns() { return rets; }
 
   typedef SpecificationList::iterator spec_iterator;
-  spec_iterator requires_begin() { return requires.begin(); }
-  spec_iterator requires_end() { return requires.end(); }
-  SpecificationList &getRequires() { return requires; }
+  spec_iterator requires_begin() { return requires_.begin(); }
+  spec_iterator requires_end() { return requires_.end(); }
+  SpecificationList &getRequires() { return requires_; }
 
   spec_iterator ensures_begin() { return ensures.begin(); }
   spec_iterator ensures_end() { return ensures.end(); }

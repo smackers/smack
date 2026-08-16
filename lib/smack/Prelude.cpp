@@ -1187,7 +1187,7 @@ void PtrOpGen::generatePtrNumConvs(std::stringstream &s) const {
 
   // e.g., function {:inline} $p2i.ref.i8(p: ref) returns (i8) {
   // $trunc.i64.i8(p) }
-  for (unsigned i = 8; i <= 64; i <<= 1) {
+  for (auto i : IntOpGen::INTEGER_SIZES) {
     s << Decl::function(
              indexedName("$p2i", {Naming::PTR_TYPE, prelude.rep.intType(i)}),
              {{"p", Naming::PTR_TYPE}}, prelude.rep.intType(i),
