@@ -62,7 +62,7 @@ source ${SMACK_DIR}/bin/versions
 SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 NINJA="ninja"
-Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip"
+Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.39.zip"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -200,7 +200,7 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
-linux-@(ubuntu|neon)-@(16|18|20|22)*)
+linux-@(ubuntu|neon)-@(16|18|20|22|24)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   fi
@@ -248,7 +248,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20|22)*)
+  linux-@(ubuntu|neon)-@(1[68]|20|22|24)*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     16*)
@@ -263,6 +263,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     22*)
       UBUNTU_CODENAME="jammy"
       ;;
+    24*)
+      UBUNTU_CODENAME="noble"
+      ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
       exit 1
@@ -274,13 +277,25 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     fi
 
     # Adding LLVM repository
-    if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    # Ubuntu 24.04 (noble) ships the pinned Clang/LLVM version in its own
+    # (universe) repositories, and apt.llvm.org has no llvm-toolchain-noble feed
+    # for it, so on 24.04 the LLVM packages are installed directly from the Ubuntu
+    # archive instead of adding an apt.llvm.org repository (which also avoids the
+    # removed apt-key on noble).
+    if [ ${INSTALL_LLVM} -eq 1 ] && [[ "$RELEASE_VERSION" != 24* ]] ; then
       ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
       sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     fi
 
-    # Adding .NET repository (skip for 22.04+ as it provides .NET 6 natively)
-    if [[ "$RELEASE_VERSION" != 22* ]]; then
+    # Adding .NET repository for dotnet-sdk-6.0 (required by Boogie and Corral):
+    # - 20.04 and older: use Microsoft's package feed
+    # - 22.04: .NET 6 is available in the default Ubuntu repositories
+    # - 24.04: .NET 6 is neither in the Ubuntu archive nor Microsoft's feed
+    #   (Microsoft stopped publishing to packages.microsoft.com for 24.04), so
+    #   use Canonical's dotnet backports PPA
+    if [[ "$RELEASE_VERSION" == 24* ]]; then
+      sudo add-apt-repository -y ppa:dotnet/backports
+    elif [[ "$RELEASE_VERSION" != 22* ]]; then
       ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
       sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
       rm -f packages-microsoft-prod.deb

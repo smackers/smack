@@ -81,6 +81,12 @@ const llvm::cl::opt<bool> SmackOptions::FailOnLoopExit(
     "fail-on-loop-exit",
     llvm::cl::desc("Add assert(false) to the end of each loop"));
 
+const llvm::cl::opt<unsigned> SmackOptions::UnrollBound(
+    "unroll-bound",
+    llvm::cl::desc("The loop unrolling bound the back-end verifier will be "
+                   "given; 0 means unknown"),
+    llvm::cl::init(0));
+
 const llvm::cl::opt<LLVMAssumeType> SmackOptions::LLVMAssumes(
     "llvm-assumes",
     llvm::cl::desc(

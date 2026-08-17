@@ -134,7 +134,8 @@ bool SimplifyEV::runOnModule(Module& M) {
               Indices.push_back(ConstantInt::get(Int32Ty, *I));
             }
 
-            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(LI->getOperand(0), Indices,
+            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(LI->getOperand(0)->getType()->getScalarType()->getPointerElementType(),
+			                                               LI->getOperand(0), Indices,
                                                                        LI->getName(), LI) ;
             LoadInst *LINew = new LoadInst(GEP->getResultElementType(), GEP, "", LI);
             EV->replaceAllUsesWith(LINew);

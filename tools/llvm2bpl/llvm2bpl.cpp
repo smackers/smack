@@ -10,6 +10,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -18,7 +19,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,6 +34,7 @@
 #include "smack/ExtractContracts.h"
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
+#include "smack/LoopBoundWarnings.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
@@ -182,6 +183,7 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::RemoveDeadDefs());
   }
 
+  pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // pass_manager.add(llvm::createCFGSimplificationPass());
@@ -195,6 +197,12 @@ int main(int argc, char **argv) {
     // pass_manager.add(llvm::createIndVarSimplifyPass());
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
+
+  // Report loops here rather than later in the pipeline: after StaticUnroll,
+  // so that fully unrolled loops are correctly not reported, but before
+  // NormalizeLoops, which rewrites conditional latches and in doing so orphans
+  // the `llvm.loop` metadata that carries each loop's source range.
+  pass_manager.add(new smack::LoopBoundWarnings());
 
   // pass_manager.add(new llvm::StructRet());
   pass_manager.add(new smack::NormalizeLoops());

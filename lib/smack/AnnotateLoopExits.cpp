@@ -8,7 +8,6 @@
 // to reach the loop exit.
 //
 
-#define DEBUG_TYPE "smack-loop-unroll"
 #include "smack/AnnotateLoopExits.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
@@ -26,6 +25,8 @@
 #include <vector>
 
 #include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "smack-loop-unroll"
 
 namespace smack {
 

@@ -11,6 +11,7 @@
 #include "smack/NormalizeLoops.h"
 #include "smack/Naming.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,7 +26,6 @@ namespace smack {
 
 using namespace llvm;
 
-// Register LoopInfo
 void NormalizeLoops::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
 }
@@ -69,7 +69,8 @@ std::vector<unsigned> getSuccessorIndices(Instruction *ti,
  * \param blockMap is updated to map between \param BB and the newly created
  * forwarding block.
  */
-void splitBlock(BasicBlock *BB, BasicBlock *headerBlock,
+void splitBlock(Loop *loop, LoopInfo &loopInfo, BasicBlock *BB,
+                BasicBlock *headerBlock,
                 std::map<BasicBlock *, BasicBlock *> &blockMap) {
   Instruction *ti = BB->getTerminator();
 
@@ -81,6 +82,7 @@ void splitBlock(BasicBlock *BB, BasicBlock *headerBlock,
   // index uses the same forwarding block.
   if (succIndices.size()) {
     BasicBlock *forwarder = makeForwardingBlock(headerBlock);
+    loop->addBasicBlockToLoop(forwarder, loopInfo);
     blockMap[BB] = forwarder;
     for (auto succIndex : succIndices) {
       ti->setSuccessor(succIndex, forwarder);
@@ -106,7 +108,7 @@ void processPhis(std::vector<PHINode *> &phis,
   }
 }
 
-void processLoop(Loop *loop) {
+bool processLoop(Loop *loop, LoopInfo &loopInfo) {
   std::vector<PHINode *> phis;
   std::set<BasicBlock *> phiIncBlocks;
   std::set<BasicBlock *> loopBlocks(loop->block_begin(), loop->block_end());
@@ -127,31 +129,18 @@ void processLoop(Loop *loop) {
     if (loopBlocks.count(BB) == 0) {
       continue;
     }
-    splitBlock(BB, headerBlock, blockMap);
+    splitBlock(loop, loopInfo, BB, headerBlock, blockMap);
   }
 
   // Fix up Phi nodes
   processPhis(phis, blockMap);
 
-  // Handle subloops
-  for (Loop *subloop : loop->getSubLoops()) {
-    processLoop(subloop);
-  }
+  return !blockMap.empty();
 }
 
-bool NormalizeLoops::runOnModule(Module &m) {
-  for (auto F = m.begin(), FEnd = m.end(); F != FEnd; ++F) {
-    if (F->isIntrinsic() || F->empty()) {
-      continue;
-    }
-    LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
-    for (LoopInfo::iterator LI = loopInfo.begin(), LIEnd = loopInfo.end();
-         LI != LIEnd; ++LI) {
-      processLoop(*LI);
-    }
-  }
-
-  return true;
+bool NormalizeLoops::runOnLoop(Loop *L, LPPassManager &LPM) {
+  LoopInfo &loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  return processLoop(L, loopInfo);
 }
 
 // Pass ID variable

@@ -17,7 +17,7 @@ from .replay import replay_error_trace
 from .frontend import link_bc_files, frontends, languages, extra_libs
 from .errtrace import error_trace, json_output_str
 
-VERSION = '2.8.0'
+VERSION = '2.10.0'
 
 
 class VResult(Flag):
@@ -492,7 +492,11 @@ def arguments():
         '--check',
         metavar='PROPERTY',
         nargs='+',
-        choices=list(VProperty),
+        # Use __members__ rather than iterating the Flag directly: since
+        # Python 3.11 (Ubuntu 24.04 ships 3.12) Flag iteration omits the zero
+        # member (NONE) and composite members (MEMORY_SAFETY), which would
+        # drop them from the valid choices.
+        choices=list(VProperty.__members__.values()),
         default=VProperty.NONE,
         type=VProperty.argparse,
         action=PropertyAction,
@@ -768,6 +772,10 @@ def llvm_to_bpl(args):
         cmd += ['-rust-panics']
     if args.fail_on_loop_exit:
         cmd += ['-fail-on-loop-exit']
+    if not args.modular:
+        # Lets llvm2bpl warn only about the loops this bound fails to cover.
+        # Under --modular there is no such bound, so it is left unset.
+        cmd += ['-unroll-bound', str(args.unroll)]
     if args.llvm_assumes:
         cmd += ['-llvm-assumes=' + args.llvm_assumes]
     if args.float:
@@ -1003,16 +1011,31 @@ def process_verifier_output(args, verifier_output):
 def verify_bpl(args):
     """Verify the Boogie source file with a back-end verifier."""
 
+    # We no longer override Z3's smt.qi.eager_threshold or smt.arith.solver.
+    # Both were workarounds tied to Z3 4.8.x and are obsolete as of Z3 5.0.0:
+    #
+    # - qi.eager_threshold=100 is a legacy Boogie default (see boogie-org/
+    #   boogie#73) that Boogie itself dropped in boogie-org/boogie#197 and
+    #   Corral demoted to its opt-in `oldCorralFlags` block. Since 100 exceeds
+    #   qi.lazy_threshold (20), it bypasses Z3's delayed instantiation queue
+    #   rather than merely widening it, and Z3 5.0.0 reworked the generation
+    #   accounting the threshold is compared against (Z3Prover/z3#10009).
+    #
+    # - arith.solver=2 pinned the legacy simplex solver to dodge the Z3 4.8.9
+    #   regression we reported in Z3Prover/z3#4702, which upstream closed as
+    #   fixed in 2025. Solver 6 has been the default since 4.8.9, is the only
+    #   one wired to nlsat (arith.nl.nra), and is where all upstream
+    #   arithmetic work has gone since.
+    #
+    # smt.array.extensional=false below is unrelated: it is a modeling choice
+    # that goes with /useArrayTheory, not a Z3 workaround.
+
     if args.verifier == 'boogie' or args.modular:
         command = boogie_command(args)
         command += ["/proverOpt:O:smt.array.extensional=false"]
-        command += ["/proverOpt:O:smt.qi.eager_threshold=100"]
-        command += ["/proverOpt:O:smt.arith.solver=2"]
 
     elif args.verifier == 'corral':
         command = corral_command(args)
-        command += ["/bopt:proverOpt:O:smt.qi.eager_threshold=100"]
-        command += ["/bopt:proverOpt:O:smt.arith.solver=2"]
 
     elif args.verifier == 'symbooglix':
         command = symbooglix_command(args)

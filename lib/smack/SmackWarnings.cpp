@@ -54,6 +54,15 @@ std::string SmackWarnings::getFlagStr(UnsetFlagsT flags) {
   return ret + "}";
 }
 
+void SmackWarnings::warnLoop(std::string description, const Instruction *i) {
+  // No Block to attach a comment to: this is reported by a FunctionPass that
+  // runs long before any Boogie is generated, so the warning only ever reaches
+  // stderr.
+  processApproximate(description +
+                         "; bugs that need more loop iterations will be missed",
+                     {}, nullptr, i);
+}
+
 void SmackWarnings::warnApproximate(std::string name, Block *currBlock,
                                     const Instruction *i) {
   processApproximate(
