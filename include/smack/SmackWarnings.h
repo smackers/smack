@@ -34,6 +34,9 @@ public:
   static void warnApproximate(std::string name, Block *currBlock,
                               const llvm::Instruction *i);
 
+  // generate warnings about loops that the unroll bound may not cover
+  static void warnLoop(std::string description, const llvm::Instruction *i);
+
   static void warnOverApproximate(std::string name, UnsetFlagsT unsetFlags,
                                   Block *currBlock, const llvm::Instruction *i,
                                   FlagRelation rel);
