@@ -55,15 +55,14 @@ public:
   /// not in the map, which includes every constant -- see update().
   Sign getSign(const llvm::Value *V) const;
 
-  /// Sign to use when rendering a *constant operand* of \p U.
+  /// Query the inferred sign for a particular operand use.
   ///
   /// Constants have no sign of their own: LLVM uniques them per context, so
-  /// one `-1 : i32` object is shared by every use in the module and any sign
-  /// recorded for it would leak between unrelated functions.  The sign of a
-  /// constant operand is therefore taken from the surrounding computation --
-  /// the user's own inferred sign, or failing that the meet of its
-  /// non-constant integer operands.  Returns Unknown for a null \p U.
-  Sign getConstantOperandSign(const llvm::User *U) const;
+  /// one -1 : i32 object is shared by every use in the module and any sign
+  /// recorded for it would leak between unrelated functions.  For a constant,
+  /// this query therefore derives sign from the exact operand position and its
+  /// surrounding computation.  Non-constants use the ordinary value query.
+  Sign getSign(const llvm::Use &U) const;
 
   /// Dump the analysis results to errs() (for debugging).
   void dump() const;
@@ -84,7 +83,7 @@ private:
 
   /// Resolve a pointer to its abstract memory cell via DSA.
   /// Returns {nullptr, 0} if resolution fails.
-  MemCell resolvePointer(const llvm::Value *Ptr);
+  MemCell resolvePointer(const llvm::Value *Ptr) const;
 
   /// Build the CellStores/CellLoads indices from all load/store instructions.
   void buildMemoryIndex(llvm::Module &M);

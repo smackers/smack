@@ -26,6 +26,7 @@ class Expr;
 class Regions;
 class Attr;
 class SignAnalysis;
+enum class Sign;
 
 using llvm::Regex;
 using llvm::SmallVector;
@@ -87,17 +88,15 @@ private:
   const Stmt *store(unsigned R, const llvm::Type *T, const Expr *P,
                     const Expr *V);
 
-  const Expr *cast(unsigned opcode, const llvm::Value *v, const llvm::Type *t,
-                   const llvm::User *user = nullptr);
+  const Expr *cast(unsigned opcode, const llvm::Use &v, const llvm::Type *t);
   bool isFpArithOp(unsigned opcode);
-  const Expr *bop(unsigned opcode, const llvm::Value *lhs,
-                  const llvm::Value *rhs, const llvm::Type *t,
-                  bool isUnsigned = false, const llvm::User *user = nullptr);
+  const Expr *bop(unsigned opcode, const llvm::Use &lhs, const llvm::Use &rhs,
+                  const llvm::Type *t);
   const Expr *uop(const llvm::Value *op);
-  const Expr *cmp(unsigned predicate, const llvm::Value *lhs,
-                  const llvm::Value *rhs, bool isUnsigned);
-  const Expr *select(const llvm::Value *condVal, const llvm::Value *trueVal,
-                     const llvm::Value *falseVal);
+  const Expr *cmp(unsigned predicate, const llvm::Use &lhs,
+                  const llvm::Use &rhs);
+  const Expr *select(const llvm::Use &cond, const llvm::Use &trueValue,
+                     const llvm::Use &falseValue);
 
   std::string procName(const llvm::User &U);
   std::string procName(llvm::Function *F, const llvm::User &U);
@@ -138,12 +137,8 @@ public:
   std::string type(const llvm::Type *t);
   std::string type(const llvm::Value *v);
 
-  // `user` is the instruction or constant expression whose operand `v` is,
-  // and is what SignAnalysis is asked about when `v` is a constant.  Passing
-  // nullptr just falls back to the local heuristic.
-  const Expr *lit(const llvm::Value *v, bool isUnsigned = false,
-                  bool isUnsignedInst = false,
-                  const llvm::User *user = nullptr);
+  const Expr *lit(const llvm::Value *v);
+  const Expr *lit(const llvm::Value *v, Sign sign);
   const Expr *lit(const llvm::Value *v, unsigned flag);
 
   const Expr *ptrArith(const llvm::GetElementPtrInst *I);
@@ -152,9 +147,9 @@ public:
   ptrArith(const llvm::Value *p,
            std::vector<std::pair<llvm::Value *, llvm::gep_type_iterator>> args);
 
-  const Expr *expr(const llvm::Value *v, bool isConstIntUnsigned = false,
-                   bool isUnsignedInst = false,
-                   const llvm::User *user = nullptr);
+  const Expr *expr(const llvm::Value *v);
+  const Expr *expr(const llvm::Value *v, Sign sign);
+  const Expr *expr(const llvm::Use &use);
 
   const Expr *cast(const llvm::Instruction *I);
   const Expr *cast(const llvm::ConstantExpr *CE);

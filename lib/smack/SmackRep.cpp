@@ -626,43 +626,21 @@ const Expr *SmackRep::integerLit(long long v, unsigned width) {
   }
 }
 
-const Expr *SmackRep::lit(const llvm::Value *v, bool isUnsigned,
-                          bool isUnsignedInst, const llvm::User *user) {
+const Expr *SmackRep::lit(const llvm::Value *v) {
+  return lit(v, Sign::Unknown);
+}
+
+const Expr *SmackRep::lit(const llvm::Value *v, Sign sign) {
   using namespace llvm;
 
   if (const ConstantInt *ci = llvm::dyn_cast<const ConstantInt>(v)) {
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
 
-    // LLVM does not record whether an integer constant was written signed, so
-    // this is a guess from the context the caller passed down.  Signed values
-    // -1 is special since it appears often because i-- gets translated into
-    // i + (-1), and so in that context it should be a signed integer.
-    auto heuristic = [&]() {
-      return width > 1 &&
-             (isUnsigned ? (isUnsignedInst ? false : API.getSExtValue() == -1)
-                         : ci->isNegative());
-    };
-
-    bool neg;
-    if (isUnsigned && isUnsignedInst) {
-      // Both flags set means the caller is *asserting* an unsigned reading of
-      // this particular operand -- SmackRep::select and SmackRep::cmp do, as
-      // do the Sub/UDiv/URem cases of SmackRep::bop.  A per-use assertion is
-      // better evidence than an inferred sign, so it always wins.
-      neg = false;
-    } else {
-      // Ask SignAnalysis about the *user*, never about the constant itself:
-      // constants are uniqued module-wide and so have no single sign.
-      Sign s = signAnalysis ? signAnalysis->getConstantOperandSign(user)
-                            : Sign::Unknown;
-      if (s == Sign::Signed)
-        neg = width > 1 && ci->isNegative();
-      else if (s == Sign::Unsigned)
-        neg = false;
-      else
-        neg = heuristic();
-    }
+    // LLVM constants are signless.  Definite unsigned evidence prints the
+    // bit-pattern as non-negative; signed, unknown, and conflicting evidence
+    // use the long-standing signed fallback.
+    bool neg = width > 1 && sign != Sign::Unsigned && ci->isNegative();
     SmallString<32> str;
     (neg ? API.abs() : API).toString(str, 10, false);
     const Expr *e = SmackOptions::BitPrecise
@@ -822,8 +800,16 @@ const Expr *SmackRep::ptrArith(
   return e;
 }
 
-const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
-                           bool isUnsignedInst, const llvm::User *user) {
+const Expr *SmackRep::expr(const llvm::Value *v) {
+  return expr(v, Sign::Unknown);
+}
+
+const Expr *SmackRep::expr(const llvm::Use &use) {
+  Sign sign = signAnalysis ? signAnalysis->getSign(use) : Sign::Unknown;
+  return expr(use.get(), sign);
+}
+
+const Expr *SmackRep::expr(const llvm::Value *v, Sign sign) {
   using namespace llvm;
 
   if (isa<const Constant>(v)) {
@@ -866,7 +852,7 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
       }
 
     } else if (const ConstantInt *ci = dyn_cast<const ConstantInt>(constant)) {
-      return lit(ci, isConstIntUnsigned, isUnsignedInst, user);
+      return lit(ci, sign);
 
     } else if (const ConstantFP *cf = dyn_cast<const ConstantFP>(constant)) {
       return lit(cf);
@@ -897,35 +883,33 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
 }
 
 const Expr *SmackRep::cast(const llvm::Instruction *I) {
-  return cast(I->getOpcode(), I->getOperand(0), I->getType(), I);
+  return cast(I->getOpcode(), I->getOperandUse(0), I->getType());
 }
 
 const Expr *SmackRep::cast(const llvm::ConstantExpr *CE) {
-  return cast(CE->getOpcode(), CE->getOperand(0), CE->getType(), CE);
+  return cast(CE->getOpcode(), CE->getOperandUse(0), CE->getType());
 }
 
-const Expr *SmackRep::cast(unsigned opcode, const llvm::Value *v,
-                           const llvm::Type *t, const llvm::User *user) {
+const Expr *SmackRep::cast(unsigned opcode, const llvm::Use &v,
+                           const llvm::Type *t) {
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (opcode == Instruction::FPTrunc || opcode == Instruction::FPExt ||
       opcode == Instruction::SIToFP || opcode == Instruction::UIToFP) {
     if (SmackOptions::FloatEnabled) {
       return Expr::fn(opName(fn, {v->getType(), t}),
-                      Expr::id(Naming::RMODE_VAR), expr(v, false, false, user));
+                      Expr::id(Naming::RMODE_VAR), expr(v));
     } else {
-      return Expr::fn(opName(fn, {v->getType(), t}),
-                      expr(v, false, false, user));
+      return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
     }
   } else if (opcode == Instruction::FPToSI || opcode == Instruction::FPToUI) {
     if (SmackOptions::FloatEnabled) {
       return Expr::fn(opName(fn, {v->getType(), t}), Expr::lit(RModeKind::RTZ),
-                      expr(v, false, false, user));
+                      expr(v));
     } else {
-      return Expr::fn(opName(fn, {v->getType(), t}),
-                      expr(v, false, false, user));
+      return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
     }
   }
-  return Expr::fn(opName(fn, {v->getType(), t}), expr(v, false, false, user));
+  return Expr::fn(opName(fn, {v->getType(), t}), expr(v));
 }
 
 bool SmackRep::isBitwiseOp(llvm::Instruction *I) {
@@ -942,18 +926,17 @@ bool SmackRep::isFpArithOp(unsigned opcode) {
 }
 
 const Expr *SmackRep::bop(const llvm::ConstantExpr *CE) {
-  return bop(CE->getOpcode(), CE->getOperand(0), CE->getOperand(1),
-             CE->getType(), true, CE);
+  return bop(CE->getOpcode(), CE->getOperandUse(0), CE->getOperandUse(1),
+             CE->getType());
 }
 
 const Expr *SmackRep::bop(const llvm::BinaryOperator *BO) {
-  return bop(BO->getOpcode(), BO->getOperand(0), BO->getOperand(1),
-             BO->getType(), !BO->hasNoSignedWrap(), BO);
+  return bop(BO->getOpcode(), BO->getOperandUse(0), BO->getOperandUse(1),
+             BO->getType());
 }
 
-const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
-                          const llvm::Value *rhs, const llvm::Type *t,
-                          bool isUnsigned, const llvm::User *user) {
+const Expr *SmackRep::bop(unsigned opcode, const llvm::Use &lhs,
+                          const llvm::Use &rhs, const llvm::Type *t) {
   std::string fn = Naming::INSTRUCTION_TABLE.at(opcode);
   if (isFpArithOp(opcode)) {
     if (SmackOptions::FloatEnabled) {
@@ -964,18 +947,7 @@ const Expr *SmackRep::bop(unsigned opcode, const llvm::Value *lhs,
     }
   }
 
-  bool isUnsignedInst = false;
-  if (opcode == llvm::Instruction::SDiv || opcode == llvm::Instruction::SRem) {
-    isUnsigned = false;
-  } else if (opcode == llvm::Instruction::UDiv ||
-             opcode == llvm::Instruction::URem ||
-             opcode == llvm::Instruction::Sub) {
-    isUnsignedInst = true;
-    isUnsigned = true;
-  }
-
-  return Expr::fn(opName(fn, {t}), expr(lhs, isUnsigned, isUnsignedInst, user),
-                  expr(rhs, isUnsigned, isUnsignedInst, user));
+  return Expr::fn(opName(fn, {t}), expr(lhs), expr(rhs));
 }
 
 const Expr *SmackRep::uop(const llvm::ConstantExpr *CE) {
@@ -992,21 +964,19 @@ const Expr *SmackRep::uop(const llvm::Value *op) {
 }
 
 const Expr *SmackRep::cmp(const llvm::CmpInst *I) {
-  return cmp(I->getPredicate(), I->getOperand(0), I->getOperand(1),
-             I->isUnsigned());
+  return cmp(I->getPredicate(), I->getOperandUse(0), I->getOperandUse(1));
 }
 
 const Expr *SmackRep::cmp(const llvm::ConstantExpr *CE) {
-  return cmp(CE->getPredicate(), CE->getOperand(0), CE->getOperand(1),
-             llvm::CmpInst::isUnsigned((CmpInst::Predicate)CE->getPredicate()));
+  return cmp(CE->getPredicate(), CE->getOperandUse(0), CE->getOperandUse(1));
 }
 
-const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
-                          const llvm::Value *rhs, bool isUnsigned) {
+const Expr *SmackRep::cmp(unsigned predicate, const llvm::Use &lhs,
+                          const llvm::Use &rhs) {
   std::string fn =
       opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
-  const Expr *e1 = expr(lhs, isUnsigned, true);
-  const Expr *e2 = expr(rhs, isUnsigned, true);
+  const Expr *e1 = expr(lhs);
+  const Expr *e2 = expr(rhs);
   if (lhs->getType()->isFloatingPointTy())
     return Expr::ifThenElse(Expr::fn(fn + ".bool", e1, e2), integerLit(1ULL, 1),
                             integerLit(0ULL, 1));
@@ -1015,21 +985,21 @@ const Expr *SmackRep::cmp(unsigned predicate, const llvm::Value *lhs,
 }
 
 const Expr *SmackRep::select(const llvm::SelectInst *I) {
-  return select(I->getCondition(), I->getTrueValue(), I->getFalseValue());
+  return select(I->getOperandUse(0), I->getOperandUse(1), I->getOperandUse(2));
 }
 
 const Expr *SmackRep::select(const llvm::ConstantExpr *CE) {
-  return select(CE->getOperand(0), CE->getOperand(1), CE->getOperand(2));
+  return select(CE->getOperandUse(0), CE->getOperandUse(1),
+                CE->getOperandUse(2));
 }
 
-const Expr *SmackRep::select(const llvm::Value *condVal,
-                             const llvm::Value *trueVal,
-                             const llvm::Value *falseVal) {
-  const Expr *c = expr(condVal);
-  const Expr *v1 = expr(trueVal, true, true);
-  const Expr *v2 = expr(falseVal, true, true);
+const Expr *SmackRep::select(const llvm::Use &cond, const llvm::Use &trueValue,
+                             const llvm::Use &falseValue) {
+  const Expr *c = expr(cond);
+  const Expr *v1 = expr(trueValue);
+  const Expr *v2 = expr(falseValue);
 
-  assert(!condVal->getType()->isVectorTy() &&
+  assert(!cond->getType()->isVectorTy() &&
          "Vector condition is not supported.");
   return Expr::ifThenElse(Expr::eq(c, integerLit(1LL, 1)), v1, v2);
 }
@@ -1137,14 +1107,9 @@ const Stmt *SmackRep::call(llvm::Function *f, const llvm::User &ci) {
   std::list<const Expr *> args;
   std::list<std::string> rets;
 
-  unsigned num_arg_operands = ci.getNumOperands();
-  if (isa<CallInst>(ci))
-    num_arg_operands -= 1;
-  else if (isa<InvokeInst>(ci))
-    num_arg_operands -= 3;
-
-  for (unsigned i = 0; i < num_arg_operands; i++)
-    args.push_back(arg(f, i, ci.getOperand(i)));
+  const auto &CB = llvm::cast<CallBase>(ci);
+  for (unsigned i = 0; i < CB.arg_size(); ++i)
+    args.push_back(expr(CB.getArgOperandUse(i)));
 
   if (!ci.getType()->isVoidTy())
     rets.push_back(naming->get(ci));

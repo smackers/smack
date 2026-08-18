@@ -109,7 +109,7 @@ bool SignAnalysis::update(const Value *V, Sign S) {
   // not of the constant: the same literal is legitimately signed in
   // `x sdiv -1` and unsigned in `x udiv 4294967295`.  Constant operands get
   // their sign from the surrounding computation instead -- see
-  // getConstantOperandSign.
+  // getSign(Use).
   if (isa<Constant>(V))
     return false;
   auto it = SignMap.find(V);
@@ -130,32 +130,159 @@ Sign SignAnalysis::getSign(const Value *V) const {
   return it != SignMap.end() ? it->second : Sign::Unknown;
 }
 
-Sign SignAnalysis::getConstantOperandSign(const User *U) const {
-  if (!U)
+Sign SignAnalysis::getSign(const Use &U) const {
+  const Value *V = U.get();
+  if (!isa<Constant>(V))
+    return getSign(V);
+
+  const User *Owner = U.getUser();
+  const unsigned Operand = U.getOperandNo();
+  const auto *I = dyn_cast<Instruction>(Owner);
+  const auto *CE = dyn_cast<ConstantExpr>(Owner);
+  if (!I && !CE)
     return Sign::Unknown;
+  const unsigned Opcode = I ? I->getOpcode() : CE->getOpcode();
 
-  // The user's own inferred sign is the most direct evidence about how its
-  // constant operands are being read: a zext result is unsigned, so its
-  // operand is too.
-  Sign S = getSign(U);
-  if (S == Sign::Signed || S == Sign::Unsigned)
+  // First honor operations whose opcode or predicate fixes how this exact
+  // operand is interpreted.
+  switch (Opcode) {
+  case Instruction::SDiv:
+  case Instruction::SRem:
+    return Sign::Signed;
+  case Instruction::UDiv:
+  case Instruction::URem:
+    return Sign::Unsigned;
+  case Instruction::AShr:
+    return Operand == 0 ? Sign::Signed : Sign::Unsigned;
+  case Instruction::LShr:
+    return Sign::Unsigned;
+  case Instruction::Shl:
+    if (Operand == 1)
+      return Sign::Unsigned;
+    break;
+  case Instruction::SExt:
+  case Instruction::SIToFP:
+    return Sign::Signed;
+  case Instruction::ZExt:
+  case Instruction::UIToFP:
+    return Sign::Unsigned;
+  case Instruction::GetElementPtr:
+    if (Operand > 0)
+      return Sign::Signed;
+    break;
+  default:
+    break;
+  }
+
+  if (Opcode == Instruction::ICmp) {
+    CmpInst::Predicate Predicate;
+    if (const auto *Cmp = dyn_cast<ICmpInst>(I))
+      Predicate = Cmp->getPredicate();
+    else
+      Predicate = static_cast<CmpInst::Predicate>(CE->getPredicate());
+
+    if (CmpInst::isSigned(Predicate))
+      return Sign::Signed;
+    if (CmpInst::isUnsigned(Predicate))
+      return Sign::Unsigned;
+  }
+
+  if (I) {
+    Sign S = flagSign(*I);
+    if (S == Sign::Signed || S == Sign::Unsigned)
+      return S;
+  }
+
+  auto meetValue = [this](Sign S, const Value *Other) {
+    if (!isInteger(Other) || isa<Constant>(Other))
+      return S;
+    return meetSign(S, getSign(Other));
+  };
+
+  // For sign-polymorphic operations, the result and only the semantically
+  // related operands provide context.  In particular, this avoids treating a
+  // select condition or an unrelated call argument as evidence.
+  switch (Opcode) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor: {
+    Sign S = getSign(Owner);
+    for (unsigned Index = 0; Index < Owner->getNumOperands(); ++Index)
+      if (Index != Operand)
+        S = meetValue(S, Owner->getOperand(Index));
     return S;
-
-  // Otherwise take the meet of the non-constant integer siblings.  A constant
-  // added to a value known to be signed is itself being read as signed.
-  // Constants are skipped because they carry no sign of their own; including
-  // them would reintroduce exactly the module-wide aliasing this avoids.
-  for (auto &Op : U->operands())
-    if (isInteger(Op.get()) && !isa<Constant>(Op.get()))
-      S = meetSign(S, getSign(Op.get()));
-  return S;
+  }
+  case Instruction::Shl:
+    return getSign(Owner);
+  case Instruction::Trunc:
+    return getSign(Owner);
+  case Instruction::ICmp:
+    return meetValue(Sign::Unknown, Owner->getOperand(1 - Operand));
+  case Instruction::Select: {
+    if (Operand == 0)
+      return Sign::Unsigned;
+    Sign S = getSign(Owner);
+    return meetValue(S, Owner->getOperand(Operand == 1 ? 2 : 1));
+  }
+  case Instruction::PHI: {
+    Sign S = getSign(Owner);
+    for (unsigned Index = 0; Index < Owner->getNumOperands(); ++Index)
+      if (Index != Operand)
+        S = meetValue(S, Owner->getOperand(Index));
+    return S;
+  }
+  case Instruction::Call:
+  case Instruction::Invoke: {
+    const auto *CB = cast<CallBase>(Owner);
+    if (!CB->isArgOperand(&U))
+      return Sign::Unknown;
+    const Function *Callee = CB->getCalledFunction();
+    const unsigned Arg = CB->getArgOperandNo(&U);
+    if (!Callee || Arg >= Callee->arg_size())
+      return Sign::Unknown;
+    return getSign(Callee->getArg(Arg));
+  }
+  case Instruction::Ret: {
+    Sign S = Sign::Unknown;
+    const Function *F = cast<Instruction>(Owner)->getFunction();
+    for (const User *FunctionUser : F->users())
+      if (const auto *CB = dyn_cast<CallBase>(FunctionUser))
+        if (CB->getCalledFunction() == F && isInteger(CB))
+          S = meetSign(S, getSign(CB));
+    return S;
+  }
+  case Instruction::Store: {
+    if (Operand != 0)
+      return Sign::Unknown;
+    const auto *SI = cast<StoreInst>(Owner);
+    auto Cell = resolvePointer(SI->getPointerOperand());
+    if (!Cell.first)
+      return Sign::Unknown;
+    auto It = CellLoads.find(Cell);
+    if (It == CellLoads.end())
+      return Sign::Unknown;
+    Sign S = Sign::Unknown;
+    for (const Value *Load : It->second)
+      S = meetSign(S, getSign(Load));
+    return S;
+  }
+  case Instruction::Switch:
+    if (Operand >= 2 && Operand % 2 == 0)
+      return getSign(Owner->getOperand(0));
+    return Sign::Unknown;
+  default:
+    return Sign::Unknown;
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Memory index (DSA-based)
 // ---------------------------------------------------------------------------
 
-SignAnalysis::MemCell SignAnalysis::resolvePointer(const Value *Ptr) {
+SignAnalysis::MemCell SignAnalysis::resolvePointer(const Value *Ptr) const {
   if (!DSA)
     return {nullptr, 0};
   auto *node = DSA->getNode(Ptr);

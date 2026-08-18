@@ -1,4 +1,5 @@
 *.ll
+!llvm/sign_analysis_constant_uses.ll
 *.bc
 *.o
 *.bpl

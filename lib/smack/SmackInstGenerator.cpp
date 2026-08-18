@@ -188,10 +188,12 @@ void SmackInstGenerator::generatePhiAssigns(llvm::Instruction &ti) {
          s != e && llvm::isa<llvm::PHINode>(s); ++s) {
 
       llvm::PHINode *phi = llvm::cast<llvm::PHINode>(s);
-      if (llvm::Value *v = phi->getIncomingValueForBlock(block)) {
-        v = v->stripPointerCastsAndAliases();
+      int incoming = phi->getBasicBlockIndex(block);
+      if (incoming >= 0) {
+        const llvm::Use &use = phi->getOperandUse(incoming);
+        const llvm::Value *value = use->stripPointerCastsAndAliases();
         lhs.push_back(rep->expr(phi));
-        rhs.push_back(rep->expr(v));
+        rhs.push_back(value == use.get() ? rep->expr(use) : rep->expr(value));
       }
     }
   }
@@ -240,9 +242,9 @@ void SmackInstGenerator::generateGotoStmts(
 void SmackInstGenerator::visitReturnInst(llvm::ReturnInst &ri) {
   processInstruction(ri);
 
-  llvm::Value *v = ri.getReturnValue();
-  if (v)
-    emit(Stmt::assign(Expr::id(Naming::RET_VAR), rep->expr(v)));
+  if (ri.getReturnValue())
+    emit(Stmt::assign(Expr::id(Naming::RET_VAR),
+                      rep->expr(ri.getOperandUse(0))));
   emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
   emit(Stmt::return_());
 }
@@ -511,16 +513,19 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
 void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
   processInstruction(si);
   const llvm::Value *P = si.getPointerOperand();
-  const llvm::Value *V = si.getValueOperand()->stripPointerCastsAndAliases();
+  const llvm::Use &valueUse = si.getOperandUse(0);
+  const llvm::Value *V = valueUse->stripPointerCastsAndAliases();
+  const Expr *valueExpr =
+      V == valueUse.get() ? rep->expr(valueUse) : rep->expr(V);
   assert(!V->getType()->isAggregateType() && "Unexpected store value.");
 
   if (isa<FixedVectorType>(V->getType())) {
     auto D = VectorOperations(rep).store(P);
     auto M = Expr::id(rep->memPath(P));
-    auto E = Expr::fn(D->getName(), {M, rep->expr(P), rep->expr(V)});
+    auto E = Expr::fn(D->getName(), {M, rep->expr(P), valueExpr});
     emit(Stmt::assign(M, E));
   } else {
-    emit(rep->store(P, V));
+    emit(rep->store(P, valueExpr));
     if (const Stmt *inverseAssume = rep->inverseFPCastAssume(&si)) {
       emit(inverseAssume);
     }
