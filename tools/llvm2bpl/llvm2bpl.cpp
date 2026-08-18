@@ -191,6 +191,10 @@ int main(int argc, char **argv) {
   // pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
+  // Strip Clang's signed/unsigned overflow sanitizer scaffolding before it can
+  // perturb loop, alias, or sign analysis. The late instance still handles
+  // genuine checked-arithmetic intrinsics and requested overflow checks.
+  pass_manager.add(new smack::IntegerOverflowChecker(true));
   if (StaticUnroll) {
     pass_manager.add(llvm::createLoopSimplifyPass());
     pass_manager.add(llvm::createLoopRotatePass());

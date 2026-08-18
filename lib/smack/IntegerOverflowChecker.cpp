@@ -7,25 +7,39 @@
 // operations, and optionally allows for the checking of overflow.
 //
 
-#define DEBUG_TYPE "smack-overflow"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <string>
+
+#define DEBUG_TYPE "smack-overflow"
 
 namespace smack {
 
 using namespace llvm;
 
+const char OverflowSignMetadata[] = "overflow.sign";
+
 Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
+
+static void setOverflowSign(Instruction *I, bool isSigned) {
+  LLVMContext &C = I->getContext();
+  I->setMetadata(OverflowSignMetadata,
+                 MDNode::get(C, MDString::get(C, isSigned ? "s" : "u")));
+}
 
 const std::map<std::string, Instruction::BinaryOps>
     IntegerOverflowChecker::INSTRUCTION_TABLE{{"add", Instruction::Add},
@@ -115,7 +129,11 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
   assert(co != NULL && "Function __SMACK_check_overflow should be present.");
   Function *va = m.getFunction("__VERIFIER_assume");
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
+  SmallPtrSet<BasicBlock *, 8> blocksToFold;
+  SmallPtrSet<Function *, 8> functionsToClean;
+  SmallVector<WeakTrackingVH, 8> blocksToMerge;
   std::vector<Instruction *> instToErase;
+  bool modified = false;
   for (auto &F : m) {
     if (Naming::isSmackName(F.getName()))
       continue;
@@ -124,6 +142,18 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
         Function *f = ci->getCalledFunction();
         if (f && f->hasName()) {
           auto fn = f->getName();
+          bool sanitizerInstrumentation =
+              ci->getMetadata("nosanitize") != nullptr;
+          if (FrontendInstrumentationOnly) {
+            SmallVector<StringRef, 4> frontendInfo;
+            if (!sanitizerInstrumentation ||
+                !OVERFLOW_INTRINSICS.match(fn, &frontendInfo))
+              continue;
+            // Preserve signed sanitizer instrumentation for the late pass when
+            // the user explicitly requested overflow checking.
+            if (SmackOptions::IntegerOverflow && frontendInfo[1] == "s")
+              continue;
+          }
           if (fn.find("__ubsan_handle_shift_out_of_bounds") !=
                   StringRef::npos ||
               fn.find("__ubsan_handle_divrem_overflow") != StringRef::npos) {
@@ -138,6 +168,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
               addBlockingAssume(va, flag, ci);
               ci->replaceAllUsesWith(flag);
               instToErase.push_back(ci);
+              modified = true;
             }
           }
           SmallVector<StringRef, 4> info;
@@ -162,21 +193,38 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
             unsigned bits = 0;
             auto res = info[3].getAsInteger(10, bits);
             assert(!res && "Invalid bit widths.");
-            Value *eo1 =
-                extendBitWidth(ci->getArgOperand(0), bits, isSigned, ci);
-            Value *eo2 =
-                extendBitWidth(ci->getArgOperand(1), bits, isSigned, ci);
             SDEBUG(errs() << "Processing operator: " << op << "\n");
             assert(INSTRUCTION_TABLE.count(op) != 0 &&
                    "Operator must be present in our instruction table.");
-            BinaryOperator *ai = BinaryOperator::Create(
-                INSTRUCTION_TABLE.at(op), eo1, eo2, "", ci);
-            Value *r = createResult(ai, bits, &*I);
-            BinaryOperator *flag = createFlag(ai, bits, isSigned, ci);
-            if (SmackOptions::IntegerOverflow &&
+            bool checkThisOverflow = SmackOptions::IntegerOverflow &&
+                                     (!sanitizerInstrumentation || isSigned);
+            bool needsOverflowFlag =
+                !sanitizerInstrumentation || checkThisOverflow;
+            Value *r;
+            BinaryOperator *flag = nullptr;
+            if (needsOverflowFlag) {
+              Value *eo1 =
+                  extendBitWidth(ci->getArgOperand(0), bits, isSigned, ci);
+              Value *eo2 =
+                  extendBitWidth(ci->getArgOperand(1), bits, isSigned, ci);
+              BinaryOperator *ai = BinaryOperator::Create(
+                  INSTRUCTION_TABLE.at(op), eo1, eo2, "", ci);
+              r = createResult(ai, bits, &*I);
+              flag = createFlag(ai, bits, isSigned, ci);
+            } else {
+              auto *ai = BinaryOperator::Create(INSTRUCTION_TABLE.at(op),
+                                                ci->getArgOperand(0),
+                                                ci->getArgOperand(1), "", ci);
+              ai->setDebugLoc(ci->getDebugLoc());
+              r = ai;
+            }
+            setOverflowSign(cast<Instruction>(r), isSigned);
+            if (checkThisOverflow &&
                 SmackOptions::shouldCheckFunction(F.getName()))
               addCheck(co, flag, ci);
-            for (auto U : ci->users()) {
+            SmallVector<User *, 4> intrinsicUsers(ci->user_begin(),
+                                                  ci->user_end());
+            for (auto U : intrinsicUsers) {
               if (ExtractValueInst *ei = dyn_cast<ExtractValueInst>(U)) {
                 if (ei->getNumIndices() == 1) {
                   if (ei->getIndices()[0] == 0)
@@ -185,7 +233,15 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                   else if (ei->getIndices()[0] == 1) {
                     // flag part
                     // addBlockingAssume(va, flag, ei);
-                    ei->replaceAllUsesWith(flag);
+                    if (sanitizerInstrumentation) {
+                      blocksToFold.insert(ei->getParent());
+                      functionsToClean.insert(ei->getFunction());
+                      auto *noOverflow =
+                          ConstantInt::getFalse(ei->getContext());
+                      ei->replaceAllUsesWith(noOverflow);
+                    } else {
+                      ei->replaceAllUsesWith(flag);
+                    }
                   } else
                     llvm_unreachable("Unexpected extractvalue inst!");
                   instToErase.push_back(ei);
@@ -193,6 +249,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
               }
             }
             instToErase.push_back(ci);
+            modified = true;
           }
         }
       }
@@ -201,7 +258,21 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
   for (auto I : instToErase) {
     I->eraseFromParent();
   }
-  return true;
+  for (BasicBlock *BB : blocksToFold) {
+    SimplifyInstructionsInBlock(BB);
+    ConstantFoldTerminator(BB, true);
+    if (BasicBlock *Succ = BB->getSingleSuccessor())
+      blocksToMerge.push_back(Succ);
+  }
+  for (Function *F : functionsToClean)
+    removeUnreachableBlocks(*F);
+  for (WeakTrackingVH &Handle : blocksToMerge) {
+    Value *V = Handle;
+    if (auto *BB = dyn_cast_or_null<BasicBlock>(V))
+      MergeBlockIntoPredecessor(BB);
+  }
+
+  return modified;
 }
 
 // Pass ID variable

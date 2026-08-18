@@ -4,6 +4,7 @@
 #ifndef INTEGEROVERFLOWCHECKER_H
 #define INTEGEROVERFLOWCHECKER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -11,14 +12,19 @@
 
 namespace smack {
 
+extern const char OverflowSignMetadata[];
+
 class IntegerOverflowChecker : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  IntegerOverflowChecker() : llvm::ModulePass(ID) {}
+  explicit IntegerOverflowChecker(bool frontendInstrumentationOnly = false)
+      : llvm::ModulePass(ID),
+        FrontendInstrumentationOnly(frontendInstrumentationOnly) {}
   virtual llvm::StringRef getPassName() const override;
   virtual bool runOnModule(llvm::Module &m) override;
 
 private:
+  bool FrontendInstrumentationOnly;
   static const std::map<std::string, llvm::Instruction::BinaryOps>
       INSTRUCTION_TABLE;
   llvm::APInt getMax(unsigned bits, bool isSigned);

@@ -52,8 +52,18 @@ public:
   bool runOnModule(llvm::Module &M) override;
 
   /// Query the inferred sign for a value.  Returns Unknown for values
-  /// not in the map.
+  /// not in the map, which includes every constant -- see update().
   Sign getSign(const llvm::Value *V) const;
+
+  /// Sign to use when rendering a *constant operand* of \p U.
+  ///
+  /// Constants have no sign of their own: LLVM uniques them per context, so
+  /// one `-1 : i32` object is shared by every use in the module and any sign
+  /// recorded for it would leak between unrelated functions.  The sign of a
+  /// constant operand is therefore taken from the surrounding computation --
+  /// the user's own inferred sign, or failing that the meet of its
+  /// non-constant integer operands.  Returns Unknown for a null \p U.
+  Sign getConstantOperandSign(const llvm::User *U) const;
 
   /// Dump the analysis results to errs() (for debugging).
   void dump() const;

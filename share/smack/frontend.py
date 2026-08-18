@@ -106,9 +106,18 @@ def default_clang_compile_command(args, lib=False):
 
     if args.check.contains_mem_safe_props():
         cmd += ['-DMEMORY_SAFETY']
-    if VProperty.INTEGER_OVERFLOW in args.check:
-        cmd += (['-fsanitize=signed-integer-overflow,shift']
-                if not lib else ['-DSIGNED_INTEGER_OVERFLOW_CHECK'])
+    if not lib:
+        # LLVM integers are signless. Ask Clang to retain the source-level
+        # distinction on add/sub/mul as checked-arithmetic intrinsics; SMACK
+        # consumes the sanitizer scaffolding as analysis metadata before
+        # verification, so this does not enable overflow checking by itself.
+        sanitizers = ['signed-integer-overflow',
+                      'unsigned-integer-overflow']
+        if VProperty.INTEGER_OVERFLOW in args.check:
+            sanitizers.append('shift')
+        cmd += ['-fsanitize=' + ','.join(sanitizers)]
+    elif VProperty.INTEGER_OVERFLOW in args.check:
+        cmd += ['-DSIGNED_INTEGER_OVERFLOW_CHECK']
     if VProperty.ASSERTIONS not in args.check:
         cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:

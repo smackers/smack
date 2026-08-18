@@ -24,6 +24,7 @@
 #include "seadsa/Graph.hh"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
+#include "smack/IntegerOverflowChecker.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -57,9 +58,21 @@ static const char *signName(Sign S) {
 /// Return true if V is an integer (not pointer, not void, not FP).
 static bool isInteger(const Value *V) { return V->getType()->isIntegerTy(); }
 
-/// Classify the nsw/nuw flags on an OverflowingBinaryOperator.
-/// Returns Signed if nsw-only, Unsigned if nuw-only, Unknown otherwise.
+/// Classify overflow-sign metadata or the nsw/nuw flags on an
+/// OverflowingBinaryOperator. Returns Signed or Unsigned for unambiguous
+/// evidence and Unknown otherwise.
 static Sign flagSign(const Instruction &I) {
+  if (MDNode *N = I.getMetadata(OverflowSignMetadata)) {
+    if (N->getNumOperands() == 1) {
+      if (auto *S = dyn_cast<MDString>(N->getOperand(0).get())) {
+        if (S->getString() == "s")
+          return Sign::Signed;
+        if (S->getString() == "u")
+          return Sign::Unsigned;
+      }
+    }
+  }
+
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
     bool nsw = OBO->hasNoSignedWrap();
     bool nuw = OBO->hasNoUnsignedWrap();
@@ -89,6 +102,16 @@ void SignAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 bool SignAnalysis::update(const Value *V, Sign S) {
   if (S == Sign::Unknown)
     return false;
+  // Never record a sign for a constant.  LLVM uniques ConstantInts per
+  // LLVMContext, so `-1 : i32` is a single object shared by every use of that
+  // bit pattern in the module.  A sign learned at one use would silently
+  // become the sign at all of them, and signedness is a property of a *use*,
+  // not of the constant: the same literal is legitimately signed in
+  // `x sdiv -1` and unsigned in `x udiv 4294967295`.  Constant operands get
+  // their sign from the surrounding computation instead -- see
+  // getConstantOperandSign.
+  if (isa<Constant>(V))
+    return false;
   auto it = SignMap.find(V);
   if (it == SignMap.end()) {
     SignMap[V] = S;
@@ -105,6 +128,27 @@ bool SignAnalysis::update(const Value *V, Sign S) {
 Sign SignAnalysis::getSign(const Value *V) const {
   auto it = SignMap.find(V);
   return it != SignMap.end() ? it->second : Sign::Unknown;
+}
+
+Sign SignAnalysis::getConstantOperandSign(const User *U) const {
+  if (!U)
+    return Sign::Unknown;
+
+  // The user's own inferred sign is the most direct evidence about how its
+  // constant operands are being read: a zext result is unsigned, so its
+  // operand is too.
+  Sign S = getSign(U);
+  if (S == Sign::Signed || S == Sign::Unsigned)
+    return S;
+
+  // Otherwise take the meet of the non-constant integer siblings.  A constant
+  // added to a value known to be signed is itself being read as signed.
+  // Constants are skipped because they carry no sign of their own; including
+  // them would reintroduce exactly the module-wide aliasing this avoids.
+  for (auto &Op : U->operands())
+    if (isInteger(Op.get()) && !isa<Constant>(Op.get()))
+      S = meetSign(S, getSign(Op.get()));
+  return S;
 }
 
 // ---------------------------------------------------------------------------

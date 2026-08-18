@@ -4,15 +4,26 @@
 
 LLVM IR integers are signless — the sign is encoded per-operation (e.g., `sdiv` vs `udiv`), not per-value. For downstream translation (e.g., to Boogie or other typed IRs), it's useful to infer whether a given SSA value is "intended" to be signed or unsigned. This pass performs a best-effort dataflow analysis to recover that intent.
 
-## Files to Create/Modify
+## Frontend sign evidence
 
-| File | Action |
-|------|--------|
-| `include/smack/SignAnalysis.h` | **Create** — header with `Sign` enum, lattice ops, `SignAnalysis` pass class |
-| `lib/smack/SignAnalysis.cpp` | **Create** — implementation |
-| `CMakeLists.txt` | **Edit** — add both files to `smackTranslator` |
+Clang normally preserves signed no-wrap intent with `nsw`, but unsigned
+wrapping arithmetic often has no corresponding `nuw` flag. To retain both
+kinds of source-level intent, SMACK compiles user C-family translation units
+with Clang's `signed-integer-overflow` and `unsigned-integer-overflow`
+sanitizers. The resulting `llvm.*with.overflow` intrinsics are used only as an
+encoding of signedness.
 
-No wiring into the pass pipeline yet — this is a standalone analysis that other passes can opt into via `getAnalysis<SignAnalysis>()`.
+An early `IntegerOverflowChecker` pass recognizes frontend-generated
+intrinsics by their `!nosanitize` metadata, replaces them with ordinary
+same-width arithmetic carrying `!overflow.sign`, folds away the UBSan guard,
+and removes the now-unreachable handler. `SignAnalysis` consumes that inert
+metadata. This path neither emits `__SMACK_check_overflow` calls nor preserves
+runtime overflow checks.
+
+SMACK library and model sources are deliberately compiled without these
+sanitizer flags. Genuine checked-arithmetic intrinsics (for example, those
+emitted by Rust) and the explicit `--check integer-overflow` mode retain their
+existing checking behavior.
 
 ## Core Algorithm
 
@@ -64,7 +75,12 @@ Every integer instruction is classified into one of three categories:
 
 `add`, `sub`, `mul`, `shl`, `and`, `or`, `xor`, `icmp eq/ne`, `trunc`, `select`
 
-**However**, `nsw`/`nuw` flags on sign-agnostic arithmetic provide direct evidence:
+**However**, `!overflow.sign` metadata produced from frontend overflow
+intrinsics and `nsw`/`nuw` flags on sign-agnostic arithmetic provide direct
+evidence:
+
+- `!overflow.sign !{!"s"}` → operands and result are `Signed`
+- `!overflow.sign !{!"u"}` → operands and result are `Unsigned`
 - `add nsw` / `sub nsw` / `mul nsw` / `shl nsw` → operands and result are `Signed`
 - `add nuw` / `sub nuw` / `mul nuw` / `shl nuw` → operands and result are `Unsigned`
 - If both flags are present, we do not constrain (they don't conflict in LLVM semantics, but for sign inference they're ambiguous).
@@ -127,8 +143,8 @@ sea-dsa over-approximates the set of memory locations a pointer can refer to. Si
 #### Forward propagation (def → result)
 For each instruction `I` producing value `V`:
 - If `I` is in category B, set `sign(V) = meet(sign(V), <table value>)`.
-- If `I` has `nsw` (only) → `sign(V) = meet(sign(V), Signed)`.
-- If `I` has `nuw` (only) → `sign(V) = meet(sign(V), Unsigned)`.
+- If `I` has signed `!overflow.sign` metadata or `nsw` (only) → `sign(V) = meet(sign(V), Signed)`.
+- If `I` has unsigned `!overflow.sign` metadata or `nuw` (only) → `sign(V) = meet(sign(V), Unsigned)`.
 - If `I` is a `PHINode`: `sign(V) = meet over all incoming values`.
 - If `I` is a `select`: `sign(V) = meet(sign(true_val), sign(false_val))`.
 - If `I` is a `trunc`: `sign(V) = sign(source operand)` (propagate through).
@@ -137,8 +153,8 @@ For each instruction `I` producing value `V`:
 #### Backward propagation (use → operands)
 For each instruction `I` using value `V` as an operand:
 - If `I` is in category A, update `sign(V) = meet(sign(V), <table value>)`.
-- If `I` has `nsw` (only) → `sign(V) = meet(sign(V), Signed)` for each integer operand.
-- If `I` has `nuw` (only) → `sign(V) = meet(sign(V), Unsigned)` for each integer operand.
+- If `I` has signed `!overflow.sign` metadata or `nsw` (only) → `sign(V) = meet(sign(V), Signed)` for each integer operand.
+- If `I` has unsigned `!overflow.sign` metadata or `nuw` (only) → `sign(V) = meet(sign(V), Unsigned)` for each integer operand.
 - If `I` is a `store`: meet `sign(stored_value)` into all aliasing load results (see §4).
 
 ### 6. Initialization
@@ -223,27 +239,30 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
   Sign getSign(const Value *V) const;
+  Sign getConstantOperandSign(const User *U) const;
   void dump() const;
 };
 ```
 
 ## Integration with SmackRep (constant rendering)
 
-The existing per-instruction sign heuristic in `SmackRep` is replaced with queries to `SignAnalysis`:
+`SmackRep` uses `SignAnalysis` first and retains its local heuristic as a
+fallback when the result is `Unknown` or `Conflict`.
 
-### Current heuristic (to be commented out)
+Integer constants are deliberately absent from `SignMap`. LLVM uniques a
+`ConstantInt` by context, type, and bit pattern, so the same object can be used
+as signed in one expression and unsigned in another. Recording either sign on
+the constant would leak that decision between unrelated uses.
 
-- `SmackRep::bop(BinaryOperator*)`: uses `!BO->hasNoSignedWrap()` as `isUnsigned`, then overrides per opcode (SDiv→signed, UDiv/Sub→unsigned).
-- `SmackRep::lit()`: decides whether to render a negative constant via a complex `isUnsigned`/`isUnsignedInst` two-flag heuristic with a special case for `-1`.
-- `SmackRep::expr()`: threads `isConstIntUnsigned`/`isUnsignedInst` from callers down to `lit()`.
+Instead, `SmackRep::expr()` threads the surrounding `User` to `lit()`, which
+queries `SignAnalysis::getConstantOperandSign()`. That method uses the user's
+inferred sign, or the meet of its non-constant integer operands. Explicitly
+unsigned operations such as `udiv`, `urem`, unsigned comparisons, and select
+conditions remain authoritative at the individual use.
 
-### Replacement
-
-- `SmackRep` gains a `SignAnalysis *signAnalysis` member, set at construction.
-- `SmackRep::expr(const Value *v)` — when `v` is a `ConstantInt`, queries `signAnalysis->getSign(v)` to decide rendering. The `isConstIntUnsigned`/`isUnsignedInst` parameters are removed.
-- `SmackRep::lit(const Value *v)` — simplified: query `signAnalysis->getSign(v)`. If `Signed`, render negative constants as `$sub.iN(0, abs)`. If `Unsigned` or `Unknown`, render as positive. The old two-flag parameters are removed.
-- `SmackRep::bop(BinaryOperator*)` — no longer computes `isUnsigned` from NSW; calls `expr()` without sign flags.
-- `SmackRep::cmp()` — already uses `CmpInst::isUnsigned()` for predicate selection; for operand constant rendering, it now relies on `SignAnalysis` via `expr()` instead of passing its own flag.
+If the per-use result is `Signed`, negative constants are rendered as
+`$sub.iN(0, abs)`. If it is `Unsigned`, they are rendered as their positive
+bit-pattern value. `Unknown` and `Conflict` use the previous two-flag heuristic.
 
 ### Wiring
 
@@ -255,8 +274,8 @@ The existing per-instruction sign heuristic in `SmackRep` is replaced with queri
 
 | File | Changes |
 |------|---------|
-| `include/smack/SmackRep.h` | Add `SignAnalysis*` member; remove `isUnsigned`/`isUnsignedInst` params from `lit()`, `expr()`, `bop()` |
-| `lib/smack/SmackRep.cpp` | Comment out old heuristic, replace with `signAnalysis->getSign()` queries |
+| `include/smack/SmackRep.h` | Add `SignAnalysis*` and thread an optional per-use `User` through expression rendering |
+| `lib/smack/SmackRep.cpp` | Query the per-use sign before falling back to the existing literal heuristic |
 | `include/smack/SmackModuleGenerator.h` | No change needed |
 | `lib/smack/SmackModuleGenerator.cpp` | Add `SignAnalysis` to `getAnalysisUsage`, pass to `SmackRep` |
 | `tools/llvm2bpl/llvm2bpl.cpp` | Add `SignAnalysis` pass to pipeline |
