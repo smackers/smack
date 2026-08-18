@@ -116,8 +116,13 @@ def default_clang_compile_command(args, lib=False):
         if VProperty.INTEGER_OVERFLOW in args.check:
             sanitizers.append('shift')
         cmd += ['-fsanitize=' + ','.join(sanitizers)]
-    elif VProperty.INTEGER_OVERFLOW in args.check:
-        cmd += ['-DSIGNED_INTEGER_OVERFLOW_CHECK']
+    else:
+        # Library and model sources must not acquire overflow instrumentation:
+        # it would add analysis noise and could turn model arithmetic into
+        # verification conditions. Preserve only the existing explicit-check
+        # configuration macro.
+        if VProperty.INTEGER_OVERFLOW in args.check:
+            cmd += ['-DSIGNED_INTEGER_OVERFLOW_CHECK']
     if VProperty.ASSERTIONS not in args.check:
         cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:

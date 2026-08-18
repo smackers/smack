@@ -13,10 +13,10 @@
 //        Conflict
 //
 // Constraints are drawn from operations that carry explicit sign intent
-// (sdiv, zext, signed comparisons, etc.) and from nsw/nuw flags on
-// otherwise sign-agnostic arithmetic.  Memory propagation uses sea-dsa
-// alias information to connect stores to loads.  The analysis iterates
-// to a fixpoint.
+// (sdiv, zext, signed comparisons, etc.), nsw/nuw flags, and inert
+// !overflow.sign metadata produced from Clang's sanitizer-only overflow
+// intrinsics. Memory propagation uses sea-dsa alias information to connect
+// stores to loads. The analysis iterates to a fixpoint.
 //
 
 #define DEBUG_TYPE "smack-sign"

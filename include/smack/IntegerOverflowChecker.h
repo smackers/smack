@@ -12,8 +12,19 @@
 
 namespace smack {
 
+/// Metadata attached to ordinary arithmetic after consuming Clang's
+/// sanitizer-only overflow intrinsics. Its single string operand is `"s"` or
+/// `"u"`, providing sign evidence without retaining an overflow check.
 extern const char OverflowSignMetadata[];
 
+/// Lower LLVM checked-integer arithmetic to ordinary LLVM instructions.
+///
+/// The early, frontend-only mode recognizes Clang sanitizer instrumentation by
+/// `!nosanitize`, records its signedness in OverflowSignMetadata, replaces its
+/// overflow flag with false, and removes the unreachable UBSan path. It does
+/// not turn that instrumentation into a verification condition. The normal
+/// mode retains the existing behavior for genuine checked-arithmetic
+/// intrinsics and explicitly requested signed-overflow checks.
 class IntegerOverflowChecker : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -24,6 +35,7 @@ public:
   virtual bool runOnModule(llvm::Module &m) override;
 
 private:
+  /// Restrict this instance to annotation-only frontend instrumentation.
   bool FrontendInstrumentationOnly;
   static const std::map<std::string, llvm::Instruction::BinaryOps>
       INSTRUCTION_TABLE;
