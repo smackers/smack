@@ -47,7 +47,7 @@ INSTALL_DEV_DEPENDENCIES=${INSTALL_DEV_DEPENDENCIES:-0}
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
-DEPS_DIR="${ROOT_DIR}/smack-deps"
+DEPS_DIR="${DEPS_DIR:-${ROOT_DIR}/smack-deps}"
 Z3_DIR="${DEPS_DIR}/z3"
 CVC5_DIR="${DEPS_DIR}/cvc5"
 YICES2_DIR="${DEPS_DIR}/yices2"
@@ -399,7 +399,6 @@ if [ ${INSTALL_RUST} -eq 1 ] ; then
       source $HOME/.cargo/env
   fi
   rustup toolchain install ${RUST_VERSION}
-  cargo install rustfilt
   puts "Installed Rust"
 fi
 
@@ -541,9 +540,6 @@ fi
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
   sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
   sudo pip3 install -U flake8 --break-system-packages || sudo pip3 install -U flake8
-  if [ "${GITHUB_ACTIONS}" = "true" ] ; then
-    exit 0
-  fi
 fi
 
 
@@ -577,14 +573,18 @@ if [ ${BUILD_SMACK} -eq 1 ] ; then
 fi
 
 
+res=0
+
 if [ ${TEST_SMACK} -eq 1 ] ; then
   puts "Running SMACK regression tests"
 
   cd ${SMACK_DIR}/test
+  set +e
   ./regtest.py ${REGTEST_ENV}
   res=$?
+  set -e
 
   puts "Regression tests complete"
 fi
 
-exit $res
+exit ${res}

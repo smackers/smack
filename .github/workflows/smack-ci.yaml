@@ -1,10 +1,64 @@
 name: SMACK CI
 
-on: [push, pull_request]
+# A `push` to a branch that has an open pull request used to fire this entire
+# workflow a second time, so every PR commit ran the 28-job matrix twice. Only
+# the branches that publish a Docker image need a push-triggered run; every
+# other branch is covered by its pull request (or by workflow_dispatch).
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Coalesce runs per pull request, so a force-push cancels the run it
+  # supersedes. Push runs use github.run_id, which is unique, so two merges
+  # landing close together on develop still both run and both publish.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Formatting is a property of the tree, not of any one test folder, so it runs
+  # once per CI run instead of once per matrix entry. bin/build.sh stays the
+  # single source of truth for how the tools are installed -- it pins
+  # clang-format to LLVM_SHORT_VERSION from bin/versions -- but every phase
+  # except the dev dependencies is switched off, so this job installs no LLVM,
+  # dotnet, or Boost packages, downloads no solvers, and compiles nothing.
+  #
+  # Deliberately not a `needs:` dependency of check-regressions: a skipped job
+  # reports as success to branch protection, so gating the matrix on this would
+  # turn a formatting error into 28 green-looking skipped checks.
+  check-format:
+    name: check formatting
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: install formatting tools
+        env:
+          INSTALL_DEPENDENCIES: 0
+          INSTALL_Z3: 0
+          INSTALL_BOOGIE: 0
+          INSTALL_CORRAL: 0
+          BUILD_SMACK: 0
+          TEST_SMACK: 0
+          INSTALL_DEV_DEPENDENCIES: 1
+        run: |
+          sudo apt-get update
+          ./bin/build.sh
+
+      - name: run formatters
+        run: |
+          ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
+          flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
+
   check-regressions:
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     strategy:
       matrix:
         regtest_env:
@@ -40,31 +94,73 @@ jobs:
             # "--exhaustive --folder=rust/cargo/** --languages=cargo --threads=1",
             "--exhaustive --folder=llvm --languages=llvm-ir"
           ]
+    env:
+      # bin/build.sh defaults DEPS_DIR to a sibling of the checkout, which on a
+      # runner is outside GITHUB_WORKSPACE. Point it inside so actions/cache and
+      # bin/build.sh agree on one plain, relative path.
+      DEPS_DIR: ${{ github.workspace }}/smack-deps
     steps:
       - uses: actions/checkout@v7
 
-      - name: install dependencies
-        env:
-          GITHUB_ACTIONS: true
-        run: INSTALL_DEV_DEPENDENCIES=1 INSTALL_RUST=1 ./bin/build.sh
+      # Z3, Boogie and Corral are pinned by bin/versions and installed by
+      # bin/build.sh only when their directory is missing, so restoring them is
+      # equivalent to reinstalling them.
+      #
+      # restore/save are split rather than using actions/cache, so that only a
+      # job which ran green can publish an entry: bin/build.sh creates these
+      # directories before populating them, so a job that died on a failed
+      # download would otherwise cache an empty tree that every later job would
+      # accept as a complete install.
+      #
+      # No restore-keys, for the same reason: a prefix-matched entry from before
+      # a version bump would satisfy the directory check and the matrix would
+      # verify against the wrong solver while reporting green.
+      - name: restore Z3, Boogie and Corral
+        id: deps-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: smack-deps
+          # bin/build.sh is hashed as well as bin/versions because the Z3
+          # download URL (and the supported-distro list) live there, not in
+          # bin/versions.
+          key: smack-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
 
-      - name: format checking
-        run: |
-          ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
-          flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
-
+      # One bin/build.sh call: install dependencies, build SMACK, run this
+      # folder. This used to be two calls, the second of which re-ran the whole
+      # apt phase for nothing.
       - name: compile and test
         env:
           REGTEST_ENV: ${{ matrix.regtest_env }}
+          # rustc is reached only through the Rust and Cargo frontends, so the
+          # 17 pure C/LLVM entries do not need a nightly toolchain.
+          INSTALL_RUST: ${{ (contains(matrix.regtest_env, '--languages=rust') || contains(matrix.regtest_env, '--languages=cargo')) && '1' || '0' }}
         run: ./bin/build.sh
+
+      - name: save Z3, Boogie and Corral
+        if: success() && steps.deps-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: smack-deps
+          key: smack-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bin/versions', 'bin/build.sh') }}
 
   build-and-push-docker:
     runs-on: ubuntu-24.04
-    needs: check-regressions
+    needs: [check-format, check-regressions]
+    # Docker Hub secrets are not available to forks, so a fork PR used to earn a
+    # guaranteed red X after ~25 minutes of green regressions.
+    if: github.event_name == 'push' && github.repository == 'smackers/smack'
 
     steps:
       - name: Check Out Repo
         uses: actions/checkout@v7
+
+      - name: Set tag name
+        id: set_tag
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            main)    echo "docker_tag=stable" >> "$GITHUB_OUTPUT" ;;
+            develop) echo "docker_tag=latest" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Login to Docker Hub
         uses: docker/login-action@v4
@@ -76,23 +172,7 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v4
 
-      # borrowed from:
-      # https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions/58035262
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
-      - name: Set tag name
-        shell: bash
-        id: set_tag
-        run: |
-          if [ ${{ steps.extract_branch.outputs.branch }} == 'master' ]; then echo "##[set-output name=docker_tag;]$(echo stable)" && exit 0; fi
-          if [ ${{ steps.extract_branch.outputs.branch }} == 'develop' ]; then echo "##[set-output name=docker_tag;]$(echo latest)" && exit 0; fi
-          echo "##[set-output name=docker_tag;]$(echo none)"
-
       - name: Build and push
-        if: ${{ steps.set_tag.outputs.docker_tag != 'none' }}
         id: docker_build
         uses: docker/build-push-action@v7
         with:
