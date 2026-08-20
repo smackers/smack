@@ -173,6 +173,8 @@ public:
   const Stmt *memcpy(const llvm::MemCpyInst &msi);
   const Stmt *memset(const llvm::MemSetInst &msi);
   const Expr *load(const llvm::Value *P);
+  const Expr *functionalLoad(const llvm::Value *P, const Expr *memory,
+                             const Expr *address);
   const Stmt *store(const llvm::Value *P, const llvm::Value *V);
   const Stmt *store(const llvm::Value *P, const Expr *V);
 
@@ -192,6 +194,8 @@ public:
   std::string memPath(const llvm::Value *v);
   bool canFunctionalizeMemory(const llvm::Value *pointer,
                               const llvm::Type *valueType);
+  bool canFunctionalizeRead(const llvm::Value *pointer,
+                            const llvm::Type *valueType);
 
   std::list<std::pair<std::string, std::string>> memoryMaps();
 

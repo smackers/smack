@@ -289,6 +289,16 @@ bool SmackRep::canFunctionalizeMemory(const llvm::Value *pointer,
          Region.getType() == valueType && !valueType->isFloatingPointTy();
 }
 
+bool SmackRep::canFunctionalizeRead(const llvm::Value *pointer,
+                                    const llvm::Type *valueType) {
+  unsigned R = regions->idx(pointer);
+  const auto &Region = regions->get(R);
+  return !Region.isSingleton() &&
+         (Region.bytewiseAccess() || Region.getType() == valueType ||
+          (!Region.getType() && valueType->isIntegerTy(8))) &&
+         !valueType->isFloatingPointTy();
+}
+
 std::list<std::pair<std::string, std::string>> SmackRep::memoryMaps() {
   std::list<std::pair<std::string, std::string>> mms;
   for (unsigned i = 0; i < regions->size(); i++)
@@ -512,13 +522,18 @@ bool SmackRep::isUnsafeFloatAccess(const Type *elemTy, const Type *resultTy) {
 }
 
 const Expr *SmackRep::load(const llvm::Value *P) {
+  const unsigned R = regions->idx(P);
+  return functionalLoad(P, Expr::id(memPath(R)), SmackRep::expr(P));
+}
+
+const Expr *SmackRep::functionalLoad(const llvm::Value *P, const Expr *memory,
+                                     const Expr *address) {
   const PointerType *T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
   const unsigned R = regions->idx(P);
   bool bytewise = regions->get(R).bytewiseAccess();
   bool singleton = regions->get(R).isSingleton();
   const Type *resultTy = regions->get(R).getType();
-  const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
       (bytewise
@@ -526,7 +541,7 @@ const Expr *SmackRep::load(const llvm::Value *P) {
            : (isUnsafeFloatAccess(T->getElementType(), resultTy) ? "unsafe."
                                                                  : "")) +
       type(T->getElementType());
-  return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
+  return singleton ? memory : Expr::fn(N, memory, address);
 }
 
 const Stmt *SmackRep::store(const Value *P, const Value *V) {

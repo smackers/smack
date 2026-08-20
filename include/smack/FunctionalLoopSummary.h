@@ -11,6 +11,7 @@
 namespace llvm {
 class AAResults;
 class BasicBlock;
+class BranchInst;
 class Function;
 class IntegerType;
 class ConstantInt;
@@ -57,6 +58,9 @@ struct FunctionalLoopScalarRecurrence {
 // LLVM values rather than Boogie expressions so recognition and emission stay
 // separate and the emitter can use SMACK's actual memory representation.
 struct FunctionalLoopSummary {
+  enum class Kind { MemoryUpdate, ReadOnlyPredicate };
+
+  Kind kind = Kind::MemoryUpdate;
   llvm::Loop *loop = nullptr;
   llvm::BasicBlock *preheader = nullptr;
   llvm::BasicBlock *exit = nullptr;
@@ -70,6 +74,10 @@ struct FunctionalLoopSummary {
   llvm::SmallVector<FunctionalLoopLoad, 2> loads;
   llvm::SmallVector<FunctionalLoopScalarRecurrence, 2> recurrences;
   llvm::SmallVector<llvm::PHINode *, 1> finalInductionPhis;
+  const llvm::BranchInst *predicateBranch = nullptr;
+  llvm::BasicBlock *normalExit = nullptr;
+  llvm::BasicBlock *failureExit = nullptr;
+  bool continueConditionValue = true;
 };
 
 class FunctionalLoopSummaryAnalysis {

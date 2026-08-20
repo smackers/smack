@@ -67,15 +67,11 @@ emission, inside the existing module/instruction generators:
    destination map a lambda whose false branch reads the destination snapshot.
    RHS loads read only source snapshots.
 
-The initial recognizer will require a top-tested, single-level loop with a
-preheader, one latch, one exit, one affine unit IV starting at zero, an exact
-symbolic-or-constant SCEV trip count, and one injective affine store.  It will
-accept only a deliberately small RHS tree (constants, the IV, loop invariants,
-entry-memory loads, and selected integer casts/arithmetic).  Every possibly
-aliasing store/load pair must either be proven disjoint for all iterations or
-the loop is rejected.  Calls, assertions/assumptions, volatile or atomic
-accesses, exceptional/abnormal exits, bytewise memory, escaping loop values,
-and unsupported integer/pointer encodings are rejected.
+The recognizer deliberately keeps two summary forms separate.  Memory-update
+loops produce map lambdas.  Pure early-exit checks produce a quantified
+predicate and a failure witness.  Both consume the same SCEV induction,
+iteration-domain, affine-address and RHS representation, so recognition and
+proof remain independent of Boogie emission.
 
 This placement is also the safety boundary.  Memory-safety and overflow
 instrumentation run before Boogie generation.  A loop containing their calls
@@ -92,28 +88,31 @@ observable scalar or control-flow effect is discarded.
 
 ## Implemented prototype
 
-The opt-in `--functionalize-loops` implementation now supports this exact
-class:
+The opt-in `--functionalize-loops` memory-update implementation now supports
+this exact class:
 
 - a non-nested LoopSimplify loop with one latch, one conditional exit and one
   unique exit block; both top-tested and LoopRotate-style bottom-tested forms
   are accepted, including a zero-trip guard outside the loop;
 - straight-line control flow or one structured `if`/`else` diamond;
-- one unique integer SCEV recurrence `{0,+,1}<L>` defining iteration `k`, and
-  a body-execution count that simplifies to a constant or one loop-invariant
-  LLVM value of the same type;
+- one unique integer SCEV recurrence with a loop-invariant start and a strictly
+  positive constant step.  Its exact body-execution count may be a supported
+  loop-invariant SCEV expression (constants/unknowns, integer casts, add/mul,
+  and unsigned division by a nonzero constant);
 - one or more simple stores with positive-constant-stride affine pointer
   recurrences `base + offset + stride*k`.  Address injectivity must follow
   from SCEV no-wrap or an LLVM `inbounds` GEP;
 - pairwise stores that AA proves object-disjoint, whose affine images are
-  disjoint by the stride/offset congruence test, or that write the identical
-  pointwise address under opposite sides of the same branch;
+  disjoint by the stride/offset congruence test, whose finite ranges are
+  disjoint for a constant trip count, or that write the identical pointwise
+  address under opposite sides of the same branch.  Different invariant bases
+  may be normalized through inbounds constant GEPs to one base plus offsets;
 - RHS values composed from constants, loop invariants, the iteration, modular
   affine scalar SCEV recurrences, `add`/`sub`/`mul`, constant-safe integer
   division/remainder, integer casts, comparisons, selects, and affine loads;
-- a final escaping unit induction, including the one-input LCSSA forwarding
-  PHI produced by LLVM 14 loop rotation, when SCEV proves its exit value is the
-  trip count;
+- a final escaping induction, including the one-input LCSSA forwarding PHI
+  produced by LLVM 14 loop rotation, when SCEV proves its exit value is
+  `start + step*tripCount`;
 - non-singleton, non-bytewise typed SMACK regions under the default integer
   and pointer encodings.
 
@@ -122,7 +121,10 @@ derived pointer inductions such as `{a,+,8}<L>` are accepted even when the
 source no longer has a canonical `a[2*i]` expression, and an RHS scalar
 recurrence `{0,+,2}<L>` is emitted as modular `2*k`.  Conversely, a source
 expression such as 32-bit `2*i` is rejected if LLVM cannot prove its pointer
-recurrence because the multiply may wrap.
+recurrence because the multiply may wrap.  LLVM 14's common
+`base + zext({0,+,1}<L>)` form is accepted when the casted recurrence is the
+validated zero-start/unit-step induction; broader casted recurrences remain
+rejected without a no-wrap proof.
 
 For every load/store pair that AA cannot separate, the recognizer requires
 identical pointwise recurrences with the load dominating the write, or affine
@@ -142,8 +144,8 @@ read of a newly written map.  The emitter assigns the supported final
 induction state, jumps to the original exit and omits every loop block, so the
 generated Boogie has no cycle for that LLVM loop.
 
-The implementation deliberately rejects nonzero-start or non-unit domain
-inductions, negative or non-affine addresses, scatter, unproved aliasing,
+The memory-update implementation deliberately rejects negative or
+non-constant-step inductions, non-affine addresses, scatter, unproved aliasing,
 overlapping nonexclusive stores, loop-carried RAW dependences, nested loops,
 more than one body diamond, abnormal/multiple exits, arbitrary escaping
 scalars, calls, assertions/assumptions, memory intrinsics, volatile/atomic
@@ -153,19 +155,61 @@ or zero-capable divisor is also rejected.  Instrumented safety/overflow checks
 introduce unsupported loop effects before recognition, so functionalization
 does not erase their per-iteration failures.
 
+### Read-only predicate summaries
+
+The second exact form handles pure search/check loops of the form “return a
+constant on the first failing element, otherwise return another constant.”
+It currently requires a LoopSimplify loop with one bound exit, one early exit,
+one positive affine induction, no escaping loop value, and one or more simple
+affine loads used by a straight-line Boolean predicate.  Every non-debug
+instruction must belong to the bound, induction update, or predicate slice;
+stores, calls, additional conditionals, volatile/atomic loads and direct exit
+PHIs are rejected.
+
+The successful path assumes the exact iteration-quantified predicate.  It also
+assumes a logically redundant pointer-quantified form over the affine read
+image: its explicit memory-read trigger lets client reads instantiate the fact
+without requiring the solver to invert pointer arithmetic.  The failing path
+havocs an iteration witness and assumes that it is in the exact domain and
+violates the predicate.  The original normal/failure exit blocks remain in the
+program, so their constant return and join-PHI behavior is preserved; only the
+loop blocks are omitted.  This is exact because the loop is read-only and no
+iteration-dependent value escapes.
+
+Read summaries reuse `SmackRep`'s actual typed/byte load expression.  They may
+therefore read non-singleton bytewise maps and type-collapsed `[ref] i8` maps,
+even though those regions remain deliberately forbidden for lambda writes.
+This distinction is important for AWS's `aws_is_mem_zeroed`, which views a
+mixed-field struct through `uint8_t *`.
+
+A translation-only run of
+`aws_array_list_init_dynamic_harness.i` from AWS-C-Common now replaces the
+reachable `aws_is_mem_zeroed` loop with this acyclic summary.  No verifier was
+run on the AWS or driver suites.  Representative region traces also explain
+why region-only store disjointness was not added: one AWS fill had a useful
+typed `i8` region, but priority-queue and driver structures collapsed multiple
+fields into one region, while a representative copy placed source and
+destination in the same region.  The existing AA plus affine-image proofs are
+more useful and no less conservative for those loops.
+
 ## Regression and evaluation results
 
 The focused suite covers constant, IV, remainder and affine-scalar-recurrence
 fills; disjoint copy-plus-constant; same-object entry-memory updates; multiple
 maps and interleaved disjoint writes; rotated constant and symbolic loops;
-guarded one- and two-sided stores; and final-IV/LCSSA state.  Negative tests
+guarded one- and two-sided stores; nonzero starts, safe positive steps, and
+final-IV/LCSSA state.  Negative tests
 retain ordinary loops for shifted loop-carried RAW, write-before-read,
 overlapping writes, scatter, possible aliasing and an invalid instrumented
 memory access.  All tests run with loop bound 1 and inspect the generated
 Boogie for the expected presence or absence of lambda summaries.  The suite
 also covers preserving a rejected loop's known bound and conservatively
 rejecting a complex header recurrence without recursing through it in LLVM 14
-ScalarEvolution.  All 72 test/memory-model configurations pass with Boogie.
+ScalarEvolution.  Read-only tests cover symbolic `all_zero`, two-array
+equality, a type-collapsed struct byte scan, rejection when the failing index
+escapes, and preservation of an invalid memory access.  All 102
+test/memory-model configurations pass with Boogie; the symbolic read-only
+client also passes with the updated `~/corral` at loop bound 1.
 
 Loop-bound warnings are deferred until semantic and memory-model eligibility
 are known.  Summarized loops no longer request a higher bound; rejected loops
@@ -228,13 +272,16 @@ remaining array cases require one of the following qualitatively new ideas:
 - nondeterministic scatter needs injectivity or address inversion;
 - reductions, sorting and in-place mutation need closed forms for loop-carried
   scalar or memory state;
-- read-only assertion loops need a quantified safety summary rather than a
-  memory lambda;
+- read-only assertion/assumption loops need quantified safety summaries that
+  preserve failure paths and instrumentation rather than a Boolean return
+  summary;
 - arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
   typed pointwise lambda would require byte packing/unpacking support.
 
 These are the current fundamental boundaries of this prototype rather than
 small additions to its pointwise recognizer.  The recommended next experiment
-is quantified summarization of read-only assertion loops: it would directly
-address why many successfully functionalized initialization loops still time
-out, without weakening the entry-memory soundness argument.
+is a quantified read-only assertion summary with an explicit, preserved error
+edge.  It would address why many successfully functionalized initialization
+loops still time out, but should be attempted only after defining how each
+SMACK-inserted safety/undefined-behavior check is represented over the whole
+iteration domain.

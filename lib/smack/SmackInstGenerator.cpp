@@ -94,8 +94,12 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
           Store.store->getPointerOperand(),
           Store.store->getValueOperand()->getType());
     for (const auto &Load : Summary.loads)
-      SupportedMemory &= rep->canFunctionalizeMemory(
-          Load.load->getPointerOperand(), Load.load->getType());
+      SupportedMemory &=
+          Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate
+              ? rep->canFunctionalizeRead(Load.load->getPointerOperand(),
+                                          Load.load->getType())
+              : rep->canFunctionalizeMemory(Load.load->getPointerOperand(),
+                                            Load.load->getType());
     if (SupportedMemory)
       functionalLoops.push_back(std::move(Summary));
   }
@@ -104,6 +108,15 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
     auto *Branch = dyn_cast<BranchInst>(Summary.preheader->getTerminator());
     if (!Branch)
       continue;
+    if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate) {
+      if (!Branch->isUnconditional() ||
+          Branch->getSuccessor(0) != Summary.loop->getHeader())
+        continue;
+      summariesByPreheader[Branch] = &Summary;
+      suppressedBlocks.insert(Summary.loop->block_begin(),
+                              Summary.loop->block_end());
+      continue;
+    }
     if (Branch->isUnconditional()) {
       if (Branch->getSuccessor(0) != Summary.loop->getHeader())
         continue;
@@ -153,8 +166,7 @@ const Expr *SmackInstGenerator::functionalIntegerSCEV(const SCEV *S) {
     return Result;
   }
   if (auto *Div = dyn_cast<SCEVUDivExpr>(S)) {
-    auto Name =
-        rep->opName("$udiv", std::list<const Type *>{S->getType()});
+    auto Name = rep->opName("$udiv", std::list<const Type *>{S->getType()});
     return Expr::fn(Name, functionalIntegerSCEV(Div->getLHS()),
                     functionalIntegerSCEV(Div->getRHS()));
   }
@@ -187,9 +199,9 @@ const Expr *SmackInstGenerator::functionalPointerSCEV(const SCEV *S) {
       return Result;
 
   auto *OffsetType = cast<IntegerType>(Offset->getType());
-  auto OffsetAsPointer = Expr::fn(
-      indexedName("$i2p", {rep->type(OffsetType), Naming::PTR_TYPE}),
-      functionalIntegerSCEV(Offset));
+  auto OffsetAsPointer =
+      Expr::fn(indexedName("$i2p", {rep->type(OffsetType), Naming::PTR_TYPE}),
+               functionalIntegerSCEV(Offset));
   return Expr::fn("$add.ref", Result, OffsetAsPointer);
 }
 
@@ -201,8 +213,7 @@ const Expr *SmackInstGenerator::functionalInductionValue(
 
   auto MulName = rep->opName("$mul", {Summary.iterationType});
   auto AddName = rep->opName("$add", {Summary.iterationType});
-  auto Scaled =
-      Expr::fn(MulName, rep->expr(Summary.inductionStep), Iteration);
+  auto Scaled = Expr::fn(MulName, rep->expr(Summary.inductionStep), Iteration);
   return Expr::fn(AddName, rep->expr(Summary.inductionStart), Scaled);
 }
 
@@ -245,8 +256,8 @@ const Expr *SmackInstGenerator::functionalValue(
         Access = &Candidate.access;
     assert(Access && "validated functional load must have an affine access");
     auto Path = rep->memPath(Load->getPointerOperand());
-    return Expr::sel(
-        Expr::id(EntryMemories.at(Path)),
+    return rep->functionalLoad(
+        Load->getPointerOperand(), Expr::id(EntryMemories.at(Path)),
         functionalAddress(*Access, Iteration, Summary.iterationType));
   }
 
@@ -293,6 +304,93 @@ const Expr *SmackInstGenerator::functionalValue(
   llvm_unreachable("unsupported value in validated functional loop summary");
 }
 
+void SmackInstGenerator::emitReadOnlyFunctionalLoop(
+    const FunctionalLoopSummary &Summary, BranchInst &PreheaderBranch) {
+  unsigned Id = functionalLoopId++;
+  std::string IterationType = rep->type(Summary.iterationType);
+  const Expr *Zero =
+      rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
+  const Expr *IterationCount = functionalIntegerSCEV(Summary.iterationCount);
+
+  std::map<std::string, std::string> CurrentMemories;
+  for (const auto &Load : Summary.loads) {
+    std::string Path = rep->memPath(Load.load->getPointerOperand());
+    CurrentMemories[Path] = Path;
+  }
+
+  auto ContinueAt = [&](const Expr *Iteration) {
+    const Expr *Condition =
+        functionalValue(Summary.predicateBranch->getCondition(), Summary,
+                        Iteration, CurrentMemories);
+    const Expr *ConditionIsTrue = Expr::eq(Condition, rep->integerLit(1ULL, 1));
+    return Summary.continueConditionValue ? ConditionIsTrue
+                                          : Expr::not_(ConditionIsTrue);
+  };
+  auto IterationInDomain = [&](const Expr *Iteration) {
+    return Expr::and_(
+        Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+                 Iteration, Zero),
+        Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                 Iteration, IterationCount));
+  };
+
+  const FunctionalLoopLoad &Load = Summary.loads.front();
+  std::string LoadPath = rep->memPath(Load.load->getPointerOperand());
+  std::string PointerName = "$functional.read.pointer." + std::to_string(Id);
+  const Expr *Pointer = Expr::id(PointerName);
+  const Expr *Start = functionalPointerSCEV(Load.access.start);
+  const Expr *Delta = Expr::fn("$sub.ref", Pointer, Start);
+  const Expr *DeltaAsInteger =
+      Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+  const Expr *Stride =
+      rep->integerLit(static_cast<unsigned long long>(Load.access.stride),
+                      Summary.iterationType->getBitWidth());
+  const Expr *Iteration = Expr::fn(
+      rep->opName("$udiv", {Summary.iterationType}), DeltaAsInteger, Stride);
+  const Expr *IsReadAddress =
+      Expr::eq(Pointer, functionalAddress(Load.access, Iteration,
+                                          Summary.iterationType));
+  const Expr *InReadImage =
+      Expr::and_(IterationInDomain(Iteration), IsReadAddress);
+  const Expr *Trigger =
+      rep->functionalLoad(Load.load->getPointerOperand(),
+                          Expr::id(CurrentMemories.at(LoadPath)), Pointer);
+  const Expr *TriggeredAllContinue =
+      Expr::forall({{PointerName, Naming::PTR_TYPE}}, Trigger,
+                   Expr::impl(InReadImage, ContinueAt(Iteration)));
+
+  // This is the semantic summary.  The pointer-quantified formula above is a
+  // redundant consequence whose explicit load trigger lets clients instantiate
+  // the fact at an arbitrary read address without inverting pointer arithmetic.
+  std::string IterationName =
+      "$functional.read.iteration." + std::to_string(Id);
+  const Expr *ExactIteration = Expr::id(IterationName);
+  const Expr *AllContinue =
+      Expr::forall({{IterationName, IterationType}},
+                   Expr::impl(IterationInDomain(ExactIteration),
+                              ContinueAt(ExactIteration)));
+
+  std::string WitnessName = "$functional.read.witness." + std::to_string(Id);
+  proc->getDeclarations().push_back(Decl::variable(WitnessName, IterationType));
+  const Expr *Witness = Expr::id(WitnessName);
+  const Expr *WitnessesFailure =
+      Expr::and_(IterationInDomain(Witness), Expr::not_(ContinueAt(Witness)));
+
+  emit(Stmt::comment("functional read-only loop summary for " +
+                     Summary.predicateBranch->getFunction()->getName().str()));
+  Block *Normal = createBlock();
+  annotate(PreheaderBranch, Normal);
+  Normal->addStmt(Stmt::assume(AllContinue));
+  Normal->addStmt(Stmt::assume(TriggeredAllContinue));
+  Normal->addStmt(Stmt::goto_({getBlock(Summary.normalExit)->getName()}));
+  Block *Failure = createBlock();
+  annotate(PreheaderBranch, Failure);
+  Failure->addStmt(Stmt::havoc(WitnessName));
+  Failure->addStmt(Stmt::assume(WitnessesFailure));
+  Failure->addStmt(Stmt::goto_({getBlock(Summary.failureExit)->getName()}));
+  emit(Stmt::goto_({Normal->getName(), Failure->getName()}));
+}
+
 void SmackInstGenerator::emitFunctionalLoop(
     const FunctionalLoopSummary &Summary) {
   unsigned Id = functionalLoopId++;
@@ -321,8 +419,7 @@ void SmackInstGenerator::emitFunctionalLoop(
 
   std::string IterationType = rep->type(Summary.iterationType);
   auto Zero = rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
-  const Expr *IterationCount =
-      functionalIntegerSCEV(Summary.iterationCount);
+  const Expr *IterationCount = functionalIntegerSCEV(Summary.iterationCount);
   emit(Stmt::comment(
       "functional loop summary for " +
       Summary.stores.front().store->getFunction()->getName().str()));
@@ -574,7 +671,10 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst &bi) {
 
   auto Summary = summariesByPreheader.find(&bi);
   if (Summary != summariesByPreheader.end()) {
-    emitFunctionalLoop(*Summary->second);
+    if (Summary->second->kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate)
+      emitReadOnlyFunctionalLoop(*Summary->second, bi);
+    else
+      emitFunctionalLoop(*Summary->second);
     return;
   }
 

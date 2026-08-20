@@ -14,6 +14,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include <limits>
+#include <set>
 
 namespace smack {
 
@@ -21,8 +22,7 @@ using namespace llvm;
 
 namespace {
 
-bool isSupportedInvariantSCEV(const SCEV *S, Loop &L,
-                              ScalarEvolution &SE) {
+bool isSupportedInvariantSCEV(const SCEV *S, Loop &L, ScalarEvolution &SE) {
   if (!S->getType()->isIntegerTy() || !SE.isLoopInvariant(S, &L))
     return false;
   if (isa<SCEVConstant>(S))
@@ -47,9 +47,10 @@ bool isSupportedInvariantSCEV(const SCEV *S, Loop &L,
   return false;
 }
 
-bool getIterationCount(Loop &L, ScalarEvolution &SE, IntegerType *Ty,
-                       bool IncludeFinalExitingBlock, const SCEV *&Count) {
-  const SCEV *S = SE.getExitCount(&L, L.getExitingBlock());
+bool getIterationCount(Loop &L, BasicBlock *ExitingBlock, ScalarEvolution &SE,
+                       IntegerType *Ty, bool IncludeFinalExitingBlock,
+                       const SCEV *&Count) {
+  const SCEV *S = SE.getExitCount(&L, ExitingBlock);
   if (isa<SCEVCouldNotCompute>(S) || S->getType() != Ty)
     return false;
 
@@ -129,8 +130,8 @@ PHINode *getSimplePositiveInductionCandidate(Loop &L) {
     if (!Phi->getType()->isIntegerTy() ||
         !L.isLoopInvariant(Phi->getIncomingValueForBlock(Incoming)))
       continue;
-    auto *Update = dyn_cast<BinaryOperator>(
-        Phi->getIncomingValueForBlock(Backedge));
+    auto *Update =
+        dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Backedge));
     if (!Update || Update->getOpcode() != Instruction::Add)
       continue;
     const Value *Step = nullptr;
@@ -176,10 +177,48 @@ PHINode *getPositiveInduction(Loop &L, ScalarEvolution &SE, PHINode *Phi,
 }
 
 bool getAffineAccess(const Value *Pointer, Loop &L, ScalarEvolution &SE,
-                     AffineLoopAccess &Access) {
-  auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(const_cast<Value *>(Pointer)));
+                     const PHINode *Induction, AffineLoopAccess &Access) {
+  const SCEV *PointerSCEV = SE.getSCEV(const_cast<Value *>(Pointer));
+  auto *AR = dyn_cast<SCEVAddRecExpr>(PointerSCEV);
   auto *GEP = dyn_cast<GetElementPtrInst>(Pointer);
-  if (!AR || AR->getLoop() != &L || !AR->isAffine() ||
+  const SCEV *Start = AR ? AR->getStart() : nullptr;
+
+  // A narrower integer induction used as a pointer index is commonly exposed
+  // by LLVM 14 as `base + zext({0,+,1}<L>)`, rather than a pointer AddRec.
+  // Accept only the cast of this loop's already-validated zero,+1 induction;
+  // broader casted recurrences need a separate no-wrap proof.
+  if (!AR && Induction && GEP && GEP->isInBounds()) {
+    auto *Add = dyn_cast<SCEVAddExpr>(PointerSCEV);
+    const SCEV *PointerBase = SE.getPointerBase(PointerSCEV);
+    const SCEVAddRecExpr *CastedAR = nullptr;
+    if (Add && !isa<SCEVCouldNotCompute>(PointerBase)) {
+      for (const SCEV *Operand : Add->operands()) {
+        if (Operand == PointerBase)
+          continue;
+        auto *Extend = dyn_cast<SCEVZeroExtendExpr>(Operand);
+        auto *Candidate =
+            Extend ? dyn_cast<SCEVAddRecExpr>(Extend->getOperand()) : nullptr;
+        if (!Candidate || CastedAR)
+          return false;
+        CastedAR = Candidate;
+      }
+    }
+    auto *InductionAR =
+        dyn_cast<SCEVAddRecExpr>(SE.getSCEV(const_cast<PHINode *>(Induction)));
+    auto *CastedStart =
+        CastedAR ? dyn_cast<SCEVConstant>(CastedAR->getStart()) : nullptr;
+    auto *CastedStep =
+        CastedAR ? dyn_cast<SCEVConstant>(CastedAR->getStepRecurrence(SE))
+                 : nullptr;
+    if (!CastedAR || CastedAR != InductionAR || !CastedStart ||
+        !CastedStart->getAPInt().isZero() || !CastedStep ||
+        !CastedStep->getAPInt().isOne())
+      return false;
+    AR = CastedAR;
+    Start = PointerBase;
+  }
+
+  if (!AR || !Start || AR->getLoop() != &L || !AR->isAffine() ||
       (!AR->hasNoSelfWrap() && !(GEP && GEP->isInBounds())))
     return false;
 
@@ -188,7 +227,6 @@ bool getAffineAccess(const Value *Pointer, Loop &L, ScalarEvolution &SE,
       Step->getAPInt().getActiveBits() > 64)
     return false;
 
-  const SCEV *Start = AR->getStart();
   const SCEVUnknown *BaseSCEV = dyn_cast<SCEVUnknown>(SE.getPointerBase(Start));
   if (!BaseSCEV)
     return false;
@@ -287,9 +325,8 @@ bool addSignedOffset(uint64_t Offset, int64_t Delta, uint64_t &Result) {
   return true;
 }
 
-bool normalizeRelatedBases(const AffineLoopAccess &A,
-                           const AffineLoopAccess &B, const DataLayout &DL,
-                           AffineLoopAccess &NormalizedA,
+bool normalizeRelatedBases(const AffineLoopAccess &A, const AffineLoopAccess &B,
+                           const DataLayout &DL, AffineLoopAccess &NormalizedA,
                            AffineLoopAccess &NormalizedB) {
   if (!A.hasConstantOffset || !B.hasConstantOffset)
     return false;
@@ -331,10 +368,9 @@ bool areAffineAccessesDisjoint(const AffineLoopAccess &A,
     return false;
   if (finiteAffineImagesAreDisjoint(NormalizedA, NormalizedB, IterationCount))
     return true;
-  uint64_t Difference =
-      NormalizedA.offset >= NormalizedB.offset
-          ? NormalizedA.offset - NormalizedB.offset
-          : NormalizedB.offset - NormalizedA.offset;
+  uint64_t Difference = NormalizedA.offset >= NormalizedB.offset
+                            ? NormalizedA.offset - NormalizedB.offset
+                            : NormalizedB.offset - NormalizedA.offset;
   return Difference %
              greatestCommonDivisor(NormalizedA.stride, NormalizedB.stride) !=
          0;
@@ -372,7 +408,8 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
       return true;
 
     AffineLoopAccess Read;
-    if (!getAffineAccess(Load->getPointerOperand(), *Summary.loop, SE, Read))
+    if (!getAffineAccess(Load->getPointerOperand(), *Summary.loop, SE,
+                         Summary.induction, Read))
       return false;
 
     // Every store must either be on a distinct object, denote the load's same
@@ -389,11 +426,9 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
       if (SamePointwise && !DT.dominates(Load, Write.store))
         return false;
       if (!SamePointwise &&
-          !areAffineAccessesDisjoint(Write.access, Read,
-                                     Summary.iterationCount,
-                                     Summary.loop->getHeader()
-                                         ->getModule()
-                                         ->getDataLayout()))
+          !areAffineAccessesDisjoint(
+              Write.access, Read, Summary.iterationCount,
+              Summary.loop->getHeader()->getModule()->getDataLayout()))
         return false;
       UsesRecurrenceProof = true;
     }
@@ -594,8 +629,9 @@ bool hasOnlySupportedInstructions(Loop &L,
   return !Stores.empty();
 }
 
-bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
-                 DominatorTree &DT, FunctionalLoopSummary &Summary) {
+bool analyzeMemoryLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
+                       MemorySSA &MSSA, DominatorTree &DT,
+                       FunctionalLoopSummary &Summary) {
   SupportedControlFlow Flow;
   if (L.getParentLoop() || !L.getSubLoops().empty() ||
       !L.isLoopSimplifyForm() || L.getNumBackEdges() != 1 ||
@@ -606,13 +642,12 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
   PHINode *InductionCandidate = L.getCanonicalInductionVariable();
   if (!InductionCandidate)
     InductionCandidate = getSimplePositiveInductionCandidate(L);
-  if (!InductionCandidate ||
-      !hasOnlySimpleHeaderPhis(L, InductionCandidate))
+  if (!InductionCandidate || !hasOnlySimpleHeaderPhis(L, InductionCandidate))
     return false;
   const Value *InductionStart = nullptr;
   const ConstantInt *InductionStep = nullptr;
-  PHINode *Induction = getPositiveInduction(
-      L, SE, InductionCandidate, InductionStart, InductionStep);
+  PHINode *Induction = getPositiveInduction(L, SE, InductionCandidate,
+                                            InductionStart, InductionStep);
   auto *IterationType =
       Induction ? dyn_cast<IntegerType>(Induction->getType()) : nullptr;
   if (!IterationType)
@@ -636,8 +671,8 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
         BeforeExitTest != StoresExecuteBeforeExitTest)
       return false;
   }
-  if (!getIterationCount(L, SE, IterationType, StoresExecuteBeforeExitTest,
-                         IterationCount))
+  if (!getIterationCount(L, L.getExitingBlock(), SE, IterationType,
+                         StoresExecuteBeforeExitTest, IterationCount))
     return false;
 
   Summary.loop = &L;
@@ -668,7 +703,8 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
 
   for (const StoreInst *Store : Stores) {
     AffineLoopAccess Write;
-    if (!getAffineAccess(Store->getPointerOperand(), L, SE, Write))
+    if (!getAffineAccess(Store->getPointerOperand(), L, SE, Summary.induction,
+                         Write))
       return false;
     const Value *Guard = nullptr;
     bool GuardValue = true;
@@ -704,6 +740,172 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
   return true;
 }
 
+bool getInsideAndOutsideSuccessors(Loop &L, BranchInst &Branch,
+                                   BasicBlock *&Inside, BasicBlock *&Outside,
+                                   bool &InsideOnTrue) {
+  if (!Branch.isConditional())
+    return false;
+  Inside = nullptr;
+  Outside = nullptr;
+  for (unsigned I = 0; I < 2; ++I) {
+    BasicBlock *Successor = Branch.getSuccessor(I);
+    if (L.contains(Successor)) {
+      if (Inside)
+        return false;
+      Inside = Successor;
+      InsideOnTrue = I == 0;
+    } else {
+      if (Outside)
+        return false;
+      Outside = Successor;
+    }
+  }
+  return Inside && Outside;
+}
+
+void collectInstructionSlice(const Value *V, Loop &L,
+                             std::set<const Instruction *> &Slice) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !L.contains(I) || !Slice.insert(I).second)
+    return;
+  for (const Value *Operand : I->operand_values())
+    collectInstructionSlice(Operand, L, Slice);
+}
+
+bool hasEscapingLoopValue(Loop &L) {
+  for (BasicBlock *BB : L.blocks())
+    for (Instruction &I : *BB)
+      if (!I.getType()->isVoidTy())
+        for (User *U : I.users())
+          if (auto *Use = dyn_cast<Instruction>(U))
+            if (!L.contains(Use))
+              return true;
+  return false;
+}
+
+bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
+                                  MemorySSA &MSSA, DominatorTree &DT,
+                                  FunctionalLoopSummary &Summary) {
+  if (L.getParentLoop() || !L.getSubLoops().empty() ||
+      !L.isLoopSimplifyForm() || L.getNumBackEdges() != 1 ||
+      !L.getLoopPreheader() || !L.getLoopLatch() || hasEscapingLoopValue(L))
+    return false;
+
+  SmallVector<BasicBlock *, 2> ExitingBlocks;
+  L.getExitingBlocks(ExitingBlocks);
+  if (ExitingBlocks.size() != 2 ||
+      llvm::find(ExitingBlocks, L.getHeader()) == ExitingBlocks.end())
+    return false;
+
+  BasicBlock *PredicateBlock =
+      ExitingBlocks[0] == L.getHeader() ? ExitingBlocks[1] : ExitingBlocks[0];
+  auto *BoundBranch = dyn_cast<BranchInst>(L.getHeader()->getTerminator());
+  auto *PredicateBranch = dyn_cast<BranchInst>(PredicateBlock->getTerminator());
+  BasicBlock *BodyEntry = nullptr;
+  BasicBlock *NormalExit = nullptr;
+  bool BodyOnTrue = false;
+  BasicBlock *ContinueBlock = nullptr;
+  BasicBlock *FailureExit = nullptr;
+  bool ContinueOnTrue = false;
+  if (!BoundBranch || !PredicateBranch ||
+      !getInsideAndOutsideSuccessors(L, *BoundBranch, BodyEntry, NormalExit,
+                                     BodyOnTrue) ||
+      !getInsideAndOutsideSuccessors(L, *PredicateBranch, ContinueBlock,
+                                     FailureExit, ContinueOnTrue) ||
+      NormalExit == FailureExit || !DT.dominates(BodyEntry, PredicateBlock) ||
+      !DT.dominates(PredicateBlock, L.getLoopLatch()))
+    return false;
+
+  // Keep exit blocks in the generated program so their return/PHI behavior is
+  // preserved.  Direct exit PHIs cannot be populated from the summarized
+  // preheader edge, so reject them for this first form.
+  if (isa<PHINode>(&NormalExit->front()) || isa<PHINode>(&FailureExit->front()))
+    return false;
+
+  PHINode *InductionCandidate = L.getCanonicalInductionVariable();
+  if (!InductionCandidate)
+    InductionCandidate = getSimplePositiveInductionCandidate(L);
+  if (!InductionCandidate || !hasOnlySimpleHeaderPhis(L, InductionCandidate))
+    return false;
+  for (Instruction &I : *L.getHeader())
+    if (auto *Phi = dyn_cast<PHINode>(&I)) {
+      if (Phi != InductionCandidate)
+        return false;
+    } else {
+      break;
+    }
+
+  const Value *InductionStart = nullptr;
+  const ConstantInt *InductionStep = nullptr;
+  PHINode *Induction = getPositiveInduction(L, SE, InductionCandidate,
+                                            InductionStart, InductionStep);
+  auto *IterationType =
+      Induction ? dyn_cast<IntegerType>(Induction->getType()) : nullptr;
+  if (!IterationType)
+    return false;
+
+  const SCEV *IterationCount = nullptr;
+  if (!getIterationCount(L, L.getHeader(), SE, IterationType, false,
+                         IterationCount))
+    return false;
+
+  Summary.kind = FunctionalLoopSummary::Kind::ReadOnlyPredicate;
+  Summary.loop = &L;
+  Summary.preheader = L.getLoopPreheader();
+  Summary.induction = Induction;
+  Summary.inductionStart = InductionStart;
+  Summary.inductionStep = InductionStep;
+  Summary.iterationType = IterationType;
+  Summary.iterationCount = IterationCount;
+  Summary.predicateBranch = PredicateBranch;
+  Summary.normalExit = NormalExit;
+  Summary.failureExit = FailureExit;
+  Summary.continueConditionValue = ContinueOnTrue;
+
+  if (!validateRhs(PredicateBranch->getCondition(), Summary, SE, AA, MSSA, DT))
+    return false;
+
+  std::set<const Instruction *> Required;
+  collectInstructionSlice(BoundBranch->getCondition(), L, Required);
+  collectInstructionSlice(PredicateBranch->getCondition(), L, Required);
+  Required.insert(Induction);
+  BasicBlock *Incoming = nullptr;
+  BasicBlock *Backedge = nullptr;
+  if (!L.getIncomingAndBackEdge(Incoming, Backedge))
+    return false;
+  auto *InductionUpdate =
+      dyn_cast<Instruction>(Induction->getIncomingValueForBlock(Backedge));
+  if (!InductionUpdate)
+    return false;
+  Required.insert(InductionUpdate);
+
+  unsigned LoadCount = 0;
+  for (BasicBlock *BB : L.blocks()) {
+    auto *Branch = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!Branch ||
+        (Branch->isConditional() && Branch != BoundBranch &&
+         Branch != PredicateBranch) ||
+        (Branch->isUnconditional() && !L.contains(Branch->getSuccessor(0))))
+      return false;
+    for (Instruction &I : *BB) {
+      if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
+        continue;
+      if (auto *Load = dyn_cast<LoadInst>(&I)) {
+        if (!Load->isSimple())
+          return false;
+        ++LoadCount;
+      } else if (!isa<PHINode>(I) && !isa<BinaryOperator>(I) &&
+                 !isa<CastInst>(I) && !isa<GetElementPtrInst>(I) &&
+                 !isa<ICmpInst>(I) && !isa<SelectInst>(I)) {
+        return false;
+      }
+      if (!Required.count(&I))
+        return false;
+    }
+  }
+  return LoadCount != 0 && LoadCount == Summary.loads.size();
+}
+
 } // namespace
 
 std::vector<FunctionalLoopSummary>
@@ -713,9 +915,14 @@ FunctionalLoopSummaryAnalysis::analyze(Function &F, LoopInfo &LI,
   std::vector<FunctionalLoopSummary> Result;
   DominatorTree DT(F);
   for (Loop *L : LI.getLoopsInPreorder()) {
-    FunctionalLoopSummary Summary;
-    if (analyzeLoop(*L, SE, AA, MSSA, DT, Summary))
-      Result.push_back(std::move(Summary));
+    FunctionalLoopSummary MemorySummary;
+    if (analyzeMemoryLoop(*L, SE, AA, MSSA, DT, MemorySummary)) {
+      Result.push_back(std::move(MemorySummary));
+      continue;
+    }
+    FunctionalLoopSummary ReadSummary;
+    if (analyzeReadOnlyPredicateLoop(*L, SE, AA, MSSA, DT, ReadSummary))
+      Result.push_back(std::move(ReadSummary));
   }
   return Result;
 }
