@@ -211,16 +211,64 @@ bool finiteAffineImagesAreDisjoint(const AffineLoopAccess &A,
          (LastA < B.offset || LastB < A.offset);
 }
 
+bool addSignedOffset(uint64_t Offset, int64_t Delta, uint64_t &Result) {
+  if (Delta >= 0) {
+    uint64_t Positive = static_cast<uint64_t>(Delta);
+    if (Offset > std::numeric_limits<uint64_t>::max() - Positive)
+      return false;
+    Result = Offset + Positive;
+    return true;
+  }
+
+  uint64_t Magnitude = static_cast<uint64_t>(-(Delta + 1)) + 1;
+  if (Offset < Magnitude)
+    return false;
+  Result = Offset - Magnitude;
+  return true;
+}
+
+bool normalizeRelatedBases(const AffineLoopAccess &A,
+                           const AffineLoopAccess &B, const DataLayout &DL,
+                           AffineLoopAccess &NormalizedA,
+                           AffineLoopAccess &NormalizedB) {
+  int64_t BaseOffsetA = 0;
+  int64_t BaseOffsetB = 0;
+  const Value *BaseA =
+      GetPointerBaseWithConstantOffset(A.base, BaseOffsetA, DL, false);
+  const Value *BaseB =
+      GetPointerBaseWithConstantOffset(B.base, BaseOffsetB, DL, false);
+  if (BaseA != BaseB)
+    return false;
+
+  uint64_t OffsetA = 0;
+  uint64_t OffsetB = 0;
+  if (!addSignedOffset(A.offset, BaseOffsetA, OffsetA) ||
+      !addSignedOffset(B.offset, BaseOffsetB, OffsetB))
+    return false;
+
+  NormalizedA = {BaseA, OffsetA, A.stride};
+  NormalizedB = {BaseB, OffsetB, B.stride};
+  return true;
+}
+
 bool areAffineAccessesDisjoint(const AffineLoopAccess &A,
                                const AffineLoopAccess &B,
-                               const Value *IterationCount) {
-  if (A.base != B.base)
+                               const Value *IterationCount,
+                               const DataLayout &DL) {
+  AffineLoopAccess NormalizedA = A;
+  AffineLoopAccess NormalizedB = B;
+  if (A.base != B.base &&
+      !normalizeRelatedBases(A, B, DL, NormalizedA, NormalizedB))
     return false;
-  if (finiteAffineImagesAreDisjoint(A, B, IterationCount))
+  if (finiteAffineImagesAreDisjoint(NormalizedA, NormalizedB, IterationCount))
     return true;
   uint64_t Difference =
-      A.offset >= B.offset ? A.offset - B.offset : B.offset - A.offset;
-  return Difference % greatestCommonDivisor(A.stride, B.stride) != 0;
+      NormalizedA.offset >= NormalizedB.offset
+          ? NormalizedA.offset - NormalizedB.offset
+          : NormalizedB.offset - NormalizedA.offset;
+  return Difference %
+             greatestCommonDivisor(NormalizedA.stride, NormalizedB.stride) !=
+         0;
 }
 
 bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
@@ -273,7 +321,10 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
         return false;
       if (!SamePointwise &&
           !areAffineAccessesDisjoint(Write.access, Read,
-                                     Summary.iterationCount))
+                                     Summary.iterationCount,
+                                     Summary.loop->getHeader()
+                                         ->getModule()
+                                         ->getDataLayout()))
         return false;
       UsesRecurrenceProof = true;
     }
@@ -559,7 +610,9 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
           Summary.stores[I].guardValue != Summary.stores[J].guardValue;
       if (!AA.isNoAlias(getUnderlyingObject(A.base),
                         getUnderlyingObject(B.base)) &&
-          !areAffineAccessesDisjoint(A, B, Summary.iterationCount) &&
+          !areAffineAccessesDisjoint(
+              A, B, Summary.iterationCount,
+              Summary.loop->getHeader()->getModule()->getDataLayout()) &&
           !MutuallyExclusive)
         return false;
     }
