@@ -90,3 +90,78 @@ injective (`W(j) != W(k)` for `j != k`); every RHS load denotes loop-entry
 memory (`j < k => W(j) != R(k)`); the emitted expression uses the same SMACK
 integer, pointer, and typed-memory operations as ordinary lowering; and no
 observable scalar or control-flow effect is discarded.
+
+## Implemented prototype
+
+The opt-in `--functionalize-loops` implementation supports exactly this class:
+
+- a non-nested LoopSimplify loop with one latch, a conditional header exit,
+  one unique exit block, and otherwise straight-line branches;
+- exactly one integer SCEV add recurrence `{0,+,1}<L>` and an exact exit count
+  that is either a constant or one loop-invariant LLVM value of the same type;
+- exactly one simple store whose pointer SCEV is an affine, positive-constant-
+  stride, no-self-wrap recurrence with a loop-invariant pointer base;
+- an RHS composed of integer constants, the IV, loop-invariant SSA values,
+  `add`/`sub`/`mul`, selected integer casts, and simple loads with affine
+  addresses;
+- for every RHS load, LLVM AA must prove the entire underlying source and
+  destination objects `NoAlias`, and MemorySSA's clobber must be loop entry or
+  outside the loop;
+- non-singleton, non-bytewise typed SMACK regions, using the default unbounded
+  integer and pointer encodings.
+
+The emitter snapshots every source/destination region, derives the unique
+iteration number from the lambda's address parameter, checks both the
+iteration domain and exact address reconstruction, computes the RHS from the
+snapshots, and otherwise returns the old destination-map element.  It then
+jumps from the preheader to the old unique exit and emits none of the loop's
+blocks.  Escaping values (including a live final IV) are rejected rather than
+approximated.
+
+The prototype deliberately rejects multiple stores, same-object reads (even
+safe `a[i] = a[i] + 1`), non-unit or nonzero-start IVs, computed scatter
+addresses, possible aliasing, nested or branched bodies, exit PHIs, calls,
+assertions/assumptions, memory intrinsics, volatile/atomic accesses, EH,
+bytewise/singleton regions, memory-model debugging, and bit-vector or wrapped
+integer/pointer encodings.  Memory-safety instrumentation inserts calls in the
+loop before recognition, so `--check=memory-safety` candidates are rejected
+and their per-iteration checks remain in cyclic control flow.
+
+## Regression and evaluation results
+
+`test/c/functionalize-loops` contains symbolic positive tests for constant
+fill, IV fill, and `restrict`-disjoint copy-plus-constant; a fixed 4096-
+iteration demonstration; and negative tests for a loop-carried RAW recurrence,
+scatter, possible aliasing, and an invalid memory access under memory-safety
+checking.  The positives inspect generated Boogie for a lambda; the negatives
+inspect it for absence of a summary.  All 24 combinations of these eight tests
+and SMACK's three memory-allocation models pass with Boogie (loop bound 1).
+
+For the fixed 4096-iteration test, raw generated Boogie changed as follows:
+
+| configuration | lines | bytes | lambda summaries | cyclic source loop |
+|---|---:|---:|---:|---|
+| baseline | 16,269 | 707,389 | 0 | yes |
+| functionalized | 16,233 | 706,338 | 1 | no |
+
+Using the requested `~/corral` with recursion bound 1, the baseline reports
+`Reached recursion bound of 1` (0.84 s wall time), whereas the functionalized
+program proves all three assertions without reaching the bound (1.14 s wall
+time).  The analogous symbolic-`n` test has the same qualitative result:
+baseline reaches the bound; functionalized proves with bound 1.
+
+There is one integration caveat in the current Corral checkout.  Its Boogie
+3.5.7 frontend parses/typechecks lambda expressions, but Corral does not call
+`LambdaHelper.ExpandLambdas` before its custom VC path, so a raw lambda reaches
+`Boogie2VCExprTranslator` and crashes.  The measurements above use Boogie
+3.4.3's `/printLambdaLifting /doModSetAnalysis /noVerify` output as input to
+that exact Corral executable.  The lifted 4096-iteration input has one lambda
+function/quantified definition.  Calling Boogie's lambda-expansion hook in
+Corral's input preprocessing is the small backend integration needed for
+direct raw-lambda runs; it is separate from this SMACK prototype.
+
+The recommended next SMACK experiment is to accept same-object pointwise
+loads by proving equal affine recurrences are cross-iteration disjoint.  That
+would cover `a[i] = a[i] + c` without weakening the current all-iterations
+dependence obligation.  Only after that proof is isolated should the summary
+grow support for multiple stores or ITE bodies.
