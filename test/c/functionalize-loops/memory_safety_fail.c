@@ -3,6 +3,7 @@
 // @expect error
 // @flag --check=memory-safety --unroll=2
 // @checkbpl awk 'index($0,"functional loop summary for bad_fill"){found=1} END{exit found}'
+// @checkout grep -F "SMACK warning: found loop"
 
 static void bad_fill(unsigned *a, unsigned n) {
   for (unsigned i = 0; i < n; ++i)

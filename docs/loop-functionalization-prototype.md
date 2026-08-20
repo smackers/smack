@@ -49,10 +49,9 @@ only non-singleton, non-bytewise typed regions and update the existing
 expression node.  Adding a small lambda AST node is sufficient to print
 Boogie's `(lambda p: ref :: e)` syntax.  A smoke test against the requested
 `~/corral` checkout confirms that its Boogie 3.5.7 parser and type checker
-accept that syntax.  The currently built Corral executable nevertheless lets
-the lambda reach the low-level VC translator, which crashes; its input path
-still needs to invoke Boogie's lambda-lifting/expansion hook before this can be
-counted as end-to-end verification.
+accept that syntax.  The checkout now expands lambdas before its custom VC
+translation, so raw SMACK lambda output is accepted end to end without an
+external lifting step.
 
 ## Prototype architecture
 
@@ -146,6 +145,12 @@ generated Boogie for a lambda; the negatives inspect it for absence of a
 summary.  All 30 combinations of these ten tests and SMACK's three memory-
 allocation models pass with Boogie (loop bound 1).
 
+Loop-bound warnings are deferred when functionalization is enabled until the
+generator has completed semantic recognition and memory-model eligibility
+checking.  Successfully summarized loops no longer produce a misleading
+request for a higher `--unroll` value; rejected loops, including memory-safety
+and bit-vector configurations, retain the warning.
+
 For the fixed 4096-iteration test, raw generated Boogie changed as follows:
 
 | configuration | lines | bytes | lambda summaries | cyclic source loop |
@@ -155,26 +160,17 @@ For the fixed 4096-iteration test, raw generated Boogie changed as follows:
 
 Using the requested `~/corral` with recursion bound 1, the baseline reports
 `Reached recursion bound of 1` (0.84 s wall time), whereas the functionalized
-program proves all three assertions without reaching the bound (1.14 s wall
-time).  The analogous symbolic-`n` test has the same qualitative result:
-baseline reaches the bound; functionalized proves with bound 1.
+raw-lambda program proves all three assertions without reaching the bound
+(1.13 s wall time).  The analogous symbolic-`n` test has the same qualitative
+result: baseline reaches the bound; functionalized proves with bound 1.
 
 For symbolic `a[i] = a[i] + 1`, raw Boogie shrinks from 16,384 lines / 712,133
 bytes to 16,332 lines / 710,485 bytes and contains one lambda summary instead
 of the source cycle.  With the same requested Corral executable and recursion
-bound 1, the baseline reaches the bound (0.92 s wall), while the lifted
+bound 1, the baseline reaches the bound (0.92 s wall), while the raw-lambda
 functionalized input proves the arbitrary-index assertion without reaching
-the bound (1.30 s wall).
-
-There is one integration caveat in the current Corral checkout.  Its Boogie
-3.5.7 frontend parses/typechecks lambda expressions, but Corral does not call
-`LambdaHelper.ExpandLambdas` before its custom VC path, so a raw lambda reaches
-`Boogie2VCExprTranslator` and crashes.  The measurements above use Boogie
-3.4.3's `/printLambdaLifting /doModSetAnalysis /noVerify` output as input to
-that exact Corral executable.  The lifted 4096-iteration input has one lambda
-function/quantified definition.  Calling Boogie's lambda-expansion hook in
-Corral's input preprocessing is the small backend integration needed for
-direct raw-lambda runs; it is separate from this SMACK prototype.
+the bound (1.25 s wall).  Running both examples through the complete
+`smack --functionalize-loops --verifier=corral --unroll=1` path also succeeds.
 
 The recommended next SMACK experiment is either multiple stores with pairwise
 disjoint affine recurrences or a single-store diamond whose values merge into

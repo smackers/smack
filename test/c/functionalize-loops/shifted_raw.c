@@ -2,6 +2,7 @@
 
 // @expect verified
 // @checkbpl awk 'index($0,"functional loop summary for main"){found=1} END{exit found}'
+// @checkout grep -F "SMACK warning: found loop"
 
 int main(void) {
   unsigned a[4096];

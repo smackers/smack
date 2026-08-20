@@ -119,13 +119,19 @@ bool LoopBoundWarnings::runOnFunction(Function &F) {
   auto &loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
+  warnAboutLoops(F, loopInfo, SE);
+  return false;
+}
+
+void warnAboutLoops(const Function &F, LoopInfo &LoopInfo,
+                    ScalarEvolution &SE,
+                    const std::set<const Loop *> &IgnoredLoops) {
   // `getLoopsInPreorder`, not `begin()`/`end()`: the latter walks only the
   // outermost loops, and in a nest it is normally the inner loop that needs
   // the larger bound.
-  for (auto *loop : loopInfo.getLoopsInPreorder())
-    warnAboutLoop(F, loop, SE);
-
-  return false;
+  for (auto *Loop : LoopInfo.getLoopsInPreorder())
+    if (!IgnoredLoops.count(Loop))
+      warnAboutLoop(F, Loop, SE);
 }
 
 char LoopBoundWarnings::ID = 0;

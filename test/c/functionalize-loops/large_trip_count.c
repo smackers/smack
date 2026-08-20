@@ -2,6 +2,7 @@
 
 // @expect verified
 // @checkbpl grep -q lambda
+// @checkout awk '/SMACK warning: found loop/ { found = 1 } END { exit found }'
 
 int main(void) {
   unsigned a[4096];

@@ -5,8 +5,23 @@
 #define SMACK_LOOP_BOUND_WARNINGS_H
 
 #include "llvm/Pass.h"
+#include <set>
+
+namespace llvm {
+class Function;
+class Loop;
+class LoopInfo;
+class ScalarEvolution;
+} // namespace llvm
 
 namespace smack {
+
+// Emit the usual bound warning for every loop except those in IgnoredLoops.
+// Functional loop lowering calls this only after its final memory-model
+// eligibility checks, so a rejected loop never loses its warning.
+void warnAboutLoops(const llvm::Function &F, llvm::LoopInfo &LI,
+                    llvm::ScalarEvolution &SE,
+                    const std::set<const llvm::Loop *> &IgnoredLoops = {});
 
 // SMACK is a *bounded* verifier: whichever back end runs, every loop is
 // explored at most `--unroll N` times (Boogie's `/loopUnroll:N`, Corral's
@@ -26,6 +41,8 @@ namespace smack {
 //
 // The pass is a pure analysis -- it preserves everything and returns false
 // from runOnFunction. Its only effect is on stderr, via SmackWarnings.
+// With --functionalize-loops the pipeline defers this work until Boogie
+// generation, where the exact set of loops replaced by summaries is known.
 //
 // This partially addresses issue #760, which asked for CBMC-style automatic
 // loop-bound computation. The complementary existing feature is

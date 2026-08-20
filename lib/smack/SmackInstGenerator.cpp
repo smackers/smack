@@ -5,6 +5,7 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/BoogieAst.h"
 #include "smack/Debug.h"
+#include "smack/LoopBoundWarnings.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "smack/SmackRep.h"
@@ -73,8 +74,11 @@ void SmackInstGenerator::generateFunction(llvm::Function &F) {
 void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   if (!SmackOptions::FunctionalizeLoops || SmackOptions::BitPrecise ||
       SmackOptions::BitPrecisePointers ||
-      SmackOptions::WrappedIntegerEncoding || SmackOptions::MemoryModelDebug)
+      SmackOptions::WrappedIntegerEncoding || SmackOptions::MemoryModelDebug) {
+    if (emitLoopBoundWarnings)
+      warnAboutLoops(F, loops, *scalarEvolution);
     return;
+  }
 
   auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
       F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
@@ -100,6 +104,13 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
     summariesByPreheader[Branch] = &Summary;
     suppressedBlocks.insert(Summary.loop->block_begin(),
                             Summary.loop->block_end());
+  }
+
+  if (emitLoopBoundWarnings) {
+    std::set<const Loop *> SummarizedLoops;
+    for (const auto &Entry : summariesByPreheader)
+      SummarizedLoops.insert(Entry.second->loop);
+    warnAboutLoops(F, loops, *scalarEvolution, SummarizedLoops);
   }
 }
 

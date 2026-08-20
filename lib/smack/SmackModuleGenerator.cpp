@@ -84,6 +84,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
     if (!F.empty() && !F.getEntryBlock().empty()) {
       SDEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
+      bool EmitLoopBoundWarnings = SmackOptions::FunctionalizeLoops;
       for (auto P : procs) {
         auto &LoopInfo = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
         ScalarEvolution *SE = nullptr;
@@ -94,9 +95,11 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
           MSSA = &getAnalysis<MemorySSAWrapperPass>(F).getMSSA();
           AA = &getAnalysis<AAResultsWrapperPass>(F).getAAResults();
         }
-        SmackInstGenerator igen(LoopInfo, SE, AA, MSSA, &rep, P, &naming);
+        SmackInstGenerator igen(LoopInfo, SE, AA, MSSA, &rep, P, &naming,
+                                EmitLoopBoundWarnings);
         SDEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
         igen.generateFunction(F);
+        EmitLoopBoundWarnings = false;
         SDEBUG(errs() << "\n");
 
         // First execute static initializers, in the main procedure.

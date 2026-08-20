@@ -197,11 +197,12 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
-  // Report loops here rather than later in the pipeline: after StaticUnroll,
-  // so that fully unrolled loops are correctly not reported, but before
-  // NormalizeLoops, which rewrites conditional latches and in doing so orphans
-  // the `llvm.loop` metadata that carries each loop's source range.
-  pass_manager.add(new smack::LoopBoundWarnings());
+  // Normally report loops here: after StaticUnroll, so that fully unrolled
+  // loops are correctly not reported, but before NormalizeLoops, which
+  // rewrites conditional latches.  Functionalization defers warnings until
+  // Boogie generation, where its final memory eligibility decision is known.
+  if (!smack::SmackOptions::FunctionalizeLoops)
+    pass_manager.add(new smack::LoopBoundWarnings());
 
   // pass_manager.add(new llvm::StructRet());
   pass_manager.add(new smack::NormalizeLoops());

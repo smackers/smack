@@ -29,6 +29,7 @@ private:
   llvm::ScalarEvolution *scalarEvolution;
   llvm::AAResults *aliasAnalysis;
   llvm::MemorySSA *memorySSA;
+  bool emitLoopBoundWarnings;
   SmackRep *rep;
   ProcDecl *proc;
   Naming *naming;
@@ -73,9 +74,10 @@ public:
 public:
   SmackInstGenerator(llvm::LoopInfo &LI, llvm::ScalarEvolution *SE,
                      llvm::AAResults *AA, llvm::MemorySSA *MSSA, SmackRep *R,
-                     ProcDecl *P, Naming *N)
+                     ProcDecl *P, Naming *N, bool EmitLoopBoundWarnings = false)
       : loops(LI), scalarEvolution(SE), aliasAnalysis(AA), memorySSA(MSSA),
-        rep(R), proc(P), naming(N) {}
+        emitLoopBoundWarnings(EmitLoopBoundWarnings), rep(R), proc(P),
+        naming(N) {}
 
   void visitBasicBlock(llvm::BasicBlock &bb);
   void visitInstruction(llvm::Instruction &i);
