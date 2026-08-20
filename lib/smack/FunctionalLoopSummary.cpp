@@ -184,10 +184,40 @@ uint64_t greatestCommonDivisor(uint64_t A, uint64_t B) {
   return A;
 }
 
+bool finiteAffineImagesAreDisjoint(const AffineLoopAccess &A,
+                                   const AffineLoopAccess &B,
+                                   const Value *IterationCount) {
+  auto *Count = dyn_cast<ConstantInt>(IterationCount);
+  if (!Count || Count->getValue().getActiveBits() > 64)
+    return false;
+
+  uint64_t Iterations = Count->getZExtValue();
+  if (Iterations == 0)
+    return true;
+
+  auto LastOffset = [Iterations](const AffineLoopAccess &Access,
+                                 uint64_t &Last) {
+    uint64_t Steps = Iterations - 1;
+    if (Steps >
+        (std::numeric_limits<uint64_t>::max() - Access.offset) / Access.stride)
+      return false;
+    Last = Access.offset + Steps * Access.stride;
+    return true;
+  };
+
+  uint64_t LastA = 0;
+  uint64_t LastB = 0;
+  return LastOffset(A, LastA) && LastOffset(B, LastB) &&
+         (LastA < B.offset || LastB < A.offset);
+}
+
 bool areAffineAccessesDisjoint(const AffineLoopAccess &A,
-                               const AffineLoopAccess &B) {
+                               const AffineLoopAccess &B,
+                               const Value *IterationCount) {
   if (A.base != B.base)
     return false;
+  if (finiteAffineImagesAreDisjoint(A, B, IterationCount))
+    return true;
   uint64_t Difference =
       A.offset >= B.offset ? A.offset - B.offset : B.offset - A.offset;
   return Difference % greatestCommonDivisor(A.stride, B.stride) != 0;
@@ -241,7 +271,9 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
       bool SamePointwise = isSamePointwiseAccess(Write.access, Read);
       if (SamePointwise && !DT.dominates(Load, Write.store))
         return false;
-      if (!SamePointwise && !areAffineAccessesDisjoint(Write.access, Read))
+      if (!SamePointwise &&
+          !areAffineAccessesDisjoint(Write.access, Read,
+                                     Summary.iterationCount))
         return false;
       UsesRecurrenceProof = true;
     }
@@ -527,7 +559,8 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
           Summary.stores[I].guardValue != Summary.stores[J].guardValue;
       if (!AA.isNoAlias(getUnderlyingObject(A.base),
                         getUnderlyingObject(B.base)) &&
-          !areAffineAccessesDisjoint(A, B) && !MutuallyExclusive)
+          !areAffineAccessesDisjoint(A, B, Summary.iterationCount) &&
+          !MutuallyExclusive)
         return false;
     }
 
