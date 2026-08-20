@@ -9,7 +9,9 @@
 #include "smack/SmackWarnings.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
@@ -32,6 +34,8 @@ void LoopBoundWarnings::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 namespace {
+
+constexpr const char *LoopBoundMetadata = "smack.loop.bound";
 
 // Renders the loop's source range for the warning message.
 //
@@ -61,7 +65,7 @@ std::string describeLoopSource(const Loop *loop) {
   return os.str();
 }
 
-void warnAboutLoop(const Function &F, const Loop *loop, ScalarEvolution &SE) {
+void warnAboutLoop(const Function &F, const Loop *loop, unsigned tripCount) {
   // ScalarEvolution offers several notions of "how long does this loop run",
   // and the trip count is the one that answers the user's actual question,
   // because it is exactly the smallest `--unroll` value that covers the loop.
@@ -83,7 +87,6 @@ void warnAboutLoop(const Function &F, const Loop *loop, ScalarEvolution &SE) {
   // LoopRotate produces under `--static-unroll`. That difference does not
   // matter in practice, because `--static-unroll` runs LoopUnroll and any loop
   // whose trip count is a known constant is gone by the time we get here.
-  unsigned tripCount = SE.getSmallConstantTripCount(loop);
   unsigned unrollBound = SmackOptions::UnrollBound;
 
   // The bound already covers every execution of this loop, so nothing is
@@ -113,25 +116,69 @@ void warnAboutLoop(const Function &F, const Loop *loop, ScalarEvolution &SE) {
   SmackWarnings::warnLoop(os.str(), loop->getHeader()->getTerminator());
 }
 
+std::vector<LoopBoundInfo>
+collectLoopBoundInfo(LoopInfo &LoopInfo, ScalarEvolution &SE) {
+  std::vector<LoopBoundInfo> Result;
+  // `getLoopsInPreorder`, not `begin()`/`end()`: the latter walks only the
+  // outermost loops, and in a nest it is normally the inner loop that needs
+  // the larger bound.
+  for (auto *Loop : LoopInfo.getLoopsInPreorder())
+    Result.push_back({Loop, SE.getSmallConstantTripCount(Loop)});
+  return Result;
+}
+
+void recordLoopBoundInfo(const std::vector<LoopBoundInfo> &LoopBounds) {
+  for (const auto &Bound : LoopBounds) {
+    auto *Terminator = Bound.loop->getHeader()->getTerminator();
+    auto &Context = Terminator->getContext();
+    auto *Count = ConstantInt::get(Type::getInt32Ty(Context), Bound.tripCount);
+    Terminator->setMetadata(
+        LoopBoundMetadata,
+        MDNode::get(Context, ConstantAsMetadata::get(Count)));
+  }
+}
+
 } // namespace
 
 bool LoopBoundWarnings::runOnFunction(Function &F) {
   auto &loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto LoopBounds = collectLoopBoundInfo(loopInfo, SE);
 
-  warnAboutLoops(F, loopInfo, SE);
+  if (SmackOptions::FunctionalizeLoops) {
+    recordLoopBoundInfo(LoopBounds);
+    return !LoopBounds.empty();
+  }
+
+  warnAboutLoops(F, LoopBounds);
   return false;
+}
+
+std::vector<LoopBoundInfo> recordedLoopBoundInfo(LoopInfo &LoopInfo) {
+  std::vector<LoopBoundInfo> Result;
+  for (auto *Loop : LoopInfo.getLoopsInPreorder()) {
+    unsigned TripCount = 0;
+    if (auto *Node =
+            Loop->getHeader()->getTerminator()->getMetadata(LoopBoundMetadata))
+      if (auto *Count = mdconst::dyn_extract<ConstantInt>(Node->getOperand(0)))
+        TripCount = static_cast<unsigned>(Count->getZExtValue());
+    Result.push_back({Loop, TripCount});
+  }
+  return Result;
+}
+
+void warnAboutLoops(const Function &F,
+                    const std::vector<LoopBoundInfo> &LoopBounds,
+                    const std::set<const Loop *> &IgnoredLoops) {
+  for (const auto &Bound : LoopBounds)
+    if (!IgnoredLoops.count(Bound.loop))
+      warnAboutLoop(F, Bound.loop, Bound.tripCount);
 }
 
 void warnAboutLoops(const Function &F, LoopInfo &LoopInfo,
                     ScalarEvolution &SE,
                     const std::set<const Loop *> &IgnoredLoops) {
-  // `getLoopsInPreorder`, not `begin()`/`end()`: the latter walks only the
-  // outermost loops, and in a nest it is normally the inner loop that needs
-  // the larger bound.
-  for (auto *Loop : LoopInfo.getLoopsInPreorder())
-    if (!IgnoredLoops.count(Loop))
-      warnAboutLoop(F, Loop, SE);
+  warnAboutLoops(F, collectLoopBoundInfo(LoopInfo, SE), IgnoredLoops);
 }
 
 char LoopBoundWarnings::ID = 0;

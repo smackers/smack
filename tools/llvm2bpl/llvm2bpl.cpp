@@ -197,12 +197,13 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
-  // Normally report loops here: after StaticUnroll, so that fully unrolled
-  // loops are correctly not reported, but before NormalizeLoops, which
-  // rewrites conditional latches.  Functionalization defers warnings until
-  // Boogie generation, where its final memory eligibility decision is known.
-  if (!smack::SmackOptions::FunctionalizeLoops)
-    pass_manager.add(new smack::LoopBoundWarnings());
+  // Analyze bounds here: after StaticUnroll, so that fully unrolled loops are
+  // correctly absent, but before NormalizeLoops rewrites conditional latches.
+  // With functionalization enabled the pass records its results as metadata;
+  // Boogie generation emits them later, after it knows which loops were
+  // summarized. This avoids querying LLVM 14 ScalarEvolution on normalized
+  // loops, which crashes on some large driver programs.
+  pass_manager.add(new smack::LoopBoundWarnings());
 
   // pass_manager.add(new llvm::StructRet());
   pass_manager.add(new smack::NormalizeLoops());

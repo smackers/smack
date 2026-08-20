@@ -49,26 +49,67 @@ bool getIterationCount(Loop &L, ScalarEvolution &SE, IntegerType *Ty,
   return Count->getType() == Ty && L.isLoopInvariant(Count);
 }
 
-PHINode *getUnitInduction(Loop &L, ScalarEvolution &SE) {
-  PHINode *Result = nullptr;
-  for (auto &I : *L.getHeader()) {
+bool hasOnlySimpleHeaderPhis(Loop &L, const PHINode *Induction) {
+  BasicBlock *Incoming = nullptr;
+  BasicBlock *Backedge = nullptr;
+  if (!L.getIncomingAndBackEdge(Incoming, Backedge))
+    return false;
+
+  for (Instruction &I : *L.getHeader()) {
     auto *Phi = dyn_cast<PHINode>(&I);
     if (!Phi)
       break;
+    if (Phi == Induction)
+      continue;
 
-    auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Phi));
-    if (!AR || AR->getLoop() != &L || !AR->isAffine())
+    Value *Start = Phi->getIncomingValueForBlock(Incoming);
+    Value *Update = Phi->getIncomingValueForBlock(Backedge);
+    if (!L.isLoopInvariant(Start) || Update->getType() != Phi->getType())
+      return false;
+
+    if (auto *BO = dyn_cast<BinaryOperator>(Update)) {
+      const Value *Step = nullptr;
+      if (BO->getOpcode() == Instruction::Add) {
+        if (BO->getOperand(0) == Phi)
+          Step = BO->getOperand(1);
+        else if (BO->getOperand(1) == Phi)
+          Step = BO->getOperand(0);
+      } else if (BO->getOpcode() == Instruction::Sub &&
+                 BO->getOperand(0) == Phi) {
+        Step = BO->getOperand(1);
+      }
+      if (!Step || !L.isLoopInvariant(Step))
+        return false;
       continue;
-    auto *Start = dyn_cast<SCEVConstant>(AR->getStart());
-    auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
-    if (!Phi->getType()->isIntegerTy() || !Start ||
-        !Start->getAPInt().isZero() || !Step || !Step->getAPInt().isOne())
-      continue;
-    if (Result)
-      return nullptr;
-    Result = Phi;
+    }
+
+    auto *GEP = dyn_cast<GetElementPtrInst>(Update);
+    if (!GEP || GEP->getPointerOperand() != Phi)
+      return false;
+    for (const Use &Index : GEP->indices())
+      if (!L.isLoopInvariant(Index.get()))
+        return false;
   }
-  return Result;
+  return true;
+}
+
+PHINode *getUnitInduction(Loop &L, ScalarEvolution &SE,
+                          PHINode *Phi) {
+  // Ask LoopInfo to identify the canonical 0,+1 recurrence before querying
+  // ScalarEvolution. Large generated programs can carry unrelated header
+  // PHIs with deeply cyclic value graphs; LLVM 14 may recurse until it
+  // segfaults merely trying to build a SCEV for one of those PHIs. Candidate
+  // loops are canonical by contract, so this is both a conservative filter
+  // and a way to keep SCEV focused on the semantic induction variable.
+  auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Phi));
+  if (!AR || AR->getLoop() != &L || !AR->isAffine())
+    return nullptr;
+  auto *Start = dyn_cast<SCEVConstant>(AR->getStart());
+  auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
+  if (!Phi->getType()->isIntegerTy() || !Start ||
+      !Start->getAPInt().isZero() || !Step || !Step->getAPInt().isOne())
+    return nullptr;
+  return Phi;
 }
 
 bool getAffineAccess(const Value *Pointer, Loop &L, ScalarEvolution &SE,
@@ -410,7 +451,11 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
       !L.getExitBlock() || !hasSupportedControlFlow(L, Flow))
     return false;
 
-  PHINode *Induction = getUnitInduction(L, SE);
+  PHINode *CanonicalInduction = L.getCanonicalInductionVariable();
+  if (!CanonicalInduction ||
+      !hasOnlySimpleHeaderPhis(L, CanonicalInduction))
+    return false;
+  PHINode *Induction = getUnitInduction(L, SE, CanonicalInduction);
   auto *IterationType =
       Induction ? dyn_cast<IntegerType>(Induction->getType()) : nullptr;
   if (!IterationType)

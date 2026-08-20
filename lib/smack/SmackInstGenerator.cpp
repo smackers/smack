@@ -80,6 +80,10 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
     return;
   }
 
+  std::vector<LoopBoundInfo> LoopBounds;
+  if (emitLoopBoundWarnings)
+    LoopBounds = recordedLoopBoundInfo(loops);
+
   auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
       F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
   for (auto &Summary : Candidates) {
@@ -123,7 +127,7 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
     std::set<const Loop *> SummarizedLoops;
     for (const auto &Entry : summariesByPreheader)
       SummarizedLoops.insert(Entry.second->loop);
-    warnAboutLoops(F, loops, *scalarEvolution, SummarizedLoops);
+    warnAboutLoops(F, LoopBounds, SummarizedLoops);
   }
 }
 

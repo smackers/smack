@@ -162,8 +162,10 @@ guarded one- and two-sided stores; and final-IV/LCSSA state.  Negative tests
 retain ordinary loops for shifted loop-carried RAW, write-before-read,
 overlapping writes, scatter, possible aliasing and an invalid instrumented
 memory access.  All tests run with loop bound 1 and inspect the generated
-Boogie for the expected presence or absence of lambda summaries.  All 66
-test/memory-model configurations pass with Boogie.
+Boogie for the expected presence or absence of lambda summaries.  The suite
+also covers preserving a rejected loop's known bound and conservatively
+rejecting a complex header recurrence without recursing through it in LLVM 14
+ScalarEvolution.  All 72 test/memory-model configurations pass with Boogie.
 
 Loop-bound warnings are deferred until semantic and memory-model eligibility
 are known.  Summarized loops no longer request a higher bound; rejected loops
@@ -187,6 +189,7 @@ added to the commands.
 |---|---:|---:|---:|---:|---:|---:|
 | C.unreach-call.Arrays | 440 | 438 | 63 | 217 | 95,707,143 | 95,504,377 |
 | C.unreach-call.Loops | 758 | 758 | 7 | 7 | 4,957,197 | 4,951,224 |
+| C.unreach-call.SoftwareSystems-DeviceDriversLinux64 | 2,326 | 2,180 | 32 | 37 | 222,089,115 | 222,063,060 |
 
 On Arrays, the original 44 affected tasks were checked with a 20-second outer
 limit: every baseline timed out, while functionalization found 10 expected
@@ -196,6 +199,25 @@ checked at 10 seconds; both variants timed out because other initialization or
 assertion loops remain cyclic.  On the final seven affected Loops tasks at 10
 seconds, every baseline timed out; functionalization solved three (one unsafe
 and two safe) and timed out on four.
+
+The driver scan used a 30-second translation-only limit and did not invoke a
+verifier.  Its 146 misses comprise 134 failures in the existing SeaDsa pass,
+six timeouts, and six generator failures.  Five generator failures reproduce
+without functionalization; the sixth succeeded on an immediate isolated
+retry.  Before the robustness fix, ten additional files crashed because the
+deferred loop-bound warning path queried LLVM 14 ScalarEvolution after
+`NormalizeLoops`; all ten now translate, and one newly reachable `cxgb3` loop
+is summarized.  Trip counts are now recorded as metadata before normalization,
+and warning emission consumes that metadata after summary eligibility is
+known.  Recognition also selects the canonical induction before asking SCEV
+about recurrences and rejects complex non-induction header PHIs with a cheap
+structural screen.
+
+Longer retries translated three of the six timed-out files, without finding
+summaries.  Retrying `hisax` and the two `bfa` files was stopped after their
+concurrent `llvm2bpl` processes consumed roughly 8--14 GiB each and triggered
+the host OOM killer; those resource-limited retries are not counted in the
+table.
 
 The low Loops hit rate is informative.  Most of its 758 tasks are scalar or
 nonlinear recurrence problems, not pointwise memory updates.  Representative
