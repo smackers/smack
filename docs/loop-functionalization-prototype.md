@@ -92,88 +92,127 @@ observable scalar or control-flow effect is discarded.
 
 ## Implemented prototype
 
-The opt-in `--functionalize-loops` implementation supports exactly this class:
+The opt-in `--functionalize-loops` implementation now supports this exact
+class:
 
-- a non-nested LoopSimplify loop with one latch, a conditional header exit,
-  one unique exit block, and otherwise straight-line branches;
-- exactly one integer SCEV add recurrence `{0,+,1}<L>` and an exact exit count
-  that is either a constant or one loop-invariant LLVM value of the same type;
-- exactly one simple store whose pointer SCEV is an affine, positive-constant-
-  stride, no-self-wrap recurrence with a loop-invariant pointer base;
-- an RHS composed of integer constants, the IV, loop-invariant SSA values,
-  `add`/`sub`/`mul`, selected integer casts, and simple loads with affine
-  addresses;
-- for every RHS load, either LLVM AA proves the entire underlying source and
-  destination objects `NoAlias` and MemorySSA's clobber is loop entry or
-  outside the loop, or its affine recurrence is exactly the store recurrence;
-- non-singleton, non-bytewise typed SMACK regions, using the default unbounded
-  integer and pointer encodings.
+- a non-nested LoopSimplify loop with one latch, one conditional exit and one
+  unique exit block; both top-tested and LoopRotate-style bottom-tested forms
+  are accepted, including a zero-trip guard outside the loop;
+- straight-line control flow or one structured `if`/`else` diamond;
+- one unique integer SCEV recurrence `{0,+,1}<L>` defining iteration `k`, and
+  a body-execution count that simplifies to a constant or one loop-invariant
+  LLVM value of the same type;
+- one or more simple stores with positive-constant-stride affine pointer
+  recurrences `base + offset + stride*k`.  Address injectivity must follow
+  from SCEV no-wrap or an LLVM `inbounds` GEP;
+- pairwise stores that AA proves object-disjoint, whose affine images are
+  disjoint by the stride/offset congruence test, or that write the identical
+  pointwise address under opposite sides of the same branch;
+- RHS values composed from constants, loop invariants, the iteration, modular
+  affine scalar SCEV recurrences, `add`/`sub`/`mul`, constant-safe integer
+  division/remainder, integer casts, comparisons, selects, and affine loads;
+- a final escaping unit induction, including the one-input LCSSA forwarding
+  PHI produced by LLVM 14 loop rotation, when SCEV proves its exit value is the
+  trip count;
+- non-singleton, non-bytewise typed SMACK regions under the default integer
+  and pointer encodings.
 
-The emitter snapshots every source/destination region, derives the unique
-iteration number from the lambda's address parameter, checks both the
-iteration domain and exact address reconstruction, computes the RHS from the
-snapshots, and otherwise returns the old destination-map element.  It then
-jumps from the preheader to the old unique exit and emits none of the loop's
-blocks.  Escaping values (including a live final IV) are rejected rather than
-approximated.
+Recognition is semantic rather than source-pattern based.  For example,
+derived pointer inductions such as `{a,+,8}<L>` are accepted even when the
+source no longer has a canonical `a[2*i]` expression, and an RHS scalar
+recurrence `{0,+,2}<L>` is emitted as modular `2*k`.  Conversely, a source
+expression such as 32-bit `2*i` is rejected if LLVM cannot prove its pointer
+recurrence because the multiply may wrap.
 
-The identical-recurrence case covers `a[i] = a[i] + c`: a positive,
-no-self-wrap recurrence is injective, so for `j < k`, `W(j) != R(k)` when
-`R(k) = W(k)`.  The load is an SSA dependency of the sole store and therefore
-occurs before that iteration's write.  It consequently reads the loop-entry
-value at that address even though MemorySSA conservatively reports the loop's
-memory phi as its clobber.
+For every load/store pair that AA cannot separate, the recognizer requires
+identical pointwise recurrences with the load dominating the write, or affine
+images proven disjoint for all iterations.  MemorySSA must independently
+place object-disjoint loads at loop entry; a same-object MemoryPhi is bypassed
+only when the recurrence proof discharges its conservative may-clobber.  Each
+store recurrence is injective, and separate stores cannot collide except for
+mutually exclusive alternatives at the same pointwise address.
 
-The prototype deliberately rejects multiple stores, shifted or otherwise
-non-identical same-object read recurrences, non-unit or nonzero-start IVs,
-computed scatter addresses, possible aliasing, nested or branched bodies,
-exit PHIs, calls, assertions/assumptions, memory intrinsics, volatile/atomic
+The emitter snapshots every referenced SMACK memory map before any update.
+It groups writes by destination map and emits one lambda with nested guarded
+ITEs per map.  For a lambda address `p`, it reconstructs candidate iteration
+`k`, checks `0 <= k < T` and `p == W(k)`, and evaluates every guard and RHS from
+the entry snapshots.  The default branch also reads the entry destination
+map.  Thus lambda assignment order cannot turn an entry-memory read into a
+read of a newly written map.  The emitter assigns the supported final
+induction state, jumps to the original exit and omits every loop block, so the
+generated Boogie has no cycle for that LLVM loop.
+
+The implementation deliberately rejects nonzero-start or non-unit domain
+inductions, negative or non-affine addresses, scatter, unproved aliasing,
+overlapping nonexclusive stores, loop-carried RAW dependences, nested loops,
+more than one body diamond, abnormal/multiple exits, arbitrary escaping
+scalars, calls, assertions/assumptions, memory intrinsics, volatile/atomic
 accesses, EH, bytewise/singleton regions, memory-model debugging, and
-bit-vector or wrapped integer/pointer encodings.  Memory-safety instrumentation
-inserts calls in the loop before recognition, so `--check=memory-safety`
-candidates are rejected and their per-iteration checks remain in cyclic
-control flow.
+bit-precise/wrapped integer or pointer configurations.  Division by a variable
+or zero-capable divisor is also rejected.  Instrumented safety/overflow checks
+introduce unsupported loop effects before recognition, so functionalization
+does not erase their per-iteration failures.
 
 ## Regression and evaluation results
 
-`test/c/functionalize-loops` contains symbolic positive tests for constant
-fill, IV fill, `restrict`-disjoint copy-plus-constant, and same-object
-pointwise addition; a fixed 4096-iteration demonstration; and negative tests
-for loop-carried and shifted RAW recurrences, scatter, possible aliasing, and
-an invalid memory access under memory-safety checking.  The positives inspect
-generated Boogie for a lambda; the negatives inspect it for absence of a
-summary.  All 30 combinations of these ten tests and SMACK's three memory-
-allocation models pass with Boogie (loop bound 1).
+The focused suite covers constant, IV, remainder and affine-scalar-recurrence
+fills; disjoint copy-plus-constant; same-object entry-memory updates; multiple
+maps and interleaved disjoint writes; rotated constant and symbolic loops;
+guarded one- and two-sided stores; and final-IV/LCSSA state.  Negative tests
+retain ordinary loops for shifted loop-carried RAW, write-before-read,
+overlapping writes, scatter, possible aliasing and an invalid instrumented
+memory access.  All tests run with loop bound 1 and inspect the generated
+Boogie for the expected presence or absence of lambda summaries.  All 66
+test/memory-model configurations pass with Boogie.
 
-Loop-bound warnings are deferred when functionalization is enabled until the
-generator has completed semantic recognition and memory-model eligibility
-checking.  Successfully summarized loops no longer produce a misleading
-request for a higher `--unroll` value; rejected loops, including memory-safety
-and bit-vector configurations, retain the warning.
+Loop-bound warnings are deferred until semantic and memory-model eligibility
+are known.  Summarized loops no longer request a higher bound; rejected loops
+retain the warning.
 
-For the fixed 4096-iteration test, raw generated Boogie changed as follows:
+For the fixed 4096-iteration demonstration, baseline Boogie has 16,269 lines /
+707,389 bytes and a cycle; functionalized Boogie has 16,233 lines / 706,338
+bytes, one lambda and no source-loop cycle.  With the requested `~/corral` and
+recursion bound 1, baseline reaches the recursion bound (0.84 s), while the raw
+lambda proves the assertions (1.13 s).  A symbolic-`n` fill has the same
+qualitative result.  Symbolic `a[i] = a[i] + 1` changes from 16,384 lines /
+712,133 bytes to 16,332 lines / 710,485 bytes; baseline reaches bound 1
+(0.92 s), whereas the lambda proves (1.25 s).
 
-| configuration | lines | bytes | lambda summaries | cyclic source loop |
-|---|---:|---:|---:|---|
-| baseline | 16,269 | 707,389 | 0 | yes |
-| functionalized | 16,233 | 706,338 | 1 | no |
+The official SV-COMP frontend (`-x svcomp --verifier=svcomp`) was used for the
+suite study.  That frontend itself enables `--static-unroll`, so LLVM loop
+rotation is part of these results even though no explicit unroll flag was
+added to the commands.
 
-Using the requested `~/corral` with recursion bound 1, the baseline reports
-`Reached recursion bound of 1` (0.84 s wall time), whereas the functionalized
-raw-lambda program proves all three assertions without reaching the bound
-(1.13 s wall time).  The analogous symbolic-`n` test has the same qualitative
-result: baseline reaches the bound; functionalized proves with bound 1.
+| suite | tasks | translated | tasks with summaries | summaries | baseline bytes on affected tasks | functional bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| C.unreach-call.Arrays | 440 | 438 | 63 | 217 | 95,707,143 | 95,504,377 |
+| C.unreach-call.Loops | 758 | 758 | 7 | 7 | 4,957,197 | 4,951,224 |
 
-For symbolic `a[i] = a[i] + 1`, raw Boogie shrinks from 16,384 lines / 712,133
-bytes to 16,332 lines / 710,485 bytes and contains one lambda summary instead
-of the source cycle.  With the same requested Corral executable and recursion
-bound 1, the baseline reaches the bound (0.92 s wall), while the raw-lambda
-functionalized input proves the arbitrary-index assertion without reaching
-the bound (1.25 s wall).  Running both examples through the complete
-`smack --functionalize-loops --verifier=corral --unroll=1` path also succeeds.
+On Arrays, the original 44 affected tasks were checked with a 20-second outer
+limit: every baseline timed out, while functionalization found 10 expected
+unsafe verdicts and timed out on 34 (including all safe tasks).  The 19 tasks
+added by later multiple-store, guarded and scalar-recurrence extensions were
+checked at 10 seconds; both variants timed out because other initialization or
+assertion loops remain cyclic.  On the final seven affected Loops tasks at 10
+seconds, every baseline timed out; functionalization solved three (one unsafe
+and two safe) and timed out on four.
 
-The recommended next SMACK experiment is either multiple stores with pairwise
-disjoint affine recurrences or a single-store diamond whose values merge into
-an ITE.  Multiple stores exercises the summary representation and cross-store
-dependence proof; an ITE body exercises control dependence.  Both should
-retain the current conservative memory-model and instrumentation boundary.
+The low Loops hit rate is informative.  Most of its 758 tasks are scalar or
+nonlinear recurrence problems, not pointwise memory updates.  Representative
+remaining array cases require one of the following qualitatively new ideas:
+
+- per-iteration nondeterministic calls need a fresh-function/havoc-map summary
+  plus a proof that call and assumption behavior is preserved;
+- nondeterministic scatter needs injectivity or address inversion;
+- reductions, sorting and in-place mutation need closed forms for loop-carried
+  scalar or memory state;
+- read-only assertion loops need a quantified safety summary rather than a
+  memory lambda;
+- arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
+  typed pointwise lambda would require byte packing/unpacking support.
+
+These are the current fundamental boundaries of this prototype rather than
+small additions to its pointwise recognizer.  The recommended next experiment
+is quantified summarization of read-only assertion loops: it would directly
+address why many successfully functionalized initialization loops still time
+out, without weakening the entry-memory soundness argument.
