@@ -429,6 +429,12 @@ def arguments():
         help='enable static LLVM loop unrolling pass as a preprocessing step')
 
     translate_group.add_argument(
+        '--functionalize-loops',
+        action="store_true",
+        default=False,
+        help='replace supported pointwise loops with exact Boogie map lambdas')
+
+    translate_group.add_argument(
         '--pthread',
         action='store_true',
         default=False,
@@ -750,6 +756,8 @@ def llvm_to_bpl(args):
         cmd += ['-mem-mod-impls']
     if args.static_unroll:
         cmd += ['-static-unroll']
+    if args.functionalize_loops:
+        cmd += ['-functionalize-loops']
     if args.integer_encoding == 'bit-vector':
         cmd += ['-bit-precise']
     if args.integer_encoding == 'wrapped-integer':

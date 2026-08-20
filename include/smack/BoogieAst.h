@@ -25,6 +25,7 @@ public:
   static const Expr *eq(const Expr *l, const Expr *r);
   static const Expr *lt(const Expr *l, const Expr *r);
   static const Expr *ifThenElse(const Expr *c, const Expr *t, const Expr *e);
+  static const Expr *lambda(Binding var, const Expr *e);
   static const Expr *fn(std::string f, const Expr *x);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y,
@@ -197,6 +198,15 @@ private:
 public:
   QuantExpr(Quantifier q, std::list<Binding> vs, const Expr *e)
       : quant(q), vars(vs), expr(e) {}
+  void print(std::ostream &os) const override;
+};
+
+class LambdaExpr : public Expr {
+  Binding var;
+  const Expr *expr;
+
+public:
+  LambdaExpr(Binding v, const Expr *e) : var(v), expr(e) {}
   void print(std::ostream &os) const override;
 };
 

@@ -187,8 +187,11 @@ public:
 
   std::string memReg(unsigned i);
   std::string memType(unsigned region);
+  std::string memType(const llvm::Value *v);
   std::string memPath(unsigned region);
   std::string memPath(const llvm::Value *v);
+  bool canFunctionalizeMemory(const llvm::Value *pointer,
+                              const llvm::Type *valueType);
 
   std::list<std::pair<std::string, std::string>> memoryMaps();
 

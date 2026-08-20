@@ -271,10 +271,22 @@ std::string SmackRep::memType(unsigned region) {
   return s.str();
 }
 
+std::string SmackRep::memType(const llvm::Value *v) {
+  return memType(regions->idx(v));
+}
+
 std::string SmackRep::memPath(unsigned region) { return memReg(region); }
 
 std::string SmackRep::memPath(const llvm::Value *v) {
   return memPath(regions->idx(v));
+}
+
+bool SmackRep::canFunctionalizeMemory(const llvm::Value *pointer,
+                                      const llvm::Type *valueType) {
+  unsigned R = regions->idx(pointer);
+  const auto &Region = regions->get(R);
+  return !Region.isSingleton() && !Region.bytewiseAccess() &&
+         Region.getType() == valueType && !valueType->isFloatingPointTy();
 }
 
 std::list<std::pair<std::string, std::string>> SmackRep::memoryMaps() {

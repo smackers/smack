@@ -20,6 +20,7 @@
 #include <iostream>
 
 #include "smack/SmackWarnings.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace smack {
 
@@ -60,6 +61,156 @@ void SmackInstGenerator::emit(const Stmt *s) {
   // s->print(str);
   // SDEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
   currBlock->addStmt(s);
+}
+
+void SmackInstGenerator::generateFunction(llvm::Function &F) {
+  prepareFunctionalLoops(F);
+  for (auto &BB : F)
+    if (!suppressedBlocks.count(&BB))
+      visit(BB);
+}
+
+void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
+  if (!SmackOptions::FunctionalizeLoops || SmackOptions::BitPrecise ||
+      SmackOptions::BitPrecisePointers ||
+      SmackOptions::WrappedIntegerEncoding || SmackOptions::MemoryModelDebug)
+    return;
+
+  auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
+      F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
+  for (auto &Summary : Candidates) {
+    auto *StorePointer = Summary.store->getPointerOperand();
+    if (!rep->canFunctionalizeMemory(
+            StorePointer, Summary.store->getValueOperand()->getType()))
+      continue;
+
+    bool SupportedMemory = true;
+    for (const auto &Load : Summary.loads)
+      SupportedMemory &= rep->canFunctionalizeMemory(
+          Load.load->getPointerOperand(), Load.load->getType());
+    if (SupportedMemory)
+      functionalLoops.push_back(std::move(Summary));
+  }
+
+  for (const auto &Summary : functionalLoops) {
+    auto *Branch = dyn_cast<BranchInst>(Summary.preheader->getTerminator());
+    if (!Branch || !Branch->isUnconditional() ||
+        Branch->getSuccessor(0) != Summary.loop->getHeader())
+      continue;
+    summariesByPreheader[Branch] = &Summary;
+    suppressedBlocks.insert(Summary.loop->block_begin(),
+                            Summary.loop->block_end());
+  }
+}
+
+const Expr *
+SmackInstGenerator::functionalAddress(const AffineLoopAccess &Access,
+                                      const Expr *Iteration,
+                                      const IntegerType *IterationTy) {
+  std::string IterationType = rep->type(IterationTy);
+  auto IterationAsPointer = Expr::fn(
+      indexedName("$i2p", {IterationType, Naming::PTR_TYPE}), Iteration);
+  auto Offset =
+      Expr::fn("$mul.ref", IterationAsPointer,
+               rep->pointerLit(static_cast<unsigned long long>(Access.stride)));
+  return Expr::fn("$add.ref", rep->expr(Access.base), Offset);
+}
+
+const Expr *SmackInstGenerator::functionalValue(
+    const Value *Value, const FunctionalLoopSummary &Summary,
+    const Expr *Iteration,
+    const std::map<std::string, std::string> &EntryMemories) {
+  if (Value == Summary.induction)
+    return Iteration;
+  if (isa<Constant>(Value) || Summary.loop->isLoopInvariant(Value))
+    return rep->expr(Value);
+
+  if (auto *Load = dyn_cast<LoadInst>(Value)) {
+    const AffineLoopAccess *Access = nullptr;
+    for (const auto &Candidate : Summary.loads)
+      if (Candidate.load == Load)
+        Access = &Candidate.access;
+    assert(Access && "validated functional load must have an affine access");
+    auto Path = rep->memPath(Load->getPointerOperand());
+    return Expr::sel(
+        Expr::id(EntryMemories.at(Path)),
+        functionalAddress(*Access, Iteration, Summary.iterationType));
+  }
+
+  if (auto *BO = dyn_cast<BinaryOperator>(Value)) {
+    auto Name = rep->opName(Naming::INSTRUCTION_TABLE.at(BO->getOpcode()),
+                            std::list<const Type *>{BO->getType()});
+    return Expr::fn(
+        Name,
+        functionalValue(BO->getOperand(0), Summary, Iteration, EntryMemories),
+        functionalValue(BO->getOperand(1), Summary, Iteration, EntryMemories));
+  }
+
+  if (auto *Cast = dyn_cast<CastInst>(Value)) {
+    auto Name =
+        rep->opName(Naming::INSTRUCTION_TABLE.at(Cast->getOpcode()),
+                    std::list<const Type *>{Cast->getOperand(0)->getType(),
+                                            Cast->getType()});
+    return Expr::fn(Name, functionalValue(Cast->getOperand(0), Summary,
+                                          Iteration, EntryMemories));
+  }
+
+  llvm_unreachable("unsupported value in validated functional loop summary");
+}
+
+void SmackInstGenerator::emitFunctionalLoop(
+    const FunctionalLoopSummary &Summary) {
+  unsigned Id = functionalLoopId++;
+  std::map<std::string, const Value *> MemoryPointers;
+  auto *StorePointer = Summary.store->getPointerOperand();
+  MemoryPointers[rep->memPath(StorePointer)] = StorePointer;
+  for (const auto &Load : Summary.loads)
+    MemoryPointers[rep->memPath(Load.load->getPointerOperand())] =
+        Load.load->getPointerOperand();
+
+  std::map<std::string, std::string> EntryMemories;
+  for (const auto &Memory : MemoryPointers) {
+    std::string Snapshot =
+        "$fl.entry." + std::to_string(Id) + "." + Memory.first;
+    EntryMemories[Memory.first] = Snapshot;
+    proc->getDeclarations().push_back(
+        Decl::variable(Snapshot, rep->memType(Memory.second)));
+    emit(Stmt::assign(Expr::id(Snapshot), Expr::id(Memory.first)));
+  }
+
+  std::string IterationType = rep->type(Summary.iterationType);
+  std::string PointerName = "$fl.p." + std::to_string(Id);
+  auto Pointer = Expr::id(PointerName);
+  auto Base = rep->expr(Summary.write.base);
+  auto Delta = Expr::fn("$sub.ref", Pointer, Base);
+  auto DeltaAsInteger =
+      Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+  auto Iteration = Expr::fn(
+      indexedName("$udiv", {IterationType}), DeltaAsInteger,
+      rep->integerLit(static_cast<unsigned long long>(Summary.write.stride),
+                      Summary.iterationType->getBitWidth()));
+
+  auto Zero = rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
+  auto InDomain = Expr::and_(
+      Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+               Iteration, Zero),
+      Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+               Iteration, rep->expr(Summary.iterationCount)));
+  auto IsWrittenAddress =
+      Expr::eq(Pointer, functionalAddress(Summary.write, Iteration,
+                                          Summary.iterationType));
+  auto Predicate = Expr::and_(InDomain, IsWrittenAddress);
+
+  std::string Destination = rep->memPath(StorePointer);
+  auto Value = functionalValue(Summary.store->getValueOperand(), Summary,
+                               Iteration, EntryMemories);
+  auto OldValue = Expr::sel(Expr::id(EntryMemories.at(Destination)), Pointer);
+  auto Body = Expr::ifThenElse(Predicate, Value, OldValue);
+  emit(Stmt::comment("functional loop summary for " +
+                     Summary.store->getFunction()->getName().str()));
+  emit(Stmt::assign(Expr::id(Destination),
+                    Expr::lambda({PointerName, Naming::PTR_TYPE}, Body)));
+  emit(Stmt::goto_({getBlock(Summary.exit)->getName()}));
 }
 
 const Stmt *
@@ -249,6 +400,12 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst &ri) {
 
 void SmackInstGenerator::visitBranchInst(llvm::BranchInst &bi) {
   processInstruction(bi);
+
+  auto Summary = summariesByPreheader.find(&bi);
+  if (Summary != summariesByPreheader.end()) {
+    emitFunctionalLoop(*Summary->second);
+    return;
+  }
 
   // Collect the list of tarets
   std::vector<std::pair<const Expr *, llvm::BasicBlock *>> targets;

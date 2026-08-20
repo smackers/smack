@@ -81,6 +81,10 @@ const llvm::cl::opt<bool> SmackOptions::FailOnLoopExit(
     "fail-on-loop-exit",
     llvm::cl::desc("Add assert(false) to the end of each loop"));
 
+const llvm::cl::opt<bool> SmackOptions::FunctionalizeLoops(
+    "functionalize-loops",
+    llvm::cl::desc("Replace supported pointwise loops with exact map lambdas"));
+
 const llvm::cl::opt<unsigned> SmackOptions::UnrollBound(
     "unroll-bound",
     llvm::cl::desc("The loop unrolling bound the back-end verifier will be "

@@ -40,6 +40,10 @@ const Expr *Expr::ifThenElse(const Expr *c, const Expr *t, const Expr *e) {
   return new IfThenElseExpr(c, t, e);
 }
 
+const Expr *Expr::lambda(Binding var, const Expr *e) {
+  return new LambdaExpr(var, e);
+}
+
 const Expr *Expr::fn(std::string f, std::list<const Expr *> args) {
   return new FunExpr(f, args);
 }
@@ -476,6 +480,10 @@ void QuantExpr::print(std::ostream &os) const {
   }
   print_seq<Binding>(os, vars, ", ");
   os << " :: " << expr << ")";
+}
+
+void LambdaExpr::print(std::ostream &os) const {
+  os << "(lambda " << var << " :: " << expr << ")";
 }
 
 void SelExpr::print(std::ostream &os) const {
