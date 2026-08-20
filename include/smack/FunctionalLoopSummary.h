@@ -19,6 +19,7 @@ class Loop;
 class LoopInfo;
 class MemorySSA;
 class PHINode;
+class SCEV;
 class ScalarEvolution;
 class StoreInst;
 class Value;
@@ -27,9 +28,11 @@ class Value;
 namespace smack {
 
 struct AffineLoopAccess {
+  const llvm::SCEV *start = nullptr;
   const llvm::Value *base = nullptr;
   uint64_t offset = 0;
   uint64_t stride = 0;
+  bool hasConstantOffset = false;
 };
 
 struct FunctionalLoopLoad {
@@ -58,9 +61,11 @@ struct FunctionalLoopSummary {
   llvm::BasicBlock *preheader = nullptr;
   llvm::BasicBlock *exit = nullptr;
   llvm::PHINode *induction = nullptr;
+  const llvm::Value *inductionStart = nullptr;
+  const llvm::ConstantInt *inductionStep = nullptr;
   bool inductionEscapes = false;
   llvm::IntegerType *iterationType = nullptr;
-  const llvm::Value *iterationCount = nullptr;
+  const llvm::SCEV *iterationCount = nullptr;
   llvm::SmallVector<FunctionalLoopStore, 2> stores;
   llvm::SmallVector<FunctionalLoopLoad, 2> loads;
   llvm::SmallVector<FunctionalLoopScalarRecurrence, 2> recurrences;

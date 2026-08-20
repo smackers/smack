@@ -11,6 +11,7 @@
 #include "smack/SmackRep.h"
 #include "smack/VectorOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -131,6 +132,80 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   }
 }
 
+const Expr *SmackInstGenerator::functionalIntegerSCEV(const SCEV *S) {
+  if (auto *Constant = dyn_cast<SCEVConstant>(S))
+    return rep->expr(Constant->getValue());
+  if (auto *Unknown = dyn_cast<SCEVUnknown>(S))
+    return rep->expr(Unknown->getValue());
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(S)) {
+    std::string Operation;
+    if (isa<SCEVAddExpr>(NAry))
+      Operation = "$add";
+    else if (isa<SCEVMulExpr>(NAry))
+      Operation = "$mul";
+    else
+      llvm_unreachable("unsupported n-ary functional SCEV");
+    auto Name = rep->opName(Operation, std::list<const Type *>{S->getType()});
+    auto It = NAry->op_begin();
+    const Expr *Result = functionalIntegerSCEV(*It++);
+    for (; It != NAry->op_end(); ++It)
+      Result = Expr::fn(Name, Result, functionalIntegerSCEV(*It));
+    return Result;
+  }
+  if (auto *Div = dyn_cast<SCEVUDivExpr>(S)) {
+    auto Name =
+        rep->opName("$udiv", std::list<const Type *>{S->getType()});
+    return Expr::fn(Name, functionalIntegerSCEV(Div->getLHS()),
+                    functionalIntegerSCEV(Div->getRHS()));
+  }
+  if (auto *Cast = dyn_cast<SCEVCastExpr>(S)) {
+    std::string Operation;
+    if (isa<SCEVTruncateExpr>(Cast))
+      Operation = "$trunc";
+    else if (isa<SCEVZeroExtendExpr>(Cast))
+      Operation = "$zext";
+    else if (isa<SCEVSignExtendExpr>(Cast))
+      Operation = "$sext";
+    else
+      llvm_unreachable("unsupported functional SCEV cast");
+    auto Name = rep->opName(
+        Operation,
+        std::list<const Type *>{Cast->getOperand()->getType(), S->getType()});
+    return Expr::fn(Name, functionalIntegerSCEV(Cast->getOperand()));
+  }
+  llvm_unreachable("unsupported functional integer SCEV");
+}
+
+const Expr *SmackInstGenerator::functionalPointerSCEV(const SCEV *S) {
+  const SCEV *BaseSCEV = scalarEvolution->getPointerBase(S);
+  auto *Base = dyn_cast<SCEVUnknown>(BaseSCEV);
+  assert(Base && "validated affine pointer must have an unknown base");
+  const Expr *Result = rep->expr(Base->getValue());
+  const SCEV *Offset = scalarEvolution->removePointerBase(S);
+  if (auto *Constant = dyn_cast<SCEVConstant>(Offset))
+    if (Constant->getAPInt().isZero())
+      return Result;
+
+  auto *OffsetType = cast<IntegerType>(Offset->getType());
+  auto OffsetAsPointer = Expr::fn(
+      indexedName("$i2p", {rep->type(OffsetType), Naming::PTR_TYPE}),
+      functionalIntegerSCEV(Offset));
+  return Expr::fn("$add.ref", Result, OffsetAsPointer);
+}
+
+const Expr *SmackInstGenerator::functionalInductionValue(
+    const FunctionalLoopSummary &Summary, const Expr *Iteration) {
+  auto *Start = dyn_cast<ConstantInt>(Summary.inductionStart);
+  if (Start && Start->isZero() && Summary.inductionStep->isOne())
+    return Iteration;
+
+  auto MulName = rep->opName("$mul", {Summary.iterationType});
+  auto AddName = rep->opName("$add", {Summary.iterationType});
+  auto Scaled =
+      Expr::fn(MulName, rep->expr(Summary.inductionStep), Iteration);
+  return Expr::fn(AddName, rep->expr(Summary.inductionStart), Scaled);
+}
+
 const Expr *
 SmackInstGenerator::functionalAddress(const AffineLoopAccess &Access,
                                       const Expr *Iteration,
@@ -141,11 +216,7 @@ SmackInstGenerator::functionalAddress(const AffineLoopAccess &Access,
   auto Offset =
       Expr::fn("$mul.ref", IterationAsPointer,
                rep->pointerLit(static_cast<unsigned long long>(Access.stride)));
-  const Expr *Start = rep->expr(Access.base);
-  if (Access.offset != 0)
-    Start = Expr::fn(
-        "$add.ref", Start,
-        rep->pointerLit(static_cast<unsigned long long>(Access.offset)));
+  const Expr *Start = functionalPointerSCEV(Access.start);
   return Expr::fn("$add.ref", Start, Offset);
 }
 
@@ -154,7 +225,7 @@ const Expr *SmackInstGenerator::functionalValue(
     const Expr *Iteration,
     const std::map<std::string, std::string> &EntryMemories) {
   if (Value == Summary.induction)
-    return Iteration;
+    return functionalInductionValue(Summary, Iteration);
   if (isa<Constant>(Value) || Summary.loop->isLoopInvariant(Value))
     return rep->expr(Value);
 
@@ -250,6 +321,8 @@ void SmackInstGenerator::emitFunctionalLoop(
 
   std::string IterationType = rep->type(Summary.iterationType);
   auto Zero = rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
+  const Expr *IterationCount =
+      functionalIntegerSCEV(Summary.iterationCount);
   emit(Stmt::comment(
       "functional loop summary for " +
       Summary.stores.front().store->getFunction()->getName().str()));
@@ -270,11 +343,7 @@ void SmackInstGenerator::emitFunctionalLoop(
          StoreIt != MemoryStores.second.rend(); ++StoreIt) {
       const FunctionalLoopStore &Store = **StoreIt;
       const AffineLoopAccess &Write = Store.access;
-      const Expr *Start = rep->expr(Write.base);
-      if (Write.offset != 0)
-        Start = Expr::fn(
-            "$add.ref", Start,
-            rep->pointerLit(static_cast<unsigned long long>(Write.offset)));
+      const Expr *Start = functionalPointerSCEV(Write.start);
       auto Delta = Expr::fn("$sub.ref", Pointer, Start);
       auto DeltaAsInteger = Expr::fn(
           indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
@@ -286,7 +355,7 @@ void SmackInstGenerator::emitFunctionalLoop(
           Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
                    Iteration, Zero),
           Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
-                   Iteration, rep->expr(Summary.iterationCount)));
+                   Iteration, IterationCount));
       auto IsWrittenAddress = Expr::eq(
           Pointer, functionalAddress(Write, Iteration, Summary.iterationType));
       auto Predicate = Expr::and_(InDomain, IsWrittenAddress);
@@ -306,11 +375,12 @@ void SmackInstGenerator::emitFunctionalLoop(
     emit(Stmt::assign(Expr::id(Destination),
                       Expr::lambda({PointerName, Naming::PTR_TYPE}, Body)));
   }
+  const Expr *FinalInduction =
+      functionalInductionValue(Summary, IterationCount);
   if (Summary.inductionEscapes)
-    emit(Stmt::assign(rep->expr(Summary.induction),
-                      rep->expr(Summary.iterationCount)));
+    emit(Stmt::assign(rep->expr(Summary.induction), FinalInduction));
   for (PHINode *Phi : Summary.finalInductionPhis)
-    emit(Stmt::assign(rep->expr(Phi), rep->expr(Summary.iterationCount)));
+    emit(Stmt::assign(rep->expr(Phi), FinalInduction));
   emit(Stmt::goto_({getBlock(Summary.exit)->getName()}));
 }
 

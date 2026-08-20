@@ -56,6 +56,10 @@ private:
   void annotate(llvm::Instruction &i, Block *b);
   void prepareFunctionalLoops(llvm::Function &F);
   void emitFunctionalLoop(const FunctionalLoopSummary &summary);
+  const Expr *functionalIntegerSCEV(const llvm::SCEV *scev);
+  const Expr *functionalPointerSCEV(const llvm::SCEV *scev);
+  const Expr *functionalInductionValue(
+      const FunctionalLoopSummary &summary, const Expr *iteration);
   const Expr *functionalAddress(const AffineLoopAccess &access,
                                 const Expr *iteration,
                                 const llvm::IntegerType *iterationType);

@@ -21,8 +21,34 @@ using namespace llvm;
 
 namespace {
 
+bool isSupportedInvariantSCEV(const SCEV *S, Loop &L,
+                              ScalarEvolution &SE) {
+  if (!S->getType()->isIntegerTy() || !SE.isLoopInvariant(S, &L))
+    return false;
+  if (isa<SCEVConstant>(S))
+    return true;
+  if (auto *Unknown = dyn_cast<SCEVUnknown>(S))
+    return L.isLoopInvariant(Unknown->getValue());
+  if (auto *Cast = dyn_cast<SCEVCastExpr>(S))
+    return isSupportedInvariantSCEV(Cast->getOperand(), L, SE);
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(S)) {
+    if (!isa<SCEVAddExpr>(NAry) && !isa<SCEVMulExpr>(NAry))
+      return false;
+    for (const SCEV *Operand : NAry->operands())
+      if (!isSupportedInvariantSCEV(Operand, L, SE))
+        return false;
+    return true;
+  }
+  if (auto *Div = dyn_cast<SCEVUDivExpr>(S)) {
+    auto *Divisor = dyn_cast<SCEVConstant>(Div->getRHS());
+    return Divisor && !Divisor->getAPInt().isZero() &&
+           isSupportedInvariantSCEV(Div->getLHS(), L, SE);
+  }
+  return false;
+}
+
 bool getIterationCount(Loop &L, ScalarEvolution &SE, IntegerType *Ty,
-                       bool IncludeFinalExitingBlock, const Value *&Count) {
+                       bool IncludeFinalExitingBlock, const SCEV *&Count) {
   const SCEV *S = SE.getExitCount(&L, L.getExitingBlock());
   if (isa<SCEVCouldNotCompute>(S) || S->getType() != Ty)
     return false;
@@ -39,14 +65,10 @@ bool getIterationCount(Loop &L, ScalarEvolution &SE, IntegerType *Ty,
     S = SE.getAddExpr(S, SE.getOne(Ty));
   }
 
-  if (auto *C = dyn_cast<SCEVConstant>(S))
-    Count = C->getValue();
-  else if (auto *U = dyn_cast<SCEVUnknown>(S))
-    Count = U->getValue();
-  else
+  if (!isSupportedInvariantSCEV(S, L, SE))
     return false;
-
-  return Count->getType() == Ty && L.isLoopInvariant(Count);
+  Count = S;
+  return Count->getType() == Ty;
 }
 
 bool hasOnlySimpleHeaderPhis(Loop &L, const PHINode *Induction) {
@@ -93,8 +115,42 @@ bool hasOnlySimpleHeaderPhis(Loop &L, const PHINode *Induction) {
   return true;
 }
 
-PHINode *getUnitInduction(Loop &L, ScalarEvolution &SE,
-                          PHINode *Phi) {
+PHINode *getSimplePositiveInductionCandidate(Loop &L) {
+  BasicBlock *Incoming = nullptr;
+  BasicBlock *Backedge = nullptr;
+  if (!L.getIncomingAndBackEdge(Incoming, Backedge))
+    return nullptr;
+
+  PHINode *Candidate = nullptr;
+  for (Instruction &I : *L.getHeader()) {
+    auto *Phi = dyn_cast<PHINode>(&I);
+    if (!Phi)
+      break;
+    if (!Phi->getType()->isIntegerTy() ||
+        !L.isLoopInvariant(Phi->getIncomingValueForBlock(Incoming)))
+      continue;
+    auto *Update = dyn_cast<BinaryOperator>(
+        Phi->getIncomingValueForBlock(Backedge));
+    if (!Update || Update->getOpcode() != Instruction::Add)
+      continue;
+    const Value *Step = nullptr;
+    if (Update->getOperand(0) == Phi)
+      Step = Update->getOperand(1);
+    else if (Update->getOperand(1) == Phi)
+      Step = Update->getOperand(0);
+    auto *ConstantStep = dyn_cast_or_null<ConstantInt>(Step);
+    if (!ConstantStep || !ConstantStep->getValue().isStrictlyPositive())
+      continue;
+    if (Candidate)
+      return nullptr;
+    Candidate = Phi;
+  }
+  return Candidate;
+}
+
+PHINode *getPositiveInduction(Loop &L, ScalarEvolution &SE, PHINode *Phi,
+                              const Value *&Initial,
+                              const ConstantInt *&StepValue) {
   // Ask LoopInfo to identify the canonical 0,+1 recurrence before querying
   // ScalarEvolution. Large generated programs can carry unrelated header
   // PHIs with deeply cyclic value graphs; LLVM 14 may recurse until it
@@ -104,11 +160,18 @@ PHINode *getUnitInduction(Loop &L, ScalarEvolution &SE,
   auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Phi));
   if (!AR || AR->getLoop() != &L || !AR->isAffine())
     return nullptr;
-  auto *Start = dyn_cast<SCEVConstant>(AR->getStart());
   auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
-  if (!Phi->getType()->isIntegerTy() || !Start ||
-      !Start->getAPInt().isZero() || !Step || !Step->getAPInt().isOne())
+  BasicBlock *Incoming = nullptr;
+  BasicBlock *Backedge = nullptr;
+  if (!Phi->getType()->isIntegerTy() || !Step ||
+      !Step->getAPInt().isStrictlyPositive() ||
+      !L.getIncomingAndBackEdge(Incoming, Backedge))
     return nullptr;
+  Initial = Phi->getIncomingValueForBlock(Incoming);
+  if (Initial->getType() != Phi->getType() || !L.isLoopInvariant(Initial) ||
+      AR->getStart() != SE.getSCEV(const_cast<Value *>(Initial)))
+    return nullptr;
+  StepValue = Step->getValue();
   return Phi;
 }
 
@@ -125,29 +188,8 @@ bool getAffineAccess(const Value *Pointer, Loop &L, ScalarEvolution &SE,
       Step->getAPInt().getActiveBits() > 64)
     return false;
 
-  const SCEVUnknown *BaseSCEV = dyn_cast<SCEVUnknown>(AR->getStart());
-  uint64_t Offset = 0;
-  if (!BaseSCEV) {
-    auto *Start = dyn_cast<SCEVAddExpr>(AR->getStart());
-    if (!Start)
-      return false;
-    for (const SCEV *Operand : Start->operands()) {
-      if (auto *Unknown = dyn_cast<SCEVUnknown>(Operand)) {
-        if (BaseSCEV)
-          return false;
-        BaseSCEV = Unknown;
-      } else if (auto *Constant = dyn_cast<SCEVConstant>(Operand)) {
-        const APInt &Value = Constant->getAPInt();
-        if (Value.isNegative() || Value.getActiveBits() > 64 ||
-            Offset >
-                std::numeric_limits<uint64_t>::max() - Value.getZExtValue())
-          return false;
-        Offset += Value.getZExtValue();
-      } else {
-        return false;
-      }
-    }
-  }
+  const SCEV *Start = AR->getStart();
+  const SCEVUnknown *BaseSCEV = dyn_cast<SCEVUnknown>(SE.getPointerBase(Start));
   if (!BaseSCEV)
     return false;
 
@@ -155,9 +197,26 @@ bool getAffineAccess(const Value *Pointer, Loop &L, ScalarEvolution &SE,
   if (!Base->getType()->isPointerTy() || !L.isLoopInvariant(Base))
     return false;
 
+  const SCEV *OffsetSCEV = SE.removePointerBase(Start);
+  if (isa<SCEVCouldNotCompute>(OffsetSCEV) ||
+      !isSupportedInvariantSCEV(OffsetSCEV, L, SE))
+    return false;
+
+  uint64_t Offset = 0;
+  bool HasConstantOffset = false;
+  if (auto *Constant = dyn_cast<SCEVConstant>(OffsetSCEV)) {
+    const APInt &Value = Constant->getAPInt();
+    if (!Value.isNegative() && Value.getActiveBits() <= 64) {
+      Offset = Value.getZExtValue();
+      HasConstantOffset = true;
+    }
+  }
+
+  Access.start = Start;
   Access.base = Base;
   Access.offset = Offset;
   Access.stride = Step->getAPInt().getZExtValue();
+  Access.hasConstantOffset = HasConstantOffset;
   return Access.stride != 0;
 }
 
@@ -171,8 +230,7 @@ const AffineLoopAccess *findLoadAccess(const FunctionalLoopSummary &Summary,
 
 bool isSamePointwiseAccess(const AffineLoopAccess &Write,
                            const AffineLoopAccess &Read) {
-  return Write.base == Read.base && Write.offset == Read.offset &&
-         Write.stride == Read.stride;
+  return Write.start == Read.start && Write.stride == Read.stride;
 }
 
 uint64_t greatestCommonDivisor(uint64_t A, uint64_t B) {
@@ -186,12 +244,14 @@ uint64_t greatestCommonDivisor(uint64_t A, uint64_t B) {
 
 bool finiteAffineImagesAreDisjoint(const AffineLoopAccess &A,
                                    const AffineLoopAccess &B,
-                                   const Value *IterationCount) {
-  auto *Count = dyn_cast<ConstantInt>(IterationCount);
-  if (!Count || Count->getValue().getActiveBits() > 64)
+                                   const SCEV *IterationCount) {
+  auto *Count = dyn_cast<SCEVConstant>(IterationCount);
+  if (!A.hasConstantOffset || !B.hasConstantOffset)
+    return false;
+  if (!Count || Count->getAPInt().getActiveBits() > 64)
     return false;
 
-  uint64_t Iterations = Count->getZExtValue();
+  uint64_t Iterations = Count->getAPInt().getZExtValue();
   if (Iterations == 0)
     return true;
 
@@ -231,6 +291,9 @@ bool normalizeRelatedBases(const AffineLoopAccess &A,
                            const AffineLoopAccess &B, const DataLayout &DL,
                            AffineLoopAccess &NormalizedA,
                            AffineLoopAccess &NormalizedB) {
+  if (!A.hasConstantOffset || !B.hasConstantOffset)
+    return false;
+
   int64_t BaseOffsetA = 0;
   int64_t BaseOffsetB = 0;
   const Value *BaseA =
@@ -246,19 +309,25 @@ bool normalizeRelatedBases(const AffineLoopAccess &A,
       !addSignedOffset(B.offset, BaseOffsetB, OffsetB))
     return false;
 
-  NormalizedA = {BaseA, OffsetA, A.stride};
-  NormalizedB = {BaseB, OffsetB, B.stride};
+  NormalizedA = A;
+  NormalizedB = B;
+  NormalizedA.base = BaseA;
+  NormalizedA.offset = OffsetA;
+  NormalizedB.base = BaseB;
+  NormalizedB.offset = OffsetB;
   return true;
 }
 
 bool areAffineAccessesDisjoint(const AffineLoopAccess &A,
                                const AffineLoopAccess &B,
-                               const Value *IterationCount,
+                               const SCEV *IterationCount,
                                const DataLayout &DL) {
   AffineLoopAccess NormalizedA = A;
   AffineLoopAccess NormalizedB = B;
   if (A.base != B.base &&
       !normalizeRelatedBases(A, B, DL, NormalizedA, NormalizedB))
+    return false;
+  if (!NormalizedA.hasConstantOffset || !NormalizedB.hasConstantOffset)
     return false;
   if (finiteAffineImagesAreDisjoint(NormalizedA, NormalizedB, IterationCount))
     return true;
@@ -534,11 +603,16 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
       !L.getExitBlock() || !hasSupportedControlFlow(L, Flow))
     return false;
 
-  PHINode *CanonicalInduction = L.getCanonicalInductionVariable();
-  if (!CanonicalInduction ||
-      !hasOnlySimpleHeaderPhis(L, CanonicalInduction))
+  PHINode *InductionCandidate = L.getCanonicalInductionVariable();
+  if (!InductionCandidate)
+    InductionCandidate = getSimplePositiveInductionCandidate(L);
+  if (!InductionCandidate ||
+      !hasOnlySimpleHeaderPhis(L, InductionCandidate))
     return false;
-  PHINode *Induction = getUnitInduction(L, SE, CanonicalInduction);
+  const Value *InductionStart = nullptr;
+  const ConstantInt *InductionStep = nullptr;
+  PHINode *Induction = getPositiveInduction(
+      L, SE, InductionCandidate, InductionStart, InductionStep);
   auto *IterationType =
       Induction ? dyn_cast<IntegerType>(Induction->getType()) : nullptr;
   if (!IterationType)
@@ -551,7 +625,7 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
   if (!hasOnlySupportedInstructions(L, Stores))
     return false;
 
-  const Value *IterationCount = nullptr;
+  const SCEV *IterationCount = nullptr;
   bool StoresExecuteBeforeExitTest = false;
   if (!storeExecutesBeforeExitTest(L, *Stores.front(), DT,
                                    StoresExecuteBeforeExitTest))
@@ -570,12 +644,16 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
   Summary.preheader = L.getLoopPreheader();
   Summary.exit = L.getExitBlock();
   Summary.induction = Induction;
+  Summary.inductionStart = InductionStart;
+  Summary.inductionStep = InductionStep;
   Summary.inductionEscapes = InductionEscapes;
   Summary.iterationType = IterationType;
   Summary.iterationCount = IterationCount;
 
-  const SCEV *IterationCountSCEV =
-      SE.getSCEV(const_cast<Value *>(IterationCount));
+  const SCEV *FinalInductionSCEV = SE.getAddExpr(
+      SE.getSCEV(const_cast<Value *>(InductionStart)),
+      SE.getMulExpr(SE.getSCEV(const_cast<ConstantInt *>(InductionStep)),
+                    IterationCount));
   for (Instruction &I : *L.getExitBlock()) {
     auto *Phi = dyn_cast<PHINode>(&I);
     if (!Phi)
@@ -583,7 +661,7 @@ bool analyzeLoop(Loop &L, ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA,
     if (Phi->getNumIncomingValues() != 1 ||
         !L.contains(Phi->getIncomingBlock(0)) ||
         SE.getSCEVAtScope(Phi->getIncomingValue(0), L.getParentLoop()) !=
-            IterationCountSCEV)
+            FinalInductionSCEV)
       return false;
     Summary.finalInductionPhis.push_back(Phi);
   }
