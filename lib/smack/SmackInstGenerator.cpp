@@ -83,12 +83,11 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
       F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
   for (auto &Summary : Candidates) {
-    auto *StorePointer = Summary.store->getPointerOperand();
-    if (!rep->canFunctionalizeMemory(
-            StorePointer, Summary.store->getValueOperand()->getType()))
-      continue;
-
     bool SupportedMemory = true;
+    for (const auto &Store : Summary.stores)
+      SupportedMemory &= rep->canFunctionalizeMemory(
+          Store.store->getPointerOperand(),
+          Store.store->getValueOperand()->getType());
     for (const auto &Load : Summary.loads)
       SupportedMemory &= rep->canFunctionalizeMemory(
           Load.load->getPointerOperand(), Load.load->getType());
@@ -98,10 +97,24 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
 
   for (const auto &Summary : functionalLoops) {
     auto *Branch = dyn_cast<BranchInst>(Summary.preheader->getTerminator());
-    if (!Branch || !Branch->isUnconditional() ||
-        Branch->getSuccessor(0) != Summary.loop->getHeader())
+    if (!Branch)
       continue;
+    if (Branch->isUnconditional()) {
+      if (Branch->getSuccessor(0) != Summary.loop->getHeader())
+        continue;
+    } else {
+      bool HasHeaderSuccessor = false;
+      bool HasExitSuccessor = false;
+      for (BasicBlock *Successor : Branch->successors()) {
+        HasHeaderSuccessor |= Successor == Summary.loop->getHeader();
+        HasExitSuccessor |= Successor == Summary.exit;
+      }
+      if (!HasHeaderSuccessor || !HasExitSuccessor)
+        continue;
+    }
     summariesByPreheader[Branch] = &Summary;
+    if (Summary.inductionEscapes)
+      nameInstruction(*Summary.induction);
     suppressedBlocks.insert(Summary.loop->block_begin(),
                             Summary.loop->block_end());
   }
@@ -124,7 +137,12 @@ SmackInstGenerator::functionalAddress(const AffineLoopAccess &Access,
   auto Offset =
       Expr::fn("$mul.ref", IterationAsPointer,
                rep->pointerLit(static_cast<unsigned long long>(Access.stride)));
-  return Expr::fn("$add.ref", rep->expr(Access.base), Offset);
+  const Expr *Start = rep->expr(Access.base);
+  if (Access.offset != 0)
+    Start = Expr::fn(
+        "$add.ref", Start,
+        rep->pointerLit(static_cast<unsigned long long>(Access.offset)));
+  return Expr::fn("$add.ref", Start, Offset);
 }
 
 const Expr *SmackInstGenerator::functionalValue(
@@ -135,6 +153,15 @@ const Expr *SmackInstGenerator::functionalValue(
     return Iteration;
   if (isa<Constant>(Value) || Summary.loop->isLoopInvariant(Value))
     return rep->expr(Value);
+
+  for (const auto &Recurrence : Summary.recurrences) {
+    if (Recurrence.value != Value)
+      continue;
+    auto MulName = rep->opName("$mul", {Summary.iterationType});
+    auto AddName = rep->opName("$add", {Summary.iterationType});
+    return Expr::fn(AddName, rep->expr(Recurrence.start),
+                    Expr::fn(MulName, rep->expr(Recurrence.step), Iteration));
+  }
 
   if (auto *Load = dyn_cast<LoadInst>(Value)) {
     const AffineLoopAccess *Access = nullptr;
@@ -166,6 +193,28 @@ const Expr *SmackInstGenerator::functionalValue(
                                           Iteration, EntryMemories));
   }
 
+  if (auto *Cmp = dyn_cast<ICmpInst>(Value)) {
+    auto Operand = [&](const llvm::Value *V) {
+      if (isa<ConstantInt>(V))
+        return rep->expr(V, Cmp->isUnsigned(), true);
+      return functionalValue(V, Summary, Iteration, EntryMemories);
+    };
+    auto Name = rep->opName(Naming::CMPINST_TABLE.at(Cmp->getPredicate()),
+                            {Cmp->getOperand(0)->getType()});
+    return Expr::fn(Name, Operand(Cmp->getOperand(0)),
+                    Operand(Cmp->getOperand(1)));
+  }
+
+  if (auto *Select = dyn_cast<SelectInst>(Value)) {
+    auto Condition = functionalValue(Select->getCondition(), Summary, Iteration,
+                                     EntryMemories);
+    return Expr::ifThenElse(Expr::eq(Condition, rep->integerLit(1ULL, 1)),
+                            functionalValue(Select->getTrueValue(), Summary,
+                                            Iteration, EntryMemories),
+                            functionalValue(Select->getFalseValue(), Summary,
+                                            Iteration, EntryMemories));
+  }
+
   llvm_unreachable("unsupported value in validated functional loop summary");
 }
 
@@ -173,8 +222,14 @@ void SmackInstGenerator::emitFunctionalLoop(
     const FunctionalLoopSummary &Summary) {
   unsigned Id = functionalLoopId++;
   std::map<std::string, const Value *> MemoryPointers;
-  auto *StorePointer = Summary.store->getPointerOperand();
-  MemoryPointers[rep->memPath(StorePointer)] = StorePointer;
+  std::map<std::string, std::vector<const FunctionalLoopStore *>>
+      StoresByMemory;
+  for (const auto &Store : Summary.stores) {
+    auto *StorePointer = Store.store->getPointerOperand();
+    std::string Memory = rep->memPath(StorePointer);
+    MemoryPointers[Memory] = StorePointer;
+    StoresByMemory[Memory].push_back(&Store);
+  }
   for (const auto &Load : Summary.loads)
     MemoryPointers[rep->memPath(Load.load->getPointerOperand())] =
         Load.load->getPointerOperand();
@@ -190,37 +245,68 @@ void SmackInstGenerator::emitFunctionalLoop(
   }
 
   std::string IterationType = rep->type(Summary.iterationType);
-  std::string PointerName = "$fl.p." + std::to_string(Id);
-  auto Pointer = Expr::id(PointerName);
-  auto Base = rep->expr(Summary.write.base);
-  auto Delta = Expr::fn("$sub.ref", Pointer, Base);
-  auto DeltaAsInteger =
-      Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
-  auto Iteration = Expr::fn(
-      indexedName("$udiv", {IterationType}), DeltaAsInteger,
-      rep->integerLit(static_cast<unsigned long long>(Summary.write.stride),
-                      Summary.iterationType->getBitWidth()));
-
   auto Zero = rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
-  auto InDomain = Expr::and_(
-      Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
-               Iteration, Zero),
-      Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
-               Iteration, rep->expr(Summary.iterationCount)));
-  auto IsWrittenAddress =
-      Expr::eq(Pointer, functionalAddress(Summary.write, Iteration,
-                                          Summary.iterationType));
-  auto Predicate = Expr::and_(InDomain, IsWrittenAddress);
+  emit(Stmt::comment(
+      "functional loop summary for " +
+      Summary.stores.front().store->getFunction()->getName().str()));
 
-  std::string Destination = rep->memPath(StorePointer);
-  auto Value = functionalValue(Summary.store->getValueOperand(), Summary,
-                               Iteration, EntryMemories);
-  auto OldValue = Expr::sel(Expr::id(EntryMemories.at(Destination)), Pointer);
-  auto Body = Expr::ifThenElse(Predicate, Value, OldValue);
-  emit(Stmt::comment("functional loop summary for " +
-                     Summary.store->getFunction()->getName().str()));
-  emit(Stmt::assign(Expr::id(Destination),
-                    Expr::lambda({PointerName, Naming::PTR_TYPE}, Body)));
+  unsigned MemoryIndex = 0;
+  for (const auto &MemoryStores : StoresByMemory) {
+    const std::string &Destination = MemoryStores.first;
+    std::string PointerName =
+        "$fl.p." + std::to_string(Id) + "." + std::to_string(MemoryIndex++);
+    auto Pointer = Expr::id(PointerName);
+    const Expr *Body =
+        Expr::sel(Expr::id(EntryMemories.at(Destination)), Pointer);
+
+    // The recognizer proves these affine images pairwise disjoint, so their
+    // ITE order is immaterial.  Every RHS and the default branch read only the
+    // loop-entry snapshots.
+    for (auto StoreIt = MemoryStores.second.rbegin();
+         StoreIt != MemoryStores.second.rend(); ++StoreIt) {
+      const FunctionalLoopStore &Store = **StoreIt;
+      const AffineLoopAccess &Write = Store.access;
+      const Expr *Start = rep->expr(Write.base);
+      if (Write.offset != 0)
+        Start = Expr::fn(
+            "$add.ref", Start,
+            rep->pointerLit(static_cast<unsigned long long>(Write.offset)));
+      auto Delta = Expr::fn("$sub.ref", Pointer, Start);
+      auto DeltaAsInteger = Expr::fn(
+          indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+      auto Iteration = Expr::fn(
+          indexedName("$udiv", {IterationType}), DeltaAsInteger,
+          rep->integerLit(static_cast<unsigned long long>(Write.stride),
+                          Summary.iterationType->getBitWidth()));
+      auto InDomain = Expr::and_(
+          Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+                   Iteration, Zero),
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Iteration, rep->expr(Summary.iterationCount)));
+      auto IsWrittenAddress = Expr::eq(
+          Pointer, functionalAddress(Write, Iteration, Summary.iterationType));
+      auto Predicate = Expr::and_(InDomain, IsWrittenAddress);
+      if (Store.guard) {
+        auto Guard =
+            functionalValue(Store.guard, Summary, Iteration, EntryMemories);
+        const Expr *GuardHolds = Expr::eq(Guard, rep->integerLit(1ULL, 1));
+        if (!Store.guardValue)
+          GuardHolds = Expr::not_(GuardHolds);
+        Predicate = Expr::and_(Predicate, GuardHolds);
+      }
+      auto Value = functionalValue(Store.store->getValueOperand(), Summary,
+                                   Iteration, EntryMemories);
+      Body = Expr::ifThenElse(Predicate, Value, Body);
+    }
+
+    emit(Stmt::assign(Expr::id(Destination),
+                      Expr::lambda({PointerName, Naming::PTR_TYPE}, Body)));
+  }
+  if (Summary.inductionEscapes)
+    emit(Stmt::assign(rep->expr(Summary.induction),
+                      rep->expr(Summary.iterationCount)));
+  for (PHINode *Phi : Summary.finalInductionPhis)
+    emit(Stmt::assign(rep->expr(Phi), rep->expr(Summary.iterationCount)));
   emit(Stmt::goto_({getBlock(Summary.exit)->getName()}));
 }
 

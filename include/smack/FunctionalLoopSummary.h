@@ -13,6 +13,7 @@ class AAResults;
 class BasicBlock;
 class Function;
 class IntegerType;
+class ConstantInt;
 class LoadInst;
 class Loop;
 class LoopInfo;
@@ -27,12 +28,26 @@ namespace smack {
 
 struct AffineLoopAccess {
   const llvm::Value *base = nullptr;
+  uint64_t offset = 0;
   uint64_t stride = 0;
 };
 
 struct FunctionalLoopLoad {
   const llvm::LoadInst *load = nullptr;
   AffineLoopAccess access;
+};
+
+struct FunctionalLoopStore {
+  const llvm::StoreInst *store = nullptr;
+  AffineLoopAccess access;
+  const llvm::Value *guard = nullptr;
+  bool guardValue = true;
+};
+
+struct FunctionalLoopScalarRecurrence {
+  const llvm::Value *value = nullptr;
+  const llvm::ConstantInt *start = nullptr;
+  const llvm::ConstantInt *step = nullptr;
 };
 
 // Analysis-only description of a pointwise loop.  It deliberately contains
@@ -43,11 +58,13 @@ struct FunctionalLoopSummary {
   llvm::BasicBlock *preheader = nullptr;
   llvm::BasicBlock *exit = nullptr;
   llvm::PHINode *induction = nullptr;
+  bool inductionEscapes = false;
   llvm::IntegerType *iterationType = nullptr;
   const llvm::Value *iterationCount = nullptr;
-  const llvm::StoreInst *store = nullptr;
-  AffineLoopAccess write;
+  llvm::SmallVector<FunctionalLoopStore, 2> stores;
   llvm::SmallVector<FunctionalLoopLoad, 2> loads;
+  llvm::SmallVector<FunctionalLoopScalarRecurrence, 2> recurrences;
+  llvm::SmallVector<llvm::PHINode *, 1> finalInductionPhis;
 };
 
 class FunctionalLoopSummaryAnalysis {
