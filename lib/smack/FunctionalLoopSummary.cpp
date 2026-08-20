@@ -84,6 +84,11 @@ const AffineLoopAccess *findLoadAccess(const FunctionalLoopSummary &Summary,
   return nullptr;
 }
 
+bool isSamePointwiseAccess(const AffineLoopAccess &Write,
+                           const AffineLoopAccess &Read) {
+  return Write.base == Read.base && Write.stride == Read.stride;
+}
+
 bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
                  ScalarEvolution &SE, AAResults &AA, MemorySSA &MSSA) {
   if (isa<Constant>(V) || V == Summary.induction)
@@ -103,19 +108,28 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
     if (!getAffineAccess(Load->getPointerOperand(), *Summary.loop, SE, Read))
       return false;
 
-    // Before/after locations cover every affine offset within each underlying
-    // object, which is the all-iterations proof needed here.  A same-iteration
-    // NoAlias query would be insufficient.
+    // Equal affine recurrences denote the same address in iteration k.  The
+    // positive, no-self-wrap recurrence is injective, so an earlier W(j)
+    // cannot equal R(k) for j < k.  The load is an SSA dependency of the
+    // store, hence it occurs before that iteration's write and reads the
+    // loop-entry value at its pointwise address.
+    bool SamePointwise = isSamePointwiseAccess(Summary.write, Read);
+
+    // Otherwise, prove separation for all iterations at object granularity.
+    // A same-iteration alias query would be insufficient.
     const Value *WriteObject = getUnderlyingObject(Summary.write.base);
     const Value *ReadObject = getUnderlyingObject(Read.base);
-    if (!AA.isNoAlias(WriteObject, ReadObject))
+    if (!SamePointwise && !AA.isNoAlias(WriteObject, ReadObject))
       return false;
 
     auto *MA = MSSA.getMemoryAccess(Load);
     if (!MA)
       return false;
     MemoryAccess *Clobber = MSSA.getWalker()->getClobberingMemoryAccess(MA);
-    if (!MSSA.isLiveOnEntryDef(Clobber) &&
+    // A pointwise load normally reaches the loop MemoryPhi because the same
+    // object is written in the loop.  The recurrence proof above discharges
+    // that may-clobber; all other reads must independently reach entry memory.
+    if (!SamePointwise && !MSSA.isLiveOnEntryDef(Clobber) &&
         Summary.loop->contains(Clobber->getBlock()))
       return false;
 

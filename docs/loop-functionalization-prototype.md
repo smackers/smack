@@ -104,9 +104,9 @@ The opt-in `--functionalize-loops` implementation supports exactly this class:
 - an RHS composed of integer constants, the IV, loop-invariant SSA values,
   `add`/`sub`/`mul`, selected integer casts, and simple loads with affine
   addresses;
-- for every RHS load, LLVM AA must prove the entire underlying source and
-  destination objects `NoAlias`, and MemorySSA's clobber must be loop entry or
-  outside the loop;
+- for every RHS load, either LLVM AA proves the entire underlying source and
+  destination objects `NoAlias` and MemorySSA's clobber is loop entry or
+  outside the loop, or its affine recurrence is exactly the store recurrence;
 - non-singleton, non-bytewise typed SMACK regions, using the default unbounded
   integer and pointer encodings.
 
@@ -118,24 +118,33 @@ jumps from the preheader to the old unique exit and emits none of the loop's
 blocks.  Escaping values (including a live final IV) are rejected rather than
 approximated.
 
-The prototype deliberately rejects multiple stores, same-object reads (even
-safe `a[i] = a[i] + 1`), non-unit or nonzero-start IVs, computed scatter
-addresses, possible aliasing, nested or branched bodies, exit PHIs, calls,
-assertions/assumptions, memory intrinsics, volatile/atomic accesses, EH,
-bytewise/singleton regions, memory-model debugging, and bit-vector or wrapped
-integer/pointer encodings.  Memory-safety instrumentation inserts calls in the
-loop before recognition, so `--check=memory-safety` candidates are rejected
-and their per-iteration checks remain in cyclic control flow.
+The identical-recurrence case covers `a[i] = a[i] + c`: a positive,
+no-self-wrap recurrence is injective, so for `j < k`, `W(j) != R(k)` when
+`R(k) = W(k)`.  The load is an SSA dependency of the sole store and therefore
+occurs before that iteration's write.  It consequently reads the loop-entry
+value at that address even though MemorySSA conservatively reports the loop's
+memory phi as its clobber.
+
+The prototype deliberately rejects multiple stores, shifted or otherwise
+non-identical same-object read recurrences, non-unit or nonzero-start IVs,
+computed scatter addresses, possible aliasing, nested or branched bodies,
+exit PHIs, calls, assertions/assumptions, memory intrinsics, volatile/atomic
+accesses, EH, bytewise/singleton regions, memory-model debugging, and
+bit-vector or wrapped integer/pointer encodings.  Memory-safety instrumentation
+inserts calls in the loop before recognition, so `--check=memory-safety`
+candidates are rejected and their per-iteration checks remain in cyclic
+control flow.
 
 ## Regression and evaluation results
 
 `test/c/functionalize-loops` contains symbolic positive tests for constant
-fill, IV fill, and `restrict`-disjoint copy-plus-constant; a fixed 4096-
-iteration demonstration; and negative tests for a loop-carried RAW recurrence,
-scatter, possible aliasing, and an invalid memory access under memory-safety
-checking.  The positives inspect generated Boogie for a lambda; the negatives
-inspect it for absence of a summary.  All 24 combinations of these eight tests
-and SMACK's three memory-allocation models pass with Boogie (loop bound 1).
+fill, IV fill, `restrict`-disjoint copy-plus-constant, and same-object
+pointwise addition; a fixed 4096-iteration demonstration; and negative tests
+for loop-carried and shifted RAW recurrences, scatter, possible aliasing, and
+an invalid memory access under memory-safety checking.  The positives inspect
+generated Boogie for a lambda; the negatives inspect it for absence of a
+summary.  All 30 combinations of these ten tests and SMACK's three memory-
+allocation models pass with Boogie (loop bound 1).
 
 For the fixed 4096-iteration test, raw generated Boogie changed as follows:
 
@@ -150,6 +159,13 @@ program proves all three assertions without reaching the bound (1.14 s wall
 time).  The analogous symbolic-`n` test has the same qualitative result:
 baseline reaches the bound; functionalized proves with bound 1.
 
+For symbolic `a[i] = a[i] + 1`, raw Boogie shrinks from 16,384 lines / 712,133
+bytes to 16,332 lines / 710,485 bytes and contains one lambda summary instead
+of the source cycle.  With the same requested Corral executable and recursion
+bound 1, the baseline reaches the bound (0.92 s wall), while the lifted
+functionalized input proves the arbitrary-index assertion without reaching
+the bound (1.30 s wall).
+
 There is one integration caveat in the current Corral checkout.  Its Boogie
 3.5.7 frontend parses/typechecks lambda expressions, but Corral does not call
 `LambdaHelper.ExpandLambdas` before its custom VC path, so a raw lambda reaches
@@ -160,8 +176,8 @@ function/quantified definition.  Calling Boogie's lambda-expansion hook in
 Corral's input preprocessing is the small backend integration needed for
 direct raw-lambda runs; it is separate from this SMACK prototype.
 
-The recommended next SMACK experiment is to accept same-object pointwise
-loads by proving equal affine recurrences are cross-iteration disjoint.  That
-would cover `a[i] = a[i] + c` without weakening the current all-iterations
-dependence obligation.  Only after that proof is isolated should the summary
-grow support for multiple stores or ITE bodies.
+The recommended next SMACK experiment is either multiple stores with pairwise
+disjoint affine recurrences or a single-store diamond whose values merge into
+an ITE.  Multiple stores exercises the summary representation and cross-store
+dependence proof; an ITE body exercises control dependence.  Both should
+retain the current conservative memory-model and instrumentation boundary.
