@@ -72,6 +72,8 @@ struct FunctionalLoopAccessCheck {
   uint64_t size = 0;
   const llvm::Value *guard = nullptr;
   bool guardValue = true;
+  // Verifier-assumption actions that execute before this check.
+  llvm::SmallVector<unsigned, 2> precedingAssumptions;
 };
 
 // Analysis-only description of a pointwise loop.  It deliberately contains

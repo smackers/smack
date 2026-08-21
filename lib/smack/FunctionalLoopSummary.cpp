@@ -725,7 +725,7 @@ bool collectMemoryAccessChecks(Loop &L, const SupportedControlFlow &Flow,
           CheckedSize != ExpectedSize)
         return false;
       Summary.accessChecks.push_back(
-          {Call, Access, CheckedSize, Guard, GuardValue});
+          {Call, Access, CheckedSize, Guard, GuardValue, {}});
     }
   return true;
 }
@@ -967,7 +967,8 @@ bool hasOnlyReadOnlyInstructions(Loop &L, const BranchInst *BoundBranch,
   return LoadCount != 0 && LoadCount == Summary.loads.size();
 }
 
-bool collectReadOnlyAccessChecks(Loop &L, FunctionalLoopSummary &Summary,
+bool collectReadOnlyAccessChecks(Loop &L, DominatorTree &DT,
+                                 FunctionalLoopSummary &Summary,
                                  std::set<const CallInst *> &AllowedCalls,
                                  std::set<const Instruction *> &Required) {
   std::set<const Instruction *> ProtectedAccesses;
@@ -979,11 +980,6 @@ bool collectReadOnlyAccessChecks(Loop &L, FunctionalLoopSummary &Summary,
           Call ? MemorySafetyChecker::getCheckedInstruction(*Call) : nullptr;
       if (!Protected)
         continue;
-      if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate)
-        return false;
-      for (const auto &Action : Summary.verifierActions)
-        if (Action.kind == FunctionalLoopVerifierAction::Kind::Assumption)
-          return false;
       Function *Callee = Call->getCalledFunction();
       auto *Load = dyn_cast<LoadInst>(Protected);
       const AffineLoopAccess *Access =
@@ -1003,8 +999,27 @@ bool collectReadOnlyAccessChecks(Loop &L, FunctionalLoopSummary &Summary,
           CheckedSize != ExpectedSize)
         return false;
 
-      Summary.accessChecks.push_back(
-          {Call, *Access, CheckedSize, nullptr, true});
+      FunctionalLoopAccessCheck Check{Call,    *Access, CheckedSize,
+                                      nullptr, true,    {}};
+      for (unsigned ActionIndex = 0;
+           ActionIndex < Summary.verifierActions.size(); ++ActionIndex) {
+        const auto &Action = Summary.verifierActions[ActionIndex];
+        if (Action.kind != FunctionalLoopVerifierAction::Kind::Assumption)
+          continue;
+        // Assumption calls are semantic stopping events.  A checked load and
+        // every assumption must have a definite within-iteration order so the
+        // emitter can decide whether the load executes at the first stopping
+        // iteration.  Branch-shaped assumption primitives remain outside this
+        // deliberately linear event model.
+        if (Action.predicateBranch)
+          return false;
+        if (DT.dominates(Action.call, Call))
+          Check.precedingAssumptions.push_back(ActionIndex);
+        else if (!DT.dominates(Call, Action.call))
+          return false;
+      }
+
+      Summary.accessChecks.push_back(std::move(Check));
       AllowedCalls.insert(Call);
       Required.insert(Call);
       collectInstructionSlice(Call->getArgOperand(0), L, Required);
@@ -1075,7 +1090,7 @@ bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
   Required.insert(InductionUpdate);
 
   std::set<const CallInst *> AccessChecks;
-  if (!collectReadOnlyAccessChecks(L, Summary, AccessChecks, Required))
+  if (!collectReadOnlyAccessChecks(L, DT, Summary, AccessChecks, Required))
     return false;
 
   return hasOnlyReadOnlyInstructions(L, BoundBranch, {PredicateBranch},
@@ -1224,7 +1239,7 @@ bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
     return false;
   Required.insert(InductionUpdate);
 
-  if (!collectReadOnlyAccessChecks(L, Summary, VerifierCalls, Required))
+  if (!collectReadOnlyAccessChecks(L, DT, Summary, VerifierCalls, Required))
     return false;
 
   if (!hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranches,

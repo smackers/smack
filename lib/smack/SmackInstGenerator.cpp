@@ -365,6 +365,21 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
   };
   bool IsVerifier =
       Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyVerifier;
+  bool HasAssertion = false;
+  bool HasAssumption = false;
+  for (const auto &Action : Summary.verifierActions) {
+    HasAssertion |=
+        Action.kind == FunctionalLoopVerifierAction::Kind::Assertion;
+    HasAssumption |=
+        Action.kind == FunctionalLoopVerifierAction::Kind::Assumption;
+  }
+  auto AssumptionsAt = [&](const Expr *Iteration) {
+    const Expr *Result = Expr::lit(true);
+    for (const auto &Action : Summary.verifierActions)
+      if (Action.kind == FunctionalLoopVerifierAction::Kind::Assumption)
+        Result = Expr::and_(Result, ActionAt(Action, Iteration));
+    return Result;
+  };
   auto ContinueAt = [&](const Expr *Iteration) {
     return IsVerifier ? AllActionsAt(Iteration)
                       : PredicateAt(Summary.predicateValue, false,
@@ -377,6 +392,55 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
         Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
                  Iteration, IterationCount));
   };
+
+  const Expr *FirstStop = nullptr;
+  if ((!IsVerifier || HasAssumption) && !Summary.accessChecks.empty()) {
+    // Capture the per-iteration continuation condition as a first-class map.
+    // The forward recursive function then denotes the first stopping
+    // iteration (or IterationCount if none stops) without adding cyclic CFG.
+    std::string ContinueMapName =
+        "$functional.read.continue." + std::to_string(Id);
+    std::string ContinueMapType = "[" + IterationType + "]bool";
+    proc->getDeclarations().push_back(
+        Decl::variable(ContinueMapName, ContinueMapType));
+    std::string ContinueIterationName =
+        "$functional.read.continue.iteration." + std::to_string(Id);
+    emit(Stmt::assign(
+        Expr::id(ContinueMapName),
+        Expr::lambda({ContinueIterationName, IterationType},
+                     IsVerifier
+                         ? AssumptionsAt(Expr::id(ContinueIterationName))
+                         : ContinueAt(Expr::id(ContinueIterationName)))));
+
+    std::string FirstStopName = "$functional.firstStop." +
+                                std::to_string(proc->getId()) + "." +
+                                std::to_string(Id);
+    const std::string ContinuesName = "$continues";
+    const std::string CurrentName = "$current";
+    const std::string RemainingName = "$remaining";
+    const Expr *Continues = Expr::id(ContinuesName);
+    const Expr *Current = Expr::id(CurrentName);
+    const Expr *Remaining = Expr::id(RemainingName);
+    const Expr *One =
+        rep->integerLit(1ULL, Summary.iterationType->getBitWidth());
+    const Expr *Next =
+        Expr::fn(indexedName("$add", {IterationType}), Current, One);
+    const Expr *RemainingAfter =
+        Expr::fn(indexedName("$sub", {IterationType}), Remaining, One);
+    const Expr *Recursive =
+        Expr::fn(FirstStopName, {Continues, Next, RemainingAfter});
+    const Expr *FirstStopBody = Expr::ifThenElse(
+        Expr::eq(Remaining, Zero), Current,
+        Expr::ifThenElse(Expr::sel(Continues, Current), Recursive, Current));
+    rep->getProgram()->getDeclarations().push_back(
+        Decl::function(FirstStopName,
+                       {{ContinuesName, ContinueMapType},
+                        {CurrentName, IterationType},
+                        {RemainingName, IterationType}},
+                       IterationType, FirstStopBody));
+    FirstStop = Expr::fn(FirstStopName,
+                         {Expr::id(ContinueMapName), Zero, IterationCount});
+  }
 
   SmallVector<const Expr *, 4> TriggeredAllContinue;
   for (unsigned LoadIndex = 0; LoadIndex < Summary.loads.size(); ++LoadIndex) {
@@ -418,14 +482,6 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
                    Expr::impl(IterationInDomain(ExactIteration),
                               ContinueAt(ExactIteration)));
 
-  bool HasAssertion = false;
-  bool HasAssumption = false;
-  for (const auto &Action : Summary.verifierActions) {
-    HasAssertion |=
-        Action.kind == FunctionalLoopVerifierAction::Kind::Assertion;
-    HasAssumption |=
-        Action.kind == FunctionalLoopVerifierAction::Kind::Assumption;
-  }
   std::string VerifierKind = HasAssertion && HasAssumption ? "verifier "
                              : HasAssertion                ? "assertion "
                              : HasAssumption               ? "assumption "
@@ -455,6 +511,25 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
     annotate(PreheaderBranch, CheckBlock);
     CheckBlock->addStmt(Stmt::havoc(WitnessName));
     CheckBlock->addStmt(Stmt::assume(IterationInDomain(Witness)));
+    if (FirstStop) {
+      const Expr *BeforeStop =
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Witness, FirstStop);
+      if (!IsVerifier) {
+        CheckBlock->addStmt(
+            Stmt::assume(Expr::or_(BeforeStop, Expr::eq(Witness, FirstStop))));
+      } else {
+        const Expr *PrecedingAssumptionsHold = Expr::lit(true);
+        for (unsigned ActionIndex : Check.precedingAssumptions)
+          PrecedingAssumptionsHold = Expr::and_(
+              PrecedingAssumptionsHold,
+              ActionAt(Summary.verifierActions[ActionIndex], Witness));
+        const Expr *ExecutesAtStop =
+            Expr::and_(Expr::eq(Witness, FirstStop), PrecedingAssumptionsHold);
+        CheckBlock->addStmt(
+            Stmt::assume(Expr::or_(BeforeStop, ExecutesAtStop)));
+      }
+    }
     annotate(*Check.call, CheckBlock);
     CheckBlock->addStmt(Stmt::call(
         Naming::MEMORY_SAFETY_FUNCTION,

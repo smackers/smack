@@ -69,8 +69,10 @@ emission, inside the existing module/instruction generators:
 
 The recognizer deliberately keeps three semantic summary forms separate.
 Memory-update loops produce map lambdas.  Pure early-exit checks produce a
-quantified predicate and a failure witness.  Read-only verifier loops produce
-an exact quantified assertion or assumption.  All three consume the same SCEV
+quantified predicate, a failure witness, and, when access checks are present,
+an exact first-stopping-iteration term.  Read-only verifier loops produce an
+exact quantified assertion or assumption and use the same stopping term for
+accesses ordered around assumptions.  All three consume the same SCEV
 induction, iteration-domain, affine-address and RHS representation, so
 recognition and proof remain independent of Boogie emission.
 
@@ -229,6 +231,12 @@ have no failure branch.  A redundant pointer-triggered universal formula is
 emitted for every affine load, so client reads can instantiate the facts
 without solving affine address inversion.
 
+When memory-access checks are enabled, direct assumption calls and each checked
+load must also have a definite dominance order.  The summary records, per
+check, exactly which assumptions precede it in one iteration.  Branch-shaped
+assumption primitives are still rejected because their conditional call site
+does not fit this deliberately linear event order.
+
 Eligibility no longer follows from a reserved name alone.  `smack.h` annotates
 the two primitives as `smack.verifier.assert` and `smack.verifier.assume`;
 `VerifierCodeMetadata` reads `llvm.global.annotations` after linking and adds
@@ -265,18 +273,37 @@ one branch per site avoids a product of witnesses.  The original check
 procedure and source location are retained rather than duplicating the three
 memory-model-specific allocation assertions in the functionalizer.
 
-Read-only verifier summaries admit the same encoding only when every verifier
-action is an assertion.  Safe executions then reach every affine load, while
-any earlier failing assertion already makes the original program unsafe.
-Assumptions and early-return predicate summaries are conservatively rejected
-when memory checks are present.  Two exact reachability-prefix encodings were
-tested: a universal "every earlier iteration continues" constraint and its
-logically equivalent "no earlier stopping witness exists" form.  Both Boogie
-and Corral reported an infeasible later dereference in a one-byte example where
-`a[0] != 0` stops the loop immediately; the ordinary loop proves safe at bound
-101.  Rephrasing the quantifier does not solve the required induction over an
-arbitrary symbolic prefix.  This solver behavior is the current fundamental
-boundary rather than a reason to ship a false-positive-prone summary.
+Read-only predicate and verifier summaries now retain checked accesses even
+when an early return or assumption truncates execution.  The emitter snapshots
+the continuation predicate in a Boogie map lambda and passes it to a generated
+mathematical recursive function:
+
+```text
+firstStop(continues, current, remaining) =
+  current                                      if remaining == 0
+  firstStop(continues, current + 1, remaining - 1)
+                                               if continues[current]
+  current                                      otherwise
+```
+
+For an early-return predicate, `continues[k]` is the loop predicate and its
+load executes exactly when `k < T && k <= firstStop(...)`: the stopping
+iteration is included because the load precedes the decision to return.  For a
+verifier loop, `continues[k]` is the conjunction of assumptions at iteration
+`k`.  A checked access executes before the first stopping iteration, or at that
+iteration exactly when all assumptions recorded before that access hold.  This
+per-check equality case preserves accesses before, between, and after multiple
+assumptions.  Assertions do not truncate the continuation map: a preceding
+failed assertion already makes the source execution unsafe.
+
+The lambda is an argument to the recursive function rather than a function
+body that captures procedure locals.  The generated Boogie remains acyclic;
+the recursion is a mathematical definition and does not consume Corral's
+control-flow recursion bound.  This forward definition replaced two exact but
+solver-ineffective quantified formulations ("every earlier iteration
+continues" and "no earlier stopping witness exists"), both of which produced a
+false memory error in the immediate-stop regression.  The recursive form
+proves that regression and handles zero-trip and later-stop/failure cases.
 
 A translation-only run of
 `aws_array_list_init_dynamic_harness.i` from AWS-C-Common now replaces the
@@ -310,12 +337,16 @@ failure at a later site, rejection beyond four sites, an unannotated reserved
 name, and instrumented access checks.  Memory-safety tests cover safe and
 failing fills, a two-access copy, guarded-store skip/failure polarity, guarded
 conditional RHS loads in both branch arms, safe and failing read-only assertion
-scans, and conservative rejection of early returns and assumptions.  All 171
-test/memory-model configurations pass with their configured Boogie bounds;
+scans, early-return scans that stop immediately or after several accesses,
+zero-trip early returns, and checked accesses before, between, and after
+blocking assumptions.  All 195 test/memory-model configurations pass with
+their configured Boogie bounds;
 every summarized case uses bound 1.  The updated `~/corral` at recursion bound
-1 proves the safe fill, guarded skip, conditional load skip and assertion scan,
-and finds the expected bugs in the out-of-bounds fill, guarded store,
-conditional load and assertion scan.
+1 proves the safe fill, guarded skip, conditional load skip, assertion scan,
+symbolic immediate-stop scan, later-stop scan, zero-trip scan, and blocked
+assumption scans.  It finds the expected bugs in the out-of-bounds fill,
+guarded store, conditional load, assertion scan, later-invalid early-return
+scan, and the corresponding assumption-order cases.
 
 The out-of-bounds fill is intentionally valid for its first four iterations
 and fails only on iteration 4.  At recursion bound 1, baseline Corral reports
@@ -394,16 +425,17 @@ remaining array cases require one of the following qualitatively new ideas:
 - reductions, sorting and in-place mutation need closed forms for loop-carried
   scalar or memory state;
 - verifier loops with data-dependent action control flow, other calls or stores
-  need a richer event summary.  Early returns and blocking assumptions
-  additionally need a solver-effective representation of the access-event
-  prefix;
+  need a richer event summary.  Branch-shaped or dominance-incomparable
+  assumptions likewise remain outside the current linear event model;
 - arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
   typed pointwise lambda would require byte packing/unpacking support.
 
 These are now the fundamental boundaries of the exact pointwise model rather
-than small additions to its recognizer.  The next early-termination experiment
-would need a qualitatively different inductive prefix abstraction—such as a
-separately verified lemma/procedure contract or backend support for a recursive
-prefix operator—evaluated first on the retained one-byte stopping regression.
-General undefined-behavior checks should remain cyclic until each check kind
-has equally explicit provenance and an exact failure summary.
+than small additions to its recognizer.  The forward recursive prefix is exact
+and removes the loop-bound dependency, but backend reasoning still unfolds the
+definition.  A continuation that stops only at an unconstrained symbolic depth
+may therefore be solver-expensive or remain unproved; supporting such cases
+robustly would require induction, a separately verified lemma/procedure
+contract, or native backend prefix support.  General undefined-behavior checks
+should remain cyclic until each check kind has equally explicit provenance and
+an exact failure summary.
