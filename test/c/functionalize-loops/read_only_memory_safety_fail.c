@@ -2,7 +2,7 @@
 
 // @expect error
 // @flag --check=memory-safety --unroll=2
-// @checkbpl awk 'index($0,"functional read-only loop summary for bad_check"){found=1} END{exit found}'
+// @checkbpl awk '/functional read-only loop summary for bad_check/{x=1}END{exit x}'
 // @checkout grep -F "SMACK warning: found loop"
 
 static int bad_check(const unsigned char *a, unsigned n) {

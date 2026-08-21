@@ -3,6 +3,8 @@
 //
 
 #include "smack/FunctionalLoopSummary.h"
+#include "smack/MemorySafetyChecker.h"
+#include "smack/Naming.h"
 #include "smack/VerifierCodeMetadata.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -628,6 +630,11 @@ bool hasOnlySupportedInstructions(Loop &L,
         Stores.push_back(SI);
         continue;
       }
+      if (auto *Call = dyn_cast<CallInst>(&I)) {
+        if (MemorySafetyChecker::getCheckedInstruction(*Call))
+          continue;
+        return false;
+      }
       if (isa<LoadInst>(I) || isa<PHINode>(I) || isa<BinaryOperator>(I) ||
           isa<CastInst>(I) || isa<GetElementPtrInst>(I) || isa<ICmpInst>(I) ||
           isa<SelectInst>(I) || isa<BranchInst>(I))
@@ -636,6 +643,85 @@ bool hasOnlySupportedInstructions(Loop &L,
     }
   }
   return !Stores.empty();
+}
+
+bool getConstantAccessSize(const Value *V, uint64_t &Size) {
+  while (auto *Cast = dyn_cast<CastInst>(V))
+    V = Cast->getOperand(0);
+  if (auto *Expr = dyn_cast<ConstantExpr>(V)) {
+    if (Expr->getOpcode() != Instruction::IntToPtr)
+      return false;
+    V = Expr->getOperand(0);
+  }
+  auto *Constant = dyn_cast<ConstantInt>(V);
+  if (!Constant || Constant->getValue().getActiveBits() > 64)
+    return false;
+  Size = Constant->getZExtValue();
+  return true;
+}
+
+bool collectMemoryAccessChecks(Loop &L, DominatorTree &DT,
+                               FunctionalLoopSummary &Summary) {
+  std::set<const Instruction *> ProtectedAccesses;
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  for (BasicBlock *BB : L.blocks())
+    for (Instruction &I : *BB) {
+      auto *Call = dyn_cast<CallInst>(&I);
+      const Instruction *Protected =
+          Call ? MemorySafetyChecker::getCheckedInstruction(*Call) : nullptr;
+      if (!Protected)
+        continue;
+      Function *Callee = Call->getCalledFunction();
+      if (!Callee || Callee->getName() != Naming::MEMORY_SAFETY_FUNCTION ||
+          Call->arg_size() != 2 ||
+          Protected->getParent() != Call->getParent() ||
+          !Call->comesBefore(Protected) ||
+          !ProtectedAccesses.insert(Protected).second)
+        return false;
+
+      const Value *Pointer = nullptr;
+      Type *AccessType = nullptr;
+      AffineLoopAccess Access;
+      const Value *Guard = nullptr;
+      bool GuardValue = true;
+      if (auto *Load = dyn_cast<LoadInst>(Protected)) {
+        Pointer = Load->getPointerOperand();
+        AccessType = Load->getType();
+        const AffineLoopAccess *SummaryLoad = findLoadAccess(Summary, Load);
+        if (!SummaryLoad ||
+            !DT.dominates(Protected, L.getLoopLatch()->getTerminator()))
+          return false;
+        Access = *SummaryLoad;
+      } else if (auto *Store = dyn_cast<StoreInst>(Protected)) {
+        Pointer = Store->getPointerOperand();
+        AccessType = Store->getValueOperand()->getType();
+        const FunctionalLoopStore *SummaryStore = nullptr;
+        for (const auto &Candidate : Summary.stores)
+          if (Candidate.store == Store)
+            SummaryStore = &Candidate;
+        if (!SummaryStore ||
+            (!SummaryStore->guard &&
+             !DT.dominates(Protected, L.getLoopLatch()->getTerminator())))
+          return false;
+        Access = SummaryStore->access;
+        Guard = SummaryStore->guard;
+        GuardValue = SummaryStore->guardValue;
+      } else {
+        return false;
+      }
+
+      if (Call->getArgOperand(0)->stripPointerCasts() !=
+          Pointer->stripPointerCasts())
+        return false;
+      uint64_t CheckedSize = 0;
+      uint64_t ExpectedSize = DL.getTypeStoreSize(AccessType);
+      if (!getConstantAccessSize(Call->getArgOperand(1), CheckedSize) ||
+          CheckedSize != ExpectedSize)
+        return false;
+      Summary.accessChecks.push_back(
+          {Call, Access, CheckedSize, Guard, GuardValue});
+    }
+  return true;
 }
 
 bool analyzeMemoryLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
@@ -746,7 +832,7 @@ bool analyzeMemoryLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
     if (!validateRhs(Store.store->getValueOperand(), Summary, SE, AA, MSSA, DT))
       return false;
   }
-  return true;
+  return collectMemoryAccessChecks(L, DT, Summary);
 }
 
 bool getInsideAndOutsideSuccessors(Loop &L, BranchInst &Branch,
@@ -838,12 +924,11 @@ bool initializeReadOnlySummary(Loop &L, BasicBlock *ExitingBlock,
   return true;
 }
 
-bool hasOnlyReadOnlyInstructions(
-    Loop &L, const BranchInst *BoundBranch,
-    const std::set<const BranchInst *> &Predicates,
-    const std::set<const CallInst *> &VerifierCalls,
-    const std::set<const Instruction *> &Required,
-    const FunctionalLoopSummary &Summary) {
+bool hasOnlyReadOnlyInstructions(Loop &L, const BranchInst *BoundBranch,
+                                 const std::set<const BranchInst *> &Predicates,
+                                 const std::set<const CallInst *> &AllowedCalls,
+                                 const std::set<const Instruction *> &Required,
+                                 const FunctionalLoopSummary &Summary) {
   unsigned LoadCount = 0;
   for (BasicBlock *BB : L.blocks()) {
     auto *Branch = dyn_cast<BranchInst>(BB->getTerminator());
@@ -855,7 +940,7 @@ bool hasOnlyReadOnlyInstructions(
     for (Instruction &I : *BB) {
       if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
         continue;
-      if (VerifierCalls.count(dyn_cast<CallInst>(&I))) {
+      if (AllowedCalls.count(dyn_cast<CallInst>(&I))) {
         if (!Required.count(&I))
           return false;
         continue;
@@ -874,6 +959,52 @@ bool hasOnlyReadOnlyInstructions(
     }
   }
   return LoadCount != 0 && LoadCount == Summary.loads.size();
+}
+
+bool collectReadOnlyAccessChecks(Loop &L, FunctionalLoopSummary &Summary,
+                                 std::set<const CallInst *> &AllowedCalls,
+                                 std::set<const Instruction *> &Required) {
+  std::set<const Instruction *> ProtectedAccesses;
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  for (BasicBlock *BB : L.blocks())
+    for (Instruction &I : *BB) {
+      auto *Call = dyn_cast<CallInst>(&I);
+      const Instruction *Protected =
+          Call ? MemorySafetyChecker::getCheckedInstruction(*Call) : nullptr;
+      if (!Protected)
+        continue;
+      if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate)
+        return false;
+      for (const auto &Action : Summary.verifierActions)
+        if (Action.kind == FunctionalLoopVerifierAction::Kind::Assumption)
+          return false;
+      Function *Callee = Call->getCalledFunction();
+      auto *Load = dyn_cast<LoadInst>(Protected);
+      const AffineLoopAccess *Access =
+          Load ? findLoadAccess(Summary, Load) : nullptr;
+      if (!Callee || Callee->getName() != Naming::MEMORY_SAFETY_FUNCTION ||
+          Call->arg_size() != 2 || !Load || !Access ||
+          Protected->getParent() != Call->getParent() ||
+          !Call->comesBefore(Protected) ||
+          !ProtectedAccesses.insert(Protected).second ||
+          Call->getArgOperand(0)->stripPointerCasts() !=
+              Load->getPointerOperand()->stripPointerCasts())
+        return false;
+
+      uint64_t CheckedSize = 0;
+      uint64_t ExpectedSize = DL.getTypeStoreSize(Load->getType());
+      if (!getConstantAccessSize(Call->getArgOperand(1), CheckedSize) ||
+          CheckedSize != ExpectedSize)
+        return false;
+
+      Summary.accessChecks.push_back(
+          {Call, *Access, CheckedSize, nullptr, true});
+      AllowedCalls.insert(Call);
+      Required.insert(Call);
+      collectInstructionSlice(Call->getArgOperand(0), L, Required);
+      collectInstructionSlice(Call->getArgOperand(1), L, Required);
+    }
+  return true;
 }
 
 bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
@@ -937,8 +1068,12 @@ bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
     return false;
   Required.insert(InductionUpdate);
 
-  return hasOnlyReadOnlyInstructions(L, BoundBranch, {PredicateBranch}, {},
-                                     Required, Summary);
+  std::set<const CallInst *> AccessChecks;
+  if (!collectReadOnlyAccessChecks(L, Summary, AccessChecks, Required))
+    return false;
+
+  return hasOnlyReadOnlyInstructions(L, BoundBranch, {PredicateBranch},
+                                     AccessChecks, Required, Summary);
 }
 
 bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
@@ -1082,6 +1217,9 @@ bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
   if (!InductionUpdate)
     return false;
   Required.insert(InductionUpdate);
+
+  if (!collectReadOnlyAccessChecks(L, Summary, VerifierCalls, Required))
+    return false;
 
   if (!hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranches,
                                    VerifierCalls, Required, Summary))

@@ -75,12 +75,12 @@ induction, iteration-domain, affine-address and RHS representation, so
 recognition and proof remain independent of Boogie emission.
 
 This placement is also the safety boundary.  Memory-safety and overflow
-instrumentation run before Boogie generation.  A loop containing their calls
-will fail recognition, so functionalization cannot silently erase a per-
-iteration check.  The only admitted calls are up to four explicitly annotated
-`__VERIFIER_assert` or `__VERIFIER_assume` actions, for which the summary
-recreates SMACK's verifier semantics in execution order.  Source-location/debug
-intrinsics are non-semantic and may be omitted with the suppressed loop blocks.
+instrumentation run before Boogie generation.  The only admitted semantic
+calls are up to four explicitly annotated `__VERIFIER_assert` or
+`__VERIFIER_assume` actions and compiler-inserted affine memory-access checks
+whose failure behavior is re-emitted by the summary.  Every other inserted
+check remains a rejection.  Source-location/debug intrinsics are non-semantic
+and may be omitted with the suppressed loop blocks.
 
 The core soundness obligations for an accepted summary are: the SCEV trip
 count exactly describes the body iterations; the store recurrence is
@@ -147,17 +147,23 @@ read of a newly written map.  The emitter assigns the supported final
 induction state, jumps to the original exit and omits every loop block, so the
 generated Boogie has no cycle for that LLVM loop.
 
+Without `--check=memory-safety`, no access checks or access provenance metadata
+are inserted and the range-check extension is inert.  With that option, the
+memory-update form accepts constant-size checks for its affine loads and
+stores.  Loads must execute on every body iteration; a guarded store check is
+enabled by the same entry-memory guard as its lambda update.
+
 The memory-update form deliberately rejects negative or
 non-constant-step inductions, non-affine addresses, scatter, unproved aliasing,
 overlapping nonexclusive stores, loop-carried RAW dependences, nested loops,
 more than one body diamond, abnormal/multiple exits, arbitrary escaping
-scalars, all calls (including assertions/assumptions), memory intrinsics,
+scalars, all other calls (including assertions/assumptions), memory intrinsics,
 volatile/atomic accesses, EH, bytewise/singleton regions, memory-model
 debugging, and
 bit-precise/wrapped integer or pointer configurations.  Division by a variable
-or zero-capable divisor is also rejected.  Instrumented safety/overflow checks
-introduce unsupported loop effects before recognition, so functionalization
-does not erase their per-iteration failures.
+or zero-capable divisor is also rejected.  Dynamic-size, split-aggregate and
+conditionally executed load checks remain unsupported, as do overflow and
+other undefined-behavior instrumentation calls.
 
 ### Read-only predicate summaries
 
@@ -230,6 +236,44 @@ conservatively rejected.  A regression deliberately defines an unannotated
 function named `__VERIFIER_assert` with program effects and confirms that its
 loop and call remain intact.
 
+### Affine memory-safety checks
+
+`MemorySafetyChecker` now attaches one distinct paired metadata token to each
+compiler-inserted `__SMACK_check_memory_safety` call and the exact LLVM
+load/store it protects.  Recognition requires that provenance, the reserved
+callee, the original pointer modulo casts, and the DataLayout-derived constant
+access size.  A user call with the same name is not sufficient.  LLVM 14 cannot
+store a direct metadata reference to a void-typed store without producing a
+`<badref>`, which is why the implementation uses paired tokens.
+
+For every accepted check site the memory-update emitter adds a separate
+demonic branch:
+
+```boogie
+havoc k;
+assume 0 <= k && k < T && guard(k);
+call __SMACK_check_memory_safety(address(k), access_size);
+goto functional_update;
+```
+
+Boogie verification is universal over the nondeterministic branch and witness,
+so every executed affine access is checked.  A direct branch to the same
+functional update preserves the ordinary post-state and the zero-trip case;
+one branch per site avoids a product of witnesses.  The original check
+procedure and source location are retained rather than duplicating the three
+memory-model-specific allocation assertions in the functionalizer.
+
+Read-only verifier summaries admit the same encoding only when every verifier
+action is an assertion.  Safe executions then reach every affine load, while
+any earlier failing assertion already makes the original program unsafe.
+Assumptions and early-return predicate summaries are conservatively rejected
+when memory checks are present.  An exact quantified reachability-prefix
+prototype for those loops was tested, but both Boogie and Corral reported an
+infeasible later dereference in a one-byte example where `a[0] != 0` stops the
+loop immediately; the ordinary loop proves safe at bound 101.  This solver
+behavior is the current fundamental boundary rather than a reason to ship a
+false-positive-prone summary.
+
 A translation-only run of
 `aws_array_list_init_dynamic_harness.i` from AWS-C-Common now replaces the
 reachable `aws_is_mem_zeroed` loop with this acyclic summary.  No verifier was
@@ -248,8 +292,8 @@ maps and interleaved disjoint writes; rotated constant and symbolic loops;
 guarded one- and two-sided stores; nonzero starts, safe positive steps, and
 final-IV/LCSSA state.  Negative tests
 retain ordinary loops for shifted loop-carried RAW, write-before-read,
-overlapping writes, scatter, possible aliasing and an invalid instrumented
-memory access.  All tests run with loop bound 1 and inspect the generated
+overlapping writes, scatter and possible aliasing.  Summarized tests run with
+loop bound 1 and inspect the generated
 Boogie for the expected presence or absence of lambda summaries.  The suite
 also covers preserving a rejected loop's known bound and conservatively
 rejecting a complex header recurrence without recursing through it in LLVM 14
@@ -259,10 +303,19 @@ escapes, and preservation of an invalid memory access.  Verifier-loop tests
 cover safe and failing source assertions, direct verifier calls, a two-array
 predicate, LoopRotate form, macro assumptions, mixed ordered verifier sites,
 failure at a later site, rejection beyond four sites, an unannotated reserved
-name, and an instrumented invalid access.  All 135 test/memory-model
-configurations pass with Boogie at loop bound 1.  Safe, ordering-sensitive and
-failing multisite clients also produce the expected results with the updated
-`~/corral` at bound 1.
+name, and instrumented access checks.  Memory-safety tests cover safe and
+failing fills, a two-access copy, guarded-store skip/failure polarity, safe and
+failing read-only assertion scans, and conservative rejection of conditional
+loads, early returns and assumptions.  All 162 test/memory-model configurations
+pass with Boogie at loop bound 1.  The updated `~/corral` at recursion bound 1
+proves the safe fill, guarded skip and assertion scan, and finds the expected
+bugs in the out-of-bounds fill, guarded store and assertion scan.
+
+The out-of-bounds fill is intentionally valid for its first four iterations
+and fails only on iteration 4.  At recursion bound 1, baseline Corral reports
+no bug and that it reached the recursion bound; the functionalized program
+finds the allocation assertion failure at the same bound.  Thus the affine
+check summary detects a genuinely later-iteration failure without unrolling.
 
 Loop-bound warnings are deferred until semantic and memory-model eligibility
 are known.  Summarized loops no longer request a higher bound; rejected loops
@@ -334,15 +387,16 @@ remaining array cases require one of the following qualitatively new ideas:
 - nondeterministic scatter needs injectivity or address inversion;
 - reductions, sorting and in-place mutation need closed forms for loop-carried
   scalar or memory state;
-- verifier loops with data-dependent action control flow, other calls, stores,
-  or inserted access checks need a richer event summary and, for memory safety,
-  a range-validity proof over every accessed address;
+- verifier loops with data-dependent action control flow, other calls or stores
+  need a richer event summary.  Conditional loads, early returns and blocking
+  assumptions additionally need a solver-effective representation of the
+  access-event prefix;
 - arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
   typed pointwise lambda would require byte packing/unpacking support.
 
 These are now the fundamental boundaries of the exact pointwise model rather
 than small additions to its recognizer.  The recommended next experiment is a
-separate range-validity summary for instrumented affine accesses.  It must
-quantify pointer validity and allocation extent over the complete address
-image; until that encoding exists, memory-safety and undefined-behavior checks
-must remain ordinary cyclic behavior.
+solver-oriented event-prefix encoding for conditionally executed loads and
+early termination, evaluated first on the retained one-byte stopping
+regression.  General undefined-behavior checks should remain cyclic until each
+check kind has equally explicit provenance and an exact failure summary.

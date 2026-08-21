@@ -1,9 +1,10 @@
 #include "smack.h"
 
 // @expect error
-// @flag --check=memory-safety --unroll=2
-// @checkbpl awk 'index($0,"functional loop summary for bad_fill"){found=1} END{exit found}'
-// @checkout grep -F "SMACK warning: found loop"
+// @flag --check=memory-safety
+// @checkbpl grep -q "functional affine access range checks"
+// @checkbpl grep -q "functional loop summary for bad_fill"
+// @checkout awk '/SMACK warning: found loop/ {x=1} END{exit x}'
 
 static void bad_fill(unsigned *a, unsigned n) {
   for (unsigned i = 0; i < n; ++i)
@@ -12,6 +13,6 @@ static void bad_fill(unsigned *a, unsigned n) {
 
 int main(void) {
   unsigned a[4];
-  bad_fill(a + 4, 1);
+  bad_fill(a, 5);
   return 0;
 }

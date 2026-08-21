@@ -442,6 +442,28 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
       {getBlock(IsVerifier ? Summary.exit : Summary.normalExit)->getName()}));
 
   std::list<std::string> Targets = {Normal->getName()};
+  for (unsigned CheckIndex = 0; CheckIndex < Summary.accessChecks.size();
+       ++CheckIndex) {
+    const auto &Check = Summary.accessChecks[CheckIndex];
+    std::string Suffix = std::to_string(Id) + "." + std::to_string(CheckIndex);
+    std::string WitnessName = "$functional.read.check." + Suffix;
+    proc->getDeclarations().push_back(
+        Decl::variable(WitnessName, IterationType));
+    const Expr *Witness = Expr::id(WitnessName);
+
+    Block *CheckBlock = createBlock();
+    annotate(PreheaderBranch, CheckBlock);
+    CheckBlock->addStmt(Stmt::havoc(WitnessName));
+    CheckBlock->addStmt(Stmt::assume(IterationInDomain(Witness)));
+    annotate(*Check.call, CheckBlock);
+    CheckBlock->addStmt(Stmt::call(
+        Naming::MEMORY_SAFETY_FUNCTION,
+        {functionalAddress(Check.access, Witness, Summary.iterationType),
+         rep->pointerLit(static_cast<unsigned long long>(Check.size))}));
+    CheckBlock->addStmt(Stmt::goto_({Normal->getName()}));
+    Targets.push_back(CheckBlock->getName());
+  }
+
   if (IsVerifier) {
     for (unsigned ActionIndex = 0; ActionIndex < Summary.verifierActions.size();
          ++ActionIndex) {
@@ -533,6 +555,47 @@ void SmackInstGenerator::emitFunctionalLoop(
   std::string IterationType = rep->type(Summary.iterationType);
   auto Zero = rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
   const Expr *IterationCount = functionalIntegerSCEV(Summary.iterationCount);
+
+  if (!Summary.accessChecks.empty()) {
+    Block *Update = createBlock();
+    std::list<std::string> Targets = {Update->getName()};
+    for (unsigned CheckIndex = 0; CheckIndex < Summary.accessChecks.size();
+         ++CheckIndex) {
+      const auto &Check = Summary.accessChecks[CheckIndex];
+      std::string WitnessName = "$fl.check.iteration." + std::to_string(Id) +
+                                "." + std::to_string(CheckIndex);
+      proc->getDeclarations().push_back(
+          Decl::variable(WitnessName, IterationType));
+      const Expr *Witness = Expr::id(WitnessName);
+      const Expr *InDomain = Expr::and_(
+          Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+                   Witness, Zero),
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Witness, IterationCount));
+      if (Check.guard) {
+        const Expr *Guard =
+            functionalValue(Check.guard, Summary, Witness, EntryMemories);
+        const Expr *GuardHolds = Expr::eq(Guard, rep->integerLit(1ULL, 1));
+        InDomain = Expr::and_(
+            InDomain, Check.guardValue ? GuardHolds : Expr::not_(GuardHolds));
+      }
+
+      Block *CheckBlock = createBlock();
+      CheckBlock->addStmt(Stmt::havoc(WitnessName));
+      CheckBlock->addStmt(Stmt::assume(InDomain));
+      annotate(*Check.call, CheckBlock);
+      CheckBlock->addStmt(Stmt::call(
+          Naming::MEMORY_SAFETY_FUNCTION,
+          {functionalAddress(Check.access, Witness, Summary.iterationType),
+           rep->pointerLit(static_cast<unsigned long long>(Check.size))}));
+      CheckBlock->addStmt(Stmt::goto_({Update->getName()}));
+      Targets.push_back(CheckBlock->getName());
+    }
+    emit(Stmt::comment("functional affine access range checks"));
+    emit(Stmt::goto_(Targets));
+    currBlock = Update;
+  }
+
   emit(Stmt::comment(
       "functional loop summary for " +
       Summary.stores.front().store->getFunction()->getName().str()));
@@ -650,6 +713,8 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst) {
     StringRef name = Names[II.first];
+    if (name == "smack.memory.access" || name == "smack.memory.checked")
+      continue;
     if (name.find("smack.") == 0 || name.find("verifier.") == 0) {
       std::list<const Expr *> attrs;
       for (auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE;

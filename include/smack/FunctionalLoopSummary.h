@@ -66,6 +66,14 @@ struct FunctionalLoopVerifierAction {
   bool predicateIsNonzero = false;
 };
 
+struct FunctionalLoopAccessCheck {
+  llvm::CallInst *call = nullptr;
+  AffineLoopAccess access;
+  uint64_t size = 0;
+  const llvm::Value *guard = nullptr;
+  bool guardValue = true;
+};
+
 // Analysis-only description of a pointwise loop.  It deliberately contains
 // LLVM values rather than Boogie expressions so recognition and emission stay
 // separate and the emitter can use SMACK's actual memory representation.
@@ -86,6 +94,7 @@ struct FunctionalLoopSummary {
   llvm::SmallVector<FunctionalLoopLoad, 2> loads;
   llvm::SmallVector<FunctionalLoopScalarRecurrence, 2> recurrences;
   llvm::SmallVector<FunctionalLoopVerifierAction, 2> verifierActions;
+  llvm::SmallVector<FunctionalLoopAccessCheck, 2> accessChecks;
   llvm::SmallVector<llvm::PHINode *, 1> finalInductionPhis;
   const llvm::BranchInst *predicateBranch = nullptr;
   const llvm::Value *predicateValue = nullptr;
