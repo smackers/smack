@@ -440,8 +440,16 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
     // A same-object load normally reaches the loop MemoryPhi.  The recurrence
     // proofs above discharge that may-clobber; reads separated only by AA must
     // independently reach entry memory.
+    // LLVM conservatively models the reserved verifier calls as memory
+    // definitions, although SMACK lowers the one call admitted by a verifier
+    // summary without updating program memory.  The final instruction gate
+    // rejects every other call and every store.
+    bool OnlyVerifierCallMayClobber =
+        Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssertion ||
+        Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssumption;
     if (!UsesRecurrenceProof && !MSSA.isLiveOnEntryDef(Clobber) &&
-        Summary.loop->contains(Clobber->getBlock()))
+        Summary.loop->contains(Clobber->getBlock()) &&
+        !OnlyVerifierCallMayClobber)
       return false;
 
     Summary.loads.push_back({Load, Read});
@@ -783,12 +791,93 @@ bool hasEscapingLoopValue(Loop &L) {
   return false;
 }
 
-bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
-                                  MemorySSA &MSSA, DominatorTree &DT,
-                                  FunctionalLoopSummary &Summary) {
+bool initializeReadOnlySummary(Loop &L, BasicBlock *ExitingBlock,
+                               bool IncludeFinalExitingBlock,
+                               ScalarEvolution &SE,
+                               FunctionalLoopSummary &Summary) {
   if (L.getParentLoop() || !L.getSubLoops().empty() ||
       !L.isLoopSimplifyForm() || L.getNumBackEdges() != 1 ||
       !L.getLoopPreheader() || !L.getLoopLatch() || hasEscapingLoopValue(L))
+    return false;
+
+  PHINode *InductionCandidate = L.getCanonicalInductionVariable();
+  if (!InductionCandidate)
+    InductionCandidate = getSimplePositiveInductionCandidate(L);
+  if (!InductionCandidate || !hasOnlySimpleHeaderPhis(L, InductionCandidate))
+    return false;
+  for (Instruction &I : *L.getHeader())
+    if (auto *Phi = dyn_cast<PHINode>(&I)) {
+      if (Phi != InductionCandidate)
+        return false;
+    } else {
+      break;
+    }
+
+  const Value *InductionStart = nullptr;
+  const ConstantInt *InductionStep = nullptr;
+  PHINode *Induction = getPositiveInduction(L, SE, InductionCandidate,
+                                            InductionStart, InductionStep);
+  auto *IterationType =
+      Induction ? dyn_cast<IntegerType>(Induction->getType()) : nullptr;
+  if (!IterationType)
+    return false;
+
+  const SCEV *IterationCount = nullptr;
+  if (!getIterationCount(L, ExitingBlock, SE, IterationType,
+                         IncludeFinalExitingBlock, IterationCount))
+    return false;
+
+  Summary.loop = &L;
+  Summary.preheader = L.getLoopPreheader();
+  Summary.induction = Induction;
+  Summary.inductionStart = InductionStart;
+  Summary.inductionStep = InductionStep;
+  Summary.iterationType = IterationType;
+  Summary.iterationCount = IterationCount;
+  return true;
+}
+
+bool hasOnlyReadOnlyInstructions(Loop &L, const BranchInst *BoundBranch,
+                                 const BranchInst *PredicateBranch,
+                                 const CallInst *VerifierCall,
+                                 const std::set<const Instruction *> &Required,
+                                 const FunctionalLoopSummary &Summary) {
+  unsigned LoadCount = 0;
+  for (BasicBlock *BB : L.blocks()) {
+    auto *Branch = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!Branch ||
+        (Branch->isConditional() && Branch != BoundBranch &&
+         Branch != PredicateBranch) ||
+        (Branch->isUnconditional() && !L.contains(Branch->getSuccessor(0))))
+      return false;
+    for (Instruction &I : *BB) {
+      if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
+        continue;
+      if (&I == VerifierCall) {
+        if (!Required.count(&I))
+          return false;
+        continue;
+      }
+      if (auto *Load = dyn_cast<LoadInst>(&I)) {
+        if (!Load->isSimple())
+          return false;
+        ++LoadCount;
+      } else if (!isa<PHINode>(I) && !isa<BinaryOperator>(I) &&
+                 !isa<CastInst>(I) && !isa<GetElementPtrInst>(I) &&
+                 !isa<ICmpInst>(I) && !isa<SelectInst>(I)) {
+        return false;
+      }
+      if (!Required.count(&I))
+        return false;
+    }
+  }
+  return LoadCount != 0 && LoadCount == Summary.loads.size();
+}
+
+bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
+                                  MemorySSA &MSSA, DominatorTree &DT,
+                                  FunctionalLoopSummary &Summary) {
+  if (!initializeReadOnlySummary(L, L.getHeader(), false, SE, Summary))
     return false;
 
   SmallVector<BasicBlock *, 2> ExitingBlocks;
@@ -822,42 +911,9 @@ bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
   if (isa<PHINode>(&NormalExit->front()) || isa<PHINode>(&FailureExit->front()))
     return false;
 
-  PHINode *InductionCandidate = L.getCanonicalInductionVariable();
-  if (!InductionCandidate)
-    InductionCandidate = getSimplePositiveInductionCandidate(L);
-  if (!InductionCandidate || !hasOnlySimpleHeaderPhis(L, InductionCandidate))
-    return false;
-  for (Instruction &I : *L.getHeader())
-    if (auto *Phi = dyn_cast<PHINode>(&I)) {
-      if (Phi != InductionCandidate)
-        return false;
-    } else {
-      break;
-    }
-
-  const Value *InductionStart = nullptr;
-  const ConstantInt *InductionStep = nullptr;
-  PHINode *Induction = getPositiveInduction(L, SE, InductionCandidate,
-                                            InductionStart, InductionStep);
-  auto *IterationType =
-      Induction ? dyn_cast<IntegerType>(Induction->getType()) : nullptr;
-  if (!IterationType)
-    return false;
-
-  const SCEV *IterationCount = nullptr;
-  if (!getIterationCount(L, L.getHeader(), SE, IterationType, false,
-                         IterationCount))
-    return false;
-
   Summary.kind = FunctionalLoopSummary::Kind::ReadOnlyPredicate;
-  Summary.loop = &L;
-  Summary.preheader = L.getLoopPreheader();
-  Summary.induction = Induction;
-  Summary.inductionStart = InductionStart;
-  Summary.inductionStep = InductionStep;
-  Summary.iterationType = IterationType;
-  Summary.iterationCount = IterationCount;
   Summary.predicateBranch = PredicateBranch;
+  Summary.predicateValue = PredicateBranch->getCondition();
   Summary.normalExit = NormalExit;
   Summary.failureExit = FailureExit;
   Summary.continueConditionValue = ContinueOnTrue;
@@ -868,42 +924,134 @@ bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
   std::set<const Instruction *> Required;
   collectInstructionSlice(BoundBranch->getCondition(), L, Required);
   collectInstructionSlice(PredicateBranch->getCondition(), L, Required);
-  Required.insert(Induction);
+  Required.insert(Summary.induction);
   BasicBlock *Incoming = nullptr;
   BasicBlock *Backedge = nullptr;
   if (!L.getIncomingAndBackEdge(Incoming, Backedge))
     return false;
-  auto *InductionUpdate =
-      dyn_cast<Instruction>(Induction->getIncomingValueForBlock(Backedge));
+  auto *InductionUpdate = dyn_cast<Instruction>(
+      Summary.induction->getIncomingValueForBlock(Backedge));
   if (!InductionUpdate)
     return false;
   Required.insert(InductionUpdate);
 
-  unsigned LoadCount = 0;
-  for (BasicBlock *BB : L.blocks()) {
-    auto *Branch = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!Branch ||
-        (Branch->isConditional() && Branch != BoundBranch &&
-         Branch != PredicateBranch) ||
-        (Branch->isUnconditional() && !L.contains(Branch->getSuccessor(0))))
-      return false;
+  return hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranch, nullptr,
+                                     Required, Summary);
+}
+
+bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
+                                 MemorySSA &MSSA, DominatorTree &DT,
+                                 FunctionalLoopSummary &Summary) {
+  BasicBlock *ExitingBlock = L.getExitingBlock();
+  if (!ExitingBlock ||
+      !initializeReadOnlySummary(L, ExitingBlock, ExitingBlock != L.getHeader(),
+                                 SE, Summary) ||
+      !L.getExitBlock())
+    return false;
+
+  auto *BoundBranch = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
+  BasicBlock *BodyEntry = nullptr;
+  BasicBlock *NormalExit = nullptr;
+  bool BodyOnTrue = false;
+  if (!BoundBranch ||
+      !getInsideAndOutsideSuccessors(L, *BoundBranch, BodyEntry, NormalExit,
+                                     BodyOnTrue) ||
+      NormalExit != L.getExitBlock() || isa<PHINode>(&NormalExit->front()))
+    return false;
+
+  CallInst *VerifierCall = nullptr;
+  bool IsAssumption = false;
+  for (BasicBlock *BB : L.blocks())
     for (Instruction &I : *BB) {
-      if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
+      auto *Call = dyn_cast<CallInst>(&I);
+      Function *Callee = Call ? Call->getCalledFunction() : nullptr;
+      if (!Callee || (Callee->getName() != "__VERIFIER_assert" &&
+                      Callee->getName() != "__VERIFIER_assume"))
         continue;
-      if (auto *Load = dyn_cast<LoadInst>(&I)) {
-        if (!Load->isSimple())
-          return false;
-        ++LoadCount;
-      } else if (!isa<PHINode>(I) && !isa<BinaryOperator>(I) &&
-                 !isa<CastInst>(I) && !isa<GetElementPtrInst>(I) &&
-                 !isa<ICmpInst>(I) && !isa<SelectInst>(I)) {
+      if (VerifierCall)
         return false;
-      }
-      if (!Required.count(&I))
-        return false;
+      VerifierCall = Call;
+      IsAssumption = Callee->getName() == "__VERIFIER_assume";
     }
+  if (!VerifierCall || VerifierCall->arg_size() != 1 ||
+      !VerifierCall->getArgOperand(0)->getType()->isIntegerTy())
+    return false;
+
+  BasicBlock *VerifierBlock = VerifierCall->getParent();
+  BasicBlock *PredicateExecutionBlock = VerifierBlock;
+  const Value *PredicateValue = VerifierCall->getArgOperand(0);
+  BranchInst *PredicateBranch = nullptr;
+  bool ContinueConditionValue = true;
+  bool PredicateIsNonzero = true;
+  auto *AssertedConstant = dyn_cast<ConstantInt>(PredicateValue);
+  if (!IsAssumption && AssertedConstant && AssertedConstant->isZero()) {
+    BasicBlock *PredicateBlock = VerifierBlock->getSinglePredecessor();
+    PredicateBranch =
+        PredicateBlock ? dyn_cast<BranchInst>(PredicateBlock->getTerminator())
+                       : nullptr;
+    auto *AssertionBranch =
+        dyn_cast<BranchInst>(VerifierBlock->getTerminator());
+    if (!PredicateBranch || !PredicateBranch->isConditional() ||
+        !AssertionBranch || !AssertionBranch->isUnconditional() ||
+        !L.contains(PredicateBlock) ||
+        !DT.dominates(BodyEntry, PredicateBlock) ||
+        !DT.dominates(PredicateBlock, L.getLoopLatch()))
+      return false;
+    PredicateExecutionBlock = PredicateBlock;
+
+    unsigned AssertionSuccessor =
+        PredicateBranch->getSuccessor(0) == VerifierBlock   ? 0
+        : PredicateBranch->getSuccessor(1) == VerifierBlock ? 1
+                                                            : 2;
+    if (AssertionSuccessor == 2)
+      return false;
+    BasicBlock *ContinueBlock =
+        PredicateBranch->getSuccessor(1 - AssertionSuccessor);
+    if (!L.contains(ContinueBlock) ||
+        AssertionBranch->getSuccessor(0) != ContinueBlock ||
+        !DT.dominates(ContinueBlock, L.getLoopLatch()))
+      return false;
+    PredicateValue = PredicateBranch->getCondition();
+    ContinueConditionValue = AssertionSuccessor != 0;
+    PredicateIsNonzero = false;
+  } else if (!DT.dominates(VerifierCall, L.getLoopLatch()->getTerminator())) {
+    return false;
   }
-  return LoadCount != 0 && LoadCount == Summary.loads.size();
+  if (ExitingBlock != L.getHeader() &&
+      !DT.dominates(PredicateExecutionBlock, ExitingBlock))
+    return false;
+
+  Summary.kind = IsAssumption ? FunctionalLoopSummary::Kind::ReadOnlyAssumption
+                              : FunctionalLoopSummary::Kind::ReadOnlyAssertion;
+  Summary.exit = NormalExit;
+  Summary.predicateBranch = PredicateBranch;
+  Summary.predicateValue = PredicateValue;
+  Summary.verifierCall = VerifierCall;
+  Summary.continueConditionValue = ContinueConditionValue;
+  Summary.predicateIsNonzero = PredicateIsNonzero;
+
+  if (!validateRhs(PredicateValue, Summary, SE, AA, MSSA, DT))
+    return false;
+
+  std::set<const Instruction *> Required;
+  collectInstructionSlice(BoundBranch->getCondition(), L, Required);
+  collectInstructionSlice(PredicateValue, L, Required);
+  Required.insert(Summary.induction);
+  Required.insert(VerifierCall);
+  BasicBlock *Incoming = nullptr;
+  BasicBlock *Backedge = nullptr;
+  if (!L.getIncomingAndBackEdge(Incoming, Backedge))
+    return false;
+  auto *InductionUpdate = dyn_cast<Instruction>(
+      Summary.induction->getIncomingValueForBlock(Backedge));
+  if (!InductionUpdate)
+    return false;
+  Required.insert(InductionUpdate);
+
+  if (!hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranch,
+                                   VerifierCall, Required, Summary))
+    return false;
+  return true;
 }
 
 } // namespace
@@ -921,8 +1069,13 @@ FunctionalLoopSummaryAnalysis::analyze(Function &F, LoopInfo &LI,
       continue;
     }
     FunctionalLoopSummary ReadSummary;
-    if (analyzeReadOnlyPredicateLoop(*L, SE, AA, MSSA, DT, ReadSummary))
+    if (analyzeReadOnlyPredicateLoop(*L, SE, AA, MSSA, DT, ReadSummary)) {
       Result.push_back(std::move(ReadSummary));
+      continue;
+    }
+    FunctionalLoopSummary VerifierSummary;
+    if (analyzeReadOnlyVerifierLoop(*L, SE, AA, MSSA, DT, VerifierSummary))
+      Result.push_back(std::move(VerifierSummary));
   }
   return Result;
 }

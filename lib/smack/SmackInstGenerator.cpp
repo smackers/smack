@@ -88,6 +88,9 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
       F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
   for (auto &Summary : Candidates) {
+    if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssertion &&
+        !SmackOptions::shouldCheckFunction(F.getName()))
+      continue;
     bool SupportedMemory = true;
     for (const auto &Store : Summary.stores)
       SupportedMemory &= rep->canFunctionalizeMemory(
@@ -95,7 +98,7 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
           Store.store->getValueOperand()->getType());
     for (const auto &Load : Summary.loads)
       SupportedMemory &=
-          Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate
+          Summary.kind != FunctionalLoopSummary::Kind::MemoryUpdate
               ? rep->canFunctionalizeRead(Load.load->getPointerOperand(),
                                           Load.load->getType())
               : rep->canFunctionalizeMemory(Load.load->getPointerOperand(),
@@ -108,10 +111,22 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
     auto *Branch = dyn_cast<BranchInst>(Summary.preheader->getTerminator());
     if (!Branch)
       continue;
-    if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate) {
-      if (!Branch->isUnconditional() ||
-          Branch->getSuccessor(0) != Summary.loop->getHeader())
-        continue;
+    if (Summary.kind != FunctionalLoopSummary::Kind::MemoryUpdate) {
+      if (Branch->isUnconditional()) {
+        if (Branch->getSuccessor(0) != Summary.loop->getHeader())
+          continue;
+      } else {
+        bool HasHeaderSuccessor = false;
+        bool HasExitSuccessor = false;
+        for (BasicBlock *Successor : Branch->successors()) {
+          HasHeaderSuccessor |= Successor == Summary.loop->getHeader();
+          HasExitSuccessor |= Successor == Summary.exit;
+        }
+        if ((Summary.kind != FunctionalLoopSummary::Kind::ReadOnlyAssertion &&
+             Summary.kind != FunctionalLoopSummary::Kind::ReadOnlyAssumption) ||
+            !HasHeaderSuccessor || !HasExitSuccessor)
+          continue;
+      }
       summariesByPreheader[Branch] = &Summary;
       suppressedBlocks.insert(Summary.loop->block_begin(),
                               Summary.loop->block_end());
@@ -319,9 +334,15 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
   }
 
   auto ContinueAt = [&](const Expr *Iteration) {
-    const Expr *Condition =
-        functionalValue(Summary.predicateBranch->getCondition(), Summary,
-                        Iteration, CurrentMemories);
+    const Expr *Condition = functionalValue(Summary.predicateValue, Summary,
+                                            Iteration, CurrentMemories);
+    if (Summary.predicateIsNonzero) {
+      auto *ConditionType =
+          cast<IntegerType>(Summary.predicateValue->getType());
+      return Expr::neq(
+          Condition,
+          rep->integerLit(0ULL, ConditionType->getIntegerBitWidth()));
+    }
     const Expr *ConditionIsTrue = Expr::eq(Condition, rep->integerLit(1ULL, 1));
     return Summary.continueConditionValue ? ConditionIsTrue
                                           : Expr::not_(ConditionIsTrue);
@@ -370,24 +391,44 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
                    Expr::impl(IterationInDomain(ExactIteration),
                               ContinueAt(ExactIteration)));
 
+  bool IsAssertion =
+      Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssertion;
+  bool IsAssumption =
+      Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssumption;
+  emit(Stmt::comment(std::string("functional read-only ") +
+                     (IsAssertion    ? "assertion "
+                      : IsAssumption ? "assumption "
+                                     : "") +
+                     "loop summary for " +
+                     Summary.loop->getHeader()->getParent()->getName().str()));
+  Block *Normal = createBlock();
+  annotate(PreheaderBranch, Normal);
+  Normal->addStmt(Stmt::assume(AllContinue));
+  Normal->addStmt(Stmt::assume(TriggeredAllContinue));
+  Normal->addStmt(Stmt::goto_(
+      {getBlock(IsAssertion || IsAssumption ? Summary.exit : Summary.normalExit)
+           ->getName()}));
+  if (IsAssumption) {
+    emit(Stmt::goto_({Normal->getName()}));
+    return;
+  }
+
   std::string WitnessName = "$functional.read.witness." + std::to_string(Id);
   proc->getDeclarations().push_back(Decl::variable(WitnessName, IterationType));
   const Expr *Witness = Expr::id(WitnessName);
   const Expr *WitnessesFailure =
       Expr::and_(IterationInDomain(Witness), Expr::not_(ContinueAt(Witness)));
-
-  emit(Stmt::comment("functional read-only loop summary for " +
-                     Summary.predicateBranch->getFunction()->getName().str()));
-  Block *Normal = createBlock();
-  annotate(PreheaderBranch, Normal);
-  Normal->addStmt(Stmt::assume(AllContinue));
-  Normal->addStmt(Stmt::assume(TriggeredAllContinue));
-  Normal->addStmt(Stmt::goto_({getBlock(Summary.normalExit)->getName()}));
   Block *Failure = createBlock();
   annotate(PreheaderBranch, Failure);
   Failure->addStmt(Stmt::havoc(WitnessName));
   Failure->addStmt(Stmt::assume(WitnessesFailure));
-  Failure->addStmt(Stmt::goto_({getBlock(Summary.failureExit)->getName()}));
+  if (IsAssertion) {
+    annotate(*Summary.verifierCall, Failure);
+    Failure->addStmt(Stmt::assert_(Expr::lit(false)));
+    Failure->addStmt(Stmt::goto_({getBlock(Summary.exit)->getName()}));
+  } else {
+    Failure->addStmt(Stmt::goto_({getBlock(Summary.failureExit)->getName()}));
+  }
   emit(Stmt::goto_({Normal->getName(), Failure->getName()}));
 }
 
@@ -671,7 +712,7 @@ void SmackInstGenerator::visitBranchInst(llvm::BranchInst &bi) {
 
   auto Summary = summariesByPreheader.find(&bi);
   if (Summary != summariesByPreheader.end()) {
-    if (Summary->second->kind == FunctionalLoopSummary::Kind::ReadOnlyPredicate)
+    if (Summary->second->kind != FunctionalLoopSummary::Kind::MemoryUpdate)
       emitReadOnlyFunctionalLoop(*Summary->second, bi);
     else
       emitFunctionalLoop(*Summary->second);

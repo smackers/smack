@@ -67,24 +67,27 @@ emission, inside the existing module/instruction generators:
    destination map a lambda whose false branch reads the destination snapshot.
    RHS loads read only source snapshots.
 
-The recognizer deliberately keeps two summary forms separate.  Memory-update
-loops produce map lambdas.  Pure early-exit checks produce a quantified
-predicate and a failure witness.  Both consume the same SCEV induction,
-iteration-domain, affine-address and RHS representation, so recognition and
-proof remain independent of Boogie emission.
+The recognizer deliberately keeps three semantic summary forms separate.
+Memory-update loops produce map lambdas.  Pure early-exit checks produce a
+quantified predicate and a failure witness.  Read-only verifier loops produce
+an exact quantified assertion or assumption.  All three consume the same SCEV
+induction, iteration-domain, affine-address and RHS representation, so
+recognition and proof remain independent of Boogie emission.
 
 This placement is also the safety boundary.  Memory-safety and overflow
 instrumentation run before Boogie generation.  A loop containing their calls
 will fail recognition, so functionalization cannot silently erase a per-
-iteration assertion.  Source-location/debug intrinsics are non-semantic and
-may be omitted with the suppressed loop blocks.
+iteration check.  The only admitted calls are a single reserved
+`__VERIFIER_assert` or `__VERIFIER_assume`, for which the summary explicitly
+recreates SMACK's verifier semantics.  Source-location/debug intrinsics are
+non-semantic and may be omitted with the suppressed loop blocks.
 
 The core soundness obligations for an accepted summary are: the SCEV trip
 count exactly describes the body iterations; the store recurrence is
 injective (`W(j) != W(k)` for `j != k`); every RHS load denotes loop-entry
 memory (`j < k => W(j) != R(k)`); the emitted expression uses the same SMACK
-integer, pointer, and typed-memory operations as ordinary lowering; and no
-observable scalar or control-flow effect is discarded.
+integer, pointer, and typed-memory operations as ordinary lowering; and every
+observable scalar, control-flow, assume, or error effect is preserved.
 
 ## Implemented prototype
 
@@ -144,12 +147,13 @@ read of a newly written map.  The emitter assigns the supported final
 induction state, jumps to the original exit and omits every loop block, so the
 generated Boogie has no cycle for that LLVM loop.
 
-The memory-update implementation deliberately rejects negative or
+The memory-update form deliberately rejects negative or
 non-constant-step inductions, non-affine addresses, scatter, unproved aliasing,
 overlapping nonexclusive stores, loop-carried RAW dependences, nested loops,
 more than one body diamond, abnormal/multiple exits, arbitrary escaping
-scalars, calls, assertions/assumptions, memory intrinsics, volatile/atomic
-accesses, EH, bytewise/singleton regions, memory-model debugging, and
+scalars, all calls (including assertions/assumptions), memory intrinsics,
+volatile/atomic accesses, EH, bytewise/singleton regions, memory-model
+debugging, and
 bit-precise/wrapped integer or pointer configurations.  Division by a variable
 or zero-capable divisor is also rejected.  Instrumented safety/overflow checks
 introduce unsupported loop effects before recognition, so functionalization
@@ -182,6 +186,45 @@ even though those regions remain deliberately forbidden for lambda writes.
 This distinction is important for AWS's `aws_is_mem_zeroed`, which views a
 mixed-field struct through `uint8_t *`.
 
+### Read-only verifier summaries
+
+The third exact form handles a deliberately narrow verifier loop:
+
+```c
+for (unsigned i = 0; i < n; ++i)
+  __VERIFIER_assert(P(entry_memory, i));
+```
+
+and the corresponding `__VERIFIER_assume` loop.  Source `assert(P)` is also
+accepted in the LLVM 14 shape emitted by SMACK's `assert.h`: a predicate branch
+whose failing arm calls `__VERIFIER_assert(0)` and then rejoins.  Direct
+nonzero-valued verifier conditions are accepted without requiring that branch
+shape.
+
+The loop must have one exact SCEV trip count, one positive affine induction,
+one verifier call, at least one simple affine load, no stores, no escaping
+values, no other calls or conditionals, no exit PHI, and no abnormal exit.
+Top-tested loops and LoopRotate bottom-tested loops are supported.  In the
+bottom-tested case the verifier predicate must dominate the exit test, and the
+zero-trip preheader guard is retained, so adding one to SCEV's backedge count
+does not invent an execution.
+
+For an assertion, the normal branch assumes `forall k in [0,T). P(k)`.  The
+error branch havocs an in-domain witness satisfying `!P(k)`, emits an
+`assert false` annotated with the original source location, and then targets
+the original exit.  Choosing an arbitrary failing iteration rather than the
+first one is exact because the accepted body is read-only and has no other
+observable effect.  An assumption loop emits only the universal assumption;
+it has no failure witness or error branch.  Both forms add a redundant
+pointer-triggered universal formula, as the early-return summary does, so a
+client read can instantiate the fact without solving affine address inversion.
+
+This treatment relies on SMACK's reserved verifier-function contract for the
+names `__VERIFIER_assert` and `__VERIFIER_assume`.  Arbitrary user-defined
+functions with those reserved names are outside the supported input contract.
+An explicit LLVM attribute or metadata marker would be preferable before
+generalizing the call whitelist.
+
 A translation-only run of
 `aws_array_list_init_dynamic_harness.i` from AWS-C-Common now replaces the
 reachable `aws_is_mem_zeroed` loop with this acyclic summary.  No verifier was
@@ -207,9 +250,13 @@ also covers preserving a rejected loop's known bound and conservatively
 rejecting a complex header recurrence without recursing through it in LLVM 14
 ScalarEvolution.  Read-only tests cover symbolic `all_zero`, two-array
 equality, a type-collapsed struct byte scan, rejection when the failing index
-escapes, and preservation of an invalid memory access.  All 102
-test/memory-model configurations pass with Boogie; the symbolic read-only
-client also passes with the updated `~/corral` at loop bound 1.
+escapes, and preservation of an invalid memory access.  Verifier-loop tests
+cover safe and failing source assertions, a direct `__VERIFIER_assert`, a
+two-array predicate, a direct `__VERIFIER_assume`, LoopRotate form, and
+rejection of an instrumented invalid access.  All 120 test/memory-model
+configurations pass with Boogie at loop bound 1.  Safe and failing assertion
+clients also produce the expected results with the updated `~/corral` at bound
+1.
 
 Loop-bound warnings are deferred until semantic and memory-model eligibility
 are known.  Summarized loops no longer request a higher bound; rejected loops
@@ -223,6 +270,15 @@ lambda proves the assertions (1.13 s).  A symbolic-`n` fill has the same
 qualitative result.  Symbolic `a[i] = a[i] + 1` changes from 16,384 lines /
 712,133 bytes to 16,332 lines / 710,485 bytes; baseline reaches bound 1
 (0.92 s), whereas the lambda proves (1.25 s).
+
+The larger SV-COMP Arrays example
+`array-examples/standard_init8_ground-2.i` contains eight 100,000-iteration
+fills followed by a 100,000-iteration direct assertion loop.  Baseline Boogie
+has 16,533 lines / 717,901 bytes and retains all nine source loops.
+Functionalized Boogie has 16,261 lines / 676,623 bytes, eight lambdas, two
+universal assertion formulas and no source-loop cycle.  The updated
+`~/corral` reports no error at bound 1; the only remaining loop warning is the
+unreachable library implementation of `abort`.
 
 The official SV-COMP frontend (`-x svcomp --verifier=svcomp`) was used for the
 suite study.  That frontend itself enables `--static-unroll`, so LLVM loop
@@ -272,16 +328,15 @@ remaining array cases require one of the following qualitatively new ideas:
 - nondeterministic scatter needs injectivity or address inversion;
 - reductions, sorting and in-place mutation need closed forms for loop-carried
   scalar or memory state;
-- read-only assertion/assumption loops need quantified safety summaries that
-  preserve failure paths and instrumentation rather than a Boolean return
-  summary;
+- verifier loops with multiple assertion/assumption sites, other calls, stores,
+  or inserted access checks need an ordered verifier-action summary and, for
+  memory safety, a range-validity proof over every accessed address;
 - arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
   typed pointwise lambda would require byte packing/unpacking support.
 
-These are the current fundamental boundaries of this prototype rather than
-small additions to its pointwise recognizer.  The recommended next experiment
-is a quantified read-only assertion summary with an explicit, preserved error
-edge.  It would address why many successfully functionalized initialization
-loops still time out, but should be attempted only after defining how each
-SMACK-inserted safety/undefined-behavior check is represented over the whole
-iteration domain.
+These are now the fundamental boundaries of the exact pointwise model rather
+than small additions to its recognizer.  The recommended next experiment is to
+mark verifier primitives explicitly in LLVM and represent a short ordered list
+of pure assertion/assumption sites.  Instrumented memory-safety and undefined-
+behavior checks should remain rejected until their per-iteration validity can
+be expressed and tested over the complete address image.
