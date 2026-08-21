@@ -150,8 +150,10 @@ generated Boogie has no cycle for that LLVM loop.
 Without `--check=memory-safety`, no access checks or access provenance metadata
 are inserted and the range-check extension is inert.  With that option, the
 memory-update form accepts constant-size checks for its affine loads and
-stores.  Loads must execute on every body iteration; a guarded store check is
-enabled by the same entry-memory guard as its lambda update.
+stores.  A load may execute on every body iteration or on one arm of the
+already-supported single diamond.  Conditional load and store checks are
+enabled by that arm's exact entry-memory guard, with true and false polarity
+preserved.
 
 The memory-update form deliberately rejects negative or
 non-constant-step inductions, non-affine addresses, scatter, unproved aliasing,
@@ -161,9 +163,9 @@ scalars, all other calls (including assertions/assumptions), memory intrinsics,
 volatile/atomic accesses, EH, bytewise/singleton regions, memory-model
 debugging, and
 bit-precise/wrapped integer or pointer configurations.  Division by a variable
-or zero-capable divisor is also rejected.  Dynamic-size, split-aggregate and
-conditionally executed load checks remain unsupported, as do overflow and
-other undefined-behavior instrumentation calls.
+or zero-capable divisor is also rejected.  Dynamic-size and split-aggregate
+checks remain unsupported, as do conditionals beyond the single supported
+diamond, overflow and other undefined-behavior instrumentation calls.
 
 ### Read-only predicate summaries
 
@@ -267,12 +269,14 @@ Read-only verifier summaries admit the same encoding only when every verifier
 action is an assertion.  Safe executions then reach every affine load, while
 any earlier failing assertion already makes the original program unsafe.
 Assumptions and early-return predicate summaries are conservatively rejected
-when memory checks are present.  An exact quantified reachability-prefix
-prototype for those loops was tested, but both Boogie and Corral reported an
-infeasible later dereference in a one-byte example where `a[0] != 0` stops the
-loop immediately; the ordinary loop proves safe at bound 101.  This solver
-behavior is the current fundamental boundary rather than a reason to ship a
-false-positive-prone summary.
+when memory checks are present.  Two exact reachability-prefix encodings were
+tested: a universal "every earlier iteration continues" constraint and its
+logically equivalent "no earlier stopping witness exists" form.  Both Boogie
+and Corral reported an infeasible later dereference in a one-byte example where
+`a[0] != 0` stops the loop immediately; the ordinary loop proves safe at bound
+101.  Rephrasing the quantifier does not solve the required induction over an
+arbitrary symbolic prefix.  This solver behavior is the current fundamental
+boundary rather than a reason to ship a false-positive-prone summary.
 
 A translation-only run of
 `aws_array_list_init_dynamic_harness.i` from AWS-C-Common now replaces the
@@ -304,12 +308,14 @@ cover safe and failing source assertions, direct verifier calls, a two-array
 predicate, LoopRotate form, macro assumptions, mixed ordered verifier sites,
 failure at a later site, rejection beyond four sites, an unannotated reserved
 name, and instrumented access checks.  Memory-safety tests cover safe and
-failing fills, a two-access copy, guarded-store skip/failure polarity, safe and
-failing read-only assertion scans, and conservative rejection of conditional
-loads, early returns and assumptions.  All 162 test/memory-model configurations
-pass with Boogie at loop bound 1.  The updated `~/corral` at recursion bound 1
-proves the safe fill, guarded skip and assertion scan, and finds the expected
-bugs in the out-of-bounds fill, guarded store and assertion scan.
+failing fills, a two-access copy, guarded-store skip/failure polarity, guarded
+conditional RHS loads in both branch arms, safe and failing read-only assertion
+scans, and conservative rejection of early returns and assumptions.  All 171
+test/memory-model configurations pass with their configured Boogie bounds;
+every summarized case uses bound 1.  The updated `~/corral` at recursion bound
+1 proves the safe fill, guarded skip, conditional load skip and assertion scan,
+and finds the expected bugs in the out-of-bounds fill, guarded store,
+conditional load and assertion scan.
 
 The out-of-bounds fill is intentionally valid for its first four iterations
 and fails only on iteration 4.  At recursion bound 1, baseline Corral reports
@@ -388,15 +394,16 @@ remaining array cases require one of the following qualitatively new ideas:
 - reductions, sorting and in-place mutation need closed forms for loop-carried
   scalar or memory state;
 - verifier loops with data-dependent action control flow, other calls or stores
-  need a richer event summary.  Conditional loads, early returns and blocking
-  assumptions additionally need a solver-effective representation of the
-  access-event prefix;
+  need a richer event summary.  Early returns and blocking assumptions
+  additionally need a solver-effective representation of the access-event
+  prefix;
 - arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
   typed pointwise lambda would require byte packing/unpacking support.
 
 These are now the fundamental boundaries of the exact pointwise model rather
-than small additions to its recognizer.  The recommended next experiment is a
-solver-oriented event-prefix encoding for conditionally executed loads and
-early termination, evaluated first on the retained one-byte stopping
-regression.  General undefined-behavior checks should remain cyclic until each
-check kind has equally explicit provenance and an exact failure summary.
+than small additions to its recognizer.  The next early-termination experiment
+would need a qualitatively different inductive prefix abstraction—such as a
+separately verified lemma/procedure contract or backend support for a recursive
+prefix operator—evaluated first on the retained one-byte stopping regression.
+General undefined-behavior checks should remain cyclic until each check kind
+has equally explicit provenance and an exact failure summary.

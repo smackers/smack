@@ -1,21 +1,20 @@
 #include "smack.h"
 
-// @expect verified
+// @expect error
 // @flag --check=memory-safety
 // @checkbpl grep -q "functional affine access range checks"
 // @checkbpl grep -q "functional loop summary for main"
 // @checkout awk '/SMACK warning: found loop/ {x=1} END{exit x}'
 
 int main(void) {
-  unsigned dst[4];
-  unsigned src[4];
-  unsigned enabled[4];
-  unsigned n = __VERIFIER_nondet_unsigned();
-  __VERIFIER_assume(n <= 4);
+  unsigned dst[1];
+  unsigned src[1];
+  unsigned enabled[1];
+  enabled[0] = 1;
 
-  for (unsigned i = 0; i < n; ++i)
+  for (unsigned i = 0; i < 1; ++i)
     if (enabled[i] != 0)
-      dst[i] = src[i];
+      dst[i] = (src + 1)[i];
 
   return 0;
 }

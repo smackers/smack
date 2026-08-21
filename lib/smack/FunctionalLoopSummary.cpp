@@ -581,21 +581,23 @@ bool storeExecutesBeforeExitTest(Loop &L, const StoreInst &Store,
   return true;
 }
 
-void getStoreGuard(const StoreInst &Store, const SupportedControlFlow &Flow,
-                   DominatorTree &DT, const Value *&Guard, bool &GuardValue) {
+void getExecutionGuard(const Instruction &I, const SupportedControlFlow &Flow,
+                       DominatorTree &DT, const Value *&Guard,
+                       bool &GuardValue) {
   Guard = nullptr;
   GuardValue = true;
   if (!Flow.bodyCondition)
     return;
 
-  const BasicBlock *StoreBlock = Store.getParent();
-  if (DT.dominates(Flow.merge, StoreBlock))
+  const BasicBlock *InstructionBlock = I.getParent();
+  if (DT.dominates(Flow.merge, InstructionBlock))
     return;
-  for (unsigned I = 0; I < 2; ++I) {
-    const BasicBlock *Successor = Flow.bodyCondition->getSuccessor(I);
-    if (Successor != Flow.merge && DT.dominates(Successor, StoreBlock)) {
+  for (unsigned SuccessorIndex = 0; SuccessorIndex < 2; ++SuccessorIndex) {
+    const BasicBlock *Successor =
+        Flow.bodyCondition->getSuccessor(SuccessorIndex);
+    if (Successor != Flow.merge && DT.dominates(Successor, InstructionBlock)) {
       Guard = Flow.bodyCondition->getCondition();
-      GuardValue = I == 0;
+      GuardValue = SuccessorIndex == 0;
       return;
     }
   }
@@ -660,7 +662,8 @@ bool getConstantAccessSize(const Value *V, uint64_t &Size) {
   return true;
 }
 
-bool collectMemoryAccessChecks(Loop &L, DominatorTree &DT,
+bool collectMemoryAccessChecks(Loop &L, const SupportedControlFlow &Flow,
+                               DominatorTree &DT,
                                FunctionalLoopSummary &Summary) {
   std::set<const Instruction *> ProtectedAccesses;
   const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
@@ -688,10 +691,13 @@ bool collectMemoryAccessChecks(Loop &L, DominatorTree &DT,
         Pointer = Load->getPointerOperand();
         AccessType = Load->getType();
         const AffineLoopAccess *SummaryLoad = findLoadAccess(Summary, Load);
-        if (!SummaryLoad ||
-            !DT.dominates(Protected, L.getLoopLatch()->getTerminator()))
+        if (!SummaryLoad)
           return false;
         Access = *SummaryLoad;
+        getExecutionGuard(*Protected, Flow, DT, Guard, GuardValue);
+        if (!Guard &&
+            !DT.dominates(Protected, L.getLoopLatch()->getTerminator()))
+          return false;
       } else if (auto *Store = dyn_cast<StoreInst>(Protected)) {
         Pointer = Store->getPointerOperand();
         AccessType = Store->getValueOperand()->getType();
@@ -803,7 +809,7 @@ bool analyzeMemoryLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
       return false;
     const Value *Guard = nullptr;
     bool GuardValue = true;
-    getStoreGuard(*Store, Flow, DT, Guard, GuardValue);
+    getExecutionGuard(*Store, Flow, DT, Guard, GuardValue);
     Summary.stores.push_back({Store, Write, Guard, GuardValue});
   }
 
@@ -832,7 +838,7 @@ bool analyzeMemoryLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
     if (!validateRhs(Store.store->getValueOperand(), Summary, SE, AA, MSSA, DT))
       return false;
   }
-  return collectMemoryAccessChecks(L, DT, Summary);
+  return collectMemoryAccessChecks(L, Flow, DT, Summary);
 }
 
 bool getInsideAndOutsideSuccessors(Loop &L, BranchInst &Branch,
