@@ -285,8 +285,13 @@ bool SmackRep::canFunctionalizeMemory(const llvm::Value *pointer,
                                       const llvm::Type *valueType) {
   unsigned R = regions->idx(pointer);
   const auto &Region = regions->get(R);
+  // A region whose source types collapsed is represented by memType as an i8
+  // map.  An i8 point update is therefore still the ordinary store semantics;
+  // wider updates would require byte packing and remain unsupported.
   return !Region.isSingleton() && !Region.bytewiseAccess() &&
-         Region.getType() == valueType && !valueType->isFloatingPointTy();
+         (Region.getType() == valueType ||
+          (!Region.getType() && valueType->isIntegerTy(8))) &&
+         !valueType->isFloatingPointTy();
 }
 
 bool SmackRep::canFunctionalizeRead(const llvm::Value *pointer,

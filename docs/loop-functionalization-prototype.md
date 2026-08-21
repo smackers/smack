@@ -41,9 +41,11 @@ SMACK memory is not one source-level array per object.  `Regions` partitions
 LLVM memory and `SmackRep` declares `$M.<region>` as either a scalar singleton,
 a typed `[ref] T` map, or a byte map.  Loads and stores use typed helpers such
 as `$load.i32(M,p)` and `$store.i32(M,p,v)`; bytewise and unsafe variants have
-different encodings.  A first map-lambda prototype should consequently accept
-only non-singleton, non-bytewise typed regions and update the existing
-`$M.<region>` rather than inventing a new array model.
+different encodings.  Map-lambda summaries consequently update the existing
+`$M.<region>` rather than inventing a new array model.  Writes normally require
+a non-singleton, non-bytewise typed region.  The one exact exception is an `i8`
+write to a type-collapsed region: SMACK already represents that region as
+`[ref] i8`, so the lambda has exactly the ordinary point-update type.
 
 `BoogieAst` supports map select/update, ITEs, and quantifiers, but has no lambda
 expression node.  Adding a small lambda AST node is sufficient to print
@@ -119,7 +121,7 @@ this exact class:
   produced by LLVM 14 loop rotation, when SCEV proves its exit value is
   `start + step*tripCount`;
 - non-singleton, non-bytewise typed SMACK regions under the default integer
-  and pointer encodings.
+  and pointer encodings, plus `i8` stores to type-collapsed `[ref] i8` regions.
 
 Recognition is semantic rather than source-pattern based.  For example,
 derived pointer inductions such as `{a,+,8}<L>` are accepted even when the
@@ -246,6 +248,15 @@ conservatively rejected.  A regression deliberately defines an unannotated
 function named `__VERIFIER_assert` with program effects and confirms that its
 loop and call remain intact.
 
+The SV-COMP frontend is an explicit exception to the annotation source, not to
+the typed call metadata consumed by the recognizer.  SV-COMP tasks define
+`__VERIFIER_assert` themselves with either an `int` or `_Bool` parameter, so
+force-including one typed declaration from `smack.h` conflicts with one task
+family.  The frontend now passes an internal `-svcomp` convention flag and
+`VerifierCodeMetadata` attaches the primitive identity to that task-provided
+function after Clang has preserved its actual type.  Other frontends still do
+not trust the reserved name.
+
 ### Affine memory-safety checks
 
 `MemorySafetyChecker` now attaches one distinct paired metadata token to each
@@ -315,6 +326,13 @@ fields into one region, while a representative copy placed source and
 destination in the same region.  The existing AA plus affine-image proofs are
 more useful and no less conservative for those loops.
 
+The type collapse no longer rejects an otherwise eligible `i8` fill.  A
+translation-only retry of `aws_priority_queue_init_dynamic_harness.i` confirms
+that its `memset_impl` loop now becomes a lambda over the existing `[ref] i8`
+map.  Wider stores to a collapsed region remain rejected: they would require a
+defined byte-packing relation and width-aware overlap reasoning, neither of
+which the current unbounded-integer memory encoding supplies.
+
 ## Regression and evaluation results
 
 The focused suite covers constant, IV, remainder and affine-scalar-recurrence
@@ -339,8 +357,9 @@ failing fills, a two-access copy, guarded-store skip/failure polarity, guarded
 conditional RHS loads in both branch arms, safe and failing read-only assertion
 scans, early-return scans that stop immediately or after several accesses,
 zero-trip early returns, and checked accesses before, between, and after
-blocking assumptions.  All 195 test/memory-model configurations pass with
-their configured Boogie bounds;
+blocking assumptions, type-collapsed byte fills, rejection of wider writes to
+the same kind of region, and an SV-COMP `_Bool` verifier primitive.  All 204
+test/memory-model configurations pass with their configured Boogie bounds;
 every summarized case uses bound 1.  The updated `~/corral` at recursion bound
 1 proves the safe fill, guarded skip, conditional load skip, assertion scan,
 symbolic immediate-stop scan, later-stop scan, zero-trip scan, and blocked
