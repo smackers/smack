@@ -118,6 +118,19 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
           verifierPrimitives[F] = Primitive.str();
       }
 
+  // The SV-COMP frontend force-includes smack.h before the task.  Tasks define
+  // __VERIFIER_assert themselves with either an int or _Bool parameter, so a
+  // typed annotated declaration in the header would conflict with one of the
+  // two families.  Under this explicit frontend contract, attach the same
+  // primitive identity by reserved name after Clang has preserved the task's
+  // actual function type.  Other frontends still require an annotation.
+  if (SmackOptions::SVComp) {
+    if (auto *F = M.getFunction("__VERIFIER_assert"))
+      verifierPrimitives[F] = "assert";
+    if (auto *F = M.getFunction("__VERIFIER_assume"))
+      verifierPrimitives[F] = "assume";
+  }
+
   // first mark verifier function calls
   visit(M);
 

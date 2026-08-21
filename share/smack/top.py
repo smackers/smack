@@ -758,6 +758,8 @@ def llvm_to_bpl(args):
         cmd += ['-static-unroll']
     if args.functionalize_loops:
         cmd += ['-functionalize-loops']
+    if args.language == 'svcomp':
+        cmd += ['-svcomp']
     if args.integer_encoding == 'bit-vector':
         cmd += ['-bit-precise']
     if args.integer_encoding == 'wrapped-integer':

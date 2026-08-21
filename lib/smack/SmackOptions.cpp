@@ -85,6 +85,11 @@ const llvm::cl::opt<bool> SmackOptions::FunctionalizeLoops(
     "functionalize-loops",
     llvm::cl::desc("Replace supported pointwise loops with exact map lambdas"));
 
+const llvm::cl::opt<bool>
+    SmackOptions::SVComp("svcomp",
+                         llvm::cl::desc("Enable SV-COMP frontend conventions"),
+                         llvm::cl::Hidden);
+
 const llvm::cl::opt<unsigned> SmackOptions::UnrollBound(
     "unroll-bound",
     llvm::cl::desc("The loop unrolling bound the back-end verifier will be "
