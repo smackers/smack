@@ -3,6 +3,7 @@
 // @expect verified
 // @flag --static-unroll
 // @checkbpl grep -q "read-only assertion loop summary"
+// @checkbpl grep -q "verifier.primitive"
 
 static void verifier_assert_all_zero(const unsigned char *a, unsigned n) {
   for (unsigned i = 0; i < n; ++i)

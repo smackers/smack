@@ -88,9 +88,15 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
       F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
   for (auto &Summary : Candidates) {
-    if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssertion &&
-        !SmackOptions::shouldCheckFunction(F.getName()))
-      continue;
+    if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyVerifier &&
+        !SmackOptions::shouldCheckFunction(F.getName())) {
+      bool HasAssertion = false;
+      for (const auto &Action : Summary.verifierActions)
+        HasAssertion |=
+            Action.kind == FunctionalLoopVerifierAction::Kind::Assertion;
+      if (HasAssertion)
+        continue;
+    }
     bool SupportedMemory = true;
     for (const auto &Store : Summary.stores)
       SupportedMemory &= rep->canFunctionalizeMemory(
@@ -122,8 +128,7 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
           HasHeaderSuccessor |= Successor == Summary.loop->getHeader();
           HasExitSuccessor |= Successor == Summary.exit;
         }
-        if ((Summary.kind != FunctionalLoopSummary::Kind::ReadOnlyAssertion &&
-             Summary.kind != FunctionalLoopSummary::Kind::ReadOnlyAssumption) ||
+        if (Summary.kind != FunctionalLoopSummary::Kind::ReadOnlyVerifier ||
             !HasHeaderSuccessor || !HasExitSuccessor)
           continue;
       }
@@ -333,19 +338,37 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
     CurrentMemories[Path] = Path;
   }
 
-  auto ContinueAt = [&](const Expr *Iteration) {
-    const Expr *Condition = functionalValue(Summary.predicateValue, Summary,
-                                            Iteration, CurrentMemories);
-    if (Summary.predicateIsNonzero) {
-      auto *ConditionType =
-          cast<IntegerType>(Summary.predicateValue->getType());
+  auto PredicateAt = [&](const Value *PredicateValue, bool PredicateIsNonzero,
+                         bool ContinueConditionValue, const Expr *Iteration) {
+    const Expr *Condition =
+        functionalValue(PredicateValue, Summary, Iteration, CurrentMemories);
+    if (PredicateIsNonzero) {
+      auto *ConditionType = cast<IntegerType>(PredicateValue->getType());
       return Expr::neq(
           Condition,
           rep->integerLit(0ULL, ConditionType->getIntegerBitWidth()));
     }
     const Expr *ConditionIsTrue = Expr::eq(Condition, rep->integerLit(1ULL, 1));
-    return Summary.continueConditionValue ? ConditionIsTrue
-                                          : Expr::not_(ConditionIsTrue);
+    return ContinueConditionValue ? ConditionIsTrue
+                                  : Expr::not_(ConditionIsTrue);
+  };
+  auto ActionAt = [&](const FunctionalLoopVerifierAction &Action,
+                      const Expr *Iteration) {
+    return PredicateAt(Action.predicateValue, Action.predicateIsNonzero,
+                       Action.continueConditionValue, Iteration);
+  };
+  auto AllActionsAt = [&](const Expr *Iteration) {
+    const Expr *Result = Expr::lit(true);
+    for (const auto &Action : Summary.verifierActions)
+      Result = Expr::and_(Result, ActionAt(Action, Iteration));
+    return Result;
+  };
+  bool IsVerifier =
+      Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyVerifier;
+  auto ContinueAt = [&](const Expr *Iteration) {
+    return IsVerifier ? AllActionsAt(Iteration)
+                      : PredicateAt(Summary.predicateValue, false,
+                                    Summary.continueConditionValue, Iteration);
   };
   auto IterationInDomain = [&](const Expr *Iteration) {
     return Expr::and_(
@@ -355,30 +378,34 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
                  Iteration, IterationCount));
   };
 
-  const FunctionalLoopLoad &Load = Summary.loads.front();
-  std::string LoadPath = rep->memPath(Load.load->getPointerOperand());
-  std::string PointerName = "$functional.read.pointer." + std::to_string(Id);
-  const Expr *Pointer = Expr::id(PointerName);
-  const Expr *Start = functionalPointerSCEV(Load.access.start);
-  const Expr *Delta = Expr::fn("$sub.ref", Pointer, Start);
-  const Expr *DeltaAsInteger =
-      Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
-  const Expr *Stride =
-      rep->integerLit(static_cast<unsigned long long>(Load.access.stride),
-                      Summary.iterationType->getBitWidth());
-  const Expr *Iteration = Expr::fn(
-      rep->opName("$udiv", {Summary.iterationType}), DeltaAsInteger, Stride);
-  const Expr *IsReadAddress =
-      Expr::eq(Pointer, functionalAddress(Load.access, Iteration,
-                                          Summary.iterationType));
-  const Expr *InReadImage =
-      Expr::and_(IterationInDomain(Iteration), IsReadAddress);
-  const Expr *Trigger =
-      rep->functionalLoad(Load.load->getPointerOperand(),
-                          Expr::id(CurrentMemories.at(LoadPath)), Pointer);
-  const Expr *TriggeredAllContinue =
-      Expr::forall({{PointerName, Naming::PTR_TYPE}}, Trigger,
-                   Expr::impl(InReadImage, ContinueAt(Iteration)));
+  SmallVector<const Expr *, 4> TriggeredAllContinue;
+  for (unsigned LoadIndex = 0; LoadIndex < Summary.loads.size(); ++LoadIndex) {
+    const FunctionalLoopLoad &Load = Summary.loads[LoadIndex];
+    std::string LoadPath = rep->memPath(Load.load->getPointerOperand());
+    std::string PointerName = "$functional.read.pointer." + std::to_string(Id) +
+                              "." + std::to_string(LoadIndex);
+    const Expr *Pointer = Expr::id(PointerName);
+    const Expr *Start = functionalPointerSCEV(Load.access.start);
+    const Expr *Delta = Expr::fn("$sub.ref", Pointer, Start);
+    const Expr *DeltaAsInteger =
+        Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+    const Expr *Stride =
+        rep->integerLit(static_cast<unsigned long long>(Load.access.stride),
+                        Summary.iterationType->getBitWidth());
+    const Expr *Iteration = Expr::fn(
+        rep->opName("$udiv", {Summary.iterationType}), DeltaAsInteger, Stride);
+    const Expr *IsReadAddress =
+        Expr::eq(Pointer, functionalAddress(Load.access, Iteration,
+                                            Summary.iterationType));
+    const Expr *InReadImage =
+        Expr::and_(IterationInDomain(Iteration), IsReadAddress);
+    const Expr *Trigger =
+        rep->functionalLoad(Load.load->getPointerOperand(),
+                            Expr::id(CurrentMemories.at(LoadPath)), Pointer);
+    TriggeredAllContinue.push_back(
+        Expr::forall({{PointerName, Naming::PTR_TYPE}}, Trigger,
+                     Expr::impl(InReadImage, ContinueAt(Iteration))));
+  }
 
   // This is the semantic summary.  The pointer-quantified formula above is a
   // redundant consequence whose explicit load trigger lets clients instantiate
@@ -391,25 +418,75 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
                    Expr::impl(IterationInDomain(ExactIteration),
                               ContinueAt(ExactIteration)));
 
-  bool IsAssertion =
-      Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssertion;
-  bool IsAssumption =
-      Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssumption;
-  emit(Stmt::comment(std::string("functional read-only ") +
-                     (IsAssertion    ? "assertion "
-                      : IsAssumption ? "assumption "
-                                     : "") +
+  bool HasAssertion = false;
+  bool HasAssumption = false;
+  for (const auto &Action : Summary.verifierActions) {
+    HasAssertion |=
+        Action.kind == FunctionalLoopVerifierAction::Kind::Assertion;
+    HasAssumption |=
+        Action.kind == FunctionalLoopVerifierAction::Kind::Assumption;
+  }
+  std::string VerifierKind = HasAssertion && HasAssumption ? "verifier "
+                             : HasAssertion                ? "assertion "
+                             : HasAssumption               ? "assumption "
+                                                           : "";
+  emit(Stmt::comment(std::string("functional read-only ") + VerifierKind +
                      "loop summary for " +
                      Summary.loop->getHeader()->getParent()->getName().str()));
   Block *Normal = createBlock();
   annotate(PreheaderBranch, Normal);
   Normal->addStmt(Stmt::assume(AllContinue));
-  Normal->addStmt(Stmt::assume(TriggeredAllContinue));
+  for (const Expr *Triggered : TriggeredAllContinue)
+    Normal->addStmt(Stmt::assume(Triggered));
   Normal->addStmt(Stmt::goto_(
-      {getBlock(IsAssertion || IsAssumption ? Summary.exit : Summary.normalExit)
-           ->getName()}));
-  if (IsAssumption) {
-    emit(Stmt::goto_({Normal->getName()}));
+      {getBlock(IsVerifier ? Summary.exit : Summary.normalExit)->getName()}));
+
+  std::list<std::string> Targets = {Normal->getName()};
+  if (IsVerifier) {
+    for (unsigned ActionIndex = 0; ActionIndex < Summary.verifierActions.size();
+         ++ActionIndex) {
+      const auto &Action = Summary.verifierActions[ActionIndex];
+      if (Action.kind != FunctionalLoopVerifierAction::Kind::Assertion)
+        continue;
+
+      std::string Suffix =
+          std::to_string(Id) + "." + std::to_string(ActionIndex);
+      std::string WitnessName = "$functional.read.witness." + Suffix;
+      proc->getDeclarations().push_back(
+          Decl::variable(WitnessName, IterationType));
+      const Expr *Witness = Expr::id(WitnessName);
+
+      std::string PreviousName = "$functional.read.previous." + Suffix;
+      const Expr *Previous = Expr::id(PreviousName);
+      const Expr *BeforeWitness = Expr::and_(
+          IterationInDomain(Previous),
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Previous, Witness));
+      const Expr *EarlierIterationsPass =
+          Expr::forall({{PreviousName, IterationType}},
+                       Expr::impl(BeforeWitness, AllActionsAt(Previous)));
+
+      const Expr *EarlierActionsPass = Expr::lit(true);
+      for (unsigned Earlier = 0; Earlier < ActionIndex; ++Earlier)
+        EarlierActionsPass =
+            Expr::and_(EarlierActionsPass,
+                       ActionAt(Summary.verifierActions[Earlier], Witness));
+      const Expr *WitnessesFailure = Expr::and_(
+          IterationInDomain(Witness),
+          Expr::and_(EarlierIterationsPass,
+                     Expr::and_(EarlierActionsPass,
+                                Expr::not_(ActionAt(Action, Witness)))));
+
+      Block *Failure = createBlock();
+      annotate(PreheaderBranch, Failure);
+      Failure->addStmt(Stmt::havoc(WitnessName));
+      Failure->addStmt(Stmt::assume(WitnessesFailure));
+      annotate(*Action.call, Failure);
+      Failure->addStmt(Stmt::assert_(Expr::lit(false)));
+      Failure->addStmt(Stmt::goto_({getBlock(Summary.exit)->getName()}));
+      Targets.push_back(Failure->getName());
+    }
+    emit(Stmt::goto_(Targets));
     return;
   }
 
@@ -422,14 +499,9 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
   annotate(PreheaderBranch, Failure);
   Failure->addStmt(Stmt::havoc(WitnessName));
   Failure->addStmt(Stmt::assume(WitnessesFailure));
-  if (IsAssertion) {
-    annotate(*Summary.verifierCall, Failure);
-    Failure->addStmt(Stmt::assert_(Expr::lit(false)));
-    Failure->addStmt(Stmt::goto_({getBlock(Summary.exit)->getName()}));
-  } else {
-    Failure->addStmt(Stmt::goto_({getBlock(Summary.failureExit)->getName()}));
-  }
-  emit(Stmt::goto_({Normal->getName(), Failure->getName()}));
+  Failure->addStmt(Stmt::goto_({getBlock(Summary.failureExit)->getName()}));
+  Targets.push_back(Failure->getName());
+  emit(Stmt::goto_(Targets));
 }
 
 void SmackInstGenerator::emitFunctionalLoop(

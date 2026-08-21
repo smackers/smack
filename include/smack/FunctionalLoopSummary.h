@@ -55,16 +55,22 @@ struct FunctionalLoopScalarRecurrence {
   const llvm::ConstantInt *step = nullptr;
 };
 
+struct FunctionalLoopVerifierAction {
+  enum class Kind { Assertion, Assumption };
+
+  Kind kind = Kind::Assertion;
+  const llvm::Value *predicateValue = nullptr;
+  llvm::CallInst *call = nullptr;
+  const llvm::BranchInst *predicateBranch = nullptr;
+  bool continueConditionValue = true;
+  bool predicateIsNonzero = false;
+};
+
 // Analysis-only description of a pointwise loop.  It deliberately contains
 // LLVM values rather than Boogie expressions so recognition and emission stay
 // separate and the emitter can use SMACK's actual memory representation.
 struct FunctionalLoopSummary {
-  enum class Kind {
-    MemoryUpdate,
-    ReadOnlyPredicate,
-    ReadOnlyAssertion,
-    ReadOnlyAssumption
-  };
+  enum class Kind { MemoryUpdate, ReadOnlyPredicate, ReadOnlyVerifier };
 
   Kind kind = Kind::MemoryUpdate;
   llvm::Loop *loop = nullptr;
@@ -79,14 +85,13 @@ struct FunctionalLoopSummary {
   llvm::SmallVector<FunctionalLoopStore, 2> stores;
   llvm::SmallVector<FunctionalLoopLoad, 2> loads;
   llvm::SmallVector<FunctionalLoopScalarRecurrence, 2> recurrences;
+  llvm::SmallVector<FunctionalLoopVerifierAction, 2> verifierActions;
   llvm::SmallVector<llvm::PHINode *, 1> finalInductionPhis;
   const llvm::BranchInst *predicateBranch = nullptr;
   const llvm::Value *predicateValue = nullptr;
-  llvm::CallInst *verifierCall = nullptr;
   llvm::BasicBlock *normalExit = nullptr;
   llvm::BasicBlock *failureExit = nullptr;
   bool continueConditionValue = true;
-  bool predicateIsNonzero = false;
 };
 
 class FunctionalLoopSummaryAnalysis {

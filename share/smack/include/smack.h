@@ -54,10 +54,11 @@ void __SMACK_check_memory_leak(void);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#ifndef SVCOMP
-void __VERIFIER_assert(int);
-#endif
-void __VERIFIER_assume(int);
+// These annotations survive Clang and linking in llvm.global.annotations.
+// VerifierCodeMetadata turns them into call-site metadata consumed by exact
+// loop summaries; this avoids trusting a reserved name by itself.
+void __VERIFIER_assert(int) __attribute__((annotate("smack.verifier.assert")));
+void __VERIFIER_assume(int) __attribute__((annotate("smack.verifier.assume")));
 
 #define assume(EX)                                                             \
   do {                                                                         \

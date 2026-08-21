@@ -3,6 +3,8 @@
 //
 
 #include "smack/FunctionalLoopSummary.h"
+#include "smack/VerifierCodeMetadata.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -445,8 +447,7 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
     // summary without updating program memory.  The final instruction gate
     // rejects every other call and every store.
     bool OnlyVerifierCallMayClobber =
-        Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssertion ||
-        Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyAssumption;
+        Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyVerifier;
     if (!UsesRecurrenceProof && !MSSA.isLiveOnEntryDef(Clobber) &&
         Summary.loop->contains(Clobber->getBlock()) &&
         !OnlyVerifierCallMayClobber)
@@ -837,23 +838,24 @@ bool initializeReadOnlySummary(Loop &L, BasicBlock *ExitingBlock,
   return true;
 }
 
-bool hasOnlyReadOnlyInstructions(Loop &L, const BranchInst *BoundBranch,
-                                 const BranchInst *PredicateBranch,
-                                 const CallInst *VerifierCall,
-                                 const std::set<const Instruction *> &Required,
-                                 const FunctionalLoopSummary &Summary) {
+bool hasOnlyReadOnlyInstructions(
+    Loop &L, const BranchInst *BoundBranch,
+    const std::set<const BranchInst *> &Predicates,
+    const std::set<const CallInst *> &VerifierCalls,
+    const std::set<const Instruction *> &Required,
+    const FunctionalLoopSummary &Summary) {
   unsigned LoadCount = 0;
   for (BasicBlock *BB : L.blocks()) {
     auto *Branch = dyn_cast<BranchInst>(BB->getTerminator());
     if (!Branch ||
         (Branch->isConditional() && Branch != BoundBranch &&
-         Branch != PredicateBranch) ||
+         !Predicates.count(Branch)) ||
         (Branch->isUnconditional() && !L.contains(Branch->getSuccessor(0))))
       return false;
     for (Instruction &I : *BB) {
       if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
         continue;
-      if (&I == VerifierCall) {
+      if (VerifierCalls.count(dyn_cast<CallInst>(&I))) {
         if (!Required.count(&I))
           return false;
         continue;
@@ -935,7 +937,7 @@ bool analyzeReadOnlyPredicateLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
     return false;
   Required.insert(InductionUpdate);
 
-  return hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranch, nullptr,
+  return hasOnlyReadOnlyInstructions(L, BoundBranch, {PredicateBranch}, {},
                                      Required, Summary);
 }
 
@@ -959,85 +961,118 @@ bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
       NormalExit != L.getExitBlock() || isa<PHINode>(&NormalExit->front()))
     return false;
 
-  CallInst *VerifierCall = nullptr;
-  bool IsAssumption = false;
+  Summary.kind = FunctionalLoopSummary::Kind::ReadOnlyVerifier;
+  Summary.exit = NormalExit;
+
+  struct OrderedAction {
+    FunctionalLoopVerifierAction action;
+    const Instruction *executionPoint = nullptr;
+  };
+  constexpr unsigned MaxVerifierActions = 4;
+  SmallVector<OrderedAction, 4> Actions;
   for (BasicBlock *BB : L.blocks())
     for (Instruction &I : *BB) {
-      auto *Call = dyn_cast<CallInst>(&I);
-      Function *Callee = Call ? Call->getCalledFunction() : nullptr;
-      if (!Callee || (Callee->getName() != "__VERIFIER_assert" &&
-                      Callee->getName() != "__VERIFIER_assume"))
+      auto *VerifierCall = dyn_cast<CallInst>(&I);
+      StringRef Primitive =
+          VerifierCall
+              ? VerifierCodeMetadata::getVerifierPrimitive(*VerifierCall)
+              : StringRef();
+      if (Primitive.empty())
         continue;
-      if (VerifierCall)
+      if ((Primitive != "assert" && Primitive != "assume") ||
+          VerifierCall->arg_size() != 1 ||
+          !VerifierCall->getArgOperand(0)->getType()->isIntegerTy())
         return false;
-      VerifierCall = Call;
-      IsAssumption = Callee->getName() == "__VERIFIER_assume";
+
+      FunctionalLoopVerifierAction Action;
+      Action.kind = Primitive == "assert"
+                        ? FunctionalLoopVerifierAction::Kind::Assertion
+                        : FunctionalLoopVerifierAction::Kind::Assumption;
+      Action.call = VerifierCall;
+      Action.predicateValue = VerifierCall->getArgOperand(0);
+      Action.predicateIsNonzero = true;
+      const Instruction *ExecutionPoint = VerifierCall;
+
+      auto *AssertedConstant = dyn_cast<ConstantInt>(Action.predicateValue);
+      if (AssertedConstant && AssertedConstant->isZero()) {
+        BasicBlock *VerifierBlock = VerifierCall->getParent();
+        BasicBlock *PredicateBlock = VerifierBlock->getSinglePredecessor();
+        auto *PredicateBranch =
+            PredicateBlock
+                ? dyn_cast<BranchInst>(PredicateBlock->getTerminator())
+                : nullptr;
+        auto *VerifierBranch =
+            dyn_cast<BranchInst>(VerifierBlock->getTerminator());
+        if (!PredicateBranch || !PredicateBranch->isConditional() ||
+            !VerifierBranch || !VerifierBranch->isUnconditional() ||
+            !L.contains(PredicateBlock) ||
+            !DT.dominates(BodyEntry, PredicateBlock) ||
+            !DT.dominates(PredicateBlock, L.getLoopLatch()))
+          return false;
+
+        unsigned VerifierSuccessor =
+            PredicateBranch->getSuccessor(0) == VerifierBlock   ? 0
+            : PredicateBranch->getSuccessor(1) == VerifierBlock ? 1
+                                                                : 2;
+        if (VerifierSuccessor == 2)
+          return false;
+        BasicBlock *ContinueBlock =
+            PredicateBranch->getSuccessor(1 - VerifierSuccessor);
+        if (!L.contains(ContinueBlock) ||
+            VerifierBranch->getSuccessor(0) != ContinueBlock ||
+            !DT.dominates(ContinueBlock, L.getLoopLatch()))
+          return false;
+        Action.predicateBranch = PredicateBranch;
+        Action.predicateValue = PredicateBranch->getCondition();
+        Action.continueConditionValue = VerifierSuccessor != 0;
+        Action.predicateIsNonzero = false;
+        ExecutionPoint = PredicateBranch;
+      } else if (!DT.dominates(VerifierCall,
+                               L.getLoopLatch()->getTerminator())) {
+        return false;
+      }
+
+      if (ExitingBlock != L.getHeader() &&
+          !DT.dominates(ExecutionPoint, ExitingBlock->getTerminator()))
+        return false;
+      if (Actions.size() == MaxVerifierActions)
+        return false;
+      Actions.push_back({Action, ExecutionPoint});
     }
-  if (!VerifierCall || VerifierCall->arg_size() != 1 ||
-      !VerifierCall->getArgOperand(0)->getType()->isIntegerTy())
+  if (Actions.empty())
     return false;
 
-  BasicBlock *VerifierBlock = VerifierCall->getParent();
-  BasicBlock *PredicateExecutionBlock = VerifierBlock;
-  const Value *PredicateValue = VerifierCall->getArgOperand(0);
-  BranchInst *PredicateBranch = nullptr;
-  bool ContinueConditionValue = true;
-  bool PredicateIsNonzero = true;
-  auto *AssertedConstant = dyn_cast<ConstantInt>(PredicateValue);
-  if (!IsAssumption && AssertedConstant && AssertedConstant->isZero()) {
-    BasicBlock *PredicateBlock = VerifierBlock->getSinglePredecessor();
-    PredicateBranch =
-        PredicateBlock ? dyn_cast<BranchInst>(PredicateBlock->getTerminator())
-                       : nullptr;
-    auto *AssertionBranch =
-        dyn_cast<BranchInst>(VerifierBlock->getTerminator());
-    if (!PredicateBranch || !PredicateBranch->isConditional() ||
-        !AssertionBranch || !AssertionBranch->isUnconditional() ||
-        !L.contains(PredicateBlock) ||
-        !DT.dominates(BodyEntry, PredicateBlock) ||
-        !DT.dominates(PredicateBlock, L.getLoopLatch()))
+  // Every accepted action executes once on every continuing iteration.  Their
+  // execution points must therefore form a total dominance order.
+  for (unsigned I = 0; I < Actions.size(); ++I)
+    for (unsigned J = I + 1; J < Actions.size(); ++J)
+      if (!DT.dominates(Actions[I].executionPoint, Actions[J].executionPoint) &&
+          !DT.dominates(Actions[J].executionPoint, Actions[I].executionPoint))
+        return false;
+  llvm::sort(Actions, [&](const OrderedAction &A, const OrderedAction &B) {
+    if (A.executionPoint == B.executionPoint)
       return false;
-    PredicateExecutionBlock = PredicateBlock;
+    return DT.dominates(A.executionPoint, B.executionPoint);
+  });
+  for (const auto &Ordered : Actions)
+    Summary.verifierActions.push_back(Ordered.action);
 
-    unsigned AssertionSuccessor =
-        PredicateBranch->getSuccessor(0) == VerifierBlock   ? 0
-        : PredicateBranch->getSuccessor(1) == VerifierBlock ? 1
-                                                            : 2;
-    if (AssertionSuccessor == 2)
+  for (const auto &Action : Summary.verifierActions)
+    if (!validateRhs(Action.predicateValue, Summary, SE, AA, MSSA, DT))
       return false;
-    BasicBlock *ContinueBlock =
-        PredicateBranch->getSuccessor(1 - AssertionSuccessor);
-    if (!L.contains(ContinueBlock) ||
-        AssertionBranch->getSuccessor(0) != ContinueBlock ||
-        !DT.dominates(ContinueBlock, L.getLoopLatch()))
-      return false;
-    PredicateValue = PredicateBranch->getCondition();
-    ContinueConditionValue = AssertionSuccessor != 0;
-    PredicateIsNonzero = false;
-  } else if (!DT.dominates(VerifierCall, L.getLoopLatch()->getTerminator())) {
-    return false;
-  }
-  if (ExitingBlock != L.getHeader() &&
-      !DT.dominates(PredicateExecutionBlock, ExitingBlock))
-    return false;
-
-  Summary.kind = IsAssumption ? FunctionalLoopSummary::Kind::ReadOnlyAssumption
-                              : FunctionalLoopSummary::Kind::ReadOnlyAssertion;
-  Summary.exit = NormalExit;
-  Summary.predicateBranch = PredicateBranch;
-  Summary.predicateValue = PredicateValue;
-  Summary.verifierCall = VerifierCall;
-  Summary.continueConditionValue = ContinueConditionValue;
-  Summary.predicateIsNonzero = PredicateIsNonzero;
-
-  if (!validateRhs(PredicateValue, Summary, SE, AA, MSSA, DT))
-    return false;
 
   std::set<const Instruction *> Required;
+  std::set<const BranchInst *> PredicateBranches;
+  std::set<const CallInst *> VerifierCalls;
   collectInstructionSlice(BoundBranch->getCondition(), L, Required);
-  collectInstructionSlice(PredicateValue, L, Required);
   Required.insert(Summary.induction);
-  Required.insert(VerifierCall);
+  for (const auto &Action : Summary.verifierActions) {
+    collectInstructionSlice(Action.predicateValue, L, Required);
+    Required.insert(Action.call);
+    VerifierCalls.insert(Action.call);
+    if (Action.predicateBranch)
+      PredicateBranches.insert(Action.predicateBranch);
+  }
   BasicBlock *Incoming = nullptr;
   BasicBlock *Backedge = nullptr;
   if (!L.getIncomingAndBackEdge(Incoming, Backedge))
@@ -1048,8 +1083,8 @@ bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
     return false;
   Required.insert(InductionUpdate);
 
-  if (!hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranch,
-                                   VerifierCall, Required, Summary))
+  if (!hasOnlyReadOnlyInstructions(L, BoundBranch, PredicateBranches,
+                                   VerifierCalls, Required, Summary))
     return false;
   return true;
 }

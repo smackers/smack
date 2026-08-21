@@ -77,10 +77,10 @@ recognition and proof remain independent of Boogie emission.
 This placement is also the safety boundary.  Memory-safety and overflow
 instrumentation run before Boogie generation.  A loop containing their calls
 will fail recognition, so functionalization cannot silently erase a per-
-iteration check.  The only admitted calls are a single reserved
-`__VERIFIER_assert` or `__VERIFIER_assume`, for which the summary explicitly
-recreates SMACK's verifier semantics.  Source-location/debug intrinsics are
-non-semantic and may be omitted with the suppressed loop blocks.
+iteration check.  The only admitted calls are up to four explicitly annotated
+`__VERIFIER_assert` or `__VERIFIER_assume` actions, for which the summary
+recreates SMACK's verifier semantics in execution order.  Source-location/debug
+intrinsics are non-semantic and may be omitted with the suppressed loop blocks.
 
 The core soundness obligations for an accepted summary are: the SCEV trip
 count exactly describes the body iterations; the store recurrence is
@@ -195,35 +195,40 @@ for (unsigned i = 0; i < n; ++i)
   __VERIFIER_assert(P(entry_memory, i));
 ```
 
-and the corresponding `__VERIFIER_assume` loop.  Source `assert(P)` is also
-accepted in the LLVM 14 shape emitted by SMACK's `assert.h`: a predicate branch
-whose failing arm calls `__VERIFIER_assert(0)` and then rejoins.  Direct
-nonzero-valued verifier conditions are accepted without requiring that branch
-shape.
+and an ordered sequence of up to four assertions and assumptions.  Source
+`assert(P)` and SMACK's `assume(P)` macro are accepted in their LLVM 14 shape:
+a predicate branch whose failing arm calls the zero-valued verifier primitive
+and then rejoins.  Direct nonzero-valued verifier conditions are accepted
+without requiring that branch shape.
 
 The loop must have one exact SCEV trip count, one positive affine induction,
-one verifier call, at least one simple affine load, no stores, no escaping
-values, no other calls or conditionals, no exit PHI, and no abnormal exit.
-Top-tested loops and LoopRotate bottom-tested loops are supported.  In the
-bottom-tested case the verifier predicate must dominate the exit test, and the
-zero-trip preheader guard is retained, so adding one to SCEV's backedge count
-does not invent an execution.
+one to four verifier actions, at least one simple affine load, no stores, no
+escaping values, no other calls or conditionals, no exit PHI, and no abnormal
+exit.  Their execution points must form a total dominance order and each must
+execute once on every continuing iteration.  Top-tested loops and LoopRotate
+bottom-tested loops are supported.  In the bottom-tested case every action
+must dominate the exit test, and the zero-trip preheader guard is retained, so
+adding one to SCEV's backedge count does not invent an execution.
 
-For an assertion, the normal branch assumes `forall k in [0,T). P(k)`.  The
-error branch havocs an in-domain witness satisfying `!P(k)`, emits an
-`assert false` annotated with the original source location, and then targets
-the original exit.  Choosing an arbitrary failing iteration rather than the
-first one is exact because the accepted body is read-only and has no other
-observable effect.  An assumption loop emits only the universal assumption;
-it has no failure witness or error branch.  Both forms add a redundant
-pointer-triggered universal formula, as the early-return summary does, so a
-client read can instantiate the fact without solving affine address inversion.
+The normal branch assumes that every action succeeds at every iteration.  An
+assertion action gets its own in-domain failure witness.  Its error branch also
+requires every action at earlier iterations and every preceding action at the
+witness iteration to succeed before its predicate fails.  It then emits an
+`assert false` annotated with that action's original source location.  This
+lexicographic prefix is necessary: for example, an earlier false assumption
+must block a later assertion rather than create a spurious error.  Assumptions
+have no failure branch.  A redundant pointer-triggered universal formula is
+emitted for every affine load, so client reads can instantiate the facts
+without solving affine address inversion.
 
-This treatment relies on SMACK's reserved verifier-function contract for the
-names `__VERIFIER_assert` and `__VERIFIER_assume`.  Arbitrary user-defined
-functions with those reserved names are outside the supported input contract.
-An explicit LLVM attribute or metadata marker would be preferable before
-generalizing the call whitelist.
+Eligibility no longer follows from a reserved name alone.  `smack.h` annotates
+the two primitives as `smack.verifier.assert` and `smack.verifier.assume`;
+`VerifierCodeMetadata` reads `llvm.global.annotations` after linking and adds
+typed `verifier.primitive` call metadata.  The recognizer consumes only that
+metadata.  Raw LLVM and non-C frontends without the annotation are
+conservatively rejected.  A regression deliberately defines an unannotated
+function named `__VERIFIER_assert` with program effects and confirms that its
+loop and call remain intact.
 
 A translation-only run of
 `aws_array_list_init_dynamic_harness.i` from AWS-C-Common now replaces the
@@ -251,12 +256,13 @@ rejecting a complex header recurrence without recursing through it in LLVM 14
 ScalarEvolution.  Read-only tests cover symbolic `all_zero`, two-array
 equality, a type-collapsed struct byte scan, rejection when the failing index
 escapes, and preservation of an invalid memory access.  Verifier-loop tests
-cover safe and failing source assertions, a direct `__VERIFIER_assert`, a
-two-array predicate, a direct `__VERIFIER_assume`, LoopRotate form, and
-rejection of an instrumented invalid access.  All 120 test/memory-model
-configurations pass with Boogie at loop bound 1.  Safe and failing assertion
-clients also produce the expected results with the updated `~/corral` at bound
-1.
+cover safe and failing source assertions, direct verifier calls, a two-array
+predicate, LoopRotate form, macro assumptions, mixed ordered verifier sites,
+failure at a later site, rejection beyond four sites, an unannotated reserved
+name, and an instrumented invalid access.  All 135 test/memory-model
+configurations pass with Boogie at loop bound 1.  Safe, ordering-sensitive and
+failing multisite clients also produce the expected results with the updated
+`~/corral` at bound 1.
 
 Loop-bound warnings are deferred until semantic and memory-model eligibility
 are known.  Summarized loops no longer request a higher bound; rejected loops
@@ -275,8 +281,8 @@ The larger SV-COMP Arrays example
 `array-examples/standard_init8_ground-2.i` contains eight 100,000-iteration
 fills followed by a 100,000-iteration direct assertion loop.  Baseline Boogie
 has 16,533 lines / 717,901 bytes and retains all nine source loops.
-Functionalized Boogie has 16,261 lines / 676,623 bytes, eight lambdas, two
-universal assertion formulas and no source-loop cycle.  The updated
+Functionalized Boogie has 16,272 lines / 677,583 bytes, eight lambdas, three
+universal verifier formulas and no source-loop cycle.  The updated
 `~/corral` reports no error at bound 1; the only remaining loop warning is the
 unreachable library implementation of `abort`.
 
@@ -328,15 +334,15 @@ remaining array cases require one of the following qualitatively new ideas:
 - nondeterministic scatter needs injectivity or address inversion;
 - reductions, sorting and in-place mutation need closed forms for loop-carried
   scalar or memory state;
-- verifier loops with multiple assertion/assumption sites, other calls, stores,
-  or inserted access checks need an ordered verifier-action summary and, for
-  memory safety, a range-validity proof over every accessed address;
+- verifier loops with data-dependent action control flow, other calls, stores,
+  or inserted access checks need a richer event summary and, for memory safety,
+  a range-validity proof over every accessed address;
 - arrays initialized through `llvm.memset` become bytewise SMACK regions, so a
   typed pointwise lambda would require byte packing/unpacking support.
 
 These are now the fundamental boundaries of the exact pointwise model rather
-than small additions to its recognizer.  The recommended next experiment is to
-mark verifier primitives explicitly in LLVM and represent a short ordered list
-of pure assertion/assumption sites.  Instrumented memory-safety and undefined-
-behavior checks should remain rejected until their per-iteration validity can
-be expressed and tested over the complete address image.
+than small additions to its recognizer.  The recommended next experiment is a
+separate range-validity summary for instrumented affine accesses.  It must
+quantify pointer validity and allocation extent over the complete address
+image; until that encoding exists, memory-safety and undefined-behavior checks
+must remain ordinary cyclic behavior.
