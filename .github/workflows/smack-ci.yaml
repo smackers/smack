@@ -108,8 +108,56 @@ jobs:
           ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
           flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
 
-  check-regressions:
+  # Compile the checked-out revision once and pass the relocatable install tree
+  # to every regression shard. The dependency image deliberately contains no
+  # repository source, so changing SMACK still invalidates this artifact.
+  build-smack:
+    name: build SMACK
     needs: prepare-ci-image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.prepare-ci-image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        CARGO_HOME: /root/.cargo
+        RUSTUP_HOME: /root/.rustup
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: prepare mounted Actions workspace
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          touch "$GITHUB_WORKSPACE/../smack.environment"
+
+      - name: compile and install
+        env:
+          INSTALL_DEPENDENCIES: 0
+          INSTALL_RUST: 0
+          INSTALL_Z3: 0
+          INSTALL_BOOGIE: 0
+          INSTALL_CORRAL: 0
+          TEST_SMACK: 0
+        run: ./bin/build.sh --prefix "$GITHUB_WORKSPACE/smack-install"
+
+      # upload-artifact does not preserve executable bits, so preserve the
+      # install tree in a tar archive before handing it to the matrix.
+      - name: package install tree
+        run: tar -czf smack-install.tar.gz smack-install
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: smack-install
+          path: smack-install.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  check-regressions:
+    needs: [prepare-ci-image, build-smack]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -162,18 +210,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/download-artifact@v7
+        with:
+          name: smack-install
+
+      - name: unpack SMACK
+        run: tar -xzf smack-install.tar.gz
+
       # The mounted workspace belongs to the host runner UID, while this image
       # runs as root. checkout's temporary HOME does not carry its safe-directory
-      # setting into later container steps. With all installers disabled,
-      # build.sh also needs an empty environment file to source after the build.
+      # setting into later container steps.
       - name: prepare mounted Actions workspace
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          touch "$GITHUB_WORKSPACE/../smack.environment"
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      # The image already contains all system, language, and solver
-      # dependencies. This call only builds SMACK and runs this folder.
-      - name: compile and test
+      # The image supplies dependencies and the artifact supplies the one build
+      # of this revision. Each matrix entry now runs only its assigned tests.
+      - name: test
         env:
           REGTEST_ENV: ${{ matrix.regtest_env }}
           INSTALL_DEPENDENCIES: 0
@@ -181,12 +233,15 @@ jobs:
           INSTALL_Z3: 0
           INSTALL_BOOGIE: 0
           INSTALL_CORRAL: 0
-        run: ./bin/build.sh
+          BUILD_SMACK: 0
+        run: |
+          export PATH="$GITHUB_WORKSPACE/smack-install/bin:$PATH"
+          ./bin/build.sh
 
   build-and-push-docker:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
-    needs: [check-format, check-regressions]
+    needs: [check-format, build-smack, check-regressions]
 
     steps:
       - name: Check Out Repo
