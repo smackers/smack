@@ -34,7 +34,8 @@
  */
 
 void *__builtinx_va_arg(char *x) {
-  __SMACK_code("assume false;");
+  // Underapproximate this function by not blocking verification
+  //__SMACK_code("assume false;");
   return 0;
 }
 
