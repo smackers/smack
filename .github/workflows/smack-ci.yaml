@@ -119,6 +119,11 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        # Actions overrides HOME inside job containers. Keep rustup pointed at
+        # the toolchain baked under root's real home directory.
+        CARGO_HOME: /root/.cargo
+        RUSTUP_HOME: /root/.rustup
     strategy:
       matrix:
         regtest_env:
@@ -156,6 +161,12 @@ jobs:
           ]
     steps:
       - uses: actions/checkout@v7
+
+      # The mounted workspace belongs to the host runner UID, while this image
+      # runs as root. checkout's temporary HOME does not carry its safe-directory
+      # setting into later container steps.
+      - name: trust mounted Actions workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       # The image already contains all system, language, and solver
       # dependencies. This call only builds SMACK and runs this folder.
