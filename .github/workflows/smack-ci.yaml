@@ -28,7 +28,7 @@ jobs:
         id: image
         shell: bash
         run: |
-          recipe_hash=$(sha256sum .github/ci/Dockerfile bin/build.sh bin/versions | sha256sum | cut -c1-64)
+          recipe_hash=$(sha256sum Dockerfile bin/build.sh bin/versions | sha256sum | cut -c1-64)
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/smack-ci-deps:ubuntu-24.04-${recipe_hash}"
           echo "image=${image}" >> "$GITHUB_OUTPUT"
 
@@ -71,7 +71,8 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: .github/ci/Dockerfile
+          file: Dockerfile
+          target: ci-deps
           push: true
           tags: ${{ steps.image.outputs.image }}
           cache-from: type=gha,scope=ci-dependencies
