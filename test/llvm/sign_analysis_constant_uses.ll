@@ -4,7 +4,8 @@
 ; @checkbpl grep -F 'then $sub.i32(0, 16) else 0'
 ; @checkbpl grep -F 'then 4294967280 else 0'
 ; @checkbpl grep -F '$eq.i32($i0, $sub.i32(0, 16))'
-; @checkbpl grep -F '$eq.i32($i0, 4294967280)'
+; @checkbpl grep -F '$eq.i32($i0, $sub.i32(0, 17))'
+; @checkbpl grep -F '$ne.i32($i0, $sub.i32(0, 18))'
 ; @checkbpl grep -F '$si2fp.i32.float($sub.i32(0, 16))'
 ; @checkbpl grep -F '$ui2fp.i32.float(4294967280)'
 ; @checkbpl grep -F 'signed_arg($sub.i32(0, 16))'
@@ -40,7 +41,18 @@ define i1 @signed_eq(i32 %x) {
 
 define i1 @unsigned_eq(i32 %x) {
   %seed = add i32 %x, 0, !overflow.sign !1
-  %r = icmp eq i32 %seed, -16
+  %r = icmp eq i32 %seed, -17
+  ret i1 %r
+}
+
+define internal i32 @unsigned_result(i32 %x) {
+  %r = add i32 %x, 0, !overflow.sign !1
+  ret i32 %r
+}
+
+define i1 @unsigned_ne(i32 %x) {
+  %seed = call i32 @unsigned_result(i32 %x)
+  %r = icmp ne i32 %seed, -18
   ret i1 %r
 }
 
@@ -71,6 +83,7 @@ define i32 @main() {
   %u1 = call i32 @unsigned_select(i1 true, i32 0)
   %s2 = call i1 @signed_eq(i32 0)
   %u2 = call i1 @unsigned_eq(i32 0)
+  %u2ne = call i1 @unsigned_ne(i32 0)
   %s3 = call float @signed_fp()
   %u3 = call float @unsigned_fp()
   %s4 = call i32 @signed_arg(i32 -16)

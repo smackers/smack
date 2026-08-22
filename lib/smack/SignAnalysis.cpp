@@ -185,6 +185,13 @@ Sign SignAnalysis::getSign(const Use &U) const {
       return Sign::Signed;
     if (CmpInst::isUnsigned(Predicate))
       return Sign::Unsigned;
+
+    // Equality compares bit patterns and supplies no sign information.  In
+    // particular, borrowing the other operand's inferred sign can turn a
+    // signed sentinel such as -2 into 4294967294 when the value being compared
+    // crossed a function boundary from unsigned storage.  Keep the established
+    // signed literal fallback for eq/ne instead.
+    return Sign::Unknown;
   }
 
   if (I) {
@@ -219,8 +226,6 @@ Sign SignAnalysis::getSign(const Use &U) const {
     return getSign(Owner);
   case Instruction::Trunc:
     return getSign(Owner);
-  case Instruction::ICmp:
-    return meetValue(Sign::Unknown, Owner->getOperand(1 - Operand));
   case Instruction::Select: {
     if (Operand == 0)
       return Sign::Unsigned;
