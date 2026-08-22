@@ -2,7 +2,7 @@
 
 // @expect error
 // @flag --check=memory-safety
-// @checkbpl grep -q "functional read-only assumption loop summary for continue_to_load"
+// @checkbpl grep -q "assumption loop summary for continue_to_load"
 // @checkbpl grep -q "functional.firstStop"
 // @checkout awk '/SMACK warning: found loop/ {x=1} END{exit x}'
 

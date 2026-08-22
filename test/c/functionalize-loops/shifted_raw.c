@@ -1,7 +1,7 @@
 #include "smack.h"
 
 // @expect verified
-// @checkbpl awk 'index($0,"functional loop summary for main"){found=1} END{exit found}'
+// @checkbpl awk '/functional loop summary/{x=1}END{exit x}'
 // @checkout grep -F "SMACK warning: found loop"
 
 int main(void) {

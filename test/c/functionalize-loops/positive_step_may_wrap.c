@@ -2,7 +2,7 @@
 
 // @expect verified
 // @flag --static-unroll
-// @checkbpl awk 'index($0,"functional loop summary for main"){found=1} END{exit found}'
+// @checkbpl awk '/functional loop summary/{x=1}END{exit x}'
 
 int main(void) {
   unsigned a[4096];

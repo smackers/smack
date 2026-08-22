@@ -2,7 +2,7 @@
 #include <assert.h>
 
 // @expect verified
-// @checkbpl awk '/functional loop summary for main/ { summaries++ } /:= \(lambda / { lambdas++ } END { exit !(summaries == 1 && lambdas == 2) }'
+// @checkbpl awk '/summary/{s++}/:= \(lambda/{l++}END{exit s!=1||l!=2}'
 
 int main(void) {
   unsigned a[4096];

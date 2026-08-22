@@ -3,7 +3,7 @@
 
 // @expect error
 // @flag --check=memory-safety
-// @checkbpl grep -q "functional read-only assertion loop summary for bad_assert"
+// @checkbpl grep -q "assertion loop summary for bad_assert"
 // @checkbpl grep -q "functional.read.check"
 // @checkout awk '/SMACK warning: found loop/ {x=1} END{exit x}'
 

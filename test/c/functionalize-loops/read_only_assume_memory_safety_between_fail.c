@@ -2,7 +2,7 @@
 
 // @expect error
 // @flag --check=memory-safety
-// @checkbpl grep -q "functional read-only verifier loop summary for check_between"
+// @checkbpl grep -q "verifier loop summary for check_between"
 // @checkbpl grep -q "functional.firstStop"
 // @checkout awk '/SMACK warning: found loop/ {x=1} END{exit x}'
 

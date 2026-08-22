@@ -1,7 +1,7 @@
 #include "smack.h"
 
 // @expect verified
-// @checkbpl awk 'index($0,"functional loop summary for fill_words"){found=1} END{exit found}'
+// @checkbpl awk '/summary for fill_words/{x=1}END{exit x}'
 
 union mixed_widths {
   unsigned words[16];

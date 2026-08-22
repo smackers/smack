@@ -1,7 +1,7 @@
 #include "smack.h"
 
 // @expect verified
-// @checkbpl awk 'index($0,"functional read-only loop summary for first_nonzero"){found=1} END{exit found}'
+// @checkbpl awk '/summary for first_nonzero/{x=1}END{exit x}'
 
 static int first_nonzero(const unsigned char *a, unsigned n) {
   for (unsigned i = 0; i < n; ++i)

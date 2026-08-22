@@ -1,7 +1,7 @@
 #include "smack.h"
 
 // @expect verified
-// @checkbpl awk 'index($0,"functional loop summary for copy"){found=1} END{exit found}'
+// @checkbpl awk '/summary for copy/{x=1}END{exit x}'
 
 static void copy(unsigned *dst, const unsigned *src, unsigned n) {
   for (unsigned i = 0; i < n; ++i)

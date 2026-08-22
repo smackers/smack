@@ -116,8 +116,8 @@ void warnAboutLoop(const Function &F, const Loop *loop, unsigned tripCount) {
   SmackWarnings::warnLoop(os.str(), loop->getHeader()->getTerminator());
 }
 
-std::vector<LoopBoundInfo>
-collectLoopBoundInfo(LoopInfo &LoopInfo, ScalarEvolution &SE) {
+std::vector<LoopBoundInfo> collectLoopBoundInfo(LoopInfo &LoopInfo,
+                                                ScalarEvolution &SE) {
   std::vector<LoopBoundInfo> Result;
   // `getLoopsInPreorder`, not `begin()`/`end()`: the latter walks only the
   // outermost loops, and in a nest it is normally the inner loop that needs
@@ -175,8 +175,7 @@ void warnAboutLoops(const Function &F,
       warnAboutLoop(F, Bound.loop, Bound.tripCount);
 }
 
-void warnAboutLoops(const Function &F, LoopInfo &LoopInfo,
-                    ScalarEvolution &SE,
+void warnAboutLoops(const Function &F, LoopInfo &LoopInfo, ScalarEvolution &SE,
                     const std::set<const Loop *> &IgnoredLoops) {
   warnAboutLoops(F, collectLoopBoundInfo(LoopInfo, SE), IgnoredLoops);
 }
