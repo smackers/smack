@@ -47,7 +47,7 @@ INSTALL_DEV_DEPENDENCIES=${INSTALL_DEV_DEPENDENCIES:-0}
 # PATHS
 SMACK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 ROOT_DIR="$( cd "${SMACK_DIR}" && cd .. && pwd )"
-DEPS_DIR="${ROOT_DIR}/smack-deps"
+DEPS_DIR="${DEPS_DIR:-${ROOT_DIR}/smack-deps}"
 Z3_DIR="${DEPS_DIR}/z3"
 CVC5_DIR="${DEPS_DIR}/cvc5"
 YICES2_DIR="${DEPS_DIR}/yices2"

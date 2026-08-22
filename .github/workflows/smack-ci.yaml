@@ -1,8 +1,82 @@
 name: SMACK CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
+  # The dependency image is addressed by the contents of its complete recipe.
+  # This producer publishes it once when the recipe changes, then the matrix
+  # jobs pull that immutable tag instead of installing dependencies themselves.
+  prepare-ci-image:
+    name: prepare CI dependency image
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ci-dependencies
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compute image name
+        id: image
+        shell: bash
+        run: |
+          recipe_hash=$(sha256sum .github/ci/Dockerfile bin/build.sh bin/versions | sha256sum | cut -c1-64)
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/smack-ci-deps:ubuntu-24.04-${recipe_hash}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check whether image already exists
+        id: published
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        shell: bash
+        run: |
+          if docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require a maintainer to publish images for fork changes
+        if: >-
+          steps.published.outputs.exists == 'false' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          echo "::error::${IMAGE} does not exist. A maintainer must publish dependency images changed by fork pull requests."
+          exit 1
+
+      - name: Set up Docker Buildx
+        if: steps.published.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and publish dependency image
+        if: steps.published.outputs.exists == 'false'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: .github/ci/Dockerfile
+          push: true
+          tags: ${{ steps.image.outputs.image }}
+          cache-from: type=gha,scope=ci-dependencies
+          cache-to: type=gha,mode=max,scope=ci-dependencies
+
   # Formatting is a property of the tree, not of any one test folder, so it runs
   # once per CI run instead of once per matrix entry. bin/build.sh stays the
   # single source of truth for how the tools are installed -- it pins
@@ -35,7 +109,16 @@ jobs:
           flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
 
   check-regressions:
+    needs: prepare-ci-image
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.prepare-ci-image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         regtest_env:
@@ -74,16 +157,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # One bin/build.sh call: install dependencies, build SMACK, run this
-      # folder. This used to be two calls, the second of which re-ran the whole
-      # apt phase for nothing.
+      # The image already contains all system, language, and solver
+      # dependencies. This call only builds SMACK and runs this folder.
       - name: compile and test
         env:
           REGTEST_ENV: ${{ matrix.regtest_env }}
-          INSTALL_RUST: ${{ (contains(matrix.regtest_env, '--languages=rust') || contains(matrix.regtest_env, '--languages=cargo')) && '1' || '0' }}
+          INSTALL_DEPENDENCIES: 0
+          INSTALL_RUST: 0
+          INSTALL_Z3: 0
+          INSTALL_BOOGIE: 0
+          INSTALL_CORRAL: 0
         run: ./bin/build.sh
 
   build-and-push-docker:
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     needs: [check-format, check-regressions]
 
@@ -101,23 +188,17 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v4
 
-      # borrowed from:
-      # https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions/58035262
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
       - name: Set tag name
         shell: bash
         id: set_tag
         run: |
-          if [ ${{ steps.extract_branch.outputs.branch }} == 'master' ]; then echo "##[set-output name=docker_tag;]$(echo stable)" && exit 0; fi
-          if [ ${{ steps.extract_branch.outputs.branch }} == 'develop' ]; then echo "##[set-output name=docker_tag;]$(echo latest)" && exit 0; fi
-          echo "##[set-output name=docker_tag;]$(echo none)"
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            echo "docker_tag=stable" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker_tag=latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push
-        if: ${{ steps.set_tag.outputs.docker_tag != 'none' }}
         id: docker_build
         uses: docker/build-push-action@v7
         with:
