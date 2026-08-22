@@ -38,6 +38,7 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
+#include "smack/PropertySlicing.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
@@ -227,6 +228,14 @@ int main(int argc, char **argv) {
   }
 
   pass_manager.add(new smack::IntegerOverflowChecker());
+
+  // Property slicing runs here: after Devirtualize has resolved indirect
+  // calls and SplitAggregateValue has run, so the call graph and the memory
+  // operations are final; but before RewriteBitwiseOps, so that `and`/`or`
+  // are still plain instructions rather than calls to __SMACK_and32 &c.,
+  // which the slicer would have to treat as opaque verifier calls. It is a
+  // no-op unless -property-slicing is given.
+  pass_manager.add(smack::createPropertySlicingPass());
 
   if (smack::SmackOptions::RewriteBitwiseOps &&
       !(smack::SmackOptions::BitPrecise ||

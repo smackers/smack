@@ -489,6 +489,41 @@ def arguments():
                 function name. [default: everything]''')
 
     translate_group.add_argument(
+        '--property-slicing',
+        action='store_true',
+        default=False,
+        help='remove program behaviour that cannot influence the assertion '
+             'property before Boogie generation (unreach-call only)')
+
+    translate_group.add_argument(
+        '--property-slicing-no-loop-bypass',
+        action='store_true',
+        default=False,
+        help='with --property-slicing, drop irrelevant instructions but keep '
+             'every loop')
+
+    translate_group.add_argument(
+        '--property-slicing-relax-asm',
+        action='store_true',
+        default=False,
+        help='with --property-slicing, treat inline asm as the no-op SMACK '
+             'already translates it to')
+
+    translate_group.add_argument(
+        '--property-slicing-no-regions',
+        action='store_true',
+        default=False,
+        help='with --property-slicing, ignore the DSA region partition and '
+             'treat all memory as one object (ablation experiment)')
+
+    translate_group.add_argument(
+        '--property-slicing-profile',
+        metavar='FILE',
+        default=None,
+        type=str,
+        help='with --property-slicing, write a machine-readable profile here')
+
+    translate_group.add_argument(
         '--check',
         metavar='PROPERTY',
         nargs='+',
@@ -772,6 +807,16 @@ def llvm_to_bpl(args):
         cmd += ['-rust-panics']
     if args.fail_on_loop_exit:
         cmd += ['-fail-on-loop-exit']
+    if args.property_slicing:
+        cmd += ['-property-slicing']
+    if args.property_slicing_no_loop_bypass:
+        cmd += ['-property-slicing-no-loop-bypass']
+    if args.property_slicing_relax_asm:
+        cmd += ['-property-slicing-relax-asm']
+    if args.property_slicing_no_regions:
+        cmd += ['-property-slicing-no-regions']
+    if args.property_slicing_profile:
+        cmd += ['-property-slicing-profile', args.property_slicing_profile]
     if not args.modular:
         # Lets llvm2bpl warn only about the loops this bound fails to cover.
         # Under --modular there is no such bound, so it is left unset.
