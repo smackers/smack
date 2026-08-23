@@ -97,6 +97,7 @@ private:
                   const llvm::Use &rhs);
   const Expr *select(const llvm::Use &cond, const llvm::Use &trueValue,
                      const llvm::Use &falseValue);
+  Sign legacyLiteralSign(const llvm::Use &use) const;
 
   std::string procName(const llvm::User &U);
   std::string procName(llvm::Function *F, const llvm::User &U);

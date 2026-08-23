@@ -99,6 +99,9 @@ def default_clang_compile_command(args, lib=False):
     # See: https://stackoverflow.com/a/46753969.
     cmd += ['-Xclang', '-disable-O0-optnone']
     cmd += ['-I' + path for path in smack_headers(args)]
+    if not args.sign_analysis:
+        # Keep the historical argument precedence when the analysis is off.
+        cmd += args.clang_options.split()
     cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-', '_')]
 
     from .top import VProperty
@@ -106,16 +109,20 @@ def default_clang_compile_command(args, lib=False):
     if args.check.contains_mem_safe_props():
         cmd += ['-DMEMORY_SAFETY']
     if not lib:
-        # LLVM integers are signless. Ask Clang to retain the source-level
-        # distinction on add/sub/mul as checked-arithmetic intrinsics; SMACK
-        # consumes the sanitizer scaffolding as analysis metadata before
-        # verification, so this does not enable overflow checking by itself.
-        sanitizers = ['signed-integer-overflow',
-                      'unsigned-integer-overflow']
+        sanitizers = []
+        if args.sign_analysis:
+            # LLVM integers are signless. Ask Clang to retain the source-level
+            # distinction on add/sub/mul as checked-arithmetic intrinsics;
+            # SMACK consumes the scaffolding as analysis metadata.
+            sanitizers += ['signed-integer-overflow',
+                           'unsigned-integer-overflow']
         if VProperty.INTEGER_OVERFLOW in args.check:
+            if 'signed-integer-overflow' not in sanitizers:
+                sanitizers.append('signed-integer-overflow')
             sanitizers.append('shift')
-        cmd += ['-fsanitize=' + ','.join(sanitizers)]
-        if VProperty.INTEGER_OVERFLOW not in args.check:
+        if sanitizers:
+            cmd += ['-fsanitize=' + ','.join(sanitizers)]
+        if args.sign_analysis and VProperty.INTEGER_OVERFLOW not in args.check:
             # Trap mode retains the checked-arithmetic intrinsics without
             # generating a per-operation UBSan data descriptor. The early LLVM
             # cleanup removes the unreachable trap paths.
@@ -127,9 +134,10 @@ def default_clang_compile_command(args, lib=False):
         # configuration macro.
         if VProperty.INTEGER_OVERFLOW in args.check:
             cmd += ['-DSIGNED_INTEGER_OVERFLOW_CHECK']
-    # User options come last so an explicit -fno-sanitize can opt out of the
-    # annotation mechanism and other frontend choices remain overridable.
-    cmd += args.clang_options.split()
+    if args.sign_analysis:
+        # User options come last so an explicit -fno-sanitize can opt out of
+        # the annotation mechanism.
+        cmd += args.clang_options.split()
     if VProperty.ASSERTIONS not in args.check:
         cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:

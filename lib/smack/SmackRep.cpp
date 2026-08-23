@@ -804,13 +804,59 @@ const Expr *SmackRep::expr(const llvm::Value *v) {
   return expr(v, Sign::Unknown);
 }
 
+Sign SmackRep::legacyLiteralSign(const llvm::Use &Use) const {
+  using namespace llvm;
+
+  const auto *CI = dyn_cast<ConstantInt>(Use.get());
+  if (!CI || CI->getBitWidth() <= 1 || !CI->isNegative())
+    return Sign::Unknown;
+
+  const User *Owner = Use.getUser();
+  const unsigned Operand = Use.getOperandNo();
+  const auto *I = dyn_cast<Instruction>(Owner);
+  const auto *CE = dyn_cast<ConstantExpr>(Owner);
+  if (!I && !CE)
+    return Sign::Signed;
+
+  const unsigned Opcode = I ? I->getOpcode() : CE->getOpcode();
+  switch (Opcode) {
+  case Instruction::SDiv:
+  case Instruction::SRem:
+    return Sign::Signed;
+  case Instruction::UDiv:
+  case Instruction::URem:
+  case Instruction::Sub:
+    return Sign::Unsigned;
+  case Instruction::Select:
+    return Operand == 0 ? Sign::Signed : Sign::Unsigned;
+  default:
+    break;
+  }
+
+  if (Opcode == Instruction::ICmp) {
+    CmpInst::Predicate Predicate;
+    if (const auto *Cmp = dyn_cast<ICmpInst>(I))
+      Predicate = Cmp->getPredicate();
+    else
+      Predicate = static_cast<CmpInst::Predicate>(CE->getPredicate());
+    return CmpInst::isUnsigned(Predicate) ? Sign::Unsigned : Sign::Signed;
+  }
+
+  // Preserve SMACK's original operation-local heuristic when the optional
+  // analysis is disabled. Unflagged ordinary binary operations are treated as
+  // unsigned, except that add/mul/etc. keep the common -1 decrement signed.
+  if (const auto *BO = dyn_cast_or_null<BinaryOperator>(I)) {
+    if (!BO->hasNoSignedWrap())
+      return CI->isMinusOne() ? Sign::Signed : Sign::Unsigned;
+  }
+  return Sign::Signed;
+}
+
 const Expr *SmackRep::expr(const llvm::Use &use) {
   Sign sign = Sign::Unknown;
-  if (signAnalysis) {
-    if (const auto *CI = llvm::dyn_cast<llvm::ConstantInt>(use.get())) {
-      if (CI->getBitWidth() > 1 && CI->isNegative())
-        sign = signAnalysis->getSign(use);
-    }
+  if (const auto *CI = llvm::dyn_cast<llvm::ConstantInt>(use.get())) {
+    if (CI->getBitWidth() > 1 && CI->isNegative())
+      sign = signAnalysis ? signAnalysis->getSign(use) : legacyLiteralSign(use);
   }
   return expr(use.get(), sign);
 }

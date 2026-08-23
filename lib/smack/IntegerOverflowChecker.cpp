@@ -150,7 +150,12 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
         Function *f = ci->getCalledFunction();
         if (f && f->hasName()) {
           auto fn = f->getName();
+          // Outside the opt-in analysis, preserve the historical treatment of
+          // checked-arithmetic intrinsics exactly. In particular, a user may
+          // have supplied sanitizer instrumentation through --clang-options;
+          // that did not previously make the intrinsic annotation-only.
           bool sanitizerInstrumentation =
+              SmackOptions::SignAnalysisEnabled &&
               ci->getMetadata("nosanitize") != nullptr;
           SmallVector<StringRef, 4> frontendInfo;
           bool overflowIntrinsic = OVERFLOW_INTRINSICS.match(fn, &frontendInfo);
@@ -241,7 +246,8 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
               ai->setDebugLoc(ci->getDebugLoc());
               r = ai;
             }
-            setOverflowSign(cast<Instruction>(r), isSigned);
+            if (SmackOptions::SignAnalysisEnabled)
+              setOverflowSign(cast<Instruction>(r), isSigned);
             if (checkThisOverflow &&
                 SmackOptions::shouldCheckFunction(F.getName()))
               addCheck(co, flag, ci);
@@ -317,7 +323,9 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
       MergeBlockIntoPredecessor(BB);
   }
 
-  return modified;
+  // The legacy pass reported the module as modified unconditionally. Keep
+  // that pass-manager behavior when the optional analysis is disabled.
+  return SmackOptions::SignAnalysisEnabled ? modified : true;
 }
 
 // Pass ID variable

@@ -1,5 +1,6 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 // @expect verified
+// @flag --sign-analysis
 // clang-format off
 // @checkbpl grep -F '$add.i32($i0, 4294967280)'
 // @checkbpl grep -F '$add.i32($i0, $sub.i32(0, 16))'

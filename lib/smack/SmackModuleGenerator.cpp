@@ -27,7 +27,8 @@ void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<llvm::LoopInfoWrapperPass>();
   AU.addRequired<Regions>();
-  AU.addRequired<SignAnalysis>();
+  if (SmackOptions::SignAnalysisEnabled)
+    AU.addRequired<SignAnalysis>();
   if (SmackOptions::MemorySafety)
     AU.addRequired<DSAWrapper>();
 }
@@ -40,8 +41,11 @@ bool SmackModuleGenerator::runOnModule(llvm::Module &m) {
 void SmackModuleGenerator::generateProgram(llvm::Module &M) {
 
   Naming naming;
+  SignAnalysis *SA = SmackOptions::SignAnalysisEnabled
+                         ? &getAnalysis<SignAnalysis>()
+                         : nullptr;
   SmackRep rep(&M.getDataLayout(), &naming, program, &getAnalysis<Regions>(),
-               &getAnalysis<SignAnalysis>());
+               SA);
   std::list<Decl *> &decls = program->getDeclarations();
   DSAWrapper *DSA =
       SmackOptions::MemorySafety ? &getAnalysis<DSAWrapper>() : nullptr;

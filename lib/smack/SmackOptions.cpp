@@ -77,6 +77,11 @@ const llvm::cl::opt<bool>
 const llvm::cl::opt<bool> SmackOptions::IntegerOverflow(
     "integer-overflow", llvm::cl::desc("Enable integer overflow checks"));
 
+const llvm::cl::opt<bool> SmackOptions::SignAnalysisEnabled(
+    "sign-analysis",
+    llvm::cl::desc("Infer the signedness of integer literal uses"),
+    llvm::cl::init(false));
+
 const llvm::cl::opt<bool> SmackOptions::FailOnLoopExit(
     "fail-on-loop-exit",
     llvm::cl::desc("Add assert(false) to the end of each loop"));

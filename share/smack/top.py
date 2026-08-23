@@ -451,6 +451,12 @@ def arguments():
                 behavior) [default: %(default)s]''')
 
     translate_group.add_argument(
+        '--sign-analysis',
+        action='store_true',
+        default=False,
+        help='infer the signedness of integer literal uses')
+
+    translate_group.add_argument(
         '--timing-annotations',
         action="store_true",
         default=False,
@@ -764,6 +770,8 @@ def llvm_to_bpl(args):
         cmd += ['-rewrite-bitwise-ops']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
+    if args.sign_analysis:
+        cmd += ['-sign-analysis']
     if args.check.contains_mem_safe_props():
         cmd += ['-memory-safety']
     if VProperty.INTEGER_OVERFLOW in args.check:

@@ -191,10 +191,12 @@ int main(int argc, char **argv) {
   // pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
-  // Strip Clang's signed/unsigned overflow sanitizer scaffolding before it can
-  // perturb loop, alias, or sign analysis. The late instance still handles
-  // genuine checked-arithmetic intrinsics and requested overflow checks.
-  pass_manager.add(new smack::IntegerOverflowChecker(true));
+  if (smack::SmackOptions::SignAnalysisEnabled) {
+    // Strip Clang's signed/unsigned overflow sanitizer scaffolding before it
+    // can perturb loop or alias analysis. The late instance still handles
+    // genuine checked-arithmetic intrinsics and requested overflow checks.
+    pass_manager.add(new smack::IntegerOverflowChecker(true));
+  }
   if (StaticUnroll) {
     pass_manager.add(llvm::createLoopSimplifyPass());
     pass_manager.add(llvm::createLoopRotatePass());
@@ -282,7 +284,8 @@ int main(int argc, char **argv) {
       check(EC.message());
     F->keep();
     files.push_back(F);
-    pass_manager.add(new smack::SignAnalysis());
+    if (smack::SmackOptions::SignAnalysisEnabled)
+      pass_manager.add(new smack::SignAnalysis());
     pass_manager.add(new smack::SmackModuleGenerator());
     pass_manager.add(new smack::BplFilePrinter(F->os()));
   }

@@ -1,4 +1,5 @@
 ; @expect verified
+; @flag --sign-analysis
 ; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 16))'
 ; @checkbpl grep -F '$sub.i32(x, 4294967280)'
 ; @checkbpl grep -F 'then $sub.i32(0, 16) else 0'
