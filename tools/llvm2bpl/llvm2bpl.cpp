@@ -195,6 +195,7 @@ int main(int argc, char **argv) {
   // perturb loop, alias, or sign analysis. The late instance still handles
   // genuine checked-arithmetic intrinsics and requested overflow checks.
   pass_manager.add(new smack::IntegerOverflowChecker(true));
+  pass_manager.add(llvm::createGlobalDCEPass());
   if (StaticUnroll) {
     pass_manager.add(llvm::createLoopSimplifyPass());
     pass_manager.add(llvm::createLoopRotatePass());

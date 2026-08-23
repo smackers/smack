@@ -13,6 +13,7 @@
 #include "smack/SmackOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -34,6 +35,12 @@ using namespace llvm;
 const char OverflowSignMetadata[] = "overflow.sign";
 
 Regex OVERFLOW_INTRINSICS("^llvm.(u|s)(add|sub|mul).with.overflow.i([0-9]+)$");
+
+static bool isSanitizerHandler(StringRef Name) {
+  return Name.find("__ubsan_handle_shift_out_of_bounds") != StringRef::npos ||
+         Name.find("__ubsan_handle_divrem_overflow") != StringRef::npos ||
+         Name == "llvm.ubsantrap";
+}
 
 static void setOverflowSign(Instruction *I, bool isSigned) {
   LLVMContext &C = I->getContext();
@@ -130,6 +137,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
   Function *va = m.getFunction("__VERIFIER_assume");
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
   SmallPtrSet<BasicBlock *, 8> blocksToFold;
+  SmallPtrSet<BasicBlock *, 8> handlerBlocksToRemove;
   SmallPtrSet<Function *, 8> functionsToClean;
   SmallVector<WeakTrackingVH, 8> blocksToMerge;
   std::vector<Instruction *> instToErase;
@@ -144,19 +152,34 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
           auto fn = f->getName();
           bool sanitizerInstrumentation =
               ci->getMetadata("nosanitize") != nullptr;
+          SmallVector<StringRef, 4> frontendInfo;
+          bool overflowIntrinsic = OVERFLOW_INTRINSICS.match(fn, &frontendInfo);
           if (FrontendInstrumentationOnly) {
-            SmallVector<StringRef, 4> frontendInfo;
-            if (!sanitizerInstrumentation ||
-                !OVERFLOW_INTRINSICS.match(fn, &frontendInfo))
+            if (!sanitizerInstrumentation)
               continue;
+
+            if (isSanitizerHandler(fn)) {
+              // Clang emits signed division and shift checks directly as a
+              // branch to a handler (or llvm.ubsantrap), without an overflow
+              // intrinsic. In annotation-only mode, fold every predecessor
+              // away from that handler block.
+              if (!SmackOptions::IntegerOverflow) {
+                handlerBlocksToRemove.insert(ci->getParent());
+                functionsToClean.insert(ci->getFunction());
+                modified = true;
+              }
+              continue;
+            }
+
+            if (!overflowIntrinsic)
+              continue;
+
             // Preserve signed sanitizer instrumentation for the late pass when
             // the user explicitly requested overflow checking.
             if (SmackOptions::IntegerOverflow && frontendInfo[1] == "s")
               continue;
           }
-          if (fn.find("__ubsan_handle_shift_out_of_bounds") !=
-                  StringRef::npos ||
-              fn.find("__ubsan_handle_divrem_overflow") != StringRef::npos) {
+          if (isSanitizerHandler(fn) && fn != "llvm.ubsantrap") {
             // If the call to __ubsan_handle_* is reachable,
             // then an overflow is possible.
             if (SmackOptions::IntegerOverflow) {
@@ -172,7 +195,7 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
             }
           }
           SmallVector<StringRef, 4> info;
-          if (OVERFLOW_INTRINSICS.match(fn, &info)) {
+          if (overflowIntrinsic && OVERFLOW_INTRINSICS.match(fn, &info)) {
             /*
              * If ei is an ExtractValueInst whose value flows from an LLVM
              * checked value intrinsic f, then we do the following:
@@ -257,6 +280,28 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
   }
   for (auto I : instToErase) {
     I->eraseFromParent();
+  }
+  for (BasicBlock *Handler : handlerBlocksToRemove) {
+    SmallVector<BasicBlock *, 2> predecessorsToFold;
+    for (BasicBlock *Pred : predecessors(Handler))
+      predecessorsToFold.push_back(Pred);
+
+    for (BasicBlock *Pred : predecessorsToFold) {
+      auto *Branch = dyn_cast<BranchInst>(Pred->getTerminator());
+      if (!Branch || !Branch->isConditional())
+        continue;
+
+      bool HandlerOnTrue = Branch->getSuccessor(0) == Handler;
+      bool HandlerOnFalse = Branch->getSuccessor(1) == Handler;
+      if (HandlerOnTrue == HandlerOnFalse)
+        continue;
+
+      Branch->setCondition(HandlerOnTrue
+                               ? ConstantInt::getFalse(Branch->getContext())
+                               : ConstantInt::getTrue(Branch->getContext()));
+      blocksToFold.insert(Pred);
+      functionsToClean.insert(Pred->getParent());
+    }
   }
   for (BasicBlock *BB : blocksToFold) {
     SimplifyInstructionsInBlock(BB);

@@ -4,20 +4,12 @@
 #ifndef SIGNANALYSIS_H
 #define SIGNANALYSIS_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include <map>
-#include <vector>
-
-namespace seadsa {
-class Node;
-}
 
 namespace smack {
-
-class DSAWrapper;
 
 /// Inferred sign for an integer SSA value.
 ///
@@ -40,9 +32,14 @@ inline Sign meetSign(Sign a, Sign b) {
   return Sign::Conflict;
 }
 
-/// Module pass that infers the sign (signed / unsigned / unknown / conflict)
-/// of every integer-typed SSA value via bidirectional dataflow analysis,
-/// including propagation through memory via sea-dsa alias information.
+/// A demand-driven sign oracle for integer literal uses.
+///
+/// LLVM integer values are signless, and signedness is not an invariant of an
+/// SSA value: the same value can legitimately be consumed by both signed and
+/// unsigned operations. This analysis therefore starts at an exact Use and
+/// follows only the use-context needed to classify that operand. Results for
+/// completed value queries are memoized, so repeated literal uses can share
+/// their resolved context without requiring a whole-module scan.
 class SignAnalysis : public llvm::ModulePass {
 public:
   static char ID;
@@ -51,55 +48,31 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
   bool runOnModule(llvm::Module &M) override;
 
-  /// Query the inferred sign for a value.  Returns Unknown for values
-  /// not in the map, which includes every constant -- see update().
+  /// Meet the contexts in which V is consumed. This is primarily exposed for
+  /// debugging; literal rendering should query an exact Use instead.
   Sign getSign(const llvm::Value *V) const;
 
   /// Query the inferred sign for a particular operand use.
   ///
   /// Constants have no sign of their own: LLVM uniques them per context, so
-  /// one -1 : i32 object is shared by every use in the module and any sign
-  /// recorded for it would leak between unrelated functions.  For a constant,
-  /// this query therefore derives sign from the exact operand position and its
-  /// surrounding computation.  Non-constants use the ordinary value query.
+  /// one -1 : i32 object is shared by every use in the module. This query
+  /// derives sign from the exact operand position and follows transparent SSA
+  /// and direct call/return edges only when local evidence is insufficient.
   Sign getSign(const llvm::Use &U) const;
 
   /// Dump the analysis results to errs() (for debugging).
   void dump() const;
 
 private:
-  using MemCell = std::pair<const seadsa::Node *, unsigned>;
+  mutable std::map<const llvm::Value *, Sign> SignCache;
 
-  std::map<const llvm::Value *, Sign> SignMap;
-
-  /// Index connecting loads and stores through DSA alias cells.
-  std::map<MemCell, std::vector<const llvm::Value *>> CellStores;
-  std::map<MemCell, std::vector<const llvm::Value *>> CellLoads;
-
-  DSAWrapper *DSA = nullptr;
-
-  /// Meet sign S into V's current mapping.  Returns true if changed.
-  bool update(const llvm::Value *V, Sign S);
-
-  /// Resolve a pointer to its abstract memory cell via DSA.
-  /// Returns {nullptr, 0} if resolution fails.
-  MemCell resolvePointer(const llvm::Value *Ptr) const;
-
-  /// Build the CellStores/CellLoads indices from all load/store instructions.
-  void buildMemoryIndex(llvm::Module &M);
-
-  /// Seed the map from obvious defs and uses.
-  void initialize(llvm::Module &M);
-
-  /// One round of forward + backward propagation.  Returns true if
-  /// any mapping changed.
-  bool propagate(llvm::Module &M);
-
-  /// Forward: propagate sign from a def to its result.
-  bool propagateForward(llvm::Instruction &I);
-
-  /// Backward: propagate sign constraints from a use to its operands.
-  bool propagateBackward(llvm::Instruction &I);
+  Sign
+  inferValue(const llvm::Value *V,
+             llvm::SmallPtrSetImpl<const llvm::Value *> &VisitedValues) const;
+  Sign
+  inferUse(const llvm::Use &U,
+           llvm::SmallPtrSetImpl<const llvm::Value *> &VisitedValues) const;
+  Sign legacyLiteralFallback(const llvm::Use &U) const;
 };
 
 } // namespace smack

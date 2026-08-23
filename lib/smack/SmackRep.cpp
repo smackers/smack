@@ -637,9 +637,9 @@ const Expr *SmackRep::lit(const llvm::Value *v, Sign sign) {
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
 
-    // LLVM constants are signless.  Definite unsigned evidence prints the
+    // LLVM constants are signless. Definite unsigned evidence prints the
     // bit-pattern as non-negative; signed, unknown, and conflicting evidence
-    // use the long-standing signed fallback.
+    // use the stable signed fallback.
     bool neg = width > 1 && sign != Sign::Unsigned && ci->isNegative();
     SmallString<32> str;
     (neg ? API.abs() : API).toString(str, 10, false);
@@ -805,7 +805,13 @@ const Expr *SmackRep::expr(const llvm::Value *v) {
 }
 
 const Expr *SmackRep::expr(const llvm::Use &use) {
-  Sign sign = signAnalysis ? signAnalysis->getSign(use) : Sign::Unknown;
+  Sign sign = Sign::Unknown;
+  if (signAnalysis) {
+    if (const auto *CI = llvm::dyn_cast<llvm::ConstantInt>(use.get())) {
+      if (CI->getBitWidth() > 1 && CI->isNegative())
+        sign = signAnalysis->getSign(use);
+    }
+  }
   return expr(use.get(), sign);
 }
 

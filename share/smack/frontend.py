@@ -99,7 +99,6 @@ def default_clang_compile_command(args, lib=False):
     # See: https://stackoverflow.com/a/46753969.
     cmd += ['-Xclang', '-disable-O0-optnone']
     cmd += ['-I' + path for path in smack_headers(args)]
-    cmd += args.clang_options.split()
     cmd += ['-DMEMORY_MODEL_' + args.mem_mod.upper().replace('-', '_')]
 
     from .top import VProperty
@@ -116,6 +115,11 @@ def default_clang_compile_command(args, lib=False):
         if VProperty.INTEGER_OVERFLOW in args.check:
             sanitizers.append('shift')
         cmd += ['-fsanitize=' + ','.join(sanitizers)]
+        if VProperty.INTEGER_OVERFLOW not in args.check:
+            # Trap mode retains the checked-arithmetic intrinsics without
+            # generating a per-operation UBSan data descriptor. The early LLVM
+            # cleanup removes the unreachable trap paths.
+            cmd += ['-fsanitize-trap=' + ','.join(sanitizers)]
     else:
         # Library and model sources must not acquire overflow instrumentation:
         # it would add analysis noise and could turn model arithmetic into
@@ -123,6 +127,9 @@ def default_clang_compile_command(args, lib=False):
         # configuration macro.
         if VProperty.INTEGER_OVERFLOW in args.check:
             cmd += ['-DSIGNED_INTEGER_OVERFLOW_CHECK']
+    # User options come last so an explicit -fno-sanitize can opt out of the
+    # annotation mechanism and other frontend choices remain overridable.
+    cmd += args.clang_options.split()
     if VProperty.ASSERTIONS not in args.check:
         cmd += ['-DDISABLE_SMACK_ASSERTIONS']
     if args.float:
