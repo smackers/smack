@@ -4,6 +4,7 @@
 #include "smack/Regions.h"
 #include "smack/DSAWrapper.h"
 #include "smack/Debug.h"
+#include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 
@@ -91,6 +92,13 @@ bool Region::overlaps(Region &R) {
           (collapsed || !isDisjoint(R.offset, R.length)));
 }
 
+bool Region::mayShareAllocation(const Region &R) const {
+  // Memory maps may split disjoint offsets of one object, but its allocation
+  // state must remain shared across those offsets.
+  return (incomplete && R.incomplete) || (complicated && R.complicated) ||
+         representative == R.representative;
+}
+
 void Region::print(raw_ostream &O) {
   // TODO identify the representative
   O << "<Node:";
@@ -141,14 +149,89 @@ bool Regions::runOnModule(Module &M) {
   if (!SmackOptions::NoMemoryRegionSplitting) {
     Region::init(M, *this);
     visit(M);
-  }
+  } else if (SmackOptions::MemorySafety)
+    visit(M);
+
+  assert(allocationsAreDisjoint() &&
+         "Allocation classes must be pairwise non-sharing.");
 
   return false;
+}
+
+// Checked once per module rather than per merge: the scan is quadratic in the
+// number of classes, and allocationIdx runs at every tracked memory access.
+bool Regions::allocationsAreDisjoint() const {
+  for (unsigned i = 0; i < allocations.size(); ++i)
+    for (unsigned j = i + 1; j < allocations.size(); ++j)
+      if (allocations[i].mayShareAllocation(allocations[j]))
+        return false;
+  return true;
 }
 
 unsigned Regions::size() const { return regions.size(); }
 
 Region &Regions::get(unsigned R) { return regions[R]; }
+
+unsigned Regions::allocationCount() const { return allocations.size(); }
+
+bool Regions::findAllocation(const Value *V, unsigned &a) const {
+  Region R(V);
+  for (a = 0; a < allocations.size(); ++a) {
+    if (allocations[a].mayShareAllocation(R))
+      return true;
+  }
+  return false;
+}
+
+// Invariant maintained by allocationIdx: no two entries of `allocations`
+// satisfy mayShareAllocation. `findAllocation` depends on it, since it returns
+// the first matching class and would otherwise pick an arbitrary one of
+// several.
+//
+// Establishing it takes a fixed point rather than a single pass, because
+// mayShareAllocation is reflexive and symmetric but *not* transitive: the
+// `incomplete` and `complicated` disjuncts relate classes with unrelated
+// representatives. Absorbing a region can therefore give a class a flag it did
+// not have, making it share with classes that did not match a moment earlier,
+// and absorbing those can widen it again.
+unsigned Regions::allocationIdx(Region &R) {
+  unsigned a;
+  for (a = 0; a < allocations.size(); ++a) {
+    if (allocations[a].mayShareAllocation(R)) {
+      allocations[a].merge(R);
+      break;
+    }
+  }
+
+  if (a == allocations.size()) {
+    allocations.emplace_back(R);
+    return a;
+  }
+
+  for (bool merged = true; merged;) {
+    merged = false;
+    for (unsigned q = 0; q < allocations.size(); ++q) {
+      if (q == a || !allocations[a].mayShareAllocation(allocations[q]))
+        continue;
+      allocations[a].merge(allocations[q]);
+      allocations.erase(allocations.begin() + q);
+      // Erasing shifts everything after q down, including a itself.
+      if (q < a)
+        --a;
+      merged = true;
+      break;
+    }
+  }
+
+  return a;
+}
+
+void Regions::trackAllocation(const Value *V) {
+  if (SmackOptions::MemorySafety) {
+    Region R(V);
+    allocationIdx(R);
+  }
+}
 
 unsigned Regions::idx(const Value *V) {
   SDEBUG(errs() << "[regions] for: " << *V << "\n"; auto U = V;
@@ -235,16 +318,24 @@ unsigned Regions::idx(Region &R) {
   return r;
 }
 
-void Regions::visitLoadInst(LoadInst &I) { idx(I.getPointerOperand()); }
+void Regions::visitLoadInst(LoadInst &I) {
+  idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
+}
 
-void Regions::visitStoreInst(StoreInst &I) { idx(I.getPointerOperand()); }
+void Regions::visitStoreInst(StoreInst &I) {
+  idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
+}
 
 void Regions::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
 }
 
 void Regions::visitAtomicRMWInst(AtomicRMWInst &I) {
   idx(I.getPointerOperand());
+  trackAllocation(I.getPointerOperand());
 }
 
 void Regions::visitMemSetInst(MemSetInst &I) {
@@ -256,6 +347,7 @@ void Regions::visitMemSetInst(MemSetInst &I) {
     length = std::numeric_limits<unsigned>::max();
 
   idx(I.getDest(), length);
+  trackAllocation(I.getDest());
 }
 
 void Regions::visitMemTransferInst(MemTransferInst &I) {
@@ -271,6 +363,8 @@ void Regions::visitMemTransferInst(MemTransferInst &I) {
   // resulting in ``hanging'' regions.
   idx(I.getSource(), length);
   idx(I.getDest(), length);
+  trackAllocation(I.getSource());
+  trackAllocation(I.getDest());
 }
 
 void Regions::visitCallInst(CallInst &I) {
@@ -279,6 +373,12 @@ void Regions::visitCallInst(CallInst &I) {
 
   if (F && F->isDeclaration() && I.getType()->isPointerTy() && name != "malloc")
     idx(&I);
+
+  if (SmackOptions::MemorySafety) {
+    if ((name == "free" || name == Naming::MEMORY_SAFETY_FUNCTION) &&
+        I.arg_size() > 0)
+      trackAllocation(I.getArgOperand(0));
+  }
 
   if (name.find("__SMACK_values") != std::string::npos) {
     assert(I.arg_size() == 2 && "Expected two operands.");

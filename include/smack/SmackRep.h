@@ -186,6 +186,8 @@ public:
   unsigned getElementSize(const llvm::Value *v);
 
   std::string memReg(unsigned i);
+  std::string allocReg(unsigned i);
+  std::string allocPath(const llvm::Value *v);
   std::string memType(unsigned region);
   std::string memPath(unsigned region);
   std::string memPath(const llvm::Value *v);
