@@ -1359,6 +1359,39 @@ static std::string intrinsicQuant(const std::string &qid) {
 // (the ite else-branch covers everything outside [dst, dst+len), including
 // len <= 0 and wrapped bit-vector ranges, where the frame axioms overlap and
 // agree). Emitted once per element type, keyed by the function's name.
+//
+// The axiom carries {:weight 0}. z3 (5.0.0, smt/qi_queue.cpp) prices every
+// E-matching instance at cost = weight + generation, where generation is the
+// largest generation of the terms bound by the trigger, and stamps every term
+// the instance creates with generation = cost (get_new_gen; weight 0 keeps the
+// bindings' generation, with the sole exception 0 -> 1). Instances with cost
+// above smt.qi.lazy_threshold (20) are never asserted, and the query comes back
+// `unknown`, which Boogie reports as a failed assertion. A chain of k intrinsic
+// calls expands a read of the last result through k nested applications: with
+// the default weight 1 the k-th expansion costs k + 1, so a copy chain deeper
+// than 20 turns into a spurious error; with weight 0 every expansion stays at
+// generation 1 and cost 1, independent of the depth of the chain.
+//
+// Weight 0 removes z3's generation brake, so this relies on the axiom being
+// incapable of a matching loop, which holds for these reasons:
+//   * the sole pattern is a read of the result, `fn(params)[x]`; the axiom is
+//     never triggered by a read of an argument map;
+//   * an instance creates reads only on the argument maps D/S, which are proper
+//     subterms of the trigger and earlier incarnations of the memory under
+//     Boogie's passification; the map position strictly decreases along every
+//     chain of instances, so the closure of any seed read is finite (bounded by
+//     the number of intrinsic calls between the seed and the ground store);
+//   * no other SMACK-generated formula creates a read of an application from a
+//     read of an argument map (the remaining quantifiers mention no memory
+//     map, and z3's array axioms create reads only on store terms), so the
+//     upward edge from argument map to result cannot be produced by anything
+//     SMACK emits. The only way to close the cycle is an asserted equality
+//     between an application and its own argument (`M1 == fn(M0,..)` and
+//     `M1 == M0`), which SMACK never emits.
+// Adding a trigger on an argument map (`{D[x]}`, `{S[y]}`), or asserting such
+// an equality, invalidates this argument and would make the weight-0 axiom
+// loop without bound; if that ever becomes necessary the default weight must
+// be restored.
 void SmackRep::intrinsicSummary(const std::string &fn, const std::string &type,
                                 const std::string &params,
                                 const std::string &qid,
@@ -1374,8 +1407,8 @@ void SmackRep::intrinsicSummary(const std::string &fn, const std::string &type,
   std::string app = fn + "(" + names + ")";
   std::stringstream s;
   s << "function " << fn << "(" << params << ") : [ref] " << type << ";\n"
-    << "axiom (forall " << params << ", x: ref :: {:qid \"" << qid << "\"} {"
-    << app << "[x]} " << app << "[x] == (if "
+    << "axiom (forall " << params << ", x: ref :: {:qid \"" << qid
+    << "\"} {:weight 0} {" << app << "[x]} " << app << "[x] == (if "
     << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) then "
     << value << " else D[x]));\n";
   auxDecls[fn] = Decl::code(fn, s.str());
