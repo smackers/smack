@@ -417,6 +417,11 @@ def arguments():
                 the post-state memory map''')
 
     translate_group.add_argument(
+        '--memory-intrinsic-summaries', action='store_true', default=False,
+        help='''model memcpy/memset as map-valued functions with a single
+                read axiom triggered on reads of the result''')
+
+    translate_group.add_argument(
         '--no-memory-splitting',
         action="store_true",
         default=False,
@@ -778,6 +783,8 @@ def llvm_to_bpl(args):
                 str(args.memory_intrinsic_threshold)]
     if args.memory_intrinsic_triggers:
         cmd += ['-memory-intrinsic-triggers']
+    if args.memory_intrinsic_summaries:
+        cmd += ['-memory-intrinsic-summaries']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
     if args.check.contains_mem_safe_props():

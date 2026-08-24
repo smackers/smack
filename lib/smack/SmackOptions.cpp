@@ -94,6 +94,12 @@ const llvm::cl::opt<bool> SmackOptions::MemoryIntrinsicTriggers(
                    "trigger on the post-state memory map, suppressing the "
                    "pre-state pattern Z3 would otherwise infer"));
 
+const llvm::cl::opt<bool> SmackOptions::MemoryIntrinsicSummaries(
+    "memory-intrinsic-summaries",
+    llvm::cl::desc("Model memcpy/memset as first-class map-valued functions "
+                   "with a single read axiom triggered on reads of the "
+                   "result, instead of three quantifiers per call"));
+
 const llvm::cl::opt<unsigned> SmackOptions::UnrollBound(
     "unroll-bound",
     llvm::cl::desc("The loop unrolling bound the back-end verifier will be "

@@ -109,6 +109,9 @@ private:
 
   unsigned numElements(const llvm::Constant *v);
 
+  void intrinsicSummary(const std::string &fn, const std::string &type,
+                        const std::string &params, const std::string &qid,
+                        const std::string &value);
   Decl *memcpyProc(std::string type,
                    unsigned length = std::numeric_limits<unsigned>::max());
   Decl *memsetProc(std::string type,

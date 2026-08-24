@@ -1349,6 +1349,38 @@ static std::string intrinsicQuant(const std::string &qid) {
   return attrs;
 }
 
+// Under --memory-intrinsic-summaries the intrinsic's result is a first-class
+// map-valued function of its arguments, `fn(params)`, defined by ONE read axiom
+// whose only trigger is a read of the result: `fn(params)[x]`. A read of the
+// post-state is then expanded on demand into a read of the pre-state map(s),
+// and an instance can only create reads on strictly earlier maps, so there is
+// no back edge from the pre-state map and no matching loop. Pointwise this is
+// exactly the conjunction of the three quantified axioms above for every len
+// (the ite else-branch covers everything outside [dst, dst+len), including
+// len <= 0 and wrapped bit-vector ranges, where the frame axioms overlap and
+// agree). Emitted once per element type, keyed by the function's name.
+void SmackRep::intrinsicSummary(const std::string &fn, const std::string &type,
+                                const std::string &params,
+                                const std::string &qid,
+                                const std::string &value) {
+  if (auxDecls.count(fn))
+    return;
+  std::string names = params;
+  for (size_t i = names.find(':'); i != std::string::npos;
+       i = names.find(':')) {
+    size_t e = names.find(',', i);
+    names.erase(i, e == std::string::npos ? std::string::npos : e - i);
+  }
+  std::string app = fn + "(" + names + ")";
+  std::stringstream s;
+  s << "function " << fn << "(" << params << ") : [ref] " << type << ";\n"
+    << "axiom (forall " << params << ", x: ref :: {:qid \"" << qid << "\"} {"
+    << app << "[x]} " << app << "[x] == (if "
+    << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) then "
+    << value << " else D[x]));\n";
+  auxDecls[fn] = Decl::code(fn, s.str());
+}
+
 Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
   std::stringstream s;
 
@@ -1384,6 +1416,18 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
         << "\n";
     s << "}"
       << "\n";
+
+  } else if (SmackOptions::MemoryIntrinsicSummaries) {
+    std::string fn = Naming::MEMCPY + ".copy." + type;
+    intrinsicSummary(fn, type,
+                     "D: [ref] " + type + ", S: [ref] " + type +
+                         ", dst: ref, src: ref, len: ref",
+                     "smack.copy.read", "S[$add.ref($sub.ref(src,dst),x)]");
+    std::string app = fn + "(M.dst, M.src, dst, src, len)";
+    if (SmackOptions::MemoryModelImpls)
+      s << "\n{\n  M.ret := " << app << ";\n}\n";
+    else
+      s << ";\nensures M.ret == " << app << ";\n";
 
   } else if (SmackOptions::MemoryModelImpls) {
     s << "\n"
@@ -1458,6 +1502,18 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
         << "\n";
     s << "}"
       << "\n";
+
+  } else if (SmackOptions::MemoryIntrinsicSummaries) {
+    std::string fn = Naming::MEMSET + ".set." + type;
+    intrinsicSummary(fn, type,
+                     "D: [ref] " + type + ", dst: ref, val: " + intType(8) +
+                         ", len: ref",
+                     "smack.set.read", "val");
+    std::string app = fn + "(M, dst, val, len)";
+    if (SmackOptions::MemoryModelImpls)
+      s << "\n{\n  M.ret := " << app << ";\n}\n";
+    else
+      s << ";\nensures M.ret == " << app << ";\n";
 
   } else if (SmackOptions::MemoryModelImpls) {
     s << "\n"

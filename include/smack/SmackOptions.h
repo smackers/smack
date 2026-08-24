@@ -35,6 +35,7 @@ public:
   static const llvm::cl::opt<bool> FailOnLoopExit;
   static const llvm::cl::opt<unsigned> MemoryIntrinsicThreshold;
   static const llvm::cl::opt<bool> MemoryIntrinsicTriggers;
+  static const llvm::cl::opt<bool> MemoryIntrinsicSummaries;
   static const llvm::cl::opt<unsigned> UnrollBound;
   static const llvm::cl::opt<LLVMAssumeType> LLVMAssumes;
   static const llvm::cl::opt<bool> RustPanics;
