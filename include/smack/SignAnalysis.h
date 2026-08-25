@@ -40,6 +40,14 @@ inline Sign meetSign(Sign a, Sign b) {
   return Sign::Conflict;
 }
 
+/// SMACK's original operation-local sign table for a negative integer literal
+/// operand. This is the complete rendering rule when --sign-analysis is off
+/// (its output must stay byte-identical to that of earlier releases) and the
+/// residue the analysis falls back to for sign-polymorphic bitwise operations
+/// on which no consumer supplied a window. Returns Unknown for anything that
+/// is not a negative literal of width > 1.
+Sign legacyLiteralSign(const llvm::Use &U);
+
 /// A demand-driven sign oracle for integer literal uses.
 ///
 /// LLVM integer values are signless, and signedness is not an invariant of an
@@ -80,7 +88,6 @@ private:
   Sign
   inferUse(const llvm::Use &U,
            llvm::SmallPtrSetImpl<const llvm::Value *> &VisitedValues) const;
-  Sign legacyLiteralFallback(const llvm::Use &U) const;
 };
 
 } // namespace smack

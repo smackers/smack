@@ -74,45 +74,53 @@ bool SignAnalysis::runOnModule(Module &) {
   return false;
 }
 
-Sign SignAnalysis::legacyLiteralFallback(const Use &U) const {
+Sign legacyLiteralSign(const Use &U) {
   const auto *CI = dyn_cast<ConstantInt>(U.get());
   if (!CI || CI->getBitWidth() <= 1 || !CI->isNegative())
     return Sign::Unknown;
 
-  const auto *I = dyn_cast<Instruction>(U.getUser());
-  const auto *CE = dyn_cast<ConstantExpr>(U.getUser());
+  const User *Owner = U.getUser();
+  const unsigned Operand = U.getOperandNo();
+  const auto *I = dyn_cast<Instruction>(Owner);
+  const auto *CE = dyn_cast<ConstantExpr>(Owner);
   if (!I && !CE)
-    return Sign::Unknown;
+    return Sign::Signed;
 
-  unsigned Opcode = I ? I->getOpcode() : CE->getOpcode();
-
-  // Preserve the old operation-local behavior when Clang did not provide
-  // sanitizer metadata, most importantly for uninstrumented library code.
-  // Trust nsw/nuw first when they are available.
-  if (I) {
-    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I)) {
-      if (OBO->hasNoSignedWrap())
-        return Sign::Signed;
-      if (OBO->hasNoUnsignedWrap())
-        return Sign::Unsigned;
-    }
-  }
-
+  const unsigned Opcode = I ? I->getOpcode() : CE->getOpcode();
   switch (Opcode) {
+  case Instruction::SDiv:
+  case Instruction::SRem:
+    return Sign::Signed;
+  case Instruction::UDiv:
+  case Instruction::URem:
   case Instruction::Sub:
     return Sign::Unsigned;
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::Shl:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-    // The historical heuristic kept -1 signed because decrement commonly
-    // appears as add -1, while other high-bit patterns were printed unsigned.
-    return CI->isMinusOne() ? Sign::Signed : Sign::Unsigned;
+  case Instruction::Select:
+    return Operand == 0 ? Sign::Signed : Sign::Unsigned;
   default:
-    return Sign::Unknown;
+    break;
   }
+
+  if (Opcode == Instruction::ICmp) {
+    CmpInst::Predicate Predicate;
+    // The owner may be an icmp constant expression, in which case I is null.
+    if (const auto *Cmp = dyn_cast_or_null<ICmpInst>(I))
+      Predicate = Cmp->getPredicate();
+    else
+      Predicate = static_cast<CmpInst::Predicate>(CE->getPredicate());
+    return CmpInst::isUnsigned(Predicate) ? Sign::Unsigned : Sign::Signed;
+  }
+
+  // SMACK's original operation-local heuristic: an ordinary binary operation
+  // without nsw treats the literal as unsigned, except that the common -1
+  // decrement stays signed. Only add/sub/mul/shl carry wrap flags; and/or/
+  // xor/lshr/ashr are not OverflowingBinaryOperators and must not be asked.
+  if (const auto *BO = dyn_cast_or_null<BinaryOperator>(I)) {
+    const auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO);
+    if (!OBO || !OBO->hasNoSignedWrap())
+      return CI->isMinusOne() ? Sign::Signed : Sign::Unsigned;
+  }
+  return Sign::Signed;
 }
 
 Sign SignAnalysis::inferValue(
@@ -257,13 +265,10 @@ Sign SignAnalysis::inferUse(
   case Instruction::Mul:
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor: {
-    Sign S = inferValue(Owner, VisitedValues);
-    return S == Sign::Unknown ? legacyLiteralFallback(U) : S;
-  }
+  case Instruction::Xor:
   case Instruction::Shl: {
     Sign S = inferValue(Owner, VisitedValues);
-    return S == Sign::Unknown ? legacyLiteralFallback(U) : S;
+    return S == Sign::Unknown ? legacyLiteralSign(U) : S;
   }
   case Instruction::Trunc:
   case Instruction::Freeze:
