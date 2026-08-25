@@ -1024,10 +1024,63 @@ const Expr *SmackRep::cmp(const llvm::ConstantExpr *CE) {
   return cmp(CE->getPredicate(), CE->getOperandUse(0), CE->getOperandUse(1));
 }
 
+// Under the unbounded integer encoding an N-bit value has two representatives
+// for every bit pattern with the top bit set: -k when it was produced in the
+// signed window and 2^N - k when it was produced in the unsigned window. An
+// equality against a negative literal is only meaningful when the literal is
+// spelled in the window the other operand actually holds. When the sign
+// analysis can decide that window (Signed or Unsigned) the literal follows it;
+// otherwise (Unknown: no evidence, or Conflict: the value escapes) compare
+// against both representatives. Under the two-window model this is exact: the
+// value holds one representative or the other, and the disjunction is true
+// iff the bit patterns agree, so it cannot create false alarms either way.
+// The bit-vector and wrapped-integer encodings have a single representative
+// and never need this.
+const Expr *SmackRep::twoWindowEquality(unsigned predicate,
+                                        const std::string &fn,
+                                        const llvm::Use &lhs,
+                                        const llvm::Use &rhs) {
+  using namespace llvm;
+
+  if (!signAnalysis || SmackOptions::BitPrecise ||
+      SmackOptions::WrappedIntegerEncoding)
+    return nullptr;
+  if (predicate != CmpInst::ICMP_EQ && predicate != CmpInst::ICMP_NE)
+    return nullptr;
+
+  auto isNegativeLiteral = [](const Use &U) {
+    const auto *CI = dyn_cast<ConstantInt>(U.get());
+    return CI && CI->getBitWidth() > 1 && CI->isNegative();
+  };
+  const bool lhsLit = isNegativeLiteral(lhs);
+  const bool rhsLit = isNegativeLiteral(rhs);
+  if (lhsLit == rhsLit)
+    return nullptr;
+
+  const Use &litUse = lhsLit ? lhs : rhs;
+  const Use &valUse = lhsLit ? rhs : lhs;
+  const Sign sign = signAnalysis->getSign(litUse);
+  if (sign == Sign::Signed || sign == Sign::Unsigned)
+    return nullptr;
+
+  const Expr *v = expr(valUse);
+  const Expr *lo = lit(litUse.get(), Sign::Signed);
+  const Expr *hi = lit(litUse.get(), Sign::Unsigned);
+  auto compare = [&](const Expr *l) {
+    return lhsLit ? Expr::fn(fn + ".bool", l, v) : Expr::fn(fn + ".bool", v, l);
+  };
+  const Expr *c = predicate == CmpInst::ICMP_EQ
+                      ? Expr::or_(compare(lo), compare(hi))
+                      : Expr::and_(compare(lo), compare(hi));
+  return Expr::ifThenElse(c, integerLit(1ULL, 1), integerLit(0ULL, 1));
+}
+
 const Expr *SmackRep::cmp(unsigned predicate, const llvm::Use &lhs,
                           const llvm::Use &rhs) {
   std::string fn =
       opName(Naming::CMPINST_TABLE.at(predicate), {lhs->getType()});
+  if (const Expr *e = twoWindowEquality(predicate, fn, lhs, rhs))
+    return e;
   const Expr *e1 = expr(lhs);
   const Expr *e2 = expr(rhs);
   if (lhs->getType()->isFloatingPointTy())

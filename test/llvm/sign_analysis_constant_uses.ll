@@ -5,8 +5,12 @@
 ; @checkbpl grep -F 'then $sub.i32(0, 16) else 0'
 ; @checkbpl grep -F 'then 4294967280 else 0'
 ; @checkbpl grep -F '$eq.i32($i0, $sub.i32(0, 16))'
-; @checkbpl grep -F '$eq.i32($i0, $sub.i32(0, 17))'
-; @checkbpl grep -F '$ne.i32($i0, $sub.i32(0, 18))'
+; @checkbpl grep -F '$eq.i32($i0, 4294967279)'
+; @checkbpl grep -F '$ne.i32($i0, 4294967278)'
+; @checkbpl grep -F '(if ($eq.i32.bool($i0, $sub.i32(0, 20)) || $eq.i32.bool($i0, 4294967276)) then 1 else 0)'
+; @checkbpl grep -F '(if ($ne.i32.bool($i0, $sub.i32(0, 21)) && $ne.i32.bool($i0, 4294967275)) then 1 else 0)'
+; @checkbpl grep -F '$i0 := 4294967295;'
+; @checkbpl grep -F '$eq.i32($i0, 4294967295)'
 ; @checkbpl grep -F '$si2fp.i32.float($sub.i32(0, 16))'
 ; @checkbpl grep -F '$ui2fp.i32.float(4294967280)'
 ; @checkbpl grep -F 'signed_arg($sub.i32(0, 16))'
@@ -49,14 +53,24 @@ define i32 @unsigned_select(i1 %c, i32 %x) {
   ret i32 %r
 }
 
+; An equality literal is spelled in the window of the value it meets, which
+; is decided by that value's other consumers: under the integer encoding -16
+; and 4294967280 are different integers, so a mismatch makes the equality
+; silently false.
+@sink = global i32 0
+
 define i1 @signed_eq(i32 %x) {
-  %seed = add i32 %x, 0, !overflow.sign !0
+  %seed = add i32 %x, 0
+  %d = sdiv i32 %seed, 2
+  store i32 %d, i32* @sink
   %r = icmp eq i32 %seed, -16
   ret i1 %r
 }
 
 define i1 @unsigned_eq(i32 %x) {
-  %seed = add i32 %x, 0, !overflow.sign !1
+  %seed = add i32 %x, 0
+  %d = udiv i32 %seed, 2
+  store i32 %d, i32* @sink
   %r = icmp eq i32 %seed, -17
   ret i1 %r
 }
@@ -68,7 +82,42 @@ define internal i32 @unsigned_result(i32 %x) {
 
 define i1 @unsigned_ne(i32 %x) {
   %seed = call i32 @unsigned_result(i32 %x)
+  %d = udiv i32 %seed, 2
+  store i32 %d, i32* @sink
   %r = icmp ne i32 %seed, -18
+  ret i1 %r
+}
+
+; With no window evidence (only the equality consumes %seed) or with an
+; escaping value (stored to memory), the literal is compared against both
+; representatives of its bit pattern.
+define i1 @unknown_eq(i32 %x) {
+  %seed = add i32 %x, 0
+  %r = icmp eq i32 %seed, -20
+  ret i1 %r
+}
+
+define i1 @escaped_ne(i32 %x) {
+  %seed = add i32 %x, 0
+  store i32 %seed, i32* @sink
+  %r = icmp ne i32 %seed, -21
+  ret i1 %r
+}
+
+; The sentinel idiom: the phi literal and the equality literal must land in
+; the same window, here unsigned because of the udiv.
+define i1 @phi_eq_sentinel(i1 %c, i32 %x) {
+entry:
+  br i1 %c, label %left, label %right
+left:
+  br label %merge
+right:
+  br label %merge
+merge:
+  %p = phi i32 [ -1, %left ], [ %x, %right ]
+  %q = udiv i32 %p, 3
+  store i32 %q, i32* @sink
+  %r = icmp eq i32 %p, -1
   ret i1 %r
 }
 
@@ -188,6 +237,9 @@ define i32 @main() {
   %s2 = call i1 @signed_eq(i32 0)
   %u2 = call i1 @unsigned_eq(i32 0)
   %u2ne = call i1 @unsigned_ne(i32 0)
+  %k2 = call i1 @unknown_eq(i32 0)
+  %e2 = call i1 @escaped_ne(i32 0)
+  %p2 = call i1 @phi_eq_sentinel(i1 true, i32 0)
   %s3 = call float @signed_fp()
   %u3 = call float @unsigned_fp()
   %s4 = call i32 @signed_arg(i32 -16)

@@ -95,6 +95,8 @@ private:
   const Expr *uop(const llvm::Value *op);
   const Expr *cmp(unsigned predicate, const llvm::Use &lhs,
                   const llvm::Use &rhs);
+  const Expr *twoWindowEquality(unsigned predicate, const std::string &fn,
+                                const llvm::Use &lhs, const llvm::Use &rhs);
   const Expr *select(const llvm::Use &cond, const llvm::Use &trueValue,
                      const llvm::Use &falseValue);
   Sign legacyLiteralSign(const llvm::Use &use) const;

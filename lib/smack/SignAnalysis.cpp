@@ -202,8 +202,20 @@ Sign SignAnalysis::inferUse(
     if (CmpInst::isUnsigned(Predicate))
       return Sign::Unsigned;
 
-    // Equality compares bit patterns and supplies no sign information. In
-    // particular, do not borrow a sign from the other operand or result.
+    // Equality compares bit patterns. Under the integer encoding one bit
+    // pattern has two representatives (-k and 2^N - k), so a literal in an
+    // eq/ne must be spelled in the window of the SSA value it meets, or the
+    // comparison silently fails. That window is the value's own inferred
+    // sign: its producer-side literals (phi/select/argument/return) are
+    // rendered from the same inferValue result, so both sides agree by
+    // construction. When the other operand is itself a constant there is no
+    // value to agree with. The non-constant operand receives no window
+    // information from an equality and the value cannot flow through it.
+    if (isa<ConstantInt>(U.get())) {
+      const Value *Other = Owner->getOperand(1 - Operand);
+      if (isInteger(Other) && !isa<Constant>(Other))
+        return inferValue(Other, VisitedValues);
+    }
     return Sign::Unknown;
   }
 
