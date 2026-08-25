@@ -152,8 +152,10 @@ Sign SignAnalysis::inferUse(
   const unsigned Operand = U.getOperandNo();
   const auto *I = dyn_cast<Instruction>(Owner);
   const auto *CE = dyn_cast<ConstantExpr>(Owner);
+  // Anything else (a global initializer, metadata) is outside the SSA graph
+  // this analysis can follow: the value escapes.
   if (!I && !CE)
-    return Sign::Unknown;
+    return Sign::Conflict;
 
   const unsigned Opcode = I ? I->getOpcode() : CE->getOpcode();
 
@@ -230,6 +232,13 @@ Sign SignAnalysis::inferUse(
   // Sign-polymorphic operations get their interpretation from consumers of
   // their result. This follows PHI/select/trunc chains in either direction
   // without assigning a permanent sign to the intermediate SSA value.
+  //
+  // Unknown is reserved for consumers that carry no window information AND
+  // cannot forward the value anywhere. Every consumer this analysis cannot
+  // see through (memory, calls it cannot follow, unlisted opcodes) returns
+  // Conflict instead: it is not "no evidence" but "the value escapes", and
+  // only a value whose entire consumer set is classified may take the
+  // unsigned window. Conflict renders signed, the pre-analysis behavior.
   switch (Opcode) {
   case Instruction::Add:
   case Instruction::Sub:
@@ -253,23 +262,36 @@ Sign SignAnalysis::inferUse(
     return inferValue(Owner, VisitedValues);
   case Instruction::PHI:
     return inferValue(Owner, VisitedValues);
+  case Instruction::Store:
+    // The stored value escapes to memory; its readers are invisible here.
+    return Sign::Conflict;
   case Instruction::Call:
   case Instruction::Invoke: {
+    // Only an argument of a direct call to a function defined in this module
+    // can be followed into the callee. Indirect calls, intrinsics, external
+    // declarations and variadic arguments escape.
     const auto *CB = cast<CallBase>(Owner);
-    if (!CB->isArgOperand(&U))
-      return Sign::Unknown;
     const Function *Callee = CB->getCalledFunction();
+    if (!CB->isArgOperand(&U) || !Callee || Callee->isDeclaration())
+      return Sign::Conflict;
     const unsigned Arg = CB->getArgOperandNo(&U);
-    if (!Callee || Arg >= Callee->arg_size())
-      return Sign::Unknown;
+    if (Arg >= Callee->arg_size())
+      return Sign::Conflict;
     return inferValue(Callee->getArg(Arg), VisitedValues);
   }
   case Instruction::Ret: {
+    // Meet over every direct call site of the function in the module: the
+    // returned value is consumed wherever the function is called, so this
+    // result is non-local by design. A function whose address is taken can
+    // be called from sites this walk cannot see, so the value escapes. A
+    // call site that ignores the result contributes nothing.
     Sign S = Sign::Unknown;
     const Function *F = I->getFunction();
     for (const User *FunctionUser : F->users()) {
       const auto *CB = dyn_cast<CallBase>(FunctionUser);
-      if (!CB || CB->getCalledFunction() != F || !isInteger(CB))
+      if (!CB || CB->getCalledFunction() != F)
+        return Sign::Conflict;
+      if (!isInteger(CB))
         continue;
       S = meetSign(S, inferValue(CB, VisitedValues));
       if (S == Sign::Conflict)
@@ -278,7 +300,9 @@ Sign SignAnalysis::inferUse(
     return S;
   }
   default:
-    return Sign::Unknown;
+    // Switch, inttoptr, bitcast, insertvalue, atomics, alloca sizes, ...:
+    // no window information and no way to follow the value.
+    return Sign::Conflict;
   }
 }
 

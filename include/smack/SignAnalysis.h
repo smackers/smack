@@ -19,6 +19,14 @@ namespace smack {
 ///    Signed   Unsigned
 ///        \     /
 ///        Conflict
+///
+/// Unknown: no consumer supplied window information (and none could forward
+///   the value somewhere unseen). Conflict: the value has both signed and
+///   unsigned consumers, or it escapes the analysis (stored to memory,
+///   passed to a call that cannot be followed, consumed by an opcode the
+///   analysis does not model). Both render a negative literal signed, i.e.
+///   exactly as SMACK did before this analysis; only Unsigned changes the
+///   spelling to the non-negative representative 2^N - k.
 enum class Sign { Unknown, Signed, Unsigned, Conflict };
 
 /// Meet operator on the sign lattice.  Unknown is top, Conflict is bottom.
