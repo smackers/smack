@@ -168,6 +168,18 @@ int main(int argc, char **argv) {
   // This runs before DSA because some Rust functions cause problems.
   pass_manager.add(new smack::RustFixes);
 
+  if (smack::SmackOptions::SignAnalysisEnabled) {
+    // Strip Clang's signed/unsigned overflow sanitizer scaffolding first, so
+    // that every later pass and analysis sees the IR of an uninstrumented
+    // compilation. In particular RemovePtrToInt must see plain
+    // inttoptr(add(ptrtoint p, k)) chains to rewrite them into GEPs; a
+    // checked-arithmetic intrinsic in the middle hides the pattern and leaves
+    // the pointer analysis with integer-cast pointers it partitions
+    // differently. The late instance still handles genuine
+    // checked-arithmetic intrinsics and requested overflow checks.
+    pass_manager.add(new smack::IntegerOverflowChecker(true));
+  }
+
   if (!Modular) {
     auto PreserveKeyGlobals = [=](const llvm::GlobalValue &GV) {
       auto name = GV.getName();
@@ -191,12 +203,6 @@ int main(int argc, char **argv) {
   // pass_manager.add(llvm::createInternalizePass());
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
 
-  if (smack::SmackOptions::SignAnalysisEnabled) {
-    // Strip Clang's signed/unsigned overflow sanitizer scaffolding before it
-    // can perturb loop or alias analysis. The late instance still handles
-    // genuine checked-arithmetic intrinsics and requested overflow checks.
-    pass_manager.add(new smack::IntegerOverflowChecker(true));
-  }
   if (StaticUnroll) {
     pass_manager.add(llvm::createLoopSimplifyPass());
     pass_manager.add(llvm::createLoopRotatePass());

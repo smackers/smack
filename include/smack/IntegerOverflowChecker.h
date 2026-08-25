@@ -22,8 +22,11 @@ extern const char OverflowSignMetadata[];
 /// The early, frontend-only mode recognizes Clang sanitizer instrumentation by
 /// `!nosanitize`, records its signedness in OverflowSignMetadata, replaces its
 /// overflow flag with false, and removes the unreachable UBSan path. It does
-/// not turn that instrumentation into a verification condition. The normal
-/// mode retains the existing behavior for genuine checked-arithmetic
+/// not turn that instrumentation into a verification condition, and it
+/// touches nothing but the `!nosanitize` scaffolding: the instrumented
+/// arithmetic and the program around it are left exactly as Clang emitted
+/// them, so later analyses see the IR of an uninstrumented compilation. The
+/// normal mode retains the existing behavior for genuine checked-arithmetic
 /// intrinsics and explicitly requested signed-overflow checks.
 class IntegerOverflowChecker : public llvm::ModulePass {
 public:

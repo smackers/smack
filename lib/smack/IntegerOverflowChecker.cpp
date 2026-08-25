@@ -12,7 +12,9 @@
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -46,6 +48,111 @@ static void setOverflowSign(Instruction *I, bool isSigned) {
   LLVMContext &C = I->getContext();
   I->setMetadata(OverflowSignMetadata,
                  MDNode::get(C, MDString::get(C, isSigned ? "s" : "u")));
+}
+
+/// Clang tags every instruction of its sanitizer instrumentation (the checked
+/// intrinsic, the extractvalues, the i1 logic, the branch and the handler
+/// block) with !nosanitize. The annotation-only cleanup below relies on that
+/// tag to distinguish the scaffolding from the program it instruments.
+static bool isSanitizerScaffolding(const Instruction *I) {
+  return I->getMetadata("nosanitize") != nullptr;
+}
+
+/*
+ * Fold the sanitizer scaffolding reachable from Roots after its overflow flag
+ * has been replaced by a constant: the i1 logic that feeds the sanitizer
+ * branch is constant-folded and the branch is made unconditional, which
+ * unlinks the handler block. Nothing outside the scaffolding is simplified.
+ * In particular the instrumented arithmetic itself and the casts around it
+ * are left as instructions; folding e.g. inttoptr(add(ptrtoint @g, k)) into a
+ * ConstantExpr would change the region partition of the pointer analysis and
+ * with it the memory model of the translated program.
+ */
+static void
+foldSanitizerScaffolding(ArrayRef<WeakTrackingVH> Roots, const DataLayout &DL,
+                         SmallPtrSetImpl<BasicBlock *> &Folded,
+                         SmallVectorImpl<WeakTrackingVH> &Unlinked) {
+  // A root may already have been erased by an earlier step; the tracking
+  // handle then reads as null.
+  SmallSetVector<Instruction *, 16> Worklist;
+  for (const WeakTrackingVH &Root : Roots)
+    if (auto *I = dyn_cast_or_null<Instruction>(static_cast<Value *>(Root)))
+      Worklist.insert(I);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    if (!isSanitizerScaffolding(I))
+      continue;
+    if (auto *Branch = dyn_cast<BranchInst>(I)) {
+      if (Branch->isConditional() && isa<ConstantInt>(Branch->getCondition())) {
+        BasicBlock *BB = Branch->getParent();
+        for (BasicBlock *Succ : successors(BB))
+          Unlinked.push_back(Succ);
+        if (ConstantFoldTerminator(BB, true))
+          Folded.insert(BB);
+      }
+      continue;
+    }
+    if (I->isTerminator())
+      continue;
+    Constant *C = ConstantFoldInstruction(I, DL);
+    if (!C)
+      continue;
+    for (User *U : I->users())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        Worklist.insert(UI);
+    I->replaceAllUsesWith(C);
+    I->eraseFromParent();
+  }
+}
+
+/*
+ * Erase the sanitizer scaffolding that a folded branch left dead, such as the
+ * icmp/or chain of a division check. Only !nosanitize instructions are
+ * removed; a program value that becomes dead is left to the ordinary
+ * dead-code elimination later in the pipeline.
+ */
+static void eraseDeadSanitizerScaffolding(ArrayRef<WeakTrackingVH> Roots) {
+  SmallSetVector<Instruction *, 16> Worklist;
+  for (const WeakTrackingVH &Root : Roots)
+    if (auto *I = dyn_cast_or_null<Instruction>(static_cast<Value *>(Root)))
+      Worklist.insert(I);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    if (!isSanitizerScaffolding(I) || !isInstructionTriviallyDead(I))
+      continue;
+    SmallVector<Instruction *, 4> Operands;
+    for (Use &Op : I->operands())
+      if (auto *OI = dyn_cast<Instruction>(Op))
+        Operands.push_back(OI);
+    I->eraseFromParent();
+    for (Instruction *OI : Operands)
+      Worklist.insert(OI);
+  }
+}
+
+/*
+ * Delete the handler blocks that folding the sanitizer branches left without
+ * predecessors, and transitively whatever was reachable only through them.
+ * This is deliberately narrower than removeUnreachableBlocks, whose liveness
+ * scan also constant-folds every reachable terminator and rewrites code after
+ * noreturn calls or stores to null; those changes are unrelated to the
+ * instrumentation and would make the translation differ from an
+ * uninstrumented compilation.
+ */
+static void eraseUnlinkedBlocks(ArrayRef<WeakTrackingVH> Candidates) {
+  SmallSetVector<BasicBlock *, 8> Worklist;
+  for (const WeakTrackingVH &H : Candidates)
+    if (auto *BB = dyn_cast_or_null<BasicBlock>(static_cast<Value *>(H)))
+      Worklist.insert(BB);
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (BB == &BB->getParent()->getEntryBlock() || !pred_empty(BB))
+      continue;
+    SmallVector<BasicBlock *, 2> Successors(successors(BB));
+    DeleteDeadBlock(BB);
+    for (BasicBlock *Succ : Successors)
+      Worklist.insert(Succ);
+  }
 }
 
 const std::map<std::string, Instruction::BinaryOps>
@@ -136,9 +243,14 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
   assert(co != NULL && "Function __SMACK_check_overflow should be present.");
   Function *va = m.getFunction("__VERIFIER_assume");
   assert(va != NULL && "Function __VERIFIER_assume should be present.");
-  SmallPtrSet<BasicBlock *, 8> blocksToFold;
+  // Tracking handles: a trap block reached from an intrinsic's overflow
+  // branch is seen by both cleanup steps below, and whichever runs first
+  // erases the shared i1 logic.
+  SmallVector<WeakTrackingVH, 8> scaffoldingRoots;
+  SmallVector<WeakTrackingVH, 8> deadScaffolding;
+  SmallPtrSet<BasicBlock *, 8> foldedBlocks;
   SmallPtrSet<BasicBlock *, 8> handlerBlocksToRemove;
-  SmallPtrSet<Function *, 8> functionsToClean;
+  SmallVector<WeakTrackingVH, 8> unlinkedBlocks;
   SmallVector<WeakTrackingVH, 8> blocksToMerge;
   std::vector<Instruction *> instToErase;
   bool modified = false;
@@ -170,7 +282,6 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
               // away from that handler block.
               if (!SmackOptions::IntegerOverflow) {
                 handlerBlocksToRemove.insert(ci->getParent());
-                functionsToClean.insert(ci->getFunction());
                 modified = true;
               }
               continue;
@@ -263,8 +374,13 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                     // flag part
                     // addBlockingAssume(va, flag, ei);
                     if (sanitizerInstrumentation) {
-                      blocksToFold.insert(ei->getParent());
-                      functionsToClean.insert(ei->getFunction());
+                      // The scaffolding that consumes the flag (typically
+                      // `xor i1 %flag, true` and the branch to the handler)
+                      // becomes constant; fold exactly that once the
+                      // intrinsic is gone.
+                      for (User *FlagUser : ei->users())
+                        if (auto *FI = dyn_cast<Instruction>(FlagUser))
+                          scaffoldingRoots.push_back(FI);
                       auto *noOverflow =
                           ConstantInt::getFalse(ei->getContext());
                       ei->replaceAllUsesWith(noOverflow);
@@ -302,21 +418,26 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
       if (HandlerOnTrue == HandlerOnFalse)
         continue;
 
+      // The old condition is the check's icmp/or chain; it is dead once the
+      // branch no longer reads it.
+      deadScaffolding.push_back(Branch->getCondition());
       Branch->setCondition(HandlerOnTrue
                                ? ConstantInt::getFalse(Branch->getContext())
                                : ConstantInt::getTrue(Branch->getContext()));
-      blocksToFold.insert(Pred);
-      functionsToClean.insert(Pred->getParent());
+      if (ConstantFoldTerminator(Pred, true))
+        foldedBlocks.insert(Pred);
     }
+    unlinkedBlocks.push_back(Handler);
   }
-  for (BasicBlock *BB : blocksToFold) {
-    SimplifyInstructionsInBlock(BB);
-    ConstantFoldTerminator(BB, true);
+  foldSanitizerScaffolding(scaffoldingRoots, m.getDataLayout(), foldedBlocks,
+                           unlinkedBlocks);
+  eraseDeadSanitizerScaffolding(deadScaffolding);
+  for (BasicBlock *BB : foldedBlocks)
     if (BasicBlock *Succ = BB->getSingleSuccessor())
       blocksToMerge.push_back(Succ);
-  }
-  for (Function *F : functionsToClean)
-    removeUnreachableBlocks(*F);
+  eraseUnlinkedBlocks(unlinkedBlocks);
+  // Re-join the block Clang split off after each check so that the CFG
+  // matches the uninstrumented compilation; no instruction is simplified.
   for (WeakTrackingVH &Handle : blocksToMerge) {
     Value *V = Handle;
     if (auto *BB = dyn_cast_or_null<BasicBlock>(V))
