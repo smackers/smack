@@ -205,6 +205,22 @@ Sign SignAnalysis::inferUse(
     return Sign::Unknown;
   }
 
+  // A negative literal that is a direct operand of add/sub/mul is always
+  // spelled in the signed window. Under the unbounded Int encoding $add, $sub
+  // and $mul do not wrap, so x + (-k) is the only rendering that computes the
+  // C decrement: x + (2^N - k) never comes back below 2^N. Consumer evidence
+  // and the sanitizer "u" tag describe the window of the VALUE, not how a
+  // literal must be spelled inside a non-wrapping operation, so neither is
+  // consulted for this operand. (Under the bit-vector and wrapped-integer
+  // encodings both spellings denote the same bit pattern, so this is safe
+  // there as well.)
+  if (Opcode == Instruction::Add || Opcode == Instruction::Sub ||
+      Opcode == Instruction::Mul) {
+    if (const auto *CI = dyn_cast<ConstantInt>(U.get()))
+      if (CI->getBitWidth() > 1 && CI->isNegative())
+        return Sign::Signed;
+  }
+
   if (I) {
     Sign S = flagSign(*I);
     if (S != Sign::Unknown)

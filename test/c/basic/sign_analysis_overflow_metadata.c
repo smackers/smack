@@ -2,26 +2,32 @@
 // @expect verified
 // @flag --sign-analysis
 // clang-format off
-// @checkbpl grep -F '$add.i32($i0, 4294967280)'
+// @checkbpl grep -F '$add.i32($i0, $sub.i32(0, 17))'
 // @checkbpl grep -F '$add.i32($i0, $sub.i32(0, 16))'
-// @checkbpl grep -F '$sub.i32($i0, 4294967280)'
+// @checkbpl grep -F '$sub.i32($i0, $sub.i32(0, 17))'
 // @checkbpl grep -F '$sub.i32($i0, $sub.i32(0, 16))'
-// @checkbpl grep -F '$mul.i32($i0, 4294967280)'
+// @checkbpl grep -F '$mul.i32($i0, $sub.i32(0, 17))'
 // @checkbpl grep -F '$mul.i32($i0, $sub.i32(0, 16))'
 // @checkbpl grep -F 'then 4294967280 else 0'
 // @checkbpl grep -F 'then $sub.i32(0, 16) else 0'
 // @checkbpl awk '/(__ubsan|llvm[.]ubsantrap|[.]src: ref)/ { exit 1 }'
 // clang-format on
 
-unsigned unsigned_add(unsigned x) { return x + 4294967280U; }
+// Negative literals that are direct add/sub/mul operands are rendered signed
+// even when the sanitizer tags the operation "u": under the unbounded integer
+// encoding x + (2^32 - 17) never wraps, so x + (-17) is the only spelling that
+// computes the C result. The tag still decides the window of a value that
+// flows into the operation, e.g. the select arms below.
+
+unsigned unsigned_add(unsigned x) { return x + 4294967279U; }
 
 int signed_add(int x) { return x + -16; }
 
-unsigned unsigned_sub(unsigned x) { return x - 4294967280U; }
+unsigned unsigned_sub(unsigned x) { return x - 4294967279U; }
 
 int signed_sub(int x) { return x - -16; }
 
-unsigned unsigned_mul(unsigned x) { return x * 4294967280U; }
+unsigned unsigned_mul(unsigned x) { return x * 4294967279U; }
 
 int signed_mul(int x) { return x * -16; }
 

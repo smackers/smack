@@ -1,7 +1,7 @@
 ; @expect verified
 ; @flag --sign-analysis
 ; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 16))'
-; @checkbpl grep -F '$sub.i32(x, 4294967280)'
+; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 19))'
 ; @checkbpl grep -F 'then $sub.i32(0, 16) else 0'
 ; @checkbpl grep -F 'then 4294967280 else 0'
 ; @checkbpl grep -F '$eq.i32($i0, $sub.i32(0, 16))'
@@ -11,11 +11,11 @@
 ; @checkbpl grep -F '$ui2fp.i32.float(4294967280)'
 ; @checkbpl grep -F 'signed_arg($sub.i32(0, 16))'
 ; @checkbpl grep -F 'unsigned_arg(4294967280)'
-; @checkbpl grep -F '$add.i32(x, 4294967294)'
+; @checkbpl grep -F '$add.i32(x, $sub.i32(0, 4))'
 ; @checkbpl grep -F '$add.i32(x, $sub.i32(0, 2))'
-; @checkbpl grep -F '$sub.i32(x, 4294967294)'
+; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 4))'
 ; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 2))'
-; @checkbpl grep -F '$mul.i32(x, 4294967294)'
+; @checkbpl grep -F '$mul.i32(x, $sub.i32(0, 4))'
 ; @checkbpl grep -F '$mul.i32(x, $sub.i32(0, 2))'
 ; @checkbpl grep -F 'phi_unsigned_arg(1, 9223372036854775808)'
 ; @checkbpl grep -F 'phi_signed_arg(1, $sub.i64(0, 2))'
@@ -29,8 +29,11 @@ define i32 @signed_sub(i32 %x) {
   ret i32 %r
 }
 
+; A negative literal that is a direct add/sub/mul operand is always spelled in
+; the signed window, whatever the operation's tag: $sub does not wrap under the
+; integer encoding, so x - (-19) is the only spelling that computes the C value.
 define i32 @unsigned_sub(i32 %x) {
-  %r = sub i32 %x, -16, !overflow.sign !1
+  %r = sub i32 %x, -19, !overflow.sign !1
   ret i32 %r
 }
 
@@ -89,10 +92,11 @@ define internal i32 @unsigned_arg(i32 %x) {
   ret i32 %r
 }
 
-; These model uninstrumented library IR. Unknown arithmetic must retain the
-; legacy local fallback, while nsw remains definite signed evidence.
+; These model uninstrumented library IR. Flagless arithmetic operands take the
+; signed spelling like every other add/sub/mul literal; nsw remains definite
+; signed evidence.
 define internal i32 @plain_unsigned_add(i32 %x) {
-  %r = add i32 %x, -2
+  %r = add i32 %x, -4
   ret i32 %r
 }
 
@@ -102,7 +106,7 @@ define internal i32 @plain_signed_add(i32 %x) {
 }
 
 define internal i32 @plain_unsigned_sub(i32 %x) {
-  %r = sub i32 %x, -2
+  %r = sub i32 %x, -4
   ret i32 %r
 }
 
@@ -112,7 +116,7 @@ define internal i32 @plain_signed_sub(i32 %x) {
 }
 
 define internal i32 @plain_unsigned_mul(i32 %x) {
-  %r = mul i32 %x, -2
+  %r = mul i32 %x, -4
   ret i32 %r
 }
 
