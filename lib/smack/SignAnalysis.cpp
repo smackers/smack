@@ -227,20 +227,37 @@ Sign SignAnalysis::inferUse(
     return Sign::Unknown;
   }
 
-  // A negative literal that is a direct operand of add/sub/mul is always
-  // spelled in the signed window. Under the unbounded Int encoding $add, $sub
-  // and $mul do not wrap, so x + (-k) is the only rendering that computes the
-  // C decrement: x + (2^N - k) never comes back below 2^N. Consumer evidence
-  // and the sanitizer "u" tag describe the window of the VALUE, not how a
-  // literal must be spelled inside a non-wrapping operation, so neither is
-  // consulted for this operand. (Under the bit-vector and wrapped-integer
-  // encodings both spellings denote the same bit pattern, so this is safe
-  // there as well.)
+  // Negative literals inside add/sub/mul. Under the unbounded Int encoding
+  // $add, $sub and $mul do not wrap, so the spelling must be the one under
+  // which the C operation does not wrap either:
+  //  - x + L and x - L (L an addend or subtrahend) are offsets: x + (-k) and
+  //    x - (-k) compute the C decrement/increment in BOTH windows, whereas
+  //    x + (2^N - k) never comes back below 2^N. Always signed, whatever the
+  //    consumers or the sanitizer "u" tag say about the VALUE's window.
+  //  - L - x (L the minuend) and L * x are not offsets: the C result lives in
+  //    the window of the result. SIZE_MAX - b in an overflow check is
+  //    (2^N - 1) - b, an unsigned quantity that -1 - b does not denote, while
+  //    -1 - x under a signed consumer is the signed quantity. These follow the
+  //    result's window and fall back to the legacy table (Sub -> unsigned)
+  //    when it is undecided.
+  // (Under the bit-vector and wrapped-integer encodings both spellings denote
+  // the same bit pattern, so this is safe there as well.)
   if (Opcode == Instruction::Add || Opcode == Instruction::Sub ||
       Opcode == Instruction::Mul) {
-    if (const auto *CI = dyn_cast<ConstantInt>(U.get()))
-      if (CI->getBitWidth() > 1 && CI->isNegative())
-        return Sign::Signed;
+    if (const auto *CI = dyn_cast<ConstantInt>(U.get())) {
+      if (CI->getBitWidth() > 1 && CI->isNegative()) {
+        const bool offset = Opcode == Instruction::Add ||
+                            (Opcode == Instruction::Sub && Operand == 1);
+        if (offset)
+          return Sign::Signed;
+        Sign S = I ? flagSign(*I) : Sign::Unknown;
+        if (S == Sign::Unknown)
+          S = inferValue(Owner, VisitedValues);
+        if (S == Sign::Signed || S == Sign::Unsigned)
+          return S;
+        return legacyLiteralSign(U);
+      }
+    }
   }
 
   if (I) {
