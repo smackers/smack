@@ -6,7 +6,7 @@
 // @checkbpl grep -F '$add.i32($i0, $sub.i32(0, 16))'
 // @checkbpl grep -F '$sub.i32($i0, $sub.i32(0, 17))'
 // @checkbpl grep -F '$sub.i32($i0, $sub.i32(0, 16))'
-// @checkbpl grep -F '$mul.i32($i0, $sub.i32(0, 17))'
+// @checkbpl grep -F '$mul.i32($i0, 4294967279)'
 // @checkbpl grep -F '$mul.i32($i0, $sub.i32(0, 16))'
 // @checkbpl grep -F 'then 4294967280 else 0'
 // @checkbpl grep -F 'then $sub.i32(0, 16) else 0'

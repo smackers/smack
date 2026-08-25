@@ -19,7 +19,7 @@
 ; @checkbpl grep -F '$add.i32(x, $sub.i32(0, 2))'
 ; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 4))'
 ; @checkbpl grep -F '$sub.i32(x, $sub.i32(0, 2))'
-; @checkbpl grep -F '$mul.i32(x, $sub.i32(0, 4))'
+; @checkbpl grep -F '$mul.i32(x, 4294967292)'
 ; @checkbpl grep -F '$mul.i32(x, $sub.i32(0, 2))'
 ; @checkbpl grep -F 'phi_unsigned_arg(1, 9223372036854775808)'
 ; @checkbpl grep -F 'phi_signed_arg(1, $sub.i64(0, 2))'

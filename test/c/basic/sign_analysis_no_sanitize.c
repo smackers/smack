@@ -6,7 +6,7 @@
 // @checkbpl grep -F '$add.i32($i0, $sub.i32(0, 2))'
 // @checkbpl grep -F '$sub.i32($i0, $sub.i32(0, 3))'
 // @checkbpl grep -F '$sub.i32($i0, $sub.i32(0, 2))'
-// @checkbpl grep -F '$mul.i32($i0, $sub.i32(0, 3))'
+// @checkbpl grep -F '$mul.i32($i0, 4294967293)'
 // @checkbpl grep -F '$mul.i32($i0, $sub.i32(0, 2))'
 // @checkbpl awk '/(__ubsan|llvm[.]ubsantrap|[.]src: ref)/ { exit 1 }'
 // clang-format on
