@@ -355,6 +355,11 @@ bool IntegerOverflowChecker::runOnModule(Module &m) {
                                                 ci->getArgOperand(0),
                                                 ci->getArgOperand(1), "", ci);
               ai->setDebugLoc(ci->getDebugLoc());
+              // Without the sanitizer Clang emits signed arithmetic as
+              // `add nsw` etc.; restore that so later LLVM passes (e.g.
+              // static loop unrolling) see the same operation. Unsigned
+              // arithmetic gets no wrap flag, as in Clang's own output.
+              ai->setHasNoSignedWrap(isSigned);
               r = ai;
             }
             if (SmackOptions::SignAnalysisEnabled)
