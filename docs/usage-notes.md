@@ -86,6 +86,15 @@ enabling this flag. However, note that enabling bit-precise reasoning often
 degrades the performance of SMACK, and causes for it to take much longer to
 perform the verification.
 
+## Signedness of Integer Literals
+Under the default integer encoding, a negative literal has two representatives
+(`-1` and `4294967295` for a 32-bit `-1`), and SMACK has to print each literal
+in the same window as the value it meets. The `--sign-analysis` flag enables an
+analysis that infers that window from how the value is used; without it, a
+fixed per-opcode heuristic is used. The flag also changes the Clang command
+line. See [Integer Literal Sign Analysis](sign-analysis.md) for the rules, the
+rendering policy and the opt-out.
+
 ## Floating-Point Arithmetic
 Similar to machine integers, floating-point numbers and arithmetic are modeled
 using the theory of integers and uninterpreted functions, respectively.

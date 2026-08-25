@@ -1,4 +1,9 @@
 // This file is distributed under the MIT License. See LICENSE for details.
+// Without --sign-analysis the translation must stay byte-identical to the
+// legacy output. The spellings pinned below are the legacy per-opcode
+// heuristic, not the correct rendering: `x - -2` on an int is printed as
+// `$sub.i32($i0, 4294967294)`, which does not compute x + 2 under the
+// unbounded integer encoding. See docs/sign-analysis.md.
 // @expect verified
 // clang-format off
 // @checkbpl grep -F '$add.i32($i0, 4294967294)'
