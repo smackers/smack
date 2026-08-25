@@ -4,7 +4,8 @@
 // @flag --memory-intrinsic-summaries
 // @expect verified
 
-// read-over-copy: the copy result read repeatedly at the same and at different indices
+// read-over-copy: the copy result read repeatedly at the same and at different
+// indices
 
 int main(void) {
   char s[8], d[8];

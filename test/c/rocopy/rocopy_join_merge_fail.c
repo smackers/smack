@@ -4,7 +4,8 @@
 // @flag --memory-intrinsic-summaries
 // @expect error
 
-// read-over-copy: two memcpys merged at a join point, then copied again (failing twin)
+// read-over-copy: two memcpys merged at a join point, then copied again
+// (failing twin)
 
 int main(void) {
   char s1[4], s2[4], d[4];

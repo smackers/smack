@@ -4,7 +4,8 @@
 // @flag --memory-intrinsic-summaries
 // @expect error
 
-// read-over-copy: acyclic chain of 4 memcpys between distinct regions (failing twin)
+// read-over-copy: acyclic chain of 4 memcpys between distinct regions (failing
+// twin)
 
 int main(void) {
   char a0[2];

@@ -52,7 +52,6 @@ std::list<CallInst *> findCallers(Function *F) {
 
 namespace smack {
 
-
 std::string indexedName(std::string name,
                         std::initializer_list<std::string> idxs) {
   std::stringstream idxd;
@@ -1369,11 +1368,11 @@ static bool intrinsicTrigger() {
 // post-state map. Without a trigger Z3 infers its own, and for the two frame
 // axioms (whose body is `M.ret[x] == M.dst[x]`) it infers *two* patterns -- one
 // per incarnation -- so every intrinsic bridges the pre- and post-state maps in
-// both directions. On a region that DSA collapsed to a single map that back edge
-// re-creates shifted indices on the newest incarnation and the instantiation set
-// doubles per intrinsic in the chain. Pinning the trigger to the post-state map
-// cuts the back edge; it cannot affect soundness, only which obligations remain
-// provable.
+// both directions. On a region that DSA collapsed to a single map that back
+// edge re-creates shifted indices on the newest incarnation and the
+// instantiation set doubles per intrinsic in the chain. Pinning the trigger to
+// the post-state map cuts the back edge; it cannot affect soundness, only which
+// obligations remain provable.
 static std::string intrinsicQuant(const std::string &qid) {
   std::string attrs = "{:qid \"" + qid + "\"} ";
   if (intrinsicTrigger())
@@ -1466,7 +1465,8 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
   else
     SmackWarnings::warnInfo(
         "warning: memory intrinsic length exceeds threshold (" +
-        std::to_string(SmackOptions::MemoryIntrinsicThreshold) + "adding quantifiers.");
+        std::to_string(SmackOptions::MemoryIntrinsicThreshold) +
+        "adding quantifiers.");
 
   s << "procedure " << name << "("
     << "M.dst: [ref] " << type << ", "
@@ -1512,11 +1512,13 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
       << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
       << ");"
       << "\n";
-    s << "  assume (forall x: ref :: " << intrinsicQuant("smack.memcpy.frame.low")
+    s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
-    s << "  assume (forall x: ref :: " << intrinsicQuant("smack.memcpy.frame.high")
+    s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
@@ -1531,11 +1533,13 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
       << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
       << ");"
       << "\n";
-    s << "ensures (forall x: ref :: " << intrinsicQuant("smack.memcpy.frame.low")
+    s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
-    s << "ensures (forall x: ref :: " << intrinsicQuant("smack.memcpy.frame.high")
+    s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
@@ -1554,7 +1558,8 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
   else
     SmackWarnings::warnInfo(
         "warning: memory intrinsic length exceeds threshold (" +
-        std::to_string(SmackOptions::MemoryIntrinsicThreshold) + "adding quantifiers.");
+        std::to_string(SmackOptions::MemoryIntrinsicThreshold) +
+        "adding quantifiers.");
 
   s << "procedure " << name << "("
     << "M: [ref] " << type << ", "
@@ -1598,11 +1603,13 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
       << "M.ret[x] == val"
       << ");"
       << "\n";
-    s << "  assume (forall x: ref :: " << intrinsicQuant("smack.memset.frame.low")
+    s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";
-    s << "  assume (forall x: ref :: " << intrinsicQuant("smack.memset.frame.high")
+    s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";
@@ -1617,11 +1624,13 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
       << "M.ret[x] == val"
       << ");"
       << "\n";
-    s << "ensures (forall x: ref :: " << intrinsicQuant("smack.memset.frame.low")
+    s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";
-    s << "ensures (forall x: ref :: " << intrinsicQuant("smack.memset.frame.high")
+    s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";

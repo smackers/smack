@@ -4,7 +4,8 @@
 // @flag --memory-intrinsic-summaries
 // @expect error
 
-// read-over-copy: the copy result read repeatedly at the same and at different indices (failing twin)
+// read-over-copy: the copy result read repeatedly at the same and at different
+// indices (failing twin)
 
 int main(void) {
   char s[8], d[8];

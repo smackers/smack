@@ -4,7 +4,8 @@
 // @flag --memory-intrinsic-summaries
 // @expect error
 
-// read-over-copy: memset seed then chain of 32 memcpys; exercises smack.set.read and smack.copy.read past depth 20 (failing twin)
+// read-over-copy: memset seed then chain of 32 memcpys; exercises
+// smack.set.read and smack.copy.read past depth 20 (failing twin)
 
 int main(void) {
   char a0[2];

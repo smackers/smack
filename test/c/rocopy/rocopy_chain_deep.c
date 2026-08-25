@@ -4,7 +4,9 @@
 // @flag --memory-intrinsic-summaries
 // @expect verified
 
-// read-over-copy: chain of 32 memcpys between distinct regions; deeper than z3's qi.lazy_threshold (20), spurious error without {:weight 0} on smack.copy.read
+// read-over-copy: chain of 32 memcpys between distinct regions; deeper than
+// z3's qi.lazy_threshold (20), spurious error without {:weight 0} on
+// smack.copy.read
 
 int main(void) {
   char a0[2];

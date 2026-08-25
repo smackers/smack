@@ -4,7 +4,8 @@
 // @flag --memory-intrinsic-summaries
 // @expect verified
 
-// read-over-copy: chain of 22 memcpys within one region (each copy reads the previous copy's result); deeper than z3's qi.lazy_threshold
+// read-over-copy: chain of 22 memcpys within one region (each copy reads the
+// previous copy's result); deeper than z3's qi.lazy_threshold
 
 int main(void) {
   char b[23];
