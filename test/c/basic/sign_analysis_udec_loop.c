@@ -1,6 +1,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 // @expect verified
 // @flag --unroll=8
+// @flag --loop-limit=8
 // clang-format off
 // @flag --sign-analysis --clang-options=-fno-sanitize=signed-integer-overflow,unsigned-integer-overflow
 // @checkbpl grep -F '$add.i32($i4, $sub.i32(0, 1))'
