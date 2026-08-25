@@ -11,7 +11,8 @@ int main(void) {
   __VERIFIER_assume(v >= 0);
   _ExtInt(33) a[1];
   a[0] = v;
-  unsigned char *c = (unsigned char *)a; // byte access collapses the region to bytes
+  unsigned char *c =
+      (unsigned char *)a; // byte access collapses the region to bytes
   c[4] = 7;
   __VERIFIER_assert((unsigned)a[0] == (unsigned)v); // low 32 bits untouched
   __VERIFIER_assert(a[0] >= 0);                     // bit 32 = low bit of 7
