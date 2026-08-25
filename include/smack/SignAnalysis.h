@@ -56,6 +56,31 @@ Sign legacyLiteralSign(const llvm::Use &U);
 /// follows only the use-context needed to classify that operand. Results for
 /// completed value queries are memoized, so repeated literal uses can share
 /// their resolved context without requiring a whole-module scan.
+///
+/// Rendering policy (see SmackRep::lit). Under the unbounded integer encoding
+/// an N-bit pattern with the top bit set has two representatives, -k and
+/// 2^N - k, and every literal that meets a given SSA value must be spelled in
+/// the window of that value or equalities silently fail. The invariant this
+/// analysis maintains is therefore: a literal is printed in the window given
+/// by the inferred sign of the value it meets, and when that sign is not
+/// decided nothing is guessed that could break an equality.
+///   - Unsigned: the literal is spelled 2^N - k.
+///   - Signed:   the literal is spelled -k.
+///   - Unknown / Conflict: the literal is spelled -k, exactly as SMACK did
+///     before this analysis existed; an eq/ne against such a literal is
+///     additionally compared with both representatives
+///     (SmackRep::twoWindowEquality), which is exact under this model.
+///   - Negative operands of add/sub/mul are always spelled -k: the operations
+///     do not wrap under the integer encoding, so that is the only spelling
+///     that computes the C decrement.
+///
+/// Non-locality. The window of a value is the meet over all of its consumers,
+/// and the Ret rule meets over every direct call site of the function in the
+/// module, so the spelling of a literal inside a phi/select/argument/return
+/// is a whole-module property by design: a new caller elsewhere can change
+/// it. Any consumer the analysis cannot see through (memory, calls it cannot
+/// follow, unmodelled opcodes) makes the value Conflict, so only a value whose
+/// entire consumer set is classified takes the unsigned window.
 class SignAnalysis : public llvm::ModulePass {
 public:
   static char ID;

@@ -630,6 +630,22 @@ const Expr *SmackRep::lit(const llvm::Value *v) {
   return lit(v, Sign::Unknown);
 }
 
+// Rendering policy for integer literals. LLVM constants are signless; under
+// the unbounded integer encoding a negative N-bit constant can be spelled
+// either as -k (signed window) or as 2^N - k (unsigned window), and the two
+// are different integers. The sign passed in is the window of the SSA value
+// the literal meets (SignAnalysis when --sign-analysis is on, otherwise the
+// operation-local legacyLiteralSign table):
+//   Unsigned           -> 2^N - k
+//   Signed             -> -k
+//   Unknown / Conflict -> -k, i.e. SMACK's behavior before the analysis.
+//     Unknown means no consumer supplied a window; Conflict means the value
+//     has both signed and unsigned consumers or escapes the analysis. Neither
+//     guesses the unsigned window, so a literal can only move to 2^N - k when
+//     every consumer of the value agrees. Equalities against such literals
+//     compare with both representatives (twoWindowEquality) so the undecided
+//     case cannot break them either.
+// Under the bit-vector encoding both spellings denote the same bit pattern.
 const Expr *SmackRep::lit(const llvm::Value *v, Sign sign) {
   using namespace llvm;
 
@@ -637,9 +653,7 @@ const Expr *SmackRep::lit(const llvm::Value *v, Sign sign) {
     const APInt &API = ci->getValue();
     unsigned width = ci->getBitWidth();
 
-    // LLVM constants are signless. Definite unsigned evidence prints the
-    // bit-pattern as non-negative; signed, unknown, and conflicting evidence
-    // use the stable signed fallback.
+    // Only definite unsigned evidence prints the bit pattern as non-negative.
     bool neg = width > 1 && sign != Sign::Unsigned && ci->isNegative();
     SmallString<32> str;
     (neg ? API.abs() : API).toString(str, 10, false);
