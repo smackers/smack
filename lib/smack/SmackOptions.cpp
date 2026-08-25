@@ -81,6 +81,27 @@ const llvm::cl::opt<bool> SmackOptions::FailOnLoopExit(
     "fail-on-loop-exit",
     llvm::cl::desc("Add assert(false) to the end of each loop"));
 
+const llvm::cl::opt<unsigned> SmackOptions::MemoryIntrinsicThreshold(
+    "memory-intrinsic-threshold",
+    llvm::cl::desc("Expand constant-length memcpy/memset of at most this many "
+                   "bytes into per-offset map updates instead of emitting "
+                   "quantified axioms; 0 disables expansion"),
+    llvm::cl::init(0));
+
+const llvm::cl::opt<bool> SmackOptions::MemoryIntrinsicTriggers(
+    "memory-intrinsic-triggers",
+    llvm::cl::desc("Give the quantified memcpy/memset axioms an explicit "
+                   "trigger on the post-state memory map, suppressing the "
+                   "pre-state pattern Z3 would otherwise infer"));
+
+const llvm::cl::opt<bool> SmackOptions::MemoryIntrinsicSummaries(
+    "memory-intrinsic-summaries",
+    llvm::cl::desc("Model memcpy/memset as first-class map-valued functions "
+                   "with a single read axiom triggered on reads of the "
+                   "result, instead of three quantifiers per call (with "
+                   "bit-precise pointers: the three quantifiers with an "
+                   "explicit trigger)"));
+
 const llvm::cl::opt<unsigned> SmackOptions::UnrollBound(
     "unroll-bound",
     llvm::cl::desc("The loop unrolling bound the back-end verifier will be "

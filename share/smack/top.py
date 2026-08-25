@@ -406,6 +406,24 @@ def arguments():
                 when integer encoding is used''')
 
     translate_group.add_argument(
+        '--memory-intrinsic-threshold', metavar='N', default=0, type=int,
+        help='''expand constant-length memcpy/memset of at most N bytes into
+                per-offset map updates instead of quantified axioms
+                [default: %(default)s]''')
+
+    translate_group.add_argument(
+        '--memory-intrinsic-triggers', action='store_true', default=False,
+        help='''give the quantified memcpy/memset axioms an explicit trigger on
+                the post-state memory map''')
+
+    translate_group.add_argument(
+        '--memory-intrinsic-summaries', action='store_true', default=False,
+        help='''model memcpy/memset as map-valued functions with a single
+                read axiom triggered on reads of the result; under
+                --pointer-encoding=bit-vector this falls back to the quantified
+                axioms with explicit triggers''')
+
+    translate_group.add_argument(
         '--no-memory-splitting',
         action="store_true",
         default=False,
@@ -762,6 +780,13 @@ def llvm_to_bpl(args):
         cmd += ['-no-byte-access-inference']
     if args.rewrite_bitwise_ops:
         cmd += ['-rewrite-bitwise-ops']
+    if args.memory_intrinsic_threshold:
+        cmd += ['-memory-intrinsic-threshold',
+                str(args.memory_intrinsic_threshold)]
+    if args.memory_intrinsic_triggers:
+        cmd += ['-memory-intrinsic-triggers']
+    if args.memory_intrinsic_summaries:
+        cmd += ['-memory-intrinsic-summaries']
     if args.no_memory_splitting:
         cmd += ['-no-memory-splitting']
     if args.check.contains_mem_safe_props():

@@ -109,6 +109,9 @@ private:
 
   unsigned numElements(const llvm::Constant *v);
 
+  void intrinsicSummary(const std::string &fn, const std::string &type,
+                        const std::string &params, const std::string &qid,
+                        const std::string &value);
   Decl *memcpyProc(std::string type,
                    unsigned length = std::numeric_limits<unsigned>::max());
   Decl *memsetProc(std::string type,
@@ -120,6 +123,7 @@ private:
                         std::list<const Attr *> &);
 
 public:
+  std::string ptrOffset(unsigned offset);
   const Expr *pointerLit(unsigned v) {
     return pointerLit((unsigned long long)v);
   }

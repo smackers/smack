@@ -52,8 +52,6 @@ std::list<CallInst *> findCallers(Function *F) {
 
 namespace smack {
 
-const unsigned MEMORY_INTRINSIC_THRESHOLD = 0;
-
 std::string indexedName(std::string name,
                         std::initializer_list<std::string> idxs) {
   std::stringstream idxd;
@@ -1333,17 +1331,142 @@ const Expr *SmackRep::declareIsExternal(const Expr *e) {
   return Expr::fn(Naming::EXTERNAL_ADDR, e);
 }
 
+// The read-over-copy encoding (--memory-intrinsic-summaries) is only used with
+// integer pointers. Under --pointer-encoding=bit-vector the
+// single read axiom is a worse problem for Z3's bit-vector solver than the
+// three guarded implications: through Corral (Boogie 3.5.7, Z3 5.0.0) one
+// 32-byte memcpy between distinct regions whose destination is read a few
+// times afterwards (phase-2 t07_distinct) ran 94,130 smack.copy.read instances
+// at generation 0 with 324,940 conflicts and was killed at 300 s, where the
+// quantified axioms verify it in ~25 s, and an 8-byte struct copy
+// (test/c/bits/pack_struct.c) costs 2.6x the rlimit. The instance counts are
+// tiny in the second case, so it is the bit-vector reasoning around the
+// instantiated `ite` body, not instantiation volume, that hurts. With
+// bit-vector pointers a request for read-over-copy therefore degrades to the
+// quantified axioms with the explicit post-state trigger: over 44 bit-vector
+// programs with an intrinsic that form had no verdict regression, no new
+// timeout, no wall regression above 2x and no more instances than the
+// untriggered axioms on 42 of them, and turned two of their timeouts into
+// verdicts. The wrapped integer encoding keeps integer pointers and keeps the
+// read-over-copy form.
+static bool readOverCopy() {
+  return SmackOptions::MemoryIntrinsicSummaries &&
+         !SmackOptions::BitPrecisePointers;
+}
+
+// Whether the quantified axioms carry the explicit {M.ret[x]} trigger: always
+// under --memory-intrinsic-triggers, and whenever read-over-copy was requested
+// but bit-vector pointers rule it out.
+static bool intrinsicTrigger() {
+  return SmackOptions::MemoryIntrinsicTriggers ||
+         (SmackOptions::MemoryIntrinsicSummaries &&
+          SmackOptions::BitPrecisePointers);
+}
+
+// Attribute prefix shared by the quantified memory-intrinsic axioms: a stable
+// qid, and under --memory-intrinsic-triggers an explicit trigger on the
+// post-state map. Without a trigger Z3 infers its own, and for the two frame
+// axioms (whose body is `M.ret[x] == M.dst[x]`) it infers *two* patterns -- one
+// per incarnation -- so every intrinsic bridges the pre- and post-state maps in
+// both directions. On a region that DSA collapsed to a single map that back
+// edge re-creates shifted indices on the newest incarnation and the
+// instantiation set doubles per intrinsic in the chain. Pinning the trigger to
+// the post-state map cuts the back edge; it cannot affect soundness, only which
+// obligations remain provable.
+static std::string intrinsicQuant(const std::string &qid) {
+  std::string attrs = "{:qid \"" + qid + "\"} ";
+  if (intrinsicTrigger())
+    attrs += "{M.ret[x]} ";
+  return attrs;
+}
+
+// Under --memory-intrinsic-summaries the intrinsic's result is a first-class
+// map-valued function of its arguments, `fn(params)`, defined by ONE read axiom
+// whose only trigger is a read of the result: `fn(params)[x]`. A read of the
+// post-state is then expanded on demand into a read of the pre-state map(s),
+// and an instance can only create reads on strictly earlier maps, so there is
+// no back edge from the pre-state map and no matching loop. Pointwise this is
+// exactly the conjunction of the three quantified axioms above for every len
+// (the ite else-branch covers everything outside [dst, dst+len), including
+// len <= 0 and wrapped bit-vector ranges, where the frame axioms overlap and
+// agree). Emitted once per element type, keyed by the function's name.
+//
+// The axiom carries {:weight 0}. z3 (5.0.0, smt/qi_queue.cpp) prices every
+// E-matching instance at cost = weight + generation, where generation is the
+// largest generation of the terms bound by the trigger, and stamps every term
+// the instance creates with generation = cost (get_new_gen; weight 0 keeps the
+// bindings' generation, with the sole exception 0 -> 1). Instances with cost
+// above smt.qi.lazy_threshold (20) are never asserted, and the query comes back
+// `unknown`, which Boogie reports as a failed assertion. A chain of k intrinsic
+// calls expands a read of the last result through k nested applications: with
+// the default weight 1 the k-th expansion costs k + 1, so a copy chain deeper
+// than 20 turns into a spurious error; with weight 0 every expansion stays at
+// generation 1 and cost 1, independent of the depth of the chain.
+//
+// Weight 0 removes z3's generation brake, so this relies on the axiom being
+// incapable of a matching loop, which holds for these reasons:
+//   * the sole pattern is a read of the result, `fn(params)[x]`; the axiom is
+//     never triggered by a read of an argument map;
+//   * an instance creates reads only on the argument maps D/S, which are proper
+//     subterms of the trigger and earlier incarnations of the memory under
+//     Boogie's passification; the map position strictly decreases along every
+//     chain of instances, so the closure of any seed read is finite (bounded by
+//     the number of intrinsic calls between the seed and the ground store);
+//   * no other SMACK-generated formula creates a read of an application from a
+//     read of an argument map (the remaining quantifiers mention no memory
+//     map, and z3's array axioms create reads only on store terms), so the
+//     upward edge from argument map to result cannot be produced by anything
+//     SMACK emits. The only way to close the cycle is an asserted equality
+//     between an application and its own argument (`M1 == fn(M0,..)` and
+//     `M1 == M0`), which SMACK never emits.
+// Adding a trigger on an argument map (`{D[x]}`, `{S[y]}`), or asserting such
+// an equality, invalidates this argument and would make the weight-0 axiom
+// loop without bound; if that ever becomes necessary the default weight must
+// be restored.
+void SmackRep::intrinsicSummary(const std::string &fn, const std::string &type,
+                                const std::string &params,
+                                const std::string &qid,
+                                const std::string &value) {
+  if (auxDecls.count(fn))
+    return;
+  std::string names = params;
+  for (size_t i = names.find(':'); i != std::string::npos;
+       i = names.find(':')) {
+    size_t e = names.find(',', i);
+    names.erase(i, e == std::string::npos ? std::string::npos : e - i);
+  }
+  std::string app = fn + "(" + names + ")";
+  std::stringstream s;
+  s << "function " << fn << "(" << params << ") : [ref] " << type << ";\n"
+    << "axiom (forall " << params << ", x: ref :: {:qid \"" << qid
+    << "\"} {:weight 0} {" << app << "[x]} " << app << "[x] == (if "
+    << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) then "
+    << value << " else D[x]));\n";
+  auxDecls[fn] = Decl::code(fn, s.str());
+}
+
+// Offsets inside the scalar-expanded intrinsics must be pointer literals
+// (`3bv64` under --pointer-encoding=bit-vector, `3` otherwise); a bare integer
+// fails Boogie's type check as soon as pointers are bit-vectors.
+std::string SmackRep::ptrOffset(unsigned offset) {
+  std::stringstream t;
+  pointerLit(offset)->print(t);
+  return t.str();
+}
+
 Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
   std::stringstream s;
 
   std::string name = Naming::MEMCPY + "." + type;
-  bool no_quantifiers = length <= MEMORY_INTRINSIC_THRESHOLD;
+  bool no_quantifiers = length <= SmackOptions::MemoryIntrinsicThreshold;
 
   if (no_quantifiers)
     name = name + "." + std::to_string(length);
-  SmackWarnings::warnInfo(
-      "warning: memory intrinsic length exceeds threshold (" +
-      std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
+  else
+    SmackWarnings::warnInfo(
+        "warning: memory intrinsic length exceeds threshold (" +
+        std::to_string(SmackOptions::MemoryIntrinsicThreshold) +
+        "adding quantifiers.");
 
   s << "procedure " << name << "("
     << "M.dst: [ref] " << type << ", "
@@ -1362,26 +1485,40 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
     s << "  M.ret := M.dst;"
       << "\n";
     for (unsigned offset = 0; offset < length; ++offset)
-      s << "  M.ret[$add.ref(dst," << offset << ")] := "
-        << "M.src[$add.ref(src," << offset << ")];"
+      s << "  M.ret[$add.ref(dst," << ptrOffset(offset) << ")] := "
+        << "M.src[$add.ref(src," << ptrOffset(offset) << ")];"
         << "\n";
     s << "}"
       << "\n";
+
+  } else if (readOverCopy()) {
+    std::string fn = Naming::MEMCPY + ".copy." + type;
+    intrinsicSummary(fn, type,
+                     "D: [ref] " + type + ", S: [ref] " + type +
+                         ", dst: ref, src: ref, len: ref",
+                     "smack.copy.read", "S[$add.ref($sub.ref(src,dst),x)]");
+    std::string app = fn + "(M.dst, M.src, dst, src, len)";
+    if (SmackOptions::MemoryModelImpls)
+      s << "\n{\n  M.ret := " << app << ";\n}\n";
+    else
+      s << ";\nensures M.ret == " << app << ";\n";
 
   } else if (SmackOptions::MemoryModelImpls) {
     s << "\n"
       << "{"
       << "\n";
-    s << "  assume (forall x: ref :: "
+    s << "  assume (forall x: ref :: " << intrinsicQuant("smack.memcpy.write")
       << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
       << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
       << ");"
       << "\n";
     s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
     s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
@@ -1391,16 +1528,18 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
   } else {
     s << ";"
       << "\n";
-    s << "ensures (forall x: ref :: "
+    s << "ensures (forall x: ref :: " << intrinsicQuant("smack.memcpy.write")
       << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
       << "M.ret[x] == M.src[$add.ref($sub.ref(src,dst),x)]"
       << ");"
       << "\n";
     s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
     s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memcpy.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M.dst[x]"
       << ");"
       << "\n";
@@ -1412,13 +1551,15 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
   std::stringstream s;
 
   std::string name = Naming::MEMSET + "." + type;
-  bool no_quantifiers = length <= MEMORY_INTRINSIC_THRESHOLD;
+  bool no_quantifiers = length <= SmackOptions::MemoryIntrinsicThreshold;
 
   if (no_quantifiers)
     name = name + "." + std::to_string(length);
-  SmackWarnings::warnInfo(
-      "warning: memory intrinsic length exceeds threshold (" +
-      std::to_string(MEMORY_INTRINSIC_THRESHOLD) + "adding quantifiers.");
+  else
+    SmackWarnings::warnInfo(
+        "warning: memory intrinsic length exceeds threshold (" +
+        std::to_string(SmackOptions::MemoryIntrinsicThreshold) +
+        "adding quantifiers.");
 
   s << "procedure " << name << "("
     << "M: [ref] " << type << ", "
@@ -1436,25 +1577,39 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
     s << "M.ret := M;"
       << "\n";
     for (unsigned offset = 0; offset < length; ++offset)
-      s << "  M.ret[$add.ref(dst," << offset << ")] := val;"
+      s << "  M.ret[$add.ref(dst," << ptrOffset(offset) << ")] := val;"
         << "\n";
     s << "}"
       << "\n";
+
+  } else if (readOverCopy()) {
+    std::string fn = Naming::MEMSET + ".set." + type;
+    intrinsicSummary(fn, type,
+                     "D: [ref] " + type + ", dst: ref, val: " + intType(8) +
+                         ", len: ref",
+                     "smack.set.read", "val");
+    std::string app = fn + "(M, dst, val, len)";
+    if (SmackOptions::MemoryModelImpls)
+      s << "\n{\n  M.ret := " << app << ";\n}\n";
+    else
+      s << ";\nensures M.ret == " << app << ";\n";
 
   } else if (SmackOptions::MemoryModelImpls) {
     s << "\n"
       << "{"
       << "\n";
-    s << "  assume (forall x: ref :: "
+    s << "  assume (forall x: ref :: " << intrinsicQuant("smack.memset.write")
       << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
       << "M.ret[x] == val"
       << ");"
       << "\n";
     s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";
     s << "  assume (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";
@@ -1464,16 +1619,18 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
   } else {
     s << ";"
       << "\n";
-    s << "ensures (forall x: ref :: "
+    s << "ensures (forall x: ref :: " << intrinsicQuant("smack.memset.write")
       << "$sle.ref.bool(dst,x) && $slt.ref.bool(x,$add.ref(dst,len)) ==> "
       << "M.ret[x] == val"
       << ");"
       << "\n";
     s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.low")
       << "$slt.ref.bool(x,dst) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";
     s << "ensures (forall x: ref :: "
+      << intrinsicQuant("smack.memset.frame.high")
       << "$sle.ref.bool($add.ref(dst,len),x) ==> M.ret[x] == M[x]"
       << ");"
       << "\n";

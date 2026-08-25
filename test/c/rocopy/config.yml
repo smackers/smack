@@ -1,0 +1,7 @@
+# Read-over-copy regression tests (--memory-intrinsic-summaries). Restricted to
+# the impls memory model: in the spec models the intrinsic is a bodiless
+# procedure with `ensures M.ret == $memcpy.copy.T(..)`, a map equality that
+# makes Corral enable array extensionality, and the copy-chain tests then time
+# out (measured through the Corral fork: 11 of 84 all-configs runs, all of
+# them no-reuse/reuse with corral; every boogie run passes).
+memory: [no-reuse-impls]
