@@ -1,5 +1,6 @@
 *.ll
 !llvm/sign_analysis_constant_uses.ll
+!llvm/icmp_ce.ll
 *.bc
 *.o
 *.bpl

@@ -189,7 +189,8 @@ Sign SignAnalysis::inferUse(
 
   if (Opcode == Instruction::ICmp) {
     CmpInst::Predicate Predicate;
-    if (const auto *Cmp = dyn_cast<ICmpInst>(I))
+    // The owner may be an icmp constant expression, in which case I is null.
+    if (const auto *Cmp = dyn_cast_or_null<ICmpInst>(I))
       Predicate = Cmp->getPredicate();
     else
       Predicate = static_cast<CmpInst::Predicate>(CE->getPredicate());
