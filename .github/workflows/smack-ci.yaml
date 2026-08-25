@@ -10,6 +10,7 @@ jobs:
         regtest_env:
           [
             "--exhaustive --folder=c/basic",
+            "--exhaustive --folder=c/rocopy",
             "--exhaustive --folder=c/data",
             "--exhaustive --folder=c/ntdrivers-simplified",
             "--exhaustive --folder=c/ntdrivers",
