@@ -419,7 +419,9 @@ def arguments():
     translate_group.add_argument(
         '--memory-intrinsic-summaries', action='store_true', default=False,
         help='''model memcpy/memset as map-valued functions with a single
-                read axiom triggered on reads of the result''')
+                read axiom triggered on reads of the result; under
+                --pointer-encoding=bit-vector this falls back to the quantified
+                axioms with explicit triggers''')
 
     translate_group.add_argument(
         '--no-memory-splitting',

@@ -1332,6 +1332,39 @@ const Expr *SmackRep::declareIsExternal(const Expr *e) {
   return Expr::fn(Naming::EXTERNAL_ADDR, e);
 }
 
+// The read-over-copy encoding (--memory-intrinsic-summaries) is only used with
+// integer pointers. Under --pointer-encoding=bit-vector the
+// single read axiom is a worse problem for Z3's bit-vector solver than the
+// three guarded implications: through Corral (Boogie 3.5.7, Z3 5.0.0) one
+// 32-byte memcpy between distinct regions whose destination is read a few
+// times afterwards (phase-2 t07_distinct) ran 94,130 smack.copy.read instances
+// at generation 0 with 324,940 conflicts and was killed at 300 s, where the
+// quantified axioms verify it in ~25 s, and an 8-byte struct copy
+// (test/c/bits/pack_struct.c) costs 2.6x the rlimit. The instance counts are
+// tiny in the second case, so it is the bit-vector reasoning around the
+// instantiated `ite` body, not instantiation volume, that hurts. With
+// bit-vector pointers a request for read-over-copy therefore degrades to the
+// quantified axioms with the explicit post-state trigger: over 44 bit-vector
+// programs with an intrinsic that form had no verdict regression, no new
+// timeout, no wall regression above 2x and no more instances than the
+// untriggered axioms on 42 of them, and turned two of their timeouts into
+// verdicts. The wrapped integer encoding keeps integer pointers and keeps the
+// read-over-copy form.
+static bool readOverCopy() {
+  return SmackOptions::MemoryIntrinsicSummaries &&
+         !SmackOptions::BitPrecisePointers;
+}
+
+// Whether the quantified axioms carry the explicit {M.ret[x]} trigger: always
+// under --memory-intrinsic-triggers, and whenever read-over-copy was requested
+// but bit-vector pointers rule it out.
+static bool intrinsicTrigger() {
+  return SmackOptions::MemoryIntrinsicTriggers ||
+         ((SmackOptions::MemoryIntrinsicSummaries ||
+           SmackOptions::MemoryIntrinsicLambdas) &&
+          SmackOptions::BitPrecisePointers);
+}
+
 // Attribute prefix shared by the quantified memory-intrinsic axioms: a stable
 // qid, and under --memory-intrinsic-triggers an explicit trigger on the
 // post-state map. Without a trigger Z3 infers its own, and for the two frame
@@ -1344,7 +1377,7 @@ const Expr *SmackRep::declareIsExternal(const Expr *e) {
 // provable.
 static std::string intrinsicQuant(const std::string &qid) {
   std::string attrs = "{:qid \"" + qid + "\"} ";
-  if (SmackOptions::MemoryIntrinsicTriggers)
+  if (intrinsicTrigger())
     attrs += "{M.ret[x]} ";
   return attrs;
 }
@@ -1450,7 +1483,7 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
     s << "}"
       << "\n";
 
-  } else if (SmackOptions::MemoryIntrinsicSummaries) {
+  } else if (readOverCopy()) {
     std::string fn = Naming::MEMCPY + ".copy." + type;
     intrinsicSummary(fn, type,
                      "D: [ref] " + type + ", S: [ref] " + type +
@@ -1536,7 +1569,7 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
     s << "}"
       << "\n";
 
-  } else if (SmackOptions::MemoryIntrinsicSummaries) {
+  } else if (readOverCopy()) {
     std::string fn = Naming::MEMSET + ".set." + type;
     intrinsicSummary(fn, type,
                      "D: [ref] " + type + ", dst: ref, val: " + intType(8) +

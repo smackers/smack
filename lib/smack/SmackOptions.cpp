@@ -98,7 +98,9 @@ const llvm::cl::opt<bool> SmackOptions::MemoryIntrinsicSummaries(
     "memory-intrinsic-summaries",
     llvm::cl::desc("Model memcpy/memset as first-class map-valued functions "
                    "with a single read axiom triggered on reads of the "
-                   "result, instead of three quantifiers per call"));
+                   "result, instead of three quantifiers per call (with "
+                   "bit-precise pointers: the three quantifiers with an "
+                   "explicit trigger)"));
 
 const llvm::cl::opt<unsigned> SmackOptions::UnrollBound(
     "unroll-bound",
