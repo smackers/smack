@@ -123,6 +123,7 @@ private:
                         std::list<const Attr *> &);
 
 public:
+  std::string ptrOffset(unsigned offset);
   const Expr *pointerLit(unsigned v) {
     return pointerLit((unsigned long long)v);
   }

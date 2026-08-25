@@ -1360,8 +1360,7 @@ static bool readOverCopy() {
 // but bit-vector pointers rule it out.
 static bool intrinsicTrigger() {
   return SmackOptions::MemoryIntrinsicTriggers ||
-         ((SmackOptions::MemoryIntrinsicSummaries ||
-           SmackOptions::MemoryIntrinsicLambdas) &&
+         (SmackOptions::MemoryIntrinsicSummaries &&
           SmackOptions::BitPrecisePointers);
 }
 
@@ -1447,6 +1446,15 @@ void SmackRep::intrinsicSummary(const std::string &fn, const std::string &type,
   auxDecls[fn] = Decl::code(fn, s.str());
 }
 
+// Offsets inside the scalar-expanded intrinsics must be pointer literals
+// (`3bv64` under --pointer-encoding=bit-vector, `3` otherwise); a bare integer
+// fails Boogie's type check as soon as pointers are bit-vectors.
+std::string SmackRep::ptrOffset(unsigned offset) {
+  std::stringstream t;
+  pointerLit(offset)->print(t);
+  return t.str();
+}
+
 Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
   std::stringstream s;
 
@@ -1477,8 +1485,8 @@ Decl *SmackRep::memcpyProc(std::string type, unsigned length) {
     s << "  M.ret := M.dst;"
       << "\n";
     for (unsigned offset = 0; offset < length; ++offset)
-      s << "  M.ret[$add.ref(dst," << offset << ")] := "
-        << "M.src[$add.ref(src," << offset << ")];"
+      s << "  M.ret[$add.ref(dst," << ptrOffset(offset) << ")] := "
+        << "M.src[$add.ref(src," << ptrOffset(offset) << ")];"
         << "\n";
     s << "}"
       << "\n";
@@ -1564,7 +1572,7 @@ Decl *SmackRep::memsetProc(std::string type, unsigned length) {
     s << "M.ret := M;"
       << "\n";
     for (unsigned offset = 0; offset < length; ++offset)
-      s << "  M.ret[$add.ref(dst," << offset << ")] := val;"
+      s << "  M.ret[$add.ref(dst," << ptrOffset(offset) << ")] := val;"
         << "\n";
     s << "}"
       << "\n";
