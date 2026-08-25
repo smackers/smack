@@ -980,15 +980,31 @@ void IntOpGen::generateMemOps(std::stringstream &s) const {
         s << prelude.unsafeStore(binding, prelude.mapUpdExpr(0, valExpr))
           << "\n";
       } else {
+        // A width that is not a multiple of 8 (bv33) occupies ceil(size/8)
+        // bytes: store it zero-extended to that byte boundary and load it by
+        // truncating the concatenation of those bytes. Concatenating only
+        // size/8 bytes, as before, gave $load.bytes.bv33 a bv32 body (and lost
+        // bit 32 on store); Boogie 2.x never computed the width of ++ so this
+        // surfaced only as a z3 sort error, while Boogie 3.x rejects it at
+        // type checking.
+        unsigned bytes = (size + 7) >> 3;
+        unsigned padded = bytes << 3;
+        auto storeVal =
+            padded == size
+                ? valExpr
+                : Expr::fn(indexedName("$zext", {type, getBvTypeName(padded)}),
+                           valExpr);
         auto loadBody = prelude.mapSelExpr(0);
-        auto storeBody = prelude.mapUpdExpr(0, Expr::bvExtract(valExpr, 8, 0));
-        for (unsigned i = 1; i < (size >> 3); ++i) {
+        auto storeBody = prelude.mapUpdExpr(0, Expr::bvExtract(storeVal, 8, 0));
+        for (unsigned i = 1; i < bytes; ++i) {
           unsigned lowerIdx = i << 3;
           unsigned upperIdx = lowerIdx + 8;
           loadBody = Expr::bvConcat(prelude.mapSelExpr(i), loadBody);
           storeBody = prelude.mapUpdExpr(
-              i, Expr::bvExtract(valExpr, upperIdx, lowerIdx), storeBody);
+              i, Expr::bvExtract(storeVal, upperIdx, lowerIdx), storeBody);
         }
+        if (padded != size)
+          loadBody = Expr::bvExtract(loadBody, size, 0);
         // e.g., function {:inline} $load.bytes.bv16(M: [ref] bv8, p: ref)
         // returns (bv16) { (M[$add.ref(p, 1)]++M[p]) }
         s << prelude.unsafeLoad(type, loadBody) << "\n";
