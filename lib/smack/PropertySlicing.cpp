@@ -1296,6 +1296,59 @@ bool propertySlicingWillRun() {
     return false;
   }
 
+  // Nothing else SMACK's front end can be asked for needs a refusal. Each of
+  // the remaining modes was checked against the relevance relation and
+  // measured; the negative results are recorded here so a later reader does
+  // not repeat the search.
+  //
+  //   -rust-panics   The panic marker is a property root (isPropertyRoot),
+  //                  exactly as __VERIFIER_assert is, so a panicking path is
+  //                  error-reaching for the slicer too. test/rust/panic
+  //                  (four error tests, one verified) passes with slicing on.
+  //
+  //   -llvm-assumes=use|check
+  //                  `llvm.assume` is inaccessiblememonly, so it is neither
+  //                  readnone nor onlyReadsMemory and computeEffects puts it
+  //                  in unsafeToDrop: the call is always kept, and with it
+  //                  the condition it names. This matters for `check`, where
+  //                  SmackInstGenerator turns the intrinsic into an *assert*
+  //                  (SmackInstGenerator.cpp:930) -- a property root the
+  //                  rules above do not name. Measured on a probe whose
+  //                  assumed value is irrelevant to the assertion: the
+  //                  violation is reported with slicing on and off alike.
+  //
+  //   -float         The relevance rules are type-agnostic; a floating-point
+  //                  value is relevant exactly where an integer one would
+  //                  be. Rounding-mode state reaches Boogie through
+  //                  __SMACK_code, which has a verification effect.
+  //
+  //   -bit-precise, -bit-precise-pointers, -wrapped-integer-encoding
+  //                  Encoding choices made by SmackRep, downstream of the IR
+  //                  this pass rewrites. The one ordering constraint --
+  //                  running before RewriteBitwiseOps, so that and/or are
+  //                  still instructions rather than __SMACK_and32 calls --
+  //                  is already honoured by llvm2bpl.cpp.
+  //
+  //   -modular       Contract calls are verification effects, so requires,
+  //                  ensures and invariant survive together with everything
+  //                  they observe; a procedure carrying only a contract
+  //                  keeps its whole footprint. test/c/contracts passes with
+  //                  slicing on.
+  //
+  //   -checked-functions, -entry-points
+  //                  Narrowing the checked set only removes Boogie asserts,
+  //                  while the slicer still roots at every
+  //                  __VERIFIER_assert; that is the conservative side.
+  //                  mayReachError is a whole-module fixpoint and never
+  //                  consults the entry points, so extra entries cost
+  //                  nothing.
+  //
+  //   -no-memory-splitting
+  //                  Collapses Regions into fewer, larger regions, making
+  //                  regionIsRelevant coarser -- strictly more is kept.
+  //
+  // Measured with the 28 tests of test/c/property-slicing re-run under
+  // -bit-precise, -float and -llvm-assumes=check: 28/28 in every mode.
   return true;
 }
 
