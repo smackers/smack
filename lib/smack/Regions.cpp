@@ -292,7 +292,8 @@ void Regions::visitCallInst(CallInst &I) {
 
     if (auto I = dyn_cast<ConstantInt>(N)) {
       const unsigned bound = I->getZExtValue();
-      const unsigned size = T->getElementType()->getIntegerBitWidth() / 8;
+      const unsigned size =
+          T->getPointerElementType()->getIntegerBitWidth() / 8;
       const unsigned length = bound * size;
       idx(P, length);
 
