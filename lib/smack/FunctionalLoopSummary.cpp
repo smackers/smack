@@ -58,6 +58,19 @@ bool getIterationCount(Loop &L, BasicBlock *ExitingBlock, ScalarEvolution &SE,
   if (isa<SCEVCouldNotCompute>(S) || S->getType() != Ty)
     return false;
 
+  // For an `i != e` (or `==`) exit ScalarEvolution's count is `e - start`
+  // modulo 2^N: exact for LLVM, where the induction wraps around to reach e,
+  // but SMACK's default lowering is over unbounded integers, in which that
+  // loop never terminates and `e - start` is negative. A summary built from
+  // the modular count would run zero iterations there, dropping every write
+  // and every check the flag-off translation performs. Only a constant count
+  // is the same number under both readings.
+  if (auto *Branch = dyn_cast<BranchInst>(ExitingBlock->getTerminator()))
+    if (Branch->isConditional())
+      if (auto *Cmp = dyn_cast<ICmpInst>(Branch->getCondition()))
+        if (Cmp->isEquality() && !isa<SCEVConstant>(S))
+          return false;
+
   if (IncludeFinalExitingBlock) {
     // SCEV's exit count is the number of backedges taken.  When the store
     // executes before the exit test (the form produced by LoopRotate), its
@@ -175,6 +188,21 @@ PHINode *getPositiveInduction(Loop &L, ScalarEvolution &SE, PHINode *Phi,
   Initial = Phi->getIncomingValueForBlock(Incoming);
   if (Initial->getType() != Phi->getType() || !L.isLoopInvariant(Initial) ||
       AR->getStart() != SE.getSCEV(const_cast<Value *>(Initial)))
+    return nullptr;
+  // The closed form start + step*k is rendered with the step as a positive
+  // literal, which is only the flag-off value when the update really is
+  // `phi + step` (a `sub` of a negative constant lowers to a different
+  // representative under the unbounded encoding).
+  auto *Update =
+      dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Backedge));
+  if (!Update || Update->getOpcode() != Instruction::Add)
+    return nullptr;
+  const ConstantInt *Increment = nullptr;
+  if (Update->getOperand(0) == Phi)
+    Increment = dyn_cast<ConstantInt>(Update->getOperand(1));
+  else if (Update->getOperand(1) == Phi)
+    Increment = dyn_cast<ConstantInt>(Update->getOperand(0));
+  if (!Increment || Increment->getValue() != Step->getAPInt())
     return nullptr;
   StepValue = Step->getValue();
   return Phi;
@@ -390,19 +418,37 @@ bool validateRhs(const Value *V, FunctionalLoopSummary &Summary,
   if (!I || !Summary.loop->contains(I))
     return Summary.loop->isLoopInvariant(V);
 
-  if (I->getType() == Summary.iterationType) {
-    if (auto *AR = dyn_cast<SCEVAddRecExpr>(
-            SE.getSCEV(const_cast<Instruction *>(I)))) {
-      auto *Start = dyn_cast<SCEVConstant>(AR->getStart());
-      auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
-      if (AR->getLoop() == Summary.loop && AR->isAffine() && Start && Step) {
-        for (const auto &Recurrence : Summary.recurrences)
-          if (Recurrence.value == V)
-            return true;
-        Summary.recurrences.push_back({V, Start->getValue(), Step->getValue()});
+  if (auto *Phi = dyn_cast<PHINode>(I)) {
+    // A loop-carried scalar other than the induction. Its closed form is
+    // taken from the update instruction rather than from ScalarEvolution:
+    // SCEV folds `x + (-1)` and `x - 1` to the same recurrence, but SMACK's
+    // unbounded-integer lowering renders them as different values.
+    BasicBlock *Incoming = nullptr;
+    BasicBlock *Backedge = nullptr;
+    if (Phi->getParent() != Summary.loop->getHeader() ||
+        Phi->getType() != Summary.iterationType ||
+        !Summary.loop->getIncomingAndBackEdge(Incoming, Backedge))
+      return false;
+    const Value *Start = Phi->getIncomingValueForBlock(Incoming);
+    auto *Update =
+        dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Backedge));
+    if (!Summary.loop->isLoopInvariant(Start) || !Update ||
+        !Summary.loop->contains(Update))
+      return false;
+    const ConstantInt *Step = nullptr;
+    if (Update->getOpcode() == Instruction::Add && Update->getOperand(1) == Phi)
+      Step = dyn_cast<ConstantInt>(Update->getOperand(0));
+    else if ((Update->getOpcode() == Instruction::Add ||
+              Update->getOpcode() == Instruction::Sub) &&
+             Update->getOperand(0) == Phi)
+      Step = dyn_cast<ConstantInt>(Update->getOperand(1));
+    if (!Step)
+      return false;
+    for (const auto &Recurrence : Summary.recurrences)
+      if (Recurrence.value == V)
         return true;
-      }
-    }
+    Summary.recurrences.push_back({V, Start, Update, Step});
+    return true;
   }
 
   if (auto *Load = dyn_cast<LoadInst>(I)) {
@@ -620,6 +666,33 @@ bool hasUnsupportedEscapingValue(Loop &L, const PHINode *Induction,
   return false;
 }
 
+// Whether calling F cannot change program memory: no store or memory
+// intrinsic in its body, and every callee it reaches is either a declaration
+// (which SMACK models without touching program memory) or is itself pure.
+// The verifier summaries evaluate every action on loop-entry memory, which
+// is only right if the primitive's own body -- under the SV-COMP frontend it
+// is the task's definition -- writes nothing the loop reads.
+bool isMemoryPure(const Function &F, std::set<const Function *> &Visited) {
+  if (!Visited.insert(&F).second)
+    return true;
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB) {
+      if (isa<StoreInst>(I) || isa<MemIntrinsic>(I) || isa<AtomicRMWInst>(I) ||
+          isa<AtomicCmpXchgInst>(I))
+        return false;
+      if (auto *Call = dyn_cast<CallBase>(&I)) {
+        if (isa<DbgInfoIntrinsic>(I))
+          continue;
+        const Function *Callee = Call->getCalledFunction();
+        if (!Callee)
+          return false;
+        if (!Callee->isDeclaration() && !isMemoryPure(*Callee, Visited))
+          return false;
+      }
+    }
+  return true;
+}
+
 bool hasOnlySupportedInstructions(Loop &L,
                                   SmallVectorImpl<const StoreInst *> &Stores) {
   for (BasicBlock *BB : L.blocks()) {
@@ -783,6 +856,7 @@ bool analyzeMemoryLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
   Summary.inductionStart = InductionStart;
   Summary.inductionStep = InductionStep;
   Summary.inductionEscapes = InductionEscapes;
+  Summary.exitTestFollowsBody = StoresExecuteBeforeExitTest;
   Summary.iterationType = IterationType;
   Summary.iterationCount = IterationCount;
 
@@ -1139,6 +1213,14 @@ bool analyzeReadOnlyVerifierLoop(Loop &L, ScalarEvolution &SE, AAResults &AA,
           VerifierCall->arg_size() != 1 ||
           !VerifierCall->getArgOperand(0)->getType()->isIntegerTy())
         return false;
+      // Under the SV-COMP frontend the primitive is the task's own function
+      // and is translated as such; the summary is only exact if that body
+      // cannot write memory the loop reads.
+      if (const Function *Callee = VerifierCall->getCalledFunction()) {
+        std::set<const Function *> Visited;
+        if (!Callee->isDeclaration() && !isMemoryPure(*Callee, Visited))
+          return false;
+      }
 
       FunctionalLoopVerifierAction Action;
       Action.kind = Primitive == "assert"

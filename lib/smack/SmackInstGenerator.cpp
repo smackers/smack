@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "llvm/Support/raw_ostream.h"
+#include <functional>
 #include <iostream>
 
 #include "smack/SmackWarnings.h"
@@ -76,8 +77,11 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   if (!SmackOptions::FunctionalizeLoops || SmackOptions::BitPrecise ||
       SmackOptions::BitPrecisePointers ||
       SmackOptions::WrappedIntegerEncoding || SmackOptions::MemoryModelDebug) {
+    // LoopBoundWarnings recorded the counts before NormalizeLoops; asking
+    // ScalarEvolution again here, on the normalized loops, is what crashed
+    // LLVM 14 on some large drivers.
     if (emitLoopBoundWarnings)
-      warnAboutLoops(F, loops, *scalarEvolution);
+      warnAboutLoops(F, recordedLoopBoundInfo(loops));
     return;
   }
 
@@ -317,10 +321,17 @@ const Expr *SmackInstGenerator::functionalValue(
   for (const auto &Recurrence : Summary.recurrences) {
     if (Recurrence.value != Value)
       continue;
+    // start +/- step*k, with the step literal rendered exactly as
+    // SmackRep::bop renders the update's constant operand (the sign
+    // convention differs between `add` without nsw and `sub`), so the closed
+    // form is the value the unrolled loop computes.
+    bool Sub = Recurrence.update->getOpcode() == Instruction::Sub;
     auto MulName = rep->opName("$mul", {Summary.iterationType});
-    auto AddName = rep->opName("$add", {Summary.iterationType});
-    return Expr::fn(AddName, rep->expr(Recurrence.start),
-                    Expr::fn(MulName, rep->expr(Recurrence.step), Iteration));
+    auto OpName = rep->opName(Sub ? "$sub" : "$add", {Summary.iterationType});
+    const Expr *Step = rep->expr(
+        Recurrence.step, Sub || !Recurrence.update->hasNoSignedWrap(), Sub);
+    return Expr::fn(OpName, functionalExpr(Recurrence.start),
+                    Expr::fn(MulName, Step, Iteration));
   }
 
   if (auto *Load = dyn_cast<LoadInst>(Value)) {
@@ -338,12 +349,28 @@ const Expr *SmackInstGenerator::functionalValue(
   }
 
   if (auto *BO = dyn_cast<BinaryOperator>(Value)) {
-    auto Name = rep->opName(Naming::INSTRUCTION_TABLE.at(BO->getOpcode()),
+    // Constant operands take the representative SmackRep::bop would give them
+    // for this opcode; under the unbounded encoding the two representatives
+    // of a bit pattern are different integers.
+    unsigned Opcode = BO->getOpcode();
+    bool IsUnsigned = !BO->hasNoSignedWrap();
+    bool IsUnsignedInst = false;
+    if (Opcode == Instruction::SDiv || Opcode == Instruction::SRem) {
+      IsUnsigned = false;
+    } else if (Opcode == Instruction::UDiv || Opcode == Instruction::URem ||
+               Opcode == Instruction::Sub) {
+      IsUnsigned = true;
+      IsUnsignedInst = true;
+    }
+    auto Operand = [&](const llvm::Value *V) {
+      if (isa<ConstantInt>(V))
+        return rep->expr(V, IsUnsigned, IsUnsignedInst);
+      return functionalValue(V, Summary, Iteration, EntryMemories);
+    };
+    auto Name = rep->opName(Naming::INSTRUCTION_TABLE.at(Opcode),
                             std::list<const Type *>{BO->getType()});
-    return Expr::fn(
-        Name,
-        functionalValue(BO->getOperand(0), Summary, Iteration, EntryMemories),
-        functionalValue(BO->getOperand(1), Summary, Iteration, EntryMemories));
+    return Expr::fn(Name, Operand(BO->getOperand(0)),
+                    Operand(BO->getOperand(1)));
   }
 
   if (auto *Cast = dyn_cast<CastInst>(Value)) {
@@ -370,11 +397,15 @@ const Expr *SmackInstGenerator::functionalValue(
   if (auto *Select = dyn_cast<SelectInst>(Value)) {
     auto Condition = functionalValue(Select->getCondition(), Summary, Iteration,
                                      EntryMemories);
+    // SmackRep::select renders constant arms as unsigned magnitudes.
+    auto Arm = [&](const llvm::Value *V) {
+      if (isa<ConstantInt>(V))
+        return rep->expr(V, true, true);
+      return functionalValue(V, Summary, Iteration, EntryMemories);
+    };
     return Expr::ifThenElse(Expr::eq(Condition, rep->integerLit(1ULL, 1)),
-                            functionalValue(Select->getTrueValue(), Summary,
-                                            Iteration, EntryMemories),
-                            functionalValue(Select->getFalseValue(), Summary,
-                                            Iteration, EntryMemories));
+                            Arm(Select->getTrueValue()),
+                            Arm(Select->getFalseValue()));
   }
 
   llvm_unreachable("unsupported value in validated functional loop summary");
@@ -469,6 +500,20 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
         {ContinueIterationName, IterationType}, ContinueBody, Capture,
         ContinueMapType, "smack.functional.continue");
 
+    // firstStop(c, current, remaining) is the first iteration at or after
+    // `current`, within `remaining` more, whose continuation predicate fails
+    // (or current + remaining if none does). It is a recursive definition,
+    // emitted as a bodiless function and its own definitional axiom rather
+    // than as a function body, so the axiom can carry {:weight 0}: Boogie's
+    // definitional axiom has weight 1, Z3 charges one generation per
+    // unfolding and stops after about twenty, and Boogie reports the
+    // resulting `unknown` as a definite error -- on a safe scan of a
+    // 30-element array. A first-order characterisation (least k with
+    // !c[k]) was tried and is exact but never instantiated at the right k;
+    // the unfolding is what enumerates the iterations up to the stop. With a
+    // constant trip count the chain is bounded by it; with a symbolic count
+    // and a stop the solver cannot locate, the unfolding does not terminate
+    // and the query times out, which is the honest outcome.
     std::string FirstStopName = "$functional.firstStop." +
                                 std::to_string(proc->getId()) + "." +
                                 std::to_string(Id);
@@ -489,43 +534,65 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
     const Expr *FirstStopBody = Expr::ifThenElse(
         Expr::eq(Remaining, Zero), Current,
         Expr::ifThenElse(Expr::sel(Continues, Current), Recursive, Current));
-    rep->getProgram()->getDeclarations().push_back(
-        Decl::function(FirstStopName,
-                       {{ContinuesName, ContinueMapType},
-                        {CurrentName, IterationType},
-                        {RemainingName, IterationType}},
-                       IterationType, FirstStopBody));
+    std::list<Binding> Params = {{ContinuesName, ContinueMapType},
+                                 {CurrentName, IterationType},
+                                 {RemainingName, IterationType}};
+    const Expr *Application =
+        Expr::fn(FirstStopName, {Continues, Current, Remaining});
+    auto &Decls = rep->getProgram()->getDeclarations();
+    Decls.push_back(Decl::function(FirstStopName, Params, IterationType));
+    Decls.push_back(Decl::axiom(
+        Expr::forall(Params,
+                     {Attr::attr("qid", "smack.functional.firstStop"),
+                      Attr::attr("weight", 0)},
+                     Application, Expr::eq(Application, FirstStopBody))));
     FirstStop = Expr::fn(FirstStopName, {ContinueMap, Zero, IterationCount});
   }
 
-  SmallVector<const Expr *, 4> TriggeredAllContinue;
-  for (unsigned LoadIndex = 0; LoadIndex < Summary.loads.size(); ++LoadIndex) {
-    const FunctionalLoopLoad &Load = Summary.loads[LoadIndex];
-    std::string LoadPath = rep->memPath(Load.load->getPointerOperand());
-    std::string PointerName = "$functional.read.pointer." + std::to_string(Id) +
-                              "." + std::to_string(LoadIndex);
-    const Expr *Pointer = Expr::id(PointerName);
-    const Expr *Start = functionalPointerSCEV(Load.access.start);
-    const Expr *Delta = Expr::fn("$sub.ref", Pointer, Start);
-    const Expr *DeltaAsInteger =
-        Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
-    const Expr *Stride =
-        rep->integerLit(static_cast<unsigned long long>(Load.access.stride),
-                        Summary.iterationType->getBitWidth());
-    const Expr *Iteration = Expr::fn(
-        rep->opName("$udiv", {Summary.iterationType}), DeltaAsInteger, Stride);
-    const Expr *IsReadAddress =
-        Expr::eq(Pointer, functionalAddress(Load.access, Iteration,
-                                            Summary.iterationType));
-    const Expr *InReadImage =
-        Expr::and_(IterationInDomain(Iteration), IsReadAddress);
-    const Expr *Trigger =
-        rep->functionalLoad(Load.load->getPointerOperand(),
-                            Expr::id(CurrentMemories.at(LoadPath)), Pointer);
-    TriggeredAllContinue.push_back(
-        Expr::forall({{PointerName, Naming::PTR_TYPE}}, Trigger,
-                     Expr::impl(InReadImage, ContinueAt(Iteration))));
-  }
+  // One pointer-quantified fact per affine load, triggered by a read of that
+  // load's map: for a pointer in the load's image, `Consequent` holds of the
+  // iteration that reads it. Iteration-quantified facts alone are not enough
+  // for the solver: their bound variable occurs only inside map indices, so
+  // E-matching never instantiates them at the iteration a client read
+  // concerns.
+  auto TriggeredFacts =
+      [&](const std::string &Tag,
+          const std::function<const Expr *(const Expr *)> &Consequent) {
+        SmallVector<const Expr *, 4> Facts;
+        for (unsigned LoadIndex = 0; LoadIndex < Summary.loads.size();
+             ++LoadIndex) {
+          const FunctionalLoopLoad &Load = Summary.loads[LoadIndex];
+          std::string LoadPath = rep->memPath(Load.load->getPointerOperand());
+          std::string PointerName = "$functional.read.pointer." +
+                                    std::to_string(Id) + "." +
+                                    std::to_string(LoadIndex) + Tag;
+          const Expr *Pointer = Expr::id(PointerName);
+          const Expr *Start = functionalPointerSCEV(Load.access.start);
+          const Expr *Delta = Expr::fn("$sub.ref", Pointer, Start);
+          const Expr *DeltaAsInteger = Expr::fn(
+              indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+          const Expr *Stride = rep->integerLit(
+              static_cast<unsigned long long>(Load.access.stride),
+              Summary.iterationType->getBitWidth());
+          const Expr *Iteration =
+              Expr::fn(rep->opName("$udiv", {Summary.iterationType}),
+                       DeltaAsInteger, Stride);
+          const Expr *IsReadAddress =
+              Expr::eq(Pointer, functionalAddress(Load.access, Iteration,
+                                                  Summary.iterationType));
+          const Expr *InReadImage =
+              Expr::and_(IterationInDomain(Iteration), IsReadAddress);
+          const Expr *Trigger = rep->functionalLoad(
+              Load.load->getPointerOperand(),
+              Expr::id(CurrentMemories.at(LoadPath)), Pointer);
+          Facts.push_back(
+              Expr::forall({{PointerName, Naming::PTR_TYPE}}, Trigger,
+                           Expr::impl(InReadImage, Consequent(Iteration))));
+        }
+        return Facts;
+      };
+  SmallVector<const Expr *, 4> TriggeredAllContinue =
+      TriggeredFacts("", ContinueAt);
 
   // This is the semantic summary.  The pointer-quantified formula above is a
   // redundant consequence whose explicit load trigger lets clients instantiate
@@ -618,6 +685,16 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
       const Expr *EarlierIterationsPass =
           Expr::forall({{PreviousName, IterationType}},
                        Expr::impl(BeforeWitness, AllActionsAt(Previous)));
+      // The same prefix, matchable from a read: without it a failed
+      // assumption at an earlier iteration cannot be seen to block this
+      // assertion, and the witness produces a spurious error.
+      SmallVector<const Expr *, 4> EarlierIterationsPassTriggered =
+          TriggeredFacts(".witness." + Suffix, [&](const Expr *Iteration) {
+            return Expr::impl(Expr::fn(indexedName("$ult", {IterationType,
+                                                            Naming::BOOL_TYPE}),
+                                       Iteration, Witness),
+                              AllActionsAt(Iteration));
+          });
 
       const Expr *EarlierActionsPass = Expr::lit(true);
       for (unsigned Earlier = 0; Earlier < ActionIndex; ++Earlier)
@@ -634,6 +711,8 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
       annotate(PreheaderBranch, Failure);
       Failure->addStmt(Stmt::havoc(WitnessName));
       Failure->addStmt(Stmt::assume(WitnessesFailure));
+      for (const Expr *Triggered : EarlierIterationsPassTriggered)
+        Failure->addStmt(Stmt::assume(Triggered));
       annotate(*Action.call, Failure);
       Failure->addStmt(Stmt::assert_(Expr::lit(false)));
       Failure->addStmt(Stmt::goto_({getBlock(Summary.exit)->getName()}));
@@ -792,8 +871,19 @@ void SmackInstGenerator::emitFunctionalLoop(
   }
   const Expr *FinalInduction =
       functionalInductionValue(Summary, IterationCount);
-  if (Summary.inductionEscapes)
-    emit(Stmt::assign(rep->expr(Summary.induction), FinalInduction));
+  if (Summary.inductionEscapes) {
+    // A direct use of the header PHI after the loop sees the value of the
+    // last iteration that ran. When the exit test follows the body that is
+    // one step short of the incremented value the exit PHIs carry.
+    const Expr *ExitValue = FinalInduction;
+    if (Summary.exitTestFollowsBody)
+      ExitValue = functionalInductionValue(
+          Summary,
+          Expr::fn(
+              indexedName("$sub", {IterationType}), IterationCount,
+              rep->integerLit(1ULL, Summary.iterationType->getBitWidth())));
+    emit(Stmt::assign(rep->expr(Summary.induction), ExitValue));
+  }
   for (PHINode *Phi : Summary.finalInductionPhis)
     emit(Stmt::assign(rep->expr(Phi), FinalInduction));
   emit(Stmt::goto_({getBlock(Summary.exit)->getName()}));

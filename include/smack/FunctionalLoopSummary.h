@@ -11,6 +11,7 @@
 namespace llvm {
 class AAResults;
 class BasicBlock;
+class BinaryOperator;
 class BranchInst;
 class CallInst;
 class Function;
@@ -49,9 +50,16 @@ struct FunctionalLoopStore {
   bool guardValue = true;
 };
 
+// A loop-carried scalar `x = x + c` / `x = x - c` other than the induction:
+// a header PHI whose backedge value is `update`, the add or sub of the PHI and
+// the constant `step`. Its closed form is rendered from the update
+// instruction, not from ScalarEvolution's folded recurrence, because SMACK's
+// unbounded-integer lowering renders a constant operand differently per
+// instruction (SmackRep::bop) and the summary must produce the same value.
 struct FunctionalLoopScalarRecurrence {
   const llvm::Value *value = nullptr;
-  const llvm::ConstantInt *start = nullptr;
+  const llvm::Value *start = nullptr;
+  const llvm::BinaryOperator *update = nullptr;
   const llvm::ConstantInt *step = nullptr;
 };
 
@@ -90,6 +98,10 @@ struct FunctionalLoopSummary {
   const llvm::Value *inductionStart = nullptr;
   const llvm::ConstantInt *inductionStep = nullptr;
   bool inductionEscapes = false;
+  // The exit test follows the body (LoopRotate's form), so iterationCount is
+  // the backedge count plus one and the header induction PHI's value on exit
+  // is that of the last iteration, not the incremented one.
+  bool exitTestFollowsBody = false;
   llvm::IntegerType *iterationType = nullptr;
   const llvm::SCEV *iterationCount = nullptr;
   llvm::SmallVector<FunctionalLoopStore, 2> stores;
