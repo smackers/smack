@@ -1,0 +1,3 @@
+skip: false
+verifiers: [boogie]
+flags: [--functionalize-loops, --unroll=1]

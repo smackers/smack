@@ -20,11 +20,14 @@ public:
   virtual void print(std::ostream &os) const = 0;
   static const Expr *exists(std::list<Binding>, const Expr *e);
   static const Expr *forall(std::list<Binding>, const Expr *e);
+  static const Expr *forall(std::list<Binding>, const Expr *trigger,
+                            const Expr *e);
   static const Expr *and_(const Expr *l, const Expr *r);
   static const Expr *or_(const Expr *l, const Expr *r);
   static const Expr *eq(const Expr *l, const Expr *r);
   static const Expr *lt(const Expr *l, const Expr *r);
   static const Expr *ifThenElse(const Expr *c, const Expr *t, const Expr *e);
+  static const Expr *lambda(Binding var, const Expr *e);
   static const Expr *fn(std::string f, const Expr *x);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y,
@@ -192,11 +195,22 @@ public:
 private:
   Quantifier quant;
   std::list<Binding> vars;
+  std::list<const Expr *> triggers;
   const Expr *expr;
 
 public:
-  QuantExpr(Quantifier q, std::list<Binding> vs, const Expr *e)
-      : quant(q), vars(vs), expr(e) {}
+  QuantExpr(Quantifier q, std::list<Binding> vs, std::list<const Expr *> ts,
+            const Expr *e)
+      : quant(q), vars(vs), triggers(ts), expr(e) {}
+  void print(std::ostream &os) const override;
+};
+
+class LambdaExpr : public Expr {
+  Binding var;
+  const Expr *expr;
+
+public:
+  LambdaExpr(Binding v, const Expr *e) : var(v), expr(e) {}
   void print(std::ostream &os) const override;
 };
 

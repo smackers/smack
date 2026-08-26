@@ -5,11 +5,13 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/BoogieAst.h"
 #include "smack/Debug.h"
+#include "smack/LoopBoundWarnings.h"
 #include "smack/Naming.h"
 #include "smack/SmackOptions.h"
 #include "smack/SmackRep.h"
 #include "smack/VectorOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -20,6 +22,7 @@
 #include <iostream>
 
 #include "smack/SmackWarnings.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace smack {
 
@@ -60,6 +63,673 @@ void SmackInstGenerator::emit(const Stmt *s) {
   // s->print(str);
   // SDEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
   currBlock->addStmt(s);
+}
+
+void SmackInstGenerator::generateFunction(llvm::Function &F) {
+  prepareFunctionalLoops(F);
+  for (auto &BB : F)
+    if (!suppressedBlocks.count(&BB))
+      visit(BB);
+}
+
+void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
+  if (!SmackOptions::FunctionalizeLoops || SmackOptions::BitPrecise ||
+      SmackOptions::BitPrecisePointers ||
+      SmackOptions::WrappedIntegerEncoding || SmackOptions::MemoryModelDebug) {
+    if (emitLoopBoundWarnings)
+      warnAboutLoops(F, loops, *scalarEvolution);
+    return;
+  }
+
+  std::vector<LoopBoundInfo> LoopBounds;
+  if (emitLoopBoundWarnings)
+    LoopBounds = recordedLoopBoundInfo(loops);
+
+  auto Candidates = FunctionalLoopSummaryAnalysis::analyze(
+      F, loops, *scalarEvolution, *aliasAnalysis, *memorySSA);
+  for (auto &Summary : Candidates) {
+    if (Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyVerifier &&
+        !SmackOptions::shouldCheckFunction(F.getName())) {
+      bool HasAssertion = false;
+      for (const auto &Action : Summary.verifierActions)
+        HasAssertion |=
+            Action.kind == FunctionalLoopVerifierAction::Kind::Assertion;
+      if (HasAssertion)
+        continue;
+    }
+    bool SupportedMemory = true;
+    for (const auto &Store : Summary.stores)
+      SupportedMemory &= rep->canFunctionalizeMemory(
+          Store.store->getPointerOperand(),
+          Store.store->getValueOperand()->getType());
+    for (const auto &Load : Summary.loads)
+      SupportedMemory &=
+          Summary.kind != FunctionalLoopSummary::Kind::MemoryUpdate
+              ? rep->canFunctionalizeRead(Load.load->getPointerOperand(),
+                                          Load.load->getType())
+              : rep->canFunctionalizeMemory(Load.load->getPointerOperand(),
+                                            Load.load->getType());
+    if (SupportedMemory)
+      functionalLoops.push_back(std::move(Summary));
+  }
+
+  for (const auto &Summary : functionalLoops) {
+    auto *Branch = dyn_cast<BranchInst>(Summary.preheader->getTerminator());
+    if (!Branch)
+      continue;
+    if (Summary.kind != FunctionalLoopSummary::Kind::MemoryUpdate) {
+      if (Branch->isUnconditional()) {
+        if (Branch->getSuccessor(0) != Summary.loop->getHeader())
+          continue;
+      } else {
+        bool HasHeaderSuccessor = false;
+        bool HasExitSuccessor = false;
+        for (BasicBlock *Successor : Branch->successors()) {
+          HasHeaderSuccessor |= Successor == Summary.loop->getHeader();
+          HasExitSuccessor |= Successor == Summary.exit;
+        }
+        if (Summary.kind != FunctionalLoopSummary::Kind::ReadOnlyVerifier ||
+            !HasHeaderSuccessor || !HasExitSuccessor)
+          continue;
+      }
+      summariesByPreheader[Branch] = &Summary;
+      suppressedBlocks.insert(Summary.loop->block_begin(),
+                              Summary.loop->block_end());
+      continue;
+    }
+    if (Branch->isUnconditional()) {
+      if (Branch->getSuccessor(0) != Summary.loop->getHeader())
+        continue;
+    } else {
+      bool HasHeaderSuccessor = false;
+      bool HasExitSuccessor = false;
+      for (BasicBlock *Successor : Branch->successors()) {
+        HasHeaderSuccessor |= Successor == Summary.loop->getHeader();
+        HasExitSuccessor |= Successor == Summary.exit;
+      }
+      if (!HasHeaderSuccessor || !HasExitSuccessor)
+        continue;
+    }
+    summariesByPreheader[Branch] = &Summary;
+    if (Summary.inductionEscapes)
+      nameInstruction(*Summary.induction);
+    suppressedBlocks.insert(Summary.loop->block_begin(),
+                            Summary.loop->block_end());
+  }
+
+  if (emitLoopBoundWarnings) {
+    std::set<const Loop *> SummarizedLoops;
+    for (const auto &Entry : summariesByPreheader)
+      SummarizedLoops.insert(Entry.second->loop);
+    warnAboutLoops(F, LoopBounds, SummarizedLoops);
+  }
+}
+
+const Expr *SmackInstGenerator::functionalIntegerSCEV(const SCEV *S) {
+  if (auto *Constant = dyn_cast<SCEVConstant>(S))
+    return rep->expr(Constant->getValue());
+  if (auto *Unknown = dyn_cast<SCEVUnknown>(S))
+    return rep->expr(Unknown->getValue());
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(S)) {
+    std::string Operation;
+    if (isa<SCEVAddExpr>(NAry))
+      Operation = "$add";
+    else if (isa<SCEVMulExpr>(NAry))
+      Operation = "$mul";
+    else
+      llvm_unreachable("unsupported n-ary functional SCEV");
+    auto Name = rep->opName(Operation, std::list<const Type *>{S->getType()});
+    auto It = NAry->op_begin();
+    const Expr *Result = functionalIntegerSCEV(*It++);
+    for (; It != NAry->op_end(); ++It)
+      Result = Expr::fn(Name, Result, functionalIntegerSCEV(*It));
+    return Result;
+  }
+  if (auto *Div = dyn_cast<SCEVUDivExpr>(S)) {
+    auto Name = rep->opName("$udiv", std::list<const Type *>{S->getType()});
+    return Expr::fn(Name, functionalIntegerSCEV(Div->getLHS()),
+                    functionalIntegerSCEV(Div->getRHS()));
+  }
+  if (auto *Cast = dyn_cast<SCEVCastExpr>(S)) {
+    std::string Operation;
+    if (isa<SCEVTruncateExpr>(Cast))
+      Operation = "$trunc";
+    else if (isa<SCEVZeroExtendExpr>(Cast))
+      Operation = "$zext";
+    else if (isa<SCEVSignExtendExpr>(Cast))
+      Operation = "$sext";
+    else
+      llvm_unreachable("unsupported functional SCEV cast");
+    auto Name = rep->opName(
+        Operation,
+        std::list<const Type *>{Cast->getOperand()->getType(), S->getType()});
+    return Expr::fn(Name, functionalIntegerSCEV(Cast->getOperand()));
+  }
+  llvm_unreachable("unsupported functional integer SCEV");
+}
+
+const Expr *SmackInstGenerator::functionalPointerSCEV(const SCEV *S) {
+  const SCEV *BaseSCEV = scalarEvolution->getPointerBase(S);
+  auto *Base = dyn_cast<SCEVUnknown>(BaseSCEV);
+  assert(Base && "validated affine pointer must have an unknown base");
+  const Expr *Result = rep->expr(Base->getValue());
+  const SCEV *Offset = scalarEvolution->removePointerBase(S);
+  if (auto *Constant = dyn_cast<SCEVConstant>(Offset))
+    if (Constant->getAPInt().isZero())
+      return Result;
+
+  auto *OffsetType = cast<IntegerType>(Offset->getType());
+  auto OffsetAsPointer =
+      Expr::fn(indexedName("$i2p", {rep->type(OffsetType), Naming::PTR_TYPE}),
+               functionalIntegerSCEV(Offset));
+  return Expr::fn("$add.ref", Result, OffsetAsPointer);
+}
+
+const Expr *SmackInstGenerator::functionalInductionValue(
+    const FunctionalLoopSummary &Summary, const Expr *Iteration) {
+  auto *Start = dyn_cast<ConstantInt>(Summary.inductionStart);
+  if (Start && Start->isZero() && Summary.inductionStep->isOne())
+    return Iteration;
+
+  auto MulName = rep->opName("$mul", {Summary.iterationType});
+  auto AddName = rep->opName("$add", {Summary.iterationType});
+  auto Scaled = Expr::fn(MulName, rep->expr(Summary.inductionStep), Iteration);
+  return Expr::fn(AddName, rep->expr(Summary.inductionStart), Scaled);
+}
+
+const Expr *
+SmackInstGenerator::functionalAddress(const AffineLoopAccess &Access,
+                                      const Expr *Iteration,
+                                      const IntegerType *IterationTy) {
+  std::string IterationType = rep->type(IterationTy);
+  auto IterationAsPointer = Expr::fn(
+      indexedName("$i2p", {IterationType, Naming::PTR_TYPE}), Iteration);
+  auto Offset =
+      Expr::fn("$mul.ref", IterationAsPointer,
+               rep->pointerLit(static_cast<unsigned long long>(Access.stride)));
+  const Expr *Start = functionalPointerSCEV(Access.start);
+  return Expr::fn("$add.ref", Start, Offset);
+}
+
+const Expr *SmackInstGenerator::functionalValue(
+    const Value *Value, const FunctionalLoopSummary &Summary,
+    const Expr *Iteration,
+    const std::map<std::string, std::string> &EntryMemories) {
+  if (Value == Summary.induction)
+    return functionalInductionValue(Summary, Iteration);
+  if (isa<Constant>(Value) || Summary.loop->isLoopInvariant(Value))
+    return rep->expr(Value);
+
+  for (const auto &Recurrence : Summary.recurrences) {
+    if (Recurrence.value != Value)
+      continue;
+    auto MulName = rep->opName("$mul", {Summary.iterationType});
+    auto AddName = rep->opName("$add", {Summary.iterationType});
+    return Expr::fn(AddName, rep->expr(Recurrence.start),
+                    Expr::fn(MulName, rep->expr(Recurrence.step), Iteration));
+  }
+
+  if (auto *Load = dyn_cast<LoadInst>(Value)) {
+    const AffineLoopAccess *Access = nullptr;
+    for (const auto &Candidate : Summary.loads)
+      if (Candidate.load == Load)
+        Access = &Candidate.access;
+    assert(Access && "validated functional load must have an affine access");
+    auto Path = rep->memPath(Load->getPointerOperand());
+    return rep->functionalLoad(
+        Load->getPointerOperand(), Expr::id(EntryMemories.at(Path)),
+        functionalAddress(*Access, Iteration, Summary.iterationType));
+  }
+
+  if (auto *BO = dyn_cast<BinaryOperator>(Value)) {
+    auto Name = rep->opName(Naming::INSTRUCTION_TABLE.at(BO->getOpcode()),
+                            std::list<const Type *>{BO->getType()});
+    return Expr::fn(
+        Name,
+        functionalValue(BO->getOperand(0), Summary, Iteration, EntryMemories),
+        functionalValue(BO->getOperand(1), Summary, Iteration, EntryMemories));
+  }
+
+  if (auto *Cast = dyn_cast<CastInst>(Value)) {
+    auto Name =
+        rep->opName(Naming::INSTRUCTION_TABLE.at(Cast->getOpcode()),
+                    std::list<const Type *>{Cast->getOperand(0)->getType(),
+                                            Cast->getType()});
+    return Expr::fn(Name, functionalValue(Cast->getOperand(0), Summary,
+                                          Iteration, EntryMemories));
+  }
+
+  if (auto *Cmp = dyn_cast<ICmpInst>(Value)) {
+    auto Operand = [&](const llvm::Value *V) {
+      if (isa<ConstantInt>(V))
+        return rep->expr(V, Cmp->isUnsigned(), true);
+      return functionalValue(V, Summary, Iteration, EntryMemories);
+    };
+    auto Name = rep->opName(Naming::CMPINST_TABLE.at(Cmp->getPredicate()),
+                            {Cmp->getOperand(0)->getType()});
+    return Expr::fn(Name, Operand(Cmp->getOperand(0)),
+                    Operand(Cmp->getOperand(1)));
+  }
+
+  if (auto *Select = dyn_cast<SelectInst>(Value)) {
+    auto Condition = functionalValue(Select->getCondition(), Summary, Iteration,
+                                     EntryMemories);
+    return Expr::ifThenElse(Expr::eq(Condition, rep->integerLit(1ULL, 1)),
+                            functionalValue(Select->getTrueValue(), Summary,
+                                            Iteration, EntryMemories),
+                            functionalValue(Select->getFalseValue(), Summary,
+                                            Iteration, EntryMemories));
+  }
+
+  llvm_unreachable("unsupported value in validated functional loop summary");
+}
+
+void SmackInstGenerator::emitReadOnlyFunctionalLoop(
+    const FunctionalLoopSummary &Summary, BranchInst &PreheaderBranch) {
+  unsigned Id = functionalLoopId++;
+  std::string IterationType = rep->type(Summary.iterationType);
+  const Expr *Zero =
+      rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
+  const Expr *IterationCount = functionalIntegerSCEV(Summary.iterationCount);
+
+  std::map<std::string, std::string> CurrentMemories;
+  for (const auto &Load : Summary.loads) {
+    std::string Path = rep->memPath(Load.load->getPointerOperand());
+    CurrentMemories[Path] = Path;
+  }
+
+  auto PredicateAt = [&](const Value *PredicateValue, bool PredicateIsNonzero,
+                         bool ContinueConditionValue, const Expr *Iteration) {
+    const Expr *Condition =
+        functionalValue(PredicateValue, Summary, Iteration, CurrentMemories);
+    if (PredicateIsNonzero) {
+      auto *ConditionType = cast<IntegerType>(PredicateValue->getType());
+      return Expr::neq(
+          Condition,
+          rep->integerLit(0ULL, ConditionType->getIntegerBitWidth()));
+    }
+    const Expr *ConditionIsTrue = Expr::eq(Condition, rep->integerLit(1ULL, 1));
+    return ContinueConditionValue ? ConditionIsTrue
+                                  : Expr::not_(ConditionIsTrue);
+  };
+  auto ActionAt = [&](const FunctionalLoopVerifierAction &Action,
+                      const Expr *Iteration) {
+    return PredicateAt(Action.predicateValue, Action.predicateIsNonzero,
+                       Action.continueConditionValue, Iteration);
+  };
+  auto AllActionsAt = [&](const Expr *Iteration) {
+    const Expr *Result = Expr::lit(true);
+    for (const auto &Action : Summary.verifierActions)
+      Result = Expr::and_(Result, ActionAt(Action, Iteration));
+    return Result;
+  };
+  bool IsVerifier =
+      Summary.kind == FunctionalLoopSummary::Kind::ReadOnlyVerifier;
+  bool HasAssertion = false;
+  bool HasAssumption = false;
+  for (const auto &Action : Summary.verifierActions) {
+    HasAssertion |=
+        Action.kind == FunctionalLoopVerifierAction::Kind::Assertion;
+    HasAssumption |=
+        Action.kind == FunctionalLoopVerifierAction::Kind::Assumption;
+  }
+  auto AssumptionsAt = [&](const Expr *Iteration) {
+    const Expr *Result = Expr::lit(true);
+    for (const auto &Action : Summary.verifierActions)
+      if (Action.kind == FunctionalLoopVerifierAction::Kind::Assumption)
+        Result = Expr::and_(Result, ActionAt(Action, Iteration));
+    return Result;
+  };
+  auto ContinueAt = [&](const Expr *Iteration) {
+    return IsVerifier ? AllActionsAt(Iteration)
+                      : PredicateAt(Summary.predicateValue, false,
+                                    Summary.continueConditionValue, Iteration);
+  };
+  auto IterationInDomain = [&](const Expr *Iteration) {
+    return Expr::and_(
+        Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+                 Iteration, Zero),
+        Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                 Iteration, IterationCount));
+  };
+
+  const Expr *FirstStop = nullptr;
+  if ((!IsVerifier || HasAssumption) && !Summary.accessChecks.empty()) {
+    // Capture the per-iteration continuation condition as a first-class map.
+    // The forward recursive function then denotes the first stopping
+    // iteration (or IterationCount if none stops) without adding cyclic CFG.
+    std::string ContinueMapName =
+        "$functional.read.continue." + std::to_string(Id);
+    std::string ContinueMapType = "[" + IterationType + "]bool";
+    proc->getDeclarations().push_back(
+        Decl::variable(ContinueMapName, ContinueMapType));
+    std::string ContinueIterationName =
+        "$functional.read.continue.iteration." + std::to_string(Id);
+    emit(Stmt::assign(
+        Expr::id(ContinueMapName),
+        Expr::lambda({ContinueIterationName, IterationType},
+                     IsVerifier
+                         ? AssumptionsAt(Expr::id(ContinueIterationName))
+                         : ContinueAt(Expr::id(ContinueIterationName)))));
+
+    std::string FirstStopName = "$functional.firstStop." +
+                                std::to_string(proc->getId()) + "." +
+                                std::to_string(Id);
+    const std::string ContinuesName = "$continues";
+    const std::string CurrentName = "$current";
+    const std::string RemainingName = "$remaining";
+    const Expr *Continues = Expr::id(ContinuesName);
+    const Expr *Current = Expr::id(CurrentName);
+    const Expr *Remaining = Expr::id(RemainingName);
+    const Expr *One =
+        rep->integerLit(1ULL, Summary.iterationType->getBitWidth());
+    const Expr *Next =
+        Expr::fn(indexedName("$add", {IterationType}), Current, One);
+    const Expr *RemainingAfter =
+        Expr::fn(indexedName("$sub", {IterationType}), Remaining, One);
+    const Expr *Recursive =
+        Expr::fn(FirstStopName, {Continues, Next, RemainingAfter});
+    const Expr *FirstStopBody = Expr::ifThenElse(
+        Expr::eq(Remaining, Zero), Current,
+        Expr::ifThenElse(Expr::sel(Continues, Current), Recursive, Current));
+    rep->getProgram()->getDeclarations().push_back(
+        Decl::function(FirstStopName,
+                       {{ContinuesName, ContinueMapType},
+                        {CurrentName, IterationType},
+                        {RemainingName, IterationType}},
+                       IterationType, FirstStopBody));
+    FirstStop = Expr::fn(FirstStopName,
+                         {Expr::id(ContinueMapName), Zero, IterationCount});
+  }
+
+  SmallVector<const Expr *, 4> TriggeredAllContinue;
+  for (unsigned LoadIndex = 0; LoadIndex < Summary.loads.size(); ++LoadIndex) {
+    const FunctionalLoopLoad &Load = Summary.loads[LoadIndex];
+    std::string LoadPath = rep->memPath(Load.load->getPointerOperand());
+    std::string PointerName = "$functional.read.pointer." + std::to_string(Id) +
+                              "." + std::to_string(LoadIndex);
+    const Expr *Pointer = Expr::id(PointerName);
+    const Expr *Start = functionalPointerSCEV(Load.access.start);
+    const Expr *Delta = Expr::fn("$sub.ref", Pointer, Start);
+    const Expr *DeltaAsInteger =
+        Expr::fn(indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+    const Expr *Stride =
+        rep->integerLit(static_cast<unsigned long long>(Load.access.stride),
+                        Summary.iterationType->getBitWidth());
+    const Expr *Iteration = Expr::fn(
+        rep->opName("$udiv", {Summary.iterationType}), DeltaAsInteger, Stride);
+    const Expr *IsReadAddress =
+        Expr::eq(Pointer, functionalAddress(Load.access, Iteration,
+                                            Summary.iterationType));
+    const Expr *InReadImage =
+        Expr::and_(IterationInDomain(Iteration), IsReadAddress);
+    const Expr *Trigger =
+        rep->functionalLoad(Load.load->getPointerOperand(),
+                            Expr::id(CurrentMemories.at(LoadPath)), Pointer);
+    TriggeredAllContinue.push_back(
+        Expr::forall({{PointerName, Naming::PTR_TYPE}}, Trigger,
+                     Expr::impl(InReadImage, ContinueAt(Iteration))));
+  }
+
+  // This is the semantic summary.  The pointer-quantified formula above is a
+  // redundant consequence whose explicit load trigger lets clients instantiate
+  // the fact at an arbitrary read address without inverting pointer arithmetic.
+  std::string IterationName =
+      "$functional.read.iteration." + std::to_string(Id);
+  const Expr *ExactIteration = Expr::id(IterationName);
+  const Expr *AllContinue =
+      Expr::forall({{IterationName, IterationType}},
+                   Expr::impl(IterationInDomain(ExactIteration),
+                              ContinueAt(ExactIteration)));
+
+  std::string VerifierKind = HasAssertion && HasAssumption ? "verifier "
+                             : HasAssertion                ? "assertion "
+                             : HasAssumption               ? "assumption "
+                                                           : "";
+  emit(Stmt::comment(std::string("functional read-only ") + VerifierKind +
+                     "loop summary for " +
+                     Summary.loop->getHeader()->getParent()->getName().str()));
+  Block *Normal = createBlock();
+  annotate(PreheaderBranch, Normal);
+  Normal->addStmt(Stmt::assume(AllContinue));
+  for (const Expr *Triggered : TriggeredAllContinue)
+    Normal->addStmt(Stmt::assume(Triggered));
+  Normal->addStmt(Stmt::goto_(
+      {getBlock(IsVerifier ? Summary.exit : Summary.normalExit)->getName()}));
+
+  std::list<std::string> Targets = {Normal->getName()};
+  for (unsigned CheckIndex = 0; CheckIndex < Summary.accessChecks.size();
+       ++CheckIndex) {
+    const auto &Check = Summary.accessChecks[CheckIndex];
+    std::string Suffix = std::to_string(Id) + "." + std::to_string(CheckIndex);
+    std::string WitnessName = "$functional.read.check." + Suffix;
+    proc->getDeclarations().push_back(
+        Decl::variable(WitnessName, IterationType));
+    const Expr *Witness = Expr::id(WitnessName);
+
+    Block *CheckBlock = createBlock();
+    annotate(PreheaderBranch, CheckBlock);
+    CheckBlock->addStmt(Stmt::havoc(WitnessName));
+    CheckBlock->addStmt(Stmt::assume(IterationInDomain(Witness)));
+    if (FirstStop) {
+      const Expr *BeforeStop =
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Witness, FirstStop);
+      if (!IsVerifier) {
+        CheckBlock->addStmt(
+            Stmt::assume(Expr::or_(BeforeStop, Expr::eq(Witness, FirstStop))));
+      } else {
+        const Expr *PrecedingAssumptionsHold = Expr::lit(true);
+        for (unsigned ActionIndex : Check.precedingAssumptions)
+          PrecedingAssumptionsHold = Expr::and_(
+              PrecedingAssumptionsHold,
+              ActionAt(Summary.verifierActions[ActionIndex], Witness));
+        const Expr *ExecutesAtStop =
+            Expr::and_(Expr::eq(Witness, FirstStop), PrecedingAssumptionsHold);
+        CheckBlock->addStmt(
+            Stmt::assume(Expr::or_(BeforeStop, ExecutesAtStop)));
+      }
+    }
+    annotate(*Check.call, CheckBlock);
+    CheckBlock->addStmt(Stmt::call(
+        Naming::MEMORY_SAFETY_FUNCTION,
+        {functionalAddress(Check.access, Witness, Summary.iterationType),
+         rep->pointerLit(static_cast<unsigned long long>(Check.size))}));
+    CheckBlock->addStmt(Stmt::goto_({Normal->getName()}));
+    Targets.push_back(CheckBlock->getName());
+  }
+
+  if (IsVerifier) {
+    for (unsigned ActionIndex = 0; ActionIndex < Summary.verifierActions.size();
+         ++ActionIndex) {
+      const auto &Action = Summary.verifierActions[ActionIndex];
+      if (Action.kind != FunctionalLoopVerifierAction::Kind::Assertion)
+        continue;
+
+      std::string Suffix =
+          std::to_string(Id) + "." + std::to_string(ActionIndex);
+      std::string WitnessName = "$functional.read.witness." + Suffix;
+      proc->getDeclarations().push_back(
+          Decl::variable(WitnessName, IterationType));
+      const Expr *Witness = Expr::id(WitnessName);
+
+      std::string PreviousName = "$functional.read.previous." + Suffix;
+      const Expr *Previous = Expr::id(PreviousName);
+      const Expr *BeforeWitness = Expr::and_(
+          IterationInDomain(Previous),
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Previous, Witness));
+      const Expr *EarlierIterationsPass =
+          Expr::forall({{PreviousName, IterationType}},
+                       Expr::impl(BeforeWitness, AllActionsAt(Previous)));
+
+      const Expr *EarlierActionsPass = Expr::lit(true);
+      for (unsigned Earlier = 0; Earlier < ActionIndex; ++Earlier)
+        EarlierActionsPass =
+            Expr::and_(EarlierActionsPass,
+                       ActionAt(Summary.verifierActions[Earlier], Witness));
+      const Expr *WitnessesFailure = Expr::and_(
+          IterationInDomain(Witness),
+          Expr::and_(EarlierIterationsPass,
+                     Expr::and_(EarlierActionsPass,
+                                Expr::not_(ActionAt(Action, Witness)))));
+
+      Block *Failure = createBlock();
+      annotate(PreheaderBranch, Failure);
+      Failure->addStmt(Stmt::havoc(WitnessName));
+      Failure->addStmt(Stmt::assume(WitnessesFailure));
+      annotate(*Action.call, Failure);
+      Failure->addStmt(Stmt::assert_(Expr::lit(false)));
+      Failure->addStmt(Stmt::goto_({getBlock(Summary.exit)->getName()}));
+      Targets.push_back(Failure->getName());
+    }
+    emit(Stmt::goto_(Targets));
+    return;
+  }
+
+  std::string WitnessName = "$functional.read.witness." + std::to_string(Id);
+  proc->getDeclarations().push_back(Decl::variable(WitnessName, IterationType));
+  const Expr *Witness = Expr::id(WitnessName);
+  const Expr *WitnessesFailure =
+      Expr::and_(IterationInDomain(Witness), Expr::not_(ContinueAt(Witness)));
+  Block *Failure = createBlock();
+  annotate(PreheaderBranch, Failure);
+  Failure->addStmt(Stmt::havoc(WitnessName));
+  Failure->addStmt(Stmt::assume(WitnessesFailure));
+  Failure->addStmt(Stmt::goto_({getBlock(Summary.failureExit)->getName()}));
+  Targets.push_back(Failure->getName());
+  emit(Stmt::goto_(Targets));
+}
+
+void SmackInstGenerator::emitFunctionalLoop(
+    const FunctionalLoopSummary &Summary) {
+  unsigned Id = functionalLoopId++;
+  std::map<std::string, const Value *> MemoryPointers;
+  std::map<std::string, std::vector<const FunctionalLoopStore *>>
+      StoresByMemory;
+  for (const auto &Store : Summary.stores) {
+    auto *StorePointer = Store.store->getPointerOperand();
+    std::string Memory = rep->memPath(StorePointer);
+    MemoryPointers[Memory] = StorePointer;
+    StoresByMemory[Memory].push_back(&Store);
+  }
+  for (const auto &Load : Summary.loads)
+    MemoryPointers[rep->memPath(Load.load->getPointerOperand())] =
+        Load.load->getPointerOperand();
+
+  std::map<std::string, std::string> EntryMemories;
+  for (const auto &Memory : MemoryPointers) {
+    std::string Snapshot =
+        "$fl.entry." + std::to_string(Id) + "." + Memory.first;
+    EntryMemories[Memory.first] = Snapshot;
+    proc->getDeclarations().push_back(
+        Decl::variable(Snapshot, rep->memType(Memory.second)));
+    emit(Stmt::assign(Expr::id(Snapshot), Expr::id(Memory.first)));
+  }
+
+  std::string IterationType = rep->type(Summary.iterationType);
+  auto Zero = rep->integerLit(0ULL, Summary.iterationType->getBitWidth());
+  const Expr *IterationCount = functionalIntegerSCEV(Summary.iterationCount);
+
+  if (!Summary.accessChecks.empty()) {
+    Block *Update = createBlock();
+    std::list<std::string> Targets = {Update->getName()};
+    for (unsigned CheckIndex = 0; CheckIndex < Summary.accessChecks.size();
+         ++CheckIndex) {
+      const auto &Check = Summary.accessChecks[CheckIndex];
+      std::string WitnessName = "$fl.check.iteration." + std::to_string(Id) +
+                                "." + std::to_string(CheckIndex);
+      proc->getDeclarations().push_back(
+          Decl::variable(WitnessName, IterationType));
+      const Expr *Witness = Expr::id(WitnessName);
+      const Expr *InDomain = Expr::and_(
+          Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+                   Witness, Zero),
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Witness, IterationCount));
+      if (Check.guard) {
+        const Expr *Guard =
+            functionalValue(Check.guard, Summary, Witness, EntryMemories);
+        const Expr *GuardHolds = Expr::eq(Guard, rep->integerLit(1ULL, 1));
+        InDomain = Expr::and_(
+            InDomain, Check.guardValue ? GuardHolds : Expr::not_(GuardHolds));
+      }
+
+      Block *CheckBlock = createBlock();
+      CheckBlock->addStmt(Stmt::havoc(WitnessName));
+      CheckBlock->addStmt(Stmt::assume(InDomain));
+      annotate(*Check.call, CheckBlock);
+      CheckBlock->addStmt(Stmt::call(
+          Naming::MEMORY_SAFETY_FUNCTION,
+          {functionalAddress(Check.access, Witness, Summary.iterationType),
+           rep->pointerLit(static_cast<unsigned long long>(Check.size))}));
+      CheckBlock->addStmt(Stmt::goto_({Update->getName()}));
+      Targets.push_back(CheckBlock->getName());
+    }
+    emit(Stmt::comment("functional affine access range checks"));
+    emit(Stmt::goto_(Targets));
+    currBlock = Update;
+  }
+
+  emit(Stmt::comment(
+      "functional loop summary for " +
+      Summary.stores.front().store->getFunction()->getName().str()));
+
+  unsigned MemoryIndex = 0;
+  for (const auto &MemoryStores : StoresByMemory) {
+    const std::string &Destination = MemoryStores.first;
+    std::string PointerName =
+        "$fl.p." + std::to_string(Id) + "." + std::to_string(MemoryIndex++);
+    auto Pointer = Expr::id(PointerName);
+    const Expr *Body =
+        Expr::sel(Expr::id(EntryMemories.at(Destination)), Pointer);
+
+    // The recognizer proves these affine images pairwise disjoint, so their
+    // ITE order is immaterial.  Every RHS and the default branch read only the
+    // loop-entry snapshots.
+    for (auto StoreIt = MemoryStores.second.rbegin();
+         StoreIt != MemoryStores.second.rend(); ++StoreIt) {
+      const FunctionalLoopStore &Store = **StoreIt;
+      const AffineLoopAccess &Write = Store.access;
+      const Expr *Start = functionalPointerSCEV(Write.start);
+      auto Delta = Expr::fn("$sub.ref", Pointer, Start);
+      auto DeltaAsInteger = Expr::fn(
+          indexedName("$p2i", {Naming::PTR_TYPE, IterationType}), Delta);
+      auto Iteration = Expr::fn(
+          indexedName("$udiv", {IterationType}), DeltaAsInteger,
+          rep->integerLit(static_cast<unsigned long long>(Write.stride),
+                          Summary.iterationType->getBitWidth()));
+      auto InDomain = Expr::and_(
+          Expr::fn(indexedName("$uge", {IterationType, Naming::BOOL_TYPE}),
+                   Iteration, Zero),
+          Expr::fn(indexedName("$ult", {IterationType, Naming::BOOL_TYPE}),
+                   Iteration, IterationCount));
+      auto IsWrittenAddress = Expr::eq(
+          Pointer, functionalAddress(Write, Iteration, Summary.iterationType));
+      auto Predicate = Expr::and_(InDomain, IsWrittenAddress);
+      if (Store.guard) {
+        auto Guard =
+            functionalValue(Store.guard, Summary, Iteration, EntryMemories);
+        const Expr *GuardHolds = Expr::eq(Guard, rep->integerLit(1ULL, 1));
+        if (!Store.guardValue)
+          GuardHolds = Expr::not_(GuardHolds);
+        Predicate = Expr::and_(Predicate, GuardHolds);
+      }
+      auto Value = functionalValue(Store.store->getValueOperand(), Summary,
+                                   Iteration, EntryMemories);
+      Body = Expr::ifThenElse(Predicate, Value, Body);
+    }
+
+    emit(Stmt::assign(Expr::id(Destination),
+                      Expr::lambda({PointerName, Naming::PTR_TYPE}, Body)));
+  }
+  const Expr *FinalInduction =
+      functionalInductionValue(Summary, IterationCount);
+  if (Summary.inductionEscapes)
+    emit(Stmt::assign(rep->expr(Summary.induction), FinalInduction));
+  for (PHINode *Phi : Summary.finalInductionPhis)
+    emit(Stmt::assign(rep->expr(Phi), FinalInduction));
+  emit(Stmt::goto_({getBlock(Summary.exit)->getName()}));
 }
 
 const Stmt *
@@ -118,6 +788,8 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst) {
     StringRef name = Names[II.first];
+    if (name == "smack.memory.access" || name == "smack.memory.checked")
+      continue;
     if (name.find("smack.") == 0 || name.find("verifier.") == 0) {
       std::list<const Expr *> attrs;
       for (auto AI = II.second->op_begin(), AE = II.second->op_end(); AI != AE;
@@ -249,6 +921,15 @@ void SmackInstGenerator::visitReturnInst(llvm::ReturnInst &ri) {
 
 void SmackInstGenerator::visitBranchInst(llvm::BranchInst &bi) {
   processInstruction(bi);
+
+  auto Summary = summariesByPreheader.find(&bi);
+  if (Summary != summariesByPreheader.end()) {
+    if (Summary->second->kind != FunctionalLoopSummary::Kind::MemoryUpdate)
+      emitReadOnlyFunctionalLoop(*Summary->second, bi);
+    else
+      emitFunctionalLoop(*Summary->second);
+    return;
+  }
 
   // Collect the list of tarets
   std::vector<std::pair<const Expr *, llvm::BasicBlock *>> targets;

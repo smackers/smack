@@ -4,6 +4,7 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
+#include "smack/FunctionalLoopSummary.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/InstVisitor.h"
 #include <map>
@@ -25,6 +26,10 @@ class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
   llvm::LoopInfo &loops;
+  llvm::ScalarEvolution *scalarEvolution;
+  llvm::AAResults *aliasAnalysis;
+  llvm::MemorySSA *memorySSA;
+  bool emitLoopBoundWarnings;
   SmackRep *rep;
   ProcDecl *proc;
   Naming *naming;
@@ -33,6 +38,11 @@ private:
   llvm::BasicBlock::const_iterator nextInst;
   std::map<const llvm::BasicBlock *, Block *> blockMap;
   std::map<const llvm::Value *, std::string> sourceNames;
+  std::vector<FunctionalLoopSummary> functionalLoops;
+  std::map<const llvm::BranchInst *, const FunctionalLoopSummary *>
+      summariesByPreheader;
+  std::set<const llvm::BasicBlock *> suppressedBlocks;
+  unsigned functionalLoopId = 0;
 
   Block *createBlock();
   Block *getBlock(llvm::BasicBlock *bb);
@@ -44,16 +54,36 @@ private:
   void processInstruction(llvm::Instruction &i);
   void nameInstruction(llvm::Instruction &i);
   void annotate(llvm::Instruction &i, Block *b);
+  void prepareFunctionalLoops(llvm::Function &F);
+  void emitFunctionalLoop(const FunctionalLoopSummary &summary);
+  void emitReadOnlyFunctionalLoop(const FunctionalLoopSummary &summary,
+                                  llvm::BranchInst &preheaderBranch);
+  const Expr *functionalIntegerSCEV(const llvm::SCEV *scev);
+  const Expr *functionalPointerSCEV(const llvm::SCEV *scev);
+  const Expr *functionalInductionValue(const FunctionalLoopSummary &summary,
+                                       const Expr *iteration);
+  const Expr *functionalAddress(const AffineLoopAccess &access,
+                                const Expr *iteration,
+                                const llvm::IntegerType *iterationType);
+  const Expr *
+  functionalValue(const llvm::Value *value,
+                  const FunctionalLoopSummary &summary, const Expr *iteration,
+                  const std::map<std::string, std::string> &entryMemories);
 
   const Stmt *recordProcedureCall(const llvm::Value *V,
                                   std::list<const Attr *> attrs);
 
 public:
   void emit(const Stmt *s);
+  void generateFunction(llvm::Function &F);
 
 public:
-  SmackInstGenerator(llvm::LoopInfo &LI, SmackRep *R, ProcDecl *P, Naming *N)
-      : loops(LI), rep(R), proc(P), naming(N) {}
+  SmackInstGenerator(llvm::LoopInfo &LI, llvm::ScalarEvolution *SE,
+                     llvm::AAResults *AA, llvm::MemorySSA *MSSA, SmackRep *R,
+                     ProcDecl *P, Naming *N, bool EmitLoopBoundWarnings = false)
+      : loops(LI), scalarEvolution(SE), aliasAnalysis(AA), memorySSA(MSSA),
+        emitLoopBoundWarnings(EmitLoopBoundWarnings), rep(R), proc(P),
+        naming(N) {}
 
   void visitBasicBlock(llvm::BasicBlock &bb);
   void visitInstruction(llvm::Instruction &i);
