@@ -35,11 +35,17 @@ class DSAWrapper;
 ///     Errors(original) is a subset of Errors(sliced)
 ///
 /// i.e. the slice may add executions but must never delete a concrete
-/// error-reaching one. Bypassing a property-irrelevant loop can add the
-/// execution that skips a nontermination; for reachability that is the safe
-/// direction. It would NOT be safe for termination, and it is not sound for
-/// memory-safety or overflow properties, whose roots this pass does not model
-/// -- the pass therefore refuses to run for anything but assertion checking.
+/// error-reaching one. It is not sound for memory-safety or overflow
+/// properties, whose roots this pass does not model -- the pass therefore
+/// refuses to run for anything but assertion checking.
+///
+/// ADDED EXECUTIONS ARE NOT FREE. An execution the original does not have
+/// cannot hide a bug, but it can report one that is not there, and the slice
+/// is worthless if it does. The rule that keeps that in check is
+/// non-termination sensitivity: a loop the original program may never leave is
+/// never skipped, and the branches that decide to leave such a loop are always
+/// retained, because everything after the loop happens only because the loop
+/// was left.
 class PropertySlicing : public llvm::ModulePass {
 public:
   /// Why a loop was retained; reported by the profile.
@@ -55,6 +61,7 @@ public:
     NO_PREHEADER,
     MULTIPLE_EXITS,
     NO_EXIT,
+    MAY_NOT_TERMINATE,
     OTHER_CONSERVATIVE,
     BYPASSED,
   };
@@ -131,6 +138,13 @@ private:
                      std::unordered_map<const llvm::BasicBlock *,
                                         std::vector<const llvm::BasicBlock *>>>
       CD;
+
+  /// Headers of the loops ScalarEvolution can bound. A loop that is not in
+  /// this set may spin forever as far as the slice knows, so it is never
+  /// bypassed and everything its exit reaches is control-dependent on leaving
+  /// it. Keyed by header block: the answer is computed once, before any
+  /// rewriting, and read back through a second LoopInfo instance.
+  std::unordered_set<const llvm::BasicBlock *> terminatingLoops;
 
   /// Per-function set of blocks from which a function exit is reachable.
   std::unordered_map<const llvm::Function *,

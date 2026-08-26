@@ -12,6 +12,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
@@ -171,6 +172,71 @@ void computeControlDependence(
   }
 }
 
+/// Whether the analysis can prove the loop is left. ScalarEvolution returning
+/// anything but SCEVCouldNotCompute for the backedge-taken count is a bound on
+/// the number of times the backedge runs, so every execution reaches an exit;
+/// everything else -- including every loop whose exit test the analysis does
+/// not understand -- is treated as possibly spinning forever. (LLVM's answer
+/// rests on C's forward-progress rule for loops with a non-constant condition,
+/// which is the same assumption clang itself compiles under; a loop with a
+/// constant condition, the `while (1)` idiom this matters for, gets no such
+/// benefit.)
+bool mustTerminate(const Loop *L, ScalarEvolution &SE) {
+  return !isa<SCEVCouldNotCompute>(SE.getSymbolicMaxBackedgeTakenCount(L));
+}
+
+/// Non-termination-SENSITIVE control dependence, for the loops the analysis
+/// cannot prove terminate: whatever such a loop's exit can reach executes only
+/// because the loop was left, so it is control-dependent on the branches that
+/// leave it.
+///
+/// The post-dominator relation cannot express this. `PostDominatorTree` treats
+/// every loop as if it always terminated, so in
+///
+///     while (1) { if (bad) { __VERIFIER_assert(0); return; } step(); }
+///
+/// the assertion's block post-dominates the branch that decides to enter it --
+/// it is the function's only exit -- and comes out control-dependent on
+/// nothing at all. `bad` is then irrelevant, the branch is nondeterminized,
+/// the loop holds no kept instruction and is bypassed, and control lands on
+/// the assertion unconditionally: a program that never reaches the assertion
+/// reports a bug. Adding these edges keeps the guard, and with it the loop.
+void addLoopExitDependence(
+    LoopInfo &LI, const std::unordered_set<const BasicBlock *> &Terminating,
+    std::unordered_map<const BasicBlock *, std::vector<const BasicBlock *>>
+        &CD) {
+  std::vector<Loop *> work(LI.begin(), LI.end());
+  while (!work.empty()) {
+    Loop *L = work.back();
+    work.pop_back();
+    for (Loop *Sub : *L)
+      work.push_back(Sub);
+    if (Terminating.count(L->getHeader()))
+      continue;
+
+    SmallVector<BasicBlock *, 4> exiting;
+    L->getExitingBlocks(exiting);
+    SmallVector<BasicBlock *, 4> exits;
+    L->getExitBlocks(exits);
+    if (exiting.empty() || exits.empty())
+      continue; // never left at all: nothing downstream depends on leaving it
+
+    std::unordered_set<const BasicBlock *> reached;
+    std::vector<const BasicBlock *> stack(exits.begin(), exits.end());
+    while (!stack.empty()) {
+      auto *B = stack.back();
+      stack.pop_back();
+      if (!reached.insert(B).second)
+        continue;
+      for (auto *S : successors(B))
+        stack.push_back(S);
+    }
+    for (auto *B : reached)
+      for (auto *X : exiting)
+        CD[B].push_back(X);
+  }
+}
+
 double secondsSince(std::chrono::steady_clock::time_point T0) {
   return std::chrono::duration<double>(std::chrono::steady_clock::now() - T0)
       .count();
@@ -202,6 +268,8 @@ const char *PropertySlicing::reasonName(LoopReason R) {
     return "MULTIPLE_EXITS";
   case LoopReason::NO_EXIT:
     return "NO_EXIT";
+  case LoopReason::MAY_NOT_TERMINATE:
+    return "MAY_NOT_TERMINATE";
   case LoopReason::OTHER_CONSERVATIVE:
     return "OTHER_CONSERVATIVE";
   case LoopReason::BYPASSED:
@@ -224,6 +292,9 @@ void PropertySlicing::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DSAWrapper>();
   AU.addRequired<PostDominatorTreeWrapperPass>();
   AU.addRequired<LoopInfoWrapperPass>();
+  // Only ever asked whether a loop's backedge count is bounded, which decides
+  // whether the slice is allowed to skip the loop -- see mustTerminate.
+  AU.addRequired<ScalarEvolutionWrapperPass>();
 }
 
 // ------------------------------------------------------------- predicates
@@ -673,6 +744,24 @@ void PropertySlicing::propagate(Module &M) {
     auto &ER = exitReaching[&F];
     collectExitReaching(F, ER);
     computeControlDependence(F, PDT, ER, CD[&F]);
+    // Which loops the slice is allowed to treat as terminating. Recorded by
+    // header block rather than by Loop*, because rewrite() asks again from a
+    // second LoopInfo instance. Both queries happen before any CFG edit: the
+    // answers describe the module the slice was computed on.
+    {
+      auto &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+      auto &SE = getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
+      std::vector<Loop *> work(LI.begin(), LI.end());
+      while (!work.empty()) {
+        Loop *L = work.back();
+        work.pop_back();
+        for (Loop *Sub : *L)
+          work.push_back(Sub);
+        if (mustTerminate(L, SE))
+          terminatingLoops.insert(L->getHeader());
+      }
+      addLoopExitDependence(LI, terminatingLoops, CD[&F]);
+    }
     // Where post-dominance is undefined, retain every branch outright.
     for (auto &BB : F)
       if (!ER.count(&BB)) {
@@ -1016,6 +1105,28 @@ bool PropertySlicing::bypassIrrelevantLoops(Function &F) {
       droppable = false;
     }
 
+    // Non-termination sensitivity, the one rule that governs this decision:
+    // ONLY A LOOP THE ANALYSIS CAN PROVE TERMINATES MAY BE SKIPPED. Redirecting
+    // the preheader past a loop replaces "the loop runs and is left" with
+    // "the loop is not there", which for a loop the program may never leave
+    // hands the slice an execution that continues past a point the original
+    // never passes -- straight into whatever follows, up to and including the
+    // property root. That is how
+    //     while (1) { if (bad) { __VERIFIER_assert(0); return; } step(); }
+    // turns into a false alarm. When the backedge count is bounded the bypass
+    // adds nothing: the original leaves the loop too, and by the tests above
+    // nothing it computes on the way is relevant.
+    //
+    // This subsumes, and is cheaper than, asking whether the property root is
+    // reachable from the loop -- and unlike that question it also covers the
+    // interprocedural case, where the loop's own function has no root in it
+    // but returns into a caller that does.
+    if (droppable && !terminatingLoops.count(L->getHeader())) {
+      reason = LoopReason::MAY_NOT_TERMINATE;
+      droppable = false;
+      blocker = "backedge count not bounded by ScalarEvolution";
+    }
+
     // A value defined in the loop and used outside it loses its definition
     // when the loop goes. If any such external user is itself relevant, the
     // loop's result matters after all and the loop stays. Otherwise the escape
@@ -1087,9 +1198,9 @@ bool PropertySlicing::bypassIrrelevantLoops(Function &F) {
                          (UI && !isa<PHINode>(UI)) ? UI : nullptr));
     }
 
-    // Redirect the preheader past the loop. This can add the execution that
-    // skips a nonterminating loop -- sound for reachability, and recorded as
-    // an over-approximation.
+    // Redirect the preheader past the loop. Only loops with a bounded backedge
+    // count get here, so the original leaves this loop on every execution and
+    // the redirect adds no path the original does not already have.
     auto *T = P->getTerminator();
     bool redirected = false;
     for (unsigned i = 0; i < T->getNumSuccessors(); ++i)
