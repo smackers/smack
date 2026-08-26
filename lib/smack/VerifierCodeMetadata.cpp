@@ -11,6 +11,7 @@
 #include "llvm/IR/DataLayout.h"
 
 #include <set>
+#include <vector>
 
 namespace smack {
 
@@ -96,10 +97,14 @@ StringRef VerifierCodeMetadata::getVerifierPrimitive(const CallInst &I) {
 
 void VerifierCodeMetadata::getAnalysisUsage(AnalysisUsage &AU) const {}
 
-bool VerifierCodeMetadata::runOnModule(Module &M) {
-
-  verifierPrimitives.clear();
-  if (auto *Annotations = M.getNamedGlobal("llvm.global.annotations"))
+// Only the loop summaries consume the primitive identity, and smack.h only
+// annotates the primitives under that option, so without it this leaves the
+// module -- and the emitted Boogie -- untouched.
+void VerifierCodeMetadata::collectVerifierPrimitives(Module &M) {
+  auto *Annotations = M.getNamedGlobal("llvm.global.annotations");
+  bool AllConsumed = Annotations != nullptr;
+  std::vector<GlobalVariable *> AnnotationStrings;
+  if (Annotations)
     if (auto *Array = dyn_cast<ConstantArray>(Annotations->getInitializer()))
       for (const Use &Operand : Array->operands()) {
         auto *Entry = dyn_cast<ConstantStruct>(Operand.get());
@@ -111,12 +116,32 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
         if (!F || !getConstantStringInfo(Entry->getOperand(1), Annotation))
           continue;
         StringRef Prefix = "smack.verifier.";
-        if (!Annotation.startswith(Prefix))
+        if (!Annotation.startswith(Prefix)) {
+          AllConsumed = false;
           continue;
+        }
         StringRef Primitive = Annotation.drop_front(Prefix.size());
         if (Primitive == "assert" || Primitive == "assume")
           verifierPrimitives[F] = Primitive.str();
+        for (const Use &Field : Entry->operands())
+          if (auto *G = dyn_cast<GlobalVariable>(
+                  Field.get()->stripPointerCastsAndAliases()))
+            if (G != Annotations)
+              AnnotationStrings.push_back(G);
       }
+
+  // The annotation table has served its purpose; dropping it (and the string
+  // constants only it referenced) keeps them out of the Boogie program's
+  // globals.
+  if (AllConsumed) {
+    Annotations->eraseFromParent();
+    for (auto *G : AnnotationStrings) {
+      // The table's constant expressions over the strings outlive it.
+      G->removeDeadConstantUsers();
+      if (G->getParent() && G->use_empty())
+        G->eraseFromParent();
+    }
+  }
 
   // The SV-COMP frontend force-includes smack.h before the task.  Tasks define
   // __VERIFIER_assert themselves with either an int or _Bool parameter, so a
@@ -130,6 +155,13 @@ bool VerifierCodeMetadata::runOnModule(Module &M) {
     if (auto *F = M.getFunction("__VERIFIER_assume"))
       verifierPrimitives[F] = "assume";
   }
+}
+
+bool VerifierCodeMetadata::runOnModule(Module &M) {
+
+  verifierPrimitives.clear();
+  if (SmackOptions::FunctionalizeLoops)
+    collectVerifierPrimitives(M);
 
   // first mark verifier function calls
   visit(M);

@@ -855,7 +855,8 @@ void SmackInstGenerator::annotate(llvm::Instruction &I, Block *B) {
   //  for(auto II = MDForInst.begin(), EE = MDForInst.end(); II !=EE; ++II) {
   for (auto II : MDForInst) {
     StringRef name = Names[II.first];
-    if (name == "smack.memory.access" || name == "smack.memory.checked")
+    if (name == "smack.memory.access" || name == "smack.memory.checked" ||
+        name == "smack.loop.bound" || name == "verifier.primitive")
       continue;
     if (name.find("smack.") == 0 || name.find("verifier.") == 0) {
       std::list<const Expr *> attrs;

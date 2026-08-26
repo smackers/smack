@@ -20,6 +20,7 @@ class VerifierCodeMetadata : public ModulePass,
 private:
   std::queue<Instruction *> workList;
   std::map<const Function *, std::string> verifierPrimitives;
+  void collectVerifierPrimitives(Module &M);
 
 public:
   static char ID;

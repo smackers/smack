@@ -776,8 +776,11 @@ def llvm_to_bpl(args):
         cmd += ['-static-unroll']
     if args.functionalize_loops:
         cmd += ['-functionalize-loops']
-    if args.language == 'svcomp':
-        cmd += ['-svcomp']
+        # The SV-COMP frontend identifies the verifier primitives by name;
+        # only the loop summaries consume that identity, so it is passed only
+        # with them, keeping the default translation of SV-COMP tasks intact.
+        if args.language == 'svcomp':
+            cmd += ['-svcomp']
     if args.integer_encoding == 'bit-vector':
         cmd += ['-bit-precise']
     if args.integer_encoding == 'wrapped-integer':
