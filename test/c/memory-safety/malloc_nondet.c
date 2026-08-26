@@ -5,7 +5,7 @@
 
 int main(void) {
   int x = __VERIFIER_nondet_int();
-  assume(x != 0); // malloc(0) can return anything
+  assume(x > 0); // p[x - 1] needs at least one byte
   char *p = (char *)malloc(x);
   p[x - 1] = x;
   free(p);
