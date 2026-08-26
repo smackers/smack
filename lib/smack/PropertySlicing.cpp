@@ -19,6 +19,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <cctype>
 
 #include <chrono>
 #include <limits>
@@ -1210,7 +1211,8 @@ void PropertySlicing::emitProfile(Module &M) {
 
 // ------------------------------------------------------------------- pass
 
-bool PropertySlicing::runOnModule(Module &M) {
+bool propertySlicingWillRun() {
+  static bool warned = false;
   if (!PropertySlicingEnabled)
     return false;
 
@@ -1219,8 +1221,10 @@ bool PropertySlicing::runOnModule(Module &M) {
   // relevance rules above do not model, and termination is unsound by
   // construction under loop bypass.
   if (SmackOptions::MemorySafety || SmackOptions::IntegerOverflow) {
-    errs() << "SMACK warning: property slicing is only sound for assertion "
-              "reachability; disabling it for this property.\n";
+    if (!warned)
+      errs() << "SMACK warning: property slicing is only sound for assertion "
+                "reachability; disabling it for this property.\n";
+    warned = true;
     return false;
   }
 
@@ -1232,11 +1236,19 @@ bool PropertySlicing::runOnModule(Module &M) {
   // Measured on test/c/unroll: nine tests flip from verified to a spurious
   // error, with and without loop bypass.
   if (SmackOptions::FailOnLoopExit) {
-    errs() << "SMACK warning: property slicing is incompatible with "
-              "-fail-on-loop-exit, whose property depends on the unroll "
-              "bound; disabling it.\n";
+    if (!warned)
+      errs() << "SMACK warning: property slicing is incompatible with "
+                "-fail-on-loop-exit, whose property depends on the unroll "
+                "bound; disabling it.\n";
+    warned = true;
     return false;
   }
+  return true;
+}
+
+bool PropertySlicing::runOnModule(Module &M) {
+  if (!propertySlicingWillRun())
+    return false;
 
   DL = &M.getDataLayout();
   regions = &getAnalysis<Regions>();

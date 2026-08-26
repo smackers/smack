@@ -174,6 +174,14 @@ private:
   void emitProfile(llvm::Module &M);
 };
 
+/// Whether the pass would do anything for this invocation: the flag is on and
+/// the property is one the relevance relation models. llvm2bpl consults this
+/// to decide whether to *schedule* the pass at all -- requiring Regions and
+/// DSAWrapper is not free of side effects on the pass pipeline, so a pass that
+/// would immediately return must not be added. Warns once per run when the
+/// flag is given but the property rules it out.
+bool propertySlicingWillRun();
+
 llvm::ModulePass *createPropertySlicingPass();
 } // namespace smack
 
