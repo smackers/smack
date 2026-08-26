@@ -13,16 +13,21 @@ namespace smack {
 unsigned Decl::uniqueId = 0;
 
 const Expr *Expr::exists(std::list<Binding> vars, const Expr *e) {
-  return new QuantExpr(QuantExpr::Exists, vars, {}, e);
+  return new QuantExpr(QuantExpr::Exists, vars, {}, {}, e);
 }
 
 const Expr *Expr::forall(std::list<Binding> vars, const Expr *e) {
-  return new QuantExpr(QuantExpr::Forall, vars, {}, e);
+  return new QuantExpr(QuantExpr::Forall, vars, {}, {}, e);
 }
 
 const Expr *Expr::forall(std::list<Binding> vars, const Expr *trigger,
                          const Expr *e) {
-  return new QuantExpr(QuantExpr::Forall, vars, {trigger}, e);
+  return new QuantExpr(QuantExpr::Forall, vars, {}, {trigger}, e);
+}
+
+const Expr *Expr::forall(std::list<Binding> vars, std::list<const Attr *> attrs,
+                         const Expr *trigger, const Expr *e) {
+  return new QuantExpr(QuantExpr::Forall, vars, attrs, {trigger}, e);
 }
 
 const Expr *Expr::and_(const Expr *l, const Expr *r) {
@@ -43,10 +48,6 @@ const Expr *Expr::lt(const Expr *l, const Expr *r) {
 
 const Expr *Expr::ifThenElse(const Expr *c, const Expr *t, const Expr *e) {
   return new IfThenElseExpr(c, t, e);
-}
-
-const Expr *Expr::lambda(Binding var, const Expr *e) {
-  return new LambdaExpr(var, e);
 }
 
 const Expr *Expr::fn(std::string f, std::list<const Expr *> args) {
@@ -485,13 +486,11 @@ void QuantExpr::print(std::ostream &os) const {
   }
   print_seq<Binding>(os, vars, ", ");
   os << " :: ";
+  for (const Attr *A : attrs)
+    os << A << " ";
   for (const Expr *Trigger : triggers)
     os << "{" << Trigger << "} ";
   os << expr << ")";
-}
-
-void LambdaExpr::print(std::ostream &os) const {
-  os << "(lambda " << var << " :: " << expr << ")";
 }
 
 void SelExpr::print(std::ostream &os) const {

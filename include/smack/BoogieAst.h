@@ -14,6 +14,8 @@ typedef std::pair<std::string, std::string> Binding;
 
 enum class RModeKind { RNE, RNA, RTP, RTN, RTZ };
 
+class Attr;
+
 class Expr {
 public:
   virtual ~Expr() {}
@@ -22,12 +24,13 @@ public:
   static const Expr *forall(std::list<Binding>, const Expr *e);
   static const Expr *forall(std::list<Binding>, const Expr *trigger,
                             const Expr *e);
+  static const Expr *forall(std::list<Binding>, std::list<const Attr *> attrs,
+                            const Expr *trigger, const Expr *e);
   static const Expr *and_(const Expr *l, const Expr *r);
   static const Expr *or_(const Expr *l, const Expr *r);
   static const Expr *eq(const Expr *l, const Expr *r);
   static const Expr *lt(const Expr *l, const Expr *r);
   static const Expr *ifThenElse(const Expr *c, const Expr *t, const Expr *e);
-  static const Expr *lambda(Binding var, const Expr *e);
   static const Expr *fn(std::string f, const Expr *x);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y);
   static const Expr *fn(std::string f, const Expr *x, const Expr *y,
@@ -195,22 +198,14 @@ public:
 private:
   Quantifier quant;
   std::list<Binding> vars;
+  std::list<const Attr *> attrs;
   std::list<const Expr *> triggers;
   const Expr *expr;
 
 public:
-  QuantExpr(Quantifier q, std::list<Binding> vs, std::list<const Expr *> ts,
-            const Expr *e)
-      : quant(q), vars(vs), triggers(ts), expr(e) {}
-  void print(std::ostream &os) const override;
-};
-
-class LambdaExpr : public Expr {
-  Binding var;
-  const Expr *expr;
-
-public:
-  LambdaExpr(Binding v, const Expr *e) : var(v), expr(e) {}
+  QuantExpr(Quantifier q, std::list<Binding> vs, std::list<const Attr *> as,
+            std::list<const Expr *> ts, const Expr *e)
+      : quant(q), vars(vs), attrs(as), triggers(ts), expr(e) {}
   void print(std::ostream &os) const override;
 };
 

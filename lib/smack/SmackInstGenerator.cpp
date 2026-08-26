@@ -165,11 +165,65 @@ void SmackInstGenerator::prepareFunctionalLoops(llvm::Function &F) {
   }
 }
 
+const Expr *SmackInstGenerator::functionalExpr(const llvm::Value *V) {
+  // Constants (literals, global addresses, undef) print as literals or Boogie
+  // constants and may appear in an axiom as they are; anything else is a
+  // procedure local or parameter and must become an argument of the map.
+  if (functionalCapture && !isa<Constant>(V))
+    functionalCapture->emplace(naming->get(*V), rep->type(V->getType()));
+  return rep->expr(V);
+}
+
+const Expr *SmackInstGenerator::functionalMap(const std::string &Name,
+                                              const std::string &Type) {
+  if (functionalCapture)
+    functionalCapture->emplace(Name, Type);
+  return Expr::id(Name);
+}
+
+// A summary map is the Boogie lambda `(lambda index :: body)` over the values
+// captured in `capture`. It is emitted the way Boogie's own
+// /freeVarLambdaLifting would emit it, as a map-valued function of the captured
+// values defined by ONE read axiom whose only trigger is a read of the result:
+//
+//   function name(captured...) returns (type);
+//   axiom (forall captured..., index :: {name(captured...)[index]}
+//          name(captured...)[index] == body);
+//
+// A read of the summarised map is then expanded on demand into reads of the
+// loop-entry maps it captured, which are proper subterms of the trigger, so an
+// instance can only create reads on strictly earlier memory and the axiom
+// cannot match on its own output. The Corral distribution SMACK targets
+// (1.1.8, Boogie 2.9.1) rejects lambda expressions outright; this form is
+// accepted by every Boogie SMACK has been used with. The axiom carries
+// {:weight 0} for the same reason as SmackRep::intrinsicSummary: the depth
+// of a chain of summaries must not turn into a Z3 generation cost and a
+// spurious `unknown`.
+const Expr *SmackInstGenerator::liftFunctionalMap(
+    const std::string &Name, Binding Index, const Expr *Body,
+    const std::map<std::string, std::string> &Capture, const std::string &Type,
+    const std::string &Qid) {
+  std::list<Binding> Params(Capture.begin(), Capture.end());
+  std::list<const Expr *> Args;
+  for (const auto &P : Params)
+    Args.push_back(Expr::id(P.first));
+  const Expr *Map = Expr::fn(Name, Args);
+  const Expr *Read = Expr::sel(Map, Expr::id(Index.first));
+  std::list<Binding> Bound = Params;
+  Bound.push_back(Index);
+  auto &Decls = rep->getProgram()->getDeclarations();
+  Decls.push_back(Decl::function(Name, Params, Type));
+  Decls.push_back(Decl::axiom(
+      Expr::forall(Bound, {Attr::attr("qid", Qid), Attr::attr("weight", 0)},
+                   Read, Expr::eq(Read, Body))));
+  return Map;
+}
+
 const Expr *SmackInstGenerator::functionalIntegerSCEV(const SCEV *S) {
   if (auto *Constant = dyn_cast<SCEVConstant>(S))
     return rep->expr(Constant->getValue());
   if (auto *Unknown = dyn_cast<SCEVUnknown>(S))
-    return rep->expr(Unknown->getValue());
+    return functionalExpr(Unknown->getValue());
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(S)) {
     std::string Operation;
     if (isa<SCEVAddExpr>(NAry))
@@ -212,7 +266,7 @@ const Expr *SmackInstGenerator::functionalPointerSCEV(const SCEV *S) {
   const SCEV *BaseSCEV = scalarEvolution->getPointerBase(S);
   auto *Base = dyn_cast<SCEVUnknown>(BaseSCEV);
   assert(Base && "validated affine pointer must have an unknown base");
-  const Expr *Result = rep->expr(Base->getValue());
+  const Expr *Result = functionalExpr(Base->getValue());
   const SCEV *Offset = scalarEvolution->removePointerBase(S);
   if (auto *Constant = dyn_cast<SCEVConstant>(Offset))
     if (Constant->getAPInt().isZero())
@@ -234,7 +288,7 @@ const Expr *SmackInstGenerator::functionalInductionValue(
   auto MulName = rep->opName("$mul", {Summary.iterationType});
   auto AddName = rep->opName("$add", {Summary.iterationType});
   auto Scaled = Expr::fn(MulName, rep->expr(Summary.inductionStep), Iteration);
-  return Expr::fn(AddName, rep->expr(Summary.inductionStart), Scaled);
+  return Expr::fn(AddName, functionalExpr(Summary.inductionStart), Scaled);
 }
 
 const Expr *
@@ -258,7 +312,7 @@ const Expr *SmackInstGenerator::functionalValue(
   if (Value == Summary.induction)
     return functionalInductionValue(Summary, Iteration);
   if (isa<Constant>(Value) || Summary.loop->isLoopInvariant(Value))
-    return rep->expr(Value);
+    return functionalExpr(Value);
 
   for (const auto &Recurrence : Summary.recurrences) {
     if (Recurrence.value != Value)
@@ -277,7 +331,9 @@ const Expr *SmackInstGenerator::functionalValue(
     assert(Access && "validated functional load must have an affine access");
     auto Path = rep->memPath(Load->getPointerOperand());
     return rep->functionalLoad(
-        Load->getPointerOperand(), Expr::id(EntryMemories.at(Path)),
+        Load->getPointerOperand(),
+        functionalMap(EntryMemories.at(Path),
+                      rep->memType(Load->getPointerOperand())),
         functionalAddress(*Access, Iteration, Summary.iterationType));
   }
 
@@ -398,19 +454,20 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
     // Capture the per-iteration continuation condition as a first-class map.
     // The forward recursive function then denotes the first stopping
     // iteration (or IterationCount if none stops) without adding cyclic CFG.
-    std::string ContinueMapName =
-        "$functional.read.continue." + std::to_string(Id);
     std::string ContinueMapType = "[" + IterationType + "]bool";
-    proc->getDeclarations().push_back(
-        Decl::variable(ContinueMapName, ContinueMapType));
     std::string ContinueIterationName =
         "$functional.read.continue.iteration." + std::to_string(Id);
-    emit(Stmt::assign(
-        Expr::id(ContinueMapName),
-        Expr::lambda({ContinueIterationName, IterationType},
-                     IsVerifier
-                         ? AssumptionsAt(Expr::id(ContinueIterationName))
-                         : ContinueAt(Expr::id(ContinueIterationName)))));
+    std::map<std::string, std::string> Capture;
+    functionalCapture = &Capture;
+    const Expr *ContinueBody =
+        IsVerifier ? AssumptionsAt(Expr::id(ContinueIterationName))
+                   : ContinueAt(Expr::id(ContinueIterationName));
+    functionalCapture = nullptr;
+    const Expr *ContinueMap = liftFunctionalMap(
+        "$fl.lambda.continue." + std::to_string(proc->getId()) + "." +
+            std::to_string(Id),
+        {ContinueIterationName, IterationType}, ContinueBody, Capture,
+        ContinueMapType, "smack.functional.continue");
 
     std::string FirstStopName = "$functional.firstStop." +
                                 std::to_string(proc->getId()) + "." +
@@ -438,8 +495,7 @@ void SmackInstGenerator::emitReadOnlyFunctionalLoop(
                         {CurrentName, IterationType},
                         {RemainingName, IterationType}},
                        IterationType, FirstStopBody));
-    FirstStop = Expr::fn(FirstStopName,
-                         {Expr::id(ContinueMapName), Zero, IterationCount});
+    FirstStop = Expr::fn(FirstStopName, {ContinueMap, Zero, IterationCount});
   }
 
   SmallVector<const Expr *, 4> TriggeredAllContinue;
@@ -679,10 +735,15 @@ void SmackInstGenerator::emitFunctionalLoop(
   for (const auto &MemoryStores : StoresByMemory) {
     const std::string &Destination = MemoryStores.first;
     std::string PointerName =
-        "$fl.p." + std::to_string(Id) + "." + std::to_string(MemoryIndex++);
+        "$fl.p." + std::to_string(Id) + "." + std::to_string(MemoryIndex);
     auto Pointer = Expr::id(PointerName);
-    const Expr *Body =
-        Expr::sel(Expr::id(EntryMemories.at(Destination)), Pointer);
+    std::string MapType = rep->memType(MemoryPointers.at(Destination));
+    std::map<std::string, std::string> Capture;
+    functionalCapture = &Capture;
+    // Rebuilt under capture: the iteration count may mention locals.
+    const Expr *IterationCount = functionalIntegerSCEV(Summary.iterationCount);
+    const Expr *Body = Expr::sel(
+        functionalMap(EntryMemories.at(Destination), MapType), Pointer);
 
     // The recognizer proves these affine images pairwise disjoint, so their
     // ITE order is immaterial.  Every RHS and the default branch read only the
@@ -719,9 +780,15 @@ void SmackInstGenerator::emitFunctionalLoop(
                                    Iteration, EntryMemories);
       Body = Expr::ifThenElse(Predicate, Value, Body);
     }
+    functionalCapture = nullptr;
 
-    emit(Stmt::assign(Expr::id(Destination),
-                      Expr::lambda({PointerName, Naming::PTR_TYPE}, Body)));
+    emit(Stmt::assign(
+        Expr::id(Destination),
+        liftFunctionalMap("$fl.lambda." + std::to_string(proc->getId()) + "." +
+                              std::to_string(Id) + "." +
+                              std::to_string(MemoryIndex++),
+                          {PointerName, Naming::PTR_TYPE}, Body, Capture,
+                          MapType, "smack.functional.write")));
   }
   const Expr *FinalInduction =
       functionalInductionValue(Summary, IterationCount);

@@ -4,6 +4,7 @@
 #ifndef SMACKINSTVISITOR_H
 #define SMACKINSTVISITOR_H
 
+#include "smack/BoogieAst.h"
 #include "smack/FunctionalLoopSummary.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/InstVisitor.h"
@@ -43,6 +44,10 @@ private:
       summariesByPreheader;
   std::set<const llvm::BasicBlock *> suppressedBlocks;
   unsigned functionalLoopId = 0;
+  // While a summary map's body is being built, every procedure-local or
+  // global-variable name it mentions is recorded here (name -> Boogie type) so
+  // the map can be emitted as a function of exactly those names.
+  std::map<std::string, std::string> *functionalCapture = nullptr;
 
   Block *createBlock();
   Block *getBlock(llvm::BasicBlock *bb);
@@ -58,6 +63,12 @@ private:
   void emitFunctionalLoop(const FunctionalLoopSummary &summary);
   void emitReadOnlyFunctionalLoop(const FunctionalLoopSummary &summary,
                                   llvm::BranchInst &preheaderBranch);
+  const Expr *functionalExpr(const llvm::Value *value);
+  const Expr *functionalMap(const std::string &name, const std::string &type);
+  const Expr *
+  liftFunctionalMap(const std::string &name, Binding index, const Expr *body,
+                    const std::map<std::string, std::string> &capture,
+                    const std::string &type, const std::string &qid);
   const Expr *functionalIntegerSCEV(const llvm::SCEV *scev);
   const Expr *functionalPointerSCEV(const llvm::SCEV *scev);
   const Expr *functionalInductionValue(const FunctionalLoopSummary &summary,
