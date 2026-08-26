@@ -73,13 +73,43 @@ namespace {
 
 /// A helper that never lies about not knowing: any callee we cannot resolve to
 /// a single Function is treated as unknown.
-const Function *calleeOf(const CallInst &CI) {
-  if (auto F = CI.getCalledFunction())
+///
+/// The parameter is `CallBase`, not `CallInst`, because an `invoke` is a call
+/// too: it transfers control to a callee exactly as a `call` does, and SMACK
+/// translates it with the very same `SmackRep::call` (SmackRep.cpp:1105-1128,
+/// which discriminates the two only to count operands). A pass that reasoned
+/// about `CallInst` alone would see no callee, no argument binding and no
+/// call-graph edge at an invoke.
+const Function *calleeOf(const CallBase &CB) {
+  if (auto F = CB.getCalledFunction())
     return F;
-  if (auto V = CI.getCalledOperand())
+  if (auto V = CB.getCalledOperand())
     if (auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases()))
       return F;
   return nullptr;
+}
+
+/// An `invoke` (and a `callbr`) is a call that is also a TERMINATOR, so it is
+/// retained unconditionally rather than being weighed like a `call`.
+///
+/// Two ways to drop one were considered. Rewriting it into a `br` to its
+/// normal destination is what "deleting" an invoke would have to mean, and it
+/// costs a CFG edit plus a `removePredecessor` on the unwind destination's
+/// PHIs, inside a rewriter that otherwise only ever erases instructions.
+/// Keeping it costs one entry in `keep` and, through it, the invoke's
+/// operands and the control dependences of its block. Keeping it was chosen
+/// because it is the cheaper and far less error-prone of the two and buys
+/// nothing to lose: `removeIrrelevantInstructions` already skips every
+/// terminator, so no invoke was ever being deleted, and this predicate only
+/// makes that explicit and closes the one path (loop bypass) that could still
+/// take a terminator call away with the block it lives in.
+///
+/// What the pass gains from `invoke` is not the right to delete it but the
+/// *effects* it carries: the call-graph edge, the written regions, the
+/// may-reach-error bit and the argument and return bindings, all of which the
+/// rules below now read off it.
+bool isTerminatorCall(const Instruction &I) {
+  return I.isTerminator() && isa<CallBase>(&I);
 }
 
 /// Control dependence, computed from the post-dominator tree by the standard
@@ -205,8 +235,8 @@ void PropertySlicing::getAnalysisUsage(AnalysisUsage &AU) const {
 /// in the pipeline is therefore purely a call to a specially-named function,
 /// and the set below is exactly the set of names that later become Boogie
 /// asserts or otherwise carry verification semantics.
-bool PropertySlicing::isPropertyRoot(const CallInst &CI) const {
-  auto F = calleeOf(CI);
+bool PropertySlicing::isPropertyRoot(const CallBase &CB) const {
+  auto F = calleeOf(CB);
   if (!F || !F->hasName())
     return false;
   auto N = F->getName();
@@ -233,8 +263,8 @@ bool PropertySlicing::isPropertyRoot(const CallInst &CI) const {
 /// external-address assumption). Classifying them as verification effects made
 /// every function that draws a nondeterministic value un-droppable, and by
 /// transitivity poisoned nearly the whole call graph.
-bool PropertySlicing::hasVerificationEffect(const CallInst &CI) const {
-  auto F = calleeOf(CI);
+bool PropertySlicing::hasVerificationEffect(const CallBase &CB) const {
+  auto F = calleeOf(CB);
   if (!F || !F->hasName())
     return false;
   auto N = F->getName();
@@ -289,8 +319,39 @@ bool PropertySlicing::hasUnmodelledEffect(const Instruction &I) const {
   // driver task for no soundness gain.
   if (isa<FenceInst>(&I))
     return true;
-  if (auto CI = dyn_cast<CallInst>(&I)) {
-    if (CI->isInlineAsm())
+  // The exception *state* is the one channel outside the region abstraction:
+  // SMACK carries it in the Boogie global $exn (Naming::EXN_VAR), which no
+  // Region covers, and it admits as much for the clauses themselves
+  // ("TODO what exactly!?", SmackInstGenerator.cpp:872-880, which warns that
+  // approximating "landingpad clauses" "can lead to both false alarms and
+  // missed detections"). Raising, catching and cleaning up therefore stay
+  // unmodelled. isEHPad() is used rather than isa<LandingPadInst> so the
+  // Windows funclet pads (catchswitch/catchpad/cleanuppad) are covered too:
+  // they used to be reached only by accident, through the blanket
+  // isa<InvokeInst> that this predicate no longer has.
+  if (I.isEHPad() || isa<ResumeInst>(&I) || isa<CatchReturnInst>(&I) ||
+      isa<CleanupReturnInst>(&I))
+    return true;
+  // Checked before the CallBase rule below so that `callbr` keeps its
+  // unconditional treatment: it is a CallBase whose operand is virtually
+  // always inline asm (asm goto), and -property-slicing-relax-asm must not
+  // silently make an unmodelled control transfer disappear as well.
+  if (isa<IndirectBrInst>(&I) || isa<CallBrInst>(&I))
+    return true;
+  // `invoke` deliberately is NOT unmodelled, though it used to be. It is the
+  // ordinary-call half of the exception pair -- visitInvokeInst emits exactly
+  // the SmackRep::call a CallInst gets, plus a goto on $exn -- so the region
+  // and call-graph rules describe it as well as they describe a call.
+  //
+  // Dropping the case does not weaken `unsafeToDrop` by itself: an invoke's
+  // unwind destination must begin with an EH pad *in the same function*
+  // (LangRef), so the rule above still marks every function that contains an
+  // invoke. That redundancy is exactly why the old blanket case was worth
+  // removing -- it hid the fact that the EH pad, not the invoke, is what
+  // actually holds the function, and it stopped every rule below from seeing
+  // the invoke's callee, arguments and result.
+  if (auto CB = dyn_cast<CallBase>(&I)) {
+    if (CB->isInlineAsm())
       // SmackInstGenerator.cpp:641-646 already translates every inline asm to
       // Stmt::skip() -- a complete no-op -- and warns that this "can lead to
       // both false alarms and missed detections". Under -property-slicing-
@@ -299,13 +360,12 @@ bool PropertySlicing::hasUnmodelledEffect(const Instruction &I) const {
       // prototype's baseline retains anything the region abstraction does not
       // capture.
       return !PropertySlicingRelaxAsm;
-    if (!calleeOf(*CI))
-      return true; // unresolved indirect target
+    if (!calleeOf(*CB))
+      // Unresolved indirect target. For an invoke this is also what SMACK
+      // itself refuses to translate (llvm_unreachable("Unexpected invoke
+      // instruction."), SmackInstGenerator.cpp:305-311).
+      return true;
   }
-  if (isa<InvokeInst>(&I) || isa<ResumeInst>(&I) || isa<LandingPadInst>(&I))
-    return true;
-  if (isa<IndirectBrInst>(&I) || isa<CallBrInst>(&I))
-    return true;
   return false;
 }
 
@@ -320,12 +380,15 @@ void PropertySlicing::computeMayReachError(Module &M) {
       continue;
     bool root = false;
     for (auto &I : instructions(F)) {
-      if (auto CI = dyn_cast<CallInst>(&I)) {
-        if (isPropertyRoot(*CI))
+      // CallBase, not CallInst: an invoke is a call-graph edge like any
+      // other. Missing it meant a function whose only route to the property
+      // root ran through an invoke never joined mayReachError.
+      if (auto CB = dyn_cast<CallBase>(&I)) {
+        if (isPropertyRoot(*CB))
           root = true;
-        if (auto G = calleeOf(*CI))
+        if (auto G = calleeOf(*CB))
           callers[G].push_back(&F);
-        else if (!CI->isInlineAsm())
+        else if (!CB->isInlineAsm())
           // An unresolved indirect call may reach anything. Inline asm cannot
           // reach a C function at all, and counting it here marked 33 extra
           // functions on he.ko as error-reaching.
@@ -368,9 +431,9 @@ void PropertySlicing::computeEffects(Module &M) {
       if (hasUnmodelledEffect(I)) {
         if (unsafeToDrop.insert(&F).second)
           unsafeWhy[&F] =
-              isa<CallInst>(&I) && cast<CallInst>(&I)->isInlineAsm()
+              isa<CallBase>(&I) && cast<CallBase>(&I)->isInlineAsm()
                   ? "inline_asm"
-                  : (isa<CallInst>(&I) ? "indirect_call" : "atomic");
+                  : (isa<CallBase>(&I) ? "indirect_call" : "atomic");
       }
       if (isa<StoreInst>(&I) || isa<MemIntrinsic>(&I) ||
           isa<AtomicRMWInst>(&I) || isa<AtomicCmpXchgInst>(&I)) {
@@ -381,12 +444,15 @@ void PropertySlicing::computeEffects(Module &M) {
           W.insert(r);
       }
 
-      if (auto CI = dyn_cast<CallInst>(&I)) {
-        if (hasVerificationEffect(*CI)) {
+      // CallBase again: without the invoke edge here a function's effect
+      // summary omitted everything its invoked callees write, so a store the
+      // property reads could be dropped at the call site of the *caller*.
+      if (auto CB = dyn_cast<CallBase>(&I)) {
+        if (hasVerificationEffect(*CB)) {
           if (unsafeToDrop.insert(&F).second)
             unsafeWhy[&F] = "verification_effect";
         }
-        if (auto G = calleeOf(*CI))
+        if (auto G = calleeOf(*CB))
           callees[&F].push_back(G);
       }
     }
@@ -523,8 +589,8 @@ std::string PropertySlicing::explainRelevance(const Instruction *I) const {
     if (!out.empty())
       out += " -> ";
     out += cur->getOpcodeName();
-    if (auto CI = dyn_cast<CallInst>(cur))
-      if (auto G = calleeOf(*CI))
+    if (auto CB = dyn_cast<CallBase>(cur))
+      if (auto G = calleeOf(*CB))
         out += "(" + G->getName().str() + ")";
     if (cur != I && cur->getFunction() != I->getFunction())
       out += "@" + cur->getFunction()->getName().str();
@@ -588,10 +654,11 @@ void PropertySlicing::seedRoots(Module &M) {
       continue;
     for (auto &I : instructions(F)) {
       bool isRoot = false;
-      if (auto CI = dyn_cast<CallInst>(&I))
-        isRoot = isPropertyRoot(*CI) || hasVerificationEffect(*CI);
-      // Effects the abstraction cannot model are retained from the start.
-      if (isRoot || hasUnmodelledEffect(I))
+      if (auto CB = dyn_cast<CallBase>(&I))
+        isRoot = isPropertyRoot(*CB) || hasVerificationEffect(*CB);
+      // Effects the abstraction cannot model are retained from the start, and
+      // so is every call that is a terminator -- see isTerminatorCall.
+      if (isRoot || hasUnmodelledEffect(I) || isTerminatorCall(I))
         keep.insert(&I);
     }
   }
@@ -641,14 +708,14 @@ void PropertySlicing::propagate(Module &M) {
             // A write whose region is TOP may land on any relevant object.
             if (regionIsRelevant(destRegion(I)))
               kept = true;
-          } else if (auto CI = dyn_cast<CallInst>(&I)) {
-            auto G = calleeOf(*CI);
+          } else if (auto CB = dyn_cast<CallBase>(&I)) {
+            auto G = calleeOf(*CB);
             if (!G)
               // No resolvable callee: an indirect target could do anything.
               // Inline asm is the one exception under
               // -property-slicing-relax-asm, where we adopt SMACK's own
               // Stmt::skip() semantics for it.
-              kept = !(CI->isInlineAsm() && PropertySlicingRelaxAsm);
+              kept = !(CB->isInlineAsm() && PropertySlicingRelaxAsm);
             else if (mayReachError.count(G) || unsafeToDrop.count(G) ||
                      writesTop.count(G))
               kept = true;
@@ -677,14 +744,14 @@ void PropertySlicing::propagate(Module &M) {
         // body keep the wholesale rule, since nothing can be established about
         // them.
         markSource = &I;
-        auto CIforArgs = dyn_cast<CallInst>(&I);
-        const Function *Gee = CIforArgs ? calleeOf(*CIforArgs) : nullptr;
-        if (CIforArgs && Gee && !Gee->isDeclaration() && !Gee->isVarArg() &&
-            Gee->arg_size() == CIforArgs->arg_size()) {
+        auto CBforArgs = dyn_cast<CallBase>(&I);
+        const Function *Gee = CBforArgs ? calleeOf(*CBforArgs) : nullptr;
+        if (CBforArgs && Gee && !Gee->isDeclaration() && !Gee->isVarArg() &&
+            Gee->arg_size() == CBforArgs->arg_size()) {
           unsigned k = 0;
           for (auto &A : Gee->args()) {
             if (relevant.count(&A))
-              markValue(CIforArgs->getArgOperand(k), changed);
+              markValue(CBforArgs->getArgOperand(k), changed);
             ++k;
           }
         } else {
@@ -718,9 +785,11 @@ void PropertySlicing::propagate(Module &M) {
         }
 
         // A relevant call result makes the callee's returned values relevant.
-        if (auto CI = dyn_cast<CallInst>(&I)) {
-          if (relevant.count(CI)) {
-            if (auto G = calleeOf(*CI))
+        // An invoke defines its result on the normal edge, so the rule is the
+        // same one.
+        if (auto CB = dyn_cast<CallBase>(&I)) {
+          if (relevant.count(CB)) {
+            if (auto G = calleeOf(*CB))
               if (!G->isDeclaration())
                 for (auto &BB : *G)
                   if (auto RI = dyn_cast<ReturnInst>(BB.getTerminator()))
@@ -799,6 +868,9 @@ bool PropertySlicing::removeIrrelevantInstructions(Function &F) {
     else if (isa<StoreInst>(I))
       S.storesRemoved++;
     else if (isa<CallInst>(I))
+      // CallInst and not CallBase on purpose: `dead` is built from
+      // non-terminators only, so an invoke can never reach this loop, and
+      // counting it would be dead code that suggested otherwise.
       S.callsRemoved++;
     I->eraseFromParent();
     changed = true;
@@ -833,6 +905,11 @@ bool PropertySlicing::removeIrrelevantInstructions(Function &F) {
         changed = true;
       }
     } else if (auto *SI = dyn_cast<SwitchInst>(T)) {
+      // The CallInst guard recognises a condition this pass has already
+      // replaced -- freshNondet emits a CallInst -- and stays CallInst-only.
+      // Widening it to CallBase would only skip switches fed by an invoke
+      // result, and *not* nondeterminizing a condition just leaves the
+      // original program semantics in place, which is always sound.
       if (!isa<UndefValue>(SI->getCondition()) &&
           !isa<CallInst>(SI->getCondition())) {
         SI->setCondition(freshNondet(SI->getCondition()->getType(), SI));
@@ -880,8 +957,8 @@ bool PropertySlicing::bypassIrrelevantLoops(Function &F) {
           // by the first instruction encountered in block order -- that is
           // nearly always the induction PHI, which says nothing.
           const Instruction *T = relevanceTerminus(&I);
-          if (auto CI = dyn_cast<CallInst>(T ? T : &I)) {
-            auto G = calleeOf(*CI);
+          if (auto CB = dyn_cast<CallBase>(T ? T : &I)) {
+            auto G = calleeOf(*CB);
             if (!G)
               reason = LoopReason::UNKNOWN_CALL;
             else if (mayReachError.count(G))
@@ -1078,6 +1155,9 @@ bool PropertySlicing::rewrite(Module &M) {
         else if (isa<StoreInst>(&I))
           S.storesRetained++;
         else if (isa<CallInst>(&I))
+          // Paired with callsRemoved above, which counts CallInst only; an
+          // invoke is never a candidate for removal, so leaving it out of both
+          // keeps `before == retained + removed` over the same population.
           S.callsRetained++;
       }
     }

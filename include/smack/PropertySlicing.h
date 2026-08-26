@@ -137,8 +137,8 @@ private:
                      std::unordered_set<const llvm::BasicBlock *>>
       exitReaching;
 
-  bool isPropertyRoot(const llvm::CallInst &CI) const;
-  bool hasVerificationEffect(const llvm::CallInst &CI) const;
+  bool isPropertyRoot(const llvm::CallBase &CB) const;
+  bool hasVerificationEffect(const llvm::CallBase &CB) const;
   bool hasUnmodelledEffect(const llvm::Instruction &I) const;
 
   void computeMayReachError(llvm::Module &M);
