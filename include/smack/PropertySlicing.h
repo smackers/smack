@@ -164,6 +164,7 @@ private:
 
   void snapshotRegions(llvm::Module &M);
   bool isOpaquePointer(const llvm::Value *Ptr) const;
+  llvm::Value *freshNondet(llvm::Type *T, llvm::Instruction *InsertBefore);
   unsigned destRegion(const llvm::Instruction &I) const;
   unsigned srcRegion(const llvm::Instruction &I) const;
 

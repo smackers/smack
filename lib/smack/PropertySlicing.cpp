@@ -819,12 +819,13 @@ bool PropertySlicing::removeIrrelevantInstructions(Function &F) {
           }
         });
         auto *C = BI->getCondition();
-        BI->setCondition(UndefValue::get(C->getType()));
+        BI->setCondition(freshNondet(C->getType(), BI));
         changed = true;
       }
     } else if (auto *SI = dyn_cast<SwitchInst>(T)) {
-      if (!isa<UndefValue>(SI->getCondition())) {
-        SI->setCondition(UndefValue::get(SI->getCondition()->getType()));
+      if (!isa<UndefValue>(SI->getCondition()) &&
+          !isa<CallInst>(SI->getCondition())) {
+        SI->setCondition(freshNondet(SI->getCondition()->getType(), SI));
         changed = true;
       }
     }
@@ -984,8 +985,14 @@ bool PropertySlicing::bypassIrrelevantLoops(Function &F) {
     }
 
     // Detach the irrelevant escaping values before the definitions go away.
-    for (auto *U : escapes)
-      U->set(UndefValue::get(U->get()->getType()));
+    // A PHI user keeps `undef`: its incoming block may itself be one of the
+    // loop blocks about to be deleted, so there is no insertion point that
+    // survives the rewrite.
+    for (auto *U : escapes) {
+      auto *UI = dyn_cast<Instruction>(U->getUser());
+      U->set(freshNondet(U->get()->getType(),
+                         (UI && !isa<PHINode>(UI)) ? UI : nullptr));
+    }
 
     // Redirect the preheader past the loop. This can add the execution that
     // skips a nonterminating loop -- sound for reachability, and recorded as
@@ -1006,7 +1013,7 @@ bool PropertySlicing::bypassIrrelevantLoops(Function &F) {
     // the "more behaviours" side.
     for (auto &PN : E->phis())
       if (PN.getBasicBlockIndex(P) < 0)
-        PN.addIncoming(UndefValue::get(PN.getType()), P);
+        PN.addIncoming(freshNondet(PN.getType(), P->getTerminator()), P);
 
     S.loopsBypassed++;
     changed = true;
@@ -1244,6 +1251,41 @@ bool propertySlicingWillRun() {
     return false;
   }
   return true;
+}
+
+/// A *distinct* nondeterministic value for each site the slicer needs one.
+///
+/// `undef` cannot be used here. `UndefValue::get(T)` is uniqued per type and
+/// `Naming::get` caches by `Value *`, so `SmackRep` emits every undef of a
+/// type as one module-global Boogie `const` (SmackRep.cpp:813-816,
+/// Naming.cpp:238/269). A Boogie constant is a single unconstrained but
+/// *fixed* value, so every site sharing it is forced to agree -- on one
+/// sliced driver a single `const $u0: i1` was the condition of 363 branches.
+/// That *removes* execution combinations, the exact opposite of the
+/// over-approximation the bypass and nondeterminization rules rely on, and is
+/// unsound wherever the relevance relation is imprecise.
+///
+/// A call to a body-less declaration is havoced by Boogie per call site, which
+/// is the intended semantics. Pointer results keep `undef`: an external call
+/// returning a pointer additionally gets `assume $isExternal(p)`
+/// (SmackInstGenerator.cpp:811-815), which would *constrain* the value, and a
+/// pointer is never a branch condition so it cannot correlate control flow.
+Value *PropertySlicing::freshNondet(Type *T, Instruction *InsertBefore) {
+  if (T->isPointerTy() || !InsertBefore)
+    return UndefValue::get(T);
+
+  std::string suffix;
+  raw_string_ostream OS(suffix);
+  T->print(OS);
+  OS.flush();
+  for (auto &c : suffix)
+    if (!isalnum(static_cast<unsigned char>(c)))
+      c = '_';
+
+  Module *M = InsertBefore->getModule();
+  FunctionCallee C =
+      M->getOrInsertFunction("__SMACK_slice_nondet_" + suffix, T);
+  return CallInst::Create(C, "", InsertBefore);
 }
 
 bool PropertySlicing::runOnModule(Module &M) {
