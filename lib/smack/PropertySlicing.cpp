@@ -54,6 +54,16 @@ const llvm::cl::opt<bool> PropertySlicingNoRegions(
     llvm::cl::desc("Property slicing: ignore the region partition and treat "
                    "all memory as one object (ablation experiment)."));
 
+/// SMACK's concurrency mode -- share/smack/top.py passes this alongside
+/// -property-slicing whenever the user gave --pthread. It describes the
+/// *program* rather than this pass, so it belongs in SmackOptions next to
+/// -memory-safety and -integer-overflow; it is declared here only because the
+/// slicer is its single consumer (the refusal in propertySlicingWillRun()).
+const llvm::cl::opt<bool> PropertySlicingPthread(
+    "property-slicing-pthread",
+    llvm::cl::desc("Property slicing: the translated program is concurrent "
+                   "(SMACK's --pthread); slicing is refused for it."));
+
 const llvm::cl::opt<std::string> PropertySlicingProfile(
     "property-slicing-profile",
     llvm::cl::desc("Write a machine-readable property-slicing profile here."),
@@ -1250,6 +1260,42 @@ bool propertySlicingWillRun() {
     warned = true;
     return false;
   }
+
+  // --pthread. Every relevance rule in this pass is a *sequential* dependence:
+  // an instruction is kept when the property's value depends on it along the
+  // thread's own control flow. Under an interleaved semantics that is the
+  // wrong relation in both directions.
+  //
+  //   - A store that no *later* instruction of this thread reads is still read
+  //     by another thread. The slicer drops it, and the protocol it
+  //     implemented is gone.
+  //   - A loop whose exit test reads a location another thread writes carries
+  //     no intra-thread control dependence -- the exit block post-dominates
+  //     the header, so nothing after the loop is control-dependent on the
+  //     test. bypassIrrelevantLoops therefore deletes the busy-wait, and
+  //     -property-slicing-no-loop-bypass is not a remedy: the exit condition
+  //     is nondeterminized instead, which lets the spin leave at any moment.
+  //
+  // Measured on test/c/pthread_extras with --pthread --context-bound=2:
+  // peterson, dekker and szymanski all go from verified to a spurious error,
+  // because both threads lose their `flag = 1` / `turn = ...` stores and their
+  // spin loops and walk straight into the critical section.
+  //
+  // Fixing this needs a may-happen-in-parallel notion the pass does not have
+  // (and cannot get cheaply: it would have to keep every store to a shared
+  // region as well as every loop testing one, which on these programs is
+  // everything). SMACK's concurrency model lives in string literals --
+  // `__SMACK_code("async call ...")` in share/smack/lib/pthread.c -- so the
+  // slicer could not even see the thread edges to be conservative about.
+  if (PropertySlicingPthread) {
+    if (!warned)
+      errs() << "SMACK warning: property slicing models only sequential "
+                "dependence and would remove thread synchronisation; "
+                "disabling it for --pthread.\n";
+    warned = true;
+    return false;
+  }
+
   return true;
 }
 

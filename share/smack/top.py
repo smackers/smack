@@ -809,6 +809,13 @@ def llvm_to_bpl(args):
         cmd += ['-fail-on-loop-exit']
     if args.property_slicing:
         cmd += ['-property-slicing']
+        if args.pthread:
+            # Slicing is refused for concurrent programs: its relevance
+            # relation is a sequential one and would delete the stores and
+            # spin loops that implement synchronisation. llvm2bpl cannot see
+            # --pthread otherwise -- see propertySlicingWillRun() in
+            # lib/smack/PropertySlicing.cpp.
+            cmd += ['-property-slicing-pthread']
     if args.property_slicing_no_loop_bypass:
         cmd += ['-property-slicing-no-loop-bypass']
     if args.property_slicing_relax_asm:
