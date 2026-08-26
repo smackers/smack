@@ -945,7 +945,13 @@ bool PropertySlicing::bypassIrrelevantLoops(Function &F) {
 
     for (auto *BB : L->blocks()) {
       for (auto &I : *BB) {
-        if (I.isTerminator())
+        // Terminators are examined below, as the *block's* terminator -- with
+        // one exception: a terminator that is also a call. That check exempts
+        // the loop latch (a latch's back-edge branch is exactly what a bypass
+        // is entitled to delete), and an invoke can perfectly well terminate a
+        // latch, which would let the bypass delete the whole loop body around
+        // a call site that isTerminatorCall promises to retain.
+        if (I.isTerminator() && !isTerminatorCall(I))
           continue;
         if (hasUnmodelledEffect(I)) {
           reason = LoopReason::VOLATILE_ATOMIC;
