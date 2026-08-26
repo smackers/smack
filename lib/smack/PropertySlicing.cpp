@@ -146,6 +146,34 @@ void collectExitReaching(Function &F,
   }
 }
 
+/// Whether control can ever come back from a call to this function: is any
+/// `ret` reachable from its entry block?
+///
+/// The attribute is not the test. The LDV drivers' `void ldv_stop(void) { L:
+/// goto L; }` -- and `void hang(void) { while (1) {} }` generally -- is an
+/// ordinary function that clang marks with nothing at all; only its shape says
+/// it never gives control back. The attribute is still honoured, for the
+/// body-less declarations (`exit`, `abort`) where shape says nothing.
+bool neverReturns(const Function &F) {
+  if (F.hasFnAttribute(Attribute::NoReturn))
+    return true;
+  if (F.isDeclaration())
+    return false; // no body to look at; unsafeToDrop already covers these
+  std::unordered_set<const BasicBlock *> seen;
+  std::vector<const BasicBlock *> work{&F.getEntryBlock()};
+  while (!work.empty()) {
+    auto *B = work.back();
+    work.pop_back();
+    if (!seen.insert(B).second)
+      continue;
+    if (isa<ReturnInst>(B->getTerminator()))
+      return false;
+    for (auto *S : successors(B))
+      work.push_back(S);
+  }
+  return true;
+}
+
 void computeControlDependence(
     Function &F, PostDominatorTree &PDT,
     const std::unordered_set<const BasicBlock *> &ExitReaching,
@@ -491,6 +519,16 @@ void PropertySlicing::computeEffects(Module &M) {
   std::unordered_map<const Function *, std::vector<const Function *>> callees;
 
   for (auto &F : M) {
+    // A call that never comes back may not be elided: the slice would carry on
+    // past a point the original execution never leaves, and everything after
+    // it -- assertions included -- becomes reachable that was not. This is
+    // "unsafe to drop" in exactly the sense the fixpoint below already
+    // propagates: a function that calls a function that never returns may
+    // itself never return.
+    if (neverReturns(F)) {
+      if (unsafeToDrop.insert(&F).second)
+        unsafeWhy[&F] = "may_not_return";
+    }
     if (F.isDeclaration()) {
       // No body: unknown effects unless LLVM itself proves otherwise.
       if (!F.doesNotAccessMemory() && !F.onlyReadsMemory())
