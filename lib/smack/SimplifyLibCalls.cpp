@@ -2,8 +2,6 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
-#define DEBUG_TYPE "simplify-libcalls"
-
 #include "smack/SimplifyLibCalls.h"
 #include "smack/Debug.h"
 #include "smack/Naming.h"
@@ -19,6 +17,8 @@
 #include <set>
 #include <stack>
 #include <vector>
+
+#define DEBUG_TYPE "simplify-libcalls"
 
 namespace smack {
 
