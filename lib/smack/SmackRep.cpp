@@ -393,7 +393,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
     if ((A = dyn_cast<const Argument>(V))) {
       auto PT = dyn_cast<const PointerType>(A->getType());
       assert(PT && "Expected pointer argument.");
-      T = PT->getElementType();
+      T = PT->getPointerElementType();
       addr = expr(A);
 
     } else if (auto GEP = dyn_cast<const GetElementPtrInst>(V)) {
@@ -410,7 +410,7 @@ const Stmt *SmackRep::valueAnnotation(const CallInst &CI) {
       assert(A->hasName() && "Expected named argument.");
       auto PT = dyn_cast<PointerType>(V->getType());
       assert(PT && "Expected pointer type result of load instruction.");
-      T = PT->getElementType();
+      T = PT->getPointerElementType();
       addr = ptrArith(GEP);
 
     } else {
@@ -507,11 +507,11 @@ const Expr *SmackRep::load(const llvm::Value *P) {
   const Expr *M = Expr::id(memPath(R));
   std::string N =
       Naming::LOAD + "." +
-      (bytewise
-           ? "bytes."
-           : (isUnsafeFloatAccess(T->getElementType(), resultTy) ? "unsafe."
-                                                                 : "")) +
-      type(T->getElementType());
+      (bytewise ? "bytes."
+                : (isUnsafeFloatAccess(T->getPointerElementType(), resultTy)
+                       ? "unsafe."
+                       : "")) +
+      type(T->getPointerElementType());
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
@@ -522,7 +522,7 @@ const Stmt *SmackRep::store(const Value *P, const Value *V) {
 const Stmt *SmackRep::store(const Value *P, const Expr *V) {
   const PointerType *T = dyn_cast<PointerType>(P->getType());
   assert(T && "Expected pointer type.");
-  return store(regions->idx(P), T->getElementType(), expr(P), V);
+  return store(regions->idx(P), T->getPointerElementType(), expr(P), V);
 }
 
 const Stmt *SmackRep::store(unsigned R, const Type *T, const Expr *P,
@@ -1211,9 +1211,7 @@ const Stmt *SmackRep::inverseFPCastAssume(const Value *src,
 
 const Stmt *SmackRep::inverseFPCastAssume(const StoreInst *si) {
   const Value *P = si->getPointerOperand();
-  const PointerType *PT = dyn_cast<PointerType>(P->getType());
-  assert(PT && "Expected pointer type.");
-  const Type *T = PT->getElementType();
+  const Type *T = si->getValueOperand()->getType();
   unsigned R = regions->idx(P);
   if (!T->isFloatingPointTy() || !regions->get(R).bytewiseAccess() ||
       regions->get(R).isSingleton()) {
@@ -1251,10 +1249,8 @@ Decl *SmackRep::getInitFuncs() {
 
 void SmackRep::addAllocSizeAttr(const llvm::GlobalVariable *G,
                                 std::list<const Attr *> &ax) {
-  auto T = dyn_cast<const PointerType>(G->getType());
-  assert(T && "Global variables should have pointer types!");
-  if (T->getElementType()->isSized()) {
-    auto allocSize = targetData->getTypeAllocSize(T->getElementType());
+  if (G->getValueType()->isSized()) {
+    auto allocSize = targetData->getTypeAllocSize(G->getValueType());
     ax.push_back(Attr::attr("allocSize", allocSize));
   }
 }
@@ -1285,8 +1281,8 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v,
       if (const PointerType *t = dyn_cast<const PointerType>(g->getType())) {
 
         // in case we can determine the size of the element type ...
-        if (t->getElementType()->isSized())
-          size = storageSize(t->getElementType());
+        if (t->getPointerElementType()->isSized())
+          size = storageSize(t->getPointerElementType());
 
         // otherwise (e.g. for function declarations), use a default size
         else

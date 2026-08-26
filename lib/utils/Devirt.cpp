@@ -163,7 +163,7 @@ Devirtualize::findInCache (const CallBase *CS,
     if (CS->getCalledOperand()->stripPointerCastsAndAliases()->getType() != PT)
       continue;
 
-    FunctionType* FT = dyn_cast<FunctionType>(PT->getElementType());
+    FunctionType* FT = dyn_cast<FunctionType>(PT->getPointerElementType());
     assert(FT);
     if (FT->isVarArg() && !checkArgs(CS, bounceFunc))
       continue;

@@ -99,7 +99,7 @@ bool DSAWrapper::isRead(const Value *V) {
 
 unsigned DSAWrapper::getPointedTypeSize(const Value *v) {
   if (llvm::PointerType *t = llvm::dyn_cast<llvm::PointerType>(v->getType())) {
-    llvm::Type *pointedType = t->getElementType();
+    llvm::Type *pointedType = t->getPointerElementType();
     if (pointedType->isSized())
       return dataLayout->getTypeStoreSize(pointedType);
     else

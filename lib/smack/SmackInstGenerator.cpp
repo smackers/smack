@@ -490,7 +490,7 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   // assert (!li.getType()->isAggregateType() && "Unexpected load value.");
 
   const Expr *E;
-  if (isa<FixedVectorType>(T->getElementType())) {
+  if (isa<FixedVectorType>(T->getPointerElementType())) {
     auto D = VectorOperations(rep).load(P);
     E = Expr::fn(D->getName(), {Expr::id(rep->memPath(P)), rep->expr(P)});
   } else {
@@ -531,7 +531,7 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
             llvm::dyn_cast<const llvm::GlobalVariable>(P)) {
       if (const llvm::PointerType *t =
               llvm::dyn_cast<const llvm::PointerType>(G->getType())) {
-        if (!t->getElementType()->isPointerTy() && G->hasName()) {
+        if (!t->getPointerElementType()->isPointerTy() && G->hasName()) {
           emit(recordProcedureCall(V,
                                    {Attr::attr("cexpr", G->getName().str())}));
         }
