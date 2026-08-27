@@ -81,6 +81,13 @@ const llvm::cl::opt<bool> SmackOptions::FailOnLoopExit(
     "fail-on-loop-exit",
     llvm::cl::desc("Add assert(false) to the end of each loop"));
 
+const llvm::cl::opt<bool> SmackOptions::LowerVarArgs(
+    "lower-varargs",
+    llvm::cl::desc("Give each call to a variadic function its own copy of the "
+                   "callee with the variadic arguments as parameters, and "
+                   "initialize the va_list from them, so that va_arg reads "
+                   "the values actually passed"));
+
 const llvm::cl::opt<unsigned> SmackOptions::MemoryIntrinsicThreshold(
     "memory-intrinsic-threshold",
     llvm::cl::desc("Expand constant-length memcpy/memset of at most this many "
