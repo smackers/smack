@@ -447,6 +447,13 @@ def arguments():
         help='enable static LLVM loop unrolling pass as a preprocessing step')
 
     translate_group.add_argument(
+        '--lower-varargs',
+        action="store_true",
+        default=False,
+        help='model va_arg precisely by passing the variadic arguments to a '
+             'per-call-site copy of the callee')
+
+    translate_group.add_argument(
         '--pthread',
         action='store_true',
         default=False,
@@ -768,6 +775,8 @@ def llvm_to_bpl(args):
         cmd += ['-mem-mod-impls']
     if args.static_unroll:
         cmd += ['-static-unroll']
+    if args.lower_varargs:
+        cmd += ['-lower-varargs']
     if args.integer_encoding == 'bit-vector':
         cmd += ['-bit-precise']
     if args.integer_encoding == 'wrapped-integer':
