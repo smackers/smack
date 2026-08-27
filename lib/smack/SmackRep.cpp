@@ -1267,6 +1267,12 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v,
 
   unsigned size = 0;
   bool external = false;
+  // Whether `size` is this object's real size. It is not for an external
+  // declaration, whose definition we cannot see, nor for an unsized type;
+  // both fall back to a placeholder below. An object whose type is sized but
+  // empty -- a zero-length array, an empty struct -- has a real size of zero,
+  // which has to be told apart from those two cases.
+  bool sizeKnown = false;
 
   if (v->isThreadLocal())
     ax.push_back(Attr::attr("treadLocal"));
@@ -1281,15 +1287,19 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v,
       if (const PointerType *t = dyn_cast<const PointerType>(g->getType())) {
 
         // in case we can determine the size of the element type ...
-        if (t->getPointerElementType()->isSized())
+        if (t->getPointerElementType()->isSized()) {
           size = storageSize(t->getPointerElementType());
+          sizeKnown = true;
+        }
 
         // otherwise (e.g. for function declarations), use a default size
         else
           size = 1024;
 
-      } else
+      } else {
         size = storageSize(g->getType());
+        sizeKnown = true;
+      }
 
       if (!g->hasName() || !STRING_CONSTANT.match(g->getName().str())) {
         if (numElems > 1)
@@ -1303,22 +1313,28 @@ std::list<Decl *> SmackRep::globalDecl(const llvm::GlobalValue *v,
 
   decls.push_back(Decl::constant(name, Naming::PTR_TYPE, ax, false));
 
-  if (!size)
-    size = targetData->getPrefTypeAlignment(v->getType());
+  // Reserving address space and recording the object's size are two different
+  // jobs, and they part company for an object with no bytes: it still needs an
+  // address of its own, distinct from every other object, but every access to
+  // it is out of bounds. Give it the type's alignment to sit in and record its
+  // size as it is.
+  unsigned reserved =
+      size ? size : targetData->getPrefTypeAlignment(v->getType());
 
   // Add padding between globals to be able to check memory overflows/underflows
   const unsigned globalsPadding = 1024;
   if (external) {
     decls.push_back(Decl::axiom(Expr::eq(
         Expr::id(name), Expr::fn("$add.ref", Expr::id(Naming::GLOBALS_BOTTOM),
-                                 pointerLit(externsOffset -= size)))));
+                                 pointerLit(externsOffset -= reserved)))));
   } else {
-    decls.push_back(Decl::axiom(Expr::eq(
-        Expr::id(name), pointerLit(globalsOffset -= (size + globalsPadding)))));
+    decls.push_back(Decl::axiom(
+        Expr::eq(Expr::id(name),
+                 pointerLit(globalsOffset -= (reserved + globalsPadding)))));
   }
 
   if (!llvm::isa<Function>(v) && allocate)
-    globalAllocations[v] = size;
+    globalAllocations[v] = sizeKnown ? size : reserved;
 
   return decls;
 }
