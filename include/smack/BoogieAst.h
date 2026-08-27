@@ -14,12 +14,18 @@ typedef std::pair<std::string, std::string> Binding;
 
 enum class RModeKind { RNE, RNA, RTP, RTN, RTZ };
 
+class Attr;
+
 class Expr {
 public:
   virtual ~Expr() {}
   virtual void print(std::ostream &os) const = 0;
   static const Expr *exists(std::list<Binding>, const Expr *e);
   static const Expr *forall(std::list<Binding>, const Expr *e);
+  static const Expr *forall(std::list<Binding>, const Expr *trigger,
+                            const Expr *e);
+  static const Expr *forall(std::list<Binding>, std::list<const Attr *> attrs,
+                            const Expr *trigger, const Expr *e);
   static const Expr *and_(const Expr *l, const Expr *r);
   static const Expr *or_(const Expr *l, const Expr *r);
   static const Expr *eq(const Expr *l, const Expr *r);
@@ -192,11 +198,14 @@ public:
 private:
   Quantifier quant;
   std::list<Binding> vars;
+  std::list<const Attr *> attrs;
+  std::list<const Expr *> triggers;
   const Expr *expr;
 
 public:
-  QuantExpr(Quantifier q, std::list<Binding> vs, const Expr *e)
-      : quant(q), vars(vs), expr(e) {}
+  QuantExpr(Quantifier q, std::list<Binding> vs, std::list<const Attr *> as,
+            std::list<const Expr *> ts, const Expr *e)
+      : quant(q), vars(vs), attrs(as), triggers(ts), expr(e) {}
   void print(std::ostream &os) const override;
 };
 

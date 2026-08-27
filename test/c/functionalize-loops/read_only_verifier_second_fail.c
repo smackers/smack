@@ -1,0 +1,29 @@
+#include "smack.h"
+
+// @expect error
+// @checkbpl grep -q "read-only verifier loop summary"
+
+static void check_both(const unsigned char *a, const unsigned char *b,
+                       unsigned n) {
+  for (unsigned i = 0; i < n; ++i) {
+    __VERIFIER_assume(a[i] == 0);
+    __VERIFIER_assert(a[i] == 0);
+    __VERIFIER_assert(b[i] == 0);
+  }
+}
+
+int main(void) {
+  unsigned char a[4096];
+  unsigned char b[4096];
+  unsigned n = __VERIFIER_nondet_unsigned();
+  __VERIFIER_assume(0 < n && n <= 4096);
+  for (unsigned i = 0; i < n; ++i) {
+    a[i] = 0;
+    b[i] = 0;
+  }
+  unsigned k = __VERIFIER_nondet_unsigned();
+  __VERIFIER_assume(k < n);
+  b[k] = 1;
+  check_both(a, b, n);
+  return 0;
+}

@@ -197,10 +197,12 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createLoopUnrollPass(32767));
   }
 
-  // Report loops here rather than later in the pipeline: after StaticUnroll,
-  // so that fully unrolled loops are correctly not reported, but before
-  // NormalizeLoops, which rewrites conditional latches and in doing so orphans
-  // the `llvm.loop` metadata that carries each loop's source range.
+  // Analyze bounds here: after StaticUnroll, so that fully unrolled loops are
+  // correctly absent, but before NormalizeLoops rewrites conditional latches.
+  // With functionalization enabled the pass records its results as metadata;
+  // Boogie generation emits them later, after it knows which loops were
+  // summarized. This avoids querying LLVM 14 ScalarEvolution on normalized
+  // loops, which crashes on some large driver programs.
   pass_manager.add(new smack::LoopBoundWarnings());
 
   // pass_manager.add(new llvm::StructRet());

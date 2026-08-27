@@ -117,6 +117,8 @@ def default_clang_compile_command(args, lib=False):
         cmd += ['-DSMACK_MAX_THREADS=' + str(args.max_threads)]
     if args.integer_encoding == 'bit-vector':
         cmd += ['-DBIT_PRECISE']
+    if args.functionalize_loops:
+        cmd += ['-DFUNCTIONALIZE_LOOPS']
     if sys.stdout.isatty():
         cmd += ['-fcolor-diagnostics']
     return cmd

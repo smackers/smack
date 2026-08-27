@@ -13,11 +13,21 @@ namespace smack {
 unsigned Decl::uniqueId = 0;
 
 const Expr *Expr::exists(std::list<Binding> vars, const Expr *e) {
-  return new QuantExpr(QuantExpr::Exists, vars, e);
+  return new QuantExpr(QuantExpr::Exists, vars, {}, {}, e);
 }
 
 const Expr *Expr::forall(std::list<Binding> vars, const Expr *e) {
-  return new QuantExpr(QuantExpr::Forall, vars, e);
+  return new QuantExpr(QuantExpr::Forall, vars, {}, {}, e);
+}
+
+const Expr *Expr::forall(std::list<Binding> vars, const Expr *trigger,
+                         const Expr *e) {
+  return new QuantExpr(QuantExpr::Forall, vars, {}, {trigger}, e);
+}
+
+const Expr *Expr::forall(std::list<Binding> vars, std::list<const Attr *> attrs,
+                         const Expr *trigger, const Expr *e) {
+  return new QuantExpr(QuantExpr::Forall, vars, attrs, {trigger}, e);
 }
 
 const Expr *Expr::and_(const Expr *l, const Expr *r) {
@@ -475,7 +485,12 @@ void QuantExpr::print(std::ostream &os) const {
     break;
   }
   print_seq<Binding>(os, vars, ", ");
-  os << " :: " << expr << ")";
+  os << " :: ";
+  for (const Attr *A : attrs)
+    os << A << " ";
+  for (const Expr *Trigger : triggers)
+    os << "{" << Trigger << "} ";
+  os << expr << ")";
 }
 
 void SelExpr::print(std::ostream &os) const {
