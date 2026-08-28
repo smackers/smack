@@ -12,6 +12,10 @@
 #include <unordered_set>
 #include <vector>
 
+namespace llvm {
+class DIType;
+}
+
 namespace smack {
 
 class Naming;
@@ -57,9 +61,12 @@ private:
   void rememberSourceExpr(const llvm::Value *v, const SourceExpr &expr);
   const std::vector<SourceExpr> *findSourceExprs(const llvm::Value *v) const;
   std::vector<SourceExpr> sourceLValues(const llvm::Value *pointer) const;
-  void rememberLoadSourceExpr(llvm::LoadInst &i);
+  void rememberLoadSourceExpr(llvm::LoadInst &i,
+                              const std::vector<SourceExpr> &lvalues);
   void rememberGEPSourceExpr(llvm::GetElementPtrInst &i);
   void rememberCastSourceExpr(llvm::CastInst &i);
+  void recordDerivedLValues(const std::vector<SourceExpr> &lvalues,
+                            const llvm::Value *value);
   void recordSourceLValues(const llvm::Value *pointer,
                            const llvm::Value *value);
 
