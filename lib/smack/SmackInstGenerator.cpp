@@ -10,10 +10,14 @@
 #include "smack/SmackRep.h"
 #include "smack/VectorOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/GraphWriter.h"
+#include <algorithm>
 #include <sstream>
 
 #include "llvm/Support/raw_ostream.h"
@@ -55,11 +59,339 @@ Type *getElemType(const Type *t, unsigned idx) {
     llvm_unreachable("Unexpected aggregate type.");
 }
 
+const DIType *stripDIAliases(const DIType *T) {
+  while (auto *DT = dyn_cast_or_null<DIDerivedType>(T)) {
+    switch (DT->getTag()) {
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+      T = DT->getBaseType();
+      continue;
+    default:
+      return T;
+    }
+  }
+  return T;
+}
+
+const DIType *dereferenceDIType(const DIType *T) {
+  T = stripDIAliases(T);
+  auto *DT = dyn_cast_or_null<DIDerivedType>(T);
+  if (!DT)
+    return nullptr;
+
+  switch (DT->getTag()) {
+  case dwarf::DW_TAG_pointer_type:
+  case dwarf::DW_TAG_reference_type:
+  case dwarf::DW_TAG_rvalue_reference_type:
+    return stripDIAliases(DT->getBaseType());
+  default:
+    return nullptr;
+  }
+}
+
+// The n-th LLVM struct element is not the n-th DW_TAG_member: bitfields share
+// a storage unit, clang inserts padding, and a base class occupies a field
+// without being a member. Matching on the byte offset instead keeps the name
+// tied to the field whose value is actually recorded.
+const DIDerivedType *getDIMemberAtOffset(const DIType *T,
+                                         uint64_t offsetInBits) {
+  auto *CT = dyn_cast_or_null<DICompositeType>(stripDIAliases(T));
+  if (!CT)
+    return nullptr;
+
+  switch (CT->getTag()) {
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_class_type:
+    break;
+  default:
+    // Every union member sits at offset zero, so a field index cannot pick one
+    // out; arrays and enumerations have no members to pick at all.
+    return nullptr;
+  }
+
+  const DIDerivedType *found = nullptr;
+  for (DINode *N : CT->getElements()) {
+    auto *Member = dyn_cast<DIDerivedType>(N);
+    if (!Member || Member->getTag() != dwarf::DW_TAG_member)
+      continue;
+    // A static member has no storage in the object, and an artificial one
+    // (a vtable pointer) is not something the source can name.
+    if (Member->isStaticMember() || Member->isArtificial())
+      continue;
+    if (Member->getOffsetInBits() != offsetInBits)
+      continue;
+    // Several bitfields share one storage unit, so the recorded value is not
+    // the value of any single one of them.
+    if (Member->isBitField())
+      return nullptr;
+    if (found)
+      return nullptr;
+    found = Member;
+  }
+  return found;
+}
+
+unsigned countDIArrayDims(const DICompositeType *CT) {
+  unsigned dims = 0;
+  for (DINode *N : CT->getElements())
+    if (isa<DISubrange>(N))
+      ++dims;
+  return dims;
+}
+
+// DWARF folds every dimension of a multi-dimensional array into one node, so
+// consuming a subscript may leave the remaining dimensions in place.
+const DIType *stepIntoDIArray(const DIType *T, unsigned &dimsLeft) {
+  auto *CT = dyn_cast_or_null<DICompositeType>(stripDIAliases(T));
+  if (!CT || CT->getTag() != dwarf::DW_TAG_array_type)
+    return nullptr;
+
+  if (dimsLeft == 0)
+    dimsLeft = countDIArrayDims(CT);
+  if (dimsLeft == 0)
+    return nullptr;
+
+  if (--dimsLeft > 0)
+    return T;
+  return stripDIAliases(CT->getBaseType());
+}
+
+std::string sourceIndex(const Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return std::to_string(CI->getSExtValue());
+  return "";
+}
+
 void SmackInstGenerator::emit(const Stmt *s) {
   // stringstream str;
   // s->print(str);
   // SDEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
   currBlock->addStmt(s);
+}
+
+void SmackInstGenerator::rememberSourceExpr(const llvm::Value *V,
+                                            const SourceExpr &E) {
+  if (!V || E.name.empty() || !E.type)
+    return;
+
+  auto &Exprs = sourceExprs[V];
+  auto Duplicate =
+      std::find_if(Exprs.begin(), Exprs.end(), [&E](const SourceExpr &Known) {
+        return Known.name == E.name && Known.isAddress == E.isAddress;
+      });
+  if (Duplicate == Exprs.end())
+    Exprs.push_back(E);
+}
+
+const std::vector<SmackInstGenerator::SourceExpr> *
+SmackInstGenerator::findSourceExprs(const llvm::Value *V) const {
+  if (!V)
+    return nullptr;
+
+  auto I = sourceExprs.find(V);
+  if (I != sourceExprs.end())
+    return &I->second;
+
+  // Only follow a strip that preserves the pointee type; a bitcast to another
+  // pointee would let the next GEP resolve field indices against the wrong
+  // debug type.
+  const Value *Stripped = V->stripPointerCastsAndAliases();
+  if (Stripped != V && Stripped->getType() == V->getType()) {
+    I = sourceExprs.find(Stripped);
+    if (I != sourceExprs.end())
+      return &I->second;
+  }
+  return nullptr;
+}
+
+std::vector<SmackInstGenerator::SourceExpr>
+SmackInstGenerator::sourceLValues(const llvm::Value *Pointer) const {
+  std::vector<SourceExpr> Results;
+  auto *Exprs = findSourceExprs(Pointer);
+  if (!Exprs)
+    return Results;
+
+  for (const auto &E : *Exprs) {
+    if (E.isAddress) {
+      Results.push_back(E);
+      continue;
+    }
+
+    const DIType *Pointee = dereferenceDIType(E.type);
+    if (!Pointee)
+      continue;
+
+    std::string Name = E.name;
+    if (Name.find_first_of(".->[]") != std::string::npos)
+      Name = "*(" + Name + ")";
+    else
+      Name = "*" + Name;
+    Results.push_back({Name, Pointee, true, true});
+  }
+  return Results;
+}
+
+void SmackInstGenerator::rememberLoadSourceExpr(
+    llvm::LoadInst &I, const std::vector<SourceExpr> &LValues) {
+  for (const auto &E : LValues)
+    rememberSourceExpr(&I, {E.name, E.type, false, E.isDerived});
+}
+
+void SmackInstGenerator::rememberGEPSourceExpr(llvm::GetElementPtrInst &I) {
+  auto *Bases = findSourceExprs(I.getPointerOperand());
+  if (!Bases)
+    return;
+
+  // Copy the bases: recording a new expression for this instruction may grow
+  // the map, and we would otherwise be iterating a vector inside it.
+  const std::vector<SourceExpr> Sources = *Bases;
+
+  for (const auto &Base : Sources) {
+    std::string Name = Base.name;
+    const DIType *DITy = Base.isAddress ? stripDIAliases(Base.type)
+                                        : dereferenceDIType(Base.type);
+    Type *IRTy = I.getSourceElementType();
+    // A pointer value still owes a dereference: the first member access spends
+    // it as '->', and the first subscript spends it as '(*p)[i]'.
+    bool PendingDeref = !Base.isAddress;
+    bool Derived = Base.isDerived;
+    bool Valid = DITy != nullptr;
+    unsigned Dims = 0;
+    unsigned Position = 0;
+
+    for (auto Index = I.idx_begin(), End = I.idx_end(); Valid && Index != End;
+         ++Index, ++Position) {
+      Value *IndexValue = Index->get();
+
+      // The first index steps through the pointer operand. A zero index names
+      // the same source object and leaves the dereference to the next index.
+      if (Position == 0) {
+        auto *CI = dyn_cast<ConstantInt>(IndexValue);
+        if (CI && CI->isZero())
+          continue;
+
+        std::string IndexName = sourceIndex(IndexValue);
+        if (IndexName.empty()) {
+          Valid = false;
+          break;
+        }
+
+        if (Base.isAddress) {
+          // Subscripting the address of an object only names an element when
+          // that object is an array; otherwise this is pointer arithmetic
+          // running past it, and 'x[1]' would name something that x is not.
+          const DIType *ElemDITy = stepIntoDIArray(DITy, Dims);
+          if (!ElemDITy) {
+            Valid = false;
+            break;
+          }
+          DITy = ElemDITy;
+        }
+
+        Name += "[" + IndexName + "]";
+        PendingDeref = false;
+        Derived = true;
+        continue;
+      }
+
+      if (auto *ST = dyn_cast<StructType>(IRTy)) {
+        auto *CI = dyn_cast<ConstantInt>(IndexValue);
+        if (!CI || CI->getZExtValue() >= ST->getNumElements()) {
+          Valid = false;
+          break;
+        }
+
+        unsigned Field = CI->getZExtValue();
+        const DIDerivedType *Member =
+            getDIMemberAtOffset(DITy, I.getModule()
+                                          ->getDataLayout()
+                                          .getStructLayout(ST)
+                                          ->getElementOffsetInBits(Field));
+        if (!Member || Member->getName().empty()) {
+          Valid = false;
+          break;
+        }
+
+        Name += (PendingDeref ? "->" : ".") + Member->getName().str();
+        PendingDeref = false;
+        Derived = true;
+        IRTy = ST->getElementType(Field);
+        DITy = stripDIAliases(Member->getBaseType());
+        Dims = 0;
+        continue;
+      }
+
+      std::string IndexName = sourceIndex(IndexValue);
+      if (IndexName.empty()) {
+        Valid = false;
+        break;
+      }
+
+      Type *ElemIRTy = nullptr;
+      if (auto *AT = dyn_cast<ArrayType>(IRTy))
+        ElemIRTy = AT->getElementType();
+      else if (auto *VT = dyn_cast<FixedVectorType>(IRTy))
+        ElemIRTy = VT->getElementType();
+
+      const DIType *ElemDITy = stepIntoDIArray(DITy, Dims);
+      if (!ElemIRTy || !ElemDITy) {
+        Valid = false;
+        break;
+      }
+
+      // '*p' subscripted is '(*p)[i]'; 'p[i]' would name a different address.
+      if (PendingDeref)
+        Name = "(*" + Name + ")";
+      Name += "[" + IndexName + "]";
+      PendingDeref = false;
+      Derived = true;
+      IRTy = ElemIRTy;
+      DITy = ElemDITy;
+    }
+
+    if (Valid)
+      rememberSourceExpr(&I, {Name, DITy, true, Derived});
+  }
+}
+
+void SmackInstGenerator::rememberCastSourceExpr(llvm::CastInst &I) {
+  // A cast that changes the type no longer describes the same source object:
+  // the pointee of a bitcast decides which struct the next GEP resolves its
+  // field indices against, and an integer cast changes the value outright.
+  if (I.getSrcTy() != I.getDestTy())
+    return;
+
+  auto *Exprs = findSourceExprs(I.getOperand(0));
+  if (!Exprs)
+    return;
+  const std::vector<SourceExpr> Sources = *Exprs;
+  for (const auto &E : Sources)
+    rememberSourceExpr(&I, E);
+}
+
+void SmackInstGenerator::recordDerivedLValues(
+    const std::vector<SourceExpr> &LValues, const llvm::Value *V) {
+  // boogie_si_record_* models a single scalar; an aggregate or a vector has no
+  // counterexample value to print.
+  llvm::Type *T = V->getType();
+  if (!SmackOptions::SourceLocSymbols || T->isAggregateType() ||
+      T->isVectorTy() || T->isVoidTy())
+    return;
+
+  std::set<std::string> Recorded;
+  for (const auto &E : LValues) {
+    if (!E.isDerived || !Recorded.insert(E.name).second)
+      continue;
+    emit(recordProcedureCall(V, {Attr::attr("cexpr", E.name)}));
+  }
+}
+
+void SmackInstGenerator::recordSourceLValues(const llvm::Value *Pointer,
+                                             const llvm::Value *V) {
+  recordDerivedLValues(sourceLValues(Pointer), V);
 }
 
 const Stmt *
@@ -498,6 +830,9 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   }
 
   emit(Stmt::assign(rep->expr(&li), E));
+  auto LValues = sourceLValues(P);
+  rememberLoadSourceExpr(li, LValues);
+  recordDerivedLValues(LValues, &li);
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
@@ -525,6 +860,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
       emit(inverseAssume);
     }
   }
+
+  recordSourceLValues(P, V);
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable *G =
@@ -579,6 +916,7 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst &i) {
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
   processInstruction(I);
   emit(Stmt::assign(rep->expr(&I), rep->ptrArith(&I)));
+  rememberGEPSourceExpr(I);
 }
 
 /******************************************************************************/
@@ -596,6 +934,7 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
     E = rep->cast(&I);
   }
   emit(Stmt::assign(rep->expr(&I), E));
+  rememberCastSourceExpr(I);
 
   if (I.getOpcode() == Instruction::BitCast) {
     if (const Stmt *inverseAssume =
@@ -835,12 +1174,29 @@ bool isSourceLoc(const Stmt *stmt) {
          (stmt->getKind() == Stmt::CALL);
 }
 
+void SmackInstGenerator::visitDbgDeclareInst(llvm::DbgDeclareInst &DDI) {
+  processInstruction(DDI);
+
+  if (SmackOptions::SourceLocSymbols && !DDI.isUndef() &&
+      DDI.getExpression()->getNumElements() == 0) {
+    const DILocalVariable *Var = DDI.getVariable();
+    rememberSourceExpr(DDI.getAddress(),
+                       {Var->getName().str(), Var->getType(), true, false});
+  }
+
+  // Preserve the previous llvm.dbg.declare translation.
+  emit(Stmt::skip());
+}
+
 void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
   processInstruction(dvi);
 
   if (SmackOptions::SourceLocSymbols) {
     Value *V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
+    if (V && !dvi.isUndef() && dvi.getExpression()->getNumElements() == 0)
+      rememberSourceExpr(V,
+                         {var->getName().str(), var->getType(), false, false});
     // if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
     if (V && !V->getType()->isPointerTy()) {
       // if (currBlock->begin() != currBlock->end()
@@ -1224,7 +1580,6 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
           {llvm::Intrinsic::ctlz, ctlz},
           {llvm::Intrinsic::ctpop, ctpop},
           {llvm::Intrinsic::cttz, cttz},
-          {llvm::Intrinsic::dbg_declare, ignore},
           {llvm::Intrinsic::dbg_label, ignore},
           {llvm::Intrinsic::copysign, copysign},
           {llvm::Intrinsic::expect, identity},
