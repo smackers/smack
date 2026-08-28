@@ -10,7 +10,9 @@
 #include "smack/SmackRep.h"
 #include "smack/VectorOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/GraphWriter.h"
@@ -55,11 +57,236 @@ Type *getElemType(const Type *t, unsigned idx) {
     llvm_unreachable("Unexpected aggregate type.");
 }
 
+const DIType *stripDIAliases(const DIType *T) {
+  while (auto *DT = dyn_cast_or_null<DIDerivedType>(T)) {
+    switch (DT->getTag()) {
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+      T = DT->getBaseType();
+      continue;
+    default:
+      return T;
+    }
+  }
+  return T;
+}
+
+const DIType *dereferenceDIType(const DIType *T) {
+  T = stripDIAliases(T);
+  auto *DT = dyn_cast_or_null<DIDerivedType>(T);
+  if (!DT)
+    return nullptr;
+
+  switch (DT->getTag()) {
+  case dwarf::DW_TAG_pointer_type:
+  case dwarf::DW_TAG_reference_type:
+  case dwarf::DW_TAG_rvalue_reference_type:
+    return stripDIAliases(DT->getBaseType());
+  default:
+    return nullptr;
+  }
+}
+
+const DIDerivedType *getDIMember(const DIType *T, unsigned index) {
+  auto *CT = dyn_cast_or_null<DICompositeType>(stripDIAliases(T));
+  if (!CT)
+    return nullptr;
+
+  unsigned memberIndex = 0;
+  for (DINode *N : CT->getElements()) {
+    auto *Member = dyn_cast<DIDerivedType>(N);
+    if (!Member || Member->getTag() != dwarf::DW_TAG_member)
+      continue;
+    if (memberIndex++ == index)
+      return Member;
+  }
+  return nullptr;
+}
+
+std::string sourceIndex(const Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return std::to_string(CI->getSExtValue());
+  return "";
+}
+
 void SmackInstGenerator::emit(const Stmt *s) {
   // stringstream str;
   // s->print(str);
   // SDEBUG(llvm::errs() << "emit:   " << str.str() << "\n");
   currBlock->addStmt(s);
+}
+
+void SmackInstGenerator::rememberSourceExpr(const llvm::Value *V,
+                                            const SourceExpr &E) {
+  if (!V || E.name.empty() || !E.type)
+    return;
+
+  auto &Exprs = sourceExprs[V];
+  auto Duplicate =
+      std::find_if(Exprs.begin(), Exprs.end(), [&E](const SourceExpr &Known) {
+        return Known.name == E.name && Known.isAddress == E.isAddress;
+      });
+  if (Duplicate == Exprs.end())
+    Exprs.push_back(E);
+}
+
+const std::vector<SmackInstGenerator::SourceExpr> *
+SmackInstGenerator::findSourceExprs(const llvm::Value *V) const {
+  if (!V)
+    return nullptr;
+
+  auto I = sourceExprs.find(V);
+  if (I != sourceExprs.end())
+    return &I->second;
+
+  const Value *Stripped = V->stripPointerCastsAndAliases();
+  if (Stripped != V) {
+    I = sourceExprs.find(Stripped);
+    if (I != sourceExprs.end())
+      return &I->second;
+  }
+  return nullptr;
+}
+
+std::vector<SmackInstGenerator::SourceExpr>
+SmackInstGenerator::sourceLValues(const llvm::Value *Pointer) const {
+  std::vector<SourceExpr> Results;
+  auto *Exprs = findSourceExprs(Pointer);
+  if (!Exprs)
+    return Results;
+
+  for (const auto &E : *Exprs) {
+    if (E.isAddress) {
+      Results.push_back(E);
+      continue;
+    }
+
+    const DIType *Pointee = dereferenceDIType(E.type);
+    if (!Pointee)
+      continue;
+
+    std::string Name = E.name;
+    if (Name.find_first_of(".->[]") != std::string::npos)
+      Name = "*(" + Name + ")";
+    else
+      Name = "*" + Name;
+    Results.push_back({Name, Pointee, true, true});
+  }
+  return Results;
+}
+
+void SmackInstGenerator::rememberLoadSourceExpr(llvm::LoadInst &I) {
+  for (const auto &E : sourceLValues(I.getPointerOperand()))
+    rememberSourceExpr(&I, {E.name, E.type, false, E.isDerived});
+}
+
+void SmackInstGenerator::rememberGEPSourceExpr(llvm::GetElementPtrInst &I) {
+  auto *Bases = findSourceExprs(I.getPointerOperand());
+  if (!Bases)
+    return;
+
+  for (const auto &Base : *Bases) {
+    std::string Name = Base.name;
+    const DIType *DITy = Base.isAddress ? stripDIAliases(Base.type)
+                                        : dereferenceDIType(Base.type);
+    Type *IRTy = I.getSourceElementType();
+    bool UseArrow = !Base.isAddress;
+    bool Derived = Base.isDerived;
+    bool Valid = DITy != nullptr;
+    unsigned Position = 0;
+
+    for (auto Index = I.idx_begin(), End = I.idx_end(); Valid && Index != End;
+         ++Index, ++Position) {
+      Value *IndexValue = Index->get();
+
+      // The first index steps through the pointer operand. A zero index names
+      // the same source object and leaves '.' versus '->' to the first member.
+      if (Position == 0) {
+        auto *CI = dyn_cast<ConstantInt>(IndexValue);
+        if (!CI || !CI->isZero()) {
+          std::string IndexName = sourceIndex(IndexValue);
+          if (IndexName.empty()) {
+            Valid = false;
+            break;
+          }
+          Name += "[" + IndexName + "]";
+          UseArrow = false;
+          Derived = true;
+        }
+        continue;
+      }
+
+      if (auto *ST = dyn_cast<StructType>(IRTy)) {
+        auto *CI = dyn_cast<ConstantInt>(IndexValue);
+        if (!CI || CI->getZExtValue() >= ST->getNumElements()) {
+          Valid = false;
+          break;
+        }
+
+        unsigned Field = CI->getZExtValue();
+        const DIDerivedType *Member = getDIMember(DITy, Field);
+        if (!Member || Member->getName().empty()) {
+          Valid = false;
+          break;
+        }
+
+        Name += (UseArrow ? "->" : ".") + Member->getName().str();
+        UseArrow = false;
+        Derived = true;
+        IRTy = ST->getElementType(Field);
+        DITy = stripDIAliases(Member->getBaseType());
+        continue;
+      }
+
+      std::string IndexName = sourceIndex(IndexValue);
+      if (IndexName.empty()) {
+        Valid = false;
+        break;
+      }
+      Name += "[" + IndexName + "]";
+      UseArrow = false;
+      Derived = true;
+
+      if (auto *AT = dyn_cast<ArrayType>(IRTy)) {
+        IRTy = AT->getElementType();
+        auto *CT = dyn_cast_or_null<DICompositeType>(stripDIAliases(DITy));
+        DITy = CT ? stripDIAliases(CT->getBaseType()) : nullptr;
+      } else if (auto *VT = dyn_cast<VectorType>(IRTy)) {
+        IRTy = VT->getElementType();
+        auto *CT = dyn_cast_or_null<DICompositeType>(stripDIAliases(DITy));
+        DITy = CT ? stripDIAliases(CT->getBaseType()) : nullptr;
+      } else {
+        Valid = false;
+      }
+    }
+
+    if (Valid)
+      rememberSourceExpr(&I, {Name, DITy, true, Derived});
+  }
+}
+
+void SmackInstGenerator::rememberCastSourceExpr(llvm::CastInst &I) {
+  auto *Exprs = findSourceExprs(I.getOperand(0));
+  if (!Exprs)
+    return;
+  for (const auto &E : *Exprs)
+    rememberSourceExpr(&I, E);
+}
+
+void SmackInstGenerator::recordSourceLValues(const llvm::Value *Pointer,
+                                             const llvm::Value *Value) {
+  if (!SmackOptions::SourceLocSymbols || Value->getType()->isAggregateType())
+    return;
+
+  std::set<std::string> Recorded;
+  for (const auto &E : sourceLValues(Pointer)) {
+    if (!E.isDerived || !Recorded.insert(E.name).second)
+      continue;
+    emit(recordProcedureCall(Value, {Attr::attr("cexpr", E.name)}));
+  }
 }
 
 const Stmt *
@@ -498,6 +725,8 @@ void SmackInstGenerator::visitLoadInst(llvm::LoadInst &li) {
   }
 
   emit(Stmt::assign(rep->expr(&li), E));
+  rememberLoadSourceExpr(li);
+  recordSourceLValues(P, &li);
 
   if (SmackOptions::MemoryModelDebug) {
     emit(Stmt::call(Naming::REC_MEM_OP, {Expr::id(Naming::MEM_OP_VAL)}));
@@ -525,6 +754,8 @@ void SmackInstGenerator::visitStoreInst(llvm::StoreInst &si) {
       emit(inverseAssume);
     }
   }
+
+  recordSourceLValues(P, V);
 
   if (SmackOptions::SourceLocSymbols) {
     if (const llvm::GlobalVariable *G =
@@ -579,6 +810,7 @@ void SmackInstGenerator::visitAtomicRMWInst(llvm::AtomicRMWInst &i) {
 void SmackInstGenerator::visitGetElementPtrInst(llvm::GetElementPtrInst &I) {
   processInstruction(I);
   emit(Stmt::assign(rep->expr(&I), rep->ptrArith(&I)));
+  rememberGEPSourceExpr(I);
 }
 
 /******************************************************************************/
@@ -596,6 +828,7 @@ void SmackInstGenerator::visitCastInst(llvm::CastInst &I) {
     E = rep->cast(&I);
   }
   emit(Stmt::assign(rep->expr(&I), E));
+  rememberCastSourceExpr(I);
 
   if (I.getOpcode() == Instruction::BitCast) {
     if (const Stmt *inverseAssume =
@@ -835,12 +1068,29 @@ bool isSourceLoc(const Stmt *stmt) {
          (stmt->getKind() == Stmt::CALL);
 }
 
+void SmackInstGenerator::visitDbgDeclareInst(llvm::DbgDeclareInst &DDI) {
+  processInstruction(DDI);
+
+  if (SmackOptions::SourceLocSymbols && !DDI.isUndef() &&
+      DDI.getExpression()->getNumElements() == 0) {
+    const DILocalVariable *Var = DDI.getVariable();
+    rememberSourceExpr(DDI.getAddress(),
+                       {Var->getName().str(), Var->getType(), true, false});
+  }
+
+  // Preserve the previous llvm.dbg.declare translation.
+  emit(Stmt::skip());
+}
+
 void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
   processInstruction(dvi);
 
   if (SmackOptions::SourceLocSymbols) {
     Value *V = dvi.getValue();
     const llvm::DILocalVariable *var = dvi.getVariable();
+    if (V && !dvi.isUndef() && dvi.getExpression()->getNumElements() == 0)
+      rememberSourceExpr(V,
+                         {var->getName().str(), var->getType(), false, false});
     // if (V && !V->getType()->isPointerTy() && !llvm::isa<ConstantInt>(V)) {
     if (V && !V->getType()->isPointerTy()) {
       // if (currBlock->begin() != currBlock->end()

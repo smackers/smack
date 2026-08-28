@@ -8,7 +8,9 @@
 #include "llvm/IR/InstVisitor.h"
 #include <map>
 #include <set>
+#include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace smack {
 
@@ -24,6 +26,13 @@ class SmackRep;
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
+  struct SourceExpr {
+    std::string name;
+    const llvm::DIType *type;
+    bool isAddress;
+    bool isDerived;
+  };
+
   llvm::LoopInfo &loops;
   SmackRep *rep;
   ProcDecl *proc;
@@ -32,7 +41,7 @@ private:
   Block *currBlock;
   llvm::BasicBlock::const_iterator nextInst;
   std::map<const llvm::BasicBlock *, Block *> blockMap;
-  std::map<const llvm::Value *, std::string> sourceNames;
+  std::map<const llvm::Value *, std::vector<SourceExpr>> sourceExprs;
 
   Block *createBlock();
   Block *getBlock(llvm::BasicBlock *bb);
@@ -44,6 +53,15 @@ private:
   void processInstruction(llvm::Instruction &i);
   void nameInstruction(llvm::Instruction &i);
   void annotate(llvm::Instruction &i, Block *b);
+
+  void rememberSourceExpr(const llvm::Value *v, const SourceExpr &expr);
+  const std::vector<SourceExpr> *findSourceExprs(const llvm::Value *v) const;
+  std::vector<SourceExpr> sourceLValues(const llvm::Value *pointer) const;
+  void rememberLoadSourceExpr(llvm::LoadInst &i);
+  void rememberGEPSourceExpr(llvm::GetElementPtrInst &i);
+  void rememberCastSourceExpr(llvm::CastInst &i);
+  void recordSourceLValues(const llvm::Value *pointer,
+                           const llvm::Value *value);
 
   const Stmt *recordProcedureCall(const llvm::Value *V,
                                   std::list<const Attr *> attrs);
@@ -91,6 +109,7 @@ public:
   void visitSelectInst(llvm::SelectInst &i);
   void visitCallInst(llvm::CallInst &i);
   void visitCallBrInst(llvm::CallBrInst &i);
+  void visitDbgDeclareInst(llvm::DbgDeclareInst &i);
   void visitDbgValueInst(llvm::DbgValueInst &i);
   // TODO implement va_arg
   void visitLandingPadInst(llvm::LandingPadInst &i);
