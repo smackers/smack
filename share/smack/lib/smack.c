@@ -33,12 +33,6 @@
  *
  */
 
-void *__builtinx_va_arg(char *x) {
-  // Underapproximate this function by not blocking verification
-  //__SMACK_code("assume false;");
-  return 0;
-}
-
 long __builtinx_expect(long exp, long c) { return exp; }
 
 void __VERIFIER_assume(int x) {
