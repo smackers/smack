@@ -119,6 +119,7 @@ add_library(smackTranslator STATIC
   include/smack/IntegerOverflowChecker.h
   include/smack/RewriteBitwiseOps.h
   include/smack/NormalizeLoops.h
+  include/smack/PropertySlicing.h
   include/smack/RustFixes.h
   include/smack/AnnotateLoopExits.h
   include/smack/SplitAggregateValue.h
@@ -147,6 +148,7 @@ add_library(smackTranslator STATIC
   lib/smack/IntegerOverflowChecker.cpp
   lib/smack/RewriteBitwiseOps.cpp
   lib/smack/NormalizeLoops.cpp
+  lib/smack/PropertySlicing.cpp
   lib/smack/RustFixes.cpp
   lib/smack/AnnotateLoopExits.cpp
   lib/smack/SplitAggregateValue.cpp

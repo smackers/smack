@@ -1,0 +1,7 @@
+skip: false
+verifiers: [corral]
+# Pinned because pthread_spin_wait{,_fail}.c pass --pthread, and Corral rejects
+# the prelude the other two memory models emit for a concurrent program
+# ("Ensures has a shared global"). test/c/pthread pins it for the same reason.
+memory: [no-reuse-impls]
+flags: [--property-slicing]
