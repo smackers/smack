@@ -583,6 +583,9 @@ const Expr *SmackRep::integerToPointer(const Expr *e, unsigned width) {
     e = Expr::fn(opName("$trunc", {width, ptrSizeInBits}), e);
   e = bitConversion(e, SmackOptions::BitPrecise,
                     SmackOptions::BitPrecisePointers);
+  // Non-bitvector pointers use the signed-canonical machine representation.
+  if (SmackOptions::WrappedIntegerEncoding && !SmackOptions::BitPrecisePointers)
+    e = Expr::fn(opName(Naming::getIntWrapFunc(false), {ptrSizeInBits}), e);
   return e;
 }
 
