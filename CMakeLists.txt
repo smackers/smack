@@ -110,6 +110,7 @@ add_library(smackTranslator STATIC
   include/smack/SmackOptions.h
   include/smack/CodifyStaticInits.h
   include/smack/RemoveDeadDefs.h
+  include/smack/SmackFunctionInliner.h
   include/smack/ExtractContracts.h
   include/smack/VerifierCodeMetadata.h
   include/smack/SimplifyLibCalls.h
@@ -138,6 +139,7 @@ add_library(smackTranslator STATIC
   lib/smack/SmackOptions.cpp
   lib/smack/CodifyStaticInits.cpp
   lib/smack/RemoveDeadDefs.cpp
+  lib/smack/SmackFunctionInliner.cpp
   lib/smack/ExtractContracts.cpp
   lib/smack/VerifierCodeMetadata.cpp
   lib/smack/SimplifyLibCalls.cpp
