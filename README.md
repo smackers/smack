@@ -4,12 +4,12 @@
 <img src="docs/smack-logo.png" width=400 alt="SMACK Logo" align="right">
 
 SMACK is both a *modular software verification toolchain* and a
-*self-contained software verifier*. It can be used to verify the assertions
-in its input programs. In its default mode, assertions are verified up to a
-given bound on loop iterations and recursion depth; it contains experimental
-support for unbounded verification as well. SMACK handles complicated feature
-of the C language, including dynamic memory allocation, pointer arithmetic, and
-bitwise operations.
+*self-contained software verifier*. It searches for violations of assertions
+in its input programs. In its default mode, that search is bounded by loop
+iterations and recursion depth; its precision also depends on the selected
+translation models and encodings. SMACK handles complicated features of the C
+language, including dynamic memory allocation, pointer arithmetic, and bitwise
+operations.
 
 Under the hood, SMACK is a translator from the [LLVM](http://www.llvm.org)
 compiler's popular intermediate representation (IR) into the
@@ -55,6 +55,11 @@ benchmarking of SMACK.
 
 1. [System Requirements and Installation](docs/installation.md)
 1. [Running SMACK](docs/running.md)
+1. [Command-Line Options](docs/command-line-options.md)
+1. [Build Workflows](docs/build-workflows.md)
+1. [Advanced Modeling](docs/advanced.md)
+1. [Troubleshooting](docs/troubleshooting.md)
+1. [Usage Notes](docs/usage-notes.md)
 1. [Demos](docs/demos.md)
 1. [FAQ](docs/faq.md)
 1. [Inline Boogie Code](docs/boogie-code.md)

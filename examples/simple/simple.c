@@ -1,5 +1,6 @@
 // examples/simple/simple.c
 #include "smack.h"
+#include <assert.h>
 #include <stdlib.h>
 
 #define TRUE 1

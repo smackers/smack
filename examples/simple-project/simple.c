@@ -2,6 +2,7 @@
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "simple.h"
+#include <assert.h>
 
 void test(int a) {
   int b = a;
