@@ -526,7 +526,13 @@ bool SmackRep::isUnsafeFloatAccess(const Type *elemTy, const Type *resultTy) {
 
 const Expr *SmackRep::load(const llvm::Value *P) {
   const unsigned R = regions->idx(P);
-  return functionalLoad(P, Expr::id(memPath(R)), SmackRep::expr(P));
+  const Expr *M = Expr::id(memPath(R));
+  // A singleton region is read as the map itself. Its address must not be
+  // rendered: doing so names P, and when P is defined in a block laid out
+  // after this load that renumbers the procedure's locals.
+  if (regions->get(R).isSingleton())
+    return M;
+  return functionalLoad(P, M, SmackRep::expr(P));
 }
 
 const Expr *SmackRep::functionalLoad(const llvm::Value *P, const Expr *memory,
