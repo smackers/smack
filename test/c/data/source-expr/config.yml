@@ -1,0 +1,3 @@
+# Recorded source expressions are only rendered into a counterexample by
+# Corral's /printDataValues, so @checkout cannot match under Boogie.
+verifiers: [corral]

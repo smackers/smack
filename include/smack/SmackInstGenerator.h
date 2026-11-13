@@ -10,7 +10,13 @@
 #include "llvm/IR/InstVisitor.h"
 #include <map>
 #include <set>
+#include <string>
 #include <unordered_set>
+#include <vector>
+
+namespace llvm {
+class DIType;
+}
 
 namespace smack {
 
@@ -26,6 +32,13 @@ class SmackRep;
 class SmackInstGenerator : public llvm::InstVisitor<SmackInstGenerator> {
 
 private:
+  struct SourceExpr {
+    std::string name;
+    const llvm::DIType *type;
+    bool isAddress;
+    bool isDerived;
+  };
+
   llvm::LoopInfo &loops;
   llvm::ScalarEvolution *scalarEvolution;
   llvm::AAResults *aliasAnalysis;
@@ -38,7 +51,7 @@ private:
   Block *currBlock;
   llvm::BasicBlock::const_iterator nextInst;
   std::map<const llvm::BasicBlock *, Block *> blockMap;
-  std::map<const llvm::Value *, std::string> sourceNames;
+  std::map<const llvm::Value *, std::vector<SourceExpr>> sourceExprs;
   std::vector<FunctionalLoopSummary> functionalLoops;
   std::map<const llvm::BranchInst *, const FunctionalLoopSummary *>
       summariesByPreheader;
@@ -80,6 +93,18 @@ private:
   functionalValue(const llvm::Value *value,
                   const FunctionalLoopSummary &summary, const Expr *iteration,
                   const std::map<std::string, std::string> &entryMemories);
+
+  void rememberSourceExpr(const llvm::Value *v, const SourceExpr &expr);
+  const std::vector<SourceExpr> *findSourceExprs(const llvm::Value *v) const;
+  std::vector<SourceExpr> sourceLValues(const llvm::Value *pointer) const;
+  void rememberLoadSourceExpr(llvm::LoadInst &i,
+                              const std::vector<SourceExpr> &lvalues);
+  void rememberGEPSourceExpr(llvm::GetElementPtrInst &i);
+  void rememberCastSourceExpr(llvm::CastInst &i);
+  void recordDerivedLValues(const std::vector<SourceExpr> &lvalues,
+                            const llvm::Value *value);
+  void recordSourceLValues(const llvm::Value *pointer,
+                           const llvm::Value *value);
 
   const Stmt *recordProcedureCall(const llvm::Value *V,
                                   std::list<const Attr *> attrs);
@@ -132,6 +157,7 @@ public:
   void visitSelectInst(llvm::SelectInst &i);
   void visitCallInst(llvm::CallInst &i);
   void visitCallBrInst(llvm::CallBrInst &i);
+  void visitDbgDeclareInst(llvm::DbgDeclareInst &i);
   void visitDbgValueInst(llvm::DbgValueInst &i);
   // TODO implement va_arg
   void visitLandingPadInst(llvm::LandingPadInst &i);
