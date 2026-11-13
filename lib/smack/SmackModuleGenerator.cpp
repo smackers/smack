@@ -1,7 +1,6 @@
 //
 // This file is distributed under the MIT License. See LICENSE for details.
 //
-#define DEBUG_TYPE "smack-mod-gen"
 #include "smack/SmackModuleGenerator.h"
 #include "smack/BoogieAst.h"
 #include "smack/DSAWrapper.h"
@@ -12,6 +11,12 @@
 #include "smack/SmackInstGenerator.h"
 #include "smack/SmackOptions.h"
 #include "smack/SmackRep.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "smack-mod-gen"
 
 namespace smack {
 
@@ -25,6 +30,11 @@ SmackModuleGenerator::SmackModuleGenerator() : ModulePass(ID) {
 void SmackModuleGenerator::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<llvm::LoopInfoWrapperPass>();
+  if (SmackOptions::FunctionalizeLoops) {
+    AU.addRequired<llvm::ScalarEvolutionWrapperPass>();
+    AU.addRequired<llvm::AAResultsWrapperPass>();
+    AU.addRequired<llvm::MemorySSAWrapperPass>();
+  }
   AU.addRequired<Regions>();
   if (SmackOptions::MemorySafety)
     AU.addRequired<DSAWrapper>();
@@ -74,12 +84,22 @@ void SmackModuleGenerator::generateProgram(llvm::Module &M) {
     if (!F.empty() && !F.getEntryBlock().empty()) {
       SDEBUG(errs() << "Analyzing function body: " << naming.get(F) << "\n");
 
+      bool EmitLoopBoundWarnings = SmackOptions::FunctionalizeLoops;
       for (auto P : procs) {
-        SmackInstGenerator igen(
-            getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo(), &rep, P,
-            &naming);
+        auto &LoopInfo = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+        ScalarEvolution *SE = nullptr;
+        MemorySSA *MSSA = nullptr;
+        AAResults *AA = nullptr;
+        if (SmackOptions::FunctionalizeLoops) {
+          SE = &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
+          MSSA = &getAnalysis<MemorySSAWrapperPass>(F).getMSSA();
+          AA = &getAnalysis<AAResultsWrapperPass>(F).getAAResults();
+        }
+        SmackInstGenerator igen(LoopInfo, SE, AA, MSSA, &rep, P, &naming,
+                                EmitLoopBoundWarnings);
         SDEBUG(errs() << "Generating body for " << naming.get(F) << "\n");
-        igen.visit(F);
+        igen.generateFunction(F);
+        EmitLoopBoundWarnings = false;
         SDEBUG(errs() << "\n");
 
         // First execute static initializers, in the main procedure.
