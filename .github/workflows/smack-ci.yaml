@@ -4,12 +4,9 @@ on: [push, pull_request]
 
 jobs:
   check-regressions:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-26.04
     strategy:
-      # A failure on one Ubuntu release should not cancel the other's jobs.
-      fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-26.04]
         regtest_env:
           [
             "--exhaustive --folder=c/basic",
@@ -66,7 +63,7 @@ jobs:
         run: ./bin/build.sh
 
   build-and-push-docker:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: check-regressions
 
     steps:
