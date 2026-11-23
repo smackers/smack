@@ -36,6 +36,7 @@ TEST_SMACK=${TEST_SMACK:-1}
 INSTALL_LLVM=${INSTALL_LLVM:-1}
 BUILD_LLVM=${BUILD_LLVM:-0} # LLVM is typically installed from packages (see below)
 BUILD_Z3=${BUILD_Z3:-0} # Z3 is typically installed from binary (see below)
+DOWNLOAD_LLVM=${DOWNLOAD_LLVM:-0} # Set for platforms that package no LLVM 14 (see below)
 
 # Support for more programming languages
 INSTALL_OBJECTIVEC=${INSTALL_OBJECTIVEC:-0}
@@ -63,6 +64,11 @@ SMACKENV=${ROOT_DIR}/smack.environment
 WGET="wget --no-verbose"
 NINJA="ninja"
 Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.39.zip"
+# LLVM's own release binaries, for platforms that package no LLVM 14. 14.0.6 is
+# the version Ubuntu 24.04 packages, and its RHEL 8 build needs only glibc and
+# libstdc++ (the 14.0.0 Ubuntu 18.04 build needs libtinfo5, which recent
+# distributions no longer ship).
+LLVM_DOWNLOAD_LINK="https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/clang+llvm-14.0.6-x86_64-linux-gnu-rhel-8.4.tar.xz"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -71,6 +77,7 @@ CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
 DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-6.0 libboost-all-dev"
+DEV_DEPENDENCIES="python3-pip clang-format-${LLVM_SHORT_VERSION}"
 
 shopt -s extglob
 
@@ -206,6 +213,18 @@ linux-@(ubuntu|neon)-@(16|18|20|22|24)*)
   fi
   ;;
 
+linux-@(ubuntu|neon)-26*)
+  # Ubuntu 26.04 packages neither LLVM 14 nor .NET 6. LLVM 14 comes from LLVM's
+  # release binaries instead (which include clang-format), and Boogie and
+  # Corral, built for .NET 6, run on the archive's .NET 10 under
+  # DOTNET_ROLL_FORWARD=Major.
+  DEPENDENCIES="${DEPENDENCIES/dotnet-sdk-6.0/dotnet-sdk-10.0} xz-utils"
+  DEV_DEPENDENCIES="python3-pip"
+  if [ ${INSTALL_LLVM} -eq 1 ] ; then
+    DOWNLOAD_LLVM=1
+  fi
+  ;;
+
 linux---x86_64)
   BUILD_Z3=1
   INSTALL_Z3=0
@@ -248,7 +267,7 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20|22|24)*)
+  linux-@(ubuntu|neon)-@(1[68]|20|22|24|26)*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
     16*)
@@ -266,6 +285,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     24*)
       UBUNTU_CODENAME="noble"
       ;;
+    26*)
+      UBUNTU_CODENAME="resolute"
+      ;;
     *)
       puts "Release ${RELEASE_VERSION} for ${distro} not supported. Dependencies must be installed manually."
       exit 1
@@ -281,8 +303,10 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     # (universe) repositories, and apt.llvm.org has no llvm-toolchain-noble feed
     # for it, so on 24.04 the LLVM packages are installed directly from the Ubuntu
     # archive instead of adding an apt.llvm.org repository (which also avoids the
-    # removed apt-key on noble).
-    if [ ${INSTALL_LLVM} -eq 1 ] && [[ "$RELEASE_VERSION" != 24* ]] ; then
+    # removed apt-key on noble). Ubuntu 26.04 (resolute) packages no LLVM 14 at
+    # all, and neither does apt.llvm.org; it uses LLVM's release binaries (see
+    # DOWNLOAD_LLVM).
+    if [ ${INSTALL_LLVM} -eq 1 ] && [[ "$RELEASE_VERSION" != 2[46]* ]] ; then
       ${WGET} -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
       sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     fi
@@ -293,9 +317,11 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     # - 24.04: .NET 6 is neither in the Ubuntu archive nor Microsoft's feed
     #   (Microsoft stopped publishing to packages.microsoft.com for 24.04), so
     #   use Canonical's dotnet backports PPA
+    # - 26.04: no repository has .NET 6, so dotnet-sdk-10.0 from the default
+    #   Ubuntu repositories takes its place (see the platform flags above)
     if [[ "$RELEASE_VERSION" == 24* ]]; then
       sudo add-apt-repository -y ppa:dotnet/backports
-    elif [[ "$RELEASE_VERSION" != 22* ]]; then
+    elif [[ "$RELEASE_VERSION" != 2[26]* ]]; then
       ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
       sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
       rm -f packages-microsoft-prod.deb
@@ -380,6 +406,36 @@ if [ ${BUILD_LLVM} -eq 1 ] ; then
   sudo update-alternatives --install /usr/local/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} /usr/local/bin/llvm-dis 30
 
   puts "Built LLVM"
+fi
+
+
+if [ ${DOWNLOAD_LLVM} -eq 1 ] ; then
+  if [ ! -e "${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION}" ] ; then
+    puts "Installing LLVM release binaries"
+    mkdir -p ${LLVM_DIR}
+    ${WGET} ${LLVM_DOWNLOAD_LINK} -O ${DEPS_DIR}/llvm-downloaded.tar.xz
+    tar -C ${LLVM_DIR} -xf ${DEPS_DIR}/llvm-downloaded.tar.xz --strip-components 1
+    rm -f ${DEPS_DIR}/llvm-downloaded.tar.xz
+
+    # LLVM 14's SmallVector.h uses uint64_t without including <cstdint>, which
+    # libstdc++ 13 and later no longer pull in through other headers, so SMACK
+    # and SeaDsa fail to compile against it. LLVM 16 added this same include.
+    SMALLVECTOR_H=${LLVM_DIR}/include/llvm/ADT/SmallVector.h
+    grep -q '^#include <cstdint>$' ${SMALLVECTOR_H} || \
+      sed -i 's|^#include <cstddef>$|#include <cstddef>\n#include <cstdint>|' ${SMALLVECTOR_H}
+
+    # SMACK calls the LLVM tools by their versioned names, as distributions
+    # package them; of those, the release has only clang-14. The llvm-config
+    # link goes last because its presence marks a complete installation.
+    for tool in clang++ clang-format llvm-as llvm-dis llvm-link llvm-config ; do
+      ln -sf ${tool} ${LLVM_DIR}/bin/${tool}-${LLVM_SHORT_VERSION}
+    done
+    puts "Installed LLVM release binaries"
+  else
+    puts "LLVM release binaries already installed"
+  fi
+  export PATH="${LLVM_DIR}/bin:$PATH"
+  echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
 fi
 
 
@@ -480,6 +536,9 @@ if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
     puts "Boogie already installed"
   fi
   echo export PATH=\"${BOOGIE_DIR}:\$PATH\" >> ${SMACKENV}
+  # Boogie is built for .NET 6; this lets it run on a newer .NET when that is
+  # all the platform has (Ubuntu 26.04). Corral's block below sets it too.
+  echo export DOTNET_ROLL_FORWARD=Major >> ${SMACKENV}
 fi
 
 
@@ -539,7 +598,7 @@ fi
 
 
 if [ ${INSTALL_DEV_DEPENDENCIES} -eq 1 ] ; then
-  sudo apt-get install -y python3-pip clang-format-${LLVM_SHORT_VERSION}
+  sudo apt-get install -y ${DEV_DEPENDENCIES}
   sudo pip3 install -U flake8 --break-system-packages || sudo pip3 install -U flake8
   if [ "${GITHUB_ACTIONS}" = "true" ] ; then
     exit 0

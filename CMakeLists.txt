@@ -2,7 +2,8 @@
 # This file is distributed under the MIT License. See LICENSE for details.
 #
 
-cmake_minimum_required(VERSION 3.4.3)
+# CMake 4 (as on Ubuntu 26.04) rejects a minimum below 3.5 and warns below 3.10.
+cmake_minimum_required(VERSION 3.10)
 project(smack)
 
 if(NOT WIN32 OR MSYS OR CYGWIN)
