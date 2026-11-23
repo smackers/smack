@@ -4,9 +4,12 @@ on: [push, pull_request]
 
 jobs:
   check-regressions:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
+      # A failure on one Ubuntu release should not cancel the other's jobs.
+      fail-fast: false
       matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
         regtest_env:
           [
             "--exhaustive --folder=c/basic",
@@ -51,6 +54,9 @@ jobs:
 
       - name: format checking
         run: |
+          # On Ubuntu 26.04, clang-format-14 comes with the downloaded LLVM,
+          # which only smack.environment puts on PATH.
+          source ../smack.environment
           ./format/run-clang-format.py -r lib/smack include/smack tools share/smack/include share/smack/lib test examples
           flake8 test/regtest.py share/smack/ --extend-exclude share/smack/svcomp/,share/smack/reach.py
 
