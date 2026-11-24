@@ -5,6 +5,11 @@
 #ifndef SMACK_DEBUG_H
 #define SMACK_DEBUG_H
 
+// LLVM 14's SmallVector.h, which raw_ostream.h includes, uses uint64_t
+// without including <cstdint>; libstdc++ 13 and later no longer provide it
+// through other headers. This block must stay ahead of the LLVM includes.
+#include <cstdint>
+
 #include "llvm/Support/raw_ostream.h"
 
 namespace smack {

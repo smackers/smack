@@ -417,13 +417,6 @@ if [ ${DOWNLOAD_LLVM} -eq 1 ] ; then
     tar -C ${LLVM_DIR} -xf ${DEPS_DIR}/llvm-downloaded.tar.xz --strip-components 1
     rm -f ${DEPS_DIR}/llvm-downloaded.tar.xz
 
-    # LLVM 14's SmallVector.h uses uint64_t without including <cstdint>, which
-    # libstdc++ 13 and later no longer pull in through other headers, so SMACK
-    # and SeaDsa fail to compile against it. LLVM 16 added this same include.
-    SMALLVECTOR_H=${LLVM_DIR}/include/llvm/ADT/SmallVector.h
-    grep -q '^#include <cstdint>$' ${SMALLVECTOR_H} || \
-      sed -i 's|^#include <cstddef>$|#include <cstddef>\n#include <cstdint>|' ${SMALLVECTOR_H}
-
     # SMACK calls the LLVM tools by their versioned names, as distributions
     # package them; of those, the release has only clang-14. The llvm-config
     # link goes last because its presence marks a complete installation.
