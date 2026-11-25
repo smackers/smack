@@ -28,6 +28,12 @@ public:
   MemorySafetyChecker() : llvm::FunctionPass(ID) {}
   virtual bool runOnFunction(llvm::Function &F) override;
 
+  // Memory-access checks are compiler-inserted calls.  Keep their provenance
+  // explicit so later exact transformations never trust the reserved callee
+  // name or try to recover the protected access from instruction adjacency.
+  static const llvm::Instruction *
+  getCheckedInstruction(const llvm::CallInst &I);
+
   void visitReturnInst(llvm::ReturnInst &I);
   void visitLoadInst(llvm::LoadInst &I);
   void visitStoreInst(llvm::StoreInst &I);

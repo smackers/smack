@@ -51,9 +51,27 @@ void MemorySafetyChecker::insertMemoryAccessCheck(Value *addr, Value *size,
   auto sizeArg = CastInst::CreateBitOrPointerCast(size, T, "", I);
   auto ci =
       CallInst::Create(getSafetyCheckFunction(M), {ptrArg, sizeArg}, "", I);
+  // Only the loop summaries read these markers; without the option the
+  // module, and with it the final IR, is left as it was.
+  if (SmackOptions::FunctionalizeLoops) {
+    auto *Marker = MDNode::getDistinct(C, {});
+    ci->setMetadata("smack.memory.access", Marker);
+    I->setMetadata("smack.memory.checked", Marker);
+  }
   copyDbgMetadata(I, ptrArg);
   copyDbgMetadata(I, sizeArg);
   copyDbgMetadata(I, ci);
+}
+
+const Instruction *
+MemorySafetyChecker::getCheckedInstruction(const CallInst &I) {
+  auto *N = I.getMetadata("smack.memory.access");
+  if (!N)
+    return nullptr;
+  for (const Instruction &Candidate : instructions(*I.getFunction()))
+    if (Candidate.getMetadata("smack.memory.checked") == N)
+      return &Candidate;
+  return nullptr;
 }
 
 bool MemorySafetyChecker::runOnFunction(Function &F) {

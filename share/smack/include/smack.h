@@ -54,10 +54,21 @@ void __SMACK_check_memory_leak(void);
 // with an integer argument (DSA gets confused otherwise)
 __attribute__((always_inline)) void __SMACK_dummy(int v);
 
-#ifndef SVCOMP
-void __VERIFIER_assert(int);
+// Under --functionalize-loops these annotations survive Clang and linking in
+// llvm.global.annotations, and VerifierCodeMetadata turns them into call-site
+// metadata consumed by exact loop summaries, so that a reserved name is never
+// trusted by itself. Without the option they are absent, so the module -- and
+// with it every emitted Boogie program -- is exactly what it was before.
+#ifdef FUNCTIONALIZE_LOOPS
+#define SMACK_VERIFIER_PRIMITIVE(p)                                            \
+  __attribute__((annotate("smack.verifier." p)))
+#else
+#define SMACK_VERIFIER_PRIMITIVE(p)
 #endif
-void __VERIFIER_assume(int);
+#ifndef SVCOMP
+void __VERIFIER_assert(int) SMACK_VERIFIER_PRIMITIVE("assert");
+#endif
+void __VERIFIER_assume(int) SMACK_VERIFIER_PRIMITIVE("assume");
 
 #define assume(EX)                                                             \
   do {                                                                         \
