@@ -3,12 +3,11 @@
 //
 #include "smack/LowerVarArgs.h"
 #include "smack/Debug.h"
-#include "smack/Naming.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <cctype>
@@ -23,7 +22,7 @@ using namespace llvm;
 
 namespace {
 
-// The x86-64 `va_list` is { i32 gp_offset; i32 fp_offset; i8*
+// The System V x86-64 `va_list` is { i32 gp_offset; i32 fp_offset; i8*
 // overflow_arg_area; i8* reg_save_area; }. Setting both offsets past the end of
 // their save areas is what makes clang's lowering take the overflow path for
 // every argument, whatever its type, so only the overflow layout has to be
@@ -34,42 +33,68 @@ const unsigned OVERFLOW_ARG_AREA = 8;
 const unsigned REG_SAVE_AREA = 16;
 const unsigned GP_EXHAUSTED = 48;
 const unsigned FP_EXHAUSTED = 304;
+const unsigned SLOT_SIZE = 8;
 
-// An argument occupies an eight-byte slot in the overflow area, or two when it
-// needs sixteen-byte alignment. Anything else -- a struct or array passed by
-// value, whose ABI classification this pass does not reproduce -- is refused,
-// and its call site is left exactly as it was.
-bool slotSize(Type *T, const DataLayout &DL, uint64_t &Size, Align &Alignment) {
-  if (!T->isIntegerTy() && !T->isPointerTy() && !T->isFloatingPointTy())
-    return false;
-  uint64_t Store = DL.getTypeStoreSize(T);
-  if (Store > 16)
-    return false;
-  Size = Store > 8 ? 16 : 8;
-  Alignment = Align(Size);
-  return true;
+// Windows and the x32 ABI share the architecture but not this `va_list`, so
+// the architecture alone does not settle it.
+bool hasSysVVaList(const Module &M) {
+  Triple T(M.getTargetTriple());
+  return T.getArch() == Triple::x86_64 && !T.isOSWindows() &&
+         M.getDataLayout().getPointerSize() == 8;
 }
 
-bool isVaStart(const Instruction &I) {
+// An argument is modeled when it fills one eight-byte slot of the overflow
+// area. That leaves out a struct or array passed by value, whose ABI
+// classification this pass does not reproduce, and anything wider than a slot,
+// such as `long double`: before reading one, clang rounds the list pointer up
+// to sixteen bytes with integer arithmetic that SMACK does not resolve, so the
+// value would not come back out. A call with such an argument is left exactly
+// as it was.
+bool fitsInSlot(Type *T, const DataLayout &DL) {
+  if (!T->isIntegerTy() && !T->isPointerTy() && !T->isFloatingPointTy())
+    return false;
+  return DL.getTypeStoreSize(T).getFixedSize() <= SLOT_SIZE;
+}
+
+bool isIntrinsic(const Instruction &I, Intrinsic::ID ID) {
   const auto *II = dyn_cast<IntrinsicInst>(&I);
-  return II && II->getIntrinsicID() == Intrinsic::vastart;
+  return II && II->getIntrinsicID() == ID;
+}
+
+// The address of the field at `Offset` in the `va_list` that `Ap` points to.
+Value *field(IRBuilder<> &B, Value *Ap, unsigned Offset, Type *T) {
+  Value *Base = B.CreateBitCast(Ap, B.getInt8PtrTy());
+  Value *At = B.CreateGEP(B.getInt8Ty(), Base, B.getInt64(Offset));
+  return B.CreateBitCast(At, T->getPointerTo());
+}
+
+void copyField(IRBuilder<> &B, Value *To, Value *From, unsigned Offset,
+               Type *T) {
+  Value *V = B.CreateLoad(T, field(B, From, Offset, T));
+  B.CreateStore(V, field(B, To, Offset, T));
 }
 
 // Whether this call can be specialized: a direct call to a defined variadic
 // function, with variadic arguments whose layout we can reproduce.
-bool supported(CallInst *CI, Function *F, const DataLayout &DL) {
+bool supported(CallInst *CI, const DataLayout &DL) {
+  Function *F = CI->getCalledFunction();
   if (!F || F->isDeclaration() || !F->isVarArg())
-    return false;
-  if (CI->getCalledFunction() != F)
     return false;
   if (CI->isMustTailCall())
     return false;
+  // Another calling convention, such as `ms_abi`, means another `va_list`.
+  if (F->getCallingConv() != CallingConv::C)
+    return false;
   bool AnyFloat = false, AnyOther = false;
   for (unsigned i = F->arg_size(); i < CI->arg_size(); i++) {
+    // A `byval` operand is the address of the argument, while the ABI puts
+    // the argument itself in the overflow area, where the callee reads it.
+    // Clang passes a struct this way when it is larger than sixteen bytes,
+    // and a smaller one too once the argument registers are used up.
+    if (CI->isPassPointeeByValueArgument(i))
+      return false;
     Type *T = CI->getArgOperand(i)->getType();
-    uint64_t Size;
-    Align Alignment;
-    if (!slotSize(T, DL, Size, Alignment))
+    if (!fitsInSlot(T, DL))
       return false;
     (T->isFloatingPointTy() ? AnyFloat : AnyOther) = true;
   }
@@ -82,11 +107,43 @@ bool supported(CallInst *CI, Function *F, const DataLayout &DL) {
   return !(AnyFloat && AnyOther);
 }
 
+// On this target `va_copy` copies the four fields of the list and `va_end`
+// does nothing. Clang leaves both as intrinsics, which SMACK does not model,
+// so without this a copy of an initialized list would still be unconstrained.
+bool lowerVaCopyAndEnd(Module &M) {
+  auto &C = M.getContext();
+  Type *I8Ptr = Type::getInt8PtrTy(C);
+  Type *I32 = Type::getInt32Ty(C);
+
+  std::vector<CallInst *> Copies, Ends;
+  for (auto &F : M)
+    for (auto &I : instructions(F)) {
+      if (isIntrinsic(I, Intrinsic::vacopy))
+        Copies.push_back(cast<CallInst>(&I));
+      else if (isIntrinsic(I, Intrinsic::vaend))
+        Ends.push_back(cast<CallInst>(&I));
+    }
+
+  for (CallInst *Copy : Copies) {
+    IRBuilder<> B(Copy);
+    Value *To = Copy->getArgOperand(0);
+    Value *From = Copy->getArgOperand(1);
+    copyField(B, To, From, GP_OFFSET, I32);
+    copyField(B, To, From, FP_OFFSET, I32);
+    copyField(B, To, From, OVERFLOW_ARG_AREA, I8Ptr);
+    copyField(B, To, From, REG_SAVE_AREA, I8Ptr);
+    Copy->eraseFromParent();
+  }
+  for (CallInst *End : Ends)
+    End->eraseFromParent();
+  return !Copies.empty() || !Ends.empty();
+}
+
 // Lay the specialized function's extra parameters out in a buffer and point
 // the `va_list` at it. The buffer and the stores go in the entry block, so a
 // `va_start` inside a loop costs nothing extra; each `va_start` then only
 // writes the four list fields.
-void lowerVaStart(Function &NF, unsigned FirstExtra, const DataLayout &DL) {
+void lowerVaStart(Function &NF, unsigned FirstExtra) {
   auto &C = NF.getContext();
   Type *I8 = Type::getInt8Ty(C);
   Type *I8Ptr = Type::getInt8PtrTy(C);
@@ -94,26 +151,16 @@ void lowerVaStart(Function &NF, unsigned FirstExtra, const DataLayout &DL) {
 
   std::vector<Instruction *> Starts;
   for (auto &I : instructions(NF))
-    if (isVaStart(I))
+    if (isIntrinsic(I, Intrinsic::vastart))
       Starts.push_back(&I);
   if (Starts.empty())
     return;
 
-  std::vector<uint64_t> Offsets;
-  uint64_t Total = 0;
-  for (unsigned i = FirstExtra; i < NF.arg_size(); i++) {
-    uint64_t Size;
-    Align Alignment;
-    slotSize(NF.getArg(i)->getType(), DL, Size, Alignment);
-    Total = alignTo(Total, Alignment);
-    Offsets.push_back(Total);
-    Total += Size;
-  }
   // A call that passes no variadic argument still needs somewhere to point:
   // reading from it is undefined in C, and leaving the area unallocated would
   // reintroduce the unconstrained read this pass exists to remove.
-  if (Total == 0)
-    Total = 8;
+  uint64_t Slots = NF.arg_size() - FirstExtra;
+  uint64_t Total = (Slots ? Slots : 1) * SLOT_SIZE;
 
   IRBuilder<> Entry(&*NF.getEntryBlock().getFirstInsertionPt());
   auto *Buf = Entry.CreateAlloca(ArrayType::get(I8, Total), nullptr, "va.buf");
@@ -121,51 +168,51 @@ void lowerVaStart(Function &NF, unsigned FirstExtra, const DataLayout &DL) {
   Value *Base = Entry.CreateBitCast(Buf, I8Ptr);
   for (unsigned i = FirstExtra; i < NF.arg_size(); i++) {
     Argument *A = NF.getArg(i);
-    Value *Slot =
-        Entry.CreateGEP(I8, Base, Entry.getInt64(Offsets[i - FirstExtra]));
+    uint64_t Offset = (i - FirstExtra) * SLOT_SIZE;
+    Value *Slot = Entry.CreateGEP(I8, Base, Entry.getInt64(Offset));
     Entry.CreateStore(A,
                       Entry.CreateBitCast(Slot, A->getType()->getPointerTo()));
   }
 
   for (Instruction *S : Starts) {
     IRBuilder<> B(S);
-    Value *Ap = B.CreateBitCast(cast<CallInst>(S)->getArgOperand(0), I8Ptr);
-    auto field = [&](unsigned Off, Type *T) {
-      return B.CreateBitCast(B.CreateGEP(I8, Ap, B.getInt64(Off)),
-                             T->getPointerTo());
-    };
-    B.CreateStore(ConstantInt::get(I32, GP_EXHAUSTED), field(GP_OFFSET, I32));
-    B.CreateStore(ConstantInt::get(I32, FP_EXHAUSTED), field(FP_OFFSET, I32));
-    B.CreateStore(Base, field(OVERFLOW_ARG_AREA, I8Ptr));
+    Value *Ap = cast<CallInst>(S)->getArgOperand(0);
+    B.CreateStore(B.getInt32(GP_EXHAUSTED), field(B, Ap, GP_OFFSET, I32));
+    B.CreateStore(B.getInt32(FP_EXHAUSTED), field(B, Ap, FP_OFFSET, I32));
+    B.CreateStore(Base, field(B, Ap, OVERFLOW_ARG_AREA, I8Ptr));
     // Never read, since the offsets above send every argument to the overflow
     // area, but left defined so that copying the list copies nothing unknown.
-    B.CreateStore(Base, field(REG_SAVE_AREA, I8Ptr));
+    B.CreateStore(Base, field(B, Ap, REG_SAVE_AREA, I8Ptr));
     S->eraseFromParent();
   }
 }
 
-Function *
-specialize(Function *F, ArrayRef<Type *> Extra, const DataLayout &DL,
-           std::map<std::pair<Function *, std::string>, Function *> &Cache) {
+// A callee, and the types of the variadic arguments one of its calls passes.
+using Signature = std::pair<Function *, std::vector<Type *>>;
+
+Function *specialize(Function *F, const std::vector<Type *> &Extra,
+                     std::map<Signature, Function *> &Cache) {
+  auto Found = Cache.find({F, Extra});
+  if (Found != Cache.end())
+    return Found->second;
+
   // The signature becomes part of a Boogie identifier, so the printed LLVM
   // type has to be reduced to characters Boogie accepts: `i32*` would end the
-  // identifier at the star and the program would not parse.
-  std::string Key;
-  raw_string_ostream Sig(Key);
+  // identifier at the star and the program would not parse. Two signatures can
+  // reduce to the same text, which is why the cache above is keyed by the
+  // types themselves; the module then gives the second clone a name of its own.
+  std::string Printed;
+  raw_string_ostream Sig(Printed);
   for (Type *T : Extra)
     T->print(Sig << ".");
   Sig.flush();
   std::string Mangled;
-  for (char C : Key)
+  for (char C : Printed)
     Mangled +=
         C == '*' ? 'P'
         : (isalnum(static_cast<unsigned char>(C)) || C == '.' || C == '_')
             ? C
             : '_';
-  Key = Mangled;
-  auto Found = Cache.find({F, Key});
-  if (Found != Cache.end())
-    return Found->second;
 
   std::vector<Type *> Params(F->getFunctionType()->param_begin(),
                              F->getFunctionType()->param_end());
@@ -173,7 +220,7 @@ specialize(Function *F, ArrayRef<Type *> Extra, const DataLayout &DL,
   Params.insert(Params.end(), Extra.begin(), Extra.end());
   auto *NFT = FunctionType::get(F->getReturnType(), Params, false);
   auto *NF = Function::Create(NFT, GlobalValue::InternalLinkage,
-                              F->getName() + ".va" + Key, F->getParent());
+                              F->getName() + ".va" + Mangled, F->getParent());
   NF->copyAttributesFrom(F);
   NF->setIsMaterializable(false);
 
@@ -191,9 +238,9 @@ specialize(Function *F, ArrayRef<Type *> Extra, const DataLayout &DL,
                     Returns);
   // The clone is no longer variadic, so every va_start in it must go; it is
   // replaced by the layout that makes the arguments readable.
-  lowerVaStart(*NF, FirstExtra, DL);
+  lowerVaStart(*NF, FirstExtra);
 
-  Cache[{F, Key}] = NF;
+  Cache[{F, Extra}] = NF;
   return NF;
 }
 
@@ -206,42 +253,60 @@ StringRef LowerVarArgs::getPassName() const {
 void LowerVarArgs::getAnalysisUsage(AnalysisUsage &AU) const {}
 
 bool LowerVarArgs::runOnModule(Module &M) {
-  const DataLayout &DL = M.getDataLayout();
-  std::map<std::pair<Function *, std::string>, Function *> Cache;
-  std::vector<CallInst *> Work;
-
-  for (auto &F : M)
-    for (auto &I : instructions(F))
-      if (auto *CI = dyn_cast<CallInst>(&I))
-        if (supported(CI, CI->getCalledFunction(), DL))
-          Work.push_back(CI);
-
-  for (CallInst *CI : Work) {
-    Function *F = CI->getCalledFunction();
-    std::vector<Type *> Extra;
-    std::vector<Value *> Args;
-    for (unsigned i = 0; i < CI->arg_size(); i++) {
-      Args.push_back(CI->getArgOperand(i));
-      if (i >= F->arg_size())
-        Extra.push_back(CI->getArgOperand(i)->getType());
-    }
-    Function *NF = specialize(F, Extra, DL, Cache);
-
-    auto *New = CallInst::Create(NF, Args, "", CI);
-    New->setDebugLoc(CI->getDebugLoc());
-    SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-    CI->getAllMetadata(MDs);
-    for (auto &MD : MDs)
-      New->setMetadata(MD.first, MD.second);
-    if (!CI->getType()->isVoidTy()) {
-      New->takeName(CI);
-      CI->replaceAllUsesWith(New);
-    }
-    CI->eraseFromParent();
-    SDEBUG(errs() << "lowered a variadic call to " << NF->getName() << "\n");
+  if (!hasSysVVaList(M)) {
+    errs() << "warning: lower-varargs has no effect on target '"
+           << M.getTargetTriple() << "'\n";
+    return false;
   }
 
-  return !Work.empty();
+  const DataLayout &DL = M.getDataLayout();
+  bool Changed = lowerVaCopyAndEnd(M);
+  std::map<Signature, Function *> Cache;
+
+  // A clone carries copies of its original's calls, calls to variadic
+  // functions among them, so one sweep over the module is not enough: go on
+  // until no call is left to rewrite. This ends because a function is cloned
+  // at most once for each signature, and a clone brings no call that its
+  // original did not have.
+  while (true) {
+    std::vector<CallInst *> Work;
+    for (auto &F : M)
+      for (auto &I : instructions(F))
+        if (auto *CI = dyn_cast<CallInst>(&I))
+          if (supported(CI, DL))
+            Work.push_back(CI);
+    if (Work.empty())
+      break;
+
+    for (CallInst *CI : Work) {
+      Function *F = CI->getCalledFunction();
+      std::vector<Type *> Extra;
+      std::vector<Value *> Args;
+      for (unsigned i = 0; i < CI->arg_size(); i++) {
+        Args.push_back(CI->getArgOperand(i));
+        if (i >= F->arg_size())
+          Extra.push_back(CI->getArgOperand(i)->getType());
+      }
+      Function *NF = specialize(F, Extra, Cache);
+
+      auto *New = CallInst::Create(NF, Args, "", CI);
+      New->setAttributes(CI->getAttributes());
+      New->setDebugLoc(CI->getDebugLoc());
+      SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+      CI->getAllMetadata(MDs);
+      for (auto &MD : MDs)
+        New->setMetadata(MD.first, MD.second);
+      if (!CI->getType()->isVoidTy()) {
+        New->takeName(CI);
+        CI->replaceAllUsesWith(New);
+      }
+      CI->eraseFromParent();
+      SDEBUG(errs() << "lowered a call to " << NF->getName() << "\n");
+    }
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 char LowerVarArgs::ID = 0;

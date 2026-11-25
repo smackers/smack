@@ -25,7 +25,13 @@ namespace smack {
 //
 // Because the values live in memory rather than in the clone's parameters,
 // this also covers a `va_list` handed to another function, as `vfprintf`
-// does.
+// does. For the same reason `llvm.va_copy` becomes a copy of the list's
+// fields, and `llvm.va_end`, which does nothing on this target, is removed.
+//
+// The layout is the System V x86-64 one, so the pass does nothing for any
+// other target. A call it cannot lay out faithfully is left as it was, with
+// its arguments unconstrained: one that passes a struct by value, a `long
+// double`, or floating-point values together with integers or pointers.
 class LowerVarArgs : public llvm::ModulePass {
 public:
   static char ID;
