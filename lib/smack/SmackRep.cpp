@@ -512,6 +512,10 @@ const Expr *SmackRep::load(const llvm::Value *P) {
                        ? "unsafe."
                        : "")) +
       type(T->getPointerElementType());
+  // With --bit-precise and --no-byte-access-inference, every region is a
+  // byte map, singletons included (see memType).
+  if (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference)
+    return Expr::fn(N, M, SmackRep::expr(P));
   return singleton ? M : Expr::fn(N, M, SmackRep::expr(P));
 }
 
@@ -536,6 +540,10 @@ const Stmt *SmackRep::store(unsigned R, const Type *T, const Expr *P,
                 : (isUnsafeFloatAccess(T, resultTy) ? "unsafe." : "")) +
       type(T);
   const Expr *M = Expr::id(memPath(R));
+  // With --bit-precise and --no-byte-access-inference, every region is a
+  // byte map, singletons included (see memType).
+  if (SmackOptions::BitPrecise && SmackOptions::NoByteAccessInference)
+    return Stmt::assign(M, Expr::fn(N, M, P, V));
   return Stmt::assign(M, singleton ? V : Expr::fn(N, M, P, V));
 }
 
