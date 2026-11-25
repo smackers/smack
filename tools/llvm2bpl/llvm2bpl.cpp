@@ -35,6 +35,7 @@
 #include "smack/InitializePasses.h"
 #include "smack/IntegerOverflowChecker.h"
 #include "smack/LoopBoundWarnings.h"
+#include "smack/LowerVarArgs.h"
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
@@ -180,6 +181,12 @@ int main(int argc, char **argv) {
     pass_manager.add(llvm::createGlobalDCEPass());
     pass_manager.add(llvm::createDeadCodeEliminationPass());
     pass_manager.add(new smack::RemoveDeadDefs());
+  }
+
+  // Before anything looks at the bodies: this clones variadic callees, and
+  // everything downstream should see the clones rather than the originals.
+  if (smack::SmackOptions::LowerVarArgs) {
+    pass_manager.add(new smack::LowerVarArgs());
   }
 
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
