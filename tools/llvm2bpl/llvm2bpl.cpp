@@ -38,6 +38,7 @@
 #include "smack/MemorySafetyChecker.h"
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
+#include "smack/PropertySlicing.h"
 #include "smack/RemoveDeadDefs.h"
 #include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
@@ -227,6 +228,23 @@ int main(int argc, char **argv) {
   }
 
   pass_manager.add(new smack::IntegerOverflowChecker());
+
+  // Property slicing runs here: after Devirtualize has resolved indirect
+  // calls and SplitAggregateValue has run, so the call graph and the memory
+  // operations are final; but before RewriteBitwiseOps, so that `and`/`or`
+  // are still plain instructions rather than calls to __SMACK_and32 &c.,
+  // which the slicer would have to treat as opaque verifier calls.
+  //
+  // The pass is *scheduled* only when it will actually run. It requires
+  // Regions and DSAWrapper, which transfers last-usership of DSAWrapper,
+  // seadsa::DsaAnalysis and CallGraph away from the passes that follow;
+  // scheduling it alongside MemorySafetyChecker crashes the legacy pass
+  // manager in PMTopLevelManager::setLastUser before any pass runs. Adding it
+  // conditionally also makes the refusals in propertySlicingWillRun()
+  // effective rather than dead code reached only after that crash.
+  if (smack::propertySlicingWillRun()) {
+    pass_manager.add(smack::createPropertySlicingPass());
+  }
 
   if (smack::SmackOptions::RewriteBitwiseOps &&
       !(smack::SmackOptions::BitPrecise ||
