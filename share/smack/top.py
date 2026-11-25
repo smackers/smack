@@ -681,6 +681,15 @@ def arguments():
 
     args = parser.parse_args()
 
+    # Inlining moves code into the caller, and both of these options decide
+    # what to check by the function the code is in.
+    if args.inline_funcs:
+        if args.modular:
+            parser.error('--inline-funcs cannot be used with --modular')
+        if args.checked_functions:
+            parser.error(
+                '--inline-funcs cannot be used with --checked-functions')
+
     if not args.bc_file:
         args.bc_file = temporary_file('a', '.bc', args)
 

@@ -23,8 +23,10 @@ private:
   bool involvesPointers(llvm::Function &F);
   unsigned getInstructionCount(llvm::Function &F);
   void computeRecursiveFunctions(llvm::Module &M);
+  void computeNamedInBoogie(llvm::Module &M);
 
   std::set<llvm::Function *> recursiveFunctions;
+  std::set<llvm::Function *> namedInBoogie;
 };
 
 } // namespace smack

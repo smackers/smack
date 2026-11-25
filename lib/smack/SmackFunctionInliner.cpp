@@ -10,6 +10,8 @@
 #include "smack/SmackOptions.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,6 +44,49 @@ static llvm::cl::list<std::string>
 namespace smack {
 
 using namespace llvm;
+
+namespace {
+
+Function *calledFunction(const CallBase &CB) {
+  return dyn_cast<Function>(CB.getCalledOperand()->stripPointerCasts());
+}
+
+// The primitives whose string argument is copied into the Boogie program.
+bool isBoogieText(StringRef name) {
+  return name.find(Naming::CODE_PROC) != StringRef::npos ||
+         name.find(Naming::DECL_PROC) != StringRef::npos ||
+         name.find(Naming::TOP_DECL_PROC) != StringRef::npos ||
+         name.find(Naming::MOD_PROC) != StringRef::npos;
+}
+
+bool isContract(StringRef name) {
+  return name == Naming::CONTRACT_REQUIRES ||
+         name == Naming::CONTRACT_ENSURES || name == Naming::CONTRACT_INVARIANT;
+}
+
+// The text of a string literal passed as an argument, or nothing.
+StringRef literal(const Value *V) {
+  auto *G = dyn_cast<GlobalVariable>(V->stripPointerCasts());
+  if (!G || !G->hasInitializer())
+    return StringRef();
+  auto *D = dyn_cast<ConstantDataSequential>(G->getInitializer());
+  return D && D->isString() ? D->getAsString() : StringRef();
+}
+
+// A body with Boogie text or a contract in it belongs to its function: a
+// declaration would be emitted once for every copy of the body, and a contract
+// would end up constraining the caller.
+bool carriesBoogie(Function &F) {
+  for (auto &BB : F)
+    for (auto &I : BB)
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (Function *Callee = calledFunction(*CB))
+          if (isBoogieText(Callee->getName()) || isContract(Callee->getName()))
+            return true;
+  return false;
+}
+
+} // namespace
 
 bool SmackFunctionInliner::involvesPointers(Function &F) {
   if (F.getReturnType()->isPointerTy())
@@ -80,10 +125,47 @@ bool SmackFunctionInliner::shouldInline(Function &F) {
   if (recursiveFunctions.count(&F))
     return false;
 
+  if (namedInBoogie.count(&F))
+    return false;
+
   unsigned instCount = getInstructionCount(F);
-  if (involvesPointers(F))
-    return instCount <= PtrInlineLimit;
-  return InlineLimit > 0 && instCount <= InlineLimit;
+  unsigned limit = involvesPointers(F) ? PtrInlineLimit : InlineLimit;
+  if (limit == 0 || instCount > limit)
+    return false;
+
+  return !carriesBoogie(F);
+}
+
+// Boogie text can call a function by name, which leaves no trace in the IR.
+// If every visible call to such a function were inlined, the function would
+// look dead, be removed later in the pipeline, and leave that text calling a
+// procedure that no longer exists. Matching on the name as a substring errs on
+// the side of keeping a function.
+void SmackFunctionInliner::computeNamedInBoogie(Module &M) {
+  namedInBoogie.clear();
+  std::vector<StringRef> texts;
+
+  for (auto &F : M)
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = calledFunction(*CB))
+            if (isBoogieText(Callee->getName()))
+              for (auto &A : CB->args()) {
+                StringRef text = literal(A);
+                if (!text.empty())
+                  texts.push_back(text);
+              }
+
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    for (StringRef text : texts)
+      if (text.contains(F.getName())) {
+        namedInBoogie.insert(&F);
+        break;
+      }
+  }
 }
 
 void SmackFunctionInliner::computeRecursiveFunctions(Module &M) {
@@ -116,6 +198,14 @@ void SmackFunctionInliner::computeRecursiveFunctions(Module &M) {
 bool SmackFunctionInliner::runOnModule(Module &M) {
   if (!InlineFuncs)
     return false;
+
+  // Property checks are selected by the function an instruction is in, which
+  // is exactly what inlining changes. `smack` rejects the combination; this
+  // covers llvm2bpl run on its own.
+  if (!SmackOptions::CheckedFunctions.empty())
+    return false;
+
+  computeNamedInBoogie(M);
 
   bool changed = false;
   bool inlinedAny;
@@ -182,23 +272,8 @@ bool SmackFunctionInliner::runOnModule(Module &M) {
       }
     }
 
-    // Remove dead functions after inlining.
-    if (inlinedAny) {
-      std::vector<Function *> dead;
-      for (Function &F : M) {
-        if (F.isDeclaration())
-          continue;
-        if (F.use_empty() && !SmackOptions::isEntryPoint(F.getName()) &&
-            F.getName().find("__SMACK_") == StringRef::npos &&
-            F.getName().find("__VERIFIER_") == StringRef::npos) {
-          dead.push_back(&F);
-        }
-      }
-      for (auto *F : dead) {
-        SDEBUG(errs() << "removing fully inlined: " << F->getName() << "\n");
-        F->eraseFromParent();
-      }
-    }
+    // A function left without callers is not removed here: RemoveDeadDefs
+    // does that later in the pipeline, with the rules the rest of SMACK uses.
   } while (inlinedAny);
 
   return changed;

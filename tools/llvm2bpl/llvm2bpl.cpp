@@ -190,7 +190,11 @@ int main(int argc, char **argv) {
     pass_manager.add(new smack::LowerVarArgs());
   }
 
-  pass_manager.add(new smack::SmackFunctionInliner());
+  // Not under modular verification: every procedure is checked on its own
+  // there, and a contract inlined into a caller would constrain the caller.
+  if (!Modular) {
+    pass_manager.add(new smack::SmackFunctionInliner());
+  }
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
   pass_manager.add(seadsa::createRemovePtrToIntPass());
   pass_manager.add(llvm::createLowerSwitchPass());
