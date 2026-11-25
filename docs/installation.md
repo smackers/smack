@@ -108,6 +108,12 @@ environment variables in your shell's `.profile`. However, we do not expect
 this script to work out of the box on all configurations. Instead, it can be
 used as reference guidelines for manual installation.
 
+Ubuntu 26.04 packages neither LLVM 14 nor .NET 6. There, the script installs
+LLVM 14.0.6 from LLVM's release binaries into `smack-deps/llvm`, which
+`smack.environment` adds to `PATH`, and installs .NET 10 from the Ubuntu
+archive in place of .NET 6. Boogie and Corral run on .NET 10 because
+`smack.environment` sets `DOTNET_ROLL_FORWARD=Major`.
+
 **NOTE** A common omission is to forget to set the required environment
 variables after the installation process, as indicated in the end of the build
 script.  Alternatively, you can read how to accomplish this below.

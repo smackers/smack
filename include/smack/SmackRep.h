@@ -4,6 +4,11 @@
 #ifndef SMACKREP_H
 #define SMACKREP_H
 
+// LLVM 14's SmallVector.h, which SmallString.h includes, uses uint64_t
+// without including <cstdint>; libstdc++ 13 and later no longer provide it
+// through other headers. This block must stay ahead of the LLVM includes.
+#include <cstdint>
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
