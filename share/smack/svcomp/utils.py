@@ -14,10 +14,8 @@ def svcomp_frontend(input_file, args):
   # enable static LLVM unroll pass
   args.static_unroll = True
 
-  # enable function inlining before DSA for precision
-  args.inline_funcs = True
-
-  # prevent inlining reach_error so replace_reach_error can find it
+  # if the user asks for inlining (--inline-funcs), keep reach_error out of it:
+  # replace_reach_error looks for the calls to it in the generated Boogie
   args.no_inline = getattr(args, 'no_inline', []) + ['reach_error']
 
   # attempt to rewrite bitwise ops into provided models
