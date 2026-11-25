@@ -502,7 +502,9 @@ const Expr *SmackRep::load(const llvm::Value *P) {
   assert(T && "Expected pointer type.");
   const unsigned R = regions->idx(P);
   bool bytewise = regions->get(R).bytewiseAccess();
-  bool singleton = regions->get(R).isSingleton();
+  bool singleton = regions->get(R).isSingleton() &&
+                   !(SmackOptions::BitPrecise &&
+                     SmackOptions::NoByteAccessInference);
   const Type *resultTy = regions->get(R).getType();
   const Expr *M = Expr::id(memPath(R));
   std::string N =
@@ -528,7 +530,9 @@ const Stmt *SmackRep::store(const Value *P, const Expr *V) {
 const Stmt *SmackRep::store(unsigned R, const Type *T, const Expr *P,
                             const Expr *V) {
   bool bytewise = regions->get(R).bytewiseAccess();
-  bool singleton = regions->get(R).isSingleton();
+  bool singleton = regions->get(R).isSingleton() &&
+                   !(SmackOptions::BitPrecise &&
+                     SmackOptions::NoByteAccessInference);
   const Type *resultTy = regions->get(R).getType();
   std::string N =
       Naming::STORE + "." +
