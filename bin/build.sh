@@ -456,9 +456,9 @@ if [ ${BUILD_Z3} -eq 1 ] ; then
   puts "Building Z3"
   mkdir -p ${Z3_DIR}
   cd ${Z3_DIR}
-  ${WGET} https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.1.zip
-  unzip z3-4.12.1.zip
-  cd z3-z3-4.12.1
+  ${WGET} https://github.com/Z3Prover/z3/archive/refs/tags/z3-${Z3_VERSION}.zip
+  unzip z3-${Z3_VERSION}.zip
+  cd z3-z3-${Z3_VERSION}
   python scripts/mk_make.py
   cd build
   make -j$(nproc)
