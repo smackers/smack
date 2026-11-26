@@ -31,6 +31,7 @@ public:
                         const Expr *z);
   static const Expr *fn(std::string f, std::list<const Expr *> args);
   static const Expr *id(std::string x);
+  static const Expr *field(const Expr *b, std::string f);
   static const Expr *impl(const Expr *l, const Expr *r);
   static const Expr *lit(bool b);
   static const Expr *lit(std::string v);
@@ -94,6 +95,16 @@ class FunExpr : public Expr {
 
 public:
   FunExpr(std::string f, std::list<const Expr *> xs) : fun(f), args(xs) {}
+  void print(std::ostream &os) const override;
+};
+
+// Selection of a datatype field, b->f
+class FieldExpr : public Expr {
+  const Expr *base;
+  std::string field;
+
+public:
+  FieldExpr(const Expr *b, std::string f) : base(b), field(f) {}
   void print(std::ostream &os) const override;
 };
 
