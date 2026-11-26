@@ -976,7 +976,7 @@ def verification_result(verifier_output, verifier):
         elif verifier == 'boogie':
             boogie_af_msg = re.search(
                 r'([\w#$~%.\/-]+)\((\d+),\d+\): '
-                r'Error: This assertion might not hold', verifier_output)
+                r'Error: this assertion could not be proved', verifier_output)
             if boogie_af_msg:
                 if re.match('.*[.]bpl$', boogie_af_msg.group(1)):
                     line_no = int(boogie_af_msg.group(2))
@@ -1004,8 +1004,7 @@ def verification_result(verifier_output, verifier):
 def boogie_command(args):
     command = ["boogie"]
     command += [args.bpl_file]
-    command += ["/doModSetAnalysis"]
-    command += ["/useArrayTheory"]
+    command += ["/inferModifies"]
     command += ["/timeLimit:%s" % args.time_limit]
     command += ["/errorLimit:%s" % args.max_violations]
     if not args.modular:
@@ -1088,7 +1087,8 @@ def verify_bpl(args):
     #   arithmetic work has gone since.
     #
     # smt.array.extensional=false below is unrelated: it is a modeling choice
-    # that goes with /useArrayTheory, not a Z3 workaround.
+    # that goes with the SMT theory of arrays, which Boogie uses for maps by
+    # default, not a Z3 workaround.
 
     if args.verifier == 'boogie' or args.modular:
         command = boogie_command(args)
