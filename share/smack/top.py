@@ -497,6 +497,19 @@ def arguments():
         help='disable bit-precision-related optimizations with DSA')
 
     translate_group.add_argument(
+        '--inline-funcs',
+        action="store_true",
+        default=False,
+        help='inline small functions before DSA analysis for precision')
+
+    translate_group.add_argument(
+        '--no-inline',
+        metavar='FUNC',
+        nargs='+',
+        default=[],
+        help='functions that should not be inlined')
+
+    translate_group.add_argument(
         '--entry-points',
         metavar='PROC',
         nargs='+',
@@ -668,6 +681,15 @@ def arguments():
 
     args = parser.parse_args()
 
+    # Inlining moves code into the caller, and both of these options decide
+    # what to check by the function the code is in.
+    if args.inline_funcs:
+        if args.modular:
+            parser.error('--inline-funcs cannot be used with --modular')
+        if args.checked_functions:
+            parser.error(
+                '--inline-funcs cannot be used with --checked-functions')
+
     if not args.bc_file:
         args.bc_file = temporary_file('a', '.bc', args)
 
@@ -787,6 +809,10 @@ def llvm_to_bpl(args):
         cmd += ['-bit-precise-pointers']
     if args.no_byte_access_inference:
         cmd += ['-no-byte-access-inference']
+    if args.inline_funcs:
+        cmd += ['-inline-funcs']
+    for func in args.no_inline:
+        cmd += ['-no-inline', func]
     if args.rewrite_bitwise_ops:
         cmd += ['-rewrite-bitwise-ops']
     if args.memory_intrinsic_threshold:
