@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-// @flag --rewrite-bitwise-ops
+// @flag --integer-encoding=bit-vector
 // @expect error
 
 uint8_t results[256] = {

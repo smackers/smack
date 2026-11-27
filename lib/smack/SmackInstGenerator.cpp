@@ -1424,32 +1424,17 @@ void SmackInstGenerator::visitIntrinsicInst(llvm::IntrinsicInst &ii) {
         Value *arg = ci->getArgOperand(0);
         auto width = arg->getType()->getIntegerBitWidth();
         auto var = rep->expr(arg);
-        const Expr *body = nullptr;
         auto type = rep->type(arg->getType());
-
-        if (SmackOptions::BitPrecise) { // Bitvector mode
-          body = Expr::lit(0, width);
-          for (unsigned i = 0; i < width; ++i) {
-            body = Expr::fn(indexedName("$add", {type}),
-                            Expr::fn(indexedName("$zext", {"bv1", type}),
-                                     Expr::bvExtract(var, i + 1, i)),
-                            body);
-          }
-        } else { // Otherwise, try with the integer encoding
-          body = Expr::lit(0ull);
-          for (unsigned i = 0; i < width; ++i) {
-            auto quotient =
-                Expr::fn(indexedName("$udiv", {type}), var,
-                         Expr::lit((unsigned long long)(1ull << i)));
-            auto remainder = Expr::fn(indexedName("$urem", {type}), quotient,
-                                      Expr::lit(2ull));
-            body = Expr::fn(indexedName("$add", {type}), remainder, body);
-          }
+        const Expr *body = Expr::lit(0, width);
+        for (unsigned i = 0; i < width; ++i) {
+          body = Expr::fn(indexedName("$add", {type}),
+                          Expr::fn(indexedName("$zext", {"bv1", type}),
+                                   Expr::bvExtract(var, i + 1, i)),
+                          body);
         }
         emit(Stmt::assign(rep->expr(ci), body));
       },
-      {&SmackOptions::BitPrecise, &SmackOptions::RewriteBitwiseOps},
-      SmackWarnings::FlagRelation::Or);
+      {&SmackOptions::BitPrecise});
 
   static const auto assignBvExpr =
       [this](std::function<const Expr *(Value *)> exprGenFunc) {

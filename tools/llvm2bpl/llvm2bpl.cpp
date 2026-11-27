@@ -40,7 +40,6 @@
 #include "smack/Naming.h"
 #include "smack/NormalizeLoops.h"
 #include "smack/RemoveDeadDefs.h"
-#include "smack/RewriteBitwiseOps.h"
 #include "smack/RustFixes.h"
 #include "smack/SimplifyLibCalls.h"
 #include "smack/SmackFunctionInliner.h"
@@ -240,12 +239,6 @@ int main(int argc, char **argv) {
   }
 
   pass_manager.add(new smack::IntegerOverflowChecker());
-
-  if (smack::SmackOptions::RewriteBitwiseOps &&
-      !(smack::SmackOptions::BitPrecise ||
-        smack::SmackOptions::BitPrecisePointers)) {
-    pass_manager.add(new smack::RewriteBitwiseOps());
-  }
 
   if (smack::SmackOptions::AddTiming) {
     Triple ModuleTriple(module->getTargetTriple());
