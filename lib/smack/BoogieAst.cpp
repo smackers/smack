@@ -66,6 +66,10 @@ const Expr *Expr::fn(std::string f, const Expr *x, const Expr *y,
 
 const Expr *Expr::id(std::string s) { return new VarExpr(s); }
 
+const Expr *Expr::field(const Expr *b, std::string f) {
+  return new FieldExpr(b, f);
+}
+
 const Expr *Expr::impl(const Expr *l, const Expr *r) {
   return new BinExpr(BinExpr::Imp, l, r);
 }
@@ -424,6 +428,8 @@ void FunExpr::print(std::ostream &os) const {
   os << fun;
   print_seq<const Expr *>(os, args, "(", ", ", ")");
 }
+
+void FieldExpr::print(std::ostream &os) const { os << base << "->" << field; }
 
 void BoolLit::print(std::ostream &os) const { os << (val ? "true" : "false"); }
 

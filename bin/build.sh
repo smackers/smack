@@ -69,6 +69,9 @@ Z3_DOWNLOAD_LINK="https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSI
 # libstdc++ (the 14.0.0 Ubuntu 18.04 build needs libtinfo5, which recent
 # distributions no longer ship).
 LLVM_DOWNLOAD_LINK="https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/clang+llvm-14.0.6-x86_64-linux-gnu-rhel-8.4.tar.xz"
+# Corral built against the Boogie version above. The archive is self-contained:
+# it brings its own .NET runtime.
+CORRAL_DOWNLOAD_LINK="https://github.com/shaobo-he/corral/releases/download/${CORRAL_VERSION}/${CORRAL_VERSION}-linux-x64.tar.gz"
 
 # Install prefix -- system default is used if left unspecified
 INSTALL_PREFIX=
@@ -76,7 +79,7 @@ CONFIGURE_INSTALL_PREFIX=
 CMAKE_INSTALL_PREFIX=
 
 # Partial list of dependencies; the rest are added depending on the platform
-DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-6.0 libboost-all-dev"
+DEPENDENCIES="git cmake python3-yaml python3-psutil python3-toml unzip wget ninja-build apt-transport-https dotnet-sdk-10.0 libboost-all-dev"
 DEV_DEPENDENCIES="python3-pip clang-format-${LLVM_SHORT_VERSION}"
 
 shopt -s extglob
@@ -214,11 +217,9 @@ linux-@(ubuntu|neon)-@(16|18|20|22|24)*)
   ;;
 
 linux-@(ubuntu|neon)-26*)
-  # Ubuntu 26.04 packages neither LLVM 14 nor .NET 6. LLVM 14 comes from LLVM's
-  # release binaries instead (which include clang-format), and Boogie and
-  # Corral, built for .NET 6, run on the archive's .NET 10 under
-  # DOTNET_ROLL_FORWARD=Major.
-  DEPENDENCIES="${DEPENDENCIES/dotnet-sdk-6.0/dotnet-sdk-10.0} xz-utils"
+  # Ubuntu 26.04 does not package LLVM 14. It comes from LLVM's release
+  # binaries instead (which include clang-format).
+  DEPENDENCIES+=" xz-utils"
   DEV_DEPENDENCIES="python3-pip"
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DOWNLOAD_LLVM=1
@@ -311,21 +312,22 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     fi
 
-    # Adding .NET repository for dotnet-sdk-6.0 (required by Boogie and Corral):
-    # - 20.04 and older: use Microsoft's package feed
-    # - 22.04: .NET 6 is available in the default Ubuntu repositories
-    # - 24.04: .NET 6 is neither in the Ubuntu archive nor Microsoft's feed
-    #   (Microsoft stopped publishing to packages.microsoft.com for 24.04), so
-    #   use Canonical's dotnet backports PPA
-    # - 26.04: no repository has .NET 6, so dotnet-sdk-10.0 from the default
-    #   Ubuntu repositories takes its place (see the platform flags above)
-    if [[ "$RELEASE_VERSION" == 24* ]]; then
+    # Adding .NET repository for the .NET SDK, which installs and runs Boogie.
+    # Boogie is built for .NET 8, so it needs .NET 8 or newer:
+    # - 24.04 and 26.04: dotnet-sdk-10.0 is in the default Ubuntu repositories
+    # - 22.04: dotnet-sdk-10.0 is in Canonical's dotnet backports PPA
+    # - 20.04: Microsoft's package feed has no .NET 10, so dotnet-sdk-8.0 from
+    #   it takes the place of dotnet-sdk-10.0
+    # - 18.04 and older: Microsoft's package feed stops before .NET 8, so the
+    #   installation of dotnet-sdk-8.0 fails; .NET has to be installed manually
+    if [[ "$RELEASE_VERSION" == 22* ]]; then
       sudo add-apt-repository -y ppa:dotnet/backports
-    elif [[ "$RELEASE_VERSION" != 2[26]* ]]; then
+    elif [[ "$RELEASE_VERSION" != 2[46]* ]]; then
       ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
       sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
       rm -f packages-microsoft-prod.deb
       sudo apt-get update
+      DEPENDENCIES="${DEPENDENCIES/dotnet-sdk-10.0/dotnet-sdk-8.0}"
     fi
 
     sudo apt-get install -y ${DEPENDENCIES}
@@ -335,6 +337,8 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
   linux---x86_64)
     sudo yum -y install ninja-build
     sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+    # This feed stops at .NET 7. Boogie needs .NET 8 or newer, which has to be
+    # installed manually.
     sudo yum -y install dotnet-sdk-6.0
     sudo pip3 install pyyaml psutil toml --break-system-packages || sudo pip3 install pyyaml psutil toml
 
@@ -529,8 +533,8 @@ if [ ${INSTALL_BOOGIE} -eq 1 ] ; then
     puts "Boogie already installed"
   fi
   echo export PATH=\"${BOOGIE_DIR}:\$PATH\" >> ${SMACKENV}
-  # Boogie is built for .NET 6; this lets it run on a newer .NET when that is
-  # all the platform has (Ubuntu 26.04). Corral's block below sets it too.
+  # Boogie is built for .NET 8; this lets it run on the .NET 10 that the
+  # platform installs.
   echo export DOTNET_ROLL_FORWARD=Major >> ${SMACKENV}
 fi
 
@@ -538,14 +542,15 @@ fi
 if [ ${INSTALL_CORRAL} -eq 1 ] ; then
   if [ ! -d "$CORRAL_DIR" ] ; then
     puts "Installing Corral"
-    # Hacky fix that pipes "dummy" into stdin for dotnet bug https://github.com/dotnet/sdk/issues/8050
-    dotnet tool install Corral --tool-path ${CORRAL_DIR} --version ${CORRAL_VERSION} <<< "dummy"
+    mkdir -p ${CORRAL_DIR}
+    ${WGET} ${CORRAL_DOWNLOAD_LINK} -O ${DEPS_DIR}/corral-downloaded.tar.gz
+    tar -C ${CORRAL_DIR} -xzf ${DEPS_DIR}/corral-downloaded.tar.gz --strip-components 1
+    rm -f ${DEPS_DIR}/corral-downloaded.tar.gz
     puts "Installed Corral"
   else
     puts "Corral already installed"
   fi
   echo export PATH=\"${CORRAL_DIR}:\$PATH\" >> ${SMACKENV}
-  echo export DOTNET_ROLL_FORWARD=Major >> ${SMACKENV}
 fi
 
 

@@ -22,8 +22,8 @@ std::string VectorOperations::field(Type *T, unsigned idx) {
   return ss.str();
 }
 
-std::string VectorOperations::selector(Type *T, unsigned idx) {
-  return field(T, idx) + "#" + constructor(T);
+const Expr *VectorOperations::select(Type *T, unsigned idx, const Expr *v) {
+  return Expr::field(v, field(T, idx));
 }
 
 std::list<Decl *> VectorOperations::type(Type *T) {
@@ -31,13 +31,14 @@ std::list<Decl *> VectorOperations::type(Type *T) {
   assert(VT && "expected vector type");
   std::list<Decl *> decls;
 
-  std::list<std::pair<std::string, std::string>> args;
+  // datatype vec.Nxt { mk.vec.Nxt(i0: t, ..., iN-1: t) }
+  std::stringstream ss;
+  ss << "datatype " << rep->type(T) << " { " << constructor(T) << "(";
   for (unsigned i = 0; i < VT->getNumElements(); i++)
-    args.push_back({field(T, i), rep->type(VT->getElementType())});
-
-  decls.push_back(Decl::typee(rep->type(T), "", {Attr::attr("datatype")}));
-  decls.push_back(Decl::function(constructor(T), args, rep->type(T), NULL,
-                                 {Attr::attr("constructor")}));
+    ss << (i ? ", " : "") << field(T, i) << ": "
+       << rep->type(VT->getElementType());
+  ss << ") }";
+  decls.push_back(Decl::code(rep->type(T), ss.str()));
 
   for (auto D : decls)
     rep->addAuxiliaryDeclaration(D);
@@ -73,7 +74,7 @@ FuncDecl *VectorOperations::cast(unsigned OpCode, Type *SrcTy, Type *DstTy) {
   if (!SrcVecTy && DstVecTy && DstVecTy->getNumElements() == 1)
     Body = Expr::fn(constructor(DstVecTy), Expr::id("v"));
   else if (SrcVecTy && SrcVecTy->getNumElements() == 1 && !DstVecTy)
-    Body = Expr::fn(selector(SrcVecTy, 0), Expr::id("v"));
+    Body = select(SrcVecTy, 0, Expr::id("v"));
   else if ((OpCode == Instruction::Trunc || OpCode == Instruction::ZExt ||
             OpCode == Instruction::SExt) &&
            SrcVecTy && DstVecTy &&
@@ -86,8 +87,7 @@ FuncDecl *VectorOperations::cast(unsigned OpCode, Type *SrcTy, Type *DstTy) {
                     {SrcVecTy->getElementType(), DstVecTy->getElementType()});
     std::list<const Expr *> Args;
     for (unsigned i = 0; i < SrcVecTy->getNumElements(); i++)
-      Args.push_back(
-          Expr::fn(FnBase, Expr::fn(selector(SrcVecTy, i), Expr::id("v"))));
+      Args.push_back(Expr::fn(FnBase, select(SrcVecTy, i, Expr::id("v"))));
     Body = Expr::fn(constructor(DstVecTy), Args);
   } else
     Body = nullptr;
@@ -113,9 +113,8 @@ FuncDecl *VectorOperations::binary(unsigned OpCode, FixedVectorType *T) {
       rep->opName(Naming::INSTRUCTION_TABLE.at(OpCode), {T->getElementType()});
   std::list<const Expr *> Args;
   for (unsigned i = 0; i < T->getNumElements(); i++) {
-    Args.push_back(
-        Expr::fn(FnBase, {Expr::fn(selector(T, i), Expr::id("v1")),
-                          Expr::fn(selector(T, i), Expr::id("v2"))}));
+    Args.push_back(Expr::fn(
+        FnBase, {select(T, i, Expr::id("v1")), select(T, i, Expr::id("v2"))}));
   }
   return Decl::function(FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
                         rep->type(T), Expr::fn(constructor(T), Args));
@@ -128,9 +127,8 @@ FuncDecl *VectorOperations::cmp(CmpInst::Predicate P, FixedVectorType *T) {
                                  T->getNumElements());
   std::list<const Expr *> Args;
   for (unsigned i = 0; i < T->getNumElements(); i++) {
-    Args.push_back(
-        Expr::fn(FnBase, {Expr::fn(selector(T, i), Expr::id("v1")),
-                          Expr::fn(selector(T, i), Expr::id("v2"))}));
+    Args.push_back(Expr::fn(
+        FnBase, {select(T, i, Expr::id("v1")), select(T, i, Expr::id("v2"))}));
   }
   return Decl::function(FnName, {{"v1", rep->type(T)}, {"v2", rep->type(T)}},
                         rep->type(RT), Expr::fn(constructor(RT), Args));
@@ -200,9 +198,9 @@ FuncDecl *VectorOperations::shuffle(Type *T, Type *U, std::vector<int> mask) {
 
     auto idx = (unsigned)m;
     if (idx < N)
-      args.push_back(Expr::fn(selector(T, idx), Expr::id("v1")));
+      args.push_back(select(T, idx, Expr::id("v1")));
     else
-      args.push_back(Expr::fn(selector(T, idx - N), Expr::id("v2")));
+      args.push_back(select(T, idx - N, Expr::id("v2")));
   }
 
   auto V = rep->type(T);
@@ -233,8 +231,7 @@ FuncDecl *VectorOperations::insert(Type *T, Type *IT) {
 
     std::list<const Expr *> args;
     for (unsigned j = 0; j < VT->getNumElements(); j++) {
-      args.push_back(i == j ? Expr::id("x")
-                            : Expr::fn(selector(T, j), Expr::id("v")));
+      args.push_back(i == j ? Expr::id("x") : select(T, j, Expr::id("v")));
     }
 
     rep->addAuxiliaryDeclaration(Decl::axiom(
@@ -274,7 +271,7 @@ FuncDecl *VectorOperations::extract(Type *T, Type *IT) {
     rep->addAuxiliaryDeclaration(Decl::axiom(
         Expr::forall({{"v", V}},
                      Expr::eq(Expr::fn(FN, Expr::id("v"), Expr::lit(i)),
-                              Expr::fn(selector(T, i), Expr::id("v")))),
+                              select(T, i, Expr::id("v")))),
         ss.str()));
   }
 

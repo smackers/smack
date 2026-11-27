@@ -108,11 +108,15 @@ environment variables in your shell's `.profile`. However, we do not expect
 this script to work out of the box on all configurations. Instead, it can be
 used as reference guidelines for manual installation.
 
-Ubuntu 26.04 packages neither LLVM 14 nor .NET 6. There, the script installs
-LLVM 14.0.6 from LLVM's release binaries into `smack-deps/llvm`, which
-`smack.environment` adds to `PATH`, and installs .NET 10 from the Ubuntu
-archive in place of .NET 6. Boogie and Corral run on .NET 10 because
-`smack.environment` sets `DOTNET_ROLL_FORWARD=Major`.
+Ubuntu 26.04 does not package LLVM 14. There, the script installs LLVM 14.0.6
+from LLVM's release binaries into `smack-deps/llvm`, which `smack.environment`
+adds to `PATH`.
+
+The script installs [Boogie][] as a .NET tool, and the .NET 10 SDK to install
+and run it. Boogie is built for .NET 8 and runs on .NET 10 because
+`smack.environment` sets `DOTNET_ROLL_FORWARD=Major`. [Corral][] comes from a
+[self-contained build][Corral-builds] against the same Boogie version, which
+needs no .NET installation.
 
 **NOTE** A common omission is to forget to set the required environment
 variables after the installation process, as indicated in the end of the build
@@ -200,6 +204,7 @@ shell in the `test` directory by executing
 [Clang-12.0.1]: http://llvm.org/releases/download.html#12.0.1
 [Boogie]: https://github.com/boogie-org/boogie
 [Corral]: https://github.com/boogie-org/corral
+[Corral-builds]: https://github.com/shaobo-he/corral/releases
 [Z3]: https://github.com/Z3Prover/z3/
 [Mono]: http://www.mono-project.com/
 [Cygwin]: https://www.cygwin.com

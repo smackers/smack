@@ -19,7 +19,7 @@ class VectorOperations {
   SmackRep *rep;
   std::string constructor(Type *T);
   std::string field(Type *T, unsigned idx);
-  std::string selector(Type *T, unsigned idx);
+  const Expr *select(Type *T, unsigned idx, const Expr *v);
 
   FuncDecl *cast(unsigned OpCode, Type *SrcTy, Type *DstTy);
   Decl *inverseAxiom(unsigned OpCode, Type *SrcTy, Type *DstTy);
