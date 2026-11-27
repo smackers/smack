@@ -111,6 +111,9 @@ private:
   std::string pointerType();
   std::string intType(unsigned width);
   std::string vectorType(int n, llvm::Type *T);
+  std::string aggregateType(const llvm::Type *T);
+  const Expr *aggregateValue(const llvm::Type *T,
+                             std::list<const llvm::Value *> elements);
 
   unsigned numElements(const llvm::Constant *v);
 
@@ -142,6 +145,9 @@ public:
 
   std::string type(const llvm::Type *t);
   std::string type(const llvm::Value *v);
+  // The constructor and the field names of the datatype of an aggregate value
+  std::string aggregateConstructor(const llvm::Type *T);
+  static std::string aggregateField(unsigned idx);
 
   const Expr *lit(const llvm::Value *v, bool isUnsigned = false,
                   bool isUnsignedInst = false);

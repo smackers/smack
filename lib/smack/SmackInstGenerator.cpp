@@ -50,15 +50,6 @@ std::string i2s(const llvm::Instruction &i) {
   return s;
 }
 
-Type *getElemType(const Type *t, unsigned idx) {
-  if (const llvm::StructType *st = llvm::dyn_cast<const llvm::StructType>(t))
-    return st->getElementType(idx);
-  else if (const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(t))
-    return at->getElementType();
-  else
-    llvm_unreachable("Unexpected aggregate type.");
-}
-
 const DIType *stripDIAliases(const DIType *T) {
   while (auto *DT = dyn_cast_or_null<DIDerivedType>(T)) {
     switch (DT->getTag()) {
@@ -651,10 +642,25 @@ void SmackInstGenerator::visitInvokeInst(llvm::InvokeInst &ii) {
   generateGotoStmts(ii, targets);
 }
 
+// The value of a landingpad, usually { i8*, i32 }, is an aggregate. Only its
+// exception pointer is passed between resume and landingpad, in $exnv; the
+// other fields, such as the selector, are not modeled.
+static bool carriesExceptionPointer(const Type *T) {
+  auto ST = dyn_cast<StructType>(T);
+  return ST && ST->getNumElements() > 0 && ST->getElementType(0)->isPointerTy();
+}
+
 void SmackInstGenerator::visitResumeInst(llvm::ResumeInst &ri) {
   processInstruction(ri);
   emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(true)));
-  emit(Stmt::assign(Expr::id(Naming::EXN_VAL_VAR), rep->expr(ri.getValue())));
+  const Expr *exn = rep->expr(ri.getValue());
+  if (carriesExceptionPointer(ri.getValue()->getType()))
+    emit(Stmt::assign(Expr::id(Naming::EXN_VAL_VAR),
+                      Expr::field(exn, SmackRep::aggregateField(0))));
+  else if (ri.getValue()->getType()->isAggregateType())
+    emit(Stmt::havoc(Expr::id(Naming::EXN_VAL_VAR)));
+  else
+    emit(Stmt::assign(Expr::id(Naming::EXN_VAL_VAR), exn));
   emit(Stmt::return_());
 }
 
@@ -753,54 +759,20 @@ void SmackInstGenerator::visitShuffleVectorInst(ShuffleVectorInst &I) {
 
 void SmackInstGenerator::visitExtractValueInst(llvm::ExtractValueInst &evi) {
   processInstruction(evi);
-  const Value *ao = evi.getAggregateOperand();
-  const Expr *e = rep->expr(ao);
-  const Type *t = ao->getType();
-
-  for (auto &idx : evi.indices()) {
-    e = Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t, idx)}), e,
-                 Expr::lit((unsigned long long)idx));
-    t = getElemType(t, idx);
-  }
+  const Expr *e = rep->expr(evi.getAggregateOperand());
+  for (auto idx : evi.indices())
+    e = Expr::field(e, SmackRep::aggregateField(idx));
   emit(Stmt::assign(rep->expr(&evi), e));
 }
 
+// x := insertvalue a, v, i, j  becomes  x := a; x->fi->fj := v;
 void SmackInstGenerator::visitInsertValueInst(llvm::InsertValueInst &ivi) {
   processInstruction(ivi);
-  const Expr *old = rep->expr(ivi.getAggregateOperand());
   const Expr *res = rep->expr(&ivi);
-  const llvm::Type *t = ivi.getType();
-
-  auto getNumElements = [](const Type *t) -> unsigned {
-    if (const llvm::StructType *st =
-            llvm::dyn_cast<const llvm::StructType>(t)) {
-      return st->getNumElements();
-    } else if (const llvm::ArrayType *at =
-                   llvm::dyn_cast<const llvm::ArrayType>(t)) {
-      return at->getNumElements();
-    } else {
-      llvm_unreachable("Unexpected aggregate type.");
-    }
-  };
-
-  for (auto &idx : ivi.indices()) {
-
-    for (unsigned j = 0; j < getNumElements(t); j++) {
-      if (j != idx) {
-        emit(Stmt::assume(Expr::eq(
-            Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t, j)}),
-                     res, Expr::lit(j)),
-            Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t, j)}),
-                     old, Expr::lit(j)))));
-      }
-    }
-    res = Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t, idx)}),
-                   res, Expr::lit(idx));
-    old = Expr::fn(rep->opName(Naming::EXTRACT_VALUE, {getElemType(t, idx)}),
-                   old, Expr::lit(idx));
-    t = getElemType(t, idx);
-  }
-  emit(Stmt::assume(Expr::eq(res, rep->expr(ivi.getInsertedValueOperand()))));
+  emit(Stmt::assign(res, rep->expr(ivi.getAggregateOperand())));
+  for (auto idx : ivi.indices())
+    res = Expr::field(res, SmackRep::aggregateField(idx));
+  emit(Stmt::assign(res, rep->expr(ivi.getInsertedValueOperand())));
 }
 
 /******************************************************************************/
@@ -1228,7 +1200,14 @@ void SmackInstGenerator::visitDbgValueInst(llvm::DbgValueInst &dvi) {
 void SmackInstGenerator::visitLandingPadInst(llvm::LandingPadInst &lpi) {
   processInstruction(lpi);
   // TODO what exactly!?
-  emit(Stmt::assign(rep->expr(&lpi), Expr::id(Naming::EXN_VAL_VAR)));
+  const Expr *lp = rep->expr(&lpi);
+  if (lpi.getType()->isAggregateType()) {
+    emit(Stmt::havoc(lp));
+    if (carriesExceptionPointer(lpi.getType()))
+      emit(Stmt::assign(Expr::field(lp, SmackRep::aggregateField(0)),
+                        Expr::id(Naming::EXN_VAL_VAR)));
+  } else
+    emit(Stmt::assign(lp, Expr::id(Naming::EXN_VAL_VAR)));
   if (lpi.isCleanup())
     emit(Stmt::assign(Expr::id(Naming::EXN_VAR), Expr::lit(false)));
   SmackWarnings::warnApproximate("landingpad clauses", currBlock, &lpi);

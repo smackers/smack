@@ -35,13 +35,7 @@ private:
   void splitAggregateStore(llvm::Value *P, llvm::Value *V,
                            std::vector<InfoT> &info, llvm::IRBuilder<> &irb,
                            bool preserveWholeAccessCheck);
-  void splitConstantReturn(llvm::ReturnInst *ri, std::vector<InfoT> &info);
-  void splitConstantArg(llvm::CallInst *ci, unsigned i,
-                        std::vector<InfoT> &info);
   void visitAggregateValue(llvm::Constant *baseVal, llvm::Type *T, IndexT idxs,
                            std::vector<InfoT> &info, llvm::LLVMContext &C);
-  llvm::Value *createInsertedValue(llvm::IRBuilder<> &irb, llvm::Type *T,
-                                   std::vector<InfoT> &info, llvm::Value *V);
-  bool isConstantAggregate(llvm::Value *V);
 };
 } // namespace smack

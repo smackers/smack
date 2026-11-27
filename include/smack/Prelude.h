@@ -108,7 +108,6 @@ struct TypeGen : public Gen {
   virtual void generatePreds(std::stringstream &s) const = 0;
   virtual void generateMemOps(std::stringstream &s) const = 0;
   virtual void generateConvOps(std::stringstream &s) const = 0;
-  virtual void generateExtractValueFuncs(std::stringstream &s) const = 0;
   virtual ~TypeGen(){};
 };
 
@@ -126,7 +125,6 @@ struct IntOpGen : public TypeGen {
   void generatePreds(std::stringstream &s) const override;
   void generateMemOps(std::stringstream &s) const override;
   void generateConvOps(std::stringstream &s) const override;
-  void generateExtractValueFuncs(std::stringstream &s) const override;
   void generateBvIntConvs(std::stringstream &s) const;
   void generate(std::stringstream &s) const override;
 };
@@ -139,7 +137,6 @@ struct PtrOpGen : public TypeGen {
   void generatePreds(std::stringstream &s) const override;
   void generateMemOps(std::stringstream &s) const override;
   void generateConvOps(std::stringstream &s) const override;
-  void generateExtractValueFuncs(std::stringstream &s) const override;
   void generatePtrNumConvs(std::stringstream &s) const;
   void generate(std::stringstream &s) const override;
 };
@@ -159,7 +156,6 @@ struct FpOpGen : public TypeGen {
   void generatePreds(std::stringstream &s) const override;
   void generateMemOps(std::stringstream &s) const override;
   void generateConvOps(std::stringstream &s) const override;
-  void generateExtractValueFuncs(std::stringstream &s) const override;
   void generateFpIntConv(std::stringstream &s) const;
   void generate(std::stringstream &s) const override;
 };
