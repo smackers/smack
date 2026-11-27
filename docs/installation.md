@@ -40,11 +40,8 @@ vagrant destroy
 
 ### Quick Setup 2: Docker
 
-SMACK can also be run in a [Docker][] container. We tested the Dockerfile on
-the following configurations:
-
-* Ubuntu 18.04, Docker version 19.03.6
-* Windows WSL Ubuntu 20.04, Docker Desktop with Docker engine version 20.10.2
+SMACK can also be run in a [Docker][] container. The image is based on Ubuntu
+24.04.
 
 #### Docker Hub
 
@@ -108,6 +105,10 @@ environment variables in your shell's `.profile`. However, we do not expect
 this script to work out of the box on all configurations. Instead, it can be
 used as reference guidelines for manual installation.
 
+The script supports the Ubuntu releases still in standard support: 22.04,
+24.04 and 26.04, and KDE neon releases based on them. On older releases it
+stops and asks for a manual installation.
+
 Ubuntu 26.04 does not package LLVM 14. There, the script installs LLVM 14.0.6
 from LLVM's release binaries into `smack-deps/llvm`, which `smack.environment`
 adds to `PATH`.
@@ -138,9 +139,8 @@ either from the [Mono][] download page, or via [Homebrew Cask][].
 ### Installation on Windows
 
 SMACK can be installed on the Windows Subsystem for Linux (WSL) by following the
-same procedure as the Linux installation (i.e., via the build script [build.sh][]).
-We tested the WSL installation on Windows 10 (Build 18362) with Ubuntu 16.04
-installed via the Microsoft Store.
+same procedure as the Linux installation (i.e., via the build script [build.sh][]),
+with one of the Ubuntu releases listed above.
 
 ### Installing SMACK Itself
 

@@ -210,7 +210,7 @@ linux-opensuse*)
   DEPENDENCIES+=" ncurses-devel"
   ;;
 
-linux-@(ubuntu|neon)-@(16|18|20|22|24)*)
+linux-@(ubuntu|neon)-@(22|24)*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DEPENDENCIES+=" clang-${LLVM_SHORT_VERSION} llvm-${LLVM_SHORT_VERSION}-dev"
   fi
@@ -224,12 +224,6 @@ linux-@(ubuntu|neon)-26*)
   if [ ${INSTALL_LLVM} -eq 1 ] ; then
     DOWNLOAD_LLVM=1
   fi
-  ;;
-
-linux---x86_64)
-  BUILD_Z3=1
-  INSTALL_Z3=0
-  NINJA="ninja-build"
   ;;
 
 *)
@@ -268,18 +262,9 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
     sudo zypper --non-interactive install ${DEPENDENCIES}
     ;;
 
-  linux-@(ubuntu|neon)-@(1[68]|20|22|24|26)*)
+  linux-@(ubuntu|neon)-@(22|24|26)*)
     RELEASE_VERSION=$(get-platform-trim "$(lsb_release -r)" | awk -F: '{print $2;}')
     case "$RELEASE_VERSION" in
-    16*)
-      UBUNTU_CODENAME="xenial"
-      ;;
-    18*)
-      UBUNTU_CODENAME="bionic"
-      ;;
-    20*)
-      UBUNTU_CODENAME="focal"
-      ;;
     22*)
       UBUNTU_CODENAME="jammy"
       ;;
@@ -312,58 +297,13 @@ if [ ${INSTALL_DEPENDENCIES} -eq 1 ] ; then
       sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_SHORT_VERSION} main"
     fi
 
-    # Adding .NET repository for the .NET SDK, which installs and runs Boogie.
-    # Boogie is built for .NET 8, so it needs .NET 8 or newer:
-    # - 24.04 and 26.04: dotnet-sdk-10.0 is in the default Ubuntu repositories
-    # - 22.04: dotnet-sdk-10.0 is in Canonical's dotnet backports PPA
-    # - 20.04: Microsoft's package feed has no .NET 10, so dotnet-sdk-8.0 from
-    #   it takes the place of dotnet-sdk-10.0
-    # - 18.04 and older: Microsoft's package feed stops before .NET 8, so the
-    #   installation of dotnet-sdk-8.0 fails; .NET has to be installed manually
+    # The .NET 10 SDK installs and runs Boogie. Ubuntu 24.04 and 26.04 package
+    # it; on 22.04 it comes from Canonical's dotnet backports PPA.
     if [[ "$RELEASE_VERSION" == 22* ]]; then
       sudo add-apt-repository -y ppa:dotnet/backports
-    elif [[ "$RELEASE_VERSION" != 2[46]* ]]; then
-      ${WGET} -q https://packages.microsoft.com/config/ubuntu/${RELEASE_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-      sudo DEBIAN_FRONTEND=noninteractive dpkg -i --force-confdef --force-confold packages-microsoft-prod.deb
-      rm -f packages-microsoft-prod.deb
-      sudo apt-get update
-      DEPENDENCIES="${DEPENDENCIES/dotnet-sdk-10.0/dotnet-sdk-8.0}"
     fi
 
     sudo apt-get install -y ${DEPENDENCIES}
-    ;;
-
-
-  linux---x86_64)
-    sudo yum -y install ninja-build
-    sudo rpm -U https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
-    # This feed stops at .NET 7. Boogie needs .NET 8 or newer, which has to be
-    # installed manually.
-    sudo yum -y install dotnet-sdk-6.0
-    sudo pip3 install pyyaml psutil toml --break-system-packages || sudo pip3 install pyyaml psutil toml
-
-    mkdir -p ${DEPS_DIR}
-    cd ${DEPS_DIR}
-    ${WGET} https://github.com/Kitware/CMake/releases/download/v3.26.0/cmake-3.26.0-linux-x86_64.sh
-    chmod u+x cmake-3.26.0-linux-x86_64.sh
-    sudo ./cmake-3.26.0-linux-x86_64.sh --prefix=/usr/local/ --exclude-subdir
-
-    ${WGET} https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz
-    tar -xzvf boost_1_81_0.tar.gz
-    cd boost_1_81_0
-    ./bootstrap.sh
-    sudo ./b2 install --with=all
-    cd ..
-
-    mkdir -p ${LLVM_DIR}
-    ${WGET} https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-    tar -C ${LLVM_DIR} -xvf clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz --strip 1
-    sudo update-alternatives --install ${LLVM_DIR}/bin/clang++-${LLVM_SHORT_VERSION} clang++-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/clang++ 30
-    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-config-${LLVM_SHORT_VERSION} llvm-config-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-config 30
-    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-link-${LLVM_SHORT_VERSION} llvm-link-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-link 30
-    sudo update-alternatives --install ${LLVM_DIR}/bin/llvm-dis-${LLVM_SHORT_VERSION} llvm-dis-${LLVM_SHORT_VERSION} ${LLVM_DIR}/bin/llvm-dis 30
-    export PATH="${LLVM_DIR}/bin:$PATH"
-    echo export PATH=\"${LLVM_DIR}/bin:\$PATH\" >> ${SMACKENV}
     ;;
 
   *)
