@@ -152,12 +152,22 @@ const std::map<unsigned, std::string> Naming::ATOMICRMWINST_TABLE{
     {AtomicRMWInst::Max, "$smax"},  {AtomicRMWInst::Min, "$smin"},
     {AtomicRMWInst::UMax, "$umax"}, {AtomicRMWInst::UMin, "$umin"}};
 
+// Names Boogie does not accept as an identifier; Naming::get appends `_` to
+// a source or LLVM name that is one of them. These are the keywords of the
+// Boogie 3.5.8 scanner except atomic, both, left and right, which its grammar
+// accepts as identifiers wherever SMACK emits a name. hide, pop, push and
+// reveal are accepted too, except as a block label. complete, finite and par
+// are no longer keywords; escaping them is harmless.
 Regex Naming::BPL_KW(
     "^(bool|int|real|false|true|old|forall|exists|requires|modifies|ensures|"
     "invariant|free"
     "|unique|finite|complete|type|const|function|axiom|var|procedure"
     "|implementation|where|returns|assume|assert|havoc|call|return|while"
-    "|break|goto|if|then|else|div|mod|yield|par|async|lambda)$");
+    "|break|goto|if|then|else|div|mod|yield|par|async|lambda"
+    "|action|asserts|datatype|hide|hideable|is|measure|pop|preserves|pure"
+    "|push|refines|reveal|revealed|uses"
+    "|RNA|RNE|RTN|RTP|RTZ|roundNearestTiesToAway|roundNearestTiesToEven"
+    "|roundTowardNegative|roundTowardPositive|roundTowardZero)$");
 
 Regex Naming::SMACK_NAME(".*__SMACK_.*");
 
