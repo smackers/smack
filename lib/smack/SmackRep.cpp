@@ -169,6 +169,56 @@ std::string SmackRep::vectorType(int n, Type *T) {
   return s.str();
 }
 
+// A struct or array value is a datatype with one constructor and one field per
+// element, named after its layout, so that types with the same layout share
+// it: { i8*, i32 } is $s2.ref.i32 and [4 x i8] is $a4.i8. Element types are
+// named the same way, so a nested aggregate names its own datatype.
+std::string SmackRep::aggregateType(const llvm::Type *T) {
+  std::list<std::string> fields;
+  std::stringstream s;
+  if (auto ST = llvm::dyn_cast<const llvm::StructType>(T)) {
+    s << "$s" << ST->getNumElements();
+    for (auto E : ST->elements()) {
+      fields.push_back(type(E));
+      s << "." << fields.back();
+    }
+  } else {
+    auto AT = llvm::cast<const llvm::ArrayType>(T);
+    auto E = type(AT->getElementType());
+    s << "$a" << AT->getNumElements() << "." << E;
+    fields.assign(AT->getNumElements(), E);
+  }
+  std::string name = s.str();
+  if (!auxDecls.count(name)) {
+    std::stringstream d;
+    d << "datatype " << name << " { mk." << name << "(";
+    unsigned i = 0;
+    for (auto &F : fields) {
+      d << (i ? ", " : "") << aggregateField(i) << ": " << F;
+      i++;
+    }
+    d << ") }";
+    addAuxiliaryDeclaration(Decl::code(name, d.str()));
+  }
+  return name;
+}
+
+std::string SmackRep::aggregateConstructor(const llvm::Type *T) {
+  return "mk." + aggregateType(T);
+}
+
+std::string SmackRep::aggregateField(unsigned idx) {
+  return "f" + std::to_string(idx);
+}
+
+const Expr *SmackRep::aggregateValue(const llvm::Type *T,
+                                     std::list<const llvm::Value *> elements) {
+  std::list<const Expr *> args;
+  for (auto E : elements)
+    args.push_back(expr(E));
+  return Expr::fn(aggregateConstructor(T), args);
+}
+
 std::string SmackRep::opName(const std::string &operation,
                              std::list<const llvm::Type *> types) {
   std::stringstream s;
@@ -236,6 +286,9 @@ std::string SmackRep::type(const llvm::Type *t) {
 
   else if (auto VT = dyn_cast<FixedVectorType>(t))
     return vectorType(VT->getNumElements(), VT->getElementType());
+
+  else if (t->isStructTy() || t->isArrayTy())
+    return aggregateType(t);
 
   else
     return Naming::PTR_TYPE;
@@ -850,7 +903,24 @@ const Expr *SmackRep::expr(const llvm::Value *v, bool isConstIntUnsigned,
       return VectorOperations(this).constant(cv);
 
     } else if (auto cd = dyn_cast<const ConstantAggregateZero>(constant)) {
-      return VectorOperations(this).constant(cd);
+      if (cd->getType()->isVectorTy())
+        return VectorOperations(this).constant(cd);
+      std::list<const Value *> elements;
+      for (unsigned i = 0; i < cd->getElementCount().getFixedValue(); i++)
+        elements.push_back(cd->getElementValue(i));
+      return aggregateValue(cd->getType(), elements);
+
+    } else if (isa<ConstantStruct>(constant) || isa<ConstantArray>(constant)) {
+      std::list<const Value *> elements;
+      for (auto &E : constant->operands())
+        elements.push_back(E.get());
+      return aggregateValue(constant->getType(), elements);
+
+    } else if (auto ca = dyn_cast<const ConstantDataArray>(constant)) {
+      std::list<const Value *> elements;
+      for (unsigned i = 0; i < ca->getNumElements(); i++)
+        elements.push_back(ca->getElementAsConstant(i));
+      return aggregateValue(ca->getType(), elements);
 
     } else if (constant->isNullValue())
       return Expr::id(Naming::NULL_VAL);

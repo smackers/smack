@@ -63,7 +63,6 @@ public:
   static const std::string STORE;
   static const std::string MEMCPY;
   static const std::string MEMSET;
-  static const std::string EXTRACT_VALUE;
   static const std::string MALLOC;
 
   static const std::string EXTERNAL_ADDR;

@@ -47,7 +47,6 @@ const std::string Naming::LOAD = "$load";
 const std::string Naming::STORE = "$store";
 const std::string Naming::MEMCPY = "$memcpy";
 const std::string Naming::MEMSET = "$memset";
-const std::string Naming::EXTRACT_VALUE = "$extractvalue";
 const std::string Naming::MALLOC = "$malloc";
 
 const std::string Naming::EXTERNAL_ADDR = "$isExternal";

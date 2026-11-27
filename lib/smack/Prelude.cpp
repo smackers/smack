@@ -248,22 +248,6 @@ FuncDecl *Prelude::unsafeStore(Binding elemBinding, const Expr *body,
       getMapTypeName(bytes ? getBvTypeName(8) : getIntTypeName(8)), body);
 }
 
-// declare extractvalue functions
-// e.g., function $extractvalue.float(p: ref, i: int) returns (float);
-FuncDecl *extractValue(std::string resType) {
-  std::list<Binding> args = makePtrVars(1);
-  args.emplace_back(Binding{"i", "int"});
-  return uninterpretedOp("$extractvalue", {resType}, args, resType);
-}
-
-// declare extractvalue functions for integers
-// e.g., function $extractvalue.bv256(p: ref, i: int) returns (bv256);
-FuncDecl *extractValue(unsigned width) {
-  std::string resType =
-      SmackOptions::BitPrecise ? getBvTypeName(width) : getIntTypeName(width);
-  return extractValue(resType);
-}
-
 void printFuncs(FuncsT funcs, std::stringstream &s) {
   for (auto &f : funcs)
     if (f)
@@ -1017,11 +1001,6 @@ void IntOpGen::generateMemOps(std::stringstream &s) const {
   }
 }
 
-void IntOpGen::generateExtractValueFuncs(std::stringstream &s) const {
-  for (auto size : INTEGER_SIZES)
-    s << extractValue(size) << "\n";
-}
-
 void IntOpGen::generateBvIntConvs(std::stringstream &s) const {
   describe("SMT bit-vector/integer conversion", s);
 
@@ -1068,7 +1047,6 @@ void IntOpGen::generate(std::stringstream &s) const {
   generatePreds(s);
   generateMemOps(s);
   generateConvOps(s);
-  generateExtractValueFuncs(s);
 }
 
 void TypeDeclGen::generate(std::stringstream &s) const {
@@ -1324,16 +1302,11 @@ void PtrOpGen::generateConvOps(std::stringstream &s) const {
     << "\n";
 }
 
-void PtrOpGen::generateExtractValueFuncs(std::stringstream &s) const {
-  s << extractValue(Naming::PTR_TYPE) << "\n";
-}
-
 void PtrOpGen::generate(std::stringstream &s) const {
   generateArithOps(s);
   generatePreds(s);
   generateMemOps(s);
   generateConvOps(s);
-  generateExtractValueFuncs(s);
   generatePtrNumConvs(s);
 }
 
@@ -1833,14 +1806,6 @@ void FpOpGen::generateMemOps(std::stringstream &s) const {
   }
 }
 
-void FpOpGen::generateExtractValueFuncs(std::stringstream &s) const {
-  if (SmackOptions::FloatEnabled) {
-    for (auto bw : FP_BIT_WIDTHS)
-      s << extractValue(getFpTypeName(bw)) << "\n";
-  } else
-    s << extractValue(Naming::UNINTERPRETED_FLOAT_TYPE) << "\n";
-}
-
 void FpOpGen::generate(std::stringstream &s) const {
   // generate type-specific declarations
   if (SmackOptions::FloatEnabled) {
@@ -1861,7 +1826,6 @@ void FpOpGen::generate(std::stringstream &s) const {
   generateFpIntConv(s);
   generateConvOps(s);
   generateMemOps(s);
-  generateExtractValueFuncs(s);
 }
 
 std::string Prelude::getPrelude() {

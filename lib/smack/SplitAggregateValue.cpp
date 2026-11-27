@@ -63,23 +63,6 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
                               info, irb, true);
           toRemove.push_back(si);
         }
-      } else if (ReturnInst *ri = dyn_cast<ReturnInst>(&I)) {
-        Value *V = ri->getReturnValue();
-        if (isConstantAggregate(V)) {
-          visitAggregateValue(cast<Constant>(V), V->getType(), idx, info, C);
-          splitConstantReturn(ri, info);
-        }
-      } else if (CallInst *ci = dyn_cast<CallInst>(&I)) {
-        for (unsigned i = 0; i < ci->arg_size(); ++i) {
-          Value *arg = ci->getArgOperand(i);
-          if (isConstantAggregate(arg)) {
-            info.clear();
-            idx.clear();
-            visitAggregateValue(cast<Constant>(arg), arg->getType(), idx, info,
-                                C);
-            splitConstantArg(ci, i, info);
-          }
-        }
       }
     }
 
@@ -87,15 +70,6 @@ bool SplitAggregateValue::runOnFunction(Function &F) {
       i->eraseFromParent();
   }
   return true;
-}
-
-bool SplitAggregateValue::isConstantAggregate(Value *V) {
-  // we do not want to touch vector type here since there is
-  // special support for it
-  if (V && (V->getType()->isStructTy() || V->getType()->isArrayTy()))
-    return isa<ConstantAggregate>(V) || isa<ConstantAggregateZero>(V);
-  else
-    return false;
 }
 
 Value *SplitAggregateValue::splitAggregateLoad(Type *T, Value *P,
@@ -138,28 +112,6 @@ void SplitAggregateValue::splitAggregateStore(Value *P, Value *V,
   }
 }
 
-Value *SplitAggregateValue::createInsertedValue(IRBuilder<> &irb, Type *T,
-                                                std::vector<InfoT> &info,
-                                                Value *V) {
-  Value *box = irb.CreateAlloca(T);
-  splitAggregateStore(box, V, info, irb, false);
-  return splitAggregateLoad(T, box, info, irb, false);
-}
-
-void SplitAggregateValue::splitConstantReturn(ReturnInst *ri,
-                                              std::vector<InfoT> &info) {
-  IRBuilder<> irb(ri);
-  Type *T = ri->getReturnValue()->getType();
-  ri->setOperand(0, createInsertedValue(irb, T, info, ri->getReturnValue()));
-}
-
-void SplitAggregateValue::splitConstantArg(CallInst *ci, unsigned i,
-                                           std::vector<InfoT> &info) {
-  IRBuilder<> irb(ci);
-  Type *T = ci->getArgOperand(i)->getType();
-  ci->setArgOperand(i, createInsertedValue(irb, T, info, ci->getArgOperand(i)));
-}
-
 void SplitAggregateValue::visitAggregateValue(Constant *baseVal, Type *T,
                                               IndexT idxs,
                                               std::vector<InfoT> &info,
@@ -194,6 +146,5 @@ char SplitAggregateValue::ID = 0;
 
 // Register the pass
 static RegisterPass<SplitAggregateValue>
-    X("split-aggregate-values",
-      "Split Load/Store/ConstantReturn of Aggregate Types");
+    X("split-aggregate-values", "Split Load/Store of Aggregate Types");
 } // namespace smack
