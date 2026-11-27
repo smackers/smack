@@ -10,7 +10,7 @@ Vagrant.configure(2) do |config|
   config.vm.synced_folder ".", "/home/vagrant/#{project_name}"
 
   config.vm.define :ubuntu do |ubuntu_config|
-    ubuntu_config.vm.box = "bento/ubuntu-20.04"
+    ubuntu_config.vm.box = "bento/ubuntu-26.04"
   end
 
   # This provision, 'fix-no-tty', gets rid of an error during build
@@ -19,11 +19,6 @@ Vagrant.configure(2) do |config|
     s.privileged = false
     s.inline = "sudo sed -i '/tty/!s/mesg n/tty -s \\&\\& mesg n/' /root/.profile"
   end
-
-  # TODO ability to choose between the two?
-  # config.vm.define :opensuse do |opensuse_config|
-  #   opensuse_config.vm.box = "chef/opensuse-13.1"
-  # end
 
   config.vm.provision "shell", binary: true, privileged: false, inline: <<-SHELL
     sudo apt update
