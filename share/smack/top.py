@@ -399,13 +399,6 @@ def arguments():
         help='save (intermediate) Boogie code to FILE')
 
     translate_group.add_argument(
-        '--rewrite-bitwise-ops',
-        action="store_true",
-        default=False,
-        help='''attempts to provide models for bitwise operations
-                when integer encoding is used''')
-
-    translate_group.add_argument(
         '--memory-intrinsic-threshold', metavar='N', default=0, type=int,
         help='''expand constant-length memcpy/memset of at most N bytes into
                 per-offset map updates instead of quantified axioms
@@ -813,8 +806,6 @@ def llvm_to_bpl(args):
         cmd += ['-inline-funcs']
     for func in args.no_inline:
         cmd += ['-no-inline', func]
-    if args.rewrite_bitwise_ops:
-        cmd += ['-rewrite-bitwise-ops']
     if args.memory_intrinsic_threshold:
         cmd += ['-memory-intrinsic-threshold',
                 str(args.memory_intrinsic_threshold)]

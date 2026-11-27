@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-// @flag --rewrite-bitwise-ops
 // @expect error
 
 uint8_t results[256] = {

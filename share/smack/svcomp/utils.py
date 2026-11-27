@@ -18,9 +18,6 @@ def svcomp_frontend(input_file, args):
   # replace_reach_error looks for the calls to it in the generated Boogie
   args.no_inline = getattr(args, 'no_inline', []) + ['reach_error']
 
-  # attempt to rewrite bitwise ops into provided models
-  args.rewrite_bitwise_ops = True
-
   # Modeling of strings must be turned on by default
   args.strings = True
 
