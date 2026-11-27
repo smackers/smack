@@ -1,10 +1,11 @@
 # Set this variable to point to folder share of your SMACK installation
 INSTALL_SHARE = ../../../install/share
 
-CC = clang
-LD = llvm-link
+CC = clang-14
+LD = llvm-link-14
 INC = $(INSTALL_SHARE)/smack/include
-CFLAGS = -c -Wall -emit-llvm -O0 -g -I$(INC)
+CFLAGS = -c -Wall -emit-llvm -O0 -g -Xclang -disable-O0-optnone \
+	-fsanitize=signed-integer-overflow,shift -I$(INC)
 
 SOURCES = incr.c simple.c
 OBJS = $(subst .c,.bc,$(SOURCES))
@@ -20,4 +21,3 @@ incr.bc: incr.c incr.h
 
 clean:
 	rm -f *.bc *.bpl
-
