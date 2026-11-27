@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+// @flag --integer-encoding=bit-vector
 // @expect verified
 
 uint8_t results[256] = {
